@@ -66,7 +66,9 @@ tauri-plugin-clipboard-manager = "2.3.3"
 tauri-plugin-notification = "2.4.0"
 tauri-plugin-window-state = "2.4.1"
 tauri-plugin-log = "2.9.2"
-tauri-plugin-updater = "2.12.0"
+# Without `zip`: it only unpacks Tauri v1's `.zip`/`.tar.gz` updates, never published here (NSIS
+# and a bare AppImage), and pins `zip` 4, which `cargo deny` refuses (RUSTSEC-2026-0367..0369).
+tauri-plugin-updater = { version = "2.12.0", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-global-shortcut = "2.3.2"
 tauri-plugin-autostart = "2.5.1"
 tauri-plugin-single-instance = "2.4.5"
@@ -75,7 +77,7 @@ tauri-plugin-wdio-webdriver = { version = "1.4.0", optional = true }
 log = "0.4.34"
 thiserror = "2.0.21"
 unicode-normalization = "0.1.25"
-zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2"] }
 aes-gcm = { version = "0.11.1", features = ["zeroize"] }
 argon2 = "0.6.0"
 zeroize = "1.9.0"
