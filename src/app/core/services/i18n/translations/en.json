@@ -3862,6 +3862,7 @@
       "logDomain": "a logarithm is taken of a number above zero",
       "notWhole": "a whole number is expected",
       "notPositive": "a setting is above zero",
+      "rateExpected": "a rate in % is expected",
       "overflow": "number too large",
       "unsupported": "this calculation is not done here"
     },

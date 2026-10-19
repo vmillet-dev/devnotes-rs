@@ -197,6 +197,8 @@ pub(super) struct Parser<'a> {
     pub(super) notation: Option<Notation>,
     /// Inside `le plus grand de 3 et 5`, where `et` separates rather than adds.
     listing: bool,
+    /// Reading a loan's amount, where `sur 6 ans` is its length, not a ratio.
+    no_over: bool,
     /// Where the line ends, for a value missing there.
     end: u32,
 }
@@ -219,6 +221,7 @@ impl<'a> Parser<'a> {
             aggregate: false,
             notation: None,
             listing: false,
+            no_over: false,
             end,
         };
         parser.skip_quoted();
@@ -426,6 +429,17 @@ impl<'a> Parser<'a> {
                 value = share_of(value, whole, share).map_err(|error| self.blame(error))?;
             } else if self.eat(CalcWord::IsTo) {
                 value = self.proportion(value)?;
+            } else if self.duration_after(CalcWord::After) || self.duration_after(CalcWord::During)
+            {
+                value = self.compound(value)?;
+            } else if self.eat(CalcWord::Invested) {
+                // `500 € investis 1 500 € récupérés` is ×3.
+                let returned = self.principal()?;
+                if !self.eat(CalcWord::Returned) {
+                    return Err(self.unreadable());
+                }
+                let times = divide(returned, value).map_err(|error| self.blame(error))?;
+                value = self.written(times, Notation::Multiplier)?;
             } else if self.eat(CalcWord::Convert) {
                 self.converting = Some(value.dimension());
                 value = self.convert(value)?;
@@ -869,7 +883,7 @@ impl<'a> Parser<'a> {
                     applied(ratio, share, right)
                 }
                 .map_err(|error| self.blame(error))?;
-            } else if self.eat(CalcWord::Over) {
+            } else if !self.no_over && self.eat(CalcWord::Over) {
                 let right = self.power()?;
                 left = ratio(left, right).map_err(|error| self.blame(error))?;
             } else {
@@ -924,6 +938,14 @@ impl<'a> Parser<'a> {
                 Ok(value)
             }
             Tok::Word(word) => self.word(&word),
+            Tok::Symbol('$' | '€')
+                if self
+                    .tokens
+                    .get(self.at + 1)
+                    .is_some_and(|next| !next.spaced && matches!(next.tok, Tok::Number(_))) =>
+            {
+                self.prefixed()
+            }
             Tok::Symbol(_) | Tok::Other(_) | Tok::Quoted => Err(self.unreadable()),
         }
     }
@@ -980,12 +1002,44 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    /// `$1,000`, `€500`: a currency written before its amount, as English does.
+    fn prefixed(&mut self) -> Answer {
+        let Some(unit) = self.unit_at(self.at) else {
+            return Err(self.unreadable());
+        };
+        self.take(TokenKind::Unit);
+        let Some(Tok::Number(mut number)) = self.peek().cloned() else {
+            return Err(self.unreadable());
+        };
+        self.take(TokenKind::Number);
+        while let Some((scale, taken)) = words::scale_at(self.tokens, self.at) {
+            for _ in 0..taken {
+                self.take(TokenKind::Number);
+            }
+            number = number
+                .checked_mul(Decimal::from(scale))
+                .ok_or_else(overflow)?;
+        }
+        Ok(Value::Quantity(Quantity {
+            amount: number
+                .checked_mul(self.factor_of(unit))
+                .ok_or_else(overflow)?,
+            dim: unit.dim,
+            unit: Some(Shown::One(unit.id)),
+            spans: false,
+        }))
+    }
+
     /// A name defined above first, then a value the sheet knows, then a word opening a form.
     fn word(&mut self, word: &str) -> Answer {
         if let Some(value) = self.context.variables.get(word) {
             self.used.push(word.to_string());
             self.take(TokenKind::Name);
             return Ok(value.clone());
+        }
+        // Before `total`, which `total repayment on` starts with.
+        if let Some(found) = self.finance()? {
+            return Ok(found);
         }
         if self.eat(CalcWord::Previous) {
             return match self.context.previous {
@@ -1386,6 +1440,177 @@ impl Parser<'_> {
             }
         }
     }
+}
+
+/// The calendar's mean year, as the duration units have it.
+const YEAR_SECONDS: i64 = 31_556_952;
+
+impl Parser<'_> {
+    /// `après 3 ans`, `for 3 years`: the word taken only before a number, `for the` being prose.
+    fn duration_after(&mut self, word: CalcWord) -> bool {
+        let number = self.sees(word).is_some_and(|taken| {
+            self.tokens
+                .get(self.at + taken)
+                .is_some_and(|token| matches!(token.tok, Tok::Number(_)))
+        });
+        number && self.eat(word)
+    }
+
+    /// An amount read up to the words of a form: `sur 6 ans` is a loan's length there.
+    fn principal(&mut self) -> Answer {
+        let over = std::mem::replace(&mut self.no_over, true);
+        let found = self.additive();
+        self.no_over = over;
+        found
+    }
+
+    /// `3 ans`, `36 mois`: a duration in years.
+    fn years(&mut self) -> Result<Decimal, CalcError> {
+        match self.principal()? {
+            Value::Quantity(quantity) if quantity.dim == Dim::TIME => quantity
+                .amount
+                .checked_div(Decimal::from(YEAR_SECONDS))
+                .ok_or_else(overflow),
+            other => Err(self.blame(CalcError::Mismatch {
+                expected: Dimension::Time,
+                found: other.dimension(),
+                unit: None,
+            })),
+        }
+    }
+
+    /// `à 7 %`, `@ 7%`: the yearly rate, as a ratio.
+    fn rate(&mut self) -> Result<Decimal, CalcError> {
+        if !self.eat(CalcWord::At) {
+            return Err(self.unreadable());
+        }
+        match self.additive()? {
+            Value::Percent { ratio, .. } => Ok(ratio),
+            _ => Err(self.blame(CalcError::RateExpected)),
+        }
+    }
+
+    /// `composés mensuellement`: how many times a year the interest joins the amount, once
+    /// unless a line says otherwise.
+    fn periods(&mut self) -> Result<Decimal, CalcError> {
+        if !self.eat(CalcWord::Compounded) {
+            return Ok(Decimal::ONE);
+        }
+        for (word, count) in [
+            (CalcWord::Monthly, 12),
+            (CalcWord::Quarterly, 4),
+            (CalcWord::Yearly, 1),
+            (CalcWord::Daily, 365),
+        ] {
+            if self.eat(word) {
+                return Ok(Decimal::from(count));
+            }
+        }
+        Err(self.unreadable())
+    }
+
+    /// `1 000 € après 3 ans à 7 %` is 1 225,04 €: the amount and its compound interest.
+    fn compound(&mut self, principal: Value) -> Answer {
+        let years = self.years()?;
+        let rate = self.rate()?;
+        let periods = self.periods()?;
+        let grown = maths::grown(rate, periods, years).map_err(|error| self.blame(error))?;
+        multiply(principal, Value::number(grown)).map_err(|error| self.blame(error))
+    }
+
+    /// The forms that open on their own words: interest, return, present value and loans.
+    fn finance(&mut self) -> Result<Option<Value>, CalcError> {
+        if self.eat(CalcWord::InterestOn) {
+            let principal = self.principal()?;
+            if !(self.eat(CalcWord::After) || self.eat(CalcWord::During)) {
+                return Err(self.unreadable());
+            }
+            let grown = self.compound(principal.clone())?;
+            return add(grown, principal, false)
+                .map(Some)
+                .map_err(|error| self.blame(error));
+        }
+        if self.eat(CalcWord::AnnualReturn) {
+            return self.annual_return().map(Some);
+        }
+        if self.eat(CalcWord::PresentValue) {
+            let future = self.principal()?;
+            if !(self.eat(CalcWord::Within)
+                || self.eat(CalcWord::After)
+                || self.eat(CalcWord::During))
+            {
+                return Err(self.unreadable());
+            }
+            let years = self.years()?;
+            let rate = self.rate()?;
+            let periods = self.periods()?;
+            let grown = maths::grown(rate, periods, years).map_err(|error| self.blame(error))?;
+            return divide(future, Value::number(grown))
+                .map(Some)
+                .map_err(|error| self.blame(error));
+        }
+        for (word, part) in [
+            (CalcWord::Repayment, Loan::Monthly),
+            (CalcWord::TotalRepayment, Loan::Total),
+            (CalcWord::TotalInterest, Loan::Interest),
+        ] {
+            if self.eat(word) {
+                return self.loan(part).map(Some);
+            }
+        }
+        Ok(None)
+    }
+
+    /// `rendement annuel sur 1 000 € investis 2 500 € récupérés en 7 ans` is ≈ 13,99 %.
+    fn annual_return(&mut self) -> Answer {
+        let invested = self.principal()?;
+        if !self.eat(CalcWord::Invested) {
+            return Err(self.unreadable());
+        }
+        let returned = self.principal()?;
+        if !self.eat(CalcWord::Returned) {
+            return Err(self.unreadable());
+        }
+        if !(self.eat(CalcWord::Convert) || self.eat(CalcWord::After) || self.eat(CalcWord::During))
+        {
+            return Err(self.unreadable());
+        }
+        let years = self.years()?;
+        let times = divide(returned, invested).and_then(|times| plain(&times));
+        let yearly = times
+            .and_then(|times| maths::yearly(times, years))
+            .map_err(|error| self.blame(error))?;
+        Ok(Value::Percent {
+            ratio: yearly,
+            signed: false,
+        })
+    }
+
+    /// `mensualité de 10 000 € sur 6 ans à 6 %` is 165,73 €; its total, its interest.
+    fn loan(&mut self, part: Loan) -> Answer {
+        let principal = self.principal()?;
+        if !(self.eat(CalcWord::Over) || self.eat(CalcWord::During)) {
+            return Err(self.unreadable());
+        }
+        let years = self.years()?;
+        let rate = self.rate()?;
+        let months = years * Decimal::from(12);
+        let payment =
+            maths::payment(rate / Decimal::from(12), months).map_err(|error| self.blame(error))?;
+        let factor = match part {
+            Loan::Monthly => payment,
+            Loan::Total => payment * months,
+            Loan::Interest => payment * months - Decimal::ONE,
+        };
+        multiply(principal, Value::number(factor)).map_err(|error| self.blame(error))
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Loan {
+    Monthly,
+    Total,
+    Interest,
 }
 
 /// What a share multiplies: the ratio, one plus it, or one less it.

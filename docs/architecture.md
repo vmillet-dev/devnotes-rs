@@ -1603,6 +1603,16 @@ which knows no time zone, gives its cards the UTC day.
   `en multiple de 5`), `décimal`/`dec`. A proportion solves for its unknown, its ratio taken
   first so the unit is kept: `6 est à 60 ce que 8 est à combien`. `x`, `a` and `multiple` are
   values, not syntax: they stay free names.
+- **Finance**, over years of the calendar's mean length, the amount keeping its currency:
+  `1 000 € après 3 ans à 7 %` (compound, `composés mensuellement`/`compounding monthly` or
+  quarterly, yearly, daily), `intérêts sur … après …`, `500 € investis 1 500 € récupérés` (×3),
+  `rendement annuel sur … investis … récupérés en 7 ans` (a percentage),
+  `valeur actuelle de … dans 20 ans à 10 %`, and a loan `sur 6 ans à 6 %`: `mensualité de`,
+  `coût total de`, `intérêts totaux de`. Its amount is read up to the words of the form
+  (`sur 6 ans` is no ratio there); `après`, `pendant`, `after`, `for` are a length only before
+  a number (`for the` is prose); a rate is a percentage (`rateExpected`). English writes
+  `$1,000` and `@ 7%`: commas group thousands after `$`, in `1,000,000` and in `1,578.13`,
+  never in a lone French `1,000`.
 - **Dates** move by whole days, and by calendar months for months and years; two dates subtract
   into days. A duration converted into weeks keeps the days left (`6 sem 3 j`).
 - **Blocks** run from a `# heading` or a blank line to the next: `total` and `moyenne` read the

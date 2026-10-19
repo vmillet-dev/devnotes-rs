@@ -233,6 +233,7 @@ export class CalcFormatter {
       case 'logDomain':
       case 'notWhole':
       case 'notPositive':
+      case 'rateExpected':
       case 'overflow':
       case 'unsupported':
         text = this.translate(`calc.errors.${error.kind}`);

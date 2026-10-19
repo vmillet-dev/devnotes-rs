@@ -190,6 +190,58 @@ pub(super) fn digits(value: Decimal, radix: u32) -> Result<(bool, String), CalcE
     Ok((number < 0, digits))
 }
 
+/// `base` to a power, by multiplication while the power is whole: `1,07³` stays exact.
+pub(super) fn power_of(base: Decimal, exponent: Decimal) -> Result<Decimal, CalcError> {
+    if exponent.fract().is_zero()
+        && let Some(count) = exponent.abs().to_u32().filter(|count| *count <= 100_000)
+    {
+        let product = power(base, count).ok_or_else(overflow)?;
+        return if exponent.is_sign_negative() {
+            if product.is_zero() {
+                Err(CalcError::DivisionByZero)
+            } else {
+                Decimal::ONE.checked_div(product).ok_or_else(overflow)
+            }
+        } else {
+            Ok(product)
+        };
+    }
+    base.checked_powd(exponent).ok_or_else(overflow)
+}
+
+/// What one grows to in `years` at `rate` a year, the interest joining it `periods` times a year.
+pub(super) fn grown(rate: Decimal, periods: Decimal, years: Decimal) -> Result<Decimal, CalcError> {
+    let step = rate.checked_div(periods).ok_or(CalcError::DivisionByZero)?;
+    power_of(Decimal::ONE + step, periods * years)
+}
+
+/// The yearly rate that turns one into `times` in `years`.
+pub(super) fn yearly(times: Decimal, years: Decimal) -> Result<Decimal, CalcError> {
+    if years.is_zero() {
+        return Err(CalcError::DivisionByZero);
+    }
+    if times <= Decimal::ZERO {
+        return Err(CalcError::LogDomain);
+    }
+    let rooted = match years.to_u32().filter(|_| years.fract().is_zero()) {
+        Some(whole) => root(times, whole)?,
+        None => power_of(times, Decimal::ONE.checked_div(years).ok_or_else(overflow)?)?,
+    };
+    Ok(rooted - Decimal::ONE)
+}
+
+/// A loan's monthly payment for one borrowed, at `rate` a month over `months`.
+pub(super) fn payment(rate: Decimal, months: Decimal) -> Result<Decimal, CalcError> {
+    if months <= Decimal::ZERO {
+        return Err(CalcError::DivisionByZero);
+    }
+    if rate.is_zero() {
+        return Decimal::ONE.checked_div(months).ok_or_else(overflow);
+    }
+    let left = Decimal::ONE - power_of(Decimal::ONE + rate, -months)?;
+    rate.checked_div(left).ok_or(CalcError::DivisionByZero)
+}
+
 fn reduced(numerator: u128, denominator: u128) -> (u128, u128) {
     let (mut a, mut b) = (numerator, denominator);
     while b != 0 {
@@ -333,6 +385,19 @@ mod tests {
         assert_eq!(digits(d("-10"), 2), Ok((true, "1010".into())));
         assert_eq!(digits(d("255"), 8), Ok((false, "377".into())));
         assert_eq!(digits(d("2.5"), 16), Err(CalcError::NotWhole));
+    }
+
+    #[test]
+    fn money_grows_is_returned_and_is_repaid() {
+        assert_eq!(grown(d("0.07"), d("1"), d("3")), Ok(d("1.225043")));
+        let monthly = grown(d("0.07"), d("12"), d("3")).unwrap();
+        assert!(monthly.to_string().starts_with("1.23292"));
+        let return_ = yearly(d("2.5"), d("7")).unwrap();
+        assert!(return_.to_string().starts_with("0.1398"), "{return_}");
+        let payment = payment(d("0.005"), d("72")).unwrap();
+        assert!(payment.to_string().starts_with("0.0165728"), "{payment}");
+        assert_eq!(power_of(d("2"), d("-2")), Ok(d("0.25")));
+        assert_eq!(yearly(d("2"), d("0")), Err(CalcError::DivisionByZero));
     }
 
     #[test]

@@ -128,6 +128,8 @@ pub enum CalcError {
     NotWhole,
     /// `ppi = 0`: a setting is above zero.
     NotPositive,
+    /// `à 7`: a yearly rate is a percentage.
+    RateExpected,
     Overflow,
     Unsupported,
 }
@@ -1732,6 +1734,101 @@ mod tests {
         assert_eq!(value("250 + 20 %"), number("300", None));
         assert_eq!(value("300 hors 20 %"), number("250", None));
         assert_eq!(value("20 % of 340"), number("68", None));
+    }
+
+    fn cents(line: &str) -> CalcValue {
+        rounded(line, 2)
+    }
+
+    #[test]
+    fn compound_interest_keeps_the_amount_s_currency() {
+        let euros = |value: &str| number(value, Some(UnitId::Euro));
+        let dollars = |value: &str| number(value, Some(UnitId::Dollar));
+        assert_eq!(cents("1 000 € après 3 ans à 7 %"), euros("1225.04"));
+        assert_eq!(cents("$1,000 after 3 years at 7%"), dollars("1225.04"));
+        assert_eq!(cents("$1,000 after 3 years @ 7%"), dollars("1225.04"));
+        assert_eq!(
+            cents("1 000 € pendant 3 ans à 7 % composés mensuellement"),
+            euros("1232.93")
+        );
+        assert_eq!(
+            cents("$1,000 for 3 years at 7% compounding monthly"),
+            dollars("1232.93")
+        );
+        assert_eq!(
+            cents("1 000 € pendant 3 ans à 7 % composés trimestriellement"),
+            euros("1231.44")
+        );
+        assert_eq!(
+            cents("$1,000 after 3 years at 7% compounded quarterly"),
+            dollars("1231.44")
+        );
+        assert_eq!(
+            cents("intérêts sur 1 000 € après 3 ans à 7 %"),
+            euros("225.04")
+        );
+        assert_eq!(
+            cents("interest on $1,000 after 3 years @ 7%"),
+            dollars("225.04")
+        );
+        assert_eq!(cents("1 000 € après 36 mois à 7 %"), euros("1225.04"));
+        assert_eq!(error("1 000 € après 3 ans à 7"), CalcError::RateExpected);
+        assert!(matches!(
+            error("1 000 € après 3 km à 7 %"),
+            CalcError::Mismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn a_return_a_present_value_and_a_loan() {
+        let euros = |value: &str| number(value, Some(UnitId::Euro));
+        let dollars = |value: &str| number(value, Some(UnitId::Dollar));
+        let times = CalcValue::Multiplier { value: "3".into() };
+        assert_eq!(value("500 € investis 1 500 € récupérés"), times);
+        assert_eq!(value("$500 invested $1,500 returned"), times);
+        assert_eq!(
+            cents("rendement annuel sur 1 000 € investis 2 500 € récupérés en 7 ans"),
+            percent("13.99", false)
+        );
+        assert_eq!(
+            cents("annual return on $1,000 invested $2,500 returned after 7 years"),
+            percent("13.99", false)
+        );
+        assert_eq!(
+            cents("valeur actuelle de 1 000 € dans 20 ans à 10 %"),
+            euros("148.64")
+        );
+        assert_eq!(
+            cents("present value of $1,000 after 20 years at 10%"),
+            dollars("148.64")
+        );
+        assert_eq!(
+            cents("mensualité de 10 000 € sur 6 ans à 6 %"),
+            euros("165.73")
+        );
+        assert_eq!(
+            cents("monthly repayment on $10,000 over 6 years at 6%"),
+            dollars("165.73")
+        );
+        assert_eq!(
+            cents("coût total de 10 000 € sur 6 ans à 6 %"),
+            euros("11932.48")
+        );
+        assert_eq!(
+            cents("total repayment on $10,000 over 6 years at 6%"),
+            dollars("11932.48")
+        );
+        assert_eq!(
+            cents("intérêts totaux de 10 000 € sur 6 ans à 6 %"),
+            euros("1932.48")
+        );
+        assert_eq!(
+            cents("total interest on $10,000 over 6 years at 6%"),
+            dollars("1932.48")
+        );
+        assert_eq!(cents("mensualité de 1 200 € sur 1 an à 0 %"), euros("100"));
+        assert_eq!(value("30 sur 120 en %"), percent("25", false));
+        assert_eq!(value("a = 1\nb = 3\ntotal"), number("4", None));
     }
 
     #[test]

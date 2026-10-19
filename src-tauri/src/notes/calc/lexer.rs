@@ -28,7 +28,7 @@ pub(super) struct Token {
 }
 
 const SYMBOLS: &[char] = &[
-    '+', '-', '−', '×', '*', '/', '÷', '^', '(', ')', '=', '%', '€', '$', '&', '|', '<', '>',
+    '+', '-', '−', '×', '*', '/', '÷', '^', '(', ')', '=', '%', '€', '$', '&', '|', '<', '>', '@',
 ];
 
 fn is_word_start(character: char) -> bool {
@@ -163,7 +163,28 @@ fn exponent_at(characters: &[char], at: usize) -> Option<(i64, usize)> {
     Some((if negative { -exponent } else { exponent }, end - at))
 }
 
-fn number_at(characters: &[char], at: usize) -> Option<(Decimal, usize)> {
+/// After the first group, how far commas group thousands: `1,000,000`, `1,578.13`, and after
+/// `$` `1,000` — never a lone `1,000` elsewhere, which is a French one.
+fn comma_groups(characters: &[char], end: usize, after_currency: bool) -> Option<usize> {
+    let mut probe = end;
+    let mut groups = 0;
+    while characters.get(probe) == Some(&',')
+        && (1..=3).all(|offset| {
+            characters
+                .get(probe + offset)
+                .is_some_and(char::is_ascii_digit)
+        })
+        && !characters.get(probe + 4).is_some_and(char::is_ascii_digit)
+    {
+        probe += 4;
+        groups += 1;
+    }
+    let point = characters.get(probe) == Some(&'.')
+        && characters.get(probe + 1).is_some_and(char::is_ascii_digit);
+    (groups > 0 && (after_currency || groups > 1 || point)).then_some(probe)
+}
+
+fn number_at(characters: &[char], at: usize, after_currency: bool) -> Option<(Decimal, usize)> {
     if let Some(based) = based_at(characters, at) {
         return Some(based);
     }
@@ -174,12 +195,24 @@ fn number_at(characters: &[char], at: usize) -> Option<(Decimal, usize)> {
     if end == at {
         return None;
     }
-    if end - at <= 3 {
+    let english = if end - at <= 3 {
+        comma_groups(characters, end, after_currency)
+    } else {
+        None
+    };
+    if let Some(grouped) = english {
+        end = grouped;
+    } else if end - at <= 3 {
         while group_at(characters, end) {
             end += 4;
         }
     }
-    if matches!(characters.get(end), Some('.' | ','))
+    let marks: &[char] = if english.is_some() {
+        &['.']
+    } else {
+        &['.', ',']
+    };
+    if characters.get(end).is_some_and(|mark| marks.contains(mark))
         && characters.get(end + 1).is_some_and(char::is_ascii_digit)
     {
         end += 1;
@@ -189,7 +222,7 @@ fn number_at(characters: &[char], at: usize) -> Option<(Decimal, usize)> {
     }
     let text: String = characters[at..end]
         .iter()
-        .filter(|c| !c.is_whitespace())
+        .filter(|c| !c.is_whitespace() && (english.is_none() || **c != ','))
         .map(|c| if *c == ',' { '.' } else { *c })
         .collect();
     if let Some((exponent, length)) = exponent_at(characters, end)
@@ -255,7 +288,14 @@ pub(super) fn tokens(line: &str) -> Vec<Token> {
         }
         let (tok, length) = if let Some((date, length)) = date_at(&characters, at) {
             (Tok::Date(date), length)
-        } else if let Some((number, length)) = number_at(&characters, at) {
+        } else if let Some((number, length)) = number_at(
+            &characters,
+            at,
+            !spaced
+                && tokens
+                    .last()
+                    .is_some_and(|token: &Token| matches!(token.tok, Tok::Symbol('$' | '€'))),
+        ) {
             (Tok::Number(number), length)
         } else if is_word_start(character) {
             let length = word_at(&characters, at);
@@ -333,6 +373,19 @@ mod tests {
             toks("1 << 4"),
             [number("1"), Tok::Symbol('<'), Tok::Symbol('<'), number("4")]
         );
+    }
+
+    #[test]
+    fn commas_group_thousands_only_where_no_french_decimal_could_be_meant() {
+        let number = |text: &str| Tok::Number(text.parse().unwrap());
+        assert_eq!(toks("$1,000"), [Tok::Symbol('$'), number("1000")]);
+        assert_eq!(toks("$1,000.50"), [Tok::Symbol('$'), number("1000.50")]);
+        assert_eq!(toks("1,000,000"), [number("1000000")]);
+        assert_eq!(toks("1,578.13"), [number("1578.13")]);
+        assert_eq!(toks("1,000"), [number("1.000")]);
+        assert_eq!(toks("0,045"), [number("0.045")]);
+        assert_eq!(toks("$ 1,5"), [Tok::Symbol('$'), number("1.5")]);
+        assert_eq!(toks("@"), [Tok::Symbol('@')]);
     }
 
     #[test]

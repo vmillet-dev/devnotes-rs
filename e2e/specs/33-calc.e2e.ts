@@ -9,9 +9,9 @@ import { bridge } from '../support/bridge.js';
 
 /**
  * A label, a scale and the previous result, a rounding, a root, a base, a screen unit, a whole
- * solved from its share and a fraction, a variable, a total of its block, a conversion, a
- * percentage, a refused currency and a word of the grammar refused as a name: what a sheet is
- * for, in the words of both languages. The results are read by their figures and classes alone
+ * solved from its share, a fraction and a loan's monthly payment, a variable, a total of its
+ * block, a conversion, a percentage, a refused currency and a word of the grammar refused as a
+ * name: what a sheet is for, in the words of both languages. The results are read by their figures and classes alone
  * — the language on screen writes the decimal mark and the units.
  */
 const SHEET = [
@@ -23,6 +23,7 @@ const SHEET = [
   '12 pt en px',
   '5 % de combien font 6',
   '2/10 en fraction',
+  'mensualité de 10 000 € sur 6 ans à 6 %',
   '# Budget',
   'hébergement = 100,521 €',
   'domaines = 4,99 €',
@@ -76,11 +77,12 @@ describe('A Calcul note', () => {
 
     await eventually(
       async () => (await readEach(testid('calc-result'), 'text')).map(digits),
-      (results) => results.join(' ') === '3000 250 033 283 0 16 120 15 10052 499 10551 126613 200 68  ',
+      (results) => results.join(' ') === '3000 250 033 283 0 16 120 15 16573 10052 499 10551 126613 200 68  ',
       'one result a line, the heading without one',
     );
     const failed = await readEach(testid('calc-result'), '@class');
     expect(failed.map((classes) => classes.includes('calc-failed'))).toEqual([
+      false,
       false,
       false,
       false,
@@ -102,14 +104,14 @@ describe('A Calcul note', () => {
       'currency',
       'reserved',
     ]);
-    expect(digits(await $(`${testid('calc-footer')} .counts`).getText())).toBe('173');
+    expect(digits(await $(`${testid('calc-footer')} .counts`).getText())).toBe('183');
     // Written the same in every language: the base's own prefix and digits.
     expect((await readEach(testid('calc-result'), 'text'))[4]).toBe('0xFF');
   });
 
   it('adds up the result picked in its footer', async () => {
     const picks = await $$(`${testid('calc-result')} [data-pick]`).getElements();
-    await picks[9]!.click();
+    await picks[10]!.click();
 
     await eventually(
       async () => digits(await $(testid('calc-sum')).getText()),
@@ -144,7 +146,7 @@ describe('A Calcul note', () => {
       this.skip();
       return;
     }
-    expect(copied.split(/\r?\n/)[9]).toMatch(/^hébergement = 100,521 € \/\/ ≈ /);
+    expect(copied.split(/\r?\n/)[10]).toMatch(/^hébergement = 100,521 € \/\/ ≈ /);
 
     const today = new Date().toISOString().slice(0, 10);
     const [again, original] = await Promise.all([
