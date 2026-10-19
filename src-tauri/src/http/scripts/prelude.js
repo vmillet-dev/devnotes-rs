@@ -35,8 +35,7 @@
     if (value instanceof Error) return `${value.name}: ${value.message}`;
     if (Number.isNaN(value)) return 'NaN';
     try {
-      const text = JSON.stringify(value);
-      if (text === undefined) return String(value);
+      const text = String(JSON.stringify(value));
       return text.length > SHOWN ? `${text.slice(0, SHOWN)}…` : text;
     } catch {
       return Object.prototype.toString.call(value);
@@ -135,7 +134,7 @@
   define(global, 'clearImmediate', disarm);
   if (typeof global.queueMicrotask !== 'function') {
     define(global, 'queueMicrotask', (callback) => {
-      Promise.resolve().then(callback);
+      void Promise.resolve().then(callback);
     });
   }
 
@@ -302,12 +301,13 @@
     btoa: () => btoaOf,
   };
 
+  // Rust compiles a library, under its own name, as a function of these three.
   function load(name) {
-    const source = native.module(name);
-    if (typeof source !== 'string') return undefined;
+    const factory = native.module(name);
+    if (typeof factory !== 'function') return undefined;
     const module = { exports: {} };
     modules.set(name, module);
-    new Function('module', 'exports', 'require', source)(module, module.exports, requireOf);
+    factory(module, module.exports, requireOf);
     return module.exports;
   }
 
@@ -517,7 +517,7 @@
     }
     getPath() {
       if (this.path.length === 0 || (this.path.length === 1 && this.path[0] === '')) {
-        return this._rootOnly ? '/' : '/';
+        return '/';
       }
       return `/${this.path.join('/')}`;
     }
@@ -791,7 +791,10 @@
     $randomUUID: () => uuid4(),
     $timestamp: () => String(Math.floor(Date.now() / 1000)),
     $isoTimestamp: () => new Date().toISOString(),
-    $randomInt: () => String(Math.floor(Math.random() * 1001)),
+    $randomInt: () => {
+      const [high, low] = randomBytes(2);
+      return String(((high << 8) | low) % 1001);
+    },
   };
 
   function resolve(name) {

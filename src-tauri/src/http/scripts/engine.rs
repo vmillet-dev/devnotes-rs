@@ -52,7 +52,7 @@ fn options(filename: &str) -> EvalOptions {
     options
 }
 
-fn install(ctx: &Ctx<'_>, host: &Rc<RefCell<Box<dyn Host>>>) -> rquickjs::Result<()> {
+fn install<'js>(ctx: &Ctx<'js>, host: &Rc<RefCell<Box<dyn Host>>>) -> rquickjs::Result<()> {
     let native = Object::new(ctx.clone())?;
     let calls = Rc::clone(host);
     native.set(
@@ -81,9 +81,17 @@ fn install(ctx: &Ctx<'_>, host: &Rc<RefCell<Box<dyn Host>>>) -> rquickjs::Result
     )?;
     native.set(
         "module",
-        Function::new(ctx.clone(), |name: String| {
-            libraries::source(&name).map(str::to_string)
-        })?,
+        Function::new(
+            ctx.clone(),
+            |ctx: Ctx<'js>, name: String| -> rquickjs::Result<Option<Function<'js>>> {
+                let Some(source) = libraries::source(&name) else {
+                    return Ok(None);
+                };
+                let wrapped = format!("(function (module, exports, require) {{{source}\n}})");
+                ctx.eval_with_options(wrapped, options(&format!("library:{name}")))
+                    .map(Some)
+            },
+        )?,
     )?;
     ctx.globals().set("__native", native)?;
     ctx.eval_with_options::<(), _>(PRELUDE, options("prelude"))
