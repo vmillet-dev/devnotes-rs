@@ -1098,7 +1098,7 @@
       },
       "folders": {
         "title": "Des dossiers, et un tableau",
-        "body": "Un dossier découpe un espace en régions nommées et colorées, et la vue « Tableau » les montre comme telles : on y range une carte en la glissant, on l’en sort en la lâchant sur le fond. Sans souris : {{check}} pour cocher, puis « Ranger dans »."
+        "body": "Un dossier découpe un espace en régions nommées et colorées, et peut en contenir d’autres. La vue « Tableau » en montre un niveau à la fois : on range une carte en la glissant sur une zone ou sur une ligne de la barre latérale, on la remet au niveau du tableau en la lâchant sur le fond, et un clic sur une zone ouvre le sien. Un dossier glissé sur un autre dans la barre latérale s’y range, ou Alt+← et Alt+→. Sans souris : {{check}} pour cocher, puis « Ranger dans »."
       },
       "organise": {
         "title": "Retrouver : recherche, tags, filtres",

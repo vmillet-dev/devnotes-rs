@@ -1098,7 +1098,7 @@
       },
       "folders": {
         "title": "Folders, and a board",
-        "body": "A folder cuts a space into named, coloured regions, and the “Board” view shows them as such: drag a card in to file it, drop it on the background to take it out. Without a mouse: {{check}} to tick, then “File into”."
+        "body": "A folder cuts a space into named, coloured regions, and can hold others. The “Board” view shows one level at a time: drag a card onto a zone or a row of the sidebar to file it, drop it on the background to bring it back to the board’s own level, and click a zone to open its board. A folder dragged onto another in the sidebar goes inside it, or Alt+← and Alt+→. Without a mouse: {{check}} to tick, then “File into”."
       },
       "organise": {
         "title": "Finding things: search, tags, filters",
