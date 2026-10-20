@@ -73,6 +73,33 @@
     </div>
   }
 
+  @if (zone().children.length > 0) {
+    <!-- One line, never wrapped: its height is the one Rust counts in the zone's. -->
+    <nav
+      class="zone-children"
+      data-testid="board-zone-children"
+      [attr.aria-label]="'board.subFolders' | transloco: { name: folder.name }"
+    >
+      <span class="zone-children-label" aria-hidden="true">{{ 'board.subFoldersLabel' | transloco }}</span>
+      <div class="zone-children-list">
+        @for (child of zone().children; track child.id) {
+          <button
+            type="button"
+            class="zone-child"
+            data-testid="board-zone-child"
+            [attr.data-folder-id]="child.id"
+            [class]="'zone-child is-' + child.colour"
+            (click)="opened.emit(child.id)"
+          >
+            <i class="zone-child-swatch" aria-hidden="true"></i>
+            {{ child.name }}
+            <span class="zone-child-count">{{ child.count }}</span>
+          </button>
+        }
+      </div>
+    </nav>
+  }
+
   <div class="zone-body">
     @for (entry of zone().notes; track entry.note.id) {
       <!-- Dimmed, never dropped: reflowing the survivors throws away the spatial

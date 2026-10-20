@@ -152,6 +152,39 @@ export const folders = {
   label: () => $(`${testid('folder-option')}[aria-current="true"]`).getText(),
   option: (id: string) => $(`${testid('folder-option')}[data-folder-id="${id}"]`),
 
+  /**
+   * A folder's row dragged onto another row of the rail — a folder's or a space's — and let go
+   * there. Synthetic, like every input here: the embedded driver drops WebDriver actions.
+   */
+  async dragOnto(id: string, rowId: string): Promise<void> {
+    await browser.execute(
+      (from: string, to: string) => {
+        const grip = document.querySelector(from);
+        const target = document.querySelector(to);
+        if (!grip || !target) throw new Error('nothing to drag');
+        const start = grip.getBoundingClientRect();
+        const end =
+          target.querySelector('.node-row')?.getBoundingClientRect() ?? target.getBoundingClientRect();
+        const send = (type: string, x: number, y: number) =>
+          grip.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              clientX: x,
+              clientY: y,
+              button: 0,
+              pointerId: 1,
+            }),
+          );
+        send('pointerdown', start.left + 10, start.top + start.height / 2);
+        send('pointermove', end.left + 40, end.top + end.height / 2);
+        send('pointerup', end.left + 40, end.top + end.height / 2);
+      },
+      `${testid('folder-option')}[data-folder-id="${id}"]`,
+      `[data-rail-row][data-id="${rowId}"]`,
+    );
+  },
+
   names: (): Promise<string[]> => readEach(testid('folder-option'), 'text'),
 
   async create(name: string): Promise<void> {

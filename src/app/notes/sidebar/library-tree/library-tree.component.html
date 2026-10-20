@@ -38,7 +38,7 @@
       </form>
     }
 
-    <ul class="tree">
+    <ul class="tree" [attr.data-beat]="marks.beat() % 2" (pointermove)="drag.move($event)">
       <li>
         <div class="node-row">
           <span class="node-twisty-space node-icon" aria-hidden="true">✦</span>
@@ -55,11 +55,18 @@
         </div>
       </li>
 
-      @for (node of nodes(); track node.space.id) {
-        @let space = node.space;
+      @for (space of spaces(); track space.id) {
         @let open = isExpanded(space.id);
 
-        <li class="space-node">
+        <li
+          class="space-node node"
+          data-rail-row
+          data-kind="space"
+          [attr.data-id]="space.id"
+          [attr.data-moved]="marks.markOf(space.id)"
+          [class.drop-inside]="isDropTarget(space.id)"
+          [class.drop-refused]="isRefused(space.id)"
+        >
           <div class="node-row">
             <button
               type="button"
@@ -111,44 +118,7 @@
 
           @if (open) {
             <ul class="folders" [id]="folderListId(space.id)">
-              @for (folder of node.folders; track folder.id) {
-                <li>
-                  <div class="node-row">
-                    <button
-                      type="button"
-                      class="node-name node-folder"
-                      data-testid="folder-option"
-                      [attr.data-folder-id]="folder.id"
-                      [class.active]="folder.id === activeFolderId()"
-                      [attr.aria-current]="folder.id === activeFolderId() ? 'true' : null"
-                      (click)="chooseFolder(folder)"
-                    >
-                      <i
-                        class="folder-swatch"
-                        [class]="'folder-swatch is-' + folder.colour"
-                        aria-hidden="true"
-                      ></i>
-                      <span class="node-label">{{ folder.name }}</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="node-menu"
-                      data-testid="folder-edit"
-                      [attr.data-folder-id]="folder.id"
-                      [attr.aria-expanded]="editedFolder() === folder.id"
-                      [attr.aria-label]="'folders.optionsLabel' | transloco: { name: folder.name }"
-                      [attr.title]="'folders.optionsLabel' | transloco: { name: folder.name }"
-                      (click)="editFolder(folder.id)"
-                    >
-                      <span aria-hidden="true">⋯</span>
-                    </button>
-                  </div>
-
-                  @if (editedFolder() === folder.id) {
-                    <app-folder-editor [folder]="folder" (finished)="closePanels()" />
-                  }
-                </li>
-              }
+              <ng-container *ngTemplateOutlet="level; context: { $implicit: space.id, parentId: null }" />
 
               <!-- Under the active space alone: a folder is created in the space one is in,
                  and the row above is one click away from making that so. -->
@@ -180,7 +150,7 @@
                     </button>
                   }
                 </li>
-              } @else if (node.folders.length === 0) {
+              } @else if (childrenOf(space.id, null).length === 0) {
                 <li class="node-empty">{{ 'sidebar.noFolders' | transloco }}</li>
               }
             </ul>
@@ -188,5 +158,97 @@
         </li>
       }
     </ul>
+
+    <!-- Always there, so that what it comes to say is a change a screen reader announces. -->
+    <p
+      class="visually-hidden"
+      role="status"
+      data-testid="library-rail-moved"
+      [attr.data-said]="marks.said()[0]?.sentence"
+    >
+      @for (line of marks.said(); track line.beat) {
+        {{ line.key | transloco: line.params }}
+      }
+    </p>
   </nav>
 </app-rail-frame>
+
+<!-- One level of folders, and under each of them the next: the indent is the nesting. -->
+<ng-template #level let-spaceId let-parentId="parentId">
+  @for (folder of childrenOf(spaceId, parentId); track folder.id) {
+    @let nested = hasChildren(folder);
+    @let open = isExpanded(folder.id);
+    <li
+      class="node"
+      data-rail-row
+      data-kind="folder"
+      [attr.data-id]="folder.id"
+      [attr.data-space-id]="folder.spaceId"
+      [attr.data-moved]="marks.markOf(folder.id)"
+      [class.dragging]="drag.dragged() === folder.id"
+      [class.drop-inside]="isDropTarget(folder.id)"
+      [class.drop-refused]="isRefused(folder.id)"
+    >
+      <div class="node-row">
+        @if (nested) {
+          <button
+            type="button"
+            class="node-twisty"
+            data-testid="folder-twisty"
+            [attr.data-folder-id]="folder.id"
+            [attr.aria-expanded]="open"
+            [attr.aria-controls]="folderListId(folder.id)"
+            [attr.aria-label]="
+              (open ? 'sidebar.collapseFolder' : 'sidebar.expandFolder') | transloco: { name: folder.name }
+            "
+            [attr.title]="
+              (open ? 'sidebar.collapseFolder' : 'sidebar.expandFolder') | transloco: { name: folder.name }
+            "
+            (click)="toggleExpanded(folder.id)"
+          >
+            <span aria-hidden="true">{{ open ? '▾' : '▸' }}</span>
+          </button>
+        } @else {
+          <span class="node-twisty-space" aria-hidden="true"></span>
+        }
+        <button
+          type="button"
+          class="node-name node-folder"
+          data-testid="folder-option"
+          [attr.data-folder-id]="folder.id"
+          [class.active]="folder.id === activeFolderId()"
+          [attr.aria-current]="folder.id === activeFolderId() ? 'true' : null"
+          (click)="chooseFolder(folder)"
+          (keydown)="onFolderKeydown($event, folder)"
+          (pointerdown)="drag.start($event, folder)"
+          (pointerup)="endDrag($event)"
+          (pointercancel)="drag.cancel()"
+        >
+          <i class="folder-swatch" [class]="'folder-swatch is-' + folder.colour" aria-hidden="true"></i>
+          <span class="node-label">{{ folder.name }}</span>
+        </button>
+        <button
+          type="button"
+          class="node-menu"
+          data-testid="folder-edit"
+          [attr.data-folder-id]="folder.id"
+          [attr.aria-expanded]="editedFolder() === folder.id"
+          [attr.aria-label]="'folders.optionsLabel' | transloco: { name: folder.name }"
+          [attr.title]="'folders.optionsLabel' | transloco: { name: folder.name }"
+          (click)="editFolder(folder.id)"
+        >
+          <span aria-hidden="true">⋯</span>
+        </button>
+      </div>
+
+      @if (editedFolder() === folder.id) {
+        <app-folder-editor [folder]="folder" (finished)="closePanels()" />
+      }
+      @if (nested && open) {
+        <ul class="folders" [id]="folderListId(folder.id)">
+          <ng-container *ngTemplateOutlet="level; context: { $implicit: spaceId, parentId: folder.id }" />
+        </ul>
+      }
+    </li>
+  }
+</ng-template>

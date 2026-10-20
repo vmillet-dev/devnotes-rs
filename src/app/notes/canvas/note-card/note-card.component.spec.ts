@@ -85,7 +85,7 @@ describe('NoteCardComponent', () => {
         priority: 'urgent',
         attachmentCount: 3,
         placeholders: [{ name: 'host', defaultValue: '', value: '' }],
-        folder: { id: 'ops', name: 'Exploitation', colour: 'blue' },
+        folder: { id: 'ops', name: 'Exploitation', colour: 'blue', path: ['Exploitation'] },
       }),
     );
     await fixture.whenStable();
@@ -449,7 +449,10 @@ describe('NoteCardComponent', () => {
     it('names the folder and carries its colour as a swatch', async () => {
       fixture.componentRef.setInput(
         'note',
-        createNote({ folderId: 'perf', folder: { id: 'perf', name: 'Perf', colour: 'amber' } }),
+        createNote({
+          folderId: 'perf',
+          folder: { id: 'perf', name: 'Perf', colour: 'amber', path: ['Perf'] },
+        }),
       );
       await fixture.whenStable();
 
@@ -471,7 +474,10 @@ describe('NoteCardComponent', () => {
     it('is a neutral pill, never a tinted one like a tag', async () => {
       fixture.componentRef.setInput(
         'note',
-        createNote({ folder: { id: 'perf', name: 'Perf', colour: 'amber' }, tags: ['urgent'] }),
+        createNote({
+          folder: { id: 'perf', name: 'Perf', colour: 'amber', path: ['Perf'] },
+          tags: ['urgent'],
+        }),
       );
       await fixture.whenStable();
 

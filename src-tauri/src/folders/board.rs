@@ -30,7 +30,7 @@ pub const ZONE_BORDER: i32 = 1;
 /// The title, the count and the ⋯ trigger.
 pub const ZONE_HEADER: i32 = 38;
 /// The row of a zone's sub-folders under its title, when it has any: one line, never wrapped.
-pub const ZONE_SUBFOLDERS: i32 = 28;
+pub const ZONE_SUBFOLDERS: i32 = 30;
 /// How many cards a freshly drawn zone is wide.
 pub const ZONE_COLUMNS: i32 = 2;
 /// A zone with no note is still a target to drop one into.

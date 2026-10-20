@@ -4,7 +4,7 @@ import { debounced } from '@core/services/time/debounce';
 import { FoldersRepository } from '@core/data/folders.repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { BoardLayout } from '@core/model/board.model';
-import { NoteFiling } from '@core/model/folder.model';
+import { FolderMove, NoteFiling } from '@core/model/folder.model';
 import { NoteBody, NoteKind, NotePlacement, NotePriority, NoteTag } from '@core/model/note.model';
 import { BoardStore } from './board.store';
 import { NotesRevision } from './notes-revision';
@@ -29,7 +29,21 @@ export type Reversible =
     }
   | { readonly kind: 'priority'; readonly previous: readonly NotePriority[]; readonly count: number }
   | { readonly kind: 'file'; readonly previous: readonly NoteFiling[]; readonly count: number }
-  | { readonly kind: 'arrange'; readonly layout: BoardLayout; readonly count: number }
+  | {
+      readonly kind: 'arrange';
+      readonly layout: BoardLayout;
+      /** The board it was made on: its own notes alone have a place there. */
+      readonly rootId: string | null;
+      readonly count: number;
+    }
+  | {
+      readonly kind: 'folderMove';
+      readonly was: FolderMove;
+      /** What the bar says: the folder, and where it went — `null` at the top of its space. */
+      readonly name: string;
+      readonly into: string | null;
+      readonly count: number;
+    }
   | {
       readonly kind: 'convert';
       readonly id: string;
@@ -100,7 +114,9 @@ export class UndoStore {
       case 'file':
         return this.folders.fileBack(action.previous);
       case 'arrange':
-        return this.board.restoreLayout(action.layout);
+        return this.board.restoreLayout(action.layout, action.rootId);
+      case 'folderMove':
+        return (await this.folders.moveBack(action.was)) ? 1 : 0;
       case 'convert': {
         const { kind, language, content, items } = action.previous;
         await this.notes.update(action.id, { kind, language, content, items });

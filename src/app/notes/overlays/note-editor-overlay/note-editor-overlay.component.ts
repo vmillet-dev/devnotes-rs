@@ -67,6 +67,7 @@ import { LANGUAGE_CHOICES } from './language-choices';
 // On a line of its own: CodeMirror is its own chunk, loaded by the first snippet opened.
 import { CalcEditorComponent } from './calc-editor/calc-editor.component';
 import { CodeEditorComponent } from './code-editor/code-editor.component';
+import { folderChoices } from '@shared/controls/choice-menu/folder-choices';
 
 const TEXT_ENCODER = new TextEncoder();
 
@@ -187,10 +188,7 @@ export class NoteEditorOverlayComponent {
 
   protected readonly folderOptions = computed<readonly ChoiceOption[]>(() => {
     const spaceId = this.note()?.spaceId;
-    return this.folders
-      .allFolders()
-      .filter((folder) => folder.spaceId === spaceId)
-      .map((folder) => ({ id: folder.id, name: folder.name, colour: folder.colour }));
+    return folderChoices(this.folders.allFolders().filter((folder) => folder.spaceId === spaceId));
   });
 
   protected readonly spaceName = computed(

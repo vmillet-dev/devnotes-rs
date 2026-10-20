@@ -14,6 +14,7 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { BoardFrame, BoardNote, BoardPoint, BoardScope, BoardZone } from '@core/model/board.model';
 import { NoteActivation, NoteCardComponent } from '@notes/canvas/note-card/note-card.component';
+import { railRowAt } from '@shared/rail/row-drag';
 import { BoardTidyComponent } from './board-tidy/board-tidy.component';
 import { BoardZoneComponent } from './board-zone/board-zone.component';
 import {
@@ -41,6 +42,15 @@ export interface CardDrop {
   /** `null` is the free background, which takes the note out of its folder. */
   readonly folderId: string | null;
   readonly position: BoardPoint;
+}
+
+/**
+ * A card let go over a row of the library rail: filed there, at any depth. `folderId` of
+ * `null` is the space's own row, the top of the space.
+ */
+export interface RailDrop {
+  readonly rowId: string;
+  readonly folderId: string | null;
 }
 
 export interface ZoneMove {
@@ -80,6 +90,8 @@ export class BoardComponent {
   readonly height = input.required<number>();
   /** Nothing can be drawn or dropped without a space to file it into. */
   readonly editable = input(true);
+  /** The space on screen: a rail row of another one takes no card from here. */
+  readonly spaceId = input<string | null>(null);
   /**
    * Two counters, not two booleans: what matters is that the value **changed**, and a
    * board arranged twice running has to pan twice. See `panTo` for what they are for.
@@ -90,6 +102,9 @@ export class BoardComponent {
   readonly noteActivated = output<NoteActivation>();
   readonly folderOpened = output<string>();
   readonly cardDropped = output<CardDrop>();
+  /** Where a card dragged over the rail would be filed, as it moves; `null` once it leaves. */
+  readonly railHovered = output<RailDrop | null>();
+  readonly cardFiledOnRail = output<{ readonly noteId: string; readonly drop: RailDrop }>();
   readonly zoneMoved = output<ZoneMove>();
   readonly zoneDrawn = output<BoardFrame>();
   readonly folderNotesSelected = output<string>();
@@ -99,6 +114,8 @@ export class BoardComponent {
   readonly guideRequested = output<void>();
 
   protected readonly gesture = signal<Gesture | null>(null);
+  /** The rail row a dragged card is over: the board's zones give way to it. */
+  private readonly overRail = signal<RailDrop | null>(null);
 
   /** Where the pan was before an arrangement sent it home, so the undo can put it back. */
   private pannedFrom: BoardPoint | null = null;
@@ -106,7 +123,7 @@ export class BoardComponent {
   /** The zone a drop would land in right now, so it can say so before the pointer lifts. */
   protected readonly hoveredZone = computed<string | null>(() => {
     const drag = this.gesture();
-    if (!drag || drag.kind !== 'card' || !drag.moved) return null;
+    if (!drag || drag.kind !== 'card' || !drag.moved || this.overRail() !== null) return null;
 
     return zoneAt(this.zoneFrames(), { x: drag.to.x, y: drag.to.y });
   });
@@ -278,6 +295,7 @@ export class BoardComponent {
     if (!moved) return;
 
     this.gesture.set({ ...drag, moved, to: this.frameFor(drag, at) });
+    if (drag.kind === 'card') this.hoverRail(this.railDropAt(event));
   }
 
   /**
@@ -289,6 +307,8 @@ export class BoardComponent {
     const drag = this.gesture();
     this.gesture.set(null);
     this.release(event);
+    const rail = drag?.kind === 'card' && drag.moved ? this.railDropAt(event) : null;
+    this.hoverRail(null);
     if (!drag || !drag.moved) return;
 
     const at = this.surfacePoint(event);
@@ -297,6 +317,10 @@ export class BoardComponent {
       case 'card': {
         // What tells the click that follows to be dropped rather than to open the note.
         this.travelled = true;
+        if (rail) {
+          this.cardFiledOnRail.emit({ noteId: drag.id, drop: rail });
+          break;
+        }
         const position = cardPosition(drag, at);
         this.cardDropped.emit({
           noteId: drag.id,
@@ -330,6 +354,7 @@ export class BoardComponent {
   /** A pointer the system took back — a right-click, a gesture, a window that lost focus. */
   protected onPointerCancel(event: PointerEvent): void {
     this.gesture.set(null);
+    this.hoverRail(null);
     this.release(event);
   }
 
@@ -374,6 +399,26 @@ export class BoardComponent {
       this.document.removeEventListener('pointerdown', standDown, true);
       this.disarmMenuGuard = () => undefined;
     };
+  }
+
+  /** The rail row under the pointer, when it is a folder or the row of the space on screen. */
+  private railDropAt(event: PointerEvent): RailDrop | null {
+    const row = railRowAt(this.document, event.clientX, event.clientY);
+    const id = row?.dataset['id'];
+    const spaceId = this.spaceId();
+    if (!row || id === undefined || spaceId === null) return null;
+
+    if (row.dataset['kind'] === 'space') return id === spaceId ? { rowId: id, folderId: null } : null;
+    if (row.dataset['kind'] === 'folder' && row.dataset['spaceId'] === spaceId) {
+      return { rowId: id, folderId: id };
+    }
+    return null;
+  }
+
+  private hoverRail(drop: RailDrop | null): void {
+    if (this.overRail()?.rowId === drop?.rowId) return;
+    this.overRail.set(drop);
+    this.railHovered.emit(drop);
   }
 
   private release(event: PointerEvent): void {

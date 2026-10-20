@@ -46,6 +46,7 @@ const FOLDERS: readonly Folder[] = [
     name: 'Perf',
     colour: 'amber',
     createdAt: new Date('2026-01-01T10:00:00Z'),
+    parentId: null,
   },
 ];
 

@@ -30,10 +30,14 @@ export class FakeBoardRepository implements Pick<BoardRepository, keyof BoardRep
   queryCount = 0;
 
   /** Every batch it was handed, so a spec can assert one gesture wrote once. */
-  readonly saved: { zones: readonly ZonePlacement[]; cards: readonly CardPlacement[] }[] = [];
+  readonly saved: {
+    rootId: string | null;
+    zones: readonly ZonePlacement[];
+    cards: readonly CardPlacement[];
+  }[] = [];
 
   /** Each tidy-up it was asked for, and what it answers with. */
-  readonly arranged: { spaceId: string; scope: BoardScope }[] = [];
+  readonly arranged: { spaceId: string; rootId: string | null; scope: BoardScope }[] = [];
   arrangement: BoardArrangement = { moved: 0, previous: { zones: [], cards: [] } };
 
   /** When set, the next call to any method rejects with this error, then clears. */
@@ -55,15 +59,19 @@ export class FakeBoardRepository implements Pick<BoardRepository, keyof BoardRep
     });
   }
 
-  saveLayout(zones: readonly ZonePlacement[], cards: readonly CardPlacement[]): Promise<void> {
+  saveLayout(
+    rootId: string | null,
+    zones: readonly ZonePlacement[],
+    cards: readonly CardPlacement[],
+  ): Promise<void> {
     return guard(this, () => {
-      this.saved.push({ zones: [...zones], cards: [...cards] });
+      this.saved.push({ rootId, zones: [...zones], cards: [...cards] });
     });
   }
 
-  arrange(spaceId: string, scope: BoardScope): Promise<BoardArrangement> {
+  arrange(spaceId: string, rootId: string | null, scope: BoardScope): Promise<BoardArrangement> {
     return guard(this, () => {
-      this.arranged.push({ spaceId, scope });
+      this.arranged.push({ spaceId, rootId, scope });
       return this.arrangement;
     });
   }
@@ -74,6 +82,7 @@ export function fakeZone(overrides: Partial<BoardZone> & Pick<BoardZone, 'folder
   return {
     frame: { x: 16, y: 16, width: 516, height: 200 },
     notes: [],
+    children: [],
     ...overrides,
   };
 }

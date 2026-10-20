@@ -895,3 +895,98 @@
     }
   }
 }
+
+// A rail's rows as a move lands on them: the row dragged faded, the row that would hold it lit,
+// and, after a move, the row and what holds it marked for `--motion-mark`. The HTTP rail and
+// the library's both draw it; `$lines` adds the line a drop between two rows leaves.
+@mixin rail-landing($lines: false) {
+  .node {
+    position: relative;
+
+    &.dragging {
+      opacity: 0.45;
+    }
+
+    // Where a drop would land: a line between two rows, or the row lit when it would hold it.
+    @if $lines {
+      &.drop-before::before,
+      &.drop-after::after {
+        content: '';
+        position: absolute;
+        right: 4px;
+        left: calc(var(--depth, 0) * var(--indent) + 4px);
+        height: 2px;
+        border-radius: 1px;
+        background: var(--amber-text);
+        pointer-events: none;
+      }
+
+      &.drop-before::before {
+        top: -1px;
+      }
+
+      &.drop-after::after {
+        bottom: -1px;
+      }
+    }
+
+    &.drop-inside > .node-row {
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 1px var(--amber-dim);
+      background: rgba(var(--amber-rgb), 0.08);
+    }
+
+    // A move made with the keys: the row in the accent, what now holds it ringed as a drop
+    // target is, for as long as `MARK_MS`. The mark is the style and the fade comes down to
+    // it: where animations are cut short, it is still there.
+    &[data-moved='row'] > .node-row {
+      border-radius: 6px;
+      background: rgba(var(--amber-rgb), 0.1);
+      animation: moved-row-a var(--motion-mark) ease-out;
+    }
+
+    &[data-moved='parent'] > .node-row {
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 1px var(--amber-dim);
+      animation: moved-parent-a var(--motion-mark) ease-out;
+    }
+  }
+
+  // ⚠️ Two names for one fade: a row moved twice keeps its mark, and only a change of
+  // `animation-name` starts an animation again.
+  .tree[data-beat='1'] .node[data-moved='row'] > .node-row {
+    animation-name: moved-row-b;
+  }
+
+  .tree[data-beat='1'] .node[data-moved='parent'] > .node-row {
+    animation-name: moved-parent-b;
+  }
+
+  @keyframes moved-row-a {
+    @include rail-moved-row;
+  }
+
+  @keyframes moved-row-b {
+    @include rail-moved-row;
+  }
+
+  @keyframes moved-parent-a {
+    @include rail-moved-parent;
+  }
+
+  @keyframes moved-parent-b {
+    @include rail-moved-parent;
+  }
+}
+
+@mixin rail-moved-row {
+  from {
+    background: rgba(var(--amber-rgb), 0.32);
+  }
+}
+
+@mixin rail-moved-parent {
+  from {
+    background: rgba(var(--amber-rgb), 0.16);
+  }
+}

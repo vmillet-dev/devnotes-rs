@@ -1,5 +1,5 @@
 <div class="undo-bar" data-testid="undo-bar" role="status">
-  <span class="undo-text">{{ message() | transloco: { count: action().count } }}</span>
+  <span class="undo-text">{{ message() | transloco: params() }}</span>
   <!-- The key is on the control, not in the sentence: the card that armed the note named
        Escape, and the bar names it too. -->
   <button type="button" class="undo-action" data-testid="undo-restore" (click)="undone.emit()">

@@ -1,10 +1,11 @@
-import { browser, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
+import { board } from '../pageobjects/board.page.js';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { crumb, selectionBar } from '../pageobjects/header.page.js';
 import { folders, spaces } from '../pageobjects/sidebar.page.js';
-import { eventually, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
+import { eventually, press, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -415,6 +416,75 @@ describe('Folders', () => {
       await editor.close();
       await bridge.deleteSpace(elsewhere.id, homeId);
       await reloadInHomeSpace();
+    });
+  });
+  /** A folder holds folders: one tree per space, and a board for each level of it. */
+  describe('folders inside folders', () => {
+    let bases = '';
+    let index = '';
+    const title = 'Index partiel sur jobs';
+
+    before(async () => {
+      bases = (await bridge.createFolder({ spaceId: homeId, name: 'Bases' })).id;
+      index = (await bridge.createFolder({ spaceId: homeId, name: 'Index' })).id;
+      const note = await bridge.createNote(draft({ spaceId: homeId, title }));
+      await bridge.fileNotes([note.id], index);
+      await reloadInHomeSpace();
+      await folders.open();
+    });
+
+    it('takes a folder dropped on another into it, and draws it there', async () => {
+      await folders.dragOnto(index, bases);
+
+      await eventually(
+        () => bridge.listFolders(homeId),
+        (listed) => listed.find((folder) => folder.id === index)?.parentId === bases,
+        'the folder to be filed under the other',
+      );
+      await $(`[data-rail-row][data-id="${bases}"] [data-rail-row][data-id="${index}"]`).waitForExist({
+        timeout: 5_000,
+      });
+    });
+
+    it('lists the notes of everything under an opened folder, each naming its own', async () => {
+      await board.show('list');
+      await folders.option(bases).click();
+      await waitForCanvas();
+
+      expect(await crumb.name()).toBe('Bases');
+      await canvas.waitForCard(title);
+      const chip = (await canvas.cardWithTitle(title)).$(testid('note-card-folder'));
+      expect(await chip.getText()).toBe('Index');
+      expect(await chip.getAttribute('title')).toBe('Bases › Index');
+    });
+
+    /** Opened from the board, a folder that holds folders is a board of its own, one level down. */
+    it('opens the board on a folder, with its sub-folder as a zone, and goes up a level on Escape', async () => {
+      await crumb.back();
+      await waitForCanvas();
+      await board.show('board');
+      await board.openZone('Bases');
+
+      await eventually(
+        () => board.zoneNames(),
+        (names) => names.length === 1 && names[0] === 'Index',
+        'the board of « Bases », with « Index » as its zone',
+      );
+      expect(await crumb.name()).toBe('Bases');
+      expect(await board.zoneTitles('Index')).toEqual([title]);
+
+      await press('Escape');
+      await eventually(
+        () => crumb.isShowing(),
+        (showing) => !showing,
+        'the space board back',
+      );
+      await eventually(
+        () => board.zoneNames(),
+        (names) => names.includes('Bases') && !names.includes('Index'),
+        'the space board, « Index » inside the zone of « Bases »',
+      );
+      await board.show('list');
     });
   });
 });

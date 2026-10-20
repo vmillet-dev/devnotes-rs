@@ -16,7 +16,7 @@ const SPACES: readonly Space[] = [
 ];
 
 function folder(id: string, spaceId: string, name: string): Folder {
-  return { id, spaceId, name, colour: 'blue', createdAt: new Date('2026-01-01T10:00:00Z') };
+  return { id, spaceId, name, colour: 'blue', createdAt: new Date('2026-01-01T10:00:00Z'), parentId: null };
 }
 
 const FOLDERS: readonly Folder[] = [
@@ -258,5 +258,86 @@ describe('FoldersStore', () => {
       spaces.selectSpace('veille');
       expect(store.activeFolderId()).toBeNull();
     });
+  });
+});
+
+describe('FoldersStore, nested', () => {
+  // SQL › Perf › Index, and Migrations beside Perf.
+  const NESTED: readonly Folder[] = [
+    folder('sql-f', 'sql', 'SQL'),
+    { ...folder('perf', 'sql', 'Perf'), parentId: 'sql-f' },
+    { ...folder('index', 'sql', 'Index'), parentId: 'perf' },
+    { ...folder('migrations', 'sql', 'Migrations'), parentId: 'sql-f' },
+  ];
+
+  it('says the path of the folder open and whether it holds folders', async () => {
+    const harness = await createStore(NESTED);
+    await inSpace(harness, 'sql');
+
+    harness.store.selectFolder('perf');
+
+    expect(harness.store.activePath().map((each) => each.name)).toEqual(['SQL', 'Perf']);
+    expect(harness.store.activeHasChildren()).toBe(true);
+    harness.store.selectFolder('index');
+    expect(harness.store.activeHasChildren()).toBe(false);
+  });
+
+  it('goes up a level at a time, then out', async () => {
+    const harness = await createStore(NESTED);
+    await inSpace(harness, 'sql');
+    harness.store.selectFolder('index');
+
+    expect(harness.store.goUp()).toBe(true);
+    expect(harness.store.activeFolderId()).toBe('perf');
+    harness.store.goUp();
+    harness.store.goUp();
+    expect(harness.store.activeFolderId()).toBeNull();
+    expect(harness.store.goUp()).toBe(false);
+  });
+
+  it('lists a level of one space by name', async () => {
+    const harness = await createStore(NESTED);
+
+    expect(harness.store.childrenOf('sql-f', 'sql').map((each) => each.name)).toEqual(['Migrations', 'Perf']);
+  });
+
+  it('creates a folder under another', async () => {
+    const harness = await createStore(NESTED);
+    await inSpace(harness, 'sql');
+
+    const created = await harness.store.createFolder('Requêtes', 'perf');
+
+    expect(created?.parentId).toBe('perf');
+  });
+
+  it('moves a folder, adopts its new parent and answers where it was', async () => {
+    const harness = await createStore(NESTED);
+    await inSpace(harness, 'sql');
+    const before = harness.revision.current();
+
+    const was = await harness.store.moveFolder('perf', 'migrations');
+
+    expect(was).toEqual({ folderId: 'perf', parentId: 'sql-f', frame: null });
+    expect(harness.store.allFolders().find((each) => each.id === 'perf')?.parentId).toBe('migrations');
+    expect(harness.revision.current()).toBeGreaterThan(before);
+  });
+
+  it('says so when a move fails, and changes nothing', async () => {
+    const harness = await createStore(NESTED);
+    harness.repository.failNext = new Error('refused');
+
+    expect(await harness.store.moveFolder('perf', null)).toBeNull();
+    expect(harness.store.allFolders().find((each) => each.id === 'perf')?.parentId).toBe('sql-f');
+  });
+
+  it('hands what a deleted folder held to its parent, and opens the parent', async () => {
+    const harness = await createStore(NESTED);
+    await inSpace(harness, 'sql');
+    harness.store.selectFolder('perf');
+
+    await harness.store.deleteFolder('perf');
+
+    expect(harness.store.activeFolderId()).toBe('sql-f');
+    expect(harness.store.allFolders().find((each) => each.id === 'index')?.parentId).toBe('sql-f');
   });
 });

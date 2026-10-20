@@ -238,3 +238,12 @@ app-folder-editor {
   outline: 2px solid var(--amber-edge);
   outline-offset: 1px;
 }
+
+@include rail-landing;
+
+// A row a folder cannot go into — itself, what it holds, another space: said in red rather
+// than left silent, which reads as unheard.
+.node.drop-refused > .node-row {
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--red);
+}

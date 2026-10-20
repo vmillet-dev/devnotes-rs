@@ -32,6 +32,7 @@ import {
   sameFrame,
   samePoint,
 } from '@core/model/board.model';
+import { NoteFiling, pathOf } from '@core/model/folder.model';
 import { Note } from '@core/model/note.model';
 import { FoldersStore } from './folders.store';
 import { Criteria, NotesQueryStore } from './notes-query.store';
@@ -48,6 +49,7 @@ export const LAYOUT_SAVE_DEBOUNCE_MS = 400;
 
 interface BoardParams {
   readonly spaceId: string;
+  readonly rootId: string | null;
   readonly criteria: Criteria;
   /** Bumped by whoever wrote notes from outside: the board re-reads on its own. */
   readonly revision: number;
@@ -56,6 +58,7 @@ interface BoardParams {
 /** `criteria` by identity: its own `computed` keeps the object while it compares equal. */
 const sameParams = sameBy<BoardParams>({
   spaceId: Object.is,
+  rootId: Object.is,
   criteria: Object.is,
   revision: Object.is,
 });
@@ -120,6 +123,9 @@ function sittingIn(
   return staged.has(id) ? (staged.get(id) ?? null) : inTheView;
 }
 
+/** A card filed off this board, by a drop on the rail: it sits in no zone and not on the ground. */
+const ELSEWHERE = '\u0000elsewhere';
+
 /** `undefined` on either side is "do not ask", and only equal to itself. */
 function sameBoardParams(a: BoardParams | undefined, b: BoardParams | undefined): boolean {
   if (a === undefined || b === undefined) return a === b;
@@ -157,10 +163,20 @@ export class BoardStore {
   readonly isBoard = computed(() => this.mode() === 'board');
 
   /**
-   * Whether the board is actually on screen: an open folder is a flat grid whatever the switch
-   * says. Spelled once, for the page, the canvas keyboard and the selection.
+   * The folder whose board this is: the open one when it holds folders, `null` for the space's.
+   * An open folder with none is a flat grid whatever the switch says.
    */
-  readonly isShowing = computed(() => this.isBoard() && this.openFolder.activeFolderId() === null);
+  readonly root = computed<string | null>(() =>
+    this.openFolder.activeHasChildren() ? this.openFolder.activeFolderId() : null,
+  );
+
+  /**
+   * Whether the board is actually on screen. Spelled once, for the page, the canvas keyboard
+   * and the selection.
+   */
+  readonly isShowing = computed(
+    () => this.isBoard() && (this.openFolder.activeFolderId() === null || this.root() !== null),
+  );
 
   /**
    * `undefined` keeps the board idle on the list view. The `equal` comparator keeps the
@@ -171,7 +187,12 @@ export class BoardStore {
       const spaceId = this.spaces.activeSpaceId();
       if (spaceId === null || !this.isBoard()) return undefined;
 
-      return { spaceId, criteria: this.canvas.criteria(), revision: this.revision.current() };
+      return {
+        spaceId,
+        rootId: this.root(),
+        criteria: this.canvas.criteria(),
+        revision: this.revision.current(),
+      };
     },
     { equal: sameBoardParams },
   );
@@ -185,6 +206,7 @@ export class BoardStore {
         const query: BoardQuery = {
           ...params.criteria,
           spaceId: params.spaceId,
+          rootId: params.rootId,
           // Untracked: the current instant, without the query re-running on every tick.
           now: untracked(() => this.clock.now()),
         };
@@ -272,6 +294,10 @@ export class BoardStore {
     () => this.zones().reduce((total, zone) => total + zone.notes.length, 0) + this.loose().length,
   );
 
+  private readonly _railTarget = signal<string | null>(null);
+  /** The rail row a card dragged on the board is over, lit there as a drop target. */
+  readonly railTarget = this._railTarget.asReadonly();
+
   private readonly _pendingZone = signal<BoardFrame | null>(null);
   /** Where a band was drawn, held until it has been given a name. */
   readonly pendingZone = this._pendingZone.asReadonly();
@@ -344,8 +370,9 @@ export class BoardStore {
   }
 
   /**
-   * A drop decides membership both ways; `folderId` of `null` unfiles the note where it was
-   * dropped. Through the batch command, the path the selection bar takes too.
+   * A drop decides membership both ways; `folderId` of `null` is the board's own ground, which
+   * files the note in the root — loose on the space's board. Through the batch command, the path
+   * the selection bar takes too.
    */
   async dropCard(noteId: string, folderId: string | null, position: BoardPoint): Promise<boolean> {
     if (folderId === null) {
@@ -353,8 +380,9 @@ export class BoardStore {
     }
     this.stagedFiling.update((staged) => new Map(staged).set(noteId, folderId));
 
+    const into = folderId ?? this.root();
     const filed = await this.notifier.attempt('errors.fileFailed', () =>
-      this.folders.fileMany([noteId], folderId),
+      this.folders.fileMany([noteId], into),
     );
 
     // Dropped on failure, where a refused place is kept: a membership the server refused is a
@@ -368,6 +396,43 @@ export class BoardStore {
       this.revision.bump();
     }
     return true;
+  }
+
+  setRailTarget(rowId: string | null): void {
+    this._railTarget.set(rowId);
+  }
+
+  /**
+   * A card let go over a row of the rail, filed there at any depth — `null` is the top of the
+   * space. Staged in the zone that holds that folder on this board, or off it, so the card does
+   * not snap back for a round trip; answers the filings, for the caller to offer back.
+   */
+  async fileFromRail(noteId: string, folderId: string | null): Promise<readonly NoteFiling[] | null> {
+    this.stagedFiling.update((staged) => new Map(staged).set(noteId, this.seatOf(folderId)));
+
+    const filed = await this.notifier.attempt('errors.fileFailed', () =>
+      this.folders.fileMany([noteId], folderId),
+    );
+    if (filed === null) {
+      this.unstageFiling(noteId);
+      return null;
+    }
+    if (filed.length > 0) this.revision.bump();
+    return filed;
+  }
+
+  /** Where a note filed in `folderId` sits on this board: a zone, the ground (`null`), or off it. */
+  private seatOf(folderId: string | null): string | null {
+    const root = this.root();
+    if (folderId === root) return null;
+    if (folderId === null) return ELSEWHERE;
+
+    const path = pathOf(this.openFolder.allFolders(), folderId);
+    const below = root === null ? 0 : path.findIndex((folder) => folder.id === root) + 1;
+    const zone = below > 0 || root === null ? path[below] : undefined;
+    return zone !== undefined && this.zones().some((each) => each.folder.id === zone.id)
+      ? zone.id
+      : ELSEWHERE;
   }
 
   private unstageFiling(noteId: string): void {
@@ -398,15 +463,16 @@ export class BoardStore {
     return true;
   }
 
-  /** Drawing a band on empty canvas creates a folder, placed where it was drawn. */
+  /** Drawing a band on empty canvas creates a folder in the board's root, placed where it was drawn. */
   async createZone(name: string, frame: BoardFrame): Promise<boolean> {
     const trimmed = name.trim();
     const spaceId = this.spaces.activeSpaceId();
     if (!trimmed || spaceId === null) return false;
 
+    const rootId = this.root();
     const created = await this.notifier.attempt(
       'errors.folderCreateFailed',
-      () => this.folders.create({ spaceId, name: trimmed }),
+      () => this.folders.create({ spaceId, name: trimmed, parentId: rootId }),
       { name: trimmed },
     );
     if (!created) return false;
@@ -414,7 +480,7 @@ export class BoardStore {
     // Written straight through: the board is about to reload, and a staged frame keyed on a
     // folder the reload has only just heard of would be dropped.
     await this.notifier.attempt('errors.boardSaveFailed', () =>
-      this.repository.saveLayout([{ folderId: created.id, frame }], []),
+      this.repository.saveLayout(rootId, [{ folderId: created.id, frame }], []),
     );
     this.revision.bump();
     return true;
@@ -425,8 +491,9 @@ export class BoardStore {
     const cards = [...this.stagedCards()].map(([noteId, position]) => ({ noteId, position }));
     if (zones.length === 0 && cards.length === 0) return;
 
+    const rootId = this.root();
     const written = await this.notifier.attempt('errors.boardSaveFailed', () =>
-      this.repository.saveLayout(zones, cards),
+      this.repository.saveLayout(rootId, zones, cards),
     );
 
     // Kept either way: a failure without it snaps every card back silently, and a success
@@ -437,15 +504,16 @@ export class BoardStore {
   }
 
   /**
-   * Puts the space back in order, as far as `scope` allows, and answers what moved and the
-   * layout it replaced, for the caller to offer back.
+   * Puts the board on screen back in order, as far as `scope` allows, and answers what moved and
+   * the layout it replaced, for the caller to offer back.
    */
   async arrange(scope: BoardScope): Promise<BoardArrangement | null> {
     const spaceId = this.spaces.activeSpaceId();
     if (spaceId === null) return null;
 
+    const rootId = this.root();
     const done = await this.notifier.attempt('errors.boardArrangeFailed', () =>
-      this.repository.arrange(spaceId, scope),
+      this.repository.arrange(spaceId, rootId, scope),
     );
     if (done === null) return null;
 
@@ -458,9 +526,9 @@ export class BoardStore {
     return done;
   }
 
-  /** The undo of `arrange`, and the count is what the banner needs back. */
-  async restoreLayout(layout: BoardLayout): Promise<number> {
-    await this.repository.saveLayout(layout.zones, layout.cards);
+  /** The undo of `arrange`, on the board it was made on; the count is what the banner needs back. */
+  async restoreLayout(layout: BoardLayout, rootId: string | null): Promise<number> {
+    await this.repository.saveLayout(rootId, layout.zones, layout.cards);
     this.stagedFrames.set(new Map());
     this.stagedCards.set(new Map());
     this._restorations.update((count) => count + 1);

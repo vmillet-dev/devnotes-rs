@@ -86,10 +86,11 @@ export class NoteBatchStore {
    * actually **moved**: a board already in order opens no undo window.
    */
   async arrangeBoard(scope: BoardScope): Promise<void> {
+    const rootId = this.board.root();
     const done = await this.board.arrange(scope);
     if (!done) return;
 
-    this.undo.record({ kind: 'arrange', layout: done.previous, count: done.moved });
+    this.undo.record({ kind: 'arrange', layout: done.previous, rootId, count: done.moved });
   }
 
   /** `null` when there was nothing to act on, or when the batch failed. */

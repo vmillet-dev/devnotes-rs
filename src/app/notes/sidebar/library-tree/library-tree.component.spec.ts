@@ -1,9 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Folder } from '@core/model/folder.model';
 import { Space } from '@core/model/space.model';
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
-import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
+import { FoldersStore } from '@core/state/folders.store';
+import { UndoStore } from '@core/state/undo.store';
+import { FakeFoldersRepository } from '@testing/fake-folders-repository';
+import { provideAppTesting } from '@testing/testing.providers';
 import { LibraryTreeComponent } from './library-tree.component';
 
 const SPACES: readonly Space[] = [
@@ -12,7 +15,7 @@ const SPACES: readonly Space[] = [
 ];
 
 function folder(id: string, spaceId: string, name: string): Folder {
-  return { id, spaceId, name, colour: 'amber', createdAt: new Date('2026-01-01T10:00:00Z') };
+  return { id, spaceId, name, colour: 'amber', createdAt: new Date('2026-01-01T10:00:00Z'), parentId: null };
 }
 
 const FOLDERS: readonly Folder[] = [
@@ -44,7 +47,7 @@ describe('LibraryTreeComponent', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({
       imports: [LibraryTreeComponent],
-      providers: [provideTranslocoTesting()],
+      providers: [provideAppTesting({ spaces: SPACES, folders: FOLDERS })],
     });
     fixture = TestBed.createComponent(LibraryTreeComponent);
     fixture.componentRef.setInput('spaces', SPACES);
@@ -68,7 +71,8 @@ describe('LibraryTreeComponent', () => {
     expect(spaces[0]).toContain('SQL');
     // The 📌 is decorative, so the row carries a text twin next to it.
     expect(spaces[0]).toContain('Espace épinglé');
-    expect(names('[data-testid="folder-option"]')).toEqual(['Perf', 'Migrations', 'Async']);
+    // By name: siblings have no order of their own.
+    expect(names('[data-testid="folder-option"]')).toEqual(['Migrations', 'Perf', 'Async']);
   });
 
   /**
@@ -80,8 +84,8 @@ describe('LibraryTreeComponent', () => {
     expect(names('.node-label')).toEqual([
       'Tous les espaces',
       'SQL',
-      'Perf',
       'Migrations',
+      'Perf',
       'Nouveau dossier',
       'Rust',
       'Async',
@@ -204,5 +208,171 @@ describe('LibraryTreeComponent', () => {
       ...root().querySelectorAll('[data-testid="choice-panel-space-move-target"] [data-option-id]'),
     ];
     expect(targets.map((option) => option.getAttribute('data-option-id'))).toEqual(['rust']);
+  });
+});
+
+/** Folders inside folders: drawn under their parent, moved by a drag or by `Alt` and the arrows. */
+describe('LibraryTreeComponent, nested', () => {
+  // SQL: Base › (Perf › Index), Archives; Rust: Async.
+  const NESTED: readonly Folder[] = [
+    folder('base', 'sql', 'Base'),
+    { ...folder('perf', 'sql', 'Perf'), parentId: 'base' },
+    { ...folder('index', 'sql', 'Index'), parentId: 'perf' },
+    folder('archives', 'sql', 'Archives'),
+    folder('async', 'rust', 'Async'),
+  ];
+
+  let fixture: ComponentFixture<LibraryTreeComponent>;
+  let repository: FakeFoldersRepository;
+
+  const el = <T extends HTMLElement = HTMLElement>(selector: string): T | null =>
+    (fixture.nativeElement as HTMLElement).querySelector<T>(selector);
+  const name = (id: string) => el(`[data-testid="folder-option"][data-folder-id="${id}"]`)!;
+  const row = (id: string) => el(`[data-rail-row][data-id="${id}"]`)!;
+  const said = () => el('[data-testid="library-rail-moved"]')?.textContent?.trim();
+
+  beforeEach(async () => {
+    repository = new FakeFoldersRepository(NESTED);
+    TestBed.configureTestingModule({
+      providers: [provideAppTesting({ spaces: SPACES, foldersRepository: repository })],
+    });
+    await vi.waitFor(() => expect(TestBed.inject(FoldersStore).allFolders()).toHaveLength(NESTED.length));
+    fixture = TestBed.createComponent(LibraryTreeComponent);
+    fixture.componentRef.setInput('spaces', SPACES);
+    fixture.componentRef.setInput('folders', NESTED);
+    fixture.componentRef.setInput('activeSpaceId', 'sql');
+    fixture.componentRef.setInput('activeFolderId', null);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    fixture.nativeElement.remove();
+  });
+
+  it('draws a folder under its parent, siblings by name, with a twisty where it holds folders', () => {
+    const names = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="folder-option"]'),
+    ].map((each) => each.getAttribute('data-folder-id'));
+
+    expect(names).toEqual(['archives', 'base', 'perf', 'index', 'async']);
+    expect(row('base').querySelector('.folders [data-id="perf"]')).not.toBeNull();
+    expect(el('[data-testid="folder-twisty"][data-folder-id="base"]')).not.toBeNull();
+    expect(el('[data-testid="folder-twisty"][data-folder-id="archives"]')).toBeNull();
+  });
+
+  it('folds a folder away, and opens it again', async () => {
+    el('[data-testid="folder-twisty"][data-folder-id="perf"]')!.click();
+    await fixture.whenStable();
+    expect(el('[data-id="index"]')).toBeNull();
+
+    el('[data-testid="folder-twisty"][data-folder-id="perf"]')!.click();
+    await fixture.whenStable();
+    expect(el('[data-id="index"]')).not.toBeNull();
+  });
+
+  it('moves a folder into the one above it with Alt+→, says so and offers it back', async () => {
+    name('base').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, bubbles: true }),
+    );
+
+    await vi.waitFor(() => expect(said()).toBe('« Base » est maintenant dans Archives.'));
+    expect((await repository.loadAll('sql')).find((each) => each.id === 'base')?.parentId).toBe('archives');
+    expect(TestBed.inject(UndoStore).last()).toMatchObject({
+      kind: 'folderMove',
+      name: 'Base',
+      into: 'Archives',
+    });
+  });
+
+  it('takes a folder up a level with Alt+←, and refuses at the top', async () => {
+    name('perf').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true, bubbles: true }),
+    );
+    await vi.waitFor(() => expect(said()).toBe('« Perf » est maintenant en haut de SQL.'));
+    expect((await repository.loadAll('sql')).find((each) => each.id === 'perf')?.parentId).toBeNull();
+
+    name('archives').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true, bubbles: true }),
+    );
+    await vi.waitFor(() => expect(said()).toBe('« Archives » est déjà en haut de son espace.'));
+    name('archives').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, bubbles: true }),
+    );
+    await vi.waitFor(() => expect(said()).toBe('Aucun dossier au-dessus de « Archives » pour l’y ranger.'));
+  });
+
+  /** jsdom has no layout: the row under the pointer is said by hand. */
+  function pointAt(target: HTMLElement): void {
+    document.elementFromPoint = () => target;
+  }
+
+  function drag(from: HTMLElement): void {
+    from.dispatchEvent(
+      new PointerEvent('pointerdown', { button: 0, pointerId: 1, clientX: 10, clientY: 10, bubbles: true }),
+    );
+    from.dispatchEvent(
+      new PointerEvent('pointermove', { pointerId: 1, clientX: 10, clientY: 60, bubbles: true }),
+    );
+  }
+
+  it('moves a folder dragged onto another, and the click that ends the drag opens nothing', async () => {
+    const opened: string[] = [];
+    fixture.componentInstance.folderOpened.subscribe((each) => opened.push(each.id));
+    pointAt(row('archives'));
+
+    drag(name('perf'));
+    await fixture.whenStable();
+    expect(row('archives').classList).toContain('drop-inside');
+    expect(row('perf').classList).toContain('dragging');
+
+    name('perf').dispatchEvent(
+      new PointerEvent('pointerup', { pointerId: 1, clientX: 10, clientY: 60, bubbles: true }),
+    );
+    name('perf').click();
+
+    await vi.waitFor(async () =>
+      expect((await repository.loadAll('sql')).find((each) => each.id === 'perf')?.parentId).toBe('archives'),
+    );
+    expect(opened).toEqual([]);
+  });
+
+  it('refuses a folder dragged into what it holds, in red, and says it', async () => {
+    pointAt(row('index'));
+
+    drag(name('base'));
+    await fixture.whenStable();
+    expect(row('index').classList).toContain('drop-refused');
+
+    name('base').dispatchEvent(
+      new PointerEvent('pointerup', { pointerId: 1, clientX: 10, clientY: 60, bubbles: true }),
+    );
+    await vi.waitFor(() => expect(said()).toBe('« Base » ne peut pas aller là.'));
+    expect((await repository.loadAll('sql')).find((each) => each.id === 'base')?.parentId).toBeNull();
+  });
+
+  it('brings a folder dropped on its space row back to the top, and refuses another space', async () => {
+    pointAt(row('rust'));
+    drag(name('perf'));
+    await fixture.whenStable();
+    expect(row('rust').classList).toContain('drop-refused');
+    name('perf').dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, bubbles: true }));
+
+    pointAt(row('sql'));
+    drag(name('perf'));
+    name('perf').dispatchEvent(
+      new PointerEvent('pointerup', { pointerId: 1, clientX: 10, clientY: 60, bubbles: true }),
+    );
+    await vi.waitFor(async () =>
+      expect((await repository.loadAll('sql')).find((each) => each.id === 'perf')?.parentId).toBeNull(),
+    );
+  });
+
+  it('lights the row a card dragged on the board would be filed into', async () => {
+    fixture.componentRef.setInput('cardTarget', 'index');
+    await fixture.whenStable();
+
+    expect(row('index').classList).toContain('drop-inside');
   });
 });

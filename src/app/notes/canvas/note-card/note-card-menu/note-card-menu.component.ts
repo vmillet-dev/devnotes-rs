@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { Folder } from '@core/model/folder.model';
+import { Folder, treeOrder } from '@core/model/folder.model';
 import { Priority } from '@core/model/note.model';
 import { PRIORITIES } from '@core/model/priority.model';
 import { Space } from '@core/model/space.model';
@@ -87,9 +87,17 @@ export class NoteCardMenuComponent {
     this.spaces().filter((space) => space.id !== this.currentSpaceId()),
   );
 
-  /** Where it already is is not somewhere to file it. */
-  protected readonly fileTargets = computed<readonly Folder[]>(() =>
-    this.folders().filter((folder) => folder.id !== this.currentFolderId()),
+  /** The tree in order, a nested folder hinted by the path above it; where it is, left out. */
+  protected readonly fileTargets = computed(() =>
+    treeOrder(this.folders())
+      .filter(({ folder }) => folder.id !== this.currentFolderId())
+      .map(({ folder, path }) => ({
+        folder,
+        above: path
+          .slice(0, -1)
+          .map((each) => each.name)
+          .join(' › '),
+      })),
   );
 
   constructor() {

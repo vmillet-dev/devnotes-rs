@@ -86,4 +86,17 @@ describe('UndoBarComponent', () => {
 
     expect(emitted).toBe(1);
   });
+
+  it('names the folder moved and where it went', async () => {
+    const was = { folderId: 'perf', parentId: null, frame: null };
+    fixture.componentRef.setInput('action', { kind: 'folderMove', was, name: 'Perf', into: 'SQL', count: 1 });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.undo-text').textContent).toContain(
+      '« Perf » est maintenant dans SQL',
+    );
+
+    fixture.componentRef.setInput('action', { kind: 'folderMove', was, name: 'Perf', into: null, count: 1 });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.undo-text').textContent).toContain('en haut de l’espace');
+  });
 });

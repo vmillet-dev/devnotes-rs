@@ -13,6 +13,7 @@ const PERF: Folder = {
   name: 'Perf',
   colour: 'amber',
   createdAt: new Date('2026-01-01T10:00:00Z'),
+  parentId: null,
 };
 
 describe('BoardComponent', () => {
@@ -382,6 +383,61 @@ describe('BoardComponent', () => {
 
       expect(seen[0]?.folderId).toBeNull();
       expect(seen[0]?.position).toEqual({ x: 700, y: 500 });
+    });
+
+    /** jsdom has no layout: the rail row under the pointer is said by hand, then taken back. */
+    function overRail(kind: 'folder' | 'space', id: string, spaceId = 'sql'): () => void {
+      const row = document.createElement('li');
+      row.setAttribute('data-rail-row', '');
+      row.dataset['kind'] = kind;
+      row.dataset['id'] = id;
+      row.dataset['spaceId'] = spaceId;
+      const previous = document.elementFromPoint;
+      document.elementFromPoint = () => row;
+      return () => (document.elementFromPoint = previous);
+    }
+
+    it('files a card let go over a rail row there, and lights the row on the way', async () => {
+      fixture.componentRef.setInput('spaceId', 'sql');
+      const hovered: (string | null)[] = [];
+      const filed: unknown[] = [];
+      const dropped: unknown[] = [];
+      fixture.componentInstance.railHovered.subscribe((drop) => hovered.push(drop?.rowId ?? null));
+      fixture.componentInstance.cardFiledOnRail.subscribe((drop) => filed.push(drop));
+      fixture.componentInstance.cardDropped.subscribe((drop) => dropped.push(drop));
+      const restore = overRail('folder', 'index');
+
+      pointer(grip(), 'pointerdown', 400, 400);
+      pointer(surface(), 'pointermove', 150, 150);
+      await fixture.whenStable();
+      expect(root().querySelector('[data-testid="board-zone-drop"]')).toBeNull();
+      pointer(surface(), 'pointerup', 150, 150);
+      restore();
+      await fixture.whenStable();
+
+      expect(hovered).toEqual(['index', null]);
+      expect(filed).toEqual([{ noteId: 'loose-1', drop: { rowId: 'index', folderId: 'index' } }]);
+      expect(dropped).toEqual([]);
+    });
+
+    it('takes a card to the top of its space from its space row, and refuses another space', async () => {
+      fixture.componentRef.setInput('spaceId', 'sql');
+      const filed: unknown[] = [];
+      fixture.componentInstance.cardFiledOnRail.subscribe((drop) => filed.push(drop));
+
+      let restore = overRail('space', 'sql');
+      pointer(grip(), 'pointerdown', 400, 400);
+      pointer(surface(), 'pointermove', 150, 150);
+      pointer(surface(), 'pointerup', 150, 150);
+      restore();
+      restore = overRail('folder', 'elsewhere', 'veille');
+      pointer(grip(), 'pointerdown', 400, 400);
+      pointer(surface(), 'pointermove', 150, 150);
+      pointer(surface(), 'pointerup', 150, 150);
+      restore();
+      await fixture.whenStable();
+
+      expect(filed).toEqual([{ noteId: 'loose-1', drop: { rowId: 'sql', folderId: null } }]);
     });
 
     it('says which zone a drop would land in before the pointer lifts', async () => {

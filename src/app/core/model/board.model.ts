@@ -1,4 +1,5 @@
 import type {
+  BoardChild,
   BoardFrame,
   BoardPoint,
   BoardNote as WireBoardNote,
@@ -19,6 +20,7 @@ export function sameFrame(a: BoardFrame, b: BoardFrame): boolean {
 
 export type {
   BoardArrangement,
+  BoardChild,
   BoardFrame,
   BoardLayout,
   BoardPoint,
@@ -39,7 +41,10 @@ export interface BoardNote {
 export interface BoardZone {
   readonly folder: Folder;
   readonly frame: BoardFrame;
+  /** Every note of its sub-tree: a zone gathers what is under it. */
   readonly notes: readonly BoardNote[];
+  /** Its sub-folders by name, under its title: the board draws one level. */
+  readonly children: readonly BoardChild[];
 }
 
 export interface BoardView {
@@ -58,6 +63,8 @@ export interface BoardView {
  *  would have no zones to draw. */
 export interface BoardQuery {
   readonly spaceId: string;
+  /** The folder whose board this is, `null` for the space's: its sub-folders are the zones. */
+  readonly rootId: string | null;
   readonly search: string;
   readonly filter: NoteFilter;
   readonly tags: readonly string[];

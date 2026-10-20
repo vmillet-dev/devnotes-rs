@@ -75,6 +75,14 @@ describe('the board is measured the same on both sides', () => {
     assert.equal(inBlock(ZONE_SCSS, '.zone', /border:\s*(\d+)px solid/), rustConst('ZONE_BORDER'));
   });
 
+  /** A zone with sub-folders is taller by their row, which a pixel too few would scroll. */
+  it('agrees on the height of the row of sub-folders', () => {
+    assert.equal(
+      inBlock(ZONE_SCSS, '.zone-children', /\n\s*height:\s*(\d+)px/),
+      rustConst('ZONE_SUBFOLDERS'),
+    );
+  });
+
   /**
    * The count and the flow, written out: whatever `columns_in` answers has to be what fits
    * between the hairlines and the padding, and never one more.

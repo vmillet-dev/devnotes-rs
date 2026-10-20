@@ -22,6 +22,7 @@ import { FoldersStore } from './folders.store';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
 import { UndoStore } from './undo.store';
+import { pathOf } from '@core/model/folder.model';
 
 export type { NoteFilter, NoteKind } from '@core/model/note.model';
 
@@ -385,10 +386,11 @@ export class NotesStore {
     if (open?.id !== id) return;
 
     const folder = this.openFolder.allFolders().find((each) => each.id === folderId);
+    const path = folder ? pathOf(this.openFolder.allFolders(), folder.id).map((each) => each.name) : [];
     this._selectedNote.set({
       ...open,
       folderId,
-      folder: folder ? { id: folder.id, name: folder.name, colour: folder.colour } : null,
+      folder: folder ? { id: folder.id, name: folder.name, colour: folder.colour, path } : null,
     });
   }
 
