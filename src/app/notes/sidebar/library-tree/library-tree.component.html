@@ -218,6 +218,7 @@
           [attr.data-folder-id]="folder.id"
           [class.active]="folder.id === activeFolderId()"
           [attr.aria-current]="folder.id === activeFolderId() ? 'true' : null"
+          [attr.title]="folder.name"
           (click)="chooseFolder(folder)"
           (keydown)="onFolderKeydown($event, folder)"
           (pointerdown)="drag.start($event, folder)"

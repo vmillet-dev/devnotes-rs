@@ -45,3 +45,16 @@ describe('RowDrag', () => {
     expect(drag.swallowsClick()).toBe(false);
   });
 });
+
+describe('RowDrag, once the drag is over', () => {
+  it('lets the next click through when the one a drag ends with never came', async () => {
+    const drag = new RowDrag<{ id: string }, string>(() => 'target');
+    drag.start(new PointerEvent('pointerdown', { button: 0, pointerId: 1 }), { id: 'perf' });
+    drag.move(new PointerEvent('pointermove', { pointerId: 1, clientX: 30 }));
+    drag.end(new PointerEvent('pointerup', { pointerId: 1, clientX: 30 }));
+
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(drag.swallowsClick()).toBe(false);
+  });
+});

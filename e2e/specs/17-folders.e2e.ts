@@ -444,6 +444,11 @@ describe('Folders', () => {
       await $(`[data-rail-row][data-id="${bases}"] [data-rail-row][data-id="${index}"]`).waitForExist({
         timeout: 5_000,
       });
+
+      // Offered back, and closed here: Escape answers the undo bar before it goes up a level.
+      await $(testid('undo-restore')).waitForExist({ timeout: 5_000 });
+      await $(testid('undo-dismiss')).click();
+      await $(testid('undo-bar')).waitForExist({ reverse: true, timeout: 5_000 });
     });
 
     it('lists the notes of everything under an opened folder, each naming its own', async () => {

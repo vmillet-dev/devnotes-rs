@@ -68,7 +68,10 @@ export class RowDrag<Row extends { readonly id: string }, Target> {
     this.cancel();
     if (!press.moved) return null;
 
+    // ⚠️ The click a drag ends with comes in the same task; one that never comes must not
+    // swallow the next real click, which a later press does not always precede.
     this.swallow = true;
+    setTimeout(() => (this.swallow = false));
     return { row: press.row, target };
   }
 
