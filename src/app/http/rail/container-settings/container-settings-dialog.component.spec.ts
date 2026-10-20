@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpcError } from '@core/ipc/ipc.error';
-import { DEFAULT_TRANSPORT } from '@core/model/http.model';
+import { DEFAULT_TRANSPORT, ScriptFocus } from '@core/model/http.model';
+import { By } from '@angular/platform-browser';
+import { CodeEditorComponent } from '@notes/overlays/note-editor-overlay/code-editor/code-editor.component';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { RailRow } from '@core/services/http/http-tree';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
@@ -25,7 +27,7 @@ describe('ContainerSettingsDialogComponent', () => {
   let http: FakeHttpRepository;
   let closed: number;
 
-  async function render(row: RailRow) {
+  async function render(row: RailRow, script: ScriptFocus | null = null) {
     TestBed.resetTestingModule();
     http = new FakeHttpRepository();
     http.settingsAnswer = {
@@ -33,12 +35,14 @@ describe('ContainerSettingsDialogComponent', () => {
       headers: [{ enabled: true, key: 'Accept', value: 'text/csv', description: '' }],
       transport: {},
       variables: [{ enabled: true, name: 'tenant', value: 'acme', kind: 'text' }],
+      scripts: { before: '', after: '' },
     };
     http.inheritedAnswer = {
       auth: { kind: 'bearer', token: '{{accessToken}}' },
       authFrom: { kind: 'collection', id: 'api', name: 'API' },
       headers: [],
       transport: DEFAULT_TRANSPORT,
+      scripts: [],
     };
     TestBed.configureTestingModule({
       imports: [ContainerSettingsDialogComponent],
@@ -46,6 +50,7 @@ describe('ContainerSettingsDialogComponent', () => {
     });
     fixture = TestBed.createComponent(ContainerSettingsDialogComponent);
     fixture.componentRef.setInput('row', row);
+    fixture.componentRef.setInput('script', script);
     closed = 0;
     fixture.componentInstance.closed.subscribe(() => closed++);
     fixture.autoDetectChanges();
@@ -84,6 +89,7 @@ describe('ContainerSettingsDialogComponent', () => {
           headers: [{ enabled: true, key: 'Accept', value: 'application/json', description: '' }],
           transport: { timeoutMs: 8000 },
           variables: [{ enabled: true, name: 'tenant', value: 'acme', kind: 'text' }],
+          scripts: { before: '', after: '' },
         },
       ],
     ]);
@@ -130,5 +136,27 @@ describe('ContainerSettingsDialogComponent', () => {
 
     el<HTMLButtonElement>('[data-testid="http-settings-cancel"]').click();
     expect(closed).toBe(1);
+  });
+
+  it('opens on the script « Ouvrir le script » named, and saves the scripts as edited', async () => {
+    await render(FOLDER, { phase: 'after', line: 2 });
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-scripts"]')?.getAttribute('data-phase')).toBe('after'),
+    );
+    const editor = () =>
+      fixture.debugElement.query(By.directive(CodeEditorComponent))?.componentInstance as
+        CodeEditorComponent | undefined;
+    await vi.waitFor(() => expect(editor()).toBeDefined());
+    expect(editor()!.focusedLines()).toEqual(new Set([2]));
+
+    editor()!.changed.emit("pm.collectionVariables.set('lastId', res.json().id);");
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-settings-save"]').click();
+    await vi.waitFor(() => expect(closed).toBe(1));
+    const saved = http.callsOf('saveSettings')[0]?.[1] as { scripts: unknown };
+    expect(saved.scripts).toEqual({
+      before: '',
+      after: "pm.collectionVariables.set('lastId', res.json().id);",
+    });
   });
 });

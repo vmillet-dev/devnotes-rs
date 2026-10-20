@@ -1,0 +1,24 @@
+<div
+  class="protected"
+  role="alertdialog"
+  [attr.data-testid]="testId() + '-confirm'"
+  [attr.aria-labelledby]="id"
+>
+  <p class="protected-question" [id]="id">
+    <i [class]="'protected-dot is-' + (colour() ?? 'red')" aria-hidden="true"></i>
+    {{ question() }}
+  </p>
+  <div class="protected-actions">
+    <button type="button" class="protected-go" [attr.data-testid]="testId() + '-send'" (click)="go.emit()">
+      {{ goLabel() }}
+    </button>
+    <button
+      type="button"
+      class="protected-cancel"
+      [attr.data-testid]="testId() + '-cancel'"
+      (click)="cancelled.emit()"
+    >
+      {{ 'http.rail.cancel' | transloco }}
+    </button>
+  </div>
+</div>

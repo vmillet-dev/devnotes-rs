@@ -5,43 +5,58 @@
     </h2>
     <p class="hint">{{ 'http.settings.hint' | transloco }}</p>
 
-    @if (settings(); as current) {
-      <h3 class="section">
-        {{ 'http.settings.variables' | transloco }}
-        <span class="section-hint">· {{ 'http.settings.variablesHint' | transloco }}</span>
-      </h3>
-      <app-variables-table
-        kind="settings"
-        [label]="'http.settings.variables' | transloco"
-        [rows]="current.variables"
-        (rowsChange)="onVariables($event)"
-      />
+    <div class="fields">
+      @if (settings(); as current) {
+        <h3 class="section">
+          {{ 'http.settings.variables' | transloco }}
+          <span class="section-hint">· {{ 'http.settings.variablesHint' | transloco }}</span>
+        </h3>
+        <app-variables-table
+          kind="settings"
+          [label]="'http.settings.variables' | transloco"
+          [rows]="current.variables"
+          (rowsChange)="onVariables($event)"
+        />
 
-      <h3 class="section">{{ 'http.editor.sections.auth' | transloco }}</h3>
-      <app-auth-editor
-        [auth]="current.auth"
-        [inherited]="above()"
-        [allowInherit]="row().kind === 'folder'"
-        (authChange)="onAuth($event)"
-      />
+        <h3 class="section">{{ 'http.editor.sections.auth' | transloco }}</h3>
+        <app-auth-editor
+          [auth]="current.auth"
+          [inherited]="above()"
+          [allowInherit]="row().kind === 'folder'"
+          (authChange)="onAuth($event)"
+        />
 
-      <h3 class="section">{{ 'http.editor.sections.headers' | transloco }}</h3>
-      <app-key-value-table
-        kind="settings-headers"
-        [label]="'http.editor.sections.headers' | transloco"
-        [rows]="current.headers"
-        [headers]="true"
-        (rowsChange)="onHeaders($event)"
-      />
+        <h3 class="section">{{ 'http.editor.sections.headers' | transloco }}</h3>
+        <app-key-value-table
+          kind="settings-headers"
+          [label]="'http.editor.sections.headers' | transloco"
+          [rows]="current.headers"
+          [headers]="true"
+          (rowsChange)="onHeaders($event)"
+        />
 
-      <h3 class="section">{{ 'http.editor.sections.settings' | transloco }}</h3>
-      <app-transport-editor
-        [settings]="current.transport"
-        [above]="above()?.transport ?? defaultTransport"
-        [aboveIsDefault]="row().kind === 'collection'"
-        (settingsChange)="onTransport($event)"
-      />
-    }
+        <h3 class="section">{{ 'http.editor.sections.settings' | transloco }}</h3>
+        <app-transport-editor
+          [settings]="current.transport"
+          [above]="above()?.transport ?? defaultTransport"
+          [aboveIsDefault]="row().kind === 'collection'"
+          (settingsChange)="onTransport($event)"
+        />
+
+        <h3 #scriptsHeading class="section">
+          {{ 'http.editor.sections.scripts' | transloco }}
+          <span class="section-hint">· {{ 'http.settings.scriptsHint' | transloco }}</span>
+        </h3>
+        <app-script-editor
+          class="scripts"
+          [scripts]="current.scripts"
+          [owner]="row().id"
+          [(phase)]="scriptPhase"
+          [line]="scriptLine()"
+          (scriptsChange)="onScripts($event)"
+        />
+      }
+    </div>
 
     <div class="actions">
       <button type="button" class="action" data-testid="http-settings-cancel" (click)="closed.emit()">

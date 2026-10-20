@@ -67,6 +67,15 @@
   </div>
 </header>
 
+@if (answer.scripts?.failure; as stop) {
+  <app-script-stop
+    class="stopped"
+    [stop]="stop"
+    [openable]="scriptOpenable()"
+    (opened)="scriptOpened.emit(stop)"
+  />
+}
+
 <div class="panel" role="tabpanel">
   @switch (section()) {
     @case ('body') {

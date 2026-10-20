@@ -9,6 +9,7 @@ const FROM_API: InheritedParts = {
   authFrom: { kind: 'collection', id: 'api', name: 'API Paiements' },
   headers: [],
   transport: DEFAULT_TRANSPORT,
+  scripts: [],
 };
 
 describe('AuthEditorComponent', () => {
@@ -53,6 +54,7 @@ describe('AuthEditorComponent', () => {
         authFrom: null,
         headers: [],
         transport: DEFAULT_TRANSPORT,
+        scripts: [],
       },
     );
     expect(el('[data-testid="http-auth-inherited"]').textContent).toContain('Rien au-dessus');

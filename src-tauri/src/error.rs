@@ -8,6 +8,7 @@ use specta::Type;
 use thiserror::Error;
 
 use crate::http::model::{HeaderFault, HttpItemKind};
+use crate::http::scripts::model::{FailureKind, ScriptError};
 use crate::http::send::SendError;
 use crate::http::transport::{SetBy, readable_delay};
 
@@ -178,6 +179,14 @@ pub enum ErrorCode {
     /// `header` is its name as written; `source` and `name` say who wrote it, as for a limit.
     HttpHeaderName,
     HttpHeaderValue,
+    /// A script before the send stopped it: `failure` is how, `level`, `name` and `owner`
+    /// whose script it was, `line` where, `message` what the script threw.
+    HttpScript,
+    HttpScriptSkipped,
+    /// `method` is what the script wrote.
+    HttpScriptMethod,
+    /// The scripts made the request one that a protected `environment` asks about: `method`.
+    HttpScriptProtected,
 }
 
 #[derive(Debug, Serialize, Type)]
@@ -297,6 +306,52 @@ impl From<SendError> for AppError {
                 };
                 Self::with(code, detail, "header", &name).set_by(&set_by)
             }
+        }
+    }
+}
+
+impl From<ScriptError> for AppError {
+    fn from(error: ScriptError) -> Self {
+        let detail = error.to_string();
+
+        match error {
+            ScriptError::Stopped(stop) => {
+                let mut refused = Self::with(
+                    ErrorCode::HttpScript,
+                    detail,
+                    "failure",
+                    &stop.kind.to_string(),
+                );
+                for (key, value) in [
+                    ("level", stop.level.map(|level| level.to_string())),
+                    ("name", stop.name),
+                    ("owner", stop.owner),
+                    ("line", stop.line.map(|line| line.to_string())),
+                ] {
+                    if let Some(value) = value {
+                        refused = refused.and(key, &value);
+                    }
+                }
+                // What the script threw is its own words; the rest is said by the front.
+                if matches!(stop.kind, FailureKind::Error | FailureKind::Syntax) {
+                    refused = refused.and("message", &stop.message);
+                }
+                refused
+            }
+            ScriptError::Skipped => Self::new(ErrorCode::HttpScriptSkipped, detail),
+            ScriptError::Method(method) => {
+                Self::with(ErrorCode::HttpScriptMethod, detail, "method", &method)
+            }
+            ScriptError::Protected {
+                method,
+                environment,
+            } => Self::with(
+                ErrorCode::HttpScriptProtected,
+                detail,
+                "method",
+                &method.to_string(),
+            )
+            .and("environment", &environment),
         }
     }
 }

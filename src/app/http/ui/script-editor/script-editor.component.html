@@ -1,0 +1,74 @@
+<div class="scripts" data-testid="http-scripts" [attr.data-phase]="phase()">
+  <div class="toolbar">
+    <app-segmented-choice
+      kind="http-script-phase"
+      [label]="'http.scripts.phase' | transloco"
+      [segments]="segments"
+      [currentId]="phase()"
+      [markedIds]="written()"
+      (chosen)="choosePhase($event)"
+    />
+    <span class="grow"></span>
+    <app-script-examples-menu (chosen)="insert($event)" />
+  </div>
+
+  @if (order(); as levels) {
+    <p class="order" data-testid="http-script-order">
+      <span class="order-label">{{ 'http.scripts.order' | transloco }}</span>
+      @for (level of levels; track level.from?.id ?? 'request'; let last = $last) {
+        @if (level.from; as from) {
+          <button
+            type="button"
+            class="level"
+            data-testid="http-script-level"
+            [attr.data-level]="from.kind"
+            [class.none]="!level.written"
+            [attr.title]="'http.scripts.openLevel' | transloco"
+            (click)="levelOpened.emit(from)"
+          >
+            <i class="level-kind">{{ 'http.scripts.levels.' + from.kind | transloco }}</i>
+            {{ level.name }}
+            @if (!level.written) {
+              · {{ 'http.scripts.none' | transloco }}
+            }
+          </button>
+        } @else {
+          <span class="level here" data-testid="http-script-level" data-level="request">
+            <i class="level-kind">{{ 'http.scripts.levels.request' | transloco }}</i>
+            {{ level.name }}
+          </span>
+        }
+        @if (!last) {
+          <span class="sep" aria-hidden="true">›</span>
+        }
+      }
+    </p>
+  }
+
+  <div class="code" data-testid="http-script-code">
+    <!-- Deferred: CodeMirror is loaded the first time a script is shown, not at startup. -->
+    @defer (on immediate) {
+      <app-code-editor
+        [session]="session()"
+        [content]="source()"
+        language="js"
+        indentUnit="  "
+        [focusedLines]="marked()"
+        [label]="'http.scripts.phases.' + phase() | transloco"
+        [placeholder]="'http.scripts.placeholder.' + phase() | transloco"
+        (changed)="onChanged($event)"
+      />
+    } @placeholder {
+      <div class="loading" aria-hidden="true"></div>
+    }
+  </div>
+
+  <p class="hint">
+    <span class="names">
+      @for (name of names; track name) {
+        <code>{{ name }}</code>
+      }
+    </span>
+    · {{ 'http.scripts.hint' | transloco }}
+  </p>
+</div>

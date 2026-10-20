@@ -1,0 +1,58 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.stop {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(var(--red-rgb), 0.45);
+  border-radius: 10px;
+  background: rgba(var(--red-rgb), 0.06);
+  font-size: 12.5px;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.message {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--red);
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.where {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.open {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px, var(--line));
+  @include focus-ring;
+  @include hit-target;
+  margin-left: auto;
+  padding: 4px 11px;
+  font-size: 12px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}

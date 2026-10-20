@@ -1,10 +1,11 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpRepository } from '@core/data/http.repository';
-import { IpcError } from '@core/ipc/ipc.error';
+import { IpcError, IpcErrorCode } from '@core/ipc/ipc.error';
 import { RequestDraft, SentResponse } from '@core/model/http.model';
 import { AppNotice, ErrorNotifier, ipcNotice } from '@core/services/errors/error-notifier.service';
 import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
+import { HttpCollectionsStore } from './http-collections.store';
 import { HttpEnvironmentsStore } from './http-environments.store';
 
 /**
@@ -15,8 +16,22 @@ import { HttpEnvironmentsStore } from './http-environments.store';
 export type SendState =
   | { readonly phase: 'sending'; readonly sendId: string; readonly startedAt: number }
   | { readonly phase: 'answered'; readonly sendId: string; readonly response: SentResponse }
-  | { readonly phase: 'failed'; readonly sendId: string; readonly notice: AppNotice }
+  | {
+      readonly phase: 'failed';
+      readonly sendId: string;
+      readonly notice: AppNotice;
+      /** What the pane answers with an action: a script that stopped, a protected environment. */
+      readonly code: IpcErrorCode | null;
+      readonly params: Readonly<Record<string, string>>;
+    }
   | { readonly phase: 'cancelled'; readonly sendId: string };
+
+const SCRIPT_CODES: ReadonlySet<IpcErrorCode | null> = new Set<IpcErrorCode>([
+  'httpScript',
+  'httpScriptSkipped',
+  'httpScriptMethod',
+  'httpScriptProtected',
+]);
 
 /** What a send needs of its tab. */
 export interface Sendable {
@@ -62,6 +77,7 @@ export class HttpSendStore {
   private readonly dialogs = inject(FileDialogService);
   private readonly status = inject(StatusNotifier);
   private readonly environments = inject(HttpEnvironmentsStore);
+  private readonly collections = inject(HttpCollectionsStore);
 
   private readonly _states = signal<ReadonlyMap<string, SendState>>(new Map());
   readonly states = this._states.asReadonly();
@@ -75,7 +91,7 @@ export class HttpSendStore {
     return this._states().get(key)?.phase === 'sending';
   }
 
-  /** `confirmed`: the yes a protected environment asked for. */
+  /** `confirmed`: the yes a protected environment asked for, which its scripts are sent with. */
   async send(tab: Sendable, confirmed = false): Promise<void> {
     if (this.isSending(tab.key)) return;
     if (!this.environments.mayLeave(tab.key, tab.draft.kind, tab.draft.method, confirmed)) return;
@@ -90,22 +106,29 @@ export class HttpSendStore {
       tab.place,
       tab.requestId,
       this.environments.active()?.id ?? null,
+      confirmed,
     );
     if (previous) void this.release(previous.sendId);
     try {
       const response = await sent;
       this.settle(sendId, { phase: 'answered', sendId, response });
       this._sent.update((count) => count + 1);
+      if (response.scripts?.wrote) void this.readWritten();
     } catch (error) {
       if (error instanceof IpcError && error.code === 'httpCancelled') {
         this.settle(sendId, { phase: 'cancelled', sendId });
       } else {
         console.error(error);
+        const code = error instanceof IpcError ? error.code : null;
         this.settle(sendId, {
           phase: 'failed',
           sendId,
           notice: ipcNotice(error, { key: 'http.send.failed' }),
+          code,
+          params: error instanceof IpcError ? error.params : {},
         });
+        // What a script wrote before it stopped is kept.
+        if (SCRIPT_CODES.has(code)) void this.readWritten();
         this._sent.update((count) => count + 1);
       }
     }
@@ -148,6 +171,12 @@ export class HttpSendStore {
     next.delete(key);
     this._states.set(next);
     void this.release(state.sendId);
+  }
+
+  /** A script wrote variables: the sets and the settings are read again. */
+  private async readWritten(): Promise<void> {
+    await this.environments.load();
+    this.collections.settingsSaved();
   }
 
   private set(key: string, state: SendState): void {

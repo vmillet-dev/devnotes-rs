@@ -8,6 +8,19 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
+}
+
+// The title and the buttons stay; what is between scrolls, the scripts making it taller than a
+// window. The padding keeps the focus rings inside what scrolls.
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  margin: 0 -4px;
+  padding: 0 4px 4px;
+  overflow-y: auto;
 }
 
 .title {
@@ -68,4 +81,9 @@
     opacity: 0.5;
     cursor: default;
   }
+}
+
+// Its code scrolls in itself: given a height, never its content's.
+.scripts {
+  flex: 0 0 300px;
 }

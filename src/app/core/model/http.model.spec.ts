@@ -10,6 +10,7 @@ import {
   toSettings,
   bodyOfKind,
   setBodyAside,
+  stopOf,
 } from './http.model';
 
 describe('the HTTP wire shapes', () => {
@@ -37,6 +38,7 @@ describe('the HTTP wire shapes', () => {
       websocket: { protocols: [], messages: [] },
       transport: {},
       variables: [],
+      scripts: { before: '', after: '' },
     });
     expect(toParts({ websocket: { messages: [{ name: 'Ping' }] } }).websocket).toEqual({
       protocols: [],
@@ -65,17 +67,30 @@ describe('the HTTP wire shapes', () => {
   });
 
   it('reads settings and what is inherited, their rows filled', () => {
-    expect(toSettings({})).toEqual({ auth: { kind: 'inherit' }, headers: [], transport: {}, variables: [] });
+    expect(toSettings({})).toEqual({
+      auth: { kind: 'inherit' },
+      headers: [],
+      transport: {},
+      variables: [],
+      scripts: { before: '', after: '' },
+    });
     expect(toSettings({ variables: [{ name: 'tenant' }] }).variables).toEqual([
       { enabled: true, name: 'tenant', value: '', kind: 'text' },
     ]);
     expect(
-      fromSettings({ auth: { kind: 'none' }, headers: [], transport: { timeoutMs: 500 }, variables: [] }),
+      fromSettings({
+        auth: { kind: 'none' },
+        headers: [],
+        transport: { timeoutMs: 500 },
+        variables: [],
+        scripts: { before: 'sign()', after: '' },
+      }),
     ).toEqual({
       auth: { kind: 'none' },
       headers: [],
       transport: { timeoutMs: 500 },
       variables: [],
+      scripts: { before: 'sign()', after: '' },
     });
 
     const from = { kind: 'collection' as const, id: 'api', name: 'API' };
@@ -85,6 +100,7 @@ describe('the HTTP wire shapes', () => {
         authFrom: null,
         headers: [{ header: { key: 'Accept' }, from }],
         transport: DEFAULT_TRANSPORT,
+        scripts: [],
       }).headers,
     ).toEqual([{ header: { enabled: true, key: 'Accept', value: '', description: '' }, from }]);
   });
@@ -137,5 +153,35 @@ describe('the HTTP wire shapes', () => {
       'GQL',
       'WS',
     ]);
+  });
+
+  it('reads a stopped script back from the values its error carries', () => {
+    expect(
+      stopOf({
+        failure: 'syntax',
+        level: 'folder',
+        name: 'Factures',
+        owner: 'f1',
+        line: '7',
+        message: 'SyntaxError',
+      }),
+    ).toEqual({
+      kind: 'syntax',
+      level: 'folder',
+      script: 'before',
+      name: 'Factures',
+      owner: 'f1',
+      line: 7,
+      message: 'SyntaxError',
+    });
+    expect(stopOf({ failure: 'nonsense', level: 'nowhere' })).toEqual({
+      kind: 'error',
+      level: null,
+      script: 'before',
+      name: null,
+      owner: null,
+      line: null,
+      message: '',
+    });
   });
 });

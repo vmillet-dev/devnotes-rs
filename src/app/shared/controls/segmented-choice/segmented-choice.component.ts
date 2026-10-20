@@ -36,6 +36,8 @@ export class SegmentedChoiceComponent {
   readonly currentId = input.required<string>();
   /** Shown and announced, but not chosen: the format the other side of a converter holds. */
   readonly disabledIds = input<readonly string[]>([]);
+  /** A dot before the label: the one that holds something, a script written. */
+  readonly markedIds = input<readonly string[]>([]);
 
   readonly chosen = output<string>();
 

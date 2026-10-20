@@ -194,6 +194,7 @@ export class HttpRepository {
     place: { collectionId: string; folderId: string | null } | null,
     requestId: string | null = null,
     environmentId: string | null = null,
+    confirmed = false,
   ): Promise<SentResponse> {
     return unwrap(
       'send_http_request',
@@ -207,6 +208,7 @@ export class HttpRepository {
         name: draft.name,
         requestId,
         environmentId,
+        confirmed,
       }),
     );
   }

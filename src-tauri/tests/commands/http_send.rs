@@ -22,9 +22,9 @@ use devnotes_lib::notes::language::Language;
 use super::{Session, code};
 
 /// What the server read: the request line and headers, then the body.
-struct Seen {
-    head: String,
-    body: Vec<u8>,
+pub(super) struct Seen {
+    pub(super) head: String,
+    pub(super) body: Vec<u8>,
 }
 
 fn read_request(stream: &mut TcpStream) -> Seen {
@@ -58,7 +58,7 @@ fn read_request(stream: &mut TcpStream) -> Seen {
 }
 
 /// Answers each connection with what `answer` writes for it, and reports what it read.
-fn serve(
+pub(super) fn serve(
     connections: usize,
     answer: impl Fn(&Seen, u16) -> Vec<u8> + Send + 'static,
 ) -> (u16, mpsc::Receiver<Seen>) {
@@ -79,7 +79,7 @@ fn serve(
 }
 
 /// A header of what the server read, by its name whatever its case.
-fn header_of(seen: &Seen, name: &str) -> Option<String> {
+pub(super) fn header_of(seen: &Seen, name: &str) -> Option<String> {
     seen.head.lines().find_map(|line| {
         let (key, value) = line.split_once(':')?;
         key.eq_ignore_ascii_case(name)
@@ -87,7 +87,7 @@ fn header_of(seen: &Seen, name: &str) -> Option<String> {
     })
 }
 
-fn response(status: &str, headers: &[(&str, &str)], body: &[u8]) -> Vec<u8> {
+pub(super) fn response(status: &str, headers: &[(&str, &str)], body: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
     write!(
         out,
@@ -103,7 +103,7 @@ fn response(status: &str, headers: &[(&str, &str)], body: &[u8]) -> Vec<u8> {
     out
 }
 
-fn request(url: &str) -> SendRequest {
+pub(super) fn request(url: &str) -> SendRequest {
     SendRequest {
         id: "tab-1".to_string(),
         kind: RequestKind::Http,
@@ -117,6 +117,7 @@ fn request(url: &str) -> SendRequest {
         name: "Ping".to_string(),
         request_id: None,
         environment_id: None,
+        confirmed: false,
     }
 }
 

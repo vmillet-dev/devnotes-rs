@@ -541,6 +541,16 @@
     },
     "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON.",
     "httpWebsocketRefused": "Le serveur a refusé la connexion WebSocket (statut {{status}}).",
+    "httpScript": {
+      "error": "Le script avant l’envoi a échoué : {{message}}",
+      "syntax": "Le script avant l’envoi n’est pas du JavaScript valide : {{message}}",
+      "timeout": "Le script avant l’envoi a pris trop de temps : la requête n’est pas partie.",
+      "memory": "Le script avant l’envoi a dépassé la mémoire permise : la requête n’est pas partie.",
+      "host": "Les scripts n’ont pas pu être lancés : la requête n’est pas partie."
+    },
+    "httpScriptSkipped": "Le script avant l’envoi a écarté la requête : elle n’est pas partie.",
+    "httpScriptMethod": "Le script avant l’envoi a choisi la méthode « {{method}} », qui n’existe pas.",
+    "httpScriptProtected": "Le script avant l’envoi en a fait un {{method}} vers {{environment}}, qui est protégé.",
     "calcFailed": "La feuille n’a pas pu être calculée."
   },
   "tray": {
@@ -3279,7 +3289,8 @@
         "message": "Messages",
         "protocols": "Protocoles",
         "settings": "Réglages",
-        "variables": "Variables"
+        "variables": "Variables",
+        "scripts": "Scripts"
       }
     },
     "table": {
@@ -3406,7 +3417,8 @@
       },
       "hint": "Ses requêtes en héritent : une requête dont l’auth est « Héritée » prend celle-ci, et ses en-têtes s’ajoutent aux leurs.",
       "variables": "Variables",
-      "variablesHint": "au-dessus de l’environnement, sous un dossier et la requête"
+      "variablesHint": "au-dessus de l’environnement, sous un dossier et la requête",
+      "scriptsHint": "avant et après chacune de ses requêtes"
     },
     "send": {
       "send": "Envoyer",
@@ -3421,6 +3433,7 @@
     },
     "response": {
       "label": "Réponse",
+      "unsent": "Non envoyée",
       "clear": "Effacer",
       "idle": "Envoyez la requête pour lire sa réponse ici.",
       "sending": "Envoi en cours…",
@@ -3596,6 +3609,58 @@
       "askConnect": "{{name}} est protégé. Ouvrir ce WebSocket ?",
       "sendAnyway": "Envoyer quand même",
       "connectAnyway": "Connecter quand même"
+    },
+    "scripts": {
+      "phase": "Quand le script s’exécute",
+      "phases": {
+        "before": "Avant l’envoi",
+        "after": "Après la réponse"
+      },
+      "order": "S’exécutent dans cet ordre :",
+      "levels": {
+        "collection": "collection",
+        "folder": "dossier",
+        "request": "cette requête"
+      },
+      "none": "aucun",
+      "openLevel": "Ouvrir ses réglages sur ce script",
+      "placeholder": {
+        "before": "Avant l’envoi : changer la requête, lire ou écrire une variable…",
+        "after": "Après la réponse : lire la réponse, en garder une valeur…"
+      },
+      "hint": "JavaScript, dans un processus à part, sans accès aux fichiers",
+      "examples": {
+        "open": "Exemples",
+        "title": "Insérer à la fin",
+        "readResponse": "Lire une valeur de la réponse",
+        "setVariable": "Définir une variable",
+        "addHeader": "Ajouter un en-tête",
+        "sendRequest": "Envoyer une autre requête",
+        "testStatus": "Tester le statut",
+        "testName": "Le statut est 200"
+      },
+      "stop": {
+        "before": {
+          "request": "Le script avant l’envoi a échoué",
+          "folder": "Le script avant l’envoi du dossier « {{name}} » a échoué",
+          "collection": "Le script avant l’envoi de la collection « {{name}} » a échoué"
+        },
+        "after": {
+          "request": "Le script après la réponse a échoué",
+          "folder": "Le script après la réponse du dossier « {{name}} » a échoué",
+          "collection": "Le script après la réponse de la collection « {{name}} » a échoué"
+        },
+        "host": "Les scripts n’ont pas pu être lancés",
+        "kinds": {
+          "timeout": "Arrêté : il a pris trop de temps.",
+          "memory": "Arrêté : il a dépassé la mémoire permise.",
+          "host": "Le processus des scripts s’est arrêté."
+        },
+        "notSent": "La requête n’a pas été envoyée",
+        "lineNotSent": "Ligne {{line}} · la requête n’a pas été envoyée",
+        "line": "Ligne {{line}}",
+        "open": "Ouvrir le script"
+      }
     },
     "variables": {
       "name": "Nom",

@@ -9,11 +9,12 @@ import {
   signal,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { SentResponse } from '@core/model/http.model';
+import { ScriptStop, SentResponse } from '@core/model/http.model';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ToolResult } from '@core/services/tools/tool.model';
 import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog.component';
+import { ScriptStopComponent } from '@http/ui/script-stop/script-stop.component';
 import { ResponseBodyComponent } from './response-body/response-body.component';
 import { ResponseTimelineComponent } from './response-timeline/response-timeline.component';
 
@@ -22,7 +23,13 @@ type Section = 'body' | 'errors' | 'headers' | 'cookies' | 'timeline';
 /** An answer read: its bar, then its body, headers, cookies and timeline. */
 @Component({
   selector: 'app-response-view',
-  imports: [ResponseBodyComponent, ResponseTimelineComponent, SaveAsNoteDialogComponent, TranslocoPipe],
+  imports: [
+    ResponseBodyComponent,
+    ResponseTimelineComponent,
+    SaveAsNoteDialogComponent,
+    ScriptStopComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './response-view.component.html',
   styleUrl: './response-view.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +42,9 @@ export class ResponseViewComponent {
   readonly fileAsked = output<void>();
   /** The pane goes back to waiting for a send; the history keeps this one. */
   readonly clearAsked = output<void>();
+  /** A script after the answer that stopped offers the way to it: not from the history. */
+  readonly scriptOpenable = input(false);
+  readonly scriptOpened = output<ScriptStop>();
 
   private readonly transloco = inject(TranslocoService);
   private readonly clipboard = inject(ClipboardService);

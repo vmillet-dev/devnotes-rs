@@ -32,6 +32,14 @@ use model::{
     HttpCollection, HttpContents, HttpFolder, HttpItem, HttpPlace, HttpRequest, HttpRequestDraft,
     HttpRequestPatch, HttpTree, NewPlace,
 };
+use scripts::around::{self, Around};
+use scripts::model::{
+    FailureKind, Job, LogEntry, Outcome, Phase, RequestFault, Script, ScriptError, ScriptFailure,
+    ScriptInfo, ScriptRequest, ScriptStop, VariableWrite, WriteScope,
+};
+use scripts::network::{self, Network};
+use scripts::process::ScriptProcess;
+use scripts::session::Session;
 
 #[tauri::command]
 #[specta::specta]
@@ -446,25 +454,408 @@ pub async fn reorder_http_collection<R: Runtime>(
 }
 
 /// What it inherits is read under the lock, its files outside it, and the send waits on nothing
-/// but the network: a 30-second request stalls no other command.
+/// but the network and its scripts: a 30-second request stalls no other command.
 #[tauri::command]
 #[specta::specta]
 pub async fn send_http_request<R: Runtime>(
     request: send::SendRequest,
     app: AppHandle<R>,
 ) -> Result<send::SentResponse, AppError> {
-    let send::SendRequest {
-        id,
-        kind,
-        method,
-        document,
-        collection_id,
-        folder_id,
-        name,
-        request_id,
-        environment_id,
-    } = request;
-    let outgoing = blocking(app.clone(), move |_, db| {
+    let mut flight = Flight::new(app, &request.id);
+    let answer = flight.send(request).await;
+    flight.keep().await;
+    answer
+}
+
+/// What a send reads under the lock before it leaves.
+struct Prepared {
+    inherited: settings::Inherited,
+    layers: Vec<variables::VariableLayer>,
+    environment: Option<environments::Environment>,
+    jar: Option<Vec<cookies::JarCookie>>,
+}
+
+/// One send and the scripts around it, from the command's side: their host, the jar's copy
+/// they change, what they wrote, and what is kept once it ends — however it ends.
+struct Flight<R: Runtime> {
+    app: AppHandle<R>,
+    id: String,
+    session: Option<Session>,
+    /// The jar's copy while no session holds it.
+    jar: Option<Vec<cookies::JarCookie>>,
+    transport: transport::Transport,
+    environment: Option<environments::Environment>,
+    /// The user said yes to what the protected environment asks.
+    confirmed: bool,
+    collection_id: Option<String>,
+    info: ScriptInfo,
+    /// What the scripts and the send did to the jar, in their order.
+    changes: Vec<cookies::Change>,
+    wrote: bool,
+    sent: Option<history::Sent>,
+}
+
+/// The request as the scripts leave it: what it sends, and the levels it resolves from.
+struct Going {
+    kind: model::RequestKind,
+    method: model::HttpMethod,
+    document: model::RequestDocument,
+    layers: Vec<variables::VariableLayer>,
+}
+
+impl<R: Runtime> Flight<R> {
+    fn new(app: AppHandle<R>, id: &str) -> Self {
+        Self {
+            app,
+            id: id.to_string(),
+            session: None,
+            jar: None,
+            transport: transport::Transport::default(),
+            environment: None,
+            confirmed: false,
+            collection_id: None,
+            info: ScriptInfo::default(),
+            changes: Vec::new(),
+            wrote: false,
+            sent: None,
+        }
+    }
+
+    async fn send(&mut self, request: send::SendRequest) -> Result<send::SentResponse, AppError> {
+        let send::SendRequest {
+            id,
+            kind,
+            method,
+            document,
+            collection_id,
+            folder_id,
+            name,
+            request_id,
+            environment_id,
+            confirmed,
+        } = request;
+        let Prepared {
+            inherited,
+            layers,
+            environment,
+            jar,
+        } = prepare(
+            &self.app,
+            &document,
+            collection_id.clone(),
+            folder_id,
+            environment_id,
+        )
+        .await?;
+        let around = Around::of(&document.scripts, &name, &inherited);
+        self.jar = jar;
+        self.transport = inherited.transport.over(&document.transport);
+        self.environment = environment;
+        self.confirmed = confirmed;
+        self.collection_id = collection_id;
+        self.info = ScriptInfo {
+            iteration: 0,
+            iteration_count: 1,
+            request_name: name.clone(),
+            request_id: request_id.clone(),
+        };
+        let mut going = Going {
+            kind,
+            method,
+            document,
+            layers,
+        };
+        if !around.before.is_empty() {
+            self.before(&around.before, &mut going).await?;
+        }
+
+        let resolver = variables::Resolver::new(&going.layers);
+        let (filled, above) = variables::resolve(&going.document, &inherited, &resolver);
+        let method = going.method;
+        let mut outgoing = tauri::async_runtime::spawn_blocking(move || {
+            send::compose(kind, method, &filled, &above)
+        })
+        .await
+        .map_err(|error| AppError::from(send::SendError::Network(error.to_string())))??;
+        outgoing.secret_values = resolver.secrets();
+        if outgoing.transport.use_cookies {
+            outgoing.jar = self.jar();
+        }
+        let exchange = send::exchange(&outgoing);
+        let secrets = outgoing.secrets.clone();
+        let secret_values = outgoing.secret_values.clone();
+        let (answer, cookies_set) = self.app.state::<send::Sending>().run(&id, outgoing).await;
+        if matches!(answer, Err(send::SendError::Cancelled)) {
+            return Err(send::SendError::Cancelled.into());
+        }
+        self.received(cookies_set);
+        let mut answer = answer.map_err(AppError::from);
+
+        let mut finished = true;
+        if let Ok(response) = &mut answer {
+            if !around.after.is_empty() {
+                finished = self.after(&around.after, &mut going, response).await;
+            }
+            let shown = variables::Resolver::new(&going.layers).secrets();
+            response.scripts.logs = around::masked(self.logs(), &shown);
+            response.scripts.wrote = self.wrote;
+        }
+        self.sent = Some(history::Sent {
+            kind,
+            name,
+            request_id,
+            exchange,
+            secrets,
+            secret_values,
+            environment: self.sent_environment(),
+            outcome: match &answer {
+                Ok(response) => Ok(response.clone()),
+                Err(error) => Err((error.code, error.params.clone())),
+            },
+        });
+        if !finished {
+            return Err(send::SendError::Cancelled.into());
+        }
+        answer
+    }
+
+    fn sent_environment(&self) -> Option<history::SentEnvironment> {
+        self.environment
+            .as_ref()
+            .map(|environment| history::SentEnvironment {
+                name: environment.name.clone(),
+                colour: environment.colour,
+            })
+    }
+
+    /// A phase's job, `url` the one its cookies are read for.
+    fn job(&self, phase: Phase, scripts: &[Script], going: &Going, url: &str) -> Job {
+        Job {
+            phase,
+            scripts: scripts.to_vec(),
+            request: ScriptRequest::of(going.kind, going.method, &going.document),
+            response: None,
+            layers: around::layers_of(&going.layers),
+            environment: self
+                .environment
+                .as_ref()
+                .map(|environment| environment.name.clone()),
+            cookies: network::cookies_for(self.jar().as_deref(), url),
+            info: self.info.clone(),
+        }
+    }
+
+    /// The scripts before the send: what they change goes out, what stops them keeps it in.
+    async fn before(&mut self, scripts: &[Script], going: &mut Going) -> Result<(), AppError> {
+        let url = variables::Resolver::new(&going.layers).fill(&going.document.url);
+        let job = self.job(Phase::Before, scripts, going, &url);
+        let outcome = self.run(job).await?;
+        self.write(&outcome.writes, &mut going.layers).await;
+        if let Some(failure) = &outcome.failure {
+            return Err(ScriptError::Stopped(ScriptStop::of(failure, scripts)).into());
+        }
+        if outcome.skip {
+            return Err(ScriptError::Skipped.into());
+        }
+        if let Some(request) = &outcome.request {
+            going.method = request
+                .onto(going.kind, &mut going.document)
+                .map_err(|RequestFault::Method(method)| ScriptError::Method(method))?;
+        }
+        // The front asked about the method it saw; the one the script left is checked here.
+        if let Some(environment) = &self.environment
+            && environment.protected
+            && !self.confirmed
+            && !going.method.changes_nothing()
+        {
+            return Err(ScriptError::Protected {
+                method: going.method,
+                environment: environment.name.clone(),
+            }
+            .into());
+        }
+        if !outcome.locals.is_empty() {
+            going
+                .layers
+                .insert(0, around::locals_layer(&outcome.locals));
+        }
+        Ok(())
+    }
+
+    /// The scripts once it is answered: what stops them is shown with the answer. `false` when
+    /// « Annuler » stopped them.
+    async fn after(
+        &mut self,
+        scripts: &[Script],
+        going: &mut Going,
+        response: &mut send::SentResponse,
+    ) -> bool {
+        let job = Job {
+            response: Some(network::response_of(response)),
+            ..self.job(Phase::After, scripts, going, &response.url)
+        };
+        let Ok(outcome) = self.run(job).await else {
+            return false;
+        };
+        self.write(&outcome.writes, &mut going.layers).await;
+        response.scripts.failure = outcome
+            .failure
+            .map(|failure| ScriptStop::of(&failure, scripts));
+        true
+    }
+
+    /// One phase in the host, started for the first one; `Err` when « Annuler » stopped it.
+    async fn run(&mut self, job: Job) -> Result<Outcome, AppError> {
+        let mut session = match self.session.take() {
+            Some(session) => session,
+            None => match ScriptProcess::start() {
+                Ok(host) => Session::new(
+                    host,
+                    Network::new(
+                        tokio::runtime::Handle::current(),
+                        self.transport,
+                        self.jar.take(),
+                        self.confirmed
+                            || !self
+                                .environment
+                                .as_ref()
+                                .is_some_and(|environment| environment.protected),
+                    ),
+                ),
+                Err(error) => return Ok(host_failed(&error.to_string())),
+            },
+        };
+        let killer = session.killer();
+        self.app
+            .state::<send::Sending>()
+            .watch(&self.id, Some(killer.clone()));
+        let ran = tauri::async_runtime::spawn_blocking(move || {
+            let outcome = session.run(&job);
+            (session, outcome)
+        })
+        .await;
+        self.app.state::<send::Sending>().watch(&self.id, None);
+        let outcome = match ran {
+            Ok((mut session, outcome)) => {
+                self.changes.append(&mut session.network.changes);
+                self.session = Some(session);
+                outcome
+            }
+            Err(error) => host_failed(&error.to_string()),
+        };
+        if killer.killed() {
+            return Err(send::SendError::Cancelled.into());
+        }
+        Ok(outcome)
+    }
+
+    /// The jar as the scripts left it.
+    fn jar(&self) -> Option<Vec<cookies::JarCookie>> {
+        match &self.session {
+            Some(session) => session.network.jar.clone(),
+            None => self.jar.clone(),
+        }
+    }
+
+    /// What the send did to the jar, for the scripts after it to read.
+    fn received(&mut self, changes: Vec<cookies::Change>) {
+        if let Some(jar) = self
+            .session
+            .as_mut()
+            .and_then(|session| session.network.jar.as_mut())
+        {
+            cookies::apply(jar, &changes);
+        }
+        self.changes.extend(changes);
+    }
+
+    fn logs(&mut self) -> Vec<LogEntry> {
+        self.session
+            .as_mut()
+            .map(|session| std::mem::take(&mut session.logs))
+            .unwrap_or_default()
+    }
+
+    /// What a phase wrote: kept under the lock, and in the levels the send resolves from.
+    async fn write(&mut self, writes: &[VariableWrite], layers: &mut [variables::VariableLayer]) {
+        if writes.is_empty() {
+            return;
+        }
+        around::apply(layers, writes);
+        let writes = writes.to_vec();
+        let environment_id = self
+            .environment
+            .as_ref()
+            .map(|environment| environment.id.clone());
+        let collection_id = self.collection_id.clone();
+        let kept = blocking(self.app.clone(), move |_, db| {
+            let mut connection = lock(db)?;
+            Ok(keep_writes(
+                &mut connection,
+                &writes,
+                environment_id.as_deref(),
+                collection_id.as_deref(),
+            )?)
+        })
+        .await;
+        match kept {
+            Ok(wrote) => self.wrote |= wrote,
+            Err(error) => log::warn!("What a script wrote was not kept: {}", error.detail),
+        }
+    }
+
+    /// The history and the jar, written under the lock again, and never at the answer's expense.
+    async fn keep(self) {
+        let Self {
+            app, sent, changes, ..
+        } = self;
+        if sent.is_none() && changes.is_empty() {
+            return;
+        }
+        let kept = blocking(app, move |_, db| {
+            let now = Utc::now();
+            let mut connection = lock(db)?;
+            if let Some(sent) = &sent {
+                let (summary, record) = history::record_of(sent);
+                history::store::record(
+                    &mut connection,
+                    sent.request_id.as_deref(),
+                    &summary,
+                    &record,
+                    now,
+                )?;
+            }
+            cookies::store::apply(&mut connection, &changes, now)?;
+            Ok(())
+        })
+        .await;
+        if let Err(error) = kept {
+            log::warn!(
+                "A send's history or cookies were not kept: {}",
+                error.detail
+            );
+        }
+    }
+}
+
+fn host_failed(message: &str) -> Outcome {
+    Outcome::failed(ScriptFailure {
+        kind: FailureKind::Host,
+        message: message.to_string(),
+        ..ScriptFailure::default()
+    })
+}
+
+async fn prepare<R: Runtime>(
+    app: &AppHandle<R>,
+    document: &model::RequestDocument,
+    collection_id: Option<String>,
+    folder_id: Option<String>,
+    environment_id: Option<String>,
+) -> Result<Prepared, AppError> {
+    let own = document.variables.clone();
+    let own_transport = document.transport;
+    blocking(app.clone(), move |_, db| {
         let mut connection = lock(db)?;
         let inherited = match collection_id {
             Some(collection_id) => {
@@ -472,58 +863,74 @@ pub async fn send_http_request<R: Runtime>(
             }
             None => settings::inherit(&[]),
         };
-        let resolver = resolver_for(
-            &mut connection,
-            &document.variables,
-            &inherited,
-            environment_id.as_deref(),
-        )?;
-        let (document, inherited) = variables::resolve(&document, &inherited, &resolver);
-        let mut outgoing = send::compose(kind, method, &document, &inherited)?;
-        outgoing.secret_values = resolver.secrets();
-        if outgoing.transport.use_cookies {
-            outgoing.jar = Some(cookies::store::jar(&mut connection, Utc::now())?);
-        }
+        let layers = layers_for(&mut connection, &own, &inherited, environment_id.as_deref())?;
         let environment = environment_id
             .as_deref()
             .map(|id| environments::store::get(&mut connection, id))
             .transpose()
             .ok()
-            .flatten()
-            .map(|environment| history::SentEnvironment {
-                name: environment.name,
-                colour: environment.colour,
-            });
-        Ok((outgoing, environment))
+            .flatten();
+        let jar = if inherited.transport.over(&own_transport).use_cookies {
+            Some(cookies::store::jar(&mut connection, Utc::now())?)
+        } else {
+            None
+        };
+        Ok(Prepared {
+            inherited,
+            layers,
+            environment,
+            jar,
+        })
     })
-    .await?;
-    let (outgoing, environment) = outgoing;
+    .await
+}
 
-    let exchange = send::exchange(&outgoing);
-    let secrets = outgoing.secrets.clone();
-    let secret_values = outgoing.secret_values.clone();
-    let (answer, cookies_set) = app.state::<send::Sending>().run(&id, outgoing).await;
-    let outcome = match &answer {
-        Ok(response) => Ok(response.clone()),
-        Err(send::SendError::Cancelled) => return Err(send::SendError::Cancelled.into()),
-        Err(error) => {
-            let error = AppError::from(error.clone());
-            Err((error.code, error.params))
-        }
-    };
-    let sent = history::Sent {
-        kind,
-        name,
-        request_id,
-        exchange,
-        secrets,
-        secret_values,
-        environment,
-        outcome,
-    };
-    keep(app, sent, cookies_set).await;
-
-    Ok(answer?)
+/// What a phase wrote into the tables that hold it: the active environment, the globals, the
+/// collection's variables. A run's data row is none of them.
+fn keep_writes(
+    connection: &mut crate::db::Library,
+    writes: &[VariableWrite],
+    environment_id: Option<&str>,
+    collection_id: Option<&str>,
+) -> Result<bool, crate::error::StorageError> {
+    let wrote_to = |scope| around::writes_to(writes, scope).next().is_some();
+    let mut wrote = false;
+    if let Some(id) = environment_id
+        && wrote_to(WriteScope::Environment)
+    {
+        let environment = environments::store::get(connection, id)?;
+        let patch = environments::EnvironmentPatch {
+            variables: Some(around::written(
+                &environment.variables,
+                around::writes_to(writes, WriteScope::Environment),
+            )),
+            ..environments::EnvironmentPatch::default()
+        };
+        environments::store::save(connection, id, &patch, None)?;
+        wrote = true;
+    }
+    if wrote_to(WriteScope::Globals) {
+        let globals = environments::store::list(connection)?.globals;
+        let globals = around::written(&globals, around::writes_to(writes, WriteScope::Globals));
+        environments::store::save_globals(connection, &globals, Utc::now())?;
+        wrote = true;
+    }
+    if let Some(id) = collection_id
+        && wrote_to(WriteScope::Collection)
+    {
+        let item = model::HttpItem {
+            kind: model::HttpItemKind::Collection,
+            id: id.to_string(),
+        };
+        let mut held = store::settings(connection, &item)?;
+        held.variables = around::written(
+            &held.variables,
+            around::writes_to(writes, WriteScope::Collection),
+        );
+        store::save_settings(connection, &item, &held)?;
+        wrote = true;
+    }
+    Ok(wrote)
 }
 
 /// What a request resolves its `{{variables}}` from, the nearest first: its own, its folders
@@ -670,35 +1077,6 @@ pub struct VariablesRequest {
     pub collection_id: Option<String>,
     pub folder_id: Option<String>,
     pub environment_id: Option<String>,
-}
-
-/// The history and the jar, written under the lock again, and never at the answer's expense.
-async fn keep<R: Runtime>(
-    app: AppHandle<R>,
-    sent: history::Sent,
-    cookies_set: Vec<cookies::Change>,
-) {
-    let kept = blocking(app, move |_, db| {
-        let now = Utc::now();
-        let (summary, record) = history::record_of(&sent);
-        let mut connection = lock(db)?;
-        history::store::record(
-            &mut connection,
-            sent.request_id.as_deref(),
-            &summary,
-            &record,
-            now,
-        )?;
-        cookies::store::apply(&mut connection, &cookies_set, now)?;
-        Ok(())
-    })
-    .await;
-    if let Err(error) = kept {
-        log::warn!(
-            "A send's history or cookies were not kept: {}",
-            error.detail
-        );
-    }
 }
 
 /// `false` when that send had already ended.

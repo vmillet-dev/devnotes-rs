@@ -1,4 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { CodeEditorComponent } from '@notes/overlays/note-editor-overlay/code-editor/code-editor.component';
+import { HttpScriptFocusStore } from '@core/services/http/http-script-focus.store';
+import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -182,6 +186,7 @@ describe('HttpPageComponent', () => {
         },
       ],
       transport: DEFAULT_TRANSPORT,
+      scripts: [],
     };
     http.bodyAnswer = { contentType: 'application/json', problem: null, unusual: false };
     http.impliedAnswer = [
@@ -344,6 +349,62 @@ describe('HttpPageComponent', () => {
       el('[data-testid="http-section"][data-section="settings"] [data-testid="http-section-count"]')
         ?.textContent,
     ).toBe('1');
+  });
+
+  it('writes a request’s scripts in their tab, after those above it, and opens one that stopped', async () => {
+    http.inheritedAnswer = {
+      ...http.inheritedAnswer,
+      scripts: [
+        {
+          from: { kind: 'collection', id: 'API', name: 'API Paiements' },
+          scripts: { before: 'login()', after: '' },
+        },
+      ],
+    };
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="scripts"]').click();
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-script-order"]')?.textContent).toContain('API Paiements'),
+    );
+    const editor = () =>
+      fixture.debugElement.query(By.directive(CodeEditorComponent))?.componentInstance as
+        CodeEditorComponent | undefined;
+    await vi.waitFor(() => expect(editor()).toBeDefined());
+
+    editor()!.changed.emit("req.headers.set('X-Signed', 'yes');");
+    await fixture.whenStable();
+    expect(tabs().active()!.draft.parts.scripts).toEqual({
+      before: "req.headers.set('X-Signed', 'yes');",
+      after: '',
+    });
+    expect(
+      el('[data-testid="http-section"][data-section="scripts"] [data-testid="http-section-count"]')
+        ?.textContent,
+    ).toBe('1');
+
+    // From the answer: the request's own script, on the line that stopped.
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();
+    await fixture.whenStable();
+    TestBed.inject(HttpScriptFocusStore).open(tabs().active()!.key, {
+      kind: 'error',
+      level: 'request',
+      script: 'after',
+      line: 1,
+      message: 'x',
+    });
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-scripts"]')?.getAttribute('data-phase')).toBe('after'),
+    );
+    expect(TestBed.inject(HttpScriptFocusStore).request()).toBeNull();
+
+    // A level above: its settings, on this script.
+    el<HTMLButtonElement>('[data-testid="http-script-level"][data-level="collection"]').click();
+    await fixture.whenStable();
+    expect(TestBed.inject(HttpCollectionsStore).settingsOpen()?.script).toEqual({
+      phase: 'after',
+      line: null,
+    });
   });
 
   it('closes, when it opens again, the tab of a request the library no longer holds', async () => {
@@ -514,6 +575,7 @@ describe('HttpPageComponent', () => {
       'headers',
       'auth',
       'variables',
+      'scripts',
       'settings',
     ]);
     expect(el('[data-testid="http-graphql"]')).not.toBeNull();

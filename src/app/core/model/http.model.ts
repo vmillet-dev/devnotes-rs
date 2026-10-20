@@ -20,6 +20,10 @@ import type {
   KeyPlace,
   RequestAuth,
   RequestBody,
+  RequestScripts,
+  ScriptStop,
+  FailureKind,
+  ScriptLevel,
   HttpCollection,
   HttpCollectionNode,
   HttpContents,
@@ -92,6 +96,7 @@ export type {
   RequestHit,
   RequestKind,
   SentResponse,
+  ScriptStop,
 };
 
 /** A row of parameters or headers, every field present: the wire leaves out a default. */
@@ -174,6 +179,49 @@ export interface WebsocketParts {
   readonly messages: readonly SavedMessageRow[];
 }
 
+/** The JavaScript run around a send, both present: blank runs nothing. */
+export interface ScriptParts {
+  readonly before: string;
+  readonly after: string;
+}
+
+export type ScriptPhase = keyof ScriptParts;
+export const SCRIPT_PHASES: readonly ScriptPhase[] = ['before', 'after'];
+
+export const NO_SCRIPTS: ScriptParts = { before: '', after: '' };
+
+/** Where « Ouvrir le script » leads: one of the two scripts, on the line that stopped. */
+export interface ScriptFocus {
+  readonly phase: ScriptPhase;
+  /** From 1; `null` when the failure named none. */
+  readonly line: number | null;
+}
+
+const FAILURE_KINDS: readonly FailureKind[] = ['error', 'syntax', 'timeout', 'memory', 'host'];
+const SCRIPT_LEVELS: readonly ScriptLevel[] = ['request', 'folder', 'collection'];
+
+/** A script before the send that stopped it, read back from the values its error carries. */
+export function stopOf(params: Readonly<Record<string, string | undefined>>): ScriptStop {
+  const kind = FAILURE_KINDS.find((known) => known === params['failure']) ?? 'error';
+  const level = SCRIPT_LEVELS.find((known) => known === params['level']) ?? null;
+  const line = Number.parseInt(params['line'] ?? '', 10);
+  return {
+    kind,
+    level,
+    script: 'before',
+    name: params['name'] ?? null,
+    owner: params['owner'] ?? null,
+    line: Number.isNaN(line) ? null : line,
+    message: params['message'] ?? '',
+  };
+}
+
+/** A folder's or the collection's scripts, and whose they are. */
+export interface InheritedScriptsRow {
+  readonly from: HttpOrigin;
+  readonly scripts: ScriptParts;
+}
+
 /** A request's document as the editor holds it, every part present. */
 export interface RequestParts {
   readonly url: string;
@@ -187,6 +235,7 @@ export interface RequestParts {
   readonly transport: TransportSettings;
   /** The nearest level a `{{name}}` resolves from. */
   readonly variables: readonly VariableRow[];
+  readonly scripts: ScriptParts;
 }
 
 /** A collection's or a folder's own auth, headers and variables, what its requests inherit. */
@@ -195,6 +244,7 @@ export interface ContainerSettingsDraft {
   readonly headers: readonly KeyValueRow[];
   readonly transport: TransportSettings;
   readonly variables: readonly VariableRow[];
+  readonly scripts: ScriptParts;
 }
 
 export interface InheritedHeaderRow {
@@ -207,6 +257,8 @@ export interface InheritedParts {
   readonly authFrom: HttpOrigin | null;
   readonly headers: readonly InheritedHeaderRow[];
   readonly transport: Transport;
+  /** The collection's, then each folder's down to the request's. */
+  readonly scripts: readonly InheritedScriptsRow[];
 }
 
 export const EMPTY_PARTS: RequestParts = {
@@ -220,6 +272,7 @@ export const EMPTY_PARTS: RequestParts = {
   websocket: { protocols: [], messages: [] },
   transport: {},
   variables: [],
+  scripts: NO_SCRIPTS,
 };
 
 /** What a request tab edits, and what saving writes. */
@@ -299,7 +352,12 @@ export function toParts(document: RequestDocument): RequestParts {
     websocket: toWebsocket(document.websocket),
     transport: document.transport ?? {},
     variables: (document.variables ?? []).map(toVariableRow),
+    scripts: toScripts(document.scripts),
   };
+}
+
+export function toScripts(scripts: RequestScripts | undefined): ScriptParts {
+  return { before: scripts?.before ?? '', after: scripts?.after ?? '' };
 }
 
 function toWebsocket(websocket: WebsocketDocument | undefined): WebsocketParts {
@@ -337,6 +395,7 @@ export function toDocument(parts: RequestParts): RequestDocument {
     websocket: { protocols: [...parts.websocket.protocols], messages: [...parts.websocket.messages] },
     transport: { ...parts.transport },
     variables: [...parts.variables],
+    scripts: { ...parts.scripts },
   };
 }
 
@@ -346,6 +405,7 @@ export function toSettings(settings: ContainerSettings): ContainerSettingsDraft 
     headers: (settings.headers ?? []).map(toRow),
     transport: settings.transport ?? {},
     variables: (settings.variables ?? []).map(toVariableRow),
+    scripts: toScripts(settings.scripts),
   };
 }
 
@@ -355,6 +415,7 @@ export function fromSettings(settings: ContainerSettingsDraft): ContainerSetting
     headers: [...settings.headers],
     transport: { ...settings.transport },
     variables: [...settings.variables],
+    scripts: { ...settings.scripts },
   };
 }
 
@@ -367,6 +428,7 @@ export function toInherited(inherited: Inherited): InheritedParts {
       from: known.from,
     })),
     transport: inherited.transport,
+    scripts: inherited.scripts.map((known) => ({ from: known.from, scripts: toScripts(known.scripts) })),
   };
 }
 

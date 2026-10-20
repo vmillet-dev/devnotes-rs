@@ -56,6 +56,10 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   httpWebsocketScheme: true,
   httpHeaderName: true,
   httpHeaderValue: true,
+  httpScript: true,
+  httpScriptSkipped: true,
+  httpScriptMethod: true,
+  httpScriptProtected: true,
 };
 
 function isAppError(cause: unknown): cause is AppError {

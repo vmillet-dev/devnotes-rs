@@ -188,6 +188,18 @@ fn cookie_of(cookie: &JarCookie) -> ScriptCookie {
     }
 }
 
+/// `pm.cookies`: what the jar holds for `url`; nothing when it is not one, or the jar is off.
+#[must_use]
+pub fn cookies_for(jar: Option<&[JarCookie]>, url: &str) -> Vec<ScriptCookie> {
+    let (Some(jar), Ok(url)) = (jar, Url::parse(url)) else {
+        return Vec::new();
+    };
+    cookies::matching(jar, &url, Utc::now())
+        .into_iter()
+        .map(cookie_of)
+        .collect()
+}
+
 /// An answer as a script reads it.
 #[must_use]
 pub fn response_of(response: &SentResponse) -> ScriptResponse {

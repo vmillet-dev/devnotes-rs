@@ -176,7 +176,15 @@ export class HttpTabsStore {
     change: Partial<
       Pick<
         RequestParts,
-        'headers' | 'description' | 'body' | 'auth' | 'graphql' | 'websocket' | 'transport' | 'variables'
+        | 'headers'
+        | 'description'
+        | 'body'
+        | 'auth'
+        | 'graphql'
+        | 'websocket'
+        | 'transport'
+        | 'variables'
+        | 'scripts'
       >
     >,
   ): void {

@@ -17,6 +17,7 @@ use super::graphql::{GraphqlDocument, GraphqlError, GraphqlResult};
 use super::model::{HttpMethod, HttpRequest, KeyValue, RequestBody, RequestDocument, RequestKind};
 use super::query::{self, QuerySide};
 use super::response::{Cookie, pretty_json};
+use super::scripts::model::ScriptsAnswer;
 use super::send::{self, Exchange, Redirect, SentBody, SentResponse};
 use super::settings::InheritedHeader;
 use super::variables;
@@ -375,6 +376,11 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
             cut: response.cut || shortened,
             body,
             exchange: exchange.clone(),
+            // What a script logged is the console's, for the session alone.
+            scripts: ScriptsAnswer {
+                logs: Vec::new(),
+                ..response.scripts.clone()
+            },
             ..masked_answer(response, &sent.secrets)
         }
     });
@@ -738,6 +744,7 @@ mod tests {
             cookies: Vec::new(),
             exchange: exchange("https://api.exemple.fr", Vec::new(), SentBody::None),
             graphql: None,
+            scripts: ScriptsAnswer::default(),
         }
     }
 

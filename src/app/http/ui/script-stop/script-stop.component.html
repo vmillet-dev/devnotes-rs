@@ -1,0 +1,28 @@
+@let stopped = stop();
+<div
+  class="stop"
+  role="alert"
+  data-testid="http-script-stop"
+  [attr.data-kind]="stopped.kind"
+  [attr.data-level]="stopped.level"
+  [attr.data-script]="stopped.script"
+>
+  <p class="title">{{ title().key | transloco: title().params }}</p>
+  @if (message(); as said) {
+    <p class="message" data-testid="http-script-stop-message">{{ said.key | transloco }}</p>
+  } @else {
+    <p class="message" data-testid="http-script-stop-message">{{ stopped.message }}</p>
+  }
+  @if (where() !== null || openable()) {
+    <div class="foot">
+      @if (where(); as at) {
+        <span class="where" data-testid="http-script-stop-where">{{ at.key | transloco: at.params }}</span>
+      }
+      @if (openable()) {
+        <button type="button" class="open" data-testid="http-script-open" (click)="opened.emit()">
+          {{ 'http.scripts.stop.open' | transloco }}
+        </button>
+      }
+    </div>
+  }
+</div>

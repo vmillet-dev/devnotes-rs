@@ -10,9 +10,29 @@
       [response]="answer"
       [sendId]="sendId()"
       [requestName]="requestName()"
+      [scriptOpenable]="true"
       (fileAsked)="saveFile()"
       (clearAsked)="clear()"
+      (scriptOpened)="openScript($event)"
     />
+  } @else if (stopped(); as stop) {
+    <div class="unsent" data-testid="http-response-unsent">
+      <span class="unsent-badge">{{ 'http.response.unsent' | transloco }}</span>
+      <app-script-stop [stop]="stop" (opened)="openScript(stop)" />
+      <ng-container *ngTemplateOutlet="clearButton" />
+    </div>
+  } @else if (protectedAsk(); as asked) {
+    <div class="unsent" data-testid="http-response-unsent">
+      <span class="unsent-badge">{{ 'http.response.unsent' | transloco }}</span>
+      <app-protected-question
+        testId="http-script-protected"
+        [colour]="protectedColour()"
+        [question]="'errors.httpScriptProtected' | transloco: asked"
+        [goLabel]="'http.environments.sendAnyway' | transloco"
+        (go)="sendAnyway()"
+        (cancelled)="clear()"
+      />
+    </div>
   } @else if (failure(); as ref) {
     <div class="settled">
       <p class="failure" role="alert" data-testid="http-response-failure" [attr.data-key]="ref.key">

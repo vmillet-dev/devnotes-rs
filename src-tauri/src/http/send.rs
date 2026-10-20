@@ -22,6 +22,8 @@ use super::model::{
     RequestKind, header_fault,
 };
 use super::response::{self, Cookie};
+use super::scripts::model::ScriptsAnswer;
+use super::scripts::process::Killer;
 use super::settings::{HttpOrigin, Inherited, implied_content_type, switches_off};
 use super::transport::{Limit, Limits, SetBy, Transport};
 use super::{variables, websocket};
@@ -60,6 +62,9 @@ pub struct SendRequest {
     /// The environment its `{{variables}}` resolve from, over the globals; `None` for the
     /// globals alone.
     pub environment_id: Option<String>,
+    /// The user said yes to what a protected environment asks: a script may then change it.
+    #[serde(default)]
+    pub confirmed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -105,6 +110,9 @@ pub struct SentResponse {
     pub exchange: Exchange,
     /// A GraphQL answer read apart: its `data` and its `errors`.
     pub graphql: Option<GraphqlResult>,
+    /// What the scripts after the answer left.
+    #[serde(default)]
+    pub scripts: ScriptsAnswer,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -1131,6 +1139,7 @@ async fn send(
             pretty,
             exchange,
             graphql,
+            scripts: ScriptsAnswer::default(),
         },
         kept: Kept {
             content_type,
@@ -1161,6 +1170,8 @@ pub struct Sending {
     running: Mutex<HashMap<String, (u64, AbortHandle)>>,
     started: AtomicU64,
     bodies: Mutex<HashMap<String, Arc<Kept>>>,
+    /// The script hosts at work, by the same id: a cancel reaches a script too.
+    hosts: Mutex<HashMap<String, Killer>>,
 }
 
 impl Sending {
@@ -1207,11 +1218,29 @@ impl Sending {
 
     /// `false` when nothing was under way under that id.
     pub fn cancel(&self, id: &str) -> bool {
-        self.running
+        let script = self
+            .hosts
+            .lock()
+            .ok()
+            .and_then(|hosts| hosts.get(id).map(Killer::kill))
+            .is_some();
+        let send = self
+            .running
             .lock()
             .ok()
             .and_then(|running| running.get(id).map(|(_, task)| task.abort()))
-            .is_some()
+            .is_some();
+        script || send
+    }
+
+    /// The host running a send's scripts, for as long as they run.
+    pub fn watch(&self, id: &str, killer: Option<Killer>) {
+        if let Ok(mut hosts) = self.hosts.lock() {
+            match killer {
+                Some(killer) => hosts.insert(id.to_string(), killer),
+                None => hosts.remove(id),
+            };
+        }
     }
 
     /// Staged then renamed: a half-written file never takes the name.
@@ -1285,6 +1314,7 @@ mod tests {
             limits: Limits::default(),
             user_agent_off: false,
             variables: Vec::new(),
+            scripts: Vec::new(),
         }
     }
 

@@ -77,6 +77,19 @@ pub struct ContainerSettings {
     pub transport: TransportSettings,
     /// Over the environment's and the globals', under a folder's and a request's own.
     pub variables: Vec<Variable>,
+    /// Run around each request under it: before the request's own, and after it.
+    pub scripts: RequestScripts,
+}
+
+/// The JavaScript a request, a folder or a collection runs around a send; a blank one runs
+/// nothing.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RequestScripts {
+    /// Before it leaves: it can change the request.
+    pub before: String,
+    /// Once it is answered: it reads the response.
+    pub after: String,
 }
 
 /// What a request sends as its body. A file is a path, read by Rust when the request is sent:
@@ -210,6 +223,7 @@ pub struct RequestDocument {
     pub transport: TransportSettings,
     /// The nearest level a `{{name}}` resolves from.
     pub variables: Vec<Variable>,
+    pub scripts: RequestScripts,
 }
 
 /// A row of a request's parameters or headers.

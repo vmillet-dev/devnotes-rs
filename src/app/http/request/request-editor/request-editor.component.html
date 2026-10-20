@@ -108,36 +108,20 @@
 
   @if (environments.asking() === tab().key) {
     @let protectedOne = environments.active();
-    <div
-      class="protected"
-      role="alertdialog"
-      data-testid="http-protected-confirm"
-      aria-labelledby="http-protected-question"
-    >
-      <p id="http-protected-question" class="protected-question">
-        <i [class]="'protected-dot is-' + (protectedOne?.colour ?? 'red')" aria-hidden="true"></i>
-        {{
-          (draft.kind === 'websocket' ? 'http.environments.askConnect' : 'http.environments.askSend')
-            | transloco: { name: protectedOne?.name ?? '', method: draft.method }
-        }}
-      </p>
-      <div class="protected-actions">
-        <button type="button" class="protected-go" data-testid="http-protected-send" (click)="sendAnyway()">
-          {{
-            (draft.kind === 'websocket' ? 'http.environments.connectAnyway' : 'http.environments.sendAnyway')
-              | transloco
-          }}
-        </button>
-        <button
-          type="button"
-          class="protected-cancel"
-          data-testid="http-protected-cancel"
-          (click)="environments.stopAsking()"
-        >
-          {{ 'http.rail.cancel' | transloco }}
-        </button>
-      </div>
-    </div>
+    <app-protected-question
+      testId="http-protected"
+      [colour]="protectedOne?.colour ?? null"
+      [question]="
+        (draft.kind === 'websocket' ? 'http.environments.askConnect' : 'http.environments.askSend')
+          | transloco: { name: protectedOne?.name ?? '', method: draft.method }
+      "
+      [goLabel]="
+        (draft.kind === 'websocket' ? 'http.environments.connectAnyway' : 'http.environments.sendAnyway')
+          | transloco
+      "
+      (go)="sendAnyway()"
+      (cancelled)="environments.stopAsking()"
+    />
   }
 
   <div class="sections" role="tablist" [attr.aria-label]="'http.editor.parts' | transloco">
@@ -172,7 +156,7 @@
     }
   </div>
 
-  <div class="panel" role="tabpanel">
+  <div class="panel" role="tabpanel" [class.grows]="section() === 'scripts'">
     @if (section() === 'params') {
       <app-key-value-table
         kind="params"
@@ -242,6 +226,17 @@
         [label]="'http.editor.sections.variables' | transloco"
         [rows]="draft.parts.variables"
         (rowsChange)="onVariables($event)"
+      />
+    } @else if (section() === 'scripts') {
+      <app-script-editor
+        [scripts]="draft.parts.scripts"
+        [owner]="tab().key"
+        [(phase)]="scriptPhase"
+        [line]="scriptLine()"
+        [above]="tab().place === null ? [] : (inherited()?.scripts ?? [])"
+        [requestName]="draft.name"
+        (scriptsChange)="onScripts($event)"
+        (levelOpened)="openLevel($event)"
       />
     } @else if (section() === 'settings') {
       <app-transport-editor

@@ -59,6 +59,7 @@ fn job(phase: Phase, source: &str) -> Job {
                 ScriptKind::Tests
             },
             name: "Login".to_string(),
+            owner: None,
             source: source.to_string(),
         }],
         request: ScriptRequest {
