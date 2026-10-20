@@ -8,6 +8,10 @@ import { HttpScriptFocusStore } from '@core/services/http/http-script-focus.stor
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { ProtectedQuestionComponent } from '@http/ui/protected-question/protected-question.component';
+import { HttpConsoleStore } from '@core/services/http/http-console.store';
+import { SettingsStore } from '@core/services/settings/settings.store';
+import { SplitHandleComponent } from '@shared/layout/split-handle/split-handle.component';
+import { HttpConsoleComponent } from './console/http-console.component';
 import { ExtractDialogComponent } from './extract-dialog/extract-dialog.component';
 import { ResponseViewComponent } from '@http/ui/response-view/response-view.component';
 import { ScriptStopComponent } from '@http/ui/script-stop/script-stop.component';
@@ -21,6 +25,8 @@ const ELAPSED_TICK_MS = 100;
   selector: 'app-response-pane',
   imports: [
     ExtractDialogComponent,
+    HttpConsoleComponent,
+    SplitHandleComponent,
     NgTemplateOutlet,
     ProtectedQuestionComponent,
     ResponseViewComponent,
@@ -42,6 +48,8 @@ export class ResponsePaneComponent {
   private readonly scriptFocus = inject(HttpScriptFocusStore);
   protected readonly environments = inject(HttpEnvironmentsStore);
   private readonly status = inject(StatusNotifier);
+  protected readonly console = inject(HttpConsoleStore);
+  protected readonly settings = inject(SettingsStore);
 
   protected readonly state = computed(() => this.sending.states().get(this.tabKey()) ?? null);
   protected readonly phase = computed(() => this.state()?.phase ?? 'idle');
@@ -71,6 +79,8 @@ export class ResponsePaneComponent {
 
   /** « Extraire vers une variable… »: the path asked, while its dialog is open. */
   protected readonly extracting = signal<string | null>(null);
+  /** « Ouvrir l'échange › » from the console: the answer opens on its timeline. */
+  protected readonly timelineAsked = signal(0);
 
   /** Moves only while a send is under way: nothing ticks under an answer. */
   private readonly now = signal(Date.now());

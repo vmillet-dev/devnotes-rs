@@ -1,6 +1,9 @@
+@let consoleShare = settings.httpConsoleShare();
 <section
   class="response"
   data-testid="http-response"
+  [class.shared]="console.open() && consoleShare > 0"
+  [style.flex-basis.%]="console.open() && consoleShare > 0 ? consoleShare : null"
   [attr.data-phase]="phase()"
   [attr.aria-label]="'http.response.label' | transloco"
   aria-live="polite"
@@ -11,6 +14,7 @@
       [sendId]="sendId()"
       [requestName]="requestName()"
       [scriptOpenable]="true"
+      [timelineAsked]="timelineAsked()"
       (fileAsked)="saveFile()"
       (clearAsked)="clear()"
       (scriptOpened)="openScript($event)"
@@ -62,6 +66,30 @@
     <p class="placeholder" data-testid="http-response-idle">{{ 'http.response.idle' | transloco }}</p>
   }
 </section>
+
+@if (console.open()) {
+  <app-split-handle
+    testId="http-console-handle"
+    [share]="consoleShare"
+    [upperFloor]="80"
+    [lowerFloor]="90"
+    [label]="'http.console.split' | transloco"
+    [valueText]="
+      consoleShare > 0
+        ? ('http.split.value' | transloco: { share: consoleShare })
+        : ('http.split.auto' | transloco)
+    "
+    (shareChanged)="settings.httpConsoleShare.write($event)"
+  />
+}
+<app-http-console
+  [class.open]="console.open()"
+  [class.shared]="consoleShare > 0"
+  [tabKey]="tabKey()"
+  [requestName]="requestName()"
+  [currentSendId]="sendId()"
+  (exchangeOpened)="timelineAsked.update((asked) => asked + 1)"
+/>
 
 <!-- A failure and a cancelled send stay on screen as an answer does, and go the same way. -->
 <ng-template #clearButton>

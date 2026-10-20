@@ -2,8 +2,7 @@
 //! their writes do to the levels the request resolves from and to the tables that hold them.
 
 use super::model::{
-    LayerScope, LogEntry, Script, ScriptKind, ScriptLayer, ScriptLevel, TestResult, VariableWrite,
-    WriteScope,
+    LayerScope, Script, ScriptKind, ScriptLayer, ScriptLevel, TestResult, VariableWrite, WriteScope,
 };
 use crate::http::environments::{FilledBy, Variable, VariableKind, variable_faults};
 use crate::http::model::{HttpItemKind, RequestScripts};
@@ -243,17 +242,6 @@ pub fn shown_tests(
         .collect()
 }
 
-/// What a script logged, each secret in force written as its `{{name}}`.
-#[must_use]
-pub fn masked(logs: Vec<LogEntry>, secrets: &[(String, String)]) -> Vec<LogEntry> {
-    logs.into_iter()
-        .map(|entry| LogEntry {
-            text: variables::hide(&entry.text, secrets),
-            ..entry
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -411,17 +399,5 @@ mod tests {
         let scripted = layers_of(&layers);
         assert_eq!(scripted[0].scope, LayerScope::Environment);
         assert_eq!(scripted[0].values["token"], "abc");
-    }
-
-    #[test]
-    fn a_log_never_shows_a_secret_in_force() {
-        let logs = masked(
-            vec![LogEntry {
-                text: "Bearer s3cr3t-value".to_string(),
-                ..LogEntry::default()
-            }],
-            &[("token".to_string(), "s3cr3t-value".to_string())],
-        );
-        assert_eq!(logs[0].text, "Bearer {{token}}");
     }
 }

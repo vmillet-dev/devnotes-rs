@@ -55,6 +55,7 @@ import type {
   Transport,
   TransportSettings,
 } from '@core/ipc/bindings';
+import type { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { VariableRow, toVariableRow } from './http-environment.model';
 
 export { DEFAULT_TRANSPORT } from '@core/ipc/bindings';
@@ -260,6 +261,21 @@ export function stopOf(params: Readonly<Record<string, string | undefined>>): Sc
     line: Number.isNaN(line) ? null : line,
     message: params['message'] ?? '',
   };
+}
+
+/** Whose script stopped: « Le script avant l'envoi de la collection « API » a échoué ». */
+export function stopTitleOf(stop: ScriptStop): TranslationRef {
+  if (stop.level === null || stop.level === undefined) return { key: 'http.scripts.stop.host' };
+  return {
+    key: `http.scripts.stop.${stop.script ?? 'before'}.${stop.level}`,
+    params: { name: stop.name ?? '' },
+  };
+}
+
+/** What stopped it, when it is not the script's own words — a throw or a syntax error. */
+export function stopMessageOf(stop: ScriptStop): TranslationRef | null {
+  const kind = stop.kind ?? 'error';
+  return kind === 'error' || kind === 'syntax' ? null : { key: `http.scripts.stop.kinds.${kind}` };
 }
 
 /** A folder's or the collection's scripts, and whose they are. */

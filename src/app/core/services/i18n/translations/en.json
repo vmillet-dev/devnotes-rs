@@ -3703,6 +3703,37 @@
       "secretShort": "secret",
       "remove": "Remove the extraction into “{{variable}}”"
     },
+    "console": {
+      "title": "Console",
+      "filter": "Filter the console",
+      "filters": {
+        "all": "All",
+        "traffic": "Traffic",
+        "logs": "Logs",
+        "errors": "Errors"
+      },
+      "masked": "Secrets masked",
+      "clear": "Clear",
+      "fold": "Fold the console",
+      "unfold": "Unfold the console",
+      "split": "Share between the response and the console",
+      "exchange": "Open the exchange ›",
+      "empty": "Nothing yet: what the request sends and what its scripts say show here.",
+      "traffic": "{count, plural, =0 {no exchange} one {# exchange} other {# exchanges}}",
+      "logs": "{count, plural, =0 {no log} one {# log} other {# logs}}",
+      "errors": "{count, plural, one {# error} other {# errors}}",
+      "in": "{{status}} {{reason}} · {{millis}} ms · {{size}} B",
+      "test": "{{name}}: expected {{expected}}, received {{actual}}",
+      "testMessage": "{{name}}: {{message}}",
+      "missed": "{{path}} no longer reads in the response: “{{variable}}” was left as it was",
+      "origins": {
+        "request": "{{name}}",
+        "sent": "pm.sendRequest · {{name}}",
+        "before": "before the send · {{name}}",
+        "after": "after the response · {{name}}",
+        "tests": "Tests · {{name}}"
+      }
+    },
     "variables": {
       "name": "Name",
       "value": "Value",

@@ -281,7 +281,9 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         .typ::<desktop::GlobalAction>()
         .constant("GLOBAL_ACTION_EVENT", desktop::ACTION_EVENT)
         .typ::<http::websocket::WebsocketEvent>()
+        .typ::<http::console::ConsoleEvent>()
         .constant("WEBSOCKET_EVENT", http::websocket::WEBSOCKET_EVENT)
+        .constant("HTTP_CONSOLE_EVENT", http::console::HTTP_CONSOLE_EVENT)
         .constant("DEFAULT_TRANSPORT", http::transport::Transport::default())
         .constant("APP_METADATA", app_info::METADATA)
         // The native side registers them before the front end exists; the front reads them.

@@ -2,11 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   input,
   linkedSignal,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ScriptStop, SentResponse, TestResult } from '@core/model/http.model';
@@ -46,6 +48,8 @@ export class ResponseViewComponent {
   readonly clearAsked = output<void>();
   /** A script after the answer that stopped offers the way to it: not from the history. */
   readonly scriptOpenable = input(false);
+  /** Moves when the console asks for this answer's exchange: its timeline is shown. */
+  readonly timelineAsked = input(0);
   readonly scriptOpened = output<ScriptStop>();
   /** A value of the answer to keep in a variable: `body.access_token`. */
   readonly extractAsked = output<string>();
@@ -124,6 +128,12 @@ export class ResponseViewComponent {
     }
     return { key: 'http.response.megabytes', params: { value: this.format(bytes / 1024 / 1024, 1) } };
   });
+
+  constructor() {
+    effect(() => {
+      if (this.timelineAsked() > 0) untracked(() => this.chosen.set('timeline'));
+    });
+  }
 
   protected choose(section: Section): void {
     this.chosen.set(section);

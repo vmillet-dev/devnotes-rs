@@ -3,9 +3,11 @@
 //! them says where.
 
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use devnotes_lib::error::ErrorCode;
+use devnotes_lib::http::console::{ConsoleEvent, ConsoleLine, HTTP_CONSOLE_EVENT};
 use devnotes_lib::http::environments::{EnvironmentPatch, FilledBy, Variable, VariableKind};
 use devnotes_lib::http::model::{
     ContainerSettings, Extraction, HttpItem, HttpItemKind, HttpMethod, RequestScripts,
@@ -17,9 +19,34 @@ use devnotes_lib::http::{
     http_history_entry, http_settings, save_http_environment, save_http_settings,
     send_http_request,
 };
+use tauri::Listener;
 
 use super::Session;
 use super::http_send::{header_of, request, response, serve};
+
+/// The console's lines as they cross, for the session of the test.
+fn console(session: &Session) -> Arc<Mutex<Vec<ConsoleEvent>>> {
+    let heard = Arc::new(Mutex::new(Vec::new()));
+    let kept = Arc::clone(&heard);
+    session.0.listen_any(HTTP_CONSOLE_EVENT, move |event| {
+        if let Ok(event) = serde_json::from_str::<ConsoleEvent>(event.payload()) {
+            kept.lock().unwrap().push(event);
+        }
+    });
+    heard
+}
+
+fn logs(heard: &Arc<Mutex<Vec<ConsoleEvent>>>) -> Vec<String> {
+    heard
+        .lock()
+        .unwrap()
+        .iter()
+        .filter_map(|event| match &event.line {
+            ConsoleLine::Log { text, .. } => Some(text.clone()),
+            _ => None,
+        })
+        .collect()
+}
 
 fn hosted() -> Session {
     host_from(PathBuf::from(env!("CARGO_BIN_EXE_devnotes")));
@@ -78,6 +105,7 @@ fn a_script_before_changes_what_leaves_and_what_the_scripts_write_is_kept() {
         "env.set('orderId', String(res.json().id));",
     );
 
+    let heard = console(&session);
     let answer = session.call(|app| send_http_request(sent, app)).unwrap();
 
     let seen = seen.recv().unwrap();
@@ -86,7 +114,31 @@ fn a_script_before_changes_what_leaves_and_what_the_scripts_write_is_kept() {
     assert!(answer.scripts.failure.is_none());
     assert!(answer.scripts.wrote);
     // A secret in force is never shown in clear, not even in what a script logged.
-    assert_eq!(answer.scripts.logs[0].text, "token {{token}}");
+    assert_eq!(logs(&heard), ["token {{token}}"]);
+    let traffic: Vec<String> = heard
+        .lock()
+        .unwrap()
+        .iter()
+        .filter_map(|event| match &event.line {
+            ConsoleLine::Out { method, url, .. } => Some(format!("→ {method} {url}")),
+            ConsoleLine::In { status, .. } => Some(format!("← {status}")),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        traffic,
+        [
+            format!("→ GET http://127.0.0.1:{port}/orders"),
+            "← 200".to_string()
+        ]
+    );
+    assert!(
+        heard
+            .lock()
+            .unwrap()
+            .iter()
+            .all(|event| event.id == "tab-1")
+    );
     let sets = session.call(http_environments).unwrap();
     let kept = sets
         .environments
@@ -348,6 +400,7 @@ fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_fille
         },
     ];
 
+    let heard = console(&session);
     let answer = session.call(|app| send_http_request(sent, app)).unwrap();
 
     let found: Vec<(&str, bool)> = answer
@@ -358,7 +411,11 @@ fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_fille
         .collect();
     assert_eq!(found, [("accessToken", true), ("refresh", false)]);
     // Made a secret by the rule, it is masked in what the script logged before it.
-    assert_eq!(answer.scripts.logs[0].text, "{{accessToken}}");
+    assert_eq!(logs(&heard), ["{{accessToken}}"]);
+    let missed = heard.lock().unwrap().iter().any(|event| {
+        matches!(&event.line, ConsoleLine::Missed { path, variable } if path == "body.refresh_token" && variable == "refresh")
+    });
+    assert!(missed, "the path that led nowhere said in the console");
     let sets = session.call(http_environments).unwrap();
     let rows = &sets
         .environments

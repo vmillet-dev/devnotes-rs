@@ -11,9 +11,10 @@ use super::model::{LogEntry, ScriptCookie, ScriptRequest, ScriptResponse, Script
 use super::process::{Refusal, Services};
 use crate::http::cookies::{self, Change, JarCookie};
 use crate::http::model::{HttpMethod, KeyValue, RequestKind};
-use crate::http::send::{self, SentResponse};
+use crate::http::send::{self, Exchange, SendError, SentResponse};
 use crate::http::settings;
 use crate::http::transport::Transport;
+use chrono::DateTime;
 
 /// What a protected environment refuses a script, by its code.
 pub const PROTECTED: &str = "httpScriptProtected";
@@ -29,7 +30,18 @@ pub struct Network {
     may_change: bool,
     pub logs: Vec<LogEntry>,
     /// Each send a script made, and how it ended: what the console shows.
-    pub sent: Vec<(ScriptRequest, Result<SentResponse, String>)>,
+    pub sent: Vec<ScriptSend>,
+}
+
+/// A request a script sent, as it left, and what came back.
+#[derive(Debug, Clone)]
+pub struct ScriptSend {
+    /// The script that sent it, by id.
+    pub script: Option<String>,
+    pub exchange: Exchange,
+    pub started: DateTime<Utc>,
+    pub ended: DateTime<Utc>,
+    pub answer: Result<SentResponse, SendError>,
 }
 
 impl Network {
@@ -52,7 +64,14 @@ impl Network {
     }
 
     fn send(&mut self, payload: &str) -> Result<serde_json::Value, Refusal> {
-        let request: ScriptRequest =
+        #[derive(serde::Deserialize)]
+        struct Asked {
+            #[serde(flatten)]
+            request: ScriptRequest,
+            #[serde(default)]
+            script: Option<String>,
+        }
+        let Asked { request, script } =
             serde_json::from_str(payload).map_err(|error| Refusal::new(error.to_string(), None))?;
         let method = request
             .method
@@ -85,13 +104,20 @@ impl Network {
         .map_err(|error| Refusal::new(error.to_string(), Some("httpScriptSend")))?;
         outgoing.transport = self.transport;
         outgoing.jar = self.jar.clone().filter(|_| self.transport.use_cookies);
+        let exchange = send::exchange(&outgoing);
+        let started = Utc::now();
         let (answer, changes) = self.runtime.block_on(send::alone(outgoing));
         if let Some(jar) = self.jar.as_mut() {
             cookies::apply(jar, &changes);
         }
         self.changes.extend(changes);
-        self.sent
-            .push((request, answer.clone().map_err(|error| error.to_string())));
+        self.sent.push(ScriptSend {
+            script,
+            exchange,
+            started,
+            ended: Utc::now(),
+            answer: answer.clone(),
+        });
         let response =
             answer.map_err(|error| Refusal::new(error.to_string(), Some("httpScriptSend")))?;
         serde_json::to_value(response_of(&response))
@@ -232,6 +258,9 @@ impl Services for Network {
     }
 
     fn log(&mut self, entry: LogEntry) {
-        self.logs.push(entry);
+        self.logs.push(LogEntry {
+            at: Some(Utc::now()),
+            ..entry
+        });
     }
 }

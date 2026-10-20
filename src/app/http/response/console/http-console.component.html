@@ -1,0 +1,103 @@
+@let count = counts();
+@if (store.open()) {
+  <section class="console" data-testid="http-console" [attr.aria-label]="'http.console.title' | transloco">
+    <header class="head">
+      <span class="title">{{ 'http.console.title' | transloco }}</span>
+      <fieldset class="filters">
+        <legend class="visually-hidden">{{ 'http.console.filter' | transloco }}</legend>
+        @for (id of filters; track id) {
+          <button
+            type="button"
+            class="filter"
+            data-testid="http-console-filter"
+            [attr.data-filter]="id"
+            [class.errors]="id === 'errors'"
+            [attr.aria-pressed]="filter() === id"
+            (click)="filter.set(id)"
+          >
+            {{ 'http.console.filters.' + id | transloco }} <span class="count">{{ count[id] }}</span>
+          </button>
+        }
+      </fieldset>
+      <span class="grow"></span>
+      <span class="masked"><app-icon name="lock" /> {{ 'http.console.masked' | transloco }}</span>
+      <button type="button" class="clear" data-testid="http-console-clear" (click)="clear()">
+        {{ 'http.console.clear' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="fold"
+        data-testid="http-console-fold"
+        aria-expanded="true"
+        [attr.aria-label]="'http.console.fold' | transloco"
+        [attr.title]="'http.console.fold' | transloco"
+        (click)="store.toggle()"
+      >
+        <span aria-hidden="true">▾</span>
+      </button>
+    </header>
+    <div #list class="lines" role="log" data-testid="http-console-lines">
+      @for (row of rows(); track $index) {
+        <div data-testid="http-console-line" [attr.data-filter]="row.filter" [class]="'line ' + row.tone">
+          <span class="at">{{ row.time }}</span>
+          <span class="mark">{{ row.mark }}</span>
+          <span class="text" data-testid="http-console-text">
+            @if (row.said; as said) {
+              {{ said.key | transloco: said.params }}
+            }
+            @if (row.reason; as reason) {
+              : {{ reason.key | transloco }}
+            }
+            @for (word of row.words; track $index) {
+              @if (word.secret) {
+                <span class="secret">{{ word.text }}</span>
+              } @else {
+                {{ word.text }}
+              }
+            }
+          </span>
+          @if (row.exchange) {
+            <button
+              type="button"
+              class="open"
+              data-testid="http-console-exchange"
+              (click)="exchangeOpened.emit()"
+            >
+              {{ 'http.console.exchange' | transloco }}
+            </button>
+          }
+          @if (row.origin; as origin) {
+            <span class="from">{{ origin.key | transloco: origin.params }}</span>
+          }
+        </div>
+        @if (row.sub; as sub) {
+          <div class="line sub" data-testid="http-console-sub">{{ sub }}</div>
+        }
+      } @empty {
+        <p class="empty">{{ 'http.console.empty' | transloco }}</p>
+      }
+    </div>
+  </section>
+} @else {
+  <button
+    type="button"
+    class="folded"
+    data-testid="http-console-unfold"
+    aria-expanded="false"
+    [attr.title]="'http.console.unfold' | transloco"
+    (click)="store.toggle()"
+  >
+    <span class="title">{{ 'http.console.title' | transloco }}</span>
+    <span class="summary" data-testid="http-console-summary"
+      >{{ 'http.console.traffic' | transloco: { count: count.traffic } }} ·
+      {{ 'http.console.logs' | transloco: { count: count.logs } }}</span
+    >
+    @if (count.errors > 0) {
+      <span class="errors" data-testid="http-console-errors">{{
+        'http.console.errors' | transloco: { count: count.errors }
+      }}</span>
+    }
+    <span class="grow"></span>
+    <span class="caret" aria-hidden="true">▴</span>
+  </button>
+}

@@ -545,9 +545,7 @@ fn marked_tree(library: &mut Library) -> String {
 /// strings it lets through — a parameter typed by hand, a body, what was answered.
 fn marked_send(library: &mut Library, request_id: &str) {
     use devnotes_lib::http::history::{self, Sent};
-    use devnotes_lib::http::scripts::model::{
-        Extracted, LogEntry, ScriptStop, ScriptsAnswer, TestResult,
-    };
+    use devnotes_lib::http::scripts::model::{Extracted, ScriptStop, ScriptsAnswer, TestResult};
     use devnotes_lib::http::send::{Exchange, SentBody, SentResponse};
     use devnotes_lib::notes::language::Language;
 
@@ -587,7 +585,7 @@ fn marked_send(library: &mut Library, request_id: &str) {
             cookies: Vec::new(),
             exchange,
             graphql: None,
-            // The logs never reach the disk; the failure is sealed with the rest.
+            // The failure, the tests and the extractions are sealed with the rest.
             scripts: ScriptsAnswer {
                 failure: Some(ScriptStop {
                     name: Some("zq-script-holder".to_string()),
@@ -598,10 +596,6 @@ fn marked_send(library: &mut Library, request_id: &str) {
                     name: "zq-test-name".to_string(),
                     actual: Some("zq-test-actual".to_string()),
                     ..TestResult::default()
-                }],
-                logs: vec![LogEntry {
-                    text: "zq-log-text".to_string(),
-                    ..LogEntry::default()
                 }],
                 extracted: vec![Extracted {
                     path: "body.zq_extracted_path".to_string(),

@@ -165,6 +165,7 @@ export class SettingsStore {
   readonly libraryRailWidth = this.setting('libraryRailWidth', asPixels(RAIL_WIDTH));
   readonly historyListWidth = this.setting('historyListWidth', asPixels(HISTORY_LIST_WIDTH));
   readonly httpRequestShare = this.setting('httpRequestShare', asShare);
+  readonly httpConsoleShare = this.setting('httpConsoleShare', asShare);
   readonly area = this.setting('area', asOneOf(AREAS));
   readonly recentTools = this.setting('recentTools', asRecentTools);
   readonly favouriteTools = this.setting('favouriteTools', asToolIds);

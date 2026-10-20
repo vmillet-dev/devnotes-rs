@@ -510,12 +510,15 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct LogEntry {
     pub level: LogLevel,
     pub text: String,
     pub script: Option<String>,
+    /// When the host said it: set on this side, the console's time.
+    #[serde(skip)]
+    pub at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// A script that stopped, as the front names it: what failed, where, and whose script it was.
@@ -579,12 +582,11 @@ pub struct Extracted {
     pub found: bool,
 }
 
-/// What the scripts after the answer left beside it. The logs cross once and are never kept.
+/// What the scripts after the answer left beside it; what they logged is the console's.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ScriptsAnswer {
     pub failure: Option<ScriptStop>,
-    pub logs: Vec<LogEntry>,
     /// The tests, in the order they ran: kept with the history entry.
     pub tests: Vec<TestResult>,
     /// Each extraction of the request, and whether its path still read.

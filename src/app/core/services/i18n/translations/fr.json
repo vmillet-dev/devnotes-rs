@@ -3703,6 +3703,37 @@
       "secretShort": "secret",
       "remove": "Retirer l’extraction vers « {{variable}} »"
     },
+    "console": {
+      "title": "Console",
+      "filter": "Filtrer la console",
+      "filters": {
+        "all": "Tout",
+        "traffic": "Trafic",
+        "logs": "Logs",
+        "errors": "Erreurs"
+      },
+      "masked": "Secrets masqués",
+      "clear": "Effacer",
+      "fold": "Replier la console",
+      "unfold": "Déplier la console",
+      "split": "Partage entre la réponse et la console",
+      "exchange": "Ouvrir l’échange ›",
+      "empty": "Rien encore : ce que la requête envoie et ce que ses scripts disent s’affichent ici.",
+      "traffic": "{count, plural, =0 {aucun échange} one {# échange} other {# échanges}}",
+      "logs": "{count, plural, =0 {aucun log} one {# log} other {# logs}}",
+      "errors": "{count, plural, one {# erreur} other {# erreurs}}",
+      "in": "{{status}} {{reason}} · {{millis}} ms · {{size}} o",
+      "test": "{{name}} : attendu {{expected}}, reçu {{actual}}",
+      "testMessage": "{{name}} : {{message}}",
+      "missed": "{{path}} ne se lit plus dans la réponse : « {{variable}} » est restée telle quelle",
+      "origins": {
+        "request": "{{name}}",
+        "sent": "pm.sendRequest · {{name}}",
+        "before": "avant l’envoi · {{name}}",
+        "after": "après la réponse · {{name}}",
+        "tests": "Tests · {{name}}"
+      }
+    },
     "variables": {
       "name": "Nom",
       "value": "Valeur",

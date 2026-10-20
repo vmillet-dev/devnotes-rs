@@ -17,7 +17,6 @@ use super::graphql::{GraphqlDocument, GraphqlError, GraphqlResult};
 use super::model::{HttpMethod, HttpRequest, KeyValue, RequestBody, RequestDocument, RequestKind};
 use super::query::{self, QuerySide};
 use super::response::{Cookie, pretty_json};
-use super::scripts::model::ScriptsAnswer;
 use super::send::{self, Exchange, Redirect, SentBody, SentResponse};
 use super::settings::InheritedHeader;
 use super::variables;
@@ -355,6 +354,13 @@ fn hidden_exchange(exchange: &Exchange, secrets: &[(String, String)]) -> Exchang
     }
 }
 
+/// A request as the console shows it: each secret in force written as its name, an auth or a
+/// cookie header masked.
+#[must_use]
+pub fn shown(exchange: &Exchange, secrets: &[(String, String)]) -> Exchange {
+    mask(&hidden_exchange(exchange, secrets), &[])
+}
+
 /// What is sealed: the request masked, its body and the answer's cut to `BODY_KEPT`.
 pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
     let mut exchange = mask(
@@ -376,11 +382,6 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
             cut: response.cut || shortened,
             body,
             exchange: exchange.clone(),
-            // What a script logged is the console's, for the session alone.
-            scripts: ScriptsAnswer {
-                logs: Vec::new(),
-                ..response.scripts.clone()
-            },
             ..masked_answer(response, &sent.secrets)
         }
     });
@@ -744,7 +745,7 @@ mod tests {
             cookies: Vec::new(),
             exchange: exchange("https://api.exemple.fr", Vec::new(), SentBody::None),
             graphql: None,
-            scripts: ScriptsAnswer::default(),
+            scripts: crate::http::scripts::model::ScriptsAnswer::default(),
         }
     }
 
