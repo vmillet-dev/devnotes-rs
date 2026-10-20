@@ -22,6 +22,7 @@ mod attachments;
 mod folders;
 mod http;
 mod http_environments;
+mod http_runner;
 mod http_scripts;
 mod http_send;
 mod notes;
@@ -37,6 +38,7 @@ impl Session {
         let app = mock_app();
         app.manage(Db::new(library));
         app.manage(devnotes_lib::http::send::Sending::default());
+        app.manage(devnotes_lib::http::runner::Runs::default());
         app.manage(devnotes_lib::http::websocket::Sockets::default());
         Self(app)
     }

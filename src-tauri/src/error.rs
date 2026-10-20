@@ -8,6 +8,7 @@ use specta::Type;
 use thiserror::Error;
 
 use crate::http::model::{HeaderFault, HttpItemKind};
+use crate::http::runner::DataFault;
 use crate::http::scripts::model::{FailureKind, ScriptError};
 use crate::http::send::SendError;
 use crate::http::transport::{SetBy, readable_delay};
@@ -187,6 +188,8 @@ pub enum ErrorCode {
     HttpScriptMethod,
     /// The scripts made the request one that a protected `environment` asks about: `method`.
     HttpScriptProtected,
+    /// A run's data file: `fault` is `unreadable` or `empty`.
+    HttpRunData,
 }
 
 #[derive(Debug, Serialize, Type)]
@@ -307,6 +310,17 @@ impl From<SendError> for AppError {
                 Self::with(code, detail, "header", &name).set_by(&set_by)
             }
         }
+    }
+}
+
+impl From<DataFault> for AppError {
+    fn from(fault: DataFault) -> Self {
+        let detail = fault.to_string();
+        let said = match fault {
+            DataFault::Unreadable => "unreadable",
+            DataFault::Empty => "empty",
+        };
+        Self::with(ErrorCode::HttpRunData, detail, "fault", said)
     }
 }
 
