@@ -32,7 +32,7 @@
     </button>
   </form>
 
-  <!-- A field of its own only once asked for: two open fields in one panel read as one. -->
+  <!-- Its field only once asked for, so the panel still opens on the one most come for. -->
   @if (nesting()) {
     <form class="editor-form" (submit)="submitSubfolder($event, subfolderInput.value)">
       <input
