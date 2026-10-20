@@ -1507,11 +1507,7 @@ pub async fn cancel_http_run<R: Runtime>(id: String, app: AppHandle<R>) -> Resul
 #[tauri::command]
 #[specta::specta]
 pub async fn read_http_run_data(path: String) -> Result<runner::RunData, AppError> {
-    off_thread(move || {
-        let text = std::fs::read_to_string(&path).context(&path)?;
-        runner::read_data(&text).map_err(AppError::from)
-    })
-    .await?
+    off_thread(move || runner::read_file(&path)).await?
 }
 
 /// `false` when that send had already ended.

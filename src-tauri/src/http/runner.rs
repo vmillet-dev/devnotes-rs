@@ -13,7 +13,7 @@ use super::model::{
 };
 use super::scripts::model::{ScriptStop, TestResult};
 use super::send::SentResponse;
-use crate::error::{AppError, ErrorCode};
+use crate::error::{AppError, ErrorCode, FileContext};
 
 pub const HTTP_RUN_EVENT: &str = "http-run";
 
@@ -31,6 +31,12 @@ pub enum DataFault {
     Unreadable,
     #[error("The file holds no row")]
     Empty,
+}
+
+/// The file at `path`, read where it lies.
+pub fn read_file(path: &str) -> Result<RunData, AppError> {
+    let text = std::fs::read_to_string(path).context(path)?;
+    read_data(&text).map_err(AppError::from)
 }
 
 /// A CSV with its header, or a JSON array of objects: what the file's text reads as.
