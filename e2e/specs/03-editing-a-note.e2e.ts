@@ -231,7 +231,7 @@ describe('Editing a note', () => {
     await $(testid('choice-filter')).setValue('pyth');
     await eventually(shown, (ids) => ids === 'py', 'Python alone, found by its full name');
 
-    await $(testid('choice-filter')).setValue('cobol');
+    await $(testid('choice-filter')).setValue('klingon');
     await $(testid('choice-empty')).waitForDisplayed({ timeout: 5_000 });
 
     await press('Escape');

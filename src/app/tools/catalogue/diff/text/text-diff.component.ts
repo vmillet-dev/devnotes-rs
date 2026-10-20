@@ -135,7 +135,7 @@ export class TextDiffComponent implements Tool {
             params: { a: this.aName() ?? 'A', b: this.bName() ?? 'B' },
           },
           kind: 'snippet',
-          language: 'txt',
+          language: 'diff',
           content: unified,
         }
       : null;
