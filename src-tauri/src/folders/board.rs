@@ -11,7 +11,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use super::model::Folder;
+use super::model::{Folder, FolderColour, Lineage, Seat};
 use crate::count::saturating_u32;
 use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
@@ -29,6 +29,8 @@ pub const ZONE_PADDING: i32 = 12;
 pub const ZONE_BORDER: i32 = 1;
 /// The title, the count and the ⋯ trigger.
 pub const ZONE_HEADER: i32 = 38;
+/// The row of a zone's sub-folders under its title, when it has any: one line, never wrapped.
+pub const ZONE_SUBFOLDERS: i32 = 28;
 /// How many cards a freshly drawn zone is wide.
 pub const ZONE_COLUMNS: i32 = 2;
 /// A zone with no note is still a target to drop one into.
@@ -48,6 +50,10 @@ pub const SCROLLBAR: i32 = 18;
 pub struct BoardQuery {
     /// Required, unlike `NotesQuery::space_id`: a board across every space has no zones.
     pub space_id: String,
+    /// The folder whose board this is, `None` for the space's: its sub-folders are the zones.
+    #[serde(default)]
+    #[specta(optional)]
+    pub root_id: Option<String>,
     pub search: String,
     pub filter: NoteFilter,
     pub tags: Vec<String>,
@@ -78,7 +84,8 @@ impl BoardQuery {
     }
 }
 
-/// How many notes each folder holds and which are loose: what a first layout is sized from.
+/// What one board holds, by the zone each note shows in and the cards free on its ground:
+/// what a first layout is sized from.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Occupancy {
     pub per_folder: HashMap<String, usize>,
@@ -86,17 +93,25 @@ pub struct Occupancy {
 }
 
 impl Occupancy {
-    pub fn of(notes: &[Note]) -> Self {
+    pub fn on(notes: &[Note], lineage: &Lineage, root: Option<&str>) -> Self {
         let mut occupancy = Self::default();
         for note in notes {
-            match &note.folder_id {
-                Some(id) => *occupancy.per_folder.entry(id.clone()).or_default() += 1,
-                None => occupancy.loose.push(note.id.clone()),
+            match lineage.seat(root, note.folder_id.as_deref()) {
+                Seat::Zone(id) => *occupancy.per_folder.entry(id).or_default() += 1,
+                Seat::Free => occupancy.loose.push(note.id.clone()),
+                Seat::Elsewhere => {}
             }
         }
 
         occupancy
     }
+}
+
+/// What a zone is sized from: its notes, and whether it shows a row of sub-folders.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ZoneContents {
+    pub notes: usize,
+    pub nested: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -128,12 +143,25 @@ pub struct BoardNote {
     pub position: Option<BoardPoint>,
 }
 
+/// A sub-folder named under a zone's title, opened by a click: the board draws one level.
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BoardChild {
+    pub id: String,
+    pub name: String,
+    pub colour: FolderColour,
+    /// What its whole sub-tree holds.
+    pub count: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardZone {
     pub folder: Folder,
     pub frame: BoardFrame,
+    /// Every note of its sub-tree: a zone gathers what is under it.
     pub notes: Vec<BoardNote>,
+    pub children: Vec<BoardChild>,
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -153,6 +181,21 @@ pub struct BoardView {
 }
 
 impl BoardView {
+    /// A card names its folder only when it comes from below the zone it sits in, and never on
+    /// the root's own ground: the zone or the breadcrumb says the rest.
+    pub fn keep_chips_from_below(&mut self) {
+        for zone in &mut self.zones {
+            for entry in &mut zone.notes {
+                if entry.note.folder_id.as_deref() == Some(zone.folder.id.as_str()) {
+                    entry.note.folder = None;
+                }
+            }
+        }
+        for entry in &mut self.loose {
+            entry.note.folder = None;
+        }
+    }
+
     pub fn notes_mut(&mut self) -> impl Iterator<Item = &mut DisplayNote> {
         self.zones
             .iter_mut()
@@ -248,10 +291,11 @@ pub fn columns_in(width: i32) -> i32 {
 
 /// Tall enough for that many notes that many across, and never shorter than one row.
 ///
-/// ⚠️ The hairlines count here too: one pixel short of its cards, `.zone-body` shows a vertical
-/// scrollbar, which takes a slice of the row and wraps two cards into one column.
+/// ⚠️ The hairlines count here too, and so does the row of sub-folders: one pixel short of its
+/// cards, `.zone-body` shows a vertical scrollbar, which takes a slice of the row and wraps two
+/// cards into one column.
 #[must_use]
-pub fn zone_height(note_count: usize, columns: i32) -> i32 {
+pub fn zone_height(note_count: usize, columns: i32, nested: bool) -> i32 {
     let columns = columns.max(1);
     let notes = px(note_count);
     let rows = notes.div_euclid(columns) + i32::from(notes.rem_euclid(columns) != 0);
@@ -259,6 +303,7 @@ pub fn zone_height(note_count: usize, columns: i32) -> i32 {
     let rows = rows.max(MIN_ZONE_ROWS);
     ZONE_BORDER * 2
         + ZONE_HEADER
+        + if nested { ZONE_SUBFOLDERS } else { 0 }
         + ZONE_PADDING
         + rows * CARD_HEIGHT
         + (rows - 1) * GAP
@@ -267,8 +312,8 @@ pub fn zone_height(note_count: usize, columns: i32) -> i32 {
 
 /// The height a zone gets on its first layout, at [`ZONE_COLUMNS`] cards across.
 #[must_use]
-pub fn default_zone_height(note_count: usize) -> i32 {
-    zone_height(note_count, ZONE_COLUMNS)
+pub fn default_zone_height(note_count: usize, nested: bool) -> i32 {
+    zone_height(note_count, ZONE_COLUMNS, nested)
 }
 
 /// Lays zones out in reading order, wrapping every [`BOARD_COLUMNS`].
@@ -276,21 +321,21 @@ pub fn default_zone_height(note_count: usize) -> i32 {
 /// Deterministic, and driven only by the order it is handed: the caller reads folders in
 /// `created_at` order so the board does not look shuffled at every launch.
 #[must_use]
-pub fn arrange_zones(note_counts: &[usize]) -> Vec<BoardFrame> {
+pub fn arrange_zones(contents: &[ZoneContents]) -> Vec<BoardFrame> {
     let width = default_zone_width();
 
-    let mut frames: Vec<BoardFrame> = Vec::with_capacity(note_counts.len());
+    let mut frames: Vec<BoardFrame> = Vec::with_capacity(contents.len());
     let mut row_top = BOARD_MARGIN;
     let mut row_height = 0;
 
-    for (index, count) in note_counts.iter().enumerate() {
+    for (index, zone) in contents.iter().enumerate() {
         let column = index % BOARD_COLUMNS;
         if column == 0 && index > 0 {
             row_top += row_height + GAP;
             row_height = 0;
         }
 
-        let height = default_zone_height(*count);
+        let height = default_zone_height(zone.notes, zone.nested);
         row_height = row_height.max(height);
 
         frames.push(BoardFrame {
@@ -409,12 +454,42 @@ fn in_zone_order(notes: &mut [BoardNote]) {
     notes.sort_by_key(|entry| !entry.note.pinned);
 }
 
+/// A zone's sub-folders by name, each with what its whole sub-tree holds.
+fn children_of(
+    lineage: &Lineage,
+    by_id: &HashMap<&str, &Folder>,
+    held: &HashMap<String, usize>,
+    id: &str,
+) -> Vec<BoardChild> {
+    let mut children: Vec<BoardChild> = lineage
+        .children(Some(id))
+        .iter()
+        .filter_map(|child| by_id.get(child.as_str()))
+        .map(|child| BoardChild {
+            id: child.id.clone(),
+            name: child.name.clone(),
+            colour: child.colour,
+            count: saturating_u32(
+                lineage
+                    .subtree(&child.id)
+                    .iter()
+                    .map(|below| held.get(below).copied().unwrap_or(0))
+                    .sum::<usize>(),
+            ),
+        })
+        .collect();
+    children.sort_by_key(|child| child.name.to_lowercase());
+    children
+}
+
 /// Assembles what the command read. Reads no database: the geometry arrives already
-/// resolved, and so does the decoration that needs a connection.
+/// resolved, and so does the decoration that needs a connection. `folders` is the whole
+/// space's, in creation order: the zones are the root's children, each gathering what is
+/// under it, and what is filed in the root itself is free on its ground.
 #[must_use]
 pub fn build<S: std::hash::BuildHasher>(
     notes: Vec<Note>,
-    folders: Vec<Folder>,
+    folders: &[Folder],
     frames: &HashMap<String, BoardFrame, S>,
     positions: &HashMap<String, BoardPoint, S>,
     facets: Facets,
@@ -430,24 +505,38 @@ pub fn build<S: std::hash::BuildHasher>(
         &request.priorities,
     );
 
+    let lineage = Lineage::of(folders);
+    let root = request.root_id.as_deref();
+
+    let mut held: HashMap<String, usize> = HashMap::new();
+    for note in &notes {
+        if let Some(folder_id) = &note.folder_id {
+            *held.entry(folder_id.clone()).or_default() += 1;
+        }
+    }
+
     let mut by_folder: HashMap<String, Vec<BoardNote>> = HashMap::new();
     let mut loose: Vec<BoardNote> = Vec::new();
     let mut matched = 0usize;
 
     for note in notes {
+        let seat = lineage.seat(root, note.folder_id.as_deref());
+        if seat == Seat::Elsewhere {
+            continue;
+        }
+
         let hit = criteria.passes(&note);
         matched += usize::from(hit);
 
-        let folder_id = note.folder_id.clone();
         let entry = BoardNote {
             note: model::decorate(note, request.now),
             matches: hit,
             position: None,
         };
 
-        match folder_id {
-            Some(id) => by_folder.entry(id).or_default().push(entry),
-            None => loose.push(entry),
+        match seat {
+            Seat::Zone(id) => by_folder.entry(id).or_default().push(entry),
+            Seat::Free | Seat::Elsewhere => loose.push(entry),
         }
     }
 
@@ -455,29 +544,37 @@ pub fn build<S: std::hash::BuildHasher>(
         entry.position = positions.get(&entry.note.id).copied();
     }
 
-    let placed = frames.values().copied().collect::<Vec<_>>();
-    let fallback_top = loose_top(&placed);
-
-    let zones: Vec<BoardZone> = folders
-        .into_iter()
+    let by_id: HashMap<&str, &Folder> = folders
+        .iter()
+        .map(|folder| (folder.id.as_str(), folder))
+        .collect();
+    let zones: Vec<BoardZone> = lineage
+        .children(root)
+        .iter()
+        .filter_map(|id| by_id.get(id.as_str()))
         .map(|folder| {
             let mut notes = by_folder.remove(&folder.id).unwrap_or_default();
             in_zone_order(&mut notes);
+            let children = children_of(&lineage, &by_id, &held, &folder.id);
 
             let frame = frames.get(&folder.id).copied().unwrap_or(BoardFrame {
                 x: BOARD_MARGIN,
                 y: BOARD_MARGIN,
                 width: default_zone_width(),
-                height: default_zone_height(notes.len()),
+                height: default_zone_height(notes.len(), !children.is_empty()),
             });
 
             BoardZone {
-                folder,
+                folder: (*folder).clone(),
                 frame,
                 notes,
+                children,
             }
         })
         .collect();
+
+    let placed: Vec<BoardFrame> = zones.iter().map(|zone| zone.frame).collect();
+    let fallback_top = loose_top(&placed);
 
     // A loose note with no stored place has not been through the geometry pass yet: it goes
     // on free ground, by the same rule `store::board::geometry` writes down.
@@ -551,8 +648,11 @@ pub struct BoardArrangement {
 /// overwrites sizes chosen by hand, and its undo is not optional. `folder_counts` arrives in
 /// `created_at` order: the same board tidied twice is the same board.
 #[must_use]
-pub fn arrange_everything(folder_counts: &[(String, usize)], loose_ids: &[String]) -> BoardLayout {
-    let counts: Vec<usize> = folder_counts.iter().map(|(_, count)| *count).collect();
+pub fn arrange_everything(
+    folder_counts: &[(String, ZoneContents)],
+    loose_ids: &[String],
+) -> BoardLayout {
+    let counts: Vec<ZoneContents> = folder_counts.iter().map(|(_, count)| *count).collect();
     let frames = arrange_zones(&counts);
 
     BoardLayout {
@@ -595,11 +695,23 @@ mod tests {
     use super::*;
     use crate::notes::fixtures::{NOW, at, note};
 
+    fn notes(count: usize) -> ZoneContents {
+        ZoneContents {
+            notes: count,
+            nested: false,
+        }
+    }
+
+    fn holding(counts: &[usize]) -> Vec<ZoneContents> {
+        counts.iter().copied().map(notes).collect()
+    }
+
     /// Everything but the space and the instant is neutral: the board dims, it never narrows.
     #[test]
     fn the_board_reads_the_whole_space_whatever_it_is_asked() {
         let request = BoardQuery {
             space_id: "s-1".to_string(),
+            root_id: Some("f-1".to_string()),
             search: "deploy".to_string(),
             filter: NoteFilter::Pinned,
             tags: vec!["ops".to_string()],
@@ -639,6 +751,7 @@ mod tests {
                     name: "Ops".to_string(),
                     colour: super::super::model::FolderColour::nth(0),
                     created_at: at(NOW),
+                    parent_id: None,
                 },
                 frame: BoardFrame {
                     x: 0,
@@ -647,6 +760,7 @@ mod tests {
                     height: 300,
                 },
                 notes: vec![card("filed")],
+                children: Vec::new(),
             }],
             loose: vec![card("loose")],
             available_tags: Vec::new(),
@@ -670,16 +784,28 @@ mod tests {
             ..note()
         };
 
-        let occupancy = Occupancy::of(&[
+        let notes = [
             filed("a", Some("f-1")),
             filed("b", Some("f-1")),
             filed("c", None),
             filed("d", Some("f-2")),
+            filed("e", Some("f-1a")),
+        ];
+        let lineage = Lineage::new([
+            ("f-1".to_string(), None),
+            ("f-2".to_string(), None),
+            ("f-1a".to_string(), Some("f-1".to_string())),
         ]);
 
-        assert_eq!(occupancy.per_folder.get("f-1"), Some(&2));
-        assert_eq!(occupancy.per_folder.get("f-2"), Some(&1));
-        assert_eq!(occupancy.loose, ["c"]);
+        let space = Occupancy::on(&notes, &lineage, None);
+        assert_eq!(space.per_folder.get("f-1"), Some(&3));
+        assert_eq!(space.per_folder.get("f-2"), Some(&1));
+        assert_eq!(space.loose, ["c"]);
+
+        let inside = Occupancy::on(&notes, &lineage, Some("f-1"));
+        assert_eq!(inside.per_folder.get("f-1a"), Some(&1));
+        assert_eq!(inside.loose, ["a", "b"]);
+        assert!(!inside.per_folder.contains_key("f-2"));
     }
 
     /// Two cards and room for the scrollbar: at exactly the inner width the second card wraps.
@@ -691,17 +817,17 @@ mod tests {
 
     #[test]
     fn a_zone_grows_a_row_at_a_time() {
-        let one_row = default_zone_height(2);
-        let two_rows = default_zone_height(3);
+        let one_row = default_zone_height(2, false);
+        let two_rows = default_zone_height(3, false);
 
         assert_eq!(two_rows - one_row, CARD_HEIGHT + GAP);
-        assert_eq!(default_zone_height(4), two_rows);
+        assert_eq!(default_zone_height(4, false), two_rows);
     }
 
     /// One pixel short of two rows brings a vertical scrollbar that wraps the second card.
     #[test]
     fn a_zone_is_tall_enough_for_its_rows_once_its_own_hairlines_are_paid_for() {
-        let body = zone_height(3, 2) - ZONE_BORDER * 2 - ZONE_HEADER;
+        let body = zone_height(3, 2, false) - ZONE_BORDER * 2 - ZONE_HEADER;
 
         assert!(
             body >= ZONE_PADDING * 2 + CARD_HEIGHT * 2 + GAP,
@@ -717,8 +843,8 @@ mod tests {
 
         assert_eq!(columns_in(shaved), 2);
         assert_eq!(
-            zone_height(3, columns_in(shaved)),
-            zone_height(3, ZONE_COLUMNS)
+            zone_height(3, columns_in(shaved), false),
+            zone_height(3, ZONE_COLUMNS, false)
         );
     }
 
@@ -739,7 +865,9 @@ mod tests {
 
         assert_eq!(columns_in(nominal), ZONE_COLUMNS);
         assert_eq!(columns_in(wider), ZONE_COLUMNS + 1);
-        assert!(zone_height(6, columns_in(wider)) < zone_height(6, columns_in(nominal)));
+        assert!(
+            zone_height(6, columns_in(wider), false) < zone_height(6, columns_in(nominal), false)
+        );
     }
 
     /// Below one card across, the flow still has to have a column.
@@ -752,12 +880,12 @@ mod tests {
     /// A zone with nothing in it is still a target to drop a card into.
     #[test]
     fn an_empty_zone_is_still_a_row_tall() {
-        assert_eq!(default_zone_height(0), default_zone_height(1));
+        assert_eq!(default_zone_height(0, false), default_zone_height(1, false));
     }
 
     #[test]
     fn zones_are_laid_out_in_reading_order() {
-        let frames = arrange_zones(&[1, 1, 1]);
+        let frames = arrange_zones(&holding(&[1, 1, 1]));
 
         assert_eq!(frames[0].y, frames[1].y);
         assert!(frames[0].x < frames[1].x);
@@ -766,7 +894,7 @@ mod tests {
 
     #[test]
     fn the_layout_wraps_after_three_zones() {
-        let frames = arrange_zones(&[1, 1, 1, 1]);
+        let frames = arrange_zones(&holding(&[1, 1, 1, 1]));
 
         assert_eq!(frames[3].x, frames[0].x);
         assert!(frames[3].y > frames[0].y);
@@ -775,7 +903,7 @@ mod tests {
     /// A row advances by its tallest zone, or the next row lands on top of it.
     #[test]
     fn a_wrapped_row_clears_the_tallest_zone_above_it() {
-        let frames = arrange_zones(&[1, 9, 1, 1]);
+        let frames = arrange_zones(&holding(&[1, 9, 1, 1]));
 
         let tallest = frames[..3].iter().map(|f| f.y + f.height).max().unwrap();
         assert!(frames[3].y >= tallest);
@@ -783,12 +911,15 @@ mod tests {
 
     #[test]
     fn the_layout_is_the_same_every_time() {
-        assert_eq!(arrange_zones(&[3, 1, 7]), arrange_zones(&[3, 1, 7]));
+        assert_eq!(
+            arrange_zones(&holding(&[3, 1, 7])),
+            arrange_zones(&holding(&[3, 1, 7]))
+        );
     }
 
     #[test]
     fn loose_cards_flow_under_the_zones_with_room_for_their_label() {
-        let frames = arrange_zones(&[1]);
+        let frames = arrange_zones(&holding(&[1]));
         let top = loose_top(&frames);
 
         assert!(top > frames[0].y + frames[0].height);
@@ -885,6 +1016,7 @@ mod tests {
                 name: "Perf".to_string(),
                 colour: crate::folders::model::FolderColour::Blue,
                 created_at: Utc::now(),
+                parent_id: None,
             },
             frame: BoardFrame {
                 x: 2000,
@@ -893,6 +1025,7 @@ mod tests {
                 height: 200,
             },
             notes: Vec::new(),
+            children: Vec::new(),
         };
 
         let (width, height) = surface(std::slice::from_ref(&zone), &[]);
@@ -911,7 +1044,11 @@ mod tests {
 
     #[test]
     fn tidying_up_puts_every_zone_back_in_reading_order() {
-        let counts = vec![("a".into(), 1), ("b".into(), 2), ("c".into(), 3)];
+        let counts = vec![
+            ("a".into(), notes(1)),
+            ("b".into(), notes(2)),
+            ("c".into(), notes(3)),
+        ];
 
         let layout = arrange_everything(&counts, &[]);
 
@@ -924,15 +1061,15 @@ mod tests {
     /// A zone stretched or squashed by hand comes back at the height its contents need.
     #[test]
     fn tidying_up_resizes_a_zone_to_what_it_holds() {
-        let layout = arrange_everything(&[("a".into(), 5)], &[]);
+        let layout = arrange_everything(&[("a".into(), notes(5))], &[]);
 
-        assert_eq!(layout.zones[0].frame.height, default_zone_height(5));
+        assert_eq!(layout.zones[0].frame.height, default_zone_height(5, false));
         assert_eq!(layout.zones[0].frame.width, default_zone_width());
     }
 
     #[test]
     fn tidied_loose_cards_flow_under_the_zones() {
-        let layout = arrange_everything(&[("a".into(), 2)], &["n1".into(), "n2".into()]);
+        let layout = arrange_everything(&[("a".into(), notes(2))], &["n1".into(), "n2".into()]);
 
         let zone = layout.zones[0].frame;
         assert!(
@@ -947,7 +1084,7 @@ mod tests {
 
     #[test]
     fn the_same_board_tidied_twice_is_the_same_board() {
-        let counts = vec![("a".into(), 4), ("b".into(), 1)];
+        let counts = vec![("a".into(), notes(4)), ("b".into(), notes(1))];
         let loose = vec!["n1".to_string(), "n2".to_string()];
 
         assert_eq!(

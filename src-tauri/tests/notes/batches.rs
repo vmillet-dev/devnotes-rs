@@ -282,7 +282,7 @@ fn putting_a_move_back_files_the_note_into_its_folder_again() {
     let mut connection = open_in_memory().unwrap();
     let source = space(&mut connection, "Personal");
     let target = space(&mut connection, "Boulot");
-    let folder = folders::create(&mut connection, &source, "Perf", t0()).unwrap();
+    let folder = folders::create(&mut connection, &source, None, "Perf", t0()).unwrap();
     let note = create(&mut connection, draft(&source), t0()).unwrap();
     folders::file_many(
         &mut connection,
@@ -317,7 +317,7 @@ fn a_folder_gone_since_the_move_leaves_the_note_loose() {
     let mut connection = open_in_memory().unwrap();
     let source = space(&mut connection, "Personal");
     let target = space(&mut connection, "Boulot");
-    let folder = folders::create(&mut connection, &source, "Perf", t0()).unwrap();
+    let folder = folders::create(&mut connection, &source, None, "Perf", t0()).unwrap();
     let note = create(&mut connection, draft(&source), t0()).unwrap();
     folders::file_many(
         &mut connection,

@@ -15,7 +15,7 @@ use crate::attachments::store as attachments;
 use crate::count::saturating_u32;
 use crate::db::Library;
 use crate::error::StorageError;
-use crate::folders::model::Folder;
+use crate::folders::model::{Folder, Lineage};
 use crate::folders::store as folders;
 use crate::notes::model::Note;
 use crate::notes::store as notes;
@@ -63,20 +63,24 @@ pub fn of(connection: &mut Library, scope: &ExportScope) -> Result<Bundle, Stora
     collect(connection, exported)
 }
 
-/// Only the spaces and folders cited travel: exporting one space must not recreate the tree.
+/// Only the spaces and folders cited travel, with the folders above them: exporting one space
+/// must not recreate the whole tree, and a folder without its parents would land at the top.
 pub fn collect(connection: &mut Library, exported: Vec<Note>) -> Result<Bundle, StorageError> {
     let spaces: Vec<Space> = spaces::list(connection)?
         .into_iter()
         .filter(|space| exported.iter().any(|note| note.space_id == space.id))
         .collect();
 
-    let folders: Vec<Folder> = folders::list(connection, None)?
+    let all = folders::list(connection, None)?;
+    let lineage = Lineage::of(&all);
+    let cited: BTreeSet<String> = exported
+        .iter()
+        .filter_map(|note| note.folder_id.as_deref())
+        .flat_map(|id| lineage.path(id))
+        .collect();
+    let folders: Vec<Folder> = all
         .into_iter()
-        .filter(|folder| {
-            exported
-                .iter()
-                .any(|note| note.folder_id.as_deref() == Some(folder.id.as_str()))
-        })
+        .filter(|folder| cited.contains(&folder.id))
         .collect();
 
     let note_ids: Vec<String> = exported.iter().map(|note| note.id.clone()).collect();
@@ -168,8 +172,10 @@ pub fn merge(
     })
 }
 
-/// Matched by name inside the destination space, case-insensitively, and created when absent.
-/// A folder whose space did not make it is dropped: its notes were skipped too.
+/// Matched by name under the same parent in the destination space, case-insensitively, and
+/// created when absent; parents first, whatever order the file wrote them in. A folder whose
+/// space did not make it is dropped: its notes were skipped too. What a file cannot hold —
+/// a parent it does not carry, a cycle, a tree past the depth — degrades to the top.
 fn merge_folders(
     connection: &mut SqliteConnection,
     vault: &Vault,
@@ -178,22 +184,52 @@ fn merge_folders(
     report: &mut ImportReport,
 ) -> Result<BTreeMap<String, String>, StorageError> {
     let mut mapping: BTreeMap<String, String> = BTreeMap::new();
+    let carried: BTreeSet<&str> = incoming.iter().map(|folder| folder.id.as_str()).collect();
+    let mut pending: Vec<&Folder> = incoming
+        .iter()
+        .filter(|folder| spaces.contains_key(&folder.space_id))
+        .collect();
 
-    for folder in incoming {
+    while !pending.is_empty() {
+        let ready = pending.iter().position(|folder| {
+            folder
+                .parent_id
+                .as_deref()
+                .is_none_or(|parent| mapping.contains_key(parent) || !carried.contains(parent))
+        });
+        // None ready is a cycle: its first folder goes to the top, and the rest follows it.
+        let folder = pending.remove(ready.unwrap_or(0));
         let Some(space_id) = spaces.get(&folder.space_id) else {
             continue;
         };
 
+        let lineage = folders::lineage(connection, space_id)?;
+        let parent = folder
+            .parent_id
+            .as_ref()
+            .and_then(|parent| mapping.get(parent))
+            .filter(|parent| lineage.check_child(Some(parent)).is_ok())
+            .cloned();
+
         let existing = folders::list_in(connection, vault, Some(space_id))?;
-        let matched = existing
-            .iter()
-            .find(|candidate| candidate.name.to_lowercase() == folder.name.to_lowercase());
+        let matched = existing.iter().find(|candidate| {
+            candidate.parent_id == parent
+                && candidate.name.to_lowercase() == folder.name.to_lowercase()
+        });
 
         let local_id = if let Some(candidate) = matched {
             candidate.id.clone()
         } else {
             report.folders_created += 1;
-            folders::create_in(connection, vault, space_id, &folder.name, folder.created_at)?.id
+            folders::create_in(
+                connection,
+                vault,
+                space_id,
+                parent.as_deref(),
+                &folder.name,
+                folder.created_at,
+            )?
+            .id
         };
         mapping.insert(folder.id.clone(), local_id);
     }

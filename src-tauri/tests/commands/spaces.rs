@@ -102,6 +102,7 @@ fn a_space_counts_what_its_deletion_would_move_and_take() {
             create_folder(
                 FolderDraft {
                     space_id: id.clone(),
+                    parent_id: None,
                     name: "Perf".to_string(),
                 },
                 app,

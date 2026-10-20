@@ -11,7 +11,7 @@ use crate::db::schema::{folders, note_positions, notes};
 use crate::error::StorageError;
 use crate::folders::board::{
     self, BoardArrangement, BoardFrame, BoardLayout, BoardPoint, BoardScope, CardPlacement,
-    Occupancy, ZonePlacement,
+    Occupancy, ZoneContents, ZonePlacement,
 };
 
 /// What a board read resolves before anything can be drawn: where each zone sits, and
@@ -70,12 +70,13 @@ pub fn grow_to_fit(
     connection: &mut SqliteConnection,
     folder_id: &str,
     note_count: usize,
+    nested: bool,
 ) -> Result<(), StorageError> {
     let Some(frame) = frame_of(connection, folder_id)? else {
         return Ok(());
     };
 
-    let needed = board::zone_height(note_count, board::columns_in(frame.width));
+    let needed = board::zone_height(note_count, board::columns_in(frame.width), nested);
     if frame.height >= needed {
         return Ok(());
     }
@@ -166,8 +167,10 @@ pub fn forget_positions(
 }
 
 /// One transaction for the whole gesture: a board half written is a board nobody arranged.
+/// `root` is the board the gesture was made on: a card's place is on its own folder's board.
 pub fn save_layout(
     connection: &mut Library,
+    root: Option<&str>,
     zones: &[ZonePlacement],
     cards: &[CardPlacement],
 ) -> Result<(), StorageError> {
@@ -187,19 +190,20 @@ pub fn save_layout(
             )?;
         }
 
-        // ⚠️ Only a loose note has a place: a card filed between the drag and the save would
-        // get back the row `file_many` just dropped.
+        // ⚠️ Only a note filed in the root has a place on its board: one filed elsewhere between
+        // the drag and the save would get back the row `file_many` just dropped.
         let moved: Vec<&String> = cards.iter().map(|placement| &placement.note_id).collect();
-        let filed: std::collections::HashSet<String> = notes::table
+        let here: std::collections::HashSet<String> = notes::table
             .filter(notes::id.eq_any(moved))
-            .filter(notes::folder_id.is_not_null())
-            .select(notes::id)
-            .load::<String>(connection)?
+            .select((notes::id, notes::folder_id))
+            .load::<(String, Option<String>)>(connection)?
             .into_iter()
+            .filter(|(_, folder_id)| folder_id.as_deref() == root)
+            .map(|(id, _)| id)
             .collect();
 
         for placement in cards {
-            if filed.contains(&placement.note_id) {
+            if !here.contains(&placement.note_id) {
                 continue;
             }
 
@@ -218,31 +222,40 @@ pub fn save_layout(
 ///
 /// ⚠️ A read that writes: every folder and loose note gets a first position stored, or the
 /// first drag lands among cards that have none. Idempotent — a second read writes nothing.
+/// `zones` are the board's — the root's children, each saying whether it shows sub-folders —
+/// and only their frames and the places of the cards free on it are read: another board's
+/// geometry must not take a seat on this one.
 pub fn geometry(
     connection: &mut Library,
     space_id: &str,
-    folder_ids: &[String],
+    zones: &[(String, bool)],
     occupancy: &Occupancy,
 ) -> Result<Geometry, StorageError> {
     connection.transaction(|connection, _vault| {
         let mut stored_frames = frames(connection, space_id)?;
+        stored_frames.retain(|id, _| zones.iter().any(|(zone, _)| zone == id));
         let mut stored_positions = positions(connection, space_id)?;
+        stored_positions.retain(|id, _| occupancy.loose.contains(id));
 
-        let missing: Vec<&String> = folder_ids
+        let folder_ids: Vec<&String> = zones.iter().map(|(id, _)| id).collect();
+        let missing: Vec<&&String> = folder_ids
             .iter()
-            .filter(|id| !stored_frames.contains_key(*id))
+            .filter(|id| !stored_frames.contains_key(**id))
             .collect();
 
         if !missing.is_empty() {
-            // Against every folder, so one added later takes its reading-order slot rather
+            // Against every zone, so one added later takes its reading-order slot rather
             // than the first zone's.
-            let counts: Vec<usize> = folder_ids
+            let contents: Vec<ZoneContents> = zones
                 .iter()
-                .map(|id| occupancy.per_folder.get(id).copied().unwrap_or(0))
+                .map(|(id, nested)| ZoneContents {
+                    notes: occupancy.per_folder.get(id).copied().unwrap_or(0),
+                    nested: *nested,
+                })
                 .collect();
-            let arranged = board::arrange_zones(&counts);
+            let arranged = board::arrange_zones(&contents);
 
-            for (id, frame) in folder_ids.iter().zip(arranged) {
+            for (id, frame) in folder_ids.into_iter().zip(arranged) {
                 if stored_frames.contains_key(id) {
                     continue;
                 }
@@ -276,19 +289,16 @@ pub fn geometry(
     })
 }
 
-/// Every folder of the space in reading order, and how many live notes each one holds.
+/// The board's zones in reading order, and what each one's sub-tree holds.
 ///
 /// Ids and counts rather than `folders::store::list` and `notes::store::fetch`, which would
 /// decrypt the whole space to answer a count.
 fn folder_counts(
     connection: &mut SqliteConnection,
     space_id: &str,
-) -> Result<Vec<(String, usize)>, StorageError> {
-    let ids = folders::table
-        .filter(folders::space_id.eq(space_id))
-        .order((folders::created_at.asc(), folders::id.asc()))
-        .select(folders::id)
-        .load::<String>(connection)?;
+    root: Option<&str>,
+) -> Result<Vec<(String, ZoneContents)>, StorageError> {
+    let lineage = crate::folders::store::lineage(connection, space_id)?;
 
     let filed = notes::table
         .filter(notes::space_id.eq(space_id))
@@ -302,24 +312,38 @@ fn folder_counts(
         *counts.entry(folder_id).or_default() += 1;
     }
 
-    Ok(ids
-        .into_iter()
+    Ok(lineage
+        .children(root)
+        .iter()
         .map(|id| {
-            let count = counts.get(&id).copied().unwrap_or(0);
-            (id, count)
+            let notes = lineage
+                .subtree(id)
+                .iter()
+                .map(|below| counts.get(below).copied().unwrap_or(0))
+                .sum();
+            let nested = !lineage.children(Some(id)).is_empty();
+            (id.clone(), ZoneContents { notes, nested })
         })
         .collect())
 }
 
-/// The unfiled notes, in the board's order: pinned first, then by last change.
+/// The notes filed in the root itself, free on its board, in its order: pinned first, then by
+/// last change.
 fn loose_ids(
     connection: &mut SqliteConnection,
     space_id: &str,
+    root: Option<&str>,
 ) -> Result<Vec<String>, StorageError> {
-    Ok(notes::table
+    let mut query = notes::table
         .filter(notes::space_id.eq(space_id))
         .filter(notes::deleted_at.is_null())
-        .filter(notes::folder_id.is_null())
+        .into_boxed();
+    query = match root {
+        Some(root) => query.filter(notes::folder_id.eq(root.to_string())),
+        None => query.filter(notes::folder_id.is_null()),
+    };
+
+    Ok(query
         .order((
             notes::pinned.desc(),
             notes::updated_at.desc(),
@@ -329,7 +353,7 @@ fn loose_ids(
         .load::<String>(connection)?)
 }
 
-/// Rewrites one space's geometry as far as `scope` allows, and answers what it was.
+/// Rewrites one board's geometry as far as `scope` allows, and answers what it was.
 ///
 /// It answers the previous layout: the new one arrives with the front end's reload anyway.
 /// Only what had a place is reported, or an undo would invent positions nobody chose, and
@@ -337,17 +361,19 @@ fn loose_ids(
 pub fn arrange(
     connection: &mut Library,
     space_id: &str,
+    root: Option<&str>,
     scope: BoardScope,
 ) -> Result<BoardArrangement, StorageError> {
     connection.transaction(|connection, _vault| {
-        let loose = loose_ids(connection, space_id)?;
-        let before = frames(connection, space_id)?;
-        let places = positions(connection, space_id)?;
+        let loose = loose_ids(connection, space_id, root)?;
+        let zones = folder_counts(connection, space_id, root)?;
+        let mut before = frames(connection, space_id)?;
+        before.retain(|id, _| zones.iter().any(|(zone, _)| zone == id));
+        let mut places = positions(connection, space_id)?;
+        places.retain(|id, _| loose.contains(id));
 
         let next = match scope {
-            BoardScope::Everything => {
-                board::arrange_everything(&folder_counts(connection, space_id)?, &loose)
-            }
+            BoardScope::Everything => board::arrange_everything(&zones, &loose),
             BoardScope::LooseCards => {
                 let standing: Vec<BoardFrame> = before.values().copied().collect();
                 board::arrange_loose_cards(&standing, &loose)

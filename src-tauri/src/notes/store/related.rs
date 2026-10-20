@@ -13,7 +13,7 @@ use crate::notes::model::Note;
 use crate::vault::key::Vault;
 
 /// Up to this many notes, their side tables are read by id; past it, by their space.
-const BIND_AT_MOST: usize = 500;
+pub(crate) const BIND_AT_MOST: usize = 500;
 
 /// Which notes a side-table read covers: bound ids for a few, the space's subquery for many,
 /// since one parameter per note is slower than reading the table whole past a few thousand.

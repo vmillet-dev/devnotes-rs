@@ -301,8 +301,17 @@ pub fn fetch(
         query = query.filter(notes::space_id.eq(space_id.clone()));
     }
 
-    if let Some(folder_id) = &request.folder_id {
-        query = query.filter(notes::folder_id.eq(folder_id.clone()));
+    // An opened folder holds what is under it. Past the bind limit the sub-tree is kept after
+    // the read rather than bound.
+    let subtree = match &request.folder_id {
+        Some(folder_id) => Some(folders::subtree(connection.db(), folder_id)?),
+        None => None,
+    };
+    if let Some(ids) = subtree
+        .as_ref()
+        .filter(|ids| ids.len() <= related::BIND_AT_MOST)
+    {
+        query = query.filter(notes::folder_id.eq_any(ids.clone()));
     }
 
     match request.filter {
@@ -354,7 +363,11 @@ pub fn fetch(
     let rows = query
         .order((notes::updated_at.desc(), notes::id.asc()))
         .load::<NoteRow>(connection.db())?;
-    let notes = opened(connection, rows, request.space_id.as_deref())?;
+    let mut notes = opened(connection, rows, request.space_id.as_deref())?;
+    if let Some(ids) = subtree.filter(|ids| ids.len() > related::BIND_AT_MOST) {
+        let held: HashSet<String> = ids.into_iter().collect();
+        notes.retain(|note| note.folder_id.as_ref().is_some_and(|id| held.contains(id)));
+    }
 
     Ok((notes, facets(connection, request.space_id.as_deref())?))
 }
@@ -445,7 +458,7 @@ pub fn seed(
         let mut folder_ids: Vec<String> = Vec::with_capacity(folder_names.len());
         for (index, name) in folder_names.iter().enumerate() {
             let at = now + TimeDelta::milliseconds(i64::try_from(index).unwrap_or(0));
-            folder_ids.push(folders::create_in(connection, vault, &space.id, name, at)?.id);
+            folder_ids.push(folders::create_in(connection, vault, &space.id, None, name, at)?.id);
         }
 
         // And backward for the notes: the canvas orders `updated_at` descending.
