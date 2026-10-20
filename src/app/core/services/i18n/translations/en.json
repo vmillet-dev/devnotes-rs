@@ -324,7 +324,12 @@
       "linkAddress": "Link address",
       "linkApply": "Apply",
       "linkHint": "An empty address removes the link · Ctrl+click opens it",
-      "linkOpen": "Ctrl+click to open"
+      "linkOpen": "Ctrl+click to open",
+      "diagram": {
+        "edit": "Click to edit the diagram’s code",
+        "failed": "The diagram cannot be read.",
+        "failedAt": "The diagram cannot be read, line {{line}}."
+      }
     },
     "languageLabel": "Content format",
     "placementLabel": "Location",
@@ -1092,7 +1097,7 @@
     "chapters": {
       "notes": {
         "title": "Snippets, Notes and lists",
-        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown — or a todo list; the editor's \"Kind\" menu turns one into another. Click a card to open it, or copy it without opening, from its own button."
+        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown — or a todo list; the editor's \"Kind\" menu turns one into another. In a Note, a Mermaid code block is drawn as a diagram. Click a card to open it, or copy it without opening, from its own button."
       },
       "spaces": {
         "title": "Spaces to file things in",

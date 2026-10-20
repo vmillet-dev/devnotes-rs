@@ -82,6 +82,7 @@
     "cm6-graphql": "^0.2.2",
     "codemirror-lang-elixir": "^4.0.1",
     "graphql": "^17.0.2",
+    "mermaid": "^12.2.0",
     "prettier": "3.9.10",
     "rxjs": "~7.8.2",
     "tslib": "^2.8.1"

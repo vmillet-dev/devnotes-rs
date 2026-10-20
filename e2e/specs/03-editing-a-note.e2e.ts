@@ -524,6 +524,31 @@ describe('Editing a note', () => {
       await reloadCanvas();
     });
 
+    /** Drawn by Mermaid under the CSP as it stands, and stored as the fence it was given. */
+    it('draws a Mermaid block as a diagram under its code', async () => {
+      const title = 'Login sequence';
+      const content =
+        'How it goes:\n\n```mermaid\nsequenceDiagram\n  Browser->>API: POST /login\n  API-->>Browser: 200 and a cookie\n```';
+      const id = (await bridge.createNote(draft({ spaceId, title, content, kind: 'note' }))).id;
+      await reloadCanvas();
+      await canvas.waitForCard(title);
+
+      await canvas.openNote(title);
+      await $(`${testid('rich-diagram')} svg`).waitForExist({ timeout: 15_000 });
+      expect(await $(`${testid('editor-rich')} pre`).getAttribute('data-language')).toBe('MERMAID');
+      const drawn = await browser.execute(
+        (selector: string) => document.querySelector(selector)?.textContent ?? '',
+        `${testid('rich-diagram')} svg`,
+      );
+      expect(drawn).toContain('POST /login');
+      await editor.close();
+
+      expect((await bridge.getNote(id)).content).toBe(content);
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
     /** Code keeps its characters and gets its language: the note becomes a snippet. */
     it('turns into a snippet in the code field when code is pasted into it empty', async () => {
       const code = 'SELECT id, title FROM notes WHERE pinned = 1;';

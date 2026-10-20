@@ -1720,6 +1720,20 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   nothing loaded twice, a block drawn plain until its grammar has arrived. Tab indents as the code field does (`indentUnit`), and `withTabs`
   leaves a fence alone: nothing is escaped in one, so its `&#9;` is text. A card and a search
   read its lines as they are (`notes::markdown::plain`).
+- **A `mermaid` block is drawn under its code** (`rich-text-diagrams.ts`), offered first in the
+  block's language menu; a snippet has no Mermaid language. The drawing is a widget decoration
+  after the block, keyed by its rank, the theme and its source, so the caret and typing elsewhere
+  reuse it; typing in the block redraws once the keys pause (`REDRAW_AFTER_MS`), the last drawing
+  kept on screen meanwhile. Away from the caret — the editor blurred, or the selection elsewhere,
+  read from TipTap's `focus`/`blur` transaction metas — the code folds to its first line; a press
+  on the drawing puts the caret back in it. A parse error names its line (`lineOf` reads both of
+  Mermaid's parsers) and shows Mermaid's message. `MermaidRenderer` loads Mermaid as a chunk of
+  its own on the first diagram, at its `strict` level with error rendering suppressed, coloured
+  from the theme's tokens (Mermaid derives shades, so it is handed concrete colours, and a theme
+  change draws again); one drawing at a time, since its configuration and its measuring element
+  are global, and the last 64 kept. Its ESM build evaluates no code, so the CSP stays as it is;
+  the SVG it returns is read by an inert HTML parser, not `innerHTML`. The fence is stored as it
+  was typed, and a card shows the block's lines.
 - **The editor says what it holds.** A "Note" badge sits where a snippet has its format menu,
   and the footer counts the draft's words (`countWords`) where a snippet counts lines and bytes:
   presenting the draft is the front's job, as the line count is. The toolbar runs headings, what

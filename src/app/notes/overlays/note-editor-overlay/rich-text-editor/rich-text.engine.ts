@@ -12,11 +12,13 @@ import { LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/languag
 import { grammarOf, loadGrammar } from '@core/services/syntax/grammars';
 import { highlightRanges } from '@core/services/syntax/highlighter';
 import { escapeMarkdownText } from './markdown-text';
+import { DiagramHooks, Diagrams, MERMAID_LABEL, isDiagram } from './rich-text-diagrams';
 import { TextSearch } from './rich-text-search';
 
 export interface RichEditorHooks {
   readonly label: string;
   readonly placeholder: string;
+  readonly diagrams: DiagramHooks;
   change(markdown: string): void;
   blur(): void;
   transaction(): void;
@@ -165,9 +167,8 @@ function highlightCode(doc: ProseMirrorNode): DecorationSet {
     if (node.type.name !== 'codeBlock') return true;
 
     const language = languageOf(node);
-    decorations.push(
-      Decoration.node(position, position + node.nodeSize, { 'data-language': LANGUAGE_LABELS[language] }),
-    );
+    const label = isDiagram(node) ? MERMAID_LABEL : LANGUAGE_LABELS[language];
+    decorations.push(Decoration.node(position, position + node.nodeSize, { 'data-language': label }));
     // Read outside any effect a transaction may be dispatched from, which would follow it.
     const grammar = untracked(() => grammarOf(language));
     for (const range of highlightRanges(node.textContent, grammar)) {
@@ -187,7 +188,7 @@ export function markdownOf(editor: Editor): string {
 
 /**
  * The editor of a Note: what GitHub's Markdown can hold and nothing more — no underline. A
- * code block keeps its language in its fence.
+ * code block keeps its language in its fence; a `mermaid` one is drawn under its code.
  */
 export function createRichEditor(element: HTMLElement, markdown: string, hooks: RichEditorHooks): Editor {
   const editor = new Editor({
@@ -204,6 +205,7 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
       TaskItem.configure({ nested: true }),
       tabCharacter((language) => hooks.indent(language)),
       CodeHighlight,
+      Diagrams(hooks.diagrams),
       TextSearch,
     ],
     content: markdown,

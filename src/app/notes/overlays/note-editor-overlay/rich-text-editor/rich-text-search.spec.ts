@@ -31,6 +31,7 @@ describe('richTextSearch', () => {
       click: () => false,
       keydown: () => false,
       indent: () => '  ',
+      diagrams: { draw: () => Promise.resolve({ svg: '' }), title: () => '', failed: () => '' },
     });
     target = richTextSearch(editor, hooks);
   }
