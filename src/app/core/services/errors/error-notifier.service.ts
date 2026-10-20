@@ -63,6 +63,7 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   httpScriptSkipped: 'errors.httpScriptSkipped',
   httpScriptMethod: 'errors.httpScriptMethod',
   httpScriptProtected: 'errors.httpScriptProtected',
+  httpRunData: 'errors.httpRunData',
 };
 
 /**
@@ -75,6 +76,7 @@ const VARIANT_PARAM: Partial<Record<IpcErrorCode, string>> = {
   httpHeaderName: 'source',
   httpHeaderValue: 'source',
   httpScript: 'failure',
+  httpRunData: 'fault',
 };
 
 /** What a code says, for an error kept as its code and its values: a failed send in the history. */

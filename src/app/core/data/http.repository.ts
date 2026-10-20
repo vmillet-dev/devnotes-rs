@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { commands } from '@core/ipc/bindings';
+import { commands, RunData, RunRequest } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import {
   CookieDomain,
@@ -211,6 +211,20 @@ export class HttpRepository {
         confirmed,
       }),
     );
+  }
+
+  /** Answers once the run is over; its steps come as events, under `run.id`. */
+  async runCollection(run: RunRequest): Promise<void> {
+    unwrap('run_http_collection', await commands.runHttpCollection(run));
+  }
+
+  /** `false` when no run of that id was under way. */
+  async cancelRun(id: string): Promise<boolean> {
+    return unwrap('cancel_http_run', await commands.cancelHttpRun(id));
+  }
+
+  async readRunData(path: string): Promise<RunData> {
+    return unwrap('read_http_run_data', await commands.readHttpRunData(path));
   }
 
   /** What was sent, newest first, a group a local day. */

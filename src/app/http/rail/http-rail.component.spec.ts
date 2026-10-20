@@ -287,7 +287,7 @@ describe('HttpRailComponent', () => {
     const parent = el<HTMLButtonElement>('[data-testid="http-node-new"]');
     expect(parent.textContent).toContain('Nouvelle requête');
     expect(parent.getAttribute('aria-expanded')).toBe('false');
-    expect(actions()).toEqual(['newFolder', 'settings', 'rename', 'duplicate', 'delete']);
+    expect(actions()).toEqual(['newFolder', 'run', 'settings', 'rename', 'duplicate', 'delete']);
 
     // The right arrow opens it as a click does, on its first kind; the left one comes back.
     parent.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));

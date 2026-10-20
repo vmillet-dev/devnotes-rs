@@ -19,13 +19,21 @@ import { SubmenuHoverDirective } from '@shared/directives/submenu-hover.directiv
 
 /** A request is begun as one of its three kinds: there is no « Nouvelle requête » to turn into one later. */
 export type HttpNodeAction =
-  'newHttp' | 'newGraphql' | 'newWebsocket' | 'newFolder' | 'settings' | 'rename' | 'duplicate' | 'delete';
+  | 'newHttp'
+  | 'newGraphql'
+  | 'newWebsocket'
+  | 'newFolder'
+  | 'run'
+  | 'settings'
+  | 'rename'
+  | 'duplicate'
+  | 'delete';
 
 /** What the panel lists: `newRequest` is no action, it opens the three kinds beside it. */
 type Entry = HttpNodeAction | 'newRequest';
 
-/** Six entries and the panel's padding, with room to spare. */
-const PANEL_HEIGHT = 220;
+/** Seven entries and the panel's padding, with room to spare. */
+const PANEL_HEIGHT = 250;
 /** Three entries and its padding. */
 const SUBMENU = { width: 190, height: 110 };
 const MARGIN = 8;
@@ -69,7 +77,7 @@ export class HttpNodeMenuComponent {
   protected readonly entries = computed<readonly Entry[]>(() =>
     this.row().kind === 'request'
       ? ['rename', 'duplicate', 'delete']
-      : ['newRequest', 'newFolder', 'settings', 'rename', 'duplicate', 'delete'],
+      : ['newRequest', 'newFolder', 'run', 'settings', 'rename', 'duplicate', 'delete'],
   );
 
   constructor() {

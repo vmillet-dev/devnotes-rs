@@ -50,7 +50,7 @@ describe('HttpConsoleComponent', () => {
   });
 
   const say = async (line: ConsoleLine, id = sendId) => {
-    play({ id, at: '2026-10-20T12:02:11.998Z', line });
+    play({ id, at: '2026-10-20T12:02:11.998Z', request: 'Payer', iteration: null, line });
     await fixture.whenStable();
   };
   const root = () => fixture.nativeElement as HTMLElement;

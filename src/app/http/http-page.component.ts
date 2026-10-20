@@ -10,6 +10,7 @@ import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { CloseChoice, CloseRequestDialogComponent } from './close-request/close-request-dialog.component';
 import { EnvironmentsPageComponent } from './environments/environments-page.component';
+import { RunnerPageComponent } from './runner/runner-page.component';
 import { HistoryPageComponent } from './history/history-page.component';
 import { HttpRailComponent } from './rail/http-rail.component';
 import { RequestEditorComponent } from './request/request-editor/request-editor.component';
@@ -28,6 +29,7 @@ import { SaveAnswer, SaveRequestDialogComponent } from './save-request/save-requ
   imports: [
     CloseRequestDialogComponent,
     EnvironmentsPageComponent,
+    RunnerPageComponent,
     HistoryPageComponent,
     HttpRailComponent,
     RequestEditorComponent,

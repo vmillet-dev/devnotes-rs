@@ -551,6 +551,10 @@
     "httpScriptSkipped": "Le script avant l’envoi a écarté la requête : elle n’est pas partie.",
     "httpScriptMethod": "Le script avant l’envoi a choisi la méthode « {{method}} », qui n’existe pas.",
     "httpScriptProtected": "Le script avant l’envoi en a fait un {{method}} vers {{environment}}, qui est protégé.",
+    "httpRunData": {
+      "unreadable": "Ce fichier ne se lit ni comme un CSV avec son en-tête, ni comme un tableau JSON d’objets.",
+      "empty": "Ce fichier ne contient aucune ligne de données."
+    },
     "calcFailed": "La feuille n’a pas pu être calculée."
   },
   "tray": {
@@ -3224,6 +3228,7 @@
       "actions": {
         "newRequest": "Nouvelle requête",
         "newFolder": "Nouveau dossier",
+        "run": "Exécuter…",
         "rename": "Renommer",
         "duplicate": "Dupliquer",
         "delete": "Supprimer",
@@ -3731,8 +3736,49 @@
         "sent": "pm.sendRequest · {{name}}",
         "before": "avant l’envoi · {{name}}",
         "after": "après la réponse · {{name}}",
-        "tests": "Tests · {{name}}"
+        "tests": "Tests · {{name}}",
+        "iteration": "{{name}} · itération {{iteration}}"
       }
+    },
+    "runner": {
+      "crumb": "Exécuter ›",
+      "noEnvironment": "Aucun environnement",
+      "progress": "Itération {{iteration}} / {{iterations}} · {{index}} / {{count}} · {{name}}…",
+      "cancel": "Annuler",
+      "start": "Lancer",
+      "again": "Relancer",
+      "startAnyway": "Lancer quand même",
+      "settings": "Réglages du run",
+      "iterations": "Itérations",
+      "delay": "Délai (ms)",
+      "dataRows": "{count, plural, one {# ligne} other {# lignes}}",
+      "dataColumns": "{count, plural, one {# colonne} other {# colonnes}}",
+      "dataClear": "Retirer le fichier de données",
+      "dataChoose": "Fichier de données, CSV ou JSON…",
+      "dataFailed": "Impossible de lire ce fichier de données.",
+      "stopOnFailure": "Arrêter au premier échec",
+      "keepVariables": "Garder les variables modifiées",
+      "keepResponses": "Enregistrer les réponses",
+      "order": "Ordre · {{running}} sur {{count}} requêtes",
+      "orderLabel": "Ordre des requêtes",
+      "orderHint": "Glisser, ou Alt ↑ ↓ sur la ligne ; Espace la laisse de côté.",
+      "include": "Exécuter {{name}}",
+      "protected": "{{name}} est protégé : {{count}} requêtes sur {{total}} peuvent le modifier ({{requests}}).",
+      "failed": "Le run n’a pas pu aller au bout.",
+      "failures": "{count, plural, one {# échec} other {# échecs}}",
+      "allPassed": "Tout passe",
+      "requests": "{count, plural, one {# requête} other {# requêtes}}",
+      "iterationsCount": "{count, plural, one {# itération} other {# itérations}}",
+      "filter": "Filtrer les résultats",
+      "filters": {
+        "all": "Toutes",
+        "passed": "Réussies",
+        "failed": "Échouées"
+      },
+      "iteration": "Itération {{iteration}} / {{count}}",
+      "skipped": "Écartée par un script",
+      "noAnswer": "Pas de réponse",
+      "versus": "attendu {{expected}}, reçu {{actual}}"
     },
     "variables": {
       "name": "Nom",

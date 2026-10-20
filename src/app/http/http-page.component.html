@@ -8,6 +8,8 @@
       <app-history-page />
     } @else if (workspace.page() === 'environments') {
       <app-environments-page />
+    } @else if (workspace.page() === 'runner') {
+      <app-runner-page />
     } @else {
       <app-request-tabs (closeAsked)="closing.set($event)" />
       @if (tabs.active(); as tab) {

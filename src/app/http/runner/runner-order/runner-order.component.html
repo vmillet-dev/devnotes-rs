@@ -1,0 +1,51 @@
+<p class="caption">
+  {{ 'http.runner.order' | transloco: { running: running(), count: rows().length } }}
+</p>
+<ol
+  #list
+  class="order"
+  data-testid="http-runner-order"
+  [attr.aria-label]="'http.runner.orderLabel' | transloco"
+>
+  @for (row of rows(); track row.id; let index = $index) {
+    <li
+      class="row"
+      data-testid="http-runner-row"
+      tabindex="0"
+      [attr.data-id]="row.id"
+      [class.off]="!row.enabled"
+      [class.landing]="dragging()?.to === index && dragging()?.from !== index"
+      [attr.aria-label]="row.name"
+      (keydown)="onKey(index, $event)"
+    >
+      <input
+        type="checkbox"
+        class="check"
+        data-testid="http-runner-row-enabled"
+        tabindex="-1"
+        [checked]="row.enabled"
+        [disabled]="disabled()"
+        [attr.aria-label]="'http.runner.include' | transloco: { name: row.name }"
+        (change)="toggled.emit(index)"
+      />
+      <span
+        class="grip"
+        data-testid="http-runner-row-grip"
+        aria-hidden="true"
+        (pointerdown)="grab(index, $event)"
+        (pointermove)="drag($event)"
+        (pointerup)="drop($event)"
+        (pointercancel)="drop($event)"
+        >⋮⋮</span
+      >
+      <span class="badge" [attr.data-method]="row.method">{{ badge(row) }}</span>
+      <span class="name">
+        @for (folder of row.path; track $index) {
+          <span class="folder">{{ folder }} ›</span>
+        }
+        {{ row.name }}
+      </span>
+    </li>
+  }
+</ol>
+<p class="hint">{{ 'http.runner.orderHint' | transloco }}</p>

@@ -1,0 +1,207 @@
+@let target = store.target();
+@let active = environments.active();
+<section class="runner" data-testid="http-runner" aria-labelledby="http-runner-title">
+  <header class="head">
+    <app-rail-toggle
+      testId="http-rail-toggle"
+      [shown]="settings.showLibraryRail()"
+      (toggled)="settings.toggleLibraryRail()"
+    />
+    <span class="crumb">{{ 'http.runner.crumb' | transloco }}</span>
+    <h2 id="http-runner-title" class="title" data-testid="http-runner-title">{{ target?.name ?? '' }}</h2>
+    <span class="environment" data-testid="http-runner-environment">
+      <i [class]="'dot is-' + (active?.colour ?? 'none')" aria-hidden="true"></i>
+      {{ active?.name ?? ('http.runner.noEnvironment' | transloco) }}
+    </span>
+    <div class="head-actions">
+      @if (running()) {
+        @if (store.progress(); as progress) {
+          <span class="progress" data-testid="http-runner-progress">
+            <app-spinner />
+            {{
+              'http.runner.progress'
+                | transloco
+                  : {
+                      iteration: progress.iteration + 1,
+                      iterations: store.runs(),
+                      index: progress.index + 1,
+                      count: store.enabled().length,
+                      name: progress.name,
+                    }
+            }}
+          </span>
+        }
+        <button type="button" class="action" data-testid="http-runner-cancel" (click)="store.cancel()">
+          {{ 'http.runner.cancel' | transloco }}
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="action primary"
+          data-testid="http-runner-start"
+          [disabled]="store.enabled().length === 0"
+          (click)="store.start()"
+        >
+          ▶ {{ (store.results().length > 0 ? 'http.runner.again' : 'http.runner.start') | transloco }}
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="side" [attr.aria-label]="'http.runner.settings' | transloco">
+      <div class="two">
+        <label class="field">
+          <span class="label">{{ 'http.runner.iterations' | transloco }}</span>
+          <input
+            type="number"
+            min="1"
+            class="input"
+            data-testid="http-runner-iterations"
+            [value]="store.runs()"
+            [disabled]="store.data() !== null || running()"
+            (change)="onNumber($event, store.iterations.set)"
+          />
+        </label>
+        <label class="field">
+          <span class="label">{{ 'http.runner.delay' | transloco }}</span>
+          <input
+            type="number"
+            min="0"
+            class="input"
+            data-testid="http-runner-delay"
+            [value]="store.delayMs()"
+            [disabled]="running()"
+            (change)="onNumber($event, store.delayMs.set)"
+          />
+        </label>
+      </div>
+      @if (store.data(); as data) {
+        <div class="data" data-testid="http-runner-data">
+          <span class="data-name">{{ data.name }}</span>
+          <span class="data-meta"
+            >{{ 'http.runner.dataRows' | transloco: { count: data.data.rows.length } }} ·
+            {{ 'http.runner.dataColumns' | transloco: { count: data.data.columns.length } }}</span
+          >
+          <button
+            type="button"
+            class="remove"
+            data-testid="http-runner-data-clear"
+            [attr.aria-label]="'http.runner.dataClear' | transloco"
+            [attr.title]="'http.runner.dataClear' | transloco"
+            [disabled]="running()"
+            (click)="store.clearData()"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+      } @else {
+        <button
+          type="button"
+          class="action"
+          data-testid="http-runner-data-choose"
+          [disabled]="running()"
+          (click)="store.chooseData()"
+        >
+          {{ 'http.runner.dataChoose' | transloco }}
+        </button>
+      }
+      <div class="options">
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="http-runner-stop"
+            [checked]="store.stopOnFailure()"
+            [disabled]="running()"
+            (change)="onCheck($event, store.stopOnFailure.set)"
+          />
+          {{ 'http.runner.stopOnFailure' | transloco }}
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="http-runner-keep-variables"
+            [checked]="store.keepVariables()"
+            [disabled]="running()"
+            (change)="onCheck($event, store.keepVariables.set)"
+          />
+          {{ 'http.runner.keepVariables' | transloco }}
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="http-runner-keep-responses"
+            [checked]="store.keepResponses()"
+            [disabled]="running()"
+            (change)="onCheck($event, store.keepResponses.set)"
+          />
+          {{ 'http.runner.keepResponses' | transloco }}
+        </label>
+      </div>
+      <span class="rule" aria-hidden="true"></span>
+      <app-runner-order
+        [rows]="store.rows()"
+        [disabled]="running()"
+        (moved)="store.move($event.from, $event.to)"
+        (toggled)="store.toggle($event)"
+      />
+    </aside>
+
+    <div class="main">
+      <div class="report">
+        @if (store.phase() === 'asking') {
+          <app-protected-question
+            testId="http-runner-protected"
+            [colour]="active?.colour ?? null"
+            [question]="
+              'http.runner.protected'
+                | transloco
+                  : {
+                      name: active?.name ?? '',
+                      count: store.changing().length,
+                      total: store.enabled().length,
+                      requests: changingNames(),
+                    }
+            "
+            [goLabel]="'http.runner.startAnyway' | transloco"
+            (go)="store.start(true)"
+            (cancelled)="store.stopAsking()"
+          />
+        }
+        @if (store.results().length > 0) {
+          <app-runner-results
+            [results]="store.results()"
+            [iterations]="store.runs()"
+            [data]="store.data()?.data ?? null"
+            [millis]="store.ended()?.millis ?? null"
+            [filter]="store.filter()"
+            (filterChanged)="store.filter.set($event)"
+          />
+        } @else if (!running() && store.phase() !== 'asking') {
+          <div class="empty" data-testid="http-runner-empty">
+            <p data-testid="http-runner-ready">
+              {{ 'http.runner.requests' | transloco: { count: store.enabled().length } }} ·
+              {{ 'http.runner.iterationsCount' | transloco: { count: store.runs() } }}
+              @if (store.data(); as data) {
+                ({{ data.name }})
+              }
+              · {{ active?.name ?? ('http.runner.noEnvironment' | transloco) }}
+            </p>
+            <button
+              type="button"
+              class="action primary"
+              data-testid="http-runner-start-empty"
+              [disabled]="store.enabled().length === 0"
+              (click)="store.start()"
+            >
+              ▶ {{ 'http.runner.start' | transloco }}
+            </button>
+          </div>
+        }
+      </div>
+      @if (store.consoleKey(); as key) {
+        <app-http-console class="console" [class.open]="true" [tabKey]="key" requestName="" />
+      }
+    </div>
+  </div>
+</section>
