@@ -12,6 +12,15 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.15.0] - 2026-10-20
+
+### 🧰 Under the hood
+
+- Rails: a row let go after a drag never opens, whatever the timing (#991)
+- Folders: new sub-folder from a folder's menu (#989)
+- Folders: folders inside folders, a board opened at any level (#987)
+- Code editor: 142 languages, coloured alike on cards and in the editor (#986)
+
 ## [0.14.0] - 2026-10-20
 
 ### ✨ Added
