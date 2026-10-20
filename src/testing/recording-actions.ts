@@ -1,4 +1,4 @@
-import { FolderColour } from '@core/model/folder.model';
+import { Folder, FolderColour } from '@core/model/folder.model';
 import { SpaceContents } from '@core/model/space.model';
 import { FoldersStore } from '@core/state/folders.store';
 import { SpacesStore } from '@core/state/spaces.store';
@@ -6,8 +6,11 @@ import { SpacesStore } from '@core/state/spaces.store';
 /** What a folder editor asked of its store, for a host drawn without a library behind it. */
 export class RecordingFolderActions implements Pick<
   FoldersStore,
-  'renameFolder' | 'recolourFolder' | 'deleteFolder'
+  'renameFolder' | 'recolourFolder' | 'deleteFolder' | 'createFolder'
 > {
+  /** `false` answers a creation the way a refused name does. */
+  accepts = true;
+  readonly created: { name: string; parentId: string | null }[] = [];
   readonly renamed: { id: string; name: string }[] = [];
   readonly recoloured: { id: string; colour: FolderColour }[] = [];
   readonly deleted: string[] = [];
@@ -25,6 +28,19 @@ export class RecordingFolderActions implements Pick<
   deleteFolder(id: string): Promise<boolean> {
     this.deleted.push(id);
     return Promise.resolve(true);
+  }
+
+  createFolder(name: string, parentId: string | null = null): Promise<Folder | null> {
+    this.created.push({ name, parentId });
+    if (!this.accepts) return Promise.resolve(null);
+    return Promise.resolve({
+      id: `made-${this.created.length}`,
+      spaceId: 'sql',
+      name,
+      colour: 'blue',
+      createdAt: new Date('2026-01-01T10:00:00Z'),
+      parentId,
+    });
   }
 }
 

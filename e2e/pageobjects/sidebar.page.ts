@@ -194,6 +194,14 @@ export const folders = {
     await $(testid('folder-create-submit')).click();
   },
 
+  /** Made from the folder's own ⋯, inside it. */
+  async createInside(id: string, name: string): Promise<void> {
+    await $(`${testid('folder-edit')}[data-folder-id="${id}"]`).click();
+    await $(testid('folder-subfolder-open')).click();
+    await setField(testid('folder-subfolder-input'), name);
+    await $(testid('folder-subfolder-submit')).click();
+  },
+
   async rename(id: string, into: string): Promise<void> {
     await $(`${testid('folder-edit')}[data-folder-id="${id}"]`).click();
     await setField(testid('folder-rename-input'), into);
@@ -207,7 +215,7 @@ export const folders = {
     await folders.close();
   },
 
-  /** No refuge to choose, unlike a space: the notes simply come out loose. */
+  /** No refuge to choose, unlike a space: what it holds goes up a level. */
   async remove(id: string): Promise<void> {
     await $(`${testid('folder-edit')}[data-folder-id="${id}"]`).click();
     await confirmTwice($(testid('folder-delete')));

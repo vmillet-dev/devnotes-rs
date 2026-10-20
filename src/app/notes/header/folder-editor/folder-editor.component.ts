@@ -1,7 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
+  afterRenderEffect,
   inject,
   input,
   output,
@@ -16,9 +18,9 @@ import { FoldersStore } from '@core/state/folders.store';
 const COLOURS: readonly FolderColour[] = ['blue', 'amber', 'purple', 'green', 'red'];
 
 /**
- * Rename, recolour, delete — the three things a folder can be told to do, in one panel so
- * the switcher, the breadcrumb, the rail and the zone menu cannot drift apart. It performs
- * them itself; its host only hears `finished`, to close whatever it was opened from.
+ * Rename, recolour, make a folder inside, delete — what a folder can be told to do, in one
+ * panel so the switcher, the breadcrumb, the rail and the zone menu cannot drift apart. It
+ * performs them itself; its host only hears `finished`, to close whatever it was opened from.
  */
 @Component({
   selector: 'app-folder-editor',
@@ -40,18 +42,29 @@ export class FolderEditorComponent {
    */
   readonly selectableCount = input<number | null>(null);
 
-  /** After a rename or a deletion; a recolour leaves the panel open on the new swatch. */
+  /** After a rename, a deletion or a sub-folder made; a recolour leaves the panel open. */
   readonly finished = output<void>();
+  /** The sub-folder made, before `finished`: the rail opens its parent and marks it. */
+  readonly created = output<Folder>();
   readonly selectRequested = output<string>();
 
   private readonly folders = inject(FoldersStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly colours = COLOURS;
 
   /** Two steps: the WebView blocks on a native `confirm()`. */
   protected readonly confirmingDelete = signal(false);
+  protected readonly nesting = signal(false);
 
   private readonly renameInput = viewChild<ElementRef<HTMLInputElement>>('renameInput');
+  private readonly subfolderInput = viewChild<ElementRef<HTMLInputElement>>('subfolderInput');
+
+  constructor() {
+    afterRenderEffect(() => {
+      if (this.nesting()) this.subfolderInput()?.nativeElement.focus();
+    });
+  }
 
   focusName(): void {
     this.renameInput()?.nativeElement.focus();
@@ -65,6 +78,17 @@ export class FolderEditorComponent {
     this.finished.emit();
   }
 
+  /** A refused name leaves the field open to be corrected; the notifier has said why. */
+  protected async submitSubfolder(event: Event, name: string): Promise<void> {
+    event.preventDefault();
+    if (!name.trim()) return;
+
+    const created = await this.folders.createFolder(name, this.folder().id);
+    if (created === null || this.destroyRef.destroyed) return;
+    this.created.emit(created);
+    this.finished.emit();
+  }
+
   protected selectNotes(): void {
     this.selectRequested.emit(this.folder().id);
   }
@@ -75,7 +99,7 @@ export class FolderEditorComponent {
     void this.folders.recolourFolder(this.folder().id, colour);
   }
 
-  /** No refuge to choose, unlike a space: the notes come out loose. */
+  /** No refuge to choose, unlike a space: its notes and sub-folders go up to its parent. */
   protected onDeleteClick(): void {
     if (!this.confirmingDelete()) {
       this.confirmingDelete.set(true);

@@ -310,6 +310,22 @@ describe('FoldersStore, nested', () => {
     expect(created?.parentId).toBe('perf');
   });
 
+  it('creates a sub-folder in its parent space, whichever space is open', async () => {
+    const harness = await createStore(NESTED);
+    await inSpace(harness, 'veille');
+
+    const created = await harness.store.createFolder('Requêtes', 'perf');
+
+    expect(created).toMatchObject({ spaceId: 'sql', parentId: 'perf' });
+  });
+
+  it('creates nothing under a folder it does not know', async () => {
+    const harness = await createStore(NESTED);
+    await inSpace(harness, 'sql');
+
+    expect(await harness.store.createFolder('Requêtes', 'gone')).toBeNull();
+  });
+
   it('moves a folder, adopts its new parent and answers where it was', async () => {
     const harness = await createStore(NESTED);
     await inSpace(harness, 'sql');

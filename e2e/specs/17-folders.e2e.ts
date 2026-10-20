@@ -491,5 +491,20 @@ describe('Folders', () => {
       );
       await board.show('list');
     });
+
+    it('makes a folder inside another from its ⋯, and shows it under it', async () => {
+      await folders.createInside(index, 'Partiels');
+
+      const listed = await eventually(
+        () => bridge.listFolders(homeId),
+        (all) => all.some((folder) => folder.name === 'Partiels' && folder.parentId === index),
+        'a folder made inside « Index »',
+      );
+      const made = listed.find((folder) => folder.name === 'Partiels')?.id ?? '';
+      await $(`[data-rail-row][data-id="${index}"] [data-rail-row][data-id="${made}"]`).waitForExist({
+        timeout: 5_000,
+      });
+      await $(testid('folder-subfolder-input')).waitForExist({ reverse: true, timeout: 5_000 });
+    });
   });
 });

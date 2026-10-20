@@ -161,6 +161,8 @@
     "newFolderLabel": "New folder name",
     "newFolderPlaceholder": "Folder name",
     "newFolderSubmit": "Create",
+    "newSubfolder": "New sub-folder",
+    "newSubfolderLabel": "Name of the new sub-folder in {{name}}",
     "needsASpace": "Pick a space to create a folder in it.",
     "optionsLabel": "Options for folder {{name}}",
     "renameLabel": "Rename folder",
