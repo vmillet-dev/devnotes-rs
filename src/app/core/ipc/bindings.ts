@@ -449,6 +449,8 @@ export const FIELD_NAME_PATTERN = "^[A-Za-z0-9_-]+$" as const;
 
 export const GLOBAL_ACTION_EVENT = "devnotes:action" as const;
 
+export const HTTP_CONSOLE_EVENT = "http-console" as const;
+
 export const MINIMUM_PASSPHRASE_LENGTH = 12 as const;
 
 export const PREFERENCES_FILE = "preferences.json" as const;
@@ -1001,6 +1003,30 @@ export type ConnectionEstimate = {
 	/**  In bits per second, exact. */
 	rate: string,
 	span: TransferTime,
+};
+
+export type ConsoleEvent = {
+	/**  The send it belongs to, under the id the front sent it with. */
+	id: string,
+	at: string,
+	line: ConsoleLine,
+};
+
+export type ConsoleLine = 
+/**  A request leaving: the send's own, or one a script sent (`by`). */
+{ kind: "out"; method: string; url: string; headers: KeyValue[]; by: ConsoleOrigin | null } | { kind: "in"; status: number; reason: string; millis: number; size: number; by: ConsoleOrigin | null } | 
+/**  What came back in place of an answer, as an error's code and the values it states. */
+{ kind: "failed"; code: ErrorCode; params: { [key in string]: string }; by: ConsoleOrigin | null } | { kind: "log"; level: LogLevel; text: string; by: ConsoleOrigin | null } | 
+/**  A test that failed. */
+{ kind: "test"; name: string; expected: string | null; actual: string | null; message: string | null; by: ConsoleOrigin | null } | { kind: "stopped"; stop: ScriptStop } | 
+/**  An extraction whose path led nowhere: its variable was left as it was. */
+{ kind: "missed"; path: string; variable: string };
+
+/**  The script a line comes from: its kind, and the request, folder or collection that holds it. */
+export type ConsoleOrigin = {
+	kind: ScriptKind,
+	level: ScriptLevel,
+	name: string,
 };
 
 /**
@@ -2415,12 +2441,6 @@ export type LineEnding = "lf" | "crlf" | "cr";
 
 export type ListProblem = "missing" | "damaged";
 
-export type LogEntry = {
-	level?: LogLevel,
-	text?: string,
-	script?: string | null,
-};
-
 export type LogLevel = "log" | "info" | "debug" | "warn" | "error";
 
 export type LoremAnswer = {
@@ -3074,10 +3094,9 @@ export type ScriptStop = {
 	message?: string,
 };
 
-/**  What the scripts after the answer left beside it. The logs cross once and are never kept. */
+/**  What the scripts after the answer left beside it; what they logged is the console's. */
 export type ScriptsAnswer = {
 	failure?: ScriptStop | null,
-	logs?: LogEntry[],
 	/**  The tests, in the order they ran: kept with the history entry. */
 	tests?: TestResult[],
 	/**  Each extraction of the request, and whether its path still read. */

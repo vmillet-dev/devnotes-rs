@@ -87,6 +87,12 @@ export class HttpSendStore {
 
   private sends = 0;
 
+  /** The tab a send belongs to now, saved meanwhile or not; `null` once it was replaced. */
+  keyOf(sendId: string): string | null {
+    for (const [key, state] of this._states()) if (state.sendId === sendId) return key;
+    return null;
+  }
+
   isSending(key: string): boolean {
     return this._states().get(key)?.phase === 'sending';
   }

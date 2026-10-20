@@ -339,4 +339,65 @@ describe('HTTP scripts', () => {
       await bridge.deleteHttpEnvironment(staging.id);
     }
   });
+
+  /**
+   * #497: the console under the answer, folded at first, says what left and came back and
+   * what a script logged — a secret in force written as its name, an auth header masked.
+   */
+  it('shows the traffic and a script’s log in the console, its secret masked', async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end('{}');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    const api = await bridge.createHttpCollection('Console');
+    const secrets = await bridge.createHttpEnvironment('Console e2e');
+    await bridge.saveHttpEnvironment(secrets.id, {
+      variables: [{ name: 'token', value: 'zq-console-secret', kind: 'secret' }],
+    });
+    const created = await bridge.createHttpRequest({
+      collectionId: api.id,
+      folderId: null,
+      name: 'Profil',
+      kind: 'http',
+      method: 'GET',
+      document: {
+        url: `http://127.0.0.1:${port}/me`,
+        description: '',
+        headers: [{ key: 'Authorization', value: 'Bearer {{token}}' }],
+        scripts: { before: "console.log('jeton', env.get('token'));" },
+      },
+    });
+    try {
+      await openHttp();
+      await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+      await $(testid('http-request-editor')).waitForDisplayed({ timeout: 10_000 });
+      await pick(secrets.id);
+      await press('Enter', ['Control']);
+      await $(testid('http-response-status')).waitForDisplayed({ timeout: 10_000 });
+
+      await eventually(
+        () => $(testid('http-console-summary')).getText(),
+        (summary) => summary.startsWith('1 '),
+        'the folded console counting the exchange',
+      );
+      await $(testid('http-console-unfold')).click();
+      await $(testid('http-console')).waitForDisplayed({ timeout: 10_000 });
+      const said = await browser.execute(
+        (selector: string) => [...document.querySelectorAll(selector)].map((line) => line.textContent ?? ''),
+        `${testid('http-console-line')}, ${testid('http-console-sub')}`,
+      );
+      const all = said.join(' | ');
+      expect(all).toContain('jeton {{token}}');
+      expect(all).toContain('Authorization: Bearer ••••••••');
+      expect(all).not.toContain('zq-console-secret');
+      await $(testid('http-console-fold')).click();
+      await $(testid('http-console-unfold')).waitForDisplayed({ timeout: 10_000 });
+    } finally {
+      server.close();
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      await bridge.deleteHttpEnvironment(secrets.id);
+    }
+  });
 });

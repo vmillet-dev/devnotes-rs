@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ScriptStop } from '@core/model/http.model';
+import { ScriptStop, stopMessageOf, stopTitleOf } from '@core/model/http.model';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 
 /**
@@ -21,19 +21,9 @@ export class ScriptStopComponent {
 
   readonly opened = output<void>();
 
-  protected readonly title = computed<TranslationRef>(() => {
-    const stop = this.stop();
-    if (stop.level === null || stop.level === undefined) return { key: 'http.scripts.stop.host' };
-    return {
-      key: `http.scripts.stop.${stop.script ?? 'before'}.${stop.level}`,
-      params: { name: stop.name ?? '' },
-    };
-  });
+  protected readonly title = computed(() => stopTitleOf(this.stop()));
   /** What the script threw is its own words; the rest is said here. */
-  protected readonly message = computed<TranslationRef | null>(() => {
-    const kind = this.stop().kind ?? 'error';
-    return kind === 'error' || kind === 'syntax' ? null : { key: `http.scripts.stop.kinds.${kind}` };
-  });
+  protected readonly message = computed(() => stopMessageOf(this.stop()));
   protected readonly where = computed<TranslationRef | null>(() => {
     const { line, script } = this.stop();
     const before = script === 'before';

@@ -151,7 +151,7 @@ describe('HttpSendStore', () => {
     });
     const revision = TestBed.inject(HttpCollectionsStore).settingsRevision();
 
-    http.response = sentResponse({ scripts: { failure: null, logs: [], wrote: true } });
+    http.response = sentResponse({ scripts: { failure: null, wrote: true } });
     await store().send(tab('Login'), true);
     expect(http.confirmedSends).toEqual([true]);
     await vi.waitFor(() => expect(environments.callsTo('list')).toHaveLength(1));

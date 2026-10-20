@@ -1,0 +1,237 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+  background: var(--bg-0);
+}
+
+.console {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.filters {
+  display: flex;
+  gap: 2px;
+}
+
+.filter {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(-2px);
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    background: var(--bg-3);
+    color: var(--text-0);
+  }
+
+  &.errors .count {
+    color: var(--red);
+  }
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+.grow {
+  flex: 1;
+}
+
+.masked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-2);
+
+  app-icon {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.clear,
+.fold {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring;
+  justify-content: center;
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
+.lines {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 20px;
+  padding: 0 14px;
+  white-space: nowrap;
+
+  &:hover .open {
+    visibility: visible;
+  }
+
+  &.bad {
+    background: rgba(var(--red-rgb), 0.08);
+
+    .mark,
+    .text {
+      color: var(--red);
+    }
+  }
+
+  &.sub {
+    padding-left: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-2);
+  }
+}
+
+.at {
+  flex-shrink: 0;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.mark {
+  flex-shrink: 0;
+  width: 34px;
+  color: var(--text-2);
+
+  .out & {
+    color: var(--blue);
+  }
+
+  .in & {
+    color: var(--green);
+  }
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+
+  .out & {
+    color: var(--text-0);
+  }
+}
+
+.log.error,
+.log.warn {
+  .mark,
+  .text {
+    color: var(--red);
+  }
+}
+
+.secret {
+  color: var(--purple);
+}
+
+.open {
+  @include unstyled-control;
+  @include focus-ring;
+  visibility: hidden;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--amber-text);
+  cursor: pointer;
+
+  &:focus-visible {
+    visibility: visible;
+  }
+}
+
+.from {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.empty {
+  margin: 8px 14px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.folded {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 0 14px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-1);
+  }
+}
+
+.summary {
+  color: var(--text-2);
+}
+
+.errors {
+  color: var(--red);
+}
+
+.caret {
+  color: var(--text-2);
+}

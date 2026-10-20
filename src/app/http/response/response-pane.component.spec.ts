@@ -9,6 +9,8 @@ import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { provideAppTesting } from '@testing/testing.providers';
 import { ResponsePaneComponent } from './response-pane.component';
+import { HttpConsoleStore } from '@core/services/http/http-console.store';
+import { HttpConsoleComponent } from './console/http-console.component';
 import { By } from '@angular/platform-browser';
 import { ResponseViewComponent } from '@http/ui/response-view/response-view.component';
 import { StatusNotifier } from '@core/services/notifications/status.service';
@@ -432,7 +434,7 @@ describe('ResponsePaneComponent', () => {
             line: 2,
             message: 'Error: x',
           },
-          logs: [],
+
           wrote: false,
         },
       }),
@@ -452,7 +454,7 @@ describe('ResponsePaneComponent', () => {
       sentResponse({
         scripts: {
           failure: null,
-          logs: [],
+
           wrote: false,
           tests: [
             { name: 'statut', passed: true, skipped: false, level: 'request', kind: 'tests' },
@@ -505,5 +507,24 @@ describe('ResponsePaneComponent', () => {
     ]);
     expect(document.body.querySelector('[data-testid="http-extract-dialog"]')).toBeNull();
     expect(TestBed.inject(StatusNotifier).status()?.key).toBe('http.extract.added');
+  });
+
+  it('folds its console under the answer, unfolds it with a line to share them, and opens the exchange', async () => {
+    await answer(sentResponse());
+    expect(el('http-console-unfold')).not.toBeNull();
+    expect(el('http-console-handle')).toBeNull();
+
+    TestBed.inject(HttpConsoleStore).toggle();
+    await fixture.whenStable();
+    expect(el('http-console')).not.toBeNull();
+    expect(el('http-console-handle')).not.toBeNull();
+
+    fixture.debugElement.query(By.directive(HttpConsoleComponent)).componentInstance.exchangeOpened.emit();
+    await fixture.whenStable();
+    expect(
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('[data-testid="http-response-section"][data-section="timeline"]')
+        ?.getAttribute('aria-selected'),
+    ).toBe('true');
   });
 });

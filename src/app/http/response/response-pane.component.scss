@@ -13,6 +13,20 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+
+  // Dragged: the answer keeps its share, the console takes the rest.
+  &.shared {
+    flex: 0 0 auto;
+  }
+}
+
+// Folded, a line; unfolded, a third of the pane until its line is dragged.
+app-http-console.open {
+  flex: 0 0 35%;
+
+  &.shared {
+    flex: 1 1 0;
+  }
 }
 
 .placeholder,

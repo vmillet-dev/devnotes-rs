@@ -19,6 +19,7 @@ import {
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { HttpCollectionsStore } from './http-collections.store';
+import { HttpConsoleStore } from './http-console.store';
 import { HttpSendStore } from './http-send.store';
 import { HttpSocketsStore } from './http-sockets.store';
 import { findRequest } from './http-tree';
@@ -77,6 +78,7 @@ export class HttpTabsStore {
   private readonly preferences = inject(LibraryPreferencesService);
   private readonly transloco = inject(TranslocoService);
   private readonly sending = inject(HttpSendStore);
+  private readonly console = inject(HttpConsoleStore);
   private readonly sockets = inject(HttpSocketsStore);
   private readonly collections = inject(HttpCollectionsStore);
 
@@ -283,6 +285,7 @@ export class HttpTabsStore {
       draft: draftOf(created),
     });
     this.sending.rekey(key, created.id);
+    this.console.rekey(key, created.id);
     this.sockets.rekey(key, created.id);
     const left = this.bodiesLeft.get(key);
     if (left !== undefined) {
@@ -303,6 +306,7 @@ export class HttpTabsStore {
     const rest = tabs.filter((tab) => tab.key !== key);
     this._tabs.set(rest);
     this.sending.forget(key);
+    this.console.forget(key);
     this.sockets.forget(key);
     this.bodiesLeft.delete(key);
     if (this._activeKey() === key) this._activeKey.set(rest[Math.min(at, rest.length - 1)]?.key ?? null);

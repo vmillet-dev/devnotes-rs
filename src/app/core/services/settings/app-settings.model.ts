@@ -79,6 +79,8 @@ export interface AppSettings {
   readonly historyListWidth: number;
   /** The request's share of the height it has with its response; `0` leaves it automatic. */
   readonly httpRequestShare: number;
+  /** The answer's share of the height it has with the console unfolded; `0` leaves it automatic. */
+  readonly httpConsoleShare: number;
   /** Which area shows — Notes or Outils — and the one the window reopens on. */
   readonly area: Area;
   /** The tools opened last, newest first: which and when, nothing typed into them. */
@@ -130,6 +132,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   libraryRailWidth: RAIL_WIDTH.default,
   historyListWidth: HISTORY_LIST_WIDTH.default,
   httpRequestShare: HTTP_REQUEST_SHARE.auto,
+  httpConsoleShare: HTTP_REQUEST_SHARE.auto,
   area: AREAS[0],
   recentTools: [],
   favouriteTools: [],

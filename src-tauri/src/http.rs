@@ -4,6 +4,7 @@
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
 pub mod codegen;
+pub mod console;
 pub mod cookies;
 pub mod environments;
 pub mod extract;
@@ -24,7 +25,7 @@ pub mod websocket;
 use std::path::Path;
 
 use chrono::Utc;
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use crate::db::{blocking, lock};
 use crate::error::{AppError, FileContext};
@@ -492,6 +493,8 @@ struct Flight<R: Runtime> {
     info: ScriptInfo,
     /// What each variable written says wrote it: this request.
     by: environments::FilledBy,
+    /// What the last phase logged and sent, for the console.
+    heard: (Vec<LogEntry>, Vec<network::ScriptSend>),
     /// What the scripts and the send did to the jar, in their order.
     changes: Vec<cookies::Change>,
     wrote: bool,
@@ -519,6 +522,7 @@ impl<R: Runtime> Flight<R> {
             collection_id: None,
             info: ScriptInfo::default(),
             by: environments::FilledBy::default(),
+            heard: (Vec::new(), Vec::new()),
             changes: Vec::new(),
             wrote: false,
             sent: None,
@@ -592,12 +596,8 @@ impl<R: Runtime> Flight<R> {
         let exchange = send::exchange(&outgoing);
         let secrets = outgoing.secrets.clone();
         let secret_values = outgoing.secret_values.clone();
-        let (answer, cookies_set) = self.app.state::<send::Sending>().run(&id, outgoing).await;
-        if matches!(answer, Err(send::SendError::Cancelled)) {
-            return Err(send::SendError::Cancelled.into());
-        }
-        self.received(cookies_set);
-        let mut answer = answer.map_err(AppError::from);
+        self.say(Utc::now(), console::out(&exchange, &secret_values, None));
+        let mut answer = self.leave(&id, outgoing).await?;
 
         let mut finished = true;
         if let Ok(response) = &mut answer {
@@ -631,6 +631,33 @@ impl<R: Runtime> Flight<R> {
             })
     }
 
+    /// The request sent, the lock free; `Err` alone when « Annuler » stopped it, a failure to
+    /// send being the answer the history keeps.
+    async fn leave(
+        &mut self,
+        id: &str,
+        outgoing: send::Outgoing,
+    ) -> Result<Result<send::SentResponse, AppError>, AppError> {
+        let (answer, cookies_set) = self.app.state::<send::Sending>().run(id, outgoing).await;
+        if matches!(answer, Err(send::SendError::Cancelled)) {
+            return Err(send::SendError::Cancelled.into());
+        }
+        self.received(cookies_set);
+        let answer = answer.map_err(AppError::from);
+        self.say(
+            Utc::now(),
+            match &answer {
+                Ok(response) => console::answered(response, None),
+                Err(error) => console::ConsoleLine::Failed {
+                    code: error.code,
+                    params: error.params.clone(),
+                    by: None,
+                },
+            },
+        );
+        Ok(answer)
+    }
+
     /// What follows an answer: the scripts after it and the tests, then the extractions; and what
     /// the answer carries of them. `false` when « Annuler » stopped the scripts.
     async fn answered(
@@ -640,15 +667,35 @@ impl<R: Runtime> Flight<R> {
         response: &mut send::SentResponse,
     ) -> bool {
         let answered = around.answered();
-        let finished = answered.is_empty() || self.after(&answered, going, response).await;
-        if finished {
+        let outcome = if answered.is_empty() {
+            Some(Outcome::default())
+        } else {
+            self.after(&answered, going, response).await
+        };
+        let finished = outcome.is_some();
+        if let Some(outcome) = outcome {
             let extractions = std::mem::take(&mut going.document.extractions);
             response.scripts.extracted = self
                 .extract(&extractions, response, &mut going.layers)
                 .await;
+            // Said once the extractions ran: a value one makes a secret is hidden in the logs.
+            self.report(&answered, &outcome, &going.layers);
+            for missed in response
+                .scripts
+                .extracted
+                .iter()
+                .filter(|extracted| !extracted.found)
+            {
+                self.say(
+                    Utc::now(),
+                    console::ConsoleLine::Missed {
+                        path: missed.path.clone(),
+                        variable: missed.variable.clone(),
+                    },
+                );
+            }
         }
         let shown = variables::Resolver::new(&going.layers).secrets();
-        response.scripts.logs = around::masked(self.logs(), &shown);
         let tests = std::mem::take(&mut response.scripts.tests);
         response.scripts.tests = around::shown_tests(tests, &answered, &shown);
         response.scripts.wrote = self.wrote;
@@ -678,6 +725,7 @@ impl<R: Runtime> Flight<R> {
         let job = self.job(Phase::Before, scripts, going, &url);
         let outcome = self.run(job).await?;
         self.write(&outcome.writes, &mut going.layers).await;
+        self.report(scripts, &outcome, &going.layers);
         if let Some(failure) = &outcome.failure {
             return Err(ScriptError::Stopped(ScriptStop::of(failure, scripts)).into());
         }
@@ -710,26 +758,25 @@ impl<R: Runtime> Flight<R> {
     }
 
     /// The scripts once it is answered, then the tests: what stops them is shown with the answer.
-    /// `false` when « Annuler » stopped them.
+    /// `None` when « Annuler » stopped them.
     async fn after(
         &mut self,
         scripts: &[Script],
         going: &mut Going,
         response: &mut send::SentResponse,
-    ) -> bool {
+    ) -> Option<Outcome> {
         let job = Job {
             response: Some(network::response_of(response)),
             ..self.job(Phase::After, scripts, going, &response.url)
         };
-        let Ok(outcome) = self.run(job).await else {
-            return false;
-        };
+        let outcome = self.run(job).await.ok()?;
         self.write(&outcome.writes, &mut going.layers).await;
-        response.scripts.tests = outcome.tests;
+        response.scripts.tests.clone_from(&outcome.tests);
         response.scripts.failure = outcome
             .failure
-            .map(|failure| ScriptStop::of(&failure, scripts));
-        true
+            .as_ref()
+            .map(|failure| ScriptStop::of(failure, scripts));
+        Some(outcome)
     }
 
     /// One phase in the host, started for the first one; `Err` when « Annuler » stopped it.
@@ -766,6 +813,10 @@ impl<R: Runtime> Flight<R> {
         let outcome = match ran {
             Ok((mut session, outcome)) => {
                 self.changes.append(&mut session.network.changes);
+                self.heard = (
+                    std::mem::take(&mut session.logs),
+                    std::mem::take(&mut session.network.sent),
+                );
                 self.session = Some(session);
                 outcome
             }
@@ -837,11 +888,29 @@ impl<R: Runtime> Flight<R> {
         self.changes.extend(changes);
     }
 
-    fn logs(&mut self) -> Vec<LogEntry> {
-        self.session
-            .as_mut()
-            .map(|session| std::mem::take(&mut session.logs))
-            .unwrap_or_default()
+    /// A line of this send's console, at once: the front shows it as it comes.
+    fn say(&self, at: chrono::DateTime<Utc>, line: console::ConsoleLine) {
+        let event = console::ConsoleEvent {
+            id: self.id.clone(),
+            at,
+            line,
+        };
+        let _ = self.app.emit(console::HTTP_CONSOLE_EVENT, event);
+    }
+
+    /// What the last phase logged and sent, the tests that failed and what stopped it, each
+    /// secret in force — those the phase wrote included — written as its name.
+    fn report(
+        &mut self,
+        scripts: &[Script],
+        outcome: &Outcome,
+        layers: &[variables::VariableLayer],
+    ) {
+        let (logs, sends) = std::mem::take(&mut self.heard);
+        let secrets = variables::Resolver::new(layers).secrets();
+        for (at, line) in console::phase(logs, sends, outcome, scripts, &secrets) {
+            self.say(at, line);
+        }
     }
 
     /// What a phase wrote: kept under the lock, and in the levels the send resolves from.

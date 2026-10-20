@@ -2781,6 +2781,15 @@ then the request's; once answered, the other way round; a blank one is not run.
   `filled_by` — the request's id and name —, which the environment page shows as « remplie par
   Login » and opens. The response explorer's right-click menu and its selection panel offer
   « Extraire vers une variable… » on an answer only (`extractable`).
+- **The console is events, not an answer** (`http/console.rs`, #497): a `Flight` says each
+  line as it goes — the request leaving and its answer or failure, a phase's logs and
+  `pm.sendRequest`s in the order they happened, the tests that failed, what stopped, an
+  extraction that led nowhere — as `HTTP_CONSOLE_EVENT`, under the send's id, so a script that
+  stops the send still has its logs shown. Each secret in force is written as its name and an
+  auth or a cookie header masked (`history::shown`); the phase after is said once the
+  extractions ran, so a value one makes a secret is hidden in what was logged before. The front
+  keeps them per tab for the session (`HttpConsoleStore`, 500 lines, never written), folded
+  under the answer until unfolded; its height is the application's (`httpConsoleShare`).
 - ⚠️ A test's executable is its harness, not the application: `process::host_from` points the
   hosts at `CARGO_BIN_EXE_devnotes` (`tests/commands/http_scripts.rs`).
 

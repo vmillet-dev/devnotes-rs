@@ -1372,7 +1372,9 @@
     const request = new Request(typeof given === 'string' ? { url: given } : given || {});
     let outcome;
     try {
-      const response = new Response(call('send', request.toJSON()));
+      const response = new Response(
+        call('send', { ...request.toJSON(), script: state.script ? state.script.id : null }),
+      );
       outcome = { response };
     } catch (error) {
       outcome = { error };
