@@ -1,5 +1,5 @@
 import { untracked } from '@angular/core';
-import { Editor, Extension, JSONContent } from '@tiptap/core';
+import { Editor, Extension, Extensions, JSONContent } from '@tiptap/core';
 import { TableKit } from '@tiptap/extension-table';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
@@ -194,18 +194,9 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
   const editor = new Editor({
     element,
     extensions: [
-      StarterKit.configure({
-        underline: false,
-        link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
-      }),
+      ...drawnWith(hooks.diagrams),
       Placeholder.configure({ placeholder: hooks.placeholder }),
-      MarkdownWithTabs,
-      TableKit.configure({ table: { resizable: false } }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
       tabCharacter((language) => hooks.indent(language)),
-      CodeHighlight,
-      Diagrams(hooks.diagrams),
       TextSearch,
     ],
     content: markdown,
@@ -233,6 +224,34 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
   editor.view.dom.addEventListener('change', () => focusFirst(editor), { capture: true });
   encodeMinimally(editor);
   return editor;
+}
+
+/** What a Note is drawn with, edited or presented: the same blocks, colours and diagrams. */
+function drawnWith(diagrams: DiagramHooks): Extensions {
+  return [
+    StarterKit.configure({
+      underline: false,
+      link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
+    }),
+    MarkdownWithTabs,
+    TableKit.configure({ table: { resizable: false } }),
+    TaskList,
+    TaskItem.configure({ nested: true }),
+    CodeHighlight,
+    Diagrams(diagrams),
+  ];
+}
+
+/** A Note's Markdown drawn as the editor draws it, and not editable: a slide. */
+export function createRichViewer(element: HTMLElement, markdown: string, diagrams: DiagramHooks): Editor {
+  return new Editor({
+    element,
+    editable: false,
+    extensions: drawnWith(diagrams),
+    content: markdown,
+    contentType: 'markdown',
+    editorProps: { attributes: { class: 'rich-text is-slide', 'data-testid': 'presentation-slide' } },
+  });
 }
 
 /**

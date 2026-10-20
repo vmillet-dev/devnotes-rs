@@ -9,6 +9,8 @@ export interface AppWindowAdapter {
   exit(code: number): Promise<void>;
   reload(): void;
   holdQuit(): Promise<void>;
+  isFullscreen(): Promise<boolean>;
+  setFullscreen(fullscreen: boolean): Promise<void>;
 }
 
 export const APP_WINDOW_ADAPTER = new InjectionToken<AppWindowAdapter>('APP_WINDOW_ADAPTER', {
@@ -18,6 +20,8 @@ export const APP_WINDOW_ADAPTER = new InjectionToken<AppWindowAdapter>('APP_WIND
     exit: (code: number) => exit(code),
     reload: () => window.location.reload(),
     holdQuit: () => commands.holdQuit(),
+    isFullscreen: () => getCurrentWindow().isFullscreen(),
+    setFullscreen: (fullscreen: boolean) => getCurrentWindow().setFullscreen(fullscreen),
   }),
 });
 
@@ -57,6 +61,29 @@ export class AppWindowService {
       await this.adapter.holdQuit();
     } catch {
       // Outside Tauri there is no quit to hold.
+    }
+  }
+
+  /**
+   * The screen given to a Note presented. Answers whether the window changed, so the one that
+   * asked gives back only what it took: a window already full screen stays so.
+   */
+  async enterFullscreen(): Promise<boolean> {
+    try {
+      if (await this.adapter.isFullscreen()) return false;
+      await this.adapter.setFullscreen(true);
+      return true;
+    } catch {
+      // Outside Tauri: the presentation fills the window instead.
+      return false;
+    }
+  }
+
+  async leaveFullscreen(): Promise<void> {
+    try {
+      await this.adapter.setFullscreen(false);
+    } catch {
+      // The window is closing, or this is not Tauri: nothing is left to give back.
     }
   }
 

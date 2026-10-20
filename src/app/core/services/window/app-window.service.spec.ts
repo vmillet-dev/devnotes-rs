@@ -51,4 +51,20 @@ describe('AppWindowService', () => {
     await expect(service.hide()).resolves.toBeUndefined();
     await expect(service.quit()).resolves.toBeUndefined();
   });
+
+  it('takes the screen for a presentation, and gives back only what it took', async () => {
+    expect(await service.enterFullscreen()).toBe(true);
+    expect(adapter.fullscreen).toBe(true);
+    expect(await service.enterFullscreen()).toBe(false);
+
+    await service.leaveFullscreen();
+    expect(adapter.fullscreen).toBe(false);
+  });
+
+  it('presents in the window when the screen cannot be had', async () => {
+    adapter.throwOnFullscreen = new Error('no bridge');
+
+    expect(await service.enterFullscreen()).toBe(false);
+    await expect(service.leaveFullscreen()).resolves.toBeUndefined();
+  });
 });

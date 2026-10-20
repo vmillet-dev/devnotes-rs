@@ -89,6 +89,18 @@
             (confirmingDelete() ? 'editor.deleteConfirm' : 'editor.delete') | transloco
           }}</span>
         </button>
+        @if (isRichText()) {
+          <button
+            type="button"
+            class="toolbar-btn"
+            data-testid="editor-present"
+            [attr.title]="'editor.presentLabel' | transloco"
+            (click)="present()"
+          >
+            <span aria-hidden="true">▶</span>
+            <span class="btn-label">{{ 'editor.present' | transloco }}</span>
+          </button>
+        }
         <button
           #foldButton
           type="button"
@@ -493,4 +505,15 @@
       </span>
     </div>
   </app-dialog>
+
+  @if (presenting(); as presentation) {
+    <!-- Deferred: it draws its slides with TipTap, a chunk of its own. -->
+    @defer (on immediate) {
+      <app-presentation
+        [title]="draftTitle()"
+        [presentation]="presentation"
+        (closed)="presenting.set(null)"
+      />
+    }
+  }
 }

@@ -549,6 +549,55 @@ describe('Editing a note', () => {
       await reloadCanvas();
     });
 
+    /** Full screen, its title first and a section a slide, then back to the editor as it was. */
+    it('presents a Note a section at a time, the third reached with →', async () => {
+      const title = 'Release plan';
+      const content = 'Why we ship.\n\n## Build\n\nThe binaries.\n\n## Ship\n\nThe tag.';
+      const id = (await bridge.createNote(draft({ spaceId, title, content, kind: 'note' }))).id;
+      await reloadCanvas();
+      await canvas.waitForCard(title);
+      await canvas.openNote(title);
+      await $(testid('editor-rich')).waitForExist({ timeout: 10_000 });
+
+      await $(testid('editor-present')).click();
+      await $(testid('presentation-cover')).waitForExist({ timeout: 10_000 });
+      expect(await $(testid('presentation-cover')).getText()).toBe(title);
+      // A window manager gives the screen: the Linux runner's display has none.
+      const ownsTheScreen = process.platform === 'win32';
+      if (ownsTheScreen) {
+        await eventually(
+          () => bridge.isFullscreen(),
+          (full) => full,
+          'the window full screen',
+        );
+      }
+
+      for (const at of ['2 / 4', '3 / 4', '4 / 4']) {
+        await press('ArrowRight');
+        await eventually(
+          () => $(testid('presentation-count')).getText(),
+          (shown) => shown === at,
+          at,
+        );
+      }
+      expect(await $(testid('presentation-slide')).getText()).toContain('The tag.');
+
+      await press('Escape');
+      await $(testid('presentation')).waitForExist({ reverse: true, timeout: 5_000 });
+      expect(await $(testid('editor-rich')).isExisting()).toBe(true);
+      if (ownsTheScreen) {
+        await eventually(
+          () => bridge.isFullscreen(),
+          (full) => !full,
+          'the window given back',
+        );
+      }
+      await editor.close();
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
     /** Code keeps its characters and gets its language: the note becomes a snippet. */
     it('turns into a snippet in the code field when code is pasted into it empty', async () => {
       const code = 'SELECT id, title FROM notes WHERE pinned = 1;';

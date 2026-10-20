@@ -245,6 +245,8 @@ describe('NoteEditorOverlayComponent', () => {
     await fixture.whenStable();
 
     expect(titleInput().value).toBe('My note');
+    // A Note is presented, a snippet is not.
+    expect(fixture.nativeElement.querySelector('[data-testid="editor-present"]')).toBeNull();
 
     const pills = fixture.debugElement
       .queryAll(By.directive(TagPillComponent))
@@ -1025,6 +1027,33 @@ describe('NoteEditorOverlayComponent', () => {
 
       expect(codeField()).toBeNull();
       expect(rich().content()).toBe('**bold**');
+    });
+
+    /** What is still being typed is presented: Rust cuts the text on screen. */
+    it('is presented from its own button, with what is being typed, and comes back', async () => {
+      const repository = TestBed.inject(NotesRepository) as unknown as FakeNotesRepository;
+      repository.presentation = { slides: ['## One'], map: [] };
+      await openText('## One');
+      const presentation = () => fixture.nativeElement.querySelector('[data-testid="presentation"]');
+
+      fixture.nativeElement.querySelector('[data-testid="editor-present"]').click();
+
+      await vi.waitFor(() => expect(presentation()).not.toBeNull());
+      expect(repository.presented).toEqual(['## One']);
+      fixture.nativeElement.querySelector('[data-testid="presentation-close"]').click();
+      await fixture.whenStable();
+      expect(presentation()).toBeNull();
+    });
+
+    it('stays in the editor when the slides cannot be had', async () => {
+      const repository = TestBed.inject(NotesRepository) as unknown as FakeNotesRepository;
+      await openText('## One');
+      repository.failNext = new Error('bridge down');
+
+      fixture.nativeElement.querySelector('[data-testid="editor-present"]').click();
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="presentation"]')).toBeNull();
     });
 
     it('says what it is where a snippet names its format', async () => {

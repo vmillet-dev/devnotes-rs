@@ -355,6 +355,23 @@ describe('NotesStore', () => {
     });
   });
 
+  describe('present', () => {
+    it('asks Rust to cut the draft it is given into slides', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      repository.presentation = { slides: ['## One'], map: [{ text: 'One', slide: 0, children: [] }] };
+
+      expect(await store.present('## One')).toEqual(repository.presentation);
+      expect(repository.presented).toEqual(['## One']);
+    });
+
+    it('answers nothing when the slides cannot be had', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      repository.failNext = new Error('bridge down');
+
+      expect(await store.present('## One')).toBeNull();
+    });
+  });
+
   describe('moveNote', () => {
     it('moves one note as a selection is moved, and offers to put it back with its folder', async () => {
       const { store, repository } = await createNotesHarness([

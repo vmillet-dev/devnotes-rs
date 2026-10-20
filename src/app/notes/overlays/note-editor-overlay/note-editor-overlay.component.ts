@@ -18,7 +18,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, isLanguageTag } from '@core/model/language.model';
 import { checklistProgress } from '@core/model/checklist.model';
-import { Note, NotePatch } from '@core/model/note.model';
+import { Note, NotePatch, Presentation } from '@core/model/note.model';
 import { PRIORITIES } from '@core/model/priority.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { FoldersStore } from '@core/state/folders.store';
@@ -51,6 +51,7 @@ import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.compo
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
 import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
+import { PresentationComponent } from '../presentation/presentation.component';
 import { indentUnit } from './indentation';
 import { countWords } from './word-count';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
@@ -131,6 +132,7 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
     CodeEditorComponent,
     CalcEditorComponent,
     RichTextEditorComponent,
+    PresentationComponent,
     SideBySideComponent,
     NgTemplateOutlet,
     TranslocoPipe,
@@ -249,6 +251,8 @@ export class NoteEditorOverlayComponent {
   protected readonly isChecklist = computed(() => this.note()?.kind === 'checklist');
   /** A Note is written in the rich editor; a snippet keeps the code field. */
   protected readonly isRichText = computed(() => this.note()?.kind === 'note');
+  /** The slides of the Note being presented; `null` while it is not. */
+  protected readonly presenting = signal<Presentation | null>(null);
   /** A Calcul note: the sheet beside its results, in an editor of its own. */
   protected readonly isCalc = computed(() => this.note()?.kind === 'calc');
   /** Only a snippet's body is code: a format picker anywhere else would do nothing. */
@@ -495,6 +499,12 @@ export class NoteEditorOverlayComponent {
 
   private placeholderValues(): Record<string, string> {
     return this.fieldsPanel()?.values() ?? {};
+  }
+
+  /** The Note on screen, presented: what is typed and not yet saved is presented too. */
+  protected async present(): Promise<void> {
+    const presentation = await this.store.present(this.draftContent());
+    if (presentation) this.presenting.set(presentation);
   }
 
   protected toggleFullscreen(): void {

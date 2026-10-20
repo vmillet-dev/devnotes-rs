@@ -1,9 +1,9 @@
 //! What a Note reads as once its Markdown is taken away: a card's preview, a search
 //! excerpt. The rich editor writes the body; nobody reads `**` or `- [ ]` on a card.
 
-use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 
-use super::model::OutlineLine;
+use super::model::{MapNode, OutlineLine, Presentation};
 use crate::count::saturating_u32;
 
 /// One line per block, list items marked `•`, `1.` or `☐`/`☑`, table cells joined by ` · `.
@@ -20,9 +20,7 @@ pub(crate) fn outline(markdown: &str) -> Vec<OutlineLine> {
     let mut out = Out::default();
     let mut lists: Vec<Option<u64>> = Vec::new();
 
-    let options =
-        Options::ENABLE_TABLES | Options::ENABLE_TASKLISTS | Options::ENABLE_STRIKETHROUGH;
-    for event in Parser::new_ext(markdown, options) {
+    for event in Parser::new_ext(markdown, OPTIONS) {
         match event {
             Event::Start(Tag::List(first)) => lists.push(first),
             Event::End(TagEnd::List(_)) => {
@@ -66,6 +64,87 @@ pub(crate) fn outline(markdown: &str) -> Vec<OutlineLine> {
     out.flush();
 
     out.lines
+}
+
+/// A slide starts at each `#` or `##` heading and after each `---` rule, outside any list or
+/// quote: a `##` in a code block is code. Each slide is a slice of the body, so the rich editor
+/// draws it as it was written; a slide with nothing in it is dropped.
+pub(crate) fn present(markdown: &str) -> Presentation {
+    let mut slides = Vec::new();
+    let mut headings: Vec<(HeadingLevel, String, u32)> = Vec::new();
+    let mut start = 0;
+    let mut depth = 0usize;
+    let mut heading: Option<(HeadingLevel, String)> = None;
+
+    let cut = |slides: &mut Vec<String>, from: usize, to: usize| {
+        let slide = markdown[from..to].trim();
+        if !slide.is_empty() {
+            slides.push(slide.to_string());
+        }
+    };
+
+    for (event, range) in Parser::new_ext(markdown, OPTIONS).into_offset_iter() {
+        match event {
+            Event::Start(tag) => {
+                if let Tag::Heading { level, .. } = tag {
+                    if depth == 0 && level <= HeadingLevel::H2 {
+                        cut(&mut slides, start, range.start);
+                        start = range.start;
+                    }
+                    heading = Some((level, String::new()));
+                }
+                depth += 1;
+            }
+            Event::End(tag) => {
+                depth = depth.saturating_sub(1);
+                if matches!(tag, TagEnd::Heading(_))
+                    && let Some((level, text)) = heading.take()
+                    && !text.trim().is_empty()
+                {
+                    headings.push((level, text.trim().to_string(), saturating_u32(slides.len())));
+                }
+            }
+            Event::Rule if depth == 0 => {
+                cut(&mut slides, start, range.start);
+                start = range.end;
+            }
+            Event::Text(words) | Event::Code(words) => {
+                if let Some((_, text)) = heading.as_mut() {
+                    text.push_str(&words);
+                }
+            }
+            _ => {}
+        }
+    }
+    cut(&mut slides, start, markdown.len());
+
+    Presentation {
+        slides,
+        map: tree(&headings),
+    }
+}
+
+const OPTIONS: Options = Options::ENABLE_TABLES
+    .union(Options::ENABLE_TASKLISTS)
+    .union(Options::ENABLE_STRIKETHROUGH);
+
+/// Each heading takes the ones after it that are deeper, up to the next of its level or above.
+fn tree(headings: &[(HeadingLevel, String, u32)]) -> Vec<MapNode> {
+    let mut nodes = Vec::new();
+    let mut at = 0;
+    while let Some((level, text, slide)) = headings.get(at) {
+        let end = headings[at + 1..]
+            .iter()
+            .position(|(other, ..)| other <= level)
+            .map_or(headings.len(), |offset| at + 1 + offset);
+        nodes.push(MapNode {
+            text: text.clone(),
+            slide: *slide,
+            children: tree(&headings[at + 1..end]),
+        });
+        at = end;
+    }
+    nodes
 }
 
 /// What the line being written will be, decided when its block opens.
@@ -204,5 +283,84 @@ Done."
     fn plain_text_stays_plain() {
         assert_eq!(plain("just a line\nand another"), "just a line and another");
         assert_eq!(plain(""), "");
+    }
+
+    fn node(text: &str, slide: u32, children: Vec<MapNode>) -> MapNode {
+        MapNode {
+            text: text.to_string(),
+            slide,
+            children,
+        }
+    }
+
+    #[test]
+    fn a_note_is_cut_at_its_sections_and_its_rules_as_the_body_wrote_them() {
+        let presentation = present(
+            "Intro line.\n\n## Why\n\nBecause *so*.\n\n---\n\nA pause.\n\n# Next\n\n### Detail\n\nMore.",
+        );
+
+        assert_eq!(
+            presentation.slides,
+            [
+                "Intro line.",
+                "## Why\n\nBecause *so*.",
+                "A pause.",
+                "# Next\n\n### Detail\n\nMore."
+            ]
+        );
+    }
+
+    /// A `##` in a fence is code, and one in a quote or a list belongs to it.
+    #[test]
+    fn a_heading_or_a_rule_inside_a_block_cuts_nothing() {
+        let presentation = present(
+            "## One\n\n```md\n## not a slide\n---\n```\n\n> ## quoted\n\n- item\n\n  ---\n\n  more",
+        );
+
+        assert_eq!(presentation.slides.len(), 1);
+    }
+
+    #[test]
+    fn nothing_to_cut_is_one_slide_and_nothing_at_all_none() {
+        assert_eq!(present("Just words.").slides, ["Just words."]);
+        assert!(present("  \n\n---\n\n---\n").slides.is_empty());
+        assert!(present("").map.is_empty());
+    }
+
+    #[test]
+    fn the_map_holds_each_heading_under_the_one_above_it_with_its_slide() {
+        let presentation = present(
+            "# Plan\n\n## Build\n\n### Rust\n\n### Front\n\n## Ship `v2` **now**\n\n#### Deep\n\n##\n",
+        );
+
+        assert_eq!(
+            presentation.map,
+            [node(
+                "Plan",
+                0,
+                vec![
+                    node(
+                        "Build",
+                        1,
+                        vec![node("Rust", 1, vec![]), node("Front", 1, vec![])]
+                    ),
+                    node("Ship v2 now", 2, vec![node("Deep", 2, vec![])]),
+                ],
+            )]
+        );
+    }
+
+    /// Two trees side by side when the Note opens on a `##` and a `#` comes later.
+    #[test]
+    fn a_heading_above_the_first_one_starts_a_tree_of_its_own() {
+        let presentation = present("## Before\n\n# After\n\n## Under");
+
+        assert_eq!(
+            presentation.map,
+            [
+                node("Before", 0, vec![]),
+                node("After", 1, vec![node("Under", 2, vec![])])
+            ]
+        );
     }
 }

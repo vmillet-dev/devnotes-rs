@@ -110,6 +110,15 @@ async function invokeSlowly<T>(command: string, args: Record<string, unknown>): 
 export const bridge = {
   /** Answers while locked: the registry is beside the libraries, not inside one. */
   listLibraries: () => invoke<Registry>('list_libraries'),
+  /** The window's own answer, not the page's: a Note presented asks for the screen. */
+  isFullscreen: async (): Promise<boolean> =>
+    (await browser.executeAsync((done: (value: unknown) => void) => {
+      const tauri = (window as unknown as Record<string, any>)['__TAURI__'];
+      tauri.window
+        .getCurrentWindow()
+        .isFullscreen()
+        .then(done, () => done(false));
+    })) as boolean,
   /** Closes the open library and points the registry at this one: the front end then reloads. */
   openLibrary: (id: string) => invoke<null>('open_library', { id }),
   exploreJson: (query: JsonQuery) => invoke<JsonView>('explore_json', { query }),

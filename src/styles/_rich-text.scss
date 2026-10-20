@@ -261,3 +261,46 @@
     background: rgba(var(--amber-rgb), 0.4);
   }
 }
+
+// A slide: the same blocks, read from across a room.
+.rich-text.is-slide {
+  min-height: 0;
+  padding: 0;
+  font-size: clamp(20px, 2.2vw, 30px);
+  line-height: 1.5;
+
+  h1 {
+    font-size: 2em;
+  }
+
+  h2 {
+    font-size: 1.6em;
+  }
+
+  h3 {
+    font-size: 1.3em;
+  }
+
+  pre code {
+    font-size: 0.75em;
+  }
+
+  // Its code is the editor's business: a slide shows the drawing alone.
+  pre.is-folded {
+    display: none;
+  }
+
+  .rich-diagram {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: default;
+
+    // Mermaid writes its natural width inline: only `!important` lets a slide enlarge it.
+    svg {
+      width: 100%;
+      max-width: 100% !important;
+      max-height: 62vh;
+    }
+  }
+}

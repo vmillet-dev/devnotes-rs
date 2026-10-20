@@ -351,6 +351,8 @@
     },
     "fullscreen": "Enter fullscreen",
     "exitFullscreen": "Exit fullscreen",
+    "present": "Present",
+    "presentLabel": "Present the Note full screen, one section a slide",
     "pin": "Pin",
     "pinned": "Pinned",
     "noPriority": "No priority",
@@ -451,6 +453,7 @@
     "noteSaveFailed": "Could not save the note. Your text is still on screen.",
     "noteCreateFailed": "Could not create the note.",
     "noteDuplicateFailed": "Could not duplicate the note.",
+    "presentFailed": "Could not present the note.",
     "noteReadFailed": "Could not read the note.",
     "noteDeleteFailed": "Could not delete the note. It is still there.",
     "noteMoveFailed": "The note could not be moved.",
@@ -1097,7 +1100,7 @@
     "chapters": {
       "notes": {
         "title": "Snippets, Notes and lists",
-        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown — or a todo list; the editor's \"Kind\" menu turns one into another. In a Note, a Mermaid code block is drawn as a diagram. Click a card to open it, or copy it without opening, from its own button."
+        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown — or a todo list; the editor's \"Kind\" menu turns one into another. In a Note, a Mermaid code block is drawn as a diagram, and \"Present\" shows it full screen, one section a slide. Click a card to open it, or copy it without opening, from its own button."
       },
       "spaces": {
         "title": "Spaces to file things in",
@@ -4099,5 +4102,14 @@
       "usedMany": "used on lines {{lines}}",
       "unused": "never used"
     }
+  },
+  "presentation": {
+    "label": "Presenting “{{title}}”",
+    "slide": "Slide {{at}} of {{count}}",
+    "previous": "Previous slide (←)",
+    "next": "Next slide (→)",
+    "map": "Map of the headings (M)",
+    "slides": "Slides (M)",
+    "close": "Leave the presentation (Esc)"
   }
 }

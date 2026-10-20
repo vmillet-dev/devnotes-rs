@@ -1,0 +1,74 @@
+<app-dialog
+  [layer]="'presentation'"
+  [variant]="'bare'"
+  [fullscreen]="true"
+  [label]="'presentation.label' | transloco: { title: title() }"
+  (closed)="closed.emit()"
+>
+  <div class="presentation" data-testid="presentation" [attr.data-at]="at()">
+    @if (showingMap()) {
+      <app-mind-map [title]="title()" [map]="presentation().map" (chosen)="open($event)" />
+    }
+
+    <!-- Kept while the map shows: the slide drawn stays drawn, and comes back as it was. -->
+    <div class="stage" [hidden]="showingMap()">
+      @if (at() === 0) {
+        <h1 class="cover" data-testid="presentation-cover">{{ title() }}</h1>
+      }
+      <div #surface class="slide" [hidden]="at() === 0"></div>
+    </div>
+
+    <div class="bar">
+      <button
+        type="button"
+        class="bar-btn"
+        data-testid="presentation-previous"
+        [disabled]="showingMap() || at() === 0"
+        [attr.aria-label]="'presentation.previous' | transloco"
+        [attr.title]="'presentation.previous' | transloco"
+        (click)="go(at() - 1)"
+      >
+        <span aria-hidden="true">←</span>
+      </button>
+      <span class="count" data-testid="presentation-count">{{ at() + 1 }} / {{ count() }}</span>
+      <button
+        type="button"
+        class="bar-btn"
+        data-testid="presentation-next"
+        [disabled]="showingMap() || at() === count() - 1"
+        [attr.aria-label]="'presentation.next' | transloco"
+        [attr.title]="'presentation.next' | transloco"
+        (click)="go(at() + 1)"
+      >
+        <span aria-hidden="true">→</span>
+      </button>
+      <button
+        type="button"
+        class="bar-btn bar-text"
+        data-testid="presentation-map"
+        [attr.aria-pressed]="showingMap()"
+        [attr.title]="(showingMap() ? 'presentation.slides' : 'presentation.map') | transloco"
+        (click)="toggleMap()"
+      >
+        {{ (showingMap() ? 'presentation.slides' : 'presentation.map') | transloco }}
+      </button>
+      <button
+        type="button"
+        class="bar-btn"
+        data-testid="presentation-close"
+        [attr.aria-label]="'presentation.close' | transloco"
+        [attr.title]="'presentation.close' | transloco"
+        (click)="closed.emit()"
+      >
+        <span aria-hidden="true">✕</span>
+      </button>
+    </div>
+
+    <div class="progress" aria-hidden="true">
+      <span class="progress-done" [style.width.%]="progress()"></span>
+    </div>
+    <p class="visually-hidden" role="status">
+      {{ 'presentation.slide' | transloco: { at: at() + 1, count: count() } }}
+    </p>
+  </div>
+</app-dialog>
