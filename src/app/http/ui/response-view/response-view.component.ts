@@ -9,22 +9,24 @@ import {
   signal,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { ScriptStop, SentResponse } from '@core/model/http.model';
+import { ScriptStop, SentResponse, TestResult } from '@core/model/http.model';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ToolResult } from '@core/services/tools/tool.model';
 import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog.component';
 import { ScriptStopComponent } from '@http/ui/script-stop/script-stop.component';
 import { ResponseBodyComponent } from './response-body/response-body.component';
+import { ResponseTestsComponent } from './response-tests/response-tests.component';
 import { ResponseTimelineComponent } from './response-timeline/response-timeline.component';
 
-type Section = 'body' | 'errors' | 'headers' | 'cookies' | 'timeline';
+type Section = 'body' | 'tests' | 'errors' | 'headers' | 'cookies' | 'timeline';
 
 /** An answer read: its bar, then its body, headers, cookies and timeline. */
 @Component({
   selector: 'app-response-view',
   imports: [
     ResponseBodyComponent,
+    ResponseTestsComponent,
     ResponseTimelineComponent,
     SaveAsNoteDialogComponent,
     ScriptStopComponent,
@@ -50,11 +52,24 @@ export class ResponseViewComponent {
   private readonly clipboard = inject(ClipboardService);
 
   /** A GraphQL answer's errors have a tab of their own, beside its data. */
-  protected readonly sections = computed<readonly Section[]>(() =>
-    (this.response().graphql?.errors.length ?? 0) > 0
-      ? ['body', 'errors', 'headers', 'cookies', 'timeline']
-      : ['body', 'headers', 'cookies', 'timeline'],
-  );
+  protected readonly sections = computed<readonly Section[]>(() => {
+    const response = this.response();
+    return [
+      'body',
+      ...((response.scripts?.tests?.length ?? 0) > 0 ? (['tests'] as const) : []),
+      ...((response.graphql?.errors.length ?? 0) > 0 ? (['errors'] as const) : []),
+      'headers',
+      'cookies',
+      'timeline',
+    ];
+  });
+  protected readonly tests = computed(() => this.response().scripts?.tests ?? []);
+  /** « 2/4 », red once one fails, green when all pass. */
+  protected readonly testsRatio = computed(() => {
+    const ran = this.tests().filter((test) => !test.skipped);
+    const passed = ran.filter((test) => test.passed).length;
+    return { text: `${passed}/${ran.length}`, failing: passed < ran.length };
+  });
   /**
    * An answer that is errors and no data opens on them: on « Corps » it read `null`, the errors
    * waiting in a tab nothing pointed to. Any other answer keeps the tab that was being read.
@@ -80,6 +95,7 @@ export class ResponseViewComponent {
 
   protected readonly counts = computed<Record<Section, number>>(() => ({
     body: 0,
+    tests: 0,
     errors: this.response().graphql?.errors.length ?? 0,
     headers: this.response().headers.length,
     cookies: this.response().cookies.length,
@@ -134,5 +150,18 @@ export class ResponseViewComponent {
     return new Intl.NumberFormat(this.transloco.activeLang(), { maximumFractionDigits: digits }).format(
       value,
     );
+  }
+
+  /** « Ligne 8 › » of a failed test: the script it was written in, on that line. */
+  protected openTest(test: TestResult): void {
+    this.scriptOpened.emit({
+      kind: 'error',
+      level: test.level ?? 'request',
+      script: test.kind ?? 'tests',
+      name: test.holder ?? null,
+      owner: test.owner ?? null,
+      line: test.line ?? null,
+      message: test.message ?? '',
+    });
   }
 }

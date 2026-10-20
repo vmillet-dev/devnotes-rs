@@ -1,0 +1,80 @@
+<div class="tests-view" data-testid="http-response-tests">
+  <div class="summary">
+    @if (failed() > 0) {
+      <span class="pill failing" data-testid="http-tests-failed">{{
+        'http.tests.failed' | transloco: { count: failed() }
+      }}</span>
+    } @else {
+      <span class="pill passing" data-testid="http-tests-passed">{{
+        'http.tests.allPassed' | transloco
+      }}</span>
+    }
+    <span class="ratio" data-testid="http-tests-ratio">{{
+      'http.tests.ratio' | transloco: { passed: passed(), total: ran() }
+    }}</span>
+  </div>
+  <div
+    class="bar"
+    role="img"
+    [attr.aria-label]="'http.tests.bar' | transloco: { passed: passed(), total: ran() }"
+  >
+    <span class="part passing" [style.flex-grow]="passed()"></span>
+    <span class="part failing" [style.flex-grow]="failed()"></span>
+  </div>
+
+  <div class="list">
+    @for (group of groups(); track group.key) {
+      <div class="group" data-testid="http-tests-group">
+        {{ group.label.key | transloco: group.label.params }}
+      </div>
+      @for (test of group.tests; track $index) {
+        @let failing = !test.passed && !test.skipped;
+        <div
+          class="test"
+          data-testid="http-test"
+          [attr.data-result]="test.skipped ? 'skipped' : test.passed ? 'passed' : 'failed'"
+          [class.failing]="failing"
+          [class.skipped]="test.skipped"
+        >
+          <span class="mark" aria-hidden="true">{{ test.skipped ? '–' : test.passed ? '✓' : '✗' }}</span>
+          <span class="name">{{ test.name }}</span>
+          @if (failing) {
+            <div class="why">
+              @if (test.expected || test.actual) {
+                <div class="versus" data-testid="http-test-versus">
+                  <span
+                    ><b>{{ 'http.tests.expected' | transloco }}</b
+                    ><span class="expected">{{ test.expected ?? '—' }}</span></span
+                  >
+                  <span
+                    ><b>{{ 'http.tests.actual' | transloco }}</b
+                    ><span class="actual">{{ test.actual ?? '—' }}</span></span
+                  >
+                </div>
+              } @else if (test.message) {
+                <div class="message" data-testid="http-test-message">{{ test.message }}</div>
+              }
+              @if (test.code || (openable() && test.line)) {
+                <div class="at">
+                  @if (test.code) {
+                    <code class="code" data-testid="http-test-code">{{ test.code }}</code>
+                  }
+                  @if (openable() && test.line) {
+                    <button
+                      type="button"
+                      class="line"
+                      data-testid="http-test-line"
+                      (click)="lineOpened.emit(test)"
+                    >
+                      {{ 'http.tests.line' | transloco: { line: test.line } }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+</div>

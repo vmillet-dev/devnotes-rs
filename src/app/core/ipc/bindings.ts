@@ -2804,6 +2804,8 @@ export type RequestScripts = {
 	before?: string,
 	/**  Once it is answered: it reads the response. */
 	after?: string,
+	/**  Its named tests, run after the scripts after the answer. */
+	tests?: string,
 };
 
 export type ReverseDns = 
@@ -2902,6 +2904,8 @@ export type ScriptStop = {
 export type ScriptsAnswer = {
 	failure?: ScriptStop | null,
 	logs?: LogEntry[],
+	/**  The tests, in the order they ran: kept with the history entry. */
+	tests?: TestResult[],
 	/**  A script wrote a variable: the environments and the settings are read again. */
 	wrote?: boolean,
 };
@@ -3119,6 +3123,25 @@ export type SyncedQuery = {
 export type TagUsage = {
 	tag: string,
 	noteCount: number,
+};
+
+export type TestResult = {
+	name?: string,
+	passed?: boolean,
+	skipped?: boolean,
+	message?: string | null,
+	/**  As the prelude writes a value: a text quoted, the rest as JSON. */
+	expected?: string | null,
+	actual?: string | null,
+	/**  The script it was written in, and the line of the assertion that failed. */
+	script?: string | null,
+	line?: number | null,
+	/**  Filled by Rust from the script: whose it is, and the line of code that failed as written. */
+	kind?: ScriptKind | null,
+	level?: ScriptLevel | null,
+	holder?: string | null,
+	owner?: string | null,
+	code?: string | null,
 };
 
 export type TextCase = "camel" | "pascal" | "snake" | "kebab" | "constant" | "title" | "sentence" | "dot" | "path" | "train" | "lower" | "upper" | "flat";

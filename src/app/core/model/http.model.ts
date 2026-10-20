@@ -22,6 +22,7 @@ import type {
   RequestBody,
   RequestScripts,
   ScriptStop,
+  TestResult,
   FailureKind,
   ScriptLevel,
   HttpCollection,
@@ -97,6 +98,7 @@ export type {
   RequestKind,
   SentResponse,
   ScriptStop,
+  TestResult,
 };
 
 /** A row of parameters or headers, every field present: the wire leaves out a default. */
@@ -179,16 +181,24 @@ export interface WebsocketParts {
   readonly messages: readonly SavedMessageRow[];
 }
 
-/** The JavaScript run around a send, both present: blank runs nothing. */
+/** The JavaScript run around a send, and its tests, all present: blank runs nothing. */
 export interface ScriptParts {
   readonly before: string;
   readonly after: string;
+  readonly tests: string;
 }
 
 export type ScriptPhase = keyof ScriptParts;
+/** The Scripts tab's two; the tests have a tab of their own. */
 export const SCRIPT_PHASES: readonly ScriptPhase[] = ['before', 'after'];
+export const TEST_PHASES: readonly ScriptPhase[] = ['tests'];
 
-export const NO_SCRIPTS: ScriptParts = { before: '', after: '' };
+export const NO_SCRIPTS: ScriptParts = { before: '', after: '', tests: '' };
+
+/** How many tests a script declares, as its tab counts them: `test(` and `pm.test(`. */
+export function testsDeclared(source: string): number {
+  return source.match(/(?:^|[^\w.]|pm\.)test\s*\(/g)?.length ?? 0;
+}
 
 /** Where « Ouvrir le script » leads: one of the two scripts, on the line that stopped. */
 export interface ScriptFocus {
@@ -357,7 +367,7 @@ export function toParts(document: RequestDocument): RequestParts {
 }
 
 export function toScripts(scripts: RequestScripts | undefined): ScriptParts {
-  return { before: scripts?.before ?? '', after: scripts?.after ?? '' };
+  return { before: scripts?.before ?? '', after: scripts?.after ?? '', tests: scripts?.tests ?? '' };
 }
 
 function toWebsocket(websocket: WebsocketDocument | undefined): WebsocketParts {

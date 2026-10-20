@@ -88,6 +88,11 @@
     font-weight: 700;
     color: var(--red);
   }
+
+  &.passing {
+    font-weight: 700;
+    color: var(--green);
+  }
 }
 
 .actions {
@@ -230,4 +235,8 @@
 // Above the answer it read: the answer itself came, and is shown as it came.
 .stopped {
   margin: 12px 20px 0;
+}
+
+.tests {
+  padding: 14px 20px 18px;
 }

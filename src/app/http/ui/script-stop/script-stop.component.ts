@@ -25,7 +25,7 @@ export class ScriptStopComponent {
     const stop = this.stop();
     if (stop.level === null || stop.level === undefined) return { key: 'http.scripts.stop.host' };
     return {
-      key: `http.scripts.stop.${stop.script === 'before' ? 'before' : 'after'}.${stop.level}`,
+      key: `http.scripts.stop.${stop.script ?? 'before'}.${stop.level}`,
       params: { name: stop.name ?? '' },
     };
   });

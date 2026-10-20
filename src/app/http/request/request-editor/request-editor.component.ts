@@ -30,8 +30,10 @@ import {
   SCRIPT_PHASES,
   ScriptParts,
   ScriptPhase,
+  TEST_PHASES,
   TransportSettings,
   WebsocketParts,
+  testsDeclared,
 } from '@core/model/http.model';
 import { UsedVariable, VariableRow } from '@core/model/http-environment.model';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
@@ -67,6 +69,7 @@ type Section =
   | 'protocols'
   | 'variables'
   | 'scripts'
+  | 'tests'
   | 'settings';
 
 /** A header a request may send: the reference's own list, those a server alone writes left out. */
@@ -121,8 +124,8 @@ export class RequestEditorComponent {
   protected readonly sections = computed<readonly Section[]>(
     () =>
       ({
-        http: ['params', 'headers', 'auth', 'body', 'variables', 'scripts', 'settings'] as const,
-        graphql: ['query', 'headers', 'auth', 'variables', 'scripts', 'settings'] as const,
+        http: ['params', 'headers', 'auth', 'body', 'variables', 'scripts', 'tests', 'settings'] as const,
+        graphql: ['query', 'headers', 'auth', 'variables', 'scripts', 'tests', 'settings'] as const,
         websocket: ['message', 'headers', 'auth', 'variables', 'protocols'] as const,
       })[this.tab().draft.kind],
   );
@@ -132,6 +135,7 @@ export class RequestEditorComponent {
   );
   protected readonly headerNames = REQUEST_HEADERS;
   protected readonly scriptPhase = signal<ScriptPhase>('before');
+  protected readonly testPhases = TEST_PHASES;
   /** The line « Ouvrir le script » leads to. */
   protected readonly scriptLine = signal<number | null>(null);
 
@@ -236,6 +240,7 @@ export class RequestEditorComponent {
     protocols: this.tab().draft.parts.websocket.protocols.length,
     variables: this.tab().draft.parts.variables.filter((row) => row.enabled && row.name !== '').length,
     scripts: SCRIPT_PHASES.filter((phase) => this.tab().draft.parts.scripts[phase].trim() !== '').length,
+    tests: testsDeclared(this.tab().draft.parts.scripts.tests),
     settings: Object.values(this.tab().draft.parts.transport).filter(
       (value) => value !== null && value !== undefined,
     ).length,
@@ -247,8 +252,9 @@ export class RequestEditorComponent {
       const asked = this.scriptFocus.request();
       if (asked === null || asked.key !== this.tab().key) return;
       untracked(() => {
-        this.chosen.set('scripts');
-        this.scriptPhase.set(asked.focus.phase);
+        const tests = asked.focus.phase === 'tests';
+        this.chosen.set(tests ? 'tests' : 'scripts');
+        if (!tests) this.scriptPhase.set(asked.focus.phase);
         this.scriptLine.set(asked.focus.line);
         this.scriptFocus.taken();
       });
@@ -310,7 +316,8 @@ export class RequestEditorComponent {
 
   /** A folder's or the collection's script, in their settings. */
   protected openLevel(from: HttpOrigin): void {
-    this.collections.openSettingsOf(from.id, { phase: this.scriptPhase(), line: null });
+    const phase = this.section() === 'tests' ? 'tests' : this.scriptPhase();
+    this.collections.openSettingsOf(from.id, { phase, line: null });
   }
 
   protected onTransport(transport: TransportSettings): void {

@@ -24,7 +24,15 @@
         (click)="choose(id)"
       >
         {{ 'http.response.sections.' + id | transloco }}
-        @if (counts()[id] > 0) {
+        @if (id === 'tests') {
+          <span
+            class="count"
+            data-testid="http-response-tests-count"
+            [class.failing]="testsRatio().failing"
+            [class.passing]="!testsRatio().failing"
+            >{{ testsRatio().text }}</span
+          >
+        } @else if (counts()[id] > 0) {
           <span class="count" data-testid="http-response-count" [class.failing]="id === 'errors'">{{
             counts()[id]
           }}</span>
@@ -80,6 +88,15 @@
   @switch (section()) {
     @case ('body') {
       <app-response-body [response]="shown()" [sendId]="sendId()" />
+    }
+    @case ('tests') {
+      <app-response-tests
+        class="tests"
+        [tests]="tests()"
+        [requestName]="requestName()"
+        [openable]="scriptOpenable()"
+        (lineOpened)="openTest($event)"
+      />
     }
     @case ('errors') {
       <ul class="errors" data-testid="http-response-errors">

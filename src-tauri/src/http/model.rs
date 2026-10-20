@@ -90,6 +90,8 @@ pub struct RequestScripts {
     pub before: String,
     /// Once it is answered: it reads the response.
     pub after: String,
+    /// Its named tests, run after the scripts after the answer.
+    pub tests: String,
 }
 
 /// What a request sends as its body. A file is a path, read by Rust when the request is sent:

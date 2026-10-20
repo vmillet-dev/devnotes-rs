@@ -443,4 +443,39 @@ describe('ResponsePaneComponent', () => {
       focus: { phase: 'after', line: 2 },
     });
   });
+
+  it('counts the tests beside the body, red once one fails, and leads a failure to its line', async () => {
+    await answer(
+      sentResponse({
+        scripts: {
+          failure: null,
+          logs: [],
+          wrote: false,
+          tests: [
+            { name: 'statut', passed: true, skipped: false, level: 'request', kind: 'tests' },
+            {
+              name: 'devise',
+              passed: false,
+              skipped: false,
+              level: 'request',
+              kind: 'tests',
+              line: 4,
+              expected: '"eur"',
+              actual: '"usd"',
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(text('http-response-tests-count')).toBe('1/2');
+    expect(el('http-response-tests-count')?.classList.contains('failing')).toBe(true);
+    await section('tests');
+    expect(text('http-tests-failed')).toBe('1 échec');
+    el('http-test-line')!.click();
+    expect(TestBed.inject(HttpScriptFocusStore).request()).toEqual({
+      key: 'Login',
+      focus: { phase: 'tests', line: 4 },
+    });
+  });
 });

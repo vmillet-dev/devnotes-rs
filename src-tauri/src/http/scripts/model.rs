@@ -404,6 +404,42 @@ pub struct TestResult {
     /// The script it was written in, and the line of the assertion that failed.
     pub script: Option<String>,
     pub line: Option<u32>,
+    /// Filled by Rust from the script: whose it is, and the line of code that failed as written.
+    pub kind: Option<ScriptKind>,
+    pub level: Option<ScriptLevel>,
+    pub holder: Option<String>,
+    pub owner: Option<String>,
+    pub code: Option<String>,
+}
+
+impl TestResult {
+    /// Placed in the script that wrote it, `scripts` the phase's.
+    #[must_use]
+    pub fn placed(self, scripts: &[Script]) -> Self {
+        let Some(script) = self
+            .script
+            .as_deref()
+            .and_then(|id| scripts.iter().find(|script| script.id == id))
+        else {
+            return self;
+        };
+        let code = self.line.and_then(|line| {
+            let index = usize::try_from(line).ok()?.checked_sub(1)?;
+            script
+                .source
+                .lines()
+                .nth(index)
+                .map(|code| code.trim().to_string())
+        });
+        Self {
+            kind: Some(script.kind),
+            level: Some(script.level),
+            holder: Some(script.name.clone()),
+            owner: script.owner.clone(),
+            code,
+            ..self
+        }
+    }
 }
 
 closed_enum! {
@@ -540,6 +576,8 @@ pub enum ScriptError {
 pub struct ScriptsAnswer {
     pub failure: Option<ScriptStop>,
     pub logs: Vec<LogEntry>,
+    /// The tests, in the order they ran: kept with the history entry.
+    pub tests: Vec<TestResult>,
     /// A script wrote a variable: the environments and the settings are read again.
     pub wrote: bool,
 }

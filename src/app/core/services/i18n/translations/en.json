@@ -3290,7 +3290,8 @@
         "protocols": "Protocols",
         "settings": "Settings",
         "variables": "Variables",
-        "scripts": "Scripts"
+        "scripts": "Scripts",
+        "tests": "Tests"
       }
     },
     "table": {
@@ -3418,7 +3419,8 @@
       "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs.",
       "variables": "Variables",
       "variablesHint": "over the environment, under a folder and the request",
-      "scriptsHint": "before and after each of its requests"
+      "scriptsHint": "before and after each of its requests",
+      "testsHint": "for each of its requests"
     },
     "send": {
       "send": "Send",
@@ -3454,6 +3456,7 @@
       "parts": "Parts of the response",
       "sections": {
         "body": "Body",
+        "tests": "Tests",
         "headers": "Headers",
         "cookies": "Cookies",
         "timeline": "Timeline",
@@ -3614,9 +3617,11 @@
       "phase": "When the script runs",
       "phases": {
         "before": "Before the send",
-        "after": "After the response"
+        "after": "After the response",
+        "tests": "Tests"
       },
       "order": "They run in this order:",
+      "orderTests": "They run after the script after the response, in this order:",
       "levels": {
         "collection": "collection",
         "folder": "folder",
@@ -3626,7 +3631,8 @@
       "openLevel": "Open its settings on this script",
       "placeholder": {
         "before": "Before the send: change the request, read or write a variable…",
-        "after": "After the response: read the response, keep a value of it…"
+        "after": "After the response: read the response, keep a value of it…",
+        "tests": "Named tests, checked after the response: test('The status is 200', …)"
       },
       "hint": "JavaScript, in a process of its own, with no access to files",
       "examples": {
@@ -3650,6 +3656,11 @@
           "folder": "The script after the response of the folder “{{name}}” failed",
           "collection": "The script after the response of the collection “{{name}}” failed"
         },
+        "tests": {
+          "request": "The tests stopped",
+          "folder": "The tests of the folder “{{name}}” stopped",
+          "collection": "The tests of the collection “{{name}}” stopped"
+        },
         "host": "The scripts could not be started",
         "kinds": {
           "timeout": "Stopped: it took too long.",
@@ -3661,6 +3672,20 @@
         "line": "Line {{line}}",
         "open": "Open the script"
       }
+    },
+    "tests": {
+      "failed": "{count, plural, one {# failure} other {# failures}}",
+      "allPassed": "All pass",
+      "ratio": "{{passed}}/{{total}} tests",
+      "bar": "{{passed}} tests passed out of {{total}}",
+      "groups": {
+        "request": "{{name}}",
+        "folder": "{{name}} · the folder’s tests",
+        "collection": "{{name}} · the collection’s tests"
+      },
+      "expected": "expected",
+      "actual": "received",
+      "line": "Line {{line}} ›"
     },
     "variables": {
       "name": "Name",

@@ -3290,7 +3290,8 @@
         "protocols": "Protocoles",
         "settings": "Réglages",
         "variables": "Variables",
-        "scripts": "Scripts"
+        "scripts": "Scripts",
+        "tests": "Tests"
       }
     },
     "table": {
@@ -3418,7 +3419,8 @@
       "hint": "Ses requêtes en héritent : une requête dont l’auth est « Héritée » prend celle-ci, et ses en-têtes s’ajoutent aux leurs.",
       "variables": "Variables",
       "variablesHint": "au-dessus de l’environnement, sous un dossier et la requête",
-      "scriptsHint": "avant et après chacune de ses requêtes"
+      "scriptsHint": "avant et après chacune de ses requêtes",
+      "testsHint": "pour chacune de ses requêtes"
     },
     "send": {
       "send": "Envoyer",
@@ -3454,6 +3456,7 @@
       "parts": "Parties de la réponse",
       "sections": {
         "body": "Corps",
+        "tests": "Tests",
         "headers": "En-têtes",
         "cookies": "Cookies",
         "timeline": "Chronologie",
@@ -3614,9 +3617,11 @@
       "phase": "Quand le script s’exécute",
       "phases": {
         "before": "Avant l’envoi",
-        "after": "Après la réponse"
+        "after": "Après la réponse",
+        "tests": "Tests"
       },
       "order": "S’exécutent dans cet ordre :",
+      "orderTests": "S’exécutent après le script « après la réponse », dans cet ordre :",
       "levels": {
         "collection": "collection",
         "folder": "dossier",
@@ -3626,7 +3631,8 @@
       "openLevel": "Ouvrir ses réglages sur ce script",
       "placeholder": {
         "before": "Avant l’envoi : changer la requête, lire ou écrire une variable…",
-        "after": "Après la réponse : lire la réponse, en garder une valeur…"
+        "after": "Après la réponse : lire la réponse, en garder une valeur…",
+        "tests": "Des tests nommés, vérifiés après la réponse : test('Le statut est 200', …)"
       },
       "hint": "JavaScript, dans un processus à part, sans accès aux fichiers",
       "examples": {
@@ -3650,6 +3656,11 @@
           "folder": "Le script après la réponse du dossier « {{name}} » a échoué",
           "collection": "Le script après la réponse de la collection « {{name}} » a échoué"
         },
+        "tests": {
+          "request": "Les tests se sont arrêtés",
+          "folder": "Les tests du dossier « {{name}} » se sont arrêtés",
+          "collection": "Les tests de la collection « {{name}} » se sont arrêtés"
+        },
         "host": "Les scripts n’ont pas pu être lancés",
         "kinds": {
           "timeout": "Arrêté : il a pris trop de temps.",
@@ -3661,6 +3672,20 @@
         "line": "Ligne {{line}}",
         "open": "Ouvrir le script"
       }
+    },
+    "tests": {
+      "failed": "{count, plural, one {# échec} other {# échecs}}",
+      "allPassed": "Tout passe",
+      "ratio": "{{passed}}/{{total}} tests",
+      "bar": "{{passed}} tests réussis sur {{total}}",
+      "groups": {
+        "request": "{{name}}",
+        "folder": "{{name}} · tests du dossier",
+        "collection": "{{name}} · tests de la collection"
+      },
+      "expected": "attendu",
+      "actual": "reçu",
+      "line": "Ligne {{line}} ›"
     },
     "variables": {
       "name": "Nom",

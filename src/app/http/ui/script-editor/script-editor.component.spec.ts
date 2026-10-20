@@ -45,9 +45,9 @@ describe('ScriptEditorComponent', () => {
       CodeEditorComponent | undefined;
 
   it('marks the phase that has code, and says the order before the send and back after it', async () => {
-    await render({ before: '', after: 'test()' }, [
-      { from: API, scripts: { before: 'login()', after: '' } },
-      { from: INVOICES, scripts: { before: '', after: '' } },
+    await render({ before: '', after: 'test()', tests: '' }, [
+      { from: API, scripts: { before: 'login()', after: '', tests: '' } },
+      { from: INVOICES, scripts: { before: '', after: '', tests: '' } },
     ]);
 
     const marked = [...root().querySelectorAll('[data-testid="segment"]')].map(
@@ -70,30 +70,34 @@ describe('ScriptEditorComponent', () => {
   });
 
   it('says no order for a folder’s or a collection’s own', async () => {
-    await render({ before: '', after: '' });
+    await render({ before: '', after: '', tests: '' });
     expect(root().querySelector('[data-testid="http-script-order"]')).toBeNull();
   });
 
   it('hands every edit out under its phase, and stops marking the line once edited', async () => {
-    await render({ before: 'throw 1;', after: 'kept()' }, [], 1);
+    await render({ before: 'throw 1;', after: 'kept()', tests: '' }, [], 1);
     await vi.waitFor(() => expect(editor()).toBeDefined());
     expect(editor()!.focusedLines()).toEqual(new Set([1]));
 
     editor()!.changed.emit('const ok = 1;');
     await fixture.whenStable();
-    expect(changes).toEqual([{ before: 'const ok = 1;', after: 'kept()' }]);
+    expect(changes).toEqual([{ before: 'const ok = 1;', after: 'kept()', tests: '' }]);
     expect(editor()!.focusedLines().size).toBe(0);
   });
 
   it('writes an example at the end of the script, a blank line after what is there', async () => {
-    await render({ before: 'const a = 1;\n\n', after: '' });
+    await render({ before: 'const a = 1;\n\n', after: '', tests: '' });
 
     root().querySelector<HTMLButtonElement>('[data-testid="http-script-examples"]')!.click();
     await fixture.whenStable();
     root().querySelector<HTMLButtonElement>('[data-example="setVariable"]')!.click();
-    expect(changes.at(-1)).toEqual({ before: "const a = 1;\n\nenv.set('name', 'value');\n", after: '' });
+    expect(changes.at(-1)).toEqual({
+      before: "const a = 1;\n\nenv.set('name', 'value');\n",
+      after: '',
+      tests: '',
+    });
 
-    fixture.componentRef.setInput('scripts', { before: '', after: '' });
+    fixture.componentRef.setInput('scripts', { before: '', after: '', tests: '' });
     root().querySelector<HTMLButtonElement>('[data-testid="http-script-examples"]')!.click();
     await fixture.whenStable();
     root().querySelector<HTMLButtonElement>('[data-example="testStatus"]')!.click();
@@ -103,10 +107,10 @@ describe('ScriptEditorComponent', () => {
   });
 
   it('has a block for each of the five examples', async () => {
-    await render({ before: '', after: '' });
+    await render({ before: '', after: '', tests: '' });
     const written: string[] = [];
     for (const example of ['readResponse', 'addHeader', 'sendRequest']) {
-      fixture.componentRef.setInput('scripts', { before: '', after: '' });
+      fixture.componentRef.setInput('scripts', { before: '', after: '', tests: '' });
       root().querySelector<HTMLButtonElement>('[data-testid="http-script-examples"]')!.click();
       await fixture.whenStable();
       root().querySelector<HTMLButtonElement>(`[data-example="${example}"]`)!.click();

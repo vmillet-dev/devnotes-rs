@@ -48,8 +48,8 @@ function exampleCode(example: ScriptExample, testName: string): string {
 }
 
 /**
- * The two scripts of a request, a folder or a collection: before the send and after the answer,
- * in the snippets' code editor. A request's says where its own runs among those above it.
+ * The scripts of a request, a folder or a collection — before the send and after the answer, or
+ * its tests — in the snippets' code editor. A request's says where its own run among those above.
  */
 @Component({
   selector: 'app-script-editor',
@@ -63,6 +63,8 @@ export class ScriptEditorComponent {
   /** What holds them: another one is another history, Ctrl+Z never reaches into it. */
   readonly owner = input.required<string>();
   readonly phase = model<ScriptPhase>('before');
+  /** The documents it switches between: the scripts' two, or the tests alone. */
+  readonly phases = input<readonly ScriptPhase[]>(SCRIPT_PHASES);
   /** The line a failure named, marked until the next edit. */
   readonly line = input<number | null>(null);
   /** The folders and collection above a request; `null` for a folder's or a collection's own. */
@@ -75,14 +77,13 @@ export class ScriptEditorComponent {
 
   private readonly transloco = inject(TranslocoService);
 
-  protected readonly segments: readonly Segment[] = SCRIPT_PHASES.map((id) => ({
-    id,
-    labelKey: `http.scripts.phases.${id}`,
-  }));
+  protected readonly segments = computed<readonly Segment[]>(() =>
+    this.phases().map((id) => ({ id, labelKey: `http.scripts.phases.${id}` })),
+  );
   /** What a script reads, in the order the mockup said them. */
   protected readonly names = ['req', 'res', 'env', 'pm', "require('lodash')…"];
   protected readonly written = computed(() =>
-    SCRIPT_PHASES.filter((phase) => this.scripts()[phase].trim() !== ''),
+    this.phases().filter((phase) => this.scripts()[phase].trim() !== ''),
   );
   protected readonly source = computed(() => this.scripts()[this.phase()]);
 

@@ -22,7 +22,7 @@ export class HttpScriptFocusStore {
 
   open(tabKey: string, stop: ScriptStop): void {
     const focus: ScriptFocus = {
-      phase: stop.script === 'before' ? 'before' : 'after',
+      phase: stop.script ?? 'before',
       line: stop.line ?? null,
     };
     if (stop.level !== 'request' && stop.owner && this.collections.openSettingsOf(stop.owner, focus)) return;

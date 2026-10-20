@@ -52,7 +52,21 @@
           [scripts]="current.scripts"
           [owner]="row().id"
           [(phase)]="scriptPhase"
-          [line]="scriptLine()"
+          [line]="script()?.phase === 'tests' ? null : scriptLine()"
+          (scriptsChange)="onScripts($event)"
+        />
+
+        <h3 #testsHeading class="section">
+          {{ 'http.editor.sections.tests' | transloco }}
+          <span class="section-hint">· {{ 'http.settings.testsHint' | transloco }}</span>
+        </h3>
+        <app-script-editor
+          class="scripts tests"
+          phase="tests"
+          [phases]="testPhases"
+          [scripts]="current.scripts"
+          [owner]="row().id"
+          [line]="script()?.phase === 'tests' ? scriptLine() : null"
           (scriptsChange)="onScripts($event)"
         />
       }
