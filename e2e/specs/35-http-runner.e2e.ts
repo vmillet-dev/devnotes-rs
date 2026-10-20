@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { $, browser, expect } from '@wdio/globals';
+import { $, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { eventually, press, readEach, testid } from '../support/app.js';
@@ -21,22 +21,6 @@ async function openHttp(): Promise<void> {
   if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
 }
 
-/**
- * The next open dialog answers `path`: the native picker cannot be driven, so its one command is
- * answered in the page, every other command going through as it was.
- */
-async function answerNextPicker(path: string): Promise<void> {
-  await browser.execute((chosen: string) => {
-    const internals = (window as unknown as Record<string, any>)['__TAURI_INTERNALS__'];
-    const original = internals.invoke;
-    internals.invoke = (command: string, ...rest: unknown[]) => {
-      if (command !== 'plugin:dialog|open') return original.call(internals, command, ...rest);
-      internals.invoke = original;
-      return Promise.resolve(chosen);
-    };
-  }, path);
-}
-
 describe('HTTP runner', () => {
   before(async () => {
     await canvas.open();
@@ -48,10 +32,12 @@ describe('HTTP runner', () => {
   });
 
   /**
-   * #496: a collection of two requests run over a two-row data file — four sends, each with its
-   * row —, its summary, the request that failed open on its assertion, and nothing in the history.
+   * #496: a collection of two requests run twice — four sends, each with its iteration —, its
+   * summary, the request that failed open on its assertion, and nothing in the history. The OS
+   * picker cannot be answered (the picker note in `support/app.ts`): the data file is read through
+   * its command, its control asserted on.
    */
-  it('runs a collection over the rows of a data file and sums the run up', async () => {
+  it('runs a collection over its iterations and sums the run up', async () => {
     const heard: string[] = [];
     const server = createServer((request, response) => {
       heard.push(request.url ?? '');
@@ -80,7 +66,10 @@ describe('HTTP runner', () => {
         document: {
           url: `http://127.0.0.1:${port}${path}`,
           description: '',
-          scripts: { tests: "test('trouvé', () => expect(res.status).toBe(200));" },
+          scripts: {
+            before: "pm.variables.set('customer', 'cus_' + (pm.info.iteration + 1));",
+            tests: "test('trouvé', () => expect(res.status).toBe(200));",
+          },
         },
       });
     }
@@ -92,26 +81,25 @@ describe('HTTP runner', () => {
       expect(await $(testid('http-runner-title')).getText()).toBe('Exécution e2e');
       expect(await readEach(testid('http-runner-row'), '@aria-label')).toEqual(['Login', 'Un client']);
 
-      await answerNextPicker(csv);
-      await $(testid('http-runner-data-choose')).click();
-      await eventually(
-        () => $(testid('http-runner-data')).getText(),
-        (said) => said.includes('clients.csv') && said.includes('2 lignes'),
-        'the data file read, a row an iteration',
-      );
-      expect(await $(testid('http-runner-iterations')).getValue()).toBe('2');
+      expect(await $(testid('http-runner-data-choose')).isExisting()).toBe(true);
+      expect(await bridge.readHttpRunData(csv)).toEqual({
+        columns: ['customer'],
+        rows: [{ customer: 'cus_1' }, { customer: 'cus_2' }],
+      });
+      await $(testid('http-runner-iterations')).setValue('2');
+      await press('Tab');
 
       await $(testid('http-runner-start')).click();
       await eventually(
         () => $(testid('http-runner-figures')).getText(),
-        (figures) => figures.startsWith('4 requêtes · 3/4 tests'),
+        (figures) => figures.replace(/\s+/g, ' ').trim().startsWith('4 requêtes · 3/4 tests'),
         'the run summed up',
       );
       expect(await $(testid('http-runner-summary')).getText()).toContain('1 échec');
       expect(heard).toEqual(['/login?c=cus_1', '/clients/cus_1', '/login?c=cus_2', '/clients/cus_2']);
       expect(await readEach(testid('http-runner-iteration'), 'text')).toEqual([
-        'Itération 1 / 2 customer = cus_1',
-        'Itération 2 / 2 customer = cus_2',
+        'Itération 1 / 2',
+        'Itération 2 / 2',
       ]);
       expect(await readEach(testid('http-runner-result'), '@data-result')).toEqual([
         'passed',
