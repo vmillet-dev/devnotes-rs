@@ -2709,7 +2709,9 @@ answers on its standard output.
   own name (`script-3`), so a stack names the script and the user's line, and an `await` reads at
   its top level. It then drives the phase: the promises' jobs, then the prelude's timers
   (`nextTimer`, `fireTimers`), until the phase's promise settles; a wait nothing can end — no job,
-  no timer — is said rather than waited for.
+  no timer — is said rather than waited for. Timers due together fire by deadline, then by
+  creation, as in Node: Windows wakes a 5 ms sleep about 15 ms later, so several are often due at
+  once.
 - **The API is the prelude's** (`prelude.js`, JavaScript over four natives: `call`, `log`,
   `random`, `module`): `req`, `res`, `env`, `test`, `expect`, `console`, the timers, and
   Postman's `pm` (request, response, environment, globals, collection variables, variables,

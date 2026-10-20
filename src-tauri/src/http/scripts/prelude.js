@@ -147,10 +147,14 @@
     return soonest < 0 ? -1 : Math.max(0, soonest - Date.now());
   }
 
+  // By deadline, as Node does: a late wake (15 ms on Windows) finds several due at once.
   function fireTimers() {
     const now = Date.now();
-    for (const [id, timer] of [...timers]) {
-      if (timer.at > now || !timers.has(id)) continue;
+    const due = [...timers]
+      .filter(([, timer]) => timer.at <= now)
+      .sort(([a, x], [b, y]) => x.at - y.at || a - b);
+    for (const [id, timer] of due) {
+      if (!timers.has(id)) continue;
       if (timer.every === null) timers.delete(id);
       else timer.at = now + Math.max(1, timer.every);
       timer.callback(...timer.args);
