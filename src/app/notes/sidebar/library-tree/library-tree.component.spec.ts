@@ -317,7 +317,7 @@ describe('LibraryTreeComponent, nested', () => {
     );
   }
 
-  it('moves a folder dragged onto another, and the click that ends the drag opens nothing', async () => {
+  it('moves a folder dragged onto another, and the click that ends the drag opens nothing but a key', async () => {
     const opened: string[] = [];
     fixture.componentInstance.folderOpened.subscribe((each) => opened.push(each.id));
     pointAt(row('archives'));
@@ -330,12 +330,15 @@ describe('LibraryTreeComponent, nested', () => {
     name('perf').dispatchEvent(
       new PointerEvent('pointerup', { pointerId: 1, clientX: 10, clientY: 60, bubbles: true }),
     );
-    name('perf').click();
+    name('perf').dispatchEvent(new MouseEvent('click', { detail: 1, bubbles: true }));
 
     await vi.waitFor(async () =>
       expect((await repository.loadAll('sql')).find((each) => each.id === 'perf')?.parentId).toBe('archives'),
     );
     expect(opened).toEqual([]);
+
+    name('perf').dispatchEvent(new MouseEvent('click', { detail: 0, bubbles: true }));
+    expect(opened).toEqual(['perf']);
   });
 
   it('refuses a folder dragged into what it holds, in red, and says it', async () => {

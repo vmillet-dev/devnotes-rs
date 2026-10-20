@@ -149,8 +149,8 @@ export class HttpRailComponent {
     });
   }
 
-  protected activate(row: RailRow): void {
-    if (this.drag.swallowsClick()) return;
+  protected activate(event: MouseEvent, row: RailRow): void {
+    if (this.drag.endsADrag(event)) return;
     if (row.kind === 'request') {
       this.workspace.show('requests');
       void this.tabs.open(row.id);
