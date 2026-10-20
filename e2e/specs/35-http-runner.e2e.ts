@@ -89,18 +89,18 @@ describe('HTTP runner', () => {
       await $(testid('http-runner-iterations')).setValue('2');
       await press('Tab');
 
+      // Read without its words: the runner's language is the machine's.
       await $(testid('http-runner-start')).click();
       await eventually(
         () => $(testid('http-runner-figures')).getText(),
-        (figures) => figures.replace(/\s+/g, ' ').trim().startsWith('4 requêtes · 3/4 tests'),
+        (figures) => /^4 \S+ · 3\/4 /.test(figures.replace(/\s+/g, ' ').trim()),
         'the run summed up',
       );
-      expect(await $(testid('http-runner-summary')).getText()).toContain('1 échec');
+      expect((await $(testid('http-runner-summary')).getText()).trim()).toMatch(/^1 /);
       expect(heard).toEqual(['/login?c=cus_1', '/clients/cus_1', '/login?c=cus_2', '/clients/cus_2']);
-      expect(await readEach(testid('http-runner-iteration'), 'text')).toEqual([
-        'Itération 1 / 2',
-        'Itération 2 / 2',
-      ]);
+      expect(
+        (await readEach(testid('http-runner-iteration'), 'text')).map((header) => header.replace(/^\D+/, '')),
+      ).toEqual(['1 / 2', '2 / 2']);
       expect(await readEach(testid('http-runner-result'), '@data-result')).toEqual([
         'passed',
         'passed',
