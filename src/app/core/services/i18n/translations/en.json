@@ -1263,6 +1263,8 @@
     "selection": "Selection",
     "copyPath": "Copy the path",
     "copyValue": "Copy the value",
+    "extract": "Extract to a variable…",
+    "menu": "Value actions",
     "kinds": {
       "object": "{count, plural, =0 {Empty object} one {Object · # key} other {Object · # keys}}",
       "array": "{count, plural, =0 {Empty array} one {Array · # item} other {Array · # items}}",
@@ -3687,6 +3689,20 @@
       "actual": "received",
       "line": "Line {{line}} ›"
     },
+    "extract": {
+      "title": "Extract to a variable",
+      "path": "Path in the response",
+      "name": "Variable name",
+      "secret": "Secret · masked everywhere",
+      "into": "Written into the active environment at each send of {{request}}, today {{environment}}.",
+      "intoGlobals": "Written into the globals at each send of {{request}}, no environment being chosen.",
+      "submit": "Extract",
+      "added": "“{{variable}}” will be filled at each send: save the request to keep the rule.",
+      "listTitle": "Extractions",
+      "listHint": "after each send, into the active environment",
+      "secretShort": "secret",
+      "remove": "Remove the extraction into “{{variable}}”"
+    },
     "variables": {
       "name": "Name",
       "value": "Value",
@@ -3731,7 +3747,10 @@
           "globals": "globals",
           "dynamic": "made at the send"
         }
-      }
+      },
+      "filledBy": "filled by {{name}}",
+      "from": "from {{name}}",
+      "openFiller": "Open {{name}} on its scripts"
     },
     "cookies": {
       "open": "Cookies",

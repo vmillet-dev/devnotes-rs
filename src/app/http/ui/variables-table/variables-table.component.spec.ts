@@ -106,4 +106,30 @@ describe('VariablesTableComponent', () => {
     expect(all('[data-testid="http-variable-row"]')[1]?.dataset['fault']).toBe('duplicate');
     expect(all('[data-testid="http-variable-fault"]')[0]?.dataset['fault']).toBe('duplicate');
   });
+
+  it('says which request fills a variable, and opens it when it is saved', async () => {
+    await render([
+      variable('accessToken', 'eyJ', { kind: 'secret', filledBy: { requestId: 'login', name: 'Login' } }),
+      variable('draftValue', '1', { filledBy: { requestId: null, name: 'Nouvelle requête' } }),
+    ]);
+    const opened: unknown[] = [];
+    fixture.componentInstance.fillerOpened.subscribe((by) => opened.push(by));
+    const tags = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '[data-testid="http-variable-filled"]',
+      ),
+    ];
+    expect(tags.map((tag) => tag.textContent?.trim())).toEqual([
+      'remplie par Login',
+      'remplie par Nouvelle requête',
+    ]);
+    expect(
+      [...(fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="http-variable-from"]')].map(
+        (from) => from.textContent?.trim(),
+      ),
+    ).toEqual(['depuis Login', 'depuis Nouvelle requête']);
+    expect(tags[1]!.disabled).toBe(true);
+    tags[0]!.click();
+    expect(opened).toEqual([{ requestId: 'login', name: 'Login' }]);
+  });
 });

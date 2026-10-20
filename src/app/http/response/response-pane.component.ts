@@ -1,12 +1,14 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { ScriptStop, stopOf } from '@core/model/http.model';
+import { ExtractionRow, ScriptStop, stopOf } from '@core/model/http.model';
+import { StatusNotifier } from '@core/services/notifications/status.service';
 import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
 import { HttpScriptFocusStore } from '@core/services/http/http-script-focus.store';
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { ProtectedQuestionComponent } from '@http/ui/protected-question/protected-question.component';
+import { ExtractDialogComponent } from './extract-dialog/extract-dialog.component';
 import { ResponseViewComponent } from '@http/ui/response-view/response-view.component';
 import { ScriptStopComponent } from '@http/ui/script-stop/script-stop.component';
 import { SpinnerComponent } from '@shared/spinner/spinner.component';
@@ -18,6 +20,7 @@ const ELAPSED_TICK_MS = 100;
 @Component({
   selector: 'app-response-pane',
   imports: [
+    ExtractDialogComponent,
     NgTemplateOutlet,
     ProtectedQuestionComponent,
     ResponseViewComponent,
@@ -37,7 +40,8 @@ export class ResponsePaneComponent {
   private readonly transloco = inject(TranslocoService);
   private readonly tabs = inject(HttpTabsStore);
   private readonly scriptFocus = inject(HttpScriptFocusStore);
-  private readonly environments = inject(HttpEnvironmentsStore);
+  protected readonly environments = inject(HttpEnvironmentsStore);
+  private readonly status = inject(StatusNotifier);
 
   protected readonly state = computed(() => this.sending.states().get(this.tabKey()) ?? null);
   protected readonly phase = computed(() => this.state()?.phase ?? 'idle');
@@ -64,6 +68,9 @@ export class ResponsePaneComponent {
     const name = this.protectedAsk()?.['environment'];
     return this.environments.environments().find((environment) => environment.name === name)?.colour ?? null;
   });
+
+  /** « Extraire vers une variable… »: the path asked, while its dialog is open. */
+  protected readonly extracting = signal<string | null>(null);
 
   /** Moves only while a send is under way: nothing ticks under an answer. */
   private readonly now = signal(Date.now());
@@ -99,6 +106,16 @@ export class ResponsePaneComponent {
   protected sendAnyway(): void {
     const tab = this.tabs.tabs().find((open) => open.key === this.tabKey());
     if (tab) void this.sending.send(tab, true);
+  }
+
+  /** A rule of the request, kept when it is saved: one variable, one path. */
+  protected addExtraction(rule: ExtractionRow): void {
+    const tab = this.tabs.tabs().find((open) => open.key === this.tabKey());
+    this.extracting.set(null);
+    if (!tab) return;
+    const others = tab.draft.parts.extractions.filter((known) => known.variable !== rule.variable);
+    this.tabs.editParts(tab.key, { extractions: [...others, rule] });
+    this.status.notify({ key: 'http.extract.added', params: { variable: rule.variable } });
   }
 
   protected saveFile(): void {

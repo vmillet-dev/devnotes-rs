@@ -237,4 +237,106 @@ describe('HTTP scripts', () => {
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     }
   });
+
+  /**
+   * #495: a value of the answer, right-clicked in its tree, becomes a rule of the request; the
+   * next send writes it into the active environment, and the next request is sent with it.
+   */
+  it('extracts a value of a response into a variable the next request is sent with', async () => {
+    const heard: string[] = [];
+    const server = createServer((request, response) => {
+      heard.push(`${request.url} ${String(request.headers.authorization ?? '-')}`);
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(request.url === '/login' ? '{"access_token":"zq-e2e-token","expires_in":3600}' : '{}');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    const api = await bridge.createHttpCollection('Extraction');
+    const staging = await bridge.createHttpEnvironment('Extraction e2e');
+    const login = await bridge.createHttpRequest({
+      collectionId: api.id,
+      folderId: null,
+      name: 'Login',
+      kind: 'http',
+      method: 'GET',
+      document: { url: `http://127.0.0.1:${port}/login`, description: '' },
+    });
+    const me = await bridge.createHttpRequest({
+      collectionId: api.id,
+      folderId: null,
+      name: 'Moi',
+      kind: 'http',
+      method: 'GET',
+      document: {
+        url: `http://127.0.0.1:${port}/me`,
+        description: '',
+        headers: [{ key: 'Authorization', value: 'Bearer {{accessToken}}' }],
+      },
+    });
+    try {
+      await openHttp();
+      await $(`${testid('http-node')}[data-id="${login.id}"] ${testid('http-node-name')}`).click();
+      await $(testid('http-request-editor')).waitForDisplayed({ timeout: 10_000 });
+      await pick(staging.id);
+      await press('Enter', ['Control']);
+      await $(testid('http-response-status')).waitForDisplayed({ timeout: 10_000 });
+
+      await pickSegment('http-response-view', 'tree');
+      const line = `${testid('json-line')}[data-path="$.access_token"]`;
+      await $(line).waitForDisplayed({ timeout: 10_000 });
+      await browser.execute((selector: string) => {
+        const target = document.querySelector(selector)!;
+        const box = target.getBoundingClientRect();
+        target.dispatchEvent(
+          new MouseEvent('contextmenu', {
+            bubbles: true,
+            cancelable: true,
+            clientX: box.left + 10,
+            clientY: box.top + 5,
+          }),
+        );
+      }, line);
+      await $(testid('json-menu-extract')).click();
+      await $(testid('http-extract-dialog')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-extract-name')).getValue()).toBe('accessToken');
+      expect(await $(testid('http-extract-secret')).isSelected()).toBe(true);
+      await $(testid('http-extract-submit')).click();
+      await $(testid('http-extract-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('s', ['Control']);
+      await eventually(
+        async () => (await bridge.httpRequest(login.id)).document.extractions,
+        (rules) => rules?.[0]?.path === 'body.access_token' && rules[0].variable === 'accessToken',
+        'the rule saved with the request',
+      );
+
+      // Applied from the next send on, into the active environment.
+      await press('Enter', ['Control']);
+      const filled = await eventually(
+        async () =>
+          (await bridge.httpEnvironments()).environments
+            .find((held) => held.id === staging.id)
+            ?.variables.find((row) => row.name === 'accessToken'),
+        (row) => row?.value === 'zq-e2e-token' && row.kind === 'secret',
+        'the token written into the environment, a secret',
+      );
+      expect(filled?.filledBy?.name).toBe('Login');
+
+      await $(`${testid('http-node')}[data-id="${me.id}"] ${testid('http-node-name')}`).click();
+      await eventually(
+        () => $(testid('http-request-name')).getValue(),
+        (name) => name === 'Moi',
+        'the next request open',
+      );
+      await press('Enter', ['Control']);
+      await eventually(
+        () => Promise.resolve(heard.at(-1)),
+        (said) => said === '/me Bearer zq-e2e-token',
+        'the next request sent with the value',
+      );
+    } finally {
+      server.close();
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      await bridge.deleteHttpEnvironment(staging.id);
+    }
+  });
 });

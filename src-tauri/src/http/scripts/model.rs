@@ -570,6 +570,15 @@ pub enum ScriptError {
     },
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Extracted {
+    pub path: String,
+    pub variable: String,
+    /// `false`: the path led nowhere, the variable was left as it was.
+    pub found: bool,
+}
+
 /// What the scripts after the answer left beside it. The logs cross once and are never kept.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase", default)]
@@ -578,6 +587,8 @@ pub struct ScriptsAnswer {
     pub logs: Vec<LogEntry>,
     /// The tests, in the order they ran: kept with the history entry.
     pub tests: Vec<TestResult>,
+    /// Each extraction of the request, and whether its path still read.
+    pub extracted: Vec<Extracted>,
     /// A script wrote a variable: the environments and the settings are read again.
     pub wrote: bool,
 }

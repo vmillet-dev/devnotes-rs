@@ -1,0 +1,46 @@
+<app-dialog [layer]="'app'" labelledBy="http-extract-title" (closed)="closed.emit()">
+  <form class="body" data-testid="http-extract-dialog" (submit)="submit($event)">
+    <h2 id="http-extract-title" class="title">{{ 'http.extract.title' | transloco }}</h2>
+
+    <div class="field">
+      <span class="label">{{ 'http.extract.path' | transloco }}</span>
+      <code class="path" data-testid="http-extract-path">{{ path() }}</code>
+    </div>
+    <label class="field">
+      <span class="label">{{ 'http.extract.name' | transloco }}</span>
+      <input
+        type="text"
+        class="input"
+        data-testid="http-extract-name"
+        spellcheck="false"
+        autocomplete="off"
+        [value]="name()"
+        (input)="onName($event)"
+      />
+    </label>
+    <label class="check">
+      <input
+        type="checkbox"
+        data-testid="http-extract-secret"
+        [checked]="secret()"
+        (change)="onSecret($event)"
+      />
+      {{ 'http.extract.secret' | transloco }}
+    </label>
+    <p class="into" data-testid="http-extract-into">
+      {{
+        (environmentName() === null ? 'http.extract.intoGlobals' : 'http.extract.into')
+          | transloco: { request: requestName(), environment: environmentName() ?? '' }
+      }}
+    </p>
+
+    <div class="actions">
+      <button type="button" class="action" data-testid="http-extract-cancel" (click)="closed.emit()">
+        {{ 'http.rail.cancel' | transloco }}
+      </button>
+      <button type="submit" class="action primary" data-testid="http-extract-submit" [disabled]="!valid()">
+        {{ 'http.extract.submit' | transloco }}
+      </button>
+    </div>
+  </form>
+</app-dialog>

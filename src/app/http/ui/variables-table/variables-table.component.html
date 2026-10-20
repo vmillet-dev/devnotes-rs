@@ -86,6 +86,20 @@
                 <app-icon [name]="hidden ? 'eye' : 'eye-off'" />
               </button>
             }
+            @if (row.filledBy; as by) {
+              <button
+                type="button"
+                class="filled"
+                data-testid="http-variable-filled"
+                [disabled]="!by.requestId"
+                [attr.title]="
+                  by.requestId ? ('http.variables.openFiller' | transloco: { name: by.name }) : null
+                "
+                (click)="fillerOpened.emit(by)"
+              >
+                {{ 'http.variables.filledBy' | transloco: { name: by.name } }}
+              </button>
+            }
           </div>
         </td>
         <td class="kind-column">
@@ -98,6 +112,11 @@
             [currentId]="row.kind"
             (chosen)="onKind($index, $event)"
           />
+          @if (row.filledBy; as by) {
+            <span class="from" data-testid="http-variable-from">{{
+              'http.variables.from' | transloco: { name: by.name }
+            }}</span>
+          }
         </td>
         <td class="remove-column">
           @if (!blank) {

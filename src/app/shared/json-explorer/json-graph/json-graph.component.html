@@ -69,6 +69,7 @@
             [class.current]="isCursor(node, index)"
             [tabindex]="tabStop(node, index)"
             (click)="chooseRow(node, index)"
+            (contextmenu)="openRowMenu(node, index, $event)"
           >
             <span class="row-key">{{ row.key }}</span>
             <span class="row-value">{{ row.value }}</span>

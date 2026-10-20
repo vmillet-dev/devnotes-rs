@@ -28,6 +28,18 @@ pub struct Variable {
     pub name: String,
     pub value: String,
     pub kind: VariableKind,
+    /// The request whose last send wrote it — by an extraction or a script —: « remplie par Login ».
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[specta(optional)]
+    pub filled_by: Option<FilledBy>,
+}
+
+/// A request that writes a variable at each send; no id for a draft never saved.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FilledBy {
+    pub request_id: Option<String>,
+    pub name: String,
 }
 
 impl Default for Variable {
@@ -37,6 +49,7 @@ impl Default for Variable {
             name: String::new(),
             value: String::new(),
             kind: VariableKind::Text,
+            filled_by: None,
         }
     }
 }

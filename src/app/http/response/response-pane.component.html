@@ -14,6 +14,7 @@
       (fileAsked)="saveFile()"
       (clearAsked)="clear()"
       (scriptOpened)="openScript($event)"
+      (extractAsked)="extracting.set($event)"
     />
   } @else if (stopped(); as stop) {
     <div class="unsent" data-testid="http-response-unsent">
@@ -68,3 +69,13 @@
     {{ 'http.response.clear' | transloco }}
   </button>
 </ng-template>
+
+@if (extracting(); as path) {
+  <app-extract-dialog
+    [path]="path"
+    [requestName]="requestName()"
+    [environmentName]="environments.active()?.name ?? null"
+    (extracted)="addExtraction($event)"
+    (closed)="extracting.set(null)"
+  />
+}

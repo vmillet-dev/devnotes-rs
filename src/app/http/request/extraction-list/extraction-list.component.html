@@ -1,0 +1,30 @@
+<section
+  class="extractions"
+  data-testid="http-extractions"
+  [attr.aria-label]="'http.extract.listTitle' | transloco"
+>
+  <p class="head">
+    {{ 'http.extract.listTitle' | transloco }}
+    <span class="hint">· {{ 'http.extract.listHint' | transloco }}</span>
+  </p>
+  @for (rule of rules(); track $index) {
+    <div class="rule" data-testid="http-extraction" [attr.data-variable]="rule.variable">
+      <code class="path">{{ rule.path }}</code>
+      <span class="arrow" aria-hidden="true">→</span>
+      <code class="to">{{ braced(rule.variable) }}</code>
+      @if (rule.secret) {
+        <span class="secret">{{ 'http.extract.secretShort' | transloco }}</span>
+      }
+      <button
+        type="button"
+        class="remove"
+        data-testid="http-extraction-remove"
+        [attr.aria-label]="'http.extract.remove' | transloco: { variable: rule.variable }"
+        [attr.title]="'http.extract.remove' | transloco: { variable: rule.variable }"
+        (click)="removed.emit($index)"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+  }
+</section>

@@ -29,6 +29,11 @@ export class HttpScriptFocusStore {
     this._request.set({ key: tabKey, focus });
   }
 
+  /** A request's own scripts, on the phase asked: « remplie par Login » leads there. */
+  show(tabKey: string, focus: ScriptFocus): void {
+    this._request.set({ key: tabKey, focus });
+  }
+
   taken(): void {
     this._request.set(null);
   }

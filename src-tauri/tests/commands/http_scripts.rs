@@ -6,9 +6,9 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use devnotes_lib::error::ErrorCode;
-use devnotes_lib::http::environments::{EnvironmentPatch, Variable, VariableKind};
+use devnotes_lib::http::environments::{EnvironmentPatch, FilledBy, Variable, VariableKind};
 use devnotes_lib::http::model::{
-    ContainerSettings, HttpItem, HttpItemKind, HttpMethod, RequestScripts,
+    ContainerSettings, Extraction, HttpItem, HttpItemKind, HttpMethod, RequestScripts,
 };
 use devnotes_lib::http::scripts::model::{FailureKind, ScriptKind, ScriptLevel};
 use devnotes_lib::http::scripts::process::host_from;
@@ -296,4 +296,87 @@ fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
     let kept = entry.record.response.unwrap().scripts.tests;
     assert_eq!(kept.len(), 4);
     assert_eq!(kept[2].actual.as_deref(), Some("\"{{token}}\""));
+}
+
+#[test]
+fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_filled_it() {
+    let session = hosted();
+    let staging = environment(&session, "Staging", false);
+    let patch = EnvironmentPatch {
+        variables: Some(vec![
+            Variable {
+                name: "refresh".to_string(),
+                value: "kept".to_string(),
+                ..Variable::default()
+            },
+            Variable {
+                name: "accessToken".to_string(),
+                value: "old".to_string(),
+                ..Variable::default()
+            },
+        ]),
+        ..EnvironmentPatch::default()
+    };
+    session
+        .call(|app| save_http_environment(staging.clone(), patch, app))
+        .unwrap();
+    let (port, _seen) = serve(1, |_, _| {
+        response(
+            "200 OK",
+            &[("Content-Type", "application/json")],
+            b"{\"access_token\":\"eyJ.a.b\",\"expires_in\":3600}",
+        )
+    });
+    let mut sent = request(&format!("http://127.0.0.1:{port}/login"));
+    sent.environment_id = Some(staging.clone());
+    sent.request_id = Some("login-id".to_string());
+    sent.name = "Login".to_string();
+    sent.document.scripts = scripts(
+        "",
+        "env.set('accessToken', 'from-script');\nconsole.log(res.json().access_token);",
+    );
+    sent.document.extractions = vec![
+        Extraction {
+            path: "body.access_token".to_string(),
+            variable: "accessToken".to_string(),
+            secret: true,
+        },
+        Extraction {
+            path: "body.refresh_token".to_string(),
+            variable: "refresh".to_string(),
+            secret: false,
+        },
+    ];
+
+    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+
+    let found: Vec<(&str, bool)> = answer
+        .scripts
+        .extracted
+        .iter()
+        .map(|extracted| (extracted.variable.as_str(), extracted.found))
+        .collect();
+    assert_eq!(found, [("accessToken", true), ("refresh", false)]);
+    // Made a secret by the rule, it is masked in what the script logged before it.
+    assert_eq!(answer.scripts.logs[0].text, "{{accessToken}}");
+    let sets = session.call(http_environments).unwrap();
+    let rows = &sets
+        .environments
+        .iter()
+        .find(|environment| environment.id == staging)
+        .unwrap()
+        .variables;
+    let token = rows.iter().find(|row| row.name == "accessToken").unwrap();
+    assert_eq!(token.value, "eyJ.a.b");
+    assert_eq!(token.kind, VariableKind::Secret);
+    assert_eq!(
+        token.filled_by,
+        Some(FilledBy {
+            request_id: Some("login-id".to_string()),
+            name: "Login".to_string(),
+        })
+    );
+    let refresh = rows.iter().find(|row| row.name == "refresh").unwrap();
+    assert_eq!(refresh.value, "kept");
+    assert_eq!(refresh.filled_by, None);
 }

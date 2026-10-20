@@ -22,6 +22,7 @@
       [style.padding-left.px]="12 + line.depth * 18"
       [tabindex]="index === cursor() ? 0 : -1"
       (click)="choose(line)"
+      (contextmenu)="openMenu(line, $event)"
       (keydown.enter)="activate(line, $event)"
       (keydown.space)="activate(line, $event)"
     >

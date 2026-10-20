@@ -5,7 +5,7 @@ use super::model::{
     LayerScope, LogEntry, Script, ScriptKind, ScriptLayer, ScriptLevel, TestResult, VariableWrite,
     WriteScope,
 };
-use crate::http::environments::{Variable, VariableKind, variable_faults};
+use crate::http::environments::{FilledBy, Variable, VariableKind, variable_faults};
 use crate::http::model::{HttpItemKind, RequestScripts};
 use crate::http::settings::Inherited;
 use crate::http::variables::{self, VariableLayer, VariableScope};
@@ -136,11 +136,12 @@ pub fn layers_of(layers: &[VariableLayer]) -> Vec<ScriptLayer> {
 
 /// A table after the writes made to it, in their order: a set changes the value of the row of
 /// that name — a secret stays one, and `env.secret` makes one — or adds a row; an unset removes
-/// the rows of that name.
+/// the rows of that name. A row set says `by` wrote it.
 #[must_use]
 pub fn written<'a>(
     table: &[Variable],
     writes: impl IntoIterator<Item = &'a VariableWrite>,
+    by: Option<&FilledBy>,
 ) -> Vec<Variable> {
     let mut table = table.to_vec();
     for write in writes {
@@ -158,6 +159,9 @@ pub fn written<'a>(
                 if write.secret {
                     variable.kind = VariableKind::Secret;
                 }
+                if by.is_some() {
+                    variable.filled_by = by.cloned();
+                }
             }
             None => table.push(Variable {
                 enabled: true,
@@ -168,6 +172,7 @@ pub fn written<'a>(
                 } else {
                     VariableKind::Text
                 },
+                filled_by: by.cloned(),
             }),
         }
     }
@@ -190,7 +195,7 @@ pub fn apply(layers: &mut [VariableLayer], writes: &[VariableWrite]) {
         (WriteScope::Collection, VariableScope::Collection),
     ] {
         if let Some(layer) = layers.iter_mut().find(|layer| layer.scope == level) {
-            layer.variables = written(&layer.variables, writes_to(writes, scope));
+            layer.variables = written(&layer.variables, writes_to(writes, scope), None);
         }
     }
 }
@@ -208,6 +213,7 @@ pub fn locals_layer(locals: &std::collections::BTreeMap<String, String>) -> Vari
                 name: name.clone(),
                 value: value.clone(),
                 kind: VariableKind::Text,
+                filled_by: None,
             })
             .collect(),
     }
@@ -352,7 +358,7 @@ mod tests {
             set(WriteScope::Environment, "key", Some("k"), true),
             set(WriteScope::Environment, "page", Some("2"), false),
         ];
-        let table = written(&table, &writes);
+        let table = written(&table, &writes, None);
         let rows: Vec<(&str, &str, VariableKind)> = table
             .iter()
             .map(|variable| {

@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { JsonLine } from '@core/model/json.model';
+import { JsonLine, ValueMenuAsk } from '@core/model/json.model';
 
 /**
  * The same document as an indented tree: the view for a large one, a line per value. Its
@@ -30,8 +30,11 @@ export class JsonTreeComponent {
   readonly lines = input.required<readonly JsonLine[]>();
   readonly truncated = input(false);
   readonly selectedPath = input<string | null>(null);
+  /** A right-click opens the explorer's menu rather than the WebView's. */
+  readonly withMenu = input(false);
 
   readonly selected = output<string>();
+  readonly menuAsked = output<ValueMenuAsk>();
   /** A container's line: it opens or closes. */
   readonly toggled = output<JsonLine>();
 
@@ -45,6 +48,13 @@ export class JsonTreeComponent {
   protected choose(line: JsonLine): void {
     if (line.opens) this.toggled.emit(line);
     else this.selected.emit(line.path);
+  }
+
+  protected openMenu(line: JsonLine, event: MouseEvent): void {
+    if (!this.withMenu()) return;
+    event.preventDefault();
+    this.selected.emit(line.path);
+    this.menuAsked.emit({ path: line.path, x: event.clientX, y: event.clientY });
   }
 
   protected activate(line: JsonLine, event: Event): void {

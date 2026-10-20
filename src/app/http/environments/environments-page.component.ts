@@ -12,11 +12,15 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import type { FolderColour } from '@core/ipc/bindings';
 import {
   ENVIRONMENT_COLOURS,
+  FilledBy,
   HttpEnvironment,
   VariableRow,
   variableCounts,
 } from '@core/model/http-environment.model';
 import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
+import { HttpScriptFocusStore } from '@core/services/http/http-script-focus.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
+import { HttpWorkspaceStore } from '@core/services/http/http-workspace.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
 import { IconComponent } from '@shared/icon/icon.component';
@@ -38,6 +42,9 @@ export class EnvironmentsPageComponent implements OnInit {
   protected readonly store = inject(HttpEnvironmentsStore);
   protected readonly settings = inject(SettingsStore);
   private readonly transloco = inject(TranslocoService);
+  private readonly tabs = inject(HttpTabsStore);
+  private readonly workspace = inject(HttpWorkspaceStore);
+  private readonly scriptFocus = inject(HttpScriptFocusStore);
 
   protected readonly colours = ENVIRONMENT_COLOURS;
   protected readonly creating = signal(false);
@@ -52,6 +59,15 @@ export class EnvironmentsPageComponent implements OnInit {
 
   ngOnInit(): void {
     void this.store.load();
+  }
+
+  /** The request that fills a variable, open on its scripts after the answer. */
+  protected async openFiller(by: FilledBy): Promise<void> {
+    if (!by.requestId) return;
+    await this.store.flush();
+    await this.tabs.open(by.requestId);
+    this.workspace.show('requests');
+    this.scriptFocus.show(by.requestId, { phase: 'after', line: null });
   }
 
   protected counts(variables: readonly VariableRow[]): { readonly count: number; readonly secrets: number } {

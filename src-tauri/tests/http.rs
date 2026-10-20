@@ -450,7 +450,7 @@ fn marked(key: &str, value: &str) -> devnotes_lib::http::model::KeyValue {
 /// auth and both places a key goes. Answers the last request.
 fn marked_tree(library: &mut Library) -> String {
     use devnotes_lib::http::model::{
-        ContainerSettings, KeyPlace, RequestAuth, RequestBody, RequestScripts,
+        ContainerSettings, Extraction, KeyPlace, RequestAuth, RequestBody, RequestScripts,
     };
 
     let api = collection(library, "zq-collection");
@@ -526,6 +526,11 @@ fn marked_tree(library: &mut Library) -> String {
                     after: "zq-request-after()".to_string(),
                     tests: "zq-request-tests()".to_string(),
                 },
+                extractions: vec![Extraction {
+                    path: "body.zq_rule_path".to_string(),
+                    variable: "zqRuleVariable".to_string(),
+                    secret: true,
+                }],
                 ..RequestDocument::default()
             },
         };
@@ -540,7 +545,9 @@ fn marked_tree(library: &mut Library) -> String {
 /// strings it lets through — a parameter typed by hand, a body, what was answered.
 fn marked_send(library: &mut Library, request_id: &str) {
     use devnotes_lib::http::history::{self, Sent};
-    use devnotes_lib::http::scripts::model::{LogEntry, ScriptStop, ScriptsAnswer, TestResult};
+    use devnotes_lib::http::scripts::model::{
+        Extracted, LogEntry, ScriptStop, ScriptsAnswer, TestResult,
+    };
     use devnotes_lib::http::send::{Exchange, SentBody, SentResponse};
     use devnotes_lib::notes::language::Language;
 
@@ -596,6 +603,11 @@ fn marked_send(library: &mut Library, request_id: &str) {
                     text: "zq-log-text".to_string(),
                     ..LogEntry::default()
                 }],
+                extracted: vec![Extracted {
+                    path: "body.zq_extracted_path".to_string(),
+                    variable: "zqExtractedVariable".to_string(),
+                    found: true,
+                }],
                 wrote: true,
             },
         }),
@@ -630,13 +642,17 @@ fn marked_cookie(library: &mut Library) {
 
 fn marked_environments(library: &mut Library) {
     use devnotes_lib::http::environments::{
-        EnvironmentPatch, Variable, VariableKind, store as sets,
+        EnvironmentPatch, FilledBy, Variable, VariableKind, store as sets,
     };
 
     let variable = |kind: VariableKind| Variable {
         name: "zq-variable-name".to_string(),
         value: "zq-variable-value".to_string(),
         kind,
+        filled_by: Some(FilledBy {
+            request_id: None,
+            name: "zq-filled-by".to_string(),
+        }),
         ..Variable::default()
     };
     let staging = sets::create(library, "zq-environment", t0()).unwrap();

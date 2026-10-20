@@ -5,13 +5,14 @@ import {
   effect,
   inject,
   input,
+  output,
   linkedSignal,
   resource,
   untracked,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
-import { SentResponse } from '@core/model/http.model';
+import { SentResponse, bodyPath } from '@core/model/http.model';
 import { LanguageTag } from '@core/model/language.model';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { contentTypeOf } from '@core/services/http/http-send.store';
@@ -45,6 +46,10 @@ export class ResponseBodyComponent {
   readonly response = input.required<SentResponse>();
   /** What Rust keeps the bytes under, for an image; `null` when it kept none. */
   readonly sendId = input<string | null>(null);
+  /** A value of the answer can be kept in a variable: not from the history. */
+  readonly extractable = input(false);
+  /** The path as the rule reads it: `body.access_token`. */
+  readonly extractAsked = output<string>();
 
   protected readonly explorer = inject(JsonExplorerStore);
   private readonly repository = inject(HttpRepository);
@@ -98,5 +103,10 @@ export class ResponseBodyComponent {
 
   protected copy(text: string): void {
     void this.clipboard.copy(text);
+  }
+
+  /** The rule reads a path from `body`, where the explorer writes it from `$`. */
+  protected extract(path: string): void {
+    this.extractAsked.emit(bodyPath(path));
   }
 }

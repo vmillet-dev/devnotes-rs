@@ -48,6 +48,7 @@ import { SpinnerComponent } from '@shared/spinner/spinner.component';
 import { HTTP_HEADERS } from '@tools/catalogue/http-headers/http-headers.data';
 import { AuthEditorComponent } from '@http/ui/auth-editor/auth-editor.component';
 import { BodyEditorComponent } from '../body-editor/body-editor.component';
+import { ExtractionListComponent } from '../extraction-list/extraction-list.component';
 import { GraphqlEditorComponent } from '../graphql-editor/graphql-editor.component';
 import { WebsocketComposerComponent } from '../websocket-composer/websocket-composer.component';
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
@@ -90,6 +91,7 @@ const sameFields = <T extends object>(a: T, b: T) =>
     BodyEditorComponent,
     ChoiceMenuComponent,
     CodeDialogComponent,
+    ExtractionListComponent,
     GraphqlEditorComponent,
     KeyValueTableComponent,
     ProtectedQuestionComponent,
@@ -308,6 +310,11 @@ export class RequestEditorComponent {
   /** A name nothing sets, written into the active environment — or the globals — to be filled. */
   protected define(name: string): void {
     this.environments.define(name);
+  }
+
+  protected removeExtraction(index: number): void {
+    const extractions = this.tab().draft.parts.extractions.filter((_, at) => at !== index);
+    this.tabs.editParts(this.tab().key, { extractions });
   }
 
   protected onScripts(scripts: ScriptParts): void {

@@ -211,6 +211,7 @@
           [label]="'http.environments.variables' | transloco"
           [rows]="store.rows()"
           (rowsChange)="store.editVariables($event)"
+          (fillerOpened)="openFiller($event)"
         />
       }
       <p class="caption">

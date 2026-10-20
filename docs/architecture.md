@@ -2772,6 +2772,15 @@ then the request's; once answered, the other way round; a blank one is not run.
   the results are kept with the history entry. The response's Tests tab groups them by holder. The console's lines cross once, each secret in force
   written as its `{{name}}`; `history::record_of` drops them. `scripts.wrote` makes the front
   read the environments and the settings again; a script error does too.
+- **An extraction is a rule of the request, not a script** (`RequestDocument.extractions`,
+  #495): after the scripts and the tests, `extract::extract` reads its path from the JSON body —
+  `body.access_token`, `body.items[0]`, `body['a key']`, the response explorer's own way of
+  writing a path from `body` — and the value goes into the active environment, the globals with
+  « Aucun ». A path that leads nowhere leaves the variable as it was and is said in
+  `scripts.extracted`. Every variable a send writes, by a rule or by `env.set`, carries
+  `filled_by` — the request's id and name —, which the environment page shows as « remplie par
+  Login » and opens. The response explorer's right-click menu and its selection panel offer
+  « Extraire vers une variable… » on an answer only (`extractable`).
 - ⚠️ A test's executable is its harness, not the application: `process::host_from` points the
   hosts at `CARGO_BIN_EXE_devnotes` (`tests/commands/http_scripts.rs`).
 

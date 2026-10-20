@@ -11,7 +11,13 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpEnvironmentsRepository } from '@core/data/http-environments.repository';
-import { VARIABLE_KINDS, VariableFault, VariableKind, VariableRow } from '@core/model/http-environment.model';
+import {
+  FilledBy,
+  VARIABLE_KINDS,
+  VariableFault,
+  VariableKind,
+  VariableRow,
+} from '@core/model/http-environment.model';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { IconComponent } from '@shared/icon/icon.component';
 
@@ -41,6 +47,8 @@ export class VariablesTableComponent {
   readonly kind = input.required<string>();
 
   readonly rowsChange = output<readonly VariableRow[]>();
+  /** « remplie par Login »: the request that writes it, to open on its scripts. */
+  readonly fillerOpened = output<FilledBy>();
 
   private readonly repository = inject(HttpEnvironmentsRepository);
 

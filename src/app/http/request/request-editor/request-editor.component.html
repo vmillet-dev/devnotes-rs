@@ -237,7 +237,11 @@
         [requestName]="draft.name"
         (scriptsChange)="onScripts($event)"
         (levelOpened)="openLevel($event)"
-      />
+      >
+        @if (scriptPhase() === 'after' && draft.parts.extractions.length > 0) {
+          <app-extraction-list [rules]="draft.parts.extractions" (removed)="removeExtraction($event)" />
+        }
+      </app-script-editor>
     } @else if (section() === 'tests') {
       <app-script-editor
         phase="tests"

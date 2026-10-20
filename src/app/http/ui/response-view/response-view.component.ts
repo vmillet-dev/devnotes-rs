@@ -47,6 +47,8 @@ export class ResponseViewComponent {
   /** A script after the answer that stopped offers the way to it: not from the history. */
   readonly scriptOpenable = input(false);
   readonly scriptOpened = output<ScriptStop>();
+  /** A value of the answer to keep in a variable: `body.access_token`. */
+  readonly extractAsked = output<string>();
 
   private readonly transloco = inject(TranslocoService);
   private readonly clipboard = inject(ClipboardService);

@@ -21,6 +21,8 @@ import type {
   RequestAuth,
   RequestBody,
   RequestScripts,
+  Extraction,
+  Extracted,
   ScriptStop,
   TestResult,
   FailureKind,
@@ -99,6 +101,7 @@ export type {
   SentResponse,
   ScriptStop,
   TestResult,
+  Extracted,
 };
 
 /** A row of parameters or headers, every field present: the wire leaves out a default. */
@@ -200,6 +203,39 @@ export function testsDeclared(source: string): number {
   return source.match(/(?:^|[^\w.]|pm\.)test\s*\(/g)?.length ?? 0;
 }
 
+/** A value of a JSON answer written into a variable after each send, every field present. */
+export interface ExtractionRow {
+  /** As the response's explorer writes it, from `body`: `body.access_token`. */
+  readonly path: string;
+  readonly variable: string;
+  readonly secret: boolean;
+}
+
+/** The explorer's `$.data.token` as the rule reads it: `body.data.token`. */
+export function bodyPath(explorerPath: string): string {
+  return explorerPath.startsWith('$') ? `body${explorerPath.slice(1)}` : explorerPath;
+}
+
+/** The name proposed for a value: its key in camelCase — `access_token` is `accessToken`. */
+export function variableNameOf(path: string): string {
+  const key = /(?:\.([A-Za-z_$][\w$]*)|\['((?:[^'\\]|\\.)*)'\])$/.exec(path);
+  const word = key?.[1] ?? key?.[2]?.replace(/\\(.)/g, '$1') ?? 'value';
+  const camel = word
+    .replace(/[^A-Za-z0-9]+(.)?/g, (_match, next: string | undefined) => (next ?? '').toUpperCase())
+    .replace(/^[A-Z]/, (first) => first.toLowerCase());
+  return /^[A-Za-z_]/.test(camel) ? camel : `value${camel}`;
+}
+
+/** A key that reads as a token, a password or a key is proposed as a secret. */
+export function looksSecret(path: string): boolean {
+  const key = path.split(/[.[]/).at(-1)?.replace(/['\]]/g, '') ?? '';
+  return (
+    /token|secret|passw|pwd|private|credential|session|signature|cookie|authorization/i.test(key) ||
+    /(?:^|[_-])key$/i.test(key) ||
+    /[a-z]Key$/.test(key)
+  );
+}
+
 /** Where « Ouvrir le script » leads: one of the two scripts, on the line that stopped. */
 export interface ScriptFocus {
   readonly phase: ScriptPhase;
@@ -246,6 +282,7 @@ export interface RequestParts {
   /** The nearest level a `{{name}}` resolves from. */
   readonly variables: readonly VariableRow[];
   readonly scripts: ScriptParts;
+  readonly extractions: readonly ExtractionRow[];
 }
 
 /** A collection's or a folder's own auth, headers and variables, what its requests inherit. */
@@ -283,6 +320,7 @@ export const EMPTY_PARTS: RequestParts = {
   transport: {},
   variables: [],
   scripts: NO_SCRIPTS,
+  extractions: [],
 };
 
 /** What a request tab edits, and what saving writes. */
@@ -363,6 +401,15 @@ export function toParts(document: RequestDocument): RequestParts {
     transport: document.transport ?? {},
     variables: (document.variables ?? []).map(toVariableRow),
     scripts: toScripts(document.scripts),
+    extractions: (document.extractions ?? []).map(toExtraction),
+  };
+}
+
+function toExtraction(extraction: Extraction): ExtractionRow {
+  return {
+    path: extraction.path ?? '',
+    variable: extraction.variable ?? '',
+    secret: extraction.secret ?? false,
   };
 }
 
@@ -406,6 +453,7 @@ export function toDocument(parts: RequestParts): RequestDocument {
     transport: { ...parts.transport },
     variables: [...parts.variables],
     scripts: { ...parts.scripts },
+    extractions: [...parts.extractions],
   };
 }
 
