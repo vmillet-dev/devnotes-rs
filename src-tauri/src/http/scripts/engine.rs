@@ -706,6 +706,8 @@ mod tests {
                  setTimeout(() => { order.push('late'); env.set('order', order.join(',')); }, 40);
                  setTimeout(() => order.push('soon'), 10);
                  const id = setInterval(() => { order.push('tick'); clearInterval(id); }, 5);
+                 const busy = Date.now() + 20;
+                 while (Date.now() < busy) {}
                  await new Promise((resolve) => setTimeout(resolve, 1));");
             assert_eq!(outcome.failure, None);
             assert_eq!(outcome.writes[0].value.as_deref(), Some("tick,soon,late"));
