@@ -12,6 +12,21 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.14.0] - 2026-10-20
+
+### ✨ Added
+
+- HTTP: run a collection or a folder over iterations and a data file (#984)
+- HTTP: a console with the traffic, script logs and errors (#983)
+- HTTP: a response value kept in a variable for the next request (#982)
+- HTTP: named tests after the response, with a Tests tab of results (#981)
+- HTTP: scripts run before the send and after the response (#980)
+- HTTP: dynamic variables, and a sandbox to run request scripts (#979)
+
+### 🧰 Under the hood
+
+- Scripts: timers due together fire in the order of their deadlines (#985)
+
 ## [0.13.1] - 2026-10-19
 
 ### 🧰 Under the hood
