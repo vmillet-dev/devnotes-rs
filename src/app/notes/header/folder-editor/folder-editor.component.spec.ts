@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Folder } from '@core/model/folder.model';
 import { FoldersStore } from '@core/state/folders.store';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
@@ -84,6 +84,71 @@ describe('FolderEditorComponent', () => {
     await click('[data-testid="folder-delete"]');
     expect(actions.deleted).toEqual(['perf']);
     expect(finished).toBe(1);
+  });
+
+  describe('a sub-folder', () => {
+    let made: Folder[];
+
+    async function nest(name: string): Promise<void> {
+      await click('[data-testid="folder-subfolder-open"]');
+      const input = root().querySelector<HTMLInputElement>('[data-testid="folder-subfolder-input"]');
+      if (input) input.value = name;
+      input?.form?.dispatchEvent(new Event('submit'));
+      await fixture.whenStable();
+    }
+
+    beforeEach(() => {
+      made = [];
+      fixture.componentInstance.created.subscribe((folder) => made.push(folder));
+    });
+
+    it('opens its field on demand, focused', async () => {
+      expect(root().querySelector('[data-testid="folder-subfolder-input"]')).toBeNull();
+
+      await click('[data-testid="folder-subfolder-open"]');
+
+      const input = root().querySelector('[data-testid="folder-subfolder-input"]');
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('is made inside this folder, then the panel says it is done', async () => {
+      await nest('Index');
+
+      expect(actions.created).toEqual([{ name: 'Index', parentId: 'perf' }]);
+      expect(made.map((folder) => folder.name)).toEqual(['Index']);
+      expect(finished).toBe(1);
+    });
+
+    it('is not asked for under a blank name', async () => {
+      await nest('  ');
+
+      expect(actions.created).toEqual([]);
+      expect(finished).toBe(0);
+    });
+
+    it('leaves the field open when the name is refused', async () => {
+      actions.accepts = false;
+
+      await nest('Index');
+
+      expect(made).toEqual([]);
+      expect(finished).toBe(0);
+      expect(root().querySelector('[data-testid="folder-subfolder-input"]')).not.toBeNull();
+    });
+
+    it('says nothing once the panel has gone, the folder made all the same', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      await click('[data-testid="folder-subfolder-open"]');
+      const input = root().querySelector<HTMLInputElement>('[data-testid="folder-subfolder-input"]');
+      if (input) input.value = 'Index';
+      input?.form?.dispatchEvent(new Event('submit'));
+      fixture.destroy();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(actions.created).toEqual([{ name: 'Index', parentId: 'perf' }]);
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
   });
 
   it('offers to select the notes only where they are on screen', async () => {

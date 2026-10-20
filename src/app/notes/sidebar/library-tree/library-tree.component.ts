@@ -220,6 +220,13 @@ export class LibraryTreeComponent {
     this.editedFolder.set(null);
   }
 
+  /** A sub-folder made from a row's panel: in sight under its parent, marked as a move is. */
+  protected showMade(folder: Folder): void {
+    const holder = folder.parentId ?? folder.spaceId;
+    this.reveal(holder);
+    this.marks.mark({ id: folder.id, parentId: holder });
+  }
+
   protected async endDrag(event: PointerEvent): Promise<void> {
     const ended = this.drag.end(event);
     const target = ended?.target;

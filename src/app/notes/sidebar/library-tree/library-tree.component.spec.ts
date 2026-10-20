@@ -272,6 +272,30 @@ describe('LibraryTreeComponent, nested', () => {
     expect(el('[data-id="index"]')).not.toBeNull();
   });
 
+  it('opens the folder a sub-folder is made in from its ⋯, and marks the new row', async () => {
+    el('[data-testid="folder-twisty"][data-folder-id="perf"]')!.click();
+    await fixture.whenStable();
+    el('[data-testid="folder-edit"][data-folder-id="perf"]')!.click();
+    await fixture.whenStable();
+    el('[data-testid="folder-subfolder-open"]')!.click();
+    await fixture.whenStable();
+    const input = el<HTMLInputElement>('[data-testid="folder-subfolder-input"]')!;
+    input.value = 'Plans';
+    input.form!.dispatchEvent(new Event('submit'));
+
+    const store = TestBed.inject(FoldersStore);
+    await vi.waitFor(() => expect(store.allFolders().some((each) => each.name === 'Plans')).toBe(true));
+    fixture.componentRef.setInput('folders', store.allFolders());
+    await fixture.whenStable();
+
+    const made = store.allFolders().find((each) => each.name === 'Plans')!;
+    expect(made).toMatchObject({ spaceId: 'sql', parentId: 'perf' });
+    expect(el('app-folder-editor')).toBeNull();
+    expect(row('perf').querySelector(`.folders [data-id="${made.id}"]`)).not.toBeNull();
+    expect(row(made.id).getAttribute('data-moved')).toBe('row');
+    expect(row('perf').getAttribute('data-moved')).toBe('parent');
+  });
+
   it('moves a folder into the one above it with Alt+→, says so and offers it back', async () => {
     name('base').dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, bubbles: true }),

@@ -140,10 +140,16 @@ export class FoldersStore {
     this._naming.set(false);
   }
 
-  /** Uniqueness is not checked here: only storage sees the real state of the database. */
+  /**
+   * Uniqueness is not checked here: only storage sees the real state of the database. A
+   * sub-folder is in its parent's space, which the rail offers whether or not it is open.
+   */
   async createFolder(name: string, parentId: string | null = null): Promise<Folder | null> {
     const trimmed = name.trim();
-    const spaceId = this.spaces.activeSpaceId();
+    const spaceId =
+      parentId === null
+        ? this.spaces.activeSpaceId()
+        : (this.allFolders().find((folder) => folder.id === parentId)?.spaceId ?? null);
     if (!trimmed || spaceId === null) return null;
 
     const created = await this.notifier.attempt(

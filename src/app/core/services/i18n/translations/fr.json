@@ -161,6 +161,8 @@
     "newFolderLabel": "Nom du nouveau dossier",
     "newFolderPlaceholder": "Nom du dossier",
     "newFolderSubmit": "Créer",
+    "newSubfolder": "Nouveau sous-dossier",
+    "newSubfolderLabel": "Nom du sous-dossier à créer dans {{name}}",
     "needsASpace": "Choisissez un espace pour y créer un dossier.",
     "optionsLabel": "Options du dossier {{name}}",
     "renameLabel": "Renommer le dossier",

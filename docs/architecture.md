@@ -3293,10 +3293,12 @@ asks `hasUserFilters` and not `isFiltering` — the latter is the _view's_ answe
 inside an opened folder, so Escape would clear a search that is not there and never fall
 through.
 
-**The folder's three actions live in one component, and it performs them.** `folder-editor/`
-holds the rename, the palette and the delete and calls `FoldersStore` itself; the switcher,
-the breadcrumb, the rail and the zone menu on the board all project it, and hear only
-`finished`, to close whatever they opened it from. `space-editor/` is its twin over
+**The folder's actions live in one component, and it performs them.** `folder-editor/`
+holds the rename, the palette, a new sub-folder and the delete and calls `FoldersStore`
+itself; the switcher, the breadcrumb, the rail and the zone menu on the board all project it,
+and hear only `finished`, to close whatever they opened it from. The rail alone also hears
+`created`, to open the parent and mark the new row. A sub-folder is made in its parent's
+space, which the rail offers whether or not it is the space open. `space-editor/` is its twin over
 `SpacesStore`, and the page binds none of their events. Deleting from the breadcrumb goes back a level, to the
 parent that now holds what it held — `FoldersStore.deleteFolder` opens the parent.
 
