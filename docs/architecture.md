@@ -2790,6 +2790,18 @@ then the request's; once answered, the other way round; a blank one is not run.
   extractions ran, so a value one makes a secret is hidden in what was logged before. The front
   keeps them per tab for the session (`HttpConsoleStore`, 500 lines, never written), folded
   under the answer until unfolded; its height is the application's (`httpConsoleShare`).
+- **A run is sends, not a history** (`http/runner.rs`, `run_http_collection`, #496): the
+  requests under a collection or a folder, in the order the page set, one after the other, each a
+  `Flight` with `record` off — no history entry — and, when the variables are not kept,
+  `persist` off: what its scripts and extractions write lives in the run's `overlay`, laid over
+  the levels each next request reads. A data file (`read_data`: a CSV with its header, or a JSON
+  array of objects) is an iteration a row, the row `pm.iterationData` and the nearest level.
+  `pm.execution.setNextRequest` goes to the request of that name, `null` ends the run; a skipped
+  request neither fails nor stops it. Each step is `HTTP_RUN_EVENT` (`Started`, `Ended` with its
+  `RunResult`, `Finished`); `cancel_http_run` cancels the send under way and the delay. The lock is
+  taken for the tree and each request read, never across a send. Its console lines are under
+  `run:<id>#…`, one console for the run. A protected environment is asked once by the page,
+  counting the requests that could change it; the yes is the run's `confirmed`.
 - ⚠️ A test's executable is its harness, not the application: `process::host_from` points the
   hosts at `CARGO_BIN_EXE_devnotes` (`tests/commands/http_scripts.rs`).
 

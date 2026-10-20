@@ -60,7 +60,12 @@ function rowOf(entry: ConsoleEntry, requestName: string, current: string | null)
     origin:
       'by' in line && line.by
         ? { key: originKey(line, line.by), params: { name: line.by.name } }
-        : { key: 'http.console.origins.request', params: { name: requestName } },
+        : entry.iteration === null
+          ? { key: 'http.console.origins.request', params: { name: entry.request || requestName } }
+          : {
+              key: 'http.console.origins.iteration',
+              params: { name: entry.request, iteration: entry.iteration },
+            },
   } satisfies Partial<ConsoleRow>;
   const own = 'by' in line && !line.by && entry.sendId === current;
   switch (line.kind) {

@@ -6,7 +6,17 @@ export type { ConsoleEvent, ConsoleLine, ConsoleOrigin } from '@core/ipc/binding
 export interface ConsoleEntry {
   readonly at: number;
   readonly sendId: string;
+  /** The request sent, and in a run of several its iteration, from 1. */
+  readonly request: string;
+  readonly iteration: number | null;
   readonly line: ConsoleLine;
+}
+
+/** A run's sends are named `run:<id>#…`: its console is one, under `run:<id>`. */
+export function runConsoleKey(sendId: string): string | null {
+  return sendId.startsWith('run:')
+    ? sendId.slice(0, sendId.indexOf('#') < 0 ? undefined : sendId.indexOf('#'))
+    : null;
 }
 
 export type ConsoleFilter = 'all' | 'traffic' | 'logs' | 'errors';

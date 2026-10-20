@@ -8,7 +8,13 @@ import {
   secretSegments,
 } from './http-console.model';
 
-const at = (line: ConsoleEntry['line']): ConsoleEntry => ({ at: 0, sendId: 'Login#1', line });
+const at = (line: ConsoleEntry['line']): ConsoleEntry => ({
+  at: 0,
+  sendId: 'Login#1',
+  request: 'Login',
+  iteration: null,
+  line,
+});
 
 describe('the console’s lines', () => {
   it('files each line under traffic, logs or errors, and counts them', () => {

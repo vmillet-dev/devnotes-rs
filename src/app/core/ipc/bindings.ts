@@ -220,6 +220,19 @@ export const commands = {
 	sendHttpRequest: (request: SendRequest_Deserialize) => typedError<SentResponse, AppError>(__TAURI_INVOKE("send_http_request", { request })),
 	/**  `false` when that send had already ended. */
 	cancelHttpSend: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("cancel_http_send", { id })),
+	/**
+	 *  A collection or a folder run, one request after the other, each sent as a send is — its
+	 *  scripts, its tests, its extractions — but written in no history. Each step is said as an
+	 *  event; answers once the run is over. The lock is held for reads alone, never over a send.
+	 */
+	runHttpCollection: (run: RunRequest) => typedError<null, AppError>(__TAURI_INVOKE("run_http_collection", { run })),
+	/**
+	 *  « Annuler » on a run: the request under way is cancelled with it. `false` when no run of that
+	 *  id was under way.
+	 */
+	cancelHttpRun: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("cancel_http_run", { id })),
+	/**  A run's data file read: a CSV with its header, or a JSON array of objects. */
+	readHttpRunData: (path: string) => typedError<RunData, AppError>(__TAURI_INVOKE("read_http_run_data", { path })),
 	/**  The whole body of the last answer to `id`, not the text shown: `false` when there is none. */
 	saveHttpResponse: (id: string, path: string) => typedError<boolean, AppError>(__TAURI_INVOKE("save_http_response", { id, path })),
 	/**  A closed tab lets its last body go. */
@@ -450,6 +463,8 @@ export const FIELD_NAME_PATTERN = "^[A-Za-z0-9_-]+$" as const;
 export const GLOBAL_ACTION_EVENT = "devnotes:action" as const;
 
 export const HTTP_CONSOLE_EVENT = "http-console" as const;
+
+export const HTTP_RUN_EVENT = "http-run" as const;
 
 export const MINIMUM_PASSPHRASE_LENGTH = 12 as const;
 
@@ -1009,6 +1024,9 @@ export type ConsoleEvent = {
 	/**  The send it belongs to, under the id the front sent it with. */
 	id: string,
 	at: string,
+	/**  The request sent, and in a run of several its iteration, from 1: the line's right column. */
+	request: string,
+	iteration: number | null,
 	line: ConsoleLine,
 };
 
@@ -1473,7 +1491,9 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 /**  `method` is what the script wrote. */
 "httpScriptMethod" | 
 /**  The scripts made the request one that a protected `environment` asks about: `method`. */
-"httpScriptProtected";
+"httpScriptProtected" | 
+/**  A run's data file: `fault` is `unreadable` or `empty`. */
+"httpRunData";
 
 export type Exchange = {
 	method: HttpMethod,
@@ -3040,6 +3060,72 @@ export type Run = {
 	offset: string,
 	epochMilliseconds: number | null,
 };
+
+/**  The rows of a data file, each an iteration; its columns are `pm.iterationData`. */
+export type RunData = {
+	columns: string[],
+	rows: { [key in string]: string }[],
+};
+
+/**  An error as its code and the values its sentence states. */
+export type RunError = {
+	code: ErrorCode,
+	params: { [key in string]: string },
+};
+
+export type RunEvent = {
+	id: string,
+	step: RunStep,
+};
+
+/**  What a run is asked to do: its switches are the runner's checkboxes, each its own. */
+export type RunRequest = {
+	/**  Chosen by the front: what its events and « Annuler » name it by. */
+	id: string,
+	/**  The collection or the folder run. */
+	item: HttpItem,
+	/**  Its requests in the order they run, those left out absent. */
+	order: string[],
+	iterations: number,
+	delayMs: number,
+	/**  An iteration a row, over `iterations`. */
+	data: RunData | null,
+	stopOnFailure: boolean,
+	/**  What the scripts and the extractions write is kept; otherwise for the run alone. */
+	keepVariables: boolean,
+	/**  Each answer kept in the report, for the session. */
+	keepResponses: boolean,
+	environmentId: string | null,
+	/**  The one yes a protected environment asked for before the run. */
+	confirmed: boolean,
+};
+
+/**  One request of one iteration, once it ended. */
+export type RunResult = {
+	iteration: number,
+	requestId: string,
+	name: string,
+	/**  The folders it sits in, under the item run. */
+	path: string[],
+	kind: RequestKind,
+	method: HttpMethod,
+	status: number | null,
+	reason: string,
+	millis: number,
+	tests: TestResult[],
+	/**  What kept it from an answer. */
+	error: RunError | null,
+	stop: ScriptStop | null,
+	/**  `pm.execution.skipRequest()`: not sent, not failed. */
+	skipped: boolean,
+	response: SentResponse | null,
+};
+
+export type RunStep = 
+/**  A request is about to leave: the progress line says which. */
+{ kind: "started"; iteration: number; index: number; name: string } | { kind: "ended"; result: RunResult } | 
+/**  The run is over: ran to its end, stopped at a failure or by a script, or cancelled. */
+{ kind: "finished"; cancelled: boolean; millis: number };
 
 /**
  *  One seeded note, and which of the seeded folders it lands in.

@@ -35,6 +35,7 @@ import {
   toParts,
 } from '@core/model/http.model';
 import { UsedVariable } from '@core/model/http-environment.model';
+import { RunData, RunRequest } from '@core/model/http-runner.model';
 import { CodeOptions, CodeTarget, GeneratedCode } from '@core/model/http-code.model';
 
 export interface HttpCall {
@@ -113,6 +114,9 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   readonly requests = new Map<string, OpenedRequest>();
   readonly calls: HttpCall[] = [];
   failNext: Error | null = null;
+  /** What a run answers once over; its steps are the spec's to play. */
+  pendingRun: Promise<void> | null = null;
+  runData: RunData = { columns: [], rows: [] };
   private nextId = 0;
 
   /** The calls of one command, their arguments in order. */
@@ -392,6 +396,19 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   responseImage(id: string): Promise<string | null> {
     return this.record('responseImage', [id], () => this.imageAnswer);
+  }
+
+  runCollection(run: RunRequest): Promise<void> {
+    const pending = this.pendingRun;
+    return this.record('runCollection', [run], () => undefined).then(() => pending ?? undefined);
+  }
+
+  cancelRun(id: string): Promise<boolean> {
+    return this.record('cancelRun', [id], () => true);
+  }
+
+  readRunData(path: string): Promise<RunData> {
+    return this.record('readRunData', [path], () => this.runData);
   }
 
   forgetResponse(id: string): Promise<void> {

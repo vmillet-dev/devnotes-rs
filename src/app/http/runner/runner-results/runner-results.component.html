@@ -1,0 +1,115 @@
+@let said = summary();
+<div class="summary" data-testid="http-runner-summary">
+  @if (said.failures > 0) {
+    <span class="pill failing">{{ 'http.runner.failures' | transloco: { count: said.failures } }}</span>
+  } @else {
+    <span class="pill passing">{{ 'http.runner.allPassed' | transloco }}</span>
+  }
+  <span class="figures" data-testid="http-runner-figures">
+    {{ 'http.runner.requests' | transloco: { count: said.requests } }} ·
+    {{ 'http.tests.ratio' | transloco: { passed: said.passed, total: said.tests } }}
+    @if (millis(); as millis) {
+      · {{ seconds(millis) }} s
+    }
+  </span>
+</div>
+@if (said.tests > 0) {
+  <div
+    class="bar"
+    role="img"
+    [attr.aria-label]="'http.tests.bar' | transloco: { passed: said.passed, total: said.tests }"
+  >
+    <span class="part passing" [style.flex-grow]="said.passed"></span>
+    <span class="part failing" [style.flex-grow]="said.tests - said.passed"></span>
+  </div>
+}
+<fieldset class="filters">
+  <legend class="visually-hidden">{{ 'http.runner.filter' | transloco }}</legend>
+  @for (id of filters; track id) {
+    <button
+      type="button"
+      class="filter"
+      data-testid="http-runner-filter"
+      [attr.data-filter]="id"
+      [attr.aria-pressed]="filter() === id"
+      (click)="filterChanged.emit(id)"
+    >
+      {{ 'http.runner.filters.' + id | transloco }} <span class="count">{{ counts()[id] }}</span>
+    </button>
+  }
+</fieldset>
+
+<div class="results" data-testid="http-runner-results">
+  @for (group of groups(); track group.iteration) {
+    @if (iterations() > 1) {
+      <div class="iteration" data-testid="http-runner-iteration">
+        {{ 'http.runner.iteration' | transloco: { iteration: group.iteration + 1, count: iterations() } }}
+        <code class="row-values">{{ rowOf(group.iteration) }}</code>
+      </div>
+    }
+    @for (result of group.results; track $index) {
+      @let bad = isFailed(result);
+      @let error = errorOf(result);
+      <div
+        class="result"
+        data-testid="http-runner-result"
+        [attr.data-result]="result.skipped ? 'skipped' : bad ? 'failed' : 'passed'"
+        [class.failing]="bad"
+      >
+        <button type="button" class="top" [attr.aria-expanded]="open().has(result)" (click)="toggle(result)">
+          <span class="mark" aria-hidden="true">{{ result.skipped ? '–' : bad ? '✗' : '✓' }}</span>
+          <span class="badge" [attr.data-method]="result.method">{{ badge(result) }}</span>
+          <span class="name">
+            @for (folder of result.path; track $index) {
+              <i>{{ folder }} › </i>
+            }
+            {{ result.name }}
+          </span>
+          <span class="status">
+            @if (result.skipped) {
+              {{ 'http.runner.skipped' | transloco }}
+            } @else if (result.status !== null) {
+              {{ result.status }} {{ result.reason }}
+            } @else {
+              {{ 'http.runner.noAnswer' | transloco }}
+            }
+          </span>
+          <span class="time">{{ result.status !== null ? result.millis + ' ms' : '' }}</span>
+          <span class="tests">{{ passedOf(result) }}</span>
+        </button>
+        @if (open().has(result)) {
+          <div class="details" data-testid="http-runner-details">
+            @if (error) {
+              <p class="line bad">{{ error.key | transloco: error.params }}</p>
+            }
+            @if (result.stop; as stop) {
+              <p class="line bad">{{ stop.message }}</p>
+            }
+            @for (test of result.tests; track $index) {
+              <div class="line" data-testid="http-runner-test" [class.bad]="!test.passed && !test.skipped">
+                <span class="mark" aria-hidden="true">{{
+                  test.skipped ? '–' : test.passed ? '✓' : '✗'
+                }}</span>
+                {{ test.name }}
+                @if (!test.passed && !test.skipped && (test.expected || test.actual)) {
+                  <span class="versus">{{
+                    'http.runner.versus'
+                      | transloco: { expected: test.expected ?? '—', actual: test.actual ?? '—' }
+                  }}</span>
+                } @else if (!test.passed && !test.skipped && test.message) {
+                  <span class="versus">{{ test.message }}</span>
+                }
+              </div>
+              @if (!test.passed && test.code) {
+                <code class="code">{{ test.code }}</code>
+              }
+            }
+            @if (result.response; as response) {
+              <app-response-view class="response" [response]="response" [requestName]="result.name" />
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

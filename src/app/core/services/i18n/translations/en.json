@@ -551,6 +551,10 @@
     "httpScriptSkipped": "The script before the send skipped the request: it was not sent.",
     "httpScriptMethod": "The script before the send chose the method “{{method}}”, which does not exist.",
     "httpScriptProtected": "The script before the send made it a {{method}} to {{environment}}, which is protected.",
+    "httpRunData": {
+      "unreadable": "This file reads neither as a CSV with its header nor as a JSON array of objects.",
+      "empty": "This file holds no row of data."
+    },
     "calcFailed": "The sheet could not be computed."
   },
   "tray": {
@@ -3224,6 +3228,7 @@
       "actions": {
         "newRequest": "New request",
         "newFolder": "New folder",
+        "run": "Run…",
         "rename": "Rename",
         "duplicate": "Duplicate",
         "delete": "Delete",
@@ -3731,8 +3736,49 @@
         "sent": "pm.sendRequest · {{name}}",
         "before": "before the send · {{name}}",
         "after": "after the response · {{name}}",
-        "tests": "Tests · {{name}}"
+        "tests": "Tests · {{name}}",
+        "iteration": "{{name}} · iteration {{iteration}}"
       }
+    },
+    "runner": {
+      "crumb": "Run ›",
+      "noEnvironment": "No environment",
+      "progress": "Iteration {{iteration}} / {{iterations}} · {{index}} / {{count}} · {{name}}…",
+      "cancel": "Cancel",
+      "start": "Start",
+      "again": "Run again",
+      "startAnyway": "Start anyway",
+      "settings": "Run settings",
+      "iterations": "Iterations",
+      "delay": "Delay (ms)",
+      "dataRows": "{count, plural, one {# row} other {# rows}}",
+      "dataColumns": "{count, plural, one {# column} other {# columns}}",
+      "dataClear": "Remove the data file",
+      "dataChoose": "Data file, CSV or JSON…",
+      "dataFailed": "This data file could not be read.",
+      "stopOnFailure": "Stop at the first failure",
+      "keepVariables": "Keep the variables changed",
+      "keepResponses": "Keep the responses",
+      "order": "Order · {{running}} of {{count}} requests",
+      "orderLabel": "Order of the requests",
+      "orderHint": "Drag, or Alt ↑ ↓ on the row; Space leaves it out.",
+      "include": "Run {{name}}",
+      "protected": "{{name}} is protected: {{count}} requests of {{total}} can change it ({{requests}}).",
+      "failed": "The run could not go to its end.",
+      "failures": "{count, plural, one {# failure} other {# failures}}",
+      "allPassed": "All pass",
+      "requests": "{count, plural, one {# request} other {# requests}}",
+      "iterationsCount": "{count, plural, one {# iteration} other {# iterations}}",
+      "filter": "Filter the results",
+      "filters": {
+        "all": "All",
+        "passed": "Passed",
+        "failed": "Failed"
+      },
+      "iteration": "Iteration {{iteration}} / {{count}}",
+      "skipped": "Skipped by a script",
+      "noAnswer": "No answer",
+      "versus": "expected {{expected}}, received {{actual}}"
     },
     "variables": {
       "name": "Name",

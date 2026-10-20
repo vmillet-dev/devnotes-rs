@@ -100,6 +100,9 @@ pub struct ConsoleEvent {
     /// The send it belongs to, under the id the front sent it with.
     pub id: String,
     pub at: DateTime<Utc>,
+    /// The request sent, and in a run of several its iteration, from 1: the line's right column.
+    pub request: String,
+    pub iteration: Option<u32>,
     pub line: ConsoleLine,
 }
 

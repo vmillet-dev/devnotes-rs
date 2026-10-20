@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 
 /** What the HTTP workspace shows: the open requests, or one of the pages from the rail's foot. */
-export type HttpWorkspacePage = 'requests' | 'history' | 'environments';
+export type HttpWorkspacePage = 'requests' | 'history' | 'environments' | 'runner';
 
 /** One page at a time: opening the history leaves the environments, and a request leaves both. */
 @Injectable({ providedIn: 'root' })

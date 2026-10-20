@@ -1,6 +1,11 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HTTP_CONSOLE_SUBSCRIBER } from '@core/ipc/http-console-events';
-import { CONSOLE_LINES_KEPT, ConsoleEntry, ConsoleEvent } from '@core/model/http-console.model';
+import {
+  CONSOLE_LINES_KEPT,
+  ConsoleEntry,
+  ConsoleEvent,
+  runConsoleKey,
+} from '@core/model/http-console.model';
 import { subscribeCancellable } from '@core/utils/subscription.util';
 import { HttpSendStore } from './http-send.store';
 
@@ -51,9 +56,15 @@ export class HttpConsoleStore {
   }
 
   private take(event: ConsoleEvent): void {
-    const key = this.sending.keyOf(event.id);
+    const key = runConsoleKey(event.id) ?? this.sending.keyOf(event.id);
     if (key === null) return;
-    const entry: ConsoleEntry = { at: Date.parse(event.at), sendId: event.id, line: event.line };
+    const entry: ConsoleEntry = {
+      at: Date.parse(event.at),
+      sendId: event.id,
+      request: event.request,
+      iteration: event.iteration,
+      line: event.line,
+    };
     this.replace(key, [...this.linesOf(key), entry].slice(-CONSOLE_LINES_KEPT));
   }
 

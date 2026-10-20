@@ -1,0 +1,238 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.runner {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.crumb {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.environment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 11.5px;
+  color: var(--text-1);
+}
+
+.dot {
+  @include folder-hues;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--folder-hue, var(--text-2));
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+.action {
+  @include unstyled-control;
+  @include surface($radius: 7px);
+  @include focus-ring(1px);
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &.primary {
+    background: var(--amber-fill);
+    border-color: var(--amber-edge);
+    color: var(--amber-ink);
+    font-weight: 700;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 290px;
+  padding: 16px;
+  border-right: 1px solid var(--line-soft);
+  overflow-y: auto;
+  font-size: 12.5px;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.input {
+  @include text-field;
+  @include surface(var(--bg-1), 7px, var(--line));
+  @include focus-ring(-1px);
+  min-width: 0;
+  padding: 6px 10px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-0);
+
+  &:disabled {
+    color: var(--text-2);
+  }
+}
+
+.data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg-1);
+  font-size: 12px;
+}
+
+.data-meta {
+  color: var(--text-2);
+  font-size: 11.5px;
+}
+
+.remove {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(1px);
+  justify-content: center;
+  margin-left: auto;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--red);
+  }
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  input {
+    margin: 0;
+    accent-color: var(--amber-fill);
+  }
+}
+
+.rule {
+  height: 1px;
+  background: var(--line-soft);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.report {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 180px;
+  font-size: 12.5px;
+  color: var(--text-2);
+
+  p {
+    margin: 0;
+  }
+}
+
+.console {
+  flex: 0 0 35%;
+}

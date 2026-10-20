@@ -60,6 +60,7 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   httpScriptSkipped: true,
   httpScriptMethod: true,
   httpScriptProtected: true,
+  httpRunData: true,
 };
 
 function isAppError(cause: unknown): cause is AppError {

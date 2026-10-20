@@ -13,6 +13,7 @@ pub mod history;
 pub mod model;
 pub mod query;
 pub mod response;
+pub mod runner;
 pub mod scripts;
 pub mod search;
 pub mod send;
@@ -22,6 +23,7 @@ pub mod transport;
 pub mod variables;
 pub mod websocket;
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use chrono::Utc;
@@ -36,8 +38,9 @@ use model::{
 };
 use scripts::around::{self, Around};
 use scripts::model::{
-    Extracted, FailureKind, Job, LogEntry, Outcome, Phase, RequestFault, Script, ScriptError,
-    ScriptFailure, ScriptInfo, ScriptRequest, ScriptStop, VariableWrite, WriteScope,
+    Extracted, FailureKind, Job, LayerScope, LogEntry, Outcome, Phase, RequestFault, Script,
+    ScriptError, ScriptFailure, ScriptInfo, ScriptLayer, ScriptRequest, ScriptStop, VariableWrite,
+    WriteScope,
 };
 use scripts::network::{self, Network};
 use scripts::process::ScriptProcess;
@@ -479,6 +482,7 @@ struct Prepared {
 
 /// One send and the scripts around it, from the command's side: their host, the jar's copy
 /// they change, what they wrote, and what is kept once it ends — however it ends.
+#[allow(clippy::struct_excessive_bools)]
 struct Flight<R: Runtime> {
     app: AppHandle<R>,
     id: String,
@@ -495,6 +499,16 @@ struct Flight<R: Runtime> {
     by: environments::FilledBy,
     /// What the last phase logged and sent, for the console.
     heard: (Vec<LogEntry>, Vec<network::ScriptSend>),
+    /// `false` in a run: what was sent is the report's, not the history's.
+    record: bool,
+    /// `false` in a run that keeps nothing: what the scripts write lives in `overlay`, for the
+    /// run alone.
+    persist: bool,
+    overlay: Vec<VariableWrite>,
+    /// A run's data file: this iteration's row, `pm.iterationData` and the nearest level.
+    data: BTreeMap<String, String>,
+    /// `pm.execution.setNextRequest`, in a run.
+    next: Option<runner::Next>,
     /// What the scripts and the send did to the jar, in their order.
     changes: Vec<cookies::Change>,
     wrote: bool,
@@ -520,9 +534,17 @@ impl<R: Runtime> Flight<R> {
             environment: None,
             confirmed: false,
             collection_id: None,
-            info: ScriptInfo::default(),
+            info: ScriptInfo {
+                iteration_count: 1,
+                ..ScriptInfo::default()
+            },
             by: environments::FilledBy::default(),
             heard: (Vec::new(), Vec::new()),
+            record: true,
+            persist: true,
+            overlay: Vec::new(),
+            data: BTreeMap::new(),
+            next: None,
             changes: Vec::new(),
             wrote: false,
             sent: None,
@@ -544,7 +566,7 @@ impl<R: Runtime> Flight<R> {
         } = request;
         let Prepared {
             inherited,
-            layers,
+            mut layers,
             environment,
             jar,
         } = prepare(
@@ -561,16 +583,8 @@ impl<R: Runtime> Flight<R> {
         self.environment = environment;
         self.confirmed = confirmed;
         self.collection_id = collection_id;
-        self.info = ScriptInfo {
-            iteration: 0,
-            iteration_count: 1,
-            request_name: name.clone(),
-            request_id: request_id.clone(),
-        };
-        self.by = environments::FilledBy {
-            request_id: request_id.clone(),
-            name: name.clone(),
-        };
+        self.named(&name, request_id.as_deref());
+        self.layered(&mut layers);
         let mut going = Going {
             kind,
             method,
@@ -603,7 +617,7 @@ impl<R: Runtime> Flight<R> {
         if let Ok(response) = &mut answer {
             finished = self.answered(&around, &mut going, response).await;
         }
-        self.sent = Some(history::Sent {
+        self.sent = self.record.then(|| history::Sent {
             kind,
             name,
             request_id,
@@ -620,6 +634,24 @@ impl<R: Runtime> Flight<R> {
             return Err(send::SendError::Cancelled.into());
         }
         answer
+    }
+
+    fn named(&mut self, name: &str, request_id: Option<&str>) {
+        self.info.request_name = name.to_string();
+        self.info.request_id = request_id.map(str::to_string);
+        self.by = environments::FilledBy {
+            request_id: request_id.map(str::to_string),
+            name: name.to_string(),
+        };
+    }
+
+    /// What a run lays over the levels read: what its scripts wrote, kept for it alone, and
+    /// this iteration's row, the nearest of all.
+    fn layered(&self, layers: &mut Vec<variables::VariableLayer>) {
+        around::apply(layers, &self.overlay);
+        if !self.data.is_empty() {
+            layers.insert(0, around::locals_layer(&self.data));
+        }
     }
 
     fn sent_environment(&self) -> Option<history::SentEnvironment> {
@@ -680,6 +712,7 @@ impl<R: Runtime> Flight<R> {
                 .await;
             // Said once the extractions ran: a value one makes a secret is hidden in the logs.
             self.report(&answered, &outcome, &going.layers);
+            self.follow(&outcome);
             for missed in response
                 .scripts
                 .extracted
@@ -709,7 +742,7 @@ impl<R: Runtime> Flight<R> {
             scripts: scripts.to_vec(),
             request: ScriptRequest::of(going.kind, going.method, &going.document),
             response: None,
-            layers: around::layers_of(&going.layers),
+            layers: self.script_layers(going),
             environment: self
                 .environment
                 .as_ref()
@@ -719,6 +752,21 @@ impl<R: Runtime> Flight<R> {
         }
     }
 
+    fn script_layers(&self, going: &Going) -> Vec<ScriptLayer> {
+        let mut layers = around::layers_of(&going.layers);
+        if !self.data.is_empty() {
+            layers.insert(
+                0,
+                ScriptLayer {
+                    scope: LayerScope::Data,
+                    from: String::new(),
+                    values: self.data.clone(),
+                },
+            );
+        }
+        layers
+    }
+
     /// The scripts before the send: what they change goes out, what stops them keeps it in.
     async fn before(&mut self, scripts: &[Script], going: &mut Going) -> Result<(), AppError> {
         let url = variables::Resolver::new(&going.layers).fill(&going.document.url);
@@ -726,6 +774,7 @@ impl<R: Runtime> Flight<R> {
         let outcome = self.run(job).await?;
         self.write(&outcome.writes, &mut going.layers).await;
         self.report(scripts, &outcome, &going.layers);
+        self.follow(&outcome);
         if let Some(failure) = &outcome.failure {
             return Err(ScriptError::Stopped(ScriptStop::of(failure, scripts)).into());
         }
@@ -888,11 +937,23 @@ impl<R: Runtime> Flight<R> {
         self.changes.extend(changes);
     }
 
+    /// `pm.execution.setNextRequest` in a phase: what a run goes to next.
+    fn follow(&mut self, outcome: &Outcome) {
+        if outcome.next.set {
+            self.next = Some(match &outcome.next.name {
+                Some(name) => runner::Next::To(name.clone()),
+                None => runner::Next::End,
+            });
+        }
+    }
+
     /// A line of this send's console, at once: the front shows it as it comes.
     fn say(&self, at: chrono::DateTime<Utc>, line: console::ConsoleLine) {
         let event = console::ConsoleEvent {
             id: self.id.clone(),
             at,
+            request: self.info.request_name.clone(),
+            iteration: (self.info.iteration_count > 1).then_some(self.info.iteration + 1),
             line,
         };
         let _ = self.app.emit(console::HTTP_CONSOLE_EVENT, event);
@@ -919,6 +980,10 @@ impl<R: Runtime> Flight<R> {
             return;
         }
         around::apply(layers, writes);
+        if !self.persist {
+            self.overlay.extend_from_slice(writes);
+            return;
+        }
         let writes = writes.to_vec();
         let environment_id = self
             .environment
@@ -1223,6 +1288,226 @@ pub struct VariablesRequest {
     pub collection_id: Option<String>,
     pub folder_id: Option<String>,
     pub environment_id: Option<String>,
+}
+
+/// A collection or a folder run, one request after the other, each sent as a send is — its
+/// scripts, its tests, its extractions — but written in no history. Each step is said as an
+/// event; answers once the run is over. The lock is held for reads alone, never over a send.
+#[tauri::command]
+#[specta::specta]
+pub async fn run_http_collection<R: Runtime>(
+    run: runner::RunRequest,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
+    let tree = blocking(app.clone(), |_, db| {
+        let mut connection = lock(db)?;
+        Ok(store::tree(&mut connection)?)
+    })
+    .await?;
+    let placed = runner::placed_under(&tree, &run.item);
+    let order: Vec<runner::Placed> = run
+        .order
+        .iter()
+        .filter_map(|id| placed.iter().find(|known| &known.id == id).cloned())
+        .collect();
+    let rows = run
+        .data
+        .as_ref()
+        .map(|data| data.rows.clone())
+        .unwrap_or_default();
+    let iterations = if rows.is_empty() {
+        run.iterations.max(1)
+    } else {
+        u32::try_from(rows.len()).unwrap_or(u32::MAX)
+    };
+    let runs = app.state::<runner::Runs>();
+    runs.start(&run.id);
+    let started = std::time::Instant::now();
+    let mut overlay = Vec::new();
+    let mut cancelled = false;
+    'run: for iteration in 0..iterations {
+        let row = rows.get(iteration as usize).cloned().unwrap_or_default();
+        let mut at = (!order.is_empty()).then_some(0);
+        let mut steps = 0_u32;
+        while let Some(index) = at {
+            if runs.cancelled(&run.id) {
+                cancelled = true;
+                break 'run;
+            }
+            steps += 1;
+            let placed = &order[index];
+            let step = RunStep {
+                run: &run,
+                iteration,
+                iterations,
+                index,
+                steps,
+                placed,
+                row: &row,
+            };
+            let Some((result, next)) = run_step(&app, step, &mut overlay).await else {
+                cancelled = true;
+                break 'run;
+            };
+            let failed = result.failed();
+            say_run(
+                &app,
+                &run.id,
+                runner::RunStep::Ended {
+                    result: Box::new(result),
+                },
+            );
+            if run.stop_on_failure && failed {
+                break 'run;
+            }
+            // `setNextRequest(null)` ends the run, as it ends a collection run elsewhere.
+            if next == Some(runner::Next::End) {
+                break 'run;
+            }
+            at = runner::next_index(&order, index, next.as_ref());
+            if at.is_some() && !wait(&runs, &run.id, run.delay_ms).await {
+                cancelled = true;
+                break 'run;
+            }
+        }
+    }
+    runs.finish(&run.id);
+    let millis = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
+    say_run(
+        &app,
+        &run.id,
+        runner::RunStep::Finished { cancelled, millis },
+    );
+    Ok(())
+}
+
+/// One request of one iteration of a run.
+struct RunStep<'a> {
+    run: &'a runner::RunRequest,
+    iteration: u32,
+    iterations: u32,
+    index: usize,
+    steps: u32,
+    placed: &'a runner::Placed,
+    row: &'a BTreeMap<String, String>,
+}
+
+/// A request of a run, sent; `None` when « Annuler » stopped it. Beside its result, where a
+/// script said to go next.
+async fn run_step<R: Runtime>(
+    app: &AppHandle<R>,
+    step: RunStep<'_>,
+    overlay: &mut Vec<VariableWrite>,
+) -> Option<(runner::RunResult, Option<runner::Next>)> {
+    let RunStep {
+        run,
+        iteration,
+        iterations,
+        index,
+        steps,
+        placed,
+        row,
+    } = step;
+    say_run(
+        app,
+        &run.id,
+        runner::RunStep::Started {
+            iteration,
+            index: u32::try_from(index).unwrap_or(u32::MAX),
+            name: placed.name.clone(),
+        },
+    );
+    let id = placed.id.clone();
+    let request = blocking(app.clone(), move |_, db| {
+        let mut connection = lock(db)?;
+        Ok(store::get_request(&mut connection, &id)?)
+    })
+    .await;
+    let request = match request {
+        Ok(request) => request,
+        Err(error) => return Some((runner::gone(iteration, placed, error), None)),
+    };
+    let send_id = format!("run:{}#{iteration}.{steps}", run.id);
+    app.state::<runner::Runs>().at(&run.id, &send_id);
+    let mut flight = Flight::new(app.clone(), &send_id);
+    flight.record = false;
+    flight.persist = run.keep_variables;
+    flight.overlay = std::mem::take(overlay);
+    flight.data.clone_from(row);
+    flight.info.iteration = iteration;
+    flight.info.iteration_count = iterations;
+    let answer = flight
+        .send(send::SendRequest {
+            id: send_id,
+            kind: request.kind,
+            method: request.method,
+            document: request.document.clone(),
+            collection_id: Some(request.collection_id.clone()),
+            folder_id: request.folder_id.clone(),
+            name: request.name.clone(),
+            request_id: Some(request.id.clone()),
+            environment_id: run.environment_id.clone(),
+            confirmed: run.confirmed,
+        })
+        .await;
+    *overlay = std::mem::take(&mut flight.overlay);
+    let next = flight.next.take();
+    flight.keep().await;
+    if matches!(&answer, Err(error) if error.code == crate::error::ErrorCode::HttpCancelled) {
+        return None;
+    }
+    let result = runner::result_of(
+        iteration,
+        &request,
+        placed.path.clone(),
+        answer,
+        run.keep_responses,
+    );
+    Some((result, next))
+}
+
+/// The delay between two requests, cut short by « Annuler »: `false` when it was.
+async fn wait(runs: &runner::Runs, id: &str, millis: u32) -> bool {
+    let until = std::time::Instant::now() + std::time::Duration::from_millis(u64::from(millis));
+    while std::time::Instant::now() < until {
+        if runs.cancelled(id) {
+            return false;
+        }
+        let left = until.saturating_duration_since(std::time::Instant::now());
+        tokio::time::sleep(left.min(std::time::Duration::from_millis(50))).await;
+    }
+    !runs.cancelled(id)
+}
+
+fn say_run<R: Runtime>(app: &AppHandle<R>, id: &str, step: runner::RunStep) {
+    let _ = app.emit(
+        runner::HTTP_RUN_EVENT,
+        runner::RunEvent {
+            id: id.to_string(),
+            step,
+        },
+    );
+}
+
+/// « Annuler » on a run: the request under way is cancelled with it. `false` when no run of that
+/// id was under way.
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_http_run<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
+    let Some(at) = app.state::<runner::Runs>().cancel(&id) else {
+        return Ok(false);
+    };
+    if let Some(send) = at {
+        app.state::<send::Sending>().cancel(&send);
+    }
+    Ok(true)
+}
+
+/// A run's data file read: a CSV with its header, or a JSON array of objects.
+#[tauri::command]
+#[specta::specta]
+pub async fn read_http_run_data(path: String) -> Result<runner::RunData, AppError> {
+    off_thread(move || runner::read_file(&path)).await?
 }
 
 /// `false` when that send had already ended.

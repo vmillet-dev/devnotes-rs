@@ -14,6 +14,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HttpContents, HttpItem, RequestKind, shortBadge } from '@core/model/http.model';
 import { AreaStore } from '@core/services/areas/area.store';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpRunnerStore } from '@core/services/http/http-runner.store';
 import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
 import { HttpWorkspaceStore } from '@core/services/http/http-workspace.store';
@@ -133,6 +134,7 @@ export class HttpRailComponent {
   protected readonly areas = inject(AreaStore);
   protected readonly settings = inject(SettingsStore);
   protected readonly store = inject(HttpCollectionsStore);
+  private readonly runner = inject(HttpRunnerStore);
   protected readonly tabs = inject(HttpTabsStore);
   protected readonly history = inject(HttpHistoryStore);
   protected readonly environments = inject(HttpEnvironmentsStore);
@@ -215,6 +217,9 @@ export class HttpRailComponent {
           underId: row.id,
           depth: row.depth + 1,
         });
+        return;
+      case 'run':
+        this.runner.open(row);
         return;
       case 'settings':
         this.store.openSettings(row);

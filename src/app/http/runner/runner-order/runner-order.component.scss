@@ -1,0 +1,91 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.caption {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.order {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.row {
+  @include focus-ring(-2px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-0);
+
+  &.off {
+    color: var(--text-2);
+
+    .name {
+      text-decoration: line-through;
+    }
+  }
+
+  &.landing {
+    box-shadow: inset 0 2px 0 var(--amber-fill);
+  }
+}
+
+.check {
+  margin: 0;
+  accent-color: var(--amber-fill);
+}
+
+.grip {
+  color: var(--text-2);
+  font-size: 11px;
+  letter-spacing: -2px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.badge {
+  @include http-method-hues;
+  flex-shrink: 0;
+  min-width: 30px;
+  font-family: var(--font-mono), monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder {
+  margin-right: 4px;
+  color: var(--text-2);
+}
+
+.hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
