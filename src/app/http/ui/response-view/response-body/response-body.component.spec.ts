@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { loadGrammar } from '@core/services/syntax/grammars';
 import { SentResponse } from '@core/model/http.model';
 import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { FakeJsonRepository } from '@testing/fake-json-repository';
@@ -47,7 +48,9 @@ describe('ResponseBodyComponent', () => {
   it('lays JSON out and colours it, shows it as it came, or explores it once asked', async () => {
     expect(segments()).toEqual(['pretty', 'raw', 'graph', 'tree']);
     expect(el('[data-testid="http-response-pretty"]')?.textContent).toContain('"data"');
-    expect(el('[data-testid="http-response-pretty"] .hljs-attr')).not.toBeNull();
+    await loadGrammar('json');
+    await fixture.whenStable();
+    expect(el('[data-testid="http-response-pretty"] .tok-property')).not.toBeNull();
     expect(json.queries).toEqual([]);
 
     await choose('raw');

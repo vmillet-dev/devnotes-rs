@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { loadGrammar } from '@core/services/syntax/grammars';
 import type { Editor } from '@tiptap/core';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { RichTextEditorComponent } from './rich-text-editor.component';
@@ -363,7 +364,9 @@ describe('RichTextEditorComponent', () => {
 
       const block = surface().querySelector('pre')!;
       expect(block.getAttribute('data-language')).toBe('SQL');
-      expect(block.querySelector('.hljs-keyword')?.textContent).toBe('SELECT');
+      await loadGrammar('sql');
+      await fixture.whenStable();
+      expect(surface().querySelector('pre .tok-keyword')?.textContent).toBe('SELECT');
     });
 
     /** The code field's level, not the prose's tab. */

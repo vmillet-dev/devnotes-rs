@@ -1,0 +1,5 @@
+(ns notes.core)
+
+(defn greet [name]
+  (let [greeting (str "Hello, " name)]
+    (println greeting)))

@@ -1,74 +1,48 @@
-// The `.hljs-*` classes highlight.js emits, in the DevNotes palette: CSS variables only.
+// The `.tok-*` classes `CODE_HIGHLIGHTER` gives Lezer's tags, in the DevNotes palette: CSS
+// variables only. The editor and the cards draw the same ones.
 /*
- * ⚠️ These rules must stay GLOBAL: the coloured HTML is injected through [innerHTML], and
+ * ⚠️ These rules must stay GLOBAL: a card's coloured HTML is injected through [innerHTML], and
  * Angular puts no `_ngcontent-*` attribute on DOM created that way — a rule written in
  * `code-viewer.component.scss` would never match, and the colouring would be missing.
  */
 
-.hljs-keyword,
-.hljs-type,
-.hljs-built_in,
-.hljs-operator,
-.hljs-selector-tag,
-.hljs-tag,
-.hljs-doctag {
+.tok-keyword {
   color: var(--blue);
 }
 
-.hljs-string,
-.hljs-regexp,
-.hljs-char.escape_,
-.hljs-quote,
-.hljs-link,
-.hljs-addition {
+.tok-string {
   color: var(--green);
 }
 
-.hljs-number,
-.hljs-literal,
-.hljs-symbol,
-.hljs-bullet,
-.hljs-variable.constant_ {
+.tok-literal {
   color: var(--amber-text);
 }
 
-.hljs-title,
-.hljs-section,
-.hljs-name,
-.hljs-selector-id,
-.hljs-selector-class,
-.hljs-selector-pseudo {
+.tok-name {
   color: var(--purple);
 }
 
-.hljs-attr,
-.hljs-attribute,
-.hljs-property,
-.hljs-variable,
-.hljs-template-variable,
-.hljs-params {
+.tok-property {
   color: var(--text-0);
 }
 
-.hljs-meta,
-.hljs-meta .hljs-keyword,
-.hljs-meta .hljs-string {
+.tok-meta {
   color: var(--text-1);
 }
 
-.hljs-comment {
+.tok-comment {
   color: var(--text-2);
   font-style: italic;
 }
 
-.hljs-deletion {
+.tok-deleted {
   color: var(--red);
 }
 
-.hljs-emphasis {
+.tok-emphasis {
   font-style: italic;
 }
 
-.hljs-strong {
+.tok-strong {
   font-weight: 700;
 }

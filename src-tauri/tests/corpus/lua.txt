@@ -1,0 +1,8 @@
+local function greet(name)
+  if name == nil then
+    return "hello"
+  end
+  return "hello " .. name
+end
+
+print(greet("world"))

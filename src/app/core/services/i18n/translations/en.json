@@ -369,7 +369,7 @@
       "formattedTitle": "Formatted:",
       "formattedList": "{{list}}.",
       "notFormattedTitle": "Not by Prettier:",
-      "notFormattedList": "{{list}}. The button is disabled there and says why."
+      "notFormattedList": "every other language. The button is disabled there and says why."
     },
     "modifiedPrefix": "Modified",
     "kind": {

@@ -1,0 +1,5 @@
+Feature: Login
+  Scenario: A known user signs in
+    Given a user named "ada"
+    When she signs in
+    Then she sees her notes

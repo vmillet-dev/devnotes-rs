@@ -8,7 +8,9 @@ closed_enum! {
     pub enum Language {
         Json = "json",
         Js = "js",
+        Jsx = "jsx",
         Ts = "ts",
+        Tsx = "tsx",
         Py = "py",
         Rs = "rs",
         Go = "go",
@@ -16,14 +18,19 @@ closed_enum! {
         Cs = "cs",
         Php = "php",
         C = "c",
+        Cpp = "cpp",
         Sql = "sql",
         Graphql = "graphql",
         Yml = "yml",
         Toml = "toml",
         Xml = "xml",
         Html = "html",
+        Vue = "vue",
+        Angular = "angular",
         Css = "css",
         Scss = "scss",
+        Less = "less",
+        Sass = "sass",
         Sh = "sh",
         /// PowerShell: what generated code is saved as, and what a pasted cmdlet reads as.
         Ps1 = "ps1",
@@ -32,6 +39,114 @@ closed_enum! {
         Swift = "swift",
         Dart = "dart",
         Ex = "ex",
+        Apl = "apl",
+        Armasm = "armasm",
+        Asn1 = "asn1",
+        Asm = "asm",
+        Asterisk = "asterisk",
+        Bf = "bf",
+        Ceylon = "ceylon",
+        Clj = "clj",
+        Gss = "gss",
+        Cmake = "cmake",
+        Cobol = "cobol",
+        Coffee = "coffee",
+        Lisp = "lisp",
+        Cr = "cr",
+        Cypher = "cypher",
+        Cython = "cython",
+        D = "d",
+        Diff = "diff",
+        Dockerfile = "dockerfile",
+        Dtd = "dtd",
+        Dylan = "dylan",
+        Ebnf = "ebnf",
+        Ecl = "ecl",
+        Eiffel = "eiffel",
+        Elm = "elm",
+        Erl = "erl",
+        Fs = "fs",
+        Factor = "factor",
+        Fcl = "fcl",
+        Forth = "forth",
+        Fortran = "fortran",
+        Gherkin = "gherkin",
+        Glsl = "glsl",
+        Groovy = "groovy",
+        Hs = "hs",
+        Haxe = "haxe",
+        Http = "http",
+        Hxml = "hxml",
+        Idl = "idl",
+        Ini = "ini",
+        Jinja = "jinja",
+        Jsonld = "jsonld",
+        Jl = "jl",
+        Tex = "tex",
+        Liquid = "liquid",
+        Ls = "ls",
+        Lua = "lua",
+        Mathematica = "mathematica",
+        Matlab = "matlab",
+        Mbox = "mbox",
+        Mirc = "mirc",
+        Modelica = "modelica",
+        Mscgen = "mscgen",
+        Mumps = "mumps",
+        Ntriples = "ntriples",
+        Nesc = "nesc",
+        Nginx = "nginx",
+        Nix = "nix",
+        Nsis = "nsis",
+        Objc = "objc",
+        Objcpp = "objcpp",
+        Ml = "ml",
+        Oz = "oz",
+        Pascal = "pascal",
+        Pegjs = "pegjs",
+        Perl = "perl",
+        Asc = "asc",
+        Pig = "pig",
+        Prisma = "prisma",
+        Properties = "properties",
+        Proto = "proto",
+        Pug = "pug",
+        Puppet = "puppet",
+        Q = "q",
+        R = "r",
+        Rpmspec = "rpmspec",
+        Sas = "sas",
+        Scala = "scala",
+        Scheme = "scheme",
+        Sieve = "sieve",
+        Smalltalk = "smalltalk",
+        Sol = "sol",
+        Solr = "solr",
+        Sparql = "sparql",
+        Spreadsheet = "spreadsheet",
+        Squirrel = "squirrel",
+        Sml = "sml",
+        Styl = "styl",
+        Tcl = "tcl",
+        Tf = "tf",
+        Textile = "textile",
+        Tiddlywiki = "tiddlywiki",
+        Tiki = "tiki",
+        Troff = "troff",
+        Ttcn = "ttcn",
+        Ttcncfg = "ttcncfg",
+        Turtle = "turtle",
+        Vbs = "vbs",
+        Velocity = "velocity",
+        Verilog = "verilog",
+        Vhdl = "vhdl",
+        Vb = "vb",
+        Webidl = "webidl",
+        Wat = "wat",
+        Xquery = "xquery",
+        Yacas = "yacas",
+        Z80 = "z80",
+        Zig = "zig",
         Md = "md",
         /// Default, and the signal that the front end chose nothing.
         #[default]
@@ -117,7 +232,7 @@ type Scorer = fn(&Sample<'_>) -> u32;
 
 /// Every language that can be guessed at, each scoring itself. The order means nothing: a
 /// language added here needs markers with honest weights, not a slot.
-const SCORERS: [(Language, Scorer); 26] = [
+const SCORERS: [(Language, Scorer); 76] = [
     (Language::Json, score_json),
     (Language::Php, score_php),
     (Language::Xml, score_xml),
@@ -144,7 +259,62 @@ const SCORERS: [(Language, Scorer); 26] = [
     (Language::Swift, score_swift),
     (Language::Dart, score_dart),
     (Language::Ex, score_elixir),
+    (Language::Cpp, score_cpp),
+    (Language::Jsx, score_jsx),
+    (Language::Tsx, score_tsx),
+    (Language::Vue, score_vue),
+    (Language::Angular, score_angular),
+    (Language::Less, score_less),
+    (Language::Dockerfile, score_dockerfile),
+    (Language::Tf, score_hcl),
+    (Language::Nginx, score_nginx),
+    (Language::Proto, score_proto),
+    (Language::Lua, score_lua),
+    (Language::Hs, score_haskell),
+    (Language::Ml, score_ocaml),
+    (Language::Clj, score_clojure),
+    (Language::Lisp, score_lisp),
+    (Language::Scheme, score_scheme),
+    (Language::R, score_r),
+    (Language::Cmake, score_cmake),
+    (Language::Erl, score_erlang),
+    (Language::Elm, score_elm),
+    (Language::Perl, score_perl),
+    (Language::Groovy, score_groovy),
+    (Language::Verilog, score_verilog),
+    (Language::Vhdl, score_vhdl),
+    (Language::Diff, score_diff),
+    (Language::Http, score_http),
+    (Language::Tex, score_tex),
+    (Language::Gherkin, score_gherkin),
+    (Language::Scala, score_scala),
+    (Language::Objc, score_objc),
+    (Language::Glsl, score_glsl),
+    (Language::Cobol, score_cobol),
+    (Language::Fortran, score_fortran),
+    (Language::Sparql, score_sparql),
+    (Language::Cypher, score_cypher),
+    (Language::Zig, score_zig),
+    (Language::Nix, score_nix),
+    (Language::Prisma, score_prisma),
+    (Language::Sol, score_solidity),
+    (Language::Asc, score_armor),
+    (Language::Jinja, score_jinja),
+    (Language::Liquid, score_liquid),
+    (Language::Wat, score_wat),
+    (Language::Jsonld, score_jsonld),
+    (Language::Matlab, score_matlab),
+    (Language::D, score_d),
+    (Language::Vb, score_vb),
+    (Language::Tcl, score_tcl),
+    (Language::Cython, score_cython),
+    (Language::Puppet, score_puppet),
 ];
+
+/// The languages detection can answer; the others are only ever chosen.
+pub fn detectable() -> impl Iterator<Item = Language> {
+    SCORERS.iter().map(|(language, _)| *language)
+}
 
 /// The best-scoring language, or `txt` when nothing proved itself. Weights settle what an
 /// order would: `<?php` outweighs the `<` of a processing instruction, and Rust's `println!`
@@ -156,7 +326,7 @@ pub fn from_content(content: &str) -> Language {
     }
     // A shebang settles the question on its own, whatever follows it.
     if sample.trimmed.starts_with("#!") {
-        return Language::Sh;
+        return from_shebang(sample.lines.first().copied().unwrap_or_default());
     }
 
     let mut best = (Language::default(), 0);
@@ -584,6 +754,659 @@ fn score_elixir(sample: &Sample<'_>) -> u32 {
         + worth(WEAK, sample.any_line(|line| line == "end"))
 }
 
+/// The interpreter a shebang names, `env` or not; a shell, or one this file does not know, is
+/// `sh` as before.
+fn from_shebang(first_line: &str) -> Language {
+    const INTERPRETERS: [(&str, Language); 9] = [
+        ("python", Language::Py),
+        ("node", Language::Js),
+        ("ruby", Language::Rb),
+        ("perl", Language::Perl),
+        ("lua", Language::Lua),
+        ("php", Language::Php),
+        ("pwsh", Language::Ps1),
+        ("Rscript", Language::R),
+        ("elixir", Language::Ex),
+    ];
+
+    let mut words = first_line.trim_start_matches("#!").split_whitespace();
+    let program = words.next().unwrap_or_default();
+    let program = if program.ends_with("/env") {
+        words
+            .find(|word| !word.starts_with('-'))
+            .unwrap_or_default()
+    } else {
+        program
+    };
+    let name = program.rsplit('/').next().unwrap_or_default();
+
+    INTERPRETERS
+        .iter()
+        .find(|(interpreter, _)| name.starts_with(interpreter))
+        .map_or(Language::Sh, |(_, language)| *language)
+}
+
+/// The languages below are guessed on a signature or not at all: what else they write only adds
+/// to it, so none of them can tie an older language on a marker they share.
+fn signed(signature: bool, extra: u32) -> u32 {
+    if signature { SIGNATURE + extra } else { 0 }
+}
+
+/// What C never writes: the standard library's namespace, a stream, a template, a header
+/// with no `.h` — which earns C's `#include` too, so it is worth more here.
+fn score_cpp(sample: &Sample<'_>) -> u32 {
+    const MARKERS: [&str; 10] = [
+        "std::cout",
+        "std::cerr",
+        "std::endl",
+        "std::vector<",
+        "std::unique_ptr<",
+        "std::shared_ptr<",
+        "std::make_unique<",
+        "using namespace std;",
+        "template <typename",
+        "template<typename",
+    ];
+    const HEADERS: [&str; 8] = [
+        "#include <iostream>",
+        "#include <vector>",
+        "#include <string>",
+        "#include <memory>",
+        "#include <map>",
+        "#include <algorithm>",
+        "#include <thread>",
+        "#include <array>",
+    ];
+
+    let header = sample.line_starts_with_any(&HEADERS);
+    signed(
+        header || MARKERS.iter().any(|marker| sample.has(marker)),
+        worth(STRONG, header)
+            + worth(
+                STRONG,
+                sample.line_starts_with_any(&["public:", "private:", "protected:"]),
+            ),
+    )
+}
+
+/// Markup in a script, with what React alone writes in it.
+fn jsx_markup(sample: &Sample<'_>) -> bool {
+    const ATTRIBUTES: [&str; 6] = [
+        "className=",
+        "onClick={",
+        "onChange={",
+        "onSubmit={",
+        "useState(",
+        "useEffect(",
+    ];
+
+    (sample.has("/>") || sample.has("</")) && ATTRIBUTES.iter().any(|marker| sample.has(marker))
+}
+
+fn script_keyword(sample: &Sample<'_>) -> bool {
+    sample.line_starts_with_any(&["import ", "export ", "const ", "function ", "return "])
+}
+
+/// The markup is worth what HTML's tags are, on top: a component outscores the page.
+fn score_jsx(sample: &Sample<'_>) -> u32 {
+    signed(
+        jsx_markup(sample),
+        STRONG + worth(STRONG, script_keyword(sample)),
+    )
+}
+
+/// JSX plus TypeScript's own score, so a typed component outscores both, and nothing without
+/// a type.
+fn score_tsx(sample: &Sample<'_>) -> u32 {
+    let typed = score_typescript(sample);
+    signed(
+        jsx_markup(sample) && typed > 0,
+        STRONG + typed + worth(STRONG, script_keyword(sample)),
+    )
+}
+
+fn score_vue(sample: &Sample<'_>) -> u32 {
+    const DIRECTIVES: [&str; 7] = [
+        "v-if=",
+        "v-for=",
+        "v-model=",
+        "v-bind:",
+        "v-on:",
+        "v-else",
+        "<script setup",
+    ];
+
+    let component = sample.line_starts_with_any(&["<template"])
+        && sample.has("</template>")
+        && sample.has("<script");
+    signed(
+        component || DIRECTIVES.iter().any(|marker| sample.has(marker)),
+        worth(STRONG, sample.has("</")),
+    )
+}
+
+fn score_angular(sample: &Sample<'_>) -> u32 {
+    const MARKERS: [&str; 8] = [
+        "*ngIf=",
+        "*ngFor=",
+        "[(ngModel)]",
+        "[formGroup]",
+        "formControlName=",
+        "routerLink",
+        "; track ",
+        "| async",
+    ];
+
+    signed(
+        MARKERS.iter().any(|marker| sample.has(marker)),
+        worth(STRONG, sample.has("</")),
+    )
+}
+
+/// `@name: value;` — an at-rule never has a colon right after a bare name.
+fn score_less(sample: &Sample<'_>) -> u32 {
+    let variable = sample.any_line(|line| {
+        line.strip_prefix('@').is_some_and(|rest| {
+            rest.split_once(':')
+                .is_some_and(|(name, _)| !name.is_empty() && name.chars().all(is_identifier_char))
+        })
+    });
+
+    signed(variable, 0)
+}
+
+fn score_dockerfile(sample: &Sample<'_>) -> u32 {
+    const INSTRUCTIONS: [&str; 9] = [
+        "RUN ",
+        "COPY ",
+        "ADD ",
+        "WORKDIR ",
+        "ENTRYPOINT ",
+        "CMD ",
+        "EXPOSE ",
+        "ENV ",
+        "ARG ",
+    ];
+
+    signed(
+        sample.line_starts_with_any(&["FROM "]) && sample.line_starts_with_any(&INSTRUCTIONS),
+        0,
+    )
+}
+
+fn score_hcl(sample: &Sample<'_>) -> u32 {
+    const BLOCKS: [&str; 7] = [
+        "resource \"",
+        "provider \"",
+        "variable \"",
+        "module \"",
+        "output \"",
+        "data \"",
+        "terraform {",
+    ];
+
+    signed(
+        sample.any_line(|line| starts_with_any(line, &BLOCKS) && line.ends_with('{')),
+        worth(STRONG, sample.has("${var.") || sample.has(" = var.")),
+    )
+}
+
+fn score_nginx(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["proxy_pass ", "server_name ", "try_files "]),
+        worth(
+            STRONG,
+            sample.any_line(|line| line.starts_with("location ") && line.ends_with('{')),
+        ),
+    )
+}
+
+fn score_proto(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("syntax = \"proto3\"") || sample.has("syntax = \"proto2\""),
+        worth(STRONG, sample.line_starts_with_any(&["message "])),
+    )
+}
+
+/// `local x = …` with its spaces: a shell's `local x=…` has none. A line ending on `then`
+/// with no `;` is not a shell's `if [ … ]; then`.
+fn score_lua(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.any_line(|line| {
+            line.starts_with("local function ")
+                || (line.starts_with("local ") && line.contains(" = "))
+        }),
+        worth(
+            STRONG,
+            sample.any_line(|line| line.ends_with(" then") && !line.contains(';')),
+        ),
+    )
+}
+
+/// A type signature on a line of its own, which Elixir's `@spec` never opens.
+fn score_haskell(sample: &Sample<'_>) -> u32 {
+    let signature = sample.any_line(|line| {
+        line.split_once(" :: ").is_some_and(|(name, _)| {
+            name.chars().next().is_some_and(|c| c.is_ascii_lowercase())
+                && name
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '\''))
+        })
+    });
+    let module = sample.any_line(|line| line.starts_with("module ") && line.ends_with(" where"));
+
+    signed(
+        signature || module || sample.line_starts_with_any(&["import qualified "]),
+        worth(STRONG, sample.has(" = do")),
+    )
+}
+
+fn score_ocaml(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("let () =")
+            || sample.has("Printf.printf")
+            || sample.has("print_endline")
+            || sample.has("= struct")
+            || sample.any_line(|line| line.ends_with(";;")),
+        worth(
+            STRONG,
+            sample.has("let rec ")
+                || sample.any_line(|line| line.starts_with("| ") && line.contains("->")),
+        ),
+    )
+}
+
+fn score_clojure(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["(defn ", "(defn- ", "(ns ", "(defmacro "]),
+        worth(STRONG, sample.has("(let [")),
+    )
+}
+
+/// Clojure writes `(defmacro` too, and its own `(defn` beside it.
+fn score_lisp(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["(defun ", "(defvar ", "(defparameter ", "(defmacro "])
+            && !sample.has("(defn"),
+        worth(STRONG, sample.has("(setf ") || sample.has("(format t ")),
+    )
+}
+
+fn score_scheme(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&[
+            "(define (",
+            "(define-syntax ",
+            "(define-record-type ",
+            "#lang ",
+        ]),
+        worth(STRONG, sample.has("(lambda (")),
+    )
+}
+
+fn score_r(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("<- function(")
+            || sample.has("data.frame(")
+            || sample.line_starts_with_any(&["library("]),
+        worth(STRONG, sample.has(" <- ")),
+    )
+}
+
+fn score_cmake(sample: &Sample<'_>) -> u32 {
+    const COMMANDS: [&str; 5] = [
+        "cmake_minimum_required(",
+        "add_executable(",
+        "add_library(",
+        "target_link_libraries(",
+        "find_package(",
+    ];
+
+    signed(
+        sample.line_starts_with_any(&COMMANDS),
+        worth(STRONG, sample.line_starts_with_any(&["project(", "set("])),
+    )
+}
+
+fn score_erlang(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["-module(", "-export(["]) || sample.has("io:format("),
+        0,
+    )
+}
+
+fn score_elm(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.any_line(|line| line.starts_with("module ") && line.contains(" exposing ("))
+            || sample.line_starts_with_any(&["type alias "]),
+        worth(
+            STRONG,
+            sample.any_line(|line| line.starts_with("import ") && line.contains(" exposing ")),
+        ),
+    )
+}
+
+/// `my` before a sigil: PHP writes the `$`, never the `my`.
+fn score_perl(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["use strict;", "use warnings;", "my $", "my @", "my %"]),
+        worth(STRONG, sample.has(" =~ ")),
+    )
+}
+
+/// Gradle's Groovy, whose dependencies are strings with no parentheses: Kotlin's are calls. A
+/// `println` with none opens the line, never a Clojure form's.
+fn score_groovy(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("apply plugin:")
+            || sample.line_starts_with_any(&["println \""])
+            || sample.line_starts_with_any(&["implementation '", "testImplementation '", "api '"]),
+        worth(
+            STRONG,
+            sample.any_line(|line| line.starts_with("def ") && line.contains(" = ")),
+        ),
+    )
+}
+
+fn score_verilog(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["endmodule"])
+            || sample.has("always @(")
+            || sample.has("posedge "),
+        worth(
+            STRONG,
+            sample.line_starts_with_any(&["reg ", "wire ", "assign "]),
+        ),
+    )
+}
+
+fn score_vhdl(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.lower.contains("library ieee;")
+            || sample.lower.contains("std_logic")
+            || sample.any_line(|line| {
+                let line = line.to_lowercase();
+                (line.starts_with("entity ") && line.ends_with(" is"))
+                    || (line.starts_with("architecture ") && line.contains(" of "))
+            }),
+        0,
+    )
+}
+
+/// Its structure outweighs the language of the lines it changes, which score in it as well.
+fn score_diff(sample: &Sample<'_>) -> u32 {
+    let hunk = sample.any_line(|line| {
+        line.strip_prefix("@@ -")
+            .is_some_and(|rest| rest.contains(" @@"))
+    });
+    let files = sample.line_starts_with_any(&["--- "]) && sample.line_starts_with_any(&["+++ "]);
+
+    let git = sample.line_starts_with_any(&["diff --git "]);
+    signed(
+        hunk || files || git,
+        worth(SIGNATURE, hunk) + worth(STRONG, files) + worth(STRONG, git),
+    )
+}
+
+/// A request line or a status line, first: a body may hold anything.
+fn score_http(sample: &Sample<'_>) -> u32 {
+    const METHODS: [&str; 7] = [
+        "GET ", "POST ", "PUT ", "PATCH ", "DELETE ", "HEAD ", "OPTIONS ",
+    ];
+
+    let first = sample.lines.first().copied().unwrap_or_default();
+    let request = starts_with_any(first, &METHODS) && first.contains(" HTTP/");
+    let status = first.starts_with("HTTP/1.") || first.starts_with("HTTP/2 ");
+
+    signed(request || status, 0)
+}
+
+fn score_tex(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("\\documentclass")
+            || sample.has("\\usepackage")
+            || sample.has("\\begin{document}"),
+        worth(
+            STRONG,
+            (sample.has("\\begin{") && sample.has("\\end{")) || sample.has("\\section{"),
+        ),
+    )
+}
+
+/// Its keywords are a YAML mapping too, which only one of them would make it.
+fn score_gherkin(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["Feature:"])
+            && sample.line_starts_with_any(&["Scenario:", "Scenario Outline:", "Background:"]),
+        worth(
+            STRONG,
+            sample.line_starts_with_any(&["Given "]) && sample.line_starts_with_any(&["Then "]),
+        ),
+    )
+}
+
+fn score_scala(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has(" extends App")
+            || sample.has("def main(args: Array[String])")
+            || sample.line_starts_with_any(&["case class ", "import scala.", "sealed trait "]),
+        0,
+    )
+}
+
+fn score_objc(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["#import ", "@interface ", "@implementation "])
+            || sample.has("NSLog(@\""),
+        worth(
+            STRONG,
+            sample.has("NSString *") || sample.any_line(|line| line == "@end"),
+        ),
+    )
+}
+
+fn score_glsl(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("gl_Position")
+            || sample.has("gl_FragColor")
+            || sample.has("gl_FragCoord")
+            || (sample.line_starts_with_any(&["#version "]) && sample.has("void main")),
+        worth(
+            STRONG,
+            sample.line_starts_with_any(&["uniform ", "varying ", "in vec", "out vec"]),
+        ),
+    )
+}
+
+fn score_cobol(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.lower.contains("identification division")
+            || sample.lower.contains("procedure division")
+            || sample.lower.contains("working-storage section"),
+        0,
+    )
+}
+
+fn score_fortran(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.lower.contains("implicit none")
+            || sample.lower.contains("end program")
+            || sample.lower.contains("end subroutine"),
+        worth(
+            STRONG,
+            sample.lower.contains("integer ::") || sample.lower.contains("real ::"),
+        ),
+    )
+}
+
+fn score_sparql(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.lower.contains("select ?")
+            || sample.any_line(|line| {
+                line.to_lowercase().starts_with("prefix ") && line.contains(": <")
+            }),
+        0,
+    )
+}
+
+/// A node in parentheses after `MATCH`, or a relationship drawn as an arrow.
+fn score_cypher(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("-[:")
+            || sample.any_line(|line| {
+                let line = line.to_lowercase();
+                line.starts_with("match (") || line.starts_with("merge (")
+            }),
+        worth(STRONG, sample.lower.contains("return ")),
+    )
+}
+
+fn score_zig(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("@import(\"") || sample.has("std.debug.print("),
+        worth(STRONG, sample.has("!void") || sample.has("comptime ")),
+    )
+}
+
+fn score_nix(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("<nixpkgs>")
+            || sample.has("mkDerivation")
+            || sample.has("with pkgs;")
+            || sample.has("{ pkgs, ")
+            || sample.has("{ pkgs ? "),
+        worth(STRONG, sample.line_starts_with_any(&["inherit "])),
+    )
+}
+
+/// A model is TypeScript's or GraphQL's shape until an attribute says otherwise.
+fn score_prisma(sample: &Sample<'_>) -> u32 {
+    const ATTRIBUTES: [&str; 4] = ["@id", "@default(", "@relation(", "@unique"];
+
+    let block = sample.any_line(|line| {
+        (line.starts_with("datasource ") || line.starts_with("generator ")) && line.ends_with('{')
+    });
+    let model = sample.any_line(|line| line.starts_with("model ") && line.ends_with('{'))
+        && ATTRIBUTES.iter().any(|attribute| sample.has(attribute));
+
+    signed(block || model, 0)
+}
+
+fn score_solidity(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.has("pragma solidity")
+            || sample.has("msg.sender")
+            || sample.any_line(|line| line.starts_with("contract ") && line.ends_with('{')),
+        0,
+    )
+}
+
+/// YAML reads its dashes as a document's start: the end line says otherwise.
+fn score_armor(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.trimmed.starts_with("-----BEGIN PGP"),
+        worth(STRONG, sample.has("-----END PGP")),
+    )
+}
+
+/// The tags both template languages write: a hint, never an answer on their own.
+fn template_tags(sample: &Sample<'_>) -> bool {
+    ["{% if ", "{% for ", "{% endif", "{% endfor"]
+        .iter()
+        .any(|tag| sample.has(tag))
+}
+
+fn score_jinja(sample: &Sample<'_>) -> u32 {
+    const TAGS: [&str; 5] = [
+        "{% extends ",
+        "{% block ",
+        "{% endblock",
+        "{% macro ",
+        "{% set ",
+    ];
+
+    signed(
+        TAGS.iter().any(|tag| sample.has(tag)),
+        worth(STRONG, template_tags(sample)) + worth(STRONG, sample.has("</")),
+    )
+}
+
+fn score_liquid(sample: &Sample<'_>) -> u32 {
+    const TAGS: [&str; 6] = [
+        "{% assign ",
+        "{% capture ",
+        "{% endcapture",
+        "{% unless ",
+        "{% endunless",
+        "{% render ",
+    ];
+
+    signed(
+        TAGS.iter().any(|tag| sample.has(tag)),
+        worth(STRONG, template_tags(sample)) + worth(STRONG, sample.has("</")),
+    )
+}
+
+fn score_wat(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.trimmed.starts_with("(module")
+            || sample.has("local.get ")
+            || sample.has("i32.const "),
+        0,
+    )
+}
+
+/// JSON's own shape plus a context: always ahead of plain JSON when it has one.
+fn score_jsonld(sample: &Sample<'_>) -> u32 {
+    signed(sample.has("\"@context\""), score_json(sample))
+}
+
+fn score_matlab(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.any_line(|line| line.starts_with("function [") && line.contains("] = ")),
+        worth(STRONG, sample.has("disp(") || sample.has("zeros(")),
+    )
+}
+
+fn score_d(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["import std."]),
+        worth(STRONG, sample.has("writeln(")),
+    )
+}
+
+/// .NET's `Console.Write` is C#'s signature too: a block's end and a declaration outweigh it.
+fn score_vb(sample: &Sample<'_>) -> u32 {
+    let block =
+        sample.line_starts_with_any(&["End Sub", "End Function", "End Module", "Imports System"]);
+    let declaration = sample.any_line(|line| line.starts_with("Dim ") && line.contains(" As "));
+
+    signed(
+        block || declaration,
+        worth(STRONG, block) + worth(STRONG, declaration),
+    )
+}
+
+fn score_tcl(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.any_line(|line| line.starts_with("proc ") && line.ends_with('{'))
+            || sample.has("[expr "),
+        worth(STRONG, sample.has("puts ")),
+    )
+}
+
+/// Python with C declarations: it adds to Python's score, which it then always outscores.
+fn score_cython(sample: &Sample<'_>) -> u32 {
+    signed(
+        sample.line_starts_with_any(&["cdef ", "cpdef ", "cimport ", "from libc"]),
+        score_python(sample),
+    )
+}
+
+fn score_puppet(sample: &Sample<'_>) -> u32 {
+    signed(sample.has("ensure => ") || sample.has("ensure  => "), 0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -773,9 +1596,16 @@ mod tests {
     #[test]
     fn a_shebang_wins_over_everything_that_follows() {
         assert_eq!(
-            from_content("#!/usr/bin/env python\nimport os"),
-            Language::Sh
+            from_content("#!/usr/bin/env python3\nconsole.log(1)"),
+            Language::Py
         );
+        assert_eq!(from_content("#!/usr/bin/perl -w\nprint 1;"), Language::Perl);
+        assert_eq!(
+            from_content("#!/usr/bin/env -S node --no-warnings\n1"),
+            Language::Js
+        );
+        assert_eq!(from_content("#!/bin/zsh\nprint -l *"), Language::Sh);
+        assert_eq!(from_content("#!/usr/bin/env tclsh\nputs 1"), Language::Sh);
     }
 
     #[test]

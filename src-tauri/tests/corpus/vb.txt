@@ -1,0 +1,6 @@
+Module Program
+    Sub Main()
+        Dim count As Integer = 3
+        Console.WriteLine(count)
+    End Sub
+End Module

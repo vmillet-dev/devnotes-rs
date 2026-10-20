@@ -83,6 +83,12 @@ describe('runPrettier', () => {
       ['html', '<div><p>hi</p><script>let a=1</script></div>'],
       ['markdown', '* a\n* b'],
       ['graphql', 'query { user(id: 1) { name, email } }'],
+      ['less', '@x: 1px; .a{ .b{ margin:@x } }'],
+      [
+        'vue',
+        '<template><p v-if="ok">{{ name }}</p></template>\n<script setup lang="ts">\nconst name:string="a"\n</script>',
+      ],
+      ['angular', '<ul><li *ngFor="let n of notes" (click)="open( n )">{{n.title|uppercase}}</li></ul>'],
     ];
 
     for (const [parser, text] of samples) {

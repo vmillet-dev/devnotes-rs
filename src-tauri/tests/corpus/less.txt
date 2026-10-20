@@ -1,0 +1,7 @@
+@primary: #4a90d9;
+@radius: 4px;
+
+.button {
+  color: @primary;
+  border-radius: @radius;
+}

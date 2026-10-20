@@ -1,45 +1,4 @@
-import { HighlightStyle } from '@codemirror/language';
 import { EditorView } from '@codemirror/view';
-import { tags as t } from '@lezer/highlight';
-
-/**
- * The colours of `src/styles/_code-theme.scss`, tag for tag: the card and the fill preview are
- * highlight.js, the editor is Lezer, and both draw one palette. The most specific tag wins, so
- * `null` and `atom` — keywords to Lezer — come back to the literals' colour.
- */
-export const CODE_COLOURS = HighlightStyle.define([
-  {
-    tag: [t.keyword, t.typeName, t.standard(t.variableName), t.operator, t.angleBracket],
-    color: 'var(--blue)',
-  },
-  {
-    tag: [t.string, t.regexp, t.escape, t.link, t.url, t.quote, t.inserted],
-    color: 'var(--green)',
-  },
-  {
-    tag: [t.number, t.bool, t.null, t.atom, t.color, t.unit, t.constant(t.variableName)],
-    color: 'var(--amber-text)',
-  },
-  {
-    tag: [
-      t.function(t.variableName),
-      t.function(t.propertyName),
-      t.function(t.definition(t.variableName)),
-      t.className,
-      t.tagName,
-      t.labelName,
-      t.macroName,
-      t.heading,
-    ],
-    color: 'var(--purple)',
-  },
-  { tag: [t.propertyName, t.attributeName, t.variableName], color: 'var(--text-0)' },
-  { tag: [t.meta, t.annotation, t.processingInstruction], color: 'var(--text-1)' },
-  { tag: t.comment, color: 'var(--text-2)', fontStyle: 'italic' },
-  { tag: t.deleted, color: 'var(--red)' },
-  { tag: t.emphasis, fontStyle: 'italic' },
-  { tag: t.strong, fontWeight: '700' },
-]);
 
 /**
  * The code field's metrics, as the `<textarea>` over the viewer had them: 13px at 1.7, the

@@ -118,7 +118,7 @@ describe('TextDiffComponent', () => {
       ['removed', '-port = 5432'],
       ['added', '+port = 6432'],
     ]);
-    expect(harness.tool.result()).toMatchObject({ kind: 'snippet', language: 'txt', content: UNIFIED });
+    expect(harness.tool.result()).toMatchObject({ kind: 'snippet', language: 'diff', content: UNIFIED });
 
     harness.tool
       .actions()

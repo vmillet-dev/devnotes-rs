@@ -2,7 +2,26 @@ import { LanguageTag } from '@core/model/language.model';
 import { IndentChoice } from '@core/services/settings/app-settings.model';
 
 /** Four spaces by their own style guides; Go is `gofmt`'s tab, and the rest two spaces. */
-const FOUR_SPACES: ReadonlySet<LanguageTag> = new Set(['py', 'rs', 'java', 'cs', 'php', 'c']);
+const FOUR_SPACES: ReadonlySet<LanguageTag> = new Set([
+  'py',
+  'rs',
+  'java',
+  'cs',
+  'php',
+  'c',
+  'cpp',
+  'objc',
+  'objcpp',
+  'cython',
+  'perl',
+  'erl',
+  'elm',
+  'd',
+  'vb',
+  'sol',
+  'zig',
+  'groovy',
+]);
 
 /** How far Shift+Tab takes back a line indented with spaces, when a level is a tab. */
 const TAB_WIDTH = 4;

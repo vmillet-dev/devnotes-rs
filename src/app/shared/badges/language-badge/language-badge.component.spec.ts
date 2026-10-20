@@ -17,11 +17,16 @@ describe('LanguageBadgeComponent', () => {
     expect(fixture.nativeElement.textContent.trim()).toBe('JSON');
   });
 
-  it('applies a class matching the language tag', async () => {
-    fixture.componentRef.setInput('language', 'py');
+  it.each([
+    ['py', 'hue-green'],
+    ['tf', 'hue-red'],
+    ['vue', 'hue-amber'],
+    ['md', 'hue-neutral'],
+  ])('colours %s by its family', async (language, hue) => {
+    fixture.componentRef.setInput('language', language);
     await fixture.whenStable();
 
     const span = fixture.debugElement.query(By.css('.lang-tag'));
-    expect(span.classes['lang-py']).toBe(true);
+    expect(span.classes[hue]).toBe(true);
   });
 });

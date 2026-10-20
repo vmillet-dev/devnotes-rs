@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { FALLBACK_LANGUAGE, LanguageTag } from '@core/model/language.model';
-import { highlightLines } from './highlighter';
+import { grammarOf } from '@core/services/syntax/grammars';
+import { highlightLines } from '@core/services/syntax/highlighter';
 
 @Component({
   selector: 'app-code-viewer',
@@ -19,6 +20,6 @@ export class CodeViewerComponent {
   readonly compact = input(false);
 
   protected readonly lines = computed<readonly string[]>(() =>
-    highlightLines(this.content(), this.language()),
+    highlightLines(this.content(), grammarOf(this.language())),
   );
 }

@@ -449,30 +449,63 @@ therefore goes **below** that line, never above it.
 
 ### Syntax highlighting
 
-`CodeViewerComponent` renders read-only coloured code — a card excerpt, or the filled preview;
-the editor's code field is CodeMirror, coloured in the same palette (see "Editing a note"). It
-delegates to `shared/code-viewer/highlighter.ts`, the **only** module
-that imports highlight.js.
+`CodeViewerComponent` renders read-only coloured code — a card excerpt, the filled preview, an
+HTTP answer, generated code; the editor's code field is CodeMirror, and a Note's code blocks are
+TipTap decorations (see "Editing a note"). **All three are coloured by the same grammar**, one
+per language, from one table: `core/services/syntax/grammars.ts`.
 
-- **Grammars are imported one by one** from `highlight.js/lib/`, never the default bundle,
-  which carries close to 200 languages. `GRAMMARS` maps a `LanguageTag` onto the grammar that
-  describes it; five do not share a name (`toml` is `ini`, `html` is `xml`, `yml` is `yaml`,
-  `rs` is `rust`, `cs` is `csharp`), and `txt` deliberately has none — free text has nothing
-  to colour, so it is only escaped. The discipline is what keeps the cost legible: the six
-  compiled languages added in v0.1.4 weigh 5.9 kB over the wire, all of it in the lazy
-  notes-page chunk, which is where the viewer already lived.
-- **Adding a language is five edits and no migration.** A variant in `closed_enum!`
-  (`notes/language.rs`), a grammar in `GRAMMARS`, a label in `LANGUAGE_LABELS`, a
-  `.lang-*` rule in `language-badge.component.scss`, and `npm run bindings`. The column
-  stores the literal and carries no `CHECK`, so nothing on disk changes. Three
-  `Record<LanguageTag, …>` tables — the grammars, the labels and the highlighter spec's
-  samples — are exhaustive by type, so a variant added in Rust stops the front end compiling
-  until each has an answer for it. ⚠️ The badge rule is the one edit **no type can catch**: a
-  format with no `.lang-*` is valid CSS and simply draws bare text, which is how six of the
-  nineteen ended up with no badge at all. `scripts/language-hues.test.mjs` is what catches it
-  now, by reading the enum and the stylesheet off disk. A detection heuristic in
-  `language::from_content` is optional, and it is **weights** now rather than an order —
-  see below.
+> **One grammar per language, editor and cards alike.** The cards used to be highlight.js and
+> the editor Lezer: two grammars per language, two colourings of one snippet, and no
+> highlight.js grammar at all for half the languages CodeMirror's packages know. A Lezer
+> grammar colours text without an editor — `language.parser.parse(text)` gives the tree,
+> `@lezer/highlight`'s `highlightCode` walks it — and so does a legacy mode, through
+> `StreamLanguage`. highlight.js is gone.
+
+- **`GRAMMARS` is the only table**, a `Record<LanguageTag, …>`: a variant added in Rust stops
+  the front compiling until it has a grammar or `null` (plain text alone has none). The
+  official `@codemirror/lang-*` packages first (JSX and TSX are `lang-javascript`'s, indented
+  Sass is `lang-sass`'s, Vue, Angular templates and Liquid have packages of their own), then
+  `@codemirror/legacy-modes`, then a mode of ours (`syntax/modes/`) for what neither has —
+  Terraform/HCL, Zig, Nix, Prisma, Solidity —, all five from one tokenizer (`smallMode`:
+  keywords, types, atoms, comments, strings, numbers, an annotation sigil). A community package
+  only when it is maintained, small and brings no dependency (GraphQL's grammar alone, Elixir).
+  SQL's dialects, Mscgen's and VBScript's variants are not languages of their own. ⚠️ No
+  grammar compiled at runtime and none in WebAssembly: the CSP refuses both.
+- **Each grammar is a chunk, loaded the first time something in it is drawn**, by whichever
+  asks first: `loadGrammar` keeps the one promise per language. `grammarOf` is what a
+  `computed` reads: `null` until the grammar has arrived — the text is drawn plain, escaped —
+  then the grammar, through a signal **per language**, so its arrival redraws the cards of that
+  language and no others. A Note's code blocks are not a `computed`: their plugin asks for the
+  grammars of the blocks it holds and dispatches once each has arrived, and reads them
+  `untracked`, since a transaction may be dispatched from inside an Angular effect, which would
+  otherwise follow the grammar.
+- ⚠️ **A legacy mode can stall.** CodeMirror throws when a mode has not moved after ten tries,
+  and some do on ordinary text (Ceylon on a plain string): a card would draw nothing.
+  `advancing` wraps every stream mode, ours included, and leaves one character plain instead.
+- **`CODE_HIGHLIGHTER` maps Lezer's tags onto ten classes** (`tok-keyword`, `tok-string`,
+  `tok-literal`, `tok-name`…), for the editor (`syntaxHighlighting(CODE_HIGHLIGHTER)`) and the
+  cards alike; the most specific tag wins, so `null` and `atom` — keywords to Lezer — come back
+  to the literals' colour. **The theme is global**, in `src/styles/_code-theme.scss`: a card's
+  coloured HTML arrives through `[innerHTML]`, and Angular does not stamp `_ngcontent-*` on DOM
+  created that way, so a rule in `code-viewer.component.scss` would never match.
+- **A line is a line.** `highlightCode` cuts a token that spans lines (a block comment, a
+  string) at each line break, so `highlightLines` gives one HTML string per line for the
+  viewer's gutter with no tag left open across two. `highlightRanges` gives the same as offsets,
+  for TipTap.
+- **The markup is never trusted.** The highlighter escapes the text it wraps, and the result
+  still goes through Angular's sanitizer; nothing calls `bypassSecurityTrust*`, and nothing
+  should — the content is typed by the user.
+- **A language is one entry in `LANGUAGES`** (`core/model/language.model.ts`): its label, its
+  full name and its hue. The labels, the names and the badge's hue are read from it, and the
+  key order is the menu's — the common languages with their kin, the rest by name, Markdown and
+  plain text last. ⚠️ The badge is coloured by **six rules, one per hue**, which `LANGUAGES`
+  gives every language: a rule per language once let six badges draw bare text with nothing to
+  say so, which a script then had to catch. Adding a language is a variant in `closed_enum!`,
+  an entry in `LANGUAGES`, one in `GRAMMARS` and one in `PRETTIER_PARSERS`, then
+  `npm run bindings` — no migration: the column stores the literal and carries no `CHECK`.
+- Two inputs let a card reuse the viewer: `showLineNumbers` (a gutter on a three-line excerpt
+  is noise) and `compact` (no padding, no scroll, no font size of its own — the card decides).
+  A third, `markedLines`, is the editor's: the lines a format just changed.
 
 **Detection scores, and can say it does not know.** `from_content` guessed by _first match
 wins_, down a hand-ordered chain of `if`s, and the order **was** the priority: a Rust
@@ -503,36 +536,27 @@ opening on `&` is a signature, and a stylesheet with none of them is CSS. GraphQ
 `type User {` is TypeScript's shape too, so a definition is weak and a non-null type
 (`ID!`, `[String!]!`), which TypeScript never writes after a name, is what outweighs it.
 
+**Most languages are chosen, not guessed.** Of the 142, detection answers 76 (`detectable`):
+the first 26, and the 50 others that write something nothing else does — a Dockerfile's `FROM`
+with its instructions, Terraform's `resource "…" "…" {`, `syntax = "proto3"`, nginx's
+`proxy_pass`, a diff's hunk. The rest are only ever picked from the menu. ⚠️ **A language
+added since is guessed on a signature or not at all** (`signed`): what else it writes only
+adds to the signature, so none of them can tie an older language on a shared marker and turn
+its answer into `txt` — `return ` scored Cypher three without one, and every Python function
+came back as prose. A language that is another one plus something (TSX over TypeScript,
+Cython over Python, JSON-LD over JSON, a Vue or Angular template over its HTML) adds to the
+other's score, so it always outscores it once its own sign is there. A shebang names its
+interpreter (`python3`, `node`, `perl`…), any other being a shell as before.
+
 ⚠️ **`src-tauri/tests/corpus/` is what says whether this is better rather than differently
 wrong.** One file per case, named `<language>[-<variant>].txt`, read from disk and asserted
-in bulk — adding a case is adding a file. It earned its keep immediately: CSS's "a selector
-and a declaration" scored a signature on `export interface Note {` with `id: string;` inside
-it, **and** on PHP's `foreach (…) {` with an `echo …;` inside it, so both tied at six and
-came back as prose. That shape is strong evidence now, not proof; a unit or a custom property
-is what makes it a stylesheet.
-
-⚠️ The languages still absent — C++, Kotlin, Swift, Ruby, Dockerfile, PowerShell and the
-rest — were deliberately **not** added in the same pass. Each is five edits of its own, and
-the whole point of the change is that adding one is no longer a slot to find by hand.
-
-- **`ignoreIllegals` is on.** A note is free text, often a fragment that does not parse end to
-  end; without it a truncated JSON snippet would throw instead of rendering.
-- **Output is re-split into lines** by `splitHighlightedLines`. highlight.js colours the whole
-  block — that is exactly what lets it handle a comment or string spanning several lines — but
-  the viewer renders one element per line for its gutter. A plain `split('\n')` would cut
-  through `<span>`s straddling a line break, so the splitter tracks the open tag stack, closes
-  it at end of line and reopens it on the next.
-- **The theme is global**, in `src/styles/_code-theme.scss`. The coloured HTML arrives through
-  `[innerHTML]`, and Angular does not stamp `_ngcontent-*` on DOM created that way: a
-  `.hljs-keyword` rule written in `code-viewer.component.scss` would be rewritten into
-  `.hljs-keyword[_ngcontent-xxx]` and never match. No highlight.js stylesheet is imported —
-  they hard-code hex values, where the rest of the app only reads theme variables.
-- **The markup is never trusted.** highlight.js escapes the source text and the result still
-  goes through Angular's sanitizer; nothing calls `bypassSecurityTrust*`, and nothing should —
-  the content is typed by the user.
-- Two inputs let a card reuse it: `showLineNumbers` (a gutter on a three-line excerpt is
-  noise) and `compact` (no padding, no scroll, no font size of its own — the card decides).
-  A third, `markedLines`, is the editor's: the lines a format just changed.
+in bulk — adding a case is adding a file. Every detectable language has one, and each language
+added since has a `txt-weak-<tag>.txt` holding only what it shares with others, which must
+stay plain text (or what the older language makes of it: `html-weak-jsx.txt`). It earned its
+keep immediately: CSS's "a selector and a declaration" scored a signature on
+`export interface Note {` with `id: string;` inside it, **and** on PHP's `foreach (…) {` with
+an `echo …;` inside it, so both tied at six and came back as prose. That shape is strong
+evidence now, not proof; a unit or a custom property is what makes it a stylesheet.
 
 ### Formatting a snippet with Prettier
 
@@ -1691,9 +1715,9 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   patch, and the note moves to the code field with its characters intact — the rich editor
   would have folded its indentation into paragraphs.
 - **A code block is coloured by decorations.** TipTap holds text, not HTML: `highlightRanges`
-  reads highlight.js's output back as offsets over the block's text, and `CodeHighlight` lays
+  gives the grammar's tokens as offsets over the block's text, and `CodeHighlight` lays
   them as inline decorations, the language as a label on the block — the code field's grammars,
-  nothing loaded twice. Tab indents as the code field does (`indentUnit`), and `withTabs`
+  nothing loaded twice, a block drawn plain until its grammar has arrived. Tab indents as the code field does (`indentUnit`), and `withTabs`
   leaves a fence alone: nothing is escaped in one, so its `&#9;` is text. A card and a search
   read its lines as they are (`notes::markdown::plain`).
 - **The editor says what it holds.** A "Note" badge sits where a snippet has its format menu,
@@ -3350,12 +3374,9 @@ knowing:
   width, so the first row stays put. The width stops at half the text's, measured in pixels on
   the editor (`--hang-cap`): the two properties read a percentage against two different widths.
   Wrapping off, the plugin is not there at all.
-- **The colours are the cards'**: `code-editor/theme.ts` maps Lezer's tags onto the variables
-  `_code-theme.scss` gives highlight.js. Each language's grammar is a chunk of its own
-  (`code-editor/languages.ts`), loaded the first time a snippet in it opens: the official
-  Lezer packages, `@codemirror/legacy-modes` for TOML, the shells, C#, Kotlin, Ruby, Swift and
-  Dart, and community packages for GraphQL (`cm6-graphql`, its grammar alone: its completion
-  and lint want a schema) and Elixir (`codemirror-lang-elixir`).
+- **The colours are the cards'**: the same grammar and the same `CODE_HIGHLIGHTER` classes
+  (see "Syntax highlighting"), each language's grammar a chunk of its own loaded the first
+  time something in it is drawn.
 - **The search bar (Ctrl+F) is ours, the engines the editors'.** `search/search-bar/` speaks to a
   `SearchTarget` (`search/search-target.ts`): the query, the count, seek, next and previous,
   replace one or all, the editor's own keys. In a snippet, `search({ createPanel })` hands the
@@ -4414,10 +4435,8 @@ rule it out. A section key needs no such guard any more: `NoteSectionKey` is gen
 variant added in Rust breaks the assignment at compile time instead of throwing at runtime.
 
 The known list is `notes/language.rs` (`Language`), aliased by `core/model/language.model.ts`
-(`LanguageTag` + `LANGUAGE_LABELS`). Adding a language means editing both, plus a `.lang-*`
-rule in `language-badge.component.scss` and, if it should be coloured, an entry in `GRAMMARS`.
-The typed tables drift no further than the next build; the stylesheet is the one that can, and
-`scripts/language-hues.test.mjs` compares it against the enum for exactly that reason.
+(`LanguageTag` + `LANGUAGES`). Adding a language means editing both, plus an entry in
+`GRAMMARS` and in `PRETTIER_PARSERS`: every table is typed, so none drifts past the next build.
 
 **The language is detected, not asked for.** `notes/language.rs` reads the content and returns
 one of `LANGUAGES`; without it every note is born `txt` and the format rail only serves people
@@ -5684,12 +5703,11 @@ translucency are also exposed as RGB triplets (e.g. `--amber-rgb`, which is the 
 `rgb(var(--amber-rgb) / 10%)` — the slash over commas is invalid, and the browser drops the whole
 declaration without a word.
 
-**Three sweeps read the shipped files**, all `node --test` rather than `*.spec.ts` because the
+**Two sweeps read the shipped files**, both `node --test` rather than `*.spec.ts` because the
 Angular builder compiles its specs for a browser, where `node:fs` does not exist:
-`palette.test.mjs` for contrast, `focus-rings.test.mjs` for a control styled with no
-`:focus-visible` — the linter cannot see a missing one, and four had accumulated — and
-`language-hues.test.mjs` for a `Language` variant with no `.lang-*` rule, whose badge is then
-bare text. ⚠️ Each is named in `test:scripts` one by one; Node 24 will not expand a directory.
+`palette.test.mjs` for contrast, and `focus-rings.test.mjs` for a control styled with no
+`:focus-visible` — the linter cannot see a missing one, and four had accumulated. A badge's hue
+needs no sweep: `LANGUAGES` gives every language one of six, by type. ⚠️ Each is named in `test:scripts` one by one; Node 24 will not expand a directory.
 
 `styles.scss` also carries the `.visually-hidden` utility and a `prefers-reduced-motion`
 block.
