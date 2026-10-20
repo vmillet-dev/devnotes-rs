@@ -3,7 +3,8 @@
   <section class="console" data-testid="http-console" [attr.aria-label]="'http.console.title' | transloco">
     <header class="head">
       <span class="title">{{ 'http.console.title' | transloco }}</span>
-      <div class="filters" role="group" [attr.aria-label]="'http.console.filter' | transloco">
+      <fieldset class="filters">
+        <legend class="visually-hidden">{{ 'http.console.filter' | transloco }}</legend>
         @for (id of filters; track id) {
           <button
             type="button"
@@ -17,7 +18,7 @@
             {{ 'http.console.filters.' + id | transloco }} <span class="count">{{ count[id] }}</span>
           </button>
         }
-      </div>
+      </fieldset>
       <span class="grow"></span>
       <span class="masked"><app-icon name="lock" /> {{ 'http.console.masked' | transloco }}</span>
       <button type="button" class="clear" data-testid="http-console-clear" (click)="clear()">
@@ -44,8 +45,8 @@
             @if (row.said; as said) {
               {{ said.key | transloco: said.params }}
             }
-            @if (row.then; as then) {
-              : {{ then.key | transloco }}
+            @if (row.reason; as reason) {
+              : {{ reason.key | transloco }}
             }
             @for (word of row.words; track $index) {
               @if (word.secret) {

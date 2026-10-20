@@ -38,7 +38,7 @@ interface ConsoleRow {
   readonly tone: string;
   readonly said: TranslationRef | null;
   /** After it, set apart: what stopped a script, when it is not its own words. */
-  readonly then: TranslationRef | null;
+  readonly reason: TranslationRef | null;
   readonly words: readonly { readonly text: string; readonly secret: boolean }[];
   /** Under a request: its headers, masked. */
   readonly sub: string | null;
@@ -53,7 +53,7 @@ function rowOf(entry: ConsoleEntry, requestName: string, current: string | null)
     time: consoleTime(entry.at),
     filter: consoleKindOf(line),
     said: null,
-    then: null,
+    reason: null,
     words: [],
     sub: null,
     exchange: false,
@@ -109,7 +109,7 @@ function rowOf(entry: ConsoleEntry, requestName: string, current: string | null)
         mark: '✗',
         tone: 'bad',
         said: stopTitleOf(line.stop),
-        then: stopMessageOf(line.stop),
+        reason: stopMessageOf(line.stop),
         words: stopMessageOf(line.stop) === null ? secretSegments(` : ${line.stop.message ?? ''}`) : [],
         origin: null,
       };

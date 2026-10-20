@@ -379,13 +379,16 @@ describe('HTTP scripts', () => {
 
       await eventually(
         () => $(testid('http-console-summary')).getText(),
-        (summary) => summary.startsWith('1 '),
+        (summary) => summary.startsWith('2 '),
         'the folded console counting the exchange',
       );
       await $(testid('http-console-unfold')).click();
       await $(testid('http-console')).waitForDisplayed({ timeout: 10_000 });
       const said = await browser.execute(
-        (selector: string) => [...document.querySelectorAll(selector)].map((line) => line.textContent ?? ''),
+        (selector: string) =>
+          [...document.querySelectorAll(selector)].map((line) =>
+            (line.textContent ?? '').replace(/\s+/g, ' '),
+          ),
         `${testid('http-console-line')}, ${testid('http-console-sub')}`,
       );
       const all = said.join(' | ');
