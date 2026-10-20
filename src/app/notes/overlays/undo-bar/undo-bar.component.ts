@@ -4,7 +4,7 @@ import { NoteKind } from '@core/model/note.model';
 import { Reversible } from '@core/state/undo.store';
 
 /** One key per kind: "3 notes deleted" and "3 notes moved" are not the same sentence. */
-const MESSAGES: Record<Exclude<Reversible['kind'], 'convert'>, string> = {
+const MESSAGES: Record<Exclude<Reversible['kind'], 'convert' | 'folderMove'>, string> = {
   deletion: 'undo.deleted',
   move: 'undo.moved',
   tag: 'undo.tagged',
@@ -39,6 +39,16 @@ export class UndoBarComponent {
   protected readonly message = computed(() => {
     const action = this.action();
     if (action.kind === 'convert') return CONVERTED[action.into];
+    if (action.kind === 'folderMove')
+      return action.into === null ? 'undo.folderMovedTop' : 'undo.folderMoved';
     return action.kind === 'pin' && !action.pinned ? 'undo.unpinned' : MESSAGES[action.kind];
+  });
+
+  /** A count for the batches; a folder moved says which, and where. */
+  protected readonly params = computed<Record<string, string | number>>(() => {
+    const action = this.action();
+    return action.kind === 'folderMove'
+      ? { name: action.name, into: action.into ?? '' }
+      : { count: action.count };
   });
 }

@@ -9,6 +9,7 @@ import { Folder } from '@core/model/folder.model';
 import { Space } from '@core/model/space.model';
 import { FakeFoldersRepository } from '@testing/fake-folders-repository';
 import { BoardStore, LAYOUT_SAVE_DEBOUNCE_MS } from './board.store';
+import { FoldersStore } from './folders.store';
 import { NotesQueryStore } from './notes-query.store';
 import { SpacesStore } from './spaces.store';
 
@@ -23,6 +24,7 @@ const PERF: Folder = {
   name: 'Perf',
   colour: 'amber',
   createdAt: new Date('2026-01-01T10:00:00Z'),
+  parentId: null,
 };
 
 interface Harness {
@@ -497,7 +499,7 @@ describe('BoardStore', () => {
 
       const done = await harness.store.arrange('everything');
 
-      expect(harness.repository.arranged).toEqual([{ spaceId: 'sql', scope: 'everything' }]);
+      expect(harness.repository.arranged).toEqual([{ spaceId: 'sql', rootId: null, scope: 'everything' }]);
       expect(done).toEqual({ moved: 2, previous: DRAGGED });
     });
 
@@ -509,7 +511,7 @@ describe('BoardStore', () => {
 
       await harness.store.arrange('looseCards');
 
-      expect(harness.repository.arranged).toEqual([{ spaceId: 'sql', scope: 'looseCards' }]);
+      expect(harness.repository.arranged).toEqual([{ spaceId: 'sql', rootId: null, scope: 'looseCards' }]);
     });
 
     it('does nothing on all spaces, where there is no board to tidy', async () => {
@@ -557,7 +559,7 @@ describe('BoardStore', () => {
       const harness = await createStore();
       await onBoard(harness);
 
-      await harness.store.restoreLayout(DRAGGED);
+      await harness.store.restoreLayout(DRAGGED, null);
 
       expect(harness.store.restorations()).toBe(1);
     });
@@ -566,8 +568,8 @@ describe('BoardStore', () => {
       const harness = await createStore();
       await onBoard(harness);
 
-      expect(await harness.store.restoreLayout(DRAGGED)).toBe(2);
-      expect(harness.repository.saved).toEqual([DRAGGED]);
+      expect(await harness.store.restoreLayout(DRAGGED, null)).toBe(2);
+      expect(harness.repository.saved).toEqual([{ rootId: null, ...DRAGGED }]);
     });
 
     it('reports a refused tidy-up rather than pretending it happened', async () => {
@@ -589,5 +591,132 @@ describe('BoardStore', () => {
 
     await vi.waitFor(() => expect(harness.store.loadError()).toBeDefined());
     expect(harness.store.zones()).toEqual([]);
+  });
+});
+
+describe('BoardStore, at a folder', () => {
+  // SQL › Perf › Index, all in the space « sql ».
+  const SQL: Folder = { ...PERF, id: 'sql-f', name: 'SQL' };
+  const NESTED: readonly Folder[] = [
+    SQL,
+    { ...PERF, parentId: 'sql-f' },
+    { ...PERF, id: 'index', name: 'Index', parentId: 'perf' },
+  ];
+
+  async function insideSql(): Promise<{
+    store: BoardStore;
+    repository: FakeBoardRepository;
+    folders: FakeFoldersRepository;
+  }> {
+    TestBed.resetTestingModule();
+    const repository = new FakeBoardRepository({
+      zones: [
+        fakeZone({
+          folder: NESTED[1]!,
+          notes: [fakeBoardNote(createNote({ id: 'deep', folderId: 'index' }))],
+        }),
+      ],
+      loose: [fakeBoardNote(createNote({ id: 'own', folderId: 'sql-f' }), { position: { x: 16, y: 300 } })],
+    });
+    const folders = new FakeFoldersRepository(NESTED);
+    TestBed.configureTestingModule({
+      providers: [
+        provideAppTesting({
+          boardRepository: repository,
+          foldersRepository: folders,
+          spacesRepository: new FakeSpacesRepository(SPACES),
+        }),
+      ],
+    });
+    const spaces = TestBed.inject(SpacesStore);
+    await vi.waitFor(() => expect(spaces.spaces()).toHaveLength(SPACES.length));
+    spaces.selectSpace('sql');
+    const open = TestBed.inject(FoldersStore);
+    await vi.waitFor(() => expect(open.allFolders()).toHaveLength(NESTED.length));
+    open.selectFolder('sql-f');
+    const store = TestBed.inject(BoardStore);
+    store.setMode('board');
+    await vi.waitFor(() => expect(repository.lastQuery?.rootId).toBe('sql-f'));
+    await vi.waitFor(() => expect(store.zones()).toHaveLength(1));
+    return { store, repository, folders };
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  it('draws the board of an open folder that holds folders', async () => {
+    const { store } = await insideSql();
+
+    expect(store.root()).toBe('sql-f');
+    expect(store.isShowing()).toBe(true);
+  });
+
+  it('keeps a flat grid for an open folder that holds none', async () => {
+    const { store } = await insideSql();
+
+    TestBed.inject(FoldersStore).selectFolder('index');
+
+    expect(store.root()).toBeNull();
+    expect(store.isShowing()).toBe(false);
+  });
+
+  it('files a card let go on the ground into the folder whose board it is', async () => {
+    const { store, folders } = await insideSql();
+
+    await store.dropCard('deep', null, { x: 40, y: 400 });
+
+    expect(folders.filings.get('deep')).toBe('sql-f');
+  });
+
+  it('draws a new zone as a sub-folder of the board it was drawn on, and saves its frame there', async () => {
+    const { store, repository, folders } = await insideSql();
+    const frame = { x: 600, y: 40, width: 400, height: 300 };
+
+    expect(await store.createZone('Requêtes', frame)).toBe(true);
+
+    expect(repository.saved.at(-1)?.rootId).toBe('sql-f');
+    const created = (await folders.loadAll('sql')).find((each) => each.name === 'Requêtes');
+    expect(created?.parentId).toBe('sql-f');
+  });
+
+  it('tidies the board on screen and no other', async () => {
+    const { store, repository } = await insideSql();
+
+    await store.arrange('everything');
+
+    expect(repository.arranged.at(-1)).toEqual({ spaceId: 'sql', rootId: 'sql-f', scope: 'everything' });
+  });
+
+  /** Dropped on the rail at any depth, it shows in the zone that holds that folder at once. */
+  it('stages a card filed from the rail in the zone that holds the folder', async () => {
+    const { store, folders } = await insideSql();
+
+    const filed = await store.fileFromRail('own', 'index');
+
+    expect(filed).toEqual([{ noteId: 'own', folderId: null }]);
+    expect(folders.filings.get('own')).toBe('index');
+    expect(store.zones()[0]?.notes.map((entry) => entry.note.id)).toContain('own');
+    expect(store.loose()).toHaveLength(0);
+  });
+
+  it('takes a card filed off this board off it, and says a failed filing', async () => {
+    const { store, folders } = await insideSql();
+
+    await store.fileFromRail('deep', null);
+    expect(store.zones()[0]?.notes).toHaveLength(0);
+
+    folders.failNext = new Error('refused');
+    expect(await store.fileFromRail('own', 'perf')).toBeNull();
+    expect(store.loose().map((entry) => entry.note.id)).toEqual(['own']);
+  });
+
+  it('remembers which rail row a card is over', async () => {
+    const { store } = await insideSql();
+
+    store.setRailTarget('perf');
+
+    expect(store.railTarget()).toBe('perf');
   });
 });

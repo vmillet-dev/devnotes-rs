@@ -36,7 +36,7 @@ use changelog::{app_changelog, release_notes};
 use desktop::{hold_quit, set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
-    list_folders, recolour_folder, rename_folder, save_board_layout,
+    list_folders, move_folder, move_folder_back, recolour_folder, rename_folder, save_board_layout,
 };
 use http::{
     add_graphql_variables, cancel_http_run, cancel_http_send, check_http_headers,
@@ -241,6 +241,8 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             rename_folder::<tauri::Wry>,
             recolour_folder::<tauri::Wry>,
             delete_folder::<tauri::Wry>,
+            move_folder::<tauri::Wry>,
+            move_folder_back::<tauri::Wry>,
             file_notes::<tauri::Wry>,
             file_notes_back::<tauri::Wry>,
             list_spaces::<tauri::Wry>,

@@ -13,6 +13,7 @@ const PERF: Folder = {
   name: 'Perf',
   colour: 'amber',
   createdAt: new Date('2026-01-01T10:00:00Z'),
+  parentId: null,
 };
 
 const ZONE: BoardZone = fakeZone({
@@ -111,5 +112,26 @@ describe('BoardZoneComponent', () => {
     await fixture.whenStable();
 
     expect(card('shown')?.classList.contains('lifted')).toBe(true);
+  });
+
+  it('lists its sub-folders under its title, each opening its own board', async () => {
+    const opened: string[] = [];
+    fixture.componentInstance.opened.subscribe((id) => opened.push(id));
+    fixture.componentRef.setInput('zone', {
+      ...ZONE,
+      children: [{ id: 'index', name: 'Index', colour: 'green', count: 3 }],
+    });
+    await fixture.whenStable();
+
+    const child = root().querySelector<HTMLElement>('[data-testid="board-zone-child"]')!;
+    expect(child.textContent).toContain('Index');
+    expect(child.textContent).toContain('3');
+    expect(child.className).toContain('is-green');
+    child.click();
+    expect(opened).toEqual(['index']);
+  });
+
+  it('draws no row of sub-folders when it has none', () => {
+    expect(part('board-zone-children')).toBeNull();
   });
 });

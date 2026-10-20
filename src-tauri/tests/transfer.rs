@@ -490,8 +490,8 @@ mod folders_travelling {
     fn arranged() -> (Library, String, String) {
         let mut connection = open_in_memory().unwrap();
         let sql = spaces::create(&mut connection, "SQL").unwrap().id;
-        let perf = folders::create(&mut connection, &sql, "Perf", t0()).unwrap();
-        let migrations = folders::create(&mut connection, &sql, "Migrations", t0()).unwrap();
+        let perf = folders::create(&mut connection, &sql, None, "Perf", t0()).unwrap();
+        let migrations = folders::create(&mut connection, &sql, None, "Migrations", t0()).unwrap();
 
         let filed = notes::create(&mut connection, draft(&sql, "EXPLAIN lent"), t0()).unwrap();
         let elsewhere = notes::create(&mut connection, draft(&sql, "Backfill"), t0()).unwrap();
@@ -514,6 +514,7 @@ mod folders_travelling {
 
         geometry::save_layout(
             &mut connection,
+            None,
             &[ZonePlacement {
                 folder_id: perf.id.clone(),
                 frame: BoardFrame {
@@ -643,7 +644,7 @@ mod folders_travelling {
 
         let mut target = open_in_memory().unwrap();
         let space = spaces::create(&mut target, "SQL").unwrap().id;
-        folders::create(&mut target, &space, "perf", t0()).unwrap();
+        folders::create(&mut target, &space, None, "perf", t0()).unwrap();
 
         let report = merge(&mut target, bundle);
 
@@ -665,7 +666,7 @@ mod folders_travelling {
 
         let mut target = open_in_memory().unwrap();
         let elsewhere = spaces::create(&mut target, "Veille").unwrap().id;
-        folders::create(&mut target, &elsewhere, "Perf", t0()).unwrap();
+        folders::create(&mut target, &elsewhere, None, "Perf", t0()).unwrap();
 
         let report = merge(&mut target, bundle);
 
@@ -742,6 +743,7 @@ mod folders_travelling {
             .unwrap();
         geometry::save_layout(
             &mut source,
+            None,
             &[],
             &[CardPlacement {
                 note_id: loose.id.clone(),
@@ -765,6 +767,110 @@ mod folders_travelling {
             .transaction(|connection, _vault| geometry::positions(connection, &space_id))
             .unwrap();
         assert_eq!(kept.get(&loose.id), Some(&BoardPoint { x: 640, y: 480 }));
+    }
+
+    /// `Base › Perf`, a note filed in `Perf` alone.
+    fn nested() -> Library {
+        let mut connection = open_in_memory().unwrap();
+        let sql = spaces::create(&mut connection, "SQL").unwrap().id;
+        let base = folders::create(&mut connection, &sql, None, "Base", t0()).unwrap();
+        let perf = folders::create(&mut connection, &sql, Some(&base.id), "Perf", t0()).unwrap();
+        folders::create(&mut connection, &sql, None, "Uncited", t0()).unwrap();
+
+        let filed = notes::create(&mut connection, draft(&sql, "EXPLAIN lent"), t0()).unwrap();
+        folders::file_many(
+            &mut connection,
+            std::slice::from_ref(&filed.id),
+            Some(&perf.id),
+            t0(),
+        )
+        .unwrap();
+        connection
+    }
+
+    fn parent_name(connection: &mut Library, name: &str) -> Option<String> {
+        let all = folders::list(connection, None).unwrap();
+        let folder = all.iter().find(|folder| folder.name == name)?;
+        let parent = folder.parent_id.as_ref()?;
+        all.iter()
+            .find(|candidate| &candidate.id == parent)
+            .map(|candidate| candidate.name.clone())
+    }
+
+    /// A folder without the ones above it would land at the top of its space.
+    #[test]
+    fn a_folder_travels_with_the_folders_above_it_and_lands_under_them() {
+        let mut source = nested();
+        let bundle = exported(&mut source);
+
+        let mut carried: Vec<&str> = bundle
+            .folders
+            .iter()
+            .map(|folder| folder.name.as_str())
+            .collect();
+        carried.sort_unstable();
+        assert_eq!(carried, ["Base", "Perf"]);
+
+        let mut target = open_in_memory().unwrap();
+        let report = merge(&mut target, round_tripped(&bundle));
+
+        assert_eq!(report.folders_created, 2);
+        assert_eq!(parent_name(&mut target, "Perf").as_deref(), Some("Base"));
+        assert_eq!(parent_name(&mut target, "Base"), None);
+        assert_eq!(
+            folder_of(&mut target, "EXPLAIN lent").as_deref(),
+            Some("Perf")
+        );
+    }
+
+    /// A « Perf » at the top is not the « Perf » under « Base »: the match is per parent.
+    #[test]
+    fn a_folder_is_matched_by_name_under_the_same_parent() {
+        let mut source = nested();
+        let bundle = round_tripped(&exported(&mut source));
+
+        let mut target = open_in_memory().unwrap();
+        let space = spaces::create(&mut target, "SQL").unwrap().id;
+        folders::create(&mut target, &space, None, "perf", t0()).unwrap();
+        let base = folders::create(&mut target, &space, None, "base", t0()).unwrap();
+
+        let report = merge(&mut target, bundle);
+
+        assert_eq!(report.folders_created, 1);
+        assert_eq!(parent_name(&mut target, "Perf").as_deref(), Some("base"));
+        assert!(
+            folders::list(&mut target, Some(&space))
+                .unwrap()
+                .iter()
+                .any(
+                    |folder| folder.name == "Perf" && folder.parent_id.as_deref() == Some(&base.id)
+                )
+        );
+    }
+
+    /// A file can say anything: a parent it does not carry, or two folders each the other's.
+    #[test]
+    fn a_tree_a_file_cannot_hold_lands_at_the_top_rather_than_failing() {
+        let mut source = nested();
+        let mut bundle = exported(&mut source);
+        let [first, second] = &mut bundle.folders[..] else {
+            panic!("two folders travel");
+        };
+        first.parent_id = Some(second.id.clone());
+        second.parent_id = Some(first.id.clone());
+        bundle.folders.push(devnotes_lib::folders::model::Folder {
+            id: "stray".to_string(),
+            name: "Stray".to_string(),
+            parent_id: Some("never-carried".to_string()),
+            ..bundle.folders[0].clone()
+        });
+
+        let mut target = open_in_memory().unwrap();
+        let report = merge(&mut target, round_tripped(&bundle));
+
+        assert_eq!(report.folders_created, 3);
+        assert_eq!(parent_name(&mut target, "Stray"), None);
+        assert_eq!(report.notes_imported, 1);
     }
 }
 

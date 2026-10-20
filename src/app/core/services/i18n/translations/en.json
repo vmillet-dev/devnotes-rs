@@ -175,7 +175,7 @@
     },
     "delete": "Delete folder",
     "deleteConfirm": "Confirm?",
-    "deleteKeepsNotes": "The notes stay, simply without a folder.",
+    "deleteKeepsNotes": "Its notes and sub-folders stay, one level up.",
     "breadcrumbLabel": "Folder breadcrumb",
     "selectNotes": "Select {count, plural, one {the note} other {all # notes}}"
   },
@@ -185,7 +185,18 @@
     "expand": "Expand space {{name}}",
     "collapse": "Collapse space {{name}}",
     "noFolders": "No folder",
-    "resize": "Width of the side rail"
+    "resize": "Width of the side rail",
+    "expandFolder": "Expand the folder {{name}}",
+    "collapseFolder": "Collapse the folder {{name}}",
+    "moved": {
+      "into": "“{{name}}” is now in {{other}}.",
+      "top": "“{{name}}” is now at the top of {{other}}.",
+      "refused": {
+        "atTop": "“{{name}}” is already at the top of its space.",
+        "noFolderAbove": "No folder above “{{name}}” to put it in.",
+        "there": "“{{name}}” cannot go there."
+      }
+    }
   },
   "board": {
     "viewSwitchLabel": "Choose the view",
@@ -203,7 +214,9 @@
     "alignHint": "Aligns {cards, plural, =0 {no loose card} one {# loose card} other {# loose cards}} under the folders, leaving those alone.",
     "tidyMoreLabel": "Other arrangements",
     "reorganise": "Reorganise {zones, plural, =0 {no folder} one {# folder} other {# folders}} and {cards, plural, =0 {no card} one {# card} other {# cards}}",
-    "reorganiseHint": "Repositions and resizes the folders. Overwrites sizes chosen by hand; undoable."
+    "reorganiseHint": "Repositions and resizes the folders. Overwrites sizes chosen by hand; undoable.",
+    "subFolders": "Sub-folders of {{name}}",
+    "subFoldersLabel": "Sub-folders"
   },
   "sort": {
     "label": "Sort and group",
@@ -555,7 +568,8 @@
       "unreadable": "This file reads neither as a CSV with its header nor as a JSON array of objects.",
       "empty": "This file holds no row of data."
     },
-    "calcFailed": "The sheet could not be computed."
+    "calcFailed": "The sheet could not be computed.",
+    "folderMoveFailed": "The folder could not be moved."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -790,7 +804,9 @@
       "snippet": "Converted to a snippet",
       "checklist": "Converted to a todo list",
       "calc": "Converted to a calculation"
-    }
+    },
+    "folderMoved": "“{{name}}” is now in {{into}}",
+    "folderMovedTop": "“{{name}}” is now at the top of the space"
   },
   "file": {
     "menuLabel": "File",
@@ -1082,7 +1098,7 @@
       },
       "folders": {
         "title": "Folders, and a board",
-        "body": "A folder cuts a space into named, coloured regions, and the “Board” view shows them as such: drag a card in to file it, drop it on the background to take it out. Without a mouse: {{check}} to tick, then “File into”."
+        "body": "A folder cuts a space into named, coloured regions, and can hold others. The “Board” view shows one level at a time: drag a card onto a zone or a row of the sidebar to file it, drop it on the background to bring it back to the board’s own level, and click a zone to open its board. A folder dragged onto another in the sidebar goes inside it, or Alt+← and Alt+→. Without a mouse: {{check}} to tick, then “File into”."
       },
       "organise": {
         "title": "Finding things: search, tags, filters",

@@ -71,17 +71,17 @@
       </div>
     }
 
-    <ul class="tree" [attr.data-beat]="beat() % 2" (pointermove)="moveDrag($event)">
+    <ul class="tree" [attr.data-beat]="marks.beat() % 2" (pointermove)="drag.move($event)">
       @for (row of rows; track row.kind + row.id) {
-        @let dropping = drop()?.id === row.id ? drop()?.zone : null;
+        @let dropping = drag.target()?.id === row.id ? drag.target()?.zone : null;
         <li
           class="node"
           data-rail-row
           data-testid="http-node"
           [attr.data-id]="row.id"
           [attr.data-kind]="row.kind"
-          [attr.data-moved]="markOf(row.id)"
-          [class.dragging]="dragged() === row.id"
+          [attr.data-moved]="marks.markOf(row.id)"
+          [class.dragging]="drag.dragged() === row.id"
           [class.drop-before]="dropping === 'before'"
           [class.drop-after]="dropping === 'after'"
           [class.drop-inside]="dropping === 'inside'"
@@ -137,9 +137,9 @@
                 [attr.title]="row.name"
                 (click)="activate(row)"
                 (keydown)="onRowKeydown($event, row)"
-                (pointerdown)="startDrag($event, row)"
+                (pointerdown)="drag.start($event, row)"
                 (pointerup)="endDrag($event)"
-                (pointercancel)="cancelDrag()"
+                (pointercancel)="drag.cancel()"
               >
                 @if (row.badge; as badge) {
                   <span class="method" data-testid="http-node-badge" [attr.data-method]="badge">{{
@@ -230,9 +230,9 @@
       class="visually-hidden"
       role="status"
       data-testid="http-rail-moved"
-      [attr.data-said]="said()[0]?.sentence"
+      [attr.data-said]="marks.said()[0]?.sentence"
     >
-      @for (line of said(); track line.beat) {
+      @for (line of marks.said(); track line.beat) {
         {{ line.key | transloco: line.params }}
       }
     </p>

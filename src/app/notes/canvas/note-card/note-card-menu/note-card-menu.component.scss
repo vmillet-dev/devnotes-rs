@@ -79,6 +79,13 @@
   color: var(--text-0);
 }
 
+// The folders above a nested one, faint after its name: the same name can sit in two places.
+.card-menu-hint {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
 .card-menu-item:focus-visible {
   outline: 2px solid var(--amber-edge);
   outline-offset: -2px;

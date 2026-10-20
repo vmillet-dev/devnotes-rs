@@ -19,6 +19,7 @@ import { FoldersStore } from '@core/state/folders.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
+import { folderChoices } from '@shared/controls/choice-menu/folder-choices';
 
 /** Commas only: a tag may hold a space, and Rust normalises what it keeps. */
 function tagsOf(text: string): string[] {
@@ -84,11 +85,7 @@ export class SaveAsNoteDialogComponent {
 
   protected readonly folders = computed<readonly ChoiceOption[]>(() => {
     const spaceId = this.spaceId();
-    return spaceId === null
-      ? []
-      : this.foldersStore
-          .foldersOf(spaceId)
-          .map((folder) => ({ id: folder.id, name: folder.name, colour: folder.colour }));
+    return spaceId === null ? [] : folderChoices(this.foldersStore.foldersOf(spaceId));
   });
 
   protected readonly languageLabel = computed(() => LANGUAGE_LABELS[this.result().language]);

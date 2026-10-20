@@ -362,9 +362,10 @@ impl NotesQuery {
         model::normalize_tags(&self.tags)
     }
 
-    /// Not inside an opened folder, whose breadcrumb already names it.
-    pub fn shows_folder_chips(&self) -> bool {
-        self.folder_id.is_none()
+    /// Which chip a card keeps: none for the folder opened, whose breadcrumb already names it,
+    /// and the deepest folder's for a note from below it.
+    pub fn keeps_chip(&self, folder_id: Option<&str>) -> bool {
+        folder_id.is_some() && folder_id != self.folder_id.as_deref()
     }
 }
 
@@ -382,7 +383,7 @@ impl NotesView {
 #[derive(Debug, Default)]
 pub struct Decorations {
     pub attachment_counts: HashMap<String, u32>,
-    /// Empty where no chip is wanted: on the board, and inside an opened folder.
+    /// Every folder of the view's space; which chips a card keeps is the view's to say.
     pub folders: HashMap<String, NoteFolder>,
     pub globals: BTreeMap<String, String>,
 }
@@ -859,6 +860,7 @@ mod tests {
                     id: "f-1".to_string(),
                     name: "Ops".to_string(),
                     colour: crate::folders::model::FolderColour::nth(0),
+                    path: vec!["Ops".to_string()],
                 },
             )]),
             globals: BTreeMap::from([("host".to_string(), "db.internal".to_string())]),
@@ -875,14 +877,16 @@ mod tests {
     }
 
     #[test]
-    fn no_chip_is_drawn_inside_an_opened_folder() {
+    fn inside_an_opened_folder_a_chip_names_only_a_folder_below_it() {
         let inside = NotesQuery {
             folder_id: Some("f-1".to_string()),
             ..request()
         };
 
-        assert!(request().shows_folder_chips());
-        assert!(!inside.shows_folder_chips());
+        assert!(request().keeps_chip(Some("f-1")));
+        assert!(!request().keeps_chip(None));
+        assert!(!inside.keeps_chip(Some("f-1")));
+        assert!(inside.keeps_chip(Some("f-1a")));
     }
 
     #[test]

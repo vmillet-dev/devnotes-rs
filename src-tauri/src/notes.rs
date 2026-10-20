@@ -44,15 +44,17 @@ pub async fn query_notes<R: Runtime>(
         let (notes, facets) = store::fetch(&mut connection, &query)?;
 
         let mut decorations = store::decorations(&mut connection)?;
-        if query.shows_folder_chips() {
-            decorations.folders =
-                folders::store::by_id(&mut connection, query.space_id.as_deref())?;
-        }
+        decorations.folders = folders::store::by_id(&mut connection, query.space_id.as_deref())?;
         // The search and the sections read nothing more: every other command waits on this lock.
         drop(connection);
 
         let mut view = view::build(notes, facets, &query);
         decorations.apply(view.notes_mut());
+        for note in view.notes_mut() {
+            if !query.keeps_chip(note.folder_id.as_deref()) {
+                note.folder = None;
+            }
+        }
 
         Ok(view)
     })

@@ -12,6 +12,7 @@ const PERF: Folder = {
   name: 'Perf',
   colour: 'amber',
   createdAt: new Date('2026-01-01T10:00:00Z'),
+  parentId: null,
 };
 
 describe('FolderBreadcrumbComponent', () => {
@@ -90,12 +91,24 @@ describe('FolderBreadcrumbComponent', () => {
   /** Two steps: the WebView blocks on a native `confirm()`. */
   it('asks once before deleting, then goes back with the notes left standing', async () => {
     await click('[data-testid="folder-breadcrumb-menu"]');
-    expect(root().querySelector('.editor-note')?.textContent).toContain('Les notes restent');
+    expect(root().querySelector('.editor-note')?.textContent).toContain('un niveau plus haut');
 
     await click('[data-testid="folder-delete"]');
     expect(actions.deleted).toEqual([]);
 
     await click('[data-testid="folder-delete"]');
     expect(actions.deleted).toEqual(['perf']);
+  });
+
+  it('reads the folders above the open one, each a step back up', async () => {
+    const opened: string[] = [];
+    fixture.componentInstance.opened.subscribe((id) => opened.push(id));
+    fixture.componentRef.setInput('ancestors', [{ ...PERF, id: 'base', name: 'Base', colour: 'blue' }]);
+    await fixture.whenStable();
+
+    const step = root().querySelector<HTMLElement>('[data-testid="folder-breadcrumb-step"]')!;
+    expect(step.textContent).toContain('Base');
+    step.click();
+    expect(opened).toEqual(['base']);
   });
 });

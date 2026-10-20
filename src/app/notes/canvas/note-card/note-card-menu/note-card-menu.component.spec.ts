@@ -12,13 +12,21 @@ const SPACES: readonly Space[] = [
 ];
 
 const FOLDERS: readonly Folder[] = [
-  { id: 'perf', spaceId: 'work', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') },
+  {
+    id: 'perf',
+    spaceId: 'work',
+    name: 'Perf',
+    colour: 'amber',
+    createdAt: new Date('2026-01-01'),
+    parentId: null,
+  },
   {
     id: 'migrations',
     spaceId: 'work',
     name: 'Migrations',
     colour: 'blue',
     createdAt: new Date('2026-01-02'),
+    parentId: null,
   },
 ];
 
@@ -146,6 +154,20 @@ describe('NoteCardMenuComponent', () => {
       expect(fileItems().map((item) => item.textContent?.trim())).toEqual(['Migrations']);
     });
 
+    it('lists the folders as a tree, a nested one after the path above it', async () => {
+      fixture.componentRef.setInput('folders', [
+        ...FOLDERS,
+        { ...FOLDERS[0]!, id: 'index', name: 'Index', parentId: 'perf' },
+      ]);
+      await open();
+
+      expect(fileItems().map((item) => item.textContent?.trim().replace(/\s+/g, ' '))).toEqual([
+        'Migrations',
+        'Perf',
+        'Index Perf',
+      ]);
+    });
+
     /** Filing is a batch command of its own, so `null` is a real answer, not an absence. */
     it('offers a way out of the folder only when there is one to leave', async () => {
       fixture.componentRef.setInput('folders', FOLDERS);
@@ -170,9 +192,10 @@ describe('NoteCardMenuComponent', () => {
       fixture.componentInstance.fileRequested.subscribe((id) => filings.push(id));
       await open();
 
-      fileItems()[0].click();
+      fileItems()[1].click();
       await fixture.whenStable();
 
+      // By name: « Migrations » comes first.
       expect(filings).toEqual(['perf']);
       expect(items()).toHaveLength(0);
     });

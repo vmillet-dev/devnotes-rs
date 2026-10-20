@@ -8,7 +8,7 @@ import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { FolderSwitcherComponent } from './folder-switcher.component';
 
 function folder(id: string, name: string, colour: Folder['colour']): Folder {
-  return { id, spaceId: 'sql', name, colour, createdAt: new Date('2026-01-01T10:00:00Z') };
+  return { id, spaceId: 'sql', name, colour, createdAt: new Date('2026-01-01T10:00:00Z'), parentId: null };
 }
 
 const FOLDERS: readonly Folder[] = [folder('perf', 'Perf', 'amber'), folder('migr', 'Migrations', 'blue')];
@@ -162,7 +162,7 @@ describe('FolderSwitcherComponent', () => {
   it('asks once before deleting, and says the notes stay', async () => {
     await open();
     await click('[data-testid="folder-edit"]');
-    expect(root().querySelector('.editor-note')?.textContent).toContain('Les notes restent');
+    expect(root().querySelector('.editor-note')?.textContent).toContain('un niveau plus haut');
 
     await click('[data-testid="folder-delete"]');
     expect(actions.deleted).toEqual([]);

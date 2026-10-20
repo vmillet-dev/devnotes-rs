@@ -102,18 +102,21 @@
           {{ 'notes.noFolder' | transloco }}
         </button>
       }
-      @for (folder of fileTargets(); track folder.id) {
+      @for (target of fileTargets(); track target.folder.id) {
         <button
           appMenuItem
           type="button"
           role="menuitem"
           class="card-menu-item"
           data-testid="note-card-file"
-          [attr.data-folder-id]="folder.id"
-          (click)="file(folder.id)"
+          [attr.data-folder-id]="target.folder.id"
+          (click)="file(target.folder.id)"
         >
-          <i [class]="'menu-swatch is-' + folder.colour" aria-hidden="true"></i>
-          {{ folder.name }}
+          <i [class]="'menu-swatch is-' + target.folder.colour" aria-hidden="true"></i>
+          {{ target.folder.name }}
+          @if (target.above) {
+            <span class="card-menu-hint">{{ target.above }}</span>
+          }
         </button>
       }
     }

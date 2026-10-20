@@ -5,6 +5,7 @@ import { Priority } from '@core/model/note.model';
 import { PRIORITIES } from '@core/model/priority.model';
 import { Space } from '@core/model/space.model';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
+import { folderChoices } from '@shared/controls/choice-menu/folder-choices';
 
 /** An entry of the filing menu, and not a folder id: taking a note out is a choice too. */
 const UNFILE = '__unfile__';
@@ -48,11 +49,7 @@ export class SelectionBarComponent {
   // The template gates on `folders()` and not on this: the way out is always here, so
   // this list is never empty and a space with no folder would still draw the control.
   protected readonly folderChoices = computed<readonly ChoiceOption[]>(() => [
-    ...this.folders().map((folder) => ({
-      id: folder.id,
-      name: folder.name,
-      colour: folder.colour,
-    })),
+    ...folderChoices(this.folders()),
     { id: UNFILE, name: 'selection.unfile', nameIsKey: true },
   ]);
 

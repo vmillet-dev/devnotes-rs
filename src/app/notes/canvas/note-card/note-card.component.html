@@ -148,7 +148,7 @@
         </span>
       }
       @if (note().folder; as folder) {
-        <span class="card-folder" data-testid="note-card-folder">
+        <span class="card-folder" data-testid="note-card-folder" [attr.title]="folder.path.join(' › ')">
           <i class="folder-swatch" [class]="'is-' + folder.colour" aria-hidden="true"></i>
           <span class="folder-name">{{ folder.name }}</span>
         </span>

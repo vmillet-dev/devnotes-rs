@@ -9,6 +9,19 @@
       {{ spaceName() ?? ('notes.allSpaces' | transloco) }}
     </button>
     <span class="crumb-sep" aria-hidden="true">/</span>
+    @for (above of ancestors(); track above.id) {
+      <button
+        type="button"
+        class="crumb-step"
+        data-testid="folder-breadcrumb-step"
+        [attr.data-folder-id]="above.id"
+        (click)="opened.emit(above.id)"
+      >
+        <i class="crumb-swatch" [class]="'crumb-swatch is-' + above.colour" aria-hidden="true"></i>
+        {{ above.name }}
+      </button>
+      <span class="crumb-sep" aria-hidden="true">›</span>
+    }
     <i class="crumb-swatch" [class]="'crumb-swatch is-' + folder().colour" aria-hidden="true"></i>
     <span class="crumb-here" data-testid="folder-breadcrumb-name" aria-current="page">{{
       folder().name

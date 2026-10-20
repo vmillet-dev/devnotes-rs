@@ -17,7 +17,14 @@ const SPACES: readonly Space[] = [
 ];
 
 const FOLDERS: readonly Folder[] = [
-  { id: 'scripts', spaceId: 'work', name: 'Scripts', colour: 'blue', createdAt: new Date('2026-01-01') },
+  {
+    id: 'scripts',
+    spaceId: 'work',
+    name: 'Scripts',
+    colour: 'blue',
+    createdAt: new Date('2026-01-01'),
+    parentId: null,
+  },
 ];
 
 const RESULT: ToolResult = {

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Folder } from '@core/model/folder.model';
 import { AreaStore } from '@core/services/areas/area.store';
+import { BoardStore } from '@core/state/board.store';
 import { FoldersStore } from '@core/state/folders.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -20,6 +21,7 @@ export class NotesSidebarComponent {
   protected readonly areas = inject(AreaStore);
   protected readonly spaces = inject(SpacesStore);
   protected readonly folders = inject(FoldersStore);
+  protected readonly board = inject(BoardStore);
 
   /** Choosing a space leaves whatever folder was open: the row means the space itself. */
   protected onSpaceChosen(id: string | null): void {

@@ -22,9 +22,11 @@
     @if (folders.activeFolder(); as openFolder) {
       <app-folder-breadcrumb
         [folder]="openFolder"
+        [ancestors]="folders.activePath().slice(0, -1)"
         [spaceName]="spaces.activeSpace()?.name ?? null"
         [selectableCount]="canvas.visibleNotes().length"
         (closed)="folders.selectFolder(null)"
+        (opened)="folders.selectFolder($event)"
         (selectRequested)="selection.checkFolder($event)"
       />
     } @else {

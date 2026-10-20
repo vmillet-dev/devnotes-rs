@@ -6,8 +6,9 @@ import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
 
 /**
- * `SQL / ● Perf`, and the way back out. It replaces the space switcher and the view
- * switch while a folder is open: there is one place to go from here, and it is back.
+ * `SQL / ● Base › ● Perf`, and the way back out: a level up from any of its steps, out to the
+ * space from the first. It replaces the space switcher and the view switch while a folder is
+ * open: from here the places to go are back.
  */
 @Component({
   selector: 'app-folder-breadcrumb',
@@ -19,12 +20,15 @@ import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive'
 })
 export class FolderBreadcrumbComponent {
   readonly folder = input.required<Folder>();
+  /** The folders above it, the top first. */
+  readonly ancestors = input<readonly Folder[]>([]);
   /** `null` while the user is on every space, which the breadcrumb then leaves out. */
   readonly spaceName = input<string | null>(null);
   /** How many of the folder's notes are on screen; the whole view is its contents. */
   readonly selectableCount = input<number | null>(null);
 
   readonly closed = output<void>();
+  readonly opened = output<string>();
   readonly selectRequested = output<string>();
 
   protected readonly menu = inject(MenuTriggerDirective);

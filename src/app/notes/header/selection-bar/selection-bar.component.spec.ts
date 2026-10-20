@@ -10,8 +10,22 @@ const SPACES = [
 ];
 
 const FOLDERS = [
-  { id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber' as const, createdAt: new Date(0) },
-  { id: 'migr', spaceId: 'space-1', name: 'Migrations', colour: 'blue' as const, createdAt: new Date(0) },
+  {
+    id: 'perf',
+    spaceId: 'space-1',
+    name: 'Perf',
+    colour: 'amber' as const,
+    createdAt: new Date(0),
+    parentId: null,
+  },
+  {
+    id: 'migr',
+    spaceId: 'space-1',
+    name: 'Migrations',
+    colour: 'blue' as const,
+    createdAt: new Date(0),
+    parentId: null,
+  },
 ];
 
 describe('SelectionBarComponent', () => {
@@ -99,7 +113,7 @@ describe('SelectionBarComponent', () => {
     it('offers every folder and a way back out of one', async () => {
       await openMenu('selection-file');
 
-      expect(entries('selection-file')).toEqual(['Perf', 'Migrations', 'Sortir du dossier']);
+      expect(entries('selection-file')).toEqual(['Migrations', 'Perf', 'Sortir du dossier']);
     });
 
     it('emits the chosen folder', async () => {

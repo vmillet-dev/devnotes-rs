@@ -5,6 +5,7 @@
     [activeSpaceId]="spaces.activeSpaceId()"
     [activeFolderId]="folders.activeFolderId()"
     [width]="settings.libraryRailWidth()"
+    [cardTarget]="board.railTarget()"
     (widthChanged)="settings.libraryRailWidth.write($event)"
     (spaceChanged)="onSpaceChosen($event)"
     (spaceCreated)="spaces.createSpace($event)"

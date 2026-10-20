@@ -2159,6 +2159,28 @@ squeeze**: under about 230px the submit drops below the field. The floor is 160,
 default, the width being remembered like the window's own geometry — the default is a first
 launch and nothing else.
 
+**A folder holds folders, so the rail draws them under their parent**, one `ul.folders` a
+level, from a recursive `ng-template`: the indent is the nesting. A folder that holds folders
+has its twisty; the others keep its column, so the names line up. **Siblings are sorted by name
+and have no order of their own**, so a folder dropped on a row always goes _inside_ it, never
+before or after; a drop on its space's row brings it back to the top. The move is the rail's
+own — `FoldersStore.moveFolder`, recorded for the undo by the rail, since `UndoStore` injects
+`BoardStore`, which injects `FoldersStore` — dragged by its row or with `Alt+←` (up a level)
+and `Alt+→` (into the folder above it among its siblings). A row it cannot go into — itself,
+what it holds, another space — is ringed in red and said, rather than left silent.
+
+⚠️ **The gesture, its landing mark and what it says are the HTTP rail's, not a copy of them.**
+`shared/rail/row-drag.ts` is the pointer state machine — a threshold, the click a drag ends
+with swallowed, `railRowAt` reading the row under a point from `data-rail-row` and `data-id` —
+and `shared/rail/rail-marks.ts` the mark on the row and on what now holds it, and the sentence
+for the live region. The look is the `rail-landing` mixin. Each rail keeps only what is its
+own: where a drop lands, and what moving means.
+
+**A card on the board can be let go over a row of the rail**, and is filed there at any depth.
+The board reads the row under the pointer (`railHovered`, which `BoardStore.railTarget` hands to
+the rail to light it), and on release `fileFromRail` files it — staged in the zone that holds
+that folder on the board on screen, or off it — and the canvas records the undo.
+
 ⚠️ **A row's name is ellipsised by `.node-label`, a box of its own.** `text-overflow` is a
 property of a block container and `.node-name` is a flex one, which ignores it outright: the
 name was cut mid-letter. Nothing said so for as long as the rail could not be narrow enough to
@@ -2874,11 +2896,23 @@ holds is deliberately small:
 | Piece                      | Where it lives                                              |
 | -------------------------- | ----------------------------------------------------------- |
 | name, colour, owning space | the `folders` table — domain, and it travels with an export |
+| the folder it is in        | `folders.parent_id`, nullable, in the same space            |
 | which folder a note is in  | `notes.folder_id`, nullable, `ON DELETE SET NULL`           |
 
 ⚠️ **`ON DELETE SET NULL`, never `CASCADE`.** Deleting a folder must not delete a note. It is
 also why `delete_folder` takes no refuge argument where `delete_space(id, targetSpaceId)`
-must: "no folder" is a legitimate state, so the notes simply come out loose. `spaces/`
+must: what the folder held goes to **its parent** — its notes filed there, its sub-folders each
+to a free slot on that board — or loose at the top of the space. That is done in Rust, in one
+transaction, before the row goes; `parent_id`'s own `SET NULL` is only a guard.
+
+**A folder holds folders, one tree per space.** Every rule about it is `folders::model::Lineage`,
+built from ids and parents alone, so no name is opened to answer one: the sub-tree, the path, the
+depth, where a note sits on a board (`Seat`), and what a move may do — never into itself or what
+it holds, never out of its space, its whole sub-tree within `MAX_DEPTH` (8, a guard and not a
+level anyone should reach). A name is unique **among its siblings**: two folders may each hold a
+« Perf », as two spaces may. `move_folder` answers where the folder was — its parent and its
+zone's frame — which `move_folder_back` puts back; the frame is let go of on the way, since a
+frame is a place on one parent's board and means nothing on another's. `spaces/`
 cascades into `folders/`, and that cascade then fires the `SET NULL` — a space's notes reach
 their refuge unfiled, which is correct, since a folder of the deleted space no longer exists.
 
@@ -2901,12 +2935,14 @@ for the same reason: rebuilding the set from the selection would unfile a note t
 touched. A note already in the target folder is not reported, so a batch that changed nothing
 opens no undo window.
 
-**The card says where a note lives, and the back end is what resolved it.**
+**A card says where a note lives, and the back end is what resolved it** — the deepest folder,
+its path from the top of the space on hover (`NoteFolder.path`).
 `view::Decorations` fills `DisplayNote.folder` in the same pass as the attachment count and
 the global `{{field}}` defaults — one pass that `query_notes`, `board_view` and every
 single-note answer run, where there used to be three. `notes::store::decorations` reads the
-counters and the globals; the chips are added by `query_notes` alone, and only when
-`NotesQuery::shows_folder_chips`. The front end never joins a `folderId` against a list it
+counters and the globals; which chips a card keeps is the view's: none for the folder opened,
+whose breadcrumb names it (`NotesQuery::keeps_chip`), none for the zone a card sits in on the
+board (`BoardView::keep_chips_from_below`) — a card from a sub-folder says which. The front end never joins a `folderId` against a list it
 happens to hold. ⚠️ The chip is a **square swatch on a neutral
 pill** — never a coloured pill, which is what a tag is. A note with no folder gets no chip at
 all: the absence reads on its own, and an "unfiled" chip would soil every loose card.
@@ -2937,8 +2973,12 @@ sessions never show it. ⚠️ `notes-canvas` imports `CardDrop` with an `import
 the compiler defers an import only when every symbol on its line serves the deferred block,
 and a shared line kept the board in the page's chunk without a word.
 
-**The board has a query of its own.** `board_view` answers folders and positions, not
-sections — `build_sections` must never learn about a folder. It reads the whole space and
+**The board has a query of its own, and it draws one level.** `board_view` answers folders and
+positions, not sections — `build_sections` must never learn about a folder. `BoardQuery.rootId`
+is the folder whose board it is (`None` for the space's): its **children are the zones**, each
+gathering the notes of its whole sub-tree, and what is filed in the root itself is free on its
+ground; nothing from outside the root is drawn. No zone is drawn inside a zone — a zone lists its
+sub-folders as chips under its title, and opening one is opening that folder's board. It reads the whole space and
 marks each note `matches`, because the search, the quick filter and the kind, tag and
 language rails all **dim** on the board rather than narrow it. ⚠️ Reflowing the survivors
 into a list would throw away the spatial memory the board exists for, which is the one
@@ -2946,16 +2986,17 @@ thing the list view cannot give.
 
 **Cards flow inside a zone and sit freely outside it.** That is the whole geometry:
 
-| What                 | Where it is stored                                   |
-| -------------------- | ---------------------------------------------------- |
-| a zone's frame       | `folders.x/y/w/h`, nullable — all four move together |
-| a loose card's place | `note_positions`, one row per **unfiled** note       |
-| a filed card's place | nowhere: it flows, in canvas order                   |
+| What                | Where it is stored                                                          |
+| ------------------- | --------------------------------------------------------------------------- |
+| a zone's frame      | `folders.x/y/w/h`, nullable — all four move together, on its parent's board |
+| a free card's place | `note_positions`, one row per note, on the board of **its own** folder      |
+| a card in a zone    | nowhere: it flows, in canvas order                                          |
 
-⚠️ A `note_positions` row means "this note is loose". `file_many` deletes the rows of the
-notes it files, so the table's meaning stays exact and a zone never has two competing
-notions of where a card is. It is also why `#133` can say the inside of a folder is not
-spatial without contradicting anything.
+⚠️ A `note_positions` row means "placed on the board of its own folder" — the space's for a
+loose note. `file_many` deletes the row of every note it files, since a place on one board
+means nothing on another, and `save_layout` keeps a place only for a note filed in the root of
+the board the gesture was made on: one filed elsewhere between the drag and the save would get
+back the row `file_many` just dropped. A zone never has two competing notions of where a card is.
 
 **The first layout is materialised, not computed on the fly.** `store::board::geometry`
 reads the frames and positions and writes one for anything that has never been laid out, in
@@ -2963,8 +3004,10 @@ a single transaction. ⚠️ A read that writes, deliberately: computing a place
 it would let the first drag land next to cards that have no stored place of their own, and
 the board would look shuffled at every launch. It is idempotent — the second read of a space
 writes nothing — and a folder added later lands in the slot reading order gives it rather
-than on top of the first zone, because the arrangement is computed against every folder and
-only the missing frames are written.
+than on top of the first zone, because the arrangement is computed against every zone and
+only the missing frames are written. ⚠️ Against the zones **of this board** and its free cards
+alone: the frames of folders a level down sit on their own parent's board, and would take a seat
+on this one.
 
 The layout rules live in `folders/board.rs`, which imports neither Diesel nor Tauri:
 `arrange_zones` flows zones three across, each row clearing the tallest zone above it;
@@ -2983,7 +3026,8 @@ placed cards _and_ the zones, not an equality one: a card dragged by hand almost
 exactly on a seat, and one half over a seat hides what lands there just as well.
 
 ⚠️ **A zone grows to fit and never shrinks.** `store::board::grow_to_fit` runs from
-`file_many` and from `restore_filings`, so both ways in are covered and so is the undo. A
+`file_many` and from `restore_filings`, so both ways in are covered and so is the undo — for the
+folder filed into **and every folder above it**, since each of their zones gathers it. A
 frame is otherwise computed once and never again, which is how a card filed into a full zone
 ended up out of sight behind its scrollbar. Rows are counted against the zone's **own** width
 (`columns_in`), not the nominal two columns — a zone widened by hand fits more across.
@@ -3001,7 +3045,10 @@ prediction — the card’s width and height, the gap, the zone’s padding and 
 and `scripts/board-geometry.test.mjs` reads them out of the stylesheets and out of `board.rs`
 and fails when one moves alone, because nothing else would: both sides are valid on their
 own and the symptom is a band of empty board. It pins `GRID_PX` against the dotted
-background it snaps to for the same reason. ⚠️ `ZONE_HEADER` is **not** in it and cannot be:
+background it snaps to for the same reason. A zone that holds folders is taller by their row, `ZONE_SUBFOLDERS`, which the sweep reads off
+`.zone-children` as well: one line, scrolled sideways and never wrapped, its height fixed — the
+list inside scrolls, so that `ring-room` hands its room back without touching the row's.
+⚠️ `ZONE_HEADER` is **not** in it and cannot be:
 the header’s height is its padding plus wherever the text lands, and no stylesheet says so —
 so `19-board-gesture` measures the drawn header against the constant instead.
 
@@ -3220,9 +3267,13 @@ to a `SQL / ● Perf` breadcrumb: from inside a folder there is one place to go,
 back. Leaving restores whichever view you came from, because the board's own mode is never
 touched.
 
-⚠️ **The inside of a folder is not spatial.** No zones, no coordinates, nothing to draw —
-it is already sorted by the fact of being there, and a second board inside the first would
-be a second set of positions to maintain for nothing.
+**A folder that holds folders opens on a board of its own; one that holds none is a flat
+grid**, as every folder was before nesting: sorted by the fact of being there, with nothing to
+draw. `BoardStore.root` is the open folder when it holds folders (`FoldersStore.activeHasChildren`),
+and the board then draws its sub-folders as zones and its own notes as free cards. In the list
+view an open folder is the flat grid of **its whole sub-tree** — the zone's rule — read in Rust:
+`fetch` filters on `folder_id IN` the sub-tree, bound up to `BIND_AT_MOST` and kept after the
+read past it. The breadcrumb reads the path, `Space / ● Base › ● Perf`, each step a level up.
 
 **It is a flat grid, and that is decided in Rust.** `notes::view::build` counts an opened
 folder as filtering, so the view comes back as a single `results` section. ⚠️
@@ -3236,7 +3287,8 @@ mid-task from another application, and a decision there would sit in the fastest
 product.
 
 **Escape falls through**, in this order: the selection, then the search and the facets, then
-out of the folder. Leaving is the biggest of the three, so it goes last. ⚠️ The middle rung
+up a level of folders (`FoldersStore.goUp`), and out at the top. Leaving is the biggest of the
+three, so it goes last, and a step at a time. ⚠️ The middle rung
 asks `hasUserFilters` and not `isFiltering` — the latter is the _view's_ answer and is true
 inside an opened folder, so Escape would clear a search that is not there and never fall
 through.
@@ -3245,16 +3297,18 @@ through.
 holds the rename, the palette and the delete and calls `FoldersStore` itself; the switcher,
 the breadcrumb, the rail and the zone menu on the board all project it, and hear only
 `finished`, to close whatever they opened it from. `space-editor/` is its twin over
-`SpacesStore`, and the page binds none of their events. Deleting from the breadcrumb goes back, with the
-notes now loose — `FoldersStore.deleteFolder` clears the open folder.
+`SpacesStore`, and the page binds none of their events. Deleting from the breadcrumb goes back a level, to the
+parent that now holds what it held — `FoldersStore.deleteFolder` opens the parent.
 
 ### A folder travels; its coordinates do not
 
 The folder is part of what a note is. Where its zone sat on a board is not.
 
 **Out.** `Bundle` gains the folders actually cited, beside the spaces it already carries,
-and each note carries its `folderId`. Only the cited ones travel, for the same reason only
-the cited spaces do: exporting one space should not recreate a whole tree on the other side.
+and each note carries its `folderId`. Only the cited ones travel, **with the folders above
+them**, for the same reason only the cited spaces do: exporting one space should not recreate a
+whole tree on the other side, and a folder without its parents would land at the top. A folder
+carries `parentId` with the same `#[serde(default)]`: an older file reads flat.
 ⚠️ `#[serde(default)]` on both new fields, exactly as `kind` and `items` carry it — an
 export written before folders must stay readable, and there is **no `FORMAT_VERSION` bump**
 because such a file still parses.
@@ -3264,9 +3318,11 @@ geometry: where a zone sits lives in columns only the board's own query reads. T
 whole reason the geometry was kept off the model in the first place, and a test reads the
 written file to prove no `x` ever reaches it.
 
-**In.** A folder is matched **by name inside the destination space**, case-insensitively,
-and created when absent — the rule spaces already follow. Spaces are merged first, because a
-folder needs its space to exist.
+**In.** A folder is matched **by name under the same parent in the destination space**,
+case-insensitively, and created when absent — the rule spaces already follow. Spaces are merged
+first, because a folder needs its space to exist, and parents before their children, whatever
+order the file wrote them in. What a file cannot hold degrades rather than fails: a parent it
+does not carry, a cycle, a tree past `MAX_DEPTH` — that folder lands at the top.
 
 ⚠️ A note's `folderId` is the _sending_ library's, so it is remapped, and **dropped when the
 file did not carry the folder**: a dangling id would be refused by the foreign key, losing

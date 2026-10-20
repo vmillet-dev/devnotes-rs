@@ -9,11 +9,12 @@ import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
+import { UndoStore } from '@core/state/undo.store';
 import { HelpStore } from '@core/services/help/help.store';
 import { SelectionBarComponent } from '../header/selection-bar/selection-bar.component';
 // ⚠️ The type apart: a value import sharing the component's line would keep it eager.
 import { BoardComponent } from './board/board.component';
-import type { CardDrop } from './board/board.component';
+import type { CardDrop, RailDrop } from './board/board.component';
 import { NoteActivation } from './note-card/note-card.component';
 import { NoteSectionComponent } from './note-section/note-section.component';
 
@@ -34,6 +35,7 @@ export class NotesCanvasComponent {
   protected readonly folders = inject(FoldersStore);
   protected readonly board = inject(BoardStore);
   private readonly transfer = inject(TransferStore);
+  private readonly undo = inject(UndoStore);
   /** The guide, opened at the chapter about whatever is empty on screen. */
   protected readonly help = inject(HelpStore);
 
@@ -64,6 +66,12 @@ export class NotesCanvasComponent {
 
   protected onCardDropped({ noteId, folderId, position }: CardDrop): void {
     void this.board.dropCard(noteId, folderId, position);
+  }
+
+  /** Filed at any depth from the rail, and offered back: it may land out of sight. */
+  protected async onCardFiledOnRail({ noteId, drop }: { noteId: string; drop: RailDrop }): Promise<void> {
+    const previous = await this.board.fileFromRail(noteId, drop.folderId);
+    if (previous) this.undo.record({ kind: 'file', previous, count: previous.length });
   }
 
   protected onZoneDrawn(frame: BoardFrame): void {

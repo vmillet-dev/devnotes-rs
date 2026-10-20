@@ -24,6 +24,7 @@ diesel::table! {
         y -> Nullable<Integer>,
         w -> Nullable<Integer>,
         h -> Nullable<Integer>,
+        parent_id -> Nullable<Text>,
     }
 }
 

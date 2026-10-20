@@ -16,6 +16,7 @@ import {
   CardPlacement,
   ZonePlacement,
 } from '@core/model/board.model';
+import { toFolder } from './folders.repository';
 import { toIsoString, toNote } from './note.mapper';
 
 /**
@@ -28,9 +29,10 @@ function toBoardNote({ matches, position, ...note }: WireBoardNote): BoardNote {
 
 function toZone(dto: WireBoardZone): BoardZone {
   return {
-    folder: { ...dto.folder, colour: dto.folder.colour ?? 'blue', createdAt: new Date(dto.folder.createdAt) },
+    folder: toFolder(dto.folder),
     frame: dto.frame,
     notes: dto.notes.map(toBoardNote),
+    children: dto.children,
   };
 }
 
@@ -52,13 +54,20 @@ export class BoardRepository {
     return toBoardView(unwrap('board_view', await commands.boardView(wire)));
   }
 
-  /** One command for the whole gesture: a board half written is a board nobody arranged. */
-  async saveLayout(zones: readonly ZonePlacement[], cards: readonly CardPlacement[]): Promise<void> {
-    unwrap('save_board_layout', await commands.saveBoardLayout([...zones], [...cards]));
+  /**
+   * One command for the whole gesture: a board half written is a board nobody arranged.
+   * `rootId` is the board it was made on, whose own notes alone have a place there.
+   */
+  async saveLayout(
+    rootId: string | null,
+    zones: readonly ZonePlacement[],
+    cards: readonly CardPlacement[],
+  ): Promise<void> {
+    unwrap('save_board_layout', await commands.saveBoardLayout(rootId, [...zones], [...cards]));
   }
 
   /** Answers what moved and the layout it replaced, which is what puts it back. */
-  async arrange(spaceId: string, scope: BoardScope): Promise<BoardArrangement> {
-    return unwrap('arrange_board', await commands.arrangeBoard(spaceId, scope));
+  async arrange(spaceId: string, rootId: string | null, scope: BoardScope): Promise<BoardArrangement> {
+    return unwrap('arrange_board', await commands.arrangeBoard(spaceId, rootId, scope));
   }
 }

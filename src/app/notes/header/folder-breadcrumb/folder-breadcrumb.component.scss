@@ -28,8 +28,19 @@
   color: var(--text-1);
 }
 
-.crumb-back:hover {
+.crumb-back:hover,
+.crumb-step:hover {
   color: var(--text-0);
+}
+
+.crumb-step {
+  @include unstyled-control;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--text-1);
 }
 
 .crumb-sep {
@@ -79,6 +90,7 @@
 }
 
 .crumb-back:focus-visible,
+.crumb-step:focus-visible,
 .crumb-menu:focus-visible {
   outline: 2px solid var(--amber-edge);
   outline-offset: 2px;

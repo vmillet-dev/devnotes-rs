@@ -175,7 +175,7 @@
     },
     "delete": "Supprimer le dossier",
     "deleteConfirm": "Confirmer ?",
-    "deleteKeepsNotes": "Les notes restent, simplement sans dossier.",
+    "deleteKeepsNotes": "Ses notes et ses sous-dossiers restent, un niveau plus haut.",
     "breadcrumbLabel": "Fil d’Ariane du dossier",
     "selectNotes": "Sélectionner {count, plural, one {la note} other {les # notes}}"
   },
@@ -185,7 +185,18 @@
     "expand": "Ouvrir l’espace {{name}}",
     "collapse": "Replier l’espace {{name}}",
     "noFolders": "Aucun dossier",
-    "resize": "Largeur de la barre latérale"
+    "resize": "Largeur de la barre latérale",
+    "expandFolder": "Déplier le dossier {{name}}",
+    "collapseFolder": "Replier le dossier {{name}}",
+    "moved": {
+      "into": "« {{name}} » est maintenant dans {{other}}.",
+      "top": "« {{name}} » est maintenant en haut de {{other}}.",
+      "refused": {
+        "atTop": "« {{name}} » est déjà en haut de son espace.",
+        "noFolderAbove": "Aucun dossier au-dessus de « {{name}} » pour l’y ranger.",
+        "there": "« {{name}} » ne peut pas aller là."
+      }
+    }
   },
   "board": {
     "viewSwitchLabel": "Choisir la vue",
@@ -203,7 +214,9 @@
     "alignHint": "Aligne {cards, plural, =0 {aucune carte libre} one {# carte libre} other {# cartes libres}} sous les dossiers, sans y toucher.",
     "tidyMoreLabel": "Autres rangements",
     "reorganise": "Réorganiser {zones, plural, =0 {aucun dossier} one {# dossier} other {# dossiers}} et {cards, plural, =0 {aucune carte} one {# carte} other {# cartes}}",
-    "reorganiseHint": "Replace et redimensionne les dossiers. Écrase les tailles choisies à la main ; annulable."
+    "reorganiseHint": "Replace et redimensionne les dossiers. Écrase les tailles choisies à la main ; annulable.",
+    "subFolders": "Sous-dossiers de {{name}}",
+    "subFoldersLabel": "Sous-dossiers"
   },
   "sort": {
     "label": "Trier et regrouper",
@@ -555,7 +568,8 @@
       "unreadable": "Ce fichier ne se lit ni comme un CSV avec son en-tête, ni comme un tableau JSON d’objets.",
       "empty": "Ce fichier ne contient aucune ligne de données."
     },
-    "calcFailed": "La feuille n’a pas pu être calculée."
+    "calcFailed": "La feuille n’a pas pu être calculée.",
+    "folderMoveFailed": "Le dossier n’a pas pu être déplacé."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -790,7 +804,9 @@
       "snippet": "Convertie en snippet",
       "checklist": "Convertie en liste de tâches",
       "calc": "Convertie en calcul"
-    }
+    },
+    "folderMoved": "« {{name}} » est maintenant dans {{into}}",
+    "folderMovedTop": "« {{name}} » est maintenant en haut de l’espace"
   },
   "file": {
     "menuLabel": "Fichier",
@@ -1082,7 +1098,7 @@
       },
       "folders": {
         "title": "Des dossiers, et un tableau",
-        "body": "Un dossier découpe un espace en régions nommées et colorées, et la vue « Tableau » les montre comme telles : on y range une carte en la glissant, on l’en sort en la lâchant sur le fond. Sans souris : {{check}} pour cocher, puis « Ranger dans »."
+        "body": "Un dossier découpe un espace en régions nommées et colorées, et peut en contenir d’autres. La vue « Tableau » en montre un niveau à la fois : on range une carte en la glissant sur une zone ou sur une ligne de la barre latérale, on la remet au niveau du tableau en la lâchant sur le fond, et un clic sur une zone ouvre le sien. Un dossier glissé sur un autre dans la barre latérale s’y range, ou Alt+← et Alt+→. Sans souris : {{check}} pour cocher, puis « Ranger dans »."
       },
       "organise": {
         "title": "Retrouver : recherche, tags, filtres",

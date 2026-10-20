@@ -1119,7 +1119,16 @@ describe('NotesStore filing one note', () => {
       [createNote({ id: 'a', spaceId: 'space-1' })],
       undefined,
       undefined,
-      [{ id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') }],
+      [
+        {
+          id: 'perf',
+          spaceId: 'space-1',
+          name: 'Perf',
+          colour: 'amber',
+          createdAt: new Date('2026-01-01'),
+          parentId: null,
+        },
+      ],
     );
 
     await harness.store.fileNote('a', 'perf');
@@ -1137,7 +1146,16 @@ describe('NotesStore filing one note', () => {
       [createNote({ id: 'a', spaceId: 'space-1' })],
       undefined,
       undefined,
-      [{ id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') }],
+      [
+        {
+          id: 'perf',
+          spaceId: 'space-1',
+          name: 'Perf',
+          colour: 'amber',
+          createdAt: new Date('2026-01-01'),
+          parentId: null,
+        },
+      ],
     );
     await harness.store.openNote('a');
     await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));
@@ -1153,7 +1171,16 @@ describe('NotesStore filing one note', () => {
       [createNote({ id: 'a', spaceId: 'space-1', folderId: 'perf' })],
       undefined,
       undefined,
-      [{ id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') }],
+      [
+        {
+          id: 'perf',
+          spaceId: 'space-1',
+          name: 'Perf',
+          colour: 'amber',
+          createdAt: new Date('2026-01-01'),
+          parentId: null,
+        },
+      ],
     );
     await harness.store.openNote('a');
     await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));

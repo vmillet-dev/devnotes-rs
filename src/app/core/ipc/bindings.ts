@@ -290,9 +290,10 @@ export const commands = {
 	 */
 	generateHttpCode: (request: CodeRequestOf_Deserialize) => typedError<GeneratedCode, AppError>(__TAURI_INVOKE("generate_http_code", { request })),
 	/**
-	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
-	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
-	 *  draws no folder chips — a chip naming the zone a card sits in is noise.
+	 *  The second way to look at a space, one level at a time: the root's sub-folders as zones,
+	 *  each gathering what is under it, and what is filed in the root itself free beside them. It
+	 *  reads the whole space and marks what matches rather than narrowing. A card names its folder
+	 *  only when it comes from below its zone — a chip naming the zone it sits in is noise.
 	 */
 	boardView: (query: BoardQuery) => typedError<BoardView, AppError>(__TAURI_INVOKE("board_view", { query })),
 	/**
@@ -300,20 +301,28 @@ export const commands = {
 	 *  cut short must not leave half a board. Filing is not here (see [`file_notes`]). This is
 	 *  also the undo of [`arrange_board`], with the layout that one answered.
 	 */
-	saveBoardLayout: (zones: ZonePlacement[], cards: CardPlacement[]) => typedError<null, AppError>(__TAURI_INVOKE("save_board_layout", { zones, cards })),
+	saveBoardLayout: (rootId: string | null, zones: ZonePlacement[], cards: CardPlacement[]) => typedError<null, AppError>(__TAURI_INVOKE("save_board_layout", { rootId, zones, cards })),
 	/**
-	 *  Puts one space's board back in order, as far as `scope` allows, and answers the layout it
-	 *  replaced: the only moment the old one still exists, for an undo.
+	 *  Puts one board back in order — the space's, or a folder's, `rootId` — as far as `scope`
+	 *  allows, and answers the layout it replaced: the only moment the old one still exists, for an
+	 *  undo.
 	 */
-	arrangeBoard: (spaceId: string, scope: BoardScope) => typedError<BoardArrangement, AppError>(__TAURI_INVOKE("arrange_board", { spaceId, scope })),
+	arrangeBoard: (spaceId: string, rootId: string | null, scope: BoardScope) => typedError<BoardArrangement, AppError>(__TAURI_INVOKE("arrange_board", { spaceId, rootId, scope })),
 	createFolder: (draft: FolderDraft) => typedError<Folder, AppError>(__TAURI_INVOKE("create_folder", { draft })),
 	renameFolder: (id: string, name: string) => typedError<Folder, AppError>(__TAURI_INVOKE("rename_folder", { id, name })),
 	recolourFolder: (id: string, colour: FolderColour) => typedError<Folder, AppError>(__TAURI_INVOKE("recolour_folder", { id, colour })),
 	/**
-	 *  No refuge, unlike [`crate::spaces::delete_space`]: the notes come out loose, a legitimate
-	 *  state.
+	 *  No refuge, unlike [`crate::spaces::delete_space`]: what it held goes to its parent, or
+	 *  loose at the top of the space.
 	 */
 	deleteFolder: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_folder", { id })),
+	/**
+	 *  Under another folder of its space, `None` at its top, with everything it holds. The answer
+	 *  is where it was: what [`move_folder_back`] puts back.
+	 */
+	moveFolder: (id: string, parentId: string | null) => typedError<FolderMove, AppError>(__TAURI_INVOKE("move_folder", { id, parentId })),
+	/**  The undo of [`move_folder`]; `false` when its old parent is gone or no longer a place for it. */
+	moveFolderBack: (was: FolderMove) => typedError<boolean, AppError>(__TAURI_INVOKE("move_folder_back", { was })),
 	/**
 	 *  A batch, like [`crate::notes::move_notes`]: the selection bar files a whole selection,
 	 *  and a drop on the board is a batch of one. `folderId` absent unfiles.
@@ -550,6 +559,15 @@ export type BoardArrangement = {
 	previous: BoardLayout,
 };
 
+/**  A sub-folder named under a zone's title, opened by a click: the board draws one level. */
+export type BoardChild = {
+	id: string,
+	name: string,
+	colour: FolderColour,
+	/**  What its whole sub-tree holds. */
+	count: number,
+};
+
 export type BoardFrame = {
 	x: number,
 	y: number,
@@ -585,6 +603,8 @@ export type BoardPoint = {
 export type BoardQuery = {
 	/**  Required, unlike `NotesQuery::space_id`: a board across every space has no zones. */
 	spaceId: string,
+	/**  The folder whose board this is, `None` for the space's: its sub-folders are the zones. */
+	rootId?: string | null,
 	search: string,
 	filter: NoteFilter,
 	tags: string[],
@@ -628,7 +648,9 @@ export type BoardView = {
 export type BoardZone = {
 	folder: Folder,
 	frame: BoardFrame,
+	/**  Every note of its sub-tree: a zone gathers what is under it. */
 	notes: BoardNote[],
+	children: BoardChild[],
 };
 
 export type BodyAnswer = {
@@ -1594,10 +1616,12 @@ export type FinalNewlineChange = "unchanged" | "added" | "removed";
 export type Folder = {
 	id: string,
 	spaceId: string,
-	/**  Uniqueness is case-insensitive inside its space, decided by persistence. */
+	/**  Unique among its siblings, case-insensitively, decided by persistence. */
 	name: string,
 	colour?: FolderColour,
 	createdAt: string,
+	/**  `None` at the top of its space. `default`: a file from before nesting reads flat. */
+	parentId?: string | null,
 };
 
 /**
@@ -1609,6 +1633,17 @@ export type FolderColour = "blue" | "amber" | "purple" | "green" | "red";
 export type FolderDraft = {
 	spaceId: string,
 	name: string,
+	parentId?: string | null,
+};
+
+/**
+ *  Where a folder was before it moved, the only thing that can put it back: its parent, and
+ *  its zone's frame on that parent's board.
+ */
+export type FolderMove = {
+	folderId: string,
+	parentId?: string | null,
+	frame?: BoardFrame | null,
 };
 
 export type FormPart = {
@@ -2641,6 +2676,8 @@ export type NoteFolder = {
 	id: string,
 	name: string,
 	colour: FolderColour,
+	/**  The names from the top of the space down to this one, said on hover. */
+	path: string[],
 };
 
 /**

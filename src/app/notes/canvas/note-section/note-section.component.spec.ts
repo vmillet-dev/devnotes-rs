@@ -53,6 +53,7 @@ describe('NoteSectionComponent', () => {
                 name: 'Ops',
                 colour: 'amber',
                 createdAt: new Date('2026-10-01T00:00:00.000Z'),
+                parentId: null,
               },
             ],
           }),

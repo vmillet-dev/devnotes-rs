@@ -278,11 +278,18 @@ fn a_space_counts_its_notes_and_its_folders_for_the_confirmation() {
     let doomed = create(&mut connection, "Perso").unwrap();
     let other = create(&mut connection, "Boulot").unwrap();
     note_in(&mut connection, &doomed.id);
-    devnotes_lib::folders::store::create(&mut connection, &doomed.id, "Perf", T0.parse().unwrap())
-        .unwrap();
+    devnotes_lib::folders::store::create(
+        &mut connection,
+        &doomed.id,
+        None,
+        "Perf",
+        T0.parse().unwrap(),
+    )
+    .unwrap();
     devnotes_lib::folders::store::create(
         &mut connection,
         &other.id,
+        None,
         "Ailleurs",
         T0.parse().unwrap(),
     )

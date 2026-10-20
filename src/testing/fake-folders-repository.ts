@@ -1,6 +1,6 @@
 import { guard } from './fail-next';
 import { FoldersRepository } from '@core/data/folders.repository';
-import { Folder, FolderColour, FolderDraft, NoteFiling } from '@core/model/folder.model';
+import { Folder, FolderColour, FolderDraft, FolderMove, NoteFiling } from '@core/model/folder.model';
 
 /** The palette the real one rotates through, so a spec can assert the colour it assigns. */
 const COLOURS: readonly FolderColour[] = ['blue', 'amber', 'purple', 'green', 'red'];
@@ -34,6 +34,7 @@ export class FakeFoldersRepository implements Pick<FoldersRepository, keyof Fold
         name: draft.name,
         colour: COLOURS[siblings % COLOURS.length] ?? 'blue',
         createdAt: new Date(),
+        parentId: draft.parentId ?? null,
       };
       this.folders = [...this.folders, folder];
       return folder;
@@ -48,12 +49,38 @@ export class FakeFoldersRepository implements Pick<FoldersRepository, keyof Fold
     return guard(this, () => this.adopt(id, (folder) => ({ ...folder, colour })));
   }
 
-  /** Unfiles rather than deleting, exactly as `ON DELETE SET NULL` does. */
+  /** Moves whatever it is asked to: the refusals are Rust's, and the specs that need one fail it. */
+  move(id: string, parentId: string | null): Promise<FolderMove> {
+    return guard(this, () => {
+      const folder = this.folders.find((candidate) => candidate.id === id);
+      if (!folder) throw new Error(`Unknown folder: ${id}`);
+      const was: FolderMove = { folderId: id, parentId: folder.parentId, frame: null };
+      if (folder.parentId === parentId) return was;
+
+      this.adopt(id, (current) => ({ ...current, parentId }));
+      return was;
+    });
+  }
+
+  moveBack(was: FolderMove): Promise<boolean> {
+    return guard(this, () => {
+      const parentId = was.parentId ?? null;
+      if (parentId !== null && !this.folders.some((folder) => folder.id === parentId)) return false;
+
+      this.adopt(was.folderId, (current) => ({ ...current, parentId }));
+      return true;
+    });
+  }
+
+  /** Hands what it held to its parent, as the real one does. */
   delete(id: string): Promise<void> {
     return guard(this, () => {
-      this.folders = this.folders.filter((folder) => folder.id !== id);
+      const parentId = this.folders.find((folder) => folder.id === id)?.parentId ?? null;
+      this.folders = this.folders
+        .filter((folder) => folder.id !== id)
+        .map((folder) => (folder.parentId === id ? { ...folder, parentId } : folder));
       for (const [noteId, folderId] of this.filings) {
-        if (folderId === id) this.filings.set(noteId, null);
+        if (folderId === id) this.filings.set(noteId, parentId);
       }
     });
   }
