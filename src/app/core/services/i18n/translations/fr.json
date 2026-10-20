@@ -1263,6 +1263,8 @@
     "selection": "Sélection",
     "copyPath": "Copier le chemin",
     "copyValue": "Copier la valeur",
+    "extract": "Extraire vers une variable…",
+    "menu": "Actions sur la valeur",
     "kinds": {
       "object": "{count, plural, =0 {Objet vide} one {Objet · # clé} other {Objet · # clés}}",
       "array": "{count, plural, =0 {Tableau vide} one {Tableau · # élément} other {Tableau · # éléments}}",
@@ -3687,6 +3689,20 @@
       "actual": "reçu",
       "line": "Ligne {{line}} ›"
     },
+    "extract": {
+      "title": "Extraire vers une variable",
+      "path": "Chemin dans la réponse",
+      "name": "Nom de la variable",
+      "secret": "Secret · masquée partout",
+      "into": "Écrite dans l’environnement actif à chaque envoi de {{request}}, aujourd’hui {{environment}}.",
+      "intoGlobals": "Écrite dans les globales à chaque envoi de {{request}}, aucun environnement n’étant choisi.",
+      "submit": "Extraire",
+      "added": "« {{variable}} » sera remplie à chaque envoi : enregistrez la requête pour garder la règle.",
+      "listTitle": "Extractions",
+      "listHint": "après chaque envoi, dans l’environnement actif",
+      "secretShort": "secret",
+      "remove": "Retirer l’extraction vers « {{variable}} »"
+    },
     "variables": {
       "name": "Nom",
       "value": "Valeur",
@@ -3731,7 +3747,10 @@
           "globals": "globales",
           "dynamic": "faite à l’envoi"
         }
-      }
+      },
+      "filledBy": "remplie par {{name}}",
+      "from": "depuis {{name}}",
+      "openFiller": "Ouvrir {{name}} sur ses scripts"
     },
     "cookies": {
       "open": "Cookies",

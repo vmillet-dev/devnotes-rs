@@ -1,5 +1,6 @@
 import type {
   Environment as WireEnvironment,
+  FilledBy,
   FolderColour,
   HttpMethod,
   RequestKind,
@@ -9,6 +10,7 @@ import type {
 
 export type {
   EnvironmentPatch,
+  FilledBy,
   ScopedVariable,
   UsedVariable,
   VariableFault,
@@ -22,6 +24,8 @@ export interface VariableRow {
   readonly name: string;
   readonly value: string;
   readonly kind: VariableKind;
+  /** The request whose last send wrote it: « remplie par Login ». Absent when none did. */
+  readonly filledBy?: FilledBy;
 }
 
 export interface HttpEnvironment {
@@ -52,6 +56,7 @@ export function toVariableRow(variable: Variable): VariableRow {
     name: variable.name ?? '',
     value: variable.value ?? '',
     kind: variable.kind ?? 'text',
+    ...(variable.filledBy ? { filledBy: variable.filledBy } : {}),
   };
 }
 

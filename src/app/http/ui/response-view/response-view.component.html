@@ -87,7 +87,12 @@
 <div class="panel" role="tabpanel">
   @switch (section()) {
     @case ('body') {
-      <app-response-body [response]="shown()" [sendId]="sendId()" />
+      <app-response-body
+        [response]="shown()"
+        [sendId]="sendId()"
+        [extractable]="scriptOpenable()"
+        (extractAsked)="extractAsked.emit($event)"
+      />
     }
     @case ('tests') {
       <app-response-tests

@@ -49,6 +49,9 @@
     </p>
   }
 
+  <!-- What a request adds among its scripts: its extractions, after the answer. -->
+  <ng-content />
+
   <div class="code" data-testid="http-script-code">
     <!-- Deferred: CodeMirror is loaded the first time a script is shown, not at startup. -->
     @defer (on immediate) {

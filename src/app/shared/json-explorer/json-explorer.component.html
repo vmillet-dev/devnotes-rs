@@ -25,7 +25,9 @@
           [graph]="view.graph"
           [selectedPath]="selectedPath()"
           [offsets]="offsets()"
+          [withMenu]="extractable()"
           (selected)="selected.emit($event)"
+          (menuAsked)="openMenu($event)"
           (rowActivated)="onRow($event)"
           (moved)="nodeMoved.emit($event)"
           (layoutReset)="layoutReset.emit()"
@@ -37,7 +39,9 @@
           [lines]="view.tree"
           [truncated]="view.treeTruncated"
           [selectedPath]="selectedPath()"
+          [withMenu]="extractable()"
           (selected)="selected.emit($event)"
+          (menuAsked)="openMenu($event)"
           (toggled)="onLine($event)"
           (keydown)="onSurfaceKeydown($event)"
         />
@@ -137,12 +141,12 @@
   <aside class="aside" data-testid="json-selection" [attr.aria-label]="'json.selectionLabel' | transloco">
     @if (selection(); as selected) {
       <p class="aside-title">{{ 'json.selection' | transloco }}</p>
-      <code class="selected-path" data-testid="json-selected-path">{{ selected.path }}</code>
+      <code class="selected-path" data-testid="json-selected-path">{{ written(selected.path) }}</code>
       <button
         type="button"
         class="action primary"
         data-testid="json-copy-path"
-        (click)="copied.emit(selected.path)"
+        (click)="copied.emit(written(selected.path))"
       >
         {{ 'json.copyPath' | transloco }}
       </button>
@@ -154,6 +158,16 @@
         <button type="button" class="action" data-testid="json-copy-value" (click)="copyValue(selected.span)">
           {{ 'json.copyValue' | transloco }}
         </button>
+        @if (extractable()) {
+          <button
+            type="button"
+            class="action"
+            data-testid="json-extract"
+            (click)="extractAsked.emit(selected.path)"
+          >
+            {{ 'json.extract' | transloco }}
+          </button>
+        }
         @if (withCode()) {
           <button
             type="button"
@@ -189,3 +203,48 @@
     <p class="aside-note">{{ 'json.limitNote' | transloco }}</p>
   </aside>
 </div>
+
+@if (menu(); as asked) {
+  <!-- In the top layer: the response pane scrolls, and would cut a menu drawn inside it. -->
+  <div
+    #menuPanel
+    class="value-menu"
+    role="menu"
+    popover="manual"
+    data-testid="json-value-menu"
+    tabindex="-1"
+    [style.left.px]="asked.x"
+    [style.top.px]="asked.y"
+    [attr.aria-label]="'json.menu' | transloco"
+    (keydown.escape)="closeMenu()"
+    (focusout)="onMenuFocusOut($event, menuPanel)"
+  >
+    <button
+      type="button"
+      role="menuitem"
+      class="value-menu-item"
+      data-testid="json-menu-copy-value"
+      (click)="menuCopyValue()"
+    >
+      {{ 'json.copyValue' | transloco }}
+    </button>
+    <button
+      type="button"
+      role="menuitem"
+      class="value-menu-item"
+      data-testid="json-menu-copy-path"
+      (click)="menuCopyPath(asked.path)"
+    >
+      {{ 'json.copyPath' | transloco }} <code class="value-menu-path">{{ written(asked.path) }}</code>
+    </button>
+    <button
+      type="button"
+      role="menuitem"
+      class="value-menu-item"
+      data-testid="json-menu-extract"
+      (click)="menuExtract(asked.path)"
+    >
+      {{ 'json.extract' | transloco }}
+    </button>
+  </div>
+}

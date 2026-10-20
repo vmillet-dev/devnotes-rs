@@ -81,6 +81,16 @@ pub struct ContainerSettings {
     pub scripts: RequestScripts,
 }
 
+/// A value of a JSON answer written into the active environment — the globals with « Aucun » —
+/// after each send: `body.access_token` into `accessToken`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Extraction {
+    pub path: String,
+    pub variable: String,
+    pub secret: bool,
+}
+
 /// The JavaScript a request, a folder or a collection runs around a send; a blank one runs
 /// nothing.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -226,6 +236,8 @@ pub struct RequestDocument {
     /// The nearest level a `{{name}}` resolves from.
     pub variables: Vec<Variable>,
     pub scripts: RequestScripts,
+    /// Values of the answer kept in variables after each send, after the scripts.
+    pub extractions: Vec<Extraction>,
 }
 
 /// A row of a request's parameters or headers.

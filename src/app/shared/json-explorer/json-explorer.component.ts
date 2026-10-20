@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
+  ElementRef,
   Injector,
   afterNextRender,
   computed,
@@ -8,6 +10,7 @@ import {
   inject,
   input,
   output,
+  signal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -22,6 +25,7 @@ import {
   NodeOffset,
   Span,
   StructureFormat,
+  ValueMenuAsk,
   FORMAT_NAMES,
   findSelection,
   lineage,
@@ -46,6 +50,10 @@ interface Crumb {
 }
 
 const CONTAINERS: readonly JsonKind[] = ['object', 'array'];
+
+/** The menu's own size, to keep it inside the window. */
+const MENU_WIDTH_PX = 300;
+const MENU_HEIGHT_PX = 120;
 
 /**
  * The visualiser: the graph or the tree, the search over them, what is selected and the
@@ -74,6 +82,10 @@ export class JsonExplorerComponent {
   readonly format = input<StructureFormat>('json');
   /** Where the graph's nodes were moved to, by path. */
   readonly offsets = input<ReadonlyMap<string, NodeOffset>>(new Map());
+  /** An HTTP answer: a value can be kept in a variable, from the menu or the selection. */
+  readonly extractable = input(false);
+  /** How a path is written: `$` in a note, `body` in an answer. */
+  readonly root = input('$');
 
   readonly searchChanged = output<string>();
   readonly stepped = output<1 | -1>();
@@ -86,12 +98,18 @@ export class JsonExplorerComponent {
   readonly treeProposed = output<void>();
   readonly nodeMoved = output<NodeMove>();
   readonly layoutReset = output<void>();
+  /** The path as the explorer writes it, from `$`. */
+  readonly extractAsked = output<string>();
 
   private readonly graphView = viewChild(JsonGraphComponent);
   private readonly treeView = viewChild(JsonTreeComponent);
   private readonly injector = inject(Injector);
+  private readonly document = inject(DOCUMENT);
   /** Set by the keys: the entry that had the focus is redrawn by the answer, and the focus goes with it. */
   private refocusOnAnswer = false;
+  private readonly menuPanel = viewChild<ElementRef<HTMLElement>>('menuPanel');
+  /** The right-click's menu, where it was asked. */
+  protected readonly menu = signal<ValueMenuAsk | null>(null);
 
   protected readonly selection = computed<Selected | null>(() => {
     const view = this.view();
@@ -182,6 +200,54 @@ export class JsonExplorerComponent {
       event.stopPropagation();
       this.searchChanged.emit('');
     }
+  }
+
+  /** A path as the explorer writes it, from its root. */
+  protected written(path: string): string {
+    return path.startsWith('$') ? this.root() + path.slice(1) : path;
+  }
+
+  protected openMenu(asked: ValueMenuAsk): void {
+    const view = this.document.defaultView;
+    // Kept inside the window: a value near its right or bottom edge opens the menu inward.
+    const x = Math.max(8, Math.min(asked.x, (view?.innerWidth ?? asked.x) - MENU_WIDTH_PX - 8));
+    const y = Math.max(8, Math.min(asked.y, (view?.innerHeight ?? asked.y) - MENU_HEIGHT_PX - 8));
+    this.menu.set({ ...asked, x, y });
+    afterNextRender(
+      {
+        write: () => {
+          const panel = this.menuPanel()?.nativeElement;
+          if (panel && typeof panel.showPopover === 'function') panel.showPopover();
+          panel?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+        },
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** The focus gone elsewhere — a click outside, Tab — puts the menu away. */
+  protected onMenuFocusOut(event: FocusEvent, panel: HTMLElement): void {
+    if (!(event.relatedTarget instanceof Node && panel.contains(event.relatedTarget))) this.closeMenu();
+  }
+
+  protected closeMenu(): void {
+    this.menu.set(null);
+  }
+
+  protected menuCopyValue(): void {
+    const selected = this.selection();
+    if (selected) this.copyValue(selected.span);
+    this.closeMenu();
+  }
+
+  protected menuCopyPath(path: string): void {
+    this.copied.emit(this.written(path));
+    this.closeMenu();
+  }
+
+  protected menuExtract(path: string): void {
+    this.closeMenu();
+    this.extractAsked.emit(path);
   }
 
   protected copyValue(span: Span): void {

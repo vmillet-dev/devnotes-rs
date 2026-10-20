@@ -11,6 +11,9 @@ import {
   bodyOfKind,
   setBodyAside,
   stopOf,
+  bodyPath,
+  looksSecret,
+  variableNameOf,
   testsDeclared,
 } from './http.model';
 
@@ -40,6 +43,7 @@ describe('the HTTP wire shapes', () => {
       transport: {},
       variables: [],
       scripts: { before: '', after: '', tests: '' },
+      extractions: [],
     });
     expect(toParts({ websocket: { messages: [{ name: 'Ping' }] } }).websocket).toEqual({
       protocols: [],
@@ -191,5 +195,24 @@ describe('the HTTP wire shapes', () => {
       testsDeclared(["test('a', () => {});", "pm.test('b', () => {});", "test.skip('c');"].join('\n')),
     ).toBe(2);
     expect(testsDeclared("const latest = 1; env.test('x'); attest(1);")).toBe(0);
+  });
+
+  it('writes a rule’s path from body, proposes a name in camelCase and a secret for a token', () => {
+    expect(bodyPath('$.data.access_token')).toBe('body.data.access_token');
+    expect(bodyPath('body.x')).toBe('body.x');
+    expect(variableNameOf('body.access_token')).toBe('accessToken');
+    expect(variableNameOf("body.user['first name']")).toBe('firstName');
+    expect(variableNameOf('body.items[0]')).toBe('value');
+    expect(variableNameOf("body['2fa-code']")).toBe('value2faCode');
+    expect(variableNameOf('body.ExpiresIn')).toBe('expiresIn');
+    expect(
+      ['body.access_token', 'body.password', 'body.apiKey', 'body.api_key', 'body.key'].map(looksSecret),
+    ).toEqual([true, true, true, true, true]);
+    expect(['body.expires_in', 'body.monkey', 'body.author', 'body.keys'].map(looksSecret)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
   });
 });

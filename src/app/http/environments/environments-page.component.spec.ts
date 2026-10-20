@@ -7,7 +7,47 @@ import {
   variable,
 } from '@testing/fake-http-environments-repository';
 import { provideAppTesting } from '@testing/testing.providers';
+import { FakeHttpRepository } from '@testing/fake-http-repository';
+import { HttpScriptFocusStore } from '@core/services/http/http-script-focus.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
+import { HttpWorkspaceStore } from '@core/services/http/http-workspace.store';
 import { EnvironmentsPageComponent } from './environments-page.component';
+
+describe('EnvironmentsPageComponent, a variable a request fills', () => {
+  it('opens the request that fills it on its scripts after the answer', async () => {
+    TestBed.resetTestingModule();
+    const http = new FakeHttpRepository();
+    http.seed('login', { name: 'Login' });
+    const environments = new FakeHttpEnvironmentsRepository({
+      environments: [
+        environment('Local', {
+          variables: [variable('accessToken', 'eyJ', { filledBy: { requestId: 'login', name: 'Login' } })],
+        }),
+      ],
+    });
+    TestBed.configureTestingModule({
+      imports: [EnvironmentsPageComponent],
+      providers: [provideAppTesting({ httpEnvironmentsRepository: environments, httpRepository: http })],
+    });
+    const fixture = TestBed.createComponent(EnvironmentsPageComponent);
+    fixture.autoDetectChanges();
+    await vi.waitFor(() => expect(TestBed.inject(HttpEnvironmentsStore).loaded()).toBe(true));
+    TestBed.inject(HttpEnvironmentsStore).select({ kind: 'environment', id: 'env-local' });
+    await fixture.whenStable();
+    TestBed.inject(HttpWorkspaceStore).show('environments');
+
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('[data-testid="http-variable-filled"]')!
+      .click();
+
+    await vi.waitFor(() => expect(TestBed.inject(HttpTabsStore).active()?.key).toBe('login'));
+    expect(TestBed.inject(HttpWorkspaceStore).page()).toBe('requests');
+    expect(TestBed.inject(HttpScriptFocusStore).request()).toEqual({
+      key: 'login',
+      focus: { phase: 'after', line: null },
+    });
+  });
+});
 
 describe('EnvironmentsPageComponent', () => {
   let fixture: ComponentFixture<EnvironmentsPageComponent>;

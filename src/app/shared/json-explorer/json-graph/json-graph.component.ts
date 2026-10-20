@@ -21,6 +21,7 @@ import {
   JsonRow,
   NodeMove,
   NodeOffset,
+  ValueMenuAsk,
   findSelection,
   lineage,
 } from '@core/model/json.model';
@@ -78,7 +79,10 @@ export class JsonGraphComponent {
   readonly offsets = input<ReadonlyMap<string, NodeOffset>>(new Map());
 
   /** A click on a node's header, or the cursor moved there. */
+  /** A right-click opens the explorer's menu rather than the WebView's. */
+  readonly withMenu = input(false);
   readonly selected = output<string>();
+  readonly menuAsked = output<ValueMenuAsk>();
   /** A click on a row, or Enter on it: the container opens or closes, a value is selected. */
   readonly rowActivated = output<JsonRow>();
   /** A node let go where it was dragged to, or nudged with the keys. */
@@ -187,6 +191,15 @@ export class JsonGraphComponent {
     if (this.swallowDragClick()) return;
     this.cursor.set({ nodePath: node.path, row: -1 });
     this.selected.emit(node.path);
+  }
+
+  protected openRowMenu(node: JsonNode, index: number, event: MouseEvent): void {
+    const row = node.rows[index];
+    if (!this.withMenu() || !row) return;
+    event.preventDefault();
+    this.cursor.set({ nodePath: node.path, row: index });
+    this.selected.emit(row.path);
+    this.menuAsked.emit({ path: row.path, x: event.clientX, y: event.clientY });
   }
 
   protected chooseRow(node: JsonNode, index: number): void {

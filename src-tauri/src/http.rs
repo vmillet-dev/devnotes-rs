@@ -6,6 +6,7 @@
 pub mod codegen;
 pub mod cookies;
 pub mod environments;
+pub mod extract;
 pub mod graphql;
 pub mod history;
 pub mod model;
@@ -34,8 +35,8 @@ use model::{
 };
 use scripts::around::{self, Around};
 use scripts::model::{
-    FailureKind, Job, LogEntry, Outcome, Phase, RequestFault, Script, ScriptError, ScriptFailure,
-    ScriptInfo, ScriptRequest, ScriptStop, VariableWrite, WriteScope,
+    Extracted, FailureKind, Job, LogEntry, Outcome, Phase, RequestFault, Script, ScriptError,
+    ScriptFailure, ScriptInfo, ScriptRequest, ScriptStop, VariableWrite, WriteScope,
 };
 use scripts::network::{self, Network};
 use scripts::process::ScriptProcess;
@@ -489,6 +490,8 @@ struct Flight<R: Runtime> {
     confirmed: bool,
     collection_id: Option<String>,
     info: ScriptInfo,
+    /// What each variable written says wrote it: this request.
+    by: environments::FilledBy,
     /// What the scripts and the send did to the jar, in their order.
     changes: Vec<cookies::Change>,
     wrote: bool,
@@ -515,6 +518,7 @@ impl<R: Runtime> Flight<R> {
             confirmed: false,
             collection_id: None,
             info: ScriptInfo::default(),
+            by: environments::FilledBy::default(),
             changes: Vec::new(),
             wrote: false,
             sent: None,
@@ -559,6 +563,10 @@ impl<R: Runtime> Flight<R> {
             request_name: name.clone(),
             request_id: request_id.clone(),
         };
+        self.by = environments::FilledBy {
+            request_id: request_id.clone(),
+            name: name.clone(),
+        };
         let mut going = Going {
             kind,
             method,
@@ -592,16 +600,8 @@ impl<R: Runtime> Flight<R> {
         let mut answer = answer.map_err(AppError::from);
 
         let mut finished = true;
-        let answered = around.answered();
         if let Ok(response) = &mut answer {
-            if !answered.is_empty() {
-                finished = self.after(&answered, &mut going, response).await;
-            }
-            let shown = variables::Resolver::new(&going.layers).secrets();
-            response.scripts.logs = around::masked(self.logs(), &shown);
-            let tests = std::mem::take(&mut response.scripts.tests);
-            response.scripts.tests = around::shown_tests(tests, &answered, &shown);
-            response.scripts.wrote = self.wrote;
+            finished = self.answered(&around, &mut going, response).await;
         }
         self.sent = Some(history::Sent {
             kind,
@@ -629,6 +629,30 @@ impl<R: Runtime> Flight<R> {
                 name: environment.name.clone(),
                 colour: environment.colour,
             })
+    }
+
+    /// What follows an answer: the scripts after it and the tests, then the extractions; and what
+    /// the answer carries of them. `false` when « Annuler » stopped the scripts.
+    async fn answered(
+        &mut self,
+        around: &Around,
+        going: &mut Going,
+        response: &mut send::SentResponse,
+    ) -> bool {
+        let answered = around.answered();
+        let finished = answered.is_empty() || self.after(&answered, going, response).await;
+        if finished {
+            let extractions = std::mem::take(&mut going.document.extractions);
+            response.scripts.extracted = self
+                .extract(&extractions, response, &mut going.layers)
+                .await;
+        }
+        let shown = variables::Resolver::new(&going.layers).secrets();
+        response.scripts.logs = around::masked(self.logs(), &shown);
+        let tests = std::mem::take(&mut response.scripts.tests);
+        response.scripts.tests = around::shown_tests(tests, &answered, &shown);
+        response.scripts.wrote = self.wrote;
+        finished
     }
 
     /// A phase's job, `url` the one its cookies are read for.
@@ -753,6 +777,46 @@ impl<R: Runtime> Flight<R> {
         Ok(outcome)
     }
 
+    /// The request's extractions, after its scripts: what each path reads is written into the
+    /// active environment, the globals with « Aucun »; a path that leads nowhere leaves its
+    /// variable as it was.
+    async fn extract(
+        &mut self,
+        extractions: &[model::Extraction],
+        response: &send::SentResponse,
+        layers: &mut [variables::VariableLayer],
+    ) -> Vec<Extracted> {
+        let scope = if self.environment.is_some() {
+            WriteScope::Environment
+        } else {
+            WriteScope::Globals
+        };
+        let mut writes = Vec::new();
+        let extracted = extractions
+            .iter()
+            .filter(|extraction| !extraction.variable.trim().is_empty())
+            .map(|extraction| {
+                let value = extract::extract(&response.body, &extraction.path);
+                let found = value.is_some();
+                if let Some(value) = value {
+                    writes.push(VariableWrite {
+                        scope,
+                        name: extraction.variable.trim().to_string(),
+                        value: Some(value),
+                        secret: extraction.secret,
+                    });
+                }
+                Extracted {
+                    path: extraction.path.clone(),
+                    variable: extraction.variable.trim().to_string(),
+                    found,
+                }
+            })
+            .collect();
+        self.write(&writes, layers).await;
+        extracted
+    }
+
     /// The jar as the scripts left it.
     fn jar(&self) -> Option<Vec<cookies::JarCookie>> {
         match &self.session {
@@ -792,6 +856,7 @@ impl<R: Runtime> Flight<R> {
             .as_ref()
             .map(|environment| environment.id.clone());
         let collection_id = self.collection_id.clone();
+        let by = self.by.clone();
         let kept = blocking(self.app.clone(), move |_, db| {
             let mut connection = lock(db)?;
             Ok(keep_writes(
@@ -799,6 +864,7 @@ impl<R: Runtime> Flight<R> {
                 &writes,
                 environment_id.as_deref(),
                 collection_id.as_deref(),
+                &by,
             )?)
         })
         .await;
@@ -896,6 +962,7 @@ fn keep_writes(
     writes: &[VariableWrite],
     environment_id: Option<&str>,
     collection_id: Option<&str>,
+    by: &environments::FilledBy,
 ) -> Result<bool, crate::error::StorageError> {
     let wrote_to = |scope| around::writes_to(writes, scope).next().is_some();
     let mut wrote = false;
@@ -907,6 +974,7 @@ fn keep_writes(
             variables: Some(around::written(
                 &environment.variables,
                 around::writes_to(writes, WriteScope::Environment),
+                Some(by),
             )),
             ..environments::EnvironmentPatch::default()
         };
@@ -915,7 +983,11 @@ fn keep_writes(
     }
     if wrote_to(WriteScope::Globals) {
         let globals = environments::store::list(connection)?.globals;
-        let globals = around::written(&globals, around::writes_to(writes, WriteScope::Globals));
+        let globals = around::written(
+            &globals,
+            around::writes_to(writes, WriteScope::Globals),
+            Some(by),
+        );
         environments::store::save_globals(connection, &globals, Utc::now())?;
         wrote = true;
     }
@@ -930,6 +1002,7 @@ fn keep_writes(
         held.variables = around::written(
             &held.variables,
             around::writes_to(writes, WriteScope::Collection),
+            Some(by),
         );
         store::save_settings(connection, &item, &held)?;
         wrote = true;

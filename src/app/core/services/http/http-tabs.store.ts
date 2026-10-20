@@ -185,6 +185,7 @@ export class HttpTabsStore {
         | 'transport'
         | 'variables'
         | 'scripts'
+        | 'extractions'
       >
     >,
   ): void {

@@ -9,6 +9,9 @@ import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { provideAppTesting } from '@testing/testing.providers';
 import { ResponsePaneComponent } from './response-pane.component';
+import { By } from '@angular/platform-browser';
+import { ResponseViewComponent } from '@http/ui/response-view/response-view.component';
+import { StatusNotifier } from '@core/services/notifications/status.service';
 
 describe('ResponsePaneComponent', () => {
   let fixture: ComponentFixture<ResponsePaneComponent>;
@@ -477,5 +480,30 @@ describe('ResponsePaneComponent', () => {
       key: 'Login',
       focus: { phase: 'tests', line: 4 },
     });
+  });
+
+  it('keeps a value of the answer in a variable: a rule of the request, after each send', async () => {
+    const tabs = TestBed.inject(HttpTabsStore);
+    tabs.newRequest();
+    const key = tabs.tabs()[0]!.key;
+    fixture.componentRef.setInput('tabKey', key);
+    http.response = sentResponse({ body: '{"access_token":"eyJ"}', pretty: '{\n  "access_token": "eyJ"\n}' });
+    await TestBed.inject(HttpSendStore).send(tabs.tabs()[0]!);
+    await fixture.whenStable();
+
+    fixture.debugElement
+      .query(By.directive(ResponseViewComponent))
+      .componentInstance.extractAsked.emit('body.access_token');
+    await fixture.whenStable();
+    const name = document.body.querySelector<HTMLInputElement>('[data-testid="http-extract-name"]')!;
+    expect(name.value).toBe('accessToken');
+    document.body.querySelector<HTMLButtonElement>('[data-testid="http-extract-submit"]')!.click();
+    await fixture.whenStable();
+
+    expect(tabs.tabs()[0]!.draft.parts.extractions).toEqual([
+      { path: 'body.access_token', variable: 'accessToken', secret: true },
+    ]);
+    expect(document.body.querySelector('[data-testid="http-extract-dialog"]')).toBeNull();
+    expect(TestBed.inject(StatusNotifier).status()?.key).toBe('http.extract.added');
   });
 });

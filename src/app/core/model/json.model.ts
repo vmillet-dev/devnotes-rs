@@ -62,6 +62,13 @@ export interface NodeOffset {
   readonly y: number;
 }
 
+/** A right-click on a value: where, and on which. */
+export interface ValueMenuAsk {
+  readonly path: string;
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface NodeMove {
   readonly path: string;
   readonly offset: NodeOffset;

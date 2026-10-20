@@ -161,14 +161,14 @@ export const commands = {
 	createHttpCollection: (name: string) => typedError<HttpCollection, AppError>(__TAURI_INVOKE("create_http_collection", { name })),
 	/**  `parent_id` `None` puts it at the collection's root. */
 	createHttpFolder: (collectionId: string, parentId: string | null, name: string) => typedError<HttpFolder, AppError>(__TAURI_INVOKE("create_http_folder", { collectionId, parentId, name })),
-	createHttpRequest: (draft: HttpRequestDraft) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("create_http_request", { draft })),
+	createHttpRequest: (draft: HttpRequestDraft_Deserialize) => typedError<HttpRequest_Serialize, AppError>(__TAURI_INVOKE("create_http_request", { draft })),
 	/**
 	 *  The first save of a request where nothing holds it yet: what `create` names is created
 	 *  with it, or nothing is. Every name is checked before anything is written.
 	 */
-	createHttpRequestIn: (draft: HttpRequestDraft, create: NewPlace) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("create_http_request_in", { draft, create })),
-	getHttpRequest: (id: string) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("get_http_request", { id })),
-	saveHttpRequest: (id: string, patch: HttpRequestPatch) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("save_http_request", { id, patch })),
+	createHttpRequestIn: (draft: HttpRequestDraft_Deserialize, create: NewPlace) => typedError<HttpRequest_Serialize, AppError>(__TAURI_INVOKE("create_http_request_in", { draft, create })),
+	getHttpRequest: (id: string) => typedError<HttpRequest_Serialize, AppError>(__TAURI_INVOKE("get_http_request", { id })),
+	saveHttpRequest: (id: string, patch: HttpRequestPatch_Deserialize) => typedError<HttpRequest_Serialize, AppError>(__TAURI_INVOKE("save_http_request", { id, patch })),
 	renameHttpItem: (item: HttpItem, name: string) => typedError<null, AppError>(__TAURI_INVOKE("rename_http_item", { item, name })),
 	/**  What a deletion would take with it, for the confirmation that comes first. */
 	countHttpContents: (item: HttpItem) => typedError<HttpContents, AppError>(__TAURI_INVOKE("count_http_contents", { item })),
@@ -179,8 +179,8 @@ export const commands = {
 	reorderHttpCollection: (id: string, index: number) => typedError<null, AppError>(__TAURI_INVOKE("reorder_http_collection", { id, index })),
 	/**  The edited side wins: the query string rewritten from the table, or the table from the URL. */
 	syncHttpQuery: (url: string, params: KeyValue[], edited: QuerySide) => typedError<SyncedQuery, AppError>(__TAURI_INVOKE("sync_http_query", { url, params, edited })),
-	httpSettings: (item: HttpItem) => typedError<ContainerSettings, AppError>(__TAURI_INVOKE("http_settings", { item })),
-	saveHttpSettings: (item: HttpItem, settings: ContainerSettings) => typedError<null, AppError>(__TAURI_INVOKE("save_http_settings", { item, settings })),
+	httpSettings: (item: HttpItem) => typedError<ContainerSettings_Serialize, AppError>(__TAURI_INVOKE("http_settings", { item })),
+	saveHttpSettings: (item: HttpItem, settings: ContainerSettings_Deserialize) => typedError<null, AppError>(__TAURI_INVOKE("save_http_settings", { item, settings })),
 	/**  What a request placed there inherits, and from where: « héritée de la collection … ». */
 	inheritedHttpSettings: (collectionId: string, folderId: string | null) => typedError<Inherited, AppError>(__TAURI_INVOKE("inherited_http_settings", { collectionId, folderId })),
 	/**
@@ -193,7 +193,7 @@ export const commands = {
 	 *  application's `User-Agent` — read as a send reads it: the editor lists the answer and
 	 *  decides none of it.
 	 */
-	impliedHttpHeaders: (kind: RequestKind, document: RequestDocument, collectionId: string | null, folderId: string | null) => typedError<ImpliedHeader[], AppError>(__TAURI_INVOKE("implied_http_headers", { kind, document, collectionId, folderId })),
+	impliedHttpHeaders: (kind: RequestKind, document: RequestDocument_Deserialize, collectionId: string | null, folderId: string | null) => typedError<ImpliedHeader[], AppError>(__TAURI_INVOKE("implied_http_headers", { kind, document, collectionId, folderId })),
 	/**
 	 *  Each header's fault by its rank, or none: the table marks the row and says why. The rule is
 	 *  the model's; the table holds none.
@@ -209,7 +209,7 @@ export const commands = {
 	 *  Its headers and auth composed like a request's, under the lock for what it inherits; the
 	 *  handshake waited on without it. Answers once the socket is open.
 	 */
-	connectWebsocket: (request: WebsocketRequest) => typedError<null, AppError>(__TAURI_INVOKE("connect_websocket", { request })),
+	connectWebsocket: (request: WebsocketRequest_Deserialize) => typedError<null, AppError>(__TAURI_INVOKE("connect_websocket", { request })),
 	/**  `false` when no socket is open under that id. */
 	sendWebsocket: (id: string, text: string) => typedError<boolean, AppError>(__TAURI_INVOKE("send_websocket", { id, text })),
 	closeWebsocket: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("close_websocket", { id })),
@@ -217,7 +217,7 @@ export const commands = {
 	 *  What it inherits is read under the lock, its files outside it, and the send waits on nothing
 	 *  but the network and its scripts: a 30-second request stalls no other command.
 	 */
-	sendHttpRequest: (request: SendRequest) => typedError<SentResponse, AppError>(__TAURI_INVOKE("send_http_request", { request })),
+	sendHttpRequest: (request: SendRequest_Deserialize) => typedError<SentResponse, AppError>(__TAURI_INVOKE("send_http_request", { request })),
 	/**  `false` when that send had already ended. */
 	cancelHttpSend: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("cancel_http_send", { id })),
 	/**  The whole body of the last answer to `id`, not the text shown: `false` when there is none. */
@@ -230,7 +230,7 @@ export const commands = {
 	httpHistory: (tzOffsetMinutes: number) => typedError<HistoryDay[], AppError>(__TAURI_INVOKE("http_history", { tzOffsetMinutes })),
 	httpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("http_history_entry", { id })),
 	/**  An entry rebuilt as a request to send again or save: its secrets are typed again. */
-	httpHistoryDraft: (id: string) => typedError<HistoryDraft, AppError>(__TAURI_INVOKE("http_history_draft", { id })),
+	httpHistoryDraft: (id: string) => typedError<HistoryDraft_Serialize, AppError>(__TAURI_INVOKE("http_history_draft", { id })),
 	/**
 	 *  A send put back onto the request it came from, as changes to save or not, the request's own
 	 *  secrets where the record holds a mask. `None` when that request is gone, or the send came
@@ -241,7 +241,7 @@ export const commands = {
 	/**  The kind of what was sent: a draft is created of it, as any request is of its own. */
 	kind: RequestKind,
 	method: HttpMethod,
-	document: RequestDocument,
+	document: RequestDocument_Serialize,
 } | null, AppError>(__TAURI_INVOKE("http_history_onto_request", { id })),
 	/**  One entry gone, answered whole: its undo hands it back to `restore_http_history_entry`. */
 	deleteHttpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("delete_http_history_entry", { id })),
@@ -257,25 +257,25 @@ export const commands = {
 	countHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_cookies")),
 	clearHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_cookies")),
 	/**  The globals and every environment, in their order. */
-	httpEnvironments: () => typedError<HttpEnvironments, AppError>(__TAURI_INVOKE("http_environments")),
-	createHttpEnvironment: (name: string) => typedError<Environment, AppError>(__TAURI_INVOKE("create_http_environment", { name })),
-	saveHttpEnvironment: (id: string, patch: EnvironmentPatch) => typedError<Environment, AppError>(__TAURI_INVOKE("save_http_environment", { id, patch })),
-	saveHttpGlobals: (variables: Variable[]) => typedError<Variable[], AppError>(__TAURI_INVOKE("save_http_globals", { variables })),
+	httpEnvironments: () => typedError<HttpEnvironments_Serialize, AppError>(__TAURI_INVOKE("http_environments")),
+	createHttpEnvironment: (name: string) => typedError<Environment_Serialize, AppError>(__TAURI_INVOKE("create_http_environment", { name })),
+	saveHttpEnvironment: (id: string, patch: EnvironmentPatch_Deserialize) => typedError<Environment_Serialize, AppError>(__TAURI_INVOKE("save_http_environment", { id, patch })),
+	saveHttpGlobals: (variables: Variable_Deserialize[]) => typedError<Variable_Serialize[], AppError>(__TAURI_INVOKE("save_http_globals", { variables })),
 	/**  The copy's name comes from the front: no user-visible word is Rust's. */
-	duplicateHttpEnvironment: (id: string, name: string) => typedError<Environment, AppError>(__TAURI_INVOKE("duplicate_http_environment", { id, name })),
+	duplicateHttpEnvironment: (id: string, name: string) => typedError<Environment_Serialize, AppError>(__TAURI_INVOKE("duplicate_http_environment", { id, name })),
 	deleteHttpEnvironment: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_http_environment", { id })),
 	/**  Each variable's fault by its rank, or none: the table marks the row, the rule is the model's. */
-	checkHttpVariables: (variables: Variable[]) => typedError<(VariableFault | null)[], AppError>(__TAURI_INVOKE("check_http_variables", { variables })),
+	checkHttpVariables: (variables: Variable_Deserialize[]) => typedError<(VariableFault | null)[], AppError>(__TAURI_INVOKE("check_http_variables", { variables })),
 	/**
 	 *  The `{{variables}}` a request holds, each with what it resolves to and from where: the
 	 *  editor colours them by it, and names the ones nothing sets before a send does.
 	 */
-	httpVariables: (request: VariablesRequest) => typedError<UsedVariable[], AppError>(__TAURI_INVOKE("http_variables", { request })),
+	httpVariables: (request: VariablesRequest_Deserialize) => typedError<UsedVariable[], AppError>(__TAURI_INVOKE("http_variables", { request })),
 	/**
 	 *  The request written as code for another tool, from what a send would write: its variables
 	 *  resolved as asked, a secret left as its `{{name}}` unless it is asked for in clear.
 	 */
-	generateHttpCode: (request: CodeRequestOf) => typedError<GeneratedCode, AppError>(__TAURI_INVOKE("generate_http_code", { request })),
+	generateHttpCode: (request: CodeRequestOf_Deserialize) => typedError<GeneratedCode, AppError>(__TAURI_INVOKE("generate_http_code", { request })),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -940,12 +940,25 @@ export type CodeOptions = {
 	followRedirects: boolean,
 };
 
-export type CodeRequestOf = {
+export type CodeRequestOf = CodeRequestOf_Serialize | CodeRequestOf_Deserialize;
+
+export type CodeRequestOf_Deserialize = {
 	target: CodeTarget,
 	options: CodeOptions,
 	kind: RequestKind,
 	method: HttpMethod,
-	document: RequestDocument,
+	document: RequestDocument_Deserialize,
+	collectionId: string | null,
+	folderId: string | null,
+	environmentId: string | null,
+};
+
+export type CodeRequestOf_Serialize = {
+	target: CodeTarget,
+	options: CodeOptions,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument_Serialize,
 	collectionId: string | null,
 	folderId: string | null,
 	environmentId: string | null,
@@ -994,15 +1007,36 @@ export type ConnectionEstimate = {
  *  What a collection or a folder hands its requests (#478, #484). Each field is
  *  `#[serde(default)]`: one added later needs no migration.
  */
-export type ContainerSettings = {
+export type ContainerSettings = ContainerSettings_Serialize | ContainerSettings_Deserialize;
+
+/**
+ *  What a collection or a folder hands its requests (#478, #484). Each field is
+ *  `#[serde(default)]`: one added later needs no migration.
+ */
+export type ContainerSettings_Deserialize = {
 	/**  `Inherit` on a collection is no auth at all: nothing is above it. */
 	auth?: RequestAuth,
 	headers?: KeyValue[],
 	transport?: TransportSettings,
 	/**  Over the environment's and the globals', under a folder's and a request's own. */
-	variables?: Variable[],
+	variables?: Variable_Deserialize[],
 	/**  Run around each request under it: before the request's own, and after it. */
 	scripts?: RequestScripts,
+};
+
+/**
+ *  What a collection or a folder hands its requests (#478, #484). Each field is
+ *  `#[serde(default)]`: one added later needs no migration.
+ */
+export type ContainerSettings_Serialize = {
+	/**  `Inherit` on a collection is no auth at all: nothing is above it. */
+	auth: RequestAuth,
+	headers: KeyValue[],
+	transport: TransportSettings,
+	/**  Over the environment's and the globals', under a folder's and a request's own. */
+	variables: Variable_Serialize[],
+	/**  Run around each request under it: before the request's own, and after it. */
+	scripts: RequestScripts,
 };
 
 export type Contrast = {
@@ -1331,23 +1365,47 @@ export type EndingCounts = {
 	cr: number,
 };
 
-export type Environment = {
+export type Environment = Environment_Serialize | Environment_Deserialize;
+
+/**  A field left out is untouched. */
+export type EnvironmentPatch = EnvironmentPatch_Serialize | EnvironmentPatch_Deserialize;
+
+/**  A field left out is untouched. */
+export type EnvironmentPatch_Deserialize = {
+	name?: string | null,
+	colour?: FolderColour | null,
+	protected?: boolean | null,
+	variables?: Variable_Deserialize[] | null,
+};
+
+/**  A field left out is untouched. */
+export type EnvironmentPatch_Serialize = {
+	name?: string | null,
+	colour?: FolderColour | null,
+	protected?: boolean | null,
+	variables?: Variable_Serialize[] | null,
+};
+
+export type Environment_Deserialize = {
 	id: string,
 	name: string,
 	/**  One of the folders' five: a mark to tell Production from Staging at a glance. */
 	colour: FolderColour,
 	/**  Asks before sending anything that could change something. */
 	protected: boolean,
-	variables: Variable[],
+	variables: Variable_Deserialize[],
 	position: number,
 };
 
-/**  A field left out is untouched. */
-export type EnvironmentPatch = {
-	name?: string | null,
-	colour?: FolderColour | null,
-	protected?: boolean | null,
-	variables?: Variable[] | null,
+export type Environment_Serialize = {
+	id: string,
+	name: string,
+	/**  One of the folders' five: a mark to tell Production from Staging at a glance. */
+	colour: FolderColour,
+	/**  Asks before sending anything that could change something. */
+	protected: boolean,
+	variables: Variable_Serialize[],
+	position: number,
 };
 
 /**
@@ -1413,6 +1471,23 @@ export type ExportScope = { kind: "library" } | { kind: "space"; spaceId: string
 /**  A selection: the ids the canvas had ticked. */
 { kind: "notes"; ids: string[] };
 
+export type Extracted = {
+	path?: string,
+	variable?: string,
+	/**  `false`: the path led nowhere, the variable was left as it was. */
+	found?: boolean,
+};
+
+/**
+ *  A value of a JSON answer written into the active environment — the globals with « Aucun » —
+ *  after each send: `body.access_token` into `accessToken`.
+ */
+export type Extraction = {
+	path?: string,
+	variable?: string,
+	secret?: boolean,
+};
+
 /**  How many of the space's notes carry a value. */
 export type FacetCount<T> = {
 	value: T,
@@ -1459,6 +1534,12 @@ export type FieldSpan = {
 export type FileProblem = "notFound" | "tooLarge" | "unreadable" | "unwritable";
 
 export type FileType = "regular" | "directory" | "symbolicLink" | "characterDevice" | "blockDevice" | "namedPipe" | "socket";
+
+/**  A request that writes a variable at each send; no id for a draft never saved. */
+export type FilledBy = {
+	requestId?: string | null,
+	name?: string,
+};
 
 export type FinalNewline = "keep" | "add" | "remove";
 
@@ -1636,12 +1717,24 @@ export type HistoryDay = {
 };
 
 /**  An entry sent again: what it was called, and the request it rebuilds. */
-export type HistoryDraft = {
+export type HistoryDraft = HistoryDraft_Serialize | HistoryDraft_Deserialize;
+
+/**  An entry sent again: what it was called, and the request it rebuilds. */
+export type HistoryDraft_Deserialize = {
 	name: string,
 	/**  The kind of what was sent: a draft is created of it, as any request is of its own. */
 	kind: RequestKind,
 	method: HttpMethod,
-	document: RequestDocument,
+	document: RequestDocument_Deserialize,
+};
+
+/**  An entry sent again: what it was called, and the request it rebuilds. */
+export type HistoryDraft_Serialize = {
+	name: string,
+	/**  The kind of what was sent: a draft is created of it, as any request is of its own. */
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument_Serialize,
 };
 
 /**  Read to be shown; and handed back as it was read to undo its deletion. */
@@ -1709,9 +1802,16 @@ export type HttpContents = {
 	requests: number,
 };
 
-export type HttpEnvironments = {
-	globals: Variable[],
-	environments: Environment[],
+export type HttpEnvironments = HttpEnvironments_Serialize | HttpEnvironments_Deserialize;
+
+export type HttpEnvironments_Deserialize = {
+	globals: Variable_Deserialize[],
+	environments: Environment_Deserialize[],
+};
+
+export type HttpEnvironments_Serialize = {
+	globals: Variable_Serialize[],
+	environments: Environment_Serialize[],
 };
 
 export type HttpFolder = {
@@ -1747,35 +1847,52 @@ export type HttpPlace = {
 	index: number,
 };
 
-export type HttpRequest = {
-	id: string,
+export type HttpRequest = HttpRequest_Serialize | HttpRequest_Deserialize;
+
+export type HttpRequestDraft = HttpRequestDraft_Serialize | HttpRequestDraft_Deserialize;
+
+export type HttpRequestDraft_Deserialize = {
 	collectionId: string,
 	folderId: string | null,
 	name: string,
 	kind: RequestKind,
 	method: HttpMethod,
-	document: RequestDocument,
-	createdAt: string,
-	updatedAt: string,
+	document: RequestDocument_Deserialize,
 };
 
-export type HttpRequestDraft = {
+export type HttpRequestDraft_Serialize = {
 	collectionId: string,
 	folderId: string | null,
 	name: string,
 	kind: RequestKind,
 	method: HttpMethod,
-	document: RequestDocument,
+	document: RequestDocument_Serialize,
 };
 
 /**
  *  A field left out is untouched. ⚠️ No `kind`: it is chosen when a request is created, so
  *  there is nothing here to refuse.
  */
-export type HttpRequestPatch = {
+export type HttpRequestPatch = HttpRequestPatch_Serialize | HttpRequestPatch_Deserialize;
+
+/**
+ *  A field left out is untouched. ⚠️ No `kind`: it is chosen when a request is created, so
+ *  there is nothing here to refuse.
+ */
+export type HttpRequestPatch_Deserialize = {
 	name?: string | null,
 	method?: HttpMethod | null,
-	document?: RequestDocument | null,
+	document?: RequestDocument_Deserialize | null,
+};
+
+/**
+ *  A field left out is untouched. ⚠️ No `kind`: it is chosen when a request is created, so
+ *  there is nothing here to refuse.
+ */
+export type HttpRequestPatch_Serialize = {
+	name?: string | null,
+	method?: HttpMethod | null,
+	document?: RequestDocument_Serialize | null,
 };
 
 /**  A request as the tree lists it: no document, which is read by id when it opens. */
@@ -1787,6 +1904,30 @@ export type HttpRequestSummary = {
 	kind: RequestKind,
 	method: HttpMethod,
 	position: number,
+};
+
+export type HttpRequest_Deserialize = {
+	id: string,
+	collectionId: string,
+	folderId: string | null,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument_Deserialize,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type HttpRequest_Serialize = {
+	id: string,
+	collectionId: string,
+	folderId: string | null,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument_Serialize,
+	createdAt: string,
+	updatedAt: string,
 };
 
 /**  Built by Rust: the front draws it and never joins a request to its folder itself. */
@@ -2759,7 +2900,13 @@ export type RequestBody = { kind: "none" } | { kind: "json"; text: string } | { 
  *  A request's parts, sealed as one document. Each field is `#[serde(default)]`: one added
  *  later needs no migration, and a document written by an older version still opens.
  */
-export type RequestDocument = {
+export type RequestDocument = RequestDocument_Serialize | RequestDocument_Deserialize;
+
+/**
+ *  A request's parts, sealed as one document. Each field is `#[serde(default)]`: one added
+ *  later needs no migration, and a document written by an older version still opens.
+ */
+export type RequestDocument_Deserialize = {
 	url?: string,
 	/**  In step with the URL's query: an enabled row is in it, a disabled one is kept aside. */
 	params?: KeyValue[],
@@ -2774,8 +2921,35 @@ export type RequestDocument = {
 	/**  Over what the folders and the collection set. */
 	transport?: TransportSettings,
 	/**  The nearest level a `{{name}}` resolves from. */
-	variables?: Variable[],
+	variables?: Variable_Deserialize[],
 	scripts?: RequestScripts,
+	/**  Values of the answer kept in variables after each send, after the scripts. */
+	extractions?: Extraction[],
+};
+
+/**
+ *  A request's parts, sealed as one document. Each field is `#[serde(default)]`: one added
+ *  later needs no migration, and a document written by an older version still opens.
+ */
+export type RequestDocument_Serialize = {
+	url: string,
+	/**  In step with the URL's query: an enabled row is in it, a disabled one is kept aside. */
+	params: KeyValue[],
+	headers: KeyValue[],
+	body: RequestBody,
+	auth: RequestAuth,
+	description: string,
+	/**  Read only for a GraphQL request, which sends it in place of the body. */
+	graphql: GraphqlDocument,
+	/**  Read only for a WebSocket. */
+	websocket: WebsocketDocument,
+	/**  Over what the folders and the collection set. */
+	transport: TransportSettings,
+	/**  The nearest level a `{{name}}` resolves from. */
+	variables: Variable_Serialize[],
+	scripts: RequestScripts,
+	/**  Values of the answer kept in variables after each send, after the scripts. */
+	extractions: Extraction[],
 };
 
 /**  A request as the palette shows it: its URL as typed, `{{baseUrl}}` and all. */
@@ -2906,6 +3080,8 @@ export type ScriptsAnswer = {
 	logs?: LogEntry[],
 	/**  The tests, in the order they ran: kept with the history entry. */
 	tests?: TestResult[],
+	/**  Each extraction of the request, and whether its path still read. */
+	extracted?: Extracted[],
 	/**  A script wrote a variable: the environments and the settings are read again. */
 	wrote?: boolean,
 };
@@ -2930,12 +3106,14 @@ export type SectionGroup = { group: "language"; language: Language } |
 
 export type Segment = "header" | "payload" | "signature";
 
-export type SendRequest = {
+export type SendRequest = SendRequest_Serialize | SendRequest_Deserialize;
+
+export type SendRequest_Deserialize = {
 	/**  Chosen by the front, so it can cancel the send it started and save what came back. */
 	id: string,
 	kind: RequestKind,
 	method: HttpMethod,
-	document: RequestDocument,
+	document: RequestDocument_Deserialize,
 	/**  Where the request sits, for what it inherits; `None` for a draft not placed yet. */
 	collectionId: string | null,
 	folderId: string | null,
@@ -2949,6 +3127,27 @@ export type SendRequest = {
 	environmentId: string | null,
 	/**  The user said yes to what a protected environment asks: a script may then change it. */
 	confirmed?: boolean,
+};
+
+export type SendRequest_Serialize = {
+	/**  Chosen by the front, so it can cancel the send it started and save what came back. */
+	id: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument_Serialize,
+	/**  Where the request sits, for what it inherits; `None` for a draft not placed yet. */
+	collectionId: string | null,
+	folderId: string | null,
+	/**  For the history: what the request is called, and which one it is once saved. */
+	name: string,
+	requestId: string | null,
+	/**
+	 *  The environment its `{{variables}}` resolve from, over the globals; `None` for the
+	 *  globals alone.
+	 */
+	environmentId: string | null,
+	/**  The user said yes to what a protected environment asks: a script may then change it. */
+	confirmed: boolean,
 };
 
 export type SentBody = { kind: "none" } | 
@@ -3387,12 +3586,7 @@ export type UuidVariant = "ncs" |
 /**  What a value was, as the list of changes shows it: itself when short, its size otherwise. */
 export type ValueSummary = { kind: "scalar"; text: string } | { kind: "object"; keys: number } | { kind: "array"; items: number };
 
-export type Variable = {
-	enabled?: boolean,
-	name?: string,
-	value?: string,
-	kind?: VariableKind,
-};
+export type Variable = Variable_Serialize | Variable_Deserialize;
 
 /**  What a set's table marks on a row: it is kept as typed, and left out when resolving. */
 export type VariableFault = 
@@ -3411,9 +3605,37 @@ export type VariableScope = "request" | "folder" | "collection" | "environment" 
 /**  `{{$guid}}` and its kind: a value made at the send, which no level holds. */
 "dynamic";
 
-export type VariablesRequest = {
+export type Variable_Deserialize = {
+	enabled?: boolean,
+	name?: string,
+	value?: string,
+	kind?: VariableKind,
+	/**  The request whose last send wrote it — by an extraction or a script —: « remplie par Login ». */
+	filledBy?: FilledBy | null,
+};
+
+export type Variable_Serialize = {
+	enabled: boolean,
+	name: string,
+	value: string,
+	kind: VariableKind,
+	/**  The request whose last send wrote it — by an extraction or a script —: « remplie par Login ». */
+	filledBy?: FilledBy | null,
+};
+
+export type VariablesRequest = VariablesRequest_Serialize | VariablesRequest_Deserialize;
+
+export type VariablesRequest_Deserialize = {
 	kind: RequestKind,
-	document: RequestDocument,
+	document: RequestDocument_Deserialize,
+	collectionId: string | null,
+	folderId: string | null,
+	environmentId: string | null,
+};
+
+export type VariablesRequest_Serialize = {
+	kind: RequestKind,
+	document: RequestDocument_Serialize,
 	collectionId: string | null,
 	folderId: string | null,
 	environmentId: string | null,
@@ -3467,10 +3689,21 @@ export type WebsocketEvent = {
 	event: SocketEvent,
 };
 
-export type WebsocketRequest = {
+export type WebsocketRequest = WebsocketRequest_Serialize | WebsocketRequest_Deserialize;
+
+export type WebsocketRequest_Deserialize = {
 	/**  Chosen by the front: what it sends on and closes, and what each event names. */
 	id: string,
-	document: RequestDocument,
+	document: RequestDocument_Deserialize,
+	collectionId: string | null,
+	folderId: string | null,
+	environmentId: string | null,
+};
+
+export type WebsocketRequest_Serialize = {
+	/**  Chosen by the front: what it sends on and closes, and what each event names. */
+	id: string,
+	document: RequestDocument_Serialize,
 	collectionId: string | null,
 	folderId: string | null,
 	environmentId: string | null,

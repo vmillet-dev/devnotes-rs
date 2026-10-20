@@ -310,4 +310,90 @@ describe('JsonExplorerComponent', () => {
     expect(query('json-copy-value')).not.toBeNull();
     expect(query('json-show-in-code')).toBeNull();
   });
+
+  describe('on an HTTP answer', () => {
+    let extracted: string[];
+
+    beforeEach(async () => {
+      extracted = [];
+      fixture.componentInstance.extractAsked.subscribe((path) => extracted.push(path));
+      await set('mode', 'tree');
+      await set('extractable', true);
+      await set('root', 'body');
+    });
+
+    const rightClick = async (path: string) => {
+      const line = fixture.nativeElement.querySelector(`[data-testid="json-line"][data-path="${path}"]`);
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 40,
+        clientY: 50,
+      });
+      line.dispatchEvent(event);
+      await fixture.whenStable();
+      return event;
+    };
+    const menu = () => document.querySelector<HTMLElement>('[data-testid="json-value-menu"]');
+
+    it('opens its menu on a right-click, the path written from body, and extracts from it', async () => {
+      const event = await rightClick('$.id');
+      expect(event.defaultPrevented).toBe(true);
+      expect(events.selected).toEqual(['$.id']);
+      expect(menu()?.textContent).toContain('body.id');
+
+      await set('selectedPath', '$.id');
+      menu()!.querySelector<HTMLButtonElement>('[data-testid="json-menu-copy-value"]')!.click();
+      await fixture.whenStable();
+      expect(events.copied).toEqual(['"evt"']);
+      expect(menu()).toBeNull();
+
+      await rightClick('$.id');
+      menu()!.querySelector<HTMLButtonElement>('[data-testid="json-menu-copy-path"]')!.click();
+      expect(events.copied.at(-1)).toBe('body.id');
+
+      await rightClick('$.data.lines[0].a');
+      menu()!.querySelector<HTMLButtonElement>('[data-testid="json-menu-extract"]')!.click();
+      await fixture.whenStable();
+      expect(extracted).toEqual(['$.data.lines[0].a']);
+      expect(menu()).toBeNull();
+    });
+
+    it('puts the menu away on Escape or when the focus leaves it', async () => {
+      await rightClick('$.id');
+      menu()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await fixture.whenStable();
+      expect(menu()).toBeNull();
+
+      await rightClick('$.id');
+      menu()!.dispatchEvent(new FocusEvent('focusout', { relatedTarget: document.body }));
+      await fixture.whenStable();
+      expect(menu()).toBeNull();
+    });
+
+    it('extracts the selection from its panel, and writes its path from body', async () => {
+      await set('selectedPath', '$.id');
+      expect(text('json-selected-path')).toBe('body.id');
+      query('json-extract').click();
+      expect(extracted).toEqual(['$.id']);
+    });
+
+    it('opens the menu from a row of the graph too', async () => {
+      await set('mode', 'graph');
+      const row = fixture.nativeElement.querySelector('[data-testid="json-row"][data-path="$.id"]');
+      row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      await fixture.whenStable();
+      expect(menu()).not.toBeNull();
+    });
+  });
+
+  it('leaves the right-click to the WebView where nothing is extracted', async () => {
+    await set('mode', 'tree');
+    const line = fixture.nativeElement.querySelector('[data-testid="json-line"][data-path="$.id"]');
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    line.dispatchEvent(event);
+    await fixture.whenStable();
+    expect(event.defaultPrevented).toBe(false);
+    expect(query('json-extract')).toBeNull();
+  });
 });

@@ -445,6 +445,30 @@ describe('HttpPageComponent', () => {
     expect(editor()!.focusedLines()).toEqual(new Set([2]));
   });
 
+  it('lists the request’s extractions among its scripts after the answer, and removes one', async () => {
+    http.seed('Login', {
+      method: 'POST',
+      parts: {
+        ...EMPTY_PARTS,
+        url: '{{baseUrl}}/login',
+        extractions: [{ path: 'body.access_token', variable: 'accessToken', secret: true }],
+      },
+    });
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="scripts"]').click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-extractions"]')).toBeNull();
+
+    el<HTMLButtonElement>('[data-testid="segmented-http-script-phase"] [data-segment-id="after"]').click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-extraction"]')?.getAttribute('data-variable')).toBe('accessToken');
+    el<HTMLButtonElement>('[data-testid="http-extraction-remove"]').click();
+    await fixture.whenStable();
+    expect(tabs().active()!.draft.parts.extractions).toEqual([]);
+    expect(el('[data-testid="http-extractions"]')).toBeNull();
+  });
+
   it('closes, when it opens again, the tab of a request the library no longer holds', async () => {
     http.seed('Gone');
     await tabs().open('Gone');
