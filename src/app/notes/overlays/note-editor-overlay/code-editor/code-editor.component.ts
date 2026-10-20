@@ -38,19 +38,20 @@ import {
 import type { Span } from '@core/model/json.model';
 import type { LanguageTag } from '@core/model/language.model';
 import type { FieldMarks } from '@core/state/field-marks.store';
+import { loadGrammar } from '@core/services/syntax/grammars';
+import { CODE_HIGHLIGHTER } from '@core/services/syntax/highlighter';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import type { CodeSelection } from '../code-selection';
 import { rewrite } from '../indentation';
 import { TAB_KEYS, applyEdit } from './editing';
 import { hangingIndent } from './hanging-indent';
-import { languageOf } from './languages';
 import { fieldMarks, setFieldMarks } from './field-marks';
 import { lineMarks, setLineMarks } from './line-marks';
 import { phrasesFrom } from './phrases';
 import { searchPanel } from './search-panel';
 import { readSearchOptions } from '../search/search-options';
 import { openReplace } from './search-query';
-import { CODE_COLOURS, CODE_THEME } from './theme';
+import { CODE_THEME } from './theme';
 
 const NO_LINES: ReadonlySet<number> = new Set();
 
@@ -132,7 +133,8 @@ export class CodeEditorComponent implements CodeSelection {
       const view = this.view();
       const tag = this.language();
       if (!view) return;
-      void languageOf(tag).then((grammar) => {
+      void loadGrammar(tag).then((support) => {
+        const grammar = support ?? [];
         if (this.view() !== view || this.language() !== tag) return;
         this.loadedGrammar = grammar;
         view.dispatch({ effects: this.grammar.reconfigure(grammar) });
@@ -254,7 +256,7 @@ export class CodeEditorComponent implements CodeSelection {
           createPanel: searchPanel(this.injector),
           ...readSearchOptions(this.preferences),
         }),
-        syntaxHighlighting(CODE_COLOURS),
+        syntaxHighlighting(CODE_HIGHLIGHTER),
         CODE_THEME,
         lineMarks,
         fieldMarks,

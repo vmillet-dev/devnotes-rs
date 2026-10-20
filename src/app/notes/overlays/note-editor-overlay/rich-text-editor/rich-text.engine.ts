@@ -1,3 +1,4 @@
+import { untracked } from '@angular/core';
 import { Editor, Extension, JSONContent } from '@tiptap/core';
 import { TableKit } from '@tiptap/extension-table';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
@@ -5,10 +6,11 @@ import { Placeholder } from '@tiptap/extensions';
 import { Markdown } from '@tiptap/markdown';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import { LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/language.model';
-import { highlightRanges } from '@shared/code-viewer/highlighter';
+import { grammarOf, loadGrammar } from '@core/services/syntax/grammars';
+import { highlightRanges } from '@core/services/syntax/highlighter';
 import { escapeMarkdownText } from './markdown-text';
 import { TextSearch } from './rich-text-search';
 
@@ -100,29 +102,61 @@ const tabCharacter = (indent: RichEditorHooks['indent']): Extension =>
     },
   });
 
+const codeHighlightKey = new PluginKey<DecorationSet>('codeHighlight');
+
 /**
  * A code block coloured by the code field's grammars. TipTap holds text, not HTML, so the
- * colours are decorations over it, and the language a label on the block.
+ * colours are decorations over it, and the language a label on the block. A block whose
+ * grammar has not arrived is drawn plain, then again once it has.
  */
 const CodeHighlight = Extension.create({
   name: 'codeHighlight',
   addProseMirrorPlugins() {
     return [
       new Plugin<DecorationSet>({
-        key: new PluginKey('codeHighlight'),
+        key: codeHighlightKey,
         state: {
           init: (_, { doc }) => highlightCode(doc),
-          apply: (tr, previous) => (tr.docChanged ? highlightCode(tr.doc) : previous),
+          apply: (tr, previous) =>
+            tr.docChanged || tr.getMeta(codeHighlightKey) ? highlightCode(tr.doc) : previous,
         },
         props: {
           decorations(state) {
             return this.getState(state);
           },
         },
+        view: (view) => awaitGrammars(view),
       }),
     ];
   },
 });
+
+function awaitGrammars(view: EditorView): { update(view: EditorView): void; destroy(): void } {
+  const awaited = new Set<LanguageTag>();
+  let alive = true;
+
+  const ask = (doc: ProseMirrorNode): void => {
+    doc.descendants((node) => {
+      if (node.type.name !== 'codeBlock') return true;
+      const language = languageOf(node);
+      if (!awaited.has(language) && untracked(() => grammarOf(language)) === null) {
+        awaited.add(language);
+        void loadGrammar(language).then((support) => {
+          if (alive && support) view.dispatch(view.state.tr.setMeta(codeHighlightKey, true));
+        });
+      }
+      return false;
+    });
+  };
+
+  ask(view.state.doc);
+  return {
+    update: (updated) => ask(updated.state.doc),
+    destroy: () => {
+      alive = false;
+    },
+  };
+}
 
 function highlightCode(doc: ProseMirrorNode): DecorationSet {
   const decorations: Decoration[] = [];
@@ -134,7 +168,9 @@ function highlightCode(doc: ProseMirrorNode): DecorationSet {
     decorations.push(
       Decoration.node(position, position + node.nodeSize, { 'data-language': LANGUAGE_LABELS[language] }),
     );
-    for (const range of highlightRanges(node.textContent, language)) {
+    // Read outside any effect a transaction may be dispatched from, which would follow it.
+    const grammar = untracked(() => grammarOf(language));
+    for (const range of highlightRanges(node.textContent, grammar)) {
       const start = position + 1 + range.from;
       decorations.push(Decoration.inline(start, position + 1 + range.to, { class: range.classes }));
     }

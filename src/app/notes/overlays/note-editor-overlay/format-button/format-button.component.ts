@@ -62,8 +62,7 @@ export class FormatButtonComponent {
   protected readonly indentations = INDENTATION_SEGMENTS;
   protected readonly quotes = QUOTE_SEGMENTS;
   protected readonly switches: readonly Switch[] = ['semicolons', 'trailingCommas', 'formatOnSave'];
-  protected readonly formattedList = prettierLanguages(true);
-  protected readonly notFormattedList = prettierLanguages(false);
+  protected readonly formattedList = prettierLanguages();
 
   private readonly widthField = viewChild<ElementRef<HTMLInputElement>>('widthField');
 

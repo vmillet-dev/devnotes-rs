@@ -95,7 +95,7 @@ Principles:
 
 - **Translation keys, not strings**: code returns `{ key, params }`; add every string to **both** `core/services/i18n/translations/fr.json` and `en.json`. No user-visible string in Rust. → "i18n".
 - ⚠️ Transloco drops an unknown `{{name}}`: no translated string can carry a snippet's `{{fields}}`. Counts are ICU plurals read by our own transpiler (`transloco-messageformat` breaks the CSP).
-- Prettier runs in a worker (hand it text, never code; every `{{…}}` must come back intact). Highlighting is highlight.js in one module (cards, previews), its theme global; the code editor's Lezer colours map onto the same variables. → "Formatting a snippet with Prettier", "Syntax highlighting".
+- Prettier runs in a worker (hand it text, never code; every `{{…}}` must come back intact). Highlighting is one CodeMirror grammar per language (`core/services/syntax/grammars.ts`) for the editor and the cards alike, each loaded on first use; its `tok-*` theme is global. → "Formatting a snippet with Prettier", "Syntax highlighting".
 - ⚠️ CSS variables stay on `:root` in `src/styles/styles.scss`; `--*-rgb` triplets are comma-separated; a parent's CSS cannot reach a child component (pass a custom property). Dark is the base; light has its own amber; `scripts/palette.test.mjs` holds text to 4.5:1. → "Theming".
 - Accessibility: linted, plus contrast, 24×24 targets and destructive controls red at rest. Modals are `DialogComponent` (the rung in `dialog.model.ts` is `z-index` and Escape priority). → "Accessibility", "The modal frame".
 

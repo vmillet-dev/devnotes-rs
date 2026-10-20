@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { LanguageTag } from '@core/model/language.model';
+import { loadGrammar } from '@core/services/syntax/grammars';
 import { CodeViewerComponent } from './code-viewer.component';
 
 describe('CodeViewerComponent', () => {
@@ -12,7 +14,16 @@ describe('CodeViewerComponent', () => {
       .queryAll(By.css('.line-content span'))
       .find((span) => span.nativeElement.textContent === text);
 
-    return token && Object.keys(token.classes).find((cls) => cls.startsWith('hljs-'));
+    return token && Object.keys(token.classes).find((cls) => cls.startsWith('tok-'));
+  }
+
+  /** Its grammar arrives after the first drawing, which is plain text. */
+  async function show(content: string, language: LanguageTag): Promise<void> {
+    fixture.componentRef.setInput('content', content);
+    fixture.componentRef.setInput('language', language);
+    fixture.detectChanges();
+    await loadGrammar(language);
+    await fixture.whenStable();
   }
 
   beforeEach(() => {
@@ -58,49 +69,56 @@ describe('CodeViewerComponent', () => {
   });
 
   it('colours JSON keys, strings and numbers', async () => {
-    fixture.componentRef.setInput('content', '{"name": "value", "count": 2}');
-    fixture.componentRef.setInput('language', 'json');
-    await fixture.whenStable();
+    await show('{"name": "value", "count": 2}', 'json');
 
-    expect(scopeOf('"name"')).toBe('hljs-attr');
-    expect(scopeOf('"value"')).toBe('hljs-string');
-    expect(scopeOf('2')).toBe('hljs-number');
+    expect(scopeOf('"name"')).toBe('tok-property');
+    expect(scopeOf('"value"')).toBe('tok-string');
+    expect(scopeOf('2')).toBe('tok-literal');
   });
 
-  it.each([
-    ['js', 'const total = 1;', 'const', 'hljs-keyword'],
-    ['ts', 'interface Shape {}', 'interface', 'hljs-keyword'],
-    ['py', 'def run():', 'def', 'hljs-keyword'],
-    ['sql', 'SELECT id FROM notes', 'SELECT', 'hljs-keyword'],
-    ['yml', 'key: value', 'key:', 'hljs-attr'],
-    ['sh', 'echo "hi"', '"hi"', 'hljs-string'],
-    ['css', '.card { color: red; }', 'color', 'hljs-attribute'],
-  ])('colours %s content', async (language, content, text, scope) => {
-    fixture.componentRef.setInput('content', content);
-    fixture.componentRef.setInput('language', language);
+  it('draws plain text until the grammar has arrived, then colours it', async () => {
+    fixture.componentRef.setInput('content', 'local x = 1');
+    fixture.componentRef.setInput('language', 'lua');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('.line-content span'))).toHaveLength(0);
+
+    await loadGrammar('lua');
     await fixture.whenStable();
+
+    expect(scopeOf('local')).toBe('tok-keyword');
+  });
+
+  it.each<[LanguageTag, string, string, string]>([
+    ['js', 'const total = 1;', 'const', 'tok-keyword'],
+    ['ts', 'interface Shape {}', 'interface', 'tok-keyword'],
+    ['py', 'def run():', 'def', 'tok-keyword'],
+    ['sql', 'SELECT id FROM notes', 'SELECT', 'tok-keyword'],
+    ['yml', 'key: value', 'key', 'tok-property'],
+    ['sh', 'echo "hi"', '"hi"', 'tok-string'],
+    ['css', '.card { color: red; }', 'color', 'tok-property'],
+    ['tf', 'resource "x" "y" {}', 'resource', 'tok-keyword'],
+    ['dockerfile', 'FROM node:20', 'FROM', 'tok-keyword'],
+  ])('colours %s content', async (language, content, text, scope) => {
+    await show(content, language);
 
     expect(scopeOf(text)).toBe(scope);
   });
 
   it('keeps a multi-line comment coloured across every one of its lines', async () => {
-    fixture.componentRef.setInput('content', '/* one\n   two\n   three */\nconst after = 1;');
-    fixture.componentRef.setInput('language', 'js');
-    await fixture.whenStable();
+    await show('/* one\n   two\n   three */\nconst after = 1;', 'js');
 
-    const comments = fixture.debugElement.queryAll(By.css('.line-content .hljs-comment'));
+    const comments = fixture.debugElement.queryAll(By.css('.line-content .tok-comment'));
     expect(comments.map((node) => node.nativeElement.textContent)).toEqual([
       '/* one',
       '   two',
       '   three */',
     ]);
-    expect(scopeOf('const')).toBe('hljs-keyword');
+    expect(scopeOf('const')).toBe('tok-keyword');
   });
 
   it('does not fail on content its grammar cannot parse', async () => {
-    fixture.componentRef.setInput('content', '{"unclosed": ');
-    fixture.componentRef.setInput('language', 'json');
-    await fixture.whenStable();
+    await show('{"unclosed": ', 'json');
 
     expect(fixture.debugElement.query(By.css('.line-content')).nativeElement.textContent).toBe(
       '{"unclosed": ',

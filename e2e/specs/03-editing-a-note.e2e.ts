@@ -480,7 +480,7 @@ describe('Editing a note', () => {
       await canvas.waitForCard(title);
 
       await canvas.openNote(title);
-      const keyword = $(`${testid('editor-rich')} pre .hljs-keyword`);
+      const keyword = $(`${testid('editor-rich')} pre .tok-keyword`);
       await keyword.waitForExist({ timeout: 10_000 });
       expect(await keyword.getText()).toBe('SELECT');
       expect(await $(`${testid('editor-rich')} pre`).getAttribute('data-language')).toBe('SQL');
@@ -622,14 +622,23 @@ describe('Editing a note', () => {
     await reloadCanvas();
   });
 
-  /** Detected in Rust, badged by a hue rule and coloured by a grammar: three places to forget. */
-  it('recognises SCSS and GraphQL, and draws them as languages', async () => {
+  /**
+   * Detected in Rust, badged by its family's hue, and coloured by one grammar on the card and in
+   * the editor alike: Terraform's is one of ours.
+   */
+  it('recognises SCSS, GraphQL and Terraform, and draws them as languages', async () => {
     const samples = [
       { title: 'Card styles', content: '$gap: 8px;\n\n.card {\n  padding: $gap;\n}', language: 'scss' },
       {
         title: 'Invoices query',
         content: 'query Invoices($id: ID!) {\n  customer(id: $id) {\n    name\n  }\n}',
         language: 'graphql',
+      },
+      {
+        title: 'Assets bucket',
+        content: 'resource "aws_s3_bucket" "assets" {\n  bucket = var.name\n}',
+        language: 'tf',
+        keyword: 'resource',
       },
     ] as const;
     const ids = [];
@@ -646,12 +655,21 @@ describe('Editing a note', () => {
 
       const badge = (await canvas.cardWithTitle(sample.title)).$('.lang-tag');
       expect(await badge.getText()).toBe(sample.language.toUpperCase());
-      // A language with no `.lang-*` rule still draws its label, on no fill at all.
+      // A badge with no hue still draws its label, on no fill at all.
       expect((await badge.getCSSProperty('background-color')).value).not.toBe('rgba(0,0,0,0)');
 
-      // Coloured by its grammar, a chunk loaded with the first snippet in that language.
+      // Coloured by its grammar, a chunk loaded with the first card in that language, and the
+      // same classes in the editor.
+      const card = await canvas.cardWithTitle(sample.title);
+      await card.$('.card-snippet [class^="tok-"]').waitForExist({ timeout: 10_000 });
+      if ('keyword' in sample) {
+        expect(await card.$('.card-snippet .tok-keyword').getText()).toBe(sample.keyword);
+      }
       await canvas.openNote(sample.title);
-      await $(`${testid('editor-body')} .cm-line span[class]`).waitForExist({ timeout: 10_000 });
+      await $(`${testid('editor-body')} .cm-line span[class^="tok-"]`).waitForExist({ timeout: 10_000 });
+      if ('keyword' in sample) {
+        expect(await $(`${testid('editor-body')} .cm-line .tok-keyword`).getText()).toBe(sample.keyword);
+      }
       await editor.close();
     }
 

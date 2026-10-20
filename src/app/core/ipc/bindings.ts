@@ -2423,9 +2423,9 @@ export type KeyValue = {
  *  Closed: the front receives a generated union, so an unknown value stops compiling
  *  there instead of being refused at runtime.
  */
-export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs" | "php" | "c" | "sql" | "graphql" | "yml" | "toml" | "xml" | "html" | "css" | "scss" | "sh" | 
+export type Language = "json" | "js" | "jsx" | "ts" | "tsx" | "py" | "rs" | "go" | "java" | "cs" | "php" | "c" | "cpp" | "sql" | "graphql" | "yml" | "toml" | "xml" | "html" | "vue" | "angular" | "css" | "scss" | "less" | "sass" | "sh" | 
 /**  PowerShell: what generated code is saved as, and what a pasted cmdlet reads as. */
-"ps1" | "kt" | "rb" | "swift" | "dart" | "ex" | "md" | 
+"ps1" | "kt" | "rb" | "swift" | "dart" | "ex" | "apl" | "armasm" | "asn1" | "asm" | "asterisk" | "bf" | "ceylon" | "clj" | "gss" | "cmake" | "cobol" | "coffee" | "lisp" | "cr" | "cypher" | "cython" | "d" | "diff" | "dockerfile" | "dtd" | "dylan" | "ebnf" | "ecl" | "eiffel" | "elm" | "erl" | "fs" | "factor" | "fcl" | "forth" | "fortran" | "gherkin" | "glsl" | "groovy" | "hs" | "haxe" | "http" | "hxml" | "idl" | "ini" | "jinja" | "jsonld" | "jl" | "tex" | "liquid" | "ls" | "lua" | "mathematica" | "matlab" | "mbox" | "mirc" | "modelica" | "mscgen" | "mumps" | "ntriples" | "nesc" | "nginx" | "nix" | "nsis" | "objc" | "objcpp" | "ml" | "oz" | "pascal" | "pegjs" | "perl" | "asc" | "pig" | "prisma" | "properties" | "proto" | "pug" | "puppet" | "q" | "r" | "rpmspec" | "sas" | "scala" | "scheme" | "sieve" | "smalltalk" | "sol" | "solr" | "sparql" | "spreadsheet" | "squirrel" | "sml" | "styl" | "tcl" | "tf" | "textile" | "tiddlywiki" | "tiki" | "troff" | "ttcn" | "ttcncfg" | "turtle" | "vbs" | "velocity" | "verilog" | "vhdl" | "vb" | "webidl" | "wat" | "xquery" | "yacas" | "z80" | "zig" | "md" | 
 /**  Default, and the signal that the front end chose nothing. */
 "txt";
 

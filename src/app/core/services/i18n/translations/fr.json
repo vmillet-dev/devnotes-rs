@@ -369,7 +369,7 @@
       "formattedTitle": "Formatés :",
       "formattedList": "{{list}}.",
       "notFormattedTitle": "Pas par Prettier :",
-      "notFormattedList": "{{list}}. Le bouton y est désactivé et dit pourquoi."
+      "notFormattedList": "tous les autres langages. Le bouton y est désactivé et dit pourquoi."
     },
     "modifiedPrefix": "Modifiée",
     "kind": {

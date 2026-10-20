@@ -1,0 +1,5 @@
+cdef int square(int x):
+    return x * x
+
+def total(values):
+    return sum(square(v) for v in values)

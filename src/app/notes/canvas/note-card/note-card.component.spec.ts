@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { loadGrammar } from '@core/services/syntax/grammars';
 import { NotesRepository } from '@core/data/notes.repository';
 import { Space } from '@core/model/space.model';
 import { LanguageBadgeComponent } from '@shared/badges/language-badge/language-badge.component';
@@ -371,9 +372,11 @@ describe('NoteCardComponent', () => {
 
   it('colours the snippet according to the note language', async () => {
     fixture.componentRef.setInput('note', createNote({ language: 'json', content: '{"a": 1}' }));
+    fixture.detectChanges();
+    await loadGrammar('json');
     await fixture.whenStable();
 
-    expect(fixture.debugElement.query(By.css('.card-snippet .hljs-attr'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('.card-snippet .tok-property'))).not.toBeNull();
   });
 
   it('numbers no line in the snippet', async () => {

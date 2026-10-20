@@ -1,0 +1,7 @@
+use strict;
+use warnings;
+
+my @names = ('ada', 'linus');
+foreach my $name (@names) {
+    print "$name\n" if $name =~ /a/;
+}

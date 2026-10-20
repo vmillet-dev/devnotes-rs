@@ -10,7 +10,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use devnotes_lib::notes::language::{Language, from_content};
+use devnotes_lib::notes::language::{Language, detectable, from_content};
 
 fn corpus() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/corpus")
@@ -69,13 +69,28 @@ fn every_detectable_language_has_at_least_one_snippet() {
         .map(|(name, _)| expected(&name))
         .collect();
 
-    let missing: Vec<String> = Language::ALL
-        .iter()
+    let missing: Vec<String> = detectable()
+        .chain([Language::Txt])
         .filter(|language| !covered.contains(language))
-        .map(ToString::to_string)
+        .map(|language| language.to_string())
         .collect();
 
     assert!(missing.is_empty(), "no snippet for: {}", missing.join(", "));
+}
+
+/// The languages detection cannot answer are chosen by hand, and nothing in the corpus may
+/// come back as one of them.
+#[test]
+fn a_language_detection_does_not_know_is_never_the_answer() {
+    let known: Vec<Language> = detectable().collect();
+    let answered: Vec<String> = cases()
+        .into_iter()
+        .map(|(name, content)| (name, from_content(&content)))
+        .filter(|(_, got)| *got != Language::Txt && !known.contains(got))
+        .map(|(name, got)| format!("{name}: {got}"))
+        .collect();
+
+    assert!(answered.is_empty(), "{}", answered.join("\n"));
 }
 
 /// A Rust snippet carrying a match arm is Rust, whatever `=>` suggests.
