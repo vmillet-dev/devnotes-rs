@@ -13,8 +13,9 @@ use devnotes_lib::http::model::{
 use devnotes_lib::http::scripts::model::{FailureKind, ScriptKind, ScriptLevel};
 use devnotes_lib::http::scripts::process::host_from;
 use devnotes_lib::http::{
-    create_http_collection, create_http_environment, http_environments, http_settings,
-    save_http_environment, save_http_settings, send_http_request,
+    create_http_collection, create_http_environment, http_environments, http_history,
+    http_history_entry, http_settings, save_http_environment, save_http_settings,
+    send_http_request,
 };
 
 use super::Session;
@@ -29,6 +30,7 @@ fn scripts(before: &str, after: &str) -> RequestScripts {
     RequestScripts {
         before: before.to_string(),
         after: after.to_string(),
+        ..RequestScripts::default()
     }
 }
 
@@ -216,4 +218,82 @@ fn with_no_environment_chosen_a_script_writes_the_globals() {
     let sets = session.call(http_environments).unwrap();
     assert_eq!(sets.globals[0].name, "tenant");
     assert_eq!(sets.globals[0].value, "acme");
+}
+
+#[test]
+fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
+    let session = hosted();
+    let staging = environment(&session, "Staging", false);
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    let settings = ContainerSettings {
+        scripts: RequestScripts {
+            tests:
+                "test('trace', () => {\n  expect(res.headers).toHaveProperty('x-request-id');\n});"
+                    .to_string(),
+            ..RequestScripts::default()
+        },
+        ..ContainerSettings::default()
+    };
+    let item = HttpItem {
+        kind: HttpItemKind::Collection,
+        id: api.id.clone(),
+    };
+    session
+        .call(|app| save_http_settings(item, settings, app))
+        .unwrap();
+    let (port, _seen) = serve(1, |_, _| ok());
+    let mut sent = request(&format!("http://127.0.0.1:{port}/"));
+    sent.collection_id = Some(api.id.clone());
+    sent.environment_id = Some(staging);
+    sent.document.scripts = RequestScripts {
+        before: String::new(),
+        after: "pm.test('from after', () => pm.response.to.have.status(200));".to_string(),
+        tests: "test('status', () => {\n  expect(res.status).toBe(200);\n});\n\
+                pm.test('token', () => {\n  pm.expect(env.get('token')).to.equal('other');\n});"
+            .to_string(),
+    };
+
+    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+
+    let tests = &answer.scripts.tests;
+    let names: Vec<(&str, bool)> = tests
+        .iter()
+        .map(|test| (test.name.as_str(), test.passed))
+        .collect();
+    assert_eq!(
+        names,
+        [
+            ("from after", true),
+            ("status", true),
+            ("token", false),
+            ("trace", false)
+        ]
+    );
+    let token = &tests[2];
+    assert_eq!(token.kind, Some(ScriptKind::Tests));
+    assert_eq!(token.level, Some(ScriptLevel::Request));
+    assert_eq!(token.line, Some(5));
+    assert_eq!(token.expected.as_deref(), Some("\"other\""));
+    // The secret it compared is never shown in clear.
+    assert_eq!(token.actual.as_deref(), Some("\"{{token}}\""));
+    assert_eq!(
+        token.code.as_deref(),
+        Some("pm.expect(env.get('token')).to.equal('other');")
+    );
+    let trace = &tests[3];
+    assert_eq!(trace.level, Some(ScriptLevel::Collection));
+    assert_eq!(trace.holder.as_deref(), Some("API"));
+    assert_eq!(trace.owner.as_deref(), Some(api.id.as_str()));
+    assert_eq!(trace.line, Some(2));
+
+    // Kept with the history entry.
+    let day = &session.call(|app| http_history(0, app)).unwrap()[0];
+    let entry = session
+        .call(|app| http_history_entry(day.items[0].id.clone(), app))
+        .unwrap();
+    let kept = entry.record.response.unwrap().scripts.tests;
+    assert_eq!(kept.len(), 4);
+    assert_eq!(kept[2].actual.as_deref(), Some("\"{{token}}\""));
 }

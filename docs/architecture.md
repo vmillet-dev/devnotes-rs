@@ -2765,7 +2765,11 @@ then the request's; once answered, the other way round; a blank one is not run.
   error only — the script's own `message`. `skipRequest()` is `httpScriptSkipped`; a method Rust
   does not send, `httpScriptMethod`. Nothing is written in the history: nothing left.
 - The phase after runs on an answer only; what stops it is `SentResponse.scripts.failure`,
-  shown above the answer, which stays. The console's lines cross once, each secret in force
+  shown above the answer, which stays. **The tests are a third script** (`RequestScripts.tests`,
+  #494) run in that phase after the scripts after the answer, request › folder › collection; a
+  `pm.test` in a script after the answer counts too. `TestResult::placed` names whose test it
+  is and the line of code that failed, as written; secrets are written as their `{{name}}`, and
+  the results are kept with the history entry. The response's Tests tab groups them by holder. The console's lines cross once, each secret in force
   written as its `{{name}}`; `history::record_of` drops them. `scripts.wrote` makes the front
   read the environments and the settings again; a script error does too.
 - ⚠️ A test's executable is its harness, not the application: `process::host_from` points the

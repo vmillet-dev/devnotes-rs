@@ -2,7 +2,8 @@
 //! their writes do to the levels the request resolves from and to the tables that hold them.
 
 use super::model::{
-    LayerScope, LogEntry, Script, ScriptKind, ScriptLayer, ScriptLevel, VariableWrite, WriteScope,
+    LayerScope, LogEntry, Script, ScriptKind, ScriptLayer, ScriptLevel, TestResult, VariableWrite,
+    WriteScope,
 };
 use crate::http::environments::{Variable, VariableKind, variable_faults};
 use crate::http::model::{HttpItemKind, RequestScripts};
@@ -15,6 +16,8 @@ use crate::http::variables::{self, VariableLayer, VariableScope};
 pub struct Around {
     pub before: Vec<Script>,
     pub after: Vec<Script>,
+    /// Run after `after`, in its order.
+    pub tests: Vec<Script>,
 }
 
 struct Holder<'a> {
@@ -28,7 +31,8 @@ impl Holder<'_> {
     fn script(&self, kind: ScriptKind) -> Option<Script> {
         let source = match kind {
             ScriptKind::Before => &self.scripts.before,
-            ScriptKind::After | ScriptKind::Tests => &self.scripts.after,
+            ScriptKind::After => &self.scripts.after,
+            ScriptKind::Tests => &self.scripts.tests,
         };
         (!source.trim().is_empty()).then(|| Script {
             id: format!("{}:{}:{kind}", self.level, self.owner.unwrap_or("request")),
@@ -73,12 +77,23 @@ impl Around {
                 .rev()
                 .filter_map(|level| level.script(ScriptKind::After))
                 .collect(),
+            tests: levels
+                .iter()
+                .rev()
+                .filter_map(|level| level.script(ScriptKind::Tests))
+                .collect(),
         }
     }
 
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.before.is_empty() && self.after.is_empty()
+        self.before.is_empty() && self.after.is_empty() && self.tests.is_empty()
+    }
+
+    /// What runs once the answer came: the scripts after it, then the tests.
+    #[must_use]
+    pub fn answered(&self) -> Vec<Script> {
+        self.after.iter().chain(&self.tests).cloned().collect()
     }
 }
 
@@ -198,6 +213,30 @@ pub fn locals_layer(locals: &std::collections::BTreeMap<String, String>) -> Vari
     }
 }
 
+/// The tests as shown: placed in their scripts, each secret in force written as its `{{name}}`.
+#[must_use]
+pub fn shown_tests(
+    tests: Vec<TestResult>,
+    scripts: &[Script],
+    secrets: &[(String, String)],
+) -> Vec<TestResult> {
+    let hide = |text: Option<String>| text.map(|text| variables::hide(&text, secrets));
+    tests
+        .into_iter()
+        .map(|test| {
+            let test = test.placed(scripts);
+            TestResult {
+                name: variables::hide(&test.name, secrets),
+                message: hide(test.message),
+                expected: hide(test.expected),
+                actual: hide(test.actual),
+                code: hide(test.code),
+                ..test
+            }
+        })
+        .collect()
+}
+
 /// What a script logged, each secret in force written as its `{{name}}`.
 #[must_use]
 pub fn masked(logs: Vec<LogEntry>, secrets: &[(String, String)]) -> Vec<LogEntry> {
@@ -219,6 +258,7 @@ mod tests {
         RequestScripts {
             before: before.to_string(),
             after: after.to_string(),
+            tests: format!("{after}-tests"),
         }
     }
 
@@ -275,6 +315,16 @@ mod tests {
             [
                 "folder:f1:after Factures",
                 "collection:c1:after API Paiements"
+            ]
+        );
+        assert_eq!(
+            order(&around.answered()),
+            [
+                "folder:f1:after Factures",
+                "collection:c1:after API Paiements",
+                "request:request:tests Payer",
+                "folder:f1:tests Factures",
+                "collection:c1:tests API Paiements",
             ]
         );
         assert_eq!(around.before[0].owner.as_deref(), Some("c1"));

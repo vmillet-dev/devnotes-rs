@@ -22,6 +22,7 @@ import {
   ScriptFocus,
   ScriptParts,
   ScriptPhase,
+  TEST_PHASES,
   TransportSettings,
 } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
@@ -69,12 +70,14 @@ export class ContainerSettingsDialogComponent implements OnInit {
   protected readonly defaultTransport = DEFAULT_TRANSPORT;
   protected readonly scriptPhase = signal<ScriptPhase>('before');
   protected readonly scriptLine = signal<number | null>(null);
+  protected readonly testPhases = TEST_PHASES;
   private readonly scriptsHeading = viewChild<ElementRef<HTMLElement>>('scriptsHeading');
+  private readonly testsHeading = viewChild<ElementRef<HTMLElement>>('testsHeading');
 
   ngOnInit(): void {
     const script = this.script();
     if (script !== null) {
-      this.scriptPhase.set(script.phase);
+      if (script.phase !== 'tests') this.scriptPhase.set(script.phase);
       this.scriptLine.set(script.line);
     }
     void this.load();
@@ -86,7 +89,7 @@ export class ContainerSettingsDialogComponent implements OnInit {
     this.settings.set(await this.errors.attempt('http.failed', () => this.repository.settings(item)));
     if (this.script() !== null) {
       afterNextRender(
-        { read: () => this.scriptsHeading()?.nativeElement.scrollIntoView({ block: 'start' }) },
+        { read: () => this.heading()?.nativeElement.scrollIntoView({ block: 'start' }) },
         {
           injector: this.injector,
         },
@@ -111,6 +114,11 @@ export class ContainerSettingsDialogComponent implements OnInit {
 
   protected onHeaders(headers: readonly KeyValueRow[]): void {
     this.settings.update((settings) => settings && { ...settings, headers });
+  }
+
+  /** The section « Ouvrir le script » leads to. */
+  private heading() {
+    return this.script()?.phase === 'tests' ? this.testsHeading() : this.scriptsHeading();
   }
 
   protected onScripts(scripts: ScriptParts): void {

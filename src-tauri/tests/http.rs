@@ -477,6 +477,7 @@ fn marked_tree(library: &mut Library) -> String {
             scripts: RequestScripts {
                 before: "zq-container-before()".to_string(),
                 after: "zq-container-after()".to_string(),
+                tests: "zq-container-tests()".to_string(),
             },
             ..ContainerSettings::default()
         };
@@ -523,6 +524,7 @@ fn marked_tree(library: &mut Library) -> String {
                 scripts: RequestScripts {
                     before: "zq-request-before()".to_string(),
                     after: "zq-request-after()".to_string(),
+                    tests: "zq-request-tests()".to_string(),
                 },
                 ..RequestDocument::default()
             },
@@ -538,7 +540,7 @@ fn marked_tree(library: &mut Library) -> String {
 /// strings it lets through — a parameter typed by hand, a body, what was answered.
 fn marked_send(library: &mut Library, request_id: &str) {
     use devnotes_lib::http::history::{self, Sent};
-    use devnotes_lib::http::scripts::model::{LogEntry, ScriptStop, ScriptsAnswer};
+    use devnotes_lib::http::scripts::model::{LogEntry, ScriptStop, ScriptsAnswer, TestResult};
     use devnotes_lib::http::send::{Exchange, SentBody, SentResponse};
     use devnotes_lib::notes::language::Language;
 
@@ -585,6 +587,11 @@ fn marked_send(library: &mut Library, request_id: &str) {
                     message: "zq-script-message".to_string(),
                     ..ScriptStop::default()
                 }),
+                tests: vec![TestResult {
+                    name: "zq-test-name".to_string(),
+                    actual: Some("zq-test-actual".to_string()),
+                    ..TestResult::default()
+                }],
                 logs: vec![LogEntry {
                     text: "zq-log-text".to_string(),
                     ..LogEntry::default()

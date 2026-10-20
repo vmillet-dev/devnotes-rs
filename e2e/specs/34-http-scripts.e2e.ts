@@ -157,4 +157,84 @@ describe('HTTP scripts', () => {
       await bridge.deleteHttpEnvironment(staging.id);
     }
   });
+
+  /**
+   * #494: named tests run after the answer, the collection's for each of its requests; the
+   * response's Tests tab counts them and says, for a failure, what was expected and what came.
+   */
+  it('runs the named tests after the answer and shows which passed', async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(402, { 'Content-Type': 'application/json' });
+      response.end('{"currency":"usd"}');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    const api = await bridge.createHttpCollection('Tests');
+    await bridge.saveHttpSettings(
+      { kind: 'collection', id: api.id },
+      {
+        auth: { kind: 'none' },
+        headers: [],
+        transport: {},
+        variables: [],
+        scripts: {
+          tests: "test('zq-trace', () => {\n  expect(res.headers).toHaveProperty('x-request-id');\n});",
+        },
+      },
+    );
+    const created = await bridge.createHttpRequest({
+      collectionId: api.id,
+      folderId: null,
+      name: 'Payer',
+      kind: 'http',
+      method: 'GET',
+      document: {
+        url: `http://127.0.0.1:${port}/pay`,
+        description: '',
+        scripts: {
+          tests:
+            "test('zq-status', () => {\n  expect([200, 402]).toContain(res.status);\n});\n" +
+            "pm.test('zq-currency', () => {\n  pm.expect(res.json().currency).to.equal('eur');\n});",
+        },
+      },
+    });
+    try {
+      await openHttp();
+      await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+      await $(testid('http-request-editor')).waitForDisplayed({ timeout: 10_000 });
+      expect(
+        await $(`${testid('http-section')}[data-section="tests"] ${testid('http-section-count')}`).getText(),
+      ).toBe('2');
+
+      await press('Enter', ['Control']);
+      await eventually(
+        () => $(testid('http-response-tests-count')).getText(),
+        (count) => count === '1/3',
+        'the tests counted beside the body',
+      );
+      await $(`${testid('http-response-section')}[data-section="tests"]`).click();
+      await $(testid('http-response-tests')).waitForDisplayed({ timeout: 10_000 });
+      const results = await browser.execute(
+        (selector: string) =>
+          [...document.querySelectorAll(selector)].map(
+            (test) =>
+              `${test.querySelector('.name')?.textContent ?? ''} ${test.getAttribute('data-result') ?? ''}`,
+          ),
+        testid('http-test'),
+      );
+      expect(results).toEqual(['zq-status passed', 'zq-currency failed', 'zq-trace failed']);
+      expect(await $(`${testid('http-test')}[data-result="failed"] .expected`).getText()).toBe('"eur"');
+      expect(await $(`${testid('http-test')}[data-result="failed"] .actual`).getText()).toBe('"usd"');
+
+      await $(testid('http-test-line')).click();
+      await eventually(
+        () => $(testid('http-scripts')).getAttribute('data-phase'),
+        (phase) => phase === 'tests',
+        'the request’s tests open on the line that failed',
+      );
+    } finally {
+      server.close();
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    }
+  });
 });

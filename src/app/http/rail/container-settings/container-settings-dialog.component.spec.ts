@@ -35,7 +35,7 @@ describe('ContainerSettingsDialogComponent', () => {
       headers: [{ enabled: true, key: 'Accept', value: 'text/csv', description: '' }],
       transport: {},
       variables: [{ enabled: true, name: 'tenant', value: 'acme', kind: 'text' }],
-      scripts: { before: '', after: '' },
+      scripts: { before: '', after: '', tests: '' },
     };
     http.inheritedAnswer = {
       auth: { kind: 'bearer', token: '{{accessToken}}' },
@@ -89,7 +89,7 @@ describe('ContainerSettingsDialogComponent', () => {
           headers: [{ enabled: true, key: 'Accept', value: 'application/json', description: '' }],
           transport: { timeoutMs: 8000 },
           variables: [{ enabled: true, name: 'tenant', value: 'acme', kind: 'text' }],
-          scripts: { before: '', after: '' },
+          scripts: { before: '', after: '', tests: '' },
         },
       ],
     ]);
@@ -157,6 +157,25 @@ describe('ContainerSettingsDialogComponent', () => {
     expect(saved.scripts).toEqual({
       before: '',
       after: "pm.collectionVariables.set('lastId', res.json().id);",
+      tests: '',
     });
+  });
+
+  it('opens on a test « Ligne › » named, its line marked in the tests', async () => {
+    await render(FOLDER, { phase: 'tests', line: 3 });
+    const editors = () =>
+      fixture.debugElement
+        .queryAll(By.directive(CodeEditorComponent))
+        .map((found) => found.componentInstance as CodeEditorComponent);
+    await vi.waitFor(() => expect(editors()).toHaveLength(2));
+    expect(editors()[0]!.focusedLines().size).toBe(0);
+    expect(editors()[1]!.focusedLines()).toEqual(new Set([3]));
+
+    editors()[1]!.changed.emit("test('trace', () => {});");
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-settings-save"]').click();
+    await vi.waitFor(() => expect(closed).toBe(1));
+    const saved = http.callsOf('saveSettings')[0]?.[1] as { scripts: unknown };
+    expect(saved.scripts).toEqual({ before: '', after: '', tests: "test('trace', () => {});" });
   });
 });

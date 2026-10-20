@@ -592,12 +592,15 @@ impl<R: Runtime> Flight<R> {
         let mut answer = answer.map_err(AppError::from);
 
         let mut finished = true;
+        let answered = around.answered();
         if let Ok(response) = &mut answer {
-            if !around.after.is_empty() {
-                finished = self.after(&around.after, &mut going, response).await;
+            if !answered.is_empty() {
+                finished = self.after(&answered, &mut going, response).await;
             }
             let shown = variables::Resolver::new(&going.layers).secrets();
             response.scripts.logs = around::masked(self.logs(), &shown);
+            let tests = std::mem::take(&mut response.scripts.tests);
+            response.scripts.tests = around::shown_tests(tests, &answered, &shown);
             response.scripts.wrote = self.wrote;
         }
         self.sent = Some(history::Sent {
@@ -682,8 +685,8 @@ impl<R: Runtime> Flight<R> {
         Ok(())
     }
 
-    /// The scripts once it is answered: what stops them is shown with the answer. `false` when
-    /// « Annuler » stopped them.
+    /// The scripts once it is answered, then the tests: what stops them is shown with the answer.
+    /// `false` when « Annuler » stopped them.
     async fn after(
         &mut self,
         scripts: &[Script],
@@ -698,6 +701,7 @@ impl<R: Runtime> Flight<R> {
             return false;
         };
         self.write(&outcome.writes, &mut going.layers).await;
+        response.scripts.tests = outcome.tests;
         response.scripts.failure = outcome
             .failure
             .map(|failure| ScriptStop::of(&failure, scripts));

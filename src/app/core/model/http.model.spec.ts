@@ -11,6 +11,7 @@ import {
   bodyOfKind,
   setBodyAside,
   stopOf,
+  testsDeclared,
 } from './http.model';
 
 describe('the HTTP wire shapes', () => {
@@ -38,7 +39,7 @@ describe('the HTTP wire shapes', () => {
       websocket: { protocols: [], messages: [] },
       transport: {},
       variables: [],
-      scripts: { before: '', after: '' },
+      scripts: { before: '', after: '', tests: '' },
     });
     expect(toParts({ websocket: { messages: [{ name: 'Ping' }] } }).websocket).toEqual({
       protocols: [],
@@ -72,7 +73,7 @@ describe('the HTTP wire shapes', () => {
       headers: [],
       transport: {},
       variables: [],
-      scripts: { before: '', after: '' },
+      scripts: { before: '', after: '', tests: '' },
     });
     expect(toSettings({ variables: [{ name: 'tenant' }] }).variables).toEqual([
       { enabled: true, name: 'tenant', value: '', kind: 'text' },
@@ -83,14 +84,14 @@ describe('the HTTP wire shapes', () => {
         headers: [],
         transport: { timeoutMs: 500 },
         variables: [],
-        scripts: { before: 'sign()', after: '' },
+        scripts: { before: 'sign()', after: '', tests: '' },
       }),
     ).toEqual({
       auth: { kind: 'none' },
       headers: [],
       transport: { timeoutMs: 500 },
       variables: [],
-      scripts: { before: 'sign()', after: '' },
+      scripts: { before: 'sign()', after: '', tests: '' },
     });
 
     const from = { kind: 'collection' as const, id: 'api', name: 'API' };
@@ -183,5 +184,12 @@ describe('the HTTP wire shapes', () => {
       line: null,
       message: '',
     });
+  });
+
+  it('counts the tests a script declares, by test( and pm.test(', () => {
+    expect(
+      testsDeclared(["test('a', () => {});", "pm.test('b', () => {});", "test.skip('c');"].join('\n')),
+    ).toBe(2);
+    expect(testsDeclared("const latest = 1; env.test('x'); attest(1);")).toBe(0);
   });
 });

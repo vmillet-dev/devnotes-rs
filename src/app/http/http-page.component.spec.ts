@@ -357,7 +357,7 @@ describe('HttpPageComponent', () => {
       scripts: [
         {
           from: { kind: 'collection', id: 'API', name: 'API Paiements' },
-          scripts: { before: 'login()', after: '' },
+          scripts: { before: 'login()', after: '', tests: '' },
         },
       ],
     };
@@ -377,6 +377,7 @@ describe('HttpPageComponent', () => {
     expect(tabs().active()!.draft.parts.scripts).toEqual({
       before: "req.headers.set('X-Signed', 'yes');",
       after: '',
+      tests: '',
     });
     expect(
       el('[data-testid="http-section"][data-section="scripts"] [data-testid="http-section-count"]')
@@ -405,6 +406,43 @@ describe('HttpPageComponent', () => {
       phase: 'after',
       line: null,
     });
+  });
+
+  it('writes the tests in a tab of their own, counted, and opens one that failed on its line', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="tests"]').click();
+    await fixture.whenStable();
+    expect(el('[data-testid="segmented-http-script-phase"]')).toBeNull();
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-script-order"]')?.textContent).toContain('après la réponse'),
+    );
+    const editor = () =>
+      fixture.debugElement.query(By.directive(CodeEditorComponent))?.componentInstance as
+        CodeEditorComponent | undefined;
+    await vi.waitFor(() => expect(editor()).toBeDefined());
+
+    editor()!.changed.emit("test('a', () => {});\npm.test('b', () => {});");
+    await fixture.whenStable();
+    expect(tabs().active()!.draft.parts.scripts.tests).toBe("test('a', () => {});\npm.test('b', () => {});");
+    expect(
+      el('[data-testid="http-section"][data-section="tests"] [data-testid="http-section-count"]')
+        ?.textContent,
+    ).toBe('2');
+
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();
+    await fixture.whenStable();
+    TestBed.inject(HttpScriptFocusStore).open(tabs().active()!.key, {
+      kind: 'error',
+      level: 'request',
+      script: 'tests',
+      line: 2,
+      message: 'x',
+    });
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-scripts"]')?.getAttribute('data-phase')).toBe('tests'),
+    );
+    expect(editor()!.focusedLines()).toEqual(new Set([2]));
   });
 
   it('closes, when it opens again, the tab of a request the library no longer holds', async () => {
@@ -576,6 +614,7 @@ describe('HttpPageComponent', () => {
       'auth',
       'variables',
       'scripts',
+      'tests',
       'settings',
     ]);
     expect(el('[data-testid="http-graphql"]')).not.toBeNull();

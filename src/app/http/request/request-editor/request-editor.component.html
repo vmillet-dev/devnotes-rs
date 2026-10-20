@@ -156,7 +156,7 @@
     }
   </div>
 
-  <div class="panel" role="tabpanel" [class.grows]="section() === 'scripts'">
+  <div class="panel" role="tabpanel" [class.grows]="section() === 'scripts' || section() === 'tests'">
     @if (section() === 'params') {
       <app-key-value-table
         kind="params"
@@ -232,6 +232,18 @@
         [scripts]="draft.parts.scripts"
         [owner]="tab().key"
         [(phase)]="scriptPhase"
+        [line]="scriptLine()"
+        [above]="tab().place === null ? [] : (inherited()?.scripts ?? [])"
+        [requestName]="draft.name"
+        (scriptsChange)="onScripts($event)"
+        (levelOpened)="openLevel($event)"
+      />
+    } @else if (section() === 'tests') {
+      <app-script-editor
+        phase="tests"
+        [phases]="testPhases"
+        [scripts]="draft.parts.scripts"
+        [owner]="tab().key"
         [line]="scriptLine()"
         [above]="tab().place === null ? [] : (inherited()?.scripts ?? [])"
         [requestName]="draft.name"

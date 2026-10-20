@@ -1,20 +1,24 @@
 <div class="scripts" data-testid="http-scripts" [attr.data-phase]="phase()">
   <div class="toolbar">
-    <app-segmented-choice
-      kind="http-script-phase"
-      [label]="'http.scripts.phase' | transloco"
-      [segments]="segments"
-      [currentId]="phase()"
-      [markedIds]="written()"
-      (chosen)="choosePhase($event)"
-    />
+    @if (segments().length > 1) {
+      <app-segmented-choice
+        kind="http-script-phase"
+        [label]="'http.scripts.phase' | transloco"
+        [segments]="segments()"
+        [currentId]="phase()"
+        [markedIds]="written()"
+        (chosen)="choosePhase($event)"
+      />
+    }
     <span class="grow"></span>
     <app-script-examples-menu (chosen)="insert($event)" />
   </div>
 
   @if (order(); as levels) {
     <p class="order" data-testid="http-script-order">
-      <span class="order-label">{{ 'http.scripts.order' | transloco }}</span>
+      <span class="order-label">{{
+        (phase() === 'tests' ? 'http.scripts.orderTests' : 'http.scripts.order') | transloco
+      }}</span>
       @for (level of levels; track level.from?.id ?? 'request'; let last = $last) {
         @if (level.from; as from) {
           <button
