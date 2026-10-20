@@ -197,7 +197,7 @@ describe('HTTP collections', () => {
       // a submenu beside the panel, on the workspace's side.
       expect(
         await readEach(`${testid('http-node-menu-panel')} ${testid('http-node-action')}`, '@data-action'),
-      ).toEqual(['newFolder', 'settings', 'rename', 'duplicate', 'delete']);
+      ).toEqual(['newFolder', 'run', 'settings', 'rename', 'duplicate', 'delete']);
       // The pointer resting on its entry opens it, with no click.
       await hover(testid('http-node-new'));
       await $(testid('http-node-new-menu')).waitForDisplayed({ timeout: 10_000 });
