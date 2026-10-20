@@ -671,7 +671,7 @@ describe('HttpRailComponent', () => {
     });
   });
 
-  it('moves a row dragged onto another, and the click that ends the drag opens nothing', async () => {
+  it('moves a row dragged onto another, and the click that ends the drag opens nothing but a key', async () => {
     const target = row('Login');
     target.getBoundingClientRect = () => ({
       top: 100,
@@ -701,13 +701,17 @@ describe('HttpRailComponent', () => {
     health.dispatchEvent(
       new PointerEvent('pointerup', { pointerId: 1, clientX: 10, clientY: 116, bubbles: true }),
     );
-    health.click();
+    health.dispatchEvent(new MouseEvent('click', { detail: 1, bubbles: true }));
     await vi.waitFor(() => expect(http.callsOf('move')).toHaveLength(1));
     expect(http.callsOf('move')[0]).toEqual([
       { kind: 'request', id: 'Health' },
       { collectionId: 'API', folderId: 'Auth', index: 1 },
     ]);
-    expect(TestBed.inject(HttpTabsStore).tabs()).toEqual([]);
+    const tabs = TestBed.inject(HttpTabsStore);
+    expect(tabs.tabs()).toEqual([]);
+
+    name('Login').dispatchEvent(new MouseEvent('click', { detail: 0, bubbles: true }));
+    await vi.waitFor(() => expect(tabs.activeRequestId()).toBe('Login'));
   });
 
   /** « créez-en une avec ＋ » pointed at a glyph the area shows twice: the action is there itself. */

@@ -135,7 +135,7 @@
                 [attr.aria-current]="row.id === tabs.activeRequestId() ? 'true' : null"
                 [attr.aria-expanded]="row.kind === 'request' ? null : row.expanded"
                 [attr.title]="row.name"
-                (click)="activate(row)"
+                (click)="activate($event, row)"
                 (keydown)="onRowKeydown($event, row)"
                 (pointerdown)="drag.start($event, row)"
                 (pointerup)="endDrag($event)"

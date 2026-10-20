@@ -7,6 +7,16 @@ function press(type: string, x: number, y: number, init: PointerEventInit = {}):
   return new PointerEvent(type, { button: 0, pointerId: 1, clientX: x, clientY: y, ...init });
 }
 
+/** A pointer's click counts the clicks; a key's, or a screen reader's, says 0. */
+const POINTER_CLICK = new MouseEvent('click', { detail: 1 });
+const KEY_CLICK = new MouseEvent('click', { detail: 0 });
+
+function dragged(drag: RowDrag<typeof ROW, string>): void {
+  drag.start(press('pointerdown', 0, 0), ROW);
+  drag.move(press('pointermove', 30, 0));
+  drag.end(press('pointerup', 30, 0));
+}
+
 describe('RowDrag', () => {
   it('starts nothing from another button, nor follows another pointer', () => {
     const drag = new RowDrag<typeof ROW, string>(() => 'target');
@@ -21,17 +31,17 @@ describe('RowDrag', () => {
     expect(drag.dragged()).toBeNull();
   });
 
-  it('is a click until the press has travelled, and swallows nothing then', () => {
+  it('is a click until the press has travelled, and that click chooses', () => {
     const drag = new RowDrag<typeof ROW, string>(() => 'target');
 
     drag.start(press('pointerdown', 0, 0), ROW);
     drag.move(press('pointermove', 2, 2));
 
     expect(drag.end(press('pointerup', 2, 2))).toBeNull();
-    expect(drag.swallowsClick()).toBe(false);
+    expect(drag.endsADrag(POINTER_CLICK)).toBe(false);
   });
 
-  it('answers the row and where it was let go, and swallows the click once', () => {
+  it('answers the row and where it was let go, and the click after it is the drag’s', () => {
     const drag = new RowDrag<typeof ROW, string>((x) => (x > 20 ? 'far' : null));
 
     drag.start(press('pointerdown', 0, 0), ROW);
@@ -41,20 +51,32 @@ describe('RowDrag', () => {
 
     expect(drag.end(press('pointerup', 30, 0))).toEqual({ row: ROW, target: 'far' });
     expect(drag.target()).toBeNull();
-    expect(drag.swallowsClick()).toBe(true);
-    expect(drag.swallowsClick()).toBe(false);
+    expect(drag.endsADrag(POINTER_CLICK)).toBe(true);
   });
-});
 
-describe('RowDrag, once the drag is over', () => {
-  it('lets the next click through when the one a drag ends with never came', async () => {
-    const drag = new RowDrag<{ id: string }, string>(() => 'target');
-    drag.start(new PointerEvent('pointerdown', { button: 0, pointerId: 1 }), { id: 'perf' });
-    drag.move(new PointerEvent('pointermove', { pointerId: 1, clientX: 30 }));
-    drag.end(new PointerEvent('pointerup', { pointerId: 1, clientX: 30 }));
+  it('lets a key choose right after a drag, whenever its click comes', () => {
+    const drag = new RowDrag<typeof ROW, string>(() => 'target');
+    dragged(drag);
 
-    await new Promise((resolve) => setTimeout(resolve));
+    expect(drag.endsADrag(KEY_CLICK)).toBe(false);
+  });
 
-    expect(drag.swallowsClick()).toBe(false);
+  it('forgets the drag at the next press, whose click chooses', () => {
+    const drag = new RowDrag<typeof ROW, string>(() => 'target');
+    dragged(drag);
+
+    drag.start(press('pointerdown', 0, 0), ROW);
+    drag.end(press('pointerup', 0, 0));
+
+    expect(drag.endsADrag(POINTER_CLICK)).toBe(false);
+  });
+
+  it('keeps the drag past a press of another button, which no click follows', () => {
+    const drag = new RowDrag<typeof ROW, string>(() => 'target');
+    dragged(drag);
+
+    drag.start(press('pointerdown', 0, 0, { button: 2 }), ROW);
+
+    expect(drag.endsADrag(POINTER_CLICK)).toBe(true);
   });
 });

@@ -167,8 +167,8 @@ export class LibraryTreeComponent {
     this.spaceChanged.emit(id);
   }
 
-  protected chooseFolder(folder: Folder): void {
-    if (this.drag.swallowsClick()) return;
+  protected chooseFolder(event: MouseEvent, folder: Folder): void {
+    if (this.drag.endsADrag(event)) return;
     this.closePanels();
     this.folderOpened.emit(folder);
   }

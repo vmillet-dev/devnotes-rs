@@ -30,7 +30,8 @@ interface Press<Row> {
  */
 export class RowDrag<Row extends { readonly id: string }, Target> {
   private press: Press<Row> | null = null;
-  private swallow = false;
+  /** Whether the last press travelled: cleared by the next, which every pointer's click follows. */
+  private travelled = false;
 
   private readonly _dragged = signal<string | null>(null);
   private readonly _target = signal<Target | null>(null);
@@ -44,7 +45,7 @@ export class RowDrag<Row extends { readonly id: string }, Target> {
 
   start(event: PointerEvent, row: Row): void {
     if (event.button !== 0) return;
-    this.swallow = false;
+    this.travelled = false;
     this.press = { row, pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
     (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId);
   }
@@ -68,10 +69,7 @@ export class RowDrag<Row extends { readonly id: string }, Target> {
     this.cancel();
     if (!press.moved) return null;
 
-    // ⚠️ The click a drag ends with comes in the same task; one that never comes must not
-    // swallow the next real click, which a later press does not always precede.
-    this.swallow = true;
-    setTimeout(() => (this.swallow = false));
+    this.travelled = true;
     return { row: press.row, target };
   }
 
@@ -81,10 +79,12 @@ export class RowDrag<Row extends { readonly id: string }, Target> {
     this._dragged.set(null);
   }
 
-  /** The click a drag ends with is not a click on the row it started from: answered once. */
-  swallowsClick(): boolean {
-    const swallowed = this.swallow;
-    this.swallow = false;
-    return swallowed;
+  /**
+   * The click a drag ends with is not a choice of the row it started from. Judged by the click
+   * itself and not by when it comes, which no WebView promises: a pointer's click after a press
+   * that travelled. A key or an assistive tool clicks with `detail` 0, and always chooses.
+   */
+  endsADrag(event: MouseEvent): boolean {
+    return event.detail > 0 && this.travelled;
   }
 }
