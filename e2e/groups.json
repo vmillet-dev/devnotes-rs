@@ -36,6 +36,7 @@
     "26-formatting",
     "27-json-explorer",
     "30-http",
-    "33-calc"
+    "33-calc",
+    "34-http-scripts"
   ]
 }

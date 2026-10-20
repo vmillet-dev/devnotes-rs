@@ -59,6 +59,10 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   httpWebsocketScheme: 'errors.httpWebsocketScheme',
   httpHeaderName: 'errors.httpHeaderName',
   httpHeaderValue: 'errors.httpHeaderValue',
+  httpScript: 'errors.httpScript',
+  httpScriptSkipped: 'errors.httpScriptSkipped',
+  httpScriptMethod: 'errors.httpScriptMethod',
+  httpScriptProtected: 'errors.httpScriptProtected',
 };
 
 /**
@@ -70,6 +74,7 @@ const VARIANT_PARAM: Partial<Record<IpcErrorCode, string>> = {
   httpTooManyRedirects: 'source',
   httpHeaderName: 'source',
   httpHeaderValue: 'source',
+  httpScript: 'failure',
 };
 
 /** What a code says, for an error kept as its code and its values: a failed send in the history. */

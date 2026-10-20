@@ -1,9 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpRepository } from '@core/data/http.repository';
-import { HttpContents, HttpItem, HttpTree, RequestKind } from '@core/model/http.model';
+import { HttpContents, HttpItem, HttpTree, RequestKind, ScriptFocus } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
-import { RailMove, ancestors, railRows } from './http-tree';
+import { RailMove, RailRow, ancestors, railRows } from './http-tree';
+
+/** A collection's or folder's settings open, and the script they open on, if one. */
+export interface SettingsOpening {
+  readonly row: RailRow;
+  readonly script: ScriptFocus | null;
+}
 
 /** In the library's preferences: which folds were left closed belongs to its collections. */
 const COLLAPSED_KEY = 'devnotes.notes.http.collapsed';
@@ -34,8 +40,32 @@ export class HttpCollectionsStore {
   /** Moves when a collection's or folder's settings were saved: what a request inherits is read again. */
   readonly settingsRevision = this._settingsRevision.asReadonly();
 
+  private readonly _settingsOpen = signal<SettingsOpening | null>(null);
+  /** The rail's « Réglages… », and « Ouvrir le script » of a folder or the collection. */
+  readonly settingsOpen = this._settingsOpen.asReadonly();
+
   settingsSaved(): void {
     this._settingsRevision.update((revision) => revision + 1);
+  }
+
+  openSettings(row: RailRow, script: ScriptFocus | null = null): void {
+    this._settingsOpen.set({ row, script });
+  }
+
+  /** `false` when nothing of that id is left in the tree. */
+  openSettingsOf(id: string, script: ScriptFocus): boolean {
+    const row = railRows(this._tree(), new Set()).find(
+      (known) => known.id === id && known.kind !== 'request',
+    );
+    if (row === undefined) return false;
+    this.openSettings(row, script);
+    return true;
+  }
+
+  /** Closed, saved or not: what a request inherits is read again either way. */
+  closeSettings(): void {
+    this._settingsOpen.set(null);
+    this.settingsSaved();
   }
 
   /** `false` when the tree could not be read: what was shown stays. */

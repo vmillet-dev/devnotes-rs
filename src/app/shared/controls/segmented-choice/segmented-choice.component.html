@@ -16,6 +16,9 @@
       [attr.aria-disabled]="disabledIds().includes(segment.id) || null"
       (click)="pick(segment.id)"
     >
+      @if (markedIds().includes(segment.id)) {
+        <span class="mark" data-testid="segment-mark" aria-hidden="true"></span>
+      }
       {{ segment.labelKey | transloco }}
     </button>
   }

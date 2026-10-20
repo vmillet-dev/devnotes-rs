@@ -4,12 +4,14 @@ import {
   ResourceRef,
   Signal,
   computed,
+  effect,
   inject,
   input,
   linkedSignal,
   output,
   resource,
   signal,
+  untracked,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
@@ -20,16 +22,21 @@ import {
   GraphqlParts,
   HTTP_METHODS,
   HttpMethod,
+  HttpOrigin,
   ImpliedHeader,
   KeyValueRow,
   RequestAuth,
   RequestBodyDraft,
+  SCRIPT_PHASES,
+  ScriptParts,
+  ScriptPhase,
   TransportSettings,
   WebsocketParts,
 } from '@core/model/http.model';
 import { UsedVariable, VariableRow } from '@core/model/http-environment.model';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
+import { HttpScriptFocusStore } from '@core/services/http/http-script-focus.store';
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
@@ -42,14 +49,25 @@ import { BodyEditorComponent } from '../body-editor/body-editor.component';
 import { GraphqlEditorComponent } from '../graphql-editor/graphql-editor.component';
 import { WebsocketComposerComponent } from '../websocket-composer/websocket-composer.component';
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
+import { ProtectedQuestionComponent } from '@http/ui/protected-question/protected-question.component';
 import { TransportEditorComponent } from '@http/ui/transport-editor/transport-editor.component';
 import { UrlFieldComponent } from '../url-field/url-field.component';
 import { VariableChipComponent } from '@http/ui/variable-chip/variable-chip.component';
 import { CodeDialogComponent } from '@http/code-dialog/code-dialog.component';
+import { ScriptEditorComponent } from '@http/ui/script-editor/script-editor.component';
 import { VariablesTableComponent } from '@http/ui/variables-table/variables-table.component';
 
 type Section =
-  'params' | 'headers' | 'auth' | 'body' | 'query' | 'message' | 'protocols' | 'variables' | 'settings';
+  | 'params'
+  | 'headers'
+  | 'auth'
+  | 'body'
+  | 'query'
+  | 'message'
+  | 'protocols'
+  | 'variables'
+  | 'scripts'
+  | 'settings';
 
 /** A header a request may send: the reference's own list, those a server alone writes left out. */
 const REQUEST_HEADERS = HTTP_HEADERS.filter((header) => header.direction !== 'response').map(
@@ -71,6 +89,8 @@ const sameFields = <T extends object>(a: T, b: T) =>
     CodeDialogComponent,
     GraphqlEditorComponent,
     KeyValueTableComponent,
+    ProtectedQuestionComponent,
+    ScriptEditorComponent,
     SpinnerComponent,
     TranslocoPipe,
     TransportEditorComponent,
@@ -94,14 +114,15 @@ export class RequestEditorComponent {
   private readonly repository = inject(HttpRepository);
   private readonly collections = inject(HttpCollectionsStore);
   protected readonly environments = inject(HttpEnvironmentsStore);
+  private readonly scriptFocus = inject(HttpScriptFocusStore);
 
   private readonly chosen = signal<Section>('params');
   protected readonly codeOpen = signal(false);
   protected readonly sections = computed<readonly Section[]>(
     () =>
       ({
-        http: ['params', 'headers', 'auth', 'body', 'variables', 'settings'] as const,
-        graphql: ['query', 'headers', 'auth', 'variables', 'settings'] as const,
+        http: ['params', 'headers', 'auth', 'body', 'variables', 'scripts', 'settings'] as const,
+        graphql: ['query', 'headers', 'auth', 'variables', 'scripts', 'settings'] as const,
         websocket: ['message', 'headers', 'auth', 'variables', 'protocols'] as const,
       })[this.tab().draft.kind],
   );
@@ -110,6 +131,9 @@ export class RequestEditorComponent {
     this.sections().includes(this.chosen()) ? this.chosen() : this.sections()[0]!,
   );
   protected readonly headerNames = REQUEST_HEADERS;
+  protected readonly scriptPhase = signal<ScriptPhase>('before');
+  /** The line « Ouvrir le script » leads to. */
+  protected readonly scriptLine = signal<number | null>(null);
 
   /** Methods only: what a request is — HTTP, GraphQL, a socket — is chosen when it is created. */
   protected readonly methods: readonly ChoiceOption[] = HTTP_METHODS.map((method) => ({
@@ -211,10 +235,25 @@ export class RequestEditorComponent {
     message: this.tab().draft.parts.websocket.messages.length,
     protocols: this.tab().draft.parts.websocket.protocols.length,
     variables: this.tab().draft.parts.variables.filter((row) => row.enabled && row.name !== '').length,
+    scripts: SCRIPT_PHASES.filter((phase) => this.tab().draft.parts.scripts[phase].trim() !== '').length,
     settings: Object.values(this.tab().draft.parts.transport).filter(
       (value) => value !== null && value !== undefined,
     ).length,
   }));
+
+  constructor() {
+    // « Ouvrir le script » under this tab's answer: its Scripts tab, on the line that stopped.
+    effect(() => {
+      const asked = this.scriptFocus.request();
+      if (asked === null || asked.key !== this.tab().key) return;
+      untracked(() => {
+        this.chosen.set('scripts');
+        this.scriptPhase.set(asked.focus.phase);
+        this.scriptLine.set(asked.focus.line);
+        this.scriptFocus.taken();
+      });
+    });
+  }
 
   /** « par défaut », « d'après le corps », or the folder or collection that hands it down. */
   protected origin(header: ImpliedHeader): TranslationRef {
@@ -229,6 +268,7 @@ export class RequestEditorComponent {
 
   protected choose(section: Section): void {
     this.chosen.set(section);
+    this.scriptLine.set(null);
   }
 
   protected onGraphql(graphql: GraphqlParts): void {
@@ -262,6 +302,15 @@ export class RequestEditorComponent {
   /** A name nothing sets, written into the active environment — or the globals — to be filled. */
   protected define(name: string): void {
     this.environments.define(name);
+  }
+
+  protected onScripts(scripts: ScriptParts): void {
+    this.tabs.editParts(this.tab().key, { scripts });
+  }
+
+  /** A folder's or the collection's script, in their settings. */
+  protected openLevel(from: HttpOrigin): void {
+    this.collections.openSettingsOf(from.id, { phase: this.scriptPhase(), line: null });
   }
 
   protected onTransport(transport: TransportSettings): void {

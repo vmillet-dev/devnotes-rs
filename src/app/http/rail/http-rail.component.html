@@ -271,8 +271,12 @@
   </nav>
 </app-rail-frame>
 
-@if (settingsFor(); as row) {
-  <app-container-settings-dialog [row]="row" (closed)="closeSettings()" />
+@if (store.settingsOpen(); as opening) {
+  <app-container-settings-dialog
+    [row]="opening.row"
+    [script]="opening.script"
+    (closed)="store.closeSettings()"
+  />
 }
 
 @if (cookiesOpen()) {

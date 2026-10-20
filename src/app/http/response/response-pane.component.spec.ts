@@ -2,7 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpcError } from '@core/ipc/ipc.error';
 import { EMPTY_PARTS, SentResponse } from '@core/model/http.model';
+import { HttpScriptFocusStore } from '@core/services/http/http-script-focus.store';
 import { HttpSendStore } from '@core/services/http/http-send.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -356,5 +358,89 @@ describe('ResponsePaneComponent', () => {
     await answer(sentResponse());
 
     expect(text('http-response-failure')).toBe('La connexion a été refusée : rien n’écoute à cette adresse.');
+  });
+
+  it('stands what stopped the script in place of the answer, with the way to it', async () => {
+    http.failNext = new IpcError('send_http_request', {
+      code: 'httpScript',
+      params: {
+        failure: 'error',
+        level: 'request',
+        line: '3',
+        message: 'ReferenceError: tokn is not defined',
+      },
+      detail: 'stopped',
+    });
+    await answer(sentResponse());
+
+    expect(text('http-response-unsent')).toContain('Non envoyée');
+    expect(text('http-script-stop-message')).toBe('ReferenceError: tokn is not defined');
+    el('http-script-open')!.click();
+    expect(TestBed.inject(HttpScriptFocusStore).request()).toEqual({
+      key: 'Login',
+      focus: { phase: 'before', line: 3 },
+    });
+  });
+
+  it('asks what the protected environment asks once the script made it a change, and sends with the yes', async () => {
+    const tabs = TestBed.inject(HttpTabsStore);
+    tabs.newRequest();
+    const key = tabs.tabs()[0]!.key;
+    fixture.componentRef.setInput('tabKey', key);
+    http.failNext = new IpcError('send_http_request', {
+      code: 'httpScriptProtected',
+      params: { method: 'POST', environment: 'Production' },
+      detail: 'protected',
+    });
+    await TestBed.inject(HttpSendStore).send(tabs.tabs()[0]!);
+    await fixture.whenStable();
+
+    expect(text('http-script-protected-confirm')).toContain(
+      'Le script avant l’envoi en a fait un POST vers Production, qui est protégé.',
+    );
+    el('http-script-protected-send')!.click();
+    await vi.waitFor(() => expect(http.confirmedSends).toEqual([false, true]));
+    await fixture.whenStable();
+    expect(el('http-script-protected-confirm')).toBeNull();
+  });
+
+  it('puts the question away on « Annuler », the send with it', async () => {
+    http.failNext = new IpcError('send_http_request', {
+      code: 'httpScriptProtected',
+      params: { method: 'DELETE', environment: 'Production' },
+      detail: 'protected',
+    });
+    await answer(sentResponse());
+    el('http-script-protected-cancel')!.click();
+    await fixture.whenStable();
+    expect(el('http-response-idle')).not.toBeNull();
+  });
+
+  it('shows what stopped a script after the answer above the answer, which came', async () => {
+    await answer(
+      sentResponse({
+        scripts: {
+          failure: {
+            kind: 'error',
+            level: 'folder',
+            script: 'after',
+            name: 'Factures',
+            owner: 'gone',
+            line: 2,
+            message: 'Error: x',
+          },
+          logs: [],
+          wrote: false,
+        },
+      }),
+    );
+
+    expect(text('http-response-status')).toBe('200 OK');
+    expect(text('http-script-stop-message')).toBe('Error: x');
+    el('http-script-open')!.click();
+    expect(TestBed.inject(HttpScriptFocusStore).request()).toEqual({
+      key: 'Login',
+      focus: { phase: 'after', line: 2 },
+    });
   });
 });

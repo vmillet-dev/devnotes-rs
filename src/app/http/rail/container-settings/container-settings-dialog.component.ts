@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Injector,
+  OnInit,
+  afterNextRender,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
@@ -7,6 +19,9 @@ import {
   InheritedParts,
   KeyValueRow,
   RequestAuth,
+  ScriptFocus,
+  ScriptParts,
+  ScriptPhase,
   TransportSettings,
 } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
@@ -14,17 +29,22 @@ import { RailRow } from '@core/services/http/http-tree';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 import { AuthEditorComponent } from '@http/ui/auth-editor/auth-editor.component';
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
+import { ScriptEditorComponent } from '@http/ui/script-editor/script-editor.component';
 import { TransportEditorComponent } from '@http/ui/transport-editor/transport-editor.component';
 import { VariablesTableComponent } from '@http/ui/variables-table/variables-table.component';
 import { VariableRow } from '@core/model/http-environment.model';
 
-/** A collection's or a folder's variables, auth and headers: what every request under it inherits. */
+/**
+ * A collection's or a folder's variables, auth, headers and scripts: what every request under it
+ * inherits.
+ */
 @Component({
   selector: 'app-container-settings-dialog',
   imports: [
     AuthEditorComponent,
     DialogComponent,
     KeyValueTableComponent,
+    ScriptEditorComponent,
     TranslocoPipe,
     TransportEditorComponent,
     VariablesTableComponent,
@@ -35,17 +55,28 @@ import { VariableRow } from '@core/model/http-environment.model';
 })
 export class ContainerSettingsDialogComponent implements OnInit {
   readonly row = input.required<RailRow>();
+  /** « Ouvrir le script »: the dialog opens on it. */
+  readonly script = input<ScriptFocus | null>(null);
   readonly closed = output<void>();
 
   private readonly repository = inject(HttpRepository);
   private readonly errors = inject(ErrorNotifier);
+  private readonly injector = inject(Injector);
 
   protected readonly settings = signal<ContainerSettingsDraft | null>(null);
   /** What a folder's « Héritée » takes: the folders and the collection above it. */
   protected readonly above = signal<InheritedParts | null>(null);
   protected readonly defaultTransport = DEFAULT_TRANSPORT;
+  protected readonly scriptPhase = signal<ScriptPhase>('before');
+  protected readonly scriptLine = signal<number | null>(null);
+  private readonly scriptsHeading = viewChild<ElementRef<HTMLElement>>('scriptsHeading');
 
   ngOnInit(): void {
+    const script = this.script();
+    if (script !== null) {
+      this.scriptPhase.set(script.phase);
+      this.scriptLine.set(script.line);
+    }
     void this.load();
   }
 
@@ -53,6 +84,14 @@ export class ContainerSettingsDialogComponent implements OnInit {
     const row = this.row();
     const item = { kind: row.kind, id: row.id };
     this.settings.set(await this.errors.attempt('http.failed', () => this.repository.settings(item)));
+    if (this.script() !== null) {
+      afterNextRender(
+        { read: () => this.scriptsHeading()?.nativeElement.scrollIntoView({ block: 'start' }) },
+        {
+          injector: this.injector,
+        },
+      );
+    }
     if (row.kind === 'folder') {
       this.above.set(
         await this.errors.attempt('http.failed', () =>
@@ -72,6 +111,10 @@ export class ContainerSettingsDialogComponent implements OnInit {
 
   protected onHeaders(headers: readonly KeyValueRow[]): void {
     this.settings.update((settings) => settings && { ...settings, headers });
+  }
+
+  protected onScripts(scripts: ScriptParts): void {
+    this.settings.update((settings) => settings && { ...settings, scripts });
   }
 
   protected onTransport(transport: TransportSettings): void {

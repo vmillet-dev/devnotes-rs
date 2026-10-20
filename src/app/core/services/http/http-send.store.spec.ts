@@ -1,12 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpcError } from '@core/ipc/ipc.error';
 import { EMPTY_PARTS, RequestDraft, SentResponse } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
+import { FakeHttpEnvironmentsRepository } from '@testing/fake-http-environments-repository';
 import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { provideAppTesting } from '@testing/testing.providers';
+import { HttpCollectionsStore } from './http-collections.store';
 import { HttpSendStore, Sendable, responseFileName } from './http-send.store';
 
 const draft: RequestDraft = { name: 'Login', kind: 'http', method: 'POST', parts: EMPTY_PARTS };
@@ -139,6 +141,53 @@ describe('HttpSendStore', () => {
       key: 'http.response.saved',
       params: { path: 'C:/tmp/avatar.png' },
     });
+  });
+
+  it('sends the yes it was given, and reads the variables again once a script wrote one', async () => {
+    const environments = new FakeHttpEnvironmentsRepository();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideAppTesting({ httpRepository: http, httpEnvironmentsRepository: environments })],
+    });
+    const revision = TestBed.inject(HttpCollectionsStore).settingsRevision();
+
+    http.response = sentResponse({ scripts: { failure: null, logs: [], wrote: true } });
+    await store().send(tab('Login'), true);
+    expect(http.confirmedSends).toEqual([true]);
+    await vi.waitFor(() => expect(environments.callsTo('list')).toHaveLength(1));
+    await vi.waitFor(() =>
+      expect(TestBed.inject(HttpCollectionsStore).settingsRevision()).toBe(revision + 1),
+    );
+
+    http.response = sentResponse();
+    await store().send(tab('Login'));
+    expect(http.confirmedSends).toEqual([true, false]);
+    expect(environments.callsTo('list')).toHaveLength(1);
+  });
+
+  it('keeps what stopped a script with its values, and reads again what it wrote before', async () => {
+    const environments = new FakeHttpEnvironmentsRepository();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideAppTesting({ httpRepository: http, httpEnvironmentsRepository: environments })],
+    });
+    http.failNext = new IpcError('send_http_request', {
+      code: 'httpScript',
+      params: { failure: 'error', level: 'request', line: '2', message: 'Error: no token' },
+      detail: 'A script before the send stopped',
+    });
+    await store().send(tab('Login'));
+
+    const state = store().states().get('Login');
+    expect(state?.phase === 'failed' && state.code).toBe('httpScript');
+    expect(state?.phase === 'failed' && state.params['line']).toBe('2');
+    await vi.waitFor(() => expect(environments.callsTo('list')).toHaveLength(1));
+
+    http.failNext = new Error('not ours');
+    await store().send(tab('Login'));
+    const plain = store().states().get('Login');
+    expect(plain?.phase === 'failed' && plain.code).toBeNull();
+    expect(plain?.phase === 'failed' && plain.params).toEqual({});
   });
 
   it('proposes an extension for the usual types, and .bin failing one', () => {

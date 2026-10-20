@@ -215,7 +215,7 @@ export const commands = {
 	closeWebsocket: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("close_websocket", { id })),
 	/**
 	 *  What it inherits is read under the lock, its files outside it, and the send waits on nothing
-	 *  but the network: a 30-second request stalls no other command.
+	 *  but the network and its scripts: a 30-second request stalls no other command.
 	 */
 	sendHttpRequest: (request: SendRequest) => typedError<SentResponse, AppError>(__TAURI_INVOKE("send_http_request", { request })),
 	/**  `false` when that send had already ended. */
@@ -1001,6 +1001,8 @@ export type ContainerSettings = {
 	transport?: TransportSettings,
 	/**  Over the environment's and the globals', under a folder's and a request's own. */
 	variables?: Variable[],
+	/**  Run around each request under it: before the request's own, and after it. */
+	scripts?: RequestScripts,
 };
 
 export type Contrast = {
@@ -1378,7 +1380,16 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 /**  A socket's URL on another scheme; `twin` is the same on `ws(s)://`, when it has one. */
 "httpWebsocketScheme" | 
 /**  `header` is its name as written; `source` and `name` say who wrote it, as for a limit. */
-"httpHeaderName" | "httpHeaderValue";
+"httpHeaderName" | "httpHeaderValue" | 
+/**
+ *  A script before the send stopped it: `failure` is how, `level`, `name` and `owner`
+ *  whose script it was, `line` where, `message` what the script threw.
+ */
+"httpScript" | "httpScriptSkipped" | 
+/**  `method` is what the script wrote. */
+"httpScriptMethod" | 
+/**  The scripts made the request one that a protected `environment` asks about: `method`. */
+"httpScriptProtected";
 
 export type Exchange = {
 	method: HttpMethod,
@@ -1407,6 +1418,16 @@ export type FacetCount<T> = {
 	value: T,
 	count: number,
 };
+
+export type FailureKind = 
+/**  Thrown by the script. */
+"error" | 
+/**  It does not read as JavaScript. */
+"syntax" | 
+/**  Past its time: an endless loop, or a wait that never ends. */
+"timeout" | "memory" | 
+/**  The script host could not be started, or stopped. */
+"host";
 
 export type FamilySummary = {
 	family: IpFamily,
@@ -1918,11 +1939,22 @@ export type Inherited = {
 	headers: InheritedHeader[],
 	/**  Resolved from the collection down; a request's own settings go over it. */
 	transport: Transport,
+	/**
+	 *  The collection's, then each folder's down to the request's: the order they run in
+	 *  before the send, the other way after it.
+	 */
+	scripts: InheritedScripts[],
 };
 
 export type InheritedHeader = {
 	header: KeyValue,
 	from: HttpOrigin,
+};
+
+/**  A folder's or the collection's scripts, and whose they are. */
+export type InheritedScripts = {
+	from: HttpOrigin,
+	scripts: RequestScripts,
 };
 
 export type InstantAnswer = { kind: "read"; readAs: ReadAs; 
@@ -2241,6 +2273,14 @@ export type LineBreaksRequest = {
 export type LineEnding = "lf" | "crlf" | "cr";
 
 export type ListProblem = "missing" | "damaged";
+
+export type LogEntry = {
+	level?: LogLevel,
+	text?: string,
+	script?: string | null,
+};
+
+export type LogLevel = "log" | "info" | "debug" | "warn" | "error";
 
 export type LoremAnswer = {
 	text: string,
@@ -2735,6 +2775,7 @@ export type RequestDocument = {
 	transport?: TransportSettings,
 	/**  The nearest level a `{{name}}` resolves from. */
 	variables?: Variable[],
+	scripts?: RequestScripts,
 };
 
 /**  A request as the palette shows it: its URL as typed, `{{baseUrl}}` and all. */
@@ -2753,6 +2794,17 @@ export type RequestHit = {
  *  a socket. The rail writes the method before its name, or `GQL` and `WS`.
  */
 export type RequestKind = "http" | "graphql" | "websocket";
+
+/**
+ *  The JavaScript a request, a folder or a collection runs around a send; a blank one runs
+ *  nothing.
+ */
+export type RequestScripts = {
+	/**  Before it leaves: it can change the request. */
+	before?: string,
+	/**  Once it is answered: it reads the response. */
+	after?: string,
+};
 
 export type ReverseDns = 
 /**  One address: the name its PTR record goes under. */
@@ -2828,6 +2880,32 @@ export type ScopedVariable = {
 	shadows: VariableScope[],
 };
 
+export type ScriptKind = "before" | "after" | "tests";
+
+/**  Who holds a script. */
+export type ScriptLevel = "request" | "folder" | "collection";
+
+/**  A script that stopped, as the front names it: what failed, where, and whose script it was. */
+export type ScriptStop = {
+	kind?: FailureKind,
+	level?: ScriptLevel | null,
+	script?: ScriptKind | null,
+	/**  The request, folder or collection that holds it. */
+	name?: string | null,
+	/**  The folder's or the collection's id, for « Ouvrir le script ». */
+	owner?: string | null,
+	line?: number | null,
+	message?: string,
+};
+
+/**  What the scripts after the answer left beside it. The logs cross once and are never kept. */
+export type ScriptsAnswer = {
+	failure?: ScriptStop | null,
+	logs?: LogEntry[],
+	/**  A script wrote a variable: the environments and the settings are read again. */
+	wrote?: boolean,
+};
+
 /**
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
  *  biggest thing on the card. That case is `SearchMatch::Title`.
@@ -2865,6 +2943,8 @@ export type SendRequest = {
 	 *  globals alone.
 	 */
 	environmentId: string | null,
+	/**  The user said yes to what a protected environment asks: a script may then change it. */
+	confirmed?: boolean,
 };
 
 export type SentBody = { kind: "none" } | 
@@ -2903,6 +2983,8 @@ export type SentResponse = {
 	exchange: Exchange,
 	/**  A GraphQL answer read apart: its `data` and its `errors`. */
 	graphql: GraphqlResult | null,
+	/**  What the scripts after the answer left. */
+	scripts?: ScriptsAnswer,
 };
 
 export type Sex = "F" | "M";

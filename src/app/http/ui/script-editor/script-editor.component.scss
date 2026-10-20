@@ -1,0 +1,120 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.scripts {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grow {
+  flex: 1;
+}
+
+.order {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.level {
+  @include unstyled-control;
+  @include hit-target;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--bg-1);
+  color: var(--text-1);
+  font-size: 12px;
+
+  &.none {
+    border-style: dashed;
+    color: var(--text-2);
+  }
+
+  &.here {
+    border-color: var(--amber-dim);
+    background: rgba(var(--amber-rgb), 0.08);
+    color: var(--text-0);
+  }
+}
+
+button.level {
+  @include focus-ring;
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
+.level-kind {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+
+.sep {
+  color: var(--text-2);
+}
+
+// CodeMirror scrolls in itself: it is given the height left, never its content's.
+.code {
+  flex: 1;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  overflow: hidden;
+
+  app-code-editor {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.loading {
+  flex: 1;
+  background: var(--bg-1);
+}
+
+.hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+
+  .names {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  code {
+    font-family: var(--font-mono), monospace;
+    font-size: 11.5px;
+    color: var(--text-1);
+  }
+}

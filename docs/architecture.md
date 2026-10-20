@@ -2743,6 +2743,39 @@ answers on its standard output.
 - ⚠️ **An imported script runs with the user's secrets and the network**: the import review
   (#618) lists the scripts a collection carries before anything is written.
 
+**Around a send** (#493). A request, a folder and a collection each hold `RequestScripts`
+(`before`, `after`), sealed with the document or the settings that carry them. `Around::of`
+(`around.rs`) lists what one send runs: before it leaves the collection's script, each folder's,
+then the request's; once answered, the other way round; a blank one is not run.
+`send_http_request` is a `Flight` (`http.rs`), one host for both phases (`session.rs`):
+
+- What it inherits, the levels it resolves from, the environment and a copy of the jar are read
+  under the lock; the phase runs on a blocking thread, the lock free. « Annuler » kills the host
+  (`Sending::watch`) and answers `httpCancelled`.
+- What a phase wrote is kept under the lock at once (`keep_writes`: the active environment,
+  the globals, the collection's variables — a run's data row is none of them) and applied to the
+  levels in memory, so the send resolves from it. `pm.variables` as the phase before left them
+  is the nearest level. `ScriptRequest::onto` writes back what the script changed.
+- ⚠️ **Rust asks the protected environment's question again after the script**: the front asked
+  about the method it saw; one the script made a change, unconfirmed, is `httpScriptProtected`
+  (`method`, `environment`), and the pane asks with « Envoyer quand même », which sends again,
+  scripts included, with `confirmed`.
+- A script before the send that fails keeps the request in: `httpScript` carries how
+  (`failure`), whose script (`level`, `name`, `owner`), the `line` and — for a throw or a syntax
+  error only — the script's own `message`. `skipRequest()` is `httpScriptSkipped`; a method Rust
+  does not send, `httpScriptMethod`. Nothing is written in the history: nothing left.
+- The phase after runs on an answer only; what stops it is `SentResponse.scripts.failure`,
+  shown above the answer, which stays. The console's lines cross once, each secret in force
+  written as its `{{name}}`; `history::record_of` drops them. `scripts.wrote` makes the front
+  read the environments and the settings again; a script error does too.
+- ⚠️ A test's executable is its harness, not the application: `process::host_from` points the
+  hosts at `CARGO_BIN_EXE_devnotes` (`tests/commands/http_scripts.rs`).
+
+On screen, the Scripts tab and the settings dialog's section are one `ScriptEditorComponent`
+(`http/ui/`), the snippets' code editor rendered without being owned. « Ouvrir le script »
+goes through `HttpScriptFocusStore`: the request's own tab, or the settings of the folder or
+collection that holds the script (`HttpCollectionsStore.settingsOpen`), on the line that stopped.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

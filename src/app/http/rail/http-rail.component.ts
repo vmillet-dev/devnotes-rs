@@ -148,8 +148,6 @@ export class HttpRailComponent {
   protected readonly confirming = signal<Confirming | null>(null);
   protected readonly drop = signal<Drop | null>(null);
   protected readonly dragged = signal<string | null>(null);
-  /** The collection or folder whose settings are open. */
-  protected readonly settingsFor = signal<RailRow | null>(null);
   protected readonly cookiesOpen = signal(false);
   /** The tabs' « + » begins a request a few pixels away: this one says what it makes. */
   protected readonly worded = computed(() => this.settings.libraryRailWidth() >= WORDED_FROM_PX);
@@ -219,7 +217,7 @@ export class HttpRailComponent {
         });
         return;
       case 'settings':
-        this.settingsFor.set(row);
+        this.store.openSettings(row);
         return;
       case 'rename':
         this.renaming.set(row.id);
@@ -333,11 +331,6 @@ export class HttpRailComponent {
     const moved = this.moved();
     if (moved === null) return null;
     return moved.id === id ? 'row' : moved.parentId === id ? 'parent' : null;
-  }
-
-  protected closeSettings(): void {
-    this.settingsFor.set(null);
-    this.store.settingsSaved();
   }
 
   protected cancelDrag(): void {

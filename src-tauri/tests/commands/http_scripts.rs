@@ -202,3 +202,18 @@ fn a_script_can_skip_its_request_or_name_a_method_that_does_not_exist() {
     assert_eq!(error.code, ErrorCode::HttpScriptMethod);
     assert_eq!(error.params["method"], "PURGE");
 }
+
+#[test]
+fn with_no_environment_chosen_a_script_writes_the_globals() {
+    let session = hosted();
+    let (port, _seen) = serve(1, |_, _| ok());
+    let mut sent = request(&format!("http://127.0.0.1:{port}/"));
+    sent.document.scripts = scripts("env.set('tenant', 'acme');", "");
+
+    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+
+    assert!(answer.scripts.wrote);
+    let sets = session.call(http_environments).unwrap();
+    assert_eq!(sets.globals[0].name, "tenant");
+    assert_eq!(sets.globals[0].value, "acme");
+}

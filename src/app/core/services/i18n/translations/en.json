@@ -541,6 +541,16 @@
     },
     "httpGraphqlVariables": "The GraphQL variables are not a JSON object.",
     "httpWebsocketRefused": "The server refused the WebSocket (status {{status}}).",
+    "httpScript": {
+      "error": "The script before the send failed: {{message}}",
+      "syntax": "The script before the send is not valid JavaScript: {{message}}",
+      "timeout": "The script before the send took too long: the request was not sent.",
+      "memory": "The script before the send ran out of memory: the request was not sent.",
+      "host": "The scripts could not be started: the request was not sent."
+    },
+    "httpScriptSkipped": "The script before the send skipped the request: it was not sent.",
+    "httpScriptMethod": "The script before the send chose the method “{{method}}”, which does not exist.",
+    "httpScriptProtected": "The script before the send made it a {{method}} to {{environment}}, which is protected.",
     "calcFailed": "The sheet could not be computed."
   },
   "tray": {
@@ -3279,7 +3289,8 @@
         "message": "Messages",
         "protocols": "Protocols",
         "settings": "Settings",
-        "variables": "Variables"
+        "variables": "Variables",
+        "scripts": "Scripts"
       }
     },
     "table": {
@@ -3406,7 +3417,8 @@
       },
       "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs.",
       "variables": "Variables",
-      "variablesHint": "over the environment, under a folder and the request"
+      "variablesHint": "over the environment, under a folder and the request",
+      "scriptsHint": "before and after each of its requests"
     },
     "send": {
       "send": "Send",
@@ -3421,6 +3433,7 @@
     },
     "response": {
       "label": "Response",
+      "unsent": "Not sent",
       "clear": "Clear",
       "idle": "Send the request to read its response here.",
       "sending": "Sending…",
@@ -3596,6 +3609,58 @@
       "askConnect": "{{name}} is protected. Open this WebSocket?",
       "sendAnyway": "Send anyway",
       "connectAnyway": "Connect anyway"
+    },
+    "scripts": {
+      "phase": "When the script runs",
+      "phases": {
+        "before": "Before the send",
+        "after": "After the response"
+      },
+      "order": "They run in this order:",
+      "levels": {
+        "collection": "collection",
+        "folder": "folder",
+        "request": "this request"
+      },
+      "none": "none",
+      "openLevel": "Open its settings on this script",
+      "placeholder": {
+        "before": "Before the send: change the request, read or write a variable…",
+        "after": "After the response: read the response, keep a value of it…"
+      },
+      "hint": "JavaScript, in a process of its own, with no access to files",
+      "examples": {
+        "open": "Examples",
+        "title": "Insert at the end",
+        "readResponse": "Read a value of the response",
+        "setVariable": "Set a variable",
+        "addHeader": "Add a header",
+        "sendRequest": "Send another request",
+        "testStatus": "Test the status",
+        "testName": "The status is 200"
+      },
+      "stop": {
+        "before": {
+          "request": "The script before the send failed",
+          "folder": "The script before the send of the folder “{{name}}” failed",
+          "collection": "The script before the send of the collection “{{name}}” failed"
+        },
+        "after": {
+          "request": "The script after the response failed",
+          "folder": "The script after the response of the folder “{{name}}” failed",
+          "collection": "The script after the response of the collection “{{name}}” failed"
+        },
+        "host": "The scripts could not be started",
+        "kinds": {
+          "timeout": "Stopped: it took too long.",
+          "memory": "Stopped: it ran out of memory.",
+          "host": "The scripts’ process stopped."
+        },
+        "notSent": "The request was not sent",
+        "lineNotSent": "Line {{line}} · the request was not sent",
+        "line": "Line {{line}}",
+        "open": "Open the script"
+      }
     },
     "variables": {
       "name": "Name",

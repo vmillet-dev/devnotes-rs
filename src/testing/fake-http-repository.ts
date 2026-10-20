@@ -21,6 +21,7 @@ import {
   ContainerSettingsDraft,
   CookieDomain,
   DEFAULT_TRANSPORT,
+  NO_SCRIPTS,
   EMPTY_PARTS,
   HeaderFault,
   ImpliedHeader,
@@ -61,12 +62,14 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     headers: [],
     transport: {},
     variables: [],
+    scripts: NO_SCRIPTS,
   };
   inheritedAnswer: InheritedParts = {
     auth: { kind: 'none' },
     authFrom: null,
     headers: [],
     transport: DEFAULT_TRANSPORT,
+    scripts: [],
   };
   /** The jar by domain; the deletes take from it as Rust would. */
   jar: CookieDomain[] = [];
@@ -77,6 +80,8 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   usedAnswer: UsedVariable[] = [];
   /** The environment each send and each connection named, in order. */
   readonly sentWith: (string | null)[] = [];
+  /** Whether each send carried the yes a protected environment asks for. */
+  readonly confirmedSends: boolean[] = [];
   /** What `checkHeaders` answers, by rank; and the rows `readHeaders` reads from a text. */
   headerFaults: (HeaderFault | null)[] = [];
   headersRead: KeyValueRow[] = [];
@@ -275,8 +280,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     place: { collectionId: string; folderId: string | null } | null,
     requestId: string | null = null,
     environmentId: string | null = null,
+    confirmed = false,
   ): Promise<SentResponse> {
     this.sentWith.push(environmentId);
+    this.confirmedSends.push(confirmed);
     const pending = this.pendingSend;
     this.pendingSend = null;
     return this.record('send', [id, draft, place, requestId], () => this.response).then(

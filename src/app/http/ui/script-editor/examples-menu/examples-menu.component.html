@@ -1,0 +1,36 @@
+<button
+  appMenuAnchor
+  type="button"
+  class="trigger"
+  data-testid="http-script-examples"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="menu.open()"
+  (click)="menu.toggle()"
+>
+  {{ 'http.scripts.examples.open' | transloco }} <span class="caret" aria-hidden="true">▾</span>
+</button>
+
+@if (menu.open()) {
+  <div
+    appMenuPanel
+    appFloatingPanel
+    class="panel"
+    data-testid="http-script-examples-panel"
+    aria-labelledby="http-script-examples-title"
+  >
+    <p id="http-script-examples-title" class="panel-title">{{ 'http.scripts.examples.title' | transloco }}</p>
+    @for (example of examples; track example.id) {
+      <button
+        appMenuItem
+        type="button"
+        class="option"
+        data-testid="http-script-example"
+        [attr.data-example]="example.id"
+        (click)="choose(example.id)"
+      >
+        <span class="name">{{ 'http.scripts.examples.' + example.id | transloco }}</span>
+        <code class="api">{{ example.api }}</code>
+      </button>
+    }
+  </div>
+}
