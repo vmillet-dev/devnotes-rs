@@ -162,9 +162,10 @@ export class DrawingScene {
 
   async load(scene: Record<string, unknown> | null): Promise<void> {
     this.restoring = true;
-    // A new drawing opened over another starts from nothing, not from what that one held.
-    if (scene) await this.canvas.loadFromJSON(scene);
-    else this.canvas.remove(...this.canvas.getObjects());
+    // A new drawing opened over another starts from nothing, not from what that one held;
+    // so does a scene Fabric cannot read, rather than an editor left restoring for good.
+    this.canvas.remove(...this.canvas.getObjects());
+    if (scene) await this.canvas.loadFromJSON(scene).catch(() => undefined);
     this.count = this.canvas.getObjects().length;
     this.dress();
     this.restoring = false;

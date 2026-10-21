@@ -1049,14 +1049,14 @@ describe('NoteEditorOverlayComponent', () => {
       const patches = await openDrawing();
       const editor = drawingEditor();
 
-      editor.changed.emit('{"version":1,"scene":{"objects":[{}]}}');
+      editor.changed.emit('{"version":1,"scene":{"objects":[]}}');
       editor.pictured.emit(PICTURES);
       editor.counted.emit(1);
       editor.blurred.emit();
       await fixture.whenStable();
 
       expect(patches.at(-1)).toEqual({
-        content: '{"version":1,"scene":{"objects":[{}]}}',
+        content: '{"version":1,"scene":{"objects":[]}}',
         pictures: PICTURES,
       });
       expect(fixture.nativeElement.querySelector('[data-testid="editor-stats"]').textContent.trim()).toBe(
@@ -1064,7 +1064,7 @@ describe('NoteEditorOverlayComponent', () => {
       );
 
       editor.blurred.emit();
-      expect(patches.at(-1)).toEqual({ content: '{"version":1,"scene":{"objects":[{}]}}' });
+      expect(patches.at(-1)).toEqual({ content: '{"version":1,"scene":{"objects":[]}}' });
     });
 
     it('takes what is still being drawn when it closes', async () => {

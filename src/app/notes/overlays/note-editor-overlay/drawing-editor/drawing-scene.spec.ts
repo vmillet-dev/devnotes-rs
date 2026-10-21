@@ -271,6 +271,19 @@ describe('DrawingScene', () => {
     expect(other.canUndo()).toBe(false);
     other.dispose();
   });
+
+  it('opens a scene it cannot read as nothing drawn, and draws on', async () => {
+    draw('rectangle', [0, 0], [50, 50]);
+
+    await scene.load({ objects: [{}] });
+    expect(objects()).toHaveLength(0);
+    changes = 0;
+
+    draw('rectangle', [0, 0], [50, 50]);
+    expect(objects()).toHaveLength(1);
+    expect(changes).toBe(1);
+    expect(scene.canUndo()).toBe(true);
+  });
 });
 
 describe('sceneOf', () => {
