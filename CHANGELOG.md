@@ -14,12 +14,15 @@ the release notes the updater hands over.
 
 ## [0.15.0] - 2026-10-20
 
-### 🧰 Under the hood
+### ✨ Added
 
-- Rails: a row let go after a drag never opens, whatever the timing (#991)
 - Folders: new sub-folder from a folder's menu (#989)
 - Folders: folders inside folders, a board opened at any level (#987)
 - Code editor: 142 languages, coloured alike on cards and in the editor (#986)
+
+### 🐛 Fixed
+
+- Rails: a row let go after a drag never opens, whatever the timing (#991)
 
 ## [0.14.0] - 2026-10-20
 
@@ -32,21 +35,24 @@ the release notes the updater hands over.
 - HTTP: scripts run before the send and after the response (#980)
 - HTTP: dynamic variables, and a sandbox to run request scripts (#979)
 
-### 🧰 Under the hood
+### 🐛 Fixed
 
 - Scripts: timers due together fire in the order of their deadlines (#985)
 
 ## [0.13.1] - 2026-10-19
 
-### 🧰 Under the hood
+### ✨ Added
 
-- Calcul: fixes to totals, finance forms, long roots and copied results (#978)
 - Calcul: compound interest, returns, present value and loans (#976)
 - Calcul: every percentage form, fractions, multipliers and proportions (#975)
 - Calcul: rounding, functions, bases and bits, CSS units and frequencies (#974)
 - Calcul: up to 14 decimals, a number format and a date format (#973)
 - Calcul: operators in words, labels, scales and the previous result (#972)
 - Calcul: one table of words, and a rule when a name collides (#971)
+
+### 🐛 Fixed
+
+- Calcul: fixes to totals, finance forms, long roots and copied results (#978)
 
 ### 📦 Dependencies
 
@@ -56,12 +62,9 @@ the release notes the updater hands over.
 
 ### ✨ Added
 
-- Tools: fill a tool's input from a note, a snippet or a todo list (#943)
-
-### 🧰 Under the hood
-
 - Notes: a fourth kind, Calcul, that computes each line as typed (#945)
 - Palette: one search over notes, requests, tools, spaces and commands (#944)
+- Tools: fill a tool's input from a note, a snippet or a todo list (#943)
 
 ## [0.12.2] - 2026-10-16
 

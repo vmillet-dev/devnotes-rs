@@ -107,6 +107,7 @@ Principles:
 ## Tickets and pull requests
 
 - **A pull request's title is its changelog entry** (`scripts/release-notes.mjs`), and a ticket's title is where it comes from: both say **what changes, factually and briefly** — `<Area>: <what now happens>`, the area in one or two words (a head of three words or more before `: ` is all the notes keep; ⚠️ never a commit kind — `CI`, `Docs`, `Test`, `Build`, `Fix`, `Security`… is read as a prefix and dropped), then the control, the action, the result; ≤ 70 characters. No figure of speech, no implementation detail, no « of our own ». ✗ « Search the code through a bar of our own » → ✓ « Code editor: new find-and-replace bar with match count and options ».
+- **A ticket wears one section label**: `enhancement`, `change`, `bug` (any fix), `removal`, `security`, or `refactor`/`documentation`/`test`; a pull request that closes no ticket wears it itself. ⚠️ Without one, the release notes file it under « Under the hood » without a word.
 - **A ticket's body opens on its context, then its change**: `**Context** —` what the application does today and where it was seen or who asked; `**Change** —` what will be different, in a sentence or two; then `**To do**` and `**Tests**` (naming the e2e scenario). A milestone's description lists what it changes, plainly.
 - **No other software in a title, a description or a milestone**, unless the feature reads, writes or plugs into it (an import format, an extension's host): never a comparison with another product.
 
