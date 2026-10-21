@@ -131,6 +131,12 @@ app-dialog {
   }
 }
 
+// A drawing's kind, named where the other kinds offer their conversions.
+.placement-kind {
+  font-size: 12px;
+  color: var(--text-1);
+}
+
 .placement-separator {
   font-size: 12px;
   color: var(--text-2);

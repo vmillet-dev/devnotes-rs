@@ -62,17 +62,19 @@
       <span class="card-menu-label">{{ 'notes.priorityLabel' | transloco }}</span>
       <span aria-hidden="true">›</span>
     </button>
-    <button
-      appMenuItem
-      type="button"
-      role="menuitem"
-      class="card-menu-item"
-      data-testid="note-card-copy"
-      (click)="run(copyRequested)"
-    >
-      <span aria-hidden="true">⧉</span>
-      {{ 'notes.copy' | transloco }}
-    </button>
+    @if (copyable()) {
+      <button
+        appMenuItem
+        type="button"
+        role="menuitem"
+        class="card-menu-item"
+        data-testid="note-card-copy"
+        (click)="run(copyRequested)"
+      >
+        <span aria-hidden="true">⧉</span>
+        {{ 'notes.copy' | transloco }}
+      </button>
+    }
     <button
       appMenuItem
       type="button"

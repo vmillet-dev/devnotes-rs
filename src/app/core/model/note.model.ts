@@ -1,5 +1,6 @@
 import type { CalcCardLine } from '@core/model/calc.model';
 import type {
+  DrawingPictures,
   ExportReport,
   ExportScope,
   FacetCount,
@@ -18,7 +19,7 @@ import type { NoteFolder } from './folder.model';
 export { type ChecklistItem, type NoteKind } from './checklist.model';
 
 export type { FacetCount, FieldSpan, OutlineLine, SearchField, SearchHit } from '@core/ipc/bindings';
-export type { MapNode, Presentation } from '@core/ipc/bindings';
+export type { DrawingPictures, DrawingRef, MapNode, Presentation } from '@core/ipc/bindings';
 
 /** They cross as themselves: a batch answers what it changed, and the undo hands it back. */
 export type { NoteBody, NotePlacement, NotePriority, NoteTag } from '@core/ipc/bindings';
@@ -110,7 +111,10 @@ export type NoteDraft = Omit<
  * either — the only move it makes is unfiling a note that changes space. No `priority`
  * either: `setPriority` leaves `updatedAt` alone, and every patch moves it.
  */
-export type NotePatch = Partial<Omit<NoteDraft, 'folderId' | 'priority'>>;
+export type NotePatch = Partial<Omit<NoteDraft, 'folderId' | 'priority'>> & {
+  /** A Dessin's two pictures, written beside its body; both empty takes them away. */
+  readonly pictures?: DrawingPictures;
+};
 
 /** `untriaged` = notes carrying a deadline, the ones whose fate is undecided. */
 export type NoteFilter = 'all' | 'pinned' | 'untriaged';

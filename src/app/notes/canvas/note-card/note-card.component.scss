@@ -231,6 +231,16 @@ app-copy-button {
   overflow: hidden;
 }
 
+// A drawing's picture, whole within the card's room: it is a sketch, not a crop of one.
+.card-drawing {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  object-position: left top;
+  border-radius: 4px;
+}
+
 // The line a search found when it is not code: prose rather than a monospaced block.
 .card-hit {
   display: block;

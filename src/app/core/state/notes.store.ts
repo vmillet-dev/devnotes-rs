@@ -108,8 +108,11 @@ function sameLifecycle(a: NoteLifecycle, b: NoteLifecycle): boolean {
 }
 
 /** Exhaustive by construction: a new `NotePatch` field stops this compiling. */
+/** Every field of a patch but a drawing's pictures, which are no field of the note. */
+type NoteField = Exclude<keyof NotePatch, 'pictures'>;
+
 const UNCHANGED: {
-  readonly [K in keyof Required<NotePatch>]: (current: Note[K], next: Required<NotePatch>[K]) => boolean;
+  readonly [K in NoteField]: (current: Note[K], next: Required<NotePatch>[K]) => boolean;
 } = {
   spaceId: Object.is,
   title: Object.is,
@@ -126,7 +129,11 @@ const UNCHANGED: {
 function changedFields(note: Note, patch: NotePatch): NotePatch {
   const changed: Record<string, unknown> = {};
 
+  // Always sent: they are taken when what is drawn changed, which the body says already.
+  if (patch.pictures) changed['pictures'] = patch.pictures;
+
   for (const key of Object.keys(patch) as (keyof NotePatch)[]) {
+    if (key === 'pictures') continue;
     const next = patch[key];
     // An absent key is "do not touch", which is what serde reads on the far side.
     if (next === undefined) continue;
@@ -603,7 +610,8 @@ export class NotesStore {
 
   /** A write on a draft stays local while the note is not worth keeping. */
   private async editDraft(draft: Note, patch: NotePatch): Promise<void> {
-    const updated: Note = { ...draft, ...patch };
+    const { pictures, ...fields } = patch;
+    const updated: Note = { ...draft, ...fields };
 
     if (!isWorthSaving(updated)) {
       this._draftNote.set(updated);
@@ -618,7 +626,9 @@ export class NotesStore {
       return id ? this.persist(id, patch) : undefined;
     }
 
-    await this.saveDraft(updated);
+    const id = await this.saveDraft(updated);
+    // A draft is made from its fields: a drawing's pictures follow the write that made it.
+    if (id && pictures) await this.persist(id, { pictures });
   }
 
   /**

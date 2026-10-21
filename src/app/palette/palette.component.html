@@ -257,7 +257,7 @@
               </span>
             </button>
 
-            @if (option.kind === 'note') {
+            @if (option.kind === 'note' && option.note.kind !== 'drawing') {
               <!-- The paste path with a mouse: copies, and over another application puts the
                    window away, which is what Ctrl+C does. -->
               <button

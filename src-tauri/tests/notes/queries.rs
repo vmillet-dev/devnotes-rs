@@ -574,7 +574,8 @@ fn every_kind_is_counted_over_the_space_whatever_is_selected() {
             (NoteKind::Snippet, 2),
             (NoteKind::Note, 1),
             (NoteKind::Checklist, 0),
-            (NoteKind::Calc, 0)
+            (NoteKind::Calc, 0),
+            (NoteKind::Drawing, 0)
         ]
     );
     assert_eq!(view.matched, 1);

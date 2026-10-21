@@ -1,3 +1,4 @@
+pub mod pictures;
 pub mod related;
 pub mod revisions;
 pub mod trash;
@@ -10,6 +11,7 @@ use uuid::Uuid;
 use chrono::{DateTime, TimeDelta, Utc};
 
 use super::convert::{self, NoteBody};
+use super::drawing::Pictures;
 use super::kind::NoteKind;
 use super::model::{
     Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NotePriority, NoteTag, SampleNote,
@@ -491,6 +493,18 @@ pub fn update(
     patch: &NotePatch,
     now: DateTime<Utc>,
 ) -> Result<Note, StorageError> {
+    update_drawn(connection, id, patch, None, now)
+}
+
+/// `update`, and a Dessin's pictures written beside its body, in the same transaction:
+/// `Some(None)` takes them away.
+pub fn update_drawn(
+    connection: &mut Library,
+    id: &str,
+    patch: &NotePatch,
+    drawn: Option<Option<&Pictures>>,
+    now: DateTime<Utc>,
+) -> Result<Note, StorageError> {
     connection.transaction(|connection, vault| {
         let Some(mut note) = find(connection, vault, id)? else {
             return Err(StorageError::NoteNotFound(id.to_string()));
@@ -523,6 +537,16 @@ pub fn update(
 
         if patch.items.is_some() {
             related::replace_items(connection, vault, &note.id, &note.items)?;
+        }
+
+        // Kept only for what is a drawing once the patch is applied.
+        if let Some(drawn) = drawn
+            && note.kind == NoteKind::Drawing
+        {
+            match drawn {
+                Some(taken) => pictures::save(connection, vault, &note.id, taken)?,
+                None => pictures::remove(connection, &note.id)?,
+            }
         }
 
         Ok(note)

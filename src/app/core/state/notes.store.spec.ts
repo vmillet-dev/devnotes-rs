@@ -96,6 +96,46 @@ describe('NotesStore', () => {
     });
   });
 
+  describe('a drawing’s pictures', () => {
+    const PICTURES = { thumbnail: 'data:image/png;base64,T', picture: 'data:image/png;base64,P' };
+
+    it('go with the body that changed, and alone when only they did', async () => {
+      const { store, repository } = await createNotesHarness([
+        createNote({ id: 'd', kind: 'drawing', content: '{"version":1}' }),
+      ]);
+      const update = vi.spyOn(repository, 'update');
+
+      await store.applyPatch('d', { content: '{"version":1}', pictures: PICTURES });
+
+      expect(update).toHaveBeenCalledWith('d', { pictures: PICTURES });
+    });
+
+    /** A draft is made from its fields: what is drawn first has its pictures written after. */
+    it('follow the write that makes a new drawing', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const update = vi.spyOn(repository, 'update');
+      store.createNote('drawing');
+
+      await store.applyPatch(DRAFT_ID, { content: '{"version":1,"scene":{}}', pictures: PICTURES });
+
+      const created = store.selectedNote();
+      expect(created?.kind).toBe('drawing');
+      expect(created?.content).toBe('{"version":1,"scene":{}}');
+      expect(update).toHaveBeenCalledWith(created?.id, { pictures: PICTURES });
+    });
+
+    it('wait for a draft still worth nothing, and go nowhere', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const update = vi.spyOn(repository, 'update');
+      store.createNote('drawing');
+
+      await store.applyPatch(DRAFT_ID, { pictures: { thumbnail: '', picture: '' } });
+
+      expect(update).not.toHaveBeenCalled();
+      expect(store.selectedNoteId()).toBe(DRAFT_ID);
+    });
+  });
+
   describe('selection', () => {
     it('exposes the selected note and clears it on close', async () => {
       const note = createNote({ id: 'selected' });

@@ -107,6 +107,7 @@ export class NotesHeaderComponent {
     note: acceleratorKeys(this.bindings.binding(CREATE_ACTIONS.note)),
     checklist: acceleratorKeys(this.bindings.binding(CREATE_ACTIONS.checklist)),
     calc: acceleratorKeys(this.bindings.binding(CREATE_ACTIONS.calc)),
+    drawing: acceleratorKeys(this.bindings.binding(CREATE_ACTIONS.drawing)),
   }));
 
   /** Asked of `DialogStack` rather than of each store in turn; and the page may be hidden. */

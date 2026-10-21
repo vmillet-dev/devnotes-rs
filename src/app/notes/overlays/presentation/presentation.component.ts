@@ -16,9 +16,11 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import type { Editor } from '@tiptap/core';
 import { Presentation } from '@core/model/note.model';
 import { MermaidRenderer } from '@core/services/diagrams/mermaid-renderer';
+import { DrawingPicturesStore } from '@core/state/drawing-pictures.store';
 import { AppWindowService } from '@core/services/window/app-window.service';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 import { createRichViewer } from '../note-editor-overlay/rich-text-editor/rich-text.engine';
+import { drawnHooks } from '../note-editor-overlay/rich-text-editor/drawn-hooks';
 import { MindMapComponent } from './mind-map/mind-map.component';
 
 /** What moves a slide, as a presenter's clicker sends it too. */
@@ -50,6 +52,7 @@ export class PresentationComponent {
 
   private readonly window = inject(AppWindowService);
   private readonly diagrams = inject(MermaidRenderer);
+  private readonly drawings = inject(DrawingPicturesStore);
   private readonly transloco = inject(TranslocoService);
   private readonly surface = viewChild.required<ElementRef<HTMLElement>>('surface');
 
@@ -119,13 +122,10 @@ export class PresentationComponent {
       this.viewer.commands.setContent(markdown, { contentType: 'markdown', emitUpdate: false });
       return;
     }
-    this.viewer = createRichViewer(this.surface().nativeElement, markdown, {
-      draw: (source) => this.diagrams.render(source),
-      title: () => '',
-      failed: (line) =>
-        line === null
-          ? this.transloco.translate('editor.rich.diagram.failed')
-          : this.transloco.translate('editor.rich.diagram.failedAt', { line }),
-    });
+    this.viewer = createRichViewer(
+      this.surface().nativeElement,
+      markdown,
+      drawnHooks(this.diagrams, this.drawings, this.transloco, false),
+    );
   }
 }

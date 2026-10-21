@@ -39,7 +39,8 @@
       "snippet": "Snippets",
       "note": "Notes",
       "checklist": "Tâches",
-      "calc": "Calculs"
+      "calc": "Calculs",
+      "drawing": "Dessins"
     },
     "createOrPaste": "Coller ou créer",
     "copyContent": "Copier",
@@ -64,7 +65,8 @@
     "kindTag": {
       "note": "Note",
       "checklist": "Tâches",
-      "calc": "Calcul"
+      "calc": "Calcul",
+      "drawing": "Dessin"
     },
     "priorityLabel": "Priorité",
     "footer": {
@@ -87,7 +89,8 @@
       "snippet": "Un bloc de code, son langage et ses champs à remplir.",
       "note": "Du texte mis en forme : titres, listes, liens, tableaux, blocs de code.",
       "checklist": "Des étapes à cocher, dans l’ordre.",
-      "calc": "Une ligne, un résultat : unités, dates, totaux."
+      "calc": "Une ligne, un résultat : unités, dates, totaux.",
+      "drawing": "Boîtes, flèches et texte : un schéma."
     },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Cocher la tâche {{text}}",
@@ -145,7 +148,8 @@
     "copyTitle": "{{title}} (copie)",
     "fileInto": "Ranger dans",
     "noFolder": "Aucun dossier",
-    "newCalc": "Calcul"
+    "newCalc": "Calcul",
+    "newDrawing": "Dessin"
   },
   "filters": {
     "groupLabel": "Filtrer les notes",
@@ -403,11 +407,14 @@
         "snippet": "Convertir en snippet",
         "note": "Convertir en Note",
         "checklist": "Convertir en liste de tâches",
-        "calc": "Convertir en calcul"
+        "calc": "Convertir en calcul",
+        "drawing": "Convertir en dessin"
       },
-      "calc": "Calcul"
+      "calc": "Calcul",
+      "drawing": "Dessin"
     },
     "noteStats": "Note · {count, plural, =0 {aucun mot} one {# mot} other {# mots}} · enregistrée en Markdown",
+    "drawingStats": "{count, plural, =0 {Dessin vide} one {# forme} other {# formes}}",
     "checklistStats": "{{done}}/{total, plural, one {# tâche} other {# tâches}}",
     "addItem": "Ajouter une tâche",
     "itemLabel": "Tâche {{position}}",
@@ -813,7 +820,8 @@
       "note": "Convertie en Note",
       "snippet": "Convertie en snippet",
       "checklist": "Convertie en liste de tâches",
-      "calc": "Convertie en calcul"
+      "calc": "Convertie en calcul",
+      "drawing": "Convertie en dessin"
     },
     "folderMoved": "« {{name}} » est maintenant dans {{into}}",
     "folderMovedTop": "« {{name}} » est maintenant en haut de l’espace"
@@ -900,7 +908,8 @@
       "undo": "Annuler la dernière suppression",
       "stepBack": "Reprendre la note, annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier",
       "align": "Aligner les cartes libres (tableau)",
-      "newCalc": "Nouveau calcul"
+      "newCalc": "Nouveau calcul",
+      "newDrawing": "Nouveau dessin"
     },
     "editor": {
       "close": "Quitter le code, puis fermer l’éditeur en enregistrant",
@@ -1100,7 +1109,7 @@
     "chapters": {
       "notes": {
         "title": "Des snippets, des Notes, des listes",
-        "body": "Une note est un snippet — du code, coloré selon son langage —, une Note — du texte mis en forme, enregistré en Markdown — ou une liste de tâches ; le menu « Type » de l’éditeur passe de l’une à l’autre. Dans une Note, un bloc de code Mermaid est dessiné en diagramme, et « Présenter » la montre en plein écran, une section par diapositive. Cliquez une carte pour l’ouvrir, ou copiez-la sans l’ouvrir depuis son propre bouton."
+        "body": "Une note est un snippet — du code, coloré selon son langage —, une Note — du texte mis en forme, enregistré en Markdown —, une liste de tâches ou un dessin — boîtes, flèches et texte ; le menu « Type » de l’éditeur passe des unes aux autres, sauf le dessin, qui s’exporte en PNG ou en SVG et s’insère dans une Note. Dans une Note, un bloc de code Mermaid est dessiné en diagramme, et « Présenter » la montre en plein écran, une section par diapositive. Cliquez une carte pour l’ouvrir, ou copiez-la sans l’ouvrir depuis son propre bouton."
       },
       "spaces": {
         "title": "Des espaces pour ranger",
@@ -4111,5 +4120,37 @@
     "map": "Carte des titres (M)",
     "slides": "Diapositives (M)",
     "close": "Quitter la présentation (Échap)"
+  },
+  "drawing": {
+    "label": "Dessin « {{title}} »",
+    "tools": "Outils de dessin",
+    "select": "Sélection (V)",
+    "rectangle": "Rectangle (R)",
+    "ellipse": "Ellipse (O)",
+    "diamond": "Losange (D)",
+    "arrow": "Flèche (A) : partie d’une forme, elle la suit",
+    "pen": "Trait libre (P)",
+    "text": "Texte (T)",
+    "colours": "Couleur",
+    "colour": {
+      "ink": "Encre",
+      "blue": "Bleu",
+      "green": "Vert",
+      "amber": "Ambre",
+      "red": "Rouge",
+      "purple": "Violet"
+    },
+    "remove": "Supprimer la sélection (Suppr)",
+    "undo": "Annuler (Ctrl+Z)",
+    "redo": "Rétablir (Ctrl+Y)",
+    "exportPng": "Exporter en PNG",
+    "exportSvg": "Exporter en SVG",
+    "exported": "Dessin exporté dans {{name}}.",
+    "exportFailed": "Le dessin n’a pas pu être exporté.",
+    "empty": "Choisissez un outil, puis dessinez.",
+    "embed": "Insérer un dessin",
+    "embedNone": "Aucun dessin à insérer",
+    "missing": "Dessin introuvable",
+    "noPicture": "Pas encore d’aperçu"
   }
 }

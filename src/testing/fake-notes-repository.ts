@@ -15,6 +15,7 @@ import {
   NotesView,
   NoteTag,
   Presentation,
+  DrawingRef,
   Priority,
   SampleNote,
   TagUsage,
@@ -59,6 +60,11 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
   /** What a spec sets: a paste reads as prose unless told otherwise. */
   detectedLanguage: LanguageTag = 'txt';
   spans: readonly FieldSpan[] = [];
+  /** The drawings a Note can embed. */
+  drawings: DrawingRef[] = [];
+  /** A drawing's pictures by its id, and the ids asked for. */
+  pictures = new Map<string, { thumbnail: string; picture: string }>();
+  readonly picturesAsked: string[] = [];
   /** What « Présenter » is answered, and the draft it was asked with. */
   presentation: Presentation = { slides: [], map: [] };
   presented: string[] = [];
@@ -165,6 +171,24 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
 
   detectLanguage(): Promise<LanguageTag> {
     return guard(this, () => this.detectedLanguage);
+  }
+
+  listDrawings(): Promise<DrawingRef[]> {
+    return guard(this, () => [...this.drawings]);
+  }
+
+  drawingThumbnail(id: string): Promise<string | null> {
+    return guard(this, () => {
+      this.picturesAsked.push(id);
+      return this.pictures.get(id)?.thumbnail ?? null;
+    });
+  }
+
+  drawingPicture(id: string): Promise<string | null> {
+    return guard(this, () => {
+      this.picturesAsked.push(id);
+      return this.pictures.get(id)?.picture ?? null;
+    });
   }
 
   present(markdown: string): Promise<Presentation> {

@@ -84,6 +84,15 @@ diesel::table! {
     }
 }
 
+// Sealed bytes of a PNG each, beside the body: see the migration.
+diesel::table! {
+    drawing_pictures (note_id) {
+        note_id -> Text,
+        thumbnail -> Binary,
+        picture -> Binary,
+    }
+}
+
 // Case-sensitive where `note_tags` folds case: `{{Host}}` is not `{{host}}`.
 diesel::table! {
     note_placeholders (note_id, name) {
@@ -186,6 +195,7 @@ diesel::joinable!(note_tags -> notes (note_id));
 diesel::joinable!(note_items -> notes (note_id));
 diesel::joinable!(note_revisions -> notes (note_id));
 diesel::joinable!(note_placeholders -> notes (note_id));
+diesel::joinable!(drawing_pictures -> notes (note_id));
 diesel::joinable!(attachments -> notes (note_id));
 diesel::joinable!(http_folders -> http_collections (collection_id));
 diesel::joinable!(http_requests -> http_collections (collection_id));
@@ -201,6 +211,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     note_items,
     note_revisions,
     note_placeholders,
+    drawing_pictures,
     global_placeholders,
     attachments,
     http_collections,

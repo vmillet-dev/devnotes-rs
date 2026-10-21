@@ -304,3 +304,23 @@
     }
   }
 }
+
+// A drawing a Note embeds: its picture on a line of its own, whole within the text's width.
+.rich-text .rich-embed {
+  display: block;
+  margin: 0.7em 0 0;
+
+  img {
+    display: block;
+    max-width: 100%;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+  }
+
+  &.is-missing,
+  &.is-other {
+    font-family: var(--font-mono), monospace;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+}

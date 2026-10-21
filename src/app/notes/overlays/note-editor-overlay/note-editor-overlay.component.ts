@@ -18,7 +18,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, isLanguageTag } from '@core/model/language.model';
 import { checklistProgress } from '@core/model/checklist.model';
-import { Note, NotePatch, Presentation } from '@core/model/note.model';
+import { DrawingPictures, Note, NotePatch, Presentation } from '@core/model/note.model';
 import { PRIORITIES } from '@core/model/priority.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { FoldersStore } from '@core/state/folders.store';
@@ -52,6 +52,7 @@ import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel
 import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 import { PresentationComponent } from '../presentation/presentation.component';
+import { DrawingEditorComponent } from './drawing-editor/drawing-editor.component';
 import { indentUnit } from './indentation';
 import { countWords } from './word-count';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
@@ -133,6 +134,7 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
     CalcEditorComponent,
     RichTextEditorComponent,
     PresentationComponent,
+    DrawingEditorComponent,
     SideBySideComponent,
     NgTemplateOutlet,
     TranslocoPipe,
@@ -243,6 +245,7 @@ export class NoteEditorOverlayComponent {
   /** By their template names: a class query would pull CodeMirror and TipTap out of their chunks. */
   private readonly codeEditor = viewChild<CodeEditorComponent>('codeEditor');
   private readonly richEditor = viewChild<RichTextEditorComponent>('richEditor');
+  private readonly drawingEditor = viewChild<DrawingEditorComponent>('drawingEditor');
   private readonly checklistEditor = viewChild(ChecklistEditorComponent);
   private readonly fieldsPanel = viewChild(PlaceholderPanelComponent);
   private readonly headerBand = viewChild<ElementRef<HTMLElement>>('headerBand');
@@ -255,6 +258,11 @@ export class NoteEditorOverlayComponent {
   protected readonly presenting = signal<Presentation | null>(null);
   /** A Calcul note: the sheet beside its results, in an editor of its own. */
   protected readonly isCalc = computed(() => this.note()?.kind === 'calc');
+  protected readonly isDrawing = computed(() => this.note()?.kind === 'drawing');
+  /** What the drawing on screen holds, as its editor counts it. */
+  protected readonly drawingShapes = signal(0);
+  /** Its pictures, taken by its editor and not yet written. */
+  protected readonly draftPictures = signal<DrawingPictures | null>(null);
   /** Only a snippet's body is code: a format picker anywhere else would do nothing. */
   protected readonly hasLanguage = computed(() => this.note()?.kind === 'snippet');
   /** Which reader the snippet's language has, if any: only those get the Graphe / Arbre tabs. */
@@ -673,8 +681,11 @@ export class NoteEditorOverlayComponent {
     }
   }
 
+  /** A drawing's pictures, taken as it was last left, go with its body once. */
   protected commitContent(): void {
-    this.requestPatch({ content: this.draftContent() });
+    const pictures = this.draftPictures();
+    this.draftPictures.set(null);
+    this.requestPatch({ content: this.draftContent(), ...(pictures && { pictures }) });
   }
 
   /**
@@ -838,6 +849,8 @@ export class NoteEditorOverlayComponent {
   }
 
   private close(): void {
+    // What is drawn and not yet emitted: the drawing waits for the hand to pause.
+    this.drawingEditor()?.flush();
     this.commitTitle();
     this.commitSource();
     this.commitContent();

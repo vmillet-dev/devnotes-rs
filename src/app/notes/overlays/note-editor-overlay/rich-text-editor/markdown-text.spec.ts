@@ -13,6 +13,7 @@ const NO_HOOKS = {
   click: () => false,
   keydown: () => false,
   indent: () => '  ',
+  embeds: { picture: () => Promise.resolve(null), missing: () => '' },
   diagrams: { draw: () => Promise.resolve({ svg: '' }), title: () => '', failed: () => '' },
 };
 

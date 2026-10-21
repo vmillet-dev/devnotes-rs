@@ -23,6 +23,7 @@ describe('NewNoteButtonComponent', () => {
       note: ['Ctrl', 'Shift', 'N'],
       checklist: ['Alt', 'L'],
       calc: ['Ctrl', 'Shift', 'M'],
+      drawing: ['Ctrl', 'Shift', 'D'],
     });
     // Focus management moves through real elements, which jsdom only tracks for
     // an attached tree.
@@ -66,14 +67,14 @@ describe('NewNoteButtonComponent', () => {
     }
   });
 
-  it('offers exactly the four kinds, the snippet first', async () => {
+  it('offers exactly the five kinds, the snippet first', async () => {
     click('.new-note-caret');
     await fixture.whenStable();
 
     const names = [...fixture.nativeElement.querySelectorAll('.kind-name')].map((name) =>
       (name as HTMLElement).textContent?.trim(),
     );
-    expect(names).toEqual(['Snippet de code', 'Note', 'Liste de tâches', 'Calcul']);
+    expect(names).toEqual(['Snippet de code', 'Note', 'Liste de tâches', 'Calcul', 'Dessin']);
   });
 
   /** A rebound key is the one named: the caps come in from the bindings, not from here. */
@@ -89,6 +90,7 @@ describe('NewNoteButtonComponent', () => {
       ['Ctrl', 'Shift', 'N'],
       ['Alt', 'L'],
       ['Ctrl', 'Shift', 'M'],
+      ['Ctrl', 'Shift', 'D'],
     ]);
     expect(options[1]?.getAttribute('aria-keyshortcuts')).toBe('Control+Shift+N');
   });

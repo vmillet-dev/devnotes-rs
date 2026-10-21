@@ -17,6 +17,7 @@ import {
   NotesView,
   NoteTag,
   Presentation,
+  DrawingRef,
   Priority,
   SampleNote,
   TagUsage,
@@ -58,6 +59,21 @@ export class NotesRepository {
   /** Rust's reading of a paste; answers `txt` for prose. */
   detectLanguage(content: string): Promise<LanguageTag> {
     return commands.detectLanguage(content);
+  }
+
+  /** A Dessin's small picture, for its card; `null` when it has none. */
+  async drawingThumbnail(id: string): Promise<string | null> {
+    return unwrap('drawing_thumbnail', await commands.drawingThumbnail(id));
+  }
+
+  /** The drawings a Note can embed, by title. */
+  async listDrawings(): Promise<DrawingRef[]> {
+    return unwrap('list_drawings', await commands.listDrawings());
+  }
+
+  /** A Dessin's large picture, for a Note that embeds it. */
+  async drawingPicture(id: string): Promise<string | null> {
+    return unwrap('drawing_picture', await commands.drawingPicture(id));
   }
 
   /** A Note's draft cut into slides, with the map of its headings. */

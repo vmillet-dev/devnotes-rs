@@ -91,6 +91,7 @@ export const CREATE_ACTIONS: Readonly<Record<NoteKind, Rebindable>> = {
     fallback: 'Ctrl+Shift+L',
   },
   calc: { id: 'canvas.newCalc', labelKey: 'shortcuts.canvas.newCalc', fallback: 'Ctrl+Shift+M' },
+  drawing: { id: 'canvas.newDrawing', labelKey: 'shortcuts.canvas.newDrawing', fallback: 'Ctrl+Shift+D' },
 };
 
 function creating(kind: NoteKind): CanvasKey {
@@ -113,6 +114,7 @@ export const CANVAS_KEYS: readonly CanvasKey[] = [
   creating('note'),
   creating('checklist'),
   creating('calc'),
+  creating('drawing'),
   {
     keys: ['↑ ↓ ← →'],
     labelKey: 'shortcuts.canvas.move',

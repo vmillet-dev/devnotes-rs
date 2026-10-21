@@ -13,12 +13,18 @@ import { grammarOf, loadGrammar } from '@core/services/syntax/grammars';
 import { highlightRanges } from '@core/services/syntax/highlighter';
 import { escapeMarkdownText } from './markdown-text';
 import { DiagramHooks, Diagrams, MERMAID_LABEL, isDiagram } from './rich-text-diagrams';
+import { DrawingEmbeds, EmbedHooks } from './rich-text-drawings';
+
+/** What a Note's blocks need from outside to be drawn: its diagrams, and the drawings it embeds. */
+export interface DrawnHooks {
+  readonly diagrams: DiagramHooks;
+  readonly embeds: EmbedHooks;
+}
 import { TextSearch } from './rich-text-search';
 
-export interface RichEditorHooks {
+export interface RichEditorHooks extends DrawnHooks {
   readonly label: string;
   readonly placeholder: string;
-  readonly diagrams: DiagramHooks;
   change(markdown: string): void;
   blur(): void;
   transaction(): void;
@@ -194,7 +200,7 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
   const editor = new Editor({
     element,
     extensions: [
-      ...drawnWith(hooks.diagrams),
+      ...drawnWith(hooks),
       Placeholder.configure({ placeholder: hooks.placeholder }),
       tabCharacter((language) => hooks.indent(language)),
       TextSearch,
@@ -227,7 +233,7 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
 }
 
 /** What a Note is drawn with, edited or presented: the same blocks, colours and diagrams. */
-function drawnWith(diagrams: DiagramHooks): Extensions {
+function drawnWith({ diagrams, embeds }: DrawnHooks): Extensions {
   return [
     StarterKit.configure({
       underline: false,
@@ -239,15 +245,16 @@ function drawnWith(diagrams: DiagramHooks): Extensions {
     TaskItem.configure({ nested: true }),
     CodeHighlight,
     Diagrams(diagrams),
+    DrawingEmbeds(embeds),
   ];
 }
 
 /** A Note's Markdown drawn as the editor draws it, and not editable: a slide. */
-export function createRichViewer(element: HTMLElement, markdown: string, diagrams: DiagramHooks): Editor {
+export function createRichViewer(element: HTMLElement, markdown: string, hooks: DrawnHooks): Editor {
   return new Editor({
     element,
     editable: false,
-    extensions: drawnWith(diagrams),
+    extensions: drawnWith(hooks),
     content: markdown,
     contentType: 'markdown',
     editorProps: { attributes: { class: 'rich-text is-slide', 'data-testid': 'presentation-slide' } },

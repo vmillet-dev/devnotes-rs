@@ -10,6 +10,7 @@ import {
   inject,
   input,
   output,
+  resource,
   signal,
   untracked,
   viewChild,
@@ -19,6 +20,8 @@ import type { ChainedCommands, Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { LanguageTag, isLanguageTag } from '@core/model/language.model';
 import { MERMAID, MermaidRenderer } from '@core/services/diagrams/mermaid-renderer';
+import { DrawingPicturesStore } from '@core/state/drawing-pictures.store';
+import { NotesRevision } from '@core/state/notes-revision';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import type { IndentChoice } from '@core/services/settings/app-settings.model';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
@@ -29,6 +32,8 @@ import { readSearchOptions } from '../search/search-options';
 import { SearchSpec, SearchTarget } from '../search/search-target';
 import { createRichEditor, focusFirst, languageOf } from './rich-text.engine';
 import { MERMAID_LABEL, isDiagram } from './rich-text-diagrams';
+import { drawingSource } from './rich-text-drawings';
+import { drawnHooks } from './drawn-hooks';
 import { richTextSearch, searchKeyOf, searchSpecOf, setSearchSpec } from './rich-text-search';
 import { LANGUAGE_CHOICES } from '../language-choices';
 
@@ -172,6 +177,8 @@ export class RichTextEditorComponent {
   private readonly searchBar = viewChild(SearchBarComponent);
   private readonly preferences = inject(PreferencesService);
   private readonly diagrams = inject(MermaidRenderer);
+  private readonly drawings = inject(DrawingPicturesStore);
+  private readonly notesRevision = inject(NotesRevision);
   private readonly transloco = inject(TranslocoService);
   /** The query the bar had when it closed: reopened, it shows it again, as the code field does. */
   private lastSearch: SearchSpec | null = null;
@@ -186,6 +193,18 @@ export class RichTextEditorComponent {
     this.revision();
     return this.editor?.isActive('table') ?? false;
   });
+
+  /** The drawings a Note can embed, asked for again whenever a note is written. */
+  private readonly drawingsResource = resource({
+    params: () => this.notesRevision.current(),
+    loader: () => this.drawings.list(),
+  });
+  protected readonly drawingChoices = computed<readonly ChoiceOption[]>(() =>
+    (this.drawingsResource.hasValue() ? this.drawingsResource.value() : []).map(({ id, title }) => ({
+      id,
+      name: title || this.transloco.translate('notes.untitled'),
+    })),
+  );
 
   /** The block the caret is in, when it is a code block: its language is chosen above it. */
   protected readonly codeLanguage = computed<BlockLanguage | null>(() => {
@@ -214,14 +233,7 @@ export class RichTextEditorComponent {
         click: (event, href) => this.onClick(event, href),
         keydown: (event) => this.onKeydown(event),
         indent: (language) => indentUnit(this.codeIndent(), language),
-        diagrams: {
-          draw: (source) => this.diagrams.render(source),
-          title: () => this.transloco.translate('editor.rich.diagram.edit'),
-          failed: (line) =>
-            line === null
-              ? this.transloco.translate('editor.rich.diagram.failed')
-              : this.transloco.translate('editor.rich.diagram.failedAt', { line }),
-        },
+        ...drawnHooks(this.diagrams, this.drawings, this.transloco, true),
       });
       this.search = richTextSearch(this.editor, {
         find: () => this.openSearch(false),
@@ -319,6 +331,15 @@ export class RichTextEditorComponent {
         chain.deleteTable().run();
         break;
     }
+  }
+
+  /** By its id, under its title: the Note holds no picture, only where to ask for one. */
+  protected embedDrawing(id: string | null): void {
+    const chosen = this.drawingChoices().find((choice) => choice.id === id);
+    if (!chosen) return;
+    this.chain()
+      ?.insertContent({ type: 'image', attrs: { src: drawingSource(chosen.id), alt: chosen.name } })
+      .run();
   }
 
   /** `txt` is no language at all: the fence is written bare. */

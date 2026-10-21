@@ -147,7 +147,9 @@ export class PaletteStore {
   }
 
   /** A snippet with fields goes through the form first, or the copy is unusable. */
+  /** A drawing is no text: it is exported from its editor, not copied. */
   async copy(note: Note): Promise<void> {
+    if (note.kind === 'drawing') return;
     if (note.placeholders.length > 0) {
       this._pendingFill.set(note);
       return;

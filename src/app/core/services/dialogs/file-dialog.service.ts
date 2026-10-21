@@ -46,6 +46,14 @@ export class FileDialogService {
     return this.destination({ defaultPath });
   }
 
+  /** A picture, under the extension of its format. */
+  async chooseImageDestination(defaultPath: string, extension: string): Promise<string | null> {
+    return this.destination({
+      defaultPath,
+      filters: [{ name: extension.toUpperCase(), extensions: [extension] }],
+    });
+  }
+
   private async destination(options: SaveDialogOptions): Promise<string | null> {
     try {
       return await this.adapter.save(options);

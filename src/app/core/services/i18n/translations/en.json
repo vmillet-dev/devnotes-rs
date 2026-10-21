@@ -39,7 +39,8 @@
       "snippet": "Snippets",
       "note": "Notes",
       "checklist": "Tasks",
-      "calc": "Calculations"
+      "calc": "Calculations",
+      "drawing": "Drawings"
     },
     "createOrPaste": "Paste or create",
     "copyContent": "Copy",
@@ -64,7 +65,8 @@
     "kindTag": {
       "note": "Note",
       "checklist": "Tasks",
-      "calc": "Calc"
+      "calc": "Calc",
+      "drawing": "Drawing"
     },
     "priorityLabel": "Priority",
     "footer": {
@@ -87,7 +89,8 @@
       "snippet": "A block of code, its language and its fields to fill in.",
       "note": "Formatted text: headings, lists, links, tables, code blocks.",
       "checklist": "Steps to tick off, in order.",
-      "calc": "One line, one result: units, dates, totals."
+      "calc": "One line, one result: units, dates, totals.",
+      "drawing": "Boxes, arrows and text: a sketch."
     },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Tick the task {{text}}",
@@ -145,7 +148,8 @@
     "copyTitle": "{{title}} (copy)",
     "fileInto": "File into",
     "noFolder": "No folder",
-    "newCalc": "Calculation"
+    "newCalc": "Calculation",
+    "newDrawing": "Drawing"
   },
   "filters": {
     "groupLabel": "Filter notes",
@@ -403,11 +407,14 @@
         "snippet": "Convert to a snippet",
         "note": "Convert to a Note",
         "checklist": "Convert to a todo list",
-        "calc": "Convert to a calculation"
+        "calc": "Convert to a calculation",
+        "drawing": "Convert into a drawing"
       },
-      "calc": "Calculation"
+      "calc": "Calculation",
+      "drawing": "Drawing"
     },
     "noteStats": "Note · {count, plural, =0 {no words} one {# word} other {# words}} · saved as Markdown",
+    "drawingStats": "{count, plural, =0 {Empty drawing} one {# shape} other {# shapes}}",
     "checklistStats": "{{done}}/{total, plural, one {# task} other {# tasks}}",
     "addItem": "Add a task",
     "itemLabel": "Task {{position}}",
@@ -813,7 +820,8 @@
       "note": "Converted to a Note",
       "snippet": "Converted to a snippet",
       "checklist": "Converted to a todo list",
-      "calc": "Converted to a calculation"
+      "calc": "Converted to a calculation",
+      "drawing": "Converted into a drawing"
     },
     "folderMoved": "“{{name}}” is now in {{into}}",
     "folderMovedTop": "“{{name}}” is now at the top of the space"
@@ -900,7 +908,8 @@
       "undo": "Undo the last deletion",
       "stepBack": "Take the note back, call off a pending deletion, then the selection, then the filters, then leave the folder",
       "align": "Align the loose cards (board)",
-      "newCalc": "New calculation"
+      "newCalc": "New calculation",
+      "newDrawing": "New drawing"
     },
     "editor": {
       "close": "Leave the code, then close the editor, saving",
@@ -1100,7 +1109,7 @@
     "chapters": {
       "notes": {
         "title": "Snippets, Notes and lists",
-        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown — or a todo list; the editor's \"Kind\" menu turns one into another. In a Note, a Mermaid code block is drawn as a diagram, and \"Present\" shows it full screen, one section a slide. Click a card to open it, or copy it without opening, from its own button."
+        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown —, a todo list or a drawing — boxes, arrows and text; the editor's \"Kind\" menu turns one into another, but for a drawing, which exports as PNG or SVG and is inserted in a Note. In a Note, a Mermaid code block is drawn as a diagram, and \"Present\" shows it full screen, one section a slide. Click a card to open it, or copy it without opening, from its own button."
       },
       "spaces": {
         "title": "Spaces to file things in",
@@ -4111,5 +4120,37 @@
     "map": "Map of the headings (M)",
     "slides": "Slides (M)",
     "close": "Leave the presentation (Esc)"
+  },
+  "drawing": {
+    "label": "Drawing “{{title}}”",
+    "tools": "Drawing tools",
+    "select": "Select (V)",
+    "rectangle": "Rectangle (R)",
+    "ellipse": "Ellipse (O)",
+    "diamond": "Diamond (D)",
+    "arrow": "Arrow (A): started on a shape, it follows it",
+    "pen": "Freehand (P)",
+    "text": "Text (T)",
+    "colours": "Colour",
+    "colour": {
+      "ink": "Ink",
+      "blue": "Blue",
+      "green": "Green",
+      "amber": "Amber",
+      "red": "Red",
+      "purple": "Purple"
+    },
+    "remove": "Delete the selection (Del)",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Y)",
+    "exportPng": "Export as PNG",
+    "exportSvg": "Export as SVG",
+    "exported": "Drawing exported to {{name}}.",
+    "exportFailed": "The drawing could not be exported.",
+    "empty": "Pick a tool, then draw.",
+    "embed": "Insert a drawing",
+    "embedNone": "No drawing to insert",
+    "missing": "Drawing not found",
+    "noPicture": "No preview yet"
   }
 }
