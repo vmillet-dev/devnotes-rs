@@ -12,6 +12,18 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.16.0] - 2026-10-21
+
+### ✨ Added
+
+- Notes: « Dessin », a kind for sketches, exported and embedded in a Note (#995)
+- Notes: « Présenter » shows a Note full screen, a section a slide (#993)
+- Notes: mermaid code blocks drawn as diagrams (#992)
+
+### 🔒 Security
+
+- HTTPS: a distrusted intermediate certificate is refused (#994)
+
 ## [0.15.0] - 2026-10-20
 
 ### 🧰 Under the hood
