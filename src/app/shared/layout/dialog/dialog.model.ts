@@ -3,6 +3,7 @@
  * and no stylesheet carries a modal `z-index`. The banners (`banners/`, at 80) stay above every
  * modal, which can trigger them. `titlebar` is no dialog but the titlebar's menus, which a
  * full-screen editor leaves in reach; `app`, the help panels they open, lands over the editor.
+ * `presentation` covers all of it, the titlebar too; only a locked library comes over it.
  */
 const LAYERS = [
   'editor',
@@ -13,6 +14,7 @@ const LAYERS = [
   'palette',
   'fields',
   'zoom',
+  'presentation',
   'passphrase',
 ] as const;
 

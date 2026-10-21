@@ -12,6 +12,7 @@ import {
   NoteKind,
   NoteLifecycle,
   NotePatch,
+  Presentation,
   Priority,
 } from '@core/model/note.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -456,6 +457,11 @@ export class NotesStore {
     } catch {
       return 'txt';
     }
+  }
+
+  /** The draft on screen cut into slides; `null` when Rust could not, the notifier saying so. */
+  present(markdown: string): Promise<Presentation | null> {
+    return this.notifier.attempt('errors.presentFailed', () => this.repository.present(markdown));
   }
 
   /** The copy opens in the editor, ready to be renamed; the canvas learns of it either way. */

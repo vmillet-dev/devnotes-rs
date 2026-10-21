@@ -27,6 +27,11 @@ export const commands = {
 	 *  `today` is the local day of the window, as the notes' sections reckon it.
 	 */
 	evaluateCalc: (sheet: string, today: string) => typedError<CalcSheet, AppError>(__TAURI_INVOKE("evaluate_calc", { sheet, today })),
+	/**
+	 *  A Note cut into slides, with the mind map of its headings: what « Présenter » shows. The
+	 *  draft is sent rather than the stored body, so what is presented is what is on screen.
+	 */
+	presentNote: (markdown: string) => typedError<Presentation, AppError>(__TAURI_INVOKE("present_note", { markdown })),
 	/**  Where the fields of a text lie, for the code field to mark them: what a field is stays here. */
 	fieldSpans: (content: string) => __TAURI_INVOKE<FieldSpan[]>("field_spans", { content }),
 	/**  No lock, but off the window's thread: a document of a few megabytes takes a while. */
@@ -2518,6 +2523,13 @@ export type LoremUnit = "words" | "sentences" | "paragraphs";
 
 export type Magnitude = "seconds" | "milliseconds" | "microseconds" | "nanoseconds";
 
+/**  A heading of the Note in its mind map, with the slide it is on and the headings under it. */
+export type MapNode = {
+	text: string,
+	slide: number,
+	children: MapNode[],
+};
+
 export type MaskRow = {
 	prefix: number,
 	hostBits: number,
@@ -2889,6 +2901,14 @@ export type PlanLine = { kind: "placed"; name: string; hosts: string; cidr: stri
 { kind: "noRoom"; name: string; hosts: string } | 
 /**  No host count on that line. */
 { kind: "unreadable"; text: string };
+
+/**  A Note shown a slide at a time, as `notes::markdown::present` cuts it. */
+export type Presentation = {
+	/**  Each slide's Markdown, as the body holds it: the slide is drawn by the rich editor. */
+	slides: string[],
+	/**  The headings, each under the one above it. */
+	map: MapNode[],
+};
 
 /**
  *  Not sealed: SQL filters and sorts on it. Declared from the least to the most pressing,

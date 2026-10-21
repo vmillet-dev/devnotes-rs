@@ -14,6 +14,7 @@ import {
   NotesQuery,
   NotesView,
   NoteTag,
+  Presentation,
   Priority,
   SampleNote,
   TagUsage,
@@ -58,6 +59,9 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
   /** What a spec sets: a paste reads as prose unless told otherwise. */
   detectedLanguage: LanguageTag = 'txt';
   spans: readonly FieldSpan[] = [];
+  /** What « Présenter » is answered, and the draft it was asked with. */
+  presentation: Presentation = { slides: [], map: [] };
+  presented: string[] = [];
 
   /** Query the store sent last, for asserting how it assembles its parameters. */
   lastQuery: NotesQuery | null = null;
@@ -161,6 +165,13 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
 
   detectLanguage(): Promise<LanguageTag> {
     return guard(this, () => this.detectedLanguage);
+  }
+
+  present(markdown: string): Promise<Presentation> {
+    return guard(this, () => {
+      this.presented.push(markdown);
+      return this.presentation;
+    });
   }
 
   duplicate(id: string, title: string): Promise<Note> {

@@ -9,6 +9,8 @@ export class FakeAppWindow implements AppWindowAdapter {
 
   throwOnHide: Error | null = null;
   throwOnExit: Error | null = null;
+  fullscreen = false;
+  throwOnFullscreen: Error | null = null;
 
   async hide(): Promise<void> {
     if (this.throwOnHide) throw this.throwOnHide;
@@ -26,5 +28,15 @@ export class FakeAppWindow implements AppWindowAdapter {
 
   async holdQuit(): Promise<void> {
     this.quitsHeld += 1;
+  }
+
+  async isFullscreen(): Promise<boolean> {
+    if (this.throwOnFullscreen) throw this.throwOnFullscreen;
+    return this.fullscreen;
+  }
+
+  async setFullscreen(fullscreen: boolean): Promise<void> {
+    if (this.throwOnFullscreen) throw this.throwOnFullscreen;
+    this.fullscreen = fullscreen;
   }
 }

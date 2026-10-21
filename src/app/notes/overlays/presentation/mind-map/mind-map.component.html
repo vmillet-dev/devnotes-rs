@@ -1,0 +1,26 @@
+@let placed = layout();
+<!-- Stretched to the screen; the strokes are not, through `non-scaling-stroke`. -->
+<svg class="map-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+  @for (link of placed.links; track link.key) {
+    <line
+      [attr.x1]="link.from.left"
+      [attr.y1]="link.from.top"
+      [attr.x2]="link.to.left"
+      [attr.y2]="link.to.top"
+      vector-effect="non-scaling-stroke"
+    />
+  }
+</svg>
+@for (node of placed.nodes; track node.key) {
+  <button
+    type="button"
+    data-testid="presentation-map-node"
+    [class]="'map-node depth-' + (node.depth < 3 ? node.depth : 3)"
+    [style.left.%]="node.left"
+    [style.top.%]="node.top"
+    [attr.title]="node.text"
+    (click)="chosen.emit(node.slide)"
+  >
+    {{ node.text }}
+  </button>
+}

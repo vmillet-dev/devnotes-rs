@@ -351,6 +351,8 @@
     },
     "fullscreen": "Passer en plein écran",
     "exitFullscreen": "Quitter le plein écran",
+    "present": "Présenter",
+    "presentLabel": "Présenter la Note en plein écran, une section par diapositive",
     "pin": "Épingler",
     "pinned": "Épinglée",
     "noPriority": "Aucune priorité",
@@ -451,6 +453,7 @@
     "noteSaveFailed": "Impossible d’enregistrer la note. Votre texte est toujours à l’écran.",
     "noteCreateFailed": "Impossible de créer la note.",
     "noteDuplicateFailed": "Impossible de dupliquer la note.",
+    "presentFailed": "Impossible de présenter la note.",
     "noteReadFailed": "Impossible de lire la note.",
     "noteDeleteFailed": "Impossible de supprimer la note. Elle est toujours là.",
     "noteMoveFailed": "La note n’a pas pu être déplacée.",
@@ -1097,7 +1100,7 @@
     "chapters": {
       "notes": {
         "title": "Des snippets, des Notes, des listes",
-        "body": "Une note est un snippet — du code, coloré selon son langage —, une Note — du texte mis en forme, enregistré en Markdown — ou une liste de tâches ; le menu « Type » de l’éditeur passe de l’une à l’autre. Dans une Note, un bloc de code Mermaid est dessiné en diagramme. Cliquez une carte pour l’ouvrir, ou copiez-la sans l’ouvrir depuis son propre bouton."
+        "body": "Une note est un snippet — du code, coloré selon son langage —, une Note — du texte mis en forme, enregistré en Markdown — ou une liste de tâches ; le menu « Type » de l’éditeur passe de l’une à l’autre. Dans une Note, un bloc de code Mermaid est dessiné en diagramme, et « Présenter » la montre en plein écran, une section par diapositive. Cliquez une carte pour l’ouvrir, ou copiez-la sans l’ouvrir depuis son propre bouton."
       },
       "spaces": {
         "title": "Des espaces pour ranger",
@@ -4099,5 +4102,14 @@
       "usedMany": "utilisée lignes {{lines}}",
       "unused": "jamais utilisée"
     }
+  },
+  "presentation": {
+    "label": "Présentation de « {{title}} »",
+    "slide": "Diapositive {{at}} sur {{count}}",
+    "previous": "Diapositive précédente (←)",
+    "next": "Diapositive suivante (→)",
+    "map": "Carte des titres (M)",
+    "slides": "Diapositives (M)",
+    "close": "Quitter la présentation (Échap)"
   }
 }

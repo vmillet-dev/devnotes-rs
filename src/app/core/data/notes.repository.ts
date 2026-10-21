@@ -16,6 +16,7 @@ import {
   NotesQuery,
   NotesView,
   NoteTag,
+  Presentation,
   Priority,
   SampleNote,
   TagUsage,
@@ -57,6 +58,11 @@ export class NotesRepository {
   /** Rust's reading of a paste; answers `txt` for prose. */
   detectLanguage(content: string): Promise<LanguageTag> {
     return commands.detectLanguage(content);
+  }
+
+  /** A Note's draft cut into slides, with the map of its headings. */
+  async present(markdown: string): Promise<Presentation> {
+    return unwrap('present_note', await commands.presentNote(markdown));
   }
 
   /** Where the fields of a text lie, in the code field's offsets. */

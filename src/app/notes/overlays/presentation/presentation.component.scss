@@ -1,0 +1,116 @@
+@use 'mixins' as *;
+
+// The whole screen, the titlebar too: nothing of the app shows behind a slide.
+app-dialog {
+  --dialog-fullscreen-top: 0px;
+}
+
+// The modal frame's panel is bare and full screen: this is the whole of it.
+.presentation {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg-0);
+  color: var(--text-0);
+}
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: safe center;
+  padding: 6vh 6vw 10vh;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.cover {
+  max-width: 1100px;
+  margin: 0;
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  @include enters;
+}
+
+.slide {
+  width: 100%;
+  max-width: 1100px;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// Out of the way of the slide, and there for whoever reaches for it.
+.bar {
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.45;
+  @include eases(opacity);
+
+  &:hover,
+  &:focus-within {
+    opacity: 1;
+  }
+}
+
+.bar-btn {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 6px, var(--line));
+  @include hit-target(32px);
+  @include focus-ring;
+  @include eases(border-color, color);
+
+  justify-content: center;
+  padding: 0 8px;
+  font-size: 14px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+}
+
+.bar-text {
+  font-size: 12.5px;
+}
+
+.count {
+  min-width: 56px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--text-1);
+}
+
+.progress {
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: var(--line-soft);
+}
+
+.progress-done {
+  display: block;
+  height: 100%;
+  background: var(--amber-fill);
+  @include eases(width);
+}

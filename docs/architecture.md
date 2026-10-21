@@ -1734,6 +1734,19 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   are global, and the last 64 kept. Its ESM build evaluates no code, so the CSP stays as it is;
   the SVG it returns is read by an inert HTML parser, not `innerHTML`. The fence is stored as it
   was typed, and a card shows the block's lines.
+- **« Présenter » shows the Note full screen, a slide at a time.** Rust cuts the draft on
+  screen, not the stored body (`present_note`, `notes::markdown::present`): a slide starts at
+  each `#` or `##` heading and after each `---` rule outside any list, quote or fence, each slide
+  a slice of the body so it is drawn as written, empty ones dropped; the headings come back as a
+  tree, each with the slide it is on. `PresentationComponent` puts the Note's title first as a
+  cover and draws each slide with `createRichViewer` — the editor's own blocks, colours and
+  diagrams, read only, a diagram without its code. ← → (and the keys a clicker sends), Home/End,
+  `M` for the map, Escape out through the modal frame (the `presentation` rung, over the
+  titlebar). The window goes full screen through `AppWindowService.enterFullscreen`
+  (`core:window:allow-set-fullscreen`), which answers whether it changed it: only that is given
+  back, so a window already full screen stays so. The map (`mind-map.layout.ts`) rings the
+  headings around the title, a share of the sector by leaves, stretched to the screen; its nodes
+  are buttons over an SVG of links, and one pressed opens its slide.
 - **The editor says what it holds.** A "Note" badge sits where a snippet has its format menu,
   and the footer counts the draft's words (`countWords`) where a snippet counts lines and bytes:
   presenting the draft is the front's job, as the line count is. The toolbar runs headings, what

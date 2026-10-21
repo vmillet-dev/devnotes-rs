@@ -323,6 +323,25 @@ impl OutlineLine {
     }
 }
 
+/// A Note shown a slide at a time, as `notes::markdown::present` cuts it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Presentation {
+    /// Each slide's Markdown, as the body holds it: the slide is drawn by the rich editor.
+    pub slides: Vec<String>,
+    /// The headings, each under the one above it.
+    pub map: Vec<MapNode>,
+}
+
+/// A heading of the Note in its mind map, with the slide it is on and the headings under it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MapNode {
+    pub text: String,
+    pub slide: u32,
+    pub children: Vec<MapNode>,
+}
+
 impl std::ops::Deref for DisplayNote {
     type Target = Note;
 
