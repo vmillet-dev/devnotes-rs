@@ -9,6 +9,7 @@ import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
+import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { createNote } from '@testing/note.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
@@ -46,6 +47,36 @@ describe('NoteCardComponent', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  describe('a drawing', () => {
+    const drawing = createNote({ id: 'sketch', kind: 'drawing', title: 'Archi', content: '' });
+
+    it('shows the picture it asks for once drawn, and nothing to copy', async () => {
+      const repository = TestBed.inject(NotesRepository) as unknown as FakeNotesRepository;
+      repository.pictures.set('sketch', { thumbnail: 'data:image/png;base64,T', picture: '' });
+      fixture.componentRef.setInput('note', drawing);
+
+      await vi.waitFor(() =>
+        expect(
+          fixture.nativeElement.querySelector('[data-testid="note-card-drawing"]')?.getAttribute('src'),
+        ).toBe('data:image/png;base64,T'),
+      );
+      expect(repository.picturesAsked).toEqual(['sketch']);
+      expect(fixture.debugElement.query(By.directive(CopyButtonComponent))).toBeNull();
+      const menu = fixture.debugElement.query(By.directive(NoteCardMenuComponent))
+        .componentInstance as NoteCardMenuComponent;
+      expect(menu.copyable()).toBe(false);
+    });
+
+    it('says it has no preview yet when its picture was never taken', async () => {
+      fixture.componentRef.setInput('note', drawing);
+      await fixture.whenStable();
+
+      await vi.waitFor(() =>
+        expect(text('[data-testid="note-card-drawing-empty"]')).toBe('Pas encore d’aperçu'),
+      );
+    });
   });
 
   it('renders the title and passes the language down to the language badge', async () => {

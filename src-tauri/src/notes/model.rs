@@ -10,6 +10,7 @@ use specta::Type;
 
 use super::calc::{self, CalcCardLine};
 use super::checklist::{self, ChecklistItem};
+use super::drawing;
 use super::kind::NoteKind;
 use super::language::{self, Language};
 use super::markdown;
@@ -123,6 +124,9 @@ pub struct NotePatch {
     /// Replaces the whole list, like `tags`: a position is all the identity an item has.
     #[specta(optional)]
     pub items: Option<Vec<ChecklistItem>>,
+    /// A Dessin's two pictures, taken as it is saved; written beside the body, not in it.
+    #[specta(optional)]
+    pub pictures: Option<drawing::DrawingPictures>,
 }
 
 impl NoteDraft {
@@ -369,6 +373,12 @@ impl DisplayNote {
     /// ⚠️ After everything that reads the body — the fields, the search excerpt — and only
     /// on what goes into a list: a note cut here must never reach the editor.
     pub fn cut_to_preview(&mut self, today: NaiveDate) {
+        // Its body is a scene, of which a card draws nothing: the card asks for its picture.
+        if self.note.kind == NoteKind::Drawing {
+            self.note.content.clear();
+            self.truncated = true;
+            return;
+        }
         if self.note.kind == NoteKind::Calc {
             self.calc = calc::card_lines(&self.note.content, today);
         }
@@ -446,12 +456,15 @@ impl Note {
         self.kind == NoteKind::Note
     }
 
-    /// What a card shows and a search quotes: a Note's words without their Markdown.
+    /// What a card shows and a search quotes: a Note's words without their Markdown, a
+    /// Dessin's words without its scene.
     pub fn readable_body(&self) -> Cow<'_, str> {
-        if self.is_rich_text() {
-            Cow::Owned(markdown::plain(&self.content))
-        } else {
-            Cow::Borrowed(&self.content)
+        match self.kind {
+            NoteKind::Note => Cow::Owned(markdown::plain(&self.content)),
+            NoteKind::Drawing => Cow::Owned(drawing::words(&self.content)),
+            NoteKind::Snippet | NoteKind::Checklist | NoteKind::Calc => {
+                Cow::Borrowed(&self.content)
+            }
         }
     }
 
@@ -486,7 +499,12 @@ pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {
     DisplayNote {
         footer: footer_of(&note),
         expiring_soon: expires_soon(&note, now),
-        placeholders: placeholder::parse(&note.content, &note.placeholder_values),
+        // A `{{name}}` written on a drawing is words on a picture, not a field to fill.
+        placeholders: if note.kind == NoteKind::Drawing {
+            Vec::new()
+        } else {
+            placeholder::parse(&note.content, &note.placeholder_values)
+        },
         attachment_count: 0,
         folder: None,
         search_hit: None,
@@ -494,8 +512,9 @@ pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {
         calc: Vec::new(),
         copy_text: match note.kind {
             NoteKind::Checklist => Some(checklist::to_markdown(&note.items)),
-            // A sheet's results are written in the language on screen: the front copies it.
-            NoteKind::Snippet | NoteKind::Note | NoteKind::Calc => None,
+            // A sheet's results are written in the language on screen: the front copies it. A
+            // drawing is no text to copy: it is exported.
+            NoteKind::Snippet | NoteKind::Note | NoteKind::Calc | NoteKind::Drawing => None,
         },
         truncated: false,
         note,
@@ -841,6 +860,41 @@ mod tests {
 
         assert_eq!(note.kind, NoteKind::Snippet);
         assert_eq!(note.language, Language::Sql);
+    }
+
+    const DRAWING: &str = r#"{"scene":{"objects":[{"type":"Textbox","text":"Fill {{host}}"}]}}"#;
+
+    /// Its scene is no text a card could draw: nothing of the body goes, and the card asks for
+    /// its picture.
+    #[test]
+    fn a_drawing_reaches_a_card_without_its_scene() {
+        let mut note = decorate(
+            Note {
+                kind: NoteKind::Drawing,
+                content: DRAWING.to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        assert_eq!(note.content, "");
+        assert!(note.truncated);
+    }
+
+    #[test]
+    fn a_drawing_reads_as_its_words_and_holds_no_field_to_fill() {
+        let note = Note {
+            kind: NoteKind::Drawing,
+            content: DRAWING.to_string(),
+            ..sample()
+        };
+
+        assert_eq!(note.readable_body(), "Fill {{host}}");
+        let shown = decorate(note, now());
+        assert!(shown.placeholders.is_empty());
+        assert_eq!(shown.copy_text, None);
     }
 
     /// Cut even when it fits, so the list never passes the words off as the Markdown.

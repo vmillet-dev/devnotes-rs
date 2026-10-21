@@ -37,6 +37,8 @@ export class NoteCardMenuComponent {
   readonly currentFolderId = input<string | null>(null);
   readonly pinned = input(false);
   readonly priority = input<Priority>('none');
+  /** `false` for a drawing, which is exported rather than copied. */
+  readonly copyable = input(true);
 
   readonly opened = output<void>();
   readonly pinToggled = output<void>();

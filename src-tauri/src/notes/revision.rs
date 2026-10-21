@@ -21,10 +21,11 @@ pub const KEEP: usize = 20;
 
 /// Whether the body a write replaces is worth keeping.
 ///
-/// Never a checklist — its items live in `note_items`, a second table to snapshot — and
-/// never an empty body: a new note's body always arrives as an update over an empty row.
+/// Never a checklist — its items live in `note_items`, a second table to snapshot — nor a
+/// drawing, whose scene reads as no text to compare, and never an empty body: a new note's
+/// body always arrives as an update over an empty row.
 pub(crate) fn worth_keeping(before: &Note, after: &Note) -> bool {
-    before.kind != NoteKind::Checklist
+    !matches!(before.kind, NoteKind::Checklist | NoteKind::Drawing)
         && after.content != before.content
         && !before.content.is_empty()
 }
@@ -147,6 +148,19 @@ mod tests {
         };
 
         assert!(!worth_keeping(&before, &snippet("select 2")));
+    }
+
+    #[test]
+    fn a_drawing_keeps_nothing() {
+        let drawing = |content| Note {
+            kind: NoteKind::Drawing,
+            ..snippet(content)
+        };
+
+        assert!(!worth_keeping(
+            &drawing(r#"{"scene":{}}"#),
+            &drawing(r#"{"scene":{"objects":[]}}"#)
+        ));
     }
 
     #[test]

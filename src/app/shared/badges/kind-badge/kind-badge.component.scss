@@ -25,3 +25,7 @@
 .is-calc {
   @include hue-badge(var(--pink));
 }
+
+.is-drawing {
+  @include hue-badge(var(--teal));
+}

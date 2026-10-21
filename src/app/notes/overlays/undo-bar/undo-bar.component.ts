@@ -20,6 +20,7 @@ const CONVERTED: Record<NoteKind, string> = {
   snippet: 'undo.convertedInto.snippet',
   checklist: 'undo.convertedInto.checklist',
   calc: 'undo.convertedInto.calc',
+  drawing: 'undo.convertedInto.drawing',
 };
 
 /** `role="status"` and not `alert`: a screen reader must not interrupt for this. */

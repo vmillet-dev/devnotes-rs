@@ -41,6 +41,7 @@ pub(crate) fn duplicate(
 
     library.transaction(|connection, vault| {
         store::insert_imported_in(connection, vault, &copy)?;
+        store::pictures::copy(connection, id, &copy.id)?;
         for attachment in &carried {
             attachments::store::create(connection, vault, attachment)?;
         }

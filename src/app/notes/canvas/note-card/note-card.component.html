@@ -93,6 +93,15 @@
           </li>
         }
       </ul>
+    } @else if (isDrawing() && !searchHit()) {
+      <!-- Rust answers a PNG data URI or nothing: an <img> runs nothing it is given. -->
+      @if (thumbnail(); as picture) {
+        <img class="card-drawing" data-testid="note-card-drawing" alt="" [src]="picture" />
+      } @else {
+        <span class="card-snippet card-hit" data-testid="note-card-drawing-empty">{{
+          'drawing.noPicture' | transloco
+        }}</span>
+      }
     } @else if (calcLines().length > 0 && !searchHit()) {
       <app-calc-lines [lines]="calcLines()" />
     } @else if (isNote() && !searchHit()) {
@@ -177,7 +186,7 @@
       >
         <span aria-hidden="true">⧉</span>
       </button>
-    } @else {
+    } @else if (!isDrawing()) {
       <app-copy-button [value]="copyText()" />
     }
 
@@ -189,6 +198,7 @@
       [currentFolderId]="note().folderId"
       [pinned]="note().pinned"
       [priority]="note().priority"
+      [copyable]="!isDrawing()"
       (opened)="onOpenFromMenu()"
       (pinToggled)="onTogglePin()"
       (copyRequested)="onCopy()"

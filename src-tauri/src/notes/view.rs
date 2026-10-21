@@ -1076,7 +1076,8 @@ mod tests {
                 (NoteKind::Snippet, 5),
                 (NoteKind::Note, 0),
                 (NoteKind::Checklist, 3),
-                (NoteKind::Calc, 0)
+                (NoteKind::Calc, 0),
+                (NoteKind::Drawing, 0)
             ]
         );
     }

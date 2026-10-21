@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use super::checklist::{self, ChecklistItem};
+use super::drawing;
 use super::kind::NoteKind;
 use super::language::{self, Language};
 use super::model::{DisplayNote, Note};
@@ -35,7 +36,9 @@ impl NoteBody {
 /// per line that is not blank. Only a snippet reads its text for a language.
 pub fn convert(note: &Note, into: NoteKind) -> NoteBody {
     let content = match (note.kind, into) {
-        (_, NoteKind::Checklist) => String::new(),
+        (NoteKind::Drawing, NoteKind::Drawing) => note.content.clone(),
+        (_, NoteKind::Checklist | NoteKind::Drawing) => String::new(),
+        (NoteKind::Drawing, _) => drawing::words(&note.content),
         (NoteKind::Checklist, NoteKind::Note) => checklist::to_markdown(&note.items),
         (NoteKind::Checklist, _) => note
             .items
@@ -47,6 +50,7 @@ pub fn convert(note: &Note, into: NoteKind) -> NoteBody {
     };
     let items = match (note.kind, into) {
         (NoteKind::Checklist, NoteKind::Checklist) => note.items.clone(),
+        (NoteKind::Drawing, NoteKind::Checklist) => items_of(&drawing::words(&note.content)),
         (_, NoteKind::Checklist) => items_of(&note.content),
         _ => Vec::new(),
     };
@@ -185,6 +189,29 @@ mod tests {
         );
         assert_eq!(back.content, sheet);
         assert_eq!(lines.content, "2 + 2");
+    }
+
+    /// Not offered from the menu: what Rust answers stays coherent all the same.
+    #[test]
+    fn a_drawing_gives_its_words_and_is_made_empty() {
+        let scene = r#"{"scene":{"objects":[{"text":"API"},{"text":"DB"}]}}"#;
+
+        let as_note = convert(&note_of(NoteKind::Drawing, scene), NoteKind::Note);
+        let as_list = convert(&note_of(NoteKind::Drawing, scene), NoteKind::Checklist);
+        let drawn = convert(&note_of(NoteKind::Note, "words"), NoteKind::Drawing);
+        let kept = convert(&note_of(NoteKind::Drawing, scene), NoteKind::Drawing);
+
+        assert_eq!(as_note.content, "API\nDB");
+        assert_eq!(
+            as_list
+                .items
+                .iter()
+                .map(|item| item.text.as_str())
+                .collect::<Vec<_>>(),
+            ["API", "DB"]
+        );
+        assert_eq!(drawn.content, "");
+        assert_eq!(kept.content, scene);
     }
 
     #[test]

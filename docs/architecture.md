@@ -1414,9 +1414,9 @@ previously lived only on the front (`isExpiringSoon`, 3 days) while the back sep
 computed `has_expiring_notes` — two definitions of "soon" behind a hint that reads "to triage
 soon". The section flag now derives from the same per-note value.
 
-### The four kinds of note
+### The five kinds of note
 
-A note is a `snippet`, a `note`, a `checklist` or a `calc` — a sheet, below — and `notes::kind::NoteKind` is a closed
+A note is a `snippet`, a `note`, a `checklist`, a `calc` — a sheet, below — or a `drawing`, and `notes::kind::NoteKind` is a closed
 enum for the same reason `Language` is: the front receives a generated union, so an unhandled
 variant stops compiling rather than surfacing at runtime.
 
@@ -1764,6 +1764,45 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   as an indented code block, or drops it after a line break. `@tiptap/markdown` decodes only
   four named entities, so `MarkdownWithTabs` wraps its `parse` and turns `&#9;` back into a
   tab. pulldown-cmark decodes it by itself for the cards.
+
+### A Dessin: a scene, and its pictures beside it
+
+A Dessin (`NoteKind::Drawing`) is drawn with Fabric.js (`drawing-editor/`, a chunk of its own,
+`@defer`red like TipTap). **Its body is the scene alone** — `{ version, scene }`, Fabric's
+own JSON — and Rust reads it only for its words (`notes::drawing::words`, the texts on it,
+through the groups): what a search matches and quotes, what a conversion or the Markdown share
+gives. It has no field (`{{x}}` written on it is words), no revision (a scene compares as no
+text), no copy (a card and the palette offer none: it is exported), and no conversion either
+way — the kind menu names it and offers nothing.
+
+- **⚠️ Its pictures are not in the body.** A list opens every body it searches, at every
+  keystroke; two PNGs are most of a drawing's bytes. They sit in `drawing_pictures`, one row
+  per drawing, both sealed as raw bytes, cascaded with the note: a small one for its card, a
+  large one for a Note that embeds it. The editor takes them only when it flushes — on blur and
+  on every closing path, never as it draws — and they go with the body in one patch
+  (`NotePatch.pictures`, validated as PNGs before the lock, written by `store::update_drawn`
+  in the patch's transaction; both empty takes them away). A new drawing's first pictures
+  follow the write that makes it (`NotesStore.editDraft`). A list sends none
+  (`cut_to_preview` clears the body): a card asks `drawing_thumbnail` once drawn, through
+  `DrawingPicturesStore`, kept until the drawing's next save (`updatedAt`); a duplicate takes
+  them, an export does not (the next save takes them again).
+- **What is drawn keeps its colours by name.** Each object carries a `hue` (ink, blue…),
+  painted from the tokens on `:root` (`paletteOf`), so a theme changed later redraws it; the
+  pictures are taken on the theme's paper (`--bg-1`). ⚠️ Fabric 7 places an object by its
+  centre: `left`/`top` are the middle of the box a drag covers.
+- **An arrow started or ended on a shape stays on its edge** (`from`/`to` ids, `ends`,
+  `boundEnds`): it follows the shape as it moves, and a shape removed lets go of it. A path's
+  box is read when it is made, so an arrow whose ends move is made again in its place.
+- **The editor**: a toolbar in the app's look (selection, rectangle, ellipse, diamond, arrow,
+  freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool,
+  then the selection, then leaves), a history of the scene's states, and an export as PNG or
+  SVG: the picture crosses as a data URI to `save_bytes`, as the base64 tool's bytes do. The
+  system's save dialog is the one step no e2e reaches (`__TAURI_INTERNALS__.invoke` is frozen).
+- **A Note embeds one by its id**: `![title](devnotes:drawing/<id>)`, the Markdown image of
+  TipTap's extension, drawn by a node view that asks `drawing_picture` (`rich-text-drawings.ts`);
+  the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose
+  list is `list_drawings` (titles only opened). Any other image stays as written: the CSP loads
+  nothing from elsewhere.
 
 ### A list sends previews, and the body is read by id
 

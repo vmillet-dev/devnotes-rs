@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { loadGrammar } from '@core/services/syntax/grammars';
 import type { Editor } from '@tiptap/core';
 import { DiagramResult, MermaidRenderer } from '@core/services/diagrams/mermaid-renderer';
+import { DrawingPicturesStore } from '@core/state/drawing-pictures.store';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { RichTextEditorComponent } from './rich-text-editor.component';
 
@@ -12,6 +13,9 @@ describe('RichTextEditorComponent', () => {
   /** What the editor asked to draw, and what drawing it gives. */
   let drawn: string[];
   let drawing: (source: string) => DiagramResult;
+  /** The drawings a Note can embed, and their pictures by id. */
+  let drawings: { id: string; title: string }[];
+  let pictures: Record<string, string>;
 
   async function open(content: string): Promise<void> {
     fixture.componentRef.setInput('content', content);
@@ -57,12 +61,21 @@ describe('RichTextEditorComponent', () => {
   }
 
   beforeEach(async () => {
+    drawings = [];
+    pictures = {};
     drawn = [];
     drawing = (source) => ({ svg: '<svg data-length="' + source.length + '"><text>drawn</text></svg>' });
     TestBed.configureTestingModule({
       imports: [RichTextEditorComponent],
       providers: [
         provideTranslocoTesting(),
+        {
+          provide: DrawingPicturesStore,
+          useValue: {
+            list: () => Promise.resolve(drawings),
+            picture: (id: string) => Promise.resolve(pictures[id] ?? null),
+          },
+        },
         {
           provide: MermaidRenderer,
           useValue: {
@@ -384,6 +397,57 @@ describe('RichTextEditorComponent', () => {
       await loadGrammar('sql');
       await fixture.whenStable();
       expect(surface().querySelector('pre .tok-keyword')?.textContent).toBe('SELECT');
+    });
+
+    describe('a drawing embedded', () => {
+      const embed = (): HTMLElement | null => surface().querySelector('[data-testid="rich-embed"]');
+
+      it('is drawn from its id, the Note holding only where to ask', async () => {
+        pictures['d1'] = 'data:image/png;base64,P';
+        await open('Before ![Archi](devnotes:drawing/d1) after');
+
+        await vi.waitFor(() =>
+          expect(embed()?.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,P'),
+        );
+        expect(embed()?.querySelector('img')?.getAttribute('alt')).toBe('Archi');
+        editor().commands.insertContentAt(1, 'x');
+        await fixture.whenStable();
+        expect(emitted.at(-1)).toBe('xBefore ![Archi](devnotes:drawing/d1) after');
+      });
+
+      it('says when the drawing is gone, under the title it had', async () => {
+        await open('![Archi](devnotes:drawing/gone)');
+
+        await vi.waitFor(() => expect(embed()?.textContent).toBe('Dessin introuvable · Archi'));
+        expect(embed()?.classList).toContain('is-missing');
+      });
+
+      it('leaves any other image as it was written, and loads nothing', async () => {
+        await open('![logo](https://example.com/logo.png)');
+
+        expect(embed()?.textContent).toBe('![logo](https://example.com/logo.png)');
+        expect(embed()?.querySelector('img')).toBeNull();
+      });
+
+      it('is inserted from the toolbar, by its id under its title', async () => {
+        drawings = [{ id: 'd1', title: 'Archi' }];
+        await mount('Plan');
+        expect(fixture.nativeElement.querySelector('[data-testid="rich-embed-drawing"]')).not.toBeNull();
+        editor().commands.setTextSelection(5);
+
+        fixture.nativeElement.querySelector('[data-testid="rich-embed-drawing"]').click();
+        await fixture.whenStable();
+        fixture.nativeElement
+          .querySelector('[data-testid="choice-panel-rich-drawing"] [data-option-id="d1"]')
+          .click();
+        await fixture.whenStable();
+
+        expect(emitted.at(-1)).toBe('Plan![Archi](devnotes:drawing/d1)');
+      });
+
+      it('is not offered while there is no drawing', () => {
+        expect(fixture.nativeElement.querySelector('[data-testid="rich-embed-drawing"]')).toBeNull();
+      });
     });
 
     describe('in Mermaid', () => {

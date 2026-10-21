@@ -13,6 +13,7 @@ use crate::attachments::model::Attachment;
 use crate::error::{StorageError, ValidationError};
 use crate::folders::model::Folder;
 use crate::notes::checklist;
+use crate::notes::drawing;
 use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
 use crate::notes::model::Note;
@@ -236,6 +237,10 @@ pub fn to_markdown(notes: &[Note], space_names: &BTreeMap<String, String>) -> St
             NoteKind::Note => {
                 let _ = writeln!(out, "{}", note.content.trim_end());
             }
+            // Its words: the scene is no text, and its pictures are not in the note.
+            NoteKind::Drawing => {
+                let _ = writeln!(out, "{}", drawing::words(&note.content));
+            }
             // The sheet alone: its results are computed where it is read.
             NoteKind::Calc => {
                 let fence = fence_for(&note.content);
@@ -288,6 +293,18 @@ mod tests {
 
         assert!(markdown.contains("## Standup\n\n- [x] ship it\n"));
         assert!(!markdown.contains("```"));
+    }
+
+    #[test]
+    fn a_drawing_is_shared_as_its_words() {
+        let mut note = sample();
+        note.kind = NoteKind::Drawing;
+        note.content = r#"{"scene":{"objects":[{"text":"API"},{"type":"Rect"}]}}"#.to_string();
+
+        let markdown = to_markdown(&[note], &spaces());
+
+        assert!(markdown.contains("\nAPI\n"));
+        assert!(!markdown.contains("scene"));
     }
 
     #[test]

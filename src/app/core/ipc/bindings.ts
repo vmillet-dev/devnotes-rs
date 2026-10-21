@@ -11,6 +11,15 @@ export const commands = {
 	 *  every copy of a long body read it here.
 	 */
 	getNote: (id: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("get_note", { id })),
+	/**  A Dessin's large picture, for a Note that embeds it by its id. */
+	drawingPicture: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("drawing_picture", { id })),
+	/**
+	 *  A Dessin's small picture, for its card, which asks for it once it is drawn: a list sends
+	 *  none, so that a search opens no picture. `None` when there is none to show.
+	 */
+	drawingThumbnail: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("drawing_thumbnail", { id })),
+	/**  The drawings a Note can embed, by title: their titles alone are opened. */
+	listDrawings: () => typedError<DrawingRef[], AppError>(__TAURI_INVOKE("list_drawings")),
 	createNote: (draft: NoteDraft) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("create_note", { draft })),
 	/**
 	 *  A copy to start another note from, attachments included and history left behind. The
@@ -1348,6 +1357,22 @@ export type DisplayNote = {
 	 */
 	calc: CalcCardLine[],
 } & Note;
+
+/**
+ *  The two pictures the front takes of a drawing when it saves it, as PNG data URIs: a small
+ *  one for its card, a large one for a Note that embeds it. Both empty: the drawing was emptied,
+ *  and has no picture any more.
+ */
+export type DrawingPictures = {
+	thumbnail: string,
+	picture: string,
+};
+
+/**  A drawing a Note can embed: what its menu names it by. */
+export type DrawingRef = {
+	id: string,
+	title: string,
+};
 
 export type DurationAnswer = { kind: "read"; negative: boolean; parts: DurationParts; iso: string; 
 /**  Typed as words, « 1h30 », rather than in ISO 8601. */
@@ -2712,7 +2737,9 @@ export type NoteKind =
 /**  Prose, written in the rich editor and stored as Markdown. */
 "note" | "checklist" | 
 /**  A sheet: one result a line, computed when it is read and never stored. */
-"calc";
+"calc" | 
+/**  A sketch: the scene the front draws and the pictures it made of it, one JSON body. */
+"drawing";
 
 export type NoteLifecycle = { kind: "permanent" } | { kind: "expires"; at: string };
 
@@ -2738,6 +2765,8 @@ export type NotePatch = {
 	kind?: NoteKind | null,
 	/**  Replaces the whole list, like `tags`: a position is all the identity an item has. */
 	items?: ChecklistItem[] | null,
+	/**  A Dessin's two pictures, taken as it is saved; written beside the body, not in it. */
+	pictures?: DrawingPictures | null,
 };
 
 /**  Where a note sat before a batch moved it — the only thing that can put it back. */

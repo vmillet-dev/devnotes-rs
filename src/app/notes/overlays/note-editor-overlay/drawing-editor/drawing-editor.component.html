@@ -1,0 +1,111 @@
+<div class="drawing">
+  <div class="drawing-tools" role="toolbar" [attr.aria-label]="'drawing.tools' | transloco">
+    <div class="tool-group">
+      @for (entry of tools; track entry.id) {
+        <button
+          type="button"
+          class="tool"
+          data-testid="drawing-tool"
+          [attr.data-tool]="entry.id"
+          [class.on]="entry.id === tool()"
+          [attr.aria-pressed]="entry.id === tool()"
+          [attr.aria-label]="'drawing.' + entry.id | transloco"
+          [attr.title]="'drawing.' + entry.id | transloco"
+          (click)="choose(entry.id)"
+        >
+          <span aria-hidden="true">{{ entry.glyph }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="tool-group" role="radiogroup" [attr.aria-label]="'drawing.colours' | transloco">
+      @for (each of hues; track each) {
+        <button
+          type="button"
+          role="radio"
+          data-testid="drawing-hue"
+          [attr.data-hue]="each"
+          [class]="'swatch is-' + each"
+          [class.on]="each === hue()"
+          [attr.aria-checked]="each === hue()"
+          [attr.aria-label]="'drawing.colour.' + each | transloco"
+          [attr.title]="'drawing.colour.' + each | transloco"
+          (click)="pick(each)"
+        ></button>
+      }
+    </div>
+
+    <div class="tool-group">
+      <button
+        type="button"
+        class="tool"
+        data-testid="drawing-undo"
+        [disabled]="!canUndo()"
+        [attr.aria-label]="'drawing.undo' | transloco"
+        [attr.title]="'drawing.undo' | transloco"
+        (click)="undo()"
+      >
+        <span aria-hidden="true">↶</span>
+      </button>
+      <button
+        type="button"
+        class="tool"
+        data-testid="drawing-redo"
+        [disabled]="!canRedo()"
+        [attr.aria-label]="'drawing.redo' | transloco"
+        [attr.title]="'drawing.redo' | transloco"
+        (click)="redo()"
+      >
+        <span aria-hidden="true">↷</span>
+      </button>
+      <button
+        type="button"
+        class="tool tool-delete"
+        data-testid="drawing-delete"
+        [attr.aria-label]="'drawing.remove' | transloco"
+        [attr.title]="'drawing.remove' | transloco"
+        (click)="remove()"
+      >
+        <span aria-hidden="true">🗑</span>
+      </button>
+    </div>
+
+    <div class="tool-group tool-exports">
+      <button
+        type="button"
+        class="export"
+        data-testid="drawing-export"
+        data-format="png"
+        [disabled]="empty()"
+        (click)="export('png')"
+      >
+        {{ 'drawing.exportPng' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="export"
+        data-testid="drawing-export"
+        data-format="svg"
+        [disabled]="empty()"
+        (click)="export('svg')"
+      >
+        {{ 'drawing.exportSvg' | transloco }}
+      </button>
+    </div>
+  </div>
+
+  <!-- The stage takes the keys: a canvas has no focus of its own to give. -->
+  <div
+    #stage
+    class="drawing-stage"
+    tabindex="0"
+    data-testid="drawing-stage"
+    [attr.data-shapes]="shapes()"
+    [attr.aria-label]="'drawing.label' | transloco: { title: title() }"
+  >
+    <canvas #canvas data-testid="drawing-canvas"></canvas>
+    @if (empty()) {
+      <p class="drawing-hint" aria-hidden="true">{{ 'drawing.empty' | transloco }}</p>
+    }
+  </div>
+</div>

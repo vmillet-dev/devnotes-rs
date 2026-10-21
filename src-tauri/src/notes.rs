@@ -3,6 +3,7 @@
 pub mod calc;
 pub mod checklist;
 pub mod convert;
+pub(crate) mod drawing;
 pub(crate) mod duplicate;
 pub mod kind;
 pub mod language;
@@ -29,6 +30,7 @@ use language::Language;
 use model::{DisplayNote, NoteDraft, NotePatch, SampleNote, TagUsage};
 use priority::Priority;
 use revision::{DiffLine, Revision};
+use store::pictures;
 use trash::TrashedNote;
 use view::{NotesQuery, NotesView};
 
@@ -71,6 +73,54 @@ pub async fn get_note<R: Runtime>(id: String, app: AppHandle<R>) -> Result<Displ
         let note = store::get(&mut connection, &id)?;
 
         Ok(display(&mut connection, note)?)
+    })
+    .await
+}
+
+/// A Dessin's small picture, for its card, which asks for it once it is drawn: a list sends
+/// none, so that a search opens no picture. `None` when there is none to show.
+#[tauri::command]
+#[specta::specta]
+pub async fn drawing_thumbnail<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<Option<String>, AppError> {
+    picture_of(app, id, pictures::Which::Thumbnail).await
+}
+
+/// A Dessin's large picture, for a Note that embeds it by its id.
+#[tauri::command]
+#[specta::specta]
+pub async fn drawing_picture<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<Option<String>, AppError> {
+    picture_of(app, id, pictures::Which::Picture).await
+}
+
+/// The drawings a Note can embed, by title: their titles alone are opened.
+#[tauri::command]
+#[specta::specta]
+pub async fn list_drawings<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<Vec<drawing::DrawingRef>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+        let (connection, vault) = connection.split();
+        Ok(pictures::drawings(connection, vault)?)
+    })
+    .await
+}
+
+async fn picture_of<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    which: pictures::Which,
+) -> Result<Option<String>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+        let (connection, vault) = connection.split();
+        Ok(pictures::read(connection, vault, &id, which)?)
     })
     .await
 }
@@ -182,9 +232,22 @@ pub async fn update_note<R: Runtime>(
     patch: NotePatch,
     app: AppHandle<R>,
 ) -> Result<DisplayNote, AppError> {
+    // Read before anything is locked: two PNGs, or the patch is refused.
+    let drawn = patch
+        .pictures
+        .as_ref()
+        .map(drawing::DrawingPictures::decoded)
+        .transpose()?;
+    // `Some(None)`: the pictures are taken away, the drawing having been emptied.
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
-        let note = store::update(&mut connection, &id, &patch, Utc::now())?;
+        let note = store::update_drawn(
+            &mut connection,
+            &id,
+            &patch,
+            drawn.as_ref().map(Option::as_ref),
+            Utc::now(),
+        )?;
 
         Ok(display(&mut connection, note)?)
     })

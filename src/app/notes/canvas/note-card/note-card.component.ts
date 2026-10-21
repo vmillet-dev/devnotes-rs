@@ -7,11 +7,13 @@ import {
   inject,
   input,
   output,
+  resource,
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { checklistProgress } from '@core/model/checklist.model';
 import { Note, Priority } from '@core/model/note.model';
+import { DrawingPicturesStore } from '@core/state/drawing-pictures.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
@@ -135,6 +137,23 @@ export class NoteCardComponent {
 
   protected readonly isChecklist = computed(() => this.note().kind === 'checklist');
   protected readonly isNote = computed(() => this.note().kind === 'note');
+  /** A drawing is no text to copy: it is exported from its editor. */
+  protected readonly isDrawing = computed(() => this.note().kind === 'drawing');
+
+  private readonly pictures = inject(DrawingPicturesStore);
+  /** Its last save names it: the same drawing saved again asks again. */
+  private readonly drawingKey = computed(
+    () => (this.isDrawing() ? { id: this.note().id, stamp: this.note().updatedAt.toISOString() } : undefined),
+    { equal: (a, b) => a?.id === b?.id && a?.stamp === b?.stamp },
+  );
+  private readonly thumbnailResource = resource({
+    params: () => this.drawingKey(),
+    loader: ({ params }) => this.pictures.thumbnail(params.id, params.stamp),
+  });
+  /** A drawing's picture, asked for once the card is drawn: a list carries none. */
+  protected readonly thumbnail = computed(() =>
+    this.thumbnailResource.hasValue() ? this.thumbnailResource.value() : null,
+  );
   /** A sheet that gave something shows its last results; an empty one, its text like any other. */
   protected readonly calcLines = computed(() => (this.note().kind === 'calc' ? this.note().calc : []));
   protected readonly progress = computed(() => checklistProgress(this.note().items));

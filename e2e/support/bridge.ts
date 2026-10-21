@@ -6,6 +6,8 @@ import { SCRIPT_TIMEOUT, SLOW_SCRIPT_TIMEOUT } from './timeouts.js';
 
 import type {
   Attachment,
+  DecodeRequest,
+  SavedBytes,
   Base64FileAnswer,
   CalcSheet,
   DisplayNote,
@@ -180,6 +182,10 @@ export const bridge = {
   updateNote: (id: string, patch: NotePatch) => invoke<DisplayNote>('update_note', { id, patch }),
   /** The whole body, as stored: a list sends a Note's words without their Markdown. */
   getNote: (id: string) => invoke<DisplayNote>('get_note', { id }),
+  /** A drawing's large picture, as its editor took it in the WebView. */
+  drawingPicture: (id: string) => invoke<string | null>('drawing_picture', { id }),
+  /** What an export writes once the system's save dialog has answered, which no driver reaches. */
+  saveBytes: (request: DecodeRequest, path: string) => invoke<SavedBytes>('save_bytes', { request, path }),
   deleteNote: (id: string) => invoke<null>('delete_note', { id }),
 
   /** The batch commands answer with a count: a selection can hold an id that went stale. */

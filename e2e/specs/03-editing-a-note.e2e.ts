@@ -1,4 +1,7 @@
 import { $, $$, browser, expect } from '@wdio/globals';
+import { readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
@@ -595,6 +598,80 @@ describe('Editing a note', () => {
       await editor.close();
       await bridge.deleteNotes([id]);
       await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
+    /**
+     * Drawn in the app, kept as its scene, shown on its card from a picture kept beside it,
+     * written as a PNG, and embedded in a Note by its id alone.
+     */
+    it('draws in a drawing, shows it on its card, writes its PNG and embeds it in a Note', async () => {
+      const title = 'Archi';
+      const id = (await bridge.createNote(draft({ spaceId, title, content: '', kind: 'drawing' }))).id;
+      await reloadCanvas();
+      await canvas.waitForCard(title);
+      await canvas.openNote(title);
+      const upper = `${testid('drawing-stage')} .upper-canvas`;
+      await $(upper).waitForExist({ timeout: 10_000 });
+
+      await $(`${testid('drawing-tool')}[data-tool="rectangle"]`).click();
+      // Fabric hears the press on its canvas, then the moves and the release on the document.
+      await browser.execute((selector: string) => {
+        const canvasElement = document.querySelector(selector) as HTMLElement;
+        const box = canvasElement.getBoundingClientRect();
+        const send = (type: string, target: EventTarget, x: number, y: number) =>
+          target.dispatchEvent(
+            new MouseEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              button: 0,
+              clientX: box.left + x,
+              clientY: box.top + y,
+            }),
+          );
+        send('mousedown', canvasElement, 40, 40);
+        send('mousemove', document, 160, 110);
+        send('mouseup', document, 160, 110);
+      }, upper);
+      await eventually(
+        () => $(testid('drawing-stage')).getAttribute('data-shapes'),
+        (shapes) => shapes === '1',
+        'a rectangle drawn',
+      );
+
+      await editor.close();
+      await eventually(
+        async () => (await bridge.getNote(id)).content,
+        (content) => content.includes('"Rect"'),
+        'the scene saved as the body',
+      );
+      await reloadCanvas();
+      await $(testid('note-card-drawing')).waitForExist({ timeout: 10_000 });
+
+      // The picture the WebView took, written as an export writes it: the system's save dialog
+      // is the one step no driver reaches.
+      const picture = (await bridge.drawingPicture(id)) ?? '';
+      expect(picture.startsWith('data:image/png;base64,')).toBe(true);
+      const target = join(tmpdir(), `devnotes-e2e-drawing-${process.pid}.png`);
+      expect(await bridge.saveBytes({ text: picture, reading: null }, target)).toMatchObject({
+        kind: 'saved',
+      });
+      expect(readFileSync(target).subarray(1, 4).toString('latin1')).toBe('PNG');
+      rmSync(target, { force: true });
+
+      const noteTitle = 'Architecture';
+      const content = `See:\n\n![Archi](devnotes:drawing/${id})`;
+      const noteId = (await bridge.createNote(draft({ spaceId, title: noteTitle, content, kind: 'note' })))
+        .id;
+      await reloadCanvas();
+      await canvas.waitForCard(noteTitle);
+      await canvas.openNote(noteTitle);
+      await $(`${testid('rich-embed')} img`).waitForExist({ timeout: 10_000 });
+      await editor.close();
+
+      expect((await bridge.getNote(noteId)).content).toBe(content);
+      await bridge.deleteNotes([id, noteId]);
+      await bridge.purgeNotes([id, noteId]);
       await reloadCanvas();
     });
 

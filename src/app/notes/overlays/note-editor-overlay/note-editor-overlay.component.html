@@ -73,7 +73,7 @@
             <span aria-hidden="true">⚡</span>
             <span class="btn-label">{{ 'placeholders.copy' | transloco }}</span>
           </button>
-        } @else {
+        } @else if (!isDrawing()) {
           <app-copy-button [value]="copyText()" [showLabel]="true" />
         }
         <button
@@ -218,14 +218,21 @@
              (`NotePatch::apply`), and a folder control on its own would lie about that. -->
         <div class="overlay-placement" data-testid="editor-placement">
           <span class="placement-label">{{ 'editor.kind.label' | transloco }}</span>
-          <app-choice-menu
-            [kind]="'note-kind'"
-            [naming]="'label'"
-            [triggerTestId]="'editor-kind'"
-            [label]="'editor.kind.' + note.kind | transloco"
-            [options]="kindChoices()"
-            (chosen)="convertTo($event)"
-          />
+          <!-- A drawing turns into nothing else, nor anything into a drawing: it is named only. -->
+          @if (isDrawing()) {
+            <span class="placement-kind" data-testid="editor-kind">{{
+              'editor.kind.drawing' | transloco
+            }}</span>
+          } @else {
+            <app-choice-menu
+              [kind]="'note-kind'"
+              [naming]="'label'"
+              [triggerTestId]="'editor-kind'"
+              [label]="'editor.kind.' + note.kind | transloco"
+              [options]="kindChoices()"
+              (chosen)="convertTo($event)"
+            />
+          }
           <span class="placement-label next">{{ 'editor.placementLabel' | transloco }}</span>
           <app-choice-menu
             [kind]="'space'"
@@ -386,6 +393,21 @@
           } @placeholder {
             <div class="rich-text-loading" aria-hidden="true"></div>
           }
+        } @else if (isDrawing()) {
+          <!-- Deferred: Fabric is loaded the first time a drawing opens, not at startup. -->
+          @defer (on immediate) {
+            <app-drawing-editor
+              #drawingEditor
+              [content]="draftContent()"
+              [title]="draftTitle()"
+              (changed)="draftContent.set($event)"
+              (pictured)="draftPictures.set($event)"
+              (blurred)="commitContent()"
+              (counted)="drawingShapes.set($event)"
+            />
+          } @placeholder {
+            <div class="rich-text-loading" aria-hidden="true"></div>
+          }
         } @else if (isCalc()) {
           <!-- Deferred: CodeMirror is loaded the first time a sheet opens, not at startup. -->
           @defer (on immediate) {
@@ -490,6 +512,8 @@
           }}
         } @else if (isRichText()) {
           {{ 'editor.noteStats' | transloco: { count: wordCount() } }}
+        } @else if (isDrawing()) {
+          {{ 'editor.drawingStats' | transloco: { count: drawingShapes() } }}
         } @else {
           {{ isCalc() ? ('notes.kindTag.calc' | transloco) : languageLabel() }} ·
           {{ 'editor.footerStats' | transloco: { lines: lineCount(), bytes: byteSize(), eol: lineEnding() } }}

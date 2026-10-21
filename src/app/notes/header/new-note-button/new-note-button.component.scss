@@ -104,6 +104,10 @@
   &[data-kind='calc'] {
     @include hue-badge(var(--pink));
   }
+
+  &[data-kind='drawing'] {
+    @include hue-badge(var(--teal));
+  }
 }
 
 .kind-text {

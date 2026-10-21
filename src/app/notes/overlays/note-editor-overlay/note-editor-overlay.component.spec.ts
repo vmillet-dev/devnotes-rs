@@ -28,6 +28,8 @@ import { FakeJsonRepository } from '@testing/fake-json-repository';
 import { JSON_TEXT, jsonView } from '@testing/json-view.fixture';
 import { EditorView } from '@codemirror/view';
 import { CodeEditorComponent } from './code-editor/code-editor.component';
+import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
+import { DrawingEditorComponent } from './drawing-editor/drawing-editor.component';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 
@@ -1005,6 +1007,74 @@ describe('NoteEditorOverlayComponent', () => {
 
       expect(tab('code')).toBeNull();
       expect(codeField()).not.toBeNull();
+    });
+  });
+
+  describe('a drawing', () => {
+    const PICTURES = { thumbnail: 'data:image/png;base64,T', picture: 'data:image/png;base64,P' };
+
+    function drawingEditor(): DrawingEditorComponent {
+      return fixture.debugElement.query(By.directive(DrawingEditorComponent))
+        .componentInstance as DrawingEditorComponent;
+    }
+
+    async function openDrawing(): Promise<NotePatch[]> {
+      const patches: NotePatch[] = [];
+      asked.patches.push((patch) => patches.push(patch));
+      fixture.componentRef.setInput('note', createNote({ kind: 'drawing', language: 'txt', content: '' }));
+      await fixture.whenStable();
+      await vi.waitFor(() =>
+        expect(fixture.debugElement.query(By.directive(DrawingEditorComponent))).not.toBeNull(),
+      );
+      return patches;
+    }
+
+    it('is drawn in its editor, named as a drawing, with nothing to copy nor convert', async () => {
+      await openDrawing();
+
+      expect(codeField()).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="editor-kind"]').textContent.trim()).toBe(
+        'Dessin',
+      );
+      expect(fixture.debugElement.query(By.directive(CopyButtonComponent))).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="editor-present"]')).toBeNull();
+      await vi.waitFor(() =>
+        expect(fixture.nativeElement.querySelector('[data-testid="editor-stats"]').textContent.trim()).toBe(
+          'Dessin vide',
+        ),
+      );
+    });
+
+    it('writes its body and its pictures together once its editor is left', async () => {
+      const patches = await openDrawing();
+      const editor = drawingEditor();
+
+      editor.changed.emit('{"version":1,"scene":{"objects":[{}]}}');
+      editor.pictured.emit(PICTURES);
+      editor.counted.emit(1);
+      editor.blurred.emit();
+      await fixture.whenStable();
+
+      expect(patches.at(-1)).toEqual({
+        content: '{"version":1,"scene":{"objects":[{}]}}',
+        pictures: PICTURES,
+      });
+      expect(fixture.nativeElement.querySelector('[data-testid="editor-stats"]').textContent.trim()).toBe(
+        '1 forme',
+      );
+
+      editor.blurred.emit();
+      expect(patches.at(-1)).toEqual({ content: '{"version":1,"scene":{"objects":[{}]}}' });
+    });
+
+    it('takes what is still being drawn when it closes', async () => {
+      await openDrawing();
+      const flush = vi.spyOn(drawingEditor(), 'flush');
+
+      fixture.nativeElement.querySelector('[data-testid="editor-close"]').click();
+
+      expect(flush).toHaveBeenCalled();
+      expect(asked.closes).toBe(1);
     });
   });
 

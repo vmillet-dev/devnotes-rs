@@ -12,6 +12,8 @@ closed_enum! {
         Checklist = "checklist",
         /// A sheet: one result a line, computed when it is read and never stored.
         Calc = "calc",
+        /// A sketch: the scene the front draws and the pictures it made of it, one JSON body.
+        Drawing = "drawing",
     }
 }
 
