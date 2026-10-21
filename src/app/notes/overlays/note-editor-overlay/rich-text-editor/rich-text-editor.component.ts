@@ -14,19 +14,21 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { LanguageTag, isLanguageTag } from '@core/model/language.model';
+import { MERMAID, MermaidRenderer } from '@core/services/diagrams/mermaid-renderer';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import type { IndentChoice } from '@core/services/settings/app-settings.model';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
-import { ChoiceMenuComponent } from '@shared/controls/choice-menu/choice-menu.component';
+import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { indentUnit } from '../indentation';
 import { SearchBarComponent } from '../search/search-bar/search-bar.component';
 import { readSearchOptions } from '../search/search-options';
 import { SearchSpec, SearchTarget } from '../search/search-target';
 import { createRichEditor, focusFirst, languageOf } from './rich-text.engine';
+import { MERMAID_LABEL, isDiagram } from './rich-text-diagrams';
 import { richTextSearch, searchKeyOf, searchSpecOf, setSearchSpec } from './rich-text-search';
 import { LANGUAGE_CHOICES } from '../language-choices';
 
@@ -91,6 +93,15 @@ const TOOLS: readonly (readonly Tool[])[] = [
   ],
 ];
 
+/** A code block's language, or the diagram a Note draws from its code. */
+type BlockLanguage = LanguageTag | typeof MERMAID;
+
+/** The formats a code block offers, and first the one a Note draws. */
+const BLOCK_LANGUAGES: readonly ChoiceOption[] = [
+  { id: MERMAID, name: MERMAID_LABEL, hint: 'Mermaid' },
+  ...LANGUAGE_CHOICES,
+];
+
 /** Shown while the caret is in a table, and only then. */
 const TABLE_TOOLS: readonly Tool[] = [
   { action: 'rowAfter', labelKey: 'editor.rich.addRow' },
@@ -141,7 +152,7 @@ export class RichTextEditorComponent {
 
   protected readonly tools = TOOLS;
   protected readonly tableTools = TABLE_TOOLS;
-  protected readonly codeLanguages = LANGUAGE_CHOICES;
+  protected readonly codeLanguages = BLOCK_LANGUAGES;
 
   /** The words and the address being typed, while the link form is open. */
   protected readonly linkForm = signal<LinkForm | null>(null);
@@ -160,6 +171,8 @@ export class RichTextEditorComponent {
   private readonly linkAddressField = viewChild<ElementRef<HTMLInputElement>>('linkAddressField');
   private readonly searchBar = viewChild(SearchBarComponent);
   private readonly preferences = inject(PreferencesService);
+  private readonly diagrams = inject(MermaidRenderer);
+  private readonly transloco = inject(TranslocoService);
   /** The query the bar had when it closed: reopened, it shows it again, as the code field does. */
   private lastSearch: SearchSpec | null = null;
   private readonly injector = inject(Injector);
@@ -175,10 +188,11 @@ export class RichTextEditorComponent {
   });
 
   /** The block the caret is in, when it is a code block: its language is chosen above it. */
-  protected readonly codeLanguage = computed<LanguageTag | null>(() => {
+  protected readonly codeLanguage = computed<BlockLanguage | null>(() => {
     this.revision();
     const parent = this.editor?.state.selection.$from.parent;
-    return parent?.type.name === 'codeBlock' ? languageOf(parent) : null;
+    if (parent?.type.name !== 'codeBlock') return null;
+    return isDiagram(parent) ? MERMAID : languageOf(parent);
   });
 
   constructor() {
@@ -200,6 +214,14 @@ export class RichTextEditorComponent {
         click: (event, href) => this.onClick(event, href),
         keydown: (event) => this.onKeydown(event),
         indent: (language) => indentUnit(this.codeIndent(), language),
+        diagrams: {
+          draw: (source) => this.diagrams.render(source),
+          title: () => this.transloco.translate('editor.rich.diagram.edit'),
+          failed: (line) =>
+            line === null
+              ? this.transloco.translate('editor.rich.diagram.failed')
+              : this.transloco.translate('editor.rich.diagram.failedAt', { line }),
+        },
       });
       this.search = richTextSearch(this.editor, {
         find: () => this.openSearch(false),
@@ -299,13 +321,14 @@ export class RichTextEditorComponent {
     }
   }
 
-  /** On a link, the whole link; otherwise the selection, whose words the form starts from. */
   /** `txt` is no language at all: the fence is written bare. */
   protected setCodeLanguage(value: string | null): void {
-    const language = value !== null && isLanguageTag(value) && value !== 'txt' ? value : null;
+    const language =
+      value === MERMAID || (value !== null && isLanguageTag(value) && value !== 'txt') ? value : null;
     this.chain()?.updateAttributes('codeBlock', { language }).run();
   }
 
+  /** On a link, the whole link; otherwise the selection, whose words the form starts from. */
   protected openLinkForm(): void {
     const editor = this.editor;
     if (!editor) return;

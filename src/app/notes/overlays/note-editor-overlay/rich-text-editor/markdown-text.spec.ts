@@ -13,6 +13,7 @@ const NO_HOOKS = {
   click: () => false,
   keydown: () => false,
   indent: () => '  ',
+  diagrams: { draw: () => Promise.resolve({ svg: '' }), title: () => '', failed: () => '' },
 };
 
 describe('escapeMarkdownText', () => {

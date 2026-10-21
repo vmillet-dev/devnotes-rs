@@ -2,12 +2,16 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadGrammar } from '@core/services/syntax/grammars';
 import type { Editor } from '@tiptap/core';
+import { DiagramResult, MermaidRenderer } from '@core/services/diagrams/mermaid-renderer';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { RichTextEditorComponent } from './rich-text-editor.component';
 
 describe('RichTextEditorComponent', () => {
   let fixture: ComponentFixture<RichTextEditorComponent>;
   let emitted: string[];
+  /** What the editor asked to draw, and what drawing it gives. */
+  let drawn: string[];
+  let drawing: (source: string) => DiagramResult;
 
   async function open(content: string): Promise<void> {
     fixture.componentRef.setInput('content', content);
@@ -53,9 +57,22 @@ describe('RichTextEditorComponent', () => {
   }
 
   beforeEach(async () => {
+    drawn = [];
+    drawing = (source) => ({ svg: '<svg data-length="' + source.length + '"><text>drawn</text></svg>' });
     TestBed.configureTestingModule({
       imports: [RichTextEditorComponent],
-      providers: [provideTranslocoTesting()],
+      providers: [
+        provideTranslocoTesting(),
+        {
+          provide: MermaidRenderer,
+          useValue: {
+            render: (source: string) => {
+              drawn.push(source);
+              return Promise.resolve(drawing(source));
+            },
+          },
+        },
+      ],
     });
     await mount('');
   });
@@ -367,6 +384,130 @@ describe('RichTextEditorComponent', () => {
       await loadGrammar('sql');
       await fixture.whenStable();
       expect(surface().querySelector('pre .tok-keyword')?.textContent).toBe('SELECT');
+    });
+
+    describe('in Mermaid', () => {
+      const FLOW = '~~~mermaid\ngraph TD\nA-->B\n~~~'.replaceAll('~~~', '```');
+      const diagram = (): HTMLElement | null => surface().querySelector('[data-testid="rich-diagram"]');
+      const block = (): HTMLElement => surface().querySelector('pre')!;
+
+      /** jsdom does not focus an editable element: the event TipTap listens to is sent by hand. */
+      async function focusAt(position: number): Promise<void> {
+        editor().commands.setTextSelection(position);
+        surface().dispatchEvent(new FocusEvent('focus'));
+        await fixture.whenStable();
+      }
+
+      afterEach(() => {
+        delete document.documentElement.dataset['theme'];
+      });
+
+      it('is drawn under its code, which folds away from the caret', async () => {
+        await open(FLOW);
+
+        await vi.waitFor(() => expect(diagram()?.querySelector('svg')).not.toBeNull());
+        expect(drawn).toEqual(['graph TD\nA-->B']);
+        expect(block().classList).toContain('is-folded');
+        expect(block().getAttribute('data-language')).toBe('MERMAID');
+        expect(diagram()!.title).toBe('Cliquer pour modifier le code du diagramme');
+      });
+
+      it('unfolds while the caret is in it, and is drawn again once the keys pause', async () => {
+        await open(`${FLOW}\n\nafter`);
+        await vi.waitFor(() => expect(drawn).toHaveLength(1));
+        await focusAt(3);
+        expect(block().classList).not.toContain('is-folded');
+
+        editor().commands.insertContent('C');
+        await fixture.whenStable();
+
+        expect(diagram()?.querySelector('svg')).not.toBeNull();
+        await vi.waitFor(() => expect(drawn).toHaveLength(2));
+        expect(drawn[1]).toContain('C');
+      });
+
+      it('folds again once the editor is left', async () => {
+        await open(`${FLOW}\n\nafter`);
+        await focusAt(3);
+        expect(block().classList).not.toContain('is-folded');
+
+        surface().dispatchEvent(new FocusEvent('blur'));
+        await fixture.whenStable();
+
+        expect(block().classList).toContain('is-folded');
+      });
+
+      it('goes back to its code when the drawing is pressed', async () => {
+        await open(`${FLOW}\n\nafter`);
+        await vi.waitFor(() => expect(diagram()?.querySelector('svg')).not.toBeNull());
+
+        diagram()!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+        await fixture.whenStable();
+
+        expect(editor().state.selection.$from.parent.attrs['language']).toBe('mermaid');
+        expect(languagePicker()?.textContent).toContain('MERMAID');
+      });
+
+      it('says on which line a diagram cannot be read, and what Mermaid found', async () => {
+        drawing = () => ({ error: 'Parse error on line 2', line: 2 });
+        await open(FLOW);
+
+        await vi.waitFor(() =>
+          expect(diagram()?.querySelector('.rich-diagram-error')?.textContent).toBe(
+            'Le diagramme ne se lit pas, ligne 2.',
+          ),
+        );
+        expect(diagram()!.classList).toContain('is-failed');
+        expect(diagram()!.querySelector('.rich-diagram-detail')?.textContent).toBe('Parse error on line 2');
+      });
+
+      it('says it cannot be read when Mermaid names no line', async () => {
+        drawing = () => ({ error: 'No diagram type detected', line: null });
+        await open(FLOW);
+
+        await vi.waitFor(() =>
+          expect(diagram()?.querySelector('.rich-diagram-error')?.textContent).toBe(
+            'Le diagramme ne se lit pas.',
+          ),
+        );
+      });
+
+      it('is drawn again in the colours of a theme changed meanwhile', async () => {
+        await open(FLOW);
+        await vi.waitFor(() => expect(drawn).toHaveLength(1));
+
+        document.documentElement.dataset['theme'] = 'light';
+
+        await vi.waitFor(() => expect(drawn).toHaveLength(2));
+      });
+
+      it('draws nothing for an empty block, nor for one gone before its turn', async () => {
+        await open(FLOW.replace('graph TD\nA-->B\n', ''));
+        editor().commands.setContent(FLOW, { contentType: 'markdown' });
+        editor().commands.setContent('plain', { contentType: 'markdown' });
+        await new Promise((resolve) => setTimeout(resolve, 20));
+
+        expect(drawn).toEqual([]);
+        expect(diagram()).toBeNull();
+      });
+
+      it('is offered first among the languages, and written in its fence', async () => {
+        const plain = FLOW.replace('mermaid', '').replace('A-->B\n', '');
+        await open(`${plain}\n\nafter`);
+        editor().commands.setTextSelection(3);
+        await fixture.whenStable();
+
+        languagePicker()!.click();
+        await fixture.whenStable();
+        const first = fixture.nativeElement.querySelector(
+          '[data-testid="choice-panel-rich-code-language"] [data-option-id]',
+        );
+        expect(first?.getAttribute('data-option-id')).toBe('mermaid');
+        first.click();
+        await fixture.whenStable();
+
+        expect(emitted.at(-1)).toBe(`${FLOW.replace('A-->B\n', '')}\n\nafter`);
+      });
     });
 
     /** The code field's level, not the prose's tab. */

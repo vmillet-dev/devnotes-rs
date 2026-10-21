@@ -324,7 +324,12 @@
       "linkAddress": "Adresse du lien",
       "linkApply": "Appliquer",
       "linkHint": "Une adresse vide retire le lien · Ctrl+clic l’ouvre",
-      "linkOpen": "Ctrl+clic pour ouvrir"
+      "linkOpen": "Ctrl+clic pour ouvrir",
+      "diagram": {
+        "edit": "Cliquer pour modifier le code du diagramme",
+        "failed": "Le diagramme ne se lit pas.",
+        "failedAt": "Le diagramme ne se lit pas, ligne {{line}}."
+      }
     },
     "languageLabel": "Format du contenu",
     "placementLabel": "Emplacement",
@@ -1092,7 +1097,7 @@
     "chapters": {
       "notes": {
         "title": "Des snippets, des Notes, des listes",
-        "body": "Une note est un snippet — du code, coloré selon son langage —, une Note — du texte mis en forme, enregistré en Markdown — ou une liste de tâches ; le menu « Type » de l’éditeur passe de l’une à l’autre. Cliquez une carte pour l’ouvrir, ou copiez-la sans l’ouvrir depuis son propre bouton."
+        "body": "Une note est un snippet — du code, coloré selon son langage —, une Note — du texte mis en forme, enregistré en Markdown — ou une liste de tâches ; le menu « Type » de l’éditeur passe de l’une à l’autre. Dans une Note, un bloc de code Mermaid est dessiné en diagramme. Cliquez une carte pour l’ouvrir, ou copiez-la sans l’ouvrir depuis son propre bouton."
       },
       "spaces": {
         "title": "Des espaces pour ranger",

@@ -120,6 +120,54 @@
       font-size: 10px;
       color: var(--text-2);
     }
+
+    // A diagram away from the caret: its first line, the drawing under it saying the rest. The
+    // code is cut and not the block, whose padding would show the top of the next line.
+    &.is-folded code {
+      display: block;
+      max-height: calc(12.5px * 1.6);
+      overflow: hidden;
+    }
+  }
+
+  .rich-diagram {
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    background: var(--bg-1);
+    overflow-x: auto;
+    text-align: center;
+    cursor: pointer;
+
+    // Nothing before its first drawing, rather than an empty frame.
+    &:empty {
+      display: none;
+    }
+
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    &.is-failed {
+      border-color: rgba(var(--red-rgb), 0.45);
+      text-align: left;
+    }
+  }
+
+  .rich-diagram-error {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--red);
+  }
+
+  .rich-diagram-detail {
+    margin-top: 6px;
+    font-family: var(--font-mono), monospace;
+    font-size: 11.5px;
+    white-space: pre-wrap;
+    color: var(--text-1);
   }
 
   blockquote {
