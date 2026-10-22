@@ -24,6 +24,24 @@ import { bridge, draft, query } from '../support/bridge.js';
 const entry = (tool: string) => $(`${testid('tools-entry')}[data-tool="${tool}"]`);
 const outputValues = () => readEach(testid('output-value'), 'text');
 
+/** The acceptance run's `config.yaml`: an anchor, and a merge key that lends it to `primaire`. */
+const CONFIG_YAML = [
+  '# Configuration du service de facturation',
+  'service: billing',
+  'replicas: 2',
+  'ports:',
+  '  - 8080',
+  '  - 8443',
+  'base: &base',
+  '  host: db.internal',
+  '  port: 5432',
+  'primaire:',
+  '  <<: *base',
+  '  role: lecture-ecriture',
+  'debug: false',
+  '',
+].join('\n');
+
 async function openTool(tool: string): Promise<void> {
   await $(testid('tools-rail-all')).click();
   await entry(tool).click();
@@ -976,6 +994,18 @@ describe('The tools', () => {
         'the JSON',
       );
       expect(await $(testid('convert-convention-xml')).isDisplayed()).toBe(true);
+    });
+
+    it('applies a YAML merge key, the alias it names expanded into the mapping', async () => {
+      await $(`${testid('segmented-convert-from')} [data-segment-id="yaml"]`).click();
+      await setField(testid('convert-input'), CONFIG_YAML);
+
+      await eventually(
+        async () => JSON.stringify(JSON.parse(await $(testid('convert-output')).getText()).primaire),
+        (primaire) =>
+          primaire === JSON.stringify({ host: 'db.internal', port: 5432, role: 'lecture-ecriture' }),
+        'the merged mapping',
+      );
     });
 
     it('fills its input from a YAML snippet, read as YAML, and lists no snippet it cannot read', async () => {
@@ -2409,6 +2439,24 @@ describe('The tools', () => {
         'json',
       ]);
       await $(testid('structured-diff-yaml-note')).waitForDisplayed({ timeout: 5_000 });
+    });
+
+    it('finds a YAML identical to its JSON twin once its merge key is applied', async () => {
+      await setField(testid('structured-diff-a'), CONFIG_YAML);
+      await setField(
+        testid('structured-diff-b'),
+        JSON.stringify({
+          service: 'billing',
+          replicas: 2,
+          ports: [8080, 8443],
+          base: { host: 'db.internal', port: 5432 },
+          primaire: { host: 'db.internal', port: 5432, role: 'lecture-ecriture' },
+          debug: false,
+        }),
+      );
+
+      await $(testid('structured-diff-identical')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('structured-diff-change')).isExisting()).toBe(false);
     });
 
     it('reads a side in the format forced on it, and says where it stops', async () => {
