@@ -132,7 +132,7 @@
             @case ('noMatch') {
               <p class="verdict none" data-testid="hash-verdict">{{ 'tools.hash.noMatch' | transloco }}</p>
               @if (shape(); as shape) {
-                <p class="shape" data-testid="hash-shape">
+                <p class="shape" data-testid="hash-shape" [attr.data-shape]="shape.key">
                   {{ shape.key | transloco: { count: shape.count, names: shape.names.join(' ' + or + ' ') } }}
                 </p>
               }
@@ -140,7 +140,7 @@
             }
             @case ('shaped') {
               @if (shape(); as shape) {
-                <p class="shape" data-testid="hash-shape">
+                <p class="shape" data-testid="hash-shape" [attr.data-shape]="shape.key">
                   {{ shape.key | transloco: { count: shape.count, names: shape.names.join(' ' + or + ' ') } }}
                 </p>
               }
