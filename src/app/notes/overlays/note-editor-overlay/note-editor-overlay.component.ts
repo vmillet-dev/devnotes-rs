@@ -16,7 +16,12 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, isLanguageTag } from '@core/model/language.model';
+import {
+  FALLBACK_LANGUAGE,
+  LANGUAGE_FULL_NAMES,
+  LANGUAGE_LABELS,
+  isLanguageTag,
+} from '@core/model/language.model';
 import { checklistProgress } from '@core/model/checklist.model';
 import { DrawingPictures, Note, NotePatch, Presentation } from '@core/model/note.model';
 import { PRIORITIES } from '@core/model/priority.model';
@@ -337,6 +342,10 @@ export class NoteEditorOverlayComponent {
 
   protected readonly languageLabel = computed(
     () => LANGUAGE_LABELS[this.note()?.language ?? FALLBACK_LANGUAGE],
+  );
+  /** « Python », where a sentence names the language: « PY » is the badge's. */
+  protected readonly languageName = computed(
+    () => LANGUAGE_FULL_NAMES[this.note()?.language ?? FALLBACK_LANGUAGE],
   );
   protected readonly lineCount = computed(() => (this.note() ? this.draftContent().split('\n').length : 0));
   protected readonly wordCount = computed(() => countWords(this.draftContent()));

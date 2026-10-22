@@ -19,6 +19,7 @@ describe('Formatting a snippet with Prettier', () => {
     "import { inject } from '@angular/core';\nconst host = {{db_host}};\nexport class InvoicesApi {\n  private readonly http = inject(HttpClient);\n  list(id: string) {\n    return this.http.get(`/api/customers/${id}/invoices`, { params: { page: 1, limit: 50 } });\n  }\n}";
   const BROKEN = 'Broken on purpose';
   const QUERY = 'Unformattable query';
+  const SCRIPT = 'Unformattable script';
   const ids: string[] = [];
   let spaceId = '';
 
@@ -41,6 +42,7 @@ describe('Formatting a snippet with Prettier', () => {
       [TITLE, MESSY, 'ts'],
       [BROKEN, 'const a = {\n  b: 1,,\n}', 'ts'],
       [QUERY, 'select  *  from notes', 'sql'],
+      [SCRIPT, 'print( "x" )', 'py'],
     ] as const) {
       ids.push((await bridge.createNote(draft({ spaceId, title, content, language }))).id);
     }
@@ -104,6 +106,15 @@ describe('Formatting a snippet with Prettier', () => {
 
     expect(await formatButton().getAttribute('aria-disabled')).toBe('true');
     expect(await $(testid('editor-prettier')).isExisting()).toBe(false);
+    await editor.close();
+
+    // The language by its name, not by its badge (COD-08).
+    await canvas.openNote(SCRIPT);
+    expect(await formatButton().getAttribute('aria-disabled')).toBe('true');
+    const title = await formatButton().getAttribute('title');
+    expect(title).toContain('Python');
+    expect(title).not.toContain('PY ');
+    expect(title?.endsWith('PY')).toBe(false);
     await editor.close();
   });
 
