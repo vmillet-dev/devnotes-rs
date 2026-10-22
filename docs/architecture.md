@@ -2916,6 +2916,11 @@ then the request's; once answered, the other way round; a blank one is not run.
   taken for the tree and each request read, never across a send. Its console lines are under
   `run:<id>#…`, one console for the run. A protected environment is asked once by the page,
   counting the requests that could change it; the yes is the run's `confirmed`.
+- **The order the page sets is kept with the collection or the folder** (`run_order` in its
+  `ContainerSettings`, `save_http_run_order` at each move or tick): `http_run_order` answers it
+  less the requests gone since, then those added since in the tree's order (`runner::run_order`).
+  The runner reads it on « Exécuter… » and again when the tree changes. The settings dialog does
+  not hold it: `save_http_settings` keeps the stored one.
 - ⚠️ A test's executable is its harness, not the application: `process::host_from` points the
   hosts at `CARGO_BIN_EXE_devnotes` (`tests/commands/http_scripts.rs`).
 

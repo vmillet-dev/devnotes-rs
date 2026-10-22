@@ -79,6 +79,17 @@ pub struct ContainerSettings {
     pub variables: Vec<Variable>,
     /// Run around each request under it: before the request's own, and after it.
     pub scripts: RequestScripts,
+    /// The order the runner last left: the runner's to write, never the settings dialog's.
+    #[specta(optional)]
+    pub run_order: Vec<RunEntry>,
+}
+
+/// A request in a run's order, and whether it runs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RunEntry {
+    pub id: String,
+    pub enabled: bool,
 }
 
 /// A value of a JSON answer written into the active environment — the globals with « Aucun » —

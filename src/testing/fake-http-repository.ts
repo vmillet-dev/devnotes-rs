@@ -35,7 +35,7 @@ import {
   toParts,
 } from '@core/model/http.model';
 import { UsedVariable } from '@core/model/http-environment.model';
-import { RunData, RunRequest } from '@core/model/http-runner.model';
+import { RunData, RunEntry, RunRequest, rowsUnder } from '@core/model/http-runner.model';
 import { CodeOptions, CodeTarget, GeneratedCode } from '@core/model/http-code.model';
 
 export interface HttpCall {
@@ -117,6 +117,8 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** What a run answers once over; its steps are the spec's to play. */
   pendingRun: Promise<void> | null = null;
   runData: RunData = { columns: [], rows: [] };
+  /** By the item's id; an item absent, nothing arranged: the tree's order. */
+  runOrders = new Map<string, RunEntry[]>();
   private nextId = 0;
 
   /** The calls of one command, their arguments in order. */
@@ -405,6 +407,20 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   cancelRun(id: string): Promise<boolean> {
     return this.record('cancelRun', [id], () => true);
+  }
+
+  runOrder(item: HttpItem): Promise<RunEntry[]> {
+    return this.record('runOrder', [item], () =>
+      structuredClone(
+        this.runOrders.get(item.id) ?? rowsUnder(this.tree$, item).map(({ id }) => ({ id, enabled: true })),
+      ),
+    );
+  }
+
+  saveRunOrder(item: HttpItem, order: readonly RunEntry[]): Promise<void> {
+    return this.record('saveRunOrder', [item, order], () => {
+      this.runOrders.set(item.id, [...order]);
+    });
   }
 
   readRunData(path: string): Promise<RunData> {
