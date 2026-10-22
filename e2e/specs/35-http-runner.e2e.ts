@@ -50,6 +50,8 @@ describe('HTTP runner', () => {
     const directory = mkdtempSync(join(tmpdir(), 'devnotes-e2e-'));
     const csv = join(directory, 'clients.csv').replaceAll('\\', '/');
     writeFileSync(csv, 'customer\ncus_1\ncus_2\n');
+    const prose = join(directory, 'runner-invalide.txt').replaceAll('\\', '/');
+    writeFileSync(prose, 'ceci n’est ni un CSV avec en-tête ni un tableau JSON\n');
     const historyBefore = (await bridge.httpHistory(0)).flatMap((day) => day.items).length;
 
     const api = await bridge.createHttpCollection('Exécution e2e');
@@ -86,6 +88,8 @@ describe('HTTP runner', () => {
         columns: ['customer'],
         rows: [{ customer: 'cus_1' }, { customer: 'cus_2' }],
       });
+      // One line of text is no CSV header: it is neither, not a file without rows (HSC-17).
+      await expect(bridge.readHttpRunData(prose)).rejects.toThrow('"fault":"unreadable"');
       await $(testid('http-runner-iterations')).setValue('2');
       await press('Tab');
 

@@ -113,7 +113,14 @@ fn records(text: &str) -> Result<Vec<Vec<String>>, DataFault> {
 }
 
 fn from_csv(text: &str) -> Result<RunData, DataFault> {
-    let mut records = records(text)?.into_iter();
+    let records = records(text)?;
+    // One line without a comma is a sentence, not a header waiting for its rows.
+    if let [only] = records.as_slice()
+        && only.len() == 1
+    {
+        return Err(DataFault::Unreadable);
+    }
+    let mut records = records.into_iter();
     let columns: Vec<String> = records
         .next()
         .ok_or(DataFault::Empty)?
@@ -470,6 +477,12 @@ mod tests {
         assert_eq!(read_data("[1, 2]"), Err(DataFault::Unreadable));
         assert_eq!(read_data("a,b\n\"open"), Err(DataFault::Unreadable));
         assert_eq!(read_data("a,b\n"), Err(DataFault::Empty));
+        assert_eq!(
+            read_data("ceci n’est ni un CSV avec en-tête ni un tableau JSON\n"),
+            Err(DataFault::Unreadable),
+            "one line without a separator"
+        );
+        assert!(read_data("id\n1\n").is_ok(), "one column, with its rows");
         assert_eq!(read_data("[]"), Err(DataFault::Empty));
         assert_eq!(read_data(""), Err(DataFault::Empty));
     }

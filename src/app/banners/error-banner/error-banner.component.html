@@ -5,7 +5,7 @@
     <span class="error-text">
       {{ notice.ref.key | transloco: notice.ref.params }}
       @if (notice.detail) {
-        <span class="error-detail">{{ notice.detail }}</span>
+        <span class="error-detail" data-testid="error-detail">{{ notice.detail }}</span>
       }
     </span>
     <button
