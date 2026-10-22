@@ -949,7 +949,9 @@ landing on its last (31 January plus a month is 28 February), then the wall cloc
 clock, in real seconds. The two part when the zone's offset differs at either end; the answer
 then names the last change, found a day at a time back from the later date, then to the second.
 An ISO 8601 duration is parsed by hand, so a refusal is located; « 1h30 » or « 90 min » are read
-too and written back in ISO. A month or a year has no length in seconds: such a duration has no
+too and written back in ISO. Sixty seconds are carried into a minute and sixty minutes into an
+hour (« 90 min » is `PT1H30M`), never hours into a day, which the clocks can make 23 or 25 hours
+long. A month or a year has no length in seconds: such a duration has no
 total. The words that spell either aloud are the front's, from typed parts.
 
 **A zone is the IANA database's**, compiled into the binary (`tools/zones.rs`, `chrono-tz`):

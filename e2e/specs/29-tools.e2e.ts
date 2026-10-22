@@ -1629,6 +1629,12 @@ describe('The tools', () => {
         (iso) => iso === 'PT1H30M',
         'the ISO form of words',
       );
+      await setField(testid('dates-duration'), '90 min');
+      await eventually(
+        () => row('data-total', 'iso'),
+        (iso) => iso === 'PT1H30M',
+        'ninety minutes carried into an hour',
+      );
 
       await $(testid('tool-clear')).click();
       await $(`${testid('segmented-dates-tab')} [data-segment-id="convert"]`).click();
