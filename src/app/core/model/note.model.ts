@@ -134,6 +134,8 @@ export interface NotesQuery {
   /** Left out by the palette: the modification date, newest first. */
   readonly order?: NoteOrder;
   readonly grouping?: Grouping;
+  /** The palette's order: how the title answers the search, then the last edit. */
+  readonly ranked?: boolean;
   readonly now: Date;
   /**
    * `Date#getTimezoneOffset()`. The sections reason in local days: without this

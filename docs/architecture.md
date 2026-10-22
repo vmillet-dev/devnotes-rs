@@ -3811,12 +3811,17 @@ It searches **every space and ignores the canvas filters**: when you recall a sn
 remember which space you filed it in. It keeps its own state rather than reusing `NotesStore`,
 whose search would otherwise change what the canvas shows behind it.
 
-**What Rust answers, and what the front reads.** The notes come from `query_notes`; the
-requests from `search_http_requests`, which ranks them in Rust (`http::search`): a name starting
-with what is typed, then a word of the name, then the name, the URL as typed — read from each
+**What Rust answers, and what the front reads.** The notes come from `query_notes` asked
+`ranked`: by how the title answers what is typed — all of it, its start, the start of a word,
+anywhere — then a match in the body, the tags or the context, the last edit breaking ties
+(`view::rank_notes`); by date alone, `psql` opened a note holding it in its body. The
+requests come from `search_http_requests`, which ranks them in Rust (`http::search`): a name
+starting with what is typed, then a word of the name, then the name, the URL as typed — read from each
 sealed document — and the collection › folders; nothing typed lists the requests edited last.
 The tools, the spaces and the commands are matched on the front, as the tools' home matches
-its catalogue: their words are translations, which Rust does not know. The groups come in a
+its catalogue: their words are translations, which Rust does not know. The tools and the spaces
+are ranked there by the same order, on their name (`rankedByName`), before the cap of each
+kind: « json » kept « Diff » and « JWT » and cut the tool named JSON. The groups come in a
 fixed order — notes, requests, tools, spaces — each with its heading and count when more than
 one answers, and share the screen (`palette-options.ts`: five notes and three of the others,
 eight for a kind alone). An empty field lists a few recent things of each kind and a line naming

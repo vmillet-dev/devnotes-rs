@@ -241,6 +241,7 @@ export class PaletteStore {
         tzOffsetMinutes: now.getTimezoneOffset(),
         // The one place the pinned hoist is a setting.
         pinnedFirst: this.settings.showPinnedFirst(),
+        ranked: true,
       }),
     );
     return view ? view.sections.flatMap((section) => [...section.notes]).slice(0, MAX_NOTES) : [];
