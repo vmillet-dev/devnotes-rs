@@ -4,7 +4,7 @@
 use serde::Serialize;
 use specta::Type;
 
-use super::{Net, address, blocks_between, usable, usable_count};
+use super::{IpFamily, Net, address, blocks_between, usable, usable_count};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(
@@ -132,9 +132,14 @@ fn need(line: &str) -> Option<Need> {
     })
 }
 
-/// The smallest subnet of the block's family holding that many hosts, if the block can.
+/// The smallest subnet of the block's family holding that many hosts, if the block can. An IPv4
+/// need never gets a /31 or a /32: point-to-point blocks (RFC 3021) are not taken everywhere.
 fn prefix_for(net: Net, hosts: u128) -> Option<u8> {
-    (net.prefix..=net.bits()).rev().find(|prefix| {
+    let deepest = match net.family {
+        IpFamily::V4 => net.bits().min(30),
+        IpFamily::V6 => net.bits(),
+    };
+    (net.prefix..=deepest).rev().find(|prefix| {
         usable_count(Net {
             family: net.family,
             network: 0,
@@ -180,13 +185,12 @@ mod tests {
                 ("Wi-Fi invités", "10.24.10.0/25"),
                 ("Serveurs", "10.24.10.128/26"),
                 ("Imprimantes", "10.24.10.192/28"),
-                ("Lien WAN", "10.24.10.208/31"),
+                ("Lien WAN", "10.24.10.208/30"),
             ]
         );
         assert_eq!(
             plan.free,
             vec![
-                "10.24.10.210/31",
                 "10.24.10.212/30",
                 "10.24.10.216/29",
                 "10.24.10.224/27",
@@ -227,6 +231,18 @@ mod tests {
         let plan = plan_of("192.168.1.0/25", "A 200\nB 20");
         assert!(matches!(plan.lines[0], PlanLine::NoRoom { .. }));
         assert_eq!(placed(&plan.lines[1]), ("B", "192.168.1.0/27"));
+    }
+
+    #[test]
+    fn an_ipv4_need_of_one_or_two_hosts_takes_a_slash_30() {
+        let plan = plan_of("192.0.2.0/29", "Lien 2\nBoucle 1");
+
+        assert_eq!(placed(&plan.lines[0]), ("Lien", "192.0.2.0/30"));
+        assert_eq!(placed(&plan.lines[1]), ("Boucle", "192.0.2.4/30"));
+        assert!(matches!(
+            plan_of("192.0.2.0/31", "Lien 2").lines[0],
+            PlanLine::NoRoom { .. }
+        ));
     }
 
     #[test]

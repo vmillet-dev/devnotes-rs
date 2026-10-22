@@ -2074,7 +2074,7 @@ describe('The tools', () => {
       await setField(testid('cidr-plan'), 'Lien WAN 2\nBureaux 500\nServeurs 60');
       await eventually(
         () => readEach(`${testid('cidr-plan-line')}[data-kind="placed"]`, '@data-cidr'),
-        (placed) => placed.join() === '10.24.8.0/23,10.24.10.0/26,10.24.10.64/31',
+        (placed) => placed.join() === '10.24.8.0/23,10.24.10.0/26,10.24.10.64/30',
         'the plan placed',
       );
 
