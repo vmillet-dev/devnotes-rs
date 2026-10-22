@@ -626,7 +626,10 @@ explorer takes the format as an input for its messages, and nothing else in it i
   its lines (`focusedLines`); the caret, moved by a key or a click, selects `entryAt` its
   offset — never a selection the visualiser set, which carries no user event. ⚠️ The explorer is projected into
   `app-side-by-side`, whose CSS cannot reach it: its pane is a one-cell grid that stretches it.
-  Narrower than 600 px, the explorer drops its selection panel (a container query).
+  Narrower than 600 px (a container query), the selection panel goes under the graph with the
+  path and its actions alone: dropped whole, « Copier la valeur » had no size beside the code.
+  A string is copied by its own text, unquoted (`JsonRow.text`, `JsonLine.text`); anything else
+  as it is written.
 - **What is open is read back from each answer.** The front keeps no set of its own: it sends
   the paths of the nodes it was given, plus or minus the one clicked, and Rust decides what
   that opens, caps included. Opening a container opens one level. Stepping to a match sends

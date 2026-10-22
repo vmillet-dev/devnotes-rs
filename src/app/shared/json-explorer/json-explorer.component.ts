@@ -42,6 +42,8 @@ interface Selected {
   readonly size: number;
   readonly preview: string;
   readonly span: Span;
+  /** A string's text, unquoted: `null` for anything else, copied as it is written. */
+  readonly text: string | null;
 }
 
 interface Crumb {
@@ -117,7 +119,14 @@ export class JsonExplorerComponent {
     const found = findSelection(view.graph, path);
     if (found?.kind === 'node') {
       const { node } = found;
-      return { path: node.path, kind: node.kind, size: node.size, preview: preview(node), span: node.span };
+      return {
+        path: node.path,
+        kind: node.kind,
+        size: node.size,
+        preview: preview(node),
+        span: node.span,
+        text: null,
+      };
     }
     const entry = found?.kind === 'row' ? found.row : view.tree.find((line) => line.path === path);
     if (!entry) return null;
@@ -127,6 +136,7 @@ export class JsonExplorerComponent {
       size: entry.size,
       preview: entry.value,
       span: entry.span,
+      text: entry.text,
     };
   });
 
@@ -236,7 +246,7 @@ export class JsonExplorerComponent {
 
   protected menuCopyValue(): void {
     const selected = this.selection();
-    if (selected) this.copyValue(selected.span);
+    if (selected) this.copyValue(selected);
     this.closeMenu();
   }
 
@@ -250,8 +260,8 @@ export class JsonExplorerComponent {
     this.extractAsked.emit(path);
   }
 
-  protected copyValue(span: Span): void {
-    this.copied.emit(this.text().slice(span.start, span.end));
+  protected copyValue(selected: Selected): void {
+    this.copied.emit(selected.text ?? this.text().slice(selected.span.start, selected.span.end));
   }
 
   protected fit(): void {

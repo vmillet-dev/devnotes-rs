@@ -2,7 +2,7 @@ import { $, $$, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { eventually, press, reloadCanvas, testid } from '../support/app.js';
+import { clipboardText, eventually, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft } from '../support/bridge.js';
 
 /**
@@ -285,6 +285,18 @@ describe('Exploring a JSON document', () => {
         selectedPath,
         (path) => path === '$.data.object.lines[0].description',
         'the value under the caret',
+      );
+
+      // Beside the code the panel keeps its buttons, with a size (COD-23), and a string is
+      // copied without its quotes.
+      const copyValue = $(testid('json-copy-value'));
+      expect(await copyValue.isDisplayed()).toBe(true);
+      expect((await copyValue.getSize()).width).toBeGreaterThan(0);
+      await copyValue.click();
+      await eventually(
+        clipboardText,
+        (text) => text === 'Pro · mensuel',
+        'the string copied without its quotes',
       );
 
       await $(testid('editor-hide-code')).click();

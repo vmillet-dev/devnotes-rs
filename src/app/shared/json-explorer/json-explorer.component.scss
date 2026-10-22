@@ -195,11 +195,43 @@
   }
 }
 
-// Narrow — beside the code, where the selection is lit in the code already — the graph keeps
-// the room and the panel goes.
+// Narrow — beside the code — the panel goes under the graph with the selection's path and
+// actions alone: hidden, its buttons had no size at all. The preview and the document's
+// figures are the wide panel's.
 @container (width < 600px) {
+  .explorer {
+    flex-direction: column;
+  }
+
   .aside {
+    width: auto;
+    max-height: 40%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-left: 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .aside > :not(.selected-path, .action, .actions) {
     display: none;
+  }
+
+  .aside:not(:has(.selected-path)) {
+    display: none;
+  }
+
+  .selected-path {
+    flex: 1 1 100%;
+    padding: 6px 8px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 }
 

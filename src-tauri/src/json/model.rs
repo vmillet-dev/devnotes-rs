@@ -75,6 +75,8 @@ pub struct JsonRow {
     pub kind: JsonKind,
     /// `"paid"`, `4900`, `{ … }`, `[ 3 ]`: cut to one line.
     pub value: String,
+    /// A string's own text, whole and unquoted: what « Copier la valeur » copies.
+    pub text: Option<String>,
     /// Keys or items of a container, open or not; 0 for a scalar.
     pub size: u32,
     pub span: Span,
@@ -126,6 +128,7 @@ pub struct JsonLine {
     pub path: String,
     pub kind: JsonKind,
     pub value: String,
+    pub text: Option<String>,
     pub size: u32,
     pub span: Span,
     pub opens: bool,
@@ -220,6 +223,7 @@ struct Entry {
     path: String,
     kind: JsonKind,
     value: String,
+    text: Option<String>,
     size: u32,
     span: Span,
     in_array: bool,
@@ -272,6 +276,10 @@ fn visit(
         path,
         kind,
         value,
+        text: match &node.value {
+            Value::String(text) => Some(text.clone()),
+            _ => None,
+        },
         size,
         span: node.span,
         in_array,
@@ -487,6 +495,7 @@ fn graph(entries: &[Entry], open: &BTreeSet<usize>, folded: bool) -> JsonGraph {
                         path: row.path.clone(),
                         kind: row.kind,
                         value: row.value.clone(),
+                        text: row.text.clone(),
                         size: row.size,
                         span: row.span,
                         child: id_of(child),
@@ -556,6 +565,7 @@ fn tree(entries: &[Entry], open: &BTreeSet<usize>) -> (Vec<JsonLine>, bool) {
             path: entry.path.clone(),
             kind: entry.kind,
             value: entry.value.clone(),
+            text: entry.text.clone(),
             size: entry.size,
             span: entry.span,
             opens: entry.container(),
@@ -691,6 +701,22 @@ mod tests {
             &INVOICE[row.span.start as usize..row.span.end as usize],
             "\"evt_1PqX4c\""
         );
+    }
+
+    /// « Copier la valeur » put `"Lyon"` in the clipboard, its quotes with it (COD-23).
+    #[test]
+    fn a_string_carries_its_own_text_unquoted_and_nothing_else_does() {
+        let view = explored(r#"{"ville": "Ly\"on\u00e9", "n": 4, "o": {"a": 1}}"#);
+        let root = node(&view, "$");
+        let texts: Vec<Option<&str>> = root.rows.iter().map(|row| row.text.as_deref()).collect();
+
+        assert_eq!(texts, [Some("Ly\"oné"), None, None]);
+        let line = view
+            .tree
+            .iter()
+            .find(|line| line.path == "$.ville")
+            .unwrap();
+        assert_eq!(line.text.as_deref(), Some("Ly\"oné"));
     }
 
     #[test]
