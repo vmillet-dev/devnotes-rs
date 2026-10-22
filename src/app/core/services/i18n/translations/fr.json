@@ -758,6 +758,12 @@
     "empty": {
       "search": "Rien ne correspond à « {{term}} ».",
       "nothing": "Rien à montrer ici.",
+      "none": {
+        "notes": "Aucune note ici.",
+        "requests": "Aucune requête ici.",
+        "tools": "Aucun outil ici.",
+        "spaces": "Aucun espace ici."
+      },
       "scopes": "Rien ne s’appelle « @{{word}} ».",
       "tags": "Aucun tag ne commence par « {{word}} ».",
       "commands": "Aucune commande ne contient « {{term}} »."
