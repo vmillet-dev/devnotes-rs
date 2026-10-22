@@ -540,12 +540,11 @@ fn footer_of(note: &Note) -> NoteFooter {
         return NoteFooter::Expiry { at };
     }
 
-    if note.pinned
-        && let Some(root) = note
-            .source
-            .split(" / ")
-            .next()
-            .filter(|root| !root.is_empty())
+    if let Some(root) = note
+        .source
+        .split(" / ")
+        .next()
+        .filter(|root| !root.trim().is_empty())
     {
         return NoteFooter::Source {
             value: root.to_string(),
@@ -1118,24 +1117,27 @@ mod tests {
         assert_eq!(note.items.len(), 1);
     }
 
+    /// Shown for pinned notes alone, a context typed under the title was nowhere on its card (COD-21).
     #[test]
-    fn a_pinned_note_shows_the_first_segment_of_its_context() {
-        let note = Note {
-            pinned: true,
-            source: "API Gateway / Auth / Tokens".to_string(),
-            ..sample()
-        };
+    fn a_note_shows_the_first_segment_of_its_context_pinned_or_not() {
+        for pinned in [true, false] {
+            let note = Note {
+                pinned,
+                source: "API Gateway / Auth / Tokens".to_string(),
+                ..sample()
+            };
 
-        assert_eq!(
-            footer_of(&note),
-            NoteFooter::Source {
-                value: "API Gateway".to_string()
-            }
-        );
+            assert_eq!(
+                footer_of(&note),
+                NoteFooter::Source {
+                    value: "API Gateway".to_string()
+                }
+            );
+        }
     }
 
     #[test]
-    fn a_pinned_note_without_context_falls_back_to_its_age() {
+    fn a_note_without_context_falls_back_to_its_age() {
         let note = Note {
             pinned: true,
             source: String::new(),

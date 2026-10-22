@@ -1407,11 +1407,11 @@ serialises to `"pinned"` / `"today"` / … and no user-visible label ever crosse
 The footer carries one of three things, and which one is a **product rule**, so it is decided
 in `notes::model` and arrives as a tagged `footer` field:
 
-| variant  | when                         | rendered as                |
-| -------- | ---------------------------- | -------------------------- |
-| `expiry` | the note has a deadline      | `expiryRef(at, now)`       |
-| `source` | pinned, and it has a context | the first path segment     |
-| `age`    | everything else              | `relativeTimeRef(at, now)` |
+| variant  | when                    | rendered as                |
+| -------- | ----------------------- | -------------------------- |
+| `expiry` | the note has a deadline | `expiryRef(at, now)`       |
+| `source` | it has a context        | the first path segment     |
+| `age`    | everything else         | `relativeTimeRef(at, now)` |
 
 The dated variants carry a **date, not a label**: formatting stays on the front so "4 min ago"
 keeps ageing on screen without a round trip. That is the line — the back decides _what_ to

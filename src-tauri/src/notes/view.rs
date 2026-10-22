@@ -300,6 +300,8 @@ pub enum SearchField {
     Tag,
     Body,
     Item,
+    /// The context under the title: « PostgreSQL / production ».
+    Source,
 }
 
 /// What made a note match, and where.
@@ -583,10 +585,16 @@ fn find_match(note: &Note, needle: &str) -> Option<SearchMatch> {
         return Some(SearchMatch::elsewhere(SearchField::Body, line.trim()));
     }
 
-    note.items
+    if let Some(item) = note
+        .items
         .iter()
         .find(|item| contains_folded(&item.text, needle))
-        .map(|item| SearchMatch::elsewhere(SearchField::Item, &item.text))
+    {
+        return Some(SearchMatch::elsewhere(SearchField::Item, &item.text));
+    }
+
+    contains_folded(&note.source, needle)
+        .then(|| SearchMatch::elsewhere(SearchField::Source, &note.source))
 }
 
 /// A note either fails to match, matches on something the card already shows, or
@@ -1503,6 +1511,30 @@ mod tests {
             let hit = hit_for(listed, "push").expect("an item match is worth quoting");
             assert_eq!(hit.field, SearchField::Item);
             assert_eq!(hit.excerpt, "Push the tag");
+        }
+
+        /// « PostgreSQL » found nothing, though the guide says the search reads the contexts (COD-21).
+        #[test]
+        fn quotes_the_context_when_nothing_else_matched() {
+            let note = Note {
+                source: "PostgreSQL / production".to_string(),
+                content: "psql -h db".to_string(),
+                ..sample()
+            };
+            let hit = hit_for(note, "postgre").expect("a context match is worth quoting");
+            assert_eq!(hit.field, SearchField::Source);
+            assert_eq!(hit.excerpt, "PostgreSQL / production");
+
+            let in_both = Note {
+                source: "Prettier".to_string(),
+                content: "npx prettier --write .".to_string(),
+                ..sample()
+            };
+            assert_eq!(
+                hit_for(in_both, "prettier").map(|hit| hit.field),
+                Some(SearchField::Body),
+                "the code is the better quote"
+            );
         }
 
         #[test]

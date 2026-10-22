@@ -184,6 +184,33 @@ describe('Search, filters and facets', () => {
     await reloadCanvas();
   });
 
+  /** COD-21, REC-03: a context was searched nowhere, and shown on a pinned card alone. */
+  it('finds a snippet by its context, quotes it, and shows it on its card', async () => {
+    const title = 'Connexion psql e2e';
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId: await homeSpaceId(),
+        title,
+        content: 'psql -h db.internal',
+        language: 'sh',
+        source: 'PostgreSQL / production',
+      }),
+    );
+    await reloadCanvas();
+    const card = await canvas.cardWithTitle(title);
+    expect(await card.$(testid('note-card-when')).getText()).toBe('PostgreSQL');
+
+    await canvas.search('postgresql');
+    expect(await canvas.titles()).toEqual([title]);
+    const found = await canvas.cardWithTitle(title);
+    expect(await found.$(testid('note-card-hit')).getText()).toBe('PostgreSQL / production');
+
+    await canvas.clearSearch();
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   it('says so when nothing matches', async () => {
     await canvas.search('nothing matches this');
     expect(await canvas.noResults().isExisting()).toBe(true);
