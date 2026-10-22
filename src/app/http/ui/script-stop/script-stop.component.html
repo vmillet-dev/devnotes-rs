@@ -7,7 +7,9 @@
   [attr.data-level]="stopped.level"
   [attr.data-script]="stopped.script"
 >
-  <p class="title">{{ title().key | transloco: title().params }}</p>
+  <p class="title" data-testid="http-script-stop-title" [attr.data-key]="title().key">
+    {{ title().key | transloco: title().params }}
+  </p>
   @if (message(); as said) {
     <p class="message" data-testid="http-script-stop-message">{{ said.key | transloco }}</p>
   } @else {

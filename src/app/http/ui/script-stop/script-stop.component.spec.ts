@@ -77,9 +77,34 @@ describe('ScriptStopComponent', () => {
   });
 
   it('gives the line alone after the answer, which came', async () => {
-    await render({ kind: 'syntax', level: 'request', script: 'after', line: 2, message: 'SyntaxError: x' });
+    await render({ kind: 'error', level: 'request', script: 'after', line: 2, message: 'TypeError: x' });
 
     expect(title()).toBe('Le script après la réponse a échoué');
     expect(text('http-script-stop-where')).toBe('Ligne 2');
+  });
+
+  /** « const = ; » read « a échoué — SyntaxError: variable name expected » (HSC-05). */
+  it('says a script that does not read is not valid JavaScript, followed by the engine words', async () => {
+    await render({
+      kind: 'syntax',
+      level: 'request',
+      script: 'before',
+      line: 1,
+      message: 'variable name expected',
+    });
+
+    expect(title()).toBe('Le script avant l’envoi n’est pas du JavaScript valide');
+    expect(text('http-script-stop-message')).toBe('variable name expected');
+    expect(text('http-script-stop-where')).toBe('Ligne 1 · la requête n’a pas été envoyée');
+
+    await render({
+      kind: 'syntax',
+      level: 'folder',
+      script: 'tests',
+      name: 'Factures',
+      line: 4,
+      message: 'x',
+    });
+    expect(title()).toBe('Les tests du dossier « Factures » ne sont pas du JavaScript valide');
   });
 });

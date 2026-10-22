@@ -3703,6 +3703,23 @@
           "folder": "Les tests du dossier « {{name}} » se sont arrêtés",
           "collection": "Les tests de la collection « {{name}} » se sont arrêtés"
         },
+        "invalid": {
+          "before": {
+            "request": "Le script avant l’envoi n’est pas du JavaScript valide",
+            "folder": "Le script avant l’envoi du dossier « {{name}} » n’est pas du JavaScript valide",
+            "collection": "Le script avant l’envoi de la collection « {{name}} » n’est pas du JavaScript valide"
+          },
+          "after": {
+            "request": "Le script après la réponse n’est pas du JavaScript valide",
+            "folder": "Le script après la réponse du dossier « {{name}} » n’est pas du JavaScript valide",
+            "collection": "Le script après la réponse de la collection « {{name}} » n’est pas du JavaScript valide"
+          },
+          "tests": {
+            "request": "Les tests ne sont pas du JavaScript valide",
+            "folder": "Les tests du dossier « {{name}} » ne sont pas du JavaScript valide",
+            "collection": "Les tests de la collection « {{name}} » ne sont pas du JavaScript valide"
+          }
+        },
         "host": "Les scripts n’ont pas pu être lancés",
         "kinds": {
           "timeout": "Arrêté : il a pris trop de temps.",
