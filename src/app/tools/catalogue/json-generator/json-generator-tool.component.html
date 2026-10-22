@@ -76,9 +76,9 @@
         <input
           id="json-generator-seed"
           type="text"
-          inputmode="numeric"
           class="number seed"
           data-testid="json-generator-seed"
+          spellcheck="false"
           [placeholder]="'tools.json-generator.seedPlaceholder' | transloco"
           [value]="seed() ?? ''"
           (input)="onSeed($event)"

@@ -895,7 +895,9 @@ magnitude.
 - **The seed has one place, its field**: the one just drawn is said beside it (« · 3634897658
   utilisée ») with a pin, a toggle, that writes it there; pinned, « Régénérer » stays offered
   and a line says it gives the same documents. « Régénérer » is the one name of that action in
-  the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers).
+  the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers). The JSON
+  generator's seed is any text, handed to Rust as typed: a number up to `u32::MAX` is itself,
+  any other text its FNV-1a hash (`generate::fnv1a`, the identity tool's too).
 
 **A cron expression's runs are listed between two moments, and counted** (`tools/cron.rs`,
 `croner`): « À partir de » and « jusqu'à », read in the zone chosen like the date that is

@@ -1725,7 +1725,7 @@ export type GenerateRequest = {
 	text: string,
 	count: number,
 	/**  The same seed and the same source draw the same documents; none draws one, and says which. */
-	seed: number | null,
+	seed: string | null,
 };
 
 export type GeneratedCode = {
