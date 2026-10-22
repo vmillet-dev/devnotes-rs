@@ -1045,6 +1045,14 @@ describe('The tools', () => {
       );
       expect(await $(testid('hash-verdict')).isExisting()).toBe(false);
 
+      await setField(testid('hash-expected'), 'zzz');
+      await eventually(
+        () => $(testid('hash-shape')).getAttribute('data-shape'),
+        (shape) => shape === 'tools.hash.shapes.unknown',
+        'neither hex nor Base64',
+      );
+      await setField(testid('hash-expected'), FOX_HMAC_SHA256.toUpperCase());
+
       await setField(testid('hash-input'), 'The quick brown fox jumps over the lazy dog');
       await eventually(
         () => $(testid('hash-verdict')).getText(),
