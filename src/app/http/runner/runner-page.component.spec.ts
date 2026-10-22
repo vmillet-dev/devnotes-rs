@@ -116,7 +116,7 @@ describe('RunnerPageComponent', () => {
     await fixture.whenStable();
     el<HTMLButtonElement>('http-runner-start')!.click();
     await fixture.whenStable();
-    expect(text('http-runner-protected-confirm')).toContain('Production est protégé : 1 requêtes sur 4');
+    expect(text('http-runner-protected-confirm')).toContain('Production est protégé : 1 requête sur 4 peut le modifier');
     expect(text('http-runner-protected-confirm')).toContain('POST Health');
 
     let finish!: () => void;

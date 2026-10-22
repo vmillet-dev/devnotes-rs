@@ -99,7 +99,19 @@ describe('PlaceholderFormComponent', () => {
   });
 
   it('says how many values the snippet expects', () => {
-    expect(fixture.nativeElement.querySelector('.fields-hint').textContent).toContain('2');
+    expect(fixture.nativeElement.querySelector('.fields-hint').textContent.trim()).toBe(
+      'Ce snippet attend 2 valeurs.',
+    );
+  });
+
+  /** A Note holding `{{db_host}}` was « Ce snippet attend 1 valeur. » (RIC-09). */
+  it('names a Note as a note, and counts one value in the singular', async () => {
+    fixture.componentRef.setInput('kind', 'note');
+    await open([FIELDS[0]!]);
+
+    expect(fixture.nativeElement.querySelector('.fields-hint').textContent.trim()).toBe(
+      'Cette note attend 1 valeur.',
+    );
   });
 
   describe('opening', () => {

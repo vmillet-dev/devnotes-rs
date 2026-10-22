@@ -10,9 +10,10 @@
   }
 }
 
-@if (fill.target()) {
+@if (fill.target(); as target) {
   <app-placeholder-form
     [placeholders]="fill.placeholders()"
+    [kind]="target.kind"
     (submitted)="fill.submit($event)"
     (rawRequested)="fill.copyRaw()"
     (cancelled)="fill.cancel()"

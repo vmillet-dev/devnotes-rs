@@ -194,4 +194,61 @@ describe('HTTP runner', () => {
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     }
   });
+
+  /** HSC-20: « 1 requêtes sur 2 peuvent le modifier » — a count of one, in the plural. */
+  it('counts one request that could change a protected environment in the singular', async () => {
+    const api = await bridge.createHttpCollection('Protégée e2e');
+    const production = await bridge.createHttpEnvironment('Production e2e');
+    await bridge.saveHttpEnvironment(production.id, { protected: true });
+    const made: string[] = [];
+    for (const [name, method] of [
+      ['Lister', 'GET'],
+      ['Créer', 'POST'],
+    ] as const) {
+      const created = await bridge.createHttpRequest({
+        collectionId: api.id,
+        folderId: null,
+        name,
+        kind: 'http',
+        method,
+        document: { url: 'http://127.0.0.1:9/', description: '' },
+      });
+      made.push(created.id);
+    }
+    const pick = async (id: string) => {
+      await $(testid('http-environment-picker')).click();
+      await $(`${testid('http-environment-option')}[data-id="${id}"]`).click();
+      await eventually(
+        () => $(testid('http-environment-picker')).getAttribute('data-active'),
+        (active) => active === id,
+        `the environment ${id} active`,
+      );
+    };
+    try {
+      await openHttp();
+      await $(`${testid('http-node')}[data-id="${made[0]}"] ${testid('http-node-name')}`).click();
+      await $(testid('http-request-editor')).waitForDisplayed({ timeout: 10_000 });
+      await pick(production.id);
+
+      await $(`${testid('http-node-menu')}[data-id="${api.id}"]`).click();
+      await $(`${testid('http-node-action')}[data-action="run"]`).click();
+      await $(testid('http-runner')).waitForDisplayed({ timeout: 10_000 });
+      await $(testid('http-runner-start')).click();
+      // Read in either language: the runner's is the machine's.
+      const question = await eventually(
+        () => $(testid('http-runner-protected-confirm')).getText(),
+        (said) => /\b1 (requête|request)\b/.test(said),
+        'the question, in the singular',
+      );
+      expect(question).not.toMatch(/\b1 (requêtes|requests)\b/);
+      await $(testid('http-runner-protected-cancel')).click();
+
+      await $(`${testid('http-node')}[data-id="${made[0]}"] ${testid('http-node-name')}`).click();
+      await $(testid('http-request-editor')).waitForDisplayed({ timeout: 10_000 });
+      await pick('none');
+    } finally {
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      await bridge.deleteHttpEnvironment(production.id);
+    }
+  });
 });

@@ -361,7 +361,7 @@
     "pinned": "Pinned",
     "noPriority": "No priority",
     "expiryLabel": "Note deadline (empty = permanent)",
-    "footerStats": "{{lines}} lines · {{bytes}} bytes · UTF-8 · {{eol}}",
+    "footerStats": "{lines, plural, one {# line} other {# lines}} · {bytes, plural, one {# byte} other {# bytes}} · UTF-8 · {{eol}}",
     "format": {
       "label": "Format",
       "keys": "Shift Alt F",
@@ -772,6 +772,7 @@
   "placeholders": {
     "title": "Fill the fields",
     "hint": "This snippet expects {count, plural, one {# value} other {# values}}.",
+    "hintNote": "This note expects {count, plural, one {# value} other {# values}}.",
     "fieldLabel": "Value for {{name}}",
     "copy": "Copy filled",
     "copyRaw": "Copy as is",
@@ -3718,8 +3719,8 @@
     "tests": {
       "failed": "{count, plural, one {# failure} other {# failures}}",
       "allPassed": "All pass",
-      "ratio": "{{passed}}/{{total}} tests",
-      "bar": "{{passed}} tests passed out of {{total}}",
+      "ratio": "{{passed}}/{total, plural, one {# test} other {# tests}}",
+      "bar": "{passed, plural, one {# test passed} other {# tests passed}} out of {{total}}",
       "groups": {
         "request": "{{name}}",
         "folder": "{{name}} · the folder’s tests",
@@ -3794,11 +3795,11 @@
       "stopOnFailure": "Stop at the first failure",
       "keepVariables": "Keep the variables changed",
       "keepResponses": "Keep the responses",
-      "order": "Order · {{running}} of {{count}} requests",
+      "order": "Order · {{running}} of {count, plural, one {# request} other {# requests}}",
       "orderLabel": "Order of the requests",
       "orderHint": "Drag, or Alt ↑ ↓ on the row; Space leaves it out.",
       "include": "Run {{name}}",
-      "protected": "{{name}} is protected: {{count}} requests of {{total}} can change it ({{requests}}).",
+      "protected": "{{name}} is protected: {count, plural, one {# request} other {# requests}} of {{total}} can change it ({{requests}}).",
       "failed": "The run could not go to its end.",
       "failures": "{count, plural, one {# failure} other {# failures}}",
       "allPassed": "All pass",

@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
-import { Placeholder } from '@core/model/note.model';
+import { NoteKind, Placeholder } from '@core/model/note.model';
 import {
   PlaceholderFieldsComponent,
   PlaceholderValue,
@@ -40,6 +40,11 @@ export class PlaceholderFormComponent {
   private readonly typed = signal<Record<string, string> | null>(null);
 
   protected readonly count = computed(() => this.placeholders().length);
+  /** The kind of the note filled: a Note holding a field was called a snippet. */
+  readonly kind = input<NoteKind>('snippet');
+  protected readonly hintKey = computed(() =>
+    this.kind() === 'snippet' ? 'placeholders.hint' : 'placeholders.hintNote',
+  );
 
   protected readonly values = computed(
     () =>

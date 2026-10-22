@@ -3,7 +3,9 @@
     <h2 id="placeholder-form-title" class="fields-title">
       {{ 'placeholders.title' | transloco }}
     </h2>
-    <p class="fields-hint">{{ 'placeholders.hint' | transloco: { count: count() } }}</p>
+    <p class="fields-hint" data-testid="placeholder-form-hint" [attr.data-key]="hintKey()">
+      {{ hintKey() | transloco: { count: count() } }}
+    </p>
 
     <div class="fields-list">
       <app-placeholder-fields
