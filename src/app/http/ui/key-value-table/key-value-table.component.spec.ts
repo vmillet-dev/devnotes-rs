@@ -158,10 +158,26 @@ describe('KeyValueTableComponent', () => {
     await vi.waitFor(() => expect(emitted).toHaveLength(2));
     type(all<HTMLInputElement>('[data-testid="http-kv-value"]')[0]!, ' 1');
 
-    expect(emitted.at(-1)).toEqual([{ enabled: true, key: 'X-Recette', value: ' 1', description: '' }]);
+    expect(emitted.at(-1)).toEqual([{ enabled: true, key: 'X-Recette', value: '1', description: '' }]);
 
     type(all<HTMLInputElement>('[data-testid="http-kv-key"]')[0]!, 'X-Autre');
-    expect(emitted.at(-1)).toEqual([{ enabled: true, key: 'X-Autre', value: ' 1', description: '' }]);
+    expect(emitted.at(-1)).toEqual([{ enabled: true, key: 'X-Autre', value: '1', description: '' }]);
+  });
+
+  /** « X-Recette: 1 » typed key by key: the space after the colon reached the value (HRQ-06). */
+  it('drops the space a header value is started with, and only there, and only for headers', async () => {
+    await render([{ enabled: true, key: 'X-A', value: '', description: '' }], true, false);
+    const value = () => all<HTMLInputElement>('[data-testid="http-kv-value"]')[0]!;
+
+    type(value(), ' ');
+    expect(value().value).toBe('');
+    expect(emitted.at(-1)?.[0]?.value).toBe('');
+    type(value(), 'a b ');
+    expect(emitted.at(-1)?.[0]?.value).toBe('a b ');
+
+    await render([{ enabled: true, key: 'q', value: '', description: '' }], false, false);
+    type(value(), ' a');
+    expect(emitted.at(-1)?.[0]?.value).toBe(' a');
   });
 
   it('moves nothing when the row has a value already, or when Rust reads no header in it', async () => {

@@ -85,7 +85,13 @@ export class KeyValueTableComponent {
   protected onInput(index: number, field: Field, event: Event): void {
     const cell = event.target as HTMLInputElement;
     const rows = [...this.latest()];
-    rows[index] = { ...(rows[index] ?? BLANK), [field]: cell.value };
+    const row = rows[index] ?? BLANK;
+    // The space typed after `Nom:` lands here once the split has moved the caret: a header's
+    // value starts at its first character, as a pasted one does.
+    if (field === 'value' && this.headers() && row.value === '' && /^\s/.test(cell.value)) {
+      cell.value = cell.value.trimStart();
+    }
+    rows[index] = { ...row, [field]: cell.value };
     this.emit(rows);
     if (field === 'key' && this.headers() && cell.value.includes(':')) void this.split(index, cell);
   }
