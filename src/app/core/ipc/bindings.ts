@@ -3305,7 +3305,7 @@ export type ScriptsAnswer = {
  *  biggest thing on the card. That case is `SearchMatch::Title`.
  */
 export type SearchField = "tag" | "body" | "item" | 
-/**  The context under the title: « PostgreSQL / production ». */
+/**  The context under the title: `PostgreSQL / production`. */
 "source";
 
 /**  What made a note match, and where. */

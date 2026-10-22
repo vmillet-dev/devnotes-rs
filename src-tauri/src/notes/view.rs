@@ -300,7 +300,7 @@ pub enum SearchField {
     Tag,
     Body,
     Item,
-    /// The context under the title: « PostgreSQL / production ».
+    /// The context under the title: `PostgreSQL / production`.
     Source,
 }
 
@@ -1513,7 +1513,7 @@ mod tests {
             assert_eq!(hit.excerpt, "Push the tag");
         }
 
-        /// « PostgreSQL » found nothing, though the guide says the search reads the contexts (COD-21).
+        /// `PostgreSQL` found nothing, though the guide says the search reads the contexts (COD-21).
         #[test]
         fn quotes_the_context_when_nothing_else_matched() {
             let note = Note {
