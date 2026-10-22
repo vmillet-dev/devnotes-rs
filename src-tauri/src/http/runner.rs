@@ -114,9 +114,10 @@ fn records(text: &str) -> Result<Vec<Vec<String>>, DataFault> {
 
 fn from_csv(text: &str) -> Result<RunData, DataFault> {
     let records = records(text)?;
-    // One line without a comma is a sentence, not a header waiting for its rows.
+    // One line, one field with a space in it: a sentence, not a header waiting for its rows.
     if let [only] = records.as_slice()
-        && only.len() == 1
+        && let [field] = only.as_slice()
+        && field.trim().contains(char::is_whitespace)
     {
         return Err(DataFault::Unreadable);
     }
@@ -483,6 +484,11 @@ mod tests {
             "one line without a separator"
         );
         assert!(read_data("id\n1\n").is_ok(), "one column, with its rows");
+        assert_eq!(
+            read_data("customer\n"),
+            Err(DataFault::Empty),
+            "a header alone"
+        );
         assert_eq!(read_data("[]"), Err(DataFault::Empty));
         assert_eq!(read_data(""), Err(DataFault::Empty));
     }
