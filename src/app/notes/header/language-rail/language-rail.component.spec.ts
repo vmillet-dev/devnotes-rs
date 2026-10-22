@@ -68,4 +68,21 @@ describe('LanguageRailComponent', () => {
 
     expect(emitted).toBe('yml');
   });
+
+  it('shows how many snippets each format holds', async () => {
+    fixture.componentRef.setInput('languages', ['json', 'yml']);
+    fixture.componentRef.setInput(
+      'counts',
+      new Map<LanguageTag, number>([
+        ['json', 6],
+        ['yml', 1],
+      ]),
+    );
+    await fixture.whenStable();
+
+    expect(chips().map((chip) => chip.querySelector('[data-testid="language-count"]')?.textContent)).toEqual([
+      '6',
+      '1',
+    ]);
+  });
 });

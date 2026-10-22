@@ -12,6 +12,8 @@ import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 export class TagRailComponent {
   readonly tags = input.required<readonly string[]>();
   readonly activeTags = input.required<ReadonlySet<string>>();
+  /** The notes each tag holds in the space. */
+  readonly counts = input<ReadonlyMap<string, number>>(new Map());
 
   readonly tagToggled = output<string>();
   /** Opens the corpus-wide manager: it acts on exactly what this rail shows. */

@@ -595,8 +595,8 @@ pub fn build<S: std::hash::BuildHasher>(
     let mut view = BoardView {
         zones,
         loose,
-        available_tags: facets.tags,
-        available_languages: facets.languages,
+        available_tags: facets.tag_names(),
+        available_languages: facets.language_names(),
         is_filtering,
         matched: saturating_u32(matched),
         width,

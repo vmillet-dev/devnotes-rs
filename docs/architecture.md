@@ -1473,6 +1473,8 @@ measures it): below 1280 px the button is a glyph, the order in its tooltip.
 **A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
 counted by one helper, `view::counted`; its rail reads the levels from the most pressing
 down, offers no chip for `none`, and stays away from a space where nothing has a priority.
+The tags and the formats count their notes the same way (`tag_counts`, `language_counts`, a
+`GROUP BY` each, `available_*` in their order), shown beside each chip.
 
 A checklist has **no body**. Its items replace `content` — they are not an addition to it —
 and they live in `note_items`, keyed `(note_id, position)`. That key is the whole design: an

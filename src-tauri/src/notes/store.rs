@@ -246,16 +246,16 @@ fn facets(connection: &mut Library, space_id: Option<&str>) -> Result<Facets, St
     let mut tags = note_tags::table
         .inner_join(notes::table)
         .filter(notes::deleted_at.is_null())
-        .select(note_tags::tag)
-        .distinct()
+        .group_by(note_tags::tag)
+        .select((note_tags::tag, diesel::dsl::count_star()))
         .order(note_tags::tag.asc())
         .into_boxed();
     // A snippet's alone: a Note or a list would bring "Text" to the rail.
     let mut languages = notes::table
         .filter(notes::deleted_at.is_null())
         .filter(notes::kind.eq(NoteKind::Snippet.as_str()))
-        .select(notes::language)
-        .distinct()
+        .group_by(notes::language)
+        .select((notes::language, diesel::dsl::count_star()))
         .order(notes::language.asc())
         .into_boxed();
     let mut kinds = notes::table
@@ -277,13 +277,8 @@ fn facets(connection: &mut Library, space_id: Option<&str>) -> Result<Facets, St
     }
 
     Ok(Facets {
-        tags: tags.load::<String>(connection.db())?,
-        // A stored language this build does not know has no facet to offer.
-        languages: languages
-            .load::<String>(connection.db())?
-            .iter()
-            .filter_map(|language| language.parse().ok())
-            .collect(),
+        tags: view::count_tags(tags.load::<(String, i64)>(connection.db())?),
+        languages: view::count_languages(&languages.load::<(String, i64)>(connection.db())?),
         kinds: view::count_kinds(&kinds.load::<(String, i64)>(connection.db())?),
         priorities: view::count_priorities(&priorities.load::<(String, i64)>(connection.db())?),
     })

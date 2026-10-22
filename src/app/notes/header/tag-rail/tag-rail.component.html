@@ -4,7 +4,12 @@
     <!-- Only the pills scroll: the button below has to stay where it can be clicked. -->
     <div class="tag-rail-scroll">
       @for (tag of tags(); track tag) {
-        <app-tag-pill [label]="tag" [active]="activeTags().has(tag)" (toggled)="tagToggled.emit($event)" />
+        <app-tag-pill
+          [label]="tag"
+          [count]="counts().get(tag) ?? null"
+          [active]="activeTags().has(tag)"
+          (toggled)="tagToggled.emit($event)"
+        />
       }
     </div>
     <button type="button" class="tag-rail-manage" data-testid="tag-manage" (click)="manageRequested.emit()">

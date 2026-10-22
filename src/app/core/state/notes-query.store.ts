@@ -195,6 +195,13 @@ export class NotesQueryStore {
   readonly allTags = computed<readonly string[]>(() => this.view()?.availableTags ?? []);
   readonly allLanguages = computed<readonly LanguageTag[]>(() => this.view()?.availableLanguages ?? []);
   readonly kindCounts = computed<readonly FacetCount<NoteKind>[]>(() => this.view()?.kindCounts ?? []);
+  /** What each tag and each format holds, by its name: the rails show it beside the chip. */
+  readonly tagCounts = computed<ReadonlyMap<string, number>>(
+    () => new Map((this.view()?.tagCounts ?? []).map(({ value, count }) => [value, count])),
+  );
+  readonly languageCounts = computed<ReadonlyMap<LanguageTag, number>>(
+    () => new Map((this.view()?.languageCounts ?? []).map(({ value, count }) => [value, count])),
+  );
   readonly priorityCounts = computed<readonly FacetCount<Priority>[]>(
     () => this.view()?.priorityCounts ?? [],
   );

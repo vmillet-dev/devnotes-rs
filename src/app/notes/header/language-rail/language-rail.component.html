@@ -13,6 +13,9 @@
         (click)="languageToggled.emit(language)"
       >
         <app-language-badge [language]="language" />
+        @if (counts().get(language); as count) {
+          <span class="language-count" data-testid="language-count">{{ count }}</span>
+        }
       </button>
     }
   </div>

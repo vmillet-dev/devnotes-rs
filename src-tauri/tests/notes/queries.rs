@@ -645,6 +645,12 @@ fn available_tags_are_sorted_and_de_duplicated() {
     let view = query(&mut connection, &all_notes()).unwrap();
 
     assert_eq!(view.available_tags, ["alpha", "beta", "zeta"]);
+    let counts: Vec<(&str, u32)> = view
+        .tag_counts
+        .iter()
+        .map(|tag| (tag.value.as_str(), tag.count))
+        .collect();
+    assert_eq!(counts, [("alpha", 2), ("beta", 1), ("zeta", 1)]);
 }
 
 #[test]

@@ -14,6 +14,8 @@ import { LanguageBadgeComponent } from '@shared/badges/language-badge/language-b
 export class LanguageRailComponent {
   readonly languages = input.required<readonly LanguageTag[]>();
   readonly activeLanguages = input.required<ReadonlySet<LanguageTag>>();
+  /** The snippets each format holds in the space. */
+  readonly counts = input<ReadonlyMap<LanguageTag, number>>(new Map());
 
   readonly languageToggled = output<LanguageTag>();
 }
