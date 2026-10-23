@@ -491,6 +491,34 @@ describe('Editing a note', () => {
       expect((await bridge.getNote(id)).items).toEqual(items);
     });
 
+    /** NOT-10: the bar sat under the editor's backdrop, and its first click only closed the editor. */
+    it('undoes a conversion from the bar in one click, the editor open', async () => {
+      const title = 'Converted and back';
+      const id = (await bridge.createNote(draft({ spaceId, title, content: 'psql -h db', language: 'sh' })))
+        .id;
+      await reloadCanvas();
+      await canvas.openNote(title);
+
+      await editor.convertTo('note');
+      await eventually(
+        async () => (await bridge.getNote(id)).kind,
+        (kind) => kind === 'note',
+        'the Note',
+      );
+      await undoBar.bar().waitForDisplayed({ timeout: 10_000 });
+      await undoBar.restore();
+
+      const back = await eventually(
+        () => bridge.getNote(id),
+        (note) => note.kind === 'snippet',
+        'the snippet back',
+      );
+      expect(back.language).toBe('sh');
+      if (await editor.isOpen()) await editor.close();
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+    });
+
     /** The code field's bar over the text: one replace for every « deploy », one Ctrl+Z for all. */
     it('replaces a word everywhere from Ctrl+H, and Ctrl+Z puts every one back', async () => {
       const title = 'Replaced everywhere';

@@ -1,13 +1,14 @@
 @use 'mixins' as *;
 
-// Above the canvas but below the modals: it must not come in front of the editor.
+// With the banners, above every modal: shown while the editor is open — a conversion, a
+// revision put back — it sat under the editor's backdrop, and its first click closed the editor.
 .undo-bar {
   @include enters(enter-lift);
   position: fixed;
   left: 50%;
   bottom: 20px;
   transform: translateX(-50%);
-  z-index: 40;
+  z-index: 80;
   display: flex;
   align-items: center;
   gap: 12px;
