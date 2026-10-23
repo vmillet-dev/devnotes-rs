@@ -47,6 +47,7 @@
     "copied": "Copied",
     "copiedNote": "“{{title}}” copied to the clipboard.",
     "copiedUntitled": "Untitled note copied to the clipboard.",
+    "drawingNotCopied": "A drawing is not copied as text.",
     "untitled": "Untitled",
     "pinnedState": "Pinned note",
     "deleteArmed": "Del again · Esc to cancel",

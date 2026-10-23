@@ -47,6 +47,7 @@
     "copied": "Copié",
     "copiedNote": "« {{title}} » copiée dans le presse-papier.",
     "copiedUntitled": "Note sans titre copiée dans le presse-papier.",
+    "drawingNotCopied": "Un dessin ne se copie pas en texte.",
     "untitled": "Sans titre",
     "pinnedState": "Note épinglée",
     "deleteArmed": "Suppr. à nouveau · Échap pour annuler",

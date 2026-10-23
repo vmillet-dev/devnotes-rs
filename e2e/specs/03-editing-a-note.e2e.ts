@@ -9,6 +9,7 @@ import { undoBar } from '../pageobjects/overlays.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
 import { settings } from '../pageobjects/titlebar.page.js';
 import {
+  clipboardText,
   eventually,
   isInFront,
   press,
@@ -597,6 +598,29 @@ describe('Editing a note', () => {
         );
       }
       await editor.close();
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
+    /** DES-12: C on a drawing's card copied its scene as JSON, and said it was copied. */
+    it('copies nothing of a drawing from its card, and says a drawing is not copied as text', async () => {
+      const title = 'Not as text';
+      const id = (await bridge.createNote(draft({ spaceId, title, content: '', kind: 'drawing' }))).id;
+      await reloadCanvas();
+      await canvas.openNote(title);
+      await editor.close();
+      const before = await clipboardText();
+
+      await press('c');
+      await eventually(
+        () => $(testid('status-toast')).getAttribute('data-key'),
+        (key) => key === 'notes.drawingNotCopied',
+        'the copy refused, and said so',
+      );
+      // Read where the runner lets anyone read the clipboard; see `clipboardText`.
+      if (before !== null) expect(await clipboardText()).toBe(before);
+
       await bridge.deleteNotes([id]);
       await bridge.purgeNotes([id]);
       await reloadCanvas();
