@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Rect, type Canvas, type TPointerEventInfo } from 'fabric';
 import type { DrawingPictures } from '@core/model/note.model';
 import { DrawingExportService, DrawingFormat } from '@core/services/drawing/drawing-export.service';
+import { DrawingPicturesStore } from '@core/state/drawing-pictures.store';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { DrawingEditorComponent, SAVE_AFTER_MS } from './drawing-editor.component';
 import type { DrawingScene } from './drawing-scene';
@@ -14,6 +15,8 @@ describe('DrawingEditorComponent', () => {
   let blurs: number;
   let counts: number[];
   let exported: { title: string; format: DrawingFormat; picture: string }[];
+  /** The drawings asked whether they have pictures; `imported` has none. */
+  let asked: string[];
 
   const el = <T extends HTMLElement = HTMLElement>(selector: string): T | null =>
     (fixture.nativeElement as HTMLElement).querySelector<T>(selector);
@@ -21,9 +24,10 @@ describe('DrawingEditorComponent', () => {
   const scene = (): DrawingScene => fixture.componentInstance['scene']!;
   const canvas = (): Canvas => scene()['canvas'];
 
-  async function mount(content = ''): Promise<void> {
+  async function mount(content = '', noteId: string | null = null): Promise<void> {
     fixture = TestBed.createComponent(DrawingEditorComponent);
     fixture.componentRef.setInput('content', content);
+    fixture.componentRef.setInput('noteId', noteId);
     fixture.componentRef.setInput('title', 'Archi');
     fixture.componentInstance.changed.subscribe((body) => bodies.push(body));
     fixture.componentInstance.pictured.subscribe((taken) => pictures.push(taken));
@@ -62,10 +66,20 @@ describe('DrawingEditorComponent', () => {
     blurs = 0;
     counts = [];
     exported = [];
+    asked = [];
     TestBed.configureTestingModule({
       imports: [DrawingEditorComponent],
       providers: [
         provideTranslocoTesting(),
+        {
+          provide: DrawingPicturesStore,
+          useValue: {
+            hasPictures: (id: string) => {
+              asked.push(id);
+              return Promise.resolve(id !== 'imported');
+            },
+          },
+        },
         {
           provide: DrawingExportService,
           useValue: {
@@ -230,5 +244,28 @@ describe('DrawingEditorComponent', () => {
     fixture.componentRef.setInput('content', bodies.at(-1)!);
     await fixture.whenStable();
     expect(scene().canUndo()).toBe(true);
+  });
+
+  /** DES-15: an imported drawing comes without its pictures, and opening it never took them. */
+  it('takes the pictures of a drawing that has none yet, and of no other, sending no body', async () => {
+    const stored = JSON.stringify({
+      version: 1,
+      scene: { objects: [new Rect({ width: 20, height: 20 }).toObject()] },
+    });
+    await mount(stored, 'sketch');
+    await vi.waitFor(() => expect(asked).toEqual(['sketch']));
+    await fixture.whenStable();
+    fixture.componentInstance.flush();
+    expect(pictures).toEqual([]);
+
+    fixture.componentRef.setInput('noteId', 'imported');
+    fixture.componentRef.setInput('content', stored.replace('"version":1', '"version": 1'));
+    await vi.waitFor(() => expect(asked).toEqual(['sketch', 'imported']));
+    await fixture.whenStable();
+    fixture.componentInstance.flush();
+
+    expect(pictures).toHaveLength(1);
+    expect(pictures[0]!.thumbnail.startsWith('data:image/png;base64,')).toBe(true);
+    expect(bodies).toEqual([]);
   });
 });

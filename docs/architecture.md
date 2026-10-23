@@ -1794,8 +1794,10 @@ way — the kind menu names it and offers nothing.
   in the patch's transaction; both empty takes them away). A new drawing's first pictures
   follow the write that makes it (`NotesStore.editDraft`). A list sends none
   (`cut_to_preview` clears the body): a card asks `drawing_thumbnail` once drawn, through
-  `DrawingPicturesStore`, kept until the drawing's next save (`updatedAt`); a duplicate takes
-  them, an export does not (the next save takes them again).
+  `DrawingPicturesStore`, kept until the drawing's next save (`updatedAt`) or its pictures'
+  (`redrawn`, which moves no date); a duplicate takes them, an export does not. A drawing
+  that has none, as one that came by import, has them taken when it opens: the editor asks
+  `hasPictures` and they go with its next flush.
 - **What is drawn keeps its colours by name.** Each object carries a `hue` (ink, blue…),
   painted from the tokens on `:root` (`paletteOf`), so a theme changed later redraws it; the
   pictures are taken on the theme's paper (`--bg-1`). ⚠️ Fabric 7 places an object by its
@@ -3714,7 +3716,8 @@ the canvas filters, sorts and groups on it. The command answers each note whose 
 moved, with the one it had, and `restore_priorities` gives each note its own back — never one
 level for the whole batch. ⚠️ Neither moves `updated_at`: triaging is not editing, and a note
 given a priority would jump to the head of a list sorted by modification. That is why the
-priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field.
+priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field it
+changes.
 
 **A pin is triage too**: `set_pinned(ids, pinned)` answers the notes whose pin changed and moves
 no date; its undo is the same call the other way over those. The selection bar, the card menu,
@@ -5674,7 +5677,10 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   the trash, filling a `{{field}}` records a value — none of the four refreshes it. The canvas
   sorts on that column, and touching it would float notes nobody reopened to the top. It is
   also why the field values are a command of their own rather than a `NotePatch` field: the
-  patch path exists to refresh that column.
+  patch path exists to refresh that column. A patch that changes nothing refreshes nothing
+  (`NotePatch::apply` compares the note before and after): closing the editor sends a body
+  compared with the list's preview of it, once the note it held is gone, and a drawing's
+  pictures may be taken of a scene left as it was.
 
 ## Cross-cutting services
 

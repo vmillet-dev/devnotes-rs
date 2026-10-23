@@ -5,6 +5,7 @@ import { loadGrammar } from '@core/services/syntax/grammars';
 import { NotesRepository } from '@core/data/notes.repository';
 import { Space } from '@core/model/space.model';
 import { LanguageBadgeComponent } from '@shared/badges/language-badge/language-badge.component';
+import { DrawingPicturesStore } from '@core/state/drawing-pictures.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
@@ -75,6 +76,22 @@ describe('NoteCardComponent', () => {
 
       await vi.waitFor(() =>
         expect(text('[data-testid="note-card-drawing-empty"]')).toBe('Pas encore d’aperçu'),
+      );
+    });
+
+    /** DES-15: an imported drawing pictured at its first opening, its date unmoved. */
+    it('shows the picture taken after it, though the drawing kept its date', async () => {
+      const repository = TestBed.inject(NotesRepository) as unknown as FakeNotesRepository;
+      fixture.componentRef.setInput('note', drawing);
+      await vi.waitFor(() => expect(repository.picturesAsked).toEqual(['sketch']));
+
+      repository.pictures.set('sketch', { thumbnail: 'data:image/png;base64,T', picture: '' });
+      TestBed.inject(DrawingPicturesStore).pictured('sketch');
+
+      await vi.waitFor(() =>
+        expect(
+          fixture.nativeElement.querySelector('[data-testid="note-card-drawing"]')?.getAttribute('src'),
+        ).toBe('data:image/png;base64,T'),
       );
     });
   });

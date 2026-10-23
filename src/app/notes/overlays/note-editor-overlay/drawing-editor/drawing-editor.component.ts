@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import type { DrawingPictures } from '@core/model/note.model';
+import { DrawingPicturesStore } from '@core/state/drawing-pictures.store';
 import { DrawingExportService, DrawingFormat } from '@core/services/drawing/drawing-export.service';
 import { HUES, Hue, Tool } from './drawing-geometry';
 import { DrawingScene, paletteOf, sceneOf } from './drawing-scene';
@@ -56,6 +57,8 @@ export const SAVE_AFTER_MS = 400;
 export class DrawingEditorComponent {
   readonly content = input.required<string>();
   readonly title = input('');
+  /** Whose pictures are taken when it has none yet, as a drawing that came by import. */
+  readonly noteId = input<string | null>(null);
 
   readonly changed = output<string>();
   /** Taken with the body that `flush` emits, not as it is drawn: two pictures are dear. */
@@ -65,6 +68,7 @@ export class DrawingEditorComponent {
   readonly counted = output<number>();
 
   private readonly exports = inject(DrawingExportService);
+  private readonly drawings = inject(DrawingPicturesStore);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly canvasElement = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly stage = viewChild.required<ElementRef<HTMLElement>>('stage');
@@ -215,6 +219,8 @@ export class DrawingEditorComponent {
     this.written = content;
     await this.scene?.load(sceneOf(content));
     this.reflect();
+    const id = this.noteId();
+    if (id && this.scene?.shapes() && !(await this.drawings.hasPictures(id))) this.unpictured = true;
   }
 
   private fit(stage: HTMLElement): void {

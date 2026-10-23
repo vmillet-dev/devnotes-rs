@@ -201,6 +201,36 @@ mod tests {
         assert!(!stored.windows(4).any(|bytes| bytes == b"PNG\r"));
     }
 
+    /// DES-15: an imported drawing is pictured at its first opening, and that is no edit.
+    #[test]
+    fn the_pictures_of_a_drawing_left_as_it_was_leave_its_date_alone() {
+        let (mut library, drawing) = library_with(NoteKind::Drawing);
+        let sent = DrawingPictures {
+            thumbnail: png(1),
+            picture: png(2),
+        };
+        let patch = NotePatch {
+            content: Some(SCENE.to_string()),
+            pictures: Some(sent.clone()),
+            ..NotePatch::default()
+        };
+
+        let saved = store::update_drawn(
+            &mut library,
+            &drawing.id,
+            &patch,
+            Some(sent.decoded().unwrap().as_ref()),
+            at("2026-07-26T09:00:00.000Z"),
+        )
+        .unwrap();
+
+        assert_eq!(saved.updated_at, drawing.updated_at);
+        assert_eq!(
+            shown(&mut library, &drawing.id, Which::Thumbnail),
+            Some(png(1))
+        );
+    }
+
     #[test]
     fn a_drawing_emptied_has_no_picture_any_more() {
         let (mut library, drawing) = library_with(NoteKind::Drawing);

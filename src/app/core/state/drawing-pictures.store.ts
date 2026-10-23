@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { NotesRepository } from '@core/data/notes.repository';
 import type { DrawingRef } from '@core/model/note.model';
 import { NotesRevision } from './notes-revision';
@@ -19,6 +19,25 @@ export class DrawingPicturesStore {
   private readonly revision = inject(NotesRevision);
   private readonly thumbnails = new Map<string, Kept<string>>();
   private readonly pictures = new Map<string, Kept<number>>();
+  private readonly _redrawn = signal<ReadonlyMap<string, number>>(new Map());
+
+  /** Part of a card's stamp: pictures written beside a body left as it was move no date. */
+  redrawn(id: string): number {
+    return this._redrawn().get(id) ?? 0;
+  }
+
+  pictured(id: string): void {
+    this._redrawn.update((counts) => new Map(counts).set(id, (counts.get(id) ?? 0) + 1));
+  }
+
+  /** An imported drawing has none until it is opened. One that cannot be read is not retaken. */
+  async hasPictures(id: string): Promise<boolean> {
+    try {
+      return (await this.repository.drawingThumbnail(id)) !== null;
+    } catch {
+      return true;
+    }
+  }
 
   /** `stamp` is the drawing's last save: another one makes what is kept stale. */
   thumbnail(id: string, stamp: string): Promise<string | null> {
