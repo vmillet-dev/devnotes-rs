@@ -208,9 +208,12 @@ export class PaletteComponent {
     return hints;
   });
 
-  /** Said in place of a list: what was looked for, so a typo shows. */
+  /**
+   * Said in place of a list — above the offer to create, which is no match: what was looked
+   * for, so a typo shows; or, for a kind alone and nothing typed, that it holds nothing.
+   */
   protected readonly empty = computed<{ key: string; params: Record<string, string> } | null>(() => {
-    if (this.options().length > 0) return null;
+    if (this.options().some((option) => option.kind !== 'create')) return null;
     const mode = this.store.mode();
     switch (mode.kind) {
       case 'scopes':
@@ -219,10 +222,13 @@ export class PaletteComponent {
         return { key: 'palette.empty.tags', params: { word: mode.word } };
       case 'commands':
         return { key: 'palette.empty.commands', params: { term: mode.term } };
-      case 'search':
-        return mode.term === ''
-          ? { key: 'palette.empty.nothing', params: {} }
-          : { key: 'palette.empty.search', params: { term: mode.term } };
+      case 'search': {
+        if (mode.term !== '') return { key: 'palette.empty.search', params: { term: mode.term } };
+        const [only, ...others] = this.store.chips();
+        return only?.kind === 'scope' && others.length === 0
+          ? { key: `palette.empty.none.${only.scope}`, params: {} }
+          : { key: 'palette.empty.nothing', params: {} };
+      }
     }
   });
 

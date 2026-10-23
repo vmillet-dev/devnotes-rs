@@ -51,8 +51,9 @@ describe('The quick-paste palette', () => {
   it('offers to create a note from a query that matches nothing', async () => {
     await palette.type('a query matching nothing at all');
     expect(await palette.createRow().isExisting()).toBe(true);
-    // The offer replaces the list rather than sitting under an empty one.
+    // The offer replaces the list, and nothing matching is said above it (PAL-11).
     expect(await palette.options().length).toBe(0);
+    expect(await palette.empty().isExisting()).toBe(true);
   });
 
   /** What was typed while looking for a note is its name: the note opens titled, already saved. */
