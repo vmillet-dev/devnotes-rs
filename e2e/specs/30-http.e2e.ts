@@ -16,6 +16,7 @@ import {
   reloadCanvas,
   setField,
   testid,
+  typeKeys,
   viewportSize,
 } from '../support/app.js';
 import { bridge } from '../support/bridge.js';
@@ -906,7 +907,7 @@ describe('HTTP collections', () => {
 
         // Key by key, as it is typed: at the colon the caret goes on to the value.
         await $(name).click();
-        await browser.keys([...'X-Recette: 1']);
+        await typeKeys('X-Recette: 1');
         await eventually(cells, (read) => read.join('|') === 'X-Recette|1', 'the header in its two cells');
         expect(await $(`${row}[data-fault]`).isExisting()).toBe(false);
 
