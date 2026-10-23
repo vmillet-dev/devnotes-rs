@@ -325,9 +325,7 @@ export class IdentityToolComponent implements Tool {
 
   protected async copyJson(): Promise<void> {
     const json = this.answer()?.json;
-    if (json && (await this.clipboard.copy(json))) {
-      this.status.notify({ key: 'tools.identity.jsonCopied' });
-    }
+    if (json) await this.clipboard.copy(json, { key: 'tools.identity.jsonCopied' });
   }
 
   /** A batch is a file, written by Rust where the user says: a hundred people are no note. */

@@ -63,6 +63,22 @@ describe('ClipboardService', () => {
     expect(TestBed.inject(StatusNotifier).status()).toBeNull();
   });
 
+  /** PRF-10: off, the card's « « zq-isolation » copiée dans le presse-papier. » still showed. */
+  it('says what the caller copied, and that too only while the acknowledgement is on', async () => {
+    const notifier = TestBed.inject(StatusNotifier);
+    await service.copy('psql', { key: 'notes.copiedNote', params: { title: 'Connexion psql' } });
+    expect(notifier.status()).toEqual({ key: 'notes.copiedNote', params: { title: 'Connexion psql' } });
+
+    notifier.dismiss();
+    await service.copy('psql', null);
+    expect(notifier.status()).toBeNull();
+
+    TestBed.inject(SettingsStore).setCopyConfirmation(false);
+    await service.copy('psql', { key: 'notes.copiedNote', params: { title: 'Connexion psql' } });
+    expect(notifier.status()).toBeNull();
+    expect(service.acknowledges()).toBe(false);
+  });
+
   it('says nothing about a copy that did not happen', async () => {
     setUp(fakeAdapter({ writeText: vi.fn(async () => Promise.reject(new Error('no plugin'))) }));
 

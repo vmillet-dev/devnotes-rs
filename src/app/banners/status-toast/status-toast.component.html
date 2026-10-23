@@ -5,6 +5,7 @@
     <button
       type="button"
       class="status-dismiss"
+      data-testid="status-dismiss"
       [attr.aria-label]="'errors.dismiss' | transloco"
       [attr.title]="'errors.dismiss' | transloco"
       (click)="notifier.dismiss()"

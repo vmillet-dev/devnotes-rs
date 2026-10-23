@@ -24,7 +24,6 @@ import { requestBadge } from '@core/model/http.model';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
 import { RequestTab } from '@core/services/http/http-tabs.store';
-import { StatusNotifier } from '@core/services/notifications/status.service';
 import { ToolResult } from '@core/services/tools/tool.model';
 import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog.component';
 import { CodeViewerComponent } from '@shared/code-viewer/code-viewer.component';
@@ -54,7 +53,6 @@ export class CodeDialogComponent {
 
   private readonly repository = inject(HttpRepository);
   private readonly clipboard = inject(ClipboardService);
-  private readonly status = inject(StatusNotifier);
   private readonly transloco = inject(TranslocoService);
   protected readonly environments = inject(HttpEnvironmentsStore);
 
@@ -145,7 +143,7 @@ export class CodeDialogComponent {
   protected async copy(): Promise<void> {
     const code = this.code();
     if (code === null) return;
-    if (await this.clipboard.copy(code.code)) this.status.notify({ key: 'http.code.copied' });
+    await this.clipboard.copy(code.code, { key: 'http.code.copied' });
   }
 
   protected saveAsSnippet(): void {
