@@ -432,6 +432,7 @@
     "hoursAgo": "il y a {{count}}h",
     "daysAgo": "il y a {{count}}j",
     "expiresIn": "expire dans {{count}}j",
+    "expiresToday": "expire aujourd’hui",
     "expired": "expirée",
     "span": {
       "now": "à moins d’une minute",

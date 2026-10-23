@@ -89,6 +89,31 @@ describe('Creating a note, and finding it again', () => {
     await reloadCanvas();
   });
 
+  /** MET-07: an expiry three days away read « dans 4j » in the evening. */
+  it('counts the days to an expiry by the calendar', async () => {
+    const titled = 'Expires in three days';
+    const day = new Date();
+    day.setDate(day.getDate() + 3);
+    day.setHours(23, 59, 59, 999);
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId: await homeSpaceId(),
+        title: titled,
+        lifecycle: { kind: 'expires', at: day.toISOString() },
+      }),
+    );
+    await reloadCanvas();
+    await canvas.waitForCard(titled);
+
+    const card = await canvas.cardWithTitle(titled);
+    // Either language: « expire dans 3j », « expires in 3d ».
+    expect(await card.$('.card-when').getText()).toMatch(/\b3\s?[jd]$/);
+
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   it('materialises the draft exactly once, not once per committed field', async () => {
     // Closing commits the title then the content with no change detection between
     // them: the second call still carries `DRAFT_ID` while the row already exists.
