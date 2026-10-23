@@ -547,15 +547,15 @@ export class NotesStore {
   }
 
   /** Synchronous down to the assignment, so a second caller joins the write in flight. */
-  private saveDraft(draft: Note): Promise<string | null> {
-    this.draftMaterialisation ??= this.writeDraft(draft);
+  private saveDraft(draft: Note, session = this._editorSession()): Promise<string | null> {
+    this.draftMaterialisation ??= this.writeDraft(draft, session);
 
     return this.draftMaterialisation;
   }
 
   /** A refused write releases the gate: the next commit may still be worth keeping. */
-  private async writeDraft(draft: Note): Promise<string | null> {
-    const created = await this.persistNew(toDraftPayload(draft));
+  private async writeDraft(draft: Note, session: number): Promise<string | null> {
+    const created = await this.persistNew(toDraftPayload(draft), session);
     if (!created) {
       this.draftMaterialisation = null;
       return null;
@@ -563,16 +563,18 @@ export class NotesStore {
 
     // Before the draft is dropped: in between, `find()` would know the note by neither name.
     this.materialisedNote = created;
-    this._draftNote.set(null);
+    // Not a draft begun since: that one is not the note just written.
+    if (this._editorSession() === session) this._draftNote.set(null);
 
     return created.id;
   }
 
-  private async persistNew(payload: NoteDraft): Promise<Note | null> {
-    // Read before the write leaves: the editor may close inside the round trip, and adopting
-    // the created note would put it back on screen.
-    const session = this._editorSession();
-
+  /**
+   * `session` is the editor's when the write was asked for: it may close inside the round trip
+   * — or before it, when closing is what commits — and adopting the created note would put it
+   * back on screen.
+   */
+  private async persistNew(payload: NoteDraft, session = this._editorSession()): Promise<Note | null> {
     const created = await this.notifier.attempt('errors.noteCreateFailed', () =>
       this.repository.create(payload),
     );
@@ -595,13 +597,17 @@ export class NotesStore {
 
   /** `changes` answers `null` when nothing moved: a no-op edit makes no round trip. */
   private async edit(id: string, changes: (note: Note) => NotePatch | null): Promise<void> {
+    // ⚠️ Read before the first `await`: closing commits its fields, then drops the draft at
+    // once, and a new note titled and closed with Escape was lost.
+    const session = this._editorSession();
+    const draft = id === DRAFT_ID ? this._draftNote() : null;
     const resolved = await this.resolve(id);
-    const target = this.find(resolved);
+    const target = resolved === DRAFT_ID && this._editorSession() !== session ? draft : this.find(resolved);
     const patch = target && changes(target);
     if (!patch) return;
 
     if (resolved === DRAFT_ID) {
-      await this.editDraft(target, patch);
+      await this.editDraft(target, patch, session);
       return;
     }
 
@@ -609,12 +615,13 @@ export class NotesStore {
   }
 
   /** A write on a draft stays local while the note is not worth keeping. */
-  private async editDraft(draft: Note, patch: NotePatch): Promise<void> {
+  private async editDraft(draft: Note, patch: NotePatch, session: number): Promise<void> {
     const { pictures, ...fields } = patch;
     const updated: Note = { ...draft, ...fields };
 
     if (!isWorthSaving(updated)) {
-      this._draftNote.set(updated);
+      // Closed meanwhile, a draft not worth keeping is let go rather than put back.
+      if (this._editorSession() === session) this._draftNote.set(updated);
       return;
     }
 
@@ -626,7 +633,7 @@ export class NotesStore {
       return id ? this.persist(id, patch) : undefined;
     }
 
-    const id = await this.saveDraft(updated);
+    const id = await this.saveDraft(updated, session);
     // A draft is made from its fields: a drawing's pictures follow the write that made it.
     if (id && pictures) await this.persist(id, { pictures });
   }

@@ -96,6 +96,59 @@ describe('NotesStore', () => {
     });
   });
 
+  /**
+   * NOT-02: a title typed into a new note, then Escape — the commits and the close in one turn,
+   * before any write left — and no card was created.
+   */
+  describe('a new note closed in the turn its title is committed', () => {
+    it('is written with that title, and the editor stays closed', async () => {
+      const { store, canvas, repository } = await createNotesHarness([]);
+      const create = vi.spyOn(repository, 'create');
+      store.createNote('snippet');
+
+      const writing = Promise.all([
+        store.applyPatch(DRAFT_ID, { title: 'Rotate the certificate' }),
+        store.applyPatch(DRAFT_ID, { content: 'openssl req -new' }),
+      ]);
+      store.closeOverlay();
+      await writing;
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(create.mock.calls[0]?.[0]).toMatchObject({ title: 'Rotate the certificate' });
+      await vi.waitFor(() => expect(visibleIds(canvas)).toHaveLength(1));
+      expect(store.selectedNote()).toBeNull();
+      expect(store.selectedNoteId()).toBeNull();
+    });
+
+    it('leaves nothing behind when what was typed is not worth keeping', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const create = vi.spyOn(repository, 'create');
+      store.createNote('snippet');
+
+      const writing = store.applyPatch(DRAFT_ID, { title: '   ' });
+      store.closeOverlay();
+      await writing;
+
+      expect(create).not.toHaveBeenCalled();
+      expect(store.selectedNoteId()).toBeNull();
+    });
+
+    it('does not take the next new note for the one just closed', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const create = vi.spyOn(repository, 'create');
+      store.createNote('snippet');
+
+      const writing = store.applyPatch(DRAFT_ID, { title: 'First' });
+      store.closeOverlay();
+      store.createNote('snippet');
+      await writing;
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(store.selectedNoteId()).toBe(DRAFT_ID);
+      expect(store.selectedNote()?.title ?? '').toBe('');
+    });
+  });
+
   describe('a drawing’s pictures', () => {
     const PICTURES = { thumbnail: 'data:image/png;base64,T', picture: 'data:image/png;base64,P' };
 

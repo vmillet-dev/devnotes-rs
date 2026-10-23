@@ -2,7 +2,7 @@ import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { bottomGapOf, press, reloadCanvas, reopenSession, testid } from '../support/app.js';
+import { bottomGapOf, press, reloadCanvas, reopenSession, setField, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -182,5 +182,30 @@ describe('Creating a note, and finding it again', () => {
     const note = section?.notes[0];
     expect(note?.title).toBe(title);
     expect(note?.content).toBe(body);
+  });
+
+  /**
+   * NOT-02: a title typed into a new note, then Escape with the caret still in it, and no
+   * card was made. `editor.setTitle` blurs the field, and the blur committed what Escape lost.
+   */
+  it('keeps a new note titled and closed with Escape, the caret still in its title', async () => {
+    const escaped = 'Closed with Escape';
+    await canvas.createSnippet();
+    await setField(testid('editor-title'), escaped);
+    expect(await browser.execute(() => document.activeElement?.getAttribute('data-testid'))).toBe(
+      'editor-title',
+    );
+    await browser.keys(['Escape']);
+    await $(testid('editor-title')).waitForExist({ reverse: true, timeout: 10_000 });
+
+    await canvas.waitForCard(escaped);
+    await reloadCanvas();
+    await canvas.waitForCard(escaped);
+    const kept = (await bridge.queryNotes(query({ search: escaped }))).sections[0]?.notes[0];
+    expect(kept?.title).toBe(escaped);
+
+    await bridge.deleteNotes([kept!.id]);
+    await bridge.purgeNotes([kept!.id]);
+    await reloadCanvas();
   });
 });
