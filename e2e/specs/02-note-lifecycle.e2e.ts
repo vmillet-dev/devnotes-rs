@@ -2,7 +2,7 @@ import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { bottomGapOf, press, reloadCanvas, reopenSession, testid } from '../support/app.js';
+import { bottomGapOf, press, reloadCanvas, reopenSession, setField, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -166,8 +166,7 @@ describe('Creating a note, and finding it again', () => {
   it('keeps a new note titled and closed with Escape, the caret still in its title', async () => {
     const escaped = 'Closed with Escape';
     await canvas.createSnippet();
-    await $(testid('editor-title')).click();
-    await browser.keys([...escaped]);
+    await setField(testid('editor-title'), escaped);
     expect(await browser.execute(() => document.activeElement?.getAttribute('data-testid'))).toBe(
       'editor-title',
     );
