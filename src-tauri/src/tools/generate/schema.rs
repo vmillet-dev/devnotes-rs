@@ -401,7 +401,7 @@ mod tests {
             source: JsonSource::Schema,
             text: SCHEMA.to_owned(),
             count,
-            seed: Some(seed),
+            seed: Some(seed.to_string()),
         });
         let GenerateAnswer::Generated {
             text, unsupported, ..

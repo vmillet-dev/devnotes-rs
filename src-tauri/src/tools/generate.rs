@@ -66,6 +66,18 @@ impl Draw {
     }
 }
 
+/// FNV-1a over the text as it is written.
+pub(crate) fn fnv1a(text: &str) -> u32 {
+    text.bytes().fold(0x811c_9dc5, |hash: u32, byte| {
+        (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193)
+    })
+}
+
+/// A seed as typed: a number is itself, any other text its hash — « recette » is a seed like `7`.
+fn seed_of(text: &str) -> u32 {
+    text.parse().unwrap_or_else(|_| fnv1a(text))
+}
+
 fn seed_or_draw(seed: Option<u32>) -> u32 {
     seed.unwrap_or_else(|| {
         let mut bytes = [0u8; 4];
@@ -218,7 +230,7 @@ pub struct GenerateRequest {
     pub text: String,
     pub count: u32,
     /// The same seed and the same source draw the same documents; none draws one, and says which.
-    pub seed: Option<u32>,
+    pub seed: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -258,7 +270,14 @@ pub fn generate(request: &GenerateRequest) -> GenerateAnswer {
             };
         }
     };
-    let seed = seed_or_draw(request.seed);
+    let seed = seed_or_draw(
+        request
+            .seed
+            .as_deref()
+            .map(str::trim)
+            .filter(|seed| !seed.is_empty())
+            .map(seed_of),
+    );
     let mut draw = Draw::new(seed);
     let count = request.count.clamp(1, MAX_DOCUMENTS);
 
@@ -313,7 +332,7 @@ mod tests {
             source,
             text: text.to_owned(),
             count,
-            seed: Some(seed),
+            seed: Some(seed.to_string()),
         }) {
             GenerateAnswer::Generated {
                 text, unsupported, ..
@@ -327,7 +346,7 @@ mod tests {
             source,
             text: text.to_owned(),
             count: 3,
-            seed: Some(1),
+            seed: Some("1".to_owned()),
         })
     }
 
@@ -427,6 +446,36 @@ mod tests {
     }
 
     #[test]
+    fn a_word_is_a_seed_and_a_number_is_itself() {
+        let example = r#"{"id":"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90","n":3}"#;
+        let drawn = |seed: &str| {
+            generate(&GenerateRequest {
+                source: JsonSource::Example,
+                text: example.to_owned(),
+                count: 3,
+                seed: Some(seed.to_owned()),
+            })
+        };
+        let GenerateAnswer::Generated { seed, text, .. } = drawn(" recette ") else {
+            panic!()
+        };
+
+        assert_eq!(seed, fnv1a("recette"));
+        assert_eq!(drawn("recette"), drawn(" recette "));
+        assert_ne!(drawn("recette"), drawn("Recette"));
+        assert_eq!(
+            text,
+            serde_json::to_string_pretty(&generated(JsonSource::Example, example, 3, seed).0)
+                .unwrap()
+        );
+        assert_eq!(drawn("7"), drawn(&7.to_string()));
+        assert!(matches!(
+            drawn("7"),
+            GenerateAnswer::Generated { seed: 7, .. }
+        ));
+    }
+
+    #[test]
     fn no_seed_draws_one_and_says_which() {
         let answer = generate(&GenerateRequest {
             source: JsonSource::Example,
@@ -510,7 +559,7 @@ mod tests {
                 source: JsonSource::Schema,
                 text: "{\n  \"a\": ,\n}".to_owned(),
                 count: 1,
-                seed: Some(1)
+                seed: Some("1".to_owned())
             }),
             GenerateAnswer::Unreadable { line: 2, column: 8 }
         );
@@ -519,7 +568,7 @@ mod tests {
                 source: JsonSource::Schema,
                 text: "[1]".to_owned(),
                 count: 1,
-                seed: Some(1)
+                seed: Some("1".to_owned())
             }),
             GenerateAnswer::NotASchema
         );

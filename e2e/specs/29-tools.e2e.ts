@@ -1269,6 +1269,27 @@ describe('The tools', () => {
       expect((JSON.parse(first) as unknown[]).length).toBe(3);
     });
 
+    it('takes a word as the seed, and draws the same documents from it again', async () => {
+      const documents = async () => JSON.parse(await output()) as unknown[];
+      const first = await output();
+
+      await setField(testid('json-generator-seed'), 'recette');
+      const fromWord = await eventually(output, (text) => text !== first, 'documents drawn from a word');
+      await $(testid('json-generator-seed-pinned')).waitForDisplayed({ timeout: 5_000 });
+
+      // « Régénérer » keeps the word: two documents asked next are the first two again.
+      await $(testid('tool-action-draw')).click();
+      await $(testid('tool-action-draw')).click();
+      await setField(testid('json-generator-count'), '2');
+      await eventually(documents, (drawn) => drawn.length === 2, 'two documents');
+      expect(await documents()).toEqual((JSON.parse(fromWord) as unknown[]).slice(0, 2));
+      expect(await $(testid('json-generator-seed')).getValue()).toBe('recette');
+
+      await setField(testid('json-generator-count'), '3');
+      await setField(testid('json-generator-seed'), '7');
+      await eventually(output, (text) => text === first, 'the documents of seed 7');
+    });
+
     it('lists the schema keywords it did not honour', async () => {
       await $(`${testid('segmented-json-generator-source')} [data-segment-id="schema"]`).click();
       await setField(

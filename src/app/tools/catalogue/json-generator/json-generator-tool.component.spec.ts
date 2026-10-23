@@ -48,7 +48,7 @@ describe('JsonGeneratorToolComponent', () => {
     await vi.waitFor(() => expect(requests(harness)).toHaveLength(2));
     await harness.settle();
 
-    expect(requests(harness)[1]).toMatchObject({ seed: 4242 });
+    expect(requests(harness)[1]).toMatchObject({ seed: '4242' });
     expect(harness.element<HTMLInputElement>('[data-testid="json-generator-seed"]').value).toBe('4242');
     expect(pin().getAttribute('aria-pressed')).toBe('true');
     expect(harness.element('[data-testid="json-generator-seed-used"]')).toBeNull();
@@ -143,22 +143,31 @@ describe('JsonGeneratorToolComponent', () => {
     expect(() => JSON.parse(input()) as unknown).not.toThrow();
   });
 
-  it('takes a typed seed within 32 bits, and lets it go when the field is emptied', async () => {
+  it('hands Rust the seed as typed, a word as well as a number, and lets it go when emptied', async () => {
     const harness = await renderTool(JsonGeneratorToolComponent, answer);
     await harness.type('json-generator-input', '{"id":1}', 'generate_json');
 
     await harness.type('json-generator-seed', '99', 'generate_json');
-    await harness.type('json-generator-seed', '99999999999', 'generate_json');
-    await harness.type('json-generator-seed', '-5', 'generate_json');
+    await harness.type('json-generator-seed', ' recette ', 'generate_json');
     await harness.type('json-generator-seed', '', 'generate_json');
 
-    expect(requests(harness).map((request) => (request as { seed: number | null }).seed)).toEqual([
+    expect(requests(harness).map((request) => (request as { seed: string | null }).seed)).toEqual([
       null,
-      99,
-      4_294_967_295,
-      0,
+      '99',
+      'recette',
       null,
     ]);
+    expect(harness.element('[data-testid="json-generator-seed-pinned"]')).toBeNull();
+  });
+
+  it('keeps a word typed as the seed pinned', async () => {
+    const harness = await renderTool(JsonGeneratorToolComponent, answer);
+    await harness.type('json-generator-input', '{"id":1}', 'generate_json');
+
+    await harness.type('json-generator-seed', 'recette', 'generate_json');
+
+    expect(harness.element('[data-testid="json-generator-seed-pinned"]')).not.toBeNull();
+    expect(harness.element<HTMLInputElement>('[data-testid="json-generator-seed"]').value).toBe('recette');
   });
 
   it('asks for as many documents as typed', async () => {
