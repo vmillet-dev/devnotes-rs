@@ -91,7 +91,9 @@ export class PlaceholderFillStore {
     const whole = await this.notes.whole(note);
     if (!whole) return;
 
-    await this.copier.copy(await this.notes.fillPlaceholders(whole.content, values));
+    await this.copier.copy(await this.notes.fillPlaceholders(whole.content, values), {
+      key: 'placeholders.copiedFilled',
+    });
     await this.notes.setPlaceholderValues(note.id, values);
   }
 

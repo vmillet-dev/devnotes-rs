@@ -143,6 +143,12 @@ describe('{{fields}} in a snippet', () => {
     await fieldsForm.field('user').setValue('reader');
     await fieldsForm.submit();
     await fieldsForm.form().waitForExist({ reverse: true, timeout: 10_000 });
+    // CHP-03: the card's form said a plain « Copié », not that the values were used.
+    await eventually(
+      () => $(testid('status-toast')).getAttribute('data-key'),
+      (key) => key === 'placeholders.copiedFilled',
+      'the copy said to hold the values',
+    );
 
     const fields = await eventually(
       async () => (await reread())?.placeholders ?? [],
