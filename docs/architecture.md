@@ -5336,9 +5336,9 @@ Afterwards every command answers `Locked`, and the page reloads to the gate, as 
 another library does: a `VaultStore.load()` over the same stores, all `providedIn: 'root'`,
 carried the replaced library's notes, undo record and open Preferences past the unlock. The
 restored copy needs a passphrase, and asking for it is the only proof the right file is in
-place. Where the replaced files went is said across the reload
-(`StatusNotifier.notifyAfterReload`, kept in `sessionStorage` and said once the vault's
-state is known).
+place. Where the replaced files went is said across the reload: Rust keeps it
+(`backup::Restored`, handed once by `take_restored_aside`), since nothing in the page outlives
+the reload on WebKitGTK, and the startup says it once the vault's state is known.
 
 ⚠️ `BackupsStore` follows the shape the tag manager and the trash already use: `ask()`
 only **proposes**, `pending()` names which copy and what it would cost, and `confirm()` is

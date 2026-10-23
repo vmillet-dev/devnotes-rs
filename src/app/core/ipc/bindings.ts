@@ -437,6 +437,8 @@ export const commands = {
 	 *  the interface back to the gate to ask for the restored copy's phrase.
 	 */
 	restoreBackup: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("restore_backup", { id })),
+	/**  Where the library the last restore replaced went, once: the page it reloaded says it. */
+	takeRestoredAside: () => __TAURI_INVOKE<string | null>("take_restored_aside"),
 	/**  The libraries, and which one is open. */
 	listLibraries: () => typedError<Registry, AppError>(__TAURI_INVOKE("list_libraries")),
 	/**  Adds one, and leaves it closed: opening it is a second, deliberate gesture. */

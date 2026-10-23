@@ -140,8 +140,26 @@ describe('BackupsStore', () => {
     expect(appWindow.reloaded).toBe(1);
     const status = TestBed.inject(StatusNotifier);
     expect(status.status()).toBeNull();
-    status.resumeAfterReload();
-    expect(status.status()?.key).toBe('backups.restored');
+
+    await store.sayRestored();
+    expect(status.status()).toEqual({
+      key: 'backups.restored',
+      params: { path: '/data/replaced/2026-07-25_09-00-00' },
+    });
+    status.dismiss();
+    await store.sayRestored();
+    expect(status.status()).toBeNull();
+  });
+
+  it('says nothing after a reload that no restore caused, nor when it cannot ask', async () => {
+    const status = TestBed.inject(StatusNotifier);
+    await store.sayRestored();
+    expect(status.status()).toBeNull();
+
+    repository.aside = '/data/replaced/x';
+    repository.failNext = new IpcError('take_restored_aside', new Error('gone'));
+    await store.sayRestored();
+    expect(status.status()).toBeNull();
   });
 
   /** The library stays where it is on a failure, and the offer stays on screen. */

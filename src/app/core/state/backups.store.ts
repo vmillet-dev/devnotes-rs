@@ -64,10 +64,19 @@ export class BackupsStore {
     if (!(await this.leave.confirm('restore'))) return;
 
     await this.notifier.attemptWhile(this._isRestoring, 'errors.backupRestoreFailed', async () => {
-      const aside = await this.repository.restore(backup.id);
+      await this.repository.restore(backup.id);
       this._pending.set(null);
-      this.status.notifyAfterReload({ key: 'backups.restored', params: { path: aside } });
       this.window.reload();
     });
+  }
+
+  /** Once the page a restore reloads knows the vault's state: said over the gate. */
+  async sayRestored(): Promise<void> {
+    try {
+      const aside = await this.repository.takeRestoredAside();
+      if (aside) this.status.notify({ key: 'backups.restored', params: { path: aside } });
+    } catch {
+      // Nothing to say rather than a startup that fails.
+    }
   }
 }

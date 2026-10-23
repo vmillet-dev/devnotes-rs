@@ -1,12 +1,12 @@
 import { inject } from '@angular/core';
 import { AutostartService } from '@core/services/autostart/autostart.service';
 import { LocaleService } from '@core/services/i18n/locale.service';
-import { StatusNotifier } from '@core/services/notifications/status.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { GlobalShortcutsService } from '@core/services/shortcuts/global-shortcuts.service';
 import { TrayService } from '@core/services/tray/tray.service';
 import { WindowBehaviorService } from '@core/services/window/window-behavior.service';
+import { BackupsStore } from '@core/state/backups.store';
 import { LibrariesStore } from '@core/state/libraries.store';
 import { VaultStore } from '@core/state/vault.store';
 
@@ -27,7 +27,7 @@ export async function startApplication(): Promise<void> {
   const autostart = inject(AutostartService);
   const vault = inject(VaultStore);
   const libraries = inject(LibrariesStore);
-  const status = inject(StatusNotifier);
+  const backups = inject(BackupsStore);
 
   await preferences.hydrate();
   // Before `locale.restore()`, which reads the language out of it.
@@ -45,7 +45,7 @@ export async function startApplication(): Promise<void> {
   // flashing a canvas it is about to replace with an unlock screen.
   await vault.load();
   // Once something is drawn to say it over: the gate, after a restore.
-  status.resumeAfterReload();
+  void backups.sayRestored();
 
   shortcuts.start();
   windowBehavior.start();
