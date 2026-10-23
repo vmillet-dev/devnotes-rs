@@ -102,6 +102,22 @@ describe('ChoiceMenuComponent', () => {
     expect(chosen).toEqual([]);
   });
 
+  it('says it has nothing to offer, where it is told what to say', async () => {
+    fixture.componentRef.setInput('options', []);
+    await open();
+    expect(fixture.nativeElement.querySelector('[data-testid="choice-empty"]')).toBeNull();
+
+    fixture.componentRef.setInput('emptyLabel', 'Aucun dossier à choisir');
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[data-testid="choice-empty"]')?.textContent?.trim()).toBe(
+      'Aucun dossier à choisir',
+    );
+
+    fixture.componentRef.setInput('options', FOLDERS);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[data-testid="choice-empty"]')).toBeNull();
+  });
+
   it('offers the way out only where there is one', async () => {
     fixture.componentRef.setInput('currentId', 'perf');
     await open();

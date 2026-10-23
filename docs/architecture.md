@@ -1814,8 +1814,8 @@ way — the kind menu names it and offers nothing.
 - **A Note embeds one by its id**: `![title](devnotes:drawing/<id>)`, the Markdown image of
   TipTap's extension, drawn by a node view that asks `drawing_picture` (`rich-text-drawings.ts`);
   the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose
-  list is `list_drawings` (titles only opened). Any other image stays as written: the CSP loads
-  nothing from elsewhere.
+  list is `list_drawings` (titles only opened), and which is there with no drawing to say there
+  is none. Any other image stays as written: the CSP loads nothing from elsewhere.
 
 ### A list sends previews, and the body is read by id
 
