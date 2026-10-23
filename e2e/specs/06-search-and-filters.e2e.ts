@@ -199,12 +199,12 @@ describe('Search, filters and facets', () => {
     );
     await reloadCanvas();
     const card = await canvas.cardWithTitle(title);
-    expect(await card.$(testid('note-card-when')).getText()).toBe('Zqbase');
+    expect((await card.$(testid('note-card-when')).getText()).trim()).toBe('Zqbase');
 
     await canvas.search('zqbase');
     expect(await canvas.titles()).toEqual([title]);
     const found = await canvas.cardWithTitle(title);
-    expect(await found.$(testid('note-card-hit')).getText()).toBe('Zqbase / production');
+    expect((await found.$(testid('note-card-hit')).getText()).trim()).toBe('Zqbase / production');
 
     await canvas.clearSearch();
     await bridge.deleteNotes([id]);
