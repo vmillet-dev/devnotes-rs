@@ -253,6 +253,11 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
 
   // A tick runs TaskItem's own `chain().focus()`: captured here, the focus comes before it.
   editor.view.dom.addEventListener('change', () => focusFirst(editor), { capture: true });
+  // ⚠️ `handleClick` is ProseMirror's mouseup: the click after it still followed the link, a
+  // plain click opening the browser too. Ctrl+click opens through `click` above.
+  editor.view.dom.addEventListener('click', (event) => {
+    if ((event.target as HTMLElement | null)?.closest('a')) event.preventDefault();
+  });
   encodeMinimally(editor);
   return editor;
 }

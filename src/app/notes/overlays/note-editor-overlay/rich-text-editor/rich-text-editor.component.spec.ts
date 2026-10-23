@@ -712,6 +712,25 @@ describe('RichTextEditorComponent', () => {
     expect(opened).toEqual(['https://example.com']);
   });
 
+  /** RIC-06: the hook left a plain click alone, and the browser's click followed the link. */
+  it('never lets the click itself follow a link, plain or with Ctrl', async () => {
+    await open('[runbook](https://example.com)');
+    const anchor = surface().querySelector('a')!;
+    const clicked = (init: MouseEventInit): boolean => {
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
+      anchor.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+
+    expect(clicked({})).toBe(true);
+    expect(clicked({ ctrlKey: true })).toBe(true);
+    const text = document.createElement('span');
+    surface().append(text);
+    const plain = new MouseEvent('click', { bubbles: true, cancelable: true });
+    text.dispatchEvent(plain);
+    expect(plain.defaultPrevented).toBe(false);
+  });
+
   /**
    * WebKit, which Linux runs, focuses inside TipTap's `chain().focus()`, and that focus dispatches
    * first: a note ending in a list gains its trailing paragraph under the chain's transaction.
