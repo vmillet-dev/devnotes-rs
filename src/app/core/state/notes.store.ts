@@ -20,6 +20,7 @@ import { ClockService } from '@core/services/time/clock.service';
 import { sameArray } from '@core/utils/equality.util';
 import { NoteSelectionStore } from './note-selection.store';
 import { FoldersStore } from './folders.store';
+import { DrawingPicturesStore } from './drawing-pictures.store';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
 import { UndoStore } from './undo.store';
@@ -137,6 +138,11 @@ function changedFields(note: Note, patch: NotePatch): NotePatch {
     const next = patch[key];
     // An absent key is "do not touch", which is what serde reads on the far side.
     if (next === undefined) continue;
+    // A list's copy holds a preview, which tells nothing of whether the body moved.
+    if (key === 'content' && note.truncated) {
+      changed[key] = next;
+      continue;
+    }
 
     const unchanged = UNCHANGED[key] as (current: unknown, next: unknown) => boolean;
     if (!unchanged(note[key], next)) {
@@ -160,6 +166,7 @@ export class NotesStore {
   private readonly selection = inject(NoteSelectionStore);
   private readonly undo = inject(UndoStore);
   private readonly settings = inject(SettingsStore);
+  private readonly drawingPictures = inject(DrawingPicturesStore);
 
   private readonly _selectedNote = signal<Note | null>(null);
   private readonly _draftNote = signal<Note | null>(null);
@@ -653,6 +660,7 @@ export class NotesStore {
       this.repository.update(id, patch),
     );
     if (!saved) return;
+    if (patch.pictures) this.drawingPictures.pictured(id);
 
     if (this.persistedNoteId() === id) {
       this._selectedNote.set(saved);

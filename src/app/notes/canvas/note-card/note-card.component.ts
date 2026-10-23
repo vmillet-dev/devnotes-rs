@@ -143,7 +143,12 @@ export class NoteCardComponent {
   private readonly pictures = inject(DrawingPicturesStore);
   /** Its last save names it: the same drawing saved again asks again. */
   private readonly drawingKey = computed(
-    () => (this.isDrawing() ? { id: this.note().id, stamp: this.note().updatedAt.toISOString() } : undefined),
+    () => {
+      const note = this.note();
+      return this.isDrawing()
+        ? { id: note.id, stamp: `${note.updatedAt.toISOString()}#${this.pictures.redrawn(note.id)}` }
+        : undefined;
+    },
     { equal: (a, b) => a?.id === b?.id && a?.stamp === b?.stamp },
   );
   private readonly thumbnailResource = resource({

@@ -401,6 +401,7 @@
               #drawingEditor
               [content]="draftContent()"
               [title]="draftTitle()"
+              [noteId]="note.id"
               (changed)="draftContent.set($event)"
               (pictured)="draftPictures.set($event)"
               (blurred)="commitContent()"

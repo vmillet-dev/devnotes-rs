@@ -826,6 +826,13 @@ describe('Editing a note', () => {
       await reloadCanvas();
       await $(testid('note-card-drawing')).waitForExist({ timeout: 10_000 });
 
+      // DES-15: opened and closed without a change, it was called edited.
+      const savedAt = (await bridge.getNote(id)).updatedAt;
+      await canvas.openNote(title);
+      await $(upper).waitForExist({ timeout: 10_000 });
+      await editor.close();
+      expect((await bridge.getNote(id)).updatedAt).toBe(savedAt);
+
       // The picture the WebView took, written as an export writes it: the system's save dialog
       // is the one step no driver reaches.
       const picture = (await bridge.drawingPicture(id)) ?? '';

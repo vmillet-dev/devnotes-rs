@@ -19,7 +19,7 @@ use super::priority::Priority;
 use super::view::SearchHit;
 use crate::folders::model::NoteFolder;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     pub id: String,
@@ -166,6 +166,7 @@ impl NotePatch {
     /// language for a snippet's first content alone: a Note is prose, and a paste of code into
     /// one asks `detect_language` before it is written.
     pub fn apply(&self, note: &mut Note, now: DateTime<Utc>) {
+        let before = note.clone();
         let detected = if self.kind.unwrap_or(note.kind).has_language() {
             language::after_patch(note, self)
         } else {
@@ -214,7 +215,10 @@ impl NotePatch {
             note.language = Language::default();
         }
 
-        note.updated_at = now;
+        // A field written back as it was, like the body an editor sends on closing, is no edit.
+        if *note != before {
+            note.updated_at = now;
+        }
     }
 }
 
@@ -770,6 +774,21 @@ mod tests {
         assert_eq!(note.tags, ["auth"]);
         assert_eq!(note.updated_at, at("2026-07-25T10:00:00.000Z"));
         assert_eq!(note.created_at, now());
+    }
+
+    #[test]
+    fn a_patch_that_changes_nothing_leaves_the_date_alone() {
+        let mut note = sample();
+        let patch = NotePatch {
+            title: Some(note.title.clone()),
+            content: Some(note.content.clone()),
+            tags: Some(vec!["#auth".to_string()]),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, at("2026-07-25T10:00:00.000Z"));
+
+        assert_eq!(note.updated_at, now());
     }
 
     #[test]

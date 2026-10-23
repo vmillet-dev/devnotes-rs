@@ -1,12 +1,13 @@
-import { browser, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { canvas } from '../pageobjects/canvas.page.js';
+import { editor } from '../pageobjects/editor.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
 import { fileMenu } from '../pageobjects/titlebar.page.js';
-import { press, reloadCanvas, testid } from '../support/app.js';
+import { eventually, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -195,6 +196,58 @@ describe('Import, export and share', () => {
     await spaces.open();
     await spaces.allOption().click();
     await bridge.deleteSpace(empty.id, homeId);
+    await reloadCanvas();
+  });
+
+  /**
+   * DES-15: a drawing back by import had its scene and no picture, its card waited for one
+   * for good, and opening it without a change called it edited.
+   */
+  it('pictures an imported drawing at its first opening, without calling it edited', async () => {
+    const sketches = await bridge.createSpace({ name: 'Croquis importés' });
+    const title = 'Imported sketch';
+    const scene = JSON.stringify({
+      version: 1,
+      scene: { objects: [{ type: 'Rect', left: 60, top: 45, width: 100, height: 50 }] },
+    });
+    const drawn = await bridge.createNote(
+      draft({ spaceId: sketches.id, title, content: scene, kind: 'drawing' }),
+    );
+    const sketchPath = join(directory, 'sketches.devnotes').replaceAll('\\', '/');
+    expect((await bridge.exportNotes(sketchPath, sketches.id)).notes).toBe(1);
+    await bridge.deleteNotes([drawn.id]);
+    await bridge.purgeNotes([drawn.id]);
+
+    expect((await bridge.importNotes(sketchPath)).notesImported).toBe(1);
+    const id = (await bridge.queryNotes(query({ search: title }))).sections[0]!.notes[0]!.id;
+    const importedAt = (await bridge.getNote(id)).updatedAt;
+    expect(await bridge.drawingPicture(id)).toBeNull();
+    await reloadCanvas();
+    await (
+      await canvas.cardWithTitle(title)
+    )
+      .$(testid('note-card-drawing-empty'))
+      .waitForExist({ timeout: 10_000 });
+
+    await canvas.openNote(title);
+    await eventually(
+      () => $(testid('drawing-stage')).getAttribute('data-shapes'),
+      (shapes) => shapes === '1',
+      'the imported scene opened',
+    );
+    await editor.close();
+
+    await (
+      await canvas.cardWithTitle(title)
+    )
+      .$(testid('note-card-drawing'))
+      .waitForExist({ timeout: 10_000 });
+    expect(await bridge.drawingPicture(id)).not.toBeNull();
+    expect((await bridge.getNote(id)).updatedAt).toBe(importedAt);
+
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await bridge.deleteSpace(sketches.id, homeId);
     await reloadCanvas();
   });
 });

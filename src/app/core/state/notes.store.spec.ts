@@ -8,6 +8,7 @@ import { Note } from '@core/model/note.model';
 import { createNote } from '@testing/note.fixture';
 import { HARNESS_SPACES, awaitQuery, createNotesHarness, visibleIds } from '@testing/notes-harness';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { DrawingPicturesStore } from './drawing-pictures.store';
 import { NotesRevision } from './notes-revision';
 import { DRAFT_ID } from './notes.store';
 import { UNDO_WINDOW_MS, UndoStore } from './undo.store';
@@ -161,6 +162,17 @@ describe('NotesStore', () => {
       await store.applyPatch('d', { content: '{"version":1}', pictures: PICTURES });
 
       expect(update).toHaveBeenCalledWith('d', { pictures: PICTURES });
+    });
+
+    /** Pictures written beside a body left as it was move no date: the card asks for them anew. */
+    it('tell the card they were taken again', async () => {
+      const { store } = await createNotesHarness([
+        createNote({ id: 'd', kind: 'drawing', content: '{"version":1}' }),
+      ]);
+
+      await store.applyPatch('d', { pictures: PICTURES });
+
+      expect(TestBed.inject(DrawingPicturesStore).redrawn('d')).toBe(1);
     });
 
     /** A draft is made from its fields: what is drawn first has its pictures written after. */
@@ -415,6 +427,18 @@ describe('NotesStore', () => {
       await store.applyPatch('a', { title: 'Same', content: 'new' });
 
       expect(update).toHaveBeenCalledWith('a', { content: 'new' });
+    });
+
+    /** Compared once the editor has closed: what is left is the list's copy, a preview. */
+    it('sends a body that only a preview of it could pass for unchanged', async () => {
+      const { store, repository } = await createNotesHarness([
+        createNote({ id: 'a', content: 'first lines', truncated: true }),
+      ]);
+      const update = vi.spyOn(repository, 'update');
+
+      await store.applyPatch('a', { content: 'first lines' });
+
+      expect(update).toHaveBeenCalledWith('a', { content: 'first lines' });
     });
   });
 
