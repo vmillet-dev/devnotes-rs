@@ -422,6 +422,33 @@ describe('Editing a note', () => {
       await canvas.waitForCard(richTitle);
     });
 
+    /** RIC-09: typed key by key, « 2 * 3 * 4 » lost its stars to an italic 3, stored « 2  *3*  4 ». */
+    it('keeps « 2 * 3 * 4 » as typed, without italics, in the text and in the Markdown', async () => {
+      const typed = 'Stars kept';
+      const id = (await bridge.createNote(draft({ spaceId, title: typed, content: '', kind: 'note' }))).id;
+      await reloadCanvas();
+      await canvas.openNote(typed);
+      await $(testid('editor-rich')).click();
+      // Key by key, as the input rules read typing: the WebView2 driver drops a space sent as a key.
+      for (const char of '2 * 3 * 4') {
+        await browser.execute((value: string) => document.execCommand('insertText', false, value), char);
+      }
+      await editor.close();
+
+      const stored = await eventually(
+        async () => (await bridge.getNote(id)).content,
+        (content) => content !== '',
+        'the text written',
+      );
+      expect(stored).toBe('2 * 3 * 4');
+      await canvas.openNote(typed);
+      expect(await $(`${testid('editor-rich')} em`).isExisting()).toBe(false);
+      expect((await $(testid('editor-rich')).getText()).trim()).toBe('2 * 3 * 4');
+      await editor.close();
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+    });
+
     it('reaches its card as words, without the Markdown', async () => {
       const view = await bridge.queryNotes(query({ search: richTitle }));
 

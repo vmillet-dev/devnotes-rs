@@ -1699,7 +1699,9 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as
   `a -&gt; b`. `rich-text.engine.ts` replaces its private `encodeTextForMarkdown` with
   `escapeMarkdownText`, which escapes a character only where it would read as syntax and never
-  inside a `{{field}}`. `markdown-text.spec.ts` fails if an upgrade stops calling it.
+  inside a `{{field}}`. `markdown-text.spec.ts` fails if an upgrade stops calling it. The same
+  goes for typing: the italic's input rule took a star with a space inside (« 2 * 3 * 4 » became
+  an italic 3), so `SpacedEmphasis` runs ahead of it and keeps such a `*` or `_` as typed.
 - **⚠️ Focus before a chain, never inside it.** On WebKit, which Linux runs, TipTap's
   `chain().focus()` focuses synchronously, and the focus dispatches first: a note ending in a
   list gains its trailing paragraph under the chain's transaction, which then throws "Applying a
