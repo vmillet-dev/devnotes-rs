@@ -71,6 +71,59 @@ describe('Editing a note', () => {
     await editor.close();
   });
 
+  /** NOT-07: a click on a card beside the editor closed it, the edit kept, and opened nothing. */
+  it('opens the card clicked beside the editor, the edit of the first kept', async () => {
+    const first = await bridge.createNote(draft({ spaceId, title: 'Beside one', content: 'echo one' }));
+    const second = await bridge.createNote(draft({ spaceId, title: 'Beside two', content: 'echo two' }));
+    const restore = await browser.getWindowSize();
+    try {
+      // Wide enough for cards to show beside the editor's panel.
+      await browser.setWindowSize(1600, 900);
+      await reloadCanvas();
+      await canvas.openNote('Beside one');
+      await setField(testid('editor-title'), 'Beside one edited');
+
+      const target = await eventually(
+        () =>
+          browser.execute((wanted: string) => {
+            const panel = document.querySelector('[role="dialog"]')?.getBoundingClientRect();
+            if (!panel) return null;
+            for (const card of document.querySelectorAll('app-note-card')) {
+              const name = card.querySelector('[data-testid="note-card-title"]')?.textContent?.trim();
+              const box = card.getBoundingClientRect();
+              const [x, y] = [box.left + box.width / 2, box.top + 12];
+              const beside = x < panel.left || x > panel.right || y < panel.top || y > panel.bottom;
+              if (name === wanted && beside && y > 0 && y < window.innerHeight) {
+                return { x: Math.round(x), y: Math.round(y) };
+              }
+            }
+            return null;
+          }, 'Beside two'),
+        (point) => point !== null,
+        'the second card beside the editor',
+      );
+      await browser
+        .action('pointer')
+        .move({ x: target!.x, y: target!.y, origin: 'viewport' })
+        .down()
+        .up()
+        .perform();
+
+      await eventually(editor.title, (shown) => shown === 'Beside two', 'the card clicked opened');
+      await eventually(
+        async () => (await bridge.getNote(first.id)).title,
+        (kept) => kept === 'Beside one edited',
+        'the first note kept its edit',
+      );
+      await editor.close();
+    } finally {
+      await browser.setWindowSize(restore.width, restore.height);
+      await bridge.deleteNotes([first.id, second.id]);
+      await bridge.purgeNotes([first.id, second.id]);
+      await reloadCanvas();
+    }
+  });
+
   it('goes fullscreen and back, without losing the draft', async () => {
     await canvas.openNote(title);
     expect(await editor.isFullscreen()).toBe(false);

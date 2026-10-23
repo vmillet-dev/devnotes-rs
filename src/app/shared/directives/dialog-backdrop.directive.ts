@@ -12,11 +12,12 @@ import { Directive, output } from '@angular/core';
   },
 })
 export class DialogBackdropDirective {
-  readonly dismissed = output<void>();
+  /** The click itself: what lies under the scrim where it landed may be what was meant. */
+  readonly dismissed = output<MouseEvent>();
 
   protected onClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.dismissed.emit();
+      this.dismissed.emit(event);
     }
   }
 }

@@ -4,6 +4,7 @@
     [variant]="'framed'"
     [fullscreen]="fullscreen()"
     labelledBy="overlay-title-input"
+    (dismissedAt)="aimBeneath($event)"
     (closed)="onDismiss()"
   >
     <!-- The bar is the container its queries measure; the row inside it is what they lay out. -->

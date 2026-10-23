@@ -3,7 +3,7 @@
   class="dialog-backdrop"
   [class.fullscreen]="fullscreen()"
   [style.z-index]="rung()"
-  (dismissed)="dismiss()"
+  (dismissed)="dismiss($event)"
 >
   <div
     appFocusTrap
