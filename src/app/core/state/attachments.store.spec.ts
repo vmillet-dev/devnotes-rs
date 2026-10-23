@@ -7,6 +7,7 @@ import { FakeAttachmentsRepository } from '@testing/fake-attachments-repository'
 import { FakeFileDialog } from '@testing/fake-file-dialog';
 import { provideAppTesting } from '@testing/testing.providers';
 import { AttachmentsStore } from './attachments.store';
+import { NotesRevision } from './notes-revision';
 
 function attachment(overrides: Partial<Attachment> = {}): Attachment {
   return {
@@ -129,6 +130,24 @@ describe('AttachmentsStore', () => {
 
     expect(await harness.store.attach()).toBe(true);
     expect(harness.store.attachments().map((item) => item.fileName)).toEqual(['capture.png', 'error.png']);
+  });
+
+  /** PJ-01, PJ-08: the card kept its count until the page was reloaded. */
+  it('has the views read again after a file is added or removed, and not after a refusal', async () => {
+    const revision = TestBed.inject(NotesRevision);
+    await harness.store.openFor('note-1');
+    const before = revision.current();
+
+    harness.dialog.openPath = 'C:/shots/error.png';
+    await harness.store.attach();
+    expect(revision.current()).toBe(before + 1);
+
+    await harness.store.remove('attachment-1');
+    expect(revision.current()).toBe(before + 2);
+
+    harness.dialog.openPath = null;
+    await harness.store.attach();
+    expect(revision.current()).toBe(before + 2);
   });
 
   it('refuses to attach when no note is open', async () => {
