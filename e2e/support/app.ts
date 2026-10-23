@@ -161,6 +161,20 @@ export async function setField(selector: string, text: string): Promise<void> {
 }
 
 /**
+ * Typed key by key into what has the focus. The WebView2 driver sends a space's keydown and
+ * never inserts the space: the page inserts it, as typing does, and every other key is sent.
+ */
+export async function typeKeys(text: string): Promise<void> {
+  for (const char of text) {
+    if (char === ' ') {
+      await browser.execute(() => document.execCommand('insertText', false, ' '));
+    } else {
+      await browser.keys([char]);
+    }
+  }
+}
+
+/**
  * The click crosses the bridge and comes back through a re-render; reading the list on
  * the next line reads it as it was before the click.
  */
