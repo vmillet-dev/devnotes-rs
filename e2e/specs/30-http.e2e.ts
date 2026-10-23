@@ -920,6 +920,8 @@ describe('HTTP collections', () => {
           (said) => said.includes('X Recette'),
           'the refusal, naming the header',
         );
+        // The sentence alone, without Rust's technical line under it (HSC-17).
+        expect(await $(testid('error-detail')).isExisting()).toBe(false);
         expect(await $(testid('http-settings-dialog')).isDisplayed()).toBe(true);
         expect(await kept()).toEqual([]);
         await $(testid('error-dismiss')).click();

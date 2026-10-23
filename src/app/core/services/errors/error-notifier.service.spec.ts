@@ -162,8 +162,16 @@ describe('ipcNotice', () => {
     expect(notice.ref.params).toEqual({ name: 'saisi' });
   });
 
-  it('keeps the technical detail as secondary text in every case', () => {
-    expect(ipcNotice(failure('noteNotFound'), FALLBACK).detail).toBe(
+  /** « Ce fichier ne contient aucune ligne… » came with « Tauri command … failed: The file holds no row » (HSC-17). */
+  it('says a named cause alone, and keeps the detail for a fallback and a file not reached', () => {
+    expect(ipcNotice(failure('noteNotFound'), FALLBACK).detail).toBeUndefined();
+    expect(ipcNotice(failure('httpRunData', { fault: 'unreadable' }), FALLBACK)).toEqual({
+      ref: { key: 'errors.httpRunData.unreadable', params: { fault: 'unreadable' } },
+    });
+    expect(ipcNotice(failure('fileAccess'), FALLBACK).detail).toBe(
+      'Tauri command "update_note" failed: détail technique',
+    );
+    expect(ipcNotice(failure('storage'), FALLBACK).detail).toBe(
       'Tauri command "update_note" failed: détail technique',
     );
   });

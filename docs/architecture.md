@@ -4504,7 +4504,11 @@ The mapping lives in **one** place, `core/services/errors/error-notifier.service
 turns a failure into the message that helps most. A named cause wins over the attempted
 action — "this note no longer exists" beats "could not save the note", which would leave the
 user retrying something that can never succeed. `fallback` is used when the cause adds
-nothing actionable (a generic SQLite failure) or when there is no code at all.
+nothing actionable (a generic SQLite failure) or when there is no code at all. A cause with its
+own sentence is shown alone: the detail is Rust's English, and under « Ce fichier ne contient
+aucune ligne de données » it read « Tauri command … failed: The file holds no row ». The
+detail stays under a fallback, where it is the only clue, and under `fileAccess`, whose
+sentence names no file (`DETAILED`).
 
 `IpcErrorCode` is a plain alias of the **generated** `ErrorCode` union, so it is no longer a
 mirror at all — adding a Rust variant makes it appear on the front at the next generation.

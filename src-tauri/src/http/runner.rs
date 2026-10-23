@@ -113,7 +113,15 @@ fn records(text: &str) -> Result<Vec<Vec<String>>, DataFault> {
 }
 
 fn from_csv(text: &str) -> Result<RunData, DataFault> {
-    let mut records = records(text)?.into_iter();
+    let records = records(text)?;
+    // One line, one field with a space in it: a sentence, not a header waiting for its rows.
+    if let [only] = records.as_slice()
+        && let [field] = only.as_slice()
+        && field.trim().contains(char::is_whitespace)
+    {
+        return Err(DataFault::Unreadable);
+    }
+    let mut records = records.into_iter();
     let columns: Vec<String> = records
         .next()
         .ok_or(DataFault::Empty)?
@@ -470,6 +478,17 @@ mod tests {
         assert_eq!(read_data("[1, 2]"), Err(DataFault::Unreadable));
         assert_eq!(read_data("a,b\n\"open"), Err(DataFault::Unreadable));
         assert_eq!(read_data("a,b\n"), Err(DataFault::Empty));
+        assert_eq!(
+            read_data("ceci n’est ni un CSV avec en-tête ni un tableau JSON\n"),
+            Err(DataFault::Unreadable),
+            "one line without a separator"
+        );
+        assert!(read_data("id\n1\n").is_ok(), "one column, with its rows");
+        assert_eq!(
+            read_data("customer\n"),
+            Err(DataFault::Empty),
+            "a header alone"
+        );
         assert_eq!(read_data("[]"), Err(DataFault::Empty));
         assert_eq!(read_data(""), Err(DataFault::Empty));
     }
