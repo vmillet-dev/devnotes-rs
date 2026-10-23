@@ -9,6 +9,8 @@ export class FakeBackupsRepository implements Pick<BackupsRepository, keyof Back
 
   /** Which copies were asked to be restored, in order. */
   restored: string[] = [];
+  /** What `takeRestoredAside` answers, once. */
+  aside: string | null = null;
 
   constructor(private copies: readonly Backup[] = []) {}
 
@@ -24,8 +26,17 @@ export class FakeBackupsRepository implements Pick<BackupsRepository, keyof Back
     // ⚠️ The real one leaves the library closed, and the copies are gone with it: what a
     // spec asserts after a restore is the gate, never this list.
     this.copies = [];
+    this.aside = `/data/replaced/${id}`;
 
-    return `/data/replaced/${id}`;
+    return this.aside;
+  }
+
+  async takeRestoredAside(): Promise<string | null> {
+    this.check();
+    const aside = this.aside;
+    this.aside = null;
+
+    return aside;
   }
 
   private check(): void {

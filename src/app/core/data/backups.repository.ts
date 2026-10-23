@@ -29,4 +29,9 @@ export class BackupsRepository {
   async restore(id: string): Promise<string> {
     return unwrap('restore_backup', await commands.restoreBackup(id));
   }
+
+  /** Where the last restore set the replaced library aside, once: Rust keeps it across the reload. */
+  async takeRestoredAside(): Promise<string | null> {
+    return commands.takeRestoredAside();
+  }
 }

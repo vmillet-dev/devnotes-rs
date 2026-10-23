@@ -31,7 +31,7 @@ use attachments::{
     attach_clipboard_image, attach_file, delete_attachment, list_attachments, open_attachment,
     read_attachment, save_attachment,
 };
-use backup::{list_backups, restore_backup};
+use backup::{list_backups, restore_backup, take_restored_aside};
 use changelog::{app_changelog, release_notes};
 use desktop::{hold_quit, set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
@@ -279,6 +279,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             archive_locked_library::<tauri::Wry>,
             list_backups::<tauri::Wry>,
             restore_backup::<tauri::Wry>,
+            take_restored_aside,
             list_libraries::<tauri::Wry>,
             create_library::<tauri::Wry>,
             open_library::<tauri::Wry>,
@@ -406,6 +407,7 @@ fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     // Empty until `vault::unlock` fills it with the connection and the key.
     app.manage(db::Db::new(None));
+    app.manage(backup::Restored::default());
     app.manage(http::send::Sending::default());
     app.manage(http::runner::Runs::default());
     app.manage(http::websocket::Sockets::default());

@@ -6,6 +6,7 @@ import { SettingsStore } from '@core/services/settings/settings.store';
 import { GlobalShortcutsService } from '@core/services/shortcuts/global-shortcuts.service';
 import { TrayService } from '@core/services/tray/tray.service';
 import { WindowBehaviorService } from '@core/services/window/window-behavior.service';
+import { BackupsStore } from '@core/state/backups.store';
 import { LibrariesStore } from '@core/state/libraries.store';
 import { VaultStore } from '@core/state/vault.store';
 
@@ -26,6 +27,7 @@ export async function startApplication(): Promise<void> {
   const autostart = inject(AutostartService);
   const vault = inject(VaultStore);
   const libraries = inject(LibrariesStore);
+  const backups = inject(BackupsStore);
 
   await preferences.hydrate();
   // Before `locale.restore()`, which reads the language out of it.
@@ -42,6 +44,8 @@ export async function startApplication(): Promise<void> {
   // Before the first render: the shell renders nothing until this answers, rather than
   // flashing a canvas it is about to replace with an unlock screen.
   await vault.load();
+  // Once something is drawn to say it over: the gate, after a restore.
+  void backups.sayRestored();
 
   shortcuts.start();
   windowBehavior.start();

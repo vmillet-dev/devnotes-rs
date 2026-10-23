@@ -2,13 +2,13 @@ import { $, $$, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { fileMenu, settings } from '../pageobjects/titlebar.page.js';
-import { eventually, testid } from '../support/app.js';
+import { eventually, reloadCanvas, testid } from '../support/app.js';
+import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
  * The copies, and the one gesture that puts one back.
  *
- * The final scenario really replaces the library and leaves it locked: a file run after it
- * in the same application meets the gate, which `waitForCanvas` passes.
+ * The final scenario really replaces the library, and unlocks the copy it put back.
  */
 describe('The backup copies', () => {
   before(canvas.open);
@@ -59,11 +59,20 @@ describe('The backup copies', () => {
   });
 
   /**
-   * The library is closed by the time the command answers, so the shell goes back to
-   * the gate: the restored copy needs a passphrase, and asking for it is the only proof
-   * the right file is in place. Nothing is unlocked afterwards.
+   * The library is closed by the time the command answers, so the page reloads to the
+   * gate: the restored copy needs a passphrase, and asking for it is the only proof the
+   * right file is in place. SEC-09: unlocked, the canvas still listed a note written after
+   * the copy, and Preferences opened again.
    */
   it('replaces the library and sends the window back to the gate', async () => {
+    const later = 'Written after the copy';
+    await settings.close();
+    await bridge.createNote(draft({ spaceId: await homeSpaceId(), title: later, content: 'echo later' }));
+    await reloadCanvas();
+    await canvas.waitForCard(later);
+    await fileMenu.openPreferences();
+    await settings.open('security');
+
     await restore().click();
     await $(testid('backup-confirm-restore')).click();
 
@@ -78,5 +87,16 @@ describe('The backup copies', () => {
     // The File menu is gated too, so the panel the restore was asked from is gone with it.
     expect(await $(testid('file-menu')).isExisting()).toBe(false);
     expect(await browser.$(testid('canvas')).isExisting()).toBe(false);
+    // Said across the reload: where the library it replaced was set aside.
+    await eventually(
+      () => $(testid('status-toast')).getAttribute('data-key'),
+      (key) => key === 'backups.restored',
+      'the restore said at the gate',
+    );
+
+    await canvas.open();
+    expect(await canvas.titles()).not.toContain(later);
+    expect((await bridge.queryNotes(query({ search: later }))).matched).toBe(0);
+    expect(await $(testid('settings-close')).isExisting()).toBe(false);
   });
 });
