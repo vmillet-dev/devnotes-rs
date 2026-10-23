@@ -102,21 +102,22 @@ describe('The quick-paste palette', () => {
   it('puts a title holding the words before a note edited later that holds them in its body', async () => {
     const spaceId = await homeSpaceId();
     const titled = await bridge.createNote(
-      draft({ spaceId, title: 'Connexion psql', content: 'psql -U ada billing', language: 'sh' }),
+      // A word no sample holds: in English the samples' « psql connection » starts with psql.
+      draft({ spaceId, title: 'Connexion zqsql', content: 'zqsql -U ada billing', language: 'sh' }),
     );
     const inBody = await bridge.createNote(
-      draft({ spaceId, title: 'zq-champs', content: 'then run psql again', language: 'sh' }),
+      draft({ spaceId, title: 'zq-champs', content: 'then run zqsql again', language: 'sh' }),
     );
     try {
       if (!(await palette.input().isExisting())) {
         await emitGlobalAction('palette');
         await palette.input().waitForExist({ timeout: 10_000 });
       }
-      await palette.type('psql');
+      await palette.type('zqsql');
       const found = await eventually(
         () => readEach(`${testid('palette-option')}[data-kind="note"]`, '@data-note-id'),
         (ids) => ids.includes(inBody.id),
-        'the notes holding psql',
+        'the notes holding zqsql',
       );
       expect(found[0]).toBe(titled.id);
     } finally {
