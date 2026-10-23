@@ -241,6 +241,13 @@ export const commands = {
 	 */
 	runHttpCollection: (run: RunRequest) => typedError<null, AppError>(__TAURI_INVOKE("run_http_collection", { run })),
 	/**
+	 *  The order a collection or a folder runs in: the one last arranged, the requests added since
+	 *  at its end.
+	 */
+	httpRunOrder: (item: HttpItem) => typedError<RunEntry[], AppError>(__TAURI_INVOKE("http_run_order", { item })),
+	/**  The order the runner was left in, kept with the collection's or the folder's settings. */
+	saveHttpRunOrder: (item: HttpItem, order: RunEntry[]) => typedError<null, AppError>(__TAURI_INVOKE("save_http_run_order", { item, order })),
+	/**
 	 *  « Annuler » on a run: the request under way is cancelled with it. `false` when no run of that
 	 *  id was under way.
 	 */
@@ -1102,6 +1109,8 @@ export type ContainerSettings_Deserialize = {
 	variables?: Variable_Deserialize[],
 	/**  Run around each request under it: before the request's own, and after it. */
 	scripts?: RequestScripts,
+	/**  The order the runner last left: the runner's to write, never the settings dialog's. */
+	runOrder?: RunEntry[],
 };
 
 /**
@@ -1117,6 +1126,8 @@ export type ContainerSettings_Serialize = {
 	variables: Variable_Serialize[],
 	/**  Run around each request under it: before the request's own, and after it. */
 	scripts: RequestScripts,
+	/**  The order the runner last left: the runner's to write, never the settings dialog's. */
+	runOrder?: RunEntry[],
 };
 
 export type Contrast = {
@@ -3151,6 +3162,12 @@ export type Run = {
 export type RunData = {
 	columns: string[],
 	rows: { [key in string]: string }[],
+};
+
+/**  A request in a run's order, and whether it runs. */
+export type RunEntry = {
+	id: string,
+	enabled: boolean,
 };
 
 /**  An error as its code and the values its sentence states. */

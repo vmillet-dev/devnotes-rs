@@ -334,6 +334,11 @@ pub async fn save_http_settings<R: Runtime>(
     }
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
+        // The dialog does not hold the run order: the one the runner left is kept.
+        let settings = model::ContainerSettings {
+            run_order: store::settings(&mut connection, &item)?.run_order,
+            ..settings
+        };
 
         Ok(store::save_settings(&mut connection, &item, &settings)?)
     })
@@ -1288,6 +1293,47 @@ pub struct VariablesRequest {
     pub collection_id: Option<String>,
     pub folder_id: Option<String>,
     pub environment_id: Option<String>,
+}
+
+/// The order a collection or a folder runs in: the one last arranged, the requests added since
+/// at its end.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_run_order<R: Runtime>(
+    item: HttpItem,
+    app: AppHandle<R>,
+) -> Result<Vec<model::RunEntry>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+        let tree = store::tree(&mut connection)?;
+        let saved = store::settings(&mut connection, &item)?.run_order;
+
+        Ok(runner::run_order(
+            &saved,
+            &runner::placed_under(&tree, &item),
+        ))
+    })
+    .await
+}
+
+/// The order the runner was left in, kept with the collection's or the folder's settings.
+#[tauri::command]
+#[specta::specta]
+pub async fn save_http_run_order<R: Runtime>(
+    item: HttpItem,
+    order: Vec<model::RunEntry>,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+        let settings = model::ContainerSettings {
+            run_order: order,
+            ..store::settings(&mut connection, &item)?
+        };
+
+        Ok(store::save_settings(&mut connection, &item, &settings)?)
+    })
+    .await
 }
 
 /// A collection or a folder run, one request after the other, each sent as a send is — its

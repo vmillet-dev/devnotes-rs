@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HttpRepository } from '@core/data/http.repository';
 import { HTTP_RUN_SUBSCRIBER } from '@core/ipc/http-run-events';
 import { IpcError } from '@core/ipc/ipc.error';
@@ -95,12 +95,23 @@ export class HttpRunnerStore {
   readonly changing = computed(() => this.enabled().filter(changes));
 
   private runs_ = 0;
+  /** The last order written: an order read meanwhile would be the one before it. */
+  private saving: Promise<unknown> = Promise.resolve();
 
   constructor() {
     subscribeCancellable(inject(HTTP_RUN_SUBSCRIBER), (event: RunEvent) => this.take(event));
+    // A request added or deleted under the target while it is open: the order follows.
+    effect(() => {
+      this.collections.tree();
+      const target = untracked(this._target);
+      if (target !== null) void this.follow(target.item);
+    });
   }
 
-  /** « Exécuter… » on a collection or a folder: its requests, all of them, in the tree's order. */
+  /**
+   * « Exécuter… » on a collection or a folder: its requests in the tree's order at once, then in
+   * the order last arranged, kept by Rust with the requests added since at its end.
+   */
   open(row: RailRow): void {
     const item = { kind: row.kind, id: row.id };
     const same = this._target()?.item.id === item.id;
@@ -109,16 +120,41 @@ export class HttpRunnerStore {
       this._rows.set(rowsUnder(this.collections.tree(), item));
       this.clearReport();
     }
+    void this.follow(item);
     this.workspace.show('runner');
   }
 
   move(from: number, to: number): void {
     this._rows.set(moved(this._rows(), from, to));
+    this.keep();
   }
 
   toggle(index: number): void {
     this._rows.update((rows) =>
       rows.map((row, at) => (at === index ? { ...row, enabled: !row.enabled } : row)),
+    );
+    this.keep();
+  }
+
+  private async follow(item: HttpItem): Promise<void> {
+    await this.saving;
+    const order = await this.errors.attempt('http.runner.failed', () => this.repository.runOrder(item));
+    if (order === null || this._target()?.item.id !== item.id) return;
+    const known = new Map(rowsUnder(this.collections.tree(), item).map((row) => [row.id, row]));
+    this._rows.set(
+      order.flatMap(({ id, enabled }) => {
+        const row = known.get(id);
+        return row === undefined ? [] : [{ ...row, enabled }];
+      }),
+    );
+  }
+
+  private keep(): void {
+    const target = this._target();
+    if (target === null) return;
+    const order = this._rows().map(({ id, enabled }) => ({ id, enabled }));
+    this.saving = this.saving.then(() =>
+      this.errors.attempt('http.runner.failed', () => this.repository.saveRunOrder(target.item, order)),
     );
   }
 

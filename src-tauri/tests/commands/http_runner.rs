@@ -6,14 +6,15 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use devnotes_lib::http::model::{
-    HttpItem, HttpItemKind, HttpMethod, HttpRequestDraft, RequestDocument, RequestKind,
-    RequestScripts,
+    ContainerSettings, HttpItem, HttpItemKind, HttpMethod, HttpRequestDraft, RequestDocument,
+    RequestKind, RequestScripts, RunEntry,
 };
 use devnotes_lib::http::runner::{HTTP_RUN_EVENT, RunData, RunEvent, RunRequest, RunStep};
 use devnotes_lib::http::scripts::process::host_from;
 use devnotes_lib::http::{
     cancel_http_run, create_http_collection, create_http_environment, create_http_request,
-    http_environments, http_history, read_http_run_data, run_http_collection,
+    http_environments, http_history, http_run_order, read_http_run_data, run_http_collection,
+    save_http_run_order, save_http_settings,
 };
 use tauri::Listener;
 
@@ -314,5 +315,64 @@ fn a_data_file_is_read_as_a_csv_or_says_why_not() {
             directory.path().join("nowhere.csv").display().to_string()
         ))
         .is_err()
+    );
+}
+
+#[test]
+fn the_order_arranged_is_kept_and_a_request_added_goes_at_its_end() {
+    let session = Session::open();
+    let (api, ids) = collection(
+        &session,
+        9,
+        &[
+            ("A", "/a", RequestScripts::default()),
+            ("B", "/b", RequestScripts::default()),
+        ],
+    );
+    let item = || HttpItem {
+        kind: HttpItemKind::Collection,
+        id: api.clone(),
+    };
+    let entry = |id: &str, enabled: bool| RunEntry {
+        id: id.to_string(),
+        enabled,
+    };
+    session
+        .call(|app| {
+            save_http_run_order(
+                item(),
+                vec![entry(&ids[1], true), entry(&ids[0], false)],
+                app,
+            )
+        })
+        .unwrap();
+    let added = session
+        .call(|app| {
+            create_http_request(
+                HttpRequestDraft {
+                    collection_id: api.clone(),
+                    folder_id: None,
+                    name: "C".to_string(),
+                    kind: RequestKind::Http,
+                    method: HttpMethod::Get,
+                    document: RequestDocument::default(),
+                },
+                app,
+            )
+        })
+        .unwrap()
+        .id;
+    // The settings dialog saves what it holds, which has no run order.
+    session
+        .call(|app| save_http_settings(item(), ContainerSettings::default(), app))
+        .unwrap();
+
+    assert_eq!(
+        session.call(|app| http_run_order(item(), app)).unwrap(),
+        [
+            entry(&ids[1], true),
+            entry(&ids[0], false),
+            entry(&added, true)
+        ]
     );
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { commands, RunData, RunRequest } from '@core/ipc/bindings';
+import { commands, RunData, RunEntry, RunRequest } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import {
   CookieDomain,
@@ -221,6 +221,15 @@ export class HttpRepository {
   /** `false` when no run of that id was under way. */
   async cancelRun(id: string): Promise<boolean> {
     return unwrap('cancel_http_run', await commands.cancelHttpRun(id));
+  }
+
+  /** The order last arranged for `item`, the requests added since at its end. */
+  async runOrder(item: HttpItem): Promise<RunEntry[]> {
+    return unwrap('http_run_order', await commands.httpRunOrder(item));
+  }
+
+  async saveRunOrder(item: HttpItem, order: readonly RunEntry[]): Promise<void> {
+    unwrap('save_http_run_order', await commands.saveHttpRunOrder(item, [...order]));
   }
 
   async readRunData(path: string): Promise<RunData> {

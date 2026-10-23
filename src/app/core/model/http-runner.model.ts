@@ -1,7 +1,7 @@
 import type { HttpItem, HttpMethod, RequestKind, RunData, RunResult, RunStep } from '@core/ipc/bindings';
 import type { HttpNode, HttpTree } from './http.model';
 
-export type { RunData, RunEvent, RunRequest, RunResult, RunStep } from '@core/ipc/bindings';
+export type { RunData, RunEntry, RunEvent, RunRequest, RunResult, RunStep } from '@core/ipc/bindings';
 
 /** A request of the run's order, and whether it runs. */
 export interface RunnerRow {
