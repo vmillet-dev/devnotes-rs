@@ -676,6 +676,71 @@ describe('Editing a note', () => {
       await reloadCanvas();
     });
 
+    /**
+     * DES-08: a shape selected, a tool taken, and the second Escape already closed the editor.
+     * The frame hears Escape on the document: what reaches it is what the drawing let go.
+     */
+    it('steps back through Escape in a drawing: the tool, then the selection, then out', async () => {
+      const title = 'Escape steps';
+      const id = (await bridge.createNote(draft({ spaceId, title, content: '', kind: 'drawing' }))).id;
+      await reloadCanvas();
+      await canvas.openNote(title);
+      const upper = `${testid('drawing-stage')} .upper-canvas`;
+      await $(upper).waitForExist({ timeout: 10_000 });
+
+      await $(`${testid('drawing-tool')}[data-tool="rectangle"]`).click();
+      await browser.execute((selector: string) => {
+        const canvasElement = document.querySelector(selector) as HTMLElement;
+        const box = canvasElement.getBoundingClientRect();
+        const send = (type: string, target: EventTarget, x: number, y: number) =>
+          target.dispatchEvent(
+            new MouseEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              button: 0,
+              clientX: box.left + x,
+              clientY: box.top + y,
+            }),
+          );
+        send('mousedown', canvasElement, 40, 40);
+        send('mousemove', document, 160, 110);
+        send('mouseup', document, 160, 110);
+        const counted = window as unknown as { escapesReached: number };
+        counted.escapesReached = 0;
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') counted.escapesReached += 1;
+        });
+      }, upper);
+      await eventually(
+        () => $(testid('drawing-stage')).getAttribute('data-shapes'),
+        (shapes) => shapes === '1',
+        'a rectangle drawn, and selected',
+      );
+      const reached = () =>
+        browser.execute(() => (window as unknown as { escapesReached: number }).escapesReached);
+      const pressed = (tool: string) =>
+        $(`${testid('drawing-tool')}[data-tool="${tool}"]`).getAttribute('aria-pressed');
+
+      await browser.keys(['o']);
+      expect(await pressed('ellipse')).toBe('true');
+
+      await browser.keys(['Escape']);
+      expect(await pressed('select')).toBe('true');
+      expect(await reached()).toBe(0);
+
+      await browser.keys(['Escape']);
+      expect(await reached()).toBe(0);
+      expect(await editor.isOpen()).toBe(true);
+
+      await browser.keys(['Escape']);
+      expect(await reached()).toBe(1);
+      await $(testid('editor-title')).waitForExist({ reverse: true, timeout: 10_000 });
+
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
     /** Code keeps its characters and gets its language: the note becomes a snippet. */
     it('turns into a snippet in the code field when code is pasted into it empty', async () => {
       const code = 'SELECT id, title FROM notes WHERE pinned = 1;';

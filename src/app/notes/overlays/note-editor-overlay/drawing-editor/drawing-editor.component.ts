@@ -164,7 +164,8 @@ export class DrawingEditorComponent {
       if (!scene.removeSelection()) return;
     } else if (event.key === 'Escape') {
       if (this.tool() !== 'select') {
-        this.choose('select');
+        this.tool.set('select');
+        scene.backToSelection();
       } else if (!scene.deselect()) {
         return;
       }

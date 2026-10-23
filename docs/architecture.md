@@ -1804,10 +1804,11 @@ way — the kind menu names it and offers nothing.
   `boundEnds`): it follows the shape as it moves, and a shape removed lets go of it. A path's
   box is read when it is made, so an arrow whose ends move is made again in its place.
 - **The editor**: a toolbar in the app's look (selection, rectangle, ellipse, diamond, arrow,
-  freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool,
-  then the selection, then leaves), a history of the scene's states, and an export as PNG or
-  SVG: the picture crosses as a data URI to `save_bytes`, as the base64 tool's bytes do. The
-  system's save dialog is the one step no e2e reaches (`__TAURI_INTERNALS__.invoke` is frozen).
+  freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool
+  and gives back the selection it was taken over, then drops the selection, then leaves), a
+  history of the scene's states, and an export as PNG or SVG: the picture crosses as a data URI
+  to `save_bytes`, as the base64 tool's bytes do. The system's save dialog is the one step no
+  e2e reaches (`__TAURI_INTERNALS__.invoke` is frozen).
 - **A Note embeds one by its id**: `![title](devnotes:drawing/<id>)`, the Markdown image of
   TipTap's extension, drawn by a node view that asks `drawing_picture` (`rich-text-drawings.ts`);
   the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose
