@@ -189,6 +189,7 @@
       <input
         id="setting-copy-confirmation"
         class="setting-switch"
+        data-testid="setting-copy-confirmation"
         type="checkbox"
         [checked]="draft.value('copyConfirmation')"
         (change)="onToggle('copyConfirmation', $event)"

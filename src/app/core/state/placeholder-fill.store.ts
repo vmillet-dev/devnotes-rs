@@ -1,5 +1,4 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { StatusNotifier } from '@core/services/notifications/status.service';
 import { noteCopyText } from '@core/model/checklist.model';
 import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { Note } from '@core/model/note.model';
@@ -21,7 +20,6 @@ export class PlaceholderFillStore {
   private readonly canvas = inject(NotesQueryStore);
   private readonly palette = inject(PaletteStore);
   private readonly copier = inject(NoteCopyService);
-  private readonly status = inject(StatusNotifier);
   private readonly calc = inject(CalcSheets);
 
   private readonly _target = signal<Note | null>(null);
@@ -65,9 +63,9 @@ export class PlaceholderFillStore {
     }
 
     const text = await this.textToCopy(note);
-    if (text === null || !(await this.copier.copy(text))) return;
-
-    this.status.notify(
+    if (text === null) return;
+    await this.copier.copy(
+      text,
       note.title
         ? { key: 'notes.copiedNote', params: { title: note.title } }
         : { key: 'notes.copiedUntitled' },
@@ -120,9 +118,7 @@ export class PlaceholderFillStore {
   async copyFilled(request: FillRequest): Promise<void> {
     const filled = await this.notes.fillPlaceholders(request.content, request.values);
 
-    if (await this.copier.copy(filled)) {
-      this.status.notify({ key: 'placeholders.copiedFilled' });
-    }
+    await this.copier.copy(filled, { key: 'placeholders.copiedFilled' });
   }
 
   async submitForPalette(values: Record<string, string>): Promise<void> {

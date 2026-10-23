@@ -123,12 +123,13 @@ export class TransferStore {
 
     await this.run(async () => {
       const markdown = await this.repository.share(ids);
-      if (!(await this.clipboard.copy(markdown))) {
+      if (
+        !(await this.clipboard.copy(markdown, { key: 'file.copied', params: { notes: String(ids.length) } }))
+      ) {
         this.notifier.notify({ ref: { key: 'errors.copyFailed' } });
         return false;
       }
 
-      this.status.notify({ key: 'file.copied', params: { notes: String(ids.length) } });
       return true;
     }, 'errors.shareFailed');
   }
