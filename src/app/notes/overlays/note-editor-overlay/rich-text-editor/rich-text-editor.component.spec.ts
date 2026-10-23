@@ -96,7 +96,7 @@ describe('RichTextEditorComponent', () => {
   });
 
   /** Headings, what marks words, blocks, then what is inserted: the mockup's order. */
-  it('lays its tools out in four groups, the link among the marks', () => {
+  it('lays its tools out in four groups, the link among the marks, then the drawing menu', () => {
     const groups: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.rich-group')];
     const ids = groups.map((group) =>
       [...group.querySelectorAll('.rich-tool')].map((tool) => tool.getAttribute('data-testid')),
@@ -107,7 +107,9 @@ describe('RichTextEditorComponent', () => {
       ['rich-bold', 'rich-italic', 'rich-strike', 'rich-code', 'rich-link'],
       ['rich-bullet', 'rich-ordered', 'rich-tasks', 'rich-quote'],
       ['rich-codeBlock', 'rich-table'],
+      [],
     ]);
+    expect(groups.at(-1)?.querySelector('[data-testid="rich-embed-drawing"]')).not.toBeNull();
   });
 
   it('names each block tool with the key that does the same', () => {
@@ -445,8 +447,14 @@ describe('RichTextEditorComponent', () => {
         expect(emitted.at(-1)).toBe('Plan![Archi](devnotes:drawing/d1)');
       });
 
-      it('is not offered while there is no drawing', () => {
-        expect(fixture.nativeElement.querySelector('[data-testid="rich-embed-drawing"]')).toBeNull();
+      /** DES-13: with no drawing the button was not drawn, and its menu never said why. */
+      it('is offered while there is no drawing, its menu saying there is none to insert', async () => {
+        fixture.nativeElement.querySelector('[data-testid="rich-embed-drawing"]').click();
+        await fixture.whenStable();
+
+        const panel = fixture.nativeElement.querySelector('[data-testid="choice-panel-rich-drawing"]');
+        expect(panel.querySelector('[data-testid="choice-option"]')).toBeNull();
+        expect(panel.querySelector('[data-testid="choice-empty"]')).not.toBeNull();
       });
     });
 

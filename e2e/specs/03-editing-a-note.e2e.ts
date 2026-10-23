@@ -385,6 +385,19 @@ describe('Editing a note', () => {
       expect(await task.getText()).toContain('write the notes');
     });
 
+    /** DES-13: with no drawing in the library the button was not drawn, and never said why. */
+    it('offers to insert a drawing with none in the library, and says there is none', async () => {
+      await canvas.openNote(richTitle);
+      await $(testid('rich-embed-drawing')).click();
+      const panel = testid('choice-panel-rich-drawing');
+      await $(`${panel} ${testid('choice-empty')}`).waitForDisplayed({ timeout: 10_000 });
+      expect(await $$(`${panel} ${testid('choice-option')}`).getElements()).toHaveLength(0);
+
+      await press('Escape');
+      await $(panel).waitForExist({ reverse: true, timeout: 10_000 });
+      await editor.close();
+    });
+
     it('opens formatted, and a box ticked there is stored as Markdown', async () => {
       await canvas.openNote(richTitle);
       const bold = $(`${testid('editor-rich')} strong`);
