@@ -1,5 +1,6 @@
 import type { DrawingPictures } from '@core/model/note.model';
 import {
+  ActiveSelection,
   Canvas,
   Ellipse,
   FabricObject,
@@ -132,6 +133,8 @@ interface Making {
 export class DrawingScene {
   private readonly canvas: Canvas;
   private tool: Tool = 'select';
+  /** What was selected when a tool was taken. */
+  private kept: FabricObject[] = [];
   private hue: Hue = 'ink';
   private making: Making | null = null;
   private history: string[] = [];
@@ -184,6 +187,8 @@ export class DrawingScene {
   }
 
   setTool(tool: Tool): void {
+    // Taking a tool drops the selection; Escape puts it back on the way to leaving.
+    if (this.tool === 'select' && tool !== 'select') this.kept = this.canvas.getActiveObjects();
     this.tool = tool;
     this.canvas.isDrawingMode = tool === 'pen';
     if (tool === 'pen') {
@@ -232,6 +237,19 @@ export class DrawingScene {
     this.canvas.requestRenderAll();
     this.keep();
     return true;
+  }
+
+  /** Escape on a tool: back to the selection, as it was before the tool was taken. */
+  backToSelection(): void {
+    const kept = this.kept.filter((object) => this.canvas.getObjects().includes(object));
+    this.kept = [];
+    this.setTool('select');
+    if (kept.length === 1) {
+      this.canvas.setActiveObject(kept[0]!);
+    } else if (kept.length > 1) {
+      this.canvas.setActiveObject(new ActiveSelection(kept, { canvas: this.canvas }));
+    }
+    this.canvas.requestRenderAll();
   }
 
   /** `false` when nothing was selected, which leaves Escape to whatever holds the drawing. */
@@ -370,6 +388,7 @@ export class DrawingScene {
 
   /** Back to the selection, the new object selected. */
   private finish(): void {
+    this.kept = [];
     this.setTool('select');
     this.hooks.made();
     const last = this.objects().at(-1);
@@ -421,6 +440,7 @@ export class DrawingScene {
       },
     );
     this.canvas.add(text);
+    this.kept = [];
     this.setTool('select');
     this.hooks.made();
     this.canvas.setActiveObject(text);

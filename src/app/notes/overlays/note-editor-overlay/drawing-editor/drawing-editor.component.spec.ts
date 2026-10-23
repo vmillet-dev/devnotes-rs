@@ -158,6 +158,26 @@ describe('DrawingEditorComponent', () => {
     expect((await press('r', { altKey: true })).defaultPrevented).toBe(false);
   });
 
+  /** DES-08: a tool taken over a selection, and the second Escape already closed the editor. */
+  it('steps back from a tool taken over a selection: the tool, then the selection, then out', async () => {
+    await mount();
+    await drawRectangle();
+    const drawn = canvas().getActiveObject();
+    expect(drawn).toBeDefined();
+
+    await press('o');
+    expect(canvas().getActiveObject()).toBeUndefined();
+
+    expect((await press('Escape')).defaultPrevented).toBe(true);
+    expect(tool('select').getAttribute('aria-pressed')).toBe('true');
+    expect(canvas().getActiveObject()).toBe(drawn);
+
+    expect((await press('Escape')).defaultPrevented).toBe(true);
+    expect(canvas().getActiveObject()).toBeUndefined();
+
+    expect((await press('Escape')).defaultPrevented).toBe(false);
+  });
+
   it('deletes the selection from the key and the button, and undoes and redoes', async () => {
     await mount();
     await drawRectangle();
