@@ -5332,10 +5332,13 @@ is built like it.
   from the front end, and `../2026-01-01_00-00-00` joins to a path outside the directory
   whose file name still parses as a stamp.
 
-Afterwards every command answers `Locked`, `VaultStore.load()` sees it, and the notes page
-is destroyed — with the File menu the panel was opened from, which is gated on the same
-signal. The restored copy needs a passphrase, and asking for it is the only proof the
-right file is in place.
+Afterwards every command answers `Locked`, and the page reloads to the gate, as opening
+another library does: a `VaultStore.load()` over the same stores, all `providedIn: 'root'`,
+carried the replaced library's notes, undo record and open Preferences past the unlock. The
+restored copy needs a passphrase, and asking for it is the only proof the right file is in
+place. Where the replaced files went is said across the reload
+(`StatusNotifier.notifyAfterReload`, kept in `sessionStorage` and said once the vault's
+state is known).
 
 ⚠️ `BackupsStore` follows the shape the tag manager and the trash already use: `ask()`
 only **proposes**, `pending()` names which copy and what it would cost, and `confirm()` is
@@ -5344,9 +5347,8 @@ what writes. The trigger is replaced by that sentence and the confirm sits somew
 strip scrolls itself into view, because it replaces a trigger further down a panel that
 scrolls and would otherwise appear below the fold.
 
-`23-backups.e2e.ts` ends on that gate for real: its final scenario replaces the library and
-leaves it locked, so a file run after it in the same application meets the gate, which
-`waitForCanvas` passes.
+`23-backups.e2e.ts` goes through that gate for real: its final scenario replaces the library,
+unlocks the copy, and finds neither a note written after the copy nor Preferences open.
 
 ### Attachments, and the one plaintext copy
 

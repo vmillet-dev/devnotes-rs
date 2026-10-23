@@ -16,6 +16,31 @@ describe('StatusNotifier', () => {
     vi.useRealTimers();
   });
 
+  it('says after the page reloads what was said as it reloaded, and only once', () => {
+    notifier.notifyAfterReload({ key: 'backups.restored', params: { path: 'replaced/x' } });
+    expect(notifier.status()).toBeNull();
+
+    notifier.resumeAfterReload();
+    expect(notifier.status()).toEqual({ key: 'backups.restored', params: { path: 'replaced/x' } });
+
+    notifier.dismiss();
+    notifier.resumeAfterReload();
+    expect(notifier.status()).toBeNull();
+  });
+
+  it('says it at once when there is nothing to keep it in', () => {
+    vi.stubGlobal('sessionStorage', {
+      setItem: () => {
+        throw new Error('blocked');
+      },
+    });
+
+    notifier.notifyAfterReload({ key: 'backups.restored' });
+
+    expect(notifier.status()).toEqual({ key: 'backups.restored' });
+    vi.unstubAllGlobals();
+  });
+
   it('starts with nothing to say', () => {
     expect(notifier.status()).toBeNull();
   });

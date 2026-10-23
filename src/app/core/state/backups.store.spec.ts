@@ -5,6 +5,8 @@ import { IpcError } from '@core/ipc/ipc.error';
 import { HttpLeaveStore } from '@core/services/http/http-leave.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { FakeBackupsRepository } from '@testing/fake-backups-repository';
+import { StatusNotifier } from '@core/services/notifications/status.service';
+import { FakeAppWindow } from '@testing/fake-app-window';
 import { FakeVaultRepository } from '@testing/fake-vault-repository';
 import { provideAppTesting } from '@testing/testing.providers';
 import { BackupsStore } from './backups.store';
@@ -24,13 +26,15 @@ describe('BackupsStore', () => {
   let store: BackupsStore;
   let repository: FakeBackupsRepository;
   let vault: FakeVaultRepository;
+  let appWindow: FakeAppWindow;
 
   function configure(copies: readonly Backup[]): void {
     TestBed.resetTestingModule();
     repository = new FakeBackupsRepository(copies);
     vault = new FakeVaultRepository();
+    appWindow = new FakeAppWindow();
     TestBed.configureTestingModule({
-      providers: [provideAppTesting({ backupsRepository: repository, vaultRepository: vault })],
+      providers: [provideAppTesting({ backupsRepository: repository, vaultRepository: vault, appWindow })],
     });
     store = TestBed.inject(BackupsStore);
   }
@@ -124,21 +128,20 @@ describe('BackupsStore', () => {
   });
 
   /**
-   * The library is closed by the time the command returns, so the shell has to be sent
-   * back to the gate: the restored copy needs a passphrase, and asking for it is the only
-   * proof the right file is in place.
+   * SEC-09: sent back to the gate over the same stores, the canvas listed the replaced
+   * library's notes once unlocked, and Preferences opened again. The page reloads, as
+   * opening another library does, and says where the replaced files went once reloaded.
    */
-  it('sends the shell back to the gate once the copy is in place', async () => {
-    const vaultStore = TestBed.inject(VaultStore);
-    await vaultStore.load();
-    expect(vaultStore.isUnlocked()).toBe(true);
-    vault.answer = 'locked';
-
+  it('reloads the page to the gate once the copy is in place, and says so after', async () => {
     await store.load();
     store.ask(store.backups()[0]);
     await store.confirm();
 
-    expect(vaultStore.isUnlocked()).toBe(false);
+    expect(appWindow.reloaded).toBe(1);
+    const status = TestBed.inject(StatusNotifier);
+    expect(status.status()).toBeNull();
+    status.resumeAfterReload();
+    expect(status.status()?.key).toBe('backups.restored');
   });
 
   /** The library stays where it is on a failure, and the offer stays on screen. */
@@ -154,5 +157,6 @@ describe('BackupsStore', () => {
     expect(store.pending()?.id).toBe('2026-07-25_09-00-00');
     expect(vaultStore.isUnlocked()).toBe(true);
     expect(store.isRestoring()).toBe(false);
+    expect(appWindow.reloaded).toBe(0);
   });
 });
