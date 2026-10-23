@@ -3,6 +3,7 @@ import { noteCopyText } from '@core/model/checklist.model';
 import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { Note } from '@core/model/note.model';
 import { NoteCopyService } from '@core/services/clipboard/note-copy.service';
+import { StatusNotifier } from '@core/services/notifications/status.service';
 import { NotesQueryStore } from './notes-query.store';
 import { NotesStore } from './notes.store';
 import { PaletteStore } from './palette.store';
@@ -21,6 +22,7 @@ export class PlaceholderFillStore {
   private readonly palette = inject(PaletteStore);
   private readonly copier = inject(NoteCopyService);
   private readonly calc = inject(CalcSheets);
+  private readonly status = inject(StatusNotifier);
 
   private readonly _target = signal<Note | null>(null);
   private readonly _preview = signal<string | null>(null);
@@ -51,12 +53,16 @@ export class PlaceholderFillStore {
   /**
    * What copying a note means when nothing is pointing at a particular control: a snippet
    * with fields asks for them first, a todo list gives its Markdown — it has no `content`
-   * at all — and anything else goes as it is.
+   * at all — a drawing, whose scene is no text, nothing — and anything else goes as it is.
    *
    * It says which note it took. The card's own button paints a tick on itself; the
    * keyboard has no such surface, and the ring may be on a card that is scrolled away.
    */
   async copyNote(note: Note): Promise<void> {
+    if (note.kind === 'drawing') {
+      this.status.notify({ key: 'notes.drawingNotCopied' });
+      return;
+    }
     if (note.placeholders.length > 0) {
       this.openFor(note.id);
       return;

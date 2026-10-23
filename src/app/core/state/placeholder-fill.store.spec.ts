@@ -126,6 +126,14 @@ describe('PlaceholderFillStore', () => {
 
       expect(harness.clipboard.content).toBe('psql -h prod.internal -U admin');
     });
+
+    /** DES-12: C on a drawing's card copied its scene, as JSON. */
+    it('copies nothing of a drawing, whose scene is no text, and says so', async () => {
+      await fill.copyNote(createNote({ id: 'drawing', kind: 'drawing', content: '{"objects":[]}' }));
+
+      expect(harness.clipboard.content).toBe('');
+      expect(status.status()?.key).toBe('notes.drawingNotCopied');
+    });
   });
 
   describe('the editor preview', () => {
