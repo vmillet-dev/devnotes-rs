@@ -6,6 +6,7 @@ import { ClockService } from '@core/services/time/clock.service';
 import { FileDropService } from '@core/services/window/file-drop.service';
 import { AttachmentsRepository } from '@core/data/attachments.repository';
 import { Attachment } from '@core/model/note.model';
+import { NotesRevision } from './notes-revision';
 import { NotesStore } from './notes.store';
 
 /**
@@ -21,6 +22,8 @@ export class AttachmentsStore {
   private readonly notifier = inject(ErrorNotifier);
   private readonly clock = inject(ClockService);
   private readonly notes = inject(NotesStore);
+  /** The cards count their files: a view not read again kept the count of before. */
+  private readonly revision = inject(NotesRevision);
 
   private readonly _noteId = signal<string | null>(null);
   private readonly _attachments = signal<readonly Attachment[]>([]);
@@ -133,6 +136,7 @@ export class AttachmentsStore {
     if (added === null) return false;
 
     await this.load(noteId);
+    this.revision.bump();
     this.status.notify({ key: 'attachments.added', params: { name: added.fileName } });
     if (added.mimeType.startsWith('image/')) {
       await this.togglePreview(added.id);
@@ -183,6 +187,7 @@ export class AttachmentsStore {
       this.closePreview();
     }
     await this.load(noteId);
+    this.revision.bump();
     return true;
   }
 
