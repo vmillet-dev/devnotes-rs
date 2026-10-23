@@ -2,7 +2,7 @@
 //! runtime, the library in its `Db`. What they add to the store is what these check: the lock,
 //! the validation before it, and the code each failure crosses the bridge as.
 //!
-//! Not here: the commands that reach the profile (the gate, the registry, the copies) or a
+//! Not here: the commands that reach the profile (the gate, the registry, the launch copy) or a
 //! plugin (the opener, the clipboard). The mock app has neither a profile of its own nor them.
 
 use std::future::Future;
@@ -19,6 +19,7 @@ use tauri::{App, AppHandle, Manager};
 mod common;
 
 mod attachments;
+mod backups;
 mod folders;
 mod http;
 mod http_environments;
@@ -37,6 +38,7 @@ impl Session {
     fn with(library: Option<Library>) -> Self {
         let app = mock_app();
         app.manage(Db::new(library));
+        app.manage(devnotes_lib::backup::Restored::default());
         app.manage(devnotes_lib::http::send::Sending::default());
         app.manage(devnotes_lib::http::runner::Runs::default());
         app.manage(devnotes_lib::http::websocket::Sockets::default());
