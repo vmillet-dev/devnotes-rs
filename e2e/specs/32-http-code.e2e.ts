@@ -84,6 +84,21 @@ describe('HTTP code generation', () => {
       await $(testid('http-code-secrets')).click();
       await eventually(code, (text) => text.includes('Bearer {{token}}'), 'the secret a variable again');
 
+      // Unresolved, the URL is the request's as written: no scheme before `{{baseUrl}}` (HCD-04).
+      await $(testid('http-code-resolve')).click();
+      await eventually(
+        code,
+        (text) => text.includes("--url '{{baseUrl}}/invoices?page=1'"),
+        'the URL as written',
+      );
+      expect(await code()).not.toContain('://{{');
+      await $(testid('http-code-resolve')).click();
+      await eventually(
+        code,
+        (text) => text.includes("--url 'https://api.exemple.fr/invoices?page=1'"),
+        'the URL resolved again',
+      );
+
       // #489: JavaScript's fetch and Angular's HttpClient, from the same request.
       await $(`${testid('http-code-target')}[data-target="fetch"]`).click();
       await eventually(
