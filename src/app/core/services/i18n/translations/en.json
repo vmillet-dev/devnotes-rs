@@ -3703,6 +3703,23 @@
           "folder": "The tests of the folder “{{name}}” stopped",
           "collection": "The tests of the collection “{{name}}” stopped"
         },
+        "invalid": {
+          "before": {
+            "request": "The script before the send is not valid JavaScript",
+            "folder": "The script before the send of the folder “{{name}}” is not valid JavaScript",
+            "collection": "The script before the send of the collection “{{name}}” is not valid JavaScript"
+          },
+          "after": {
+            "request": "The script after the response is not valid JavaScript",
+            "folder": "The script after the response of the folder “{{name}}” is not valid JavaScript",
+            "collection": "The script after the response of the collection “{{name}}” is not valid JavaScript"
+          },
+          "tests": {
+            "request": "The tests are not valid JavaScript",
+            "folder": "The tests of the folder “{{name}}” are not valid JavaScript",
+            "collection": "The tests of the collection “{{name}}” are not valid JavaScript"
+          }
+        },
         "host": "The scripts could not be started",
         "kinds": {
           "timeout": "Stopped: it took too long.",

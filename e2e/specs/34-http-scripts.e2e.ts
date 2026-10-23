@@ -151,6 +151,20 @@ describe('HTTP scripts', () => {
       await $(testid('http-scripts')).waitForDisplayed({ timeout: 10_000 });
       expect(await checkedSegment('http-script-phase')).toBe('before');
       expect(await $(testid('error-banner')).isExisting()).toBe(false);
+
+      // A script that does not read is said to be no JavaScript, in words of the application (HSC-05).
+      await typeScript('const = ;');
+      await $(`${testid('http-section')}[data-section="headers"]`).click();
+      await press('Enter', ['Control']);
+      await eventually(
+        () => $(testid('http-script-stop-title')).getAttribute('data-key'),
+        (key) => key === 'http.scripts.stop.invalid.before.request',
+        'the syntax error said as such',
+      );
+      expect(await $(testid('http-script-stop')).getAttribute('data-kind')).toBe('syntax');
+      expect(await $(testid('http-script-stop-message')).getText()).not.toContain('SyntaxError');
+      expect(await $(testid('http-script-stop-where')).getText()).toContain('1');
+      expect(heard).toHaveLength(1);
     } finally {
       server.close();
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });

@@ -263,11 +263,15 @@ export function stopOf(params: Readonly<Record<string, string | undefined>>): Sc
   };
 }
 
-/** Whose script stopped: « Le script avant l'envoi de la collection « API » a échoué ». */
+/**
+ * Whose script stopped: « Le script avant l'envoi de la collection « API » a échoué », or « … n'est
+ * pas du JavaScript valide » when it did not read, the engine's words after it.
+ */
 export function stopTitleOf(stop: ScriptStop): TranslationRef {
   if (stop.level === null || stop.level === undefined) return { key: 'http.scripts.stop.host' };
+  const group = stop.kind === 'syntax' ? 'invalid.' : '';
   return {
-    key: `http.scripts.stop.${stop.script ?? 'before'}.${stop.level}`,
+    key: `http.scripts.stop.${group}${stop.script ?? 'before'}.${stop.level}`,
     params: { name: stop.name ?? '' },
   };
 }
