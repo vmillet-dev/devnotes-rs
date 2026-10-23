@@ -34,7 +34,7 @@
           <app-format-button
             [formattable]="canFormat()"
             [busy]="showingPreview() || formatting() || jsonMode() !== null"
-            [language]="languageName()"
+            [language]="note.language"
             [settings]="prettierSettings.settings()"
             (formatRequested)="formatBody()"
             (settingsChanged)="prettierSettings.update($event)"

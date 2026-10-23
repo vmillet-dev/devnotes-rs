@@ -16,7 +16,7 @@ describe('FormatButtonComponent', () => {
     });
     fixture = TestBed.createComponent(FormatButtonComponent);
     fixture.componentRef.setInput('formattable', true);
-    fixture.componentRef.setInput('language', 'TypeScript');
+    fixture.componentRef.setInput('language', 'ts');
     fixture.componentRef.setInput('settings', DEFAULT_PRETTIER_SETTINGS);
     formats = 0;
     changes = [];
@@ -45,7 +45,7 @@ describe('FormatButtonComponent', () => {
 
   it('says which language it cannot format, by its name', async () => {
     fixture.componentRef.setInput('formattable', false);
-    fixture.componentRef.setInput('language', 'Python');
+    fixture.componentRef.setInput('language', 'py');
     await fixture.whenStable();
 
     expect(query('editor-format').title).toBe('Prettier ne sait pas formater Python');
