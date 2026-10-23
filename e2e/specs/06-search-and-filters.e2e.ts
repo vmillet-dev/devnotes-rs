@@ -193,17 +193,18 @@ describe('Search, filters and facets', () => {
         title,
         content: 'psql -h db.internal',
         language: 'sh',
-        source: 'PostgreSQL / production',
+        // A context of its own: the samples' « psql connection » carries PostgreSQL too.
+        source: 'Zqbase / production',
       }),
     );
     await reloadCanvas();
     const card = await canvas.cardWithTitle(title);
-    expect(await card.$(testid('note-card-when')).getText()).toBe('PostgreSQL');
+    expect(await card.$(testid('note-card-when')).getText()).toBe('Zqbase');
 
-    await canvas.search('postgresql');
+    await canvas.search('zqbase');
     expect(await canvas.titles()).toEqual([title]);
     const found = await canvas.cardWithTitle(title);
-    expect(await found.$(testid('note-card-hit')).getText()).toBe('PostgreSQL / production');
+    expect(await found.$(testid('note-card-hit')).getText()).toBe('Zqbase / production');
 
     await canvas.clearSearch();
     await bridge.deleteNotes([id]);
