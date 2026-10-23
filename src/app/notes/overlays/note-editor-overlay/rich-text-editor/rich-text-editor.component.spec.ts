@@ -35,11 +35,12 @@ describe('RichTextEditorComponent', () => {
     await fixture.whenStable();
   }
 
-  function paste(data: { text?: string; types?: string[]; files?: File[] }): Event {
+  function paste(data: { text?: string; html?: string; types?: string[]; files?: File[] }): Event {
     const event = new Event('paste', { bubbles: true, cancelable: true });
     Object.defineProperty(event, 'clipboardData', {
       value: {
-        getData: (type: string) => (type === 'text/plain' ? (data.text ?? '') : ''),
+        getData: (type: string) =>
+          type === 'text/plain' ? (data.text ?? '') : type === 'text/html' ? (data.html ?? '') : '',
         types: data.types ?? (data.text ? ['text/plain'] : []),
         files: data.files ?? [],
       },
@@ -765,6 +766,35 @@ describe('RichTextEditorComponent', () => {
       expect(pasted).toEqual(['SELECT 1;']);
       expect(event.defaultPrevented).toBe(true);
       expect(emitted).toEqual([]);
+    });
+
+    /** RIC-10: pasted into a new, empty Note, a page's bold and link arrived as plain text. */
+    it('pastes the bold and the link of a page into an empty note as they are', async () => {
+      const pasted: string[] = [];
+      fixture.componentInstance.pastedIntoEmpty.subscribe((text) => pasted.push(text));
+
+      paste({
+        text: 'Voir ceci et là',
+        html: '<p>Voir <strong>ceci</strong> et <a href="https://devnotes.fr">là</a></p>',
+      });
+      await fixture.whenStable();
+
+      expect(pasted).toEqual([]);
+      expect(surface().querySelector('strong')?.textContent).toBe('ceci');
+      expect(surface().querySelector('a')?.getAttribute('href')).toBe('https://devnotes.fr');
+    });
+
+    it('still asks about code an editor copied as coloured HTML', async () => {
+      const pasted: string[] = [];
+      fixture.componentInstance.pastedIntoEmpty.subscribe((text) => pasted.push(text));
+
+      paste({
+        text: 'const a = 1;',
+        html: '<div style="color:#d4d4d4"><span style="color:#569cd6">const</span> a = 1;</div>',
+      });
+      paste({ text: 'npm run build', html: '<pre><code><b>npm</b> run build</code></pre>' });
+
+      expect(pasted).toEqual(['const a = 1;', 'npm run build']);
     });
 
     it('leaves a paste into a note that has text to the editor', async () => {
