@@ -66,6 +66,8 @@ describe('PlaceholderFillStore', () => {
       expect(harness.clipboard.content).toBe('psql -h prod.internal -U admin');
       expect(kept).toHaveBeenCalledWith('note-1', { host: 'prod.internal', user: 'admin' });
       expect(fill.target()).toBeNull();
+      // From the card as from the editor's panel: the values were used (CHP-03).
+      expect(status.status()?.key).toBe('placeholders.copiedFilled');
     });
 
     /**
