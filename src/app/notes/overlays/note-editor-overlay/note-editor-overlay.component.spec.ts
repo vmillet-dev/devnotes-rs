@@ -1398,6 +1398,46 @@ describe('NoteEditorOverlayComponent', () => {
       expect(asked.closes).toBe(1);
     });
 
+    /** NOT-07: a click on a card beside the editor only closed it; the card wanted a second. */
+    it('opens the card a click on the backdrop lands on, once the editor is closed', async () => {
+      fixture.componentRef.setInput('note', createNote());
+      await fixture.whenStable();
+      const card = document.createElement('app-note-card');
+      const open = document.createElement('button');
+      open.dataset['testid'] = 'note-card-open';
+      card.append(open);
+      document.body.append(card);
+      const order: string[] = [];
+      open.addEventListener('click', () => order.push(`opened after ${asked.closes} close`));
+      const backdrop = fixture.nativeElement.querySelector('.dialog-backdrop') as HTMLElement;
+      const original = document.elementsFromPoint;
+      document.elementsFromPoint = () => [backdrop, open, card, document.body];
+      try {
+        backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }));
+      } finally {
+        document.elementsFromPoint = original;
+        card.remove();
+      }
+
+      expect(asked.closes).toBe(1);
+      expect(order).toEqual(['opened after 1 close']);
+    });
+
+    it('opens nothing when the backdrop click lands on no card', async () => {
+      fixture.componentRef.setInput('note', createNote());
+      await fixture.whenStable();
+      const backdrop = fixture.nativeElement.querySelector('.dialog-backdrop') as HTMLElement;
+      const original = document.elementsFromPoint;
+      document.elementsFromPoint = () => [backdrop, document.body];
+      try {
+        backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      } finally {
+        document.elementsFromPoint = original;
+      }
+
+      expect(asked.closes).toBe(1);
+    });
+
     it('does not emit closed when clicking inside the panel', async () => {
       fixture.componentRef.setInput('note', createNote());
       await fixture.whenStable();

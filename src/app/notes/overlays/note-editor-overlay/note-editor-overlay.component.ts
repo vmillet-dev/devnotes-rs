@@ -14,7 +14,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, isLanguageTag } from '@core/model/language.model';
 import { checklistProgress } from '@core/model/checklist.model';
@@ -363,6 +363,8 @@ export class NoteEditorOverlayComponent {
   private noticeTimer: ReturnType<typeof setTimeout> | undefined;
   /** A close waiting on Prettier: a second Escape must not commit and close twice. */
   private closing = false;
+  private readonly document = inject(DOCUMENT);
+  private cardBeneath: HTMLButtonElement | null = null;
   protected readonly modifiedRef = computed(() => {
     const note = this.note();
     return note ? relativeTimeRef(note.updatedAt, this.clock.now()) : null;
@@ -806,7 +808,23 @@ export class NoteEditorOverlayComponent {
    * Escape leaves the body first, then closes the modal: otherwise a keystroke meant
    * for the field makes the whole editor disappear. The `blur` commits on the way.
    */
+  /**
+   * A click beside the editor that lands on a card is meant for that card: it opens once the
+   * closing has committed, rather than the click only closing the editor.
+   */
+  protected aimBeneath(click: MouseEvent): void {
+    const under = this.document.elementsFromPoint?.(click.clientX, click.clientY) ?? [];
+    const card = under.map((element) => element.closest('app-note-card')).find((found) => found !== null);
+    this.cardBeneath = card?.querySelector<HTMLButtonElement>('[data-testid="note-card-open"]') ?? null;
+  }
+
   protected onDismiss(): void {
+    const beneath = this.cardBeneath;
+    this.cardBeneath = null;
+    if (beneath) {
+      this.requestClose(() => beneath.click());
+      return;
+    }
     const code = this.codeEditor();
     if (code?.hasFocus()) {
       code.blur();
@@ -825,10 +843,11 @@ export class NoteEditorOverlayComponent {
    * the close button produce no `blur`, so the last line typed would be lost. Formatting on
    * save holds the close until Prettier answers; without it, nothing waits.
    */
-  protected requestClose(): void {
+  protected requestClose(then: () => void = () => undefined): void {
     const formatting = this.formatForSave(this.draftContent());
     if (formatting === null) {
       this.close();
+      then();
       return;
     }
     if (this.closing) return;
@@ -838,6 +857,7 @@ export class NoteEditorOverlayComponent {
       if (formatted !== null) this.draftContent.set(formatted);
       this.closing = false;
       this.close();
+      then();
     });
   }
 
