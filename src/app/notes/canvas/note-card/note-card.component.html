@@ -126,7 +126,7 @@
 
     <span class="card-footer">
       <!-- prettier-ignore -->
-      <span class="card-when" [class.stale]="note().expiringSoon"
+      <span class="card-when" data-testid="note-card-when" [class.stale]="note().expiringSoon"
         >@if (footerLabel(); as label) {@if (label.kind === 'text') {{{ label.value }}} @else {@if (label.prefix) {{{ label.prefix | transloco }} }{{ label.ref.key | transloco: label.ref.params }}}}</span
       >
       <!-- Never squeezed: the folder chip gives way first. -->

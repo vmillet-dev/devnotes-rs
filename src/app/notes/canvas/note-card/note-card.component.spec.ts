@@ -132,11 +132,11 @@ describe('NoteCardComponent', () => {
     const footer: HTMLElement = fixture.nativeElement.querySelector('.card-footer');
     const order = [
       ...footer.querySelectorAll(
-        '.card-when, [data-testid="priority-pill"], [data-testid="note-card-pin"], [data-testid="note-card-fields"], [data-testid="note-card-clip"], [data-testid="note-card-folder"]',
+        '[data-testid="note-card-when"], [data-testid="priority-pill"], [data-testid="note-card-pin"], [data-testid="note-card-fields"], [data-testid="note-card-clip"], [data-testid="note-card-folder"]',
       ),
-    ].map((node) => node.getAttribute('data-testid') ?? 'when');
+    ].map((node) => node.getAttribute('data-testid'));
     expect(order).toEqual([
-      'when',
+      'note-card-when',
       'priority-pill',
       'note-card-pin',
       'note-card-fields',

@@ -3304,7 +3304,9 @@ export type ScriptsAnswer = {
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
  *  biggest thing on the card. That case is `SearchMatch::Title`.
  */
-export type SearchField = "tag" | "body" | "item";
+export type SearchField = "tag" | "body" | "item" | 
+/**  The context under the title: `PostgreSQL / production`. */
+"source";
 
 /**  What made a note match, and where. */
 export type SearchHit = {
