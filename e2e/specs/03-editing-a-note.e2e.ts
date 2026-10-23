@@ -80,8 +80,7 @@ describe('Editing a note', () => {
       await browser.setWindowSize(1600, 900);
       await reloadCanvas();
       await canvas.openNote('Beside one');
-      await $(testid('editor-title')).click();
-      await browser.keys(['End', ...' edited']);
+      await setField(testid('editor-title'), 'Beside one edited');
 
       const target = await eventually(
         () =>
