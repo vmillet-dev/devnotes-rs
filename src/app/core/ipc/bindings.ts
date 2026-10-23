@@ -2838,6 +2838,8 @@ export type NotesQuery = {
 	/**  Left out by the palette: the modification date, newest first. */
 	order?: NoteOrder,
 	grouping?: Grouping,
+	/**  The palette's order: how the title answers the search, the last edit breaking ties. */
+	ranked?: boolean,
 	now: string,
 	/**
 	 *  `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for

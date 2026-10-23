@@ -160,6 +160,7 @@ fn notes_query(space_id: &str) -> NotesQuery {
         priorities: Vec::new(),
         order: NoteOrder::default(),
         grouping: Grouping::default(),
+        ranked: false,
         now: Utc::now(),
         tz_offset_minutes: 0,
         pinned_first: true,

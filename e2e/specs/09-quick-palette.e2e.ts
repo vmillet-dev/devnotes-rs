@@ -4,7 +4,15 @@ import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { fieldsForm, palette } from '../pageobjects/overlays.page.js';
 import { aboutMenu } from '../pageobjects/titlebar.page.js';
-import { emitGlobalAction, isInFront, press, readEach, reloadCanvas, testid } from '../support/app.js';
+import {
+  emitGlobalAction,
+  eventually,
+  isInFront,
+  press,
+  readEach,
+  reloadCanvas,
+  testid,
+} from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -89,6 +97,34 @@ describe('The quick-paste palette', () => {
     expect(await editor.isOpen()).toBe(true);
     expect(await editor.title()).toBe('Reset the dev database');
     await editor.close();
+  });
+
+  /** PAL-02: « psql » opened the note edited last that held it in its body, « Connexion psql » fourth. */
+  it('puts a title holding the words before a note edited later that holds them in its body', async () => {
+    const spaceId = await homeSpaceId();
+    const titled = await bridge.createNote(
+      // A word no sample holds: in English the samples' « psql connection » starts with psql.
+      draft({ spaceId, title: 'Connexion zqsql', content: 'zqsql -U ada billing', language: 'sh' }),
+    );
+    const inBody = await bridge.createNote(
+      draft({ spaceId, title: 'zq-champs', content: 'then run zqsql again', language: 'sh' }),
+    );
+    try {
+      if (!(await palette.input().isExisting())) {
+        await emitGlobalAction('palette');
+        await palette.input().waitForExist({ timeout: 10_000 });
+      }
+      await palette.type('zqsql');
+      const found = await eventually(
+        () => readEach(`${testid('palette-option')}[data-kind="note"]`, '@data-note-id'),
+        (ids) => ids.includes(inBody.id),
+        'the notes holding zqsql',
+      );
+      expect(found[0]).toBe(titled.id);
+    } finally {
+      await bridge.deleteNotes([titled.id, inBody.id]);
+      await bridge.purgeNotes([titled.id, inBody.id]);
+    }
   });
 
   /** The palette ignores the canvas filters, so its results often name a note no view holds. */
@@ -233,6 +269,14 @@ describe('The quick-paste palette', () => {
 
       await palette.type('crontab');
       await row('data-tool', 'cron').waitForExist({ timeout: 10_000 });
+
+      // PAL-07: the tool named « JSON » first, never cut by the three a kind keeps.
+      await palette.type('json');
+      await eventually(
+        () => readEach(`${testid('palette-option')}[data-kind="tool"]`, '@data-tool'),
+        (tools) => tools[0] === 'json-generator',
+        'the tool named JSON first',
+      );
     });
 
     it('narrows to the tools with @tools, a chip in the field', async () => {

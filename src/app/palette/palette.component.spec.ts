@@ -156,6 +156,8 @@ describe('PaletteComponent', () => {
     await type('json');
 
     expect(headings()).toEqual(['Notes 2', 'Requêtes 1', 'Outils 3']);
+    // Ranked by Rust on how each title answers, not by date (PAL-02).
+    expect(notes.lastQuery?.ranked).toBe(true);
     const [note] = rows();
     expect(note.querySelector('app-kind-badge')).not.toBeNull();
     const request = rows().find((row) => row.dataset['kind'] === 'request')!;
@@ -163,6 +165,11 @@ describe('PaletteComponent', () => {
     expect(request.querySelector('.variable')?.textContent).toBe('{{baseUrl}}');
     const tool = rows().find((row) => row.dataset['kind'] === 'tool')!;
     expect(tool.querySelector('.tile')?.getAttribute('data-category')).toBeTruthy();
+    // By name first, and kept by the cap: « Diff » and « JWT » came before the tool named JSON (PAL-07).
+    const tools = rows()
+      .filter((row) => row.dataset['kind'] === 'tool')
+      .map((row) => row.dataset['tool']);
+    expect(tools.slice(0, 2)).toEqual(['json-generator', 'convert']);
   });
 
   it('turns @ into a chip with Tab, and searches that kind alone', async () => {

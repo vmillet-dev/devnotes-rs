@@ -36,6 +36,10 @@ pub struct NotesQuery {
     #[serde(default)]
     #[specta(optional)]
     pub grouping: Grouping,
+    /// The palette's order: how the title answers the search, the last edit breaking ties.
+    #[serde(default)]
+    #[specta(optional)]
+    pub ranked: bool,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
     /// UTC+2). Sections reason in local days.
@@ -463,7 +467,11 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     // A quick filter keeps the view chronological; a search, a facet or an opened folder
     // switches to a flat list. `build_sections` knows nothing of folders: the inside of one is
     // already sorted by being there.
-    order_notes(&mut notes, request.order);
+    if request.ranked && !needle.is_empty() {
+        rank_notes(&mut notes, needle);
+    } else {
+        order_notes(&mut notes, request.order);
+    }
 
     let inside_folder = request.folder_id.is_some();
     let is_filtering = criteria.narrows() || inside_folder;
@@ -509,6 +517,40 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     let today = request.now.with_timezone(&offset).date_naive();
     view.notes_mut().for_each(|note| note.cut_to_preview(today));
     view
+}
+
+/// How well a title answers the search, lower first: all of it, its start, the start of one
+/// of its words, anywhere in it; then a note found by its tags, body, items or context.
+fn title_rank(title: &str, needle: &str) -> u8 {
+    let title = fold(title);
+    if title == needle {
+        0
+    } else if title.starts_with(needle) {
+        1
+    } else if title
+        .split(|character: char| !character.is_alphanumeric())
+        .any(|word| word.starts_with(needle))
+    {
+        2
+    } else if title.contains(needle) {
+        3
+    } else {
+        4
+    }
+}
+
+/// `psql` opened the note edited last that held it in its body, not « Connexion psql ».
+fn rank_notes(notes: &mut [Note], needle: &str) {
+    let ranks: HashMap<String, u8> = notes
+        .iter()
+        .map(|note| (note.id.clone(), title_rank(&note.title, needle)))
+        .collect();
+    notes.sort_by(|a, b| {
+        ranks[&a.id]
+            .cmp(&ranks[&b.id])
+            .then_with(|| b.updated_at.cmp(&a.updated_at))
+            .then_with(|| a.id.cmp(&b.id))
+    });
 }
 
 /// Ties fall on the modification date, newest first, then the id: a card never swaps places
@@ -875,6 +917,7 @@ mod tests {
             priorities: Vec::new(),
             order: NoteOrder::default(),
             grouping: Grouping::default(),
+            ranked: false,
             now: at(NOW),
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -970,6 +1013,59 @@ mod tests {
         assert_eq!(view.matched, 1);
         assert!(view.is_filtering);
         assert_eq!(keys(&view), [NoteSectionKey::Results]);
+    }
+
+    /// `psql` opened the note edited last that held it in its body, « Connexion psql » fourth.
+    #[test]
+    fn the_palette_ranks_by_how_the_title_answers_the_search_then_by_date() {
+        let edited = |id: &str, title: &str, content: &str, when: &str| Note {
+            content: content.to_string(),
+            updated_at: at(when),
+            ..note(id, title)
+        };
+        let notes = vec![
+            edited(
+                "body",
+                "zq-champs",
+                "psql -h db",
+                "2026-07-25T12:00:00.000Z",
+            ),
+            edited("word", "Connexion psql", "", "2026-07-20T08:00:00.000Z"),
+            edited("start", "PSQL au quotidien", "", "2026-07-21T08:00:00.000Z"),
+            edited("whole", "psql", "", "2026-07-19T08:00:00.000Z"),
+            edited("inside", "Lancerpsql", "", "2026-07-24T08:00:00.000Z"),
+            edited("older-body", "Autre", "psql", "2026-07-01T08:00:00.000Z"),
+        ];
+        let ids = |view: &NotesView| -> Vec<String> {
+            view.sections
+                .iter()
+                .flat_map(|section| section.notes.iter().map(|note| note.note.id.clone()))
+                .collect()
+        };
+
+        let ranked = build(
+            notes.clone(),
+            Facets::default(),
+            &NotesQuery {
+                search: "psql".to_string(),
+                ranked: true,
+                ..request()
+            },
+        );
+        assert_eq!(
+            ids(&ranked),
+            ["whole", "start", "word", "inside", "body", "older-body"]
+        );
+
+        let dated = build(
+            notes,
+            Facets::default(),
+            &NotesQuery {
+                search: "psql".to_string(),
+                ..request()
+            },
+        );
+        assert_eq!(ids(&dated)[0], "body", "the list view keeps its own order");
     }
 
     #[test]
