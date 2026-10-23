@@ -45,6 +45,18 @@ describe('expiryRef', () => {
     expect(expiryRef(now, now)).toEqual({ key: 'time.expired' });
   });
 
+  /** MET-07: today + 3 at 21:45 read « expire dans 4j ». */
+  it('counts the local days to the expiry day, whatever the hour', () => {
+    const evening = new Date(2026, 9, 21, 21, 45);
+    const morning = new Date(2026, 9, 21, 8, 0);
+    const endOf = (day: number) => new Date(2026, 9, day, 23, 59, 59, 999);
+
+    expect(expiryRef(endOf(24), evening)).toEqual({ key: 'time.expiresIn', params: { count: 3 } });
+    expect(expiryRef(endOf(24), morning)).toEqual({ key: 'time.expiresIn', params: { count: 3 } });
+    expect(expiryRef(endOf(22), evening)).toEqual({ key: 'time.expiresIn', params: { count: 1 } });
+    expect(expiryRef(endOf(21), evening)).toEqual({ key: 'time.expiresToday' });
+  });
+
   it('returns the days-remaining key when the expiry date is in the future', () => {
     const now = new Date('2026-01-01T12:00:00Z');
     const at = new Date('2026-01-04T12:00:00Z');
