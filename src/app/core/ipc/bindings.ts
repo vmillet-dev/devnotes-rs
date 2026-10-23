@@ -2376,6 +2376,7 @@ export type JsonLine = {
 	path: string,
 	kind: JsonKind,
 	value: string,
+	text: string | null,
 	size: number,
 	span: Span,
 	opens: boolean,
@@ -2433,6 +2434,8 @@ export type JsonRow = {
 	kind: JsonKind,
 	/**  `"paid"`, `4900`, `{ … }`, `[ 3 ]`: cut to one line. */
 	value: string,
+	/**  A string's own text, whole and unquoted: what « Copier la valeur » copies. */
+	text: string | null,
 	/**  Keys or items of a container, open or not; 0 for a scalar. */
 	size: number,
 	span: Span,

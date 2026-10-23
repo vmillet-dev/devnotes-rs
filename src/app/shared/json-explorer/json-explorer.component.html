@@ -155,7 +155,7 @@
       </p>
       <pre class="selected-preview" data-testid="json-selected-preview">{{ selected.preview }}</pre>
       <div class="actions">
-        <button type="button" class="action" data-testid="json-copy-value" (click)="copyValue(selected.span)">
+        <button type="button" class="action" data-testid="json-copy-value" (click)="copyValue(selected)">
           {{ 'json.copyValue' | transloco }}
         </button>
         @if (extractable()) {

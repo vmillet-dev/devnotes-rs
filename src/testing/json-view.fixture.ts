@@ -19,6 +19,8 @@ function row(
     path,
     kind,
     value,
+    // What Rust answers for these simple strings: the value without its quotes.
+    text: kind === 'string' ? value.slice(1, -1) : null,
     size,
     span: { start, end },
     child,
@@ -127,6 +129,8 @@ function line(
     path,
     kind,
     value,
+    // What Rust answers for these simple strings: the value without its quotes.
+    text: kind === 'string' ? value.slice(1, -1) : null,
     size,
     span: { start: 0, end: 0 },
     opens,

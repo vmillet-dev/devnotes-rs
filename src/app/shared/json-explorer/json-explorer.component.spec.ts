@@ -345,7 +345,8 @@ describe('JsonExplorerComponent', () => {
       await set('selectedPath', '$.id');
       menu()!.querySelector<HTMLButtonElement>('[data-testid="json-menu-copy-value"]')!.click();
       await fixture.whenStable();
-      expect(events.copied).toEqual(['"evt"']);
+      // A string without its quotes (COD-23); an object, below, as it is written.
+      expect(events.copied).toEqual(['evt']);
       expect(menu()).toBeNull();
 
       await rightClick('$.id');
