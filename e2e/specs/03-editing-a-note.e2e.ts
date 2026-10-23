@@ -376,7 +376,10 @@ describe('Editing a note', () => {
       await reloadCanvas();
       await canvas.openNote(typed);
       await $(testid('editor-rich')).click();
-      await browser.keys([...'2 * 3 * 4']);
+      // Key by key, as the input rules read typing: the WebView2 driver drops a space sent as a key.
+      for (const char of '2 * 3 * 4') {
+        await browser.execute((value: string) => document.execCommand('insertText', false, value), char);
+      }
       await editor.close();
 
       const stored = await eventually(
