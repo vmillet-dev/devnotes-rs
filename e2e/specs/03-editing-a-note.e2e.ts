@@ -482,6 +482,35 @@ describe('Editing a note', () => {
       await bridge.purgeNotes([pasted!.id]);
     });
 
+    /** RIC-06: a plain click on a link placed the caret and opened the browser as well. */
+    it('places the caret on a plain click on a link, and follows nothing', async () => {
+      const linked = 'Linked, not followed';
+      const id = (
+        await bridge.createNote(
+          draft({ spaceId, title: linked, content: 'Voir le [site](https://devnotes.fr).', kind: 'note' }),
+        )
+      ).id;
+      await reloadCanvas();
+      await canvas.openNote(linked);
+      const anchor = $(`${testid('editor-rich')} a`);
+      await anchor.waitForDisplayed({ timeout: 10_000 });
+      // Read after the editor's own listeners: whether the click was still to follow the link.
+      await browser.execute(() => {
+        const seen = window as unknown as { followed?: boolean };
+        window.addEventListener('click', (event) => (seen.followed = !event.defaultPrevented), {
+          once: true,
+        });
+      });
+
+      await anchor.click();
+
+      expect(await browser.execute(() => (window as unknown as { followed?: boolean }).followed)).toBe(false);
+      expect(await editor.isOpen()).toBe(true);
+      await editor.close();
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+    });
+
     it('reaches its card as words, without the Markdown', async () => {
       const view = await bridge.queryNotes(query({ search: richTitle }));
 
