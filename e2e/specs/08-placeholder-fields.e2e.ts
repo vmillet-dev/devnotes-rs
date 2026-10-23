@@ -1,4 +1,4 @@
-import { browser, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
@@ -219,6 +219,29 @@ describe('{{fields}} in a snippet', () => {
     // Back to the default written in the text: the note never stored the proposal.
     expect(port?.defaultValue).toBe('5432');
     expect(await bridge.listGlobalPlaceholders()).toEqual({});
+  });
+
+  /** RIC-09: a Note holding a field was « Ce snippet attend 1 valeur. » */
+  it('names a Note as a note in its fields form', async () => {
+    const noteTitle = 'Note with one field';
+    const spaceId = await homeSpaceId();
+    const made = await bridge.createNote(
+      draft({ spaceId, title: noteTitle, content: 'Hôte : {{db_host}}', language: 'txt', kind: 'note' }),
+    );
+    try {
+      await reloadCanvas();
+      await canvas.openNote(noteTitle);
+      await editor.close();
+      await press('c');
+
+      await fieldsForm.form().waitForExist({ timeout: 10_000 });
+      expect(await $(testid('placeholder-form-hint')).getAttribute('data-key')).toBe('placeholders.hintNote');
+      expect(await $(testid('placeholder-form-hint')).getText()).toMatch(/\b1 (valeur|value)\b/);
+      await fieldsForm.cancel();
+    } finally {
+      await bridge.deleteNotes([made.id]);
+      await bridge.purgeNotes([made.id]);
+    }
   });
 
   /** Where they are written: the code marks what Rust calls a field, its default dimmed. */

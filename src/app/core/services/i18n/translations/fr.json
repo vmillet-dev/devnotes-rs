@@ -361,7 +361,7 @@
     "pinned": "Épinglée",
     "noPriority": "Aucune priorité",
     "expiryLabel": "Échéance de la note (vide = permanente)",
-    "footerStats": "{{lines}} lignes · {{bytes}} octets · UTF-8 · {{eol}}",
+    "footerStats": "{lines, plural, one {# ligne} other {# lignes}} · {bytes, plural, one {# octet} other {# octets}} · UTF-8 · {{eol}}",
     "format": {
       "label": "Formater",
       "keys": "Maj Alt F",
@@ -778,6 +778,7 @@
   "placeholders": {
     "title": "Remplir les champs",
     "hint": "Ce snippet attend {count, plural, one {# valeur} other {# valeurs}}.",
+    "hintNote": "Cette note attend {count, plural, one {# valeur} other {# valeurs}}.",
     "fieldLabel": "Valeur de {{name}}",
     "copy": "Copier rempli",
     "copyRaw": "Copier tel quel",
@@ -3741,8 +3742,8 @@
     "tests": {
       "failed": "{count, plural, one {# échec} other {# échecs}}",
       "allPassed": "Tout passe",
-      "ratio": "{{passed}}/{{total}} tests",
-      "bar": "{{passed}} tests réussis sur {{total}}",
+      "ratio": "{{passed}}/{total, plural, one {# test} other {# tests}}",
+      "bar": "{passed, plural, one {# test réussi} other {# tests réussis}} sur {{total}}",
       "groups": {
         "request": "{{name}}",
         "folder": "{{name}} · tests du dossier",
@@ -3817,11 +3818,11 @@
       "stopOnFailure": "Arrêter au premier échec",
       "keepVariables": "Garder les variables modifiées",
       "keepResponses": "Enregistrer les réponses",
-      "order": "Ordre · {{running}} sur {{count}} requêtes",
+      "order": "Ordre · {{running}} sur {count, plural, one {# requête} other {# requêtes}}",
       "orderLabel": "Ordre des requêtes",
       "orderHint": "Glisser, ou Alt ↑ ↓ sur la ligne ; Espace la laisse de côté.",
       "include": "Exécuter {{name}}",
-      "protected": "{{name}} est protégé : {{count}} requêtes sur {{total}} peuvent le modifier ({{requests}}).",
+      "protected": "{{name}} est protégé : {count, plural, one {# requête sur {{total}} peut le modifier} other {# requêtes sur {{total}} peuvent le modifier}} ({{requests}}).",
       "failed": "Le run n’a pas pu aller au bout.",
       "failures": "{count, plural, one {# échec} other {# échecs}}",
       "allPassed": "Tout passe",

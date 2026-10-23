@@ -3,6 +3,7 @@
   @if (store.pendingFill(); as note) {
     <app-placeholder-form
       [placeholders]="note.placeholders"
+      [kind]="note.kind"
       (submitted)="fill.submitForPalette($event)"
       (rawRequested)="store.copyRaw(note)"
       (cancelled)="store.cancelFill()"

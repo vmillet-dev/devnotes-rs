@@ -66,7 +66,8 @@ describe('Editing a note', () => {
     await canvas.openNote(title);
     // Derived from the draft, so it is what says the editor is on the note that was opened.
     const footer = await editor.footer();
-    expect(footer).toContain('1');
+    // A one-line body in the singular, in either language (COD-20): « 1 lignes » passed for « 1 ».
+    expect(footer).toMatch(/· 1 (ligne|line) ·/);
     await editor.close();
   });
 
