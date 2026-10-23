@@ -450,6 +450,38 @@ describe('Editing a note', () => {
       await bridge.purgeNotes([id]);
     });
 
+    /** RIC-10: pasted into a new, empty Note, a page's bold and link arrived as plain text. */
+    it('keeps the bold and the link of a page pasted into a new, empty Note', async () => {
+      await canvas.createRichNote();
+      await $(testid('editor-rich')).waitForDisplayed({ timeout: 10_000 });
+      await browser.execute((selector: string) => {
+        const surface = document.querySelector<HTMLElement>(selector)!;
+        surface.focus();
+        const data = new DataTransfer();
+        data.setData('text/plain', 'Voir zqcopie et là');
+        data.setData(
+          'text/html',
+          '<p>Voir <strong>zqcopie</strong> et <a href="https://devnotes.fr">là</a></p>',
+        );
+        surface.dispatchEvent(
+          new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+        );
+      }, testid('editor-rich'));
+      await $(`${testid('editor-rich')} strong`).waitForExist({ timeout: 5_000 });
+      await editor.close();
+
+      const pasted = await eventually(
+        async () => (await bridge.queryNotes(query({ search: 'zqcopie' }))).sections[0]?.notes[0],
+        (note) => note !== undefined,
+        'the Note written',
+      );
+      const whole = await bridge.getNote(pasted!.id);
+      expect(whole.content).toContain('**zqcopie**');
+      expect(whole.content).toContain('[là](https://devnotes.fr)');
+      await bridge.deleteNotes([pasted!.id]);
+      await bridge.purgeNotes([pasted!.id]);
+    });
+
     it('reaches its card as words, without the Markdown', async () => {
       const view = await bridge.queryNotes(query({ search: richTitle }));
 

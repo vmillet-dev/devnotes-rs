@@ -117,6 +117,20 @@ const TABLE_TOOLS: readonly Tool[] = [
 ];
 
 /**
+ * HTML a page wrote — bold, a link, a heading, a list — and not the coloured spans an editor
+ * gives its code, which is pasted as text and asked whether it is code.
+ */
+function formatted(html: string): boolean {
+  if (html.trim() === '') return false;
+  const body = new DOMParser().parseFromString(html, 'text/html').body;
+  return (
+    body.querySelector('pre, code') === null &&
+    body.querySelector('b, strong, i, em, a[href], h1, h2, h3, h4, h5, h6, ul, ol, blockquote, table') !==
+      null
+  );
+}
+
+/**
  * A Note's body, formatted as it is typed and stored as Markdown.
  *
  * ⚠️ Holds no draft of its own: `content` is the editor overlay's, and what this emits is
@@ -450,7 +464,8 @@ export class RichTextEditorComponent {
       this.imagePasted.emit();
       return true;
     }
-    if (text.trim() && this.editor?.isEmpty) {
+    // A page's bold and links stay a Note's: only plain text is asked whether it is code.
+    if (text.trim() && this.editor?.isEmpty && !formatted(data.getData('text/html'))) {
       this.pastedIntoEmpty.emit(text);
       return true;
     }
