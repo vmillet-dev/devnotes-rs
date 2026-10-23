@@ -1,5 +1,5 @@
 import { untracked } from '@angular/core';
-import { Editor, Extension, Extensions, JSONContent } from '@tiptap/core';
+import { Editor, Extension, Extensions, InputRule, JSONContent } from '@tiptap/core';
 import { TableKit } from '@tiptap/extension-table';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
@@ -187,6 +187,30 @@ function highlightCode(doc: ProseMirrorNode): DecorationSet {
   return DecorationSet.create(doc, decorations);
 }
 
+/**
+ * An asterisk or an underscore with a space on its inner side opens or closes no emphasis in
+ * Markdown, and the italic's own rule took one: « 2 * 3 * 4 » lost its stars to an italic 3.
+ * Run ahead of it, this rule keeps the character typed (a step, so the rules stop here).
+ */
+const SpacedEmphasis = Extension.create({
+  name: 'spacedEmphasis',
+  priority: 1000,
+  addInputRules() {
+    const keep = (find: RegExp) =>
+      new InputRule({
+        find,
+        undoable: false,
+        handler: ({ state, range }) => {
+          state.tr.insertText(state.doc.textBetween(range.to - 1, range.to), range.to - 1, range.to);
+        },
+      });
+    return [
+      keep(/(?:^|\s)(\*(?!\s+\*)(?:\s[^*]*|[^*]*\s)\*(?!\s+\*))$/),
+      keep(/(?:^|\s)(_(?!\s+_)(?:\s[^_]*|[^_]*\s)_(?!\s+_))$/),
+    ];
+  },
+});
+
 /** What the rich editor stores. Tables come out wrapped in blank lines; the body does not keep them. */
 export function markdownOf(editor: Editor): string {
   return editor.getMarkdown().replace(/^\n+|\n+$/g, '');
@@ -204,6 +228,7 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
       Placeholder.configure({ placeholder: hooks.placeholder }),
       tabCharacter((language) => hooks.indent(language)),
       TextSearch,
+      SpacedEmphasis,
     ],
     content: markdown,
     contentType: 'markdown',

@@ -654,6 +654,38 @@ describe('RichTextEditorComponent', () => {
     expect(blurs).toBe(1);
   });
 
+  /** RIC-09: typed key by key, « 2 * 3 * 4 » lost its stars to an italic 3. */
+  describe('emphasis typed key by key', () => {
+    /** As ProseMirror types: the input rules see each character before it lands. */
+    async function typeIn(text: string): Promise<void> {
+      const view = (surface() as HTMLElement & { editor: Editor }).editor.view;
+      for (const char of text) {
+        const { from, to } = view.state.selection;
+        const handled = view.someProp('handleTextInput', (handle) =>
+          handle(view, from, to, char, () => view.state.tr.insertText(char, from, to)),
+        );
+        if (!handled) view.dispatch(view.state.tr.insertText(char, from, to));
+      }
+      await fixture.whenStable();
+    }
+
+    it('keeps a star or an underscore with a space inside as it is', async () => {
+      await open('');
+      await typeIn('2 * 3 * 4 and a _ b _ c');
+
+      expect(surface().querySelector('em')).toBeNull();
+      expect(emitted.at(-1)).toBe('2 * 3 * 4 and a _ b _ c');
+    });
+
+    it('still makes italic what Markdown makes italic', async () => {
+      await open('');
+      await typeIn('a *b c* d');
+
+      expect(surface().querySelector('em')?.textContent).toBe('b c');
+      expect(emitted.at(-1)).toBe('a *b c* d');
+    });
+  });
+
   /** jsdom has no layout for ProseMirror to find a click in: its click hook is asked directly. */
   it('opens a link on Ctrl+click, and leaves a plain click to the caret', async () => {
     await open('[runbook](https://example.com)');
