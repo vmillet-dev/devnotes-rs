@@ -32,6 +32,8 @@ export class FacetsPanelComponent {
   readonly activeTags = input.required<ReadonlySet<string>>();
   readonly activeLanguages = input.required<ReadonlySet<LanguageTag>>();
   readonly kindCounts = input.required<readonly FacetCount<NoteKind>[]>();
+  readonly tagCounts = input<ReadonlyMap<string, number>>(new Map());
+  readonly languageCounts = input<ReadonlyMap<LanguageTag, number>>(new Map());
   readonly activeKinds = input.required<ReadonlySet<NoteKind>>();
   readonly priorityCounts = input.required<readonly FacetCount<Priority>[]>();
   readonly activePriorities = input.required<ReadonlySet<Priority>>();

@@ -13,7 +13,7 @@
     {{ 'key' in heading ? (heading.key | transloco: heading.params) : heading.text }}
     <!-- Compact on purpose: a line break between the interpolations would leave a stray space in the rendered text, which the prettier-ignore below keeps out. -->
     <!-- prettier-ignore -->
-    <span class="n">· {{ section().notes.length }}@if (section().hasExpiringNotes) { · {{ 'sections.expiringHint' | transloco }}}</span>
+    <span class="n" data-testid="note-section-count">· {{ section().notes.length }}@if (section().hasExpiringNotes) { · {{ 'sections.expiringHint' | transloco }}}</span>
   </h2>
   <div class="card-grid">
     @for (note of section().notes; track note.id) {

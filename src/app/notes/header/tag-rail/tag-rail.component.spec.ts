@@ -81,4 +81,16 @@ describe('TagRailComponent', () => {
 
     expect(emitted).toBe(1);
   });
+
+  /** Type and priority counted their notes, the tags did not (REC-05). */
+  it('shows how many notes each tag holds', async () => {
+    fixture.componentRef.setInput('tags', ['alpha', 'beta']);
+    fixture.componentRef.setInput('counts', new Map([['alpha', 3]]));
+    await fixture.whenStable();
+
+    const counts = [...fixture.nativeElement.querySelectorAll('[data-testid="tag-pill"]')].map(
+      (pill: HTMLElement) => pill.querySelector('[data-testid="tag-count"]')?.textContent ?? null,
+    );
+    expect(counts).toEqual(['3', null]);
+  });
 });

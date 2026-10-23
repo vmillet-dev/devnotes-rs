@@ -175,6 +175,8 @@ fn a_view_serializes_with_camel_case_keys() {
         available_languages: vec![Language::Json],
         kind_counts: view::count_kinds(&[("note".to_string(), 3)]),
         priority_counts: view::count_priorities(&[("urgent".to_string(), 1)]),
+        tag_counts: view::count_tags(vec![("auth".to_string(), 2)]),
+        language_counts: view::count_languages(&[("json".to_string(), 1)]),
         is_filtering: false,
         matched: 1,
     };
@@ -190,6 +192,14 @@ fn a_view_serializes_with_camel_case_keys() {
     assert_eq!(
         json["priorityCounts"][4],
         serde_json::json!({ "value": "urgent", "count": 1 })
+    );
+    assert_eq!(
+        json["tagCounts"][0],
+        serde_json::json!({ "value": "auth", "count": 2 })
+    );
+    assert_eq!(
+        json["languageCounts"][0],
+        serde_json::json!({ "value": "json", "count": 1 })
     );
     assert!(json.get("isFiltering").is_some());
     assert!(json.get("available_tags").is_none());

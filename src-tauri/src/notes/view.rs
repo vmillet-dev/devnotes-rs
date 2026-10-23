@@ -178,10 +178,25 @@ impl From<&NotesQuery> for Criteria {
 
 #[derive(Debug, Clone, Default)]
 pub struct Facets {
-    pub tags: Vec<String>,
-    pub languages: Vec<Language>,
+    pub tags: Vec<FacetCount<String>>,
+    pub languages: Vec<FacetCount<Language>>,
     pub kinds: Vec<FacetCount<NoteKind>>,
     pub priorities: Vec<FacetCount<Priority>>,
+}
+
+impl Facets {
+    #[must_use]
+    pub fn tag_names(&self) -> Vec<String> {
+        self.tags.iter().map(|tag| tag.value.clone()).collect()
+    }
+
+    #[must_use]
+    pub fn language_names(&self) -> Vec<Language> {
+        self.languages
+            .iter()
+            .map(|language| language.value)
+            .collect()
+    }
 }
 
 /// How many of the space's notes carry a value.
@@ -220,6 +235,28 @@ pub fn count_priorities(rows: &[(String, i64)]) -> Vec<FacetCount<Priority>> {
     counted(&Priority::ALL, Priority::as_str, rows)
 }
 
+/// The tags present, in the order they were read, each with its notes.
+pub fn count_tags(rows: Vec<(String, i64)>) -> Vec<FacetCount<String>> {
+    rows.into_iter()
+        .map(|(value, count)| FacetCount {
+            value,
+            count: saturating_u32(count),
+        })
+        .collect()
+}
+
+/// A stored language this build does not know has no facet to offer.
+pub fn count_languages(rows: &[(String, i64)]) -> Vec<FacetCount<Language>> {
+    rows.iter()
+        .filter_map(|(stored, count)| {
+            stored.parse().ok().map(|value| FacetCount {
+                value,
+                count: saturating_u32(*count),
+            })
+        })
+        .collect()
+}
+
 /// Sections gathered by date, priority or format, or all in one; or one flat list of matches,
 /// which offers the create card only as a place to create in rather than a list of matches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -247,6 +284,9 @@ pub struct NotesView {
     pub available_languages: Vec<Language>,
     pub kind_counts: Vec<FacetCount<NoteKind>>,
     pub priority_counts: Vec<FacetCount<Priority>>,
+    /// The notes each tag and each format holds, in the space: `available_*` in their order.
+    pub tag_counts: Vec<FacetCount<String>>,
+    pub language_counts: Vec<FacetCount<Language>>,
     pub is_filtering: bool,
     /// `u32` and not `usize`: Specta refuses what JSON cannot carry exactly.
     pub matched: u32,
@@ -448,10 +488,12 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
 
     let mut view = NotesView {
         sections: build_sections(notes, layout, request.pinned_first, request.now, offset),
-        available_tags: facets.tags,
-        available_languages: facets.languages,
+        available_tags: facets.tag_names(),
+        available_languages: facets.language_names(),
         kind_counts: facets.kinds,
         priority_counts: facets.priorities,
+        tag_counts: facets.tags,
+        language_counts: facets.languages,
         is_filtering,
         matched,
     };
@@ -644,7 +686,9 @@ fn section(
         .collect();
 
     NoteSection {
-        has_expiring_notes: notes.iter().any(|note| note.expiring_soon),
+        // The results of a filter are a count, not a list to triage.
+        has_expiring_notes: key != NoteSectionKey::Results
+            && notes.iter().any(|note| note.expiring_soon),
         key,
         id: key.as_str().to_string(),
         group: None,
@@ -1044,8 +1088,12 @@ mod tests {
         let view = build(
             vec![note("a", "Un")],
             Facets {
-                tags: vec!["api".to_string(), "auth".to_string()],
-                languages: vec![Language::Json, Language::Txt],
+                tags: count_tags(vec![("api".to_string(), 3), ("auth".to_string(), 1)]),
+                languages: count_languages(&[
+                    ("json".to_string(), 6),
+                    ("klingon".to_string(), 9),
+                    ("txt".to_string(), 2),
+                ]),
                 kinds: count_kinds(&[("note".to_string(), 2)]),
                 priorities: count_priorities(&[("high".to_string(), 1)]),
             },
@@ -1057,6 +1105,21 @@ mod tests {
 
         assert_eq!(view.available_tags, ["api", "auth"]);
         assert_eq!(view.available_languages, [Language::Json, Language::Txt]);
+        // Format and tags count their notes too (REC-05), a language this build lacks left out.
+        assert_eq!(
+            view.tag_counts
+                .iter()
+                .map(|tag| tag.count)
+                .collect::<Vec<_>>(),
+            [3, 1]
+        );
+        assert_eq!(
+            view.language_counts
+                .iter()
+                .map(|language| (language.value, language.count))
+                .collect::<Vec<_>>(),
+            [(Language::Json, 6), (Language::Txt, 2)]
+        );
         assert_eq!(view.kind_counts[1].count, 2);
         assert_eq!(view.priority_counts[3].count, 1);
     }

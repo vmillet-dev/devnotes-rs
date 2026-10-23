@@ -2858,6 +2858,9 @@ export type NotesView = {
 	availableLanguages: Language[],
 	kindCounts: FacetCount<NoteKind>[],
 	priorityCounts: FacetCount<Priority>[],
+	/**  The notes each tag and each format holds, in the space: `available_*` in their order. */
+	tagCounts: FacetCount<string>[],
+	languageCounts: FacetCount<Language>[],
 	isFiltering: boolean,
 	/**  `u32` and not `usize`: Specta refuses what JSON cannot carry exactly. */
 	matched: number,

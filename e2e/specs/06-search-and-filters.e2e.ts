@@ -387,6 +387,43 @@ describe('Search, filters and facets', () => {
     expect(await canvas.kindChip('note').getAttribute('aria-pressed')).toBe('false');
   });
 
+  /**
+   * REC-05: Type and Priority counted their notes, Format and Tags did not, and the results
+   * read « Résultats · 45 · à trier bientôt ».
+   */
+  it('counts the notes of a format and a tag as the filter finds them, and heads the results with the count alone', async () => {
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId: await homeSpaceId(),
+        title: 'Renouveler le certificat',
+        content: 'certbot renew',
+        language: 'sh',
+        tags: ['ops'],
+        lifecycle: { kind: 'expires', at: new Date(Date.now() + 86_400_000).toISOString() },
+      }),
+    );
+    await reloadCanvas();
+    const resultsCount = () =>
+      $(`${testid('note-section')}[data-section="results"] ${testid('note-section-count')}`).getText();
+
+    await canvas.openFacets();
+    const tagged = Number(await canvas.tagPill('ops').$(testid('tag-count')).getText());
+    expect(tagged).toBeGreaterThan(1);
+    await canvas.toggleTag('ops');
+    expect((await resultsCount()).trim()).toBe(`· ${tagged}`);
+    await canvas.toggleTag('ops');
+
+    const shells = Number(await canvas.languageChip('sh').$(testid('language-count')).getText());
+    expect(shells).toBeGreaterThan(0);
+    await canvas.toggleLanguage('sh');
+    expect((await resultsCount()).trim()).toBe(`· ${shells}`);
+    await canvas.toggleLanguage('sh');
+
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   /** Ordered in Rust: titles folded, ties on the last edit; the card names the date sorted by. */
   it('orders the notes as asked, and dates the cards by creation when sorted so', async () => {
     const spaceId = await homeSpaceId();

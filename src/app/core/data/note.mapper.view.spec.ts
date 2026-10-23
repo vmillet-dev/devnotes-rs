@@ -9,6 +9,11 @@ const BASE_VIEW: WireNotesView = {
   availableLanguages: ['json', 'yml'],
   kindCounts: [{ value: 'note', count: 2 }],
   priorityCounts: [{ value: 'urgent', count: 1 }],
+  tagCounts: [{ value: 'api', count: 3 }],
+  languageCounts: [
+    { value: 'json', count: 2 },
+    { value: 'yml', count: 1 },
+  ],
   isFiltering: false,
   matched: 0,
 };
@@ -46,5 +51,10 @@ describe('toWireNotesQuery', () => {
 describe('toNotesView', () => {
   it('reads the languages offered for the rail', () => {
     expect(toNotesView(BASE_VIEW).availableLanguages).toEqual(['json', 'yml']);
+  });
+
+  it('carries the counts of the tags and the formats', () => {
+    expect(toNotesView(BASE_VIEW).tagCounts).toEqual([{ value: 'api', count: 3 }]);
+    expect(toNotesView(BASE_VIEW).languageCounts[1]).toEqual({ value: 'yml', count: 1 });
   });
 });

@@ -153,6 +153,9 @@ export interface NotesView {
   readonly kindCounts: readonly FacetCount<NoteKind>[];
   /** Every level, `none` included, counted like the kinds. */
   readonly priorityCounts: readonly FacetCount<Priority>[];
+  /** The notes of each tag and each format, over the space: `available*` in their order. */
+  readonly tagCounts: readonly FacetCount<string>[];
+  readonly languageCounts: readonly FacetCount<LanguageTag>[];
   readonly isFiltering: boolean;
   readonly matched: number;
 }

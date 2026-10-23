@@ -11,6 +11,9 @@
     (click)="onClick()"
   >
     #{{ label() }}
+    @if (count(); as count) {
+      <span class="tag-count" data-testid="tag-count">{{ count }}</span>
+    }
   </button>
 } @else {
   <span class="tag-pill static">#{{ label() }}</span>
