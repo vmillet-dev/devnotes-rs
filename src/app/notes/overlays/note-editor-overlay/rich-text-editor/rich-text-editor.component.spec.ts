@@ -279,6 +279,18 @@ describe('RichTextEditorComponent', () => {
   });
 
   /** Kept from the dialog's focus trap: a Tab it sees already answered is left alone. */
+  it('sets a heading from Ctrl+Alt and the key in the 1 position, whatever it prints', async () => {
+    await open('hello');
+    (surface() as HTMLElement & { editor: Editor }).editor.commands.setTextSelection(1);
+
+    // AZERTY: the 1 key prints `&`, the 2 key `é`.
+    await press('&', { code: 'Digit1', ctrlKey: true, altKey: true });
+    expect(emitted.at(-1)).toBe('# hello');
+
+    await press('é', { code: 'Digit2', ctrlKey: true, altKey: true });
+    expect(emitted.at(-1)).toBe('## hello');
+  });
+
   it('types a tab rather than leaving the text, and Shift+Tab takes it back', async () => {
     await open('hello');
     (surface() as HTMLElement & { editor: Editor }).editor.commands.setTextSelection(1);
