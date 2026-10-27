@@ -283,7 +283,7 @@
       "onLine": "ligne",
       "replacedMatches": "$ résultats remplacés",
       "replacedOnLine": "résultat remplacé ligne $",
-      "goToLine": "Aller à la ligne",
+      "goToLine": "Aller à la ligne :",
       "go": "Aller",
       "controlCharacter": "Caractère de contrôle",
       "selectionDeleted": "Sélection supprimée"

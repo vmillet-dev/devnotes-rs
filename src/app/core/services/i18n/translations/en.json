@@ -283,7 +283,7 @@
       "onLine": "on line",
       "replacedMatches": "replaced $ matches",
       "replacedOnLine": "replaced match on line $",
-      "goToLine": "Go to line",
+      "goToLine": "Go to line:",
       "go": "Go",
       "controlCharacter": "Control character",
       "selectionDeleted": "Selection deleted"

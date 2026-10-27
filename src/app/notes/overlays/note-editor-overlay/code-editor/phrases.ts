@@ -14,12 +14,19 @@ const PHRASE_KEYS: Readonly<Record<string, string>> = {
   'Selection deleted': 'selectionDeleted',
 };
 
+/**
+ * Labels CodeMirror writes `: ` after itself: translated whole (« Aller à la ligne : »), their
+ * colon given back so the language's own spacing stays before it.
+ */
+const LABELS: ReadonlySet<string> = new Set(['Go to line']);
+
 /** From the `editor.code` translations to `EditorState.phrases`; a missing one stays English. */
 export function phrasesFrom(translated: Readonly<Record<string, unknown>>): Record<string, string> {
   const phrases: Record<string, string> = {};
   for (const [phrase, key] of Object.entries(PHRASE_KEYS)) {
     const text = translated[key];
-    if (typeof text === 'string' && text !== '') phrases[phrase] = text;
+    if (typeof text === 'string' && text !== '')
+      phrases[phrase] = LABELS.has(phrase) ? text.replace(/:$/, '') : text;
   }
   return phrases;
 }
