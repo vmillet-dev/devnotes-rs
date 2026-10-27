@@ -1257,7 +1257,8 @@ describe('The tools', () => {
       await openTool('json-generator');
       await $(`${testid('segmented-json-generator-source')} [data-segment-id="example"]`).click();
       await setField(testid('json-generator-seed'), '7');
-      await setField(testid('json-generator-input'), '{"id":"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90","n":3}');
+      // Out of alphabetical order: the documents keep the template's (GEN-03).
+      await setField(testid('json-generator-input'), '{"n":3,"id":"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90"}');
       await eventually(output, (text) => text.startsWith('['), 'the documents');
       const first = await output();
 
@@ -1267,6 +1268,11 @@ describe('The tools', () => {
 
       await eventually(output, (text) => text === first, 'the first documents again');
       expect((JSON.parse(first) as unknown[]).length).toBe(3);
+      expect((JSON.parse(first) as object[]).map((document) => Object.keys(document))).toEqual([
+        ['n', 'id'],
+        ['n', 'id'],
+        ['n', 'id'],
+      ]);
     });
 
     it('takes a word as the seed, and draws the same documents from it again', async () => {
