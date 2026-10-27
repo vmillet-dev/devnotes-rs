@@ -33,7 +33,10 @@
               [value]="draft.binding(action)"
               [attr.aria-invalid]="refusalFor(action.id) ? 'true' : null"
               [attr.aria-describedby]="refusalFor(action.id) ? 'shortcut-error-' + action.id : null"
+              [attr.data-listening]="stopped() === action.id ? 'false' : null"
               (keydown)="onCapture(action, $event)"
+              (focus)="stopped.set(null)"
+              (click)="stopped.set(null)"
             />
             <button
               type="button"

@@ -320,6 +320,16 @@ describe('Preferences', () => {
 
       expect(await field.getValue()).toBe('P');
       expect(await settings.shortcutError('canvas.pin').getText()).toContain('C');
+
+      // An arrow is the canvas's own: refused with a word, where it once did nothing at all.
+      await press('ArrowLeft');
+      expect(await field.getValue()).toBe('P');
+      expect(await settings.shortcutError('canvas.pin').getText()).not.toContain('C');
+
+      // Escape ends the listening, not Preferences.
+      await press('Escape');
+      expect(await field.getAttribute('data-listening')).toBe('false');
+      expect(await $(testid('settings-page')).isExisting()).toBe(true);
     });
 
     // Readonly: a text cursor would promise the wrong interaction.
