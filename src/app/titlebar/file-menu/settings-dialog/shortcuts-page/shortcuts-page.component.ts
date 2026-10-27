@@ -8,6 +8,7 @@ import {
   Rebindable,
   acceleratorFromEvent,
   canvasKeystrokeFromEvent,
+  isModifierAlone,
 } from '@core/services/shortcuts/shortcut.model';
 import { AREA_ACTIONS } from '@core/services/areas/area.model';
 import { CANVAS_ACTIONS } from '@notes/canvas-keys';
@@ -69,6 +70,9 @@ export class ShortcutsPageComponent {
 
   private readonly refusal = signal<Refusal | null>(null);
 
+  /** The field Escape stopped listening: the next Escape is the dialog's, until it is clicked or focused again. */
+  protected readonly stopped = signal<string | null>(null);
+
   protected readonly conflicts = computed(() =>
     this.draft.conflicts(EVERY_ACTION).map((conflict) => ({
       accelerator: conflict.accelerator,
@@ -85,8 +89,8 @@ export class ShortcutsPageComponent {
   /**
    * The field listens for a keystroke rather than accepting text, which would let through
    * combinations the native side cannot read back. A modifier on its own is a
-   * combination still being typed and goes back to the dialog — which is what leaves Tab
-   * and Escape working inside the field.
+   * combination still being typed; Tab goes on to the next field, and a first Escape stops the
+   * listening without closing the dialog, which the next one does.
    *
    * Captured through the reader its own half matches with: a global key is stored by
    * **position** because the native parser reads it back that way, a canvas one by the
@@ -94,14 +98,24 @@ export class ShortcutsPageComponent {
    * key the moment the layout is not QWERTY.
    */
   protected onCapture(action: Rebindable, event: KeyboardEvent): void {
+    if (this.stopped() === action.id || event.key === 'Tab') return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.stopped.set(action.id);
+      return;
+    }
+
     const isGlobal = GLOBAL_ACTIONS.includes(action);
     const keystroke = isGlobal ? acceleratorFromEvent(event) : canvasKeystrokeFromEvent(event);
     if (keystroke === null) {
-      // A bare key on a global row is a refusal worth saying out loud, but Tab and
-      // Escape are not one — and the canvas reader is already what refuses those two.
-      // Nothing is prevented here: the key was not taken, so it goes on working.
+      if (isModifierAlone(event)) return;
+      // A bare key makes no global shortcut; an arrow or the separator is the canvas's own.
       if (isGlobal && canvasKeystrokeFromEvent(event) !== null) {
         this.refusal.set({ id: action.id, ref: { key: 'settings.shortcuts.needsModifier' } });
+      } else if (!isGlobal) {
+        event.preventDefault();
+        this.refusal.set({ id: action.id, ref: { key: 'settings.shortcuts.reserved' } });
       }
       return;
     }

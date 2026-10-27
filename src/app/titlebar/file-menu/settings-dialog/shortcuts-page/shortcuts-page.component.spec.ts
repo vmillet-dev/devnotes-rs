@@ -99,12 +99,47 @@ describe('ShortcutsPageComponent', () => {
     expect(error('palette')).toContain('Ctrl, Alt, Maj');
   });
 
-  it('lets Tab and Escape through, which is what keeps the field escapable', async () => {
+  it('lets Tab through, which is what keeps the field escapable', async () => {
     const tab = press('palette', { key: 'Tab', code: 'Tab' });
     await fixture.whenStable();
 
     expect(tab.defaultPrevented).toBe(false);
     expect(error('palette')).toBeNull();
+  });
+
+  it('refuses a key the canvas keeps for itself, and says so', async () => {
+    press('canvas.pin', { key: 'ArrowLeft', code: 'ArrowLeft' });
+    await fixture.whenStable();
+
+    expect(field('canvas.pin').value).toBe('P');
+    expect(error('canvas.pin')).toBe('Cette touche est réservée à la navigation.');
+  });
+
+  it('says nothing of a modifier alone, a combination still being typed', async () => {
+    press('canvas.pin', { key: 'Shift', code: 'ShiftLeft', shiftKey: true });
+    await fixture.whenStable();
+
+    expect(error('canvas.pin')).toBeNull();
+  });
+
+  /** The dialog listens on the document: the first Escape stops at the field, the second reaches it. */
+  it('stops listening on a first Escape, and lets the second one close', async () => {
+    const first = press('canvas.pin', { key: 'Escape', code: 'Escape' });
+    await fixture.whenStable();
+    expect(first.defaultPrevented).toBe(true);
+    expect(error('canvas.pin')).toBeNull();
+
+    const second = press('canvas.pin', { key: 'Escape', code: 'Escape' });
+    expect(second.defaultPrevented).toBe(false);
+
+    press('canvas.pin', { key: 'j' });
+    await fixture.whenStable();
+    expect(field('canvas.pin').value).toBe('P');
+
+    field('canvas.pin').dispatchEvent(new Event('focus'));
+    press('canvas.pin', { key: 'j' });
+    await fixture.whenStable();
+    expect(field('canvas.pin').value).toBe('J');
   });
 
   /** The second action would be unreachable, and nothing on screen would say which. */
