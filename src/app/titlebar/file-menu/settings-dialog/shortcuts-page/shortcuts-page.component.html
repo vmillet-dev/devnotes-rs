@@ -35,8 +35,9 @@
               [attr.aria-describedby]="refusalFor(action.id) ? 'shortcut-error-' + action.id : null"
               [attr.data-listening]="stopped() === action.id ? 'false' : null"
               (keydown)="onCapture(action, $event)"
-              (focus)="stopped.set(null)"
-              (click)="stopped.set(null)"
+              (focus)="listen(action)"
+              (click)="listen(action)"
+              (blur)="stopListening()"
             />
             <button
               type="button"

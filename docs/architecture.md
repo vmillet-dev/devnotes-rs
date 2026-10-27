@@ -4701,6 +4701,9 @@ is still possible, so `set_global_shortcuts` **returns** what it could not take 
 says so. A log line is not an interface. The same command re-registers the three from scratch
 whenever the preference changes — everything is released first, or an abandoned combination
 would keep answering.
+While a global field of Preferences listens, the three are let go (`release_global_shortcuts`)
+and taken back when it stops, quietly: Windows hands a registered combination to its
+registration, so `Ctrl+Alt+N` typed there would open a note instead of being refused by name.
 
 - **Rust does not create the note.** Keeping creation on the front means one creation path
   (`create_note`), so a captured note gets language detection without a second implementation,
@@ -4808,7 +4811,7 @@ The commands, grouped by the feature that owns them:
 | `backup`      | `list_backups`, `restore_backup`                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `recovery`    | `archive_locked_library`, `set_aside_damaged_library`                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `changelog`   | `app_changelog`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `desktop`     | `hold_quit`, `set_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                                                        |
+| `desktop`     | `hold_quit`, `set_global_shortcuts`, `release_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                            |
 
 The guarantees the front-end relies on (persisted value returned, `Err` on an unknown id,
 "absent field means unchanged" for patches) are implemented in each feature, and tested there.

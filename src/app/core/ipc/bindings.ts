@@ -467,6 +467,11 @@ export const commands = {
 	syncTray: (labels: TrayLabels) => __TAURI_INVOKE<void>("sync_tray", { labels }),
 	/**  The native side can only fail silently, and a log line is not an interface. */
 	setGlobalShortcuts: (bindings: ShortcutBindings) => __TAURI_INVOKE<string[]>("set_global_shortcuts", { bindings }),
+	/**
+	 *  Lets go of the three while a shortcut field listens: a combination of ours would never reach
+	 *  it, Windows handing it to the registration. `set_global_shortcuts` takes them back.
+	 */
+	releaseGlobalShortcuts: () => __TAURI_INVOKE<void>("release_global_shortcuts"),
 	setWindowBehavior: (behavior: WindowBehavior) => __TAURI_INVOKE<void>("set_window_behavior", { behavior }),
 	/**
 	 *  The page's answer to `GlobalAction::Quit` when it has something to ask first: the timer

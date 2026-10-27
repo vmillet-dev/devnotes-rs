@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GlobalShortcutsService } from '@core/services/shortcuts/global-shortcuts.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -120,6 +121,33 @@ describe('ShortcutsPageComponent', () => {
     await fixture.whenStable();
 
     expect(error('canvas.pin')).toBeNull();
+  });
+
+  it('lets go of the global shortcuts while a global field listens, and only then', async () => {
+    const shortcuts = TestBed.inject(GlobalShortcutsService);
+    const suspend = vi.spyOn(shortcuts, 'suspend');
+    const resume = vi.spyOn(shortcuts, 'resume');
+
+    field('canvas.pin').dispatchEvent(new Event('focus'));
+    expect(suspend).not.toHaveBeenCalled();
+
+    field('palette').dispatchEvent(new Event('focus'));
+    expect(suspend).toHaveBeenCalledTimes(1);
+
+    field('palette').dispatchEvent(new Event('blur'));
+    expect(resume).toHaveBeenCalledTimes(1);
+
+    fixture.destroy();
+    expect(resume).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses a global combination another global shortcut holds, naming it', async () => {
+    press('palette', { key: 'n', code: 'KeyN', ctrlKey: true, altKey: true });
+    await fixture.whenStable();
+
+    expect(field('palette').value).toBe('Ctrl+Alt+P');
+    expect(error('palette')).toContain('Ctrl+Alt+N');
+    expect(error('palette')).toContain('Créer une note');
   });
 
   /** The dialog listens on the document: the first Escape stops at the field, the second reaches it. */
