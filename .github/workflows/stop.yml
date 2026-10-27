@@ -1,8 +1,9 @@
 name: Stop
 
-# Dispatched by the last step of any job that fails, in `ci.yml`, `e2e.yml` or `security.yml`:
-# it cancels that run and every other unfinished run of its commit, so the runners go to the
-# pull requests queued behind. Seconds after the dispatch, the failed job has ended « failure ».
+# Dispatched by the last step of any job that fails, in `ci.yml` or `e2e.yml`: it cancels that
+# run and every other unfinished run of its commit, so the runners go to the pull requests queued
+# behind. Seconds after the dispatch, the failed job has ended « failure ». The security workflows
+# never dispatch it: an advisory says nothing about the commit.
 on:
   workflow_dispatch:
     inputs:
