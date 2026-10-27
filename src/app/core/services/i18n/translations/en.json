@@ -3672,8 +3672,11 @@
         "after": "After the response",
         "tests": "Tests"
       },
-      "order": "They run in this order:",
-      "orderTests": "They run after the script after the response, in this order:",
+      "orders": {
+        "before": "They run from the collection down to this request:",
+        "after": "They run from this request back up to the collection:",
+        "tests": "They run after the script after the response, from this request back up to the collection:"
+      },
       "levels": {
         "collection": "collection",
         "folder": "folder",

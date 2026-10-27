@@ -3672,8 +3672,11 @@
         "after": "Après la réponse",
         "tests": "Tests"
       },
-      "order": "S’exécutent dans cet ordre :",
-      "orderTests": "S’exécutent après le script « après la réponse », dans cet ordre :",
+      "orders": {
+        "before": "S’exécutent de la collection vers cette requête :",
+        "after": "S’exécutent de cette requête vers la collection :",
+        "tests": "S’exécutent après le script « après la réponse », de cette requête vers la collection :"
+      },
       "levels": {
         "collection": "collection",
         "folder": "dossier",
