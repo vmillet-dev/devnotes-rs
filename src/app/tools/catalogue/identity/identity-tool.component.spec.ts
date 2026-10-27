@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { describe, expect, it, vi } from 'vitest';
 import { IdentityAnswer } from '@core/model/tool-answers.model';
 import { FILE_DIALOG_ADAPTER } from '@core/services/dialogs/file-dialog.service';
@@ -489,6 +490,14 @@ describe('IdentityToolComponent', () => {
       .element<HTMLButtonElement>('[data-testid="segmented-identity-format"] [data-segment-id="csv"]')
       .click();
     await harness.settle();
+    // Offered with the CSV only, and kept for the next export.
+    harness
+      .element<HTMLButtonElement>(
+        '[data-testid="segmented-identity-separator"] [data-segment-id="semicolon"]',
+      )
+      .click();
+    await harness.settle();
+    expect(TestBed.inject(SettingsStore).csvSeparator()).toBe('semicolon');
     harness.element<HTMLButtonElement>('[data-testid="identity-export"]').click();
     await vi.waitFor(() => expect(exported()).toHaveLength(1));
 
@@ -496,7 +505,7 @@ describe('IdentityToolComponent', () => {
     expect(exported()[0]).toEqual({
       // No seed was pinned: the one the card was drawn from is the file's.
       request: { country: 'FR', sex: null, ageMin: 18, ageMax: 80, seed: '2676318943' },
-      batch: { countries: ['IT', 'US'], count: 25, format: 'csv' },
+      batch: { countries: ['IT', 'US'], count: 25, format: 'csv', separator: 'semicolon' },
       path: 'C:/out/people.csv',
     });
     await vi.waitFor(() =>

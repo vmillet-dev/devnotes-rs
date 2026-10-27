@@ -10,6 +10,7 @@ import {
 } from '@core/services/tools/tool.model';
 import {
   AppSettings,
+  CSV_SEPARATORS,
   DEFAULT_SETTINGS,
   DENSITIES,
   Density,
@@ -179,6 +180,7 @@ export class SettingsStore {
   readonly calcDecimals = this.setting('calcDecimals', asOneOf(CALC_DECIMALS));
   readonly calcNumberFormat = this.setting('calcNumberFormat', asOneOf(CALC_NUMBER_FORMATS));
   readonly calcDateFormat = this.setting('calcDateFormat', asOneOf(CALC_DATE_FORMATS));
+  readonly csvSeparator = this.setting('csvSeparator', asOneOf(CSV_SEPARATORS));
 
   /** Followed live: a "system" theme must switch without a restart. */
   private readonly systemPrefersDark = signal(false);

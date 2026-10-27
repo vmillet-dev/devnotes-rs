@@ -1848,6 +1848,11 @@
         "json": "JSON",
         "csv": "CSV"
       },
+      "separator": "Separator",
+      "separators": {
+        "comma": "Comma",
+        "semicolon": "Semicolon"
+      },
       "export": "Export…",
       "batchHint": "1 to 100 people in a file, the first being the one on the card; the countries chosen take their turn.",
       "exported": "{count, plural, one {# person exported.} other {# people exported.}}",

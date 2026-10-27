@@ -1258,6 +1258,9 @@ export type Crossing =
 /**  An `@attribute` holds a value, not an object or a list. */
 "xmlAttribute";
 
+/**  Chosen at the export: a French spreadsheet reads `;`, an English one `,`. */
+export type CsvSeparator = "comma" | "semicolon";
+
 export type DataFormat = "json" | "toml" | "xml" | "yaml";
 
 export type DatedClaim = {
@@ -2912,6 +2915,7 @@ export type PeopleBatch = {
 	countries: Country[],
 	count: number,
 	format: PeopleFormat,
+	separator: CsvSeparator,
 };
 
 export type PeopleExport = { kind: "written"; people: number } | { kind: "failed"; problem: FileProblem } | 

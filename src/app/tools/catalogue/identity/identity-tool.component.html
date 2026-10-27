@@ -117,6 +117,15 @@
         [currentId]="format()"
         (chosen)="onFormat($event)"
       />
+      @if (format() === 'csv') {
+        <app-segmented-choice
+          kind="identity-separator"
+          [label]="'tools.identity.separator' | transloco"
+          [segments]="separators"
+          [currentId]="settings.csvSeparator()"
+          (chosen)="onSeparator($event)"
+        />
+      }
       <button type="button" class="action" data-testid="identity-export" (click)="export()">
         {{ 'tools.identity.export' | transloco }}
       </button>

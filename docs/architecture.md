@@ -1204,7 +1204,9 @@ is corrected or a list completed without building the application again.
   is a file, JSON or CSV, written by Rust where the file dialog says and starting from the
   person on screen. **Several countries take their turn in one file** (`PeopleBatch`), the
   card's own first; a CSV holds the numbers of a person in one column, `kind:value` and a bar
-  between, since they differ from a country to the next.
+  between, since they differ from a country to the next. A CSV opens on a UTF-8 BOM, or a spreadsheet reads
+  `Şimşek` in its own code page, and is separated by what the export chose (`CsvSeparator`:
+  `;` for a French spreadsheet), kept as the application's `csvSeparator`.
 
 **Adding a tool**, the whole of it:
 
