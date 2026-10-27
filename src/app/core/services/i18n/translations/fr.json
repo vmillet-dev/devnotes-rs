@@ -2647,6 +2647,7 @@
       },
       "nil": "UUID nul",
       "created": "Créé le",
+      "createdLocally": "Heure locale",
       "counter": "Compteur",
       "possible": "Rien ne s’y lit : sa forme est celle d’un {{kinds}}.",
       "outOfRange": "La forme d’un {{kind}}, mais au-delà de ce qu’il peut valoir.",

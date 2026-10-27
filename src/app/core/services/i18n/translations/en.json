@@ -2647,6 +2647,7 @@
       },
       "nil": "Nil UUID",
       "created": "Created",
+      "createdLocally": "Local time",
       "counter": "Counter",
       "possible": "Nothing to read: it has the shape of a {{kinds}}.",
       "outOfRange": "The shape of a {{kind}}, but past what one can hold.",

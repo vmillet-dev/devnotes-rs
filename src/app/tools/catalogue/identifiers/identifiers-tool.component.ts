@@ -68,6 +68,18 @@ function readable(iso: string | null): string | null {
   return iso ? iso.replace('T', ' ').replace('Z', ' UTC') : null;
 }
 
+/**
+ * "2016-07-31 01:54:10.259 (UTC+02:00)": the same instant on this machine's clock, its offset
+ * said. `offsetMinutes` is `Date#getTimezoneOffset()`, whose sign is the offset's opposite.
+ */
+export function localReading(iso: string, offsetMinutes = new Date(iso).getTimezoneOffset()): string {
+  const shifted = new Date(Date.parse(iso) - offsetMinutes * 60_000).toISOString();
+  const east = -offsetMinutes;
+  const hours = String(Math.floor(Math.abs(east) / 60)).padStart(2, '0');
+  const minutes = String(Math.abs(east) % 60).padStart(2, '0');
+  return `${shifted.slice(0, 23).replace('T', ' ')} (UTC${east < 0 ? '−' : '+'}${hours}:${minutes})`;
+}
+
 /** What a field takes, so a typed `r` is never read as « Générer à nouveau ». */
 function isTyping(target: EventTarget | null): boolean {
   return (
@@ -140,6 +152,13 @@ export class IdentifiersToolComponent implements Tool {
   protected readonly created = computed(() => {
     const inspection: IdInspection | null = this.inspection.value();
     return inspection && 'created' in inspection ? readable(inspection.created) : null;
+  });
+
+  protected readonly createdLocally = computed(() => {
+    const inspection: IdInspection | null = this.inspection.value();
+    return inspection && 'created' in inspection && inspection.created
+      ? localReading(inspection.created)
+      : null;
   });
 
   protected readonly random = computed(() => {
