@@ -202,4 +202,18 @@ describe('HttpSendStore', () => {
     expect(typed('application/octet-stream')).toBe('response.bin');
     expect(responseFileName(sentResponse({ headers: [] }))).toBe('response.bin');
   });
+
+  it('reads the extension off the address when the type says only text or bytes', () => {
+    const served = (value: string, url: string) =>
+      responseFileName(
+        sentResponse({ url, headers: [{ enabled: true, key: 'Content-Type', value, description: '' }] }),
+      );
+
+    expect(served('text/plain; charset=utf-8', 'https://example.test/files/large-file.json')).toBe(
+      'response.json',
+    );
+    expect(served('application/octet-stream', 'https://example.test/archive.tar.gz?x=1')).toBe('response.gz');
+    expect(served('text/plain', 'https://example.test/notes')).toBe('response.txt');
+    expect(served('application/json', 'https://example.test/page.html')).toBe('response.json');
+  });
 });

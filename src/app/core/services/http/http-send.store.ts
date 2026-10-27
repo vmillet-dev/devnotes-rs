@@ -55,18 +55,32 @@ const EXTENSIONS: readonly (readonly [string, string])[] = [
   ['image/webp', 'webp'],
   ['pdf', 'pdf'],
   ['zip', 'zip'],
-  ['text/', 'txt'],
 ];
 
 export function contentTypeOf(response: SentResponse): string | null {
   return response.headers.find((header) => header.key?.toLowerCase() === 'content-type')?.value ?? null;
 }
 
-/** The name the save dialog proposes, its extension read off the type. */
+/**
+ * The name the save dialog proposes, its extension read off the type; a type that says no more
+ * than text or bytes leaves it to the address, as a file served raw is (`large-file.json`).
+ */
 export function responseFileName(response: SentResponse): string {
   const type = (contentTypeOf(response) ?? '').toLowerCase();
-  const extension = EXTENSIONS.find(([word]) => type.includes(word))?.[1] ?? 'bin';
+  const extension =
+    EXTENSIONS.find(([word]) => type.includes(word))?.[1] ??
+    extensionOfAddress(response.url) ??
+    (type.startsWith('text/') ? 'txt' : 'bin');
   return `response.${extension}`;
+}
+
+function extensionOfAddress(url: string): string | null {
+  try {
+    const name = new URL(url).pathname.split('/').pop() ?? '';
+    return /\.([a-z0-9]{1,5})$/i.exec(name)?.[1]?.toLowerCase() ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** The sends, one a tab: Rust sends; this keeps what each tab shows of it. */
