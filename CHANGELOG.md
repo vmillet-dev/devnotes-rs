@@ -12,6 +12,53 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.16.1] - 2026-10-27
+
+### 🐛 Fixed
+
+- Notes: a plain click on a link places the caret without opening it (#1079)
+- Backups: a restored copy shows at once, without a reload (#1087)
+- Dessin: an imported drawing shows its preview on its card (#1086)
+- Notes: formatted text pasted into an empty Note keeps bold and links (#1081)
+- Notes: « Insérer un dessin » says when there is no drawing (#1085)
+- Dessin: C on a drawing's card copies no scene (#1084)
+- Dessin: Escape clears the selection before closing (#1083)
+- Notes: « 2 * 3 * 4 » stays as typed, without italics (#1080)
+- Notes: a banner over the editor takes its first click (#1078)
+- Editor: a click on another card opens it (#1077)
+- Notes: a new note titled and closed with Escape is kept (#1076)
+- Notes: an expiry three days away reads « dans 3j » all day (#1074)
+- Palette: a title holding the words comes before a body match (#1070)
+- Search: a snippet's context is searched and shown on its card (#1068)
+- Fields: the card's fill form says the values were filled in (#1073)
+- Attachments: the card's count follows an added or removed file (#1075)
+- Copies: « Accuser chaque copie » off silences the card's message (#1072)
+- Snippets: the Format tooltip names the language, not its badge (#1065)
+- Wording: a count of one reads in the singular (#1066)
+- Palette: « Rien ne correspond » shows beside the create option (#1071)
+- Filters: the Format and Tags facets show their counts (#1069)
+- Scripts: a syntax error says the script is not valid JavaScript (#1062)
+- HTTP code: unresolved variables leave the URL as written (#1061)
+- JSON explorer: « Copier la valeur » copies a string without quotes (#1067)
+- Runner: a request added shows in the run order, which is kept (#1064)
+- Runner: a data file neither CSV nor JSON says so (#1063)
+- HTTP: « Name: value » typed in a header name trims the value (#1060)
+- JSON generator: a text seed gives the same documents every time (#1058)
+- Export: each export proposes a file name of its own (#1059)
+- Subnets: a plan places a two-host need in a /30 (#1054)
+- Tools: the YAML merge key « << » is applied (#1057)
+- Durations: « 90 min » is written PT1H30M (#1056)
+- Hashes: « zzz » reads as neither hex nor base64 (#1055)
+
+### 🔒 Security
+
+- Advisories: tokio, ctutils patched; a failed audit stops no other run (#1097)
+
+### 🧰 Under the hood
+
+- HTTP headers: the space typed after the colon is checked end to end (#1082)
+- Changelog: 0.13.0 to 0.15.0 list features as Added, fixes as Fixed (#996)
+
 ## [0.16.0] - 2026-10-21
 
 ### ✨ Added
