@@ -238,9 +238,7 @@ fn action_of(app: &AppHandle, shortcut: &Shortcut) -> Option<GlobalAction> {
 /// Takes the three from scratch and returns what could not be taken. Everything is released
 /// first, or a replaced combination would keep firing.
 fn apply_shortcuts(app: &AppHandle, bindings: &ShortcutBindings) -> Vec<String> {
-    if let Err(error) = app.global_shortcut().unregister_all() {
-        log::warn!("Global shortcuts not released: {error}");
-    }
+    release(app);
 
     let mut registered = Vec::new();
     let mut unavailable = Vec::new();
@@ -276,6 +274,26 @@ fn apply_shortcuts(app: &AppHandle, bindings: &ShortcutBindings) -> Vec<String> 
 #[allow(clippy::needless_pass_by_value)]
 pub fn set_global_shortcuts(bindings: ShortcutBindings, app: AppHandle) -> Vec<String> {
     apply_shortcuts(&app, &bindings)
+}
+
+/// Lets go of the three while a shortcut field listens: a combination of ours would never reach
+/// it, Windows handing it to the registration. `set_global_shortcuts` takes them back.
+#[tauri::command]
+#[specta::specta]
+#[allow(clippy::needless_pass_by_value)]
+pub fn release_global_shortcuts(app: AppHandle) {
+    release(&app);
+}
+
+fn release(app: &AppHandle) {
+    if let Err(error) = app.global_shortcut().unregister_all() {
+        log::warn!("Global shortcuts not released: {error}");
+    }
+    if let Some(active) = app.try_state::<ActiveShortcuts>()
+        && let Ok(mut active) = active.lock()
+    {
+        active.clear();
+    }
 }
 
 /// Pushed from the preferences panel as it changes, like the tray labels.

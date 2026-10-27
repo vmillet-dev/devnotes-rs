@@ -33,7 +33,9 @@ use attachments::{
 };
 use backup::{list_backups, restore_backup, take_restored_aside};
 use changelog::{app_changelog, release_notes};
-use desktop::{hold_quit, set_global_shortcuts, set_window_behavior, sync_tray};
+use desktop::{
+    hold_quit, release_global_shortcuts, set_global_shortcuts, set_window_behavior, sync_tray,
+};
 use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
     list_folders, move_folder, move_folder_back, recolour_folder, rename_folder, save_board_layout,
@@ -289,6 +291,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             release_notes,
             sync_tray,
             set_global_shortcuts,
+            release_global_shortcuts,
             set_window_behavior,
             hold_quit,
         ])

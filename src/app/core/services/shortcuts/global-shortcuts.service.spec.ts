@@ -9,8 +9,12 @@ describe('GlobalShortcutsService', () => {
   // The generated bindings call `invoke` directly: what a spec substitutes is the commands
   // object.
   let setGlobalShortcuts: MockInstance<typeof commands.setGlobalShortcuts>;
+  let releaseGlobalShortcuts: MockInstance<typeof commands.releaseGlobalShortcuts>;
   let service: GlobalShortcutsService;
   let settings: SettingsStore;
+
+  /** The command answered, and what follows its answer run. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve));
 
   /** Combinations of the last call. */
   function lastBindings() {
@@ -19,6 +23,9 @@ describe('GlobalShortcutsService', () => {
 
   beforeEach(() => {
     setGlobalShortcuts = vi.spyOn(commands, 'setGlobalShortcuts').mockResolvedValue([]);
+    releaseGlobalShortcuts = vi.spyOn(commands, 'releaseGlobalShortcuts').mockResolvedValue();
+    setGlobalShortcuts.mockClear();
+    releaseGlobalShortcuts.mockClear();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({});
     settings = TestBed.inject(SettingsStore);
@@ -50,7 +57,7 @@ describe('GlobalShortcutsService', () => {
     setGlobalShortcuts.mockResolvedValue(['Ctrl+Alt+P']);
     service.start();
     TestBed.tick();
-    await Promise.resolve();
+    await settle();
 
     // The count travels beside the list: the sentence agrees three times over, and a
     // list is not something a translation can count.
@@ -63,8 +70,31 @@ describe('GlobalShortcutsService', () => {
   it('stays silent when everything was taken', async () => {
     service.start();
     TestBed.tick();
-    await Promise.resolve();
+    await settle();
 
+    expect(TestBed.inject(ErrorNotifier).notice()).toBeNull();
+  });
+
+  it('lets go of them while a field listens, and takes them back as they now stand', async () => {
+    setGlobalShortcuts.mockResolvedValue(['Ctrl+Alt+P']);
+    service.start();
+    TestBed.tick();
+    await settle();
+    TestBed.inject(ErrorNotifier).dismiss();
+
+    service.suspend();
+    expect(releaseGlobalShortcuts).toHaveBeenCalledTimes(1);
+
+    // Nothing is taken while a field listens, even a change.
+    settings.setPaletteShortcut('Ctrl+Shift+K');
+    TestBed.tick();
+    expect(setGlobalShortcuts).toHaveBeenCalledTimes(1);
+
+    service.resume();
+    await settle();
+    expect(setGlobalShortcuts).toHaveBeenCalledTimes(2);
+    expect(lastBindings().palette).toBe('Ctrl+Shift+K');
+    // Said when they were set, not again at every field left.
     expect(TestBed.inject(ErrorNotifier).notice()).toBeNull();
   });
 
@@ -73,7 +103,7 @@ describe('GlobalShortcutsService', () => {
 
     expect(() => service.start()).not.toThrow();
     TestBed.tick();
-    await Promise.resolve();
+    await settle();
 
     expect(TestBed.inject(ErrorNotifier).notice()).toBeNull();
   });

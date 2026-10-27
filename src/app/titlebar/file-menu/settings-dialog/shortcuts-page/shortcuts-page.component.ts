@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
+import { GlobalShortcutsService } from '@core/services/shortcuts/global-shortcuts.service';
 import { Refused } from '@core/services/shortcuts/shortcut-bindings.store';
 import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import {
@@ -65,6 +66,7 @@ const EVERY_ACTION = SECTIONS.flatMap((section) => section.actions);
 export class ShortcutsPageComponent {
   protected readonly draft = inject(SettingsDraftStore);
   private readonly transloco = inject(TranslocoService);
+  private readonly globalShortcuts = inject(GlobalShortcutsService);
 
   protected readonly sections = SECTIONS;
 
@@ -79,6 +81,11 @@ export class ShortcutsPageComponent {
       names: conflict.actions.map((action) => this.transloco.translate(action.labelKey)).join(', '),
     })),
   );
+
+  constructor() {
+    // Whatever closes Preferences: OK, Cancel, Escape, the backdrop.
+    inject(DestroyRef).onDestroy(() => this.globalShortcuts.resume());
+  }
 
   protected refusalFor(id: string): TranslationRef | null {
     const refusal = this.refusal();
@@ -103,6 +110,7 @@ export class ShortcutsPageComponent {
       event.preventDefault();
       event.stopPropagation();
       this.stopped.set(action.id);
+      this.globalShortcuts.resume();
       return;
     }
 
@@ -124,6 +132,16 @@ export class ShortcutsPageComponent {
 
     const refused = this.draft.rebind(action, keystroke, EVERY_ACTION);
     this.refusal.set(refused === null ? null : this.explain(action, keystroke, refused));
+  }
+
+  /** A global field listens with ours let go, or Ctrl+Alt+N would open a note instead of reaching it. */
+  protected listen(action: Rebindable): void {
+    this.stopped.set(null);
+    if (GLOBAL_ACTIONS.includes(action)) this.globalShortcuts.suspend();
+  }
+
+  protected stopListening(): void {
+    this.globalShortcuts.resume();
   }
 
   protected reset(action: Rebindable): void {

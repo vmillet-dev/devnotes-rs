@@ -267,6 +267,12 @@ describe('Preferences', () => {
       expect(await field.getValue()).toBe(before);
       expect(await settings.shortcutError('palette').isExisting()).toBe(true);
 
+      // Held by « Créer une note »: refused by name. WebDriver's keys never pass through the
+      // system, so the shortcuts let go while the field listens are checked by hand.
+      await press('n', ['Control', 'Alt']);
+      expect(await field.getValue()).toBe(before);
+      expect(await settings.shortcutError('palette').getText()).toContain('Ctrl+Alt+N');
+
       // `KeyboardEvent.code`, so a combination set on AZERTY stays put on QWERTY.
       await press('j', ['Control', 'Alt']);
       expect(await field.getValue()).toBe('Ctrl+Alt+J');
