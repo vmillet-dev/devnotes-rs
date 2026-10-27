@@ -162,11 +162,25 @@
           <span class="folder-name">{{ folder.name }}</span>
         </span>
       }
-      <span class="card-tags" data-testid="note-card-tags">
+      <span
+        class="card-tags"
+        data-testid="note-card-tags"
+        [appWholeItems]="displayedTags().length"
+        #tagRow="appWholeItems"
+      >
         @for (tag of displayedTags(); track tag) {
           <span>#{{ tag }}</span>
         }
       </span>
+      @let moreTags = note().tags.length - tagRow.shown();
+      @if (moreTags > 0) {
+        <span
+          class="card-tags-more"
+          data-testid="note-card-tags-more"
+          [attr.title]="'notes.moreTags' | transloco: { count: moreTags }"
+          >+{{ moreTags }}</span
+        >
+      }
     </span>
   </div>
 

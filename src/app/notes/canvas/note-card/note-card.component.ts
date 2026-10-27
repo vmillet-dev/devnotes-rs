@@ -26,6 +26,7 @@ import { CodeViewerComponent } from '@shared/code-viewer/code-viewer.component';
 import { KindBadgeComponent } from '@shared/badges/kind-badge/kind-badge.component';
 import { PriorityPillComponent } from '@notes/ui/priority-pill/priority-pill.component';
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
+import { WholeItemsDirective } from '@shared/directives/whole-items.directive';
 import { CalcLinesComponent } from './calc-lines/calc-lines.component';
 import { NoteCardMenuComponent } from './note-card-menu/note-card-menu.component';
 import { NoteOutlineComponent } from './note-outline/note-outline.component';
@@ -71,6 +72,7 @@ function canTakeFocus(card: HTMLElement): boolean {
     NoteCardMenuComponent,
     PriorityPillComponent,
     TranslocoPipe,
+    WholeItemsDirective,
   ],
   templateUrl: './note-card.component.html',
   styleUrl: './note-card.component.scss',
