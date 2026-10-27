@@ -927,15 +927,21 @@ fn request(client: &reqwest::Client, hop: &Hop, cookie: Option<&str>) -> reqwest
             for (key, part) in parts {
                 form = match part {
                     Part::Text(text) => form.text(key.clone(), text.clone()),
-                    Part::File { name, bytes } => form.part(
-                        key.clone(),
-                        reqwest::multipart::Part::bytes(bytes.clone()).file_name(name.clone()),
-                    ),
+                    Part::File { name, bytes } => form.part(key.clone(), file_part(name, bytes)),
                 };
             }
             request.multipart(form)
         }
     }
+}
+
+/// Sent with the type of its file, as a browser does: a server may sort an upload by it.
+fn file_part(name: &str, bytes: &[u8]) -> reqwest::multipart::Part {
+    let part = || reqwest::multipart::Part::bytes(bytes.to_vec()).file_name(name.to_string());
+    // Every type of the table parses; a refusal would only leave reqwest's own default.
+    part()
+        .mime_str(&super::model::part_type(name))
+        .unwrap_or_else(|_| part())
 }
 
 /// A client per send, for its TLS. It follows no redirect: `send` does, a hop at a time.

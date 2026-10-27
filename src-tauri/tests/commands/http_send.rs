@@ -8,8 +8,8 @@ use std::time::Duration;
 
 use devnotes_lib::error::ErrorCode;
 use devnotes_lib::http::model::{
-    ContainerSettings, HttpItem, HttpItemKind, HttpMethod, KeyValue, RequestAuth, RequestBody,
-    RequestDocument, RequestKind,
+    ContainerSettings, FormPart, HttpItem, HttpItemKind, HttpMethod, KeyValue, RequestAuth,
+    RequestBody, RequestDocument, RequestKind,
 };
 use devnotes_lib::http::send::{ImpliedSource, SHOWN_LIMIT, SendRequest, SentBody, USER_AGENT};
 use devnotes_lib::http::transport::TransportSettings;
@@ -629,6 +629,41 @@ fn a_body_past_what_is_shown_is_cut_and_saved_whole_to_a_file() {
         !session
             .call(|app| save_http_response("tab-1".to_string(), target, app))
             .unwrap()
+    );
+}
+
+#[test]
+fn a_multipart_file_part_is_sent_with_the_type_of_its_file() {
+    let session = Session::open();
+    let directory = tempfile::tempdir().unwrap();
+    let file = |name: &str| {
+        let path = directory.path().join(name);
+        std::fs::write(&path, b"bytes").unwrap();
+        FormPart {
+            key: name.to_string(),
+            value: path.to_string_lossy().into_owned(),
+            file: true,
+            ..FormPart::default()
+        }
+    };
+    let (port, seen) = serve(1, |_, _| response("200 OK", &[], b""));
+    let mut upload = request(&format!("http://127.0.0.1:{port}/upload"));
+    upload.method = HttpMethod::Post;
+    upload.document.body = RequestBody::Multipart {
+        parts: vec![file("image-test.png"), file("notes.unknown")],
+    };
+
+    session.call(|app| send_http_request(upload, app)).unwrap();
+
+    let body = String::from_utf8_lossy(&seen.recv().unwrap().body).into_owned();
+    let type_of = |name: &str| {
+        let from = &body[body.find(&format!("filename=\"{name}\"")).unwrap()..];
+        from.lines().nth(1).unwrap_or_default().to_string()
+    };
+    assert_eq!(type_of("image-test.png"), "Content-Type: image/png");
+    assert_eq!(
+        type_of("notes.unknown"),
+        "Content-Type: application/octet-stream"
     );
 }
 
