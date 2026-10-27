@@ -82,6 +82,15 @@ describe('ChecklistEditorComponent', () => {
     expect(last().map((item) => item.text)).toEqual(['Relire', '', 'Déployer']);
   });
 
+  it('puts the caret in the row Enter created, at its start', async () => {
+    rows()[1].focus();
+    key(rows()[1], { key: 'Enter' });
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(rows()[2]);
+    expect(rows()[2].selectionStart).toBe(0);
+  });
+
   it('cuts a row at the caret on Enter, what follows starting the next', async () => {
     rows()[1].focus();
     rows()[1].setSelectionRange(3, 3);
