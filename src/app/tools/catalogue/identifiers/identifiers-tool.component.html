@@ -208,6 +208,12 @@
                 <dd data-testid="identifiers-created">{{ created }}</dd>
               </div>
             }
+            @if (createdLocally(); as local) {
+              <div class="fact">
+                <dt>{{ 'tools.identifiers.createdLocally' | transloco }}</dt>
+                <dd data-testid="identifiers-created-local">{{ local }}</dd>
+              </div>
+            }
             @if (random(); as random) {
               <div class="fact">
                 <dt>{{ 'tools.identifiers.random' | transloco }}</dt>

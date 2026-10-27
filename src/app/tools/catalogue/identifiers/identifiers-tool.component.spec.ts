@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { IdInspection } from '@core/model/tool-answers.model';
 import { FakeToolsRepository } from '@testing/fake-tools-repository';
 import { ToolHarness, renderTool } from '@testing/tool-harness';
-import { IdentifiersToolComponent } from './identifiers-tool.component';
+import { IdentifiersToolComponent, localReading } from './identifiers-tool.component';
 
 const V7 = '01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77';
 const SECOND = '01922b6e-4b31-7000-8000-000000000001';
@@ -230,6 +230,18 @@ describe('IdentifiersToolComponent', () => {
     );
     expect(harness.element('[data-testid="identifiers-random"]').textContent?.trim()).toBe(
       '7cc4-9a5c-6f2d8e1b3a77 · 74 bits',
+    );
+  });
+
+  it('gives the instant in local time too, its offset said', async () => {
+    expect(localReading('2016-07-30T23:54:10.259Z', -120)).toBe('2016-07-31 01:54:10.259 (UTC+02:00)');
+    expect(localReading('2016-07-30T23:54:10.259Z', 330)).toBe('2016-07-30 18:24:10.259 (UTC−05:30)');
+    expect(localReading('2016-07-30T23:54:10.259Z', 0)).toBe('2016-07-30 23:54:10.259 (UTC+00:00)');
+
+    const harness = await renderTool(IdentifiersToolComponent, answer);
+    await harness.type('identifiers-checked', V7, 'inspect_identifier');
+    expect(harness.element('[data-testid="identifiers-created-local"]').textContent).toBe(
+      localReading('2024-09-25T23:05:01.488Z'),
     );
   });
 
