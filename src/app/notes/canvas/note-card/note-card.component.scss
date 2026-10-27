@@ -314,15 +314,15 @@ app-copy-button {
 }
 
 // One line shown of a row that wraps: a tag that does not hold goes whole, never cut mid-word
-// (`WholeItemsDirective`), and the tags give way before the folder's name.
+// (`WholeItemsDirective`), and the tags take only the room the folder's name leaves.
 .card-tags {
   display: flex;
+  flex: 1 1 0;
   flex-wrap: wrap;
-  flex-shrink: 100;
+  justify-content: flex-end;
   min-width: 0;
   height: 14px;
   column-gap: 4px;
-  margin-left: auto;
   overflow: hidden;
 }
 

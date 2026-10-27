@@ -4,13 +4,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WholeItemsDirective, wholeCount } from './whole-items.directive';
 
 describe('wholeCount', () => {
-  const box = { top: 100, right: 200 };
+  const box = { top: 100, left: 0, right: 200 };
 
   it('counts the items standing whole on the first line', () => {
     expect(
       wholeCount(box, [
-        { top: 100, right: 150 },
-        { top: 100, right: 199.6 },
+        { top: 100, left: 10, right: 150 },
+        { top: 100, left: 10, right: 199.6 },
       ]),
     ).toBe(2);
   });
@@ -18,15 +18,16 @@ describe('wholeCount', () => {
   it('stops at the first one wrapped onto the next line', () => {
     expect(
       wholeCount(box, [
-        { top: 100, right: 150 },
-        { top: 114, right: 140 },
-        { top: 100, right: 160 },
+        { top: 100, left: 10, right: 150 },
+        { top: 114, left: 10, right: 140 },
+        { top: 100, left: 10, right: 160 },
       ]),
     ).toBe(1);
   });
 
   it('leaves out a first item wider than the row, rather than cut it', () => {
-    expect(wholeCount(box, [{ top: 100, right: 260 }])).toBe(0);
+    expect(wholeCount(box, [{ top: 100, left: 10, right: 260 }])).toBe(0);
+    expect(wholeCount(box, [{ top: 100, left: -40, right: 200 }])).toBe(0);
   });
 });
 
@@ -60,7 +61,7 @@ describe('WholeItemsDirective', () => {
       },
     );
     const rect = (element: Element, right: number) =>
-      vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({ top: 0, right } as DOMRect);
+      vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({ top: 0, left: 0, right } as DOMRect);
 
     const fixture = TestBed.createComponent(Host);
     fixture.autoDetectChanges();

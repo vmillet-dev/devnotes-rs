@@ -96,7 +96,7 @@ describe('Creating a note, and finding it again', () => {
       return {
         whole: shown.every((tag) => {
           const edges = tag.getBoundingClientRect();
-          return edges.top - box.top < 1 && edges.right <= box.right + 0.5;
+          return edges.top - box.top < 1 && edges.left >= box.left - 0.5 && edges.right <= box.right + 0.5;
         }),
         shown: shown.length,
         more: Number(shell?.querySelector('[data-testid="note-card-tags-more"]')?.textContent?.slice(1) ?? 0),

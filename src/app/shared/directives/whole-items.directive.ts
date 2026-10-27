@@ -11,6 +11,7 @@ import {
 
 interface Edges {
   readonly top: number;
+  readonly left: number;
   readonly right: number;
 }
 
@@ -18,7 +19,8 @@ interface Edges {
 export function wholeCount(box: Edges, items: readonly Edges[]): number {
   let count = 0;
   for (const item of items) {
-    if (item.top - box.top >= 1 || item.right > box.right + 0.5) break;
+    // Laid out from the right: a first item wider than the row overflows on its left.
+    if (item.top - box.top >= 1 || item.left < box.left - 0.5 || item.right > box.right + 0.5) break;
     count += 1;
   }
   return count;
