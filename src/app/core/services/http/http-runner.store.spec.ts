@@ -209,6 +209,8 @@ describe('HttpRunnerStore', () => {
     await running;
     expect(store().phase()).toBe('done');
     expect(store().ended()).toEqual({ cancelled: true, millis: 2400 });
+    // Four requests twice: what the summary says it stopped short of.
+    expect(store().planned()).toBe(8);
     expect(store().progress()).toBeNull();
     expect(environments.callsTo('list').length).toBeGreaterThan(1);
   });

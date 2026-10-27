@@ -123,6 +123,15 @@ describe('RunnerResultsComponent', () => {
     expect(all('http-runner-result').map((row) => row.dataset['result'])).toEqual(['passed', 'skipped']);
   });
 
+  it('says a cancelled run was cancelled and how far it went, never that all pass', async () => {
+    fixture.componentRef.setInput('results', [result('Login'), result('Payer')]);
+    fixture.componentRef.setInput('cancelledOf', 10);
+    await fixture.whenStable();
+
+    expect(text('http-runner-cancelled')).toBe('Annulé · 2 sur 10 requêtes');
+    expect(text('http-runner-summary')).not.toContain('Tout passe');
+  });
+
   it('says all pass with no bar when nothing was tested, for a single iteration', async () => {
     fixture.componentRef.setInput('results', [result('Login', { tests: [] })]);
     fixture.componentRef.setInput('iterations', 1);

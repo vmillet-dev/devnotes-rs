@@ -3827,6 +3827,7 @@
       "protected": "{{name}} is protected: {count, plural, one {# request} other {# requests}} of {{total}} can change it ({{requests}}).",
       "failed": "The run could not go to its end.",
       "failures": "{count, plural, one {# failure} other {# failures}}",
+      "cancelled": "Cancelled · {{done}} of {count, plural, one {# request} other {# requests}}",
       "allPassed": "All pass",
       "requests": "{count, plural, one {# request} other {# requests}}",
       "iterationsCount": "{count, plural, one {# iteration} other {# iterations}}",

@@ -75,6 +75,9 @@ export class HttpRunnerStore {
   readonly progress = this._progress.asReadonly();
   private readonly _ended = signal<{ readonly cancelled: boolean; readonly millis: number } | null>(null);
   readonly ended = this._ended.asReadonly();
+  private readonly _planned = signal(0);
+  /** The requests the last run was to send, iterations included: an order changed since is not it. */
+  readonly planned = this._planned.asReadonly();
   private readonly _runId = signal<string | null>(null);
   /** The console of the last run, under its own key. */
   readonly consoleKey = computed(() => {
@@ -182,6 +185,7 @@ export class HttpRunnerStore {
     if (previous !== null) this.console.forget(previous);
     this._runId.set(id);
     this.clearReport();
+    this._planned.set(this.enabled().length * this.runs());
     this._phase.set('running');
     try {
       await this.repository.runCollection({
