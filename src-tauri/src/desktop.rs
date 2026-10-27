@@ -11,8 +11,8 @@ use specta::Type;
 use crate::closed_enum::closed_enum;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, State, Wry};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State, Wry};
+use tauri_plugin_global_shortcut::{GlobalShortcut, GlobalShortcutExt, Shortcut, ShortcutState};
 
 closed_enum! {
     /// One event carrying a closed value rather than a topic per action: a mistyped topic is
@@ -238,7 +238,9 @@ fn action_of(app: &AppHandle, shortcut: &Shortcut) -> Option<GlobalAction> {
 /// Takes the three from scratch and returns what could not be taken. Everything is released
 /// first, or a replaced combination would keep firing.
 fn apply_shortcuts(app: &AppHandle, bindings: &ShortcutBindings) -> Vec<String> {
-    release(app);
+    if let Err(error) = app.global_shortcut().unregister_all() {
+        log::warn!("Global shortcuts not released: {error}");
+    }
 
     let mut registered = Vec::new();
     let mut unavailable = Vec::new();
@@ -281,12 +283,11 @@ pub fn set_global_shortcuts(bindings: ShortcutBindings, app: AppHandle) -> Vec<S
 #[tauri::command]
 #[specta::specta]
 #[allow(clippy::needless_pass_by_value)]
-pub fn release_global_shortcuts(app: AppHandle) {
-    release(&app);
-}
-
-fn release(app: &AppHandle) {
-    if let Err(error) = app.global_shortcut().unregister_all() {
+pub fn release_global_shortcuts<R: Runtime>(app: AppHandle<R>) {
+    let released = app
+        .try_state::<GlobalShortcut<R>>()
+        .map(|shortcuts| shortcuts.unregister_all());
+    if let Some(Err(error)) = released {
         log::warn!("Global shortcuts not released: {error}");
     }
     if let Some(active) = app.try_state::<ActiveShortcuts>()

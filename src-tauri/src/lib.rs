@@ -291,7 +291,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             release_notes,
             sync_tray,
             set_global_shortcuts,
-            release_global_shortcuts,
+            release_global_shortcuts::<tauri::Wry>,
             set_window_behavior,
             hold_quit,
         ])
