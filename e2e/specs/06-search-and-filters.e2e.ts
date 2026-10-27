@@ -206,6 +206,11 @@ describe('Search, filters and facets', () => {
     const found = await canvas.cardWithTitle(title);
     expect((await found.$(testid('note-card-hit')).getText()).trim()).toBe('Zqbase / production');
 
+    // Down from the field to what it found (TRV-05).
+    await $(testid('search-input')).click();
+    await press('ArrowDown');
+    expect(await canvas.focusedCardTitle()).toBe(title);
+
     await canvas.clearSearch();
     await bridge.deleteNotes([id]);
     await bridge.purgeNotes([id]);

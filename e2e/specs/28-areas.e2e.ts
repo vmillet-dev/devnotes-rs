@@ -72,6 +72,19 @@ describe('Switching between areas', () => {
     await canvas.clearSearch();
   });
 
+  it('takes the keyboard into the area it switches to', async () => {
+    const focusedIn = (selector: string) =>
+      browser.execute((within: string) => !!document.activeElement?.closest(within), selector);
+
+    await press('2', ['Control']);
+    await showsTools();
+    await eventually(() => focusedIn(testid('tools-page')), Boolean, 'the focus in the tools');
+
+    await press('1', ['Control']);
+    await showsNotes();
+    await eventually(() => focusedIn(testid('note-card')), Boolean, 'the focus on a card');
+  });
+
   it('reopens on the area it was left in', async () => {
     await press('2', ['Control']);
     await showsTools();
