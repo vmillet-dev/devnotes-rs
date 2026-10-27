@@ -2,10 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
-import { Country, Identifier, PeopleFormat, Sex } from '@core/model/tool-answers.model';
+import { Country, CsvSeparator, Identifier, PeopleFormat, Sex } from '@core/model/tool-answers.model';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { CSV_SEPARATORS } from '@core/services/settings/app-settings.model';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { ClockService } from '@core/services/time/clock.service';
 import { liveResult } from '@core/services/tools/live-result';
@@ -30,6 +32,11 @@ const SEXES: readonly Segment[] = ([ANY, 'F', 'M'] as const).map((id) => ({
 const FORMATS: readonly Segment[] = (['json', 'csv'] as const).map((id) => ({
   id,
   labelKey: `tools.identity.formats.${id}`,
+}));
+
+const SEPARATORS: readonly Segment[] = CSV_SEPARATORS.map((id) => ({
+  id,
+  labelKey: `tools.identity.separators.${id}`,
 }));
 
 const COUNTRY_CODES: readonly Country[] = [
@@ -106,6 +113,7 @@ export class IdentityToolComponent implements Tool {
   private readonly repository = inject(ToolsRepository);
   private readonly clipboard = inject(ClipboardService);
   private readonly files = inject(FileDialogService);
+  protected readonly settings = inject(SettingsStore);
   private readonly notifier = inject(ErrorNotifier);
   private readonly status = inject(StatusNotifier);
   private readonly clock = inject(ClockService);
@@ -128,6 +136,7 @@ export class IdentityToolComponent implements Tool {
 
   protected readonly sexes = SEXES;
   protected readonly formats = FORMATS;
+  protected readonly separators = SEPARATORS;
   protected readonly countries = COUNTRIES;
   protected readonly countryCodes = COUNTRY_CODES;
   protected readonly ages = AGE_BOUNDS;
@@ -323,6 +332,11 @@ export class IdentityToolComponent implements Tool {
     this.format.set(id as PeopleFormat);
   }
 
+  /** Kept for the next export, this session or another: a spreadsheet's separator does not change. */
+  protected onSeparator(id: string): void {
+    this.settings.csvSeparator.write(id as CsvSeparator);
+  }
+
   protected async copyJson(): Promise<void> {
     const json = this.answer()?.json;
     if (json) await this.clipboard.copy(json, { key: 'tools.identity.jsonCopied' });
@@ -338,7 +352,12 @@ export class IdentityToolComponent implements Tool {
     const written = await this.notifier.attempt('errors.toolFailed', () =>
       this.repository.exportIdentities(
         { ...this.request(), seed: this.seed() ?? used },
-        { countries: [...this.batchCountries()], count: this.people(), format: this.format() },
+        {
+          countries: [...this.batchCountries()],
+          count: this.people(),
+          format: this.format(),
+          separator: this.settings.csvSeparator(),
+        },
         path,
       ),
     );

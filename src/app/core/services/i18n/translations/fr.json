@@ -1847,6 +1847,11 @@
         "json": "JSON",
         "csv": "CSV"
       },
+      "separator": "Séparateur",
+      "separators": {
+        "comma": "Virgule",
+        "semicolon": "Point-virgule"
+      },
       "export": "Exporter…",
       "batchHint": "De 1 à 100 personnes dans un fichier, la première étant celle de la carte ; les pays choisis y passent à tour de rôle.",
       "exported": "{count, plural, one {# personne exportée.} other {# personnes exportées.}}",
