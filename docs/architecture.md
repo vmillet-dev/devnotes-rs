@@ -1610,7 +1610,8 @@ which knows no time zone, gives its cards the UTC day.
   `à 2 décimales`/`to 2 dp`, `à 5 chiffres`/`to 5 digits` (places too), `arrondi`/`rounded`
   (a half away from zero), `arrondi supérieur`/`inférieur`, `au 10 près`/`to nearest 10`,
   `au millier près`, `à la centaine près`, combined (`arrondi supérieur au 5 près`). A quantity
-  rounds in the unit it is shown in.
+  rounds in the unit it is shown in. The places asked for travel with the result (`CalcLine::Value.places`)
+  and decide its display over the sheet's « Décimales ».
 - **Bases and bits**: `0xFF`, `0b1010`, `0o377` and `5,3e+3` are numbers; `en hex`/`bin`/`oct`/
   `sci`, `en base 2|8|16`, `hex(…)`, `bin(…)`, `int(…)` say how the line's plain number is written
   (`CalcValue::Base`, `Scientific`, the front putting `0x` before the digits Rust sends).
@@ -1664,7 +1665,8 @@ answer), its theme its own (`calc-theme.ts`). A result is picked by a click, Shi
 Ctrl for one more, or by selecting lines of the text; the footer adds them up and averages them
 — in exact decimals, on the strings Rust sent (`decimalSum`) — and says when they are of
 different units. Three application preferences change the display, never the computation:
-« Décimales » (`calcDecimals`, Auto or 0 to 14, in the footer and in the preferences), « Format
+« Décimales » (`calcDecimals`, Auto or 0 to 14, in the footer and in the preferences; Auto keeps
+four significant figures and never fewer than two decimals, money two), « Format
 des nombres et des dates » (`calcNumberFormat`: the language on screen or one of
 `CALC_LOCALES`, written by `Intl` — a locale carries no data of ours) and « Format de date »
 (`calcDateFormat`: numeric, short, long). They are the application's, not the sheet's: a sheet

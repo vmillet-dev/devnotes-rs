@@ -19,11 +19,13 @@ describe('CalcLinesComponent', () => {
         expression: 'domaines = 4,99 €',
         value: { kind: 'number', value: '4.99', unit: { unit: 'euro', per: null } },
         aggregate: false,
+        places: null,
       },
       {
         expression: 'mensuel = total',
         value: { kind: 'number', value: '131.511', unit: { unit: 'euro', per: null } },
         aggregate: true,
+        places: null,
       },
     ]);
     fixture.autoDetectChanges();
@@ -46,8 +48,13 @@ describe('CalcLinesComponent', () => {
     settings.calcDateFormat.write('long');
     const fixture = TestBed.createComponent(CalcLinesComponent);
     fixture.componentRef.setInput('lines', [
-      { expression: '4,5', value: { kind: 'number', value: '4.5', unit: null }, aggregate: false },
-      { expression: 'demain', value: { kind: 'date', date: '2026-12-01' }, aggregate: false },
+      {
+        expression: '4,5',
+        value: { kind: 'number', value: '4.5', unit: null },
+        aggregate: false,
+        places: null,
+      },
+      { expression: 'demain', value: { kind: 'date', date: '2026-12-01' }, aggregate: false, places: null },
     ]);
     fixture.autoDetectChanges();
     await fixture.whenStable();

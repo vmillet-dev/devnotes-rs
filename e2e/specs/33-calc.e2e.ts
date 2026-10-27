@@ -84,7 +84,7 @@ describe('A Calcul note', () => {
       async () => (await readEach(testid('calc-result'), 'text')).map(digits),
       (results) =>
         results.join(' ') ===
-        '3000 250 033 283 0 16 120 15 16573 326 12835 12835 10052 499 10551 126613 200 68  ',
+        '3000 250 033 2828 0 16 120 15 16573 326 12835 12835 10052 499 10551 126613 200 68  ',
       'one result a line, the heading without one',
     );
     const failed = await readEach(testid('calc-result'), '@class');

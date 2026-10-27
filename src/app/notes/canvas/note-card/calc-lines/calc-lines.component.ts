@@ -28,7 +28,7 @@ export class CalcLinesComponent {
     this.lang();
     const formatter = this.sheets.formatter();
     return this.lines().map((line) => {
-      const result = formatter.value(line.value);
+      const result = formatter.value(line.value, line.places);
       return {
         expression: line.expression,
         result: `${result.approx ? '≈ ' : ''}${result.text}`,
