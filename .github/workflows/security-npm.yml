@@ -1,19 +1,17 @@
-name: Security
+name: Security (npm)
 
 # Two triggers, because they catch different things. On a pull request: a dependency
-# arriving with a known advisory or an incompatible license, while there is still a
-# review to act on. On a schedule: an advisory published *after* a dependency was
-# merged, which no push would ever surface.
+# arriving with a known advisory, while there is still a review to act on. On a
+# schedule: an advisory published *after* a dependency was merged, which no push would
+# ever surface. Cargo and npm have a workflow each, so a pull request that touches only
+# one of them is never judged on the other's tree.
 on:
   pull_request:
     branches: [main, 'dev/**']
     paths:
-      - 'src-tauri/Cargo.toml'
-      - 'src-tauri/Cargo.lock'
-      - 'src-tauri/deny.toml'
       - 'package.json'
       - 'package-lock.json'
-      - '.github/workflows/security.yml'
+      - '.github/workflows/security-npm.yml'
   schedule:
     # Monday morning, so the week starts with the answer rather than ends with it.
     - cron: '0 6 * * 1'
@@ -25,41 +23,8 @@ concurrency:
 
 permissions:
   contents: read
-  actions: write
 
 jobs:
-  cargo-deny:
-    name: Cargo advisories
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-
-      # Reads `Cargo.lock` and the advisory database; it compiles nothing, which is
-      # why this job needs no Rust toolchain and no cargo cache.
-      #
-      # ⚠️ `advisories` alone, and it is the repository's only advisory net — Dependabot
-      # alerts are off. `licenses`, `bans` and `sources` stood here and never made a
-      # decision in 25 runs; the GPL-3.0 compatibility of the tree is a release-time
-      # review, not a per-pull-request gate.
-      - uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          manifest-path: src-tauri/Cargo.toml
-          command: check advisories
-
-      # A failed job hands its run to `stop.yml`, which cancels it, and every other run of its
-      # commit, seconds later. ⚠️ Not `gh run cancel` here: cancelled from inside, the job would
-      # end « cancelled » and hide what failed. A Dependabot run is read-only and says so.
-      - &stop-the-run
-        name: Stop the run
-        if: failure()
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh workflow run stop.yml --repo "$GITHUB_REPOSITORY" --ref "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          -f run="$GITHUB_RUN_ID" || echo "::notice::This token cannot stop the run"
-
   npm-audit:
     name: npm advisories
     runs-on: ubuntu-22.04
@@ -157,5 +122,3 @@ jobs:
           }
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
           EOF
-
-      - *stop-the-run
