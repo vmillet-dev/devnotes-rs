@@ -12,6 +12,39 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.16.2] - 2026-10-27
+
+### ✨ Added
+
+- Identifiers: a decoded date is also given in local time (#1103)
+
+### 🔧 Changed
+
+- Scripts: the order shown says which way the scripts run (#1118)
+
+### 🐛 Fixed
+
+- Shortcuts: a field says when its combination is held elsewhere (#1107)
+- Export: a CSV opens with its accents and columns in a spreadsheet (#1117)
+- Keyboard: Ctrl+1/2/3 focus the area, and ↓ leaves the search (#1109)
+- Cards: tags end on whole words, never cut mid-word (#1111)
+- JSON generator: documents keep the template's key order (#1116)
+- Shortcuts: a global combination already used is refused by name (#1106)
+- Calcul: a line's precision is shown, Auto keeps four significant figures (#1100)
+- Runner: a cancelled run says it was cancelled (#1113)
+- Notes: Ctrl+Alt+1/2/3 set headings on an AZERTY keyboard (#1108)
+- HTTP: a multipart file part is sent with its type (#1112)
+- Attachments: an opened file keeps its own name (#1110)
+- Shortcuts: a reserved canvas key is refused with a message (#1105)
+- Snippets: « Aller à la ligne : » is spaced like French text (#1102)
+- Search: an empty result offers « Effacer la recherche » (#1101)
+- HTTP: a saved response proposes an extension from its type (#1104)
+- Todo lists: Enter moves the caret to the new item (#1099)
+
+### 🔒 Security
+
+- HTTP: secrets echoed in a response are masked (#1115)
+
 ## [0.16.1] - 2026-10-27
 
 ### 🐛 Fixed
