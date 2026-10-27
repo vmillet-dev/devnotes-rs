@@ -1,4 +1,4 @@
-import { Directive, inject } from '@angular/core';
+import { Directive, Injector, inject } from '@angular/core';
 import { Area, RAIL_ACTION, areaForKey, isSearchKey, isToolSearchKey } from '@core/services/areas/area.model';
 import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -47,7 +47,8 @@ export class AreaKeysDirective {
   private readonly tools = inject(ToolsStore);
   private readonly settings = inject(SettingsStore);
   private readonly bindings = inject(ShortcutBindingsStore);
-  private readonly selection = inject(NoteSelectionStore);
+  /** ⚠️ Asked for on landing, never at construction: the canvas's stores load the library, locked at startup. */
+  private readonly injector = inject(Injector);
 
   protected onKeydown(event: KeyboardEvent): void {
     if (!this.vault.isUnlocked() || this.dialogs.hasOpenDialog() || event.defaultPrevented) return;
@@ -92,8 +93,10 @@ export class AreaKeysDirective {
 
   private landed(area: Area): boolean {
     switch (area) {
-      case 'notes':
-        return focusCard(this.selection, this.selection.focusedNoteId()) || focusWithin('app-search-box');
+      case 'notes': {
+        const selection = this.injector.get(NoteSelectionStore);
+        return focusCard(selection, selection.focusedNoteId()) || focusWithin('app-search-box');
+      }
       case 'tools':
         return focusWithin('[data-testid="tool-body"]', '[data-testid="tools-page"] .workspace');
       case 'http':
