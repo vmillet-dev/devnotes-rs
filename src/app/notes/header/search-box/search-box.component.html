@@ -13,6 +13,7 @@
     [placeholder]="'notes.searchPlaceholder' | transloco"
     [value]="query()"
     (input)="onInput(searchInput.value)"
+    (keydown.arrowdown)="onArrowDown($event)"
   />
   <!-- Empties the field and nothing else, as a cross in a search field does everywhere.
        Clearing every filter has its own button in the row. -->
