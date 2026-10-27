@@ -87,6 +87,22 @@ export class ShortcutsPageComponent {
     inject(DestroyRef).onDestroy(() => this.globalShortcuts.resume());
   }
 
+  /** The combination on the field is one another application held when ours were last taken. */
+  protected heldElsewhere(action: Rebindable): boolean {
+    return (
+      GLOBAL_ACTIONS.includes(action) &&
+      this.globalShortcuts.unavailable().includes(this.draft.binding(action))
+    );
+  }
+
+  protected describedBy(action: Rebindable): string | null {
+    const ids = [
+      this.refusalFor(action.id) ? 'shortcut-error-' + action.id : null,
+      this.heldElsewhere(action) ? 'shortcut-held-' + action.id : null,
+    ].filter((id) => id !== null);
+    return ids.length > 0 ? ids.join(' ') : null;
+  }
+
   protected refusalFor(id: string): TranslationRef | null {
     const refusal = this.refusal();
 

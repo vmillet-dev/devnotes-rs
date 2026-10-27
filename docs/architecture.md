@@ -4698,7 +4698,8 @@ Each reveals the window and emits `GlobalAction::Capture`, `NewNote` or `Palette
 gets no error — the key simply does nothing. `Ctrl+Alt+Space` was the palette's first choice
 and lost it to a widely installed application, which is why it is now `Ctrl+Alt+P`. Losing one
 is still possible, so `set_global_shortcuts` **returns** what it could not take and the front
-says so. A log line is not an interface. The same command re-registers the three from scratch
+says so. The service keeps that list (`unavailable`) and the field in Preferences whose combination
+is in it says so under it. A log line is not an interface. The same command re-registers the three from scratch
 whenever the preference changes — everything is released first, or an abandoned combination
 would keep answering.
 While a global field of Preferences listens, the three are let go (`release_global_shortcuts`)

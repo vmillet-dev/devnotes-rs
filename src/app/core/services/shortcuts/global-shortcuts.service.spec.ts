@@ -65,6 +65,8 @@ describe('GlobalShortcutsService', () => {
       key: 'shortcuts.unavailable',
       params: { count: 1, list: 'Ctrl+Alt+P' },
     });
+    // Kept, for its field to say it.
+    expect(service.unavailable()).toEqual(['Ctrl+Alt+P']);
   });
 
   it('stays silent when everything was taken', async () => {

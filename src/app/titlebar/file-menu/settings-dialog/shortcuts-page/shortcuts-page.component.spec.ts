@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { commands } from '@core/ipc/bindings';
 import { GlobalShortcutsService } from '@core/services/shortcuts/global-shortcuts.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
@@ -139,6 +140,29 @@ describe('ShortcutsPageComponent', () => {
 
     fixture.destroy();
     expect(resume).toHaveBeenCalledTimes(2);
+  });
+
+  it('says under its field that another application holds its combination', async () => {
+    const held = (id: string) =>
+      fixture.nativeElement.querySelector(`[data-testid="shortcut-held"][data-action="${id}"]`);
+    expect(held('palette')).toBeNull();
+
+    vi.spyOn(commands, 'setGlobalShortcuts').mockResolvedValue(['Ctrl+Alt+P']);
+    TestBed.inject(GlobalShortcutsService).start();
+    TestBed.tick();
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+
+    expect(held('palette').textContent.trim()).toBe(
+      'Raccourci global indisponible : Ctrl+Alt+P. Une autre application l’utilise déjà.',
+    );
+    expect(field('palette').getAttribute('aria-describedby')).toBe('shortcut-held-palette');
+    expect(held('capture')).toBeNull();
+
+    // Another combination staged: nothing is known of it yet.
+    press('palette', { key: 'k', code: 'KeyK', ctrlKey: true, shiftKey: true });
+    await fixture.whenStable();
+    expect(held('palette')).toBeNull();
   });
 
   it('refuses a global combination another global shortcut holds, naming it', async () => {

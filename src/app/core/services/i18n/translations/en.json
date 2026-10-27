@@ -1094,12 +1094,13 @@
     },
     "shortcuts": {
       "reset": "Reset",
-      "globalNote": "These three work everywhere, window closed included, so each needs at least one modifier — without one the key would be swallowed in every application you use. A shortcut another application already holds is reported at startup.",
+      "globalNote": "These three work everywhere, window closed included, so each needs at least one modifier — without one the key would be swallowed in every application you use. A combination another application already holds is reported under its field, and cannot be typed there: Windows hands it to that application.",
       "canvasNote": "These only act on the canvas, never while typing, so a bare letter is enough. Click the field, then press the combination.",
       "areasNote": "This one acts in the three areas — Notes, Tools and HTTP — and, with Ctrl or Alt, while typing too.",
       "fixedNote": "The arrows, Escape, Tab and the Ctrl or Shift clicks do not move: they are the navigation, the way out and the selection, and a library you cannot step back through would be worse than a badly placed key.",
       "taken": "{{accelerator}} is already held by \"{{action}}\".",
       "needsModifier": "A global shortcut needs at least Ctrl, Alt, Shift or Super.",
+      "heldElsewhere": "Global shortcut unavailable: {{accelerator}}. Another application already holds it.",
       "reserved": "That key is reserved for navigation.",
       "conflict": "{{accelerator}} answers several actions: {{actions}}. Only one will act."
     },
