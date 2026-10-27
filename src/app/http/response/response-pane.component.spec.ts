@@ -228,6 +228,19 @@ describe('ResponsePaneComponent', () => {
     expect(text('save-as-note-what')).toBe('Un snippet JSON, avec le corps de la réponse mis en forme.');
   });
 
+  it('saves as a note what Rust gave back, its secrets masked, and says so', async () => {
+    http.noteAnswer = { text: '{"auth":"••••••••"}', masked: true };
+    await answer(sentResponse({ body: '{"auth":"Bearer t0k"}', pretty: null }));
+
+    el('http-response-save-note')!.click();
+    await vi.waitFor(() => expect(el('save-as-note-what')).not.toBeNull());
+
+    const [id, , sentText] = http.callsOf('responseNote')[0] as [string | null, unknown, string];
+    expect(id).not.toBeNull();
+    expect(sentText).toBe('{"auth":"Bearer t0k"}');
+    expect(text('save-as-note-what')).toContain('les secrets envoyés y sont masqués');
+  });
+
   it('reads a GraphQL answer as its data, its errors in a tab of their own', async () => {
     await answer(
       sentResponse({

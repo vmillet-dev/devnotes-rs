@@ -776,6 +776,18 @@ struct Received {
 struct Kept {
     content_type: Option<String>,
     bytes: Vec<u8>,
+    /// What a note made of the answer masks: the secret variables, and what the request sent
+    /// as a secret (`history::sent_secrets`).
+    secret_values: Vec<(String, String)>,
+    echoed: Vec<String>,
+}
+
+/// An answer's text as a note keeps it, and whether a secret was masked in it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteText {
+    pub text: String,
+    pub masked: bool,
 }
 
 /// The request as it left, a secret variable's value written as its `{{name}}`.
@@ -1066,13 +1078,9 @@ async fn send(
         body: outgoing.body,
     };
     // The request as it left: with the line its first hop carries.
-    if let Some(line) = hop.cookie(chain.jar.as_deref()) {
-        exchange.headers.push(KeyValue {
-            key: "Cookie".to_string(),
-            value: line,
-            ..KeyValue::default()
-        });
-    }
+    with_cookie(&mut exchange, hop.cookie(chain.jar.as_deref()));
+    let echoed = super::history::sent_secrets(&exchange, &outgoing.secrets);
+    let secret_values = outgoing.secret_values.clone();
 
     let Arrival {
         mut response,
@@ -1144,8 +1152,20 @@ async fn send(
         kept: Kept {
             content_type,
             bytes,
+            secret_values,
+            echoed,
         },
     })
+}
+
+fn with_cookie(exchange: &mut Exchange, line: Option<String>) {
+    if let Some(line) = line {
+        exchange.headers.push(KeyValue {
+            key: "Cookie".to_string(),
+            value: line,
+            ..KeyValue::default()
+        });
+    }
 }
 
 /// A send with no id and nothing kept: a script's `pm.sendRequest`. Beside the answer, what the
@@ -1270,6 +1290,24 @@ impl Sending {
                 format!("data:{kind};base64,{encoded}")
             },
         )
+    }
+
+    /// The text of an answer made a note: what the request sent as a secret masked wherever it
+    /// is said back, as the history keeps it. The answer shown is left as it came. Without an
+    /// answer kept under `id` (a run's), what its exchange shows: its auth and cookies.
+    pub fn note_text(&self, id: Option<&str>, exchange: &Exchange, text: &str) -> NoteText {
+        let mut echoed = super::history::sent_secrets(exchange, &[]);
+        let mut hidden = text.to_string();
+        if let Some(kept) = id.and_then(|id| self.kept(id)) {
+            hidden = variables::hide(text, &kept.secret_values);
+            echoed.extend(kept.echoed.iter().cloned());
+            echoed.sort_by_key(|value| std::cmp::Reverse(value.len()));
+        }
+        let masked = super::history::masked_echo(&hidden, &echoed);
+        NoteText {
+            masked: masked != text,
+            text: masked,
+        }
     }
 
     fn kept(&self, id: &str) -> Option<Arc<Kept>> {

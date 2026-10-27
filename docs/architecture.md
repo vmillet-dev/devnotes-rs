@@ -2577,6 +2577,11 @@ is logged.
   also keeps the environment it left with, its name and colour then (`HistorySummary::environment`,
   sealed with the rest), shown on its row. « Rouvrir » puts the `{{name}}` back, which resolves
   again.
+- **What the request sent as a secret is masked where the answer says it back**: the token of
+  its auth (and the whole header), each cookie value, the API key (`history::sent_secrets`). An
+  echo service answering `Authorization: Bearer …` keeps `••••••••` in the history. A note made
+  of an answer goes through the same (`http_response_note`: the answer kept under the send's id
+  for its secret variables, its exchange for the rest) and says so; the answer shown is left as it came.
 - ⚠️ **The limit of the mask**: it knows the secrets a request _declares_. A token typed by
   hand as a parameter or in a body, or one a server answers in its body, is kept as it is —
   sealed like the rest of the record, and shown to whoever opens the entry. A test a secret

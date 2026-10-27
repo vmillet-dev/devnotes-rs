@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { commands, RunData, RunEntry, RunRequest } from '@core/ipc/bindings';
+import { commands, NoteText, RunData, RunEntry, RunRequest } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import {
   CookieDomain,
@@ -305,6 +305,11 @@ export class HttpRepository {
   /** The last answer to `id` as a `data:` URI, when it is an image. */
   async responseImage(id: string): Promise<string | null> {
     return unwrap('http_response_image', await commands.httpResponseImage(id));
+  }
+
+  /** An answer's text made a note, the secrets its request sent masked where it says them back. */
+  async responseNote(id: string | null, exchange: SentResponse['exchange'], text: string): Promise<NoteText> {
+    return unwrap('http_response_note', await commands.httpResponseNote(id, exchange, text));
   }
 
   async forgetResponse(id: string): Promise<void> {

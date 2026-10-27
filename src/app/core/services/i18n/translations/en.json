@@ -3542,7 +3542,8 @@
         "bytes": "Binary body of {{size}} bytes.",
         "multipart": "Multipart body: {{fields}}."
       },
-      "noteWhat": "A {{language}} snippet, holding the response's body laid out."
+      "noteWhat": "A {{language}} snippet, holding the response's body laid out.",
+      "noteWhatMasked": "A {{language}} snippet, holding the response's body laid out; the secrets sent are masked in it."
     },
     "history": {
       "title": "History",
