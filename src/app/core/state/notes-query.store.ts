@@ -219,9 +219,11 @@ export class NotesQueryStore {
    * What `clearFilters` would give back. ⚠️ Not `isFiltering`, which is true inside an opened
    * folder: Escape would clear a search that is not there and never leave the folder.
    */
-  readonly hasUserFilters = computed(
+  readonly hasUserFilters = computed(() => this._searchQuery() !== '' || this.hasFacetFilters());
+
+  /** A tag, a language, a kind or a priority chosen: what the search alone is not. */
+  readonly hasFacetFilters = computed(
     () =>
-      this._searchQuery() !== '' ||
       this._selectedTags().size > 0 ||
       this._selectedLanguages().size > 0 ||
       this._selectedKinds().size > 0 ||
