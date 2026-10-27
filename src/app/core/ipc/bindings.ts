@@ -692,6 +692,7 @@ export type CalcCardLine = {
 	expression: string,
 	value: CalcValue,
 	aggregate: boolean,
+	places: number | null,
 };
 
 /**  Why a line has no result. It stays on its line: the others go on computing. */
@@ -729,7 +730,9 @@ export type CalcLine =
 /**  The variable the line names, `prix` in `prix = 120 €`. */
 name: string | null; 
 /**  `total` or `moyenne`: drawn with a rule above, a ledger's own convention. */
-aggregate: boolean; dimension: Dimension } | { kind: "error"; error: CalcError };
+aggregate: boolean; dimension: Dimension; 
+/**  The decimal places the line asked for (`à 5 chiffres`), over the sheet's setting. */
+places: number | null } | { kind: "error"; error: CalcError };
 
 export type CalcRow = {
 	line: CalcLine,

@@ -40,6 +40,25 @@ describe('CalcFormatter', () => {
     expect(plain(french.value(euros('1578.132')).text)).toBe('1 578,13 €');
   });
 
+  it('keeps four significant figures on Auto, never fewer than two decimals', () => {
+    const number = (value: string): CalcValue => ({ kind: 'number', value, unit: null });
+
+    expect(french.value(number('3.10685596118667'))).toEqual({ text: '3,107', approx: true });
+    expect(french.value(number('2.82842712474619'))).toEqual({ text: '2,828', approx: true });
+    expect(french.value(number('12.3456')).text).toBe('12,35');
+    expect(plain(french.value(number('1578.132')).text)).toBe('1 578,13');
+    expect(french.value(number('0.0451234')).text).toBe('0,04512');
+  });
+
+  it('shows the places its line asked for, whatever the sheet says', () => {
+    const pi: CalcValue = { kind: 'number', value: '3.14159', unit: null };
+    const two = new CalcFormatter('fr', translator(fr), { decimals: '2' });
+
+    expect(french.value(pi, 5)).toEqual({ text: '3,14159', approx: false });
+    expect(two.value(pi, 5).text).toBe('3,14159');
+    expect(plain(french.value(euros('2.5'), 0).text)).toBe('3 €');
+  });
+
   /** The digits and the order of the parts: a WebView may write a group with a narrow space or a plain one. */
   it('writes its numbers in the locale chosen, its words still in the language on screen', () => {
     const size: CalcValue = { kind: 'number', value: '1578.13', unit: { unit: 'gigabyte', per: null } };
@@ -94,7 +113,7 @@ describe('CalcFormatter', () => {
     });
     expect(english.value({ kind: 'scientific', mantissa: '1.23', exponent: -4 }).text).toBe('1.23e-4');
     expect(english.value({ kind: 'scientific', mantissa: '1.41421356', exponent: 0 })).toEqual({
-      text: '1.41e+0',
+      text: '1.414e+0',
       approx: true,
     });
     expect(english.exact({ kind: 'scientific', mantissa: '1.41421356', exponent: 0 })).toBe('1.41421356e+0');
@@ -203,7 +222,14 @@ describe('CalcFormatter', () => {
       rows: [
         { line: { kind: 'heading', title: 'Budget' }, spans: [], converting: null },
         {
-          line: { kind: 'value', value: euros('100.521'), name: 'ttc', aggregate: false, dimension: 'euro' },
+          line: {
+            kind: 'value',
+            value: euros('100.521'),
+            name: 'ttc',
+            aggregate: false,
+            dimension: 'euro',
+            places: null,
+          },
           spans: [],
           converting: null,
         },

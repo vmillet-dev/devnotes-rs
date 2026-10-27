@@ -16,7 +16,7 @@ const euros = (value: string): CalcValue => ({ kind: 'number', value, unit: { un
 
 function value(of: CalcValue, name: string | null = null, aggregate = false): CalcRow {
   return {
-    line: { kind: 'value', value: of, name, aggregate, dimension: 'euro' },
+    line: { kind: 'value', value: of, name, aggregate, dimension: 'euro', places: null },
     spans: name ? [{ start: 0, end: name.length, kind: 'name' }] : [],
     converting: null,
   };

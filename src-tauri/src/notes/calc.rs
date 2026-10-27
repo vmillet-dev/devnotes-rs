@@ -156,6 +156,8 @@ pub enum CalcLine {
         /// `total` or `moyenne`: drawn with a rule above, a ledger's own convention.
         aggregate: bool,
         dimension: Dimension,
+        /// The decimal places the line asked for (`à 5 chiffres`), over the sheet's setting.
+        places: Option<u8>,
     },
     Error {
         error: CalcError,
@@ -219,6 +221,7 @@ pub struct CalcCardLine {
     pub expression: String,
     pub value: CalcValue,
     pub aggregate: bool,
+    pub places: Option<u8>,
 }
 
 /// How many a card shows: often the conclusion of the sheet.
@@ -618,11 +621,12 @@ impl Walk {
         }
         spans.extend(spans_of(body, &parser.kinds));
         spans.extend(trailing_comment(line));
-        let (used, converting, aggregate, notation) = (
+        let (used, converting, aggregate, notation, places) = (
             parser.used,
             parser.converting,
             parser.aggregate,
             parser.notation,
+            parser.places.and_then(|places| u8::try_from(places).ok()),
         );
         if let (Some(setting), Ok(value)) = (setting, &result) {
             result = self.set(setting, value);
@@ -641,7 +645,7 @@ impl Walk {
             let shown = self.units.show(&value, &css)?;
             notated(&value, shown, notation).map(|shown| (value, shown))
         }) {
-            Ok((value, shown)) => self.value(index, name, value, shown, aggregate),
+            Ok((value, shown)) => self.value(index, name, value, shown, (aggregate, places)),
             Err(error) => {
                 let sentence = name.is_none()
                     && used.is_empty()
@@ -720,7 +724,7 @@ impl Walk {
         name: Option<String>,
         value: Value,
         shown: CalcValue,
-        aggregate: bool,
+        (aggregate, places): (bool, Option<u8>),
     ) -> CalcLine {
         let dimension = value.dimension();
         // `ppi = 326` sets the sheet: no name, nothing for `total` or `préc` to read.
@@ -733,6 +737,7 @@ impl Walk {
                 name,
                 aggregate,
                 dimension,
+                places,
             };
         }
         if let Some(name) = &name {
@@ -754,6 +759,7 @@ impl Walk {
             name,
             aggregate,
             dimension,
+            places,
         }
     }
 }
@@ -795,11 +801,15 @@ pub fn card_lines(sheet: &str, today: NaiveDate) -> Vec<CalcCardLine> {
         .zip(&lines)
         .filter_map(|(row, line)| match row.line {
             CalcLine::Value {
-                value, aggregate, ..
+                value,
+                aggregate,
+                places,
+                ..
             } => Some(CalcCardLine {
                 expression: lexer::without_comment(line).trim().to_string(),
                 value,
                 aggregate,
+                places,
             }),
             _ => None,
         })
@@ -893,6 +903,18 @@ mod tests {
     }
 
     #[test]
+    fn the_places_a_line_asks_for_travel_with_its_result() {
+        let places = |sheet: &str| match lines(sheet).pop() {
+            Some(CalcLine::Value { places, .. }) => places,
+            other => panic!("no value: {other:?}"),
+        };
+        assert_eq!(places("pi à 5 chiffres"), Some(5));
+        assert_eq!(places("1,236 km à 2 décimales"), Some(2));
+        assert_eq!(places("pi"), None);
+        assert_eq!(card_lines("pi à 5 chiffres", today())[0].places, Some(5));
+    }
+
+    #[test]
     fn a_price_per_hour_times_hours_is_euros() {
         let sheet = "prix = 0,045 €/h\nserveurs = 3\ncoût = prix × 730 h × serveurs";
         assert_eq!(
@@ -902,6 +924,7 @@ mod tests {
                 name: Some("coût".into()),
                 aggregate: false,
                 dimension: Dimension::Euro,
+                places: None,
             })
         );
         assert_eq!(
@@ -994,6 +1017,7 @@ mod tests {
                 name: Some("mensuel".into()),
                 aggregate: true,
                 dimension: Dimension::Euro,
+                places: None,
             }
         );
         assert!(
