@@ -3828,6 +3828,7 @@
       "protected": "{{name}} est protégé : {count, plural, one {# requête sur {{total}} peut le modifier} other {# requêtes sur {{total}} peuvent le modifier}} ({{requests}}).",
       "failed": "Le run n’a pas pu aller au bout.",
       "failures": "{count, plural, one {# échec} other {# échecs}}",
+      "cancelled": "Annulé · {{done}} sur {count, plural, one {# requête} other {# requêtes}}",
       "allPassed": "Tout passe",
       "requests": "{count, plural, one {# requête} other {# requêtes}}",
       "iterationsCount": "{count, plural, one {# itération} other {# itérations}}",
