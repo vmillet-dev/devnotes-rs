@@ -100,7 +100,10 @@ pub(crate) fn write_plaintext_copy(
 ) -> Result<PathBuf, StorageError> {
     std::fs::create_dir_all(directory).context("a directory for decrypted copies")?;
 
-    let copy = directory.join(attachment.stored_name());
+    let copy = directory.join(attachment.opened_copy());
+    if let Some(folder) = copy.parent() {
+        std::fs::create_dir_all(folder).context("a directory for decrypted copies")?;
+    }
     std::fs::write(&copy, bytes).context(&attachment.file_name)?;
 
     Ok(copy)
@@ -255,6 +258,7 @@ pub(crate) mod tests {
         let two = write_plaintext_copy(&open, &second, b"2").unwrap();
 
         assert_ne!(one, two);
+        assert_eq!(one.file_name().unwrap(), "capture.png");
         assert_eq!(std::fs::read(one).unwrap(), b"1");
         assert_eq!(std::fs::read(two).unwrap(), b"2");
     }

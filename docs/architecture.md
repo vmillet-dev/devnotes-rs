@@ -5364,7 +5364,8 @@ and decrypted is time every other command would spend waiting.
 
 ⚠️ `open_attachment` is the exception, and a deliberate one: the program that opens a
 document reads it from disk, so DevNotes writes a decrypted copy under `app_data_dir()/open/`
-and opens that — one click, as before. Those copies are swept on the way out
+and opens that — one click, as before. The copy is `<id>/<its own name>` (`Attachment::opened_copy`):
+the viewer shows the name the user knows, and two of one name do not meet. Those copies are swept on the way out
 (`RunEvent::Exit`) and again at every launch, which is what covers one another application
 still held, and a crash. ⚠️ The profile and **not** the OS temporary directory: that one is
 shared with every account on the machine, where the copy would be readable by all of them
