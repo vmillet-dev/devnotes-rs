@@ -2,6 +2,8 @@
 //! `attachments/` under a name derived from the id — two `image.png` must not overwrite each
 //! other, and a name from outside has no business deciding a write path.
 
+use std::path::PathBuf;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -29,6 +31,53 @@ impl Attachment {
     pub fn stored_name(&self) -> String {
         stored_name(&self.id, &self.file_name)
     }
+
+    /// Where its decrypted copy goes under the copies' directory: a folder of its own, so two
+    /// of one name do not meet, and the file under its own name, as the program opening it shows.
+    pub fn opened_copy(&self) -> PathBuf {
+        PathBuf::from(contained(&self.id)).join(copy_name(&self.id, &self.file_name))
+    }
+}
+
+/// Past this, the name is cut before its extension: the profile's path comes first.
+const COPY_NAME_CHARS: usize = 100;
+
+/// A name Windows takes as a file: what it forbids replaced, no trailing dot or space, no
+/// device name (`CON`, `NUL`…), which fall back on the stored name.
+fn copy_name(id: &str, file_name: &str) -> String {
+    let replaced: String = file_name
+        .chars()
+        .map(|c| {
+            if c.is_control() || matches!(c, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*') {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
+    let mut name = replaced
+        .trim_end_matches(['.', ' '])
+        .trim_start()
+        .to_string();
+    if name.chars().count() > COPY_NAME_CHARS {
+        let extension = extension_of(&name).map(|extension| format!(".{extension}"));
+        let kept = COPY_NAME_CHARS - extension.as_ref().map_or(0, String::len);
+        name = name.chars().take(kept).collect::<String>() + extension.as_deref().unwrap_or("");
+    }
+    let stem = name
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .trim_end()
+        .to_ascii_uppercase();
+    let device = matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.len() == 4
+            && stem.as_bytes()[3].is_ascii_digit());
+    if name.is_empty() || device {
+        return stored_name(id, file_name);
+    }
+    name
 }
 
 /// What an id may contribute to a file name. ⚠️ An imported id is whatever the file said, and
@@ -168,12 +217,48 @@ pub fn validate_size(byte_size: u64, name: &str) -> Result<u32, StorageError> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
 
     #[test]
     fn the_stored_name_comes_from_the_identifier_not_from_the_user() {
         assert_eq!(stored_name("a-1", "capture.png"), "a-1.png");
         assert_eq!(stored_name("a-2", "capture.png"), "a-2.png");
+    }
+
+    fn opened(id: &str, file_name: &str) -> PathBuf {
+        Attachment {
+            id: id.to_string(),
+            note_id: "n".to_string(),
+            file_name: file_name.to_string(),
+            mime_type: mime_of(file_name),
+            byte_size: 1,
+            created_at: Utc::now(),
+        }
+        .opened_copy()
+    }
+
+    #[test]
+    fn an_opened_copy_keeps_its_own_name_in_a_folder_of_its_own() {
+        assert_eq!(
+            opened("7d44d90f", "image-test.png"),
+            Path::new("7d44d90f").join("image-test.png")
+        );
+        assert_eq!(opened("../x", "a:b?.png"), Path::new("x").join("a_b_.png"));
+        assert_eq!(opened("a", "notes. "), Path::new("a").join("notes"));
+    }
+
+    #[test]
+    fn a_name_windows_will_not_write_falls_back_on_the_stored_one() {
+        assert_eq!(opened("a", "CON.txt"), Path::new("a").join("a.txt"));
+        assert_eq!(opened("a", "lpt1"), Path::new("a").join("a"));
+        assert_eq!(opened("a", "..."), Path::new("a").join("a"));
+        let long = format!("{}.png", "x".repeat(300));
+        let cut = opened("a", &long);
+        let name = cut.file_name().unwrap().to_string_lossy();
+        assert_eq!(name.chars().count(), 100);
+        assert!(name.ends_with(".png"));
     }
 
     #[test]
