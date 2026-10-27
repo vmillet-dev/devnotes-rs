@@ -4,12 +4,14 @@ import {
   ElementRef,
   Injector,
   afterNextRender,
+  computed,
   inject,
   input,
   output,
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { LANGUAGE_FULL_NAMES, LanguageTag } from '@core/model/language.model';
 import {
   PRETTIER_INDENTATIONS,
   PrettierSettings,
@@ -53,8 +55,11 @@ export class FormatButtonComponent {
   /** Whether Prettier formats the note's language: the button stays, and says why not. */
   readonly formattable = input.required<boolean>();
   readonly busy = input(false);
-  readonly language = input.required<string>();
+  readonly language = input.required<LanguageTag>();
   readonly settings = input.required<PrettierSettings>();
+
+  /** « Python », where the tooltip names it: « PY » is the badge's. */
+  protected readonly languageName = computed(() => LANGUAGE_FULL_NAMES[this.language()]);
 
   readonly formatRequested = output<void>();
   readonly settingsChanged = output<Partial<PrettierSettings>>();

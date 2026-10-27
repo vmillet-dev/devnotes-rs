@@ -3,7 +3,6 @@ import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { DesktopNotifier } from '@core/services/notifications/desktop-notifier.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { StatusNotifier } from '@core/services/notifications/status.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
 import { ClockService } from '@core/services/time/clock.service';
@@ -63,7 +62,6 @@ export class PaletteStore {
   private readonly window = inject(AppWindowService);
   private readonly notifier = inject(ErrorNotifier);
   private readonly desktop = inject(DesktopNotifier);
-  private readonly status = inject(StatusNotifier);
   private readonly settings = inject(SettingsStore);
   private readonly calc = inject(CalcSheets);
 
@@ -170,25 +168,18 @@ export class PaletteStore {
    * With DevNotes already in front it only closes, and says so where it stays.
    */
   async copyAndDismiss(content: string, title: string): Promise<void> {
-    if (!(await this.clipboard.copy(content))) {
+    const fromElsewhere = this._fromElsewhere();
+    const said = title ? { key: 'palette.copiedNote', params: { title } } : { key: 'palette.copiedUntitled' };
+    if (!(await this.clipboard.copy(content, fromElsewhere ? null : said))) {
       this.notifier.notify({ ref: { key: 'errors.copyFailed' } });
       return;
     }
 
-    const fromElsewhere = this._fromElsewhere();
     this.close();
-    if (!fromElsewhere) {
-      this.status.notify(
-        title ? { key: 'palette.copiedNote', params: { title } } : { key: 'palette.copiedUntitled' },
-      );
-      return;
-    }
+    if (!fromElsewhere) return;
 
     await this.window.hide();
-    await this.desktop.notify(
-      { key: 'palette.copiedTitle' },
-      title ? { key: 'palette.copiedNote', params: { title } } : { key: 'palette.copiedUntitled' },
-    );
+    if (this.clipboard.acknowledges()) await this.desktop.notify({ key: 'palette.copiedTitle' }, said);
   }
 
   /** « Copier tel quel » from the fields form: the whole body, the result holding a preview. */
@@ -241,6 +232,7 @@ export class PaletteStore {
         tzOffsetMinutes: now.getTimezoneOffset(),
         // The one place the pinned hoist is a setting.
         pinnedFirst: this.settings.showPinnedFirst(),
+        ranked: true,
       }),
     );
     return view ? view.sections.flatMap((section) => [...section.notes]).slice(0, MAX_NOTES) : [];

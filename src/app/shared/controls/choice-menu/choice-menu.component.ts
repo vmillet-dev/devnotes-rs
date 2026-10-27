@@ -72,6 +72,8 @@ export class ChoiceMenuComponent {
   readonly triggerTestId = input<string | null>(null);
   /** Forces the filter field on or off; left unset, a list of `FILTER_FROM` entries gets one. */
   readonly filterable = input<boolean | null>(null);
+  /** Said in the menu when it has no entry at all, rather than an empty panel. */
+  readonly emptyLabel = input<string | null>(null);
 
   readonly chosen = output<string | null>();
 

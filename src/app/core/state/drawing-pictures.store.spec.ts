@@ -44,6 +44,21 @@ describe('DrawingPicturesStore', () => {
     expect(await store.list()).toEqual([]);
   });
 
+  it('says which drawing has no pictures yet, and retakes none it cannot read', async () => {
+    expect(await store.hasPictures('sketch')).toBe(true);
+    expect(await store.hasPictures('imported')).toBe(false);
+    repository.failNext = new Error('locked');
+    expect(await store.hasPictures('imported')).toBe(true);
+  });
+
+  it('counts the pictures written again of each drawing, for its card to ask anew', () => {
+    store.pictured('sketch');
+    store.pictured('sketch');
+
+    expect(store.redrawn('sketch')).toBe(2);
+    expect(store.redrawn('other')).toBe(0);
+  });
+
   it('answers nothing for a picture that cannot be had', async () => {
     repository.failNext = new Error('locked');
 

@@ -226,11 +226,9 @@ pub enum IdentityOutcome {
     Unreadable { list: UnreadableList },
 }
 
-/// FNV-1a over the seed as it is written: « devnotes » is a seed like `42` is.
+/// The seed as it is written, hashed: « devnotes » is a seed like `42` is.
 fn seed_number(seed: &str) -> u32 {
-    seed.bytes().fold(0x811c_9dc5, |hash: u32, byte| {
-        (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193)
-    })
+    super::generate::fnv1a(seed)
 }
 
 /// The seed asked for, or one drawn from the system and written as a number.

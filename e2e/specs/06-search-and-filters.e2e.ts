@@ -184,6 +184,34 @@ describe('Search, filters and facets', () => {
     await reloadCanvas();
   });
 
+  /** COD-21, REC-03: a context was searched nowhere, and shown on a pinned card alone. */
+  it('finds a snippet by its context, quotes it, and shows it on its card', async () => {
+    const title = 'Connexion psql e2e';
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId: await homeSpaceId(),
+        title,
+        content: 'psql -h db.internal',
+        language: 'sh',
+        // A context of its own: the samples' « psql connection » carries PostgreSQL too.
+        source: 'Zqbase / production',
+      }),
+    );
+    await reloadCanvas();
+    const card = await canvas.cardWithTitle(title);
+    expect((await card.$(testid('note-card-when')).getText()).trim()).toBe('Zqbase');
+
+    await canvas.search('zqbase');
+    expect(await canvas.titles()).toEqual([title]);
+    const found = await canvas.cardWithTitle(title);
+    expect((await found.$(testid('note-card-hit')).getText()).trim()).toBe('Zqbase / production');
+
+    await canvas.clearSearch();
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   it('says so when nothing matches', async () => {
     await canvas.search('nothing matches this');
     expect(await canvas.noResults().isExisting()).toBe(true);
@@ -385,6 +413,43 @@ describe('Search, filters and facets', () => {
     await canvas.toggleKind('all');
     expect(await canvas.titles()).toContain('Docker compose');
     expect(await canvas.kindChip('note').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  /**
+   * REC-05: Type and Priority counted their notes, Format and Tags did not, and the results
+   * read « Résultats · 45 · à trier bientôt ».
+   */
+  it('counts the notes of a format and a tag as the filter finds them, and heads the results with the count alone', async () => {
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId: await homeSpaceId(),
+        title: 'Renouveler le certificat',
+        content: 'certbot renew',
+        language: 'sh',
+        tags: ['ops'],
+        lifecycle: { kind: 'expires', at: new Date(Date.now() + 86_400_000).toISOString() },
+      }),
+    );
+    await reloadCanvas();
+    const resultsCount = () =>
+      $(`${testid('note-section')}[data-section="results"] ${testid('note-section-count')}`).getText();
+
+    await canvas.openFacets();
+    const tagged = Number(await canvas.tagPill('ops').$(testid('tag-count')).getText());
+    expect(tagged).toBeGreaterThan(1);
+    await canvas.toggleTag('ops');
+    expect((await resultsCount()).trim()).toBe(`· ${tagged}`);
+    await canvas.toggleTag('ops');
+
+    const shells = Number(await canvas.languageChip('sh').$(testid('language-count')).getText());
+    expect(shells).toBeGreaterThan(0);
+    await canvas.toggleLanguage('sh');
+    expect((await resultsCount()).trim()).toBe(`· ${shells}`);
+    await canvas.toggleLanguage('sh');
+
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
   });
 
   /** Ordered in Rust: titles folded, ties on the last edit; the card names the date sorted by. */

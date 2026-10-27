@@ -626,7 +626,10 @@ explorer takes the format as an input for its messages, and nothing else in it i
   its lines (`focusedLines`); the caret, moved by a key or a click, selects `entryAt` its
   offset — never a selection the visualiser set, which carries no user event. ⚠️ The explorer is projected into
   `app-side-by-side`, whose CSS cannot reach it: its pane is a one-cell grid that stretches it.
-  Narrower than 600 px, the explorer drops its selection panel (a container query).
+  Narrower than 600 px (a container query), the selection panel goes under the graph with the
+  path and its actions alone: dropped whole, « Copier la valeur » had no size beside the code.
+  A string is copied by its own text, unquoted (`JsonRow.text`, `JsonLine.text`); anything else
+  as it is written.
 - **What is open is read back from each answer.** The front keeps no set of its own: it sends
   the paths of the nodes it was given, plus or minus the one clicked, and Rust decides what
   that opens, caps included. Opening a container opens one level. Stepping to a match sends
@@ -866,9 +869,10 @@ checked after rounding to the bytes its HEX writes, or said to be out of reach.
 `serde_json::Value` and written out of it, so any format reaches any other. ⚠️ `serde_json`
 has `preserve_order` on: without it a `Map` sorts its keys, and a converted document would
 come back in alphabetical order. YAML is `yaml-rust2`, maintained and pure Rust — `serde_yaml`
-is archived — and XML is read and written by hand around `quick-xml`, to one convention the
-tool states beside its result (`@name`, `#text`, a repeated element as a list). What a format
-cannot hold — a TOML `null` in a list, a list at a TOML root, two XML roots, a name XML
+is archived; it expands aliases but not YAML 1.1 merge keys, so `<<` is applied in
+`convert::merged` (the own keys win), for the conversion and the Diff alike — and XML is read
+and written by hand around `quick-xml`, to one convention the tool states beside its result
+(`@name`, `#text`, a repeated element as a list). What a format cannot hold — a TOML `null` in a list, a list at a TOML root, two XML roots, a name XML
 refuses — is an answer carrying its `JSONPath`, never a guess. A key holding `null` is the one
 exception: TOML leaves it out and the answer names it, since dropping it moves nothing else. The
 two sides never hold the same format.
@@ -895,7 +899,9 @@ magnitude.
 - **The seed has one place, its field**: the one just drawn is said beside it (« · 3634897658
   utilisée ») with a pin, a toggle, that writes it there; pinned, « Régénérer » stays offered
   and a line says it gives the same documents. « Régénérer » is the one name of that action in
-  the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers).
+  the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers). The JSON
+  generator's seed is any text, handed to Rust as typed: a number up to `u32::MAX` is itself,
+  any other text its FNV-1a hash (`generate::fnv1a`, the identity tool's too).
 
 **A cron expression's runs are listed between two moments, and counted** (`tools/cron.rs`,
 `croner`): « À partir de » and « jusqu'à », read in the zone chosen like the date that is
@@ -949,7 +955,9 @@ landing on its last (31 January plus a month is 28 February), then the wall cloc
 clock, in real seconds. The two part when the zone's offset differs at either end; the answer
 then names the last change, found a day at a time back from the later date, then to the second.
 An ISO 8601 duration is parsed by hand, so a refusal is located; « 1h30 » or « 90 min » are read
-too and written back in ISO. A month or a year has no length in seconds: such a duration has no
+too and written back in ISO. Sixty seconds are carried into a minute and sixty minutes into an
+hour (« 90 min » is `PT1H30M`), never hours into a day, which the clocks can make 23 or 25 hours
+long. A month or a year has no length in seconds: such a duration has no
 total. The words that spell either aloud are the front's, from typed parts.
 
 **A zone is the IANA database's**, compiled into the binary (`tools/zones.rs`, `chrono-tz`):
@@ -1399,11 +1407,11 @@ serialises to `"pinned"` / `"today"` / … and no user-visible label ever crosse
 The footer carries one of three things, and which one is a **product rule**, so it is decided
 in `notes::model` and arrives as a tagged `footer` field:
 
-| variant  | when                         | rendered as                |
-| -------- | ---------------------------- | -------------------------- |
-| `expiry` | the note has a deadline      | `expiryRef(at, now)`       |
-| `source` | pinned, and it has a context | the first path segment     |
-| `age`    | everything else              | `relativeTimeRef(at, now)` |
+| variant  | when                    | rendered as                |
+| -------- | ----------------------- | -------------------------- |
+| `expiry` | the note has a deadline | `expiryRef(at, now)`       |
+| `source` | it has a context        | the first path segment     |
+| `age`    | everything else         | `relativeTimeRef(at, now)` |
 
 The dated variants carry a **date, not a label**: formatting stays on the front so "4 min ago"
 keeps ageing on screen without a round trip. That is the line — the back decides _what_ to
@@ -1470,6 +1478,8 @@ measures it): below 1280 px the button is a glyph, the order in its tooltip.
 **A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
 counted by one helper, `view::counted`; its rail reads the levels from the most pressing
 down, offers no chip for `none`, and stays away from a space where nothing has a priority.
+The tags and the formats count their notes the same way (`tag_counts`, `language_counts`, a
+`GROUP BY` each, `available_*` in their order), shown beside each chip.
 
 A checklist has **no body**. Its items replace `content` — they are not an addition to it —
 and they live in `note_items`, keyed `(note_id, position)`. That key is the whole design: an
@@ -1689,7 +1699,9 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as
   `a -&gt; b`. `rich-text.engine.ts` replaces its private `encodeTextForMarkdown` with
   `escapeMarkdownText`, which escapes a character only where it would read as syntax and never
-  inside a `{{field}}`. `markdown-text.spec.ts` fails if an upgrade stops calling it.
+  inside a `{{field}}`. `markdown-text.spec.ts` fails if an upgrade stops calling it. The same
+  goes for typing: the italic's input rule took a star with a space inside (« 2 * 3 * 4 » became
+  an italic 3), so `SpacedEmphasis` runs ahead of it and keeps such a `*` or `_` as typed.
 - **⚠️ Focus before a chain, never inside it.** On WebKit, which Linux runs, TipTap's
   `chain().focus()` focuses synchronously, and the focus dispatches first: a note ending in a
   list gains its trailing paragraph under the chain's transaction, which then throws "Applying a
@@ -1784,8 +1796,10 @@ way — the kind menu names it and offers nothing.
   in the patch's transaction; both empty takes them away). A new drawing's first pictures
   follow the write that makes it (`NotesStore.editDraft`). A list sends none
   (`cut_to_preview` clears the body): a card asks `drawing_thumbnail` once drawn, through
-  `DrawingPicturesStore`, kept until the drawing's next save (`updatedAt`); a duplicate takes
-  them, an export does not (the next save takes them again).
+  `DrawingPicturesStore`, kept until the drawing's next save (`updatedAt`) or its pictures'
+  (`redrawn`, which moves no date); a duplicate takes them, an export does not. A drawing
+  that has none, as one that came by import, has them taken when it opens: the editor asks
+  `hasPictures` and they go with its next flush.
 - **What is drawn keeps its colours by name.** Each object carries a `hue` (ink, blue…),
   painted from the tokens on `:root` (`paletteOf`), so a theme changed later redraws it; the
   pictures are taken on the theme's paper (`--bg-1`). ⚠️ Fabric 7 places an object by its
@@ -1794,15 +1808,16 @@ way — the kind menu names it and offers nothing.
   `boundEnds`): it follows the shape as it moves, and a shape removed lets go of it. A path's
   box is read when it is made, so an arrow whose ends move is made again in its place.
 - **The editor**: a toolbar in the app's look (selection, rectangle, ellipse, diamond, arrow,
-  freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool,
-  then the selection, then leaves), a history of the scene's states, and an export as PNG or
-  SVG: the picture crosses as a data URI to `save_bytes`, as the base64 tool's bytes do. The
-  system's save dialog is the one step no e2e reaches (`__TAURI_INTERNALS__.invoke` is frozen).
+  freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool
+  and gives back the selection it was taken over, then drops the selection, then leaves), a
+  history of the scene's states, and an export as PNG or SVG: the picture crosses as a data URI
+  to `save_bytes`, as the base64 tool's bytes do. The system's save dialog is the one step no
+  e2e reaches (`__TAURI_INTERNALS__.invoke` is frozen).
 - **A Note embeds one by its id**: `![title](devnotes:drawing/<id>)`, the Markdown image of
   TipTap's extension, drawn by a node view that asks `drawing_picture` (`rich-text-drawings.ts`);
   the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose
-  list is `list_drawings` (titles only opened). Any other image stays as written: the CSP loads
-  nothing from elsewhere.
+  list is `list_drawings` (titles only opened), and which is there with no drawing to say there
+  is none. Any other image stays as written: the CSP loads nothing from elsewhere.
 
 ### A list sends previews, and the body is read by id
 
@@ -2916,6 +2931,11 @@ then the request's; once answered, the other way round; a blank one is not run.
   taken for the tree and each request read, never across a send. Its console lines are under
   `run:<id>#…`, one console for the run. A protected environment is asked once by the page,
   counting the requests that could change it; the yes is the run's `confirmed`.
+- **The order the page sets is kept with the collection or the folder** (`run_order` in its
+  `ContainerSettings`, `save_http_run_order` at each move or tick): `http_run_order` answers it
+  less the requests gone since, then those added since in the tree's order (`runner::run_order`).
+  The runner reads it on « Exécuter… » and again when the tree changes. The settings dialog does
+  not hold it: `save_http_settings` keeps the stored one.
 - ⚠️ A test's executable is its harness, not the application: `process::host_from` points the
   hosts at `CARGO_BIN_EXE_devnotes` (`tests/commands/http_scripts.rs`).
 
@@ -3699,7 +3719,8 @@ the canvas filters, sorts and groups on it. The command answers each note whose 
 moved, with the one it had, and `restore_priorities` gives each note its own back — never one
 level for the whole batch. ⚠️ Neither moves `updated_at`: triaging is not editing, and a note
 given a priority would jump to the head of a list sorted by modification. That is why the
-priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field.
+priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field it
+changes.
 
 **A pin is triage too**: `set_pinned(ids, pinned)` answers the notes whose pin changed and moves
 no date; its undo is the same call the other way over those. The selection bar, the card menu,
@@ -3808,12 +3829,17 @@ It searches **every space and ignores the canvas filters**: when you recall a sn
 remember which space you filed it in. It keeps its own state rather than reusing `NotesStore`,
 whose search would otherwise change what the canvas shows behind it.
 
-**What Rust answers, and what the front reads.** The notes come from `query_notes`; the
-requests from `search_http_requests`, which ranks them in Rust (`http::search`): a name starting
-with what is typed, then a word of the name, then the name, the URL as typed — read from each
+**What Rust answers, and what the front reads.** The notes come from `query_notes` asked
+`ranked`: by how the title answers what is typed — all of it, its start, the start of a word,
+anywhere — then a match in the body, the tags or the context, the last edit breaking ties
+(`view::rank_notes`); by date alone, `psql` opened a note holding it in its body. The
+requests come from `search_http_requests`, which ranks them in Rust (`http::search`): a name
+starting with what is typed, then a word of the name, then the name, the URL as typed — read from each
 sealed document — and the collection › folders; nothing typed lists the requests edited last.
 The tools, the spaces and the commands are matched on the front, as the tools' home matches
-its catalogue: their words are translations, which Rust does not know. The groups come in a
+its catalogue: their words are translations, which Rust does not know. The tools and the spaces
+are ranked there by the same order, on their name (`rankedByName`), before the cap of each
+kind: « json » kept « Diff » and « JWT » and cut the tool named JSON. The groups come in a
 fixed order — notes, requests, tools, spaces — each with its heading and count when more than
 one answers, and share the screen (`palette-options.ts`: five notes and three of the others,
 eight for a kind alone). An empty field lists a few recent things of each kind and a line naming
@@ -4499,7 +4525,11 @@ The mapping lives in **one** place, `core/services/errors/error-notifier.service
 turns a failure into the message that helps most. A named cause wins over the attempted
 action — "this note no longer exists" beats "could not save the note", which would leave the
 user retrying something that can never succeed. `fallback` is used when the cause adds
-nothing actionable (a generic SQLite failure) or when there is no code at all.
+nothing actionable (a generic SQLite failure) or when there is no code at all. A cause with its
+own sentence is shown alone: the detail is Rust's English, and under « Ce fichier ne contient
+aucune ligne de données » it read « Tauri command … failed: The file holds no row ». The
+detail stays under a fallback, where it is the only clue, and under `fileAccess`, whose
+sentence names no file (`DETAILED`).
 
 `IpcErrorCode` is a plain alias of the **generated** `ErrorCode` union, so it is no longer a
 mirror at all — adding a Rust variant makes it appear on the front at the next generation.
@@ -5305,10 +5335,13 @@ is built like it.
   from the front end, and `../2026-01-01_00-00-00` joins to a path outside the directory
   whose file name still parses as a stamp.
 
-Afterwards every command answers `Locked`, `VaultStore.load()` sees it, and the notes page
-is destroyed — with the File menu the panel was opened from, which is gated on the same
-signal. The restored copy needs a passphrase, and asking for it is the only proof the
-right file is in place.
+Afterwards every command answers `Locked`, and the page reloads to the gate, as opening
+another library does: a `VaultStore.load()` over the same stores, all `providedIn: 'root'`,
+carried the replaced library's notes, undo record and open Preferences past the unlock. The
+restored copy needs a passphrase, and asking for it is the only proof the right file is in
+place. Where the replaced files went is said across the reload: Rust keeps it
+(`backup::Restored`, handed once by `take_restored_aside`), since nothing in the page outlives
+the reload on WebKitGTK, and the startup says it once the vault's state is known.
 
 ⚠️ `BackupsStore` follows the shape the tag manager and the trash already use: `ask()`
 only **proposes**, `pending()` names which copy and what it would cost, and `confirm()` is
@@ -5317,9 +5350,8 @@ what writes. The trigger is replaced by that sentence and the confirm sits somew
 strip scrolls itself into view, because it replaces a trigger further down a panel that
 scrolls and would otherwise appear below the fold.
 
-`23-backups.e2e.ts` ends on that gate for real: its final scenario replaces the library and
-leaves it locked, so a file run after it in the same application meets the gate, which
-`waitForCanvas` passes.
+`23-backups.e2e.ts` goes through that gate for real: its final scenario replaces the library,
+unlocks the copy, and finds neither a note written after the copy nor Preferences open.
 
 ### Attachments, and the one plaintext copy
 
@@ -5650,7 +5682,10 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   the trash, filling a `{{field}}` records a value — none of the four refreshes it. The canvas
   sorts on that column, and touching it would float notes nobody reopened to the top. It is
   also why the field values are a command of their own rather than a `NotePatch` field: the
-  patch path exists to refresh that column.
+  patch path exists to refresh that column. A patch that changes nothing refreshes nothing
+  (`NotePatch::apply` compares the note before and after): closing the editor sends a body
+  compared with the list's preview of it, once the note it held is gone, and a drawing's
+  pictures may be taken of a scene left as it was.
 
 ## Cross-cutting services
 

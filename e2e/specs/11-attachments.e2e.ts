@@ -128,6 +128,11 @@ describe('Attachments', () => {
   });
 
   it('removes one on the second click, and only then', async () => {
+    // The twin was attached through its command: the card is read again to start from two.
+    await reloadCanvas();
+    expect(
+      (await (await canvas.cardWithTitle(title)).$('[data-testid="note-card-clip"]').getText()).trim(),
+    ).toBe('📎 2');
     await canvas.openNote(title);
 
     // By its id, not by position: this note carries two attachments of the same name, so
@@ -150,5 +155,13 @@ describe('Attachments', () => {
 
     expect(left.map((item) => item.id)).not.toContain(doomed?.id);
     await editor.close();
+
+    // PJ-08: the card said « 2 » until the page was reloaded. No reload here.
+    await eventually(
+      async () =>
+        (await (await canvas.cardWithTitle(title)).$('[data-testid="note-card-clip"]').getText()).trim(),
+      (clip) => clip === '📎 1',
+      'the card counting the one file left',
+    );
   });
 });

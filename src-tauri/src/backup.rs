@@ -7,8 +7,9 @@
 pub mod copies;
 
 use std::path::PathBuf;
+use std::sync::Mutex;
 
-use tauri::{AppHandle, Runtime};
+use tauri::{AppHandle, Manager, Runtime, State};
 
 use chrono::{DateTime, Utc};
 
@@ -16,6 +17,23 @@ use crate::db::{Db, blocking, lock};
 use crate::error::{AppError, StorageError};
 use crate::layout;
 use copies::{Backup, list, replace, rotate, wanted};
+
+/// Where the library the last restore replaced went, kept for the page the restore reloads:
+/// nothing in the page survives the reload on every platform.
+#[derive(Default)]
+pub struct Restored(Mutex<Option<String>>);
+
+impl Restored {
+    fn keep(&self, aside: String) {
+        if let Ok(mut kept) = self.0.lock() {
+            *kept = Some(aside);
+        }
+    }
+
+    fn take(&self) -> Option<String> {
+        self.0.lock().ok().and_then(|mut kept| kept.take())
+    }
+}
 
 /// The key the front end writes this setting under, in the application's preferences.
 pub(crate) const AUTOMATIC_BACKUPS_KEY: &str = "devnotes.automaticBackups";
@@ -75,12 +93,21 @@ pub async fn list_backups<R: Runtime>(app: AppHandle<R>) -> Result<Vec<Backup>, 
 #[tauri::command]
 #[specta::specta]
 pub async fn restore_backup<R: Runtime>(id: String, app: AppHandle<R>) -> Result<String, AppError> {
-    blocking(app, move |_, db| {
-        let aside = restore(db, &id, Utc::now())?;
+    blocking(app, move |app, db| {
+        let aside = restore(db, &id, Utc::now())?.to_string_lossy().to_string();
+        app.state::<Restored>().keep(aside.clone());
 
-        Ok(aside.to_string_lossy().to_string())
+        Ok(aside)
     })
     .await
+}
+
+/// Where the library the last restore replaced went, once: the page it reloaded says it.
+#[tauri::command]
+#[specta::specta]
+#[allow(clippy::needless_pass_by_value)]
+pub fn take_restored_aside(restored: State<'_, Restored>) -> Option<String> {
+    restored.take()
 }
 
 fn restore(db: &Db, id: &str, now: DateTime<Utc>) -> Result<PathBuf, StorageError> {
@@ -100,6 +127,20 @@ fn restore(db: &Db, id: &str, now: DateTime<Utc>) -> Result<PathBuf, StorageErro
 mod tests {
     use super::*;
     use copies::tests::{at, library};
+
+    #[test]
+    fn where_a_restore_set_the_library_aside_is_told_once() {
+        let restored = Restored::default();
+        assert_eq!(restored.take(), None);
+
+        restored.keep("replaced/2026-07-25_09-00-00".to_string());
+
+        assert_eq!(
+            restored.take().as_deref(),
+            Some("replaced/2026-07-25_09-00-00")
+        );
+        assert_eq!(restored.take(), None);
+    }
 
     #[test]
     fn the_launch_copy_lands_beside_the_open_library() {

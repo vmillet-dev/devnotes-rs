@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Canvas, FabricObject, Path, Rect, Textbox, type TPointerEventInfo } from 'fabric';
+import { ActiveSelection, Canvas, FabricObject, Path, Rect, Textbox, type TPointerEventInfo } from 'fabric';
 import { DrawingScene, Palette, paletteOf, sceneOf } from './drawing-scene';
 
 const PALETTE: Palette = {
@@ -241,6 +241,26 @@ describe('DrawingScene', () => {
     expect([rect.selectable, rect.evented, canvas().selection]).toEqual([false, false, false]);
     scene.setTool('arrow');
     expect(rect.evented).toBe(true);
+  });
+
+  it('gives back on leaving a tool the shapes selected when it was taken, but none gone since', () => {
+    const first = draw('rectangle', [0, 0], [50, 50]);
+    const second = draw('ellipse', [100, 100], [160, 140]);
+    canvas().setActiveObject(new ActiveSelection([first, second], { canvas: canvas() }));
+
+    scene.setTool('diamond');
+    expect(canvas().getActiveObjects()).toEqual([]);
+    scene.backToSelection();
+    expect(canvas().getActiveObjects()).toEqual([first, second]);
+
+    scene.setTool('diamond');
+    canvas().remove(first);
+    scene.backToSelection();
+    expect(canvas().getActiveObjects()).toEqual([second]);
+
+    scene.setTool('diamond');
+    drag([300, 300], [340, 340]);
+    expect(canvas().getActiveObjects()).toEqual([objects().at(-1)]);
   });
 
   it('takes its pictures and its SVG framed to what is drawn, on its paper', () => {

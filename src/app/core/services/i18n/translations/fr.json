@@ -47,6 +47,7 @@
     "copied": "Copié",
     "copiedNote": "« {{title}} » copiée dans le presse-papier.",
     "copiedUntitled": "Note sans titre copiée dans le presse-papier.",
+    "drawingNotCopied": "Un dessin ne se copie pas en texte.",
     "untitled": "Sans titre",
     "pinnedState": "Note épinglée",
     "deleteArmed": "Suppr. à nouveau · Échap pour annuler",
@@ -361,7 +362,7 @@
     "pinned": "Épinglée",
     "noPriority": "Aucune priorité",
     "expiryLabel": "Échéance de la note (vide = permanente)",
-    "footerStats": "{{lines}} lignes · {{bytes}} octets · UTF-8 · {{eol}}",
+    "footerStats": "{lines, plural, one {# ligne} other {# lignes}} · {bytes, plural, one {# octet} other {# octets}} · UTF-8 · {{eol}}",
     "format": {
       "label": "Formater",
       "keys": "Maj Alt F",
@@ -432,6 +433,7 @@
     "hoursAgo": "il y a {{count}}h",
     "daysAgo": "il y a {{count}}j",
     "expiresIn": "expire dans {{count}}j",
+    "expiresToday": "expire aujourd’hui",
     "expired": "expirée",
     "span": {
       "now": "à moins d’une minute",
@@ -758,6 +760,12 @@
     "empty": {
       "search": "Rien ne correspond à « {{term}} ».",
       "nothing": "Rien à montrer ici.",
+      "none": {
+        "notes": "Aucune note ici.",
+        "requests": "Aucune requête ici.",
+        "tools": "Aucun outil ici.",
+        "spaces": "Aucun espace ici."
+      },
       "scopes": "Rien ne s’appelle « @{{word}} ».",
       "tags": "Aucun tag ne commence par « {{word}} ».",
       "commands": "Aucune commande ne contient « {{term}} »."
@@ -772,6 +780,7 @@
   "placeholders": {
     "title": "Remplir les champs",
     "hint": "Ce snippet attend {count, plural, one {# valeur} other {# valeurs}}.",
+    "hintNote": "Cette note attend {count, plural, one {# valeur} other {# valeurs}}.",
     "fieldLabel": "Valeur de {{name}}",
     "copy": "Copier rempli",
     "copyRaw": "Copier tel quel",
@@ -3703,6 +3712,23 @@
           "folder": "Les tests du dossier « {{name}} » se sont arrêtés",
           "collection": "Les tests de la collection « {{name}} » se sont arrêtés"
         },
+        "invalid": {
+          "before": {
+            "request": "Le script avant l’envoi n’est pas du JavaScript valide",
+            "folder": "Le script avant l’envoi du dossier « {{name}} » n’est pas du JavaScript valide",
+            "collection": "Le script avant l’envoi de la collection « {{name}} » n’est pas du JavaScript valide"
+          },
+          "after": {
+            "request": "Le script après la réponse n’est pas du JavaScript valide",
+            "folder": "Le script après la réponse du dossier « {{name}} » n’est pas du JavaScript valide",
+            "collection": "Le script après la réponse de la collection « {{name}} » n’est pas du JavaScript valide"
+          },
+          "tests": {
+            "request": "Les tests ne sont pas du JavaScript valide",
+            "folder": "Les tests du dossier « {{name}} » ne sont pas du JavaScript valide",
+            "collection": "Les tests de la collection « {{name}} » ne sont pas du JavaScript valide"
+          }
+        },
         "host": "Les scripts n’ont pas pu être lancés",
         "kinds": {
           "timeout": "Arrêté : il a pris trop de temps.",
@@ -3718,8 +3744,8 @@
     "tests": {
       "failed": "{count, plural, one {# échec} other {# échecs}}",
       "allPassed": "Tout passe",
-      "ratio": "{{passed}}/{{total}} tests",
-      "bar": "{{passed}} tests réussis sur {{total}}",
+      "ratio": "{{passed}}/{total, plural, one {# test} other {# tests}}",
+      "bar": "{passed, plural, one {# test réussi} other {# tests réussis}} sur {{total}}",
       "groups": {
         "request": "{{name}}",
         "folder": "{{name}} · tests du dossier",
@@ -3794,11 +3820,11 @@
       "stopOnFailure": "Arrêter au premier échec",
       "keepVariables": "Garder les variables modifiées",
       "keepResponses": "Enregistrer les réponses",
-      "order": "Ordre · {{running}} sur {{count}} requêtes",
+      "order": "Ordre · {{running}} sur {count, plural, one {# requête} other {# requêtes}}",
       "orderLabel": "Ordre des requêtes",
       "orderHint": "Glisser, ou Alt ↑ ↓ sur la ligne ; Espace la laisse de côté.",
       "include": "Exécuter {{name}}",
-      "protected": "{{name}} est protégé : {{count}} requêtes sur {{total}} peuvent le modifier ({{requests}}).",
+      "protected": "{{name}} est protégé : {count, plural, one {# requête sur {{total}} peut le modifier} other {# requêtes sur {{total}} peuvent le modifier}} ({{requests}}).",
       "failed": "Le run n’a pas pu aller au bout.",
       "failures": "{count, plural, one {# échec} other {# échecs}}",
       "allPassed": "Tout passe",

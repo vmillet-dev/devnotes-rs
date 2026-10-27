@@ -7,7 +7,7 @@ import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
 import { FakeHttpEnvironmentsRepository, environment } from '@testing/fake-http-environments-repository';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
-import { sampleTree } from '@testing/http-tree.fixture';
+import { request, sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { HttpCollectionsStore } from './http-collections.store';
 import { HttpEnvironmentsStore } from './http-environments.store';
@@ -109,6 +109,45 @@ describe('HttpRunnerStore', () => {
     // The same one again keeps the order as it was left.
     store().open(API);
     expect(store().rows()[0]?.name).toBe('Health');
+  });
+
+  /** An order rearranged was lost at restart, and a request added showed only after it (HSC-20). */
+  it('keeps the order through Rust, and follows the requests added under the target', async () => {
+    const names = () =>
+      store()
+        .rows()
+        .map((row) => `${row.name}${row.enabled ? '' : ' (off)'}`);
+    http.runOrders.set('API', [
+      { id: 'Health', enabled: true },
+      { id: 'Login', enabled: false },
+      { id: 'Logout', enabled: true },
+      { id: 'Old', enabled: true },
+    ]);
+
+    store().open(API);
+    await vi.waitFor(() => expect(names()).toEqual(['Health', 'Login (off)', 'Logout', 'Old']));
+
+    store().move(0, 3);
+    store().toggle(0);
+    await vi.waitFor(() => expect(http.callsOf('saveRunOrder')).toHaveLength(2));
+    expect(http.callsOf('saveRunOrder')[1]).toEqual([
+      { kind: 'collection', id: 'API' },
+      [
+        { id: 'Login', enabled: true },
+        { id: 'Logout', enabled: true },
+        { id: 'Old', enabled: true },
+        { id: 'Health', enabled: true },
+      ],
+    ]);
+
+    // Rust answers the order with the request added at its end; the rows follow the tree's change.
+    http.runOrders.set('API', [...http.runOrders.get('API')!, { id: 'Ping', enabled: true }]);
+    const grown = sampleTree();
+    grown.collections[0]!.children.push(request('Ping', 'API'));
+    http.tree$ = grown;
+    await TestBed.inject(HttpCollectionsStore).load();
+    TestBed.tick();
+    await vi.waitFor(() => expect(names()).toEqual(['Login', 'Logout', 'Old', 'Health', 'Ping']));
   });
 
   it('runs what is enabled with its settings, and follows the steps Rust says', async () => {

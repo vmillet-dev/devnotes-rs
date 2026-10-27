@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 
 @Injectable({ providedIn: 'root' })
 export class NoteCopyService {
@@ -8,8 +9,8 @@ export class NoteCopyService {
   private readonly notifier = inject(ErrorNotifier);
 
   /** Answers what the clipboard actually accepted: an acknowledgement is earned. */
-  async copy(content: string): Promise<boolean> {
-    if (await this.clipboard.copy(content)) return true;
+  async copy(content: string, said?: TranslationRef): Promise<boolean> {
+    if (await this.clipboard.copy(content, said)) return true;
 
     this.notifier.notify({ ref: { key: 'errors.copyFailed' } });
     return false;

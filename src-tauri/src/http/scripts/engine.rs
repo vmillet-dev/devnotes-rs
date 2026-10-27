@@ -165,6 +165,10 @@ fn compile<'js>(ctx: &Ctx<'js>, job: &Job) -> Result<Array<'js>, ScriptFailure> 
             .map_err(|error| {
                 let mut failure = failed(&error, FailureKind::Syntax);
                 failure.script.get_or_insert_with(|| script.id.clone());
+                // The kind says it is a syntax error: the engine's words alone follow the front's.
+                if let Some(words) = failure.message.strip_prefix("SyntaxError: ") {
+                    failure.message = words.to_owned();
+                }
                 failure
             })?;
         functions
@@ -664,6 +668,11 @@ mod tests {
             assert_eq!(failure.kind, FailureKind::Syntax);
             assert_eq!(failure.script.as_deref(), Some("folder:before"));
             assert_eq!(failure.line, Some(2));
+            assert!(
+                !failure.message.is_empty() && !failure.message.starts_with("SyntaxError"),
+                "{}",
+                failure.message
+            );
             assert!(
                 outcome.writes.is_empty(),
                 "nothing runs when one script does not read"

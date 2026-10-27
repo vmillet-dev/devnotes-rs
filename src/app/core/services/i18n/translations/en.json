@@ -47,6 +47,7 @@
     "copied": "Copied",
     "copiedNote": "“{{title}}” copied to the clipboard.",
     "copiedUntitled": "Untitled note copied to the clipboard.",
+    "drawingNotCopied": "A drawing is not copied as text.",
     "untitled": "Untitled",
     "pinnedState": "Pinned note",
     "deleteArmed": "Del again · Esc to cancel",
@@ -361,7 +362,7 @@
     "pinned": "Pinned",
     "noPriority": "No priority",
     "expiryLabel": "Note deadline (empty = permanent)",
-    "footerStats": "{{lines}} lines · {{bytes}} bytes · UTF-8 · {{eol}}",
+    "footerStats": "{lines, plural, one {# line} other {# lines}} · {bytes, plural, one {# byte} other {# bytes}} · UTF-8 · {{eol}}",
     "format": {
       "label": "Format",
       "keys": "Shift Alt F",
@@ -432,6 +433,7 @@
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago",
     "expiresIn": "expires in {{count}}d",
+    "expiresToday": "expires today",
     "expired": "expired",
     "span": {
       "now": "within a minute",
@@ -758,6 +760,12 @@
     "empty": {
       "search": "Nothing matches “{{term}}”.",
       "nothing": "Nothing to show here.",
+      "none": {
+        "notes": "No note here.",
+        "requests": "No request here.",
+        "tools": "No tool here.",
+        "spaces": "No space here."
+      },
       "scopes": "Nothing is called “@{{word}}”.",
       "tags": "No tag starts with “{{word}}”.",
       "commands": "No command contains “{{term}}”."
@@ -772,6 +780,7 @@
   "placeholders": {
     "title": "Fill the fields",
     "hint": "This snippet expects {count, plural, one {# value} other {# values}}.",
+    "hintNote": "This note expects {count, plural, one {# value} other {# values}}.",
     "fieldLabel": "Value for {{name}}",
     "copy": "Copy filled",
     "copyRaw": "Copy as is",
@@ -3703,6 +3712,23 @@
           "folder": "The tests of the folder “{{name}}” stopped",
           "collection": "The tests of the collection “{{name}}” stopped"
         },
+        "invalid": {
+          "before": {
+            "request": "The script before the send is not valid JavaScript",
+            "folder": "The script before the send of the folder “{{name}}” is not valid JavaScript",
+            "collection": "The script before the send of the collection “{{name}}” is not valid JavaScript"
+          },
+          "after": {
+            "request": "The script after the response is not valid JavaScript",
+            "folder": "The script after the response of the folder “{{name}}” is not valid JavaScript",
+            "collection": "The script after the response of the collection “{{name}}” is not valid JavaScript"
+          },
+          "tests": {
+            "request": "The tests are not valid JavaScript",
+            "folder": "The tests of the folder “{{name}}” are not valid JavaScript",
+            "collection": "The tests of the collection “{{name}}” are not valid JavaScript"
+          }
+        },
         "host": "The scripts could not be started",
         "kinds": {
           "timeout": "Stopped: it took too long.",
@@ -3718,8 +3744,8 @@
     "tests": {
       "failed": "{count, plural, one {# failure} other {# failures}}",
       "allPassed": "All pass",
-      "ratio": "{{passed}}/{{total}} tests",
-      "bar": "{{passed}} tests passed out of {{total}}",
+      "ratio": "{{passed}}/{total, plural, one {# test} other {# tests}}",
+      "bar": "{passed, plural, one {# test passed} other {# tests passed}} out of {{total}}",
       "groups": {
         "request": "{{name}}",
         "folder": "{{name}} · the folder’s tests",
@@ -3794,11 +3820,11 @@
       "stopOnFailure": "Stop at the first failure",
       "keepVariables": "Keep the variables changed",
       "keepResponses": "Keep the responses",
-      "order": "Order · {{running}} of {{count}} requests",
+      "order": "Order · {{running}} of {count, plural, one {# request} other {# requests}}",
       "orderLabel": "Order of the requests",
       "orderHint": "Drag, or Alt ↑ ↓ on the row; Space leaves it out.",
       "include": "Run {{name}}",
-      "protected": "{{name}} is protected: {{count}} requests of {{total}} can change it ({{requests}}).",
+      "protected": "{{name}} is protected: {count, plural, one {# request} other {# requests}} of {{total}} can change it ({{requests}}).",
       "failed": "The run could not go to its end.",
       "failures": "{count, plural, one {# failure} other {# failures}}",
       "allPassed": "All pass",

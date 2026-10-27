@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use super::model::{
-    HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpRequest, HttpTree, RequestKind,
+    HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpRequest, HttpTree, RequestKind, RunEntry,
 };
 use super::scripts::model::{ScriptStop, TestResult};
 use super::send::SentResponse;
@@ -113,7 +113,15 @@ fn records(text: &str) -> Result<Vec<Vec<String>>, DataFault> {
 }
 
 fn from_csv(text: &str) -> Result<RunData, DataFault> {
-    let mut records = records(text)?.into_iter();
+    let records = records(text)?;
+    // One line, one field with a space in it: a sentence, not a header waiting for its rows.
+    if let [only] = records.as_slice()
+        && let [field] = only.as_slice()
+        && field.trim().contains(char::is_whitespace)
+    {
+        return Err(DataFault::Unreadable);
+    }
+    let mut records = records.into_iter();
     let columns: Vec<String> = records
         .next()
         .ok_or(DataFault::Empty)?
@@ -281,6 +289,28 @@ pub fn placed_under(tree: &HttpTree, item: &HttpItem) -> Vec<Placed> {
         }
     }
     out
+}
+
+/// The order a run takes: the one last arranged, less the requests gone since, then those added
+/// since in the tree's order, each run.
+#[must_use]
+pub fn run_order(saved: &[RunEntry], placed: &[Placed]) -> Vec<RunEntry> {
+    let here = |id: &str| placed.iter().any(|request| request.id == id);
+    let mut order: Vec<RunEntry> = Vec::with_capacity(placed.len());
+    for entry in saved {
+        if here(&entry.id) && !order.iter().any(|kept| kept.id == entry.id) {
+            order.push(entry.clone());
+        }
+    }
+    for request in placed {
+        if !order.iter().any(|kept| kept.id == request.id) {
+            order.push(RunEntry {
+                id: request.id.clone(),
+                enabled: true,
+            });
+        }
+    }
+    order
 }
 
 /// What a request of a run ended as.
@@ -470,8 +500,63 @@ mod tests {
         assert_eq!(read_data("[1, 2]"), Err(DataFault::Unreadable));
         assert_eq!(read_data("a,b\n\"open"), Err(DataFault::Unreadable));
         assert_eq!(read_data("a,b\n"), Err(DataFault::Empty));
+        assert_eq!(
+            read_data("ceci n’est ni un CSV avec en-tête ni un tableau JSON\n"),
+            Err(DataFault::Unreadable),
+            "one line without a separator"
+        );
+        assert!(read_data("id\n1\n").is_ok(), "one column, with its rows");
+        assert_eq!(
+            read_data("customer\n"),
+            Err(DataFault::Empty),
+            "a header alone"
+        );
         assert_eq!(read_data("[]"), Err(DataFault::Empty));
         assert_eq!(read_data(""), Err(DataFault::Empty));
+    }
+
+    #[test]
+    fn the_order_kept_drops_what_is_gone_and_ends_on_what_was_added() {
+        let placed: Vec<Placed> = ["a", "b", "c", "d"]
+            .iter()
+            .map(|id| Placed {
+                id: (*id).to_string(),
+                name: (*id).to_uppercase(),
+                path: Vec::new(),
+            })
+            .collect();
+        let entry = |id: &str, enabled: bool| RunEntry {
+            id: id.to_string(),
+            enabled,
+        };
+
+        assert_eq!(
+            run_order(&[], &placed),
+            [
+                entry("a", true),
+                entry("b", true),
+                entry("c", true),
+                entry("d", true)
+            ],
+            "nothing arranged: the tree's order"
+        );
+        assert_eq!(
+            run_order(
+                &[
+                    entry("c", true),
+                    entry("gone", true),
+                    entry("a", false),
+                    entry("c", false)
+                ],
+                &placed
+            ),
+            [
+                entry("c", true),
+                entry("a", false),
+                entry("b", true),
+                entry("d", true)
+            ]
+        );
     }
 
     #[test]

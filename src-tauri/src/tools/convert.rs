@@ -5,7 +5,7 @@
 mod xml;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Number, Value};
+use serde_json::{Map, Number, Value};
 use specta::Type;
 use yaml_rust2::yaml::Hash;
 use yaml_rust2::{Yaml, YamlEmitter, YamlLoader};
@@ -165,13 +165,45 @@ fn from_yaml(value: Yaml) -> Value {
         Yaml::String(text) => Value::String(text),
         Yaml::Boolean(flag) => Value::Bool(flag),
         Yaml::Array(items) => Value::Array(items.into_iter().map(from_yaml).collect()),
-        Yaml::Hash(hash) => Value::Object(
-            hash.into_iter()
-                .map(|(key, value)| (yaml_key(key), from_yaml(value)))
-                .collect(),
-        ),
+        Yaml::Hash(hash) => Value::Object(merged(hash)),
         Yaml::Null | Yaml::Alias(_) | Yaml::BadValue => Value::Null,
     }
+}
+
+/// YAML 1.1 merge keys: the mappings under `<<` lend their keys, the first listed winning, and
+/// the mapping's own keys win over them. A `<<` holding anything else stays an ordinary key.
+fn merged(hash: Hash) -> Map<String, Value> {
+    let mut object = Map::new();
+    let mut own = Vec::with_capacity(hash.len());
+    for (key, value) in hash {
+        let lends = key.as_str() == Some("<<")
+            && match &value {
+                Yaml::Hash(_) => true,
+                Yaml::Array(items) => {
+                    !items.is_empty() && items.iter().all(|item| matches!(item, Yaml::Hash(_)))
+                }
+                _ => false,
+            };
+        if !lends {
+            own.push((key, value));
+            continue;
+        }
+        let sources = match value {
+            Yaml::Array(items) => items,
+            single => vec![single],
+        };
+        for source in sources {
+            if let Value::Object(lent) = from_yaml(source) {
+                for (name, item) in lent {
+                    object.entry(name).or_insert(item);
+                }
+            }
+        }
+    }
+    for (key, value) in own {
+        object.insert(yaml_key(key), from_yaml(value));
+    }
+    object
 }
 
 /// A YAML key may be a number or a boolean; JSON's are text.
@@ -420,6 +452,23 @@ mod tests {
             serde_json::from_str::<Value>(&json).unwrap(),
             serde_json::json!({ "a": null, "1": true })
         );
+    }
+
+    #[test]
+    fn a_merge_key_lends_its_mapping_s_keys_and_the_own_keys_win() {
+        let yaml = "base: &base\n  host: db.internal\n  port: 5432\nother: &other\n  port: 6432\n  tls: true\nprimaire:\n  <<: *base\n  role: rw\nreplica:\n  <<: [*other, *base]\n  host: replica.internal\nodd:\n  <<: 3\n";
+        let json: Value =
+            serde_json::from_str(&converted(yaml, DataFormat::Yaml, DataFormat::Json)).unwrap();
+
+        assert_eq!(
+            json["primaire"],
+            serde_json::json!({ "host": "db.internal", "port": 5432, "role": "rw" })
+        );
+        assert_eq!(
+            json["replica"],
+            serde_json::json!({ "port": 6432, "tls": true, "host": "replica.internal" })
+        );
+        assert_eq!(json["odd"], serde_json::json!({ "<<": 3 }), "not a mapping");
     }
 
     #[test]

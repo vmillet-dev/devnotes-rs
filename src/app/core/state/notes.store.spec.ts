@@ -8,6 +8,7 @@ import { Note } from '@core/model/note.model';
 import { createNote } from '@testing/note.fixture';
 import { HARNESS_SPACES, awaitQuery, createNotesHarness, visibleIds } from '@testing/notes-harness';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { DrawingPicturesStore } from './drawing-pictures.store';
 import { NotesRevision } from './notes-revision';
 import { DRAFT_ID } from './notes.store';
 import { UNDO_WINDOW_MS, UndoStore } from './undo.store';
@@ -96,6 +97,59 @@ describe('NotesStore', () => {
     });
   });
 
+  /**
+   * NOT-02: a title typed into a new note, then Escape — the commits and the close in one turn,
+   * before any write left — and no card was created.
+   */
+  describe('a new note closed in the turn its title is committed', () => {
+    it('is written with that title, and the editor stays closed', async () => {
+      const { store, canvas, repository } = await createNotesHarness([]);
+      const create = vi.spyOn(repository, 'create');
+      store.createNote('snippet');
+
+      const writing = Promise.all([
+        store.applyPatch(DRAFT_ID, { title: 'Rotate the certificate' }),
+        store.applyPatch(DRAFT_ID, { content: 'openssl req -new' }),
+      ]);
+      store.closeOverlay();
+      await writing;
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(create.mock.calls[0]?.[0]).toMatchObject({ title: 'Rotate the certificate' });
+      await vi.waitFor(() => expect(visibleIds(canvas)).toHaveLength(1));
+      expect(store.selectedNote()).toBeNull();
+      expect(store.selectedNoteId()).toBeNull();
+    });
+
+    it('leaves nothing behind when what was typed is not worth keeping', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const create = vi.spyOn(repository, 'create');
+      store.createNote('snippet');
+
+      const writing = store.applyPatch(DRAFT_ID, { title: '   ' });
+      store.closeOverlay();
+      await writing;
+
+      expect(create).not.toHaveBeenCalled();
+      expect(store.selectedNoteId()).toBeNull();
+    });
+
+    it('does not take the next new note for the one just closed', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const create = vi.spyOn(repository, 'create');
+      store.createNote('snippet');
+
+      const writing = store.applyPatch(DRAFT_ID, { title: 'First' });
+      store.closeOverlay();
+      store.createNote('snippet');
+      await writing;
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(store.selectedNoteId()).toBe(DRAFT_ID);
+      expect(store.selectedNote()?.title ?? '').toBe('');
+    });
+  });
+
   describe('a drawing’s pictures', () => {
     const PICTURES = { thumbnail: 'data:image/png;base64,T', picture: 'data:image/png;base64,P' };
 
@@ -108,6 +162,17 @@ describe('NotesStore', () => {
       await store.applyPatch('d', { content: '{"version":1}', pictures: PICTURES });
 
       expect(update).toHaveBeenCalledWith('d', { pictures: PICTURES });
+    });
+
+    /** Pictures written beside a body left as it was move no date: the card asks for them anew. */
+    it('tell the card they were taken again', async () => {
+      const { store } = await createNotesHarness([
+        createNote({ id: 'd', kind: 'drawing', content: '{"version":1}' }),
+      ]);
+
+      await store.applyPatch('d', { pictures: PICTURES });
+
+      expect(TestBed.inject(DrawingPicturesStore).redrawn('d')).toBe(1);
     });
 
     /** A draft is made from its fields: what is drawn first has its pictures written after. */
@@ -362,6 +427,18 @@ describe('NotesStore', () => {
       await store.applyPatch('a', { title: 'Same', content: 'new' });
 
       expect(update).toHaveBeenCalledWith('a', { content: 'new' });
+    });
+
+    /** Compared once the editor has closed: what is left is the list's copy, a preview. */
+    it('sends a body that only a preview of it could pass for unchanged', async () => {
+      const { store, repository } = await createNotesHarness([
+        createNote({ id: 'a', content: 'first lines', truncated: true }),
+      ]);
+      const update = vi.spyOn(repository, 'update');
+
+      await store.applyPatch('a', { content: 'first lines' });
+
+      expect(update).toHaveBeenCalledWith('a', { content: 'first lines' });
     });
   });
 

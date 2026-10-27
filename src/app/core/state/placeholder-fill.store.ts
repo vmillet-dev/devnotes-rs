@@ -1,9 +1,9 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { StatusNotifier } from '@core/services/notifications/status.service';
 import { noteCopyText } from '@core/model/checklist.model';
 import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { Note } from '@core/model/note.model';
 import { NoteCopyService } from '@core/services/clipboard/note-copy.service';
+import { StatusNotifier } from '@core/services/notifications/status.service';
 import { NotesQueryStore } from './notes-query.store';
 import { NotesStore } from './notes.store';
 import { PaletteStore } from './palette.store';
@@ -21,8 +21,8 @@ export class PlaceholderFillStore {
   private readonly canvas = inject(NotesQueryStore);
   private readonly palette = inject(PaletteStore);
   private readonly copier = inject(NoteCopyService);
-  private readonly status = inject(StatusNotifier);
   private readonly calc = inject(CalcSheets);
+  private readonly status = inject(StatusNotifier);
 
   private readonly _target = signal<Note | null>(null);
   private readonly _preview = signal<string | null>(null);
@@ -53,21 +53,25 @@ export class PlaceholderFillStore {
   /**
    * What copying a note means when nothing is pointing at a particular control: a snippet
    * with fields asks for them first, a todo list gives its Markdown — it has no `content`
-   * at all — and anything else goes as it is.
+   * at all — a drawing, whose scene is no text, nothing — and anything else goes as it is.
    *
    * It says which note it took. The card's own button paints a tick on itself; the
    * keyboard has no such surface, and the ring may be on a card that is scrolled away.
    */
   async copyNote(note: Note): Promise<void> {
+    if (note.kind === 'drawing') {
+      this.status.notify({ key: 'notes.drawingNotCopied' });
+      return;
+    }
     if (note.placeholders.length > 0) {
       this.openFor(note.id);
       return;
     }
 
     const text = await this.textToCopy(note);
-    if (text === null || !(await this.copier.copy(text))) return;
-
-    this.status.notify(
+    if (text === null) return;
+    await this.copier.copy(
+      text,
       note.title
         ? { key: 'notes.copiedNote', params: { title: note.title } }
         : { key: 'notes.copiedUntitled' },
@@ -93,7 +97,9 @@ export class PlaceholderFillStore {
     const whole = await this.notes.whole(note);
     if (!whole) return;
 
-    await this.copier.copy(await this.notes.fillPlaceholders(whole.content, values));
+    await this.copier.copy(await this.notes.fillPlaceholders(whole.content, values), {
+      key: 'placeholders.copiedFilled',
+    });
     await this.notes.setPlaceholderValues(note.id, values);
   }
 
@@ -120,9 +126,7 @@ export class PlaceholderFillStore {
   async copyFilled(request: FillRequest): Promise<void> {
     const filled = await this.notes.fillPlaceholders(request.content, request.values);
 
-    if (await this.copier.copy(filled)) {
-      this.status.notify({ key: 'placeholders.copiedFilled' });
-    }
+    await this.copier.copy(filled, { key: 'placeholders.copiedFilled' });
   }
 
   async submitForPalette(values: Record<string, string>): Promise<void> {

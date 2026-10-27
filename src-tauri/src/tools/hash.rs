@@ -5,7 +5,7 @@ use std::fmt::Write;
 use std::io::Read;
 
 use base64::Engine;
-use base64::engine::general_purpose::STANDARD;
+use base64::engine::general_purpose::{STANDARD, STANDARD_NO_PAD};
 use hmac::{KeyInit, Mac, SimpleHmac};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
@@ -229,11 +229,12 @@ fn as_hex(expected: &str) -> Option<String> {
 
 fn as_base64(expected: &str) -> Option<String> {
     let base64: String = expected.chars().filter(|c| !c.is_whitespace()).collect();
-    let base64 = base64.trim_end_matches('=');
-    let alphabet = |b: u8| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'/' | b'-' | b'_');
-    // One character past a group of four carries six bits: not a whole byte.
-    (!base64.is_empty() && base64.len() % 4 != 1 && base64.bytes().all(alphabet))
-        .then(|| base64.replace('-', "+").replace('_', "/"))
+    let base64 = base64
+        .trim_end_matches('=')
+        .replace('-', "+")
+        .replace('_', "/");
+    // Canonical only: the bits past the last whole byte are zero, so `zzz` is not Base64.
+    (!base64.is_empty() && STANDARD_NO_PAD.decode(&base64).is_ok()).then_some(base64)
 }
 
 fn of_length(bytes: usize) -> Vec<HashAlgorithm> {
@@ -612,7 +613,7 @@ mod tests {
         );
         assert_eq!(shaped(&"x".repeat(64)), base64(48, &[Sha384]));
         assert_eq!(
-            shaped(&format!("{}==", "_".repeat(86))),
+            shaped(&format!("{}w==", "_".repeat(85))),
             base64(64, &[Sha512])
         );
         assert_eq!(
@@ -621,6 +622,12 @@ mod tests {
             "a sixth of a byte left over"
         );
         assert_eq!(shaped("not a digest!"), DigestShape::Unknown);
+        assert_eq!(
+            shaped("zzz"),
+            DigestShape::Unknown,
+            "bits set past the last byte"
+        );
+        assert_eq!(shaped("zzw"), base64(2, &[]));
     }
 
     #[test]

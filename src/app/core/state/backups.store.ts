@@ -4,7 +4,7 @@ import { Backup } from '@core/model/backup.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { HttpLeaveStore } from '@core/services/http/http-leave.store';
 import { StatusNotifier } from '@core/services/notifications/status.service';
-import { VaultStore } from './vault.store';
+import { AppWindowService } from '@core/services/window/app-window.service';
 
 /**
  * The copies of the library, and the one gesture that puts one back.
@@ -20,7 +20,7 @@ export class BackupsStore {
   private readonly repository = inject(BackupsRepository);
   private readonly notifier = inject(ErrorNotifier);
   private readonly status = inject(StatusNotifier);
-  private readonly vault = inject(VaultStore);
+  private readonly window = inject(AppWindowService);
   private readonly leave = inject(HttpLeaveStore);
 
   private readonly _backups = signal<readonly Backup[]>([]);
@@ -52,10 +52,11 @@ export class BackupsStore {
   }
 
   /**
-   * The library is closed by the time this returns, so the shell is sent back to the
-   * gate: the restored copy needs a passphrase, and asking for it is the only proof the
-   * right file is in place. Reloading the vault state is what destroys the outlet — and
-   * with it this panel, which is rendered from a File menu that only exists unlocked.
+   * The library is closed by the time this returns, so the page reloads to the gate: the
+   * restored copy needs a passphrase, and asking for it is the only proof the right file is
+   * in place. ⚠️ A reload, as opening another library is, and not a `vault.load()`: every
+   * store is `providedIn: 'root'` and would carry the replaced library's notes, undo record
+   * and open dialogs past the gate.
    */
   async confirm(): Promise<void> {
     const backup = this._pending();
@@ -63,10 +64,19 @@ export class BackupsStore {
     if (!(await this.leave.confirm('restore'))) return;
 
     await this.notifier.attemptWhile(this._isRestoring, 'errors.backupRestoreFailed', async () => {
-      const aside = await this.repository.restore(backup.id);
+      await this.repository.restore(backup.id);
       this._pending.set(null);
-      this.status.notify({ key: 'backups.restored', params: { path: aside } });
-      await this.vault.load();
+      this.window.reload();
     });
+  }
+
+  /** Once the page a restore reloads knows the vault's state: said over the gate. */
+  async sayRestored(): Promise<void> {
+    try {
+      const aside = await this.repository.takeRestoredAside();
+      if (aside) this.status.notify({ key: 'backups.restored', params: { path: aside } });
+    } catch {
+      // Nothing to say rather than a startup that fails.
+    }
   }
 }

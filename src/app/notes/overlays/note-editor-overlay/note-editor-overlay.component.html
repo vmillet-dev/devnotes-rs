@@ -4,6 +4,7 @@
     [variant]="'framed'"
     [fullscreen]="fullscreen()"
     labelledBy="overlay-title-input"
+    (dismissedAt)="aimBeneath($event)"
     (closed)="onDismiss()"
   >
     <!-- The bar is the container its queries measure; the row inside it is what they lay out. -->
@@ -34,7 +35,7 @@
           <app-format-button
             [formattable]="canFormat()"
             [busy]="showingPreview() || formatting() || jsonMode() !== null"
-            [language]="languageLabel()"
+            [language]="note.language"
             [settings]="prettierSettings.settings()"
             (formatRequested)="formatBody()"
             (settingsChanged)="prettierSettings.update($event)"
@@ -400,6 +401,7 @@
               #drawingEditor
               [content]="draftContent()"
               [title]="draftTitle()"
+              [noteId]="note.id"
               (changed)="draftContent.set($event)"
               (pictured)="draftPictures.set($event)"
               (blurred)="commitContent()"

@@ -24,6 +24,24 @@ import { bridge, draft, query } from '../support/bridge.js';
 const entry = (tool: string) => $(`${testid('tools-entry')}[data-tool="${tool}"]`);
 const outputValues = () => readEach(testid('output-value'), 'text');
 
+/** The acceptance run's `config.yaml`: an anchor, and a merge key that lends it to `primaire`. */
+const CONFIG_YAML = [
+  '# Configuration du service de facturation',
+  'service: billing',
+  'replicas: 2',
+  'ports:',
+  '  - 8080',
+  '  - 8443',
+  'base: &base',
+  '  host: db.internal',
+  '  port: 5432',
+  'primaire:',
+  '  <<: *base',
+  '  role: lecture-ecriture',
+  'debug: false',
+  '',
+].join('\n');
+
 async function openTool(tool: string): Promise<void> {
   await $(testid('tools-rail-all')).click();
   await entry(tool).click();
@@ -978,6 +996,18 @@ describe('The tools', () => {
       expect(await $(testid('convert-convention-xml')).isDisplayed()).toBe(true);
     });
 
+    it('applies a YAML merge key, the alias it names expanded into the mapping', async () => {
+      await $(`${testid('segmented-convert-from')} [data-segment-id="yaml"]`).click();
+      await setField(testid('convert-input'), CONFIG_YAML);
+
+      await eventually(
+        async () => JSON.stringify(JSON.parse(await $(testid('convert-output')).getText()).primaire),
+        (primaire) =>
+          primaire === JSON.stringify({ host: 'db.internal', port: 5432, role: 'lecture-ecriture' }),
+        'the merged mapping',
+      );
+    });
+
     it('fills its input from a YAML snippet, read as YAML, and lists no snippet it cannot read', async () => {
       const deploy = await bridge.createNote(
         draft({ spaceId, title: 'deploy.yml', content: 'service: billing\nreplicas: 2\n', language: 'yml' }),
@@ -1044,6 +1074,14 @@ describe('The tools', () => {
         'the shape of a 256-bit digest',
       );
       expect(await $(testid('hash-verdict')).isExisting()).toBe(false);
+
+      await setField(testid('hash-expected'), 'zzz');
+      await eventually(
+        () => $(testid('hash-shape')).getAttribute('data-shape'),
+        (shape) => shape === 'tools.hash.shapes.unknown',
+        'neither hex nor Base64',
+      );
+      await setField(testid('hash-expected'), FOX_HMAC_SHA256.toUpperCase());
 
       await setField(testid('hash-input'), 'The quick brown fox jumps over the lazy dog');
       await eventually(
@@ -1229,6 +1267,27 @@ describe('The tools', () => {
 
       await eventually(output, (text) => text === first, 'the first documents again');
       expect((JSON.parse(first) as unknown[]).length).toBe(3);
+    });
+
+    it('takes a word as the seed, and draws the same documents from it again', async () => {
+      const documents = async () => JSON.parse(await output()) as unknown[];
+      const first = await output();
+
+      await setField(testid('json-generator-seed'), 'recette');
+      const fromWord = await eventually(output, (text) => text !== first, 'documents drawn from a word');
+      await $(testid('json-generator-seed-pinned')).waitForDisplayed({ timeout: 5_000 });
+
+      // « Régénérer » keeps the word: two documents asked next are the first two again.
+      await $(testid('tool-action-draw')).click();
+      await $(testid('tool-action-draw')).click();
+      await setField(testid('json-generator-count'), '2');
+      await eventually(documents, (drawn) => drawn.length === 2, 'two documents');
+      expect(await documents()).toEqual((JSON.parse(fromWord) as unknown[]).slice(0, 2));
+      expect(await $(testid('json-generator-seed')).getValue()).toBe('recette');
+
+      await setField(testid('json-generator-count'), '3');
+      await setField(testid('json-generator-seed'), '7');
+      await eventually(output, (text) => text === first, 'the documents of seed 7');
     });
 
     it('lists the schema keywords it did not honour', async () => {
@@ -1620,6 +1679,12 @@ describe('The tools', () => {
         () => row('data-total', 'iso'),
         (iso) => iso === 'PT1H30M',
         'the ISO form of words',
+      );
+      await setField(testid('dates-duration'), '90 min');
+      await eventually(
+        () => row('data-total', 'iso'),
+        (iso) => iso === 'PT1H30M',
+        'ninety minutes carried into an hour',
       );
 
       await $(testid('tool-clear')).click();
@@ -2030,7 +2095,7 @@ describe('The tools', () => {
       await setField(testid('cidr-plan'), 'Lien WAN 2\nBureaux 500\nServeurs 60');
       await eventually(
         () => readEach(`${testid('cidr-plan-line')}[data-kind="placed"]`, '@data-cidr'),
-        (placed) => placed.join() === '10.24.8.0/23,10.24.10.0/26,10.24.10.64/31',
+        (placed) => placed.join() === '10.24.8.0/23,10.24.10.0/26,10.24.10.64/30',
         'the plan placed',
       );
 
@@ -2395,6 +2460,24 @@ describe('The tools', () => {
         'json',
       ]);
       await $(testid('structured-diff-yaml-note')).waitForDisplayed({ timeout: 5_000 });
+    });
+
+    it('finds a YAML identical to its JSON twin once its merge key is applied', async () => {
+      await setField(testid('structured-diff-a'), CONFIG_YAML);
+      await setField(
+        testid('structured-diff-b'),
+        JSON.stringify({
+          service: 'billing',
+          replicas: 2,
+          ports: [8080, 8443],
+          base: { host: 'db.internal', port: 5432 },
+          primaire: { host: 'db.internal', port: 5432, role: 'lecture-ecriture' },
+          debug: false,
+        }),
+      );
+
+      await $(testid('structured-diff-identical')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('structured-diff-change')).isExisting()).toBe(false);
     });
 
     it('reads a side in the format forced on it, and says where it stops', async () => {

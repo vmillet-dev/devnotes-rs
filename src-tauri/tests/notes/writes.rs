@@ -190,10 +190,31 @@ fn updating_refreshes_updated_at_but_not_created_at() {
     let space_id = space(&mut connection, "Personal");
     let created = create(&mut connection, draft(&space_id), t0()).unwrap();
 
-    let updated = update(&mut connection, &created.id, &NotePatch::default(), t1()).unwrap();
+    let patch = NotePatch {
+        title: Some("Renamed".to_string()),
+        ..NotePatch::default()
+    };
+    let updated = update(&mut connection, &created.id, &patch, t1()).unwrap();
 
     assert_eq!(updated.created_at, t0());
     assert_eq!(updated.updated_at, t1());
+}
+
+#[test]
+fn updating_with_what_the_note_already_holds_leaves_updated_at_alone() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let created = create(&mut connection, draft(&space_id), t0()).unwrap();
+    let patch = NotePatch {
+        title: Some(created.title.clone()),
+        content: Some(created.content.clone()),
+        ..NotePatch::default()
+    };
+
+    let updated = update(&mut connection, &created.id, &patch, t1()).unwrap();
+
+    assert_eq!(updated.updated_at, t0());
+    assert_eq!(get(&mut connection, &created.id).unwrap().updated_at, t0());
 }
 
 #[test]

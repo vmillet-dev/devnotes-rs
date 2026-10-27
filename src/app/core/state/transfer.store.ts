@@ -14,15 +14,15 @@ function pad(value: number): string {
 }
 
 /**
- * Stamped to the minute, so two exports on the same day are two names — the second was
- * offered the first one's, and replacing it was one Enter away.
+ * Stamped to the second: to the minute, two exports in a row — or an export of the selection
+ * then of everything — were offered the same name, and replacing the first was one Enter away.
  *
  * Local time, not `toISOString`: the name is read by whoever wrote it, and an export
  * taken at 23:30 in Paris was dated the next day.
  */
 function defaultFileName(now: Date): string {
   const day = [now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate())].join('-');
-  return `devnotes-${day}-${pad(now.getHours())}${pad(now.getMinutes())}.devnotes`;
+  return `devnotes-${day}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.devnotes`;
 }
 
 /**
@@ -123,12 +123,13 @@ export class TransferStore {
 
     await this.run(async () => {
       const markdown = await this.repository.share(ids);
-      if (!(await this.clipboard.copy(markdown))) {
+      if (
+        !(await this.clipboard.copy(markdown, { key: 'file.copied', params: { notes: String(ids.length) } }))
+      ) {
         this.notifier.notify({ ref: { key: 'errors.copyFailed' } });
         return false;
       }
 
-      this.status.notify({ key: 'file.copied', params: { notes: String(ids.length) } });
       return true;
     }, 'errors.shareFailed');
   }

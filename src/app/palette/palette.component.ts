@@ -24,7 +24,7 @@ import { NotesStore } from '@core/state/notes.store';
 import { PALETTE_KINDS, PaletteChip, PaletteKind, PaletteStore } from '@core/state/palette.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { SpacesStore } from '@core/state/spaces.store';
-import { foldForSearch } from '@core/utils/fold.util';
+import { foldForSearch, rankedByName } from '@core/utils/fold.util';
 import { PlaceholderFormComponent } from '@app/placeholder-form/placeholder-form.component';
 import { KindBadgeComponent } from '@shared/badges/kind-badge/kind-badge.component';
 import { IconComponent } from '@shared/icon/icon.component';
@@ -121,16 +121,23 @@ export class PaletteComponent {
       );
     const mode = this.store.mode();
     if (mode.kind !== 'search' || !this.store.searched().has('tools')) return [];
-    return this.toolWords()
-      .filter(({ words }) => toolMatches(mode.term, words))
-      .map(({ tool }) => tool);
+    // By their name first: « json » put « Diff » and « JWT » before the tool named JSON.
+    return rankedByName(
+      this.toolWords().filter(({ words }) => toolMatches(mode.term, words)),
+      mode.term,
+      ({ words }) => words[0] ?? '',
+    ).map(({ tool }) => tool);
   });
 
   private readonly foundSpaces = computed(() => {
     const mode = this.store.mode();
     if (this.store.recent() || mode.kind !== 'search' || !this.store.searched().has('spaces')) return [];
     const wanted = foldForSearch(mode.term);
-    return this.spaces.spaces().filter((space) => foldForSearch(space.name).includes(wanted));
+    return rankedByName(
+      this.spaces.spaces().filter((space) => foldForSearch(space.name).includes(wanted)),
+      mode.term,
+      (space) => space.name,
+    );
   });
 
   protected readonly groups = computed<readonly PaletteGroup[]>(() => {
@@ -208,9 +215,12 @@ export class PaletteComponent {
     return hints;
   });
 
-  /** Said in place of a list: what was looked for, so a typo shows. */
+  /**
+   * Said in place of a list — above the offer to create, which is no match: what was looked
+   * for, so a typo shows; or, for a kind alone and nothing typed, that it holds nothing.
+   */
   protected readonly empty = computed<{ key: string; params: Record<string, string> } | null>(() => {
-    if (this.options().length > 0) return null;
+    if (this.options().some((option) => option.kind !== 'create')) return null;
     const mode = this.store.mode();
     switch (mode.kind) {
       case 'scopes':
@@ -219,10 +229,13 @@ export class PaletteComponent {
         return { key: 'palette.empty.tags', params: { word: mode.word } };
       case 'commands':
         return { key: 'palette.empty.commands', params: { term: mode.term } };
-      case 'search':
-        return mode.term === ''
-          ? { key: 'palette.empty.nothing', params: {} }
-          : { key: 'palette.empty.search', params: { term: mode.term } };
+      case 'search': {
+        if (mode.term !== '') return { key: 'palette.empty.search', params: { term: mode.term } };
+        const [only, ...others] = this.store.chips();
+        return only?.kind === 'scope' && others.length === 0
+          ? { key: `palette.empty.none.${only.scope}`, params: {} }
+          : { key: 'palette.empty.nothing', params: {} };
+      }
     }
   });
 

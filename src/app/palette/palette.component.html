@@ -3,6 +3,7 @@
   @if (store.pendingFill(); as note) {
     <app-placeholder-form
       [placeholders]="note.placeholders"
+      [kind]="note.kind"
       (submitted)="fill.submitForPalette($event)"
       (rawRequested)="store.copyRaw(note)"
       (cancelled)="store.cancelFill()"
@@ -55,6 +56,9 @@
       role="listbox"
       [attr.aria-label]="'palette.resultsLabel' | transloco"
     >
+      @if (empty(); as empty) {
+        <li class="empty" data-testid="palette-empty">{{ empty.key | transloco: empty.params }}</li>
+      }
       @for (group of groups(); track $index) {
         @if (group.heading) {
           <li
@@ -282,9 +286,6 @@
         }
       }
 
-      @if (empty(); as empty) {
-        <li class="empty" data-testid="palette-empty">{{ empty.key | transloco: empty.params }}</li>
-      }
       @if (store.recent()) {
         <li class="prefixes" role="presentation" data-testid="palette-prefixes">
           <span><code>&#64;</code> {{ 'palette.prefixes.at' | transloco }}</span>

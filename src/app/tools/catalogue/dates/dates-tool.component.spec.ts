@@ -266,8 +266,8 @@ describe('DatesToolComponent', () => {
           duration: {
             kind: 'read',
             negative: false,
-            parts: { years: 0, months: 0, weeks: 0, days: 0, hours: 0, minutes: 90, seconds: 0 },
-            iso: 'PT90M',
+            parts: { years: 0, months: 0, weeks: 0, days: 0, hours: 1, minutes: 30, seconds: 0 },
+            iso: 'PT1H30M',
             fromWords: true,
             totals: { seconds: 5400, minutes: 90, hours: 1.5 },
           },
@@ -278,7 +278,7 @@ describe('DatesToolComponent', () => {
       await tab(harness, 'durations');
       expect(harness.element('[data-testid="dates-input"]')).toBeNull();
       await harness.type('dates-duration', '90 min', 'measure_durations');
-      expect(harness.tool.result()?.content).toBe('PT90M = 5400 s');
+      expect(harness.tool.result()?.content).toBe('PT1H30M = 5400 s');
 
       await tab(harness, 'convert');
       expect(harness.element<HTMLInputElement>('[data-testid="dates-input"]').value).toBe('1790000000');

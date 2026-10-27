@@ -134,6 +134,8 @@ export interface NotesQuery {
   /** Left out by the palette: the modification date, newest first. */
   readonly order?: NoteOrder;
   readonly grouping?: Grouping;
+  /** The palette's order: how the title answers the search, then the last edit. */
+  readonly ranked?: boolean;
   readonly now: Date;
   /**
    * `Date#getTimezoneOffset()`. The sections reason in local days: without this
@@ -153,6 +155,9 @@ export interface NotesView {
   readonly kindCounts: readonly FacetCount<NoteKind>[];
   /** Every level, `none` included, counted like the kinds. */
   readonly priorityCounts: readonly FacetCount<Priority>[];
+  /** The notes of each tag and each format, over the space: `available*` in their order. */
+  readonly tagCounts: readonly FacetCount<string>[];
+  readonly languageCounts: readonly FacetCount<LanguageTag>[];
   readonly isFiltering: boolean;
   readonly matched: number;
 }

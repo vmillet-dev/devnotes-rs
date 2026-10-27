@@ -1,10 +1,11 @@
 @if (notifier.status(); as status) {
   <!-- role="status" and not "alert": a success does not justify interrupting a reader. -->
-  <div class="status-toast" data-testid="status-toast" role="status">
+  <div class="status-toast" data-testid="status-toast" role="status" [attr.data-key]="status.key">
     <span class="status-text">{{ status.key | transloco: status.params }}</span>
     <button
       type="button"
       class="status-dismiss"
+      data-testid="status-dismiss"
       [attr.aria-label]="'errors.dismiss' | transloco"
       [attr.title]="'errors.dismiss' | transloco"
       (click)="notifier.dismiss()"

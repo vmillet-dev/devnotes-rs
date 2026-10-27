@@ -16,7 +16,7 @@ describe('FormatButtonComponent', () => {
     });
     fixture = TestBed.createComponent(FormatButtonComponent);
     fixture.componentRef.setInput('formattable', true);
-    fixture.componentRef.setInput('language', 'TS');
+    fixture.componentRef.setInput('language', 'ts');
     fixture.componentRef.setInput('settings', DEFAULT_PRETTIER_SETTINGS);
     formats = 0;
     changes = [];
@@ -41,6 +41,15 @@ describe('FormatButtonComponent', () => {
 
     expect(formats).toBe(1);
     expect(query('editor-format').title).toBe('Formater avec Prettier (Maj+Alt+F)');
+  });
+
+  it('says which language it cannot format, by its name', async () => {
+    fixture.componentRef.setInput('formattable', false);
+    fixture.componentRef.setInput('language', 'py');
+    await fixture.whenStable();
+
+    expect(query('editor-format').title).toBe('Prettier ne sait pas formater Python');
+    expect(query('editor-format').getAttribute('aria-disabled')).toBe('true');
   });
 
   it('opens the library panel on its chevron, into its first field', async () => {

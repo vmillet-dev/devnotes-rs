@@ -2,7 +2,7 @@ import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { bottomGapOf, press, reloadCanvas, reopenSession, testid } from '../support/app.js';
+import { bottomGapOf, press, reloadCanvas, reopenSession, setField, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -89,6 +89,31 @@ describe('Creating a note, and finding it again', () => {
     await reloadCanvas();
   });
 
+  /** MET-07: an expiry three days away read « dans 4j » in the evening. */
+  it('counts the days to an expiry by the calendar', async () => {
+    const titled = 'Expires in three days';
+    const day = new Date();
+    day.setDate(day.getDate() + 3);
+    day.setHours(23, 59, 59, 999);
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId: await homeSpaceId(),
+        title: titled,
+        lifecycle: { kind: 'expires', at: day.toISOString() },
+      }),
+    );
+    await reloadCanvas();
+    await canvas.waitForCard(titled);
+
+    const card = await canvas.cardWithTitle(titled);
+    // Either language: « expire dans 3j », « expires in 3d ».
+    expect(await card.$('.card-when').getText()).toMatch(/\b3\s?[jd]$/);
+
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   it('materialises the draft exactly once, not once per committed field', async () => {
     // Closing commits the title then the content with no change detection between
     // them: the second call still carries `DRAFT_ID` while the row already exists.
@@ -157,5 +182,30 @@ describe('Creating a note, and finding it again', () => {
     const note = section?.notes[0];
     expect(note?.title).toBe(title);
     expect(note?.content).toBe(body);
+  });
+
+  /**
+   * NOT-02: a title typed into a new note, then Escape with the caret still in it, and no
+   * card was made. `editor.setTitle` blurs the field, and the blur committed what Escape lost.
+   */
+  it('keeps a new note titled and closed with Escape, the caret still in its title', async () => {
+    const escaped = 'Closed with Escape';
+    await canvas.createSnippet();
+    await setField(testid('editor-title'), escaped);
+    expect(await browser.execute(() => document.activeElement?.getAttribute('data-testid'))).toBe(
+      'editor-title',
+    );
+    await browser.keys(['Escape']);
+    await $(testid('editor-title')).waitForExist({ reverse: true, timeout: 10_000 });
+
+    await canvas.waitForCard(escaped);
+    await reloadCanvas();
+    await canvas.waitForCard(escaped);
+    const kept = (await bridge.queryNotes(query({ search: escaped }))).sections[0]?.notes[0];
+    expect(kept?.title).toBe(escaped);
+
+    await bridge.deleteNotes([kept!.id]);
+    await bridge.purgeNotes([kept!.id]);
+    await reloadCanvas();
   });
 });

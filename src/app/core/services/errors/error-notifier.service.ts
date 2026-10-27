@@ -91,7 +91,14 @@ export function errorKeyOf(
   return `${key}.${params[variant] ?? 'request'}`;
 }
 
-/** `fallback` carries the action attempted, used when the cause adds nothing. */
+/** The sentence names no file: the detail, `<path>: <cause>`, is where it is said. */
+const DETAILED: ReadonlySet<IpcErrorCode> = new Set(['fileAccess']);
+
+/**
+ * `fallback` carries the action attempted, used when the cause adds nothing. A cause with its
+ * own sentence is that sentence alone: the detail under it was Rust's English
+ * (« Tauri command … failed: The file holds no row ») — kept only where the sentence needs it.
+ */
 export function ipcNotice(
   error: unknown,
   fallback: TranslationRef,
@@ -102,7 +109,8 @@ export function ipcNotice(
   if (error instanceof IpcError && error.code !== null) {
     const key = errorKeyOf(error.code, error.params);
     if (key) {
-      return { ref: { key, params: { ...params, ...error.params } }, detail };
+      const ref = { key, params: { ...params, ...error.params } };
+      return DETAILED.has(error.code) ? { ref, detail } : { ref };
     }
   }
 

@@ -36,6 +36,10 @@ pub struct NotesQuery {
     #[serde(default)]
     #[specta(optional)]
     pub grouping: Grouping,
+    /// The palette's order: how the title answers the search, the last edit breaking ties.
+    #[serde(default)]
+    #[specta(optional)]
+    pub ranked: bool,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
     /// UTC+2). Sections reason in local days.
@@ -178,10 +182,25 @@ impl From<&NotesQuery> for Criteria {
 
 #[derive(Debug, Clone, Default)]
 pub struct Facets {
-    pub tags: Vec<String>,
-    pub languages: Vec<Language>,
+    pub tags: Vec<FacetCount<String>>,
+    pub languages: Vec<FacetCount<Language>>,
     pub kinds: Vec<FacetCount<NoteKind>>,
     pub priorities: Vec<FacetCount<Priority>>,
+}
+
+impl Facets {
+    #[must_use]
+    pub fn tag_names(&self) -> Vec<String> {
+        self.tags.iter().map(|tag| tag.value.clone()).collect()
+    }
+
+    #[must_use]
+    pub fn language_names(&self) -> Vec<Language> {
+        self.languages
+            .iter()
+            .map(|language| language.value)
+            .collect()
+    }
 }
 
 /// How many of the space's notes carry a value.
@@ -220,6 +239,28 @@ pub fn count_priorities(rows: &[(String, i64)]) -> Vec<FacetCount<Priority>> {
     counted(&Priority::ALL, Priority::as_str, rows)
 }
 
+/// The tags present, in the order they were read, each with its notes.
+pub fn count_tags(rows: Vec<(String, i64)>) -> Vec<FacetCount<String>> {
+    rows.into_iter()
+        .map(|(value, count)| FacetCount {
+            value,
+            count: saturating_u32(count),
+        })
+        .collect()
+}
+
+/// A stored language this build does not know has no facet to offer.
+pub fn count_languages(rows: &[(String, i64)]) -> Vec<FacetCount<Language>> {
+    rows.iter()
+        .filter_map(|(stored, count)| {
+            stored.parse().ok().map(|value| FacetCount {
+                value,
+                count: saturating_u32(*count),
+            })
+        })
+        .collect()
+}
+
 /// Sections gathered by date, priority or format, or all in one; or one flat list of matches,
 /// which offers the create card only as a place to create in rather than a list of matches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -247,6 +288,9 @@ pub struct NotesView {
     pub available_languages: Vec<Language>,
     pub kind_counts: Vec<FacetCount<NoteKind>>,
     pub priority_counts: Vec<FacetCount<Priority>>,
+    /// The notes each tag and each format holds, in the space: `available_*` in their order.
+    pub tag_counts: Vec<FacetCount<String>>,
+    pub language_counts: Vec<FacetCount<Language>>,
     pub is_filtering: bool,
     /// `u32` and not `usize`: Specta refuses what JSON cannot carry exactly.
     pub matched: u32,
@@ -260,6 +304,8 @@ pub enum SearchField {
     Tag,
     Body,
     Item,
+    /// The context under the title: `PostgreSQL / production`.
+    Source,
 }
 
 /// What made a note match, and where.
@@ -421,7 +467,11 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     // A quick filter keeps the view chronological; a search, a facet or an opened folder
     // switches to a flat list. `build_sections` knows nothing of folders: the inside of one is
     // already sorted by being there.
-    order_notes(&mut notes, request.order);
+    if request.ranked && !needle.is_empty() {
+        rank_notes(&mut notes, needle);
+    } else {
+        order_notes(&mut notes, request.order);
+    }
 
     let inside_folder = request.folder_id.is_some();
     let is_filtering = criteria.narrows() || inside_folder;
@@ -448,10 +498,12 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
 
     let mut view = NotesView {
         sections: build_sections(notes, layout, request.pinned_first, request.now, offset),
-        available_tags: facets.tags,
-        available_languages: facets.languages,
+        available_tags: facets.tag_names(),
+        available_languages: facets.language_names(),
         kind_counts: facets.kinds,
         priority_counts: facets.priorities,
+        tag_counts: facets.tags,
+        language_counts: facets.languages,
         is_filtering,
         matched,
     };
@@ -465,6 +517,40 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     let today = request.now.with_timezone(&offset).date_naive();
     view.notes_mut().for_each(|note| note.cut_to_preview(today));
     view
+}
+
+/// How well a title answers the search, lower first: all of it, its start, the start of one
+/// of its words, anywhere in it; then a note found by its tags, body, items or context.
+fn title_rank(title: &str, needle: &str) -> u8 {
+    let title = fold(title);
+    if title == needle {
+        0
+    } else if title.starts_with(needle) {
+        1
+    } else if title
+        .split(|character: char| !character.is_alphanumeric())
+        .any(|word| word.starts_with(needle))
+    {
+        2
+    } else if title.contains(needle) {
+        3
+    } else {
+        4
+    }
+}
+
+/// `psql` opened the note edited last that held it in its body, not « Connexion psql ».
+fn rank_notes(notes: &mut [Note], needle: &str) {
+    let ranks: HashMap<String, u8> = notes
+        .iter()
+        .map(|note| (note.id.clone(), title_rank(&note.title, needle)))
+        .collect();
+    notes.sort_by(|a, b| {
+        ranks[&a.id]
+            .cmp(&ranks[&b.id])
+            .then_with(|| b.updated_at.cmp(&a.updated_at))
+            .then_with(|| a.id.cmp(&b.id))
+    });
 }
 
 /// Ties fall on the modification date, newest first, then the id: a card never swaps places
@@ -541,10 +627,16 @@ fn find_match(note: &Note, needle: &str) -> Option<SearchMatch> {
         return Some(SearchMatch::elsewhere(SearchField::Body, line.trim()));
     }
 
-    note.items
+    if let Some(item) = note
+        .items
         .iter()
         .find(|item| contains_folded(&item.text, needle))
-        .map(|item| SearchMatch::elsewhere(SearchField::Item, &item.text))
+    {
+        return Some(SearchMatch::elsewhere(SearchField::Item, &item.text));
+    }
+
+    contains_folded(&note.source, needle)
+        .then(|| SearchMatch::elsewhere(SearchField::Source, &note.source))
 }
 
 /// A note either fails to match, matches on something the card already shows, or
@@ -644,7 +736,9 @@ fn section(
         .collect();
 
     NoteSection {
-        has_expiring_notes: notes.iter().any(|note| note.expiring_soon),
+        // The results of a filter are a count, not a list to triage.
+        has_expiring_notes: key != NoteSectionKey::Results
+            && notes.iter().any(|note| note.expiring_soon),
         key,
         id: key.as_str().to_string(),
         group: None,
@@ -823,6 +917,7 @@ mod tests {
             priorities: Vec::new(),
             order: NoteOrder::default(),
             grouping: Grouping::default(),
+            ranked: false,
             now: at(NOW),
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -918,6 +1013,59 @@ mod tests {
         assert_eq!(view.matched, 1);
         assert!(view.is_filtering);
         assert_eq!(keys(&view), [NoteSectionKey::Results]);
+    }
+
+    /// `psql` opened the note edited last that held it in its body, « Connexion psql » fourth.
+    #[test]
+    fn the_palette_ranks_by_how_the_title_answers_the_search_then_by_date() {
+        let edited = |id: &str, title: &str, content: &str, when: &str| Note {
+            content: content.to_string(),
+            updated_at: at(when),
+            ..note(id, title)
+        };
+        let notes = vec![
+            edited(
+                "body",
+                "zq-champs",
+                "psql -h db",
+                "2026-07-25T12:00:00.000Z",
+            ),
+            edited("word", "Connexion psql", "", "2026-07-20T08:00:00.000Z"),
+            edited("start", "PSQL au quotidien", "", "2026-07-21T08:00:00.000Z"),
+            edited("whole", "psql", "", "2026-07-19T08:00:00.000Z"),
+            edited("inside", "Lancerpsql", "", "2026-07-24T08:00:00.000Z"),
+            edited("older-body", "Autre", "psql", "2026-07-01T08:00:00.000Z"),
+        ];
+        let ids = |view: &NotesView| -> Vec<String> {
+            view.sections
+                .iter()
+                .flat_map(|section| section.notes.iter().map(|note| note.note.id.clone()))
+                .collect()
+        };
+
+        let ranked = build(
+            notes.clone(),
+            Facets::default(),
+            &NotesQuery {
+                search: "psql".to_string(),
+                ranked: true,
+                ..request()
+            },
+        );
+        assert_eq!(
+            ids(&ranked),
+            ["whole", "start", "word", "inside", "body", "older-body"]
+        );
+
+        let dated = build(
+            notes,
+            Facets::default(),
+            &NotesQuery {
+                search: "psql".to_string(),
+                ..request()
+            },
+        );
+        assert_eq!(ids(&dated)[0], "body", "the list view keeps its own order");
     }
 
     #[test]
@@ -1044,8 +1192,12 @@ mod tests {
         let view = build(
             vec![note("a", "Un")],
             Facets {
-                tags: vec!["api".to_string(), "auth".to_string()],
-                languages: vec![Language::Json, Language::Txt],
+                tags: count_tags(vec![("api".to_string(), 3), ("auth".to_string(), 1)]),
+                languages: count_languages(&[
+                    ("json".to_string(), 6),
+                    ("klingon".to_string(), 9),
+                    ("txt".to_string(), 2),
+                ]),
                 kinds: count_kinds(&[("note".to_string(), 2)]),
                 priorities: count_priorities(&[("high".to_string(), 1)]),
             },
@@ -1057,6 +1209,21 @@ mod tests {
 
         assert_eq!(view.available_tags, ["api", "auth"]);
         assert_eq!(view.available_languages, [Language::Json, Language::Txt]);
+        // Format and tags count their notes too (REC-05), a language this build lacks left out.
+        assert_eq!(
+            view.tag_counts
+                .iter()
+                .map(|tag| tag.count)
+                .collect::<Vec<_>>(),
+            [3, 1]
+        );
+        assert_eq!(
+            view.language_counts
+                .iter()
+                .map(|language| (language.value, language.count))
+                .collect::<Vec<_>>(),
+            [(Language::Json, 6), (Language::Txt, 2)]
+        );
         assert_eq!(view.kind_counts[1].count, 2);
         assert_eq!(view.priority_counts[3].count, 1);
     }
@@ -1440,6 +1607,30 @@ mod tests {
             let hit = hit_for(listed, "push").expect("an item match is worth quoting");
             assert_eq!(hit.field, SearchField::Item);
             assert_eq!(hit.excerpt, "Push the tag");
+        }
+
+        /// `PostgreSQL` found nothing, though the guide says the search reads the contexts (COD-21).
+        #[test]
+        fn quotes_the_context_when_nothing_else_matched() {
+            let note = Note {
+                source: "PostgreSQL / production".to_string(),
+                content: "psql -h db".to_string(),
+                ..sample()
+            };
+            let hit = hit_for(note, "postgre").expect("a context match is worth quoting");
+            assert_eq!(hit.field, SearchField::Source);
+            assert_eq!(hit.excerpt, "PostgreSQL / production");
+
+            let in_both = Note {
+                source: "Prettier".to_string(),
+                content: "npx prettier --write .".to_string(),
+                ..sample()
+            };
+            assert_eq!(
+                hit_for(in_both, "prettier").map(|hit| hit.field),
+                Some(SearchField::Body),
+                "the code is the better quote"
+            );
         }
 
         #[test]

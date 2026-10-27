@@ -43,6 +43,8 @@ export class DialogComponent implements OnInit {
   readonly dismissible = input(true);
 
   readonly closed = output<void>();
+  /** Before `closed`, when the backdrop was clicked: where. */
+  readonly dismissedAt = output<MouseEvent>();
 
   protected readonly rung = computed(() => dialogRung(this.layer()));
 
@@ -59,8 +61,9 @@ export class DialogComponent implements OnInit {
     this.stack.push(this, this.rung());
   }
 
-  protected dismiss(): void {
+  protected dismiss(click?: MouseEvent): void {
     if (this.dismissible() && this.stack.isFront(this)) {
+      if (click) this.dismissedAt.emit(click);
       this.closed.emit();
     }
   }

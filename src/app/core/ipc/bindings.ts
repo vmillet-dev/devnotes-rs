@@ -241,6 +241,13 @@ export const commands = {
 	 */
 	runHttpCollection: (run: RunRequest) => typedError<null, AppError>(__TAURI_INVOKE("run_http_collection", { run })),
 	/**
+	 *  The order a collection or a folder runs in: the one last arranged, the requests added since
+	 *  at its end.
+	 */
+	httpRunOrder: (item: HttpItem) => typedError<RunEntry[], AppError>(__TAURI_INVOKE("http_run_order", { item })),
+	/**  The order the runner was left in, kept with the collection's or the folder's settings. */
+	saveHttpRunOrder: (item: HttpItem, order: RunEntry[]) => typedError<null, AppError>(__TAURI_INVOKE("save_http_run_order", { item, order })),
+	/**
 	 *  « Annuler » on a run: the request under way is cancelled with it. `false` when no run of that
 	 *  id was under way.
 	 */
@@ -430,6 +437,8 @@ export const commands = {
 	 *  the interface back to the gate to ask for the restored copy's phrase.
 	 */
 	restoreBackup: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("restore_backup", { id })),
+	/**  Where the library the last restore replaced went, once: the page it reloaded says it. */
+	takeRestoredAside: () => __TAURI_INVOKE<string | null>("take_restored_aside"),
 	/**  The libraries, and which one is open. */
 	listLibraries: () => typedError<Registry, AppError>(__TAURI_INVOKE("list_libraries")),
 	/**  Adds one, and leaves it closed: opening it is a second, deliberate gesture. */
@@ -1102,6 +1111,8 @@ export type ContainerSettings_Deserialize = {
 	variables?: Variable_Deserialize[],
 	/**  Run around each request under it: before the request's own, and after it. */
 	scripts?: RequestScripts,
+	/**  The order the runner last left: the runner's to write, never the settings dialog's. */
+	runOrder?: RunEntry[],
 };
 
 /**
@@ -1117,6 +1128,8 @@ export type ContainerSettings_Serialize = {
 	variables: Variable_Serialize[],
 	/**  Run around each request under it: before the request's own, and after it. */
 	scripts: RequestScripts,
+	/**  The order the runner last left: the runner's to write, never the settings dialog's. */
+	runOrder?: RunEntry[],
 };
 
 export type Contrast = {
@@ -1725,7 +1738,7 @@ export type GenerateRequest = {
 	text: string,
 	count: number,
 	/**  The same seed and the same source draw the same documents; none draws one, and says which. */
-	seed: number | null,
+	seed: string | null,
 };
 
 export type GeneratedCode = {
@@ -2365,6 +2378,7 @@ export type JsonLine = {
 	path: string,
 	kind: JsonKind,
 	value: string,
+	text: string | null,
 	size: number,
 	span: Span,
 	opens: boolean,
@@ -2422,6 +2436,8 @@ export type JsonRow = {
 	kind: JsonKind,
 	/**  `"paid"`, `4900`, `{ … }`, `[ 3 ]`: cut to one line. */
 	value: string,
+	/**  A string's own text, whole and unquoted: what « Copier la valeur » copies. */
+	text: string | null,
 	/**  Keys or items of a container, open or not; 0 for a scalar. */
 	size: number,
 	span: Span,
@@ -2824,6 +2840,8 @@ export type NotesQuery = {
 	/**  Left out by the palette: the modification date, newest first. */
 	order?: NoteOrder,
 	grouping?: Grouping,
+	/**  The palette's order: how the title answers the search, the last edit breaking ties. */
+	ranked?: boolean,
 	now: string,
 	/**
 	 *  `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
@@ -2844,6 +2862,9 @@ export type NotesView = {
 	availableLanguages: Language[],
 	kindCounts: FacetCount<NoteKind>[],
 	priorityCounts: FacetCount<Priority>[],
+	/**  The notes each tag and each format holds, in the space: `available_*` in their order. */
+	tagCounts: FacetCount<string>[],
+	languageCounts: FacetCount<Language>[],
 	isFiltering: boolean,
 	/**  `u32` and not `usize`: Specta refuses what JSON cannot carry exactly. */
 	matched: number,
@@ -3153,6 +3174,12 @@ export type RunData = {
 	rows: { [key in string]: string }[],
 };
 
+/**  A request in a run's order, and whether it runs. */
+export type RunEntry = {
+	id: string,
+	enabled: boolean,
+};
+
 /**  An error as its code and the values its sentence states. */
 export type RunError = {
 	code: ErrorCode,
@@ -3281,7 +3308,9 @@ export type ScriptsAnswer = {
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
  *  biggest thing on the card. That case is `SearchMatch::Title`.
  */
-export type SearchField = "tag" | "body" | "item";
+export type SearchField = "tag" | "body" | "item" | 
+/**  The context under the title: `PostgreSQL / production`. */
+"source";
 
 /**  What made a note match, and where. */
 export type SearchHit = {

@@ -15,6 +15,7 @@
 
   <app-tag-rail
     [tags]="tags()"
+    [counts]="tagCounts()"
     [activeTags]="activeTags()"
     (tagToggled)="tagToggled.emit($event)"
     (manageRequested)="manageRequested.emit()"
@@ -22,6 +23,7 @@
 
   <app-language-rail
     [languages]="languages()"
+    [counts]="languageCounts()"
     [activeLanguages]="activeLanguages()"
     (languageToggled)="languageToggled.emit($event)"
   />

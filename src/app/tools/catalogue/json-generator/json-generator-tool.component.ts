@@ -51,7 +51,8 @@ const SAMPLES: Record<JsonSource, string> = {
 
 /**
  * Without a seed, each draw takes a new one and says which, beside the field: pinned, it makes
- * the draw again. The draw counter is only there to ask twice for the same thing.
+ * the draw again. A seed is any text, read by Rust. The draw counter is only there to ask twice
+ * for the same thing.
  */
 @Component({
   selector: 'app-json-generator-tool',
@@ -66,7 +67,7 @@ export class JsonGeneratorToolComponent implements Tool {
   protected readonly source = toolState<JsonSource>('json-generator.source', 'example');
   protected readonly text = toolState('json-generator.text', '');
   protected readonly count = toolState('json-generator.count', 3);
-  protected readonly seed = toolState<number | null>('json-generator.seed', null);
+  protected readonly seed = toolState<string | null>('json-generator.seed', null);
 
   private readonly draw = signal(0);
 
@@ -147,13 +148,12 @@ export class JsonGeneratorToolComponent implements Tool {
    * Pinned already, the pin lets it go.
    */
   protected togglePin(drawn: number | null): void {
-    this.seed.set(this.seed() === null ? drawn : null);
+    this.seed.set(this.seed() === null && drawn !== null ? String(drawn) : null);
   }
 
   protected onSeed(event: Event): void {
-    const value = (event.target as HTMLInputElement).value.trim();
-    const seed = Number.parseInt(value, 10);
-    this.seed.set(value === '' || !Number.isFinite(seed) ? null : Math.max(0, Math.min(seed, 4_294_967_295)));
+    const typed = (event.target as HTMLInputElement).value.trim();
+    this.seed.set(typed === '' ? null : typed);
   }
 
   protected onInput(event: Event): void {

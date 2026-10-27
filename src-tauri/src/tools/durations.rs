@@ -544,6 +544,18 @@ fn words_duration(chars: &[char]) -> Result<(bool, DurationParts), Located> {
     Ok((negative, parts))
 }
 
+/// Sixty seconds make a minute and sixty minutes an hour, so « 90 min » reads `PT1H30M`. Hours
+/// are never carried into days: a day is 23 or 25 hours when the clocks change.
+fn carried(mut parts: DurationParts) -> DurationParts {
+    let minutes = (parts.seconds / 60.0).floor();
+    parts.minutes += minutes;
+    parts.seconds -= minutes * 60.0;
+    let hours = (parts.minutes / 60.0).floor();
+    parts.hours += hours;
+    parts.minutes -= hours * 60.0;
+    parts
+}
+
 fn read_duration(text: &str) -> DurationAnswer {
     let chars: Vec<char> = text.chars().collect();
     let body = chars.get(usize::from(chars.first() == Some(&'-')));
@@ -555,6 +567,7 @@ fn read_duration(text: &str) -> DurationAnswer {
     };
     match read {
         Ok((negative, parts)) => {
+            let parts = carried(parts);
             let sign = if negative { -1.0 } else { 1.0 };
             let totals = (parts.years == 0.0 && parts.months == 0.0).then(|| {
                 let seconds = sign
@@ -849,6 +862,8 @@ mod tests {
             ("-P1D", "-P1D"),
             ("P0D", "PT0S"),
             ("PT36H", "PT36H"),
+            ("PT90M", "PT1H30M"),
+            ("PT150.5S", "PT2M30.5S"),
         ] {
             assert_eq!(read(text).2, written, "{text}");
         }
@@ -885,7 +900,9 @@ mod tests {
     fn words_are_read_and_written_as_iso() {
         for (text, written) in [
             ("1h30", "PT1H30M"),
-            ("90 min", "PT90M"),
+            ("90 min", "PT1H30M"),
+            ("1h 90min", "PT2H30M"),
+            ("3600 s", "PT1H"),
             ("1d 2h", "P1DT2H"),
             ("1:30", "PT1H30M"),
             ("2 h 15", "PT2H15M"),

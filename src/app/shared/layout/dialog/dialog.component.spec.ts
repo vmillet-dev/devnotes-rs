@@ -15,6 +15,7 @@ import { DialogComponent } from './dialog.component';
         [dismissible]="dismissible()"
         [fullscreen]="fullscreen()"
         labelledBy="back-title"
+        (dismissedAt)="clickedAt = $event"
         (closed)="backClosed = backClosed + 1"
       >
         <h2 id="back-title">back</h2>
@@ -36,6 +37,7 @@ class DialogHostComponent {
 
   backClosed = 0;
   frontClosed = 0;
+  clickedAt: MouseEvent | null = null;
 }
 
 describe('DialogComponent', () => {
@@ -108,10 +110,11 @@ describe('DialogComponent', () => {
     expect(host.backClosed).toBe(1);
   });
 
-  it('closes on a click that lands on the backdrop and not on the panel', async () => {
-    backdrops()[0]?.click();
+  it('closes on a click that lands on the backdrop and not on the panel, and says where', async () => {
+    backdrops()[0]?.dispatchEvent(new MouseEvent('click', { clientX: 40, clientY: 50, bubbles: true }));
     await fixture.whenStable();
     expect(host.backClosed).toBe(1);
+    expect([host.clickedAt?.clientX, host.clickedAt?.clientY]).toEqual([40, 50]);
 
     panels()[0]?.click();
     await fixture.whenStable();

@@ -4,7 +4,17 @@ import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { rail } from '../pageobjects/sidebar.page.js';
 import { aboutMenu, fileMenu, settings, titlebar } from '../pageobjects/titlebar.page.js';
-import { cursorOf, eventually, pickSegment, press, reopenSession, testid } from '../support/app.js';
+import {
+  clipboardText,
+  cursorOf,
+  eventually,
+  pickSegment,
+  press,
+  reloadCanvas,
+  reopenSession,
+  testid,
+} from '../support/app.js';
+import { bridge, draft, homeSpaceId } from '../support/bridge.js';
 
 /**
  * A preference applies on a button; only the theme and the density show while chosen.
@@ -192,6 +202,49 @@ describe('Preferences', () => {
       await canvas.createSnippet();
       expect(await $(testid('editor-body')).isExisting()).toBe(true);
       await editor.close();
+    });
+  });
+
+  /** PRF-10: off, C on a card still said « « zq-isolation » copiée dans le presse-papier. » */
+  describe('the copy acknowledgement', () => {
+    const title = 'Copied without a word';
+    let id = '';
+
+    async function acknowledge(on: boolean): Promise<void> {
+      await fileMenu.openPreferences();
+      await settings.open('general');
+      const toggle = $(testid('setting-copy-confirmation'));
+      if ((await toggle.isSelected()) !== on) await toggle.click();
+      await settings.close();
+      if (await $(testid('status-toast')).isExisting()) await $(testid('status-dismiss')).click();
+    }
+
+    before(async () => {
+      id = (await bridge.createNote(draft({ spaceId: await homeSpaceId(), title, content: 'echo quiet' })))
+        .id;
+      await reloadCanvas();
+    });
+
+    after(async () => {
+      await acknowledge(true);
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
+    it('copies a card in silence once it is off, and says so again once it is on', async () => {
+      await acknowledge(false);
+      await canvas.openNote(title);
+      await editor.close();
+      await press('c');
+      await eventually(clipboardText, (text) => text === 'echo quiet', 'the card copied');
+      expect(await $(testid('status-toast')).isExisting()).toBe(false);
+
+      await acknowledge(true);
+      await canvas.openNote(title);
+      await editor.close();
+      await press('c');
+      await $(testid('status-toast')).waitForExist({ timeout: 5_000 });
     });
   });
 

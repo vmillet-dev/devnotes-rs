@@ -1,5 +1,6 @@
 import { InjectionToken, Injectable, inject } from '@angular/core';
 import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
 
@@ -17,7 +18,8 @@ export const CLIPBOARD_ADAPTER = new InjectionToken<ClipboardAdapter>('CLIPBOARD
 /**
  * ⚠️ The CSP locks the WebView to `'self'` and `navigator.clipboard` is unusable there:
  * everything goes through the plugin, which throws outside Tauri — hence the success
- * boolean. The copy acknowledgement lives here and not in the five callers.
+ * boolean. The copy acknowledgement lives here and not in the callers, which say what they
+ * copied through `said`: « Accuser chaque copie » off, the card's own message went on (PRF-10).
  */
 @Injectable({ providedIn: 'root' })
 export class ClipboardService {
@@ -25,19 +27,23 @@ export class ClipboardService {
   private readonly notifier = inject(StatusNotifier);
   private readonly settings = inject(SettingsStore);
 
-  async copy(value: string): Promise<boolean> {
+  /** `said` `null`: the caller says it elsewhere, behind `acknowledges`. */
+  async copy(value: string, said: TranslationRef | null = { key: 'settings.copied' }): Promise<boolean> {
     try {
       await this.adapter.writeText(value);
     } catch {
       return false;
     }
 
-    // Callers with something better to say speak afterwards: the banner keeps the last.
-    if (this.settings.copyConfirmation()) {
-      this.notifier.notify({ key: 'settings.copied' });
+    if (said !== null && this.acknowledges()) {
+      this.notifier.notify(said);
     }
 
     return true;
+  }
+
+  acknowledges(): boolean {
+    return this.settings.copyConfirmation();
   }
 
   /** An empty string for an empty clipboard as for an impossible read. */

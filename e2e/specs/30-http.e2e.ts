@@ -16,6 +16,7 @@ import {
   reloadCanvas,
   setField,
   testid,
+  typeKeys,
   viewportSize,
 } from '../support/app.js';
 import { bridge } from '../support/bridge.js';
@@ -893,9 +894,10 @@ describe('HTTP collections', () => {
         const kept = async () => (await bridge.httpSettings({ kind: 'folder', id: folder.id })).headers ?? [];
         const row = `${testid('http-settings-headers-table')} ${testid('http-kv-row')}:first-child`;
         const name = `${row} ${testid('http-kv-key')}`;
+        // Read as they are: a value trimmed here let « ␠1 » pass for « 1 » (HRQ-06).
         const cells = async () => [
           await $(name).getValue(),
-          (await $(`${row} ${testid('http-kv-value')}`).getValue()).trim(),
+          await $(`${row} ${testid('http-kv-value')}`).getValue(),
         ];
 
         const node = `${testid('http-node')}[data-id="${folder.id}"]`;
@@ -905,7 +907,7 @@ describe('HTTP collections', () => {
 
         // Key by key, as it is typed: at the colon the caret goes on to the value.
         await $(name).click();
-        await browser.keys([...'X-Recette: 1']);
+        await typeKeys('X-Recette: 1');
         await eventually(cells, (read) => read.join('|') === 'X-Recette|1', 'the header in its two cells');
         expect(await $(`${row}[data-fault]`).isExisting()).toBe(false);
 
@@ -919,6 +921,8 @@ describe('HTTP collections', () => {
           (said) => said.includes('X Recette'),
           'the refusal, naming the header',
         );
+        // The sentence alone, without Rust's technical line under it (HSC-17).
+        expect(await $(testid('error-detail')).isExisting()).toBe(false);
         expect(await $(testid('http-settings-dialog')).isDisplayed()).toBe(true);
         expect(await kept()).toEqual([]);
         await $(testid('error-dismiss')).click();
@@ -927,7 +931,7 @@ describe('HTTP collections', () => {
         await $(`${row}[data-fault]`).waitForExist({ reverse: true, timeout: 10_000 });
         await $(testid('http-settings-save')).click();
         await $(testid('http-settings-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
-        expect((await kept()).map((header) => header.key)).toEqual(['X-Recette']);
+        expect((await kept()).map((header) => [header.key, header.value])).toEqual([['X-Recette', '1']]);
 
         // The request under the folder leaves, the header with it.
         await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();

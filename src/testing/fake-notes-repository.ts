@@ -688,6 +688,14 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
         value,
         count: this.notes.filter((note) => note.priority === value).length,
       })),
+      tagCounts: [...new Set(this.notes.flatMap((note) => note.tags))].sort(byCodeUnit).map((value) => ({
+        value,
+        count: this.notes.filter((note) => note.tags.includes(value)).length,
+      })),
+      languageCounts: [...new Set(this.notes.map((note) => note.language))].sort(byCodeUnit).map((value) => ({
+        value,
+        count: this.notes.filter((note) => note.language === value).length,
+      })),
       isFiltering:
         (query?.search.trim().length ?? 0) > 0 ||
         (query?.tags.length ?? 0) > 0 ||

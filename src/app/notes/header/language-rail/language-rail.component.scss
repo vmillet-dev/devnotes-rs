@@ -30,6 +30,15 @@
   border-radius: 6px;
   cursor: pointer;
   flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.language-count {
+  padding-right: 4px;
+  font-family: var(--font-mono), serif;
+  font-size: 11px;
+  color: var(--text-2);
 }
 
 // The chip's own box stays invisible: the badge carries a hairline of its own, and a second

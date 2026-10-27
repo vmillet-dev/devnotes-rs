@@ -8,7 +8,7 @@
     [attr.aria-disabled]="!formattable() || busy()"
     [attr.title]="
       (formattable() ? 'editor.format.hint' : 'editor.format.unsupported')
-        | transloco: { language: language() }
+        | transloco: { language: languageName() }
     "
     (click)="formatRequested.emit()"
   >

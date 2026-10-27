@@ -136,6 +136,9 @@
           }
         </button>
       }
+      @if (options().length === 0 && emptyLabel(); as empty) {
+        <p class="choice-empty" role="status" data-testid="choice-empty">{{ empty }}</p>
+      }
     </div>
   }
 }

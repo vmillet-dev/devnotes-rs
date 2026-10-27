@@ -35,11 +35,12 @@ describe('RichTextEditorComponent', () => {
     await fixture.whenStable();
   }
 
-  function paste(data: { text?: string; types?: string[]; files?: File[] }): Event {
+  function paste(data: { text?: string; html?: string; types?: string[]; files?: File[] }): Event {
     const event = new Event('paste', { bubbles: true, cancelable: true });
     Object.defineProperty(event, 'clipboardData', {
       value: {
-        getData: (type: string) => (type === 'text/plain' ? (data.text ?? '') : ''),
+        getData: (type: string) =>
+          type === 'text/plain' ? (data.text ?? '') : type === 'text/html' ? (data.html ?? '') : '',
         types: data.types ?? (data.text ? ['text/plain'] : []),
         files: data.files ?? [],
       },
@@ -96,7 +97,7 @@ describe('RichTextEditorComponent', () => {
   });
 
   /** Headings, what marks words, blocks, then what is inserted: the mockup's order. */
-  it('lays its tools out in four groups, the link among the marks', () => {
+  it('lays its tools out in four groups, the link among the marks, then the drawing menu', () => {
     const groups: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.rich-group')];
     const ids = groups.map((group) =>
       [...group.querySelectorAll('.rich-tool')].map((tool) => tool.getAttribute('data-testid')),
@@ -107,7 +108,9 @@ describe('RichTextEditorComponent', () => {
       ['rich-bold', 'rich-italic', 'rich-strike', 'rich-code', 'rich-link'],
       ['rich-bullet', 'rich-ordered', 'rich-tasks', 'rich-quote'],
       ['rich-codeBlock', 'rich-table'],
+      [],
     ]);
+    expect(groups.at(-1)?.querySelector('[data-testid="rich-embed-drawing"]')).not.toBeNull();
   });
 
   it('names each block tool with the key that does the same', () => {
@@ -445,8 +448,14 @@ describe('RichTextEditorComponent', () => {
         expect(emitted.at(-1)).toBe('Plan![Archi](devnotes:drawing/d1)');
       });
 
-      it('is not offered while there is no drawing', () => {
-        expect(fixture.nativeElement.querySelector('[data-testid="rich-embed-drawing"]')).toBeNull();
+      /** DES-13: with no drawing the button was not drawn, and its menu never said why. */
+      it('is offered while there is no drawing, its menu saying there is none to insert', async () => {
+        fixture.nativeElement.querySelector('[data-testid="rich-embed-drawing"]').click();
+        await fixture.whenStable();
+
+        const panel = fixture.nativeElement.querySelector('[data-testid="choice-panel-rich-drawing"]');
+        expect(panel.querySelector('[data-testid="choice-option"]')).toBeNull();
+        expect(panel.querySelector('[data-testid="choice-empty"]')).not.toBeNull();
       });
     });
 
@@ -654,6 +663,38 @@ describe('RichTextEditorComponent', () => {
     expect(blurs).toBe(1);
   });
 
+  /** RIC-09: typed key by key, « 2 * 3 * 4 » lost its stars to an italic 3. */
+  describe('emphasis typed key by key', () => {
+    /** As ProseMirror types: the input rules see each character before it lands. */
+    async function typeIn(text: string): Promise<void> {
+      const view = (surface() as HTMLElement & { editor: Editor }).editor.view;
+      for (const char of text) {
+        const { from, to } = view.state.selection;
+        const handled = view.someProp('handleTextInput', (handle) =>
+          handle(view, from, to, char, () => view.state.tr.insertText(char, from, to)),
+        );
+        if (!handled) view.dispatch(view.state.tr.insertText(char, from, to));
+      }
+      await fixture.whenStable();
+    }
+
+    it('keeps a star or an underscore with a space inside as it is', async () => {
+      await open('');
+      await typeIn('2 * 3 * 4 and a _ b _ c');
+
+      expect(surface().querySelector('em')).toBeNull();
+      expect(emitted.at(-1)).toBe('2 * 3 * 4 and a _ b _ c');
+    });
+
+    it('still makes italic what Markdown makes italic', async () => {
+      await open('');
+      await typeIn('a *b c* d');
+
+      expect(surface().querySelector('em')?.textContent).toBe('b c');
+      expect(emitted.at(-1)).toBe('a *b c* d');
+    });
+  });
+
   /** jsdom has no layout for ProseMirror to find a click in: its click hook is asked directly. */
   it('opens a link on Ctrl+click, and leaves a plain click to the caret', async () => {
     await open('[runbook](https://example.com)');
@@ -669,6 +710,25 @@ describe('RichTextEditorComponent', () => {
     expect(click({})).toBe(false);
     expect(click({ ctrlKey: true })).toBe(true);
     expect(opened).toEqual(['https://example.com']);
+  });
+
+  /** RIC-06: the hook left a plain click alone, and the browser's click followed the link. */
+  it('never lets the click itself follow a link, plain or with Ctrl', async () => {
+    await open('[runbook](https://example.com)');
+    const anchor = surface().querySelector('a')!;
+    const clicked = (init: MouseEventInit): boolean => {
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
+      anchor.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+
+    expect(clicked({})).toBe(true);
+    expect(clicked({ ctrlKey: true })).toBe(true);
+    const text = document.createElement('span');
+    surface().append(text);
+    const plain = new MouseEvent('click', { bubbles: true, cancelable: true });
+    text.dispatchEvent(plain);
+    expect(plain.defaultPrevented).toBe(false);
   });
 
   /**
@@ -725,6 +785,35 @@ describe('RichTextEditorComponent', () => {
       expect(pasted).toEqual(['SELECT 1;']);
       expect(event.defaultPrevented).toBe(true);
       expect(emitted).toEqual([]);
+    });
+
+    /** RIC-10: pasted into a new, empty Note, a page's bold and link arrived as plain text. */
+    it('pastes the bold and the link of a page into an empty note as they are', async () => {
+      const pasted: string[] = [];
+      fixture.componentInstance.pastedIntoEmpty.subscribe((text) => pasted.push(text));
+
+      paste({
+        text: 'Voir ceci et là',
+        html: '<p>Voir <strong>ceci</strong> et <a href="https://devnotes.fr">là</a></p>',
+      });
+      await fixture.whenStable();
+
+      expect(pasted).toEqual([]);
+      expect(surface().querySelector('strong')?.textContent).toBe('ceci');
+      expect(surface().querySelector('a')?.getAttribute('href')).toBe('https://devnotes.fr');
+    });
+
+    it('still asks about code an editor copied as coloured HTML', async () => {
+      const pasted: string[] = [];
+      fixture.componentInstance.pastedIntoEmpty.subscribe((text) => pasted.push(text));
+
+      paste({
+        text: 'const a = 1;',
+        html: '<div style="color:#d4d4d4"><span style="color:#569cd6">const</span> a = 1;</div>',
+      });
+      paste({ text: 'npm run build', html: '<pre><code><b>npm</b> run build</code></pre>' });
+
+      expect(pasted).toEqual(['const a = 1;', 'npm run build']);
     });
 
     it('leaves a paste into a note that has text to the editor', async () => {

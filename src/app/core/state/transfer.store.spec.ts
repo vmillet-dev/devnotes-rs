@@ -282,26 +282,27 @@ describe('TransferStore', () => {
 
   describe('export', () => {
     /**
-     * Down to the minute: two exports on the same day were offered the same name, and
+     * Down to the second: two exports in the same minute were offered the same name, and
      * replacing the first was one Enter away. The expectation is derived through
      * `sv-SE`, which formats local time ISO-style — a literal would pin the runner's
      * timezone, and the point is that the name is **not** the UTC day.
      */
-    it('proposes a name stamped with the local day and minute', async () => {
+    it('proposes a name stamped with the local day and second', async () => {
       harness.dialog.savePath = 'C:/out.json';
       const local = NOW.toLocaleString('sv-SE');
-      const expected = `devnotes-${local.slice(0, 10)}-${local.slice(11, 13)}${local.slice(14, 16)}.devnotes`;
+      const time = `${local.slice(11, 13)}${local.slice(14, 16)}${local.slice(17, 19)}`;
+      const expected = `devnotes-${local.slice(0, 10)}-${time}.devnotes`;
 
       await exportEverything(harness);
 
       expect(harness.dialog.saveCalls[0].defaultPath).toBe(expected);
     });
 
-    it('offers a second name a minute later, rather than the first one again', async () => {
+    it('offers a second name in the same minute, rather than the first one again', async () => {
       harness.dialog.savePath = 'C:/out.json';
       await exportEverything(harness);
 
-      await exportEverything(harness, null, IN_THE_CLEAR, new Date(NOW.getTime() + 60_000));
+      await exportEverything(harness, null, IN_THE_CLEAR, new Date(NOW.getTime() + 2_000));
 
       const [first, second] = harness.dialog.saveCalls;
       expect(second?.defaultPath).not.toBe(first?.defaultPath);

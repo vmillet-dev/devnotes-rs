@@ -31,20 +31,19 @@
       </div>
     }
 
-    @if (drawingChoices().length > 0) {
-      <div class="rich-group">
-        <!-- The press is kept from the menu, as from the buttons: the caret stays where it was. -->
-        <app-choice-menu
-          kind="rich-drawing"
-          naming="label"
-          triggerTestId="rich-embed-drawing"
-          [label]="'drawing.embed' | transloco"
-          [options]="drawingChoices()"
-          (mousedown)="$event.preventDefault()"
-          (chosen)="embedDrawing($event)"
-        />
-      </div>
-    }
+    <div class="rich-group">
+      <!-- The press is kept from the menu, as from the buttons: the caret stays where it was. -->
+      <app-choice-menu
+        kind="rich-drawing"
+        naming="label"
+        triggerTestId="rich-embed-drawing"
+        [label]="'drawing.embed' | transloco"
+        [options]="drawingChoices()"
+        [emptyLabel]="'drawing.embedNone' | transloco"
+        (mousedown)="$event.preventDefault()"
+        (chosen)="embedDrawing($event)"
+      />
+    </div>
 
     @if (codeLanguage(); as language) {
       <div class="rich-group">

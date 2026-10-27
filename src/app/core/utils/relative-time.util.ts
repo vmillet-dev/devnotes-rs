@@ -13,10 +13,19 @@ export function relativeTimeRef(date: Date, now: Date): TranslationRef {
   return { key: 'time.daysAgo', params: { count: days } };
 }
 
+/** The local calendar day as a number: a day is 23 or 25 hours when the clocks change. */
+function localDay(date: Date): number {
+  return Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / MS_PER_DAY);
+}
+
+/**
+ * In local calendar days, not in hours: an expiry is the end of its day, and counted in hours
+ * the third day away read « 4j » every evening.
+ */
 export function expiryRef(at: Date, now: Date): TranslationRef {
-  const days = Math.ceil((at.getTime() - now.getTime()) / MS_PER_DAY);
-  if (days <= 0) return { key: 'time.expired' };
-  return { key: 'time.expiresIn', params: { count: days } };
+  if (at.getTime() <= now.getTime()) return { key: 'time.expired' };
+  const days = localDay(at) - localDay(now);
+  return days === 0 ? { key: 'time.expiresToday' } : { key: 'time.expiresIn', params: { count: days } };
 }
 
 const SPANS: readonly (readonly [unit: string, ms: number])[] = [

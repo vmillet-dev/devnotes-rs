@@ -169,10 +169,11 @@ impl CodeRequest {
     }
 }
 
-/// `api.example.com/users` is written as `http://api.example.com/users`, as it is sent.
+/// `api.example.com/users` is written as `http://api.example.com/users`, as it is sent. A URL
+/// starting on a variable left unresolved is written as typed: `{{base}}` holds its own scheme.
 fn with_scheme(url: &str) -> String {
     let url = url.trim();
-    if url.contains("://") {
+    if url.contains("://") || url.starts_with("{{") {
         url.to_string()
     } else {
         format!("http://{url}")
@@ -597,7 +598,8 @@ mod tests {
         assert!(clear.secrets.is_empty());
 
         let typed = generated(options(false, false));
-        assert!(typed.code.contains("{{baseUrl}}/me"));
+        assert!(typed.code.contains("'{{baseUrl}}/me"), "{}", typed.code);
+        assert!(!typed.code.contains("://{{"), "{}", typed.code);
     }
 
     #[test]

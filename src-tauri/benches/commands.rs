@@ -38,6 +38,7 @@ fn query(search: &str) -> NotesQuery {
         priorities: Vec::new(),
         order: NoteOrder::default(),
         grouping: Grouping::default(),
+        ranked: false,
         now: now(),
         tz_offset_minutes: -120,
         pinned_first: true,

@@ -9,6 +9,7 @@ import { undoBar } from '../pageobjects/overlays.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
 import { settings } from '../pageobjects/titlebar.page.js';
 import {
+  clipboardText,
   eventually,
   isInFront,
   press,
@@ -66,8 +67,62 @@ describe('Editing a note', () => {
     await canvas.openNote(title);
     // Derived from the draft, so it is what says the editor is on the note that was opened.
     const footer = await editor.footer();
-    expect(footer).toContain('1');
+    // A one-line body in the singular, in either language (COD-20): « 1 lignes » passed for « 1 ».
+    expect(footer).toMatch(/· 1 (ligne|line) ·/);
     await editor.close();
+  });
+
+  /** NOT-07: a click on a card beside the editor closed it, the edit kept, and opened nothing. */
+  it('opens the card clicked beside the editor, the edit of the first kept', async () => {
+    const first = await bridge.createNote(draft({ spaceId, title: 'Beside one', content: 'echo one' }));
+    const second = await bridge.createNote(draft({ spaceId, title: 'Beside two', content: 'echo two' }));
+    const restore = await browser.getWindowSize();
+    try {
+      // Wide enough for cards to show beside the editor's panel.
+      await browser.setWindowSize(1600, 900);
+      await reloadCanvas();
+      await canvas.openNote('Beside one');
+      await setField(testid('editor-title'), 'Beside one edited');
+
+      const target = await eventually(
+        () =>
+          browser.execute((wanted: string) => {
+            const panel = document.querySelector('[role="dialog"]')?.getBoundingClientRect();
+            if (!panel) return null;
+            for (const card of document.querySelectorAll('app-note-card')) {
+              const name = card.querySelector('[data-testid="note-card-title"]')?.textContent?.trim();
+              const box = card.getBoundingClientRect();
+              const [x, y] = [box.left + box.width / 2, box.top + 12];
+              const beside = x < panel.left || x > panel.right || y < panel.top || y > panel.bottom;
+              if (name === wanted && beside && y > 0 && y < window.innerHeight) {
+                return { x: Math.round(x), y: Math.round(y) };
+              }
+            }
+            return null;
+          }, 'Beside two'),
+        (point) => point !== null,
+        'the second card beside the editor',
+      );
+      await browser
+        .action('pointer')
+        .move({ x: target!.x, y: target!.y, origin: 'viewport' })
+        .down()
+        .up()
+        .perform();
+
+      await eventually(editor.title, (shown) => shown === 'Beside two', 'the card clicked opened');
+      await eventually(
+        async () => (await bridge.getNote(first.id)).title,
+        (kept) => kept === 'Beside one edited',
+        'the first note kept its edit',
+      );
+      await editor.close();
+    } finally {
+      await browser.setWindowSize(restore.width, restore.height);
+      await bridge.deleteNotes([first.id, second.id]);
+      await bridge.purgeNotes([first.id, second.id]);
+      await reloadCanvas();
+    }
   });
 
   it('goes fullscreen and back, without losing the draft', async () => {
@@ -368,6 +423,94 @@ describe('Editing a note', () => {
       await canvas.waitForCard(richTitle);
     });
 
+    /** RIC-09: typed key by key, « 2 * 3 * 4 » lost its stars to an italic 3, stored « 2  *3*  4 ». */
+    it('keeps « 2 * 3 * 4 » as typed, without italics, in the text and in the Markdown', async () => {
+      const typed = 'Stars kept';
+      const id = (await bridge.createNote(draft({ spaceId, title: typed, content: '', kind: 'note' }))).id;
+      await reloadCanvas();
+      await canvas.openNote(typed);
+      await $(testid('editor-rich')).click();
+      // Key by key, as the input rules read typing: the WebView2 driver drops a space sent as a key.
+      for (const char of '2 * 3 * 4') {
+        await browser.execute((value: string) => document.execCommand('insertText', false, value), char);
+      }
+      await editor.close();
+
+      const stored = await eventually(
+        async () => (await bridge.getNote(id)).content,
+        (content) => content !== '',
+        'the text written',
+      );
+      expect(stored).toBe('2 * 3 * 4');
+      await canvas.openNote(typed);
+      expect(await $(`${testid('editor-rich')} em`).isExisting()).toBe(false);
+      expect((await $(testid('editor-rich')).getText()).trim()).toBe('2 * 3 * 4');
+      await editor.close();
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+    });
+
+    /** RIC-10: pasted into a new, empty Note, a page's bold and link arrived as plain text. */
+    it('keeps the bold and the link of a page pasted into a new, empty Note', async () => {
+      await canvas.createRichNote();
+      await $(testid('editor-rich')).waitForDisplayed({ timeout: 10_000 });
+      await browser.execute((selector: string) => {
+        const surface = document.querySelector<HTMLElement>(selector)!;
+        surface.focus();
+        const data = new DataTransfer();
+        data.setData('text/plain', 'Voir zqcopie et là');
+        data.setData(
+          'text/html',
+          '<p>Voir <strong>zqcopie</strong> et <a href="https://devnotes.fr">là</a></p>',
+        );
+        surface.dispatchEvent(
+          new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+        );
+      }, testid('editor-rich'));
+      await $(`${testid('editor-rich')} strong`).waitForExist({ timeout: 5_000 });
+      await editor.close();
+
+      const pasted = await eventually(
+        async () => (await bridge.queryNotes(query({ search: 'zqcopie' }))).sections[0]?.notes[0],
+        (note) => note !== undefined,
+        'the Note written',
+      );
+      const whole = await bridge.getNote(pasted!.id);
+      expect(whole.content).toContain('**zqcopie**');
+      expect(whole.content).toContain('[là](https://devnotes.fr)');
+      await bridge.deleteNotes([pasted!.id]);
+      await bridge.purgeNotes([pasted!.id]);
+    });
+
+    /** RIC-06: a plain click on a link placed the caret and opened the browser as well. */
+    it('places the caret on a plain click on a link, and follows nothing', async () => {
+      const linked = 'Linked, not followed';
+      const id = (
+        await bridge.createNote(
+          draft({ spaceId, title: linked, content: 'Voir le [site](https://devnotes.fr).', kind: 'note' }),
+        )
+      ).id;
+      await reloadCanvas();
+      await canvas.openNote(linked);
+      const anchor = $(`${testid('editor-rich')} a`);
+      await anchor.waitForDisplayed({ timeout: 10_000 });
+      // Read after the editor's own listeners: whether the click was still to follow the link.
+      await browser.execute(() => {
+        const seen = window as unknown as { followed?: boolean };
+        window.addEventListener('click', (event) => (seen.followed = !event.defaultPrevented), {
+          once: true,
+        });
+      });
+
+      await anchor.click();
+
+      expect(await browser.execute(() => (window as unknown as { followed?: boolean }).followed)).toBe(false);
+      expect(await editor.isOpen()).toBe(true);
+      await editor.close();
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+    });
+
     it('reaches its card as words, without the Markdown', async () => {
       const view = await bridge.queryNotes(query({ search: richTitle }));
 
@@ -382,6 +525,19 @@ describe('Editing a note', () => {
       const task = card.$(`${testid('note-card-outline')} .outline-item`);
       await task.waitForExist({ timeout: 10_000 });
       expect(await task.getText()).toContain('write the notes');
+    });
+
+    /** DES-13: with no drawing in the library the button was not drawn, and never said why. */
+    it('offers to insert a drawing with none in the library, and says there is none', async () => {
+      await canvas.openNote(richTitle);
+      await $(testid('rich-embed-drawing')).click();
+      const panel = testid('choice-panel-rich-drawing');
+      await $(`${panel} ${testid('choice-empty')}`).waitForDisplayed({ timeout: 10_000 });
+      expect(await $$(`${panel} ${testid('choice-option')}`).getElements()).toHaveLength(0);
+
+      await press('Escape');
+      await $(panel).waitForExist({ reverse: true, timeout: 10_000 });
+      await editor.close();
     });
 
     it('opens formatted, and a box ticked there is stored as Markdown', async () => {
@@ -435,6 +591,34 @@ describe('Editing a note', () => {
       expect(await editor.itemChecks()).toEqual([true, false]);
       await editor.close();
       expect((await bridge.getNote(id)).items).toEqual(items);
+    });
+
+    /** NOT-10: the bar sat under the editor's backdrop, and its first click only closed the editor. */
+    it('undoes a conversion from the bar in one click, the editor open', async () => {
+      const title = 'Converted and back';
+      const id = (await bridge.createNote(draft({ spaceId, title, content: 'psql -h db', language: 'sh' })))
+        .id;
+      await reloadCanvas();
+      await canvas.openNote(title);
+
+      await editor.convertTo('note');
+      await eventually(
+        async () => (await bridge.getNote(id)).kind,
+        (kind) => kind === 'note',
+        'the Note',
+      );
+      await undoBar.bar().waitForDisplayed({ timeout: 10_000 });
+      await undoBar.restore();
+
+      const back = await eventually(
+        () => bridge.getNote(id),
+        (note) => note.kind === 'snippet',
+        'the snippet back',
+      );
+      expect(back.language).toBe('sh');
+      if (await editor.isOpen()) await editor.close();
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
     });
 
     /** The code field's bar over the text: one replace for every « deploy », one Ctrl+Z for all. */
@@ -601,6 +785,29 @@ describe('Editing a note', () => {
       await reloadCanvas();
     });
 
+    /** DES-12: C on a drawing's card copied its scene as JSON, and said it was copied. */
+    it('copies nothing of a drawing from its card, and says a drawing is not copied as text', async () => {
+      const title = 'Not as text';
+      const id = (await bridge.createNote(draft({ spaceId, title, content: '', kind: 'drawing' }))).id;
+      await reloadCanvas();
+      await canvas.openNote(title);
+      await editor.close();
+      const before = await clipboardText();
+
+      await press('c');
+      await eventually(
+        () => $(testid('status-toast')).getAttribute('data-key'),
+        (key) => key === 'notes.drawingNotCopied',
+        'the copy refused, and said so',
+      );
+      // Read where the runner lets anyone read the clipboard; see `clipboardText`.
+      if (before !== null) expect(await clipboardText()).toBe(before);
+
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
     /**
      * Drawn in the app, kept as its scene, shown on its card from a picture kept beside it,
      * written as a PNG, and embedded in a Note by its id alone.
@@ -648,6 +855,13 @@ describe('Editing a note', () => {
       await reloadCanvas();
       await $(testid('note-card-drawing')).waitForExist({ timeout: 10_000 });
 
+      // DES-15: opened and closed without a change, it was called edited.
+      const savedAt = (await bridge.getNote(id)).updatedAt;
+      await canvas.openNote(title);
+      await $(upper).waitForExist({ timeout: 10_000 });
+      await editor.close();
+      expect((await bridge.getNote(id)).updatedAt).toBe(savedAt);
+
       // The picture the WebView took, written as an export writes it: the system's save dialog
       // is the one step no driver reaches.
       const picture = (await bridge.drawingPicture(id)) ?? '';
@@ -672,6 +886,71 @@ describe('Editing a note', () => {
       expect((await bridge.getNote(noteId)).content).toBe(content);
       await bridge.deleteNotes([id, noteId]);
       await bridge.purgeNotes([id, noteId]);
+      await reloadCanvas();
+    });
+
+    /**
+     * DES-08: a shape selected, a tool taken, and the second Escape already closed the editor.
+     * The frame hears Escape on the document: what reaches it is what the drawing let go.
+     */
+    it('steps back through Escape in a drawing: the tool, then the selection, then out', async () => {
+      const title = 'Escape steps';
+      const id = (await bridge.createNote(draft({ spaceId, title, content: '', kind: 'drawing' }))).id;
+      await reloadCanvas();
+      await canvas.openNote(title);
+      const upper = `${testid('drawing-stage')} .upper-canvas`;
+      await $(upper).waitForExist({ timeout: 10_000 });
+
+      await $(`${testid('drawing-tool')}[data-tool="rectangle"]`).click();
+      await browser.execute((selector: string) => {
+        const canvasElement = document.querySelector(selector) as HTMLElement;
+        const box = canvasElement.getBoundingClientRect();
+        const send = (type: string, target: EventTarget, x: number, y: number) =>
+          target.dispatchEvent(
+            new MouseEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              button: 0,
+              clientX: box.left + x,
+              clientY: box.top + y,
+            }),
+          );
+        send('mousedown', canvasElement, 40, 40);
+        send('mousemove', document, 160, 110);
+        send('mouseup', document, 160, 110);
+        const counted = window as unknown as { escapesReached: number };
+        counted.escapesReached = 0;
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') counted.escapesReached += 1;
+        });
+      }, upper);
+      await eventually(
+        () => $(testid('drawing-stage')).getAttribute('data-shapes'),
+        (shapes) => shapes === '1',
+        'a rectangle drawn, and selected',
+      );
+      const reached = () =>
+        browser.execute(() => (window as unknown as { escapesReached: number }).escapesReached);
+      const pressed = (tool: string) =>
+        $(`${testid('drawing-tool')}[data-tool="${tool}"]`).getAttribute('aria-pressed');
+
+      await browser.keys(['o']);
+      expect(await pressed('ellipse')).toBe('true');
+
+      await browser.keys(['Escape']);
+      expect(await pressed('select')).toBe('true');
+      expect(await reached()).toBe(0);
+
+      await browser.keys(['Escape']);
+      expect(await reached()).toBe(0);
+      expect(await editor.isOpen()).toBe(true);
+
+      await browser.keys(['Escape']);
+      expect(await reached()).toBe(1);
+      await $(testid('editor-title')).waitForExist({ reverse: true, timeout: 10_000 });
+
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
       await reloadCanvas();
     });
 
