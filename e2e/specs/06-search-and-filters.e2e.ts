@@ -224,6 +224,8 @@ describe('Search, filters and facets', () => {
   it('offers the way out of the state that emptied it', async () => {
     await canvas.search('nothing matches this');
 
+    // « Effacer la recherche »: no filter is set, only the search.
+    expect(await $(testid('canvas-clear-filters')).getAttribute('data-clears')).toBe('search');
     await $(testid('canvas-clear-filters')).click();
     await waitForCanvas();
 
