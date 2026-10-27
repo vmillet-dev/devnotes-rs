@@ -40,6 +40,8 @@ describe('ScriptEditorComponent', () => {
     [...root().querySelectorAll<HTMLElement>('[data-testid="http-script-level"]')].map((level) =>
       level.textContent?.replace(/\s+/g, ' ').trim(),
     );
+  const orderLabel = () =>
+    root().querySelector('[data-testid="http-script-order-label"]')?.textContent?.trim();
   const editor = () =>
     fixture.debugElement.query(By.directive(CodeEditorComponent))?.componentInstance as
       CodeEditorComponent | undefined;
@@ -55,6 +57,7 @@ describe('ScriptEditorComponent', () => {
     );
     expect(marked).toEqual([false, true]);
     expect(levels()).toEqual(['collection API Paiements', 'dossier Factures · aucun', 'cette requête Payer']);
+    expect(orderLabel()).toBe('S’exécutent de la collection vers cette requête :');
 
     root().querySelector<HTMLButtonElement>('[data-segment-id="after"]')!.click();
     await fixture.whenStable();
@@ -64,6 +67,8 @@ describe('ScriptEditorComponent', () => {
       'dossier Factures · aucun',
       'collection API Paiements · aucun',
     ]);
+    // HSC-08: the way they run, said, as much as shown.
+    expect(orderLabel()).toBe('S’exécutent de cette requête vers la collection :');
 
     root().querySelector<HTMLButtonElement>('[data-level="collection"]')!.click();
     expect(opened).toEqual([API]);
