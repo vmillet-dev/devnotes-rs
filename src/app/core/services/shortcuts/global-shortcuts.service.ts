@@ -24,6 +24,10 @@ export class GlobalShortcutsService {
   /** While a shortcut field listens: Windows would hand it our own combinations, never the field. */
   private readonly suspended = signal(false);
 
+  private readonly _unavailable = signal<readonly string[]>([]);
+  /** What the last registration could not take: another application holds it. */
+  readonly unavailable = this._unavailable.asReadonly();
+
   /** ⚠️ Called outside a constructor, so the injector is passed explicitly. */
   start(): void {
     effect(
@@ -51,6 +55,7 @@ export class GlobalShortcutsService {
 
   private async apply(bindings: ShortcutBindings, announce = true): Promise<void> {
     const taken = await this.call(() => commands.setGlobalShortcuts(bindings));
+    if (taken) this._unavailable.set(taken);
     if (announce && taken && taken.length > 0) {
       // The count travels beside the list: the sentence agrees three times over —
       // the noun, the adjective and the participle — and a list cannot be counted by

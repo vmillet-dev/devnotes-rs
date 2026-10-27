@@ -32,7 +32,7 @@
               [attr.data-action]="action.id"
               [value]="draft.binding(action)"
               [attr.aria-invalid]="refusalFor(action.id) ? 'true' : null"
-              [attr.aria-describedby]="refusalFor(action.id) ? 'shortcut-error-' + action.id : null"
+              [attr.aria-describedby]="describedBy(action)"
               [attr.data-listening]="stopped() === action.id ? 'false' : null"
               (keydown)="onCapture(action, $event)"
               (focus)="listen(action)"
@@ -55,6 +55,16 @@
         @if (refusalFor(action.id); as refusal) {
           <p class="shortcut-error" role="alert" [id]="'shortcut-error-' + action.id">
             {{ refusal.key | transloco: refusal.params }}
+          </p>
+        }
+        @if (heldElsewhere(action)) {
+          <p
+            class="shortcut-error"
+            data-testid="shortcut-held"
+            [attr.data-action]="action.id"
+            [id]="'shortcut-held-' + action.id"
+          >
+            {{ 'settings.shortcuts.heldElsewhere' | transloco: { accelerator: draft.binding(action) } }}
           </p>
         }
       }

@@ -1095,12 +1095,13 @@
     },
     "shortcuts": {
       "reset": "Rétablir",
-      "globalNote": "Ces trois-là agissent partout, fenêtre fermée comprise : ils demandent donc au moins un modificateur, sans quoi la touche serait avalée dans toutes vos applications. Un raccourci déjà pris par une autre application est signalé au démarrage.",
+      "globalNote": "Ces trois-là agissent partout, fenêtre fermée comprise : ils demandent donc au moins un modificateur, sans quoi la touche serait avalée dans toutes vos applications. Une combinaison qu’une autre application tient déjà est signalée sous son champ, et ne peut pas y être saisie : Windows la lui remet.",
       "canvasNote": "Ceux-ci n’agissent que sur le canevas, jamais pendant une saisie : une lettre nue suffit. Cliquez dans le champ puis composez la combinaison.",
       "areasNote": "Celui-ci agit dans les trois zones — Notes, Outils et HTTP — et, avec Ctrl ou Alt, pendant une saisie aussi.",
       "fixedNote": "Les flèches, Échap, Tab et les clics avec Ctrl ou Maj ne se déplacent pas : ce sont la navigation, la sortie et la sélection, et une bibliothèque où l’on ne peut plus reculer serait pire qu’une touche mal placée.",
       "taken": "{{accelerator}} est déjà pris par « {{action}} ».",
       "needsModifier": "Un raccourci global demande au moins Ctrl, Alt, Maj ou Super.",
+      "heldElsewhere": "Raccourci global indisponible : {{accelerator}}. Une autre application l’utilise déjà.",
       "reserved": "Cette touche est réservée à la navigation.",
       "conflict": "{{accelerator}} répond à plusieurs actions : {{actions}}. Une seule agira."
     },
