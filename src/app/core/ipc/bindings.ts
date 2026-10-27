@@ -260,6 +260,8 @@ export const commands = {
 	forgetHttpResponse: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("forget_http_response", { id })),
 	/**  The last answer to `id` as an image to show, when it is one. */
 	httpResponseImage: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("http_response_image", { id })),
+	/**  An answer's text made a note: the secrets the request sent, masked wherever it says them back. */
+	httpResponseNote: (id: string | null, exchange: Exchange, text: string) => typedError<NoteText, AppError>(__TAURI_INVOKE("http_response_note", { id, exchange, text })),
 	/**  What was sent, newest first, a group a local day. */
 	httpHistory: (tzOffsetMinutes: number) => typedError<HistoryDay[], AppError>(__TAURI_INVOKE("http_history", { tzOffsetMinutes })),
 	httpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("http_history_entry", { id })),
@@ -2831,6 +2833,12 @@ export type NoteSectionKey = "pinned" | "today" | "week" | "older" | "results" |
 export type NoteTag = {
 	noteId: string,
 	tag: string,
+};
+
+/**  An answer's text as a note keeps it, and whether a secret was masked in it. */
+export type NoteText = {
+	text: string,
+	masked: boolean,
 };
 
 export type NotesQuery = {

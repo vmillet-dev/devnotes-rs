@@ -3550,7 +3550,8 @@
         "bytes": "Corps binaire de {{size}} octets.",
         "multipart": "Corps multipart : {{fields}}."
       },
-      "noteWhat": "Un snippet {{language}}, avec le corps de la réponse mis en forme."
+      "noteWhat": "Un snippet {{language}}, avec le corps de la réponse mis en forme.",
+      "noteWhatMasked": "Un snippet {{language}}, avec le corps de la réponse mis en forme ; les secrets envoyés y sont masqués."
     },
     "history": {
       "title": "Historique",

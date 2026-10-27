@@ -15,7 +15,8 @@ use devnotes_lib::http::send::{ImpliedSource, SHOWN_LIMIT, SendRequest, SentBody
 use devnotes_lib::http::transport::TransportSettings;
 use devnotes_lib::http::{
     cancel_http_send, create_http_collection, forget_http_response, http_response_image,
-    implied_http_headers, save_http_response, save_http_settings, send_http_request,
+    http_response_note, implied_http_headers, save_http_response, save_http_settings,
+    send_http_request,
 };
 use devnotes_lib::notes::language::Language;
 
@@ -630,6 +631,46 @@ fn a_body_past_what_is_shown_is_cut_and_saved_whole_to_a_file() {
             .call(|app| save_http_response("tab-1".to_string(), target, app))
             .unwrap()
     );
+}
+
+/// HHI-02: an echo service says the token back; the note made of the answer masks it.
+#[test]
+fn a_note_made_of_an_answer_masks_the_auth_the_server_said_back() {
+    let session = Session::open();
+    let (port, _seen) = serve(1, |seen, _| {
+        let auth = header_of(seen, "authorization").unwrap_or_default();
+        response("200 OK", &[], format!("Authorization: {auth}").as_bytes())
+    });
+    let mut echo = request(&format!("http://127.0.0.1:{port}/anything"));
+    echo.document.auth = RequestAuth::Bearer {
+        token: "jeton-collection".to_string(),
+    };
+
+    let answer = session.call(|app| send_http_request(echo, app)).unwrap();
+    assert_eq!(answer.body, "Authorization: Bearer jeton-collection");
+
+    let note = session
+        .call(|app| {
+            http_response_note(
+                Some("tab-1".to_string()),
+                answer.exchange.clone(),
+                answer.body.clone(),
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(note.text, "Authorization: ••••••••");
+    assert!(note.masked);
+
+    // A run's answer, kept under no id: its exchange says what left.
+    let run = session
+        .call(|app| http_response_note(None, answer.exchange.clone(), answer.body.clone(), app))
+        .unwrap();
+    assert_eq!(run.text, "Authorization: ••••••••");
+    let plain = session
+        .call(|app| http_response_note(None, answer.exchange.clone(), "plain".to_string(), app))
+        .unwrap();
+    assert!(!plain.masked);
 }
 
 #[test]

@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ScriptStop, SentResponse, TestResult } from '@core/model/http.model';
+import { HttpRepository } from '@core/data/http.repository';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ToolResult } from '@core/services/tools/tool.model';
@@ -56,6 +57,9 @@ export class ResponseViewComponent {
 
   private readonly transloco = inject(TranslocoService);
   private readonly clipboard = inject(ClipboardService);
+  private readonly repository = inject(HttpRepository);
+  /** What the dialog says the note holds: with a line when a secret was masked in it. */
+  protected readonly noteWhat = signal('http.response.noteWhat');
 
   /** A GraphQL answer's errors have a tab of their own, beside its data. */
   protected readonly sections = computed<readonly Section[]>(() => {
@@ -143,14 +147,21 @@ export class ResponseViewComponent {
     void this.clipboard.copy(this.response().body);
   }
 
-  protected saveAsNote(): void {
+  /** The answer shown is left as it came; the note keeps it as the history does, secrets masked. */
+  protected async saveAsNote(): Promise<void> {
     const response = this.response();
     if (!this.hasText()) return;
+    const note = await this.repository.responseNote(
+      this.sendId(),
+      response.exchange,
+      response.pretty ?? response.body,
+    );
+    this.noteWhat.set(note.masked ? 'http.response.noteWhatMasked' : 'http.response.noteWhat');
     this.saving.set({
       title: { key: 'http.response.noteTitle', params: { name: this.requestName() } },
       kind: 'snippet',
       language: response.language,
-      content: response.pretty ?? response.body,
+      content: note.text,
     });
   }
 

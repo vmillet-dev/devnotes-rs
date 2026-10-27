@@ -1602,6 +1602,22 @@ pub async fn http_response_image<R: Runtime>(
     off_thread(move || app.state::<send::Sending>().image(&id)).await
 }
 
+/// An answer's text made a note: the secrets the request sent, masked wherever it says them back.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_response_note<R: Runtime>(
+    id: Option<String>,
+    exchange: send::Exchange,
+    text: String,
+    app: AppHandle<R>,
+) -> Result<send::NoteText, AppError> {
+    off_thread(move || {
+        app.state::<send::Sending>()
+            .note_text(id.as_deref(), &exchange, &text)
+    })
+    .await
+}
+
 /// What was sent, newest first, a group a local day.
 #[tauri::command]
 #[specta::specta]

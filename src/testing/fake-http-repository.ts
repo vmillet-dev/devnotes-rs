@@ -103,6 +103,7 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   pendingSend: Promise<SentResponse> | null = null;
   saveAnswer = true;
   imageAnswer: string | null = null;
+  noteAnswer: { text: string; masked: boolean } | null = null;
   historyAnswer: HistoryDay[] = [];
   /** By entry id; a missing one rejects, as Rust answers a purged entry. */
   readonly entries = new Map<string, HistoryEntry>();
@@ -398,6 +399,14 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   responseImage(id: string): Promise<string | null> {
     return this.record('responseImage', [id], () => this.imageAnswer);
+  }
+
+  responseNote(id: string | null, exchange: SentResponse['exchange'], text: string) {
+    return this.record(
+      'responseNote',
+      [id, exchange, text],
+      () => this.noteAnswer ?? { text, masked: false },
+    );
   }
 
   runCollection(run: RunRequest): Promise<void> {
