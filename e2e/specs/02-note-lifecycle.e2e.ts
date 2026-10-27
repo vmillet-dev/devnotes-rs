@@ -83,6 +83,28 @@ describe('Creating a note, and finding it again', () => {
     }, crowded);
     expect(when?.whole).toBe(true);
 
+    // TRV-02: a tag that does not hold goes whole, the rest counted, never « #exempl ».
+    const tags = await browser.execute((wanted: string) => {
+      const shell = [...document.querySelectorAll('[data-testid="note-card"]')].find(
+        (each) =>
+          (each.querySelector('[data-testid="note-card-title"]')?.textContent ?? '').trim() === wanted,
+      );
+      const row = shell?.querySelector('[data-testid="note-card-tags"]');
+      if (!row) return null;
+      const box = row.getBoundingClientRect();
+      const shown = [...row.children].filter((tag) => getComputedStyle(tag).visibility !== 'hidden');
+      return {
+        whole: shown.every((tag) => {
+          const edges = tag.getBoundingClientRect();
+          return edges.top - box.top < 1 && edges.left >= box.left - 0.5 && edges.right <= box.right + 0.5;
+        }),
+        shown: shown.length,
+        more: Number(shell?.querySelector('[data-testid="note-card-tags-more"]')?.textContent?.slice(1) ?? 0),
+      };
+    }, crowded);
+    expect(tags?.whole).toBe(true);
+    expect((tags?.shown ?? 0) + (tags?.more ?? 0)).toBe(3);
+
     await bridge.deleteNotes([id]);
     await bridge.purgeNotes([id]);
     await bridge.deleteFolder(folder.id);

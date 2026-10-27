@@ -195,6 +195,8 @@ pub(super) struct Parser<'a> {
     pub(super) aggregate: bool,
     /// `en hex`, `en sci`: how the line's number is written.
     pub(super) notation: Option<Notation>,
+    /// `à 5 chiffres`: the places the line asked for, shown whatever the sheet's setting.
+    pub(super) places: Option<u32>,
     /// Inside `le plus grand de 3 et 5`, where `et` separates rather than adds.
     listing: bool,
     /// Reading a loan's amount, where `sur 6 ans` is its length, not a ratio.
@@ -220,6 +222,7 @@ impl<'a> Parser<'a> {
             converting: None,
             aggregate: false,
             notation: None,
+            places: None,
             listing: false,
             no_over: false,
             end,
@@ -496,6 +499,7 @@ impl<'a> Parser<'a> {
         let Some(places) = self.places() else {
             return Ok(None);
         };
+        self.places = Some(places);
         Ok(Some(self.in_its_unit(value.clone(), |amount| {
             Ok(maths::round_places(amount, places))
         })?))

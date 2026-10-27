@@ -2,12 +2,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  inject,
   input,
   model,
   output,
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { NoteSelectionStore } from '@core/state/note-selection.store';
+import { focusCard } from '@notes/canvas/focus-card';
 
 /** Showing "⌘K" on Windows would name a key that does not exist there. */
 function platformShortcutHint(): string {
@@ -39,6 +42,7 @@ export class SearchBoxComponent {
   protected readonly shortcutHint = platformShortcutHint();
 
   private readonly inputRef = viewChild.required<ElementRef<HTMLInputElement>>('searchInput');
+  private readonly selection = inject(NoteSelectionStore);
 
   /** Carried by the component that owns the field rather than lifted to the page. */
   protected onDocumentKeydown(event: KeyboardEvent): void {
@@ -56,6 +60,11 @@ export class SearchBoxComponent {
   protected onClearText(event: MouseEvent): void {
     event.preventDefault();
     this.textCleared.emit();
+  }
+
+  /** Down from the field to what it found: the first card. */
+  protected onArrowDown(event: Event): void {
+    if (focusCard(this.selection, null)) event.preventDefault();
   }
 
   protected onInput(value: string): void {

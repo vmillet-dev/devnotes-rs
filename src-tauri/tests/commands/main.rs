@@ -20,6 +20,7 @@ mod common;
 
 mod attachments;
 mod backups;
+mod desktop;
 mod folders;
 mod http;
 mod http_environments;

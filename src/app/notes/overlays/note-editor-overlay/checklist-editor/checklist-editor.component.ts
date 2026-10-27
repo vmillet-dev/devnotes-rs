@@ -2,7 +2,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
+  inject,
   input,
   linkedSignal,
   output,
@@ -41,6 +44,7 @@ export class ChecklistEditorComponent {
 
   readonly itemsChanged = output<readonly ChecklistItem[]>();
 
+  private readonly injector = inject(Injector);
   private readonly rows = viewChildren<ElementRef<HTMLInputElement>>('row');
 
   protected readonly draft = linkedSignal<number, ChecklistItem[]>({
@@ -247,12 +251,15 @@ export class ChecklistEditorComponent {
     this.pendingCaret = null;
     if (index === null) return;
 
-    // After the created or moved row renders: the signal has just triggered it.
-    queueMicrotask(() => {
-      const row = this.rows()[index]?.nativeElement;
-      row?.focus();
-      if (row && caret !== null) row.setSelectionRange(caret, caret);
-    });
+    // A microtask runs before the zoneless render: the row created would not be there yet.
+    afterNextRender(
+      () => {
+        const row = this.rows()[index]?.nativeElement;
+        row?.focus();
+        if (row && caret !== null) row.setSelectionRange(caret, caret);
+      },
+      { injector: this.injector },
+    );
   }
 }
 

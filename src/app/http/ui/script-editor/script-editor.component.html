@@ -16,8 +16,8 @@
 
   @if (order(); as levels) {
     <p class="order" data-testid="http-script-order">
-      <span class="order-label">{{
-        (phase() === 'tests' ? 'http.scripts.orderTests' : 'http.scripts.order') | transloco
+      <span class="order-label" data-testid="http-script-order-label">{{
+        'http.scripts.orders.' + phase() | transloco
       }}</span>
       @for (level of levels; track level.from?.id ?? 'request'; let last = $last) {
         @if (level.from; as from) {

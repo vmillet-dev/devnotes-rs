@@ -253,7 +253,7 @@ impl Resolver {
 }
 
 /// Shorter than this, a secret's value is not looked for: it would be found inside every word.
-const HIDDEN_FROM: usize = 3;
+pub(crate) const HIDDEN_FROM: usize = 3;
 
 /// Each secret's value written back as its `{{name}}`, as typed and as a query encodes it: what
 /// shows a request once it left — the timeline, the history — never shows the value. The longest

@@ -274,6 +274,17 @@ describe('NotesQueryStore', () => {
   });
 
   describe('clearing the filters', () => {
+    it('tells a search alone from filters chosen', async () => {
+      const { canvas } = await createNotesHarness([createNote()]);
+      canvas.setSearchQuery('deploy');
+
+      expect(canvas.hasUserFilters()).toBe(true);
+      expect(canvas.hasFacetFilters()).toBe(false);
+
+      canvas.toggleTag('urgent');
+      expect(canvas.hasFacetFilters()).toBe(true);
+    });
+
     it('drops the search, the tags, the languages and the kinds together', async () => {
       const { canvas, repository } = await createNotesHarness([createNote()]);
       canvas.setSearchQuery('deploy');

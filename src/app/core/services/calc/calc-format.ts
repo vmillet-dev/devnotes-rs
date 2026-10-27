@@ -49,8 +49,17 @@ function parts(value: string): { negative: boolean; whole: string; fraction: str
   return { negative, whole, fraction: fraction.replace(/0+$/, '') };
 }
 
-/** How many decimals a value is shown with, and at least how many. */
-function digitsFor(value: string, decimals: CalcDecimals, money: boolean): { min: number; max: number } {
+/**
+ * How many decimals a value is shown with, and at least how many: the places its line asked for
+ * first, then the sheet's setting; Auto keeps four significant figures, never fewer than two decimals.
+ */
+function digitsFor(
+  value: string,
+  decimals: CalcDecimals,
+  money: boolean,
+  places: number | null = null,
+): { min: number; max: number } {
+  if (places !== null) return { min: Math.min(places, 20), max: Math.min(places, 20) };
   if (decimals !== 'auto') {
     const forced = Number(decimals);
     return { min: forced, max: forced };
@@ -60,9 +69,9 @@ function digitsFor(value: string, decimals: CalcDecimals, money: boolean): { min
   // A small value keeps its first figures: 0,045 €/h is not 0,05.
   if (/^0*$/.test(whole) && fraction !== '') {
     const first = fraction.search(/[1-9]/);
-    return { min: 0, max: Math.min(first + 3, 8) };
+    return { min: 0, max: Math.min(first + 4, 8) };
   }
-  return { min: 0, max: 2 };
+  return { min: 0, max: Math.max(2, 4 - whole.replace(/^0+/, '').length) };
 }
 
 /** Exact decimal arithmetic for the footer's sum and mean, on the strings Rust sends. */
@@ -115,16 +124,21 @@ export class CalcFormatter {
     this.dateFormat = format.date ?? 'short';
   }
 
-  value(value: CalcValue): CalcText {
+  /** `places`: what the line asked for (`à 5 chiffres`), over the sheet's setting. */
+  value(value: CalcValue, places: number | null = null): CalcText {
     switch (value.kind) {
       case 'number': {
         const money = value.unit !== null && value.unit.per === null && isMoney(value.unit.unit);
-        const shown = this.number(value.value, digitsFor(value.value, this.decimals, money));
+        const shown = this.number(value.value, digitsFor(value.value, this.decimals, money, places));
         const text = value.unit === null ? shown.text : `${shown.text}${NBSP}${this.unit(value.unit)}`;
         return { text, approx: shown.approx };
       }
       case 'percent': {
-        const shown = this.number(value.value, digitsFor(value.value, this.decimals, false), value.signed);
+        const shown = this.number(
+          value.value,
+          digitsFor(value.value, this.decimals, false, places),
+          value.signed,
+        );
         return { text: this.translate('calc.percent', { value: shown.text }), approx: shown.approx };
       }
       case 'date':
@@ -238,7 +252,7 @@ export class CalcFormatter {
       .map((line, index) => {
         const row = answer.rows[index];
         if (row?.line.kind !== 'value') return line;
-        const shown = this.value(row.line.value);
+        const shown = this.value(row.line.value, row.line.places);
         const at = line.indexOf('//');
         const written = (at < 0 ? line : line.slice(0, at)).trimEnd();
         return `${written} // ${shown.approx ? '≈ ' : ''}${shown.text}`;

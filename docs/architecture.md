@@ -1204,7 +1204,9 @@ is corrected or a list completed without building the application again.
   is a file, JSON or CSV, written by Rust where the file dialog says and starting from the
   person on screen. **Several countries take their turn in one file** (`PeopleBatch`), the
   card's own first; a CSV holds the numbers of a person in one column, `kind:value` and a bar
-  between, since they differ from a country to the next.
+  between, since they differ from a country to the next. A CSV opens on a UTF-8 BOM, or a spreadsheet reads
+  `Şimşek` in its own code page, and is separated by what the export chose (`CsvSeparator`:
+  `;` for a French spreadsheet), kept as the application's `csvSeparator`.
 
 **Adding a tool**, the whole of it:
 
@@ -1610,7 +1612,8 @@ which knows no time zone, gives its cards the UTC day.
   `à 2 décimales`/`to 2 dp`, `à 5 chiffres`/`to 5 digits` (places too), `arrondi`/`rounded`
   (a half away from zero), `arrondi supérieur`/`inférieur`, `au 10 près`/`to nearest 10`,
   `au millier près`, `à la centaine près`, combined (`arrondi supérieur au 5 près`). A quantity
-  rounds in the unit it is shown in.
+  rounds in the unit it is shown in. The places asked for travel with the result (`CalcLine::Value.places`)
+  and decide its display over the sheet's « Décimales ».
 - **Bases and bits**: `0xFF`, `0b1010`, `0o377` and `5,3e+3` are numbers; `en hex`/`bin`/`oct`/
   `sci`, `en base 2|8|16`, `hex(…)`, `bin(…)`, `int(…)` say how the line's plain number is written
   (`CalcValue::Base`, `Scientific`, the front putting `0x` before the digits Rust sends).
@@ -1664,7 +1667,8 @@ answer), its theme its own (`calc-theme.ts`). A result is picked by a click, Shi
 Ctrl for one more, or by selecting lines of the text; the footer adds them up and averages them
 — in exact decimals, on the strings Rust sent (`decimalSum`) — and says when they are of
 different units. Three application preferences change the display, never the computation:
-« Décimales » (`calcDecimals`, Auto or 0 to 14, in the footer and in the preferences), « Format
+« Décimales » (`calcDecimals`, Auto or 0 to 14, in the footer and in the preferences; Auto keeps
+four significant figures and never fewer than two decimals, money two), « Format
 des nombres et des dates » (`calcNumberFormat`: the language on screen or one of
 `CALC_LOCALES`, written by `Intl` — a locale carries no data of ours) and « Format de date »
 (`calcDateFormat`: numeric, short, long). They are the application's, not the sheet's: a sheet
@@ -2577,6 +2581,11 @@ is logged.
   also keeps the environment it left with, its name and colour then (`HistorySummary::environment`,
   sealed with the rest), shown on its row. « Rouvrir » puts the `{{name}}` back, which resolves
   again.
+- **What the request sent as a secret is masked where the answer says it back**: the token of
+  its auth (and the whole header), each cookie value, the API key (`history::sent_secrets`). An
+  echo service answering `Authorization: Bearer …` keeps `••••••••` in the history. A note made
+  of an answer goes through the same (`http_response_note`: the answer kept under the send's id
+  for its secret variables, its exchange for the rest) and says so; the answer shown is left as it came.
 - ⚠️ **The limit of the mask**: it knows the secrets a request _declares_. A token typed by
   hand as a parameter or in a body, or one a server answers in its body, is kept as it is —
   sealed like the rest of the record, and shown to whoever opens the entry. A test a secret
@@ -4696,9 +4705,13 @@ Each reveals the window and emits `GlobalAction::Capture`, `NewNote` or `Palette
 gets no error — the key simply does nothing. `Ctrl+Alt+Space` was the palette's first choice
 and lost it to a widely installed application, which is why it is now `Ctrl+Alt+P`. Losing one
 is still possible, so `set_global_shortcuts` **returns** what it could not take and the front
-says so. A log line is not an interface. The same command re-registers the three from scratch
+says so. The service keeps that list (`unavailable`) and the field in Preferences whose combination
+is in it says so under it. A log line is not an interface. The same command re-registers the three from scratch
 whenever the preference changes — everything is released first, or an abandoned combination
 would keep answering.
+While a global field of Preferences listens, the three are let go (`release_global_shortcuts`)
+and taken back when it stops, quietly: Windows hands a registered combination to its
+registration, so `Ctrl+Alt+N` typed there would open a note instead of being refused by name.
 
 - **Rust does not create the note.** Keeping creation on the front means one creation path
   (`create_note`), so a captured note gets language detection without a second implementation,
@@ -4806,7 +4819,7 @@ The commands, grouped by the feature that owns them:
 | `backup`      | `list_backups`, `restore_backup`                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `recovery`    | `archive_locked_library`, `set_aside_damaged_library`                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `changelog`   | `app_changelog`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `desktop`     | `hold_quit`, `set_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                                                        |
+| `desktop`     | `hold_quit`, `set_global_shortcuts`, `release_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                            |
 
 The guarantees the front-end relies on (persisted value returned, `Err` on an unknown id,
 "absent field means unchanged" for patches) are implemented in each feature, and tested there.
@@ -5364,7 +5377,8 @@ and decrypted is time every other command would spend waiting.
 
 ⚠️ `open_attachment` is the exception, and a deliberate one: the program that opens a
 document reads it from disk, so DevNotes writes a decrypted copy under `app_data_dir()/open/`
-and opens that — one click, as before. Those copies are swept on the way out
+and opens that — one click, as before. The copy is `<id>/<its own name>` (`Attachment::opened_copy`):
+the viewer shows the name the user knows, and two of one name do not meet. Those copies are swept on the way out
 (`RunEvent::Exit`) and again at every launch, which is what covers one another application
 still held, and a crash. ⚠️ The profile and **not** the OS temporary directory: that one is
 shared with every account on the machine, where the copy would be readable by all of them

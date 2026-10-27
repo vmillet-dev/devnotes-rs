@@ -155,6 +155,11 @@ export function canvasKeystrokeFromEvent(event: Event): string | null {
   return isCanvasKey(key) ? [...modifiers, key].join('+') : null;
 }
 
+/** A modifier pressed alone: a combination still being typed, not a key refused. */
+export function isModifierAlone(event: KeyboardEvent): boolean {
+  return MODIFIER_KEYS.has(event.key);
+}
+
 export function isAccelerator(value: string): boolean {
   const tokens = value.split('+').map((token) => token.trim());
   if (tokens.length < 2) return false;

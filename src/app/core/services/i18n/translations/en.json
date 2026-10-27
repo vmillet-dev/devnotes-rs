@@ -57,6 +57,7 @@
     "clearFilters": "Clear the filters",
     "clearSearch": "Clear the search",
     "attachmentsCount": "{count, plural, =0 {no attachments} one {# attachment} other {# attachments}}",
+    "moreTags": "{count, plural, one {# more tag} other {# more tags}}",
     "placeholdersCount": "{count, plural, =0 {no fields to fill} one {# field to fill} other {# fields to fill}}",
     "selectNote": "Select note {{title}}",
     "keyboardHint": "↑↓←→ move · Enter open · C copy · X select · Del trash",
@@ -283,7 +284,7 @@
       "onLine": "on line",
       "replacedMatches": "replaced $ matches",
       "replacedOnLine": "replaced match on line $",
-      "goToLine": "Go to line",
+      "goToLine": "Go to line:",
       "go": "Go",
       "controlCharacter": "Control character",
       "selectionDeleted": "Selection deleted"
@@ -1094,12 +1095,13 @@
     },
     "shortcuts": {
       "reset": "Reset",
-      "globalNote": "These three work everywhere, window closed included, so each needs at least one modifier — without one the key would be swallowed in every application you use. A shortcut another application already holds is reported at startup.",
+      "globalNote": "These three work everywhere, window closed included, so each needs at least one modifier — without one the key would be swallowed in every application you use. A combination another application already holds is reported under its field, and cannot be typed there: Windows hands it to that application.",
       "canvasNote": "These only act on the canvas, never while typing, so a bare letter is enough. Click the field, then press the combination.",
       "areasNote": "This one acts in the three areas — Notes, Tools and HTTP — and, with Ctrl or Alt, while typing too.",
       "fixedNote": "The arrows, Escape, Tab and the Ctrl or Shift clicks do not move: they are the navigation, the way out and the selection, and a library you cannot step back through would be worse than a badly placed key.",
       "taken": "{{accelerator}} is already held by \"{{action}}\".",
       "needsModifier": "A global shortcut needs at least Ctrl, Alt, Shift or Super.",
+      "heldElsewhere": "Global shortcut unavailable: {{accelerator}}. Another application already holds it.",
       "reserved": "That key is reserved for navigation.",
       "conflict": "{{accelerator}} answers several actions: {{actions}}. Only one will act."
     },
@@ -1846,6 +1848,11 @@
       "formats": {
         "json": "JSON",
         "csv": "CSV"
+      },
+      "separator": "Separator",
+      "separators": {
+        "comma": "Comma",
+        "semicolon": "Semicolon"
       },
       "export": "Export…",
       "batchHint": "1 to 100 people in a file, the first being the one on the card; the countries chosen take their turn.",
@@ -2647,6 +2654,7 @@
       },
       "nil": "Nil UUID",
       "created": "Created",
+      "createdLocally": "Local time",
       "counter": "Counter",
       "possible": "Nothing to read: it has the shape of a {{kinds}}.",
       "outOfRange": "The shape of a {{kind}}, but past what one can hold.",
@@ -3542,7 +3550,8 @@
         "bytes": "Binary body of {{size}} bytes.",
         "multipart": "Multipart body: {{fields}}."
       },
-      "noteWhat": "A {{language}} snippet, holding the response's body laid out."
+      "noteWhat": "A {{language}} snippet, holding the response's body laid out.",
+      "noteWhatMasked": "A {{language}} snippet, holding the response's body laid out; the secrets sent are masked in it."
     },
     "history": {
       "title": "History",
@@ -3671,8 +3680,11 @@
         "after": "After the response",
         "tests": "Tests"
       },
-      "order": "They run in this order:",
-      "orderTests": "They run after the script after the response, in this order:",
+      "orders": {
+        "before": "They run from the collection down to this request:",
+        "after": "They run from this request back up to the collection:",
+        "tests": "They run after the script after the response, from this request back up to the collection:"
+      },
       "levels": {
         "collection": "collection",
         "folder": "folder",
@@ -3827,6 +3839,7 @@
       "protected": "{{name}} is protected: {count, plural, one {# request} other {# requests}} of {{total}} can change it ({{requests}}).",
       "failed": "The run could not go to its end.",
       "failures": "{count, plural, one {# failure} other {# failures}}",
+      "cancelled": "Cancelled · {{done}} of {count, plural, one {# request} other {# requests}}",
       "allPassed": "All pass",
       "requests": "{count, plural, one {# request} other {# requests}}",
       "iterationsCount": "{count, plural, one {# iteration} other {# iterations}}",

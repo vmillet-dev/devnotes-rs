@@ -34,6 +34,8 @@ export class RunnerResultsComponent {
   readonly iterations = input.required<number>();
   readonly data = input<RunData | null>(null);
   readonly millis = input<number | null>(null);
+  /** Cut short by « Annuler »: how many requests it was to send, to say how far it went. */
+  readonly cancelledOf = input<number | null>(null);
   readonly filter = input.required<RunnerFilter>();
   readonly filterChanged = output<RunnerFilter>();
 

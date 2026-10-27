@@ -488,6 +488,13 @@ export class RichTextEditorComponent {
       return true;
     }
 
+    const level = headingLevelOf(event);
+    if (level !== null && this.editor) {
+      event.preventDefault();
+      this.editor.commands.toggleHeading({ level });
+      return true;
+    }
+
     const key = searchKeyOf(event);
     if (key === 'find' || key === 'replace') {
       this.openSearch(key === 'replace');
@@ -528,4 +535,14 @@ export class RichTextEditorComponent {
     // Once the bar has left: focused before, the caret went to the page with the bar's field.
     afterNextRender(() => focusFirst(editor), { injector: this.injector });
   }
+}
+
+/**
+ * Ctrl+Alt+1 to 6 by the key's position: AZERTY's 1 is `&`, and ProseMirror reads the key code
+ * back for every modifier but Ctrl+Alt on Windows, which it leaves to AltGr.
+ */
+function headingLevelOf(event: KeyboardEvent): 1 | 2 | 3 | 4 | 5 | 6 | null {
+  if (!(event.ctrlKey || event.metaKey) || !event.altKey || event.shiftKey) return null;
+  const digit = /^Digit([1-6])$/.exec(event.code)?.[1];
+  return digit ? (Number(digit) as 1 | 2 | 3 | 4 | 5 | 6) : null;
 }

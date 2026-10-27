@@ -462,6 +462,31 @@ pub struct HttpPlace {
     pub index: u32,
 }
 
+/// The type a multipart file part is sent with, read off its name: what an attachment knows,
+/// and the web's own files besides; `application/octet-stream` for the rest.
+pub fn part_type(file_name: &str) -> String {
+    let extension = file_name
+        .rsplit_once('.')
+        .map(|(_, extension)| extension.to_ascii_lowercase());
+    let web = match extension.as_deref() {
+        Some("html" | "htm") => "text/html",
+        Some("xml") => "application/xml",
+        Some("css") => "text/css",
+        Some("js" | "mjs") => "text/javascript",
+        Some("yaml" | "yml") => "application/yaml",
+        Some("avif") => "image/avif",
+        Some("ico") => "image/vnd.microsoft.icon",
+        Some("mp3") => "audio/mpeg",
+        Some("wav") => "audio/wav",
+        Some("mp4") => "video/mp4",
+        Some("webm") => "video/webm",
+        Some("gz") => "application/gzip",
+        Some("tar") => "application/x-tar",
+        _ => return crate::attachments::model::mime_of(file_name),
+    };
+    web.to_string()
+}
+
 pub fn validated_name(raw: &str) -> Result<String, ValidationError> {
     crate::name::readable(raw, "collection, folder or request")
 }
@@ -469,6 +494,15 @@ pub fn validated_name(raw: &str) -> Result<String, ValidationError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_file_part_takes_the_type_of_its_extension() {
+        assert_eq!(part_type("image-test.PNG"), "image/png");
+        assert_eq!(part_type("index.html"), "text/html");
+        assert_eq!(part_type("data.json"), "application/json");
+        assert_eq!(part_type("archive.tar.gz"), "application/gzip");
+        assert_eq!(part_type("Makefile"), "application/octet-stream");
+    }
 
     #[test]
     fn every_method_and_kind_survives_its_stored_spelling() {

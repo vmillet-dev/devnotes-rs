@@ -225,7 +225,7 @@ export class CalcEditorComponent {
   ): ShownResult[] {
     return sheet.rows.flatMap((row, line): ShownResult[] => {
       if (row.line.kind === 'value') {
-        const shown = formatter.value(row.line.value);
+        const shown = formatter.value(row.line.value, row.line.places);
         const exact = formatter.exact(row.line.value);
         return [
           {

@@ -267,6 +267,12 @@ describe('Preferences', () => {
       expect(await field.getValue()).toBe(before);
       expect(await settings.shortcutError('palette').isExisting()).toBe(true);
 
+      // Held by « Créer une note »: refused by name. WebDriver's keys never pass through the
+      // system, so the shortcuts let go while the field listens are checked by hand.
+      await press('n', ['Control', 'Alt']);
+      expect(await field.getValue()).toBe(before);
+      expect(await settings.shortcutError('palette').getText()).toContain('Ctrl+Alt+N');
+
       // `KeyboardEvent.code`, so a combination set on AZERTY stays put on QWERTY.
       await press('j', ['Control', 'Alt']);
       expect(await field.getValue()).toBe('Ctrl+Alt+J');
@@ -320,6 +326,16 @@ describe('Preferences', () => {
 
       expect(await field.getValue()).toBe('P');
       expect(await settings.shortcutError('canvas.pin').getText()).toContain('C');
+
+      // An arrow is the canvas's own: refused with a word, where it once did nothing at all.
+      await press('ArrowLeft');
+      expect(await field.getValue()).toBe('P');
+      expect(await settings.shortcutError('canvas.pin').getText()).not.toContain('C');
+
+      // Escape ends the listening, not Preferences.
+      await press('Escape');
+      expect(await field.getAttribute('data-listening')).toBe('false');
+      expect(await $(testid('settings-page')).isExisting()).toBe(true);
     });
 
     // Readonly: a text cursor would promise the wrong interaction.

@@ -10,6 +10,11 @@ describe('phrasesFrom', () => {
     });
   });
 
+  it('gives a label its colon back, the space before it kept for CodeMirror to follow', () => {
+    expect(phrasesFrom({ goToLine: 'Aller à la ligne :' })['Go to line']).toBe('Aller à la ligne ');
+    expect(phrasesFrom({ goToLine: 'Go to line:' })['Go to line']).toBe('Go to line');
+  });
+
   it('leaves a word missing or empty to its English', () => {
     expect(phrasesFrom({ go: '', close: 42 })).toEqual({});
   });

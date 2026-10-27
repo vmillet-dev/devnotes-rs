@@ -1,4 +1,5 @@
 import { CalcDateFormat, CalcDecimals, CalcNumberFormat } from '@core/model/calc.model';
+import type { CsvSeparator } from '@core/model/tool-answers.model';
 import type { NoteKind } from '@core/model/checklist.model';
 import { AREAS, Area } from '@core/services/areas/area.model';
 import { APP_LOCALES } from '@core/services/i18n/locale.model';
@@ -109,7 +110,11 @@ export interface AppSettings {
   /** The locale a sheet writes its numbers and dates in; `language` follows the one on screen. */
   readonly calcNumberFormat: CalcNumberFormat;
   readonly calcDateFormat: CalcDateFormat;
+  /** What a CSV a tool exports is separated by: chosen at the export, kept for the next. */
+  readonly csvSeparator: CsvSeparator;
 }
+
+export const CSV_SEPARATORS: readonly CsvSeparator[] = ['comma', 'semicolon'];
 
 /** Zones beyond the machine's, read back from a file nobody checks. */
 export const MAX_TIME_ZONES = 24;
@@ -146,6 +151,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   calcDecimals: 'auto',
   calcNumberFormat: 'language',
   calcDateFormat: 'short',
+  csvSeparator: 'comma',
 };
 
 /** Derived rather than hand-written: the key is the field name, prefixed. */

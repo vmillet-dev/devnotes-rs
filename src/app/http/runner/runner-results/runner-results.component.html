@@ -1,8 +1,13 @@
 @let said = summary();
 <div class="summary" data-testid="http-runner-summary">
+  @if (cancelledOf(); as planned) {
+    <span class="pill" data-testid="http-runner-cancelled">{{
+      'http.runner.cancelled' | transloco: { done: said.requests, count: planned }
+    }}</span>
+  }
   @if (said.failures > 0) {
     <span class="pill failing">{{ 'http.runner.failures' | transloco: { count: said.failures } }}</span>
-  } @else {
+  } @else if (cancelledOf() === null) {
     <span class="pill passing">{{ 'http.runner.allPassed' | transloco }}</span>
   }
   <span class="figures" data-testid="http-runner-figures">

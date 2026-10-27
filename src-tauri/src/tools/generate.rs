@@ -493,6 +493,21 @@ mod tests {
         );
     }
 
+    /// GEN-03: the keys of the template, in its order, never sorted.
+    #[test]
+    fn a_document_keeps_the_key_order_of_its_template() {
+        let template = r#"{ "id": "9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90", "email": "ana@exemple.fr", "montant": 49.9, "payee": true, "creeeLe": "2026-09-29T14:03:12Z" }"#;
+
+        let (value, _) = generated(JsonSource::Example, template, 2, 7);
+
+        for document in value.as_array().unwrap() {
+            assert_eq!(
+                document.as_object().unwrap().keys().collect::<Vec<_>>(),
+                ["id", "email", "montant", "payee", "creeeLe"]
+            );
+        }
+    }
+
     #[test]
     fn an_example_keeps_its_shape_and_the_kinds_of_its_values() {
         let example = r#"{

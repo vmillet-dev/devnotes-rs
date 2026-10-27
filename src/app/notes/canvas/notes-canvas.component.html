@@ -94,9 +94,10 @@
               type="button"
               class="canvas-retry"
               data-testid="canvas-clear-filters"
+              [attr.data-clears]="canvas.hasFacetFilters() ? 'filters' : 'search'"
               (click)="canvas.clearFilters()"
             >
-              {{ 'notes.clearFilters' | transloco }}
+              {{ (canvas.hasFacetFilters() ? 'notes.clearFilters' : 'notes.clearSearch') | transloco }}
             </button>
           } @else {
             <!-- The chapter that explains this screen, not the top of the guide. -->

@@ -1,9 +1,9 @@
-import { browser, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { banners } from '../pageobjects/titlebar.page.js';
-import { clipboardText, eventually, press, reloadCanvas, testid } from '../support/app.js';
+import { clipboardText, eventually, press, reloadCanvas, testid, typeKeys } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -73,6 +73,27 @@ describe('Todo lists', () => {
 
     await bridge.deleteNotes([view.sections[0]!.notes[0]!.id]);
     await bridge.purgeNotes([view.sections[0]!.notes[0]!.id]);
+  });
+
+  it('types the next item where Enter put the caret', async () => {
+    const typed = 'Typed list';
+    await canvas.createChecklist();
+    await editor.setTitle(typed);
+    await editor.addItem('');
+
+    await $(testid('checklist-text')).click();
+    await typeKeys('Prepare');
+    await press('Enter');
+    await eventually(editor.itemTexts, (texts) => texts.length === 2, 'a second item after Enter');
+    await typeKeys('Deploy');
+    await editor.close();
+
+    const view = await bridge.queryNotes(query({ search: typed }));
+    const note = view.sections[0]!.notes[0]!;
+    expect((note.items ?? []).map((item) => item.text)).toEqual(['Prepare', 'Deploy']);
+
+    await bridge.deleteNotes([note.id]);
+    await bridge.purgeNotes([note.id]);
   });
 
   it('ticks an item from the editor', async () => {

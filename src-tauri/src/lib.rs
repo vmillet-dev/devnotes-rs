@@ -33,7 +33,9 @@ use attachments::{
 };
 use backup::{list_backups, restore_backup, take_restored_aside};
 use changelog::{app_changelog, release_notes};
-use desktop::{hold_quit, set_global_shortcuts, set_window_behavior, sync_tray};
+use desktop::{
+    hold_quit, release_global_shortcuts, set_global_shortcuts, set_window_behavior, sync_tray,
+};
 use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
     list_folders, move_folder, move_folder_back, recolour_folder, rename_folder, save_board_layout,
@@ -47,10 +49,10 @@ use http::{
     delete_http_history_entry, delete_http_item, describe_graphql, describe_http_body,
     duplicate_http_environment, duplicate_http_item, forget_http_response, generate_http_code,
     get_http_request, http_cookies, http_environments, http_history, http_history_draft,
-    http_history_entry, http_history_onto_request, http_response_image, http_run_order,
-    http_settings, http_tree, http_variables, implied_http_headers, inherited_http_settings,
-    move_http_item, read_http_headers, read_http_run_data, rename_http_item,
-    reorder_http_collection, restore_http_history_entry, run_http_collection,
+    http_history_entry, http_history_onto_request, http_response_image, http_response_note,
+    http_run_order, http_settings, http_tree, http_variables, implied_http_headers,
+    inherited_http_settings, move_http_item, read_http_headers, read_http_run_data,
+    rename_http_item, reorder_http_collection, restore_http_history_entry, run_http_collection,
     save_http_environment, save_http_globals, save_http_request, save_http_response,
     save_http_run_order, save_http_settings, search_http_requests, send_http_request,
     send_websocket, sync_http_query,
@@ -220,6 +222,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             save_http_response::<tauri::Wry>,
             forget_http_response::<tauri::Wry>,
             http_response_image::<tauri::Wry>,
+            http_response_note::<tauri::Wry>,
             http_history::<tauri::Wry>,
             http_history_entry::<tauri::Wry>,
             http_history_draft::<tauri::Wry>,
@@ -289,6 +292,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             release_notes,
             sync_tray,
             set_global_shortcuts,
+            release_global_shortcuts::<tauri::Wry>,
             set_window_behavior,
             hold_quit,
         ])

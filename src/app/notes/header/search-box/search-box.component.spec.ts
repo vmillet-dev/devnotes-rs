@@ -50,6 +50,25 @@ describe('SearchBoxComponent', () => {
     expect(input().placeholder).toBe('Rechercher…');
   });
 
+  it('goes down to the first card on ArrowDown, and stays when there is none', () => {
+    const none = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+    input().dispatchEvent(none);
+    expect(none.defaultPrevented).toBe(false);
+
+    const card = document.createElement('div');
+    card.dataset['testid'] = 'note-card';
+    card.dataset['noteId'] = 'a';
+    card.innerHTML = '<button data-testid="note-card-open"></button>';
+    document.body.appendChild(card);
+    input().focus();
+
+    const down = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+    input().dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(card.querySelector('button'));
+    card.remove();
+  });
+
   it('renders the provided query in the input', async () => {
     fixture.componentRef.setInput('query', 'hello');
     await fixture.whenStable();

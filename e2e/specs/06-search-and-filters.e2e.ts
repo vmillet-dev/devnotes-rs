@@ -206,6 +206,11 @@ describe('Search, filters and facets', () => {
     const found = await canvas.cardWithTitle(title);
     expect((await found.$(testid('note-card-hit')).getText()).trim()).toBe('Zqbase / production');
 
+    // Down from the field to what it found (TRV-05).
+    await $(testid('search-input')).click();
+    await press('ArrowDown');
+    expect(await canvas.focusedCardTitle()).toBe(title);
+
     await canvas.clearSearch();
     await bridge.deleteNotes([id]);
     await bridge.purgeNotes([id]);
@@ -224,6 +229,8 @@ describe('Search, filters and facets', () => {
   it('offers the way out of the state that emptied it', async () => {
     await canvas.search('nothing matches this');
 
+    // « Effacer la recherche »: no filter is set, only the search.
+    expect(await $(testid('canvas-clear-filters')).getAttribute('data-clears')).toBe('search');
     await $(testid('canvas-clear-filters')).click();
     await waitForCanvas();
 

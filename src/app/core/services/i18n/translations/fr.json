@@ -57,6 +57,7 @@
     "clearFilters": "Effacer les filtres",
     "clearSearch": "Effacer la recherche",
     "attachmentsCount": "{count, plural, =0 {aucune pièce jointe} one {# pièce jointe} other {# pièces jointes}}",
+    "moreTags": "{count, plural, one {# autre tag} other {# autres tags}}",
     "placeholdersCount": "{count, plural, =0 {aucun champ à remplir} one {# champ à remplir} other {# champs à remplir}}",
     "selectNote": "Sélectionner la note {{title}}",
     "keyboardHint": "↑↓←→ naviguer · Entrée ouvrir · C copier · X sélectionner · Suppr corbeille",
@@ -283,7 +284,7 @@
       "onLine": "ligne",
       "replacedMatches": "$ résultats remplacés",
       "replacedOnLine": "résultat remplacé ligne $",
-      "goToLine": "Aller à la ligne",
+      "goToLine": "Aller à la ligne :",
       "go": "Aller",
       "controlCharacter": "Caractère de contrôle",
       "selectionDeleted": "Sélection supprimée"
@@ -1094,12 +1095,13 @@
     },
     "shortcuts": {
       "reset": "Rétablir",
-      "globalNote": "Ces trois-là agissent partout, fenêtre fermée comprise : ils demandent donc au moins un modificateur, sans quoi la touche serait avalée dans toutes vos applications. Un raccourci déjà pris par une autre application est signalé au démarrage.",
+      "globalNote": "Ces trois-là agissent partout, fenêtre fermée comprise : ils demandent donc au moins un modificateur, sans quoi la touche serait avalée dans toutes vos applications. Une combinaison qu’une autre application tient déjà est signalée sous son champ, et ne peut pas y être saisie : Windows la lui remet.",
       "canvasNote": "Ceux-ci n’agissent que sur le canevas, jamais pendant une saisie : une lettre nue suffit. Cliquez dans le champ puis composez la combinaison.",
       "areasNote": "Celui-ci agit dans les trois zones — Notes, Outils et HTTP — et, avec Ctrl ou Alt, pendant une saisie aussi.",
       "fixedNote": "Les flèches, Échap, Tab et les clics avec Ctrl ou Maj ne se déplacent pas : ce sont la navigation, la sortie et la sélection, et une bibliothèque où l’on ne peut plus reculer serait pire qu’une touche mal placée.",
       "taken": "{{accelerator}} est déjà pris par « {{action}} ».",
       "needsModifier": "Un raccourci global demande au moins Ctrl, Alt, Maj ou Super.",
+      "heldElsewhere": "Raccourci global indisponible : {{accelerator}}. Une autre application l’utilise déjà.",
       "reserved": "Cette touche est réservée à la navigation.",
       "conflict": "{{accelerator}} répond à plusieurs actions : {{actions}}. Une seule agira."
     },
@@ -1846,6 +1848,11 @@
       "formats": {
         "json": "JSON",
         "csv": "CSV"
+      },
+      "separator": "Séparateur",
+      "separators": {
+        "comma": "Virgule",
+        "semicolon": "Point-virgule"
       },
       "export": "Exporter…",
       "batchHint": "De 1 à 100 personnes dans un fichier, la première étant celle de la carte ; les pays choisis y passent à tour de rôle.",
@@ -2647,6 +2654,7 @@
       },
       "nil": "UUID nul",
       "created": "Créé le",
+      "createdLocally": "Heure locale",
       "counter": "Compteur",
       "possible": "Rien ne s’y lit : sa forme est celle d’un {{kinds}}.",
       "outOfRange": "La forme d’un {{kind}}, mais au-delà de ce qu’il peut valoir.",
@@ -3542,7 +3550,8 @@
         "bytes": "Corps binaire de {{size}} octets.",
         "multipart": "Corps multipart : {{fields}}."
       },
-      "noteWhat": "Un snippet {{language}}, avec le corps de la réponse mis en forme."
+      "noteWhat": "Un snippet {{language}}, avec le corps de la réponse mis en forme.",
+      "noteWhatMasked": "Un snippet {{language}}, avec le corps de la réponse mis en forme ; les secrets envoyés y sont masqués."
     },
     "history": {
       "title": "Historique",
@@ -3671,8 +3680,11 @@
         "after": "Après la réponse",
         "tests": "Tests"
       },
-      "order": "S’exécutent dans cet ordre :",
-      "orderTests": "S’exécutent après le script « après la réponse », dans cet ordre :",
+      "orders": {
+        "before": "S’exécutent de la collection vers cette requête :",
+        "after": "S’exécutent de cette requête vers la collection :",
+        "tests": "S’exécutent après le script « après la réponse », de cette requête vers la collection :"
+      },
       "levels": {
         "collection": "collection",
         "folder": "dossier",
@@ -3827,6 +3839,7 @@
       "protected": "{{name}} est protégé : {count, plural, one {# requête sur {{total}} peut le modifier} other {# requêtes sur {{total}} peuvent le modifier}} ({{requests}}).",
       "failed": "Le run n’a pas pu aller au bout.",
       "failures": "{count, plural, one {# échec} other {# échecs}}",
+      "cancelled": "Annulé · {{done}} sur {count, plural, one {# requête} other {# requêtes}}",
       "allPassed": "Tout passe",
       "requests": "{count, plural, one {# requête} other {# requêtes}}",
       "iterationsCount": "{count, plural, one {# itération} other {# itérations}}",

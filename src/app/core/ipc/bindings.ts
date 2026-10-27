@@ -260,6 +260,8 @@ export const commands = {
 	forgetHttpResponse: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("forget_http_response", { id })),
 	/**  The last answer to `id` as an image to show, when it is one. */
 	httpResponseImage: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("http_response_image", { id })),
+	/**  An answer's text made a note: the secrets the request sent, masked wherever it says them back. */
+	httpResponseNote: (id: string | null, exchange: Exchange, text: string) => typedError<NoteText, AppError>(__TAURI_INVOKE("http_response_note", { id, exchange, text })),
 	/**  What was sent, newest first, a group a local day. */
 	httpHistory: (tzOffsetMinutes: number) => typedError<HistoryDay[], AppError>(__TAURI_INVOKE("http_history", { tzOffsetMinutes })),
 	httpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("http_history_entry", { id })),
@@ -467,6 +469,11 @@ export const commands = {
 	syncTray: (labels: TrayLabels) => __TAURI_INVOKE<void>("sync_tray", { labels }),
 	/**  The native side can only fail silently, and a log line is not an interface. */
 	setGlobalShortcuts: (bindings: ShortcutBindings) => __TAURI_INVOKE<string[]>("set_global_shortcuts", { bindings }),
+	/**
+	 *  Lets go of the three while a shortcut field listens: a combination of ours would never reach
+	 *  it, Windows handing it to the registration. `set_global_shortcuts` takes them back.
+	 */
+	releaseGlobalShortcuts: () => __TAURI_INVOKE<void>("release_global_shortcuts"),
 	setWindowBehavior: (behavior: WindowBehavior) => __TAURI_INVOKE<void>("set_window_behavior", { behavior }),
 	/**
 	 *  The page's answer to `GlobalAction::Quit` when it has something to ask first: the timer
@@ -692,6 +699,7 @@ export type CalcCardLine = {
 	expression: string,
 	value: CalcValue,
 	aggregate: boolean,
+	places: number | null,
 };
 
 /**  Why a line has no result. It stays on its line: the others go on computing. */
@@ -729,7 +737,9 @@ export type CalcLine =
 /**  The variable the line names, `prix` in `prix = 120 €`. */
 name: string | null; 
 /**  `total` or `moyenne`: drawn with a rule above, a ledger's own convention. */
-aggregate: boolean; dimension: Dimension } | { kind: "error"; error: CalcError };
+aggregate: boolean; dimension: Dimension; 
+/**  The decimal places the line asked for (`à 5 chiffres`), over the sheet's setting. */
+places: number | null } | { kind: "error"; error: CalcError };
 
 export type CalcRow = {
 	line: CalcLine,
@@ -1249,6 +1259,9 @@ export type Crossing =
 "xmlName" | 
 /**  An `@attribute` holds a value, not an object or a list. */
 "xmlAttribute";
+
+/**  Chosen at the export: a French spreadsheet reads `;`, an English one `,`. */
+export type CsvSeparator = "comma" | "semicolon";
 
 export type DataFormat = "json" | "toml" | "xml" | "yaml";
 
@@ -2822,6 +2835,12 @@ export type NoteTag = {
 	tag: string,
 };
 
+/**  An answer's text as a note keeps it, and whether a secret was masked in it. */
+export type NoteText = {
+	text: string,
+	masked: boolean,
+};
+
 export type NotesQuery = {
 	/**  `None` = every space: a choice, not an absence of one. */
 	spaceId: string | null,
@@ -2904,6 +2923,7 @@ export type PeopleBatch = {
 	countries: Country[],
 	count: number,
 	format: PeopleFormat,
+	separator: CsvSeparator,
 };
 
 export type PeopleExport = { kind: "written"; people: number } | { kind: "failed"; problem: FileProblem } | 

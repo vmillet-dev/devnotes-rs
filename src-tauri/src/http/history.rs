@@ -289,13 +289,71 @@ fn cut(text: &str) -> (String, bool) {
     (text[..end].to_string(), true)
 }
 
+/// What the request sent as a secret, as it was written: the token of its auth, a cookie's value,
+/// an API key in a header or the query. An answer may say it back, as an echo service does.
+#[must_use]
+pub fn sent_secrets(exchange: &Exchange, secrets: &[String]) -> Vec<String> {
+    let mut found = Vec::new();
+    for header in &exchange.headers {
+        if !is_secret(&header.key, secrets) {
+            continue;
+        }
+        let name = header.key.trim().to_ascii_lowercase();
+        if name == "cookie" {
+            found.extend(header.value.split(';').filter_map(|pair| {
+                pair.split_once('=')
+                    .map(|(_, value)| value.trim().to_string())
+            }));
+        } else {
+            if let Some((_, token)) = header.value.split_once(' ') {
+                found.push(token.trim().to_string());
+            }
+            found.push(header.value.trim().to_string());
+        }
+    }
+    if let Some((_, query)) = exchange.url.split_once('?') {
+        let query = query.split_once('#').map_or(query, |(query, _)| query);
+        found.extend(query.split('&').filter_map(|pair| {
+            let (key, value) = pair.split_once('=')?;
+            secrets
+                .contains(&key.to_ascii_lowercase())
+                .then(|| value.to_string())
+        }));
+    }
+    // A secret variable is already written as its `{{name}}`, which stays readable.
+    found.retain(|value| value.chars().count() >= variables::HIDDEN_FROM && !value.contains("{{"));
+    found.sort_by_key(|value| std::cmp::Reverse(value.len()));
+    found.dedup();
+    found
+}
+
+/// Each value the request sent as a secret, masked wherever the text says it back.
+#[must_use]
+pub fn masked_echo(text: &str, sent: &[String]) -> String {
+    sent.iter().fold(text.to_string(), |text, value| {
+        text.replace(value.as_str(), MASK)
+    })
+}
+
 /// A secret variable's value, wherever the answer repeats it — a server echoing a token in its
 /// body, a URL that carried it —, written as its `{{name}}`.
 fn hidden_answer(response: &SentResponse, secrets: &[(String, String)]) -> SentResponse {
     if secrets.is_empty() {
         return response.clone();
     }
-    let hide = |text: &str| variables::hide(text, secrets);
+    rewritten(response, |text| variables::hide(text, secrets))
+}
+
+/// What the answer says back of the auth, cookies and API key sent, masked.
+fn echo_masked(response: &SentResponse, sent: &[String]) -> SentResponse {
+    if sent.is_empty() {
+        return response.clone();
+    }
+    rewritten(response, |text| masked_echo(text, sent))
+}
+
+/// Every text of the answer, rewritten: its URL, headers, body, redirects and GraphQL reading.
+fn rewritten(response: &SentResponse, hide: impl Fn(&str) -> String) -> SentResponse {
     SentResponse {
         url: hide(&response.url),
         headers: response
@@ -307,7 +365,7 @@ fn hidden_answer(response: &SentResponse, secrets: &[(String, String)]) -> SentR
             })
             .collect(),
         body: hide(&response.body),
-        pretty: response.pretty.as_deref().map(hide),
+        pretty: response.pretty.as_deref().map(&hide),
         redirects: response
             .redirects
             .iter()
@@ -318,7 +376,7 @@ fn hidden_answer(response: &SentResponse, secrets: &[(String, String)]) -> SentR
             })
             .collect(),
         graphql: response.graphql.as_ref().map(|graphql| GraphqlResult {
-            data: graphql.data.as_deref().map(hide),
+            data: graphql.data.as_deref().map(&hide),
             errors: graphql
                 .errors
                 .iter()
@@ -370,8 +428,9 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
     if let SentBody::Text { text } = &exchange.body {
         exchange.body = SentBody::Text { text: cut(text).0 };
     }
+    let echoed = sent_secrets(&sent.exchange, &sent.secrets);
     let response = sent.outcome.as_ref().ok().map(|response| {
-        let response = &hidden_answer(response, &sent.secret_values);
+        let response = &echo_masked(&hidden_answer(response, &sent.secret_values), &echoed);
         let (body, shortened) = cut(&response.body);
         SentResponse {
             pretty: if shortened {
@@ -747,6 +806,58 @@ mod tests {
             graphql: None,
             scripts: crate::http::scripts::model::ScriptsAnswer::default(),
         }
+    }
+
+    #[test]
+    fn what_the_request_sent_as_a_secret_is_found_as_it_was_written() {
+        let found = sent_secrets(
+            &exchange(
+                "https://api.exemple.fr/x?page=1&key=cl3-api#top",
+                vec![
+                    header("Authorization", "Bearer jeton-collection"),
+                    header("Cookie", "session=s3ss10n; theme=dark"),
+                    header("Accept", "application/json"),
+                ],
+                SentBody::None,
+            ),
+            &["key".to_string()],
+        );
+
+        assert_eq!(
+            found,
+            [
+                "Bearer jeton-collection",
+                "jeton-collection",
+                "s3ss10n",
+                "cl3-api",
+                "dark"
+            ]
+        );
+    }
+
+    /// HRS-11: an echo service sends the request back; the history keeps it masked.
+    #[test]
+    fn an_answer_that_says_back_the_auth_sent_is_kept_masked() {
+        let echoed = "{\"headers\":{\"Authorization\":\"Bearer jeton-collection\"}}";
+        let sent = answered(
+            exchange(
+                "https://echo.exemple.fr/anything",
+                vec![header("Authorization", "Bearer jeton-collection")],
+                SentBody::None,
+            ),
+            &[],
+            SentResponse {
+                body: echoed.to_string(),
+                pretty: Some(echoed.to_string()),
+                ..answer()
+            },
+        );
+
+        let (_, record) = record_of(&sent);
+        let kept = record.response.unwrap();
+
+        assert_eq!(kept.body, "{\"headers\":{\"Authorization\":\"••••••••\"}}");
+        assert_eq!(kept.pretty, Some(kept.body.clone()));
     }
 
     /// #487: a secret variable is kept as its name — in the request, the answer that echoes

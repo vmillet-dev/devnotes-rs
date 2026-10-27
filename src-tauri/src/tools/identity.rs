@@ -203,6 +203,24 @@ closed_enum! {
     }
 }
 
+closed_enum! {
+    /// Chosen at the export: a French spreadsheet reads `;`, an English one `,`.
+    pub enum CsvSeparator {
+        #[default]
+        Comma = "comma",
+        Semicolon = "semicolon",
+    }
+}
+
+impl CsvSeparator {
+    fn char(self) -> char {
+        match self {
+            Self::Comma => ',',
+            Self::Semicolon => ';',
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum PeopleExport {
@@ -453,8 +471,8 @@ pub fn generate(request: &IdentityRequest, today: NaiveDate, lists: &Path) -> Id
     }
 }
 
-fn csv_field(value: &str) -> String {
-    if value.contains([',', '"', '\n']) {
+fn csv_field(value: &str, separator: char) -> String {
+    if value.contains([separator, '"', '\n']) {
         format!("\"{}\"", value.replace('"', "\"\""))
     } else {
         value.to_owned()
@@ -463,7 +481,9 @@ fn csv_field(value: &str) -> String {
 
 /// One row a person, the columns named after the JSON's own fields. ⚠️ The numbers differ
 /// from a country to the next, so a column holds them all, `kind:value` and a bar between.
-fn csv(people: &[Identity]) -> String {
+/// A UTF-8 BOM first: without it a spreadsheet reads `Groß` and `Şimşek` in its own code page.
+fn csv(people: &[Identity], separator: CsvSeparator) -> String {
+    let separator = separator.char();
     let all = |identifiers: &[Identifier]| {
         identifiers
             .iter()
@@ -473,7 +493,7 @@ fn csv(people: &[Identity]) -> String {
     };
     let mut rows = vec![
         "country,sex,surname,givenNames,birthDate,birthCity,birthRegion,document,address,street,postcode,city,region,phone,mobile,email,bank,iban,bic,account,identifiers,company,companyIdentifiers"
-            .to_owned(),
+            .replace(',', &separator.to_string()),
     ];
     for person in people {
         let fields = [
@@ -504,12 +524,12 @@ fn csv(people: &[Identity]) -> String {
         rows.push(
             fields
                 .iter()
-                .map(|field| csv_field(field))
+                .map(|field| csv_field(field, separator))
                 .collect::<Vec<_>>()
-                .join(","),
+                .join(&separator.to_string()),
         );
     }
-    rows.join("\r\n") + "\r\n"
+    format!("\u{feff}{}\r\n", rows.join("\r\n"))
 }
 
 /// What an export writes: a JSON array, or a CSV with its header.
@@ -523,7 +543,7 @@ fn exported(
     let format = batch.format;
     let text = match format {
         PeopleFormat::Json => serde_json::to_string_pretty(&people).unwrap_or_default() + "\n",
-        PeopleFormat::Csv => csv(&people),
+        PeopleFormat::Csv => csv(&people, batch.separator),
     };
     (text, saturating_u32(people.len()))
 }
@@ -536,6 +556,7 @@ pub struct PeopleBatch {
     pub countries: Vec<Country>,
     pub count: u32,
     pub format: PeopleFormat,
+    pub separator: CsvSeparator,
 }
 
 /// A batch written where the user chose: never a note, a hundred people are a file.
@@ -587,6 +608,7 @@ mod tests {
             countries: countries.to_vec(),
             count,
             format,
+            separator: CsvSeparator::Comma,
         };
         super::exported(request, &batch, today, data::shipped())
     }
@@ -1518,7 +1540,7 @@ mod tests {
         let rows: Vec<&str> = csv.trim_end().split("\r\n").collect();
 
         assert_eq!(rows.len(), 5);
-        assert!(rows[0].starts_with("country,sex,surname,givenNames,birthDate"));
+        assert!(rows[0].starts_with("\u{feff}country,sex,surname,givenNames,birthDate"));
         assert!(rows[0].ends_with("account,identifiers,company,companyIdentifiers"));
         assert!(rows[1].starts_with("FR,"));
         // The address holds a comma, and is quoted; the numbers are named, a bar between.
@@ -1529,9 +1551,27 @@ mod tests {
         );
         assert!(rows[1].contains("|siret:") && rows[1].contains("|vat:FR"));
         assert!(rows[2].starts_with("GB,") && rows[2].contains("sortCode:"));
-        assert_eq!(csv_field("a,b"), "\"a,b\"");
-        assert_eq!(csv_field("say \"hi\""), "\"say \"\"hi\"\"\"");
-        assert_eq!(csv_field("plain"), "plain");
+        assert_eq!(csv_field("a,b", ','), "\"a,b\"");
+        assert_eq!(csv_field("say \"hi\"", ','), "\"say \"\"hi\"\"\"");
+        assert_eq!(csv_field("plain", ','), "plain");
+    }
+
+    /// GEN-13: a French spreadsheet splits on `;` and reads the accents by the BOM.
+    #[test]
+    fn a_csv_is_separated_as_chosen_and_opens_on_a_bom() {
+        let batch = PeopleBatch {
+            countries: vec![Country::De],
+            count: 3,
+            format: PeopleFormat::Csv,
+            separator: CsvSeparator::Semicolon,
+        };
+        let (csv, _) = super::exported(&asked("devnotes"), &batch, today(), data::shipped());
+        let rows: Vec<&str> = csv.trim_end().split("\r\n").collect();
+
+        assert!(rows[0].starts_with("\u{feff}country;sex;surname;givenNames"));
+        assert!(rows[1].starts_with("FR;") && rows[2].starts_with("DE;"));
+        assert_eq!(csv_field("a;b", ';'), "\"a;b\"");
+        assert_eq!(csv_field("a,b", ';'), "a,b");
     }
 
     #[test]
@@ -1542,6 +1582,7 @@ mod tests {
             countries: Vec::new(),
             count: 2,
             format,
+            separator: CsvSeparator::Comma,
         };
 
         let lists = data::shipped_folder();

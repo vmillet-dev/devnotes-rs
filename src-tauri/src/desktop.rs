@@ -11,8 +11,8 @@ use specta::Type;
 use crate::closed_enum::closed_enum;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, State, Wry};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State, Wry};
+use tauri_plugin_global_shortcut::{GlobalShortcut, GlobalShortcutExt, Shortcut, ShortcutState};
 
 closed_enum! {
     /// One event carrying a closed value rather than a topic per action: a mistyped topic is
@@ -276,6 +276,25 @@ fn apply_shortcuts(app: &AppHandle, bindings: &ShortcutBindings) -> Vec<String> 
 #[allow(clippy::needless_pass_by_value)]
 pub fn set_global_shortcuts(bindings: ShortcutBindings, app: AppHandle) -> Vec<String> {
     apply_shortcuts(&app, &bindings)
+}
+
+/// Lets go of the three while a shortcut field listens: a combination of ours would never reach
+/// it, Windows handing it to the registration. `set_global_shortcuts` takes them back.
+#[tauri::command]
+#[specta::specta]
+#[allow(clippy::needless_pass_by_value)]
+pub fn release_global_shortcuts<R: Runtime>(app: AppHandle<R>) {
+    let released = app
+        .try_state::<GlobalShortcut<R>>()
+        .map(|shortcuts| shortcuts.unregister_all());
+    if let Some(Err(error)) = released {
+        log::warn!("Global shortcuts not released: {error}");
+    }
+    if let Some(active) = app.try_state::<ActiveShortcuts>()
+        && let Ok(mut active) = active.lock()
+    {
+        active.clear();
+    }
 }
 
 /// Pushed from the preferences panel as it changes, like the tray labels.
