@@ -15,9 +15,11 @@ captures (§ 5.2).
 - **Keep it simple.** Write the plain version first; a helper, trait or generic comes at the second
   real use. Small functions, names that say what things are, early returns over nesting.
 - The UI thread does no I/O, crypto or waiting: every call to the core goes `api/` → `Backend` →
-  `Pending` (§ 3.3) — `db` for anything that may take the database lock, `compute` otherwise
-  (D11). Never `block_on`, never a lock taken while drawing. Only exception: a pure core function
-  whose input the screen bounds, under 1 ms, called directly but still through `api/` (D12).
+  `Pending` (§ 3.3) — `db`, the core's single ordered queue, for anything that touches the database
+  or the index (reads included); `compute` for pure work; `spawn` for the network (D11). Never
+  `block_on`, never a lock taken while drawing. Only exception: a pure core function whose input
+  the screen bounds, under 1 ms, called directly but still through `api/` (D12). Every concurrency
+  rule is in § 3.3.6 of the plan; one that is not there does not exist.
 - A data rule (what a `{{field}}`, a variable name, a heading is) belongs to the core: `text`,
   `richtext`, `drawing` take its result as an argument and never redefine it (D10).
 - Drawing reads a screen's state (`&…State`) and may change its view (`&mut …View`: text being

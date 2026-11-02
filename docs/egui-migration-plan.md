@@ -1,7 +1,7 @@
 # Plan de migration : d'Angular + Tauri à egui (100 % Rust)
 
 > Statut : **plan arrêté** — décisions prises le 2026-11-02 (§ 11), complétées le même jour après
-> relecture (D10–D29). Quatre attendent une mesure dont le critère est déjà écrit : D1 (S8), D15
+> relecture (D10–D30). Quatre attendent une mesure dont le critère est déjà écrit : D1 (S8), D15
 > (S1), D22 (S5), D26 (S9).
 > Périmètre : remplacer le front-end Angular rendu dans une WebView Tauri par une interface
 > **egui/eframe** écrite en Rust, dans le même processus que le métier, en retranscrivant **toute
@@ -321,12 +321,12 @@ flowchart TB
       state -->|appels typés| api["api/ : façade du cœur"]
     end
     api -->|"Backend::db / compute / spawn → Pending"| backend["Backend"]
-    backend -->|"thread « db » (FIFO)"| core
-    backend -->|"pool rayon (calcul)"| core
-    backend -->|"runtime tokio (réseau)"| core
+    backend -->|"file « db » : un thread, dans l'ordre"| core
+    backend -->|"pool rayon : fonctions pures"| core
+    backend -->|"runtime tokio : réseau"| core
     subgraph core["engine : Arc#lt;Engine#gt;"]
       db["Db = Mutex#lt;Option#lt;Library#gt;#gt;"]
-      idx["NoteIndex (RwLock, instantanés Arc)"]
+      idx["NoteIndex (entrées Arc immuables)"]
       net["Sending · Runs · Sockets · Restored"]
     end
     core -->|"EngineEvent via EventSink"| chan["canal d'événements"]
@@ -357,7 +357,8 @@ Aujourd'hui l'état natif est enregistré dans Tauri (`app.manage(Db)`, `Restore
 ```rust
 // engine/src/lib.rs — créée une fois par la coquille, partagée en Arc<Engine>
 pub struct Engine {
-    db: Db,                           // Mutex<Option<Library>> : inchangé
+    queue: DbQueue,                   // un thread, une file : tout ce qui touche la base ou l'index (§ 3.3.6)
+    db: Db,                           // Mutex<Option<Library>> : inchangé, lu sur ce seul thread
     index: NoteIndex,                 // § 3.5 ; vide tant que la bibliothèque est fermée
     sending: http::send::Sending,     // envois en vol, corps gardés par id
     runs: http::runner::Runs,
@@ -369,19 +370,19 @@ pub struct Engine {
 }
 
 impl Engine {
-    /// Aucune E/S lourde : la bibliothèque reste fermée jusqu'à `vault::unlock`.
+    /// Démarre le thread « db » ; aucune E/S lourde : la bibliothèque reste fermée jusqu'à `vault::unlock`.
     pub fn new(paths: Arc<dyn Paths>, events: Arc<dyn EventSink>, runtime: Handle) -> Self;
 }
 ```
 
-| État                                                      | Propriétaire                                                                         | Où il vit                                |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------- |
-| Connexion SQLite + clé (`Library`)                        | `Engine.db`                                                                          | thread « db »                            |
-| Index de notes                                            | `Engine.index`                                                                       | pool rayon (construction), lu partout    |
-| Envois, exécutions, sockets, restauration mise de côté    | `Engine.sending/runs/sockets/restored`                                               | runtime tokio                            |
-| Préférences de l'application et de la bibliothèque        | `ui::services::preferences` (mêmes fichiers) ; le cœur relit seul `automaticBackups` | thread UI (cache) + écriture hors thread |
-| Tray, raccourcis globaux, instance unique, démarrage auto | `platform`                                                                           | thread plateforme                        |
-| Brouillons, sélection, onglets, focus, menus ouverts      | `AppState`                                                                           | thread UI                                |
+| État                                                      | Propriétaire                                                                         | Où il vit                                      |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| Connexion SQLite + clé (`Library`)                        | `Engine.db`                                                                          | thread « db », seul à la toucher               |
+| Index de notes                                            | `Engine.index`                                                                       | thread « db » ; ses entrées `Arc` lues partout |
+| Envois, exécutions, sockets, restauration mise de côté    | `Engine.sending/runs/sockets/restored`                                               | runtime tokio                                  |
+| Préférences de l'application et de la bibliothèque        | `ui::services::preferences` (mêmes fichiers) ; le cœur relit seul `automaticBackups` | thread UI (cache) + écriture hors thread       |
+| Tray, raccourcis globaux, instance unique, démarrage auto | `platform`                                                                           | thread plateforme                              |
+| Brouillons, sélection, onglets, focus, menus ouverts      | `AppState`                                                                           | thread UI                                      |
 
 #### 3.3.3 L'API du cœur : trois familles de fonctions
 
@@ -389,8 +390,8 @@ Les `<feature>.rs` gardent leur rôle (valider, verrouiller, déléguer, traduir
 signature change, et elle dit sur quel thread on l'appelle :
 
 ```rust
-// 1. Données : synchrones et bloquantes — appelées sur le thread « db » si elles prennent le verrou
-//    de la base, sur le pool de calcul si elles ne lisent que l'index ; jamais sur le thread UI.
+// 1. Données : synchrones et bloquantes — exécutées sur le thread « db » (§ 3.3.6), jamais sur le
+//    thread UI ; elles touchent la base ou l'index.
 pub fn query_notes(engine: &Engine, query: NotesQuery) -> Result<NotesView, AppError>;
 pub fn update_note(engine: &Engine, id: &str, patch: NotePatch) -> Result<DisplayNote, AppError>;
 pub fn unlock(engine: &Engine, passphrase: Zeroizing<String>) -> Result<(), AppError>;
@@ -415,14 +416,14 @@ pub async fn query_notes<R: Runtime>(query: NotesQuery, app: AppHandle<R>) -> Re
 
 // Demain — engine/src/notes.rs
 pub fn query_notes(engine: &Engine, query: NotesQuery) -> Result<NotesView, AppError> {
-    let index = engine.index().read()?; // jamais le verrou de la base, décorations comprises
+    let index = engine.index().lock()?; // l'index seul : ni SQLite ni déchiffrement
     Ok(view::build(index.matching(&query), index.facets(&query), index.decorations(&query), &query))
 }
 ```
 
 Les **décorations** que `query_notes` lit aujourd'hui sous le verrou (`store::decorations` :
 nombre de pièces jointes par note, valeurs globales des `{{champs}}`, dossiers de l'espace par id)
-vivent dans l'index (§ 3.5) : sans cela, une recherche attendrait encore derrière `export_notes`.
+vivent dans l'index (§ 3.5) : une recherche ne lit plus SQLite du tout.
 
 **`NotesView` change de forme**, pas de sens : ses sections portent des
 `Card { note: Arc<IndexedNote>, hit: Option<SearchHit>, matches: bool }` au lieu de `DisplayNote`
@@ -494,20 +495,19 @@ dans le canal, vidé au début de chaque frame.
 ```rust
 // ui/src/backend.rs
 pub struct Backend {
-    engine: Arc<Engine>,
-    db: DbThread,                      // un thread, FIFO : tout ce qui peut prendre le verrou de la base
+    engine: Arc<Engine>,               // possède la file « db » (§ 3.3.6)
     runtime: tokio::runtime::Runtime,  // multi-thread, 2 workers : réseau, updater
     waker: Waker,                      // réveille l'UI à chaque résolution (§ 3.3.4)
 }
 
 impl Backend {
-    /// Thread « db », dans l'ordre d'envoi : écritures, et lectures qui prennent le verrou.
+    /// File « db » du cœur, dans l'ordre d'envoi : tout ce qui touche la base ou l'index.
     pub fn db<T: Send + 'static>(
         &self,
         job: impl FnOnce(&Engine) -> Result<T, AppError> + Send + 'static,
     ) -> Pending<T>;
 
-    /// Pool rayon global : ne prend jamais le verrou (index, outils, formatage, images).
+    /// Pool rayon global : fonctions pures, qui ne touchent ni la base ni l'index.
     pub fn compute<T: Send + 'static>(
         &self,
         job: impl FnOnce(&Engine) -> Result<T, AppError> + Send + 'static,
@@ -526,7 +526,7 @@ impl Backend {
 
 // ui/src/api/notes.rs — une fonction par service, rien d'autre ; elle choisit sa file
 pub fn query(backend: &Backend, query: NotesQuery) -> Pending<NotesView> {
-    backend.compute(move |e| engine::notes::query_notes(e, query))
+    backend.db(move |e| engine::notes::query_notes(e, query))
 }
 
 pub fn update(backend: &Backend, id: String, patch: NotePatch) -> Pending<DisplayNote> {
@@ -534,14 +534,11 @@ pub fn update(backend: &Backend, id: String, patch: NotePatch) -> Pending<Displa
 }
 ```
 
-- **Trois files, une règle (D11).** Ce qui peut prendre le verrou de la base passe par `db` : un
-  seul thread, qui exécute dans l'ordre d'envoi. Deux écritures d'une même note ne se doublent
-  jamais (un `Mutex` ne garantit pas l'ordre d'arrivée), et plusieurs threads n'iraient pas plus
-  vite derrière un verrou unique. Ce qui ne lit que l'index ou ne touche pas la base (requête de
-  notes, palette, compteurs, outils, formatage, coloration, décodage d'images) passe par `compute`,
-  sur le pool rayon global — le même que la construction de l'index : une recherche ne fait pas la
-  queue derrière un export. Le réseau passe par `spawn`. Chaque fonction d'`api/` choisit sa file
-  une fois pour toutes ; dans le doute, `db`.
+- **Trois files, sans recouvrement (D11).** `db` : tout ce qui touche la base ou l'index,
+  lectures comprises (requête de notes, palette, compteurs) — la file unique du cœur, § 3.3.6.
+  `compute` : le calcul pur, qui ne touche ni l'une ni l'autre (formatage, coloration, calcul d'un
+  outil, évaluation Calcul, `explore_json`, décodage et rendu d'images). `spawn` : le réseau.
+  Chaque fonction d'`api/` choisit sa file une fois pour toutes ; dans le doute, `db`.
 - **Appels directs (D12).** Une fonction pure du cœur — sans verrou, sans E/S — s'appelle depuis
   le thread UI, sans `Pending`, quand son entrée est bornée par ce que l'écran montre et qu'elle
   tient sous 1 ms au p95 sur la machine de référence pour la plus grande de ces entrées. Elle passe
@@ -569,22 +566,92 @@ l'état ne connaît pas egui. Il se teste sans fenêtre, contre le vrai cœur su
 temporaire et le vrai `Backend`, et attend ses réponses par `settle()` : une condition, jamais une
 durée.
 
-#### 3.3.6 Verrous, threads et instantanés
+#### 3.3.6 Concurrence : un ouvrier pour la base, le réseau en trois temps
 
-1. **Ordre des verrous : base → index.** Une écriture (thread « db ») prend le verrou de la base,
-   fait sa transaction, relit les lignes touchées, puis prend l'index en écriture le temps
-   d'échanger des `Arc`. Une requête (pool de calcul) ne prend que l'index en lecture, décorations
-   comprises (§ 3.3.3) : `export_notes` (639 ms sous le verrou) ne bloque plus la recherche.
-2. **Instantanés immuables.** Les entrées de l'index sont des `Arc<IndexedNote>` jamais modifiés en
+L'application a un seul utilisateur et un seul processus par profil (D16) : la concurrence ne vient
+que d'elle-même, et de quatre sources seulement —
+
+- le thread UI, qui ne doit jamais attendre ;
+- deux écritures rapprochées sur la même chose (perte de focus puis fermeture d'un éditeur) ;
+- les envois HTTP, longs, parfois plusieurs à la fois ;
+- un changement de bibliothèque ou une restauration pendant que quelque chose tourne.
+
+Les règles ci-dessous répondent à ces quatre-là, et à rien de plus. Ce sont toutes les règles de
+concurrence du projet : une règle qui n'est pas ici n'existe pas.
+
+1. **Un seul ouvrier pour la base (D11).** `Engine` possède une file et un thread « db » qui
+   l'exécute dans l'ordre d'arrivée. Tout ce qui touche la base ou l'index y passe, lectures
+   comprises : depuis l'UI par `Backend::db`, depuis le code asynchrone du cœur (un envoi HTTP) par
+   `db::run(engine, job).await`. En phase 1, l'enveloppe `blocking` des commandes Tauri dépose elle
+   aussi son travail dans cette file au lieu de `spawn_blocking` : les 35 scénarios e2e éprouvent
+   le modèle avant la première ligne d'egui. Conséquences :
+   - deux écritures envoyées l'une après l'autre s'exécutent dans cet ordre : A puis B donne
+     toujours B (aujourd'hui, deux commandes Tauri peuvent se doubler sur le pool de Tokio, et
+     `draftMaterialisation` compense en partie) ;
+   - une connexion SQLite, un thread : la configuration actuelle (WAL, `busy_timeout`, une
+     transaction par opération) reste telle quelle, et rien n'attend une autre connexion ;
+   - le `Mutex<Option<Library>>` et le verrou de l'index restent (le code des 190 fonctions s'en
+     sert), mais ne sont plus jamais disputés ; `lock()` vérifie en debug qu'il est appelé sur le
+     thread « db » ;
+   - un travail de la file n'attend jamais un autre travail de la file (ce serait un
+     interblocage), ni le réseau ;
+   - un travail qui panique répond `AppError` et la file continue ; s'il tenait le `Mutex`, celui-ci
+     reste empoisonné et répond comme aujourd'hui (`Unavailable`) : on échoue fermé.
+2. **Les longues opérations font attendre la file, pas l'interface.** Export (639 ms), import,
+   sauvegarde, restauration, changement de phrase tiennent la file le temps qu'il faut, comme elles
+   tiennent le verrou aujourd'hui. Une recherche tapée pendant ce temps répond après ; l'UI reste
+   fluide et la barre d'état dit ce qui tourne. Une voie de lecture parallèle ne s'ajoutera que si
+   une mesure la demande. La construction de l'index passe par tranches dans la file (§ 3.5) : une
+   recherche s'intercale entre deux tranches.
+3. **Instantanés immuables.** Les entrées de l'index sont des `Arc<IndexedNote>` jamais modifiés en
    place ; une écriture remplace l'`Arc`. Une vue tient ses `Arc` : l'UI dessine sans aucun verrou,
    et une entrée remplacée est libérée (et effacée, `Zeroizing`) quand la dernière vue qui la tenait
    disparaît.
-3. **Le réseau ne tient jamais le verrou** (règle actuelle) : un envoi lit sous le verrou ce dont il
-   hérite, relâche, envoie, puis reprend le verrou pour l'historique et les cookies.
-4. **Ouvrir une autre bibliothèque, restaurer une sauvegarde** : vider le `Mutex` **et** l'index,
-   fermer les sockets, annuler envois et exécutions, avant de toucher aux fichiers.
-5. **Seule attente du thread UI** : à la sortie, fenêtre déjà cachée, le temps que la file « db »
+4. **Le réseau en trois temps.** Un envoi — une requête, un pas d'exécution de collection — se
+   fait ainsi :
+   1. _lire_, un travail de la file : héritage, variables, environnement, copie de la boîte à
+      cookies, et le numéro de la bibliothèque ouverte (point 5) ;
+   2. _envoyer_, sur tokio, sans jamais repasser par la file : redirections une à une, scripts dans
+      leur processus, console par `EventSink` ;
+   3. _écrire_, un travail de la file : historique, cookies, variables écrites par les scripts et
+      les extractions.
+
+   L'étape 3 **fusionne, elle n'écrase pas** — c'est déjà le code actuel, à garder tel quel : les
+   cookies sont rejoués comme une liste de changements sur la boîte du moment
+   (`cookies::store::apply`), les variables relisent l'environnement du moment avant d'appliquer
+   leurs écritures (`keep_writes`). Deux envois simultanés ne perdent donc rien : le dernier qui
+   termine gagne, clé par clé, comme dans un navigateur. Les WebSockets ne passent par la file que
+   pour lire leur requête.
+
+5. **Le numéro de bibliothèque (D30).** Chaque `Library` ouverte reçoit un numéro, tiré d'un
+   compteur du processus (en mémoire seulement). L'étape 1 le note ; l'étape 3 n'écrit rien, et le
+   journalise, si la bibliothèque ouverte n'a plus ce numéro. Cela ferme un trou réel
+   d'aujourd'hui : `open_library` ferme les WebSockets mais n'annule pas les envois, et un envoi
+   lancé dans l'ancienne bibliothèque puis terminé après le déverrouillage de la nouvelle y écrit
+   son historique et ses cookies. Ouvrir une bibliothèque ou restaurer une sauvegarde vide toujours
+   le `Mutex` **et** l'index, ferme les sockets et annule envois et exécutions avant de toucher aux
+   fichiers — pour libérer le réseau ; la justesse, elle, ne dépend plus de ce que l'annulation
+   arrive à temps.
+6. **Côté interface.** Écritures non optimistes : persister, adopter la réponse, incrémenter
+   `Revision`. Les réponses de la file arrivent dans l'ordre où elles ont été demandées ; une
+   recherche périmée est ignorée (`QueryCell` : un appel en cours, le plus récent en attente).
+7. **Seule attente du thread UI** : à la sortie, fenêtre déjà cachée, le temps que la file « db »
    se vide (D19, 30 s au plus).
+
+**Ce qu'on ne fait pas, exprès** : pas de base asynchrone, pas de pool de connexions, pas de numéro
+de version par ligne, pas de framework d'acteurs ni d'énumération de messages (la file prend des
+fonctions), pas d'annulation d'un travail de la file déjà commencé (ils sont courts ; les longs vont
+au bout), pas de voie de lecture parallèle tant qu'aucune mesure ne la demande.
+
+**Ce qui le prouve** — tests du cœur, sous `cargo test`, écrits en phase 1 :
+
+- deux `update_note` déposés de suite sur la même note : le second gagne ;
+- un envoi commencé, une autre bibliothèque ouverte et déverrouillée, puis l'envoi qui se termine :
+  rien n'est écrit dans la nouvelle ;
+- deux envois simultanés vers le serveur de test, qui posent chacun un cookie, et deux scripts qui
+  écrivent chacun une variable : tout reste ;
+- un travail qui panique : son appelant reçoit `AppError` et le travail suivant s'exécute ;
+- `lock()` appelé hors du thread « db » : échec en debug.
 
 #### 3.3.7 Une frame
 
@@ -608,8 +675,8 @@ durée.
 | Moment                            | Ce qui se passe                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Lancement**                     | `main` : `--devnotes-script-host` → servir les scripts et sortir ; sinon chemins (profil par défaut ou `--profile`), journal et crochet de panique (D18), instance unique du profil (D16 : une seconde instance envoie « révéler » et sort), canal d'entrées et `Waker` (D20), thread plateforme (tray, raccourcis), eframe avec la fenêtre invisible à la géométrie restaurée ; dans la closure de création : `Waker` rempli, `Engine::new` (bibliothèque fermée), `Backend`, `AppState` ; fenêtre montrée. Première frame : `vault::state` → la porte. |
-| **Déverrouillage**                | `api::vault::unlock(Zeroizing)` sur le thread « db » : `gate::unlock`, puis les corvées de `sweep` (copie de sauvegarde, purge de la corbeille et de l'historique, fichiers orphelins, copies en clair) ; puis construction de l'index sur rayon avec `IndexProgress`. L'UI affiche les premières sections dès la première tranche.                                                                                                                                                                                                                      |
-| **Changement de bibliothèque**    | `api::libraries::open` (§ 3.3.6, point 4), puis `AppState::reset_library_scope()` : préférences de la bibliothèque rouvertes, états des notes et du HTTP remis à zéro, `LibraryCaches` et états des widgets d'egui vidés (D17), réglages de l'application gardés, retour à la porte. C'est ce que fait aujourd'hui le rechargement de la page.                                                                                                                                                                                                           |
+| **Déverrouillage**                | `api::vault::unlock(Zeroizing)` sur le thread « db » : `gate::unlock` (la `Library` reçoit son numéro, D30), puis les corvées de `sweep` (copie de sauvegarde, purge de la corbeille et de l'historique, fichiers orphelins, copies en clair) ; puis construction de l'index par tranches dans la file « db » (déchiffrement parallèle dans chaque tranche), avec `IndexProgress`. L'UI affiche les premières sections dès la première tranche.                                                                                                          |
+| **Changement de bibliothèque**    | `api::libraries::open` (§ 3.3.6, point 5), puis `AppState::reset_library_scope()` : préférences de la bibliothèque rouvertes, états des notes et du HTTP remis à zéro, `LibraryCaches` et états des widgets d'egui vidés (D17), réglages de l'application gardés, retour à la porte. C'est ce que fait aujourd'hui le rechargement de la page.                                                                                                                                                                                                           |
 | **Restauration d'une sauvegarde** | même vidage, restauration, puis porte.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | **Fermer la fenêtre**             | avec un tray : `CancelClose` + fenêtre cachée ; sans tray : comme Quitter.                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | **Quitter**                       | `HttpLeave` demande pour les requêtes non enregistrées ; brouillons d'éditeur envoyés à la file « db » ; fenêtre cachée ; file « db » fermée aux nouvelles tâches puis vidée, écritures commencées comprises (D19) ; raccourcis libérés, tray retiré ; copies en clair balayées ; géométrie écrite ; sortie.                                                                                                                                                                                                                                             |
@@ -620,13 +687,13 @@ durée.
 sequenceDiagram
   participant D as Dessin (thread UI)
   participant S as NotesQueryState
-  participant B as Backend (pool de calcul)
+  participant B as Backend (file db)
   participant C as engine
   D->>S: Action::Notes(Search("psql"))
   Note over S: params changent : QueryCell relance (1 en vol + le plus récent)
   S->>B: api::notes::query(query)
   B->>C: notes::query_notes(engine, query)
-  C->>C: index.read() → view::build (aucun verrou de base)
+  C->>C: index.lock() → view::build (ni SQLite ni déchiffrement)
   C-->>B: NotesView (Arc#lt;IndexedNote#gt;)
   B-->>S: Pending résolu + request_repaint
   S-->>D: frame suivante : rangées virtuelles visibles seulement
@@ -649,16 +716,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant T as HttpSendState
-  participant B as Backend (tokio)
-  participant C as engine
+  participant N as engine (tâche tokio)
+  participant Q as file « db »
   participant K as EventSink → canal
-  T->>B: api::http::send(request)
-  B->>C: send_http_request(engine, request)
-  C->>C: verrou : héritage, variables, cookies → relâché
-  C->>K: Console(...) pendant les scripts et les sauts
-  C->>C: envoi reqwest, redirections une à une
-  C->>C: verrou : historique + cookies → relâché
-  C-->>T: SentResponse (Pending résolu)
+  T->>N: api::http::send(request)
+  N->>Q: 1. lire : héritage, variables, environnement, cookies, n° de bibliothèque
+  Q-->>N: ce que l'envoi hérite
+  N->>K: Console(...) pendant les scripts et les sauts
+  N->>N: 2. envoyer : reqwest, redirections une à une, aucun passage par la file
+  N->>Q: 3. écrire, si le n° n'a pas changé : historique, changements de cookies, variables (fusion)
+  N-->>T: SentResponse (Pending résolu)
   Note over T: « Annuler » → api::http::cancel(id) → AbortHandle
 ```
 
@@ -673,9 +740,9 @@ flowchart LR
 ```
 
 - `src-tauri` ne garde que `lib.rs` (builder, plugins, `collect_commands!`), `desktop.rs`, une
-  enveloppe `#[tauri::command]` d'une ligne par service (`blocking(engine, |e| service(e, args))`)
-  et `TauriHost` (`Paths` + `EventSink`). Les vues gardent leur forme actuelle : `bindings.ts` et
-  le front Angular ne changent pas.
+  enveloppe `#[tauri::command]` d'une ligne par service (`blocking(engine, |e| service(e, args))`,
+  qui passe par la file « db », § 3.3.6) et `TauriHost` (`Paths` + `EventSink`). Les vues gardent
+  leur forme actuelle : `bindings.ts` et le front Angular ne changent pas.
 - Les 35 scénarios e2e, les tests Rust et l'oracle de l'index (§ 3.5) sont le filet : l'extraction
   et l'index ne changent aucun comportement visible.
 - En fin de phase, l'étiquette `angular-reference` fige cette version ; la référence visuelle
@@ -766,11 +833,12 @@ publiée. **Pour toute la bibliothèque**, l'index garde aussi les décorations 
 3. **Oracle de test** : l'ancien chemin (SQL + déchiffrement + `view::build`) est gardé en
    `#[cfg(test)]` ; des tests de propriétés enchaînent des écritures aléatoires et comparent les
    deux vues, sur tous les critères de `NotesQuery`.
-4. **Construction au déverrouillage** sur le pool rayon (lecture SQLite séquentielle, déchiffrement
-   et pli parallèles), du plus récent au plus ancien, par tranches : la première section s'affiche
-   dès la première tranche, la recherche signale « résultats partiels » jusqu'à la fin. Chaque
-   tranche est un travail distinct du pool rayon global, celui de `compute` (D11) : une requête
-   lancée pendant la construction passe entre deux tranches au lieu d'attendre la fin.
+4. **Construction au déverrouillage**, du plus récent au plus ancien, par tranches : la première
+   section s'affiche dès la première tranche, la recherche signale « résultats partiels » jusqu'à
+   la fin. Chaque tranche est un travail de la file « db » (§ 3.3.6) qui, fini, dépose la suivante ;
+   dans une tranche, la lecture SQLite est séquentielle, le déchiffrement et le pli parallèles
+   (rayon). Une requête lancée pendant la construction passe entre deux tranches au lieu
+   d'attendre la fin.
 5. **Sécurité** : les textes de l'index sont en `Zeroizing<…>` et effacés au changement de
    bibliothèque, à la restauration d'une sauvegarde et à la sortie. L'application n'a pas d'action
    « verrouiller » (le coffre n'a que `vault_state`, `create_vault`, `unlock_vault`,
@@ -1109,6 +1177,7 @@ vérifier au S5) est refusée à la capture, avec un refus motivé comme aujourd
 | CSP, `connect-src`, surface IPC, permissions Tauri (`capabilities/`) | persistance d'eframe à **désactiver** ; aucun chargeur d'images réseau (`egui_extras` sans `http`) : une image Markdown autre que `devnotes:drawing/…` reste du texte, comme aujourd'hui |
 | JS tiers dans le processus (TipTap, Mermaid, Fabric, Prettier)       | index déchiffré résident (§ 3.5) : `Zeroizing`, effacement au changement de bibliothèque, à la restauration et à la sortie, documentation du modèle de menace                            |
 |                                                                      | caches de l'UI (`LibraryCaches`, états des widgets d'egui) : vidés au changement de bibliothèque, **pas** effacés octet par octet — assumé et écrit dans le modèle de menace (D17)       |
+|                                                                      | numéro de bibliothèque (D30) : un envoi n'écrit jamais son historique ni ses cookies dans une autre bibliothèque que la sienne                                                           |
 |                                                                      | crochet de panique : emplacement et thread seulement, jamais le message (D18)                                                                                                            |
 |                                                                      | une application par profil (D16) : socket d'instance unique liée au profil                                                                                                               |
 |                                                                      | champ de phrase secrète sans copies (§ 3.8) ; état egui de ce champ oublié après usage                                                                                                   |
@@ -1380,7 +1449,9 @@ estimation recalée, risques réévalués.
    du cœur le presse-papiers (`attach_clipboard_image`, `copy_qr_code`), la lecture de
    `automaticBackups` par le plugin `store`, et `desktop.rs`.
 3. Le cœur possède son runtime : `tauri::async_runtime::spawn` → `tokio::spawn` sur un runtime créé
-   par la coquille et passé au cœur ; `db::blocking` devient générique (`spawn_blocking`).
+   par la coquille et passé au cœur. `db::blocking` dépose son travail dans la file « db » du cœur
+   au lieu de `spawn_blocking`, et chaque `Library` reçoit son numéro (§ 3.3.6, D11, D30) ; les
+   tests de concurrence du § 3.3.6 sont écrits ici.
 4. Transformer chaque commande en fonction de service (annexe C) ; `src-tauri` ne garde que des
    enveloppes `#[tauri::command]` d'une ligne, `lib.rs`, `desktop.rs` et `bindings`. `specta` reste
    une dépendance du cœur jusqu'à la phase 2 (moins de churn que des `cfg_attr`). Les vues gardent
@@ -1591,7 +1662,7 @@ requêtes non enregistrées), dépôt de fichiers, presse-papiers image, ouvertu
 
 | Couche            | Outil                                                                                                                                    | Remplace                              | Règle                                                                                                                                     |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Métier            | `cargo test` dans `engine` (inchangé) + tests de propriétés de l'index                                                                   | —                                     | ce qui est montré se teste ici                                                                                                            |
+| Métier            | `cargo test` dans `engine` (inchangé) + tests de propriétés de l'index et de concurrence (§ 3.3.6)                                       | —                                     | ce qui est montré se teste ici                                                                                                            |
 | Noyaux            | tests unitaires de `text`, `richtext`, `drawing`, `i18n`                                                                                 | specs CodeMirror/TipTap/Fabric/format | corpus d'aller-retour : Markdown (sortie TipTap actuelle), scènes Fabric, formatage (corpus d'or), coloration (une ligne par langue)      |
 | État              | tests Rust des structures d'état contre le **vrai cœur** sur une bibliothèque temporaire et le vrai `Backend`, attendu par `settle()`    | specs des stores avec faux dépôts     | plus de faux qui ré-implémentent une règle : seule la plateforme est faussée (dialogues, fenêtre, presse-papiers, notifications, horloge) |
 | Écrans et widgets | `egui_kittest` : un widget ou un écran, requêtes par `author_id`/rôle/libellé ; son contrôle d'accessibilité refuse un contrôle sans nom | specs de composants Vitest            | asserter sur l'arbre AccessKit, pas sur les pixels                                                                                        |
@@ -1779,42 +1850,43 @@ cas se portent tels quels (§ 8.1).
 
 ## 11. Décisions
 
-Arrêtées le 2026-11-02 ; D10–D29 ajoutées le même jour après relecture du plan contre le code.
+Arrêtées le 2026-11-02 ; D10–D30 ajoutées le même jour après relecture du plan contre le code.
 Quatre attendent une mesure, avec leur critère écrit d'avance : D1 (S8), D15 (S1), D22 (S5), D26
 (S9). Une décision ne se rouvre pas pendant un écran : si le code la contredit, on la change ici
 d'abord.
 
-| #   | Décision                                               | Retenu                                                                                                                                                                                                                                                                  | Conséquence dans le plan                                                                                 |
-| --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| D1  | Formatage : formateurs natifs ou Prettier dans QuickJS | **après le spike S8**. Critère : Prettier dans QuickJS si p95 ≤ 500 ms pour un snippet de 13 kB (hôte gardé chaud) ; sinon formateurs natifs, écarts du corpus d'or relus un par un                                                                                     | § 3.9.4, S8 ; `field-shield` porté en Rust dans les deux cas                                             |
-| D2  | Mermaid                                                | **moteur natif tiers s'il passe S7**, sinon organigrammes + séquences maison ; les autres types en code avec « non pris en charge »                                                                                                                                     | § 3.9.3, S7, écart E6                                                                                    |
-| D3  | Correcteur orthographique                              | **jamais**                                                                                                                                                                                                                                                              | écart E5 assumé définitivement ; pas de `spellbook`                                                      |
-| D4  | Périmètre visuel                                       | **toute l'application Angular retranscrite avec la même apparence** ; éditeur riche WYSIWYG complet avant la 1.0.0, aucun mode provisoire                                                                                                                               | § 2.1, § 5, R1 ; l'éditeur texte brut de P3 ne sert qu'au développement et disparaît en P4               |
-| D5  | Numéro de la première version egui                     | **1.0.0**                                                                                                                                                                                                                                                               | Phase 11                                                                                                 |
-| D6  | Bêta, double exploitation, compatibilité               | **aucune** : l'application n'a pas d'utilisateurs                                                                                                                                                                                                                       | § 0, § 4, § 9 ; Tauri gardé seulement en phase 1 comme filet de tests, puis figé par `angular-reference` |
-| D7  | `unsafe_code = "forbid"`                               | **interdit dans toutes les crates**                                                                                                                                                                                                                                     | § 3.10 : uniquement des dépendances à API sûre                                                           |
-| D8  | Paquets Windows                                        | **NSIS seul**, plus de `.msi`                                                                                                                                                                                                                                           | § 4.3, Phase 11                                                                                          |
-| D9  | Langue de ce plan                                      | **français** ; `architecture.md` reste en anglais                                                                                                                                                                                                                       | —                                                                                                        |
-| D10 | Règles de données et crates d'édition                  | **une règle, une définition, au cœur** ; `engine` ne dépend d'aucune crate nouvelle ; `text`, `richtext`, `drawing`, `diagram` reçoivent les résultats en argument ; seuls partages : le bouclier `{{…}}` de `text`, les options `pulldown-cmark` comparées par un test | § 3.2, § 3.8                                                                                             |
-| D11 | Files du `Backend`                                     | **thread « db » FIFO** pour tout ce qui peut prendre le verrou de la base ; **pool rayon global** (`compute`) pour le reste ; tokio pour le réseau ; chaque fonction d'`api/` choisit sa file, dans le doute `db`                                                       | § 3.3.5, § 3.3.6                                                                                         |
-| D12 | Appels directs au cœur depuis le thread UI             | **permis** pour une fonction pure (ni verrou ni E/S) dont l'entrée est bornée par l'écran et qui tient sous 1 ms au p95 ; toujours par `api/` ; cas listés au § 3.3.5                                                                                                   | § 3.3.1, § 3.3.5                                                                                         |
-| D13 | Partage entre dessin et état                           | par écran, un **état** (lu `&`, changé dans `apply`) et une **vue** (`&mut` au dessin : saisie, tampons, menus, défilement, gestes) ; `Action` à une variante par zone ; tests d'état sur le vrai `Backend` + `settle()`                                                | § 3.4, § 3.3.5                                                                                           |
-| D14 | Clavier                                                | **un ordre** : IME → widget focalisé (`consume_key`) → `keys::dispatch` (modale, zone, application) ; entrées `while_typing` ; zoom clavier d'egui coupé ; Tab d'egui sauf dans les éditeurs ; raccourcis stockés en `code` W3C                                         | § 3.12, § 3.3.7                                                                                          |
-| D15 | Linux : Wayland natif ou X11                           | **après S1**. Critère : Wayland natif si un fichier déposé depuis le gestionnaire de fichiers arrive (GNOME et KDE) et si le tray révèle la fenêtre ; sinon X11 forcé (XWayland) quand `DISPLAY` existe, Wayland natif à défaut. Une constante de `app`                 | § 3.10, S1, E12                                                                                          |
-| D16 | Profil et instance unique                              | **une application par profil** : socket d'instance unique nommée d'après le profil (`interprocess`, sans la crate `single-instance`) ; profil par défaut `com.devnotes.app.dev` jusqu'à la 1.0.0 ; `--profile` pour les tests et le développement                       | § 3.3.10, § 3.10, § 4.1, P2                                                                              |
-| D17 | Caches de l'UI                                         | **tous dans `LibraryCaches`**, vidés avec les états des widgets d'egui au changement de bibliothèque ; pas d'effacement octet par octet, assumé dans le modèle de menace                                                                                                | § 3.4, § 3.6, § 3.13                                                                                     |
-| D18 | Paniques                                               | travail du `Backend` : `catch_unwind` → `AppError` (le code du verrou empoisonné d'aujourd'hui) ; thread UI : crochet qui journalise emplacement et thread, **jamais le message** (une panique de découpe de chaîne cite le texte), puis sortie ; `panic = "unwind"`    | § 3.3.5, § 3.3.8, § 3.13                                                                                 |
-| D19 | Quitter pendant une écriture                           | fenêtre cachée, file « db » fermée puis **vidée** (brouillons, import, restauration, changement de phrase) ; 30 s au plus, puis sortie journalisée ; envois réseau annulés                                                                                              | § 3.3.6, § 3.3.8                                                                                         |
-| D20 | Réveil de l'UI et ordre de démarrage                   | canal d'entrées + **`Waker`** (`OnceLock<egui::Context>`) créés par `main`, remplis par la closure de création d'eframe, où naissent `Engine`, `Backend` et `AppState`                                                                                                  | § 3.3.4, § 3.3.8                                                                                         |
-| D21 | Formats localisés                                      | **écrits à la main** (`i18n::format`, fr/en), prouvés par le corpus d'or `Intl` ; pas d'ICU4X ; langue du système par `sys-locale`                                                                                                                                      | § 3.11, annexe E                                                                                         |
-| D22 | Moteur de regex de la coloration                       | **après S5**. Critère : `fancy-regex` si 1 Mo de JSON et 1 Mo de TypeScript se colorent en ≤ 200 ms (p95) ; sinon `onig` (du C compilé par `cc`, comme SQLite : « pas de C » n'est pas une règle du projet)                                                             | § 3.9, S5, E11                                                                                           |
-| D23 | Texte et images d'un Dessin                            | **une coupure de ligne** (celle de Fabric, dans `drawing`) pour l'éditeur et les images ; **une voie d'image** : le SVG d'export, rastérisé par `resvg`                                                                                                                 | § 3.9.2, E14                                                                                             |
-| D24 | Référence visuelle                                     | WebView2 sous Windows à 100 % ; horloge figée, fuseau `Europe/Paris` ; export de référence versionné ; `states.json` ; PNG en pré-version GitHub                                                                                                                        | § 5.2, P1                                                                                                |
-| D25 | Corpus d'or                                            | **livrable de P1**, dans `golden/`, générés par des specs `*.golden.spec.ts` gardées sur `angular-reference` ; liste au § 8.6                                                                                                                                           | § 8.6, P1                                                                                                |
-| D26 | Signature et client de mise à jour                     | signé par `cargo-packager` avec la clé actuelle ; artefacts : `.exe` NSIS et `.AppImage` ; client **après S9** : `cargo-packager-updater` s'il couvre NSIS passif et AppImage, sinon maison                                                                             | § 4.3, S9                                                                                                |
-| D27 | Numéro de version                                      | **`[workspace.package] version`** seul ; plus de version dans `package.json` ; `release.yml` compare `Cargo.toml` et `Cargo.lock`                                                                                                                                       | § 4.3, § 8.4                                                                                             |
-| D28 | Formats d'image affichés                               | PNG, JPEG, GIF (première image), WebP, BMP, ICO par `image` ; SVG par `resvg` ; le reste : « Ouvrir »                                                                                                                                                                   | § 3.6, E13                                                                                               |
-| D29 | GTK sous Linux                                         | **un seul thread GTK**, celui du tray ; dialogues de fichiers par le portail XDG (`rfd`, feature `xdg-portal`)                                                                                                                                                          | § 3.10, § 4.3                                                                                            |
+| #   | Décision                                                | Retenu                                                                                                                                                                                                                                                                                                                 | Conséquence dans le plan                                                                                 |
+| --- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| D1  | Formatage : formateurs natifs ou Prettier dans QuickJS  | **après le spike S8**. Critère : Prettier dans QuickJS si p95 ≤ 500 ms pour un snippet de 13 kB (hôte gardé chaud) ; sinon formateurs natifs, écarts du corpus d'or relus un par un                                                                                                                                    | § 3.9.4, S8 ; `field-shield` porté en Rust dans les deux cas                                             |
+| D2  | Mermaid                                                 | **moteur natif tiers s'il passe S7**, sinon organigrammes + séquences maison ; les autres types en code avec « non pris en charge »                                                                                                                                                                                    | § 3.9.3, S7, écart E6                                                                                    |
+| D3  | Correcteur orthographique                               | **jamais**                                                                                                                                                                                                                                                                                                             | écart E5 assumé définitivement ; pas de `spellbook`                                                      |
+| D4  | Périmètre visuel                                        | **toute l'application Angular retranscrite avec la même apparence** ; éditeur riche WYSIWYG complet avant la 1.0.0, aucun mode provisoire                                                                                                                                                                              | § 2.1, § 5, R1 ; l'éditeur texte brut de P3 ne sert qu'au développement et disparaît en P4               |
+| D5  | Numéro de la première version egui                      | **1.0.0**                                                                                                                                                                                                                                                                                                              | Phase 11                                                                                                 |
+| D6  | Bêta, double exploitation, compatibilité                | **aucune** : l'application n'a pas d'utilisateurs                                                                                                                                                                                                                                                                      | § 0, § 4, § 9 ; Tauri gardé seulement en phase 1 comme filet de tests, puis figé par `angular-reference` |
+| D7  | `unsafe_code = "forbid"`                                | **interdit dans toutes les crates**                                                                                                                                                                                                                                                                                    | § 3.10 : uniquement des dépendances à API sûre                                                           |
+| D8  | Paquets Windows                                         | **NSIS seul**, plus de `.msi`                                                                                                                                                                                                                                                                                          | § 4.3, Phase 11                                                                                          |
+| D9  | Langue de ce plan                                       | **français** ; `architecture.md` reste en anglais                                                                                                                                                                                                                                                                      | —                                                                                                        |
+| D10 | Règles de données et crates d'édition                   | **une règle, une définition, au cœur** ; `engine` ne dépend d'aucune crate nouvelle ; `text`, `richtext`, `drawing`, `diagram` reçoivent les résultats en argument ; seuls partages : le bouclier `{{…}}` de `text`, les options `pulldown-cmark` comparées par un test                                                | § 3.2, § 3.8                                                                                             |
+| D11 | Concurrence avec la base                                | **un seul ouvrier** : `Engine` possède une file et un thread « db » qui l'exécute dans l'ordre ; tout ce qui touche la base ou l'index y passe, lectures comprises, en phase 1 comme après ; `compute` pour le calcul pur, tokio pour le réseau ; pas de voie de lecture parallèle tant qu'aucune mesure ne la demande | § 3.3.5, § 3.3.6, P1                                                                                     |
+| D12 | Appels directs au cœur depuis le thread UI              | **permis** pour une fonction pure (ni verrou ni E/S) dont l'entrée est bornée par l'écran et qui tient sous 1 ms au p95 ; toujours par `api/` ; cas listés au § 3.3.5                                                                                                                                                  | § 3.3.1, § 3.3.5                                                                                         |
+| D13 | Partage entre dessin et état                            | par écran, un **état** (lu `&`, changé dans `apply`) et une **vue** (`&mut` au dessin : saisie, tampons, menus, défilement, gestes) ; `Action` à une variante par zone ; tests d'état sur le vrai `Backend` + `settle()`                                                                                               | § 3.4, § 3.3.5                                                                                           |
+| D14 | Clavier                                                 | **un ordre** : IME → widget focalisé (`consume_key`) → `keys::dispatch` (modale, zone, application) ; entrées `while_typing` ; zoom clavier d'egui coupé ; Tab d'egui sauf dans les éditeurs ; raccourcis stockés en `code` W3C                                                                                        | § 3.12, § 3.3.7                                                                                          |
+| D15 | Linux : Wayland natif ou X11                            | **après S1**. Critère : Wayland natif si un fichier déposé depuis le gestionnaire de fichiers arrive (GNOME et KDE) et si le tray révèle la fenêtre ; sinon X11 forcé (XWayland) quand `DISPLAY` existe, Wayland natif à défaut. Une constante de `app`                                                                | § 3.10, S1, E12                                                                                          |
+| D16 | Profil et instance unique                               | **une application par profil** : socket d'instance unique nommée d'après le profil (`interprocess`, sans la crate `single-instance`) ; profil par défaut `com.devnotes.app.dev` jusqu'à la 1.0.0 ; `--profile` pour les tests et le développement                                                                      | § 3.3.10, § 3.10, § 4.1, P2                                                                              |
+| D17 | Caches de l'UI                                          | **tous dans `LibraryCaches`**, vidés avec les états des widgets d'egui au changement de bibliothèque ; pas d'effacement octet par octet, assumé dans le modèle de menace                                                                                                                                               | § 3.4, § 3.6, § 3.13                                                                                     |
+| D18 | Paniques                                                | travail d'une file (« db », calcul) : `catch_unwind` → `AppError`, la file continue ; `Mutex` empoisonné : `Unavailable` comme aujourd'hui ; thread UI : crochet qui journalise emplacement et thread, **jamais le message** (une panique de découpe de chaîne cite le texte), puis sortie ; `panic = "unwind"`        | § 3.3.5, § 3.3.6, § 3.3.8, § 3.13                                                                        |
+| D19 | Quitter pendant une écriture                            | fenêtre cachée, file « db » fermée puis **vidée** (brouillons, import, restauration, changement de phrase) ; 30 s au plus, puis sortie journalisée ; envois réseau annulés                                                                                                                                             | § 3.3.6, § 3.3.8                                                                                         |
+| D20 | Réveil de l'UI et ordre de démarrage                    | canal d'entrées + **`Waker`** (`OnceLock<egui::Context>`) créés par `main`, remplis par la closure de création d'eframe, où naissent `Engine`, `Backend` et `AppState`                                                                                                                                                 | § 3.3.4, § 3.3.8                                                                                         |
+| D21 | Formats localisés                                       | **écrits à la main** (`i18n::format`, fr/en), prouvés par le corpus d'or `Intl` ; pas d'ICU4X ; langue du système par `sys-locale`                                                                                                                                                                                     | § 3.11, annexe E                                                                                         |
+| D22 | Moteur de regex de la coloration                        | **après S5**. Critère : `fancy-regex` si 1 Mo de JSON et 1 Mo de TypeScript se colorent en ≤ 200 ms (p95) ; sinon `onig` (du C compilé par `cc`, comme SQLite : « pas de C » n'est pas une règle du projet)                                                                                                            | § 3.9, S5, E11                                                                                           |
+| D23 | Texte et images d'un Dessin                             | **une coupure de ligne** (celle de Fabric, dans `drawing`) pour l'éditeur et les images ; **une voie d'image** : le SVG d'export, rastérisé par `resvg`                                                                                                                                                                | § 3.9.2, E14                                                                                             |
+| D24 | Référence visuelle                                      | WebView2 sous Windows à 100 % ; horloge figée, fuseau `Europe/Paris` ; export de référence versionné ; `states.json` ; PNG en pré-version GitHub                                                                                                                                                                       | § 5.2, P1                                                                                                |
+| D25 | Corpus d'or                                             | **livrable de P1**, dans `golden/`, générés par des specs `*.golden.spec.ts` gardées sur `angular-reference` ; liste au § 8.6                                                                                                                                                                                          | § 8.6, P1                                                                                                |
+| D26 | Signature et client de mise à jour                      | signé par `cargo-packager` avec la clé actuelle ; artefacts : `.exe` NSIS et `.AppImage` ; client **après S9** : `cargo-packager-updater` s'il couvre NSIS passif et AppImage, sinon maison                                                                                                                            | § 4.3, S9                                                                                                |
+| D27 | Numéro de version                                       | **`[workspace.package] version`** seul ; plus de version dans `package.json` ; `release.yml` compare `Cargo.toml` et `Cargo.lock`                                                                                                                                                                                      | § 4.3, § 8.4                                                                                             |
+| D28 | Formats d'image affichés                                | PNG, JPEG, GIF (première image), WebP, BMP, ICO par `image` ; SVG par `resvg` ; le reste : « Ouvrir »                                                                                                                                                                                                                  | § 3.6, E13                                                                                               |
+| D29 | GTK sous Linux                                          | **un seul thread GTK**, celui du tray ; dialogues de fichiers par le portail XDG (`rfd`, feature `xdg-portal`)                                                                                                                                                                                                         | § 3.10, § 4.3                                                                                            |
+| D30 | Écritures différées après un changement de bibliothèque | **numéro de bibliothèque** : chaque `Library` ouverte en reçoit un (compteur du processus, en mémoire) ; un envoi le note en lisant et n'écrit rien s'il a changé ; l'annulation à l'ouverture reste, la justesse n'en dépend plus                                                                                     | § 3.3.6, § 3.13, P1                                                                                      |
 
 ---
 
@@ -1829,9 +1901,10 @@ d'abord.
 - **`CLAUDE.md`** : commandes (plus de npm pour l'application), principes (frontière cœur/UI à la
   place de l'IPC, une règle une définition — D10), pièges retirés (`@defer`, CSP, `bindings.ts`,
   WebKit, zoneless) et nouveaux : thread UI sans E/S sauf appels directs bornés (D12), file « db »
-  ou `compute` (D11), état et vue (D13), ordre du clavier (D14), `LibraryCaches` (D17), crochet de
-  panique sans message (D18), profil `.dev` jusqu'à la 1.0.0 (D16), virtualisation, `author_id`,
-  persistance d'eframe désactivée, champ secret ; procédure de version (D27).
+  unique et `compute` (D11), réseau en trois temps et numéro de bibliothèque (§ 3.3.6, D30), état
+  et vue (D13), ordre du clavier (D14), `LibraryCaches` (D17), crochet de panique sans message
+  (D18), profil `.dev` jusqu'à la 1.0.0 (D16), virtualisation, `author_id`, persistance d'eframe
+  désactivée, champ secret ; procédure de version (D27).
 - **Skills** (`.claude/skills/`) :
   - **déjà fait** (2026-11-02) : `rust-guidelines` vendue depuis `microsoft/rust-guidelines`
     (copie non modifiée, `SKILL.md` local qui fixe les priorités) ; `egui-ui` écrite localement —
@@ -1937,20 +2010,20 @@ se retrouvent dans le même fichier Rust.
 190 commandes. Toutes deviennent des fonctions de service du cœur, appelées par `Backend` ; les
 enveloppes Tauri d'une ligne ne vivent que pendant la phase 1.
 
-| Feature                         | Commandes | Devenir particulier                                                                                                                                                                                                                             |
-| ------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `notes`                         | 41        | `query_notes`, `board_view`, `list_tags`, `count_notes_tagged`, `list_drawings` passent par l'index ; les écritures appellent `index.refresh` ; `drawing_thumbnail`/`drawing_picture` renvoient des octets PNG (plus de data URI)               |
-| `http`                          | 60        | `send_http_request`, `connect_websocket`, `run_http_collection` : tâches tokio, événements par `EventSink` ; `http_response_image` renvoie des octets ; corps de réponse passé par `Arc<str>` sans plafond d'IPC (le plafond d'affichage reste) |
-| `tools`                         | 37        | fonctions pures ; `save_bytes`, `save_qr_code`, `copy_qr_code`, `export_identities` passent par la plateforme (dialogue, presse-papiers) ; `generate_identity` reçoit le dossier de ressources par `Paths`                                      |
-| `folders`                       | 12        | `index.refresh` sur les notes rangées                                                                                                                                                                                                           |
-| `attachments`                   | 7         | `open_attachment` par `open` ; `read_attachment` renvoie des octets                                                                                                                                                                             |
-| `spaces`                        | 6         | suppression : `refresh` des notes déplacées                                                                                                                                                                                                     |
-| `transfer`                      | 5         | dialogues côté UI, reconstruction de l'index après import                                                                                                                                                                                       |
-| `libraries`                     | 5         | `open_library` : vide et reconstruit l'index, ferme les sockets, réinitialise l'état de l'UI                                                                                                                                                    |
-| `desktop`                       | 5         | `sync_tray`, `set_global_shortcuts`, `release_global_shortcuts`, `set_window_behavior`, `hold_quit` → appels directs à `platform`, plus de commandes                                                                                            |
-| `vault`                         | 4         | inchangé ; la phrase arrive en `Zeroizing<String>`                                                                                                                                                                                              |
-| `backup`                        | 3         | restauration : vide le `Mutex` et l'index d'abord                                                                                                                                                                                               |
-| `recovery`, `changelog`, `json` | 2, 2, 1   | inchangés                                                                                                                                                                                                                                       |
+| Feature                         | Commandes | Devenir particulier                                                                                                                                                                                                                                                                                                                |
+| ------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `notes`                         | 41        | `query_notes`, `board_view`, `list_tags`, `count_notes_tagged`, `list_drawings` passent par l'index ; les écritures appellent `index.refresh` ; `drawing_thumbnail`/`drawing_picture` renvoient des octets PNG (plus de data URI)                                                                                                  |
+| `http`                          | 60        | `send_http_request`, `connect_websocket`, `run_http_collection` : tâches tokio, lecture puis écriture par la file « db » avec le numéro de bibliothèque (§ 3.3.6), événements par `EventSink` ; `http_response_image` renvoie des octets ; corps de réponse passé par `Arc<str>` sans plafond d'IPC (le plafond d'affichage reste) |
+| `tools`                         | 37        | fonctions pures ; `save_bytes`, `save_qr_code`, `copy_qr_code`, `export_identities` passent par la plateforme (dialogue, presse-papiers) ; `generate_identity` reçoit le dossier de ressources par `Paths`                                                                                                                         |
+| `folders`                       | 12        | `index.refresh` sur les notes rangées                                                                                                                                                                                                                                                                                              |
+| `attachments`                   | 7         | `open_attachment` par `open` ; `read_attachment` renvoie des octets                                                                                                                                                                                                                                                                |
+| `spaces`                        | 6         | suppression : `refresh` des notes déplacées                                                                                                                                                                                                                                                                                        |
+| `transfer`                      | 5         | dialogues côté UI, reconstruction de l'index après import                                                                                                                                                                                                                                                                          |
+| `libraries`                     | 5         | `open_library` : vide et reconstruit l'index, ferme les sockets, annule envois et exécutions, réinitialise l'état de l'UI                                                                                                                                                                                                          |
+| `desktop`                       | 5         | `sync_tray`, `set_global_shortcuts`, `release_global_shortcuts`, `set_window_behavior`, `hold_quit` → appels directs à `platform`, plus de commandes                                                                                                                                                                               |
+| `vault`                         | 4         | inchangé ; la phrase arrive en `Zeroizing<String>`                                                                                                                                                                                                                                                                                 |
+| `backup`                        | 3         | restauration : vide le `Mutex` et l'index d'abord                                                                                                                                                                                                                                                                                  |
+| `recovery`, `changelog`, `json` | 2, 2, 1   | inchangés                                                                                                                                                                                                                                                                                                                          |
 
 ## Annexe D — Scénarios e2e : de WebdriverIO au pilote egui_inspection
 
