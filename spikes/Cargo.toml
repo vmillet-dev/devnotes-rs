@@ -1,0 +1,12 @@
+# Phase 0 spikes of the egui migration (docs/egui-migration-plan.md § 7). Throw-away code,
+# outside the product workspace: nothing here is shipped or reused as is.
+[workspace]
+resolver = "3"
+members = ["s1-shell", "s3-canvas", "s4-index", "s5-editor", "s5-highlight", "s7-mermaid", "s8-format"]
+
+[workspace.package]
+edition = "2024"
+publish = false
+
+[profile.release]
+debug = 1

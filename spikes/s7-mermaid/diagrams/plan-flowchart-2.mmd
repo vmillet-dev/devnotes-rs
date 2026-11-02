@@ -1,0 +1,5 @@
+flowchart LR
+  wv["WebView Angular (inchangée)"] -->|invoke| cmds["src-tauri : une ligne par commande"]
+  cmds --> core[("engine")]
+  e2e["35 scénarios e2e + cargo test"] -.->|prouvent : rien ne change| wv
+  core --> disk[("Profil")]

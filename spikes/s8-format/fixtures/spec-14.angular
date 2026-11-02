@@ -1,0 +1,1 @@
+<ul><li *ngFor="let n of notes" (click)="open( n )">{{n.title|uppercase}}</li></ul>

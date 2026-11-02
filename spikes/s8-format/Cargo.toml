@@ -1,0 +1,17 @@
+[package]
+name = "s8-format"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+rquickjs = "0.14"
+dprint-plugin-typescript = "0.96"
+dprint-plugin-json = "0.25"
+dprint-plugin-markdown = "0.28"
+dprint-core = "0.75"
+malva = "0.16"
+markup_fmt = "0.27"
+pretty_yaml = "0.6"
+pretty_graphql = "0.2"
+anyhow = "1"

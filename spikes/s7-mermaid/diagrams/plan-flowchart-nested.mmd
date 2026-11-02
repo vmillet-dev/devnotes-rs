@@ -1,0 +1,22 @@
+flowchart TB
+  subgraph proc["Processus devnotes"]
+    direction TB
+    subgraph uith["Thread UI (winit + egui)"]
+      draw["Dessin : notes/, http/, tools/, titlebar/…"] -->|Action| state["AppState : états d'écran"]
+      state -->|appels typés| api["api/ : façade du cœur"]
+    end
+    api -->|"Backend::db / compute / spawn → Pending"| backend["Backend"]
+    backend -->|"file « db » : un thread, dans l'ordre"| core
+    backend -->|"pool rayon : fonctions pures"| core
+    backend -->|"runtime tokio : réseau"| core
+    subgraph core["engine : Arc#lt;Engine#gt;"]
+      db["Db = Mutex#lt;Option#lt;Library#gt;#gt;"]
+      idx["NoteIndex (entrées Arc immuables)"]
+      net["Sending · Runs · Sockets · Restored"]
+    end
+    core -->|"EngineEvent via EventSink"| chan["canal d'événements"]
+    plat["platform : tray, raccourcis, instance unique, dépôts"] -->|"GlobalAction"| chan
+    chan -->|"vidé en début de frame + request_repaint"| state
+  end
+  core --> disk[("Profil : bibliothèques, vault.json, preferences.json")]
+  core -->|"stdin / stdout"| host["Processus enfant : hôte de scripts QuickJS"]

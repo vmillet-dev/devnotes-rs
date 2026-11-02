@@ -1,0 +1,11 @@
+[package]
+name = "s7-mermaid"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+mermaid-rs-renderer = { version = "0.3", default-features = false }
+merman = "0.9"
+mermaid-svg = "0.7"
+resvg = "0.45"

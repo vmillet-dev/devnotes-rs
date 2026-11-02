@@ -1,0 +1,9 @@
+flowchart LR
+  A[Déverrouiller] -->|phrase secrète| B{Clé valide ?}
+  B -- oui --> C[(Bibliothèque)]
+  B -- non --> D[Réessayer]
+  C --> E([Index en mémoire])
+  subgraph Cœur
+    C
+    E
+  end

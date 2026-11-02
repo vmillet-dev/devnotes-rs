@@ -1,0 +1,13 @@
+classDiagram
+  class Note {
+    +String id
+    +String title
+    +NoteKind kind
+    +tags() Vec~String~
+  }
+  class Folder {
+    +String id
+    +parent() Option~Folder~
+  }
+  Note "*" --> "1" Folder : lives in
+  Folder <|-- Space

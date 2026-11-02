@@ -1,0 +1,7 @@
+stateDiagram-v2
+  [*] --> Locked
+  Locked --> Unlocked : passphrase
+  Unlocked --> Locked : switch library
+  Unlocked --> Restoring : restore a backup
+  Restoring --> Unlocked
+  Unlocked --> [*]
