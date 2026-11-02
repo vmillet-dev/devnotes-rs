@@ -96,6 +96,13 @@ impl Engine {
         index.matches(&mut library)
     }
 
+    /// Wipes the index: the application is leaving, and its memory with it.
+    pub fn wipe_index(&self) {
+        if let Ok(mut index) = self.index.lock() {
+            index.clear();
+        }
+    }
+
     /// How many notes the index holds, for the tests.
     #[doc(hidden)]
     pub fn indexed(&self) -> usize {

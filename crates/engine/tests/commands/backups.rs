@@ -23,6 +23,12 @@ fn a_restore_keeps_where_the_library_went_for_the_page_it_reloads() {
         fs::copy(directory.join(name), copy.join(name)).unwrap();
     }
     let session = Session::with(Some(library));
+    let space = session.space("Personal");
+    session
+        .call(|e| engine::notes::create_note(e, super::common::snippet(&space)))
+        .unwrap();
+    session.wait(engine::index::fill);
+    assert_eq!(session.engine.indexed(), 1);
 
     let aside = session
         .call(|e| restore_backup(e, COPY.to_string()))
@@ -32,6 +38,11 @@ fn a_restore_keeps_where_the_library_went_for_the_page_it_reloads() {
         directory
             .join(&aside)
             .starts_with(directory.join("replaced"))
+    );
+    assert_eq!(
+        session.engine.indexed(),
+        0,
+        "the index of the library replaced is wiped"
     );
     assert_eq!(session.call(take_restored_aside), Some(aside));
     assert_eq!(session.call(take_restored_aside), None);
