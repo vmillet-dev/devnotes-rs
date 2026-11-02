@@ -10,8 +10,6 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 
-use tauri::{AppHandle, Manager, Runtime};
-
 use crate::Engine;
 
 use crate::error::{AppError, StorageError};
@@ -109,31 +107,22 @@ pub(crate) fn lock(db: &Db) -> Result<LibraryGuard<'_>, StorageError> {
     Ok(LibraryGuard(guard))
 }
 
-/// The engine the shell manages, for a command that reaches it through its handle.
-pub(crate) fn engine<R: Runtime>(app: &AppHandle<R>) -> Arc<Engine> {
-    Arc::clone(&app.state::<Arc<Engine>>())
-}
-
-/// A command's body, on the engine's db queue: one thread, in the order the bodies arrive, so
-/// two writes sent in a row land in that order. A body that panics answers as the lock it
-/// would have poisoned.
-pub(crate) async fn blocking<R, T, F>(app: AppHandle<R>, body: F) -> Result<T, AppError>
-where
-    R: Runtime,
-    T: Send + 'static,
-    F: FnOnce(&Engine, &Db) -> Result<T, AppError> + Send + 'static,
-{
-    blocking_on(engine(&app), body).await
-}
-
-/// [`blocking`], for code that holds the engine rather than a handle.
-pub(crate) async fn blocking_on<T, F>(engine: Arc<Engine>, body: F) -> Result<T, AppError>
+/// Runs `job` on the engine's db queue: one thread, in the order jobs arrive, so two writes sent
+/// in a row land in that order. A job that panics answers as the lock it would have poisoned.
+/// Every data function of the core is called through it.
+pub async fn run<T, F>(engine: Arc<Engine>, job: F) -> Result<T, AppError>
 where
     T: Send + 'static,
-    F: FnOnce(&Engine, &Db) -> Result<T, AppError> + Send + 'static,
+    F: FnOnce(&Engine) -> Result<T, AppError> + Send + 'static,
 {
     let held = Arc::clone(&engine);
-    engine.queue.run(move || body(&held, &held.db)).await
+    engine.queue.run(move || job(&held)).await
+}
+
+/// For the integration tests, which call a data function on their own thread, one at a time.
+#[doc(hidden)]
+pub fn run_here<T>(engine: &Engine, job: impl FnOnce(&Engine) -> T) -> T {
+    queue::as_db_thread(|| job(engine))
 }
 
 /// The library a send read from, if it is still the one open: `None` once another was opened.

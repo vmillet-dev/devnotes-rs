@@ -2,7 +2,7 @@
 
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::Duration;
 
@@ -126,7 +126,7 @@ pub(super) fn request(url: &str) -> SendRequest {
 fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_back() {
     let session = Session::open();
     let api = session
-        .call(|app| create_http_collection("API".to_string(), app))
+        .call(|e| create_http_collection(e, "API".to_string()))
         .unwrap();
     let settings = ContainerSettings {
         auth: RequestAuth::Bearer {
@@ -140,14 +140,14 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
         ..ContainerSettings::default()
     };
     session
-        .call(|app| {
+        .call(|e| {
             save_http_settings(
+                e,
                 HttpItem {
                     kind: HttpItemKind::Collection,
                     id: api.id.clone(),
                 },
                 settings,
-                app,
             )
         })
         .unwrap();
@@ -168,7 +168,7 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
     sent.document.body = RequestBody::Json {
         text: "{\"name\":\"Ada\"}".to_string(),
     };
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     assert_eq!((answer.status, answer.reason.as_str()), (201, "Created"));
     assert_eq!((answer.body.as_str(), answer.size), ("{\"id\":7}", 8));
@@ -224,10 +224,10 @@ fn layered(session: &Session, port: u16) -> SendRequest {
     };
 
     let api = session
-        .call(|app| create_http_collection("API".to_string(), app))
+        .call(|e| create_http_collection(e, "API".to_string()))
         .unwrap();
     let invoices = session
-        .call(|app| create_http_folder(api.id.clone(), None, "Factures".to_string(), app))
+        .call(|e| create_http_folder(e, api.id.clone(), None, "Factures".to_string()))
         .unwrap();
     for (kind, id, variables) in [
         (
@@ -250,11 +250,11 @@ fn layered(session: &Session, port: u16) -> SendRequest {
             ..ContainerSettings::default()
         };
         session
-            .call(|app| save_http_settings(item, settings, app))
+            .call(|e| save_http_settings(e, item, settings))
             .unwrap();
     }
     let staging = session
-        .call(|app| create_http_environment("Staging".to_string(), app))
+        .call(|e| create_http_environment(e, "Staging".to_string()))
         .unwrap();
     let mut token = variable("token", "t0k3n");
     token.kind = VariableKind::Secret;
@@ -267,10 +267,10 @@ fn layered(session: &Session, port: u16) -> SendRequest {
         ..EnvironmentPatch::default()
     };
     session
-        .call(|app| save_http_environment(staging.id.clone(), patch, app))
+        .call(|e| save_http_environment(e, staging.id.clone(), patch))
         .unwrap();
     session
-        .call(|app| save_http_globals(vec![variable("baseUrl", "http://nowhere.invalid")], app))
+        .call(|e| save_http_globals(e, vec![variable("baseUrl", "http://nowhere.invalid")]))
         .unwrap();
 
     let mut sent = request("{{baseUrl}}/invoices?page={{page}}&size={{size}}");
@@ -311,7 +311,7 @@ fn a_variable_is_sent_as_the_nearest_level_sets_it() {
         folder_id: sent.folder_id.clone(),
         environment_id: sent.environment_id.clone(),
     };
-    let used = session.call(|app| http_variables(asked, app)).unwrap();
+    let used = session.call(|e| http_variables(e, asked)).unwrap();
     let scopes: Vec<(&str, Option<VariableScope>)> = used
         .iter()
         .map(|known| {
@@ -333,7 +333,7 @@ fn a_variable_is_sent_as_the_nearest_level_sets_it() {
         ]
     );
 
-    session.call(|app| send_http_request(sent, app)).unwrap();
+    session.wait(|e| send_http_request(e, sent)).unwrap();
     let seen = seen.recv().unwrap();
     assert!(
         seen.head
@@ -361,7 +361,7 @@ fn a_secret_variable_shows_by_its_name_once_the_request_left() {
     });
     let sent = layered(&session, port);
 
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
     assert!(seen.recv().unwrap().head.contains("t0k3n"));
     assert!(
         answer
@@ -371,7 +371,7 @@ fn a_secret_variable_shows_by_its_name_once_the_request_left() {
             .any(|header| header.key == "Authorization" && header.value == "Bearer {{token}}")
     );
 
-    let days = session.call(|app| http_history(0, app)).unwrap();
+    let days = session.call(|e| http_history(e, 0)).unwrap();
     let item = &days[0].items[0];
     assert_eq!(
         item.summary
@@ -381,7 +381,7 @@ fn a_secret_variable_shows_by_its_name_once_the_request_left() {
         Some("Staging")
     );
     let entry = session
-        .call(|app| http_history_entry(item.id.clone(), app))
+        .call(|e| http_history_entry(e, item.id.clone()))
         .unwrap();
     let kept = serde_json::to_string(&entry).unwrap();
     assert!(!kept.contains("t0k3n"), "{kept}");
@@ -414,7 +414,7 @@ fn a_request_is_written_as_code_from_the_levels_a_send_resolves_from() {
     };
 
     let kept = session
-        .call(|app| generate_http_code(asked(CodeTarget::Curl, false), app))
+        .call(|e| generate_http_code(e, asked(CodeTarget::Curl, false)))
         .unwrap();
     assert!(
         kept.code.starts_with(
@@ -429,7 +429,7 @@ fn a_request_is_written_as_code_from_the_levels_a_send_resolves_from() {
     assert_eq!(kept.language, Language::Sh);
 
     let clear = session
-        .call(|app| generate_http_code(asked(CodeTarget::Powershell, true), app))
+        .call(|e| generate_http_code(e, asked(CodeTarget::Powershell, true)))
         .unwrap();
     assert!(clear.code.contains("'Bearer t0k3n'"), "{}", clear.code);
     assert!(clear.secrets.is_empty());
@@ -443,7 +443,7 @@ fn a_variable_set_nowhere_stops_the_send_by_its_name() {
     let mut sent = request("http://127.0.0.1:9/tenants/{{tenantId}}");
     sent.document.variables = vec![variable("other", "1")];
 
-    let answer = session.call(|app| send_http_request(sent, app));
+    let answer = session.wait(|e| send_http_request(e, sent));
 
     let name = answer
         .as_ref()
@@ -482,13 +482,13 @@ fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_of
             ..ContainerSettings::default()
         };
         session
-            .call(|app| save_http_settings(item, settings, app))
+            .call(|e| save_http_settings(e, item, settings))
             .unwrap();
     };
 
     // Nothing said: the application and its version, as the editor lists them.
     let answer = session
-        .call(|app| send_http_request(request(&url), app))
+        .wait(|e| send_http_request(e, request(&url)))
         .unwrap();
     let left = seen.recv().unwrap();
     assert_eq!(agent(&left).as_deref(), Some(USER_AGENT));
@@ -501,9 +501,7 @@ fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_of
             .any(|header| header.key == "User-Agent" && header.value == USER_AGENT)
     );
     let listed = session
-        .call(|app| {
-            implied_http_headers(RequestKind::Http, request(&url).document, None, None, app)
-        })
+        .call(|e| implied_http_headers(e, RequestKind::Http, request(&url).document, None, None))
         .unwrap();
     assert_eq!(
         listed
@@ -523,23 +521,23 @@ fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_of
 
     // Its collection names another, then the request its own over it.
     let api = session
-        .call(|app| create_http_collection("API".to_string(), app))
+        .call(|e| create_http_collection(e, "API".to_string()))
         .unwrap();
     hand_down(&api.id, vec![row("Equipe/1", true)]);
     let mut placed = request(&url);
     placed.collection_id = Some(api.id.clone());
     session
-        .call(|app| send_http_request(placed.clone(), app))
+        .wait(|e| send_http_request(e, placed.clone()))
         .unwrap();
     assert_eq!(agent(&seen.recv().unwrap()).as_deref(), Some("Equipe/1"));
     let listed = session
-        .call(|app| {
+        .call(|e| {
             implied_http_headers(
+                e,
                 RequestKind::Http,
                 placed.document.clone(),
                 Some(api.id.clone()),
                 None,
-                app,
             )
         })
         .unwrap();
@@ -557,17 +555,17 @@ fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_of
 
     let mut own = placed.clone();
     own.document.headers = vec![row("curl/8.5.0", true)];
-    session.call(|app| send_http_request(own, app)).unwrap();
+    session.wait(|e| send_http_request(e, own)).unwrap();
     assert_eq!(agent(&seen.recv().unwrap()).as_deref(), Some("curl/8.5.0"));
 
     // Switched off, in the request or above it: none at all.
     let mut silent = request(&url);
     silent.document.headers = vec![row("", false)];
-    session.call(|app| send_http_request(silent, app)).unwrap();
+    session.wait(|e| send_http_request(e, silent)).unwrap();
     assert_eq!(agent(&seen.recv().unwrap()), None);
 
     hand_down(&api.id, vec![row("Equipe/1", false)]);
-    session.call(|app| send_http_request(placed, app)).unwrap();
+    session.wait(|e| send_http_request(e, placed)).unwrap();
     assert_eq!(agent(&seen.recv().unwrap()), None);
 }
 
@@ -587,7 +585,7 @@ fn the_redirects_are_followed_and_recorded() {
     });
 
     let answer = session
-        .call(|app| send_http_request(request(&format!("http://127.0.0.1:{port}/old")), app))
+        .wait(|e| send_http_request(e, request(&format!("http://127.0.0.1:{port}/old"))))
         .unwrap();
 
     assert_eq!(answer.body, "here");
@@ -606,7 +604,7 @@ fn a_body_past_what_is_shown_is_cut_and_saved_whole_to_a_file() {
     });
 
     let answer = session
-        .call(|app| send_http_request(request(&format!("http://127.0.0.1:{port}/")), app))
+        .wait(|e| send_http_request(e, request(&format!("http://127.0.0.1:{port}/"))))
         .unwrap();
     assert!(answer.cut && !answer.incomplete);
     assert_eq!(answer.body.len(), SHOWN_LIMIT);
@@ -617,18 +615,18 @@ fn a_body_past_what_is_shown_is_cut_and_saved_whole_to_a_file() {
     let target = path.to_string_lossy().into_owned();
     assert!(
         session
-            .call(|app| save_http_response("tab-1".to_string(), target.clone(), app))
+            .wait(|e| save_http_response(e, "tab-1".to_string(), target.clone()))
             .unwrap()
     );
     assert_eq!(std::fs::read(&path).unwrap(), large);
     assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 1);
 
     session
-        .call(|app| forget_http_response("tab-1".to_string(), app))
+        .call(|e| forget_http_response(e, "tab-1".to_string()))
         .unwrap();
     assert!(
         !session
-            .call(|app| save_http_response("tab-1".to_string(), target, app))
+            .wait(|e| save_http_response(e, "tab-1".to_string(), target))
             .unwrap()
     );
 }
@@ -646,16 +644,16 @@ fn a_note_made_of_an_answer_masks_the_auth_the_server_said_back() {
         token: "jeton-collection".to_string(),
     };
 
-    let answer = session.call(|app| send_http_request(echo, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, echo)).unwrap();
     assert_eq!(answer.body, "Authorization: Bearer jeton-collection");
 
     let note = session
-        .call(|app| {
+        .wait(|e| {
             http_response_note(
+                e,
                 Some("tab-1".to_string()),
                 answer.exchange.clone(),
                 answer.body.clone(),
-                app,
             )
         })
         .unwrap();
@@ -664,11 +662,11 @@ fn a_note_made_of_an_answer_masks_the_auth_the_server_said_back() {
 
     // A run's answer, kept under no id: its exchange says what left.
     let run = session
-        .call(|app| http_response_note(None, answer.exchange.clone(), answer.body.clone(), app))
+        .wait(|e| http_response_note(e, None, answer.exchange.clone(), answer.body.clone()))
         .unwrap();
     assert_eq!(run.text, "Authorization: ••••••••");
     let plain = session
-        .call(|app| http_response_note(None, answer.exchange.clone(), "plain".to_string(), app))
+        .wait(|e| http_response_note(e, None, answer.exchange.clone(), "plain".to_string()))
         .unwrap();
     assert!(!plain.masked);
 }
@@ -694,7 +692,7 @@ fn a_multipart_file_part_is_sent_with_the_type_of_its_file() {
         parts: vec![file("image-test.png"), file("notes.unknown")],
     };
 
-    session.call(|app| send_http_request(upload, app)).unwrap();
+    session.wait(|e| send_http_request(e, upload)).unwrap();
 
     let body = String::from_utf8_lossy(&seen.recv().unwrap().body).into_owned();
     let type_of = |name: &str| {
@@ -720,14 +718,14 @@ fn an_image_is_kept_as_bytes_not_shown_as_text() {
     });
 
     let answer = session
-        .call(|app| send_http_request(request(&format!("http://127.0.0.1:{port}/a.png")), app))
+        .wait(|e| send_http_request(e, request(&format!("http://127.0.0.1:{port}/a.png"))))
         .unwrap();
 
     assert!(answer.binary && answer.cut);
     assert_eq!((answer.body.as_str(), answer.size), ("", 4));
     assert_eq!(
         session
-            .call(|app| http_response_image("tab-1".to_string(), app))
+            .wait(|e| http_response_image(e, "tab-1".to_string()))
             .unwrap()
             .as_deref(),
         Some("data:image/png;base64,iVBORw==")
@@ -737,7 +735,7 @@ fn an_image_is_kept_as_bytes_not_shown_as_text() {
 #[test]
 fn a_variable_a_bad_url_a_closed_port_and_a_plain_server_over_tls_each_fail_by_code() {
     let session = Session::open();
-    let failed = |url: &str| code(session.call(|app| send_http_request(request(url), app)));
+    let failed = |url: &str| code(session.wait(|e| send_http_request(e, request(url))));
 
     assert_eq!(failed("{{baseUrl}}/users"), ErrorCode::HttpVariable);
     assert_eq!(failed("ftp://example.com"), ErrorCode::HttpInvalidUrl);
@@ -779,11 +777,12 @@ fn a_timeout_and_a_redirect_too_many_say_the_value_in_force_and_who_set_it() {
 
     let session = Session::open();
     let api = session
-        .call(|app| create_http_collection("API".to_string(), app))
+        .call(|e| create_http_collection(e, "API".to_string()))
         .unwrap();
     session
-        .call(|app| {
+        .call(|e| {
             save_http_settings(
+                e,
                 HttpItem {
                     kind: HttpItemKind::Collection,
                     id: api.id.clone(),
@@ -795,7 +794,6 @@ fn a_timeout_and_a_redirect_too_many_say_the_value_in_force_and_who_set_it() {
                     },
                     ..ContainerSettings::default()
                 },
-                app,
             )
         })
         .unwrap();
@@ -817,7 +815,7 @@ fn a_timeout_and_a_redirect_too_many_say_the_value_in_force_and_who_set_it() {
     let mut inherited = request(&slow);
     inherited.collection_id = Some(api.id.clone());
     let failed = session
-        .call(|app| send_http_request(inherited, app))
+        .wait(|e| send_http_request(e, inherited))
         .unwrap_err();
     assert_eq!(failed.code, ErrorCode::HttpTimeout);
     assert_eq!(
@@ -828,7 +826,7 @@ fn a_timeout_and_a_redirect_too_many_say_the_value_in_force_and_who_set_it() {
     let mut own = request(&slow);
     own.collection_id = Some(api.id.clone());
     own.document.transport.timeout_ms = Some(1_000);
-    let failed = session.call(|app| send_http_request(own, app)).unwrap_err();
+    let failed = session.wait(|e| send_http_request(e, own)).unwrap_err();
     assert_eq!(failed.code, ErrorCode::HttpTimeout);
     assert_eq!(params(&failed), "amount=1 source=request unit=s");
     drop(silent);
@@ -843,20 +841,18 @@ fn a_timeout_and_a_redirect_too_many_say_the_value_in_force_and_who_set_it() {
     let around = format!("http://127.0.0.1:{port}/around");
     let mut once = request(&around);
     once.document.transport.max_redirects = Some(1);
-    let failed = session
-        .call(|app| send_http_request(once, app))
-        .unwrap_err();
+    let failed = session.wait(|e| send_http_request(e, once)).unwrap_err();
     assert_eq!(failed.code, ErrorCode::HttpTooManyRedirects);
     assert_eq!(params(&failed), "count=1 source=request");
 
     let failed = session
-        .call(|app| send_http_request(request(&around), app))
+        .wait(|e| send_http_request(e, request(&around)))
         .unwrap_err();
     assert_eq!(failed.code, ErrorCode::HttpTooManyRedirects);
     assert_eq!(params(&failed), "count=10 source=default");
 
     // The history says the same sentence: it keeps the values with the code.
-    let days = session.call(|app| http_history(0, app)).unwrap();
+    let days = session.call(|e| http_history(e, 0)).unwrap();
     let last = &days[0].items[0].summary;
     assert_eq!(last.failure, Some(ErrorCode::HttpTooManyRedirects));
     assert_eq!(
@@ -873,23 +869,23 @@ fn a_send_under_way_is_cancelled_by_its_id() {
     // Accepts, then answers nothing until the test is over.
     let silent = thread::spawn(move || listener.accept().map(|(stream, _)| stream));
 
-    let app = session.0.handle().clone();
-    let sending = tauri::async_runtime::spawn(send_http_request(
+    let sending = session.runtime.spawn(send_http_request(
+        Arc::clone(&session.engine),
         request(&format!("http://127.0.0.1:{port}/slow")),
-        app.clone(),
     ));
     // Polled from the test's own thread: the send is under way once there is one to cancel.
-    while !tauri::async_runtime::block_on(cancel_http_send("tab-1".to_string(), app.clone()))
+    while !session
+        .call(|e| cancel_http_send(e, "tab-1".to_string()))
         .unwrap()
     {
         thread::sleep(Duration::from_millis(10));
     }
-    let cancelled = tauri::async_runtime::block_on(sending).unwrap();
+    let cancelled = session.runtime.block_on(sending).unwrap();
 
     assert_eq!(cancelled.unwrap_err().code, ErrorCode::HttpCancelled);
     assert!(
         !session
-            .call(|app| cancel_http_send("tab-1".to_string(), app))
+            .call(|e| cancel_http_send(e, "tab-1".to_string()))
             .unwrap()
     );
     drop(silent);
@@ -918,18 +914,18 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
         value: "Bearer t0ken".to_string(),
         ..KeyValue::default()
     }];
-    session.call(|app| send_http_request(keyed, app)).unwrap();
+    session.wait(|e| send_http_request(e, keyed)).unwrap();
 
     let closed = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = closed.local_addr().unwrap().port();
     drop(closed);
     let refused =
-        session.call(|app| send_http_request(request(&format!("http://127.0.0.1:{port}/")), app));
+        session.wait(|e| send_http_request(e, request(&format!("http://127.0.0.1:{port}/"))));
     assert!(refused.is_err());
-    let never_left = session.call(|app| send_http_request(request("{{baseUrl}}/x"), app));
+    let never_left = session.wait(|e| send_http_request(e, request("{{baseUrl}}/x")));
     assert!(never_left.is_err());
 
-    let days = session.call(|app| http_history(0, app)).unwrap();
+    let days = session.call(|e| http_history(e, 0)).unwrap();
     assert_eq!(days.len(), 1);
     let items = &days[0].items;
     assert_eq!(items.len(), 2);
@@ -947,7 +943,7 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
     );
 
     let entry = session
-        .call(|app| http_history_entry(items[1].id.clone(), app))
+        .call(|e| http_history_entry(e, items[1].id.clone()))
         .unwrap();
     let response = entry.record.response.unwrap();
     assert_eq!(response.body, "pong");
@@ -961,14 +957,14 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
     );
 
     let draft = session
-        .call(|app| http_history_draft(items[1].id.clone(), app))
+        .call(|e| http_history_draft(e, items[1].id.clone()))
         .unwrap();
     assert!(draft.document.url.ends_with("/ping"));
     assert!(draft.document.headers.is_empty());
 
     assert_eq!(session.call(count_http_history).unwrap(), 2);
     assert_eq!(session.call(clear_http_history).unwrap(), 2);
-    assert!(session.call(|app| http_history(0, app)).unwrap().is_empty());
+    assert!(session.call(|e| http_history(e, 0)).unwrap().is_empty());
 }
 
 /// « Vider l'historique » was the only way to remove the one send made with the wrong token,
@@ -984,7 +980,7 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
     let session = Session::open();
     let (port, _seen) = serve(2, |_, _| response("200 OK", &[], b"ok"));
     let api = session
-        .call(|app| create_http_collection("API".to_string(), app))
+        .call(|e| create_http_collection(e, "API".to_string()))
         .unwrap();
     let token = KeyValue {
         key: "Authorization".to_string(),
@@ -992,8 +988,9 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
         ..KeyValue::default()
     };
     let held = session
-        .call(|app| {
+        .call(|e| {
             create_http_request(
+                e,
                 HttpRequestDraft {
                     collection_id: api.id.clone(),
                     folder_id: None,
@@ -1006,7 +1003,6 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
                         ..RequestDocument::default()
                     },
                 },
-                app,
             )
         })
         .unwrap();
@@ -1015,10 +1011,10 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
         sent.collection_id = Some(api.id.clone());
         sent.request_id = Some(held.id.clone());
         sent.document.headers = vec![token.clone()];
-        session.call(|app| send_http_request(sent, app)).unwrap();
+        session.wait(|e| send_http_request(e, sent)).unwrap();
     }
     let listed = || {
-        let days = session.call(|app| http_history(0, app)).unwrap();
+        let days = session.call(|e| http_history(e, 0)).unwrap();
         days.into_iter()
             .flat_map(|day| day.items)
             .collect::<Vec<_>>()
@@ -1038,18 +1034,18 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
     );
 
     let removed = session
-        .call(|app| delete_http_history_entry(before[0].id.clone(), app))
+        .call(|e| delete_http_history_entry(e, before[0].id.clone()))
         .unwrap();
     assert_eq!(listed(), before[1..]);
     session
-        .call(|app| restore_http_history_entry(removed, app))
+        .call(|e| restore_http_history_entry(e, removed))
         .unwrap();
     assert_eq!(listed(), before);
 
     // Back onto its request: the send's URL, and the request's own secret where the record
     // holds a mask.
     let onto = session
-        .call(|app| http_history_onto_request(before[1].id.clone(), app))
+        .call(|e| http_history_onto_request(e, before[1].id.clone()))
         .unwrap()
         .unwrap();
     assert_eq!(onto.name, "ma req");
@@ -1058,19 +1054,19 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
 
     // The request gone, there is nothing to go back onto: a draft it is.
     session
-        .call(|app| {
+        .call(|e| {
             delete_http_item(
+                e,
                 HttpItem {
                     kind: HttpItemKind::Request,
                     id: held.id.clone(),
                 },
-                app,
             )
         })
         .unwrap();
     assert_eq!(
         session
-            .call(|app| http_history_onto_request(before[1].id.clone(), app))
+            .call(|e| http_history_onto_request(e, before[1].id.clone()))
             .unwrap(),
         None
     );
@@ -1099,7 +1095,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
     };
     let document = sent.document.graphql.clone();
 
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     let read = answer.graphql.unwrap();
     assert_eq!(read.data.as_deref(), Some("{\n  \"me\": null\n}"));
@@ -1113,7 +1109,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
             .contains("\"operationName\":\"Me\"")
     );
 
-    let described = session.call(|_| describe_graphql(document)).unwrap();
+    let described = session.wait(|_| describe_graphql(document)).unwrap();
     assert_eq!(described.operations, ["Me", "Other"]);
     assert_eq!(described.query_problem, None);
 
@@ -1122,7 +1118,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
         query: "query Country($code: ID!) { country(code: $code) { name }".to_string(),
         ..GraphqlDocument::default()
     };
-    let described = session.call(|_| describe_graphql(open.clone())).unwrap();
+    let described = session.wait(|_| describe_graphql(open.clone())).unwrap();
     let problem = described.query_problem.unwrap();
     assert_eq!(
         (problem.fault, problem.line, problem.column),
@@ -1130,7 +1126,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
     );
     assert_eq!(described.missing, ["code"]);
     assert_eq!(
-        session.call(|_| add_graphql_variables(open)).unwrap(),
+        session.wait(|_| add_graphql_variables(open)).unwrap(),
         "{
   \"code\": null
 }"
@@ -1162,14 +1158,14 @@ fn an_answer_fills_the_jar_the_next_request_carries_it_and_the_manager_empties_i
     let base = format!("http://127.0.0.1:{port}");
 
     session
-        .call(|app| send_http_request(request(&format!("{base}/login")), app))
+        .wait(|e| send_http_request(e, request(&format!("{base}/login"))))
         .unwrap();
     session
-        .call(|app| send_http_request(request(&format!("{base}/me")), app))
+        .wait(|e| send_http_request(e, request(&format!("{base}/me"))))
         .unwrap();
     let mut alone = request(&format!("{base}/me"));
     alone.document.transport.use_cookies = Some(false);
-    session.call(|app| send_http_request(alone, app)).unwrap();
+    session.wait(|e| send_http_request(e, alone)).unwrap();
 
     let heads: Vec<String> = seen.iter().take(3).map(|seen| seen.head).collect();
     assert!(!heads[0].to_ascii_lowercase().contains("cookie:"));
@@ -1186,11 +1182,11 @@ fn an_answer_fills_the_jar_the_next_request_carries_it_and_the_manager_empties_i
     assert_eq!(domains[0].domain, "127.0.0.1");
     assert_eq!(domains[0].cookies.len(), 2);
     let id = domains[0].cookies[0].id.clone();
-    assert_eq!(session.call(|app| delete_http_cookie(id, app)).unwrap(), 1);
+    assert_eq!(session.call(|e| delete_http_cookie(e, id)).unwrap(), 1);
     assert_eq!(session.call(count_http_cookies).unwrap(), 1);
     assert_eq!(
         session
-            .call(|app| delete_http_cookie_domain("127.0.0.1".to_string(), app))
+            .call(|e| delete_http_cookie_domain(e, "127.0.0.1".to_string()))
             .unwrap(),
         1
     );
@@ -1230,7 +1226,7 @@ fn a_cookie_set_on_a_redirect_is_sent_to_the_hop_that_follows_and_kept_in_the_ja
     let landing = format!("http://127.0.0.1:{port}/cookies");
 
     let answer = session
-        .call(|app| send_http_request(request(&set), app))
+        .wait(|e| send_http_request(e, request(&set)))
         .unwrap();
 
     assert_eq!(answer.body, "session=abc123");
@@ -1275,7 +1271,7 @@ fn a_cookie_set_on_a_redirect_is_sent_to_the_hop_that_follows_and_kept_in_the_ja
     assert_eq!(session.call(clear_http_cookies).unwrap(), 2);
     let mut alone = request(&set);
     alone.document.transport.use_cookies = Some(false);
-    let answer = session.call(|app| send_http_request(alone, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, alone)).unwrap();
     assert_eq!(answer.body, "");
     assert_eq!(session.call(count_http_cookies).unwrap(), 0);
     // What the answers set is still read, as it always was.
@@ -1305,7 +1301,7 @@ fn a_redirect_to_another_host_carries_neither_a_cookie_nor_the_authorization() {
 
     let mut sent = request(&login);
     sent.document.headers = vec![row("Authorization", "Bearer t0ken"), row("X-Trace", "1")];
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     assert_eq!(answer.body, "there");
     assert_eq!(
@@ -1322,7 +1318,7 @@ fn a_redirect_to_another_host_carries_neither_a_cookie_nor_the_authorization() {
     // A `Cookie` typed wins over the jar's for the host it is typed for, and stays there too.
     let mut typed = request(&login);
     typed.document.headers = vec![row("Cookie", "typed=1")];
-    session.call(|app| send_http_request(typed, app)).unwrap();
+    session.wait(|e| send_http_request(e, typed)).unwrap();
     assert_eq!(
         header_of(&seen.recv().unwrap(), "cookie").as_deref(),
         Some("typed=1")
@@ -1348,7 +1344,7 @@ fn a_303_after_a_post_becomes_a_get_without_its_body_and_a_307_sends_it_again() 
         sent.document.body = RequestBody::Json {
             text: "{\"a\":1}".to_string(),
         };
-        session.call(|app| send_http_request(sent, app)).unwrap()
+        session.wait(|e| send_http_request(e, sent)).unwrap()
     };
 
     let answer = posting("see-other");
@@ -1385,7 +1381,7 @@ fn the_delay_is_the_whole_chain_s_and_a_cancel_ends_it_on_the_way() {
     let mut slow = request(&format!("http://127.0.0.1:{port}/first"));
     slow.document.transport.timeout_ms = Some(600);
     assert_eq!(
-        code(session.call(|app| send_http_request(slow, app))),
+        code(session.wait(|e| send_http_request(e, slow))),
         ErrorCode::HttpTimeout
     );
 
@@ -1398,18 +1394,18 @@ fn the_delay_is_the_whole_chain_s_and_a_cancel_ends_it_on_the_way() {
             Vec::new()
         }
     });
-    let app = session.0.handle().clone();
-    let sending = tauri::async_runtime::spawn(send_http_request(
+    let sending = session.runtime.spawn(send_http_request(
+        Arc::clone(&session.engine),
         request(&format!("http://127.0.0.1:{port}/first")),
-        app.clone(),
     ));
     seen.recv().unwrap();
-    while !tauri::async_runtime::block_on(cancel_http_send("tab-1".to_string(), app.clone()))
+    while !session
+        .call(|e| cancel_http_send(e, "tab-1".to_string()))
         .unwrap()
     {
         thread::sleep(Duration::from_millis(10));
     }
-    let cancelled = tauri::async_runtime::block_on(sending).unwrap();
+    let cancelled = session.runtime.block_on(sending).unwrap();
     assert_eq!(cancelled.unwrap_err().code, ErrorCode::HttpCancelled);
 }
 
@@ -1426,7 +1422,7 @@ fn a_request_set_not_to_follow_redirects_answers_the_redirect_itself() {
     let mut sent = request(&format!("http://127.0.0.1:{port}/old"));
     sent.document.transport.follow_redirects = Some(false);
 
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     assert_eq!(answer.status, 302);
     assert!(answer.redirects.is_empty());

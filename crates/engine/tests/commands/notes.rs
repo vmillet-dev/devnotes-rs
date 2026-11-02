@@ -42,7 +42,7 @@ fn everything(search: &str) -> NotesQuery {
 }
 
 fn note(session: &Session, draft: NoteDraft) -> String {
-    session.call(|app| create_note(draft, app)).unwrap().note.id
+    session.call(|e| create_note(e, draft)).unwrap().note.id
 }
 
 fn values(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
@@ -63,7 +63,7 @@ fn a_command_run_before_the_unlock_answers_locked() {
     let session = Session::locked();
 
     assert!(matches!(
-        code(session.call(|app| query_notes(everything(""), app))),
+        code(session.call(|e| query_notes(e, everything("")))),
         ErrorCode::Locked
     ));
 }
@@ -78,12 +78,10 @@ fn a_note_written_through_the_commands_reads_back_and_is_found() {
         title: Some("psql to prod".to_string()),
         ..Default::default()
     };
-    let updated = session
-        .call(|app| update_note(id.clone(), patch, app))
-        .unwrap();
-    let read = session.call(|app| get_note(id.clone(), app)).unwrap();
+    let updated = session.call(|e| update_note(e, id.clone(), patch)).unwrap();
+    let read = session.call(|e| get_note(e, id.clone())).unwrap();
     let found = session
-        .call(|app| query_notes(everything("prod"), app))
+        .call(|e| query_notes(e, everything("prod")))
         .unwrap();
 
     assert_eq!(updated.note.title, "psql to prod");
@@ -97,7 +95,7 @@ fn a_note_that_does_not_exist_is_named_as_such() {
     let session = Session::open();
 
     assert!(matches!(
-        code(session.call(|app| get_note("missing".to_string(), app))),
+        code(session.call(|e| get_note(e, "missing".to_string()))),
         ErrorCode::NoteNotFound
     ));
 }
@@ -109,7 +107,7 @@ fn a_duplicate_takes_the_title_it_is_given() {
     let id = note(&session, snippet(&space));
 
     let copy = session
-        .call(|app| duplicate_note(id.clone(), "Titre (copie)".to_string(), app))
+        .call(|e| duplicate_note(e, id.clone(), "Titre (copie)".to_string()))
         .unwrap();
 
     assert_ne!(copy.note.id, id);
@@ -126,18 +124,16 @@ fn the_samples_arrive_in_one_space_with_their_folders() {
     };
 
     let space = session
-        .call(|app| {
+        .call(|e| {
             seed_samples(
+                e,
                 "Samples".to_string(),
                 vec!["Scripts".to_string(), "Notes".to_string()],
                 vec![sample],
-                app,
             )
         })
         .unwrap();
-    let seeded = session
-        .call(|app| query_notes(everything(""), app))
-        .unwrap();
+    let seeded = session.call(|e| query_notes(e, everything(""))).unwrap();
 
     assert_eq!(session.spaces(), ["Samples"]);
     assert_eq!(seeded.matched, 1);
@@ -154,7 +150,7 @@ fn samples_under_a_blank_name_are_refused() {
     let session = Session::open();
 
     assert!(matches!(
-        code(session.call(|app| seed_samples(" ".to_string(), Vec::new(), Vec::new(), app))),
+        code(session.call(|e| seed_samples(e, " ".to_string(), Vec::new(), Vec::new()))),
         ErrorCode::InvalidInput
     ));
     assert!(session.spaces().is_empty());
@@ -169,17 +165,15 @@ fn a_kept_body_is_listed_compared_and_put_back() {
         content: Some("psql -h prod".to_string()),
         ..Default::default()
     };
-    session
-        .call(|app| update_note(id.clone(), edit, app))
-        .unwrap();
+    session.call(|e| update_note(e, id.clone(), edit)).unwrap();
 
-    let kept = session.call(|app| list_revisions(id.clone(), app)).unwrap();
+    let kept = session.call(|e| list_revisions(e, id.clone())).unwrap();
     let revision = kept[0].id.clone();
     let diff = session
-        .call(|app| revision_diff(id.clone(), revision.clone(), app))
+        .call(|e| revision_diff(e, id.clone(), revision.clone()))
         .unwrap();
     let restored = session
-        .call(|app| restore_revision(id.clone(), revision, app))
+        .call(|e| restore_revision(e, id.clone(), revision))
         .unwrap();
 
     assert_eq!(kept.len(), 1);
@@ -196,7 +190,7 @@ fn comparing_with_a_revision_that_is_not_kept_is_named_as_such() {
     let id = note(&session, snippet(&space));
 
     assert!(matches!(
-        code(session.call(|app| revision_diff(id, "missing".to_string(), app))),
+        code(session.call(|e| revision_diff(e, id, "missing".to_string()))),
         ErrorCode::RevisionNotFound
     ));
 }
@@ -208,14 +202,14 @@ fn the_trash_takes_notes_gives_them_back_and_forgets_them() {
     let first = note(&session, snippet(&space));
     let second = note(&session, snippet(&space));
 
-    session.call(|app| delete_note(first.clone(), app)).unwrap();
-    let trashed = session.call(|app| list_trash(String::new(), app)).unwrap();
-    let restored = session.call(|app| restore_notes(ids(&first), app)).unwrap();
+    session.call(|e| delete_note(e, first.clone())).unwrap();
+    let trashed = session.call(|e| list_trash(e, String::new())).unwrap();
+    let restored = session.call(|e| restore_notes(e, ids(&first))).unwrap();
 
     let deleted = session
-        .call(|app| delete_notes(vec![first.clone(), second.clone()], app))
+        .call(|e| delete_notes(e, vec![first.clone(), second.clone()]))
         .unwrap();
-    let purged = session.call(|app| purge_notes(ids(&first), app)).unwrap();
+    let purged = session.call(|e| purge_notes(e, ids(&first))).unwrap();
     let emptied = session.call(empty_trash).unwrap();
 
     assert_eq!(trashed.len(), 1);
@@ -223,7 +217,7 @@ fn the_trash_takes_notes_gives_them_back_and_forgets_them() {
     assert_eq!((restored, deleted, purged, emptied), (1, 2, 1, 1));
     assert!(
         session
-            .call(|app| list_trash(String::new(), app))
+            .call(|e| list_trash(e, String::new()))
             .unwrap()
             .is_empty()
     );
@@ -239,19 +233,17 @@ fn the_trash_is_searched_and_what_it_found_restored() {
     let found = note(&session, titled);
     let other = note(&session, snippet(&space));
     session
-        .call(|app| delete_notes(vec![found.clone(), other.clone()], app))
+        .call(|e| delete_notes(e, vec![found.clone(), other.clone()]))
         .unwrap();
 
     let narrowed = session
-        .call(|app| list_trash(" CERTIFICAT ".to_string(), app))
+        .call(|e| list_trash(e, " CERTIFICAT ".to_string()))
         .unwrap();
     let restored = session
-        .call(|app| restore_trash("certificat".to_string(), app))
+        .call(|e| restore_trash(e, "certificat".to_string()))
         .unwrap();
-    let left = session.call(|app| list_trash(String::new(), app)).unwrap();
-    let rest = session
-        .call(|app| restore_trash(String::new(), app))
-        .unwrap();
+    let left = session.call(|e| list_trash(e, String::new())).unwrap();
+    let rest = session.call(|e| restore_trash(e, String::new())).unwrap();
 
     let ids = |notes: &[TrashedNote]| {
         notes
@@ -273,13 +265,11 @@ fn a_move_is_undone_by_the_placements_it_answered() {
     let id = note(&session, snippet(&personal));
 
     let placements = session
-        .call(|app| move_notes(ids(&id), work.clone(), app))
+        .call(|e| move_notes(e, ids(&id), work.clone()))
         .unwrap();
-    let moved = session.call(|app| get_note(id.clone(), app)).unwrap();
-    let undone = session
-        .call(|app| move_notes_back(placements, app))
-        .unwrap();
-    let back = session.call(|app| get_note(id.clone(), app)).unwrap();
+    let moved = session.call(|e| get_note(e, id.clone())).unwrap();
+    let undone = session.call(|e| move_notes_back(e, placements)).unwrap();
+    let back = session.call(|e| get_note(e, id.clone())).unwrap();
 
     assert_eq!(moved.note.space_id, work);
     assert_eq!(undone, 1);
@@ -291,16 +281,16 @@ fn a_priority_is_set_and_put_back_without_touching_the_modification_date() {
     let session = Session::open();
     let space = session.space("Personal");
     let id = note(&session, snippet(&space));
-    let before = session.call(|app| get_note(id.clone(), app)).unwrap();
+    let before = session.call(|e| get_note(e, id.clone())).unwrap();
 
     let previous = session
-        .call(|app| set_priority(ids(&id), Priority::Urgent, app))
+        .call(|e| set_priority(e, ids(&id), Priority::Urgent))
         .unwrap();
-    let set = session.call(|app| get_note(id.clone(), app)).unwrap();
+    let set = session.call(|e| get_note(e, id.clone())).unwrap();
     let restored = session
-        .call(|app| restore_priorities(previous.clone(), app))
+        .call(|e| restore_priorities(e, previous.clone()))
         .unwrap();
-    let back = session.call(|app| get_note(id.clone(), app)).unwrap();
+    let back = session.call(|e| get_note(e, id.clone())).unwrap();
 
     assert_eq!(previous.len(), 1);
     assert_eq!(set.note.priority, Priority::Urgent);
@@ -320,13 +310,14 @@ fn a_note_changes_kind_keeps_its_body_in_the_history_and_comes_back() {
     let id = note(&session, draft);
 
     let converted = session
-        .call(|app| convert_note(id.clone(), NoteKind::Checklist, app))
+        .call(|e| convert_note(e, id.clone(), NoteKind::Checklist))
         .unwrap();
-    let history = session.call(|app| list_revisions(id.clone(), app)).unwrap();
+    let history = session.call(|e| list_revisions(e, id.clone())).unwrap();
     let previous = converted.previous.clone();
     let back = session
-        .call(|app| {
+        .call(|e| {
             update_note(
+                e,
                 id.clone(),
                 NotePatch {
                     kind: Some(previous.kind),
@@ -335,12 +326,11 @@ fn a_note_changes_kind_keeps_its_body_in_the_history_and_comes_back() {
                     items: Some(previous.items.clone()),
                     ..NotePatch::default()
                 },
-                app,
             )
         })
         .unwrap();
     let unchanged = session
-        .call(|app| convert_note(id.clone(), NoteKind::Snippet, app))
+        .call(|e| convert_note(e, id.clone(), NoteKind::Snippet))
         .unwrap();
 
     assert_eq!(converted.note.note.kind, NoteKind::Checklist);
@@ -380,31 +370,21 @@ fn a_tag_is_taken_off_a_selection_and_put_back_exactly() {
     let ops = tagged(&["ops"]);
     let bare = tagged(&[]);
     let trashed = tagged(&["ops"]);
-    session
-        .call(|app| delete_note(trashed.clone(), app))
-        .unwrap();
-    let tags_of = |id: &String| {
-        session
-            .call(|app| get_note(id.clone(), app))
-            .unwrap()
-            .note
-            .tags
-    };
+    session.call(|e| delete_note(e, trashed.clone())).unwrap();
+    let tags_of = |id: &String| session.call(|e| get_note(e, id.clone())).unwrap().note.tags;
 
     let mut removed = session
-        .call(|app| {
+        .call(|e| {
             remove_tag(
+                e,
                 vec![both.clone(), ops.clone(), bare.clone(), trashed.clone()],
                 " #OPS ".to_string(),
-                app,
             )
         })
         .unwrap();
     removed.sort_by(|a, b| a.note_id.cmp(&b.note_id));
     let after = (tags_of(&both), tags_of(&ops), tags_of(&bare));
-    let restored = session
-        .call(|app| restore_tags(removed.clone(), app))
-        .unwrap();
+    let restored = session.call(|e| restore_tags(e, removed.clone())).unwrap();
 
     let mut expected = vec![both.clone(), ops.clone()];
     expected.sort();
@@ -422,7 +402,7 @@ fn a_tag_is_taken_off_a_selection_and_put_back_exactly() {
     assert_eq!(tags_of(&ops), ["ops"]);
     assert!(
         session
-            .call(|app| remove_tag(ids(&both), "#".to_string(), app))
+            .call(|e| remove_tag(e, ids(&both), "#".to_string()))
             .unwrap()
             .is_empty()
     );
@@ -437,18 +417,18 @@ fn notes_are_pinned_together_and_unpinned_back_without_touching_the_modification
     let mut held = snippet(&space);
     held.pinned = true;
     let held = note(&session, held);
-    let before = session.call(|app| get_note(loose.clone(), app)).unwrap();
+    let before = session.call(|e| get_note(e, loose.clone())).unwrap();
 
     let changed = session
-        .call(|app| set_pinned(vec![loose.clone(), held.clone()], true, app))
+        .call(|e| set_pinned(e, vec![loose.clone(), held.clone()], true))
         .unwrap();
-    let pinned = session.call(|app| get_note(loose.clone(), app)).unwrap();
+    let pinned = session.call(|e| get_note(e, loose.clone())).unwrap();
     let undone = session
-        .call(|app| set_pinned(changed.clone(), false, app))
+        .call(|e| set_pinned(e, changed.clone(), false))
         .unwrap();
     let pinned_after = |id: &String| {
         session
-            .call(|app| get_note(id.clone(), app))
+            .call(|e| get_note(e, id.clone()))
             .unwrap()
             .note
             .pinned
@@ -479,22 +459,22 @@ fn tags_are_normalised_counted_renamed_and_dropped() {
     let id = note(&session, snippet(&space));
 
     let added = session
-        .call(|app| tag_notes(ids(&id), vec!["#urgent".to_string()], app))
+        .call(|e| tag_notes(e, ids(&id), vec!["#urgent".to_string()]))
         .unwrap();
     let counted = session
-        .call(|app| count_notes_tagged(vec!["urgent".to_string()], app))
+        .call(|e| count_notes_tagged(e, vec!["urgent".to_string()]))
         .unwrap();
     let usage = session.call(list_tags).unwrap();
-    let untagged = session.call(|app| untag_notes(added.clone(), app)).unwrap();
+    let untagged = session.call(|e| untag_notes(e, added.clone())).unwrap();
 
     session
-        .call(|app| tag_notes(ids(&id), vec!["urgent".to_string()], app))
+        .call(|e| tag_notes(e, ids(&id), vec!["urgent".to_string()]))
         .unwrap();
     let renamed = session
-        .call(|app| rename_tags(vec!["urgent".to_string()], "later".to_string(), app))
+        .call(|e| rename_tags(e, vec!["urgent".to_string()], "later".to_string()))
         .unwrap();
     let dropped = session
-        .call(|app| delete_tags(vec!["later".to_string()], app))
+        .call(|e| delete_tags(e, vec!["later".to_string()]))
         .unwrap();
 
     assert_eq!(added[0].tag, "urgent");
@@ -509,7 +489,7 @@ fn renaming_onto_a_blank_tag_is_refused() {
     let session = Session::open();
 
     assert!(matches!(
-        code(session.call(|app| rename_tags(vec!["urgent".to_string()], "#".to_string(), app))),
+        code(session.call(|e| rename_tags(e, vec!["urgent".to_string()], "#".to_string()))),
         ErrorCode::InvalidInput
     ));
 }
@@ -528,18 +508,18 @@ fn fields_fill_from_the_note_then_from_the_globals() {
     );
 
     let filled = session
-        .call(|app| set_placeholder_values(id.clone(), values(&[("host", "db")]), app))
+        .call(|e| set_placeholder_values(e, id.clone(), values(&[("host", "db")])))
         .unwrap();
     let globals = session
-        .call(|app| set_global_placeholders(values(&[("user", "admin")]), app))
+        .call(|e| set_global_placeholders(e, values(&[("user", "admin")])))
         .unwrap();
     let listed = session.call(list_global_placeholders).unwrap();
     let text = session
-        .call(|app| {
+        .call(|e| {
             fill_placeholders(
+                e,
                 filled.note.content.clone(),
                 filled.note.placeholder_values.clone(),
-                app,
             )
         })
         .unwrap();

@@ -25,11 +25,9 @@ fn a_space_is_renamed_and_pinned_to_the_head_of_the_list() {
     let id = session.space("Personal");
 
     let renamed = session
-        .call(|app| rename_space(id.clone(), named("Work"), app))
+        .call(|e| rename_space(e, id.clone(), named("Work")))
         .unwrap();
-    let pinned = session
-        .call(|app| pin_space(id.clone(), true, app))
-        .unwrap();
+    let pinned = session.call(|e| pin_space(e, id.clone(), true)).unwrap();
     let listed = session.call(list_spaces).unwrap();
 
     assert_eq!(renamed.name, "Work");
@@ -43,7 +41,7 @@ fn a_second_space_of_the_same_name_is_refused() {
     session.space("Personal");
 
     assert!(matches!(
-        code(session.call(|app| create_space(named("personal"), app))),
+        code(session.call(|e| create_space(e, named("personal")))),
         ErrorCode::DuplicateSpaceName
     ));
 }
@@ -53,7 +51,7 @@ fn a_space_without_a_readable_name_is_refused() {
     let session = Session::open();
 
     assert!(matches!(
-        code(session.call(|app| create_space(named(" "), app))),
+        code(session.call(|e| create_space(e, named(" ")))),
         ErrorCode::InvalidInput
     ));
 }
@@ -64,15 +62,15 @@ fn a_deleted_space_hands_its_notes_to_its_refuge() {
     let doomed = session.space("Personal");
     let refuge = session.space("Work");
     let note = session
-        .call(|app| create_note(snippet(&doomed), app))
+        .call(|e| create_note(e, snippet(&doomed)))
         .unwrap()
         .note
         .id;
 
     session
-        .call(|app| delete_space(doomed.clone(), refuge.clone(), app))
+        .call(|e| delete_space(e, doomed.clone(), refuge.clone()))
         .unwrap();
-    let moved = session.call(|app| get_note(note, app)).unwrap();
+    let moved = session.call(|e| get_note(e, note)).unwrap();
 
     assert_eq!(session.spaces(), ["Work"]);
     assert_eq!(moved.note.space_id, refuge);
@@ -85,7 +83,7 @@ fn a_space_cannot_be_its_own_refuge() {
     let id = session.space("Personal");
 
     assert!(matches!(
-        code(session.call(|app| delete_space(id.clone(), id, app))),
+        code(session.call(|e| delete_space(e, id.clone(), id))),
         ErrorCode::InvalidInput
     ));
     assert_eq!(session.spaces(), ["Personal"]);
@@ -96,23 +94,23 @@ fn a_space_cannot_be_its_own_refuge() {
 fn a_space_counts_what_its_deletion_would_move_and_take() {
     let session = Session::open();
     let id = session.space("Personal");
-    session.call(|app| create_note(snippet(&id), app)).unwrap();
+    session.call(|e| create_note(e, snippet(&id))).unwrap();
     session
-        .call(|app| {
+        .call(|e| {
             create_folder(
+                e,
                 FolderDraft {
                     space_id: id.clone(),
                     parent_id: None,
                     name: "Perf".to_string(),
                 },
-                app,
             )
         })
         .unwrap();
 
     assert_eq!(
         session
-            .call(|app| count_space_contents(id.clone(), app))
+            .call(|e| count_space_contents(e, id.clone()))
             .unwrap(),
         SpaceContents {
             notes: 1,
@@ -120,7 +118,7 @@ fn a_space_counts_what_its_deletion_would_move_and_take() {
         }
     );
     assert!(matches!(
-        code(session.call(|app| count_space_contents("ghost".to_string(), app))),
+        code(session.call(|e| count_space_contents(e, "ghost".to_string()))),
         ErrorCode::SpaceNotFound
     ));
 }

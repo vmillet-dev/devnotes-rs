@@ -4,7 +4,6 @@ use engine::backup::{restore_backup, take_restored_aside};
 use engine::db::open;
 use engine::vault::file::create;
 use engine::vault::key::Cost;
-use tauri::Manager;
 
 use super::Session;
 
@@ -26,7 +25,7 @@ fn a_restore_keeps_where_the_library_went_for_the_page_it_reloads() {
     let session = Session::with(Some(library));
 
     let aside = session
-        .call(|app| restore_backup(COPY.to_string(), app))
+        .call(|e| restore_backup(e, COPY.to_string()))
         .unwrap();
 
     assert!(
@@ -34,6 +33,6 @@ fn a_restore_keeps_where_the_library_went_for_the_page_it_reloads() {
             .join(&aside)
             .starts_with(directory.join("replaced"))
     );
-    assert_eq!(take_restored_aside(session.0.state()), Some(aside));
-    assert_eq!(take_restored_aside(session.0.state()), None);
+    assert_eq!(session.call(take_restored_aside), Some(aside));
+    assert_eq!(session.call(take_restored_aside), None);
 }

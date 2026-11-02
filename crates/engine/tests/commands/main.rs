@@ -1,9 +1,9 @@
-//! The commands themselves, called as the interface calls them: through a Tauri app on the mock
-//! runtime, the library in its `Db`. What they add to the store is what these check: the lock,
-//! the validation before it, and the code each failure crosses the bridge as.
+//! The service functions, called as the shell calls them, on an engine over a temporary
+//! profile. What they add to the store is what these check: the lock, the validation before it,
+//! and the code each failure answers.
 //!
-//! Not here: the commands that reach the profile (the gate, the registry, the launch copy) or a
-//! plugin (the opener, the clipboard). The mock app has neither a profile of its own nor them.
+//! Not here: what reaches the profile (the gate, the registry, the launch copy), tested where
+//! it is written.
 
 use std::future::Future;
 use std::path::Path;
@@ -11,14 +11,9 @@ use std::sync::Arc;
 
 use engine::db::{Library, open, open_in_memory, test_vault};
 use engine::error::{AppError, ErrorCode};
-use engine::http::console::HTTP_CONSOLE_EVENT;
-use engine::http::runner::HTTP_RUN_EVENT;
-use engine::http::websocket::WEBSOCKET_EVENT;
 use engine::spaces::model::SpaceDraft;
 use engine::spaces::{create_space, list_spaces};
-use engine::{Engine, EngineEvent, EventSink, Paths};
-use tauri::test::{MockRuntime, mock_app};
-use tauri::{App, AppHandle, Emitter, Manager};
+use engine::{Engine, Paths, RecordingSink};
 
 #[path = "../common/mod.rs"]
 mod common;
@@ -38,24 +33,12 @@ mod spaces;
 mod transfer;
 mod websocket;
 
-/// The app is kept, not only its handle: the state goes with it. Beside it, the profile the
-/// engine was given.
-struct Session(
-    App<MockRuntime>,
-    #[allow(dead_code, reason = "held so the directory outlives the engine")] tempfile::TempDir,
-);
-
-/// What the engine says, emitted on the mock app under the names the shell gives it.
-struct Emitted(AppHandle<MockRuntime>);
-
-impl EventSink for Emitted {
-    fn emit(&self, event: EngineEvent) {
-        let _ = match event {
-            EngineEvent::Socket(event) => self.0.emit(WEBSOCKET_EVENT, event),
-            EngineEvent::Console(event) => self.0.emit(HTTP_CONSOLE_EVENT, event),
-            EngineEvent::Run(event) => self.0.emit(HTTP_RUN_EVENT, event),
-        };
-    }
+/// An engine, what it said, the runtime its sends run on and the profile it was given.
+struct Session {
+    engine: Arc<Engine>,
+    heard: Arc<RecordingSink>,
+    runtime: tokio::runtime::Runtime,
+    _profile: tempfile::TempDir,
 }
 
 impl Session {
@@ -65,13 +48,17 @@ impl Session {
             profile: profile.path().to_path_buf(),
             resources: profile.path().to_path_buf(),
         };
-        let app = mock_app();
-        let runtime = tauri::async_runtime::handle().inner().clone();
-        let engine = Engine::new(paths, Arc::new(Emitted(app.handle().clone())), runtime);
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let heard = Arc::new(RecordingSink::default());
+        let engine = Engine::new(paths, Arc::clone(&heard) as _, runtime.handle().clone());
         *engine.db().lock().unwrap() = library;
-        app.manage(Arc::new(engine));
 
-        Self(app, profile)
+        Self {
+            engine: Arc::new(engine),
+            heard,
+            runtime,
+            _profile: profile,
+        }
     }
 
     fn open() -> Self {
@@ -91,11 +78,14 @@ impl Session {
         Self::with(Some(library))
     }
 
-    fn call<T, F>(&self, command: impl FnOnce(AppHandle<MockRuntime>) -> F) -> T
-    where
-        F: Future<Output = T>,
-    {
-        tauri::async_runtime::block_on(command(self.0.handle().clone()))
+    /// A data function, on this thread as if it were the db thread: one at a time.
+    fn call<T>(&self, job: impl FnOnce(&Engine) -> T) -> T {
+        engine::db::run_here(&self.engine, job)
+    }
+
+    /// A network function, on the engine's runtime.
+    fn wait<F: Future>(&self, job: impl FnOnce(Arc<Engine>) -> F) -> F::Output {
+        self.runtime.block_on(job(Arc::clone(&self.engine)))
     }
 
     fn space(&self, name: &str) -> String {
@@ -103,7 +93,7 @@ impl Session {
             name: name.to_string(),
         };
 
-        self.call(|app| create_space(draft, app)).unwrap().id
+        self.call(|e| create_space(e, draft)).unwrap().id
     }
 
     fn spaces(&self) -> Vec<String> {

@@ -15,7 +15,7 @@ fn a_file_is_attached_read_saved_and_deleted() {
     let session = Session::on_disk(scratch.path());
     let space = session.space("Personal");
     let note = session
-        .call(|app| create_note(snippet(&space), app))
+        .call(|e| create_note(e, snippet(&space)))
         .unwrap()
         .note
         .id;
@@ -24,25 +24,23 @@ fn a_file_is_attached_read_saved_and_deleted() {
     let saved = scratch.path().join("saved.png");
 
     let attachment = session
-        .call(|app| attach_file(note.clone(), source.to_string_lossy().to_string(), app))
+        .call(|e| attach_file(e, note.clone(), source.to_string_lossy().to_string()))
         .unwrap();
-    let listed = session
-        .call(|app| list_attachments(note.clone(), app))
-        .unwrap();
+    let listed = session.call(|e| list_attachments(e, note.clone())).unwrap();
     let uri = session
-        .call(|app| read_attachment(attachment.id.clone(), app))
+        .call(|e| read_attachment(e, attachment.id.clone()))
         .unwrap();
     session
-        .call(|app| {
+        .call(|e| {
             save_attachment(
+                e,
                 attachment.id.clone(),
                 saved.to_string_lossy().to_string(),
-                app,
             )
         })
         .unwrap();
     session
-        .call(|app| delete_attachment(attachment.id.clone(), app))
+        .call(|e| delete_attachment(e, attachment.id.clone()))
         .unwrap();
 
     assert_eq!(attachment.file_name, "capture.png");
@@ -51,12 +49,12 @@ fn a_file_is_attached_read_saved_and_deleted() {
     assert_eq!(std::fs::read(&saved).unwrap(), b"\x89PNG");
     assert!(
         session
-            .call(|app| list_attachments(note, app))
+            .call(|e| list_attachments(e, note))
             .unwrap()
             .is_empty()
     );
     assert!(matches!(
-        code(session.call(|app| read_attachment(attachment.id, app))),
+        code(session.call(|e| read_attachment(e, attachment.id))),
         ErrorCode::AttachmentNotFound
     ));
 }
@@ -68,13 +66,11 @@ fn a_file_that_cannot_be_read_is_named_as_such() {
     let missing = scratch.path().join("gone.png");
 
     assert!(matches!(
-        code(session.call(|app| {
-            attach_file(
-                "n-1".to_string(),
-                missing.to_string_lossy().to_string(),
-                app,
-            )
-        })),
+        code(session.call(|e| attach_file(
+            e,
+            "n-1".to_string(),
+            missing.to_string_lossy().to_string()
+        ))),
         ErrorCode::FileAccess
     ));
 }
@@ -89,7 +85,7 @@ fn a_file_past_the_limit_is_refused_by_its_name_and_the_limit() {
     std::fs::write(&huge, vec![0u8; limit + 1]).unwrap();
 
     let refused = session
-        .call(|app| attach_file("n-1".to_string(), huge.to_string_lossy().to_string(), app))
+        .call(|e| attach_file(e, "n-1".to_string(), huge.to_string_lossy().to_string()))
         .unwrap_err();
 
     assert!(matches!(refused.code, ErrorCode::FileTooLarge));

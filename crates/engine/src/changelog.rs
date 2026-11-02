@@ -7,15 +7,11 @@ use model::{ChangelogRelease, ChangelogSection};
 /// the release notes the updater hands over.
 const CHANGELOG: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../CHANGELOG.md"));
 
-#[tauri::command(async)]
-#[specta::specta]
 pub fn app_changelog() -> Vec<ChangelogRelease> {
     model::parse(CHANGELOG)
 }
 
 /// The notes the updater hands over, read with the same grammar as the file.
-#[tauri::command(async)]
-#[specta::specta]
 #[allow(clippy::needless_pass_by_value)]
 pub fn release_notes(markdown: String) -> Vec<ChangelogSection> {
     model::parse_section(&markdown)

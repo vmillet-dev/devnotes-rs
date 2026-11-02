@@ -9,12 +9,11 @@ pub mod copies;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use tauri::{AppHandle, Runtime, State};
-
 use chrono::{DateTime, Utc};
 
+use crate::Engine;
 use crate::Paths;
-use crate::db::{Db, blocking, lock};
+use crate::db::{Db, lock};
 use crate::error::{AppError, StorageError};
 use crate::layout;
 use copies::{Backup, list, replace, rotate, wanted};
@@ -82,10 +81,9 @@ fn copy(db: &Db) {
 
 /// The copies that exist, newest first, for the panel that lists them.
 #[allow(clippy::needless_pass_by_value)]
-#[tauri::command]
-#[specta::specta]
-pub async fn list_backups<R: Runtime>(app: AppHandle<R>) -> Result<Vec<Backup>, AppError> {
-    blocking(app, move |_, db| Ok(list(lock(db)?.directory()))).await
+pub fn list_backups(engine: &Engine) -> Result<Vec<Backup>, AppError> {
+    let db = &engine.db;
+    Ok(list(lock(db)?.directory()))
 }
 
 /// Puts a copy back, and answers where the library it replaced was moved to.
@@ -94,23 +92,17 @@ pub async fn list_backups<R: Runtime>(app: AppHandle<R>) -> Result<Vec<Backup>, 
 /// from under a live connection loses it. Every command then answers `Locked`, which sends
 /// the interface back to the gate to ask for the restored copy's phrase.
 #[allow(clippy::needless_pass_by_value)]
-#[tauri::command]
-#[specta::specta]
-pub async fn restore_backup<R: Runtime>(id: String, app: AppHandle<R>) -> Result<String, AppError> {
-    blocking(app, move |engine, db| {
-        let aside = restore(db, &id, Utc::now())?.to_string_lossy().to_string();
-        engine.restored.keep(aside.clone());
+pub fn restore_backup(engine: &Engine, id: String) -> Result<String, AppError> {
+    let db = &engine.db;
+    engine.let_go_of_the_network();
+    let aside = restore(db, &id, Utc::now())?.to_string_lossy().to_string();
+    engine.restored.keep(aside.clone());
 
-        Ok(aside)
-    })
-    .await
+    Ok(aside)
 }
 
 /// Where the library the last restore replaced went, once: the page it reloaded says it.
-#[tauri::command]
-#[specta::specta]
-#[allow(clippy::needless_pass_by_value)]
-pub fn take_restored_aside(engine: State<'_, std::sync::Arc<crate::Engine>>) -> Option<String> {
+pub fn take_restored_aside(engine: &Engine) -> Option<String> {
     engine.restored.take()
 }
 

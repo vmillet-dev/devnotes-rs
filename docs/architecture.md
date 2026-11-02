@@ -4633,14 +4633,18 @@ who remember to touch the select. Three things keep it honest:
 
 ### Rules
 
-- A new command needs **one** registration: `collect_commands![…]` in `src-tauri/src/lib.rs`.
-  Make it an `async fn` whose body runs in `db::blocking` when it takes the lock — see the
-  threading note under [Persistence](#persistence-rust) — **and** annotate it
-  `#[specta::specta]`, then regenerate; an
-  unannotated function will not compile inside `collect_commands!`. A command handed an
-  `AppHandle` is generic over `R: Runtime` and registered as `name::<tauri::Wry>`: that is what
-  lets `tests/commands` call it on the mock runtime, and specta needs the concrete type.
-- A module holding commands is `pub`, and that is not decoration: `#[specta::specta]`
+- **A command is a service function of the core and a wrapper of one line in the shell.**
+  The function lives in `crates/engine/src/<feature>.rs`, in one of three families: a **data**
+  function (`fn name(engine: &Engine, …)`, synchronous, called on the db queue), a **network**
+  one (`async fn name(engine: Arc<Engine>, …)`, which reaches the queue itself through
+  `db::run` and never holds the lock while it waits), or a pure **tool** (`off_thread`). The
+  wrapper, in `src-tauri/src/commands/<feature>.rs`, keeps the arguments in the order the front
+  sends them, takes `State<'_, Arc<Engine>>`, and calls `run(&engine, |e| feature::name(e, …))`
+  for a data function; its doc comment is the function's, copied, since `bindings.ts` carries
+  it. Then one registration in `collect_commands![…]` (`src-tauri/src/lib.rs`), annotated
+  `#[specta::specta]`, and `npm run bindings`. `tests/commands` calls the service functions on
+  an engine over a temporary profile, without Tauri.
+- A module holding wrappers is `pub`, and that is not decoration: `#[specta::specta]`
   generates a macro per command that `collect_commands!` resolves from the crate root.
   Everything else is `pub(crate)` or narrower, so that `dead_code` and `unreachable_pub` —
   both denied in `Cargo.toml` — still have something to say. A blanket `pub` silenced them
@@ -5496,9 +5500,9 @@ sockets under way, the restore set aside. It asks the shell for two things only 
 
 What reaches the platform stays out of the core's work: the clipboard is read before an
 attachment is stored and written after a QR code is drawn, and a decrypted attachment is opened
-once its copy is written — by the command, not inside the body that holds the lock. ⚠️ During
-the egui migration the commands still live in `crates/engine` and take an `AppHandle` to find
-the engine (`db::engine`); `db::blocking` hands their body `&Engine`.
+once its copy is written — by the shell's wrapper, not by the core. Opening a library or
+restoring a copy closes the sockets and cancels the sends and runs first
+(`Engine::let_go_of_the_network`). Nothing in `crates/engine` names Tauri.
 
 ## Persistence (Rust)
 

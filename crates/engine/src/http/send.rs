@@ -1260,6 +1260,16 @@ impl Sending {
         script || send
     }
 
+    /// Every send and its scripts: another library is being opened.
+    pub fn cancel_all(&self) {
+        if let Ok(hosts) = self.hosts.lock() {
+            hosts.values().for_each(Killer::kill);
+        }
+        if let Ok(running) = self.running.lock() {
+            running.values().for_each(|(_, task)| task.abort());
+        }
+    }
+
     /// The host running a send's scripts, for as long as they run.
     pub fn watch(&self, id: &str, killer: Option<Killer>) {
         if let Ok(mut hosts) = self.hosts.lock() {

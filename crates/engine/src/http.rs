@@ -28,12 +28,12 @@ use std::path::Path;
 use std::sync::Arc;
 
 use chrono::Utc;
-use tauri::{AppHandle, Runtime};
 
-use crate::db::{blocking, blocking_on, engine, lock, lock_library};
+use crate::Engine;
+use crate::EngineEvent;
+use crate::db::{self, lock, lock_library};
 use crate::error::{AppError, FileContext};
 use crate::tools::off_thread;
-use crate::{Engine, EngineEvent};
 use model::{
     HttpCollection, HttpContents, HttpFolder, HttpItem, HttpPlace, HttpRequest, HttpRequestDraft,
     HttpRequestPatch, HttpTree, NewPlace,
@@ -48,277 +48,199 @@ use scripts::network::{self, Network};
 use scripts::process::ScriptProcess;
 use scripts::session::Session;
 
-#[tauri::command]
-#[specta::specta]
-pub async fn http_tree<R: Runtime>(app: AppHandle<R>) -> Result<HttpTree, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn http_tree(engine: &Engine) -> Result<HttpTree, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::tree(&mut connection)?)
-    })
-    .await
+    Ok(store::tree(&mut connection)?)
 }
 
 /// The palette's requests, ranked here: the URL is read from each sealed document.
-#[tauri::command]
-#[specta::specta]
-pub async fn search_http_requests<R: Runtime>(
+pub fn search_http_requests(
+    engine: &Engine,
     search: String,
-    app: AppHandle<R>,
 ) -> Result<Vec<search::RequestHit>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(search::rank(
-            store::search_candidates(&mut connection)?,
-            &search,
-        ))
-    })
-    .await
+    Ok(search::rank(
+        store::search_candidates(&mut connection)?,
+        &search,
+    ))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn create_http_collection<R: Runtime>(
-    name: String,
-    app: AppHandle<R>,
-) -> Result<HttpCollection, AppError> {
-    blocking(app, move |_, db| {
-        let name = model::validated_name(&name)?;
+pub fn create_http_collection(engine: &Engine, name: String) -> Result<HttpCollection, AppError> {
+    let db = &engine.db;
+    let name = model::validated_name(&name)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::create_collection(
-            &mut connection,
-            &name,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(store::create_collection(
+        &mut connection,
+        &name,
+        Utc::now(),
+    )?)
 }
 
 /// `parent_id` `None` puts it at the collection's root.
-#[tauri::command]
-#[specta::specta]
-pub async fn create_http_folder<R: Runtime>(
+pub fn create_http_folder(
+    engine: &Engine,
     collection_id: String,
     parent_id: Option<String>,
     name: String,
-    app: AppHandle<R>,
 ) -> Result<HttpFolder, AppError> {
-    blocking(app, move |_, db| {
-        let name = model::validated_name(&name)?;
+    let db = &engine.db;
+    let name = model::validated_name(&name)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::create_folder(
-            &mut connection,
-            &collection_id,
-            parent_id.as_deref(),
-            &name,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(store::create_folder(
+        &mut connection,
+        &collection_id,
+        parent_id.as_deref(),
+        &name,
+        Utc::now(),
+    )?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn create_http_request<R: Runtime>(
+pub fn create_http_request(
+    engine: &Engine,
     draft: HttpRequestDraft,
-    app: AppHandle<R>,
 ) -> Result<HttpRequest, AppError> {
-    blocking(app, move |_, db| {
-        let name = model::validated_name(&draft.name)?;
+    let db = &engine.db;
+    let name = model::validated_name(&draft.name)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::create_request(
-            &mut connection,
-            &draft,
-            &name,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(store::create_request(
+        &mut connection,
+        &draft,
+        &name,
+        Utc::now(),
+    )?)
 }
 
 /// The first save of a request where nothing holds it yet: what `create` names is created
 /// with it, or nothing is. Every name is checked before anything is written.
-#[tauri::command]
-#[specta::specta]
-pub async fn create_http_request_in<R: Runtime>(
+pub fn create_http_request_in(
+    engine: &Engine,
     draft: HttpRequestDraft,
     create: NewPlace,
-    app: AppHandle<R>,
 ) -> Result<HttpRequest, AppError> {
-    blocking(app, move |_, db| {
-        let name = model::validated_name(&draft.name)?;
-        let collection = create
-            .collection
-            .as_deref()
-            .map(model::validated_name)
-            .transpose()?;
-        let folder = create
-            .folder
-            .as_deref()
-            .map(model::validated_name)
-            .transpose()?;
+    let db = &engine.db;
+    let name = model::validated_name(&draft.name)?;
+    let collection = create
+        .collection
+        .as_deref()
+        .map(model::validated_name)
+        .transpose()?;
+    let folder = create
+        .folder
+        .as_deref()
+        .map(model::validated_name)
+        .transpose()?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::create_request_in(
-            &mut connection,
-            &draft,
-            &name,
-            collection.as_deref(),
-            folder.as_deref(),
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(store::create_request_in(
+        &mut connection,
+        &draft,
+        &name,
+        collection.as_deref(),
+        folder.as_deref(),
+        Utc::now(),
+    )?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn get_http_request<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<HttpRequest, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn get_http_request(engine: &Engine, id: String) -> Result<HttpRequest, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::get_request(&mut connection, &id)?)
-    })
-    .await
+    Ok(store::get_request(&mut connection, &id)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn save_http_request<R: Runtime>(
+pub fn save_http_request(
+    engine: &Engine,
     id: String,
     patch: HttpRequestPatch,
-    app: AppHandle<R>,
 ) -> Result<HttpRequest, AppError> {
-    blocking(app, move |_, db| {
-        let name = patch
-            .name
-            .as_deref()
-            .map(model::validated_name)
-            .transpose()?;
+    let db = &engine.db;
+    let name = patch
+        .name
+        .as_deref()
+        .map(model::validated_name)
+        .transpose()?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::save_request(
-            &mut connection,
-            &id,
-            &patch,
-            name.as_deref(),
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(store::save_request(
+        &mut connection,
+        &id,
+        &patch,
+        name.as_deref(),
+        Utc::now(),
+    )?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn rename_http_item<R: Runtime>(
-    item: HttpItem,
-    name: String,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let name = model::validated_name(&name)?;
+pub fn rename_http_item(engine: &Engine, item: HttpItem, name: String) -> Result<(), AppError> {
+    let db = &engine.db;
+    let name = model::validated_name(&name)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::rename(&mut connection, &item, &name)?)
-    })
-    .await
+    Ok(store::rename(&mut connection, &item, &name)?)
 }
 
 /// What a deletion would take with it, for the confirmation that comes first.
-#[tauri::command]
-#[specta::specta]
-pub async fn count_http_contents<R: Runtime>(
-    item: HttpItem,
-    app: AppHandle<R>,
-) -> Result<HttpContents, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn count_http_contents(engine: &Engine, item: HttpItem) -> Result<HttpContents, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::contents(&mut connection, &item)?)
-    })
-    .await
+    Ok(store::contents(&mut connection, &item)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_http_item<R: Runtime>(
-    item: HttpItem,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn delete_http_item(engine: &Engine, item: HttpItem) -> Result<(), AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::delete(&mut connection, &item)?)
-    })
-    .await
+    Ok(store::delete(&mut connection, &item)?)
 }
 
 /// The copy's name comes from the front: no user-visible word is Rust's.
-#[tauri::command]
-#[specta::specta]
-pub async fn duplicate_http_item<R: Runtime>(
+pub fn duplicate_http_item(
+    engine: &Engine,
     item: HttpItem,
     name: String,
-    app: AppHandle<R>,
 ) -> Result<HttpItem, AppError> {
-    blocking(app, move |_, db| {
-        let name = model::validated_name(&name)?;
+    let db = &engine.db;
+    let name = model::validated_name(&name)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::duplicate(&mut connection, &item, &name, Utc::now())?)
-    })
-    .await
+    Ok(store::duplicate(&mut connection, &item, &name, Utc::now())?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn move_http_item<R: Runtime>(
-    item: HttpItem,
-    place: HttpPlace,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn move_http_item(engine: &Engine, item: HttpItem, place: HttpPlace) -> Result<(), AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::move_item(&mut connection, &item, &place)?)
-    })
-    .await
+    Ok(store::move_item(&mut connection, &item, &place)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn http_settings<R: Runtime>(
+pub fn http_settings(
+    engine: &Engine,
     item: HttpItem,
-    app: AppHandle<R>,
 ) -> Result<model::ContainerSettings, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::settings(&mut connection, &item)?)
-    })
-    .await
+    Ok(store::settings(&mut connection, &item)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn save_http_settings<R: Runtime>(
+pub fn save_http_settings(
+    engine: &Engine,
     item: HttpItem,
     settings: model::ContainerSettings,
-    app: AppHandle<R>,
 ) -> Result<(), AppError> {
     // Refused where it is typed: stored, it failed every request under it, one by one.
     if let Some((row, fault)) = settings
@@ -334,43 +256,36 @@ pub async fn save_http_settings<R: Runtime>(
         }
         .into());
     }
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        // The dialog does not hold the run order: the one the runner left is kept.
-        let settings = model::ContainerSettings {
-            run_order: store::settings(&mut connection, &item)?.run_order,
-            ..settings
-        };
+    let db = &engine.db;
 
-        Ok(store::save_settings(&mut connection, &item, &settings)?)
-    })
-    .await
+    let mut connection = lock(db)?;
+    // The dialog does not hold the run order: the one the runner left is kept.
+    let settings = model::ContainerSettings {
+        run_order: store::settings(&mut connection, &item)?.run_order,
+        ..settings
+    };
+
+    Ok(store::save_settings(&mut connection, &item, &settings)?)
 }
 
 /// What a request placed there inherits, and from where: « héritée de la collection … ».
-#[tauri::command]
-#[specta::specta]
-pub async fn inherited_http_settings<R: Runtime>(
+pub fn inherited_http_settings(
+    engine: &Engine,
     collection_id: String,
     folder_id: Option<String>,
-    app: AppHandle<R>,
 ) -> Result<settings::Inherited, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::inherited(
-            &mut connection,
-            &collection_id,
-            folder_id.as_deref(),
-        )?)
-    })
-    .await
+    Ok(store::inherited(
+        &mut connection,
+        &collection_id,
+        folder_id.as_deref(),
+    )?)
 }
 
 /// What a body implies, whether a JSON one reads, and whether its method seldom carries one:
 /// the editor says the three as it is typed, and decides none of them.
-#[tauri::command]
-#[specta::specta]
 pub async fn describe_http_body(
     body: model::RequestBody,
     method: model::HttpMethod,
@@ -399,8 +314,6 @@ pub struct BodyAnswer {
 
 /// Each header's fault by its rank, or none: the table marks the row and says why. The rule is
 /// the model's; the table holds none.
-#[tauri::command]
-#[specta::specta]
 pub async fn check_http_headers(
     rows: Vec<model::KeyValue>,
 ) -> Result<Vec<Option<model::HeaderFault>>, AppError> {
@@ -408,8 +321,6 @@ pub async fn check_http_headers(
 }
 
 /// `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows.
-#[tauri::command]
-#[specta::specta]
 pub async fn read_http_headers(text: String) -> Result<Vec<model::KeyValue>, AppError> {
     off_thread(move || model::headers_from_text(&text)).await
 }
@@ -417,31 +328,25 @@ pub async fn read_http_headers(text: String) -> Result<Vec<model::KeyValue>, App
 /// What a request sends without a row of its own — the body's type, what it inherits, the
 /// application's `User-Agent` — read as a send reads it: the editor lists the answer and
 /// decides none of it.
-#[tauri::command]
-#[specta::specta]
-pub async fn implied_http_headers<R: Runtime>(
+pub fn implied_http_headers(
+    engine: &Engine,
     kind: model::RequestKind,
     document: model::RequestDocument,
     collection_id: Option<String>,
     folder_id: Option<String>,
-    app: AppHandle<R>,
 ) -> Result<Vec<send::ImpliedHeader>, AppError> {
-    blocking(app, move |_, db| {
-        let inherited = match collection_id {
-            Some(collection_id) => {
-                let mut connection = lock(db)?;
-                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
-            }
-            None => settings::inherit(&[]),
-        };
-        Ok(send::implied(kind, &document, &inherited))
-    })
-    .await
+    let db = &engine.db;
+    let inherited = match collection_id {
+        Some(collection_id) => {
+            let mut connection = lock(db)?;
+            store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+        }
+        None => settings::inherit(&[]),
+    };
+    Ok(send::implied(kind, &document, &inherited))
 }
 
 /// The edited side wins: the query string rewritten from the table, or the table from the URL.
-#[tauri::command]
-#[specta::specta]
 pub async fn sync_http_query(
     url: String,
     params: Vec<model::KeyValue>,
@@ -450,30 +355,20 @@ pub async fn sync_http_query(
     off_thread(move || query::sync(&url, &params, edited)).await
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn reorder_http_collection<R: Runtime>(
-    id: String,
-    index: u32,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn reorder_http_collection(engine: &Engine, id: String, index: u32) -> Result<(), AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::reorder_collection(&mut connection, &id, index)?)
-    })
-    .await
+    Ok(store::reorder_collection(&mut connection, &id, index)?)
 }
 
 /// What it inherits is read under the lock, its files outside it, and the send waits on nothing
 /// but the network and its scripts: a 30-second request stalls no other command.
-#[tauri::command]
-#[specta::specta]
-pub async fn send_http_request<R: Runtime>(
+pub async fn send_http_request(
+    engine: Arc<Engine>,
     request: send::SendRequest,
-    app: AppHandle<R>,
 ) -> Result<send::SentResponse, AppError> {
-    let mut flight = Flight::new(engine(&app), &request.id);
+    let mut flight = Flight::new(engine, &request.id);
     let answer = flight.send(request).await;
     flight.keep().await;
     answer
@@ -1012,7 +907,8 @@ impl Flight {
         let collection_id = self.collection_id.clone();
         let by = self.by.clone();
         let library = self.library;
-        let kept = blocking_on(Arc::clone(&self.engine), move |_, db| {
+        let kept = db::run(Arc::clone(&self.engine), move |engine| {
+            let db = &engine.db;
             let Some(mut connection) = lock_library(db, library)? else {
                 log::warn!("A script wrote into a library closed since: nothing kept");
                 return Ok(false);
@@ -1044,7 +940,8 @@ impl Flight {
         if sent.is_none() && changes.is_empty() {
             return;
         }
-        let kept = blocking_on(engine, move |_, db| {
+        let kept = db::run(engine, move |engine| {
+            let db = &engine.db;
             let now = Utc::now();
             let Some(mut connection) = lock_library(db, library)? else {
                 log::warn!("A send ended after its library was closed: its history and cookies are not kept");
@@ -1090,7 +987,8 @@ async fn prepare(
 ) -> Result<Prepared, AppError> {
     let own = document.variables.clone();
     let own_transport = document.transport;
-    blocking_on(Arc::clone(engine), move |_, db| {
+    db::run(Arc::clone(engine), move |engine| {
+        let db = &engine.db;
         let mut connection = lock(db)?;
         let inherited = match collection_id {
             Some(collection_id) => {
@@ -1228,41 +1126,37 @@ fn layers_for(
 
 /// The request written as code for another tool, from what a send would write: its variables
 /// resolved as asked, a secret left as its `{{name}}` unless it is asked for in clear.
-#[tauri::command]
-#[specta::specta]
-pub async fn generate_http_code<R: Runtime>(
+pub fn generate_http_code(
+    engine: &Engine,
     request: CodeRequestOf,
-    app: AppHandle<R>,
 ) -> Result<codegen::GeneratedCode, AppError> {
-    blocking(app, move |_, db| {
-        let CodeRequestOf {
-            target,
-            options,
-            kind,
-            method,
-            document,
-            collection_id,
-            folder_id,
-            environment_id,
-        } = request;
-        let mut connection = lock(db)?;
-        let inherited = match collection_id {
-            Some(collection_id) => {
-                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
-            }
-            None => settings::inherit(&[]),
-        };
-        let layers = layers_for(
-            &mut connection,
-            &document.variables,
-            &inherited,
-            environment_id.as_deref(),
-        )?;
-        Ok(codegen::generate(
-            target, options, kind, method, &document, &inherited, &layers,
-        ))
-    })
-    .await
+    let db = &engine.db;
+    let CodeRequestOf {
+        target,
+        options,
+        kind,
+        method,
+        document,
+        collection_id,
+        folder_id,
+        environment_id,
+    } = request;
+    let mut connection = lock(db)?;
+    let inherited = match collection_id {
+        Some(collection_id) => {
+            store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+        }
+        None => settings::inherit(&[]),
+    };
+    let layers = layers_for(
+        &mut connection,
+        &document.variables,
+        &inherited,
+        environment_id.as_deref(),
+    )?;
+    Ok(codegen::generate(
+        target, options, kind, method, &document, &inherited, &layers,
+    ))
 }
 
 #[derive(Debug, Clone, serde::Deserialize, specta::Type)]
@@ -1280,36 +1174,32 @@ pub struct CodeRequestOf {
 
 /// The `{{variables}}` a request holds, each with what it resolves to and from where: the
 /// editor colours them by it, and names the ones nothing sets before a send does.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_variables<R: Runtime>(
+pub fn http_variables(
+    engine: &Engine,
     request: VariablesRequest,
-    app: AppHandle<R>,
 ) -> Result<Vec<variables::UsedVariable>, AppError> {
-    blocking(app, move |_, db| {
-        let VariablesRequest {
-            kind,
-            document,
-            collection_id,
-            folder_id,
-            environment_id,
-        } = request;
-        let mut connection = lock(db)?;
-        let inherited = match collection_id {
-            Some(collection_id) => {
-                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
-            }
-            None => settings::inherit(&[]),
-        };
-        let resolver = resolver_for(
-            &mut connection,
-            &document.variables,
-            &inherited,
-            environment_id.as_deref(),
-        )?;
-        Ok(resolver.used(&variables::texts(kind, &document, &inherited)))
-    })
-    .await
+    let db = &engine.db;
+    let VariablesRequest {
+        kind,
+        document,
+        collection_id,
+        folder_id,
+        environment_id,
+    } = request;
+    let mut connection = lock(db)?;
+    let inherited = match collection_id {
+        Some(collection_id) => {
+            store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+        }
+        None => settings::inherit(&[]),
+    };
+    let resolver = resolver_for(
+        &mut connection,
+        &document.variables,
+        &inherited,
+        environment_id.as_deref(),
+    )?;
+    Ok(resolver.used(&variables::texts(kind, &document, &inherited)))
 }
 
 #[derive(Debug, Clone, serde::Deserialize, specta::Type)]
@@ -1324,55 +1214,43 @@ pub struct VariablesRequest {
 
 /// The order a collection or a folder runs in: the one last arranged, the requests added since
 /// at its end.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_run_order<R: Runtime>(
-    item: HttpItem,
-    app: AppHandle<R>,
-) -> Result<Vec<model::RunEntry>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let tree = store::tree(&mut connection)?;
-        let saved = store::settings(&mut connection, &item)?.run_order;
+pub fn http_run_order(engine: &Engine, item: HttpItem) -> Result<Vec<model::RunEntry>, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let tree = store::tree(&mut connection)?;
+    let saved = store::settings(&mut connection, &item)?.run_order;
 
-        Ok(runner::run_order(
-            &saved,
-            &runner::placed_under(&tree, &item),
-        ))
-    })
-    .await
+    Ok(runner::run_order(
+        &saved,
+        &runner::placed_under(&tree, &item),
+    ))
 }
 
 /// The order the runner was left in, kept with the collection's or the folder's settings.
-#[tauri::command]
-#[specta::specta]
-pub async fn save_http_run_order<R: Runtime>(
+pub fn save_http_run_order(
+    engine: &Engine,
     item: HttpItem,
     order: Vec<model::RunEntry>,
-    app: AppHandle<R>,
 ) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let settings = model::ContainerSettings {
-            run_order: order,
-            ..store::settings(&mut connection, &item)?
-        };
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let settings = model::ContainerSettings {
+        run_order: order,
+        ..store::settings(&mut connection, &item)?
+    };
 
-        Ok(store::save_settings(&mut connection, &item, &settings)?)
-    })
-    .await
+    Ok(store::save_settings(&mut connection, &item, &settings)?)
 }
 
 /// A collection or a folder run, one request after the other, each sent as a send is — its
 /// scripts, its tests, its extractions — but written in no history. Each step is said as an
 /// event; answers once the run is over. The lock is held for reads alone, never over a send.
-#[tauri::command]
-#[specta::specta]
-pub async fn run_http_collection<R: Runtime>(
+pub async fn run_http_collection(
+    engine: Arc<Engine>,
     run: runner::RunRequest,
-    app: AppHandle<R>,
 ) -> Result<(), AppError> {
-    let tree = blocking(app.clone(), |_, db| {
+    let tree = db::run(Arc::clone(&engine), |engine| {
+        let db = &engine.db;
         let mut connection = lock(db)?;
         Ok(store::tree(&mut connection)?)
     })
@@ -1393,7 +1271,6 @@ pub async fn run_http_collection<R: Runtime>(
     } else {
         u32::try_from(rows.len()).unwrap_or(u32::MAX)
     };
-    let engine = engine(&app);
     let runs = &engine.runs;
     runs.start(&run.id);
     let started = std::time::Instant::now();
@@ -1492,7 +1369,8 @@ async fn run_step(
         },
     );
     let id = placed.id.clone();
-    let request = blocking_on(Arc::clone(engine), move |_, db| {
+    let request = db::run(Arc::clone(engine), move |engine| {
+        let db = &engine.db;
         let mut connection = lock(db)?;
         Ok(store::get_request(&mut connection, &id)?)
     })
@@ -1562,10 +1440,7 @@ fn say_run(engine: &Engine, id: &str, step: runner::RunStep) {
 
 /// « Annuler » on a run: the request under way is cancelled with it. `false` when no run of that
 /// id was under way.
-#[tauri::command]
-#[specta::specta]
-pub async fn cancel_http_run<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
-    let engine = engine(&app);
+pub fn cancel_http_run(engine: &Engine, id: String) -> Result<bool, AppError> {
     let Some(at) = engine.runs.cancel(&id) else {
         return Ok(false);
     };
@@ -1576,211 +1451,146 @@ pub async fn cancel_http_run<R: Runtime>(id: String, app: AppHandle<R>) -> Resul
 }
 
 /// A run's data file read: a CSV with its header, or a JSON array of objects.
-#[tauri::command]
-#[specta::specta]
 pub async fn read_http_run_data(path: String) -> Result<runner::RunData, AppError> {
     off_thread(move || runner::read_file(&path)).await?
 }
 
 /// `false` when that send had already ended.
-#[tauri::command]
-#[specta::specta]
-pub async fn cancel_http_send<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
-    Ok(engine(&app).sending.cancel(&id))
+pub fn cancel_http_send(engine: &Engine, id: String) -> Result<bool, AppError> {
+    Ok(engine.sending.cancel(&id))
 }
 
 /// The whole body of the last answer to `id`, not the text shown: `false` when there is none.
-#[tauri::command]
-#[specta::specta]
-pub async fn save_http_response<R: Runtime>(
+pub async fn save_http_response(
+    engine: Arc<Engine>,
     id: String,
     path: String,
-    app: AppHandle<R>,
 ) -> Result<bool, AppError> {
     crate::transfer::model::validate_path(&path)?;
-    off_thread(move || {
-        engine(&app)
-            .sending
-            .save(&id, Path::new(&path))
-            .context(&path)
-    })
-    .await?
-    .map_err(Into::into)
+    off_thread(move || engine.sending.save(&id, Path::new(&path)).context(&path))
+        .await?
+        .map_err(Into::into)
 }
 
 /// A closed tab lets its last body go.
-#[tauri::command]
-#[specta::specta]
-pub async fn forget_http_response<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    engine(&app).sending.forget(&id);
+pub fn forget_http_response(engine: &Engine, id: String) -> Result<(), AppError> {
+    engine.sending.forget(&id);
     Ok(())
 }
 
 /// The last answer to `id` as an image to show, when it is one.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_response_image<R: Runtime>(
+pub async fn http_response_image(
+    engine: Arc<Engine>,
     id: String,
-    app: AppHandle<R>,
 ) -> Result<Option<String>, AppError> {
-    off_thread(move || engine(&app).sending.image(&id)).await
+    off_thread(move || engine.sending.image(&id)).await
 }
 
 /// An answer's text made a note: the secrets the request sent, masked wherever it says them back.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_response_note<R: Runtime>(
+pub async fn http_response_note(
+    engine: Arc<Engine>,
     id: Option<String>,
     exchange: send::Exchange,
     text: String,
-    app: AppHandle<R>,
 ) -> Result<send::NoteText, AppError> {
-    off_thread(move || {
-        engine(&app)
-            .sending
-            .note_text(id.as_deref(), &exchange, &text)
-    })
-    .await
+    off_thread(move || engine.sending.note_text(id.as_deref(), &exchange, &text)).await
 }
 
 /// What was sent, newest first, a group a local day.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_history<R: Runtime>(
+pub fn http_history(
+    engine: &Engine,
     tz_offset_minutes: i32,
-    app: AppHandle<R>,
 ) -> Result<Vec<history::HistoryDay>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(history::by_day(
-            history::store::list(&mut connection)?,
-            tz_offset_minutes,
-        ))
-    })
-    .await
+    Ok(history::by_day(
+        history::store::list(&mut connection)?,
+        tz_offset_minutes,
+    ))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn http_history_entry<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<history::HistoryEntry, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn http_history_entry(engine: &Engine, id: String) -> Result<history::HistoryEntry, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(history::store::entry(&mut connection, &id)?)
-    })
-    .await
+    Ok(history::store::entry(&mut connection, &id)?)
 }
 
 /// What « Vider l'historique » says it removes.
-#[tauri::command]
-#[specta::specta]
-pub async fn count_http_history<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn count_http_history(engine: &Engine) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(history::store::count(&mut connection)?)
-    })
-    .await
+    Ok(history::store::count(&mut connection)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn clear_http_history<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn clear_http_history(engine: &Engine) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(history::store::clear(&mut connection)?)
-    })
-    .await
+    Ok(history::store::clear(&mut connection)?)
 }
 
 /// One entry gone, answered whole: its undo hands it back to `restore_http_history_entry`.
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_http_history_entry<R: Runtime>(
+pub fn delete_http_history_entry(
+    engine: &Engine,
     id: String,
-    app: AppHandle<R>,
 ) -> Result<history::HistoryEntry, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(history::store::delete(&mut connection, &id)?)
-    })
-    .await
+    Ok(history::store::delete(&mut connection, &id)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn restore_http_history_entry<R: Runtime>(
+pub fn restore_http_history_entry(
+    engine: &Engine,
     entry: history::HistoryEntry,
-    app: AppHandle<R>,
 ) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(history::store::restore(&mut connection, &entry)?)
-    })
-    .await
+    Ok(history::store::restore(&mut connection, &entry)?)
 }
 
 /// A send put back onto the request it came from, as changes to save or not, the request's own
 /// secrets where the record holds a mask. `None` when that request is gone, or the send came
 /// from a draft: the front then opens one, as `http_history_draft` rebuilds it.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_history_onto_request<R: Runtime>(
+pub fn http_history_onto_request(
+    engine: &Engine,
     id: String,
-    app: AppHandle<R>,
 ) -> Result<Option<history::HistoryDraft>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let entry = history::store::entry(&mut connection, &id)?;
-        let Some(request_id) = entry.item.request_id.as_deref() else {
-            return Ok(None);
-        };
-        let current = match store::get_request(&mut connection, request_id) {
-            Ok(current) => current,
-            Err(crate::error::StorageError::HttpItemNotFound(_)) => return Ok(None),
-            Err(error) => return Err(error.into()),
-        };
-        let above = store::inherited(
-            &mut connection,
-            &current.collection_id,
-            current.folder_id.as_deref(),
-        )?;
-        Ok(Some(history::onto(&entry, &current, &above.headers)))
-    })
-    .await
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let entry = history::store::entry(&mut connection, &id)?;
+    let Some(request_id) = entry.item.request_id.as_deref() else {
+        return Ok(None);
+    };
+    let current = match store::get_request(&mut connection, request_id) {
+        Ok(current) => current,
+        Err(crate::error::StorageError::HttpItemNotFound(_)) => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    let above = store::inherited(
+        &mut connection,
+        &current.collection_id,
+        current.folder_id.as_deref(),
+    )?;
+    Ok(Some(history::onto(&entry, &current, &above.headers)))
 }
 
 /// An entry rebuilt as a request to send again or save: its secrets are typed again.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_history_draft<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<history::HistoryDraft, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn http_history_draft(engine: &Engine, id: String) -> Result<history::HistoryDraft, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(history::draft_of(&history::store::entry(
-            &mut connection,
-            &id,
-        )?))
-    })
-    .await
+    Ok(history::draft_of(&history::store::entry(
+        &mut connection,
+        &id,
+    )?))
 }
 
 /// The operations a GraphQL document names, and why its variables do not read.
-#[tauri::command]
-#[specta::specta]
 pub async fn describe_graphql(
     document: graphql::GraphqlDocument,
 ) -> Result<graphql::GraphqlAnswer, AppError> {
@@ -1788,8 +1598,6 @@ pub async fn describe_graphql(
 }
 
 /// The variables with a `null` for each one the operation declares and they lack: « Ajouter ».
-#[tauri::command]
-#[specta::specta]
 pub async fn add_graphql_variables(document: graphql::GraphqlDocument) -> Result<String, AppError> {
     off_thread(move || graphql::with_missing(&document)).await
 }
@@ -1807,11 +1615,9 @@ pub struct WebsocketRequest {
 
 /// Its headers and auth composed like a request's, under the lock for what it inherits; the
 /// handshake waited on without it. Answers once the socket is open.
-#[tauri::command]
-#[specta::specta]
-pub async fn connect_websocket<R: Runtime>(
+pub async fn connect_websocket(
+    engine: Arc<Engine>,
     request: WebsocketRequest,
-    app: AppHandle<R>,
 ) -> Result<(), AppError> {
     let WebsocketRequest {
         id,
@@ -1821,7 +1627,8 @@ pub async fn connect_websocket<R: Runtime>(
         environment_id,
     } = request;
     document.body = model::RequestBody::None;
-    let outgoing = blocking(app.clone(), move |_, db| {
+    let outgoing = db::run(Arc::clone(&engine), move |engine| {
+        let db = &engine.db;
         let mut connection = lock(db)?;
         let inherited = match collection_id {
             Some(collection_id) => {
@@ -1848,7 +1655,6 @@ pub async fn connect_websocket<R: Runtime>(
     .await?;
 
     let (outgoing, protocols) = outgoing;
-    let engine = engine(&app);
     Ok(engine
         .sockets
         .connect(
@@ -1862,205 +1668,138 @@ pub async fn connect_websocket<R: Runtime>(
 }
 
 /// `false` when no socket is open under that id.
-#[tauri::command]
-#[specta::specta]
-pub async fn send_websocket<R: Runtime>(
-    id: String,
-    text: String,
-    app: AppHandle<R>,
-) -> Result<bool, AppError> {
-    Ok(engine(&app).sockets.send(&id, text))
+pub fn send_websocket(engine: &Engine, id: String, text: String) -> Result<bool, AppError> {
+    Ok(engine.sockets.send(&id, text))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn close_websocket<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
-    Ok(engine(&app).sockets.close(&id))
+pub fn close_websocket(engine: &Engine, id: String) -> Result<bool, AppError> {
+    Ok(engine.sockets.close(&id))
 }
 
 /// The jar by domain, for the manager.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_cookies<R: Runtime>(
-    app: AppHandle<R>,
-) -> Result<Vec<cookies::store::CookieDomain>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn http_cookies(engine: &Engine) -> Result<Vec<cookies::store::CookieDomain>, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(cookies::store::by_domain(&mut connection)?)
-    })
-    .await
+    Ok(cookies::store::by_domain(&mut connection)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_http_cookie<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn delete_http_cookie(engine: &Engine, id: String) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(cookies::store::delete(&mut connection, &id)?)
-    })
-    .await
+    Ok(cookies::store::delete(&mut connection, &id)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_http_cookie_domain<R: Runtime>(
-    domain: String,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn delete_http_cookie_domain(engine: &Engine, domain: String) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(cookies::store::delete_domain(&mut connection, &domain)?)
-    })
-    .await
+    Ok(cookies::store::delete_domain(&mut connection, &domain)?)
 }
 
 /// What « Vider le bocal » says it removes.
-#[tauri::command]
-#[specta::specta]
-pub async fn count_http_cookies<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn count_http_cookies(engine: &Engine) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(cookies::store::count(&mut connection)?)
-    })
-    .await
+    Ok(cookies::store::count(&mut connection)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn clear_http_cookies<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn clear_http_cookies(engine: &Engine) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(cookies::store::clear(&mut connection)?)
-    })
-    .await
+    Ok(cookies::store::clear(&mut connection)?)
 }
 
 /// The globals and every environment, in their order.
-#[tauri::command]
-#[specta::specta]
-pub async fn http_environments<R: Runtime>(
-    app: AppHandle<R>,
-) -> Result<environments::HttpEnvironments, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn http_environments(engine: &Engine) -> Result<environments::HttpEnvironments, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(environments::store::list(&mut connection)?)
-    })
-    .await
+    Ok(environments::store::list(&mut connection)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn create_http_environment<R: Runtime>(
+pub fn create_http_environment(
+    engine: &Engine,
     name: String,
-    app: AppHandle<R>,
 ) -> Result<environments::Environment, AppError> {
-    blocking(app, move |_, db| {
-        let name = environments::validated_name(&name)?;
+    let db = &engine.db;
+    let name = environments::validated_name(&name)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(environments::store::create(
-            &mut connection,
-            &name,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(environments::store::create(
+        &mut connection,
+        &name,
+        Utc::now(),
+    )?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn save_http_environment<R: Runtime>(
+pub fn save_http_environment(
+    engine: &Engine,
     id: String,
     patch: environments::EnvironmentPatch,
-    app: AppHandle<R>,
 ) -> Result<environments::Environment, AppError> {
-    blocking(app, move |_, db| {
-        let name = patch
-            .name
-            .as_deref()
-            .map(environments::validated_name)
-            .transpose()?;
+    let db = &engine.db;
+    let name = patch
+        .name
+        .as_deref()
+        .map(environments::validated_name)
+        .transpose()?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(environments::store::save(
-            &mut connection,
-            &id,
-            &patch,
-            name.as_deref(),
-        )?)
-    })
-    .await
+    Ok(environments::store::save(
+        &mut connection,
+        &id,
+        &patch,
+        name.as_deref(),
+    )?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn save_http_globals<R: Runtime>(
+pub fn save_http_globals(
+    engine: &Engine,
     variables: Vec<environments::Variable>,
-    app: AppHandle<R>,
 ) -> Result<Vec<environments::Variable>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(environments::store::save_globals(
-            &mut connection,
-            &variables,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(environments::store::save_globals(
+        &mut connection,
+        &variables,
+        Utc::now(),
+    )?)
 }
 
 /// The copy's name comes from the front: no user-visible word is Rust's.
-#[tauri::command]
-#[specta::specta]
-pub async fn duplicate_http_environment<R: Runtime>(
+pub fn duplicate_http_environment(
+    engine: &Engine,
     id: String,
     name: String,
-    app: AppHandle<R>,
 ) -> Result<environments::Environment, AppError> {
-    blocking(app, move |_, db| {
-        let name = environments::validated_name(&name)?;
+    let db = &engine.db;
+    let name = environments::validated_name(&name)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(environments::store::duplicate(
-            &mut connection,
-            &id,
-            &name,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(environments::store::duplicate(
+        &mut connection,
+        &id,
+        &name,
+        Utc::now(),
+    )?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_http_environment<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn delete_http_environment(engine: &Engine, id: String) -> Result<(), AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(environments::store::delete(&mut connection, &id)?)
-    })
-    .await
+    Ok(environments::store::delete(&mut connection, &id)?)
 }
 
 /// Each variable's fault by its rank, or none: the table marks the row, the rule is the model's.
-#[tauri::command]
-#[specta::specta]
 pub async fn check_http_variables(
     variables: Vec<environments::Variable>,
 ) -> Result<Vec<Option<environments::VariableFault>>, AppError> {

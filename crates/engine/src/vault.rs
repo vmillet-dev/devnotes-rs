@@ -11,11 +11,10 @@ pub mod key;
 
 use serde::Serialize;
 use specta::Type;
-use tauri::{AppHandle, Runtime};
 
 use zeroize::{Zeroize, Zeroizing};
 
-use crate::db::blocking;
+use crate::Engine;
 use crate::error::{AppError, StorageError, ValidationError};
 use key::Cost;
 
@@ -23,9 +22,10 @@ use key::Cost;
 /// to days on one GPU, not years. `u32` because it crosses as `MINIMUM_PASSPHRASE_LENGTH`.
 pub const MINIMUM_LENGTH: u32 = 12;
 
-/// Wipes a passphrase when the command returns, a panic included. It arrives owned from the
-/// IPC payload, so the command holds the last copy, and freed memory ends up in crash dumps.
-pub(crate) fn secret<S: Zeroize>(value: S) -> Zeroizing<S> {
+/// Wipes a passphrase when it is dropped, a panic included. It arrives owned from the IPC
+/// payload and is wrapped at once, so the last copy is this one: freed memory ends up in crash
+/// dumps.
+pub fn secret<S: Zeroize>(value: S) -> Zeroizing<S> {
     Zeroizing::new(value)
 }
 
@@ -46,58 +46,39 @@ pub enum VaultState {
     KeyMissing,
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn vault_state<R: Runtime>(app: AppHandle<R>) -> Result<VaultState, AppError> {
-    blocking(app, move |engine, db| {
-        if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
-            return Ok(VaultState::Unlocked);
-        }
+pub fn vault_state(engine: &Engine) -> Result<VaultState, AppError> {
+    let db = &engine.db;
+    if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
+        return Ok(VaultState::Unlocked);
+    }
 
-        let directory = crate::libraries::open_directory(engine)?;
+    let directory = crate::libraries::open_directory(engine)?;
 
-        Ok(gate::state_of(&directory))
-    })
-    .await
+    Ok(gate::state_of(&directory))
 }
 
 /// The first launch. Refuses a library that already has a key file: that file is the only
 /// way into the notes beside it.
-#[tauri::command]
-#[specta::specta]
-pub async fn create_vault<R: Runtime>(
-    passphrase: String,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |engine, db| {
-        let passphrase = secret(passphrase);
-        validate(&passphrase)?;
+pub fn create_vault(engine: &Engine, passphrase: Zeroizing<String>) -> Result<(), AppError> {
+    let db = &engine.db;
+    validate(&passphrase)?;
 
-        let directory = crate::libraries::open_directory(engine)?;
-        gate::create(&passphrase, &directory, db, Cost::default())?;
-        crate::sweep(engine);
+    let directory = crate::libraries::open_directory(engine)?;
+    gate::create(&passphrase, &directory, db, Cost::default())?;
+    crate::sweep(engine);
 
-        Ok(())
-    })
-    .await
+    Ok(())
 }
 
 /// Off the main thread: deriving the key is slow on purpose, and would freeze the window over
 /// every attempt.
-#[tauri::command]
-#[specta::specta]
-pub async fn unlock_vault<R: Runtime>(
-    passphrase: String,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |engine, db| {
-        let directory = crate::libraries::open_directory(engine)?;
-        gate::unlock(&secret(passphrase), &directory, db)?;
-        crate::sweep(engine);
+pub fn unlock_vault(engine: &Engine, passphrase: Zeroizing<String>) -> Result<(), AppError> {
+    let db = &engine.db;
+    let directory = crate::libraries::open_directory(engine)?;
+    gate::unlock(&passphrase, &directory, db)?;
+    crate::sweep(engine);
 
-        Ok(())
-    })
-    .await
+    Ok(())
 }
 
 /// What a change reached. `backupsLeft` is the honest half: a key file copied somewhere else
@@ -113,20 +94,15 @@ pub struct PassphraseChange {
 ///
 /// Not a re-encryption: the key the notes are sealed with is rewrapped, and the library stays
 /// open on it.
-#[tauri::command]
-#[specta::specta]
-pub async fn change_passphrase<R: Runtime>(
-    current: String,
-    next: String,
-    app: AppHandle<R>,
+pub fn change_passphrase(
+    engine: &Engine,
+    current: Zeroizing<String>,
+    next: Zeroizing<String>,
 ) -> Result<PassphraseChange, AppError> {
-    blocking(app, move |_, db| {
-        let (current, next) = (secret(current), secret(next));
-        validate(&next)?;
+    let db = &engine.db;
+    validate(&next)?;
 
-        Ok(gate::change(&current, &next, db, Cost::default())?)
-    })
-    .await
+    Ok(gate::change(&current, &next, db, Cost::default())?)
 }
 
 /// An export written in the clear has no phrase to hold to anything.

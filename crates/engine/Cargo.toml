@@ -27,8 +27,6 @@ bench = false
 toml = "1.1"
 
 [dependencies]
-# ~2.11 until `tauri-plugin-wdio-webdriver` (the e2e harness) builds against 2.12's `windows` 0.62.
-tauri = { version = "~2.11", features = ["tray-icon"] }
 specta = { version = "=2.0.0-rc.25", features = ["chrono", "derive", "function"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order", "raw_value"] }
@@ -39,8 +37,6 @@ uuid = { version = "1.27.0", features = ["v4", "v7"] }
 chrono = { version = "0.4.45", features = ["serde"] }
 base64 = "0.23.1"
 png = "0.18.1"
-tauri-plugin-opener = "2.5.5"
-tauri-plugin-clipboard-manager = "2.3.3"
 log = "0.4.34"
 thiserror = "2.0.21"
 unicode-normalization = "0.1.25"
@@ -80,9 +76,8 @@ psl = "2.1.241"
 rquickjs = "0.14.0"
 
 [dev-dependencies]
-# The mock runtime `tests/commands` calls the commands through.
-tauri = { version = "2.11.6", features = ["test"] }
 tempfile = "3.27.0"
+tokio = { version = "1.53.1", default-features = false, features = ["rt-multi-thread"] }
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 
 [[bench]]

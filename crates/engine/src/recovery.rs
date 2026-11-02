@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
-use tauri::{AppHandle, Runtime};
 
-use crate::db::{Db, blocking};
+use crate::Engine;
+use crate::db::Db;
 use crate::error::{AppError, FileContext, StorageError};
 use crate::layout::{self, ARCHIVED, ATTACHMENTS, DAMAGED, DATABASE, DATABASE_SIDECARS, KEY_FILE};
 
@@ -111,30 +111,22 @@ fn set_aside_closed(directory: &Path, db: &Db, reason: Reason) -> Result<String,
 /// Sets the damaged library aside so the next unlock starts on a fresh one.
 ///
 /// Answers the folder it moved everything into, so the interface can say where.
-#[tauri::command]
-#[specta::specta]
-pub async fn set_aside_damaged_library<R: Runtime>(app: AppHandle<R>) -> Result<String, AppError> {
-    blocking(app, move |engine, db| {
-        let directory = crate::libraries::open_directory(engine)?;
+pub fn set_aside_damaged_library(engine: &Engine) -> Result<String, AppError> {
+    let db = &engine.db;
+    let directory = crate::libraries::open_directory(engine)?;
 
-        Ok(set_aside_closed(&directory, db, Reason::Damaged)?)
-    })
-    .await
+    Ok(set_aside_closed(&directory, db, Reason::Damaged)?)
 }
 
 /// Archives a library whose passphrase was forgotten, so a fresh one can be started.
 ///
 /// Nothing is recovered: the notes leave sealed, under the forgotten phrase, and `vault.json`
 /// goes with them for the day the phrase comes back.
-#[tauri::command]
-#[specta::specta]
-pub async fn archive_locked_library<R: Runtime>(app: AppHandle<R>) -> Result<String, AppError> {
-    blocking(app, move |engine, db| {
-        let directory = crate::libraries::open_directory(engine)?;
+pub fn archive_locked_library(engine: &Engine) -> Result<String, AppError> {
+    let db = &engine.db;
+    let directory = crate::libraries::open_directory(engine)?;
 
-        Ok(set_aside_closed(&directory, db, Reason::Forgotten)?)
-    })
-    .await
+    Ok(set_aside_closed(&directory, db, Reason::Forgotten)?)
 }
 
 #[cfg(test)]

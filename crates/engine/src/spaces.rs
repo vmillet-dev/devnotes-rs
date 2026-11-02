@@ -3,101 +3,58 @@
 pub mod model;
 pub mod store;
 
-use tauri::{AppHandle, Runtime};
-
-use crate::db::{blocking, lock};
+use crate::Engine;
+use crate::db::lock;
 use crate::error::AppError;
 use model::{Space, SpaceContents, SpaceDraft};
 
-#[tauri::command]
-#[specta::specta]
-pub async fn list_spaces<R: Runtime>(app: AppHandle<R>) -> Result<Vec<Space>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn list_spaces(engine: &Engine) -> Result<Vec<Space>, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::list(&mut connection)?)
-    })
-    .await
+    Ok(store::list(&mut connection)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn create_space<R: Runtime>(
-    draft: SpaceDraft,
-    app: AppHandle<R>,
-) -> Result<Space, AppError> {
-    blocking(app, move |_, db| {
-        let name = draft.validated_name()?;
+pub fn create_space(engine: &Engine, draft: SpaceDraft) -> Result<Space, AppError> {
+    let db = &engine.db;
+    let name = draft.validated_name()?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::create(&mut connection, &name)?)
-    })
-    .await
+    Ok(store::create(&mut connection, &name)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn rename_space<R: Runtime>(
-    id: String,
-    draft: SpaceDraft,
-    app: AppHandle<R>,
-) -> Result<Space, AppError> {
-    blocking(app, move |_, db| {
-        let name = draft.validated_name()?;
+pub fn rename_space(engine: &Engine, id: String, draft: SpaceDraft) -> Result<Space, AppError> {
+    let db = &engine.db;
+    let name = draft.validated_name()?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::rename(&mut connection, &id, &name)?)
-    })
-    .await
+    Ok(store::rename(&mut connection, &id, &name)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn pin_space<R: Runtime>(
-    id: String,
-    pinned: bool,
-    app: AppHandle<R>,
-) -> Result<Space, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn pin_space(engine: &Engine, id: String, pinned: bool) -> Result<Space, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::set_pinned(&mut connection, &id, pinned)?)
-    })
-    .await
+    Ok(store::set_pinned(&mut connection, &id, pinned)?)
 }
 
 /// What deleting the space would move and take, for the confirmation that comes first.
-#[tauri::command]
-#[specta::specta]
-pub async fn count_space_contents<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<SpaceContents, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn count_space_contents(engine: &Engine, id: String) -> Result<SpaceContents, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::contents(&mut connection, &id)?)
-    })
-    .await
+    Ok(store::contents(&mut connection, &id)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_space<R: Runtime>(
-    id: String,
-    target_space_id: String,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        // A space as its own refuge would see its notes swept away by the cascade right
-        // after the transfer.
-        model::validate_move_target(&id, &target_space_id)?;
+pub fn delete_space(engine: &Engine, id: String, target_space_id: String) -> Result<(), AppError> {
+    let db = &engine.db;
+    // A space as its own refuge would see its notes swept away by the cascade right
+    // after the transfer.
+    model::validate_move_target(&id, &target_space_id)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::delete(&mut connection, &id, &target_space_id)?)
-    })
-    .await
+    Ok(store::delete(&mut connection, &id, &target_space_id)?)
 }

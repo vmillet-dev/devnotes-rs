@@ -2,21 +2,21 @@
 //! order over the rows of a data file, its steps said as events, nothing in the history.
 
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
+use engine::EngineEvent;
 use engine::http::model::{
     ContainerSettings, HttpItem, HttpItemKind, HttpMethod, HttpRequestDraft, RequestDocument,
     RequestKind, RequestScripts, RunEntry,
 };
-use engine::http::runner::{HTTP_RUN_EVENT, RunData, RunEvent, RunRequest, RunStep};
+use engine::http::runner::{RunData, RunRequest, RunStep};
 use engine::http::scripts::process::host_from;
 use engine::http::{
     cancel_http_run, create_http_collection, create_http_environment, create_http_request,
     http_environments, http_history, http_run_order, read_http_run_data, run_http_collection,
     save_http_run_order, save_http_settings,
 };
-use tauri::Listener;
 
 use super::Session;
 use super::http_send::{response, serve};
@@ -26,15 +26,17 @@ fn hosted() -> Session {
     Session::open()
 }
 
-fn steps(session: &Session) -> Arc<Mutex<Vec<RunStep>>> {
-    let heard = Arc::new(Mutex::new(Vec::new()));
-    let kept = Arc::clone(&heard);
-    session.0.listen_any(HTTP_RUN_EVENT, move |event| {
-        if let Ok(event) = serde_json::from_str::<RunEvent>(event.payload()) {
-            kept.lock().unwrap().push(event.step);
-        }
-    });
-    heard
+/// The steps the runs said so far.
+fn steps(session: &Session) -> Vec<RunStep> {
+    session
+        .heard
+        .events()
+        .into_iter()
+        .filter_map(|event| match event {
+            EngineEvent::Run(event) => Some(event.step),
+            _ => None,
+        })
+        .collect()
 }
 
 /// A collection of the requests given, `(name, path, scripts)`: its id and theirs.
@@ -44,7 +46,7 @@ fn collection(
     requests: &[(&str, &str, RequestScripts)],
 ) -> (String, Vec<String>) {
     let api = session
-        .call(|app| create_http_collection("Run".to_string(), app))
+        .call(|e| create_http_collection(e, "Run".to_string()))
         .unwrap()
         .id;
     let ids = requests
@@ -62,10 +64,7 @@ fn collection(
                     ..RequestDocument::default()
                 },
             };
-            session
-                .call(|app| create_http_request(draft, app))
-                .unwrap()
-                .id
+            session.call(|e| create_http_request(e, draft)).unwrap().id
         })
         .collect();
     (api, ids)
@@ -90,10 +89,8 @@ fn run(id: &str, api: &str, order: Vec<String>) -> RunRequest {
     }
 }
 
-fn ended(steps: &Arc<Mutex<Vec<RunStep>>>) -> Vec<(u32, String, bool)> {
+fn ended(steps: &[RunStep]) -> Vec<(u32, String, bool)> {
     steps
-        .lock()
-        .unwrap()
         .iter()
         .filter_map(|step| match step {
             RunStep::Ended { result } => {
@@ -112,7 +109,7 @@ fn ok() -> Vec<u8> {
 fn a_run_sends_its_requests_over_the_rows_of_its_data_and_writes_no_history() {
     let session = hosted();
     let staging = session
-        .call(|app| create_http_environment("Staging".to_string(), app))
+        .call(|e| create_http_environment(e, "Staging".to_string()))
         .unwrap()
         .id;
     let (port, seen) = serve(4, |_, _| ok());
@@ -136,7 +133,6 @@ fn a_run_sends_its_requests_over_the_rows_of_its_data_and_writes_no_history() {
             ),
         ],
     );
-    let heard = steps(&session);
     let mut asked = run("run-1", &api, ids);
     asked.data = Some(RunData {
         columns: vec!["customer".to_string()],
@@ -148,7 +144,7 @@ fn a_run_sends_its_requests_over_the_rows_of_its_data_and_writes_no_history() {
     asked.keep_variables = false;
     asked.environment_id = Some(staging.clone());
 
-    session.call(|app| run_http_collection(asked, app)).unwrap();
+    session.wait(|e| run_http_collection(e, asked)).unwrap();
 
     let paths: Vec<String> = (0..4)
         .map(|_| {
@@ -166,7 +162,7 @@ fn a_run_sends_its_requests_over_the_rows_of_its_data_and_writes_no_history() {
         ]
     );
     assert_eq!(
-        ended(&heard),
+        ended(&steps(&session)),
         [
             (0, "Login".to_string(), false),
             (0, "Client".to_string(), false),
@@ -175,14 +171,14 @@ fn a_run_sends_its_requests_over_the_rows_of_its_data_and_writes_no_history() {
         ]
     );
     assert!(matches!(
-        heard.lock().unwrap().last(),
+        steps(&session).last(),
         Some(RunStep::Finished {
             cancelled: false,
             ..
         })
     ));
     // A run keeps its report, not the history; and what it wrote was for it alone.
-    assert!(session.call(|app| http_history(0, app)).unwrap().is_empty());
+    assert!(session.call(|e| http_history(e, 0)).unwrap().is_empty());
     let sets = session.call(http_environments).unwrap();
     assert!(sets.environments[0].variables.is_empty());
 }
@@ -200,15 +196,14 @@ fn a_run_stops_at_its_first_failure_when_asked() {
         port,
         &[("A", "/a", failing), ("B", "/b", RequestScripts::default())],
     );
-    let heard = steps(&session);
     let mut asked = run("run-2", &api, ids);
     asked.stop_on_failure = true;
     asked.keep_responses = true;
 
-    session.call(|app| run_http_collection(asked, app)).unwrap();
+    session.wait(|e| run_http_collection(e, asked)).unwrap();
 
-    assert_eq!(ended(&heard), [(0, "A".to_string(), true)]);
-    let kept = heard.lock().unwrap().iter().any(
+    assert_eq!(ended(&steps(&session)), [(0, "A".to_string(), true)]);
+    let kept = steps(&session).iter().any(
         |step| matches!(step, RunStep::Ended { result } if result.response.as_ref().is_some_and(|response| response.status == 200)),
     );
     assert!(kept, "the answer kept with its result");
@@ -236,13 +231,15 @@ fn a_script_names_the_request_a_run_goes_to_and_null_ends_it() {
             ("D", "/d", RequestScripts::default()),
         ],
     );
-    let heard = steps(&session);
 
     session
-        .call(|app| run_http_collection(run("run-3", &api, ids), app))
+        .wait(|e| run_http_collection(e, run("run-3", &api, ids)))
         .unwrap();
 
-    let names: Vec<String> = ended(&heard).into_iter().map(|(_, name, _)| name).collect();
+    let names: Vec<String> = ended(&steps(&session))
+        .into_iter()
+        .map(|(_, name, _)| name)
+        .collect();
     assert_eq!(names, ["A", "C"]);
 }
 
@@ -258,14 +255,15 @@ fn a_run_is_cancelled_between_two_requests() {
             ("B", "/b", RequestScripts::default()),
         ],
     );
-    let heard = steps(&session);
     let mut asked = run("run-4", &api, ids);
     asked.delay_ms = 20_000;
-    let app = session.0.handle().clone();
-    let running =
-        std::thread::spawn(move || tauri::async_runtime::block_on(run_http_collection(asked, app)));
+    let (engine, runtime) = (
+        Arc::clone(&session.engine),
+        session.runtime.handle().clone(),
+    );
+    let running = std::thread::spawn(move || runtime.block_on(run_http_collection(engine, asked)));
     let waited = std::time::Instant::now();
-    while ended(&heard).is_empty() {
+    while ended(&steps(&session)).is_empty() {
         assert!(
             waited.elapsed() < Duration::from_secs(10),
             "the first request never ended"
@@ -275,14 +273,14 @@ fn a_run_is_cancelled_between_two_requests() {
 
     assert!(
         session
-            .call(|app| cancel_http_run("run-4".to_string(), app))
+            .call(|e| cancel_http_run(e, "run-4".to_string()))
             .unwrap()
     );
     running.join().unwrap().unwrap();
 
-    assert_eq!(ended(&heard).len(), 1);
+    assert_eq!(ended(&steps(&session)).len(), 1);
     assert!(matches!(
-        heard.lock().unwrap().last(),
+        steps(&session).last(),
         Some(RunStep::Finished {
             cancelled: true,
             ..
@@ -290,9 +288,13 @@ fn a_run_is_cancelled_between_two_requests() {
     ));
     assert!(
         !session
-            .call(|app| cancel_http_run("run-4".to_string(), app))
+            .call(|e| cancel_http_run(e, "run-4".to_string()))
             .unwrap()
     );
+}
+
+fn block_on<F: std::future::Future>(future: F) -> F::Output {
+    tokio::runtime::Runtime::new().unwrap().block_on(future)
 }
 
 #[test]
@@ -300,18 +302,16 @@ fn a_data_file_is_read_as_a_csv_or_says_why_not() {
     let directory = tempfile::tempdir().unwrap();
     let csv = directory.path().join("clients.csv");
     std::fs::write(&csv, "customer,amount\ncus_1,12\ncus_2,8\n").unwrap();
-    let data =
-        tauri::async_runtime::block_on(read_http_run_data(csv.display().to_string())).unwrap();
+    let data = block_on(read_http_run_data(csv.display().to_string())).unwrap();
     assert_eq!(data.columns, ["customer", "amount"]);
     assert_eq!(data.rows.len(), 2);
 
     let empty = directory.path().join("empty.csv");
     std::fs::write(&empty, "customer\n").unwrap();
-    let error = tauri::async_runtime::block_on(read_http_run_data(empty.display().to_string()))
-        .unwrap_err();
+    let error = block_on(read_http_run_data(empty.display().to_string())).unwrap_err();
     assert_eq!(error.params["fault"], "empty");
     assert!(
-        tauri::async_runtime::block_on(read_http_run_data(
+        block_on(read_http_run_data(
             directory.path().join("nowhere.csv").display().to_string()
         ))
         .is_err()
@@ -338,17 +338,12 @@ fn the_order_arranged_is_kept_and_a_request_added_goes_at_its_end() {
         enabled,
     };
     session
-        .call(|app| {
-            save_http_run_order(
-                item(),
-                vec![entry(&ids[1], true), entry(&ids[0], false)],
-                app,
-            )
-        })
+        .call(|e| save_http_run_order(e, item(), vec![entry(&ids[1], true), entry(&ids[0], false)]))
         .unwrap();
     let added = session
-        .call(|app| {
+        .call(|e| {
             create_http_request(
+                e,
                 HttpRequestDraft {
                     collection_id: api.clone(),
                     folder_id: None,
@@ -357,18 +352,17 @@ fn the_order_arranged_is_kept_and_a_request_added_goes_at_its_end() {
                     method: HttpMethod::Get,
                     document: RequestDocument::default(),
                 },
-                app,
             )
         })
         .unwrap()
         .id;
     // The settings dialog saves what it holds, which has no run order.
     session
-        .call(|app| save_http_settings(item(), ContainerSettings::default(), app))
+        .call(|e| save_http_settings(e, item(), ContainerSettings::default()))
         .unwrap();
 
     assert_eq!(
-        session.call(|app| http_run_order(item(), app)).unwrap(),
+        session.call(|e| http_run_order(e, item())).unwrap(),
         [
             entry(&ids[1], true),
             entry(&ids[0], false),

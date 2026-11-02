@@ -9,10 +9,10 @@ description: Use when adding or changing Tauri v2 commands, events, IPC types, p
 
 1. `#[tauri::command]` + `#[specta::specta]`; a command taking the DB lock is `async` and its body runs in `db::blocking`. With an `AppHandle`, be generic over `R: Runtime` and register as `name::<tauri::Wry>`.
 2. Validate in the model before locking; return `Result<_, AppError>` with an `ErrorCode`; no user-visible string in Rust.
-3. Add to `collect_commands!` in `src-tauri/src/lib.rs`; use `u32`, not `usize`/`i64`.
+3. Write the service function in `crates/engine/src/<feature>.rs` and its one-line wrapper in `src-tauri/src/commands/<feature>.rs` (doc comment copied); add the wrapper to `collect_commands!` in `src-tauri/src/lib.rs`; use `u32`, not `usize`/`i64`.
 4. `npm run bindings` (regenerates `src/app/core/ipc/bindings.ts`; commit it). Wrap in a repository under `core/data/`.
 5. New `ErrorCode` → `CODE_KEYS` (both locales) + `IPC_ERROR_CODES`.
-6. Test: `crates/engine/tests/commands/` on the mock runtime, plus `ipc_contract`.
+6. Test: `crates/engine/tests/commands/` calls the service function on an engine (no Tauri), plus `ipc_contract`.
 
 **Plugin / permission**
 

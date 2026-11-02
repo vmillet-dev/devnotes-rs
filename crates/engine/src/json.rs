@@ -15,10 +15,8 @@ use crate::error::{AppError, StorageError};
 use model::{JsonQuery, JsonView};
 
 /// No lock, but off the window's thread: a document of a few megabytes takes a while.
-#[tauri::command]
-#[specta::specta]
 pub async fn explore_json(query: JsonQuery) -> Result<JsonView, AppError> {
-    tauri::async_runtime::spawn_blocking(move || model::explore(&query))
+    tokio::task::spawn_blocking(move || model::explore(&query))
         .await
         .map_err(|_| StorageError::Unavailable.into())
 }
