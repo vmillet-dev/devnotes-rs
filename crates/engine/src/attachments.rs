@@ -14,6 +14,7 @@ use base64::engine::general_purpose::STANDARD;
 use crate::Engine;
 use crate::db::{Db, lock};
 use crate::error::{AppError, StorageError};
+use crate::index::Changed;
 use files::{
     directory, read_outside_lock, read_within_limit, remove_files, store_new, write_plain,
     write_plaintext_copy,
@@ -24,11 +25,17 @@ use model::Attachment;
 /// `read_attachment` this reads any file the account can read into the `WebView`, and what keeps
 /// that harmless is the CSP — `script-src 'self'`, nothing remote — not this function.
 pub fn attach_file(engine: &Engine, note_id: String, path: String) -> Result<Attachment, AppError> {
-    let db = &engine.db;
-    let file_name = model::display_name(&path)?;
-    let bytes = read_within_limit(&path)?;
-    model::validate_size(bytes.len() as u64, &file_name)?;
-    Ok(store_new(note_id, file_name, &bytes, db)?)
+    engine.write(|db| {
+        let file_name = model::display_name(&path)?;
+        let bytes = read_within_limit(&path)?;
+        model::validate_size(bytes.len() as u64, &file_name)?;
+        let answer = store_new(note_id, file_name, &bytes, db)?;
+        let changed = Changed {
+            attachments: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 pub fn list_attachments(engine: &Engine, note_id: String) -> Result<Vec<Attachment>, AppError> {
@@ -78,19 +85,27 @@ pub fn attach_image(
     (width, height): (u32, u32),
     rgba: &[u8],
 ) -> Result<Attachment, AppError> {
-    let png = model::encode_png(width, height, rgba)?;
-    model::validate_size(png.len() as u64, &model::png_name(&file_name))?;
-    Ok(store_new(
-        note_id,
-        model::png_name(&file_name),
-        &png,
-        &engine.db,
-    )?)
+    engine.write(|db| {
+        let png = model::encode_png(width, height, rgba)?;
+        model::validate_size(png.len() as u64, &model::png_name(&file_name))?;
+        let answer = store_new(note_id, model::png_name(&file_name), &png, db)?;
+        let changed = Changed {
+            attachments: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 pub fn delete_attachment(engine: &Engine, id: String) -> Result<(), AppError> {
-    let db = &engine.db;
-    Ok(delete(db, &id)?)
+    engine.write(|db| {
+        delete(db, &id)?;
+        let changed = Changed {
+            attachments: true,
+            ..Changed::default()
+        };
+        Ok(((), changed))
+    })
 }
 
 /// The record, then the file, which is removed outside the lock.

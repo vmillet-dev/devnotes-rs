@@ -9,6 +9,7 @@ use crate::Engine;
 use crate::attachments;
 use crate::db::lock;
 use crate::error::AppError;
+use crate::index::Changed;
 use crate::notes::store as notes;
 use crate::vault::secret;
 use model::{ExportReport, ExportScope, ImportReport};
@@ -57,20 +58,18 @@ pub fn import_notes(
     path: String,
     passphrase: Option<String>,
 ) -> Result<ImportReport, AppError> {
-    let db = &engine.db;
-    model::validate_path(&path)?;
+    engine.write(|db| {
+        model::validate_path(&path)?;
 
-    let (imported, mut payload) = file::read(&path, secret(passphrase).as_deref())?;
+        let (imported, mut payload) = file::read(&path, secret(passphrase).as_deref())?;
 
-    let mut connection = lock(db)?;
-    let directory = attachments::files::directory(&connection);
+        let mut connection = lock(db)?;
+        let directory = attachments::files::directory(&connection);
 
-    Ok(bundle::merge(
-        &mut connection,
-        imported,
-        &mut payload,
-        &directory,
-    )?)
+        let answer = bundle::merge(&mut connection, imported, &mut payload, &directory)?;
+        let changed = Changed::everything();
+        Ok((answer, changed))
+    })
 }
 
 /// Whether an import will want a phrase, so the interface can ask before it starts.

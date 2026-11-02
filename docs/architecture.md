@@ -5520,6 +5520,17 @@ sorting itself, SQLite would read every sealed body before the first row. A slic
 library closed since stops (`Library::number`); opening a library or restoring a copy empties
 the index first.
 
+**One path keeps it true.** A service function that writes what the index holds goes through
+`Engine::write(|db| …)`, whose closure answers its value and an `index::Changed`: the notes it
+touched (re-read, or dropped when no longer live), and whether the attachment counts, the
+folders or the global values moved. `write` refreshes the index once the closure returned —
+its transactions committed. A corpus-wide write (renaming or dropping a tag, deleting a space or
+a folder, an import, the first launch's samples) says `Changed::everything()`: the index is
+emptied and the next read builds it whole. No service function refreshes the index itself.
+⚠️ A write that forgets to declare leaves the index silently wrong: `tests/commands/index.rs`
+checks the index against one rebuilt from the database right after each write
+(`Engine::index_matches_library`).
+
 ## Persistence (Rust)
 
 Storage is **SQLite**, queried through **Diesel** and embedded via `libsqlite3-sys` with the

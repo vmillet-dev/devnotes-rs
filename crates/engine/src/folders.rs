@@ -10,6 +10,7 @@ use crate::Engine;
 use crate::count::saturating_u32 as count;
 use crate::db::lock;
 use crate::error::AppError;
+use crate::index::Changed;
 
 use crate::notes;
 use board::{
@@ -83,27 +84,39 @@ pub fn list_folders(engine: &Engine, space_id: Option<String>) -> Result<Vec<Fol
 }
 
 pub fn create_folder(engine: &Engine, draft: FolderDraft) -> Result<Folder, AppError> {
-    let db = &engine.db;
-    let name = draft.validated_name()?;
+    engine.write(|db| {
+        let name = draft.validated_name()?;
 
-    let mut connection = lock(db)?;
+        let mut connection = lock(db)?;
 
-    Ok(store::create(
-        &mut connection,
-        &draft.space_id,
-        draft.parent_id.as_deref(),
-        &name,
-        Utc::now(),
-    )?)
+        let answer = store::create(
+            &mut connection,
+            &draft.space_id,
+            draft.parent_id.as_deref(),
+            &name,
+            Utc::now(),
+        )?;
+        let changed = Changed {
+            folders: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 pub fn rename_folder(engine: &Engine, id: String, name: String) -> Result<Folder, AppError> {
-    let db = &engine.db;
-    let name = model::validated_name(&name)?;
+    engine.write(|db| {
+        let name = model::validated_name(&name)?;
 
-    let mut connection = lock(db)?;
+        let mut connection = lock(db)?;
 
-    Ok(store::rename(&mut connection, &id, &name)?)
+        let answer = store::rename(&mut connection, &id, &name)?;
+        let changed = Changed {
+            folders: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 pub fn recolour_folder(
@@ -111,10 +124,16 @@ pub fn recolour_folder(
     id: String,
     colour: FolderColour,
 ) -> Result<Folder, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::recolour(&mut connection, &id, colour)?)
+        let answer = store::recolour(&mut connection, &id, colour)?;
+        let changed = Changed {
+            folders: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 /// Under another folder of its space, `None` at its top, with everything it holds. The answer
@@ -124,27 +143,42 @@ pub fn move_folder(
     id: String,
     parent_id: Option<String>,
 ) -> Result<FolderMove, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::move_to(&mut connection, &id, parent_id.as_deref())?)
+        let answer = store::move_to(&mut connection, &id, parent_id.as_deref())?;
+        let changed = Changed {
+            folders: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 /// The undo of [`move_folder`]; `false` when its old parent is gone or no longer a place for it.
 pub fn move_folder_back(engine: &Engine, was: FolderMove) -> Result<bool, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::move_back(&mut connection, &was)?)
+        let answer = store::move_back(&mut connection, &was)?;
+        let changed = Changed {
+            folders: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 /// No refuge, unlike [`crate::spaces::delete_space`]: what it held goes to its parent, or
 /// loose at the top of the space.
 pub fn delete_folder(engine: &Engine, id: String) -> Result<(), AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::delete(&mut connection, &id)?)
+        store::delete(&mut connection, &id)?;
+        let changed = Changed::everything();
+        Ok(((), changed))
+    })
 }
 
 /// A batch, like [`crate::notes::move_notes`]: the selection bar files a whole selection,
@@ -154,23 +188,24 @@ pub fn file_notes(
     ids: Vec<String>,
     folder_id: Option<String>,
 ) -> Result<Vec<NoteFiling>, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::file_many(
-        &mut connection,
-        &ids,
-        folder_id.as_deref(),
-        Utc::now(),
-    )?)
+        let answer = store::file_many(&mut connection, &ids, folder_id.as_deref(), Utc::now())?;
+        let changed = Changed::notes(ids.clone());
+        Ok((answer, changed))
+    })
 }
 
 /// The undo of [`file_notes`]: each note goes back to the folder it left, or to loose.
 pub fn file_notes_back(engine: &Engine, filings: Vec<NoteFiling>) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(count(store::restore_filings(&mut connection, &filings)?))
+        let answer = count(store::restore_filings(&mut connection, &filings)?);
+        let changed = Changed::notes(filings.iter().map(|one| one.note_id.clone()));
+        Ok((answer, changed))
+    })
 }
 
 /// Puts one board back in order — the space's, or a folder's, `rootId` — as far as `scope`
