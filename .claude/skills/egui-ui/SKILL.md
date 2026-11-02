@@ -15,9 +15,18 @@ captures (§ 5.2).
 - **Keep it simple.** Write the plain version first; a helper, trait or generic comes at the second
   real use. Small functions, names that say what things are, early returns over nesting.
 - The UI thread does no I/O, crypto or waiting: every call to the core goes `api/` → `Backend` →
-  `Pending` (§ 3.3). Never `block_on`, never a lock taken while drawing.
-- Drawing reads `&State` and pushes `Action`s; state changes in `AppState::apply` (§ 3.4).
-- Anything longer than ~100 rows is virtualised; a costly `LayoutJob` is cached (§ 3.6).
+  `Pending` (§ 3.3) — `db` for anything that may take the database lock, `compute` otherwise
+  (D11). Never `block_on`, never a lock taken while drawing. Only exception: a pure core function
+  whose input the screen bounds, under 1 ms, called directly but still through `api/` (D12).
+- A data rule (what a `{{field}}`, a variable name, a heading is) belongs to the core: `text`,
+  `richtext`, `drawing` take its result as an argument and never redefine it (D10).
+- Drawing reads a screen's state (`&…State`) and may change its view (`&mut …View`: text being
+  typed, editor buffers, open menus, scroll, gestures). It pushes `Action`s; state changes only in
+  `AppState::apply` (§ 3.4, D13).
+- Keys: a focused widget consumes what it handles; everything else goes through `keys::dispatch`
+  (modal, then area, then application). No screen reads shortcuts on its own (§ 3.12, D14).
+- Anything longer than ~100 rows is virtualised; a costly `LayoutJob` is cached, and any cache
+  holding library content lives in `LibraryCaches` (§ 3.6, D17).
 - Colours, spacing and durations come from `theme::tokens`: no hex or millisecond literal in a
   widget (§ 3.7).
 - Every interactive widget has an accessible name and carries, as its AccessKit `author_id`, the
