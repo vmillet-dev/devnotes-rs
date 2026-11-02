@@ -30,7 +30,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use tauri::{AppHandle, Runtime};
 
-use crate::db::{blocking, blocking_on, engine, lock};
+use crate::db::{blocking, blocking_on, engine, lock, lock_library};
 use crate::error::{AppError, FileContext};
 use crate::tools::off_thread;
 use crate::{Engine, EngineEvent};
@@ -485,6 +485,8 @@ struct Prepared {
     layers: Vec<variables::VariableLayer>,
     environment: Option<environments::Environment>,
     jar: Option<Vec<cookies::JarCookie>>,
+    /// The number of the library read from: the writes go to it or nowhere.
+    library: u64,
 }
 
 /// One send and the scripts around it, from the command's side: their host, the jar's copy
@@ -493,6 +495,8 @@ struct Prepared {
 struct Flight {
     engine: Arc<Engine>,
     id: String,
+    /// The library the send read from (`Prepared::library`); 0 until it has read.
+    library: u64,
     session: Option<Session>,
     /// The jar's copy while no session holds it.
     jar: Option<Vec<cookies::JarCookie>>,
@@ -535,6 +539,7 @@ impl Flight {
         Self {
             engine,
             id: id.to_string(),
+            library: 0,
             session: None,
             jar: None,
             transport: transport::Transport::default(),
@@ -576,6 +581,7 @@ impl Flight {
             mut layers,
             environment,
             jar,
+            library,
         } = prepare(
             &self.engine,
             &document,
@@ -586,6 +592,7 @@ impl Flight {
         .await?;
         let around = Around::of(&document.scripts, &name, &inherited);
         self.jar = jar;
+        self.library = library;
         self.transport = inherited.transport.over(&document.transport);
         self.environment = environment;
         self.confirmed = confirmed;
@@ -605,11 +612,12 @@ impl Flight {
         let resolver = variables::Resolver::new(&going.layers);
         let (filled, above) = variables::resolve(&going.document, &inherited, &resolver);
         let method = going.method;
-        let mut outgoing = tauri::async_runtime::spawn_blocking(move || {
-            send::compose(kind, method, &filled, &above)
-        })
-        .await
-        .map_err(|error| AppError::from(send::SendError::Network(error.to_string())))??;
+        let mut outgoing = self
+            .engine
+            .runtime
+            .spawn_blocking(move || send::compose(kind, method, &filled, &above))
+            .await
+            .map_err(|error| AppError::from(send::SendError::Network(error.to_string())))??;
         outgoing.secret_values = resolver.secrets();
         if outgoing.transport.use_cookies {
             outgoing.jar = self.jar();
@@ -677,7 +685,11 @@ impl Flight {
         id: &str,
         outgoing: send::Outgoing,
     ) -> Result<Result<send::SentResponse, AppError>, AppError> {
-        let (answer, cookies_set) = self.engine.sending.run(id, outgoing).await;
+        let (answer, cookies_set) = self
+            .engine
+            .sending
+            .run(&self.engine.runtime, id, outgoing)
+            .await;
         if matches!(answer, Err(send::SendError::Cancelled)) {
             return Err(send::SendError::Cancelled.into());
         }
@@ -858,11 +870,14 @@ impl Flight {
         };
         let killer = session.killer();
         self.engine.sending.watch(&self.id, Some(killer.clone()));
-        let ran = tauri::async_runtime::spawn_blocking(move || {
-            let outcome = session.run(&job);
-            (session, outcome)
-        })
-        .await;
+        let ran = self
+            .engine
+            .runtime
+            .spawn_blocking(move || {
+                let outcome = session.run(&job);
+                (session, outcome)
+            })
+            .await;
         self.engine.sending.watch(&self.id, None);
         let outcome = match ran {
             Ok((mut session, outcome)) => {
@@ -996,8 +1011,12 @@ impl Flight {
             .map(|environment| environment.id.clone());
         let collection_id = self.collection_id.clone();
         let by = self.by.clone();
+        let library = self.library;
         let kept = blocking_on(Arc::clone(&self.engine), move |_, db| {
-            let mut connection = lock(db)?;
+            let Some(mut connection) = lock_library(db, library)? else {
+                log::warn!("A script wrote into a library closed since: nothing kept");
+                return Ok(false);
+            };
             Ok(keep_writes(
                 &mut connection,
                 &writes,
@@ -1017,6 +1036,7 @@ impl Flight {
     async fn keep(self) {
         let Self {
             engine,
+            library,
             sent,
             changes,
             ..
@@ -1026,7 +1046,10 @@ impl Flight {
         }
         let kept = blocking_on(engine, move |_, db| {
             let now = Utc::now();
-            let mut connection = lock(db)?;
+            let Some(mut connection) = lock_library(db, library)? else {
+                log::warn!("A send ended after its library was closed: its history and cookies are not kept");
+                return Ok(());
+            };
             if let Some(sent) = &sent {
                 let (summary, record) = history::record_of(sent);
                 history::store::record(
@@ -1092,6 +1115,7 @@ async fn prepare(
             layers,
             environment,
             jar,
+            library: connection.number(),
         })
     })
     .await
@@ -1827,7 +1851,13 @@ pub async fn connect_websocket<R: Runtime>(
     let engine = engine(&app);
     Ok(engine
         .sockets
-        .connect(Arc::clone(&engine.events), id, outgoing, &protocols)
+        .connect(
+            &engine.runtime,
+            Arc::clone(&engine.events),
+            id,
+            outgoing,
+            &protocols,
+        )
         .await?)
 }
 

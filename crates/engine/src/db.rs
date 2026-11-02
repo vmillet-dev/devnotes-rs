@@ -1,8 +1,10 @@
 pub mod migration;
+pub(crate) mod queue;
 pub mod schema;
 
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use diesel::connection::SimpleConnection;
@@ -22,9 +24,23 @@ pub struct Library {
     /// Shared, so a read can take the key past the lock: see [`Library::shared_vault`].
     vault: Arc<Vault>,
     directory: PathBuf,
+    /// Drawn from a counter of the process when the library is opened: what a send read from
+    /// is what it may write to, and a library opened since is another number.
+    number: u64,
+}
+
+/// Starts at 1: no library is numbered 0.
+static OPENED: AtomicU64 = AtomicU64::new(1);
+
+fn next_number() -> u64 {
+    OPENED.fetch_add(1, Ordering::Relaxed)
 }
 
 impl Library {
+    pub fn number(&self) -> u64 {
+        self.number
+    }
+
     /// The connection, for the Diesel call that needs it by that name.
     pub fn db(&mut self) -> &mut SqliteConnection {
         &mut self.connection
@@ -77,7 +93,14 @@ impl Library {
 pub type Db = Mutex<Option<Library>>;
 
 /// A poisoned mutex means a command panicked while holding it.
+///
+/// ⚠️ On the db thread alone (`queue`), checked in debug builds; the crate's own unit tests
+/// lock their in-memory libraries on the test thread.
 pub(crate) fn lock(db: &Db) -> Result<LibraryGuard<'_>, StorageError> {
+    debug_assert!(
+        cfg!(test) || queue::on_db_thread(),
+        "the library is locked off the db thread"
+    );
     let guard = db.lock().map_err(|_| StorageError::Unavailable)?;
     if guard.is_none() {
         return Err(StorageError::Locked);
@@ -91,9 +114,9 @@ pub(crate) fn engine<R: Runtime>(app: &AppHandle<R>) -> Arc<Engine> {
     Arc::clone(&app.state::<Arc<Engine>>())
 }
 
-/// A command's body, on Tokio's blocking pool rather than on a runtime worker: waiting on the
-/// lock, or holding it through a whole-corpus read, would park a worker the updater and the
-/// plugins share. A body that panics answers as the lock it would have poisoned.
+/// A command's body, on the engine's db queue: one thread, in the order the bodies arrive, so
+/// two writes sent in a row land in that order. A body that panics answers as the lock it
+/// would have poisoned.
 pub(crate) async fn blocking<R, T, F>(app: AppHandle<R>, body: F) -> Result<T, AppError>
 where
     R: Runtime,
@@ -109,9 +132,15 @@ where
     T: Send + 'static,
     F: FnOnce(&Engine, &Db) -> Result<T, AppError> + Send + 'static,
 {
-    tauri::async_runtime::spawn_blocking(move || body(&engine, &engine.db))
-        .await
-        .map_err(|_| StorageError::Unavailable)?
+    let held = Arc::clone(&engine);
+    engine.queue.run(move || body(&held, &held.db)).await
+}
+
+/// The library a send read from, if it is still the one open: `None` once another was opened.
+pub(crate) fn lock_library(db: &Db, number: u64) -> Result<Option<LibraryGuard<'_>>, StorageError> {
+    let connection = lock(db)?;
+
+    Ok((connection.number() == number).then_some(connection))
 }
 
 /// The guard, narrowed to a library that is definitely there — [`lock`] refused otherwise.
@@ -184,6 +213,7 @@ pub fn open(path: &Path, vault: Vault) -> Result<Library, StorageError> {
         connection,
         vault: Arc::new(vault),
         directory: path.parent().map(Path::to_path_buf).unwrap_or_default(),
+        number: next_number(),
     })
 }
 
@@ -201,6 +231,7 @@ pub fn open_in_memory() -> Result<Library, StorageError> {
         // Named, never created: a test writing beside the library fails loudly.
         directory: std::env::temp_dir()
             .join(format!("devnotes-in-memory-{}", uuid::Uuid::new_v4())),
+        number: next_number(),
     })
 }
 

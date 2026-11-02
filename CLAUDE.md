@@ -39,7 +39,7 @@ Principles:
 
 ### Rust back-end
 
-- ⚠️ **A command taking the lock is `async` and runs its body in `db::blocking`**; with an `AppHandle`, generic over `R: Runtime`, registered as `name::<tauri::Wry>`. One lock serialises everything. ⚠️ HTTP sends and WebSockets never hold it; `open_library` closes every socket. → "Persistence (Rust)", "Who holds the lock", "Sending a request, and its answer", "A WebSocket".
+- ⚠️ **A command taking the lock is `async` and runs its body in `db::blocking`**, on the engine's one db thread, in order (`lock` asserts it in debug); a send writes only into the library it read from (`Library::number`); with an `AppHandle`, generic over `R: Runtime`, registered as `name::<tauri::Wry>`. One lock serialises everything. ⚠️ HTTP sends and WebSockets never hold it; `open_library` closes every socket. → "Persistence (Rust)", "Who holds the lock", "Sending a request, and its answer", "A WebSocket".
 - HTTP history masks before sealing; the cookie jar is sealed whole and matched in Rust. → "The history of what was sent", "How a request travels, and the cookie jar".
 - A module holding commands is `pub`, the rest `pub(crate)`.
 - **Migrations are append-only** (`crates/engine/migrations/`); `db/schema.rs` is hand-written, so add a column in both. `PRAGMA foreign_keys` is per connection (`db::configure`); `db::iso8601` always writes milliseconds. → "Persistence (Rust)", "How far back an upgrade reaches".

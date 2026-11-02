@@ -5542,10 +5542,27 @@ installed or shipped alongside the executable. The database file lives under the
   so it occupies a Tokio **worker** — a pool the size of the core count, shared with the
   updater and the plugins — for its whole duration, waiting on the lock included. At 8000 notes
   `query_notes` holds that lock for ~430 ms, and each command queued behind it would park a
-  worker of its own. `db::blocking(app, |app, db| …)` runs the body on Tokio's **blocking** pool
-  instead and hands it the handle and the `Db`; `bindings.ts` is unaffected, the generated
-  TypeScript having always been promise-based. A body that panics answers
-  `StorageError::Unavailable`, the answer the lock it would have poisoned gives. `blocking`
+  worker of its own. `db::blocking(app, |engine, db| …)` drops the body in the engine's **db
+  queue** instead (`db::queue`) and hands it the `Engine` and the `Db`; `bindings.ts` is
+  unaffected, the generated TypeScript having always been promise-based. A body that panics
+  answers `StorageError::Unavailable`, the answer the lock it would have poisoned gives, and the
+  queue goes on with the next one.
+
+  **One thread, in order.** The queue is one thread that runs its jobs in the order they
+  arrive: two writes sent one after the other land in that order (two commands could overtake
+  each other on Tokio's pool before), and the `Mutex` is never contended. ⚠️ `db::lock` asserts
+  in debug builds that it runs on that thread; the crate's unit tests, which lock in-memory
+  libraries on their own thread, are exempt. A job never waits on another job, nor on the
+  network. Async code that holds the engine reaches the queue through `db::blocking_on`. Sends
+  and sockets run on the runtime the shell passes to `Engine::new`.
+
+  **A send in three steps.** It _reads_ in a job (inheritance, variables, the jar, and the
+  number of the library open), _sends_ on the runtime without coming back to the queue, then
+  _writes_ in a job: history, cookies, the variables the scripts wrote — merged into what is
+  there by then, never overwritten, so two sends at once keep both. Each `Library` gets a
+  number from a process counter when it is opened (`Library::number`); the write step goes
+  through `db::lock_library` and writes nothing, and says so in the log, if another library was
+  opened since the read. `blocking`
   and the commands are generic over `R: Runtime`, so a test runs them on Tauri's mock runtime. The commands
   that never take the lock — the registry of libraries, `export_is_protected`, the changelog —
   stay `(async)`: a short read of a file.

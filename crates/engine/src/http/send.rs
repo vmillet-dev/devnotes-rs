@@ -1206,15 +1206,16 @@ impl Sending {
     /// the cookie of a login whose landing page did not load.
     pub async fn run(
         &self,
+        runtime: &tokio::runtime::Handle,
         id: &str,
         outgoing: Outgoing,
     ) -> (Result<SentResponse, SendError>, Vec<Change>) {
         let changes: Arc<Mutex<Vec<Change>>> = Arc::default();
-        let task = tauri::async_runtime::spawn(send(outgoing, Arc::clone(&changes)));
+        let task = runtime.spawn(send(outgoing, Arc::clone(&changes)));
         let number = self.started.fetch_add(1, Ordering::Relaxed);
         if let Ok(mut running) = self.running.lock()
             && let Some((_, previous)) =
-                running.insert(id.to_string(), (number, task.inner().abort_handle()))
+                running.insert(id.to_string(), (number, task.abort_handle()))
         {
             previous.abort();
         }

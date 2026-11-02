@@ -337,7 +337,8 @@ fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     // No library until `vault::unlock` opens one.
     let events = Arc::new(host::TauriHost(app.handle().clone()));
-    app.manage(Arc::new(Engine::new(paths, events)));
+    let runtime = tauri::async_runtime::handle().inner().clone();
+    app.manage(Arc::new(Engine::new(paths, events, runtime)));
 
     Ok(())
 }

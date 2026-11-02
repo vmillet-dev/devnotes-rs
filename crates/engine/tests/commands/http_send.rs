@@ -28,7 +28,7 @@ pub(super) struct Seen {
     pub(super) body: Vec<u8>,
 }
 
-fn read_request(stream: &mut TcpStream) -> Seen {
+pub(super) fn read_request(stream: &mut TcpStream) -> Seen {
     let mut bytes = Vec::new();
     let mut buffer = [0; 4096];
     let end = loop {
