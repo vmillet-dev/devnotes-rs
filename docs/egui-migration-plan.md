@@ -235,50 +235,353 @@ Les principes de `CLAUDE.md` se transposent :
   demande une vue au cœur. La différence : la vue n'est plus sérialisée en JSON, elle est passée par
   valeur ou par `Arc`.
 - **Feature-first côté cœur** : `<feature>.rs` ne contient plus de `#[tauri::command]` mais des
-  fonctions de service (`pub fn query_notes(db: &Db, index: &NoteIndex, q: NotesQuery) ->
-Result<NotesView, AppError>`) — valider, verrouiller, déléguer, traduire l'erreur — exactement le
-  rôle des commandes actuelles. `model.rs` et `store.rs` ne bougent pas.
-- **L'arborescence de l'UI a la forme de l'écran** : `devnotes-ui/src/notes/{sidebar,header,canvas,
-overlays,ui}`, `tools/`, `http/`, `titlebar/`, `banners/` contiennent du dessin ; `state/`,
-  `services/`, `backend.rs` contiennent ce qui n'a pas de place à l'écran ; `widgets/` remplace
-  `shared/` et n'accède à aucun état global.
+  fonctions de service (`notes::query_notes(core: &Core, query)`, § 3.3.3) — valider, verrouiller,
+  déléguer, traduire l'erreur — exactement le rôle des commandes actuelles. `model.rs` et
+  `store.rs` ne bougent pas.
+- **L'arborescence de l'UI a la forme de l'écran** : `devnotes-ui/src/notes/` (`sidebar`,
+  `header`, `canvas`, `overlays`, `ui`), `tools/`, `http/`, `titlebar/`, `banners/` contiennent du
+  dessin ; `state/`, `services/`, `api/`, `backend.rs` contiennent ce qui n'a pas de place à
+  l'écran ; `widgets/` remplace `shared/` et n'accède à aucun état global.
 
-### 3.3 Modèle d'exécution
+### 3.3 Le cœur et l'interface dans un seul processus
 
+C'est l'architecture finale : ce qui remplace `invoke()`, `app.manage(...)`, `app.emit(...)` et les
+plugins appelés depuis Rust. Elle sert aussi pendant la double exploitation (§ 3.3.10), où la
+coquille Tauri et la coquille egui se branchent sur le même cœur.
+
+#### 3.3.1 Vue d'ensemble
+
+```mermaid
+flowchart TB
+  subgraph proc["Processus devnotes"]
+    direction TB
+    subgraph uith["Thread UI (winit + egui)"]
+      draw["Dessin : notes/, http/, tools/, titlebar/…"] -->|Action| state["AppState : états d'écran"]
+      state -->|appels typés| api["api/ : façade du cœur"]
+    end
+    api -->|"Backend::run / spawn → Pending"| backend["Backend"]
+    backend -->|"pool « db » (bloquant)"| core
+    backend -->|"runtime tokio (réseau)"| core
+    subgraph core["devnotes-core : Arc#lt;Core#gt;"]
+      db["Db = Mutex#lt;Option#lt;Library#gt;#gt;"]
+      idx["NoteIndex (RwLock, instantanés Arc)"]
+      net["Sending · Runs · Sockets · Restored"]
+    end
+    core -->|"CoreEvent via EventSink"| chan["canal d'événements"]
+    plat["devnotes-platform : tray, raccourcis, instance unique, dépôts"] -->|"GlobalAction"| chan
+    chan -->|"vidé en début de frame + request_repaint"| state
+  end
+  core --> disk[("Profil : bibliothèques, vault.json, preferences.json")]
+  core -->|"stdin / stdout"| host["Processus enfant : hôte de scripts QuickJS"]
 ```
-Thread UI (winit + egui)          ── jamais d'E/S, de crypto, ni de travail > 1 ms
-  │  Backend::call(job) ──────────▶ pool « db » (2–4 threads, spawn_blocking)
-  │                                    prend Db = Mutex<Option<Library>> comme aujourd'hui
-  │  Backend::query(...) ─────────▶ index en mémoire (RwLock, lecture concurrente)
-  │◀── Pending<T> résolu + ctx.request_repaint()
-  │
-  ├── runtime tokio (multi-thread, 2 workers) : envois HTTP, WebSocket, exécuteur, updater
-  │        EventSink ──▶ canal ──▶ drainé à chaque frame (remplace app.emit)
-  ├── pool rayon : construction de l'index, déchiffrement en parallèle, miniatures, coloration
-  ├── processus enfant QuickJS (hôte de scripts) — inchangé
-  └── thread plateforme : tray/GTK (Linux), raccourcis globaux → GlobalAction ──▶ canal
+
+Trois règles tiennent tout le reste :
+
+1. **Le thread UI ne fait ni E/S, ni crypto, ni attente.** Tout ce qui touche au cœur part par
+   `Backend` et revient par un `Pending` ; aucun `block_on`, aucun verrou pris depuis le dessin.
+2. **Le cœur ne sait rien de l'interface.** Il ne connaît ni egui ni Tauri : il reçoit deux traits
+   (`Paths`, `EventSink`) et renvoie des valeurs ou des `AppError`.
+3. **Une seule façade nomme les fonctions du cœur** : `devnotes-ui/src/api/`. C'est l'équivalent de
+   la règle actuelle « seuls `core/data/` et `core/ipc/` appellent les commandes ». Les types du
+   modèle (`NotesQuery`, `DisplayNote`, `Language`, `HttpRequest`…) sont, eux, utilisés partout tels
+   quels : plus de types miroirs, plus de `note.mapper.ts`.
+
+#### 3.3.2 `Core` : la racine de composition
+
+Aujourd'hui l'état natif est enregistré dans Tauri (`app.manage(Db)`, `Restored`, `Sending`, `Runs`,
+`Sockets`) et retrouvé par `app.state::<…>()`. Il devient une structure possédée par la coquille :
+
+```rust
+// devnotes-core/src/core.rs — créée une fois par la coquille, partagée en Arc<Core>
+pub struct Core {
+    db: Db,                           // Mutex<Option<Library>> : inchangé
+    index: NoteIndex,                 // § 3.5 ; vide tant que la bibliothèque est fermée
+    sending: http::send::Sending,     // envois en vol, corps gardés par id
+    runs: http::runner::Runs,
+    sockets: http::websocket::Sockets,
+    restored: backup::Restored,
+    paths: Arc<dyn Paths>,
+    events: Arc<dyn EventSink>,
+    runtime: tokio::runtime::Handle,  // fourni par la coquille
+}
+
+impl Core {
+    /// Aucune E/S lourde : la bibliothèque reste fermée jusqu'à `vault::unlock`.
+    pub fn new(paths: Arc<dyn Paths>, events: Arc<dyn EventSink>, runtime: Handle) -> Self;
+}
 ```
 
-Éléments à écrire dans `devnotes-ui/src/backend.rs` :
+| État                                                      | Propriétaire                                                                         | Où il vit                                |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------- |
+| Connexion SQLite + clé (`Library`)                        | `Core.db`                                                                            | pool « db »                              |
+| Index de notes                                            | `Core.index`                                                                         | pool rayon (construction), lu partout    |
+| Envois, exécutions, sockets, restauration mise de côté    | `Core.sending/runs/sockets/restored`                                                 | runtime tokio                            |
+| Préférences de l'application et de la bibliothèque        | `ui::services::preferences` (mêmes fichiers) ; le cœur relit seul `automaticBackups` | thread UI (cache) + écriture hors thread |
+| Tray, raccourcis globaux, instance unique, démarrage auto | `devnotes-platform`                                                                  | thread plateforme                        |
+| Brouillons, sélection, onglets, focus, menus ouverts      | `AppState`                                                                           | thread UI                                |
 
-- **`Pending<T>`** : poignée d'un appel en cours (équivalent `poll_promise`), lue à chaque frame ;
-  à la résolution, le travailleur appelle `ctx.request_repaint()`.
-- **`QueryCell<P, T>`** : remplace `resource()` + `linkedSignal` + `OneInFlight`. Garde la
-  **dernière valeur** pendant un rechargement (pas de clignotement), compare ses paramètres par
-  **`PartialEq` structurel** (le piège du comparateur d'identité disparaît), garantit **un appel en
-  vol et le plus récent en attente**, jamais ceux d'entre-deux.
-- **`Revision`** : compteur global incrémenté après chaque écriture (équivalent `NotesRevision`) ;
-  les `QueryCell` de la liste et du tableau le prennent dans leurs paramètres. Les écritures restent
-  **non optimistes** : persister, adopter la réponse, incrémenter.
-- **`EventSink`** (trait du cœur) : `websocket`, console HTTP, exécuteur de collection et
-  `GlobalAction` arrivent par un canal `crossbeam` vidé en début de frame.
+#### 3.3.3 L'API du cœur : trois familles de fonctions
+
+Les `<feature>.rs` gardent leur rôle (valider, verrouiller, déléguer, traduire l'erreur) ; seule la
+signature change, et elle dit sur quel thread on l'appelle :
+
+```rust
+// 1. Données : synchrones et bloquantes — appelées sur le pool « db », jamais sur le thread UI.
+pub fn query_notes(core: &Core, query: NotesQuery) -> Result<NotesView, AppError>;
+pub fn update_note(core: &Core, id: &str, patch: NotePatch) -> Result<DisplayNote, AppError>;
+pub fn unlock(core: &Core, passphrase: Zeroizing<String>) -> Result<(), AppError>;
+
+// 2. Réseau : asynchrones, sur le runtime du cœur ; ne tiennent jamais le verrou en attendant.
+pub async fn send_http_request(core: Arc<Core>, request: SendRequest) -> Result<SentResponse, AppError>;
+pub fn cancel_http_send(core: &Core, id: &str);
+pub async fn connect_websocket(core: Arc<Core>, request: ConnectRequest) -> Result<(), AppError>;
+
+// 3. Outils : fonctions pures, comme aujourd'hui dans tools/* (le `off_thread` part dans la coquille).
+pub fn convert_case(request: &CaseRequest) -> CaseAnswer;
+```
+
+Un exemple avant/après, pour fixer la forme :
+
+```rust
+// Aujourd'hui — src-tauri/src/notes.rs
+#[tauri::command]
+pub async fn query_notes<R: Runtime>(query: NotesQuery, app: AppHandle<R>) -> Result<NotesView, AppError> {
+    blocking(app, move |_, db| { let mut connection = lock(db)?; /* fetch, decorations, view::build */ }).await
+}
+
+// Demain — devnotes-core/src/notes.rs
+pub fn query_notes(core: &Core, query: NotesQuery) -> Result<NotesView, AppError> {
+    let decorations = { let mut c = lock(core.db())?; store::decorations(&mut c, &query)? }; // verrou relâché
+    let index = core.index().read()?;            // jamais le verrou de la base
+    Ok(view::build(index.matching(&query), index.facets(&query), &query, decorations))
+}
+```
+
+**`NotesView` change de forme**, pas de sens : ses sections portent des
+`Card { note: Arc<IndexedNote>, hit: Option<SearchHit>, matches: bool }` au lieu de `DisplayNote`
+copiées, et l'aperçu est calculé pour les seules cartes affichées. Pendant la double exploitation,
+`src-tauri` convertit cette vue en l'actuel `NotesView` sérialisé, si bien que `bindings.ts` et le
+front Angular ne voient rien.
+
+**Ce qui sort du cœur.** Quatre endroits touchent encore la plateforme depuis Rust :
+
+| Aujourd'hui                                                    | Demain                                                                                                    |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `attach_clipboard_image` lit le presse-papiers (plugin)        | l'UI lit l'image (`arboard`), le cœur reçoit des octets : `attachments::attach_image(core, note_id, png)` |
+| `copy_qr_code` écrit dans le presse-papiers (plugin)           | le cœur rend le PNG, l'UI le copie                                                                        |
+| `backup::take` lit `automaticBackups` par `tauri-plugin-store` | le cœur lit `preferences.json` lui-même (`serde_json`, `Paths::profile`, `layout::PREFERENCES`)           |
+| `resource_dir()`, `app_data_dir()`                             | `Paths`                                                                                                   |
+
+`desktop.rs` (tray, raccourcis globaux, `sync_tray`, `hold_quit`, `set_window_behavior`) quitte le
+cœur pour `devnotes-platform`, appelé par l'UI. Les dialogues de fichiers restent ce qu'ils sont
+déjà : l'interface choisit le chemin, le cœur reçoit un chemin.
+
+**Erreurs.** `AppError { code, params, detail }` ne change pas. L'UI la traduit par un `match`
+exhaustif sur `ErrorCode` (`ui::services::errors`) : un code ajouté ne compile plus tant qu'il n'a
+pas sa clé, ce qui remplace `CODE_KEYS` + `IPC_ERROR_CODES`. `detail` va au journal, jamais à
+l'écran.
+
+#### 3.3.4 `Paths` et `EventSink` : ce que le cœur demande à sa coquille
+
+```rust
+// devnotes-core/src/host.rs
+pub trait Paths: Send + Sync {
+    fn profile(&self) -> &Path;       // app_data_dir : registre, libraries/, preferences.json
+    fn resources(&self) -> &Path;     // identity/ (listes de l'outil identité)
+    fn plaintext(&self) -> PathBuf;   // copies en clair des pièces jointes ouvertes
+}
+
+pub trait EventSink: Send + Sync {
+    fn emit(&self, event: CoreEvent);
+}
+
+#[non_exhaustive]
+pub enum CoreEvent {
+    Socket { id: String, event: SocketEvent },   // remplace WEBSOCKET_EVENT
+    Console(ConsoleEvent),                       // remplace HTTP_CONSOLE_EVENT
+    Run(RunEvent),                               // remplace HTTP_RUN_EVENT
+    IndexProgress { done: u32, total: u32 },     // nouveau : construction de l'index
+    IndexReady,
+}
+```
+
+| Implémentation           | `Paths`                            | `EventSink`                                              |
+| ------------------------ | ---------------------------------- | -------------------------------------------------------- |
+| `src-tauri` (temporaire) | `app.path()` de Tauri              | `app.emit(...)` avec les noms d'événements actuels       |
+| `devnotes-ui`            | `devnotes-platform::paths` (§ 4.1) | `crossbeam::Sender<CoreEvent>` + `ctx.request_repaint()` |
+| tests                    | dossier temporaire                 | `RecordingSink` qui garde les événements                 |
+
+`GlobalAction` (tray, raccourcis, seconde instance) ne passe pas par le cœur : la plateforme
+l'envoie sur le même canal que l'UI vide.
+
+#### 3.3.5 Côté interface : `Backend`, `api/`, `Pending`, `QueryCell`, `Revision`
+
+```rust
+// devnotes-ui/src/backend.rs
+pub struct Backend {
+    core: Arc<Core>,
+    db_pool: rayon::ThreadPool,        // 2–4 threads : la base n'a qu'un verrou
+    runtime: tokio::runtime::Runtime,  // multi-thread, 2 workers : réseau, updater
+    ctx: egui::Context,                // pour réveiller l'UI à chaque résolution
+}
+
+impl Backend {
+    pub fn run<T: Send + 'static>(
+        &self,
+        job: impl FnOnce(&Core) -> Result<T, AppError> + Send + 'static,
+    ) -> Pending<T>;
+
+    pub fn spawn<T, F>(&self, job: impl FnOnce(Arc<Core>) -> F + Send + 'static) -> Pending<T>
+    where
+        F: Future<Output = Result<T, AppError>> + Send + 'static,
+        T: Send + 'static;
+}
+
+// devnotes-ui/src/api/notes.rs — une fonction par service, rien d'autre
+pub fn query(backend: &Backend, query: NotesQuery) -> Pending<NotesView> {
+    backend.run(move |core| devnotes_core::notes::query_notes(core, query))
+}
+```
+
+- **`Pending<T>`** : une poignée sur un résultat à venir (`oneshot`), lue par `poll()` à chaque
+  frame ; le travailleur appelle `ctx.request_repaint()` en la résolvant. L'abandonner n'interrompt
+  pas un travail commencé sur la base (comme aujourd'hui) ; un envoi HTTP s'annule explicitement
+  (`cancel_http_send`).
+- **`QueryCell<P: PartialEq + Clone, T>`** : remplace `resource()` + `linkedSignal` + `OneInFlight`.
+  Garde la dernière valeur pendant un rechargement, compare ses paramètres structurellement (le piège
+  du comparateur d'identité disparaît), garde **un appel en vol et le plus récent en attente**.
+- **`Revision`** : compteur incrémenté après chaque écriture adoptée (équivalent `NotesRevision`) ;
+  les `QueryCell` de la liste et du tableau l'ont dans leurs paramètres, donc les deux vues se
+  rafraîchissent ensemble. Écritures **non optimistes** : persister, adopter la réponse,
+  incrémenter.
+
+Chaîne d'appel imposée : **dessin → `Action` → état → `api` → `Backend` → cœur**. Le dessin ne
+connaît pas `api`, l'état ne connaît pas egui (il se teste sans fenêtre, contre le vrai cœur sur un
+dossier temporaire).
+
+#### 3.3.6 Verrous, threads et instantanés
+
+1. **Ordre des verrous : base → index.** Une écriture prend le verrou de la base, fait sa
+   transaction, relit les lignes touchées, puis prend l'index en écriture le temps d'échanger des
+   `Arc`. Une requête ne prend que l'index en lecture : `export_notes` (639 ms sous le verrou) ne
+   bloque plus la recherche.
+2. **Instantanés immuables.** Les entrées de l'index sont des `Arc<IndexedNote>` jamais modifiés en
+   place ; une écriture remplace l'`Arc`. Une vue tient ses `Arc` : l'UI dessine sans aucun verrou,
+   et une entrée remplacée est libérée (et effacée, `Zeroizing`) quand la dernière vue qui la tenait
+   disparaît.
+3. **Le réseau ne tient jamais le verrou** (règle actuelle) : un envoi lit sous le verrou ce dont il
+   hérite, relâche, envoie, puis reprend le verrou pour l'historique et les cookies.
+4. **Ouvrir une autre bibliothèque, restaurer une sauvegarde** : vider le `Mutex` **et** l'index,
+   fermer les sockets, annuler envois et exécutions, avant de toucher aux fichiers.
+5. **Seule attente bornée du thread UI** : à la sortie, jusqu'à 2 s pour les écritures de brouillon
+   en vol.
+
+#### 3.3.7 Une frame
+
+`DevNotesApp::update` fait toujours la même chose, dans cet ordre :
+
+1. **Vider les entrées** : `CoreEvent`, `GlobalAction`, fichiers déposés, révélation demandée par une
+   seconde instance.
+2. **Récolter les `Pending`** : chaque état adopte ses réponses ; une écriture adoptée incrémente
+   `Revision`.
+3. **Relancer les `QueryCell`** dont les paramètres ont changé (requête, `Revision`, jour local).
+4. **Dessiner** : barre de titre, zone courante, superpositions, `DialogStack`, bannières. Le dessin
+   pousse des `Action`.
+5. **Appliquer les `Action`** : elles modifient l'état et lancent de nouveaux appels.
+6. **Planifier la frame suivante** : animation en cours, prochaine étiquette relative qui change,
+   sinon rien (CPU au repos).
+
+#### 3.3.8 Cycles de vie
+
+| Moment                            | Ce qui se passe                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Lancement**                     | `main` : `--devnotes-script-host` → servir les scripts et sortir ; sinon chemins, journal, instance unique (une seconde instance demande « révéler » et sort), thread plateforme (tray, raccourcis), `Core::new` (bibliothèque fermée), eframe avec la fenêtre invisible à la géométrie restaurée, puis montrée. Première frame : `vault::state` → la porte. |
+| **Déverrouillage**                | `api::vault::unlock(Zeroizing)` sur le pool « db » : `gate::unlock`, puis les corvées de `sweep` (copie de sauvegarde, purge de la corbeille et de l'historique, fichiers orphelins, copies en clair) ; puis construction de l'index sur rayon avec `IndexProgress`. L'UI affiche les premières sections dès la première tranche.                            |
+| **Changement de bibliothèque**    | `api::libraries::open` (§ 3.3.6, point 4), puis `AppState::reset_library_scope()` : préférences de la bibliothèque rouvertes, états des notes et du HTTP remis à zéro, réglages de l'application gardés, retour à la porte. C'est ce que fait aujourd'hui le rechargement de la page.                                                                        |
+| **Restauration d'une sauvegarde** | même vidage, restauration, puis porte.                                                                                                                                                                                                                                                                                                                       |
+| **Fermer la fenêtre**             | avec un tray : `CancelClose` + fenêtre cachée ; sans tray : comme Quitter.                                                                                                                                                                                                                                                                                   |
+| **Quitter**                       | `HttpLeave` demande pour les requêtes non enregistrées ; brouillons d'éditeur validés (attente bornée) ; raccourcis libérés, tray retiré ; copies en clair balayées ; géométrie écrite ; sortie.                                                                                                                                                             |
+
+#### 3.3.9 Trois parcours de bout en bout
+
+```mermaid
+sequenceDiagram
+  participant D as Dessin (thread UI)
+  participant S as NotesQueryState
+  participant B as Backend (pool db)
+  participant C as devnotes-core
+  D->>S: Action::Search("psql")
+  Note over S: params changent : QueryCell relance (1 en vol + le plus récent)
+  S->>B: api::notes::query(query)
+  B->>C: notes::query_notes(core, query)
+  C->>C: index.read() → view::build (aucun verrou de base)
+  C-->>B: NotesView (Arc#lt;IndexedNote#gt;)
+  B-->>S: Pending résolu + request_repaint
+  S-->>D: frame suivante : rangées virtuelles visibles seulement
+```
+
+```mermaid
+sequenceDiagram
+  participant E as Éditeur
+  participant N as NotesState
+  participant B as Backend (pool db)
+  participant C as devnotes-core
+  E->>N: perte de focus → apply_patch(id, patch)
+  Note over N: table UNCHANGED : rien n'a bougé → aucun appel
+  N->>B: api::notes::update(id, patch)
+  B->>C: verrou base → transaction → COMMIT → index.refresh(ids)
+  C-->>N: DisplayNote adoptée
+  N->>N: Revision += 1 → liste et tableau relancent leur requête
+```
+
+```mermaid
+sequenceDiagram
+  participant T as HttpSendState
+  participant B as Backend (tokio)
+  participant C as devnotes-core
+  participant K as EventSink → canal
+  T->>B: api::http::send(request)
+  B->>C: send_http_request(core, request)
+  C->>C: verrou : héritage, variables, cookies → relâché
+  C->>K: Console(...) pendant les scripts et les sauts
+  C->>C: envoi reqwest, redirections une à une
+  C->>C: verrou : historique + cookies → relâché
+  C-->>T: SentResponse (Pending résolu)
+  Note over T: « Annuler » → api::http::cancel(id) → AbortHandle
+```
+
+#### 3.3.10 Pendant la double exploitation
+
+```mermaid
+flowchart LR
+  subgraph tauri["devnotes (Tauri) — publié jusqu'à la bascule"]
+    wv["WebView Angular"] -->|invoke| cmds["src-tauri : une ligne par commande + conversion des vues"]
+  end
+  subgraph egui["devnotes (egui) — en construction"]
+    ui["devnotes-ui"] --> api["api/"]
+  end
+  cmds --> core[("devnotes-core (même version, même dépôt)")]
+  api --> core
+  core --> lock{{"verrou de profil (fd-lock)"}}
+  lock --> disk[("Profil partagé")]
+```
+
+- `src-tauri` ne garde que : `lib.rs` (builder, plugins, `collect_commands!`), `desktop.rs`, une
+  enveloppe `#[tauri::command]` d'une ligne par service (`blocking(core, |c| service(c, args))`),
+  `TauriHost` (`Paths` + `EventSink`), et la conversion des nouvelles vues vers les types sérialisés
+  actuels. `bindings.ts` ne change pas, le front Angular non plus.
+- Les deux coquilles se construisent dans le même workspace sur le même `devnotes-core` : un
+  correctif du cœur part dans les deux.
+- Le verrou de profil empêche les deux applications d'ouvrir le même profil en même temps.
+- À la bascule, `src-tauri`, la conversion des vues, `TauriHost` et les dérivations `specta`
+  disparaissent ; rien d'autre ne bouge dans le cœur.
 
 ### 3.4 État de l'interface
 
 - Un `AppState` racine possède les états d'écran ; chaque store Angular devient une structure Rust
   aux champs privés, lue par des accesseurs, modifiée par des méthodes (la règle « signal privé
   derrière `.asReadonly()` » devient la visibilité Rust). Annexe B.
-- **File d'intentions** : les fonctions de dessin reçoivent `&State` et poussent des `Action`
+- **File d'intentions** (§ 3.3.7) : les fonctions de dessin reçoivent `&State` et poussent des `Action`
   (`Action::OpenNote(id)`, `Action::Global(GlobalAction::NewNote)`…) ; `AppState::apply` les traite
   en fin de frame. Une seule entrée pour clavier, palette, tray, menus et raccourcis globaux, et pas
   de conflit d'emprunt entre dessin et mutation.
@@ -813,8 +1116,10 @@ décision consignée (ADR courte dans `docs/egui-migration/adr/`).
 
 1. Créer le workspace ; `git mv src-tauri/src` (hors coquille) vers `crates/devnotes-core/src`,
    avec `migrations/`, `resources/`, `sandbox/`, `benches/`, `tests/`.
-2. Introduire `host.rs` : `trait Paths` (profil, ressources, journaux, copies en clair) et
-   `trait EventSink` ; remplacer les 17 usages d'`AppHandle`/`emit`/`resource_dir`/`app_data_dir`.
+2. Introduire `Core` et `host.rs` (§ 3.3.2, § 3.3.4) : `trait Paths` et `trait EventSink` ;
+   remplacer les usages d'`AppHandle`, `app.state`, `emit`, `resource_dir`, `app_data_dir` ; sortir
+   du cœur le presse-papiers (`attach_clipboard_image`, `copy_qr_code`), la lecture de
+   `automaticBackups` par le plugin `store`, et `desktop.rs`.
 3. Le cœur possède son runtime : `tauri::async_runtime::spawn` → `tokio::spawn` sur un runtime créé
    par la coquille et passé au cœur ; `db::blocking` devient générique (`spawn_blocking`).
 4. Transformer chaque commande en fonction de service (annexe C) ; `src-tauri` ne garde que des
