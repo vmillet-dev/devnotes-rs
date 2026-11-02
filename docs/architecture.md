@@ -17,7 +17,7 @@ shortcut, attachments, and import / export / share.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
 tags, languages, quick filters), grouping into display sections, facet aggregation and tag
-normalisation, and the choice of what a card's footer shows all run in `src-tauri/src/notes/`.
+normalisation, and the choice of what a card's footer shows all run in `crates/engine/src/notes/`.
 The front-end describes what the user asked for and renders the view it gets back — it does
 not filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels
 must age on their own, without a round trip), the ISO ↔ `Date` conversion at the serialisation
@@ -50,7 +50,8 @@ src/                Angular front-end
 ├── assets/         static images
 ├── styles/         global theme (styles.scss) and SCSS partials
 └── testing/        test doubles, fixtures and shared providers
-src-tauri/          Rust back-end
+Cargo.toml          the Cargo workspace: shared version, lints and release profile
+crates/engine/      Rust back-end, the core (migrations/, resources/, sandbox/, tests/, benches/)
 ├── src/notes/      the notes feature: model, language, view, placeholder, trash, store/
 ├── src/spaces/     the spaces feature: model, SQL
 ├── src/attachments/ the attachments feature: model, SQL (the bytes live on disk)
@@ -58,10 +59,16 @@ src-tauri/          Rust back-end
 ├── src/tools/      the Outils area: one pure module per group of tools, no lock, no store
 ├── src/db.rs       connection, migrations, schema, stored-instant format
 ├── src/error.rs    the three errors and the translation between them
+└── src/lib.rs      the modules, every command re-exported at the root
+src-tauri/          the Tauri shell over the core
 ├── src/desktop.rs  tray and global shortcuts — native glue, not a feature
-├── src/lib.rs      Tauri builder, database setup + command registration
+├── src/lib.rs      Tauri builder, plugins, native state + command registration
 └── capabilities/   Tauri v2 permission manifests
 ```
+
+⚠️ The shell registers a core command as `engine::<command>`: `#[tauri::command]` and
+`#[specta::specta]` export their macros at the root of the crate that declares the command,
+so `engine/src/lib.rs` re-exports each command there.
 
 ### Feature-first, not layer-first
 
@@ -548,7 +555,7 @@ Cython over Python, JSON-LD over JSON, a Vue or Angular template over its HTML) 
 other's score, so it always outscores it once its own sign is there. A shebang names its
 interpreter (`python3`, `node`, `perl`…), any other being a shell as before.
 
-⚠️ **`src-tauri/tests/corpus/` is what says whether this is better rather than differently
+⚠️ **`crates/engine/tests/corpus/` is what says whether this is better rather than differently
 wrong.** One file per case, named `<language>[-<variant>].txt`, read from disk and asserted
 in bulk — adding a case is adding a file. Every detectable language has one, and each language
 added since has a `txt-weak-<tag>.txt` holding only what it shares with others, which must
@@ -1116,7 +1123,7 @@ sums the files.
 ⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
 is corrected or a list completed without building the application again.
 
-- **A Tauri resource**: `src-tauri/resources/identity/` (`names.txt`, `places/*.txt`) is
+- **A Tauri resource**: `crates/engine/resources/identity/` (`names.txt`, `places/*.txt`) is
   declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
   on Windows and in a development or e2e build (`tauri-build` copies it into the target
   directory), under the package's own folder on Linux. The two commands take the
@@ -1210,7 +1217,7 @@ is corrected or a list completed without building the application again.
 
 **Adding a tool**, the whole of it:
 
-1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.
+1. `crates/engine/src/tools/<module>.rs`: the function, its request and answer types, its tests.
 2. `tools.rs`: a command through `off_thread`; `lib.rs`: a line in `collect_commands!`; then
    `npm run bindings`.
 3. `core/data/tools.repository.ts`: a method, and its twin in `FakeToolsRepository`; the types
@@ -1375,7 +1382,7 @@ Rules of the house:
 
 ### Display sections
 
-Sections are built in Rust (`src-tauri/src/notes/view.rs`) and arrive ready to render.
+Sections are built in Rust (`crates/engine/src/notes/view.rs`) and arrive ready to render.
 The front-end preserves the order it receives and never drops or merges a section.
 
 The classification into `pinned`, `today`, `week` and `older` is **exhaustive**: apart from
@@ -2866,7 +2873,7 @@ answers on its standard output.
   Ajv, tv4, xml2js, cheerio (its slim build), csv-parse, and Node's assert, buffer, events, path,
   punycode, querystring, stream, string_decoder, timers, url, util as their browser polyfills —
   about 1 MB, each evaluated on its first `require`. They are bundled by
-  `src-tauri/sandbox/build.mjs` from its own `package.json` (not the application's: none of it
+  `crates/engine/sandbox/build.mjs` from its own `package.json` (not the application's: none of it
   reaches the WebView) into `sandbox/dist/`, which is committed with a manifest and the
   libraries' licences; `libraries::tests` holds the table to the manifest. Node's modules are
   left out of the other bundles, so one copy serves them all. Nothing else is found: `fs`,
@@ -4244,7 +4251,7 @@ a time, and four flags would allow a state where two of them are stacked and the
 the loser keeps the keyboard.
 
 - **"Nouveautés"** renders `CHANGELOG.md`, the repository's own, **embedded in the binary** by
-  `include_str!` (`src-tauri/src/changelog.rs`) and read through `app_changelog`. The Markdown
+  `include_str!` (`crates/engine/src/changelog.rs`) and read through `app_changelog`. The Markdown
   is parsed **in Rust** (`changelog/model.rs`) into releases, categories and entries, so the
   front renders a typed structure with the components it already has: no Markdown renderer to
   pull in, no `innerHTML`, nothing for the CSP to forbid. The grammar is deliberately thin —
@@ -4513,7 +4520,7 @@ the one place that branches on a cause.
 ### Error contract
 
 Commands return `Result<T, AppError>`, never `Result<T, String>`. An `AppError`
-(`src-tauri/src/error.rs`) carries a stable **code**, its interpolation **params**
+(`crates/engine/src/error.rs`) carries a stable **code**, its interpolation **params**
 and a technical **detail**:
 
 ```json
@@ -5526,7 +5533,7 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   before any command can run — a command creating its own on first call would race another
   doing the same.
 
-- **Migrations.** They live as SQL files in `src-tauri/migrations/`, are compiled into the
+- **Migrations.** They live as SQL files in `crates/engine/migrations/`, are compiled into the
   binary by `embed_migrations!`, and are tracked in the `__diesel_schema_migrations` table.
   Evolving the model means adding a `YYYY-MM-DD-HHMMSS_name/` directory — never editing a
   shipped migration, it has already run on user machines. Each migration is atomic. A database
@@ -6121,7 +6128,7 @@ application's file — both serve 0.3.x, the release before the one that introdu
 
 ### Benchmarks
 
-`cargo bench` from `src-tauri/`. They are **not in CI**: a timing assertion on a shared
+`cargo bench -p engine`. They are **not in CI**: a timing assertion on a shared
 runner flaps, and a suite that flaps is a suite everyone learns to ignore. They run
 locally, on demand.
 
@@ -6132,7 +6139,7 @@ cargo bench -- --baseline main        # after
 
 That comparison is the whole reason the harness is **criterion** and not divan, which is
 lighter and pleasanter but does not offer it out of the box. ⚠️ The baseline it writes lives
-in `src-tauri/target/criterion/`, which is gitignored: it is local to one machine and dies
+in `target/criterion/`, which is gitignored: it is local to one machine and dies
 with `cargo clean`. The table below is the durable record.
 
 ⚠️ **They run below the command boundary, not through Tauri.** A command is four lines —
@@ -6315,7 +6322,7 @@ results, several sections) pins one with `setView`. `lastQuery` and `queryCount`
 the store asked for — which is the part of querying the front-end still owns.
 
 That split also decides where a test belongs: assertions about _what is shown_ (which notes
-match, which section they land in, how tags are cleaned) go in `src-tauri/`, while the
+match, which section they land in, how tags are cleaned) go in `crates/engine/`, while the
 front-end specs cover assembling the query, pacing it, and reacting to what comes back.
 
 Component specs follow one consistent pattern:
@@ -6349,14 +6356,14 @@ Component specs follow one consistent pattern:
 
 ### Rust
 
-`cargo test` from `src-tauri/` runs everything. `cargo clippy -- -D warnings` and
-`cargo fmt --check` gate the code; `Cargo.toml` sets `unsafe_code = "forbid"` and
+`cargo test --workspace` runs everything. `cargo clippy -- -D warnings` and
+`cargo fmt --check` gate the code; the workspace `Cargo.toml` sets `unsafe_code = "forbid"` and
 `deny(clippy::all)`.
 
 Unit tests are inline `#[cfg(test)] mod tests` blocks at the bottom of the file they cover —
 the idiomatic Rust form, and the one that keeps a test next to what it asserts. Shared
 fixtures for the notes tests live in `notes::fixtures`, a `#[cfg(test)]` module in `notes.rs`.
-`src-tauri/tests/` holds the integration binaries, which see only the crate's public API. Their
+`crates/engine/tests/` holds the integration binaries, which see only the crate's public API. Their
 instants, the space and the plain snippet they build on are `tests/common/mod.rs`, once;
 `notes` is a directory (`tests/notes/main.rs` and one module per subject — writes, trash,
 tags, fields, queries, revisions…) rather than one file of a hundred tests. A test that writes
@@ -6589,7 +6596,7 @@ behind the Windows build. `e2e.yml` holds two jobs:
   is embedded in the binary; Windows needs no DLL beside it.
 - **`group`** is one job per group, `max-parallel: 3` per platform: it installs what the binary
   loads — WebKitGTK and an X server on Linux, never the toolchain — runs `npm ci` and downloads
-  the binary into `src-tauri/target/debug`, where `wdio.conf.ts` looks, once; then runs
+  the binary into `target/debug`, where `wdio.conf.ts` looks, once; then runs
   `E2E_SPEC=<name> npm run test:e2e` for each of its scenarios in turn, stopping at the first
   that fails. No cargo runs there. `fail-fast: true`: the first red group cancels the others.
 

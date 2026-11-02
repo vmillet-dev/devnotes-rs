@@ -4,7 +4,7 @@
 // `generate` splices a `## [x.y.z] - DATE` section into CHANGELOG.md, `extract` reads one
 // back out. The GitHub release body comes from `extract` at the tag rather than from a
 // job output, so the file baked into the binary and the page on github.com cannot say two
-// different things. The grammar is the one `src-tauri/src/changelog/model.rs` parses.
+// different things. The grammar is the one `crates/engine/src/changelog/model.rs` parses.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';

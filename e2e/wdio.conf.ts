@@ -11,12 +11,13 @@ const repo = resolve(here, '..');
 /**
  * Built by `npm run e2e:build`, which links the `e2e` Cargo feature and merges
  * `tauri.e2e.conf.json`. A release binary carries neither and cannot be driven.
- * `CARGO_TARGET_DIR` is read as cargo reads it under the Tauri CLI, from `src-tauri/`.
+ * Cargo writes it to the workspace's `target/`, or under `CARGO_TARGET_DIR`, which is read as
+ * cargo reads it under the Tauri CLI: from `src-tauri/`.
  */
 const appBinary = resolve(
-  repo,
-  'src-tauri',
-  process.env['CARGO_TARGET_DIR'] ?? 'target',
+  process.env['CARGO_TARGET_DIR']
+    ? resolve(repo, 'src-tauri', process.env['CARGO_TARGET_DIR'])
+    : resolve(repo, 'target'),
   'debug',
   process.platform === 'win32' ? 'devnotes.exe' : 'devnotes',
 );

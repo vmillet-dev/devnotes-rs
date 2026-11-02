@@ -1,6 +1,6 @@
 name: Release
 
-# One button. The version is already in src-tauri/Cargo.toml — a human bumps it, and this
+# One button. The version is already in the root Cargo.toml — a human bumps it, and this
 # workflow draws a changelog section, a commit, a tag, the bundles and the release from it.
 #
 # All in the same run, and that is not a comfort choice: a tag pushed with the default
@@ -75,9 +75,9 @@ jobs:
       - name: Read the version
         id: version
         run: |
-          version=$(grep -m1 '^version = ' src-tauri/Cargo.toml | cut -d'"' -f2)
+          version=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
           if [ -z "$version" ]; then
-            echo '::error::no version in src-tauri/Cargo.toml'
+            echo '::error::no version in Cargo.toml'
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -94,7 +94,7 @@ jobs:
           pkg=$(node -p "require('./package.json').version")
           npm_lock=$(node -p "require('./package-lock.json').packages[''].version")
           cargo_lock=$(awk '/^name = "devnotes"$/{f=1;next} f&&/^version = /{print;exit}' \
-            src-tauri/Cargo.lock | cut -d'"' -f2)
+            Cargo.lock | cut -d'"' -f2)
           echo "Cargo.toml=$VERSION package.json=$pkg package-lock=$npm_lock Cargo.lock=$cargo_lock"
           for found in "$pkg" "$npm_lock" "$cargo_lock"; do
             if [ "$found" != "$VERSION" ]; then
@@ -269,12 +269,12 @@ jobs:
       - name: Each bundle holds the application alone
         run: |
           if [ '${{ matrix.target }}' = 'windows' ]; then
-            msi=$(cygpath -w "$(ls src-tauri/target/release/bundle/msi/*.msi)")
+            msi=$(cygpath -w "$(ls target/release/bundle/msi/*.msi)")
             pwsh -NoProfile -Command "Start-Process msiexec -ArgumentList '/a','$msi','/qn','TARGETDIR=$(cygpath -w "$RUNNER_TEMP/msi")' -Wait"
             found=$(find "$RUNNER_TEMP/msi" -type f -name '*.exe' -printf '%f\n' | sort)
             expected='devnotes.exe'
           else
-            found=$(dpkg-deb -c src-tauri/target/release/bundle/deb/*.deb \
+            found=$(dpkg-deb -c target/release/bundle/deb/*.deb \
               | awk '$6 ~ /^(\.\/)?usr\/bin\/[^\/]+$/ { n = split($6, part, "/"); print part[n] }' | sort)
             expected='devnotes'
           fi
@@ -297,16 +297,16 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           mkdir -p release
-          find src-tauri/target/release/bundle -type f \
+          find target/release/bundle -type f \
             \( -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' \
                -o -name '*.AppImage' -o -name '*.sig' \) \
             -exec cp {} release/ \;
           # The bundler does not collect the bare binary; renaming it keeps the two operating
           # systems from overlapping in the release.
           if [ '${{ matrix.target }}' = 'windows' ]; then
-            cp src-tauri/target/release/devnotes.exe "release/devnotes-${VERSION}-windows.exe"
+            cp target/release/devnotes.exe "release/devnotes-${VERSION}-windows.exe"
           else
-            cp src-tauri/target/release/devnotes "release/devnotes-${VERSION}-linux"
+            cp target/release/devnotes "release/devnotes-${VERSION}-linux"
           fi
           ls -l release
 

@@ -3,7 +3,7 @@ out-tsc
 node_modules
 .angular
 coverage
-src-tauri/target
+target
 # Schémas générés par Tauri au build.
 src-tauri/gen
 # Bindings générés par tauri-specta : réécrits à chaque build Rust, les reformater

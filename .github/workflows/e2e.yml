@@ -65,9 +65,9 @@ jobs:
         with:
           name: e2e-app-${{ inputs.os }}
           path: |
-            src-tauri/target/debug/${{ runner.os == 'Windows' && 'devnotes.exe' || 'devnotes' }}
-            src-tauri/target/debug/identity/
-            src-tauri/target/debug/.cargo-lock
+            target/debug/${{ runner.os == 'Windows' && 'devnotes.exe' || 'devnotes' }}
+            target/debug/identity/
+            target/debug/.cargo-lock
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
@@ -128,11 +128,11 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: e2e-app-${{ inputs.os }}
-          path: src-tauri/target/debug
+          path: target/debug
 
       - name: Executable bit
         if: runner.os == 'Linux'
-        run: chmod +x src-tauri/target/debug/devnotes
+        run: chmod +x target/debug/devnotes
 
       # One `npm run test:e2e` per scenario, which stops any application left running and wipes
       # the profile first: each starts as virgin as it would on a runner of its own. The group

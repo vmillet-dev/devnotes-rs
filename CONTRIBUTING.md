@@ -29,14 +29,14 @@ npm run lint && npm test && npm run test:scripts
 ```
 
 ```bash
-cd src-tauri && cargo fmt --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+cargo fmt --all --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace
 ```
 
 `--all-features` is not optional: it is what compiles the `e2e` feature, which nothing else
 type-checks.
 
 The end-to-end suite drives a **built** binary, so it needs a rebuild after any change to
-`src/` or `src-tauri/`:
+`src/`, `crates/` or `src-tauri/`:
 
 ```bash
 npm run e2e:build && npm run test:e2e
@@ -53,7 +53,7 @@ profile, as each CI job does.
 | `npm start`             | Angular dev server only, port 1420                      |
 | `npm run tauri dev`     | The main loop: Angular dev server plus the Tauri window |
 | `npm run build`         | Production Angular build, into `dist/devnotes/browser`  |
-| `npm run tauri build`   | Full production build, into `src-tauri/target/release`  |
+| `npm run tauri build`   | Full production build, into `target/release`            |
 | `npm test`              | Unit tests (Vitest on jsdom — no browser needed)        |
 | `npm run test:watch`    | The same, re-running on change                          |
 | `npm run test:coverage` | The same, with a v8 coverage report (80% thresholds)    |
@@ -66,15 +66,15 @@ profile, as each CI job does.
 
 `npm start` serves the front end alone, but every `invoke()` fails outside the Tauri window
 and the canvas shows its retry screen. Use it for pure styling work and
-`npm run tauri dev` for anything else. For Rust-only iteration, `cargo check` from
-`src-tauri/` is much faster than a full build.
+`npm run tauri dev` for anything else. For Rust-only iteration, `cargo check --workspace`
+is much faster than a full build.
 
 ## The layout
 
 ```
 src/              Angular front end: core/ (model, data, state, ipc, services) and the
                   interface itself — notes/, titlebar/, banners/, shared/
-src-tauri/src/
+crates/engine/src/
   notes/          The notes feature: model.rs, language.rs, view.rs, placeholder.rs,
                   trash.rs, checklist.rs, store.rs
   spaces/         The spaces feature: model.rs, store.rs
@@ -82,20 +82,20 @@ src-tauri/src/
   transfer/       Import, export, share: the exchange format and the Markdown rendering
   db.rs           Connection, migrations, schema, stored-instant format
   error.rs        The three errors and the translation between them
-  desktop.rs      Tray and global shortcuts — native glue, not a feature
+src-tauri/        The Tauri shell: plugins, window, desktop.rs (tray, global shortcuts)
 docs/             Architecture notes, the release procedure, the UI mockup
 ```
 
 Both halves are filed by **subject**, not by technical nature. On the Rust side each feature
-owns its model, its SQL and the commands that expose it. Deleting `src-tauri/src/notes/`
+owns its model, its SQL and the commands that expose it. Deleting `crates/engine/src/notes/`
 deletes the feature. [docs/architecture.md](docs/architecture.md) is the detailed reference —
 read it before a structural change, and keep it in step when you make one.
 
 ## Things that are not guesswork
 
-**Migrations are append-only.** A model change means a new `src-tauri/migrations/`
+**Migrations are append-only.** A model change means a new `crates/engine/migrations/`
 directory, never an edit to one that already shipped — it has already run on installed
-databases. `src-tauri/src/db/schema.rs` is **hand-written**, not generated, so a new column
+databases. `crates/engine/src/db/schema.rs` is **hand-written**, not generated, so a new column
 means editing both it and the SQL. Deleting `app_data_dir()/devnotes.sqlite3` is a legitimate
 reset while developing.
 
@@ -135,7 +135,7 @@ approach was rejected. Anything restating a signature or narrating the next line
 neither.
 
 Rust unit tests are inline `#[cfg(test)] mod tests` blocks at the bottom of the file they
-cover; `src-tauri/tests/` holds the integration binaries, which see only the crate's public
+cover; `crates/engine/tests/` holds the integration binaries, which see only the crate's public
 API. Test names are sentences — `a_blank_name_is_refused_with_its_field`, not `test_name_2`.
 
 ## Pull requests
