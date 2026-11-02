@@ -12,7 +12,6 @@ use crate::db::lock;
 use crate::error::AppError;
 use crate::index::Changed;
 
-use crate::notes;
 use board::{
     BoardArrangement, BoardQuery, BoardScope, BoardView, CardPlacement, Occupancy, ZonePlacement,
 };
@@ -27,7 +26,12 @@ pub fn board_view(engine: &Engine, query: BoardQuery) -> Result<BoardView, AppEr
     let mut connection = lock(db)?;
 
     let folders = store::list(&mut connection, Some(&query.space_id))?;
-    let (notes, facets) = notes::store::fetch(&mut connection, &query.whole_space())?;
+    let mut index = engine.index()?;
+    index.ready(&mut connection)?;
+    let (entries, facets) = index.select(&query.whole_space(), None);
+    let notes: Vec<_> = entries.iter().map(|entry| entry.note.clone()).collect();
+    let decorations = index.decorations();
+    drop(index);
 
     let lineage = Lineage::of(&folders);
     let root = query.root_id.as_deref();
@@ -43,9 +47,6 @@ pub fn board_view(engine: &Engine, query: BoardQuery) -> Result<BoardView, AppEr
         &Occupancy::on(&notes, &lineage, root),
     )?;
 
-    let mut decorations = notes::store::decorations(&mut connection)?;
-    decorations.folders = store::by_id(&mut connection, Some(&query.space_id))?;
-    // The dimming and the layout read nothing more: every other command waits on this lock.
     drop(connection);
 
     let mut view = board::build(notes, &folders, &frames, &positions, facets, &query);

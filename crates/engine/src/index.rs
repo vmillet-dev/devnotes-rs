@@ -5,7 +5,7 @@
 //! Built after the unlock, newest first, a slice at a time on the db queue ([`fill`]), so a
 //! command sent meanwhile runs between two slices.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
 use rayon::prelude::*;
@@ -14,9 +14,10 @@ use zeroize::Zeroize;
 use crate::db::{self, Library, iso8601, lock};
 use crate::error::StorageError;
 use crate::folders::model::NoteFolder;
+use crate::notes::kind::NoteKind;
 use crate::notes::model::Note;
 use crate::notes::store;
-use crate::notes::view::Folded;
+use crate::notes::view::{self, Criteria, Decorations, Facets, Folded, NotesQuery, SearchHit};
 use crate::{Engine, EngineEvent};
 
 /// Notes read and opened per job of the queue.
@@ -251,6 +252,102 @@ impl NoteIndex {
         Ok(())
     }
 
+    /// The whole index of `library`, whatever was read of it so far: a read waits for no slice.
+    pub(crate) fn ready(&mut self, library: &mut Library) -> Result<(), StorageError> {
+        self.start(library)?;
+        while self.next_slice(library)? {}
+        Ok(())
+    }
+
+    /// What `notes::store::fetch` answers, from memory: the notes the space, the folders, the
+    /// quick filter and the rails keep, edited last first, and the facets of the space.
+    pub(crate) fn select(
+        &self,
+        query: &NotesQuery,
+        folders: Option<&HashSet<String>>,
+    ) -> (Vec<&IndexedNote>, Facets) {
+        let criteria = Criteria::from(query);
+        let mut kept: Vec<&IndexedNote> = self
+            .notes
+            .values()
+            .map(Arc::as_ref)
+            .filter(|entry| {
+                let note = &entry.note;
+                query
+                    .space_id
+                    .as_ref()
+                    .is_none_or(|space| &note.space_id == space)
+                    && folders.is_none_or(|ids| {
+                        note.folder_id.as_ref().is_some_and(|id| ids.contains(id))
+                    })
+                    && criteria.passes_rails(note)
+            })
+            .collect();
+        kept.sort_by(|a, b| {
+            b.note
+                .updated_at
+                .cmp(&a.note.updated_at)
+                .then_with(|| a.note.id.cmp(&b.note.id))
+        });
+        (kept, self.facets(query.space_id.as_deref()))
+    }
+
+    /// Counted as the SQL counted them, a space or every one. ⚠️ Tags that differ only in case
+    /// are one, as under `COLLATE NOCASE`, named by their smallest spelling.
+    pub(crate) fn facets(&self, space_id: Option<&str>) -> Facets {
+        let mut tags: BTreeMap<String, (String, i64)> = BTreeMap::new();
+        let mut languages: BTreeMap<&str, i64> = BTreeMap::new();
+        let mut kinds: HashMap<&str, i64> = HashMap::new();
+        let mut priorities: HashMap<&str, i64> = HashMap::new();
+        let notes = self
+            .notes
+            .values()
+            .map(|entry| &entry.note)
+            .filter(|note| space_id.is_none_or(|space| note.space_id == space));
+        for note in notes {
+            for tag in &note.tags {
+                let (spelling, count) = tags
+                    .entry(tag.to_ascii_lowercase())
+                    .or_insert_with(|| (tag.clone(), 0));
+                if tag < spelling {
+                    spelling.clone_from(tag);
+                }
+                *count += 1;
+            }
+            if note.kind == NoteKind::Snippet {
+                *languages.entry(note.language.as_str()).or_default() += 1;
+            }
+            *kinds.entry(note.kind.as_str()).or_default() += 1;
+            *priorities.entry(note.priority.as_str()).or_default() += 1;
+        }
+        let rows = |counts: HashMap<&str, i64>| -> Vec<(String, i64)> {
+            counts
+                .into_iter()
+                .map(|(value, count)| (value.to_string(), count))
+                .collect()
+        };
+        Facets {
+            tags: view::count_tags(tags.into_values().collect()),
+            languages: view::count_languages(
+                &languages
+                    .into_iter()
+                    .map(|(value, count)| (value.to_string(), count))
+                    .collect::<Vec<_>>(),
+            ),
+            kinds: view::count_kinds(&rows(kinds)),
+            priorities: view::count_priorities(&rows(priorities)),
+        }
+    }
+
+    /// What a card carries beside its note, for the whole library.
+    pub(crate) fn decorations(&self) -> Decorations {
+        Decorations {
+            attachment_counts: self.attachment_counts.clone(),
+            folders: self.folders.clone(),
+            globals: self.globals.clone(),
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.notes.len()
     }
@@ -266,6 +363,37 @@ impl NoteIndex {
     pub fn get(&self, id: &str) -> Option<&Arc<IndexedNote>> {
         self.notes.get(id)
     }
+}
+
+/// The notes among `entries` that answer `needle`, in their order, copied for the view to
+/// cut, and the quotes of those found elsewhere than in their title. Searched in parallel.
+pub(crate) fn search(
+    entries: &[&IndexedNote],
+    needle: &str,
+) -> (Vec<Note>, HashMap<String, SearchHit>) {
+    if needle.is_empty() {
+        return (
+            entries.iter().map(|entry| entry.note.clone()).collect(),
+            HashMap::new(),
+        );
+    }
+    let found: Vec<(Note, Option<SearchHit>)> = entries
+        .par_iter()
+        .filter_map(|entry| {
+            view::answers(&entry.note, &entry.folded, needle).map(|hit| (entry.note.clone(), hit))
+        })
+        .collect();
+    let mut hits = HashMap::new();
+    let notes = found
+        .into_iter()
+        .map(|(note, hit)| {
+            if let Some(hit) = hit {
+                hits.insert(note.id.clone(), hit);
+            }
+            note
+        })
+        .collect();
+    (notes, hits)
 }
 
 /// Fills the index of the library just unlocked, a slice a job, saying how far it got. Stops
@@ -460,3 +588,6 @@ mod tests {
         assert!(values.is_empty());
     }
 }
+
+#[cfg(test)]
+mod oracle;
