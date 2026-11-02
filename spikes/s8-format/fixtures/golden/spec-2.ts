@@ -1,5 +1,0 @@
-call(
-  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-  'cccccccccccccccccccc',
-);

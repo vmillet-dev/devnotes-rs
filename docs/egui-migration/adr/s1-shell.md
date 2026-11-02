@@ -3,7 +3,7 @@
 - **Statut** : accepté pour Linux X11 et pour D15 ; **Windows et vrais bureaux Wayland non vérifiés**
   (2026-11-02)
 - **Ticket** : #1136 · plan § 3.10, D15, D16, D29, R3
-- **Prototype** : `spikes/s1-shell` (binaire) et `spikes/s1-shell/drive-x11.sh` (pilote Xvfb)
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -63,5 +63,4 @@ Clavier (X11, positions AZERTY posées par `xmodmap`) : voir l'ADR S5.
 
 Windows 10/11 (DX12, mise à l'échelle 100–200 %, plein écran, tray, raccourci global, tube
 nommé), un vrai bureau GNOME et KDE en XWayland (dépôt depuis le gestionnaire de fichiers, tray,
-plein écran), le clic de menu du tray, le dialogue avec un portail réel. Le pilote
-`drive-x11.sh` se rejoue tel quel sur une machine Linux.
+plein écran), le clic de menu du tray, le dialogue avec un portail réel.

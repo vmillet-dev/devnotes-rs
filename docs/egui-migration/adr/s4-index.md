@@ -2,7 +2,7 @@
 
 - **Statut** : accepté (2026-11-02)
 - **Ticket** : #1139 · plan § 3.5, § 6.1, § 6.2, R4
-- **Prototype** : `spikes/s4-index` (`cargo run --release -p s4-index -- <realistic|stress> <fichier> <plain|lz4>`)
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -33,8 +33,6 @@ référence du § 6.2.
 | Vue vide triée, p95               | 0,9 ms               | 1,3 ms               | 1,2 ms             | 1,2 ms             | —                               |
 | Filtre espace + type + tag, p95   | 0,2 ms               | 0,4 ms               | 0,3 ms             | 0,3 ms             | —                               |
 | Facettes (tags, types, dossiers)  | 0,4 ms               | 0,4 ms               | 2,0 ms             | 0,4 ms             | `list_tags` ≤ 5 / 10 ms         |
-
-Sortie brute : `spikes/out/s4.txt` (non versionnée, régénérée par le prototype).
 
 ## Décision
 

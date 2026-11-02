@@ -3,8 +3,7 @@
 - **Statut** : accepté pour D26 et la signature ; **NSIS et AppImage non construits ici** (voir
   « Reste à vérifier ») (2026-11-02)
 - **Ticket** : #1144 · plan § 4.1, § 4.3, D8, D26, D27, R7
-- **Prototype** : `spikes/s9-packages` (binaire `devnotes-s9` qui affiche sa version et ses
-  ressources ; `--update <latest.json> <clé publique>` vérifie, télécharge, contrôle et installe)
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 

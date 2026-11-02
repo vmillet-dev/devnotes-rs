@@ -2,7 +2,7 @@
 
 - **Statut** : accepté (2026-11-02)
 - **Ticket** : #1142 · plan § 3.9.3, D2, E6
-- **Prototype** : `spikes/s7-mermaid` (`cargo run --release -p s7-mermaid`, depuis `spikes/s7-mermaid`)
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -26,7 +26,7 @@ Recherche crates.io « mermaid » (2026-11-02) ; retenus les trois moteurs SVG l
 ## Ce qui a été mesuré
 
 Chaque diagramme rendu en SVG puis rastérisé par `resvg` (la voie d'image du plan), images
-comparées à l'œil. Sorties : `spikes/out/s7/<moteur>/`, planches `spikes/out/s7/compare-*.png`.
+comparées à l'œil.
 
 | Diagramme                                    | `merman`                    | `mermaid-rs-renderer`                       | `mermaid-svg`              |
 | -------------------------------------------- | --------------------------- | ------------------------------------------- | -------------------------- |

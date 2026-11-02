@@ -2,7 +2,7 @@
 
 - **Statut** : accepté (2026-11-02)
 - **Ticket** : #1143 · plan § 3.9.4, D1, R6
-- **Prototype** : `spikes/s8-format` (`golden.mjs`, binaires `prettier_qjs` et `native`)
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -30,7 +30,6 @@ de scripts), `standalone.js` + 9 plugins évalués depuis la source, 20 passes c
 QuickJS : chargement à froid de Prettier + 9 plugins 253 ms (une fois), 28 Mo résidents.
 Natifs : `dprint-plugin-typescript` 0.96 trie les imports par défaut, `markup_fmt` demande un
 formateur externe pour `<script>`/`<style>` (non branché ici), `pretty_yaml` perd le CRLF.
-Sorties brutes : `spikes/out/s8-*.txt`, `spikes/out/s8-native/`.
 
 ## Décision
 

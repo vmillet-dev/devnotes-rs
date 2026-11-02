@@ -1459,7 +1459,7 @@ P7 se font pendant P3–P5 et la 1.0.0 arrive environ quatre mois plus tôt.
 
 ### Phase 0 — Spikes et décisions (3 S)
 
-Des prototypes jetables dans `spikes/` (hors workspace), chacun avec un compte rendu et une
+Des prototypes jetables, non conservés dans le dépôt, chacun avec un compte rendu et une
 décision consignée (ADR courte dans `docs/egui-migration/adr/`).
 
 | Spike                  | Question                                                                                                                                                                                                                                                                                                                                                                                                                                       | Sortie attendue                                                                                                              |
@@ -1479,8 +1479,8 @@ décision consignée (ADR courte dans `docs/egui-migration/adr/`).
 § 11, moteur Mermaid de D2 choisi, règles de polices du § 3.7 appliquées (S2), pilote e2e validé,
 estimation recalée, risques réévalués.
 
-**Résultat (2026-11-02).** Les dix prototypes sont dans `spikes/` (workspace Cargo à part, hors
-lint) ; chacun a son ADR dans `docs/egui-migration/adr/`. Mesures prises dans un conteneur Linux
+**Résultat (2026-11-02).** Les dix prototypes, jetés après mesure, ont chacun leur ADR dans
+`docs/egui-migration/adr/`. Mesures prises dans un conteneur Linux
 (4 vCPU Xeon 2,1 GHz, Xvfb, Mesa lavapipe/llvmpipe, weston sans écran), plus lent par cœur que la
 machine de référence du § 6.2.
 

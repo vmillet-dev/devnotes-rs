@@ -3,8 +3,7 @@
 - **Statut** : accepté (2026-11-02) ; comparé à Chromium sous Linux, **pas encore à WebView2 sous
   Windows** (la référence de D24)
 - **Ticket** : #1137 · plan § 3.7 « Polices », § 5.2, § 5.3 E1/E2/E8, R2
-- **Prototype** : `spikes/s2-fonts` — `fonts.py` (TTF depuis `@fontsource-variable` 5.3.0),
-  binaire `s2-fonts` (epaint par `egui_kittest` + `wgpu`), `chromium.mjs`, `ssim.py`
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -15,7 +14,7 @@ sinon `fontdb`. Il fixe aussi le seuil SSIM de la comparaison visuelle (départ 
 
 ## Ce qui a été mesuré
 
-16 échantillons (`samples.tsv`) : titre de carte (14 px, 650, tronqué à 180 px), recherche de
+16 échantillons : titre de carte (14 px, 650, tronqué à 180 px), recherche de
 l'en-tête, Inter à 400/500/600/650/700, étiquette espacée (11 px, 600, +0,66 px), JetBrains Mono
 400 et 700, aperçu de code coupé à 3 rangées, émoji, CJK, arabe, hébreu, devanagari. Chacun rendu
 par epaint 0.37 (`TextFormat::coords` = `wght`, `extra_letter_spacing`, `TextWrapping` avec
@@ -35,9 +34,6 @@ des largeurs d'encre.
 | arabe                        | 0,231       | 0,231       | 0,265       | 1,000                   |
 | hébreu                       | 0,324       | 0,304       | 0,253       | 1,016                   |
 | émoji                        | 0,332       | 0,349       | 0,370       | 0,962                   |
-
-Planches côte à côte : `spikes/out/s2/sheet-100.png`, `sheet-150.png` ; chiffres :
-`spikes/out/s2-ssim.txt`.
 
 Lecture des images :
 
@@ -75,5 +71,5 @@ Lecture des images :
   partout dans le code (comme les références le font), il faut une police sans `calt`/`liga`
   (instance de JetBrains Mono « NL ») plutôt qu'un réglage : à décider avec l'écran du snippet.
 - Comparé ici à Chromium sous Linux (lissage en niveaux de gris) ; la référence de D24 est
-  WebView2 sous Windows (ClearType). Le seuil se revérifie au gel de la référence en P1, avec
-  `ssim.py` sur les mêmes échantillons.
+  WebView2 sous Windows (ClearType). Le seuil se revérifie au gel de la référence en P1, sur les
+  mêmes échantillons.

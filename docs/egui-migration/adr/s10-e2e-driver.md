@@ -2,8 +2,7 @@
 
 - **Statut** : accepté pour Linux ; **Windows (WARP) non vérifié** (2026-11-02)
 - **Ticket** : #1145 · plan § 8.3, R13
-- **Prototype** : `spikes/s10-e2e` — binaire `app` (feature `e2e` = `eframe/inspection`),
-  binaire `driver`, test `tests/wgpu_devices.rs`
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -57,5 +56,5 @@ lavapipe (1,1–1,4 s, contre 3,1 s en série), ✅ sous GL.
 
 ## Reste à vérifier
 
-Le runner Windows avec WARP (DX12 logiciel) : même `driver`, même test `wgpu_devices` ; c'est la
-première tâche de P2 si ce spike ne tourne pas d'abord sur une machine Windows.
+Le runner Windows avec WARP (DX12 logiciel) : même scénario, mêmes tests de rendu parallèles ;
+c'est la première tâche de P2, avec le pilote réel de `crates/e2e`.

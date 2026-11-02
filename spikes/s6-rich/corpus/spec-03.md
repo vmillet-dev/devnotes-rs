@@ -1,1 +1,0 @@
-[the runbook](https://example.com)

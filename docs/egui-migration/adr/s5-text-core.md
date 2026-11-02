@@ -2,8 +2,7 @@
 
 - **Statut** : accepté (2026-11-02) ; **IME japonais sous Windows non vérifié**
 - **Ticket** : #1140 · plan § 3.8, § 3.9, § 3.12, D14, D22, E11
-- **Prototypes** : `spikes/s5-highlight` (coloration, une fois `--features fancy`, une fois
-  `--features onig`), `spikes/s5-editor` (noyau + vue), `spikes/s1-shell` (touches réelles sous X11)
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -41,7 +40,7 @@ public) ; `Galley::pos_from_cursor` suit le décalage, le caret reste juste. Lim
 rangée est coupée à la même largeur réduite que les suivantes (CodeMirror lui laisse toute la
 largeur) ; à régler en P4 en mettant en page la première rangée à part si l'écart se voit.
 
-**Touches** (`egui` 0.37 / `egui-winit` 0.37 lus, puis X11 réel sous Xvfb, `spikes/s1-shell`) :
+**Touches** (`egui` 0.37 / `egui-winit` 0.37 lus, puis X11 réel sous Xvfb, prototype de S1) :
 `Event::Key` porte `physical_key`, tiré du `KeyCode` de winit, c'est-à-dire le `code` W3C. Tous les
 `code` de `NAMED_KEYS` (`shortcut.model.ts`), `KeyA–Z`, `Digit0–9`, `F1–F24` et les
 modificateurs ont un `egui::Key`. Mesuré sous X11 avec les positions AZERTY : la touche marquée

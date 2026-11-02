@@ -2,7 +2,7 @@
 
 - **Statut** : accepté (2026-11-02)
 - **Ticket** : #1138 · plan § 3.6, § 6.2
-- **Prototype** : `spikes/s3-canvas` (`cargo run --release -p s3-canvas`)
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -27,7 +27,6 @@ polices par défaut d'egui. Même machine que S4 (4 vCPU Xeon 2,1 GHz).
 | Survol seul, 1 000 frames                                   | 0,45 ms | 0,67 ms | 0,73 ms | 0,80 ms |
 
 Première frame (atlas de polices vide) : 3,4 ms. ~34 500 sommets par frame, ~50 cartes visibles.
-Sortie brute : `spikes/out/s3.txt`.
 
 ## Décision
 

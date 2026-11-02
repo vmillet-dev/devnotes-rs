@@ -2,10 +2,7 @@
 
 - **Statut** : accepté (2026-11-02) ; collage HTML **non vérifié sous Windows**
 - **Ticket** : #1141 · plan § 3.9.1, § 7 phase 4, R1, E15
-- **Prototype** : `spikes/s6-rich` — `src/model.rs` (blocs, marques, règles de saisie),
-  `src/markdown.rs` (lecture `pulldown-cmark`, écriture façon `@tiptap/markdown` +
-  `escapeMarkdownText` porté), `src/view.rs` (vue egui minimale), `tests/caret.rs` (kittest),
-  `s6-rich roundtrip`, `s6-rich clipboard`
+- **Prototype** : jetable, non conservé dans le dépôt
 
 ## Contexte
 
@@ -26,13 +23,13 @@ tâches) et les 4 Notes d'exemple du premier lancement (fr/en).
 | 4 Notes d'exemple           | 0 / 4                    | 4 / 4                  |
 
 Les exemples sont écrits à la main, pas par TipTap : la seule différence est la ligne vide que
-l'écriture met entre un titre et la liste qui le suit (test `samples_differ_only_by_blank_lines`).
+l'écriture met entre un titre et la liste qui le suit.
 La règle du plan (« le corps n'est réécrit que si l'utilisateur a modifié la Note ») les laisse
 intacts.
 
 **Modèle et vue** — paragraphes, titres, listes (puces, numérotées, tâches), citations, code,
 tableaux, règle ; marques gras/italique/barré/code/lien ; une galley par bloc. Tests kittest
-(`tests/caret.rs`, 3 verts) : ↓/↑ passent de bloc en bloc en gardant l'abscisse du caret, et
+(3 verts) : ↓/↑ passent de bloc en bloc en gardant l'abscisse du caret, et
 parcourent d'abord les rangées d'un paragraphe replié ; → en fin de bloc va au début du suivant,
 ← au début revient en fin du précédent ; `## ` tapé dans un paragraphe vide le change en titre de
 niveau 2 et le caret suit (règles du `StarterKit` : `#`…`######`, `- * +`, `1. `, `[ ] `, `[x] `,
