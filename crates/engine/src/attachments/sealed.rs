@@ -5,8 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Manager, Runtime};
-
+use crate::Paths;
 use crate::error::{FileContext, StorageError};
 use crate::vault::key::Vault;
 
@@ -27,20 +26,14 @@ pub fn read_sealed(vault: &Vault, path: &Path) -> Result<Vec<u8>, StorageError> 
 /// Where a decrypted copy goes so the desktop can open it: inside the user's profile, never the
 /// OS temporary directory, which every account on the machine shares. The profile rather than
 /// the library, so one sweep catches every library's copies.
-pub fn plaintext_directory<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, StorageError> {
-    Ok(app
-        .path()
-        .app_data_dir()
-        .context("app_data_dir")?
-        .join(crate::layout::PLAINTEXT_COPIES))
+pub fn plaintext_directory(paths: &Paths) -> PathBuf {
+    paths.profile.join(crate::layout::PLAINTEXT_COPIES)
 }
 
 /// Run on the way out and at every launch: a copy another application still holds cannot be
 /// deleted, and a crash reaches neither path, so the guarantee is "gone by the next launch".
-pub fn sweep_plaintext<R: Runtime>(app: &AppHandle<R>) {
-    let Ok(directory) = plaintext_directory(app) else {
-        return;
-    };
+pub fn sweep_plaintext(paths: &Paths) {
+    let directory = plaintext_directory(paths);
 
     if let Err(error) = std::fs::remove_dir_all(&directory)
         && error.kind() != std::io::ErrorKind::NotFound
@@ -60,6 +53,27 @@ mod tests {
 
     fn vault() -> Vault {
         Vault::derive("a passphrase", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
+    }
+
+    #[test]
+    fn the_decrypted_copies_live_under_the_profile_and_go_in_one_sweep() {
+        let profile = tempfile::tempdir().unwrap();
+        let paths = Paths {
+            profile: profile.path().to_path_buf(),
+            resources: profile.path().to_path_buf(),
+        };
+        let directory = plaintext_directory(&paths);
+        assert_eq!(
+            directory,
+            profile.path().join(crate::layout::PLAINTEXT_COPIES)
+        );
+
+        sweep_plaintext(&paths);
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(directory.join("capture.png"), b"png").unwrap();
+        sweep_plaintext(&paths);
+
+        assert!(!directory.exists());
     }
 
     /// The property the name has to have, asserted without waiting for a coincidence.

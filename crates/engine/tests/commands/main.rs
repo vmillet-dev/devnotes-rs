@@ -7,13 +7,18 @@
 
 use std::future::Future;
 use std::path::Path;
+use std::sync::Arc;
 
-use engine::db::{Db, Library, open, open_in_memory, test_vault};
+use engine::db::{Library, open, open_in_memory, test_vault};
 use engine::error::{AppError, ErrorCode};
+use engine::http::console::HTTP_CONSOLE_EVENT;
+use engine::http::runner::HTTP_RUN_EVENT;
+use engine::http::websocket::WEBSOCKET_EVENT;
 use engine::spaces::model::SpaceDraft;
 use engine::spaces::{create_space, list_spaces};
+use engine::{Engine, EngineEvent, EventSink, Paths};
 use tauri::test::{MockRuntime, mock_app};
-use tauri::{App, AppHandle, Manager};
+use tauri::{App, AppHandle, Emitter, Manager};
 
 #[path = "../common/mod.rs"]
 mod common;
@@ -27,22 +32,44 @@ mod http_runner;
 mod http_scripts;
 mod http_send;
 mod notes;
+mod profile;
 mod spaces;
 mod transfer;
 mod websocket;
 
-/// The app is kept, not only its handle: the state goes with it.
-struct Session(App<MockRuntime>);
+/// The app is kept, not only its handle: the state goes with it. Beside it, the profile the
+/// engine was given.
+struct Session(
+    App<MockRuntime>,
+    #[allow(dead_code, reason = "held so the directory outlives the engine")] tempfile::TempDir,
+);
+
+/// What the engine says, emitted on the mock app under the names the shell gives it.
+struct Emitted(AppHandle<MockRuntime>);
+
+impl EventSink for Emitted {
+    fn emit(&self, event: EngineEvent) {
+        let _ = match event {
+            EngineEvent::Socket(event) => self.0.emit(WEBSOCKET_EVENT, event),
+            EngineEvent::Console(event) => self.0.emit(HTTP_CONSOLE_EVENT, event),
+            EngineEvent::Run(event) => self.0.emit(HTTP_RUN_EVENT, event),
+        };
+    }
+}
 
 impl Session {
     fn with(library: Option<Library>) -> Self {
+        let profile = tempfile::tempdir().unwrap();
+        let paths = Paths {
+            profile: profile.path().to_path_buf(),
+            resources: profile.path().to_path_buf(),
+        };
         let app = mock_app();
-        app.manage(Db::new(library));
-        app.manage(engine::backup::Restored::default());
-        app.manage(engine::http::send::Sending::default());
-        app.manage(engine::http::runner::Runs::default());
-        app.manage(engine::http::websocket::Sockets::default());
-        Self(app)
+        let engine = Engine::new(paths, Arc::new(Emitted(app.handle().clone())));
+        *engine.db().lock().unwrap() = library;
+        app.manage(Arc::new(engine));
+
+        Self(app, profile)
     }
 
     fn open() -> Self {

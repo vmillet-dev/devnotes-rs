@@ -11,37 +11,30 @@ pub mod registry;
 
 use std::path::PathBuf;
 
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Runtime};
 
-use crate::db::blocking;
-use crate::error::{AppError, FileContext, StorageError};
+use crate::Engine;
+use crate::db::{blocking, engine};
+use crate::error::{AppError, StorageError};
 use registry::{
     LibraryEntry, Registry, create_in, delete_in, open_directory_in, point_at, registry_in,
     rename_in,
 };
 
-fn profile<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, StorageError> {
-    app.path().app_data_dir().context("app_data_dir")
-}
-
-pub(crate) fn registry<R: Runtime>(app: &AppHandle<R>) -> Result<Registry, StorageError> {
-    Ok(registry_in(&profile(app)?))
-}
-
 /// The directory of the library the registry points at, for what runs while none is open:
 /// the gate, the first launch, the recovery commands.
 ///
 /// ⚠️ An open library answers `Library::directory` instead, without reading this file. Never
-/// `app_data_dir()` directly: that is the profile, which holds no library.
-pub(crate) fn open_directory<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, StorageError> {
-    open_directory_in(&profile(app)?)
+/// the profile directly: it holds no library.
+pub(crate) fn open_directory(engine: &Engine) -> Result<PathBuf, StorageError> {
+    open_directory_in(&engine.paths.profile)
 }
 
 /// The libraries, and which one is open.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn list_libraries<R: Runtime>(app: AppHandle<R>) -> Result<Registry, AppError> {
-    Ok(registry(&app)?)
+    Ok(registry_in(&engine(&app).paths.profile))
 }
 
 /// Adds one, and leaves it closed: opening it is a second, deliberate gesture.
@@ -51,7 +44,7 @@ pub fn create_library<R: Runtime>(
     name: String,
     app: AppHandle<R>,
 ) -> Result<LibraryEntry, AppError> {
-    Ok(create_in(&profile(&app)?, &name)?)
+    Ok(create_in(&engine(&app).paths.profile, &name)?)
 }
 
 /// Closes whatever is open and points the registry at another one.
@@ -61,16 +54,12 @@ pub fn create_library<R: Runtime>(
 #[tauri::command]
 #[specta::specta]
 pub async fn open_library<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
-    blocking(app, move |app, db| {
-        let profile = profile(app)?;
-
+    blocking(app, move |engine, db| {
         let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
         *open = None;
-        if let Some(sockets) = app.try_state::<crate::http::websocket::Sockets>() {
-            sockets.close_all();
-        }
+        engine.sockets.close_all();
 
-        Ok(point_at(&profile, &id)?)
+        Ok(point_at(&engine.paths.profile, &id)?)
     })
     .await
 }
@@ -82,7 +71,7 @@ pub fn rename_library<R: Runtime>(
     name: String,
     app: AppHandle<R>,
 ) -> Result<(), AppError> {
-    Ok(rename_in(&profile(&app)?, &id, &name)?)
+    Ok(rename_in(&engine(&app).paths.profile, &id, &name)?)
 }
 
 /// Erases a library and everything in it.
@@ -91,15 +80,15 @@ pub fn rename_library<R: Runtime>(
 #[tauri::command]
 #[specta::specta]
 pub async fn delete_library<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
-    blocking(app, move |app, db| {
-        let profile = profile(app)?;
-        if registry_in(&profile).open.as_deref() == Some(id.as_str())
+    blocking(app, move |engine, db| {
+        let profile = &engine.paths.profile;
+        if registry_in(profile).open.as_deref() == Some(id.as_str())
             && db.lock().map_err(|_| StorageError::Unavailable)?.is_some()
         {
             return Err(StorageError::LibraryOpen.into());
         }
 
-        Ok(delete_in(&profile, &id)?)
+        Ok(delete_in(profile, &id)?)
     })
     .await
 }

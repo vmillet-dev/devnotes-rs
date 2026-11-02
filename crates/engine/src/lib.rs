@@ -7,6 +7,7 @@ pub mod changelog;
 pub mod db;
 pub mod error;
 pub mod folders;
+pub mod host;
 pub mod http;
 pub mod json;
 pub mod libraries;
@@ -23,7 +24,9 @@ pub(crate) mod count;
 pub mod layout;
 pub(crate) mod name;
 
-use tauri::Manager;
+use std::sync::Arc;
+
+pub use host::{EngineEvent, EventSink, Paths, RecordingSink};
 
 pub use attachments::{
     attach_clipboard_image, attach_file, delete_attachment, list_attachments, open_attachment,
@@ -80,22 +83,61 @@ pub use tools::{
 pub use transfer::{count_export, export_is_protected, export_notes, import_notes, share_notes};
 pub use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
 
+/// The core's state, created once by the shell and shared behind an `Arc`.
+pub struct Engine {
+    pub(crate) db: db::Db,
+    pub(crate) restored: backup::Restored,
+    pub(crate) sending: http::send::Sending,
+    pub(crate) runs: http::runner::Runs,
+    pub(crate) sockets: http::websocket::Sockets,
+    pub(crate) paths: Paths,
+    pub(crate) events: Arc<dyn EventSink>,
+}
+
+impl Engine {
+    /// No library is open: `vault::unlock` opens one.
+    pub fn new(paths: Paths, events: Arc<dyn EventSink>) -> Self {
+        Self {
+            db: db::Db::new(None),
+            restored: backup::Restored::default(),
+            sending: http::send::Sending::default(),
+            runs: http::runner::Runs::default(),
+            sockets: http::websocket::Sockets::default(),
+            paths,
+            events,
+        }
+    }
+
+    /// For the tests, which open a library of their own.
+    pub fn db(&self) -> &db::Db {
+        &self.db
+    }
+
+    pub fn paths(&self) -> &Paths {
+        &self.paths
+    }
+
+    pub(crate) fn emit(&self, event: EngineEvent) {
+        self.events.emit(event);
+    }
+}
+
 /// The launch chores, run after the unlock: nothing can be read before it, and none of
 /// them is fatal.
-pub(crate) fn sweep<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) {
-    let db = handle.state::<db::Db>();
+pub(crate) fn sweep(engine: &Engine) {
+    let db = &engine.db;
 
     // ⚠️ The copy before the sweeps: it is worth most holding what retention will purge.
-    backup::take(handle, &db);
+    backup::take(&engine.paths, db);
 
-    notes::trash::sweep_at_startup(&db);
-    http::history::sweep_at_startup(&db);
-    if let Err(error) = attachments::files::sweep_orphan_files(&db) {
+    notes::trash::sweep_at_startup(db);
+    http::history::sweep_at_startup(db);
+    if let Err(error) = attachments::files::sweep_orphan_files(db) {
         log::warn!("Orphan attachment files not swept: {error}");
     }
     // The decrypted copies `open_attachment` wrote: another application may still hold
     // them on close, so they go at the next launch at the latest.
-    attachments::sealed::sweep_plaintext(handle);
+    attachments::sealed::sweep_plaintext(&engine.paths);
 }
 
 /// Started with this first argument, the application is a script host and nothing else: no

@@ -1663,7 +1663,6 @@ dependencies = [
  "tauri",
  "tauri-plugin-clipboard-manager",
  "tauri-plugin-opener",
- "tauri-plugin-store",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",

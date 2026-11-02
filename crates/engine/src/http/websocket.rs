@@ -11,7 +11,6 @@ use futures_util::{SinkExt, StreamExt};
 use rustls_platform_verifier::ConfigVerifierExt;
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tauri::{AppHandle, Emitter, Runtime};
 use tokio::sync::mpsc;
 use tokio::task::AbortHandle;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -25,6 +24,7 @@ use url::Url;
 use super::send::{Outgoing, SendError, cause_of, innermost, install_crypto};
 use super::transport::Limit;
 use crate::error::{AppError, ErrorCode};
+use crate::{EngineEvent, EventSink};
 
 pub const WEBSOCKET_EVENT: &str = "devnotes://websocket";
 /// A message longer than this crosses cut: the log shows, it does not archive.
@@ -166,23 +166,20 @@ fn failure(error: &tungstenite::Error, timeout: Option<&Limit>) -> SendError {
     }
 }
 
-fn emit<R: Runtime>(app: &AppHandle<R>, id: &str, event: SocketEvent) {
-    let _ = app.emit(
-        WEBSOCKET_EVENT,
-        WebsocketEvent {
-            id: id.to_string(),
-            at: Utc::now(),
-            event,
-        },
-    );
+fn emit(events: &dyn EventSink, id: &str, event: SocketEvent) {
+    events.emit(EngineEvent::Socket(WebsocketEvent {
+        id: id.to_string(),
+        at: Utc::now(),
+        event,
+    }));
 }
 
 impl Sockets {
     /// Connects, then hands the socket to a task of its own: the command answers once the
     /// handshake did, its failure a code like a send's.
-    pub async fn connect<R: Runtime>(
+    pub async fn connect(
         &self,
-        app: AppHandle<R>,
+        events: Arc<dyn EventSink>,
         id: String,
         outgoing: Outgoing,
         protocols: &[String],
@@ -233,10 +230,10 @@ impl Sockets {
             .get("sec-websocket-protocol")
             .and_then(|value| value.to_str().ok())
             .map(str::to_string);
-        emit(&app, &id, SocketEvent::Opened { url, protocol });
+        emit(events.as_ref(), &id, SocketEvent::Opened { url, protocol });
 
         let (outbound, inbound) = mpsc::unbounded_channel();
-        let task = tauri::async_runtime::spawn(run(app, id.clone(), stream, inbound));
+        let task = tauri::async_runtime::spawn(run(events, id.clone(), stream, inbound));
         if let Ok(mut open) = self.open.lock()
             && let Some(previous) = open.insert(
                 id,
@@ -291,8 +288,8 @@ impl Sockets {
 type Stream =
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
 
-async fn run<R: Runtime>(
-    app: AppHandle<R>,
+async fn run(
+    events: Arc<dyn EventSink>,
     id: String,
     stream: Stream,
     mut outbound: mpsc::UnboundedReceiver<Outbound>,
@@ -309,29 +306,29 @@ async fn run<R: Runtime>(
                 Some(Ok(Message::Text(text))) => {
                     let size = u32::try_from(text.len()).unwrap_or(u32::MAX);
                     let (text, cut) = cut(text.as_str());
-                    emit(&app, &id, SocketEvent::Received { text, size, binary: false, cut });
+                    emit(events.as_ref(), &id, SocketEvent::Received { text, size, binary: false, cut });
                 }
                 Some(Ok(Message::Binary(bytes))) => {
                     let size = u32::try_from(bytes.len()).unwrap_or(u32::MAX);
-                    emit(&app, &id, SocketEvent::Received { text: String::new(), size, binary: true, cut: false });
+                    emit(events.as_ref(), &id, SocketEvent::Received { text: String::new(), size, binary: true, cut: false });
                 }
                 Some(Ok(Message::Close(frame))) => {
-                    emit(&app, &id, closed(frame.as_ref()));
+                    emit(events.as_ref(), &id, closed(frame.as_ref()));
                     break;
                 }
                 Some(Ok(Message::Ping(_) | Message::Pong(_) | Message::Frame(_))) => {}
                 // A close we asked for that the server cut short is still a close.
                 Some(Err(_)) if closing.is_some() => {
-                    emit(&app, &id, SocketEvent::Closed { code: Some(1000), reason: String::new() });
+                    emit(events.as_ref(), &id, SocketEvent::Closed { code: Some(1000), reason: String::new() });
                     break;
                 }
                 Some(Err(error)) => {
                     let failed = AppError::from(failure(&error, None));
-                    emit(&app, &id, SocketEvent::Failed { code: failed.code, params: failed.params, detail: failed.detail });
+                    emit(events.as_ref(), &id, SocketEvent::Failed { code: failed.code, params: failed.params, detail: failed.detail });
                     break;
                 }
                 None => {
-                    emit(&app, &id, SocketEvent::Closed { code: None, reason: String::new() });
+                    emit(events.as_ref(), &id, SocketEvent::Closed { code: None, reason: String::new() });
                     break;
                 }
             },
@@ -340,10 +337,10 @@ async fn run<R: Runtime>(
                     let size = u32::try_from(text.len()).unwrap_or(u32::MAX);
                     let (shown, _) = cut(&text);
                     match write.send(Message::text(text)).await {
-                        Ok(()) => emit(&app, &id, SocketEvent::Sent { text: shown, size }),
+                        Ok(()) => emit(events.as_ref(), &id, SocketEvent::Sent { text: shown, size }),
                         Err(error) => {
                             let failed = AppError::from(failure(&error, None));
-                            emit(&app, &id, SocketEvent::Failed { code: failed.code, params: failed.params, detail: failed.detail });
+                            emit(events.as_ref(), &id, SocketEvent::Failed { code: failed.code, params: failed.params, detail: failed.detail });
                             break;
                         }
                     }
@@ -356,7 +353,7 @@ async fn run<R: Runtime>(
                 }
             },
             () = tokio::time::sleep_until(deadline), if closing.is_some() => {
-                emit(&app, &id, SocketEvent::Closed { code: Some(1000), reason: String::new() });
+                emit(events.as_ref(), &id, SocketEvent::Closed { code: Some(1000), reason: String::new() });
                 break;
             }
         }
