@@ -18,14 +18,14 @@ sur Entrée, les cartes ; chaque contrôle porte son `data-testid` en `author_id
 `--profile <dossier temporaire>` et `EGUI_INSPECTION=127.0.0.1:<port libre>`, se connecte
 (poignée de main `eins` v1, trames MessagePack), et :
 
-| Étape                                                                  | Résultat                                   |
-| ---------------------------------------------------------------------- | ------------------------------------------ |
-| `GetInfo`, `GetTree`, trouver un nœud par `author_id`                  | ✅                                         |
-| cliquer au centre de sa boîte (`ApplyEvents` : pointeur), trois fois    | ✅ trois cartes                            |
-| taper « déploiement » (`Event::Text`), presser Entrée (`Event::Key`)   | ✅ valeur écrite dans le profil            |
-| `eventually` : relire l'arbre jusqu'à la condition, `Settle` entre deux | ✅ aucune attente de durée                 |
-| `GetScreenshot` (800 × 600), `Resize`                                  | ✅                                         |
-| tuer et **relancer réellement** sur le même profil                     | ✅ valeur relue                            |
+| Étape                                                                   | Résultat                        |
+| ----------------------------------------------------------------------- | ------------------------------- |
+| `GetInfo`, `GetTree`, trouver un nœud par `author_id`                   | ✅                              |
+| cliquer au centre de sa boîte (`ApplyEvents` : pointeur), trois fois    | ✅ trois cartes                 |
+| taper « déploiement » (`Event::Text`), presser Entrée (`Event::Key`)    | ✅ valeur écrite dans le profil |
+| `eventually` : relire l'arbre jusqu'à la condition, `Settle` entre deux | ✅ aucune attente de durée      |
+| `GetScreenshot` (800 × 600), `Resize`                                   | ✅                              |
+| tuer et **relancer réellement** sur le même profil                      | ✅ valeur relue                 |
 
 Xvfb, Vulkan logiciel (lavapipe) : scénario complet en 0,67–0,86 s, port ouvert 120–160 ms
 après le lancement, **6 exécutions sur 6** ; même scénario en GL logiciel (`WGPU_BACKEND=gl`,

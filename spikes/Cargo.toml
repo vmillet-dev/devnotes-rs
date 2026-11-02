@@ -2,7 +2,7 @@
 # outside the product workspace: nothing here is shipped or reused as is.
 [workspace]
 resolver = "3"
-members = ["s1-shell", "s2-fonts", "s3-canvas", "s4-index", "s5-editor", "s5-highlight", "s7-mermaid", "s8-format", "s10-e2e"]
+members = ["s1-shell", "s2-fonts", "s3-canvas", "s4-index", "s5-editor", "s5-highlight", "s6-rich", "s7-mermaid", "s8-format", "s9-packages", "s10-e2e"]
 
 [workspace.package]
 edition = "2024"

@@ -23,18 +23,18 @@ par epaint 0.37 (`TextFormat::coords` = `wght`, `extra_letter_spacing`, `TextWra
 150 %. SSIM sur l'encre des deux images (meilleur alignement à ± 2 px, fenêtre 7 × 7), et rapport
 des largeurs d'encre.
 
-| Échantillon            | SSIM 100 % | 125 %   | 150 %   | Largeur egui / Chromium |
-| ---------------------- | ---------- | ------- | ------- | ----------------------- |
-| Inter 400–700, dont 650 | 0,966–0,974 | 0,976–0,980 | 0,982–0,984 | 1,000 (± 0,6 %)   |
-| titre de carte tronqué | 0,974      | 0,978   | 0,981   | 1,000                   |
-| recherche, étiquette espacée | 0,966–0,980 | 0,974–0,978 | 0,975–0,981 | 1,000         |
-| JetBrains Mono 400/700 | 0,968–0,972 | 0,974–0,983 | 0,978–0,984 | 1,000             |
-| aperçu sur 3 rangées   | 0,914      | 0,868   | 0,874   | 1,000                   |
-| devanagari             | 0,874      | 0,885   | 0,937   | 1,016                   |
-| CJK (police système)   | 0,923      | 0,807   | 0,932   | 1,000                   |
-| arabe                  | 0,231      | 0,231   | 0,265   | 1,000                   |
-| hébreu                 | 0,324      | 0,304   | 0,253   | 1,016                   |
-| émoji                  | 0,332      | 0,349   | 0,370   | 0,962                   |
+| Échantillon                  | SSIM 100 %  | 125 %       | 150 %       | Largeur egui / Chromium |
+| ---------------------------- | ----------- | ----------- | ----------- | ----------------------- |
+| Inter 400–700, dont 650      | 0,966–0,974 | 0,976–0,980 | 0,982–0,984 | 1,000 (± 0,6 %)         |
+| titre de carte tronqué       | 0,974       | 0,978       | 0,981       | 1,000                   |
+| recherche, étiquette espacée | 0,966–0,980 | 0,974–0,978 | 0,975–0,981 | 1,000                   |
+| JetBrains Mono 400/700       | 0,968–0,972 | 0,974–0,983 | 0,978–0,984 | 1,000                   |
+| aperçu sur 3 rangées         | 0,914       | 0,868       | 0,874       | 1,000                   |
+| devanagari                   | 0,874       | 0,885       | 0,937       | 1,016                   |
+| CJK (police système)         | 0,923       | 0,807       | 0,932       | 1,000                   |
+| arabe                        | 0,231       | 0,231       | 0,265       | 1,000                   |
+| hébreu                       | 0,324       | 0,304       | 0,253       | 1,016                   |
+| émoji                        | 0,332       | 0,349       | 0,370       | 0,962                   |
 
 Planches côte à côte : `spikes/out/s2/sheet-100.png`, `sheet-150.png` ; chiffres :
 `spikes/out/s2-ssim.txt`.

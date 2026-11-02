@@ -17,28 +17,28 @@ demandé (classes, états, camembert, organigramme accentué à sous-graphe).
 
 Recherche crates.io « mermaid » (2026-11-02) ; retenus les trois moteurs SVG les plus avancés :
 
-| Crate                 | Version | Licence           | Types annoncés | Note                                                 |
-| --------------------- | ------- | ----------------- | -------------- | ---------------------------------------------------- |
+| Crate                 | Version | Licence           | Types annoncés | Note                                                    |
+| --------------------- | ------- | ----------------- | -------------- | ------------------------------------------------------- |
 | `merman`              | 0.9.3   | MIT OR Apache-2.0 | 23+            | comparé aux fixtures de Mermaid amont ; utilisé par Zed |
-| `mermaid-rs-renderer` | 0.3.1   | MIT               | 23             | le plus téléchargé                                   |
-| `mermaid-svg`         | 0.7.0   | MIT               | 23             |                                                      |
+| `mermaid-rs-renderer` | 0.3.1   | MIT               | 23             | le plus téléchargé                                      |
+| `mermaid-svg`         | 0.7.0   | MIT               | 23             |                                                         |
 
 ## Ce qui a été mesuré
 
 Chaque diagramme rendu en SVG puis rastérisé par `resvg` (la voie d'image du plan), images
 comparées à l'œil. Sorties : `spikes/out/s7/<moteur>/`, planches `spikes/out/s7/compare-*.png`.
 
-| Diagramme                              | `merman`                      | `mermaid-rs-renderer`                 | `mermaid-svg`                         |
-| -------------------------------------- | ----------------------------- | ------------------------------------- | ------------------------------------- |
-| organigrammes des specs                | ✅ 1–8 ms                     | ✅ < 1 ms                             | ✅ < 1 ms                             |
-| organigramme accentué, sous-graphe     | ✅ 12 ms                      | ✅ 50 ms                              | ✅                                    |
-| organigramme du plan, sous-graphes imbriqués | ✅ 14 ms, fidèle        | ⚠️ 250 ms                             | ❌ sous-graphes superposés            |
-| séquences (e2e + 3 du plan)            | ✅ 3 ms                       | ✅                                    | ✅                                    |
-| classes (génériques `~T~`, cardinalités) | ✅ `Vec<String>`, `*`/`1`   | ❌ `Vec~String~` laissé, cardinalité perdue | ✅                              |
-| états                                  | ✅                            | ⚠️ boucles mal placées                | ✅                                    |
-| Gantt du plan                          | ✅                            | ✅                                    | ✅                                    |
-| camembert                              | ✅                            | ✅                                    | ✅                                    |
-| erreur `graph TD\n  A -->`             | erreur typée + `SourceSpan`   | « 1:1 », ligne fausse                 | « line 2 », juste                     |
+| Diagramme                                    | `merman`                    | `mermaid-rs-renderer`                       | `mermaid-svg`              |
+| -------------------------------------------- | --------------------------- | ------------------------------------------- | -------------------------- |
+| organigrammes des specs                      | ✅ 1–8 ms                   | ✅ < 1 ms                                   | ✅ < 1 ms                  |
+| organigramme accentué, sous-graphe           | ✅ 12 ms                    | ✅ 50 ms                                    | ✅                         |
+| organigramme du plan, sous-graphes imbriqués | ✅ 14 ms, fidèle            | ⚠️ 250 ms                                   | ❌ sous-graphes superposés |
+| séquences (e2e + 3 du plan)                  | ✅ 3 ms                     | ✅                                          | ✅                         |
+| classes (génériques `~T~`, cardinalités)     | ✅ `Vec<String>`, `*`/`1`   | ❌ `Vec~String~` laissé, cardinalité perdue | ✅                         |
+| états                                        | ✅                          | ⚠️ boucles mal placées                      | ✅                         |
+| Gantt du plan                                | ✅                          | ✅                                          | ✅                         |
+| camembert                                    | ✅                          | ✅                                          | ✅                         |
+| erreur `graph TD\n  A -->`                   | erreur typée + `SourceSpan` | « 1:1 », ligne fausse                       | « line 2 », juste          |
 
 ## Décision
 

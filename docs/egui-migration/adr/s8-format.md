@@ -18,14 +18,14 @@ remplacés par des marqueurs comme le fait `field-shield`) et cinq textes réels
 `prettierOptions(DEFAULT_PRETTIER_SETTINGS, '  ')`. QuickJS : `rquickjs` 0.14 (celui de l'hôte
 de scripts), `standalone.js` + 9 plugins évalués depuis la source, 20 passes chaudes.
 
-| Fixture            | Taille  | QuickJS p50 | QuickJS p95 | = Node | Natif p95 | Natif = Prettier         |
-| ------------------ | ------- | ----------- | ----------- | ------ | --------- | ------------------------ |
-| TypeScript         | 13,2 kB | 265 ms      | **340 ms**  | oui    | 5,1 ms    | non (125/369 lignes)     |
-| JSON               | 13,3 kB | 111 ms      | 154 ms      | oui    | 1,2 ms    | oui                      |
-| Markdown           | 6,3 kB  | 213 ms      | 266 ms      | oui    | 0,5 ms    | oui                      |
-| SCSS               | 8,0 kB  | 77 ms       | 104 ms      | oui    | 0,7 ms    | non (7/252)              |
-| YAML               | 12,4 kB | 104 ms      | 161 ms      | oui    | 1,3 ms    | non (4/389)              |
-| 14 cas des specs   | < 120 B | 1–8 ms      | ≤ 14 ms     | 14/14  | < 0,1 ms  | 8/14 (HTML, Vue, Angular, CRLF YAML…) |
+| Fixture          | Taille  | QuickJS p50 | QuickJS p95 | = Node | Natif p95 | Natif = Prettier                      |
+| ---------------- | ------- | ----------- | ----------- | ------ | --------- | ------------------------------------- |
+| TypeScript       | 13,2 kB | 265 ms      | **340 ms**  | oui    | 5,1 ms    | non (125/369 lignes)                  |
+| JSON             | 13,3 kB | 111 ms      | 154 ms      | oui    | 1,2 ms    | oui                                   |
+| Markdown         | 6,3 kB  | 213 ms      | 266 ms      | oui    | 0,5 ms    | oui                                   |
+| SCSS             | 8,0 kB  | 77 ms       | 104 ms      | oui    | 0,7 ms    | non (7/252)                           |
+| YAML             | 12,4 kB | 104 ms      | 161 ms      | oui    | 1,3 ms    | non (4/389)                           |
+| 14 cas des specs | < 120 B | 1–8 ms      | ≤ 14 ms     | 14/14  | < 0,1 ms  | 8/14 (HTML, Vue, Angular, CRLF YAML…) |
 
 QuickJS : chargement à froid de Prettier + 9 plugins 253 ms (une fois), 28 Mo résidents.
 Natifs : `dprint-plugin-typescript` 0.96 trie les imports par défaut, `markup_fmt` demande un

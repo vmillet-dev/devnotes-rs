@@ -23,16 +23,16 @@ déchiffrement + pli + `lz4` du corps en parallèle (`rayon`). Requêtes : 30 pa
 Machine : conteneur Linux, 4 vCPU Xeon 2,1 GHz, 15 Go — plus lente par cœur que la machine de
 référence du § 6.2.
 
-| Mesure                              | Réaliste, plié clair | Réaliste, plié `lz4` | Stress, plié clair | Stress, plié `lz4` | Budget (réaliste / stress) |
-| ----------------------------------- | -------------------- | -------------------- | ------------------ | ------------------ | -------------------------- |
-| Première tranche (2 000 notes)      | 84 ms                | 89 ms                | 99 ms              | 132 ms             | premières cartes ≤ 600 / 800 ms |
-| Index complet                       | 0,42 s               | 0,44 s               | 1,00 s             | 1,15 s             | ≤ 1,5 / 4 s                |
-| Mémoire résidente (processus)       | 108 Mo               | 77 Mo                | 465 Mo             | 467 Mo             | ≤ 350 / 900 Mo             |
-| Tas : texte plié / corps `lz4`      | 63 / 16 Mo           | 16 / 16 Mo           | 384 / 40 Mo        | 40 / 40 Mo         | —                          |
-| Recherche absente (pire cas), p95   | 2,5 ms               | 7,9 ms               | 16,4 ms            | 39,4 ms            | frappe → peint ≤ 50 / 120 ms |
-| Vue vide triée, p95                 | 0,9 ms               | 1,3 ms               | 1,2 ms             | 1,2 ms             | —                          |
-| Filtre espace + type + tag, p95     | 0,2 ms               | 0,4 ms               | 0,3 ms             | 0,3 ms             | —                          |
-| Facettes (tags, types, dossiers)    | 0,4 ms               | 0,4 ms               | 2,0 ms             | 0,4 ms             | `list_tags` ≤ 5 / 10 ms    |
+| Mesure                            | Réaliste, plié clair | Réaliste, plié `lz4` | Stress, plié clair | Stress, plié `lz4` | Budget (réaliste / stress)      |
+| --------------------------------- | -------------------- | -------------------- | ------------------ | ------------------ | ------------------------------- |
+| Première tranche (2 000 notes)    | 84 ms                | 89 ms                | 99 ms              | 132 ms             | premières cartes ≤ 600 / 800 ms |
+| Index complet                     | 0,42 s               | 0,44 s               | 1,00 s             | 1,15 s             | ≤ 1,5 / 4 s                     |
+| Mémoire résidente (processus)     | 108 Mo               | 77 Mo                | 465 Mo             | 467 Mo             | ≤ 350 / 900 Mo                  |
+| Tas : texte plié / corps `lz4`    | 63 / 16 Mo           | 16 / 16 Mo           | 384 / 40 Mo        | 40 / 40 Mo         | —                               |
+| Recherche absente (pire cas), p95 | 2,5 ms               | 7,9 ms               | 16,4 ms            | 39,4 ms            | frappe → peint ≤ 50 / 120 ms    |
+| Vue vide triée, p95               | 0,9 ms               | 1,3 ms               | 1,2 ms             | 1,2 ms             | —                               |
+| Filtre espace + type + tag, p95   | 0,2 ms               | 0,4 ms               | 0,3 ms             | 0,3 ms             | —                               |
+| Facettes (tags, types, dossiers)  | 0,4 ms               | 0,4 ms               | 2,0 ms             | 0,4 ms             | `list_tags` ≤ 5 / 10 ms         |
 
 Sortie brute : `spikes/out/s4.txt` (non versionnée, régénérée par le prototype).
 

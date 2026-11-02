@@ -18,18 +18,18 @@ quand `DISPLAY` existe.
 Environnement : conteneur Linux, Xvfb sans gestionnaire de fenêtres, Mesa lavapipe (Vulkan
 logiciel), weston 13 sans écran pour Wayland ; eframe 0.37 (winit 0.30.13, wgpu 30).
 
-| Point                                                                  | Résultat                                                                                                     |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Fenêtre créée invisible (`with_visible(false)`), montrée à la 1re frame | ✅ X11 : `IsViewable` après la première frame, pas avant ; 444 ms du lancement (debug, Vulkan logiciel)       |
-| Cacher (`Visible(false)`) puis révéler depuis un autre thread          | ✅ X11 : `IsUnMapped` puis `IsViewable` ; `send_viewport_cmd` + `request_repaint` réveillent la boucle cachée |
-| Instance unique par profil (`interprocess`, espace de noms abstrait)   | ✅ seconde instance : se connecte, transmet `reveal`/`hide`/`quit`, sort ; révélation en **163 ms** de bout en bout |
-| Raccourci global (`global-hotkey`, Ctrl+Maj+D)                         | ✅ X11 : reçu sur la fenêtre cachée, la révèle                                                               |
-| Tray (`tray-icon` sur un thread GTK unique, D29) à côté de winit       | ✅ construit, aucun conflit avec la boucle winit ; clic de menu non testable (pas d'hôte StatusNotifier)      |
-| Mise à l'échelle                                                       | ✅ `WINIT_X11_SCALE_FACTOR=1.5` → `pixels_per_point` 1,5                                                     |
-| Plein écran                                                            | ⚠️ commande reçue, mais sans gestionnaire de fenêtres Xvfb ne l'applique pas : non concluant                  |
-| Dialogue par le portail XDG (`rfd`, `xdg-portal`) sans portail         | ⚠️ pas de plantage, mais `None` — indiscernable d'une annulation                                             |
-| Wayland natif (weston) : lancement                                     | ✅ fenêtre créée, rendu Vulkan                                                                               |
-| Wayland natif : cacher, créer invisible, position, dépôt de fichiers   | ❌ absents de winit 0.30.13 (voir ci-dessous)                                                                |
+| Point                                                                   | Résultat                                                                                                            |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Fenêtre créée invisible (`with_visible(false)`), montrée à la 1re frame | ✅ X11 : `IsViewable` après la première frame, pas avant ; 444 ms du lancement (debug, Vulkan logiciel)             |
+| Cacher (`Visible(false)`) puis révéler depuis un autre thread           | ✅ X11 : `IsUnMapped` puis `IsViewable` ; `send_viewport_cmd` + `request_repaint` réveillent la boucle cachée       |
+| Instance unique par profil (`interprocess`, espace de noms abstrait)    | ✅ seconde instance : se connecte, transmet `reveal`/`hide`/`quit`, sort ; révélation en **163 ms** de bout en bout |
+| Raccourci global (`global-hotkey`, Ctrl+Maj+D)                          | ✅ X11 : reçu sur la fenêtre cachée, la révèle                                                                      |
+| Tray (`tray-icon` sur un thread GTK unique, D29) à côté de winit        | ✅ construit, aucun conflit avec la boucle winit ; clic de menu non testable (pas d'hôte StatusNotifier)            |
+| Mise à l'échelle                                                        | ✅ `WINIT_X11_SCALE_FACTOR=1.5` → `pixels_per_point` 1,5                                                            |
+| Plein écran                                                             | ⚠️ commande reçue, mais sans gestionnaire de fenêtres Xvfb ne l'applique pas : non concluant                        |
+| Dialogue par le portail XDG (`rfd`, `xdg-portal`) sans portail          | ⚠️ pas de plantage, mais `None` — indiscernable d'une annulation                                                    |
+| Wayland natif (weston) : lancement                                      | ✅ fenêtre créée, rendu Vulkan                                                                                      |
+| Wayland natif : cacher, créer invisible, position, dépôt de fichiers    | ❌ absents de winit 0.30.13 (voir ci-dessous)                                                                       |
 
 **Le backend Wayland de winit 0.30.13 n'implémente pas** (lecture du source,
 `platform_impl/linux/wayland/`) : `set_visible` (« Not possible on Wayland », sans effet),

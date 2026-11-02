@@ -29,11 +29,11 @@ ligne pathologique, c'est la grammaire TypeScript.
 reprise de l'état `syntect` toutes les 128 lignes, une galley par ligne visible, indentation
 suspendue, caret, ligne courante, bulle de complétion ; une frame = `Context::run` + tessellation.
 
-| Mesure (1 Mo de TypeScript, `onig`)                                        | Résultat                           |
-| -------------------------------------------------------------------------- | ---------------------------------- |
-| Frappe au milieu (insertion + annulation + recoloration + mise en page)    | p50 6,0 · p95 **8,9** · p99 9,3 ms |
-| Saut à un endroit déjà colorié (recolore ≤ 128 lignes + l'écran)           | p50 15 · p95 26 · max 39 ms        |
-| Premier saut au milieu d'un fichier jamais colorié (points de reprise faits sur le thread UI) | **1 218 ms**    |
+| Mesure (1 Mo de TypeScript, `onig`)                                                           | Résultat                           |
+| --------------------------------------------------------------------------------------------- | ---------------------------------- |
+| Frappe au milieu (insertion + annulation + recoloration + mise en page)                       | p50 6,0 · p95 **8,9** · p99 9,3 ms |
+| Saut à un endroit déjà colorié (recolore ≤ 128 lignes + l'écran)                              | p50 15 · p95 26 · max 39 ms        |
+| Premier saut au milieu d'un fichier jamais colorié (points de reprise faits sur le thread UI) | **1 218 ms**                       |
 
 **Indentation suspendue** : faisable sans réécrire la mise en page d'egui — on met en page la
 ligne à la largeur moins le retrait, puis on décale les `PlacedRow` suivantes (champ `pos`
@@ -74,9 +74,10 @@ mortes françaises : « ^ » puis « e » donne `Text("ê")`, « ¨ » puis « i
   AZERTY, « ^ » arrive en `OpenBracket`) avant le texte composé — un raccourci sans
   modificateur sur cette position ne doit pas se déclencher pendant une composition ; (2) un
   caractère qu'egui ne nomme pas (« & », « é ») retombe sur la touche physique : sur AZERTY, la
-  touche 1 sans Maj déclenche `Num1`, là où la WebView donnait `key = "&"`. Les chiffres de
-  priorité (0–4) du canevas deviennent donc accessibles sans Maj sur AZERTY : à garder,
-  c'est le comportement de position que les raccourcis ont déjà (`KeyboardEvent.code`).
+  touche 1 sans Maj déclenche `Num1`, là où la WebView donnait `key = "&"`. Le § 3.12 garde la
+  fourche actuelle (raccourcis globaux par position, canevas par caractère) : les chiffres de
+  priorité (0–4) et les lettres du canevas se lisent donc dans `Event::Text`, pas dans
+  `Event::Key::key`, sans quoi « & » poserait la priorité 1 sur AZERTY.
 
 ## Reste à vérifier
 

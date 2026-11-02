@@ -21,3 +21,5 @@ docs/scratch-folders.html
 .claude/skills/seo
 .claude/skills/core-web-vitals
 .claude/skills/accessibility
+# Prototypes jetables de la phase 0 de la migration egui ; leurs fixtures sont volontairement brutes.
+spikes

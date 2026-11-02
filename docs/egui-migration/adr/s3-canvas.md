@@ -20,11 +20,11 @@ sections (épinglées … plus tôt), zone de 1 660 × 990 px (1 920 × 1 080 mo
 Une frame = `Context::run` + `tessellate` sans fenêtre (le téléversement GPU n'est pas compté) ;
 polices par défaut d'egui. Même machine que S4 (4 vCPU Xeon 2,1 GHz).
 
-| Scénario                                                     | p50     | p95     | p99     | max     |
-| ------------------------------------------------------------ | ------- | ------- | ------- | ------- |
+| Scénario                                                    | p50     | p95     | p99     | max     |
+| ----------------------------------------------------------- | ------- | ------- | ------- | ------- |
 | Molette (120 px par frame) + survol qui bouge, 2 000 frames | 1,37 ms | 1,75 ms | 1,82 ms | 3,85 ms |
-| Saut à un décalage aléatoire (glisser la barre, Fin), 500    | 1,22 ms | 2,27 ms | 2,38 ms | 5,89 ms |
-| Survol seul, 1 000 frames                                    | 0,45 ms | 0,67 ms | 0,73 ms | 0,80 ms |
+| Saut à un décalage aléatoire (glisser la barre, Fin), 500   | 1,22 ms | 2,27 ms | 2,38 ms | 5,89 ms |
+| Survol seul, 1 000 frames                                   | 0,45 ms | 0,67 ms | 0,73 ms | 0,80 ms |
 
 Première frame (atlas de polices vide) : 3,4 ms. ~34 500 sommets par frame, ~50 cartes visibles.
 Sortie brute : `spikes/out/s3.txt`.
