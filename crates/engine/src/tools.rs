@@ -35,7 +35,9 @@ pub mod zones;
 
 use std::path::PathBuf;
 
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Runtime};
+
+use crate::db::engine;
 
 use crate::error::{AppError, StorageError};
 
@@ -90,12 +92,8 @@ pub async fn encode_base64_file(path: String) -> Result<bases::Base64FileAnswer,
 }
 
 /// Where the lists of the identity tool are shipped: a folder of the application's resources.
-fn identity_lists<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, AppError> {
-    let resources = app
-        .path()
-        .resource_dir()
-        .map_err(|_| StorageError::Unavailable)?;
-    Ok(resources.join("identity"))
+fn identity_lists<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
+    engine(app).paths.resources.join("identity")
 }
 
 #[tauri::command]
@@ -104,7 +102,7 @@ pub async fn generate_identity<R: Runtime>(
     app: AppHandle<R>,
     request: identity::IdentityRequest,
 ) -> Result<identity::IdentityOutcome, AppError> {
-    let lists = identity_lists(&app)?;
+    let lists = identity_lists(&app);
     off_thread(move || identity::generate(&request, chrono::Local::now().date_naive(), &lists))
         .await
 }
@@ -117,7 +115,7 @@ pub async fn export_identities<R: Runtime>(
     batch: identity::PeopleBatch,
     path: String,
 ) -> Result<identity::PeopleExport, AppError> {
-    let lists = identity_lists(&app)?;
+    let lists = identity_lists(&app);
     off_thread(move || {
         identity::export(
             &request,

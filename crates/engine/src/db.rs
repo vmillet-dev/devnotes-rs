@@ -10,6 +10,8 @@ use diesel::prelude::*;
 
 use tauri::{AppHandle, Manager, Runtime};
 
+use crate::Engine;
+
 use crate::error::{AppError, StorageError};
 use crate::vault::key::Vault;
 
@@ -84,6 +86,11 @@ pub(crate) fn lock(db: &Db) -> Result<LibraryGuard<'_>, StorageError> {
     Ok(LibraryGuard(guard))
 }
 
+/// The engine the shell manages, for a command that reaches it through its handle.
+pub(crate) fn engine<R: Runtime>(app: &AppHandle<R>) -> Arc<Engine> {
+    Arc::clone(&app.state::<Arc<Engine>>())
+}
+
 /// A command's body, on Tokio's blocking pool rather than on a runtime worker: waiting on the
 /// lock, or holding it through a whole-corpus read, would park a worker the updater and the
 /// plugins share. A body that panics answers as the lock it would have poisoned.
@@ -91,9 +98,18 @@ pub(crate) async fn blocking<R, T, F>(app: AppHandle<R>, body: F) -> Result<T, A
 where
     R: Runtime,
     T: Send + 'static,
-    F: FnOnce(&AppHandle<R>, &Db) -> Result<T, AppError> + Send + 'static,
+    F: FnOnce(&Engine, &Db) -> Result<T, AppError> + Send + 'static,
 {
-    tauri::async_runtime::spawn_blocking(move || body(&app, &app.state::<Db>()))
+    blocking_on(engine(&app), body).await
+}
+
+/// [`blocking`], for code that holds the engine rather than a handle.
+pub(crate) async fn blocking_on<T, F>(engine: Arc<Engine>, body: F) -> Result<T, AppError>
+where
+    T: Send + 'static,
+    F: FnOnce(&Engine, &Db) -> Result<T, AppError> + Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(move || body(&engine, &engine.db))
         .await
         .map_err(|_| StorageError::Unavailable)?
 }

@@ -49,12 +49,12 @@ pub enum VaultState {
 #[tauri::command]
 #[specta::specta]
 pub async fn vault_state<R: Runtime>(app: AppHandle<R>) -> Result<VaultState, AppError> {
-    blocking(app, move |app, db| {
+    blocking(app, move |engine, db| {
         if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
             return Ok(VaultState::Unlocked);
         }
 
-        let directory = crate::libraries::open_directory(app)?;
+        let directory = crate::libraries::open_directory(engine)?;
 
         Ok(gate::state_of(&directory))
     })
@@ -69,13 +69,13 @@ pub async fn create_vault<R: Runtime>(
     passphrase: String,
     app: AppHandle<R>,
 ) -> Result<(), AppError> {
-    blocking(app, move |app, db| {
+    blocking(app, move |engine, db| {
         let passphrase = secret(passphrase);
         validate(&passphrase)?;
 
-        let directory = crate::libraries::open_directory(app)?;
+        let directory = crate::libraries::open_directory(engine)?;
         gate::create(&passphrase, &directory, db, Cost::default())?;
-        crate::sweep(app);
+        crate::sweep(engine);
 
         Ok(())
     })
@@ -90,10 +90,10 @@ pub async fn unlock_vault<R: Runtime>(
     passphrase: String,
     app: AppHandle<R>,
 ) -> Result<(), AppError> {
-    blocking(app, move |app, db| {
-        let directory = crate::libraries::open_directory(app)?;
+    blocking(app, move |engine, db| {
+        let directory = crate::libraries::open_directory(engine)?;
         gate::unlock(&secret(passphrase), &directory, db)?;
-        crate::sweep(app);
+        crate::sweep(engine);
 
         Ok(())
     })

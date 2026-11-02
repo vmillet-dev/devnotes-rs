@@ -2,8 +2,11 @@
 //! commands the front end may call.
 
 pub mod desktop;
+mod host;
 
-use engine::{app_info, attachments, backup, db, http, layout, notes, vault};
+use std::sync::Arc;
+
+use engine::{Engine, app_info, attachments, backup, http, layout, notes, vault};
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
 use tauri_specta::{Builder, collect_commands};
@@ -324,24 +327,17 @@ fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     // Logged, never propagated: an error out of `setup` panics before the window shows
     // anything. `vault_state`, `create_vault` and `unlock_vault` report it where it is read.
-    match app.path().app_data_dir() {
-        Ok(directory) => {
-            if let Err(error) = std::fs::create_dir_all(&directory) {
-                log::error!(
-                    "The data directory {} could not be prepared: {error}",
-                    directory.display()
-                );
-            }
-        }
-        Err(error) => log::error!("No data directory to store the library in: {error}"),
+    let paths = host::paths(app.handle())?;
+    if let Err(error) = std::fs::create_dir_all(&paths.profile) {
+        log::error!(
+            "The data directory {} could not be prepared: {error}",
+            paths.profile.display()
+        );
     }
 
-    // Empty until `vault::unlock` fills it with the connection and the key.
-    app.manage(db::Db::new(None));
-    app.manage(backup::Restored::default());
-    app.manage(http::send::Sending::default());
-    app.manage(http::runner::Runs::default());
-    app.manage(http::websocket::Sockets::default());
+    // No library until `vault::unlock` opens one.
+    let events = Arc::new(host::TauriHost(app.handle().clone()));
+    app.manage(Arc::new(Engine::new(paths, events)));
 
     Ok(())
 }
@@ -392,7 +388,8 @@ pub fn run() {
             // Built then run for this event: a decrypted copy should not outlive the
             // session. Best effort — the sweep at launch covers a locked file or a crash.
             if matches!(event, tauri::RunEvent::Exit) {
-                attachments::sealed::sweep_plaintext(handle);
+                let engine = handle.state::<Arc<Engine>>();
+                attachments::sealed::sweep_plaintext(engine.paths());
             }
         });
 }

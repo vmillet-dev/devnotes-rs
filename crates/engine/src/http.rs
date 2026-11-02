@@ -25,13 +25,15 @@ pub mod websocket;
 
 use std::collections::BTreeMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use chrono::Utc;
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Runtime};
 
-use crate::db::{blocking, lock};
+use crate::db::{blocking, blocking_on, engine, lock};
 use crate::error::{AppError, FileContext};
 use crate::tools::off_thread;
+use crate::{Engine, EngineEvent};
 use model::{
     HttpCollection, HttpContents, HttpFolder, HttpItem, HttpPlace, HttpRequest, HttpRequestDraft,
     HttpRequestPatch, HttpTree, NewPlace,
@@ -471,7 +473,7 @@ pub async fn send_http_request<R: Runtime>(
     request: send::SendRequest,
     app: AppHandle<R>,
 ) -> Result<send::SentResponse, AppError> {
-    let mut flight = Flight::new(app, &request.id);
+    let mut flight = Flight::new(engine(&app), &request.id);
     let answer = flight.send(request).await;
     flight.keep().await;
     answer
@@ -488,8 +490,8 @@ struct Prepared {
 /// One send and the scripts around it, from the command's side: their host, the jar's copy
 /// they change, what they wrote, and what is kept once it ends — however it ends.
 #[allow(clippy::struct_excessive_bools)]
-struct Flight<R: Runtime> {
-    app: AppHandle<R>,
+struct Flight {
+    engine: Arc<Engine>,
     id: String,
     session: Option<Session>,
     /// The jar's copy while no session holds it.
@@ -528,10 +530,10 @@ struct Going {
     layers: Vec<variables::VariableLayer>,
 }
 
-impl<R: Runtime> Flight<R> {
-    fn new(app: AppHandle<R>, id: &str) -> Self {
+impl Flight {
+    fn new(engine: Arc<Engine>, id: &str) -> Self {
         Self {
-            app,
+            engine,
             id: id.to_string(),
             session: None,
             jar: None,
@@ -575,7 +577,7 @@ impl<R: Runtime> Flight<R> {
             environment,
             jar,
         } = prepare(
-            &self.app,
+            &self.engine,
             &document,
             collection_id.clone(),
             folder_id,
@@ -675,7 +677,7 @@ impl<R: Runtime> Flight<R> {
         id: &str,
         outgoing: send::Outgoing,
     ) -> Result<Result<send::SentResponse, AppError>, AppError> {
-        let (answer, cookies_set) = self.app.state::<send::Sending>().run(id, outgoing).await;
+        let (answer, cookies_set) = self.engine.sending.run(id, outgoing).await;
         if matches!(answer, Err(send::SendError::Cancelled)) {
             return Err(send::SendError::Cancelled.into());
         }
@@ -855,15 +857,13 @@ impl<R: Runtime> Flight<R> {
             },
         };
         let killer = session.killer();
-        self.app
-            .state::<send::Sending>()
-            .watch(&self.id, Some(killer.clone()));
+        self.engine.sending.watch(&self.id, Some(killer.clone()));
         let ran = tauri::async_runtime::spawn_blocking(move || {
             let outcome = session.run(&job);
             (session, outcome)
         })
         .await;
-        self.app.state::<send::Sending>().watch(&self.id, None);
+        self.engine.sending.watch(&self.id, None);
         let outcome = match ran {
             Ok((mut session, outcome)) => {
                 self.changes.append(&mut session.network.changes);
@@ -961,7 +961,7 @@ impl<R: Runtime> Flight<R> {
             iteration: (self.info.iteration_count > 1).then_some(self.info.iteration + 1),
             line,
         };
-        let _ = self.app.emit(console::HTTP_CONSOLE_EVENT, event);
+        self.engine.emit(EngineEvent::Console(event));
     }
 
     /// What the last phase logged and sent, the tests that failed and what stopped it, each
@@ -996,7 +996,7 @@ impl<R: Runtime> Flight<R> {
             .map(|environment| environment.id.clone());
         let collection_id = self.collection_id.clone();
         let by = self.by.clone();
-        let kept = blocking(self.app.clone(), move |_, db| {
+        let kept = blocking_on(Arc::clone(&self.engine), move |_, db| {
             let mut connection = lock(db)?;
             Ok(keep_writes(
                 &mut connection,
@@ -1016,12 +1016,15 @@ impl<R: Runtime> Flight<R> {
     /// The history and the jar, written under the lock again, and never at the answer's expense.
     async fn keep(self) {
         let Self {
-            app, sent, changes, ..
+            engine,
+            sent,
+            changes,
+            ..
         } = self;
         if sent.is_none() && changes.is_empty() {
             return;
         }
-        let kept = blocking(app, move |_, db| {
+        let kept = blocking_on(engine, move |_, db| {
             let now = Utc::now();
             let mut connection = lock(db)?;
             if let Some(sent) = &sent {
@@ -1055,8 +1058,8 @@ fn host_failed(message: &str) -> Outcome {
     })
 }
 
-async fn prepare<R: Runtime>(
-    app: &AppHandle<R>,
+async fn prepare(
+    engine: &Arc<Engine>,
     document: &model::RequestDocument,
     collection_id: Option<String>,
     folder_id: Option<String>,
@@ -1064,7 +1067,7 @@ async fn prepare<R: Runtime>(
 ) -> Result<Prepared, AppError> {
     let own = document.variables.clone();
     let own_transport = document.transport;
-    blocking(app.clone(), move |_, db| {
+    blocking_on(Arc::clone(engine), move |_, db| {
         let mut connection = lock(db)?;
         let inherited = match collection_id {
             Some(collection_id) => {
@@ -1366,7 +1369,8 @@ pub async fn run_http_collection<R: Runtime>(
     } else {
         u32::try_from(rows.len()).unwrap_or(u32::MAX)
     };
-    let runs = app.state::<runner::Runs>();
+    let engine = engine(&app);
+    let runs = &engine.runs;
     runs.start(&run.id);
     let started = std::time::Instant::now();
     let mut overlay = Vec::new();
@@ -1391,13 +1395,13 @@ pub async fn run_http_collection<R: Runtime>(
                 placed,
                 row: &row,
             };
-            let Some((result, next)) = run_step(&app, step, &mut overlay).await else {
+            let Some((result, next)) = run_step(&engine, step, &mut overlay).await else {
                 cancelled = true;
                 break 'run;
             };
             let failed = result.failed();
             say_run(
-                &app,
+                &engine,
                 &run.id,
                 runner::RunStep::Ended {
                     result: Box::new(result),
@@ -1411,7 +1415,7 @@ pub async fn run_http_collection<R: Runtime>(
                 break 'run;
             }
             at = runner::next_index(&order, index, next.as_ref());
-            if at.is_some() && !wait(&runs, &run.id, run.delay_ms).await {
+            if at.is_some() && !wait(runs, &run.id, run.delay_ms).await {
                 cancelled = true;
                 break 'run;
             }
@@ -1420,7 +1424,7 @@ pub async fn run_http_collection<R: Runtime>(
     runs.finish(&run.id);
     let millis = u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX);
     say_run(
-        &app,
+        &engine,
         &run.id,
         runner::RunStep::Finished { cancelled, millis },
     );
@@ -1440,8 +1444,8 @@ struct RunStep<'a> {
 
 /// A request of a run, sent; `None` when « Annuler » stopped it. Beside its result, where a
 /// script said to go next.
-async fn run_step<R: Runtime>(
-    app: &AppHandle<R>,
+async fn run_step(
+    engine: &Arc<Engine>,
     step: RunStep<'_>,
     overlay: &mut Vec<VariableWrite>,
 ) -> Option<(runner::RunResult, Option<runner::Next>)> {
@@ -1455,7 +1459,7 @@ async fn run_step<R: Runtime>(
         row,
     } = step;
     say_run(
-        app,
+        engine,
         &run.id,
         runner::RunStep::Started {
             iteration,
@@ -1464,7 +1468,7 @@ async fn run_step<R: Runtime>(
         },
     );
     let id = placed.id.clone();
-    let request = blocking(app.clone(), move |_, db| {
+    let request = blocking_on(Arc::clone(engine), move |_, db| {
         let mut connection = lock(db)?;
         Ok(store::get_request(&mut connection, &id)?)
     })
@@ -1474,8 +1478,8 @@ async fn run_step<R: Runtime>(
         Err(error) => return Some((runner::gone(iteration, placed, error), None)),
     };
     let send_id = format!("run:{}#{iteration}.{steps}", run.id);
-    app.state::<runner::Runs>().at(&run.id, &send_id);
-    let mut flight = Flight::new(app.clone(), &send_id);
+    engine.runs.at(&run.id, &send_id);
+    let mut flight = Flight::new(Arc::clone(engine), &send_id);
     flight.record = false;
     flight.persist = run.keep_variables;
     flight.overlay = std::mem::take(overlay);
@@ -1525,14 +1529,11 @@ async fn wait(runs: &runner::Runs, id: &str, millis: u32) -> bool {
     !runs.cancelled(id)
 }
 
-fn say_run<R: Runtime>(app: &AppHandle<R>, id: &str, step: runner::RunStep) {
-    let _ = app.emit(
-        runner::HTTP_RUN_EVENT,
-        runner::RunEvent {
-            id: id.to_string(),
-            step,
-        },
-    );
+fn say_run(engine: &Engine, id: &str, step: runner::RunStep) {
+    engine.emit(EngineEvent::Run(runner::RunEvent {
+        id: id.to_string(),
+        step,
+    }));
 }
 
 /// « Annuler » on a run: the request under way is cancelled with it. `false` when no run of that
@@ -1540,11 +1541,12 @@ fn say_run<R: Runtime>(app: &AppHandle<R>, id: &str, step: runner::RunStep) {
 #[tauri::command]
 #[specta::specta]
 pub async fn cancel_http_run<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
-    let Some(at) = app.state::<runner::Runs>().cancel(&id) else {
+    let engine = engine(&app);
+    let Some(at) = engine.runs.cancel(&id) else {
         return Ok(false);
     };
     if let Some(send) = at {
-        app.state::<send::Sending>().cancel(&send);
+        engine.sending.cancel(&send);
     }
     Ok(true)
 }
@@ -1560,7 +1562,7 @@ pub async fn read_http_run_data(path: String) -> Result<runner::RunData, AppErro
 #[tauri::command]
 #[specta::specta]
 pub async fn cancel_http_send<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
-    Ok(app.state::<send::Sending>().cancel(&id))
+    Ok(engine(&app).sending.cancel(&id))
 }
 
 /// The whole body of the last answer to `id`, not the text shown: `false` when there is none.
@@ -1573,7 +1575,8 @@ pub async fn save_http_response<R: Runtime>(
 ) -> Result<bool, AppError> {
     crate::transfer::model::validate_path(&path)?;
     off_thread(move || {
-        app.state::<send::Sending>()
+        engine(&app)
+            .sending
             .save(&id, Path::new(&path))
             .context(&path)
     })
@@ -1588,7 +1591,7 @@ pub async fn forget_http_response<R: Runtime>(
     id: String,
     app: AppHandle<R>,
 ) -> Result<(), AppError> {
-    app.state::<send::Sending>().forget(&id);
+    engine(&app).sending.forget(&id);
     Ok(())
 }
 
@@ -1599,7 +1602,7 @@ pub async fn http_response_image<R: Runtime>(
     id: String,
     app: AppHandle<R>,
 ) -> Result<Option<String>, AppError> {
-    off_thread(move || app.state::<send::Sending>().image(&id)).await
+    off_thread(move || engine(&app).sending.image(&id)).await
 }
 
 /// An answer's text made a note: the secrets the request sent, masked wherever it says them back.
@@ -1612,7 +1615,8 @@ pub async fn http_response_note<R: Runtime>(
     app: AppHandle<R>,
 ) -> Result<send::NoteText, AppError> {
     off_thread(move || {
-        app.state::<send::Sending>()
+        engine(&app)
+            .sending
             .note_text(id.as_deref(), &exchange, &text)
     })
     .await
@@ -1820,9 +1824,10 @@ pub async fn connect_websocket<R: Runtime>(
     .await?;
 
     let (outgoing, protocols) = outgoing;
-    Ok(app
-        .state::<websocket::Sockets>()
-        .connect(app.clone(), id, outgoing, &protocols)
+    let engine = engine(&app);
+    Ok(engine
+        .sockets
+        .connect(Arc::clone(&engine.events), id, outgoing, &protocols)
         .await?)
 }
 
@@ -1834,13 +1839,13 @@ pub async fn send_websocket<R: Runtime>(
     text: String,
     app: AppHandle<R>,
 ) -> Result<bool, AppError> {
-    Ok(app.state::<websocket::Sockets>().send(&id, text))
+    Ok(engine(&app).sockets.send(&id, text))
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn close_websocket<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
-    Ok(app.state::<websocket::Sockets>().close(&id))
+    Ok(engine(&app).sockets.close(&id))
 }
 
 /// The jar by domain, for the manager.

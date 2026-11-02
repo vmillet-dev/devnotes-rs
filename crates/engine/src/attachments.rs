@@ -80,17 +80,19 @@ pub async fn read_attachment<R: Runtime>(
 #[tauri::command]
 #[specta::specta]
 pub async fn open_attachment<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
-    blocking(app, move |app, db| {
+    let copy = blocking(app.clone(), move |engine, db| {
         let (attachment, bytes) = read_outside_lock(db, &id)?;
-        let copy = write_plaintext_copy(&sealed::plaintext_directory(app)?, &attachment, &bytes)?;
+        let directory = sealed::plaintext_directory(&engine.paths);
 
-        tauri_plugin_opener::OpenerExt::opener(app)
-            .open_path(copy.to_string_lossy(), None::<&str>)
-            .context("open")?;
-
-        Ok(())
+        Ok(write_plaintext_copy(&directory, &attachment, &bytes)?)
     })
-    .await
+    .await?;
+
+    tauri_plugin_opener::OpenerExt::opener(&app)
+        .open_path(copy.to_string_lossy(), None::<&str>)
+        .context("open")?;
+
+    Ok(())
 }
 
 /// The path comes from a native picker; the write stays here.
@@ -117,12 +119,13 @@ pub async fn attach_clipboard_image<R: Runtime>(
     file_name: String,
     app: AppHandle<R>,
 ) -> Result<Attachment, AppError> {
-    blocking(app, move |app, db| {
-        let image = tauri_plugin_clipboard_manager::ClipboardExt::clipboard(app)
-            .read_image()
-            .context("clipboard image")?;
+    let image = tauri_plugin_clipboard_manager::ClipboardExt::clipboard(&app)
+        .read_image()
+        .context("clipboard image")?;
+    let (width, height, rgba) = (image.width(), image.height(), image.rgba().to_vec());
 
-        let png = model::encode_png(image.width(), image.height(), image.rgba())?;
+    blocking(app, move |_, db| {
+        let png = model::encode_png(width, height, &rgba)?;
         model::validate_size(png.len() as u64, &model::png_name(&file_name))?;
         Ok(store_new(note_id, model::png_name(&file_name), &png, db)?)
     })

@@ -9,10 +9,11 @@ pub mod copies;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::{AppHandle, Runtime, State};
 
 use chrono::{DateTime, Utc};
 
+use crate::Paths;
 use crate::db::{Db, blocking, lock};
 use crate::error::{AppError, StorageError};
 use crate::layout;
@@ -38,23 +39,26 @@ impl Restored {
 /// The key the front end writes this setting under, in the application's preferences.
 pub const AUTOMATIC_BACKUPS_KEY: &str = "devnotes.automaticBackups";
 
-/// Read from the preferences file: the copy is taken at unlock, before the front end has
-/// booted far enough to say anything.
-fn wanted_by_preference<R: Runtime>(app: &AppHandle<R>) -> bool {
-    use tauri_plugin_store::StoreExt;
-
-    let stored = app
-        .store(layout::PREFERENCES)
+/// Read from the application's `preferences.json` itself, as the front's store writes it: the copy
+/// is taken at unlock, before the front end has booted far enough to say anything. A file
+/// missing or unreadable leaves the default, which takes the copy.
+fn wanted_by_preference(paths: &Paths) -> bool {
+    let stored = std::fs::read_to_string(paths.profile.join(layout::PREFERENCES))
         .ok()
-        .and_then(|store| store.get(AUTOMATIC_BACKUPS_KEY))
-        .and_then(|value| value.as_str().map(str::to_owned));
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .and_then(|preferences| {
+            preferences
+                .get(AUTOMATIC_BACKUPS_KEY)?
+                .as_str()
+                .map(str::to_owned)
+        });
 
     wanted(stored.as_deref())
 }
 
 /// The launch copy. Never fatal: a library that cannot be copied still has to open.
-pub(crate) fn take<R: Runtime>(app: &AppHandle<R>, db: &Db) {
-    if wanted_by_preference(app) {
+pub(crate) fn take(paths: &Paths, db: &Db) {
+    if wanted_by_preference(paths) {
         copy(db);
     }
 }
@@ -93,9 +97,9 @@ pub async fn list_backups<R: Runtime>(app: AppHandle<R>) -> Result<Vec<Backup>, 
 #[tauri::command]
 #[specta::specta]
 pub async fn restore_backup<R: Runtime>(id: String, app: AppHandle<R>) -> Result<String, AppError> {
-    blocking(app, move |app, db| {
+    blocking(app, move |engine, db| {
         let aside = restore(db, &id, Utc::now())?.to_string_lossy().to_string();
-        app.state::<Restored>().keep(aside.clone());
+        engine.restored.keep(aside.clone());
 
         Ok(aside)
     })
@@ -106,8 +110,8 @@ pub async fn restore_backup<R: Runtime>(id: String, app: AppHandle<R>) -> Result
 #[tauri::command]
 #[specta::specta]
 #[allow(clippy::needless_pass_by_value)]
-pub fn take_restored_aside(restored: State<'_, Restored>) -> Option<String> {
-    restored.take()
+pub fn take_restored_aside(engine: State<'_, std::sync::Arc<crate::Engine>>) -> Option<String> {
+    engine.restored.take()
 }
 
 fn restore(db: &Db, id: &str, now: DateTime<Utc>) -> Result<PathBuf, StorageError> {
@@ -127,6 +131,26 @@ fn restore(db: &Db, id: &str, now: DateTime<Utc>) -> Result<PathBuf, StorageErro
 mod tests {
     use super::*;
     use copies::tests::{at, library};
+
+    #[test]
+    fn the_launch_copy_follows_the_application_preference() {
+        let profile = tempfile::tempdir().unwrap();
+        let paths = Paths {
+            profile: profile.path().to_path_buf(),
+            resources: profile.path().to_path_buf(),
+        };
+        assert!(wanted_by_preference(&paths), "no file: the copy is taken");
+
+        let file = profile.path().join(layout::PREFERENCES);
+        std::fs::write(&file, r#"{ "devnotes.automaticBackups": "false" }"#).unwrap();
+        assert!(!wanted_by_preference(&paths));
+
+        std::fs::write(&file, r#"{ "devnotes.automaticBackups": "true" }"#).unwrap();
+        assert!(wanted_by_preference(&paths));
+
+        std::fs::write(&file, "not json").unwrap();
+        assert!(wanted_by_preference(&paths), "unreadable: the default");
+    }
 
     #[test]
     fn where_a_restore_set_the_library_aside_is_told_once() {
