@@ -90,5 +90,10 @@ harness = false
 name = "corpus_size"
 harness = false
 
+# ⚠️ Generates the two 30 000-note reference libraries on disk first: minutes, and ~0.5 GB.
+[[bench]]
+name = "index"
+harness = false
+
 [lints]
 workspace = true
