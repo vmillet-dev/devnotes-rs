@@ -1,5 +1,6 @@
 use engine::attachments::{
-    attach_file, delete_attachment, list_attachments, read_attachment, save_attachment,
+    attach_file, attach_image, decrypted_copy, delete_attachment, list_attachments,
+    read_attachment, save_attachment,
 };
 use engine::error::ErrorCode;
 use engine::notes::create_note;
@@ -94,4 +95,29 @@ fn a_file_past_the_limit_is_refused_by_its_name_and_the_limit() {
         Some("capture.mov")
     );
     assert_eq!(refused.params.get("limit").map(String::as_str), Some("10"));
+}
+
+/// What the shell hands over: the clipboard's pixels in, a path to open out.
+#[test]
+fn an_image_read_by_the_shell_is_stored_as_a_png_and_opened_from_a_decrypted_copy() {
+    let scratch = tempfile::tempdir().unwrap();
+    let session = Session::on_disk(scratch.path());
+    let space = session.space("Personal");
+    let note = session
+        .call(|e| create_note(e, snippet(&space)))
+        .unwrap()
+        .note
+        .id;
+    let red = [255, 0, 0, 255].repeat(4);
+
+    let attachment = session
+        .call(|e| attach_image(e, note, "capture".to_string(), (2, 2), &red))
+        .unwrap();
+    let copy = session
+        .call(|e| decrypted_copy(e, attachment.id.clone()))
+        .unwrap();
+
+    assert_eq!(attachment.file_name, "capture.png");
+    assert!(copy.starts_with(session.engine.paths().profile.join("open")));
+    assert!(std::fs::read(&copy).unwrap().starts_with(b"\x89PNG"));
 }
