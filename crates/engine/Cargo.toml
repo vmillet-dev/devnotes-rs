@@ -29,7 +29,7 @@ toml = "1.1"
 [dependencies]
 # ~2.11 until `tauri-plugin-wdio-webdriver` (the e2e harness) builds against 2.12's `windows` 0.62.
 tauri = { version = "~2.11", features = ["tray-icon"] }
-specta = { version = "=2.0.0-rc.25", features = ["chrono"] }
+specta = { version = "=2.0.0-rc.25", features = ["chrono", "derive", "function"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order", "raw_value"] }
 diesel = { version = "2.3.13", features = ["sqlite"] }
