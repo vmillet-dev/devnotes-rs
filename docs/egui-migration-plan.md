@@ -29,7 +29,7 @@
 - [Annexe A — Composants Angular → modules egui](#annexe-a--composants-angular--modules-egui)
 - [Annexe B — Stores et services → état Rust](#annexe-b--stores-et-services--état-rust)
 - [Annexe C — Commandes Tauri → API du cœur](#annexe-c--commandes-tauri--api-du-cœur)
-- [Annexe D — Scénarios e2e → scénarios kittest](#annexe-d--scénarios-e2e--scénarios-kittest)
+- [Annexe D — Scénarios e2e : de WebdriverIO au pilote egui_inspection](#annexe-d--scénarios-e2e--de-webdriverio-au-pilote-egui_inspection)
 - [Annexe E — Dépendances retirées et ajoutées](#annexe-e--dépendances-retirées-et-ajoutées)
 
 ---
@@ -75,20 +75,20 @@ cryptographie, de dérivation de clé ni de format de fichier n'est nécessaire.
 
 ### 1.1 Volume
 
-| Partie                            | Taille (lignes)                                                      | Devenir                            |
-| --------------------------------- | -------------------------------------------------------------------- | ---------------------------------- |
-| Rust `src-tauri/src/`             | 72 836                                                               | conservé (→ `engine`)              |
-| dont fichiers qui nomment `tauri` | 17 fichiers, 9 096 lignes                                            | réécrits en API sans Tauri         |
-| Commandes `#[tauri::command]`     | 190                                                                  | fonctions du cœur (annexe C)       |
-| TypeScript hors specs             | 52 255                                                               | réécrit en Rust/egui               |
-| Gabarits HTML                     | 16 664                                                               | réécrits                           |
-| SCSS                              | 23 326 (dont 1 618 globaux)                                          | réécrits en thème + widgets peints |
-| Specs Vitest                      | 53 646                                                               | ré-exprimés en tests Rust (§ 8)    |
-| Scénarios e2e WebdriverIO         | 35 fichiers                                                          | portés en scénarios `egui_kittest` |
-| Composants Angular                | ~180 (55 notes, 41 HTTP, 47 outils, 15 barre de titre, 16 partagés…) | annexe A                           |
-| Stores                            | 25 (`core/state`) + 12 (HTTP)                                        | annexe B                           |
-| Clés de traduction                | 3 323 par langue (fr, en)                                            | fichiers JSON conservés            |
-| Langages de snippet               | 142 (`notes::language`)                                              | coloration à reprendre             |
+| Partie                            | Taille (lignes)                                                      | Devenir                                                              |
+| --------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Rust `src-tauri/src/`             | 72 836                                                               | conservé (→ `engine`)                                                |
+| dont fichiers qui nomment `tauri` | 17 fichiers, 9 096 lignes                                            | réécrits en API sans Tauri                                           |
+| Commandes `#[tauri::command]`     | 190                                                                  | fonctions du cœur (annexe C)                                         |
+| TypeScript hors specs             | 52 255                                                               | réécrit en Rust/egui                                                 |
+| Gabarits HTML                     | 16 664                                                               | réécrits                                                             |
+| SCSS                              | 23 326 (dont 1 618 globaux)                                          | réécrits en thème + widgets peints                                   |
+| Specs Vitest                      | 53 646                                                               | ré-exprimés en tests Rust (§ 8)                                      |
+| Scénarios e2e WebdriverIO         | 35 fichiers                                                          | portés sur le binaire assemblé, piloté par `egui_inspection` (§ 8.3) |
+| Composants Angular                | ~180 (55 notes, 41 HTTP, 47 outils, 15 barre de titre, 16 partagés…) | annexe A                                                             |
+| Stores                            | 25 (`core/state`) + 12 (HTTP)                                        | annexe B                                                             |
+| Clés de traduction                | 3 323 par langue (fr, en)                                            | fichiers JSON conservés                                              |
+| Langages de snippet               | 142 (`notes::language`)                                              | coloration à reprendre                                               |
 
 ### 1.2 Ce qui est déjà en Rust (et ne bouge pas)
 
@@ -172,12 +172,31 @@ sont eux-mêmes construits sur ces crates (`global-hotkey`, `tray-icon`, `muda`,
 
 ### 2.3 Critères de publication de la 1.0.0 (tous requis)
 
-- Les 35 scénarios e2e existent en scénarios kittest et passent sur Windows et Linux.
+- Les 35 scénarios e2e sont portés sur le pilote `egui_inspection` et passent sur Windows et Linux,
+  contre le binaire assemblé.
 - Rapport de parité visuelle (§ 5) relu et accepté sur toute l'application, écarts restants
   limités au § 5.3.
 - Budgets de performance (§ 6) tenus sur les deux corpus de référence.
 - Installation propre et mise à jour 1.0.0 → 1.0.1 testées (NSIS, AppImage).
 - `docs/architecture.md`, `CLAUDE.md` et les skills mis à jour (§ 12).
+
+### 2.4 Règles d'écriture du code
+
+Le code sera maintenu par un humain : **concis mais lisible**, et **KISS** (_keep it simple,
+stupid_). Ces règles sont aussi dans `CLAUDE.md`, que Claude Code lit à chaque session, et dans
+les skills `egui-ui` et `rust-guidelines` (§ 12).
+
+- La solution la plus simple qui marche. Pas d'abstraction — trait, générique, macro, couche — avant
+  son deuxième usage réel : les briques du § 3 (`QueryCell`, `Memo`, la file d'`Action`…) s'écrivent
+  quand le premier écran en a besoin, pas avant.
+- Petites fonctions à une responsabilité, noms qui disent ce que sont les choses, retours anticipés
+  plutôt qu'imbrication. Un écran qui grossit se découpe en fonctions de dessin nommées, pas en
+  couches.
+- Pas d'astuce pour gagner trois lignes ; entre ajouter et supprimer pour corriger, supprimer.
+- Commentaires : des décisions, pas de la narration (règle actuelle du projet).
+- Idiomes Rust : les _Pragmatic Rust Guidelines_ de Microsoft (skill `rust-guidelines`), les règles
+  du projet l'emportant là où elles diffèrent.
+- En revue : une abstraction ajoutée dit quel second usage la justifie.
 
 ---
 
@@ -903,6 +922,7 @@ par exemple) passe par une lecture sûre (registre via `winreg`, `gsettings`) ou
 | JS tiers dans le processus (TipTap, Mermaid, Fabric, Prettier)       | index déchiffré résident (§ 3.5) : `Zeroizing`, effacement au verrouillage, documentation du modèle de menace                                                                            |
 |                                                                      | champ de phrase secrète sans copies (§ 3.8) ; état egui de ce champ oublié après usage                                                                                                   |
 |                                                                      | presse-papiers et dépôts de fichiers : mêmes règles qu'aujourd'hui                                                                                                                       |
+|                                                                      | port d'inspection (`egui_inspection`, sans authentification) : compilé seulement dans la saveur `e2e`, jamais dans une version publiée (§ 8.3)                                           |
 
 Inchangé et **hors de portée de la migration** : coffre, Argon2, AES-GCM, `vault.json`, formats
 d'export et de sauvegarde, hôte de scripts isolé.
@@ -1104,20 +1124,21 @@ P7 se font pendant P3–P5 et la 1.0.0 arrive environ quatre mois plus tôt.
 Des prototypes jetables dans `spikes/` (hors workspace), chacun avec un compte rendu et une
 décision consignée (ADR courte dans `docs/egui-migration/adr/`).
 
-| Spike                  | Question                                                                                                                                                                                                                             | Sortie attendue                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| **S1 Coquille**        | eframe + wgpu sous Windows 10/11, Ubuntu X11, Wayland (GNOME, KDE) : cacher/révéler depuis le tray et un raccourci global, instance unique, fermeture vers le tray, plein écran, mise à l'échelle 100–200 %, fenêtre créée invisible | eframe suffit, ou boucle `egui-winit` + `egui-wgpu` maison (R3)            |
-| **S2 Texte**           | Inter/JetBrains Mono : graisses, interlettrage, troncature, `max_rows`, émoji, CJK, façonnage ; capture d'une carte et de l'en-tête comparée à la WebView                                                                            | instances statiques ou axes variables ; seuil SSIM ; liste E1/E8 confirmée |
-| **S3 Canevas**         | 30 000 cartes factices, sections, survol, défilement                                                                                                                                                                                 | temps de frame mesuré ; schéma de virtualisation validé                    |
-| **S4 Index**           | construire l'index sur les deux corpus ; requêtes types                                                                                                                                                                              | temps, mémoire ; besoin ou non de `lz4` pour le texte plié                 |
-| **S5 Noyau d'édition** | `ropey` + `EditorView` sur 1 Mo : frappe, sélection, IME (touches mortes françaises, IME japonais sous Windows), indentation suspendue, annuler                                                                                      | latence mesurée ; API du noyau                                             |
-| **S6 Éditeur riche**   | paragraphes, titres, listes, marques ; caret entre blocs ; aller-retour Markdown sur les échantillons                                                                                                                                | faisabilité et estimation affinée de P4                                    |
-| **S7 Mermaid**         | moteurs natifs disponibles contre les diagrammes des échantillons                                                                                                                                                                    | décision D2                                                                |
-| **S8 Formatage**       | formateurs natifs vs Prettier/QuickJS sur les fixtures actuelles                                                                                                                                                                     | décision D1                                                                |
-| **S9 Paquets**         | `cargo-packager` : NSIS par utilisateur, AppImage, deb, rpm ; signature minisign et mise à jour egui → egui ; chemins réels                                                                                                          | chemins figés (§ 4.1) ; chaîne de paquets validée                          |
+| Spike                  | Question                                                                                                                                                                                                                                           | Sortie attendue                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **S1 Coquille**        | eframe + wgpu sous Windows 10/11, Ubuntu X11, Wayland (GNOME, KDE) : cacher/révéler depuis le tray et un raccourci global, instance unique, fermeture vers le tray, plein écran, mise à l'échelle 100–200 %, fenêtre créée invisible               | eframe suffit, ou boucle `egui-winit` + `egui-wgpu` maison (R3)                                       |
+| **S2 Texte**           | Inter/JetBrains Mono : graisses, interlettrage, troncature, `max_rows`, émoji, CJK, façonnage ; capture d'une carte et de l'en-tête comparée à la WebView                                                                                          | instances statiques ou axes variables ; seuil SSIM ; liste E1/E8 confirmée                            |
+| **S3 Canevas**         | 30 000 cartes factices, sections, survol, défilement                                                                                                                                                                                               | temps de frame mesuré ; schéma de virtualisation validé                                               |
+| **S4 Index**           | construire l'index sur les deux corpus ; requêtes types                                                                                                                                                                                            | temps, mémoire ; besoin ou non de `lz4` pour le texte plié                                            |
+| **S5 Noyau d'édition** | `ropey` + `EditorView` sur 1 Mo : frappe, sélection, IME (touches mortes françaises, IME japonais sous Windows), indentation suspendue, annuler                                                                                                    | latence mesurée ; API du noyau                                                                        |
+| **S6 Éditeur riche**   | paragraphes, titres, listes, marques ; caret entre blocs ; aller-retour Markdown sur les échantillons                                                                                                                                              | faisabilité et estimation affinée de P4                                                               |
+| **S7 Mermaid**         | moteurs natifs disponibles contre les diagrammes des échantillons                                                                                                                                                                                  | décision D2                                                                                           |
+| **S8 Formatage**       | formateurs natifs vs Prettier/QuickJS sur les fixtures actuelles                                                                                                                                                                                   | décision D1                                                                                           |
+| **S9 Paquets**         | `cargo-packager` : NSIS par utilisateur, AppImage, deb, rpm ; signature minisign et mise à jour egui → egui ; chemins réels                                                                                                                        | chemins figés (§ 4.1) ; chaîne de paquets validée                                                     |
+| **S10 Pilote e2e**     | binaire `--features e2e` lancé et conduit par `egui_inspection` sur les runners Linux (xvfb + Mesa) et Windows (WARP) : arbre, clic, saisie, `Settle`, capture, relance ; deux appareils `wgpu` dans un même processus de test sur pilote logiciel | pilote validé, ou repli sur un petit canal de contrôle maison ; règle de concurrence des tests `wgpu` |
 
 **Sortie** : D1 (formatage) tranchée sur mesures selon le critère du § 11, moteur Mermaid de D2
-choisi, estimation recalée, risques réévalués.
+choisi, pilote e2e validé, estimation recalée, risques réévalués.
 
 ### Phase 1 — Le cœur sans Tauri, et l'index (3,5 S)
 
@@ -1165,7 +1186,9 @@ capturée. Rien n'est publié.
 - **Écrans de porte** : `vault-gate` (création, déverrouillage, plancher de 12 caractères à la
   création seulement), `passphrase-prompt`, bannières (erreur, toast d'état), barre de titre avec
   bascule de zone et de thème, coquille des trois zones (`Ctrl+1/2/3` par `KeyboardEvent.code`).
-- **Tests** : harnais kittest + export capture/géométrie, comparaison à la référence (§ 5.2).
+- **Tests et CI** : harnais kittest + export capture/géométrie, comparaison à la référence (§ 5.2) ;
+  saveur `e2e`, crate `e2e` (pilote, § 8.3) et début de `01-first-launch` ; workflows adaptés
+  (§ 8.4) ; skill `desktop-e2e-testing` réécrite pour ce pilote.
 
 **Fin de phase** : on déverrouille une vraie bibliothèque dans l'application egui, on change de
 thème et de densité, les zones sont des coquilles vides ; le rapport visuel couvre la barre de
@@ -1304,7 +1327,7 @@ clair balayées au lancement et à la sortie), journaux, géométrie de fenêtre
 - Banc d'interface sur les deux corpus, corrections jusqu'aux budgets du § 6.
 - Audit d'accessibilité : NVDA et Narrateur (Windows), Orca (Linux), navigation complète au clavier,
   tailles de cibles, contrastes.
-- Les 35 scénarios kittest verts sur Windows et Linux.
+- Les 35 scénarios e2e verts sur Windows et Linux, contre le binaire assemblé.
 
 ### Phase 11 — Publication de la 1.0.0 (1,5 S)
 
@@ -1321,16 +1344,16 @@ clair balayées au lancement et à la sortie), journaux, géométrie de fenêtre
 
 ### 8.1 Couches
 
-| Couche      | Outil                                                                                    | Remplace                              | Règle                                                                                                                                       |
-| ----------- | ---------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Métier      | `cargo test` dans `engine` (inchangé) + tests de propriétés de l'index                   | —                                     | ce qui est montré se teste ici                                                                                                              |
-| Noyaux      | tests unitaires de `text`, `richtext`, `drawing`, `i18n`                                 | specs CodeMirror/TipTap/Fabric/format | corpus d'aller-retour : Markdown (sortie TipTap actuelle), scènes Fabric, formatage (corpus d'or), coloration (une ligne par langue)        |
-| État        | tests Rust des structures d'état contre le **vrai cœur** sur une bibliothèque temporaire | specs des stores avec faux dépôts     | plus de faux qui ré-implémentent une règle : seule la plateforme est faussée (dialogues, fenêtre, presse-papiers, notifications, horloge)   |
-| Composants  | `egui_kittest` : un widget ou un écran, requêtes par `author_id`/rôle/libellé            | specs de composants Vitest            | asserter sur l'arbre AccessKit, pas sur les pixels                                                                                          |
-| Scénarios   | `egui_kittest` : l'application entière, un profil vierge par scénario                    | 35 scénarios WebdriverIO              | annexe D ; « relancer » recrée l'application sur le même profil (une vraie relance cette fois) ; attendre des conditions, jamais des durées |
-| Visuel      | kittest + `wgpu` logiciel, capture + géométrie                                           | —                                     | § 5.2                                                                                                                                       |
-| Performance | criterion + banc d'interface                                                             | benchs actuels                        | hors CI                                                                                                                                     |
-| OS          | liste manuelle par version                                                               | —                                     | § 8.5                                                                                                                                       |
+| Couche            | Outil                                                                                                                                    | Remplace                              | Règle                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Métier            | `cargo test` dans `engine` (inchangé) + tests de propriétés de l'index                                                                   | —                                     | ce qui est montré se teste ici                                                                                                            |
+| Noyaux            | tests unitaires de `text`, `richtext`, `drawing`, `i18n`                                                                                 | specs CodeMirror/TipTap/Fabric/format | corpus d'aller-retour : Markdown (sortie TipTap actuelle), scènes Fabric, formatage (corpus d'or), coloration (une ligne par langue)      |
+| État              | tests Rust des structures d'état contre le **vrai cœur** sur une bibliothèque temporaire                                                 | specs des stores avec faux dépôts     | plus de faux qui ré-implémentent une règle : seule la plateforme est faussée (dialogues, fenêtre, presse-papiers, notifications, horloge) |
+| Écrans et widgets | `egui_kittest` : un widget ou un écran, requêtes par `author_id`/rôle/libellé ; son contrôle d'accessibilité refuse un contrôle sans nom | specs de composants Vitest            | asserter sur l'arbre AccessKit, pas sur les pixels                                                                                        |
+| **E2E**           | **le binaire assemblé** (saveur `e2e`), piloté de l'extérieur par `egui_inspection` (§ 8.3)                                              | 35 scénarios WebdriverIO              | annexe D ; un scénario seul, sur un profil vierge ; attendre des conditions, jamais des durées                                            |
+| Visuel            | `Harness::snapshot` (`wgpu` logiciel) + relevé de géométrie                                                                              | —                                     | § 5.2                                                                                                                                     |
+| Performance       | criterion + banc d'interface                                                                                                             | benchs actuels                        | hors CI                                                                                                                                   |
+| OS                | liste manuelle par version                                                                                                               | —                                     | § 8.5                                                                                                                                     |
 
 Le portage des specs Vitest n'est pas mécanique : pour chaque spec, on garde les **comportements**
 qu'elle protège (les titres des `it(...)` servent d'inventaire) et on les écrit au niveau qui
@@ -1341,25 +1364,73 @@ disparaissent avec leurs tests.
 
 `data-testid="note-card"` → `author_id = "note-card"` posé par un helper
 (`ui.ctx().accesskit_node_builder(id, |n| n.set_author_id(...))`). Les noms actuels sont gardés :
-les scénarios portés se lisent comme les anciens.
+les scénarios portés se lisent comme les anciens, et kittest comme le pilote e2e les trouvent dans
+le même arbre AccessKit.
 
-### 8.3 CI pendant la migration
+### 8.3 Les tests e2e : le binaire assemblé, piloté de l'extérieur
 
-- **Phase 1** : jobs actuels inchangés (lint, Vitest, e2e WebdriverIO) — ils prouvent que
-  l'extraction ne change rien — plus les jobs Rust du workspace.
-- **À partir de la phase 2** : `cargo fmt`, `clippy --workspace --all-targets --all-features -D
-warnings`, `cargo test --workspace` (Linux, Windows), scénarios kittest répartis en groupes comme
-  `e2e/groups.json`, capture visuelle (Linux) en artefact, comparée à la référence de
-  `angular-reference`. Disparaissent : npm lint/test/build, WebdriverIO,
-  `tauri build --debug --features e2e` ; `test:scripts` est réduit aux scripts de release.
-- `cargo deny` étendu aux nouvelles dépendances (licences compatibles GPL-3.0 : MIT/Apache, OFL
-  pour les polices, ISC pour Lucide, licence Unicode pour ICU4X) ; skill `dependency-audit` avant
-  chaque ajout.
+La notion ne change pas (→ « One application per run, one run per scenario ») : un scénario lance
+**l'application réelle** — binaire construit, vraie fenêtre, vrai `wgpu`, vrai fichier SQLite, vrai
+hôte de scripts — sur un profil vierge, la conduit comme un utilisateur et ne connaît d'elle que ce
+qu'elle montre. Seul l'outil change : WebdriverIO et `tauri-plugin-wdio` cèdent la place à
+**`egui_inspection`**, le protocole d'inspection d'egui (crate officielle d'`emilk/egui`,
+version 0.37) : lire l'arbre AccessKit (`GetTree`), injecter des événements (`ApplyEvents` :
+pointeur, clavier, texte, défilement), attendre que l'interface se pose (`Settle`), capturer
+l'écran (`GetScreenshot`), redimensionner (`Resize`).
 
-### 8.4 Après la 1.0.0
+- **La saveur `e2e`** : `cargo build -p app --features e2e`. La feature allume la feature
+  `inspection` d'eframe et les deux portes ci-dessous, rien d'autre. Elle n'entre jamais dans une
+  version publiée : le port d'inspection n'a pas d'authentification.
+- **Le pilote** : la crate `e2e` (`crates/e2e/`), quelques centaines de lignes. Il lance le binaire
+  (`--profile <dossier temporaire>`, `EGUI_INSPECTION=127.0.0.1:<port libre>`), s'y connecte,
+  trouve un nœud par `author_id`, clique au centre de sa boîte, tape, presse une touche, attend une
+  condition (`eventually`, adossé à `Settle`), capture l'écran et garde le journal en cas d'échec,
+  arrête et **relance réellement** l'application sur le même profil.
+- **Un fichier par scénario** : `crates/e2e/tests/<nn>_<nom>.rs`, un seul `#[test]` qui enchaîne
+  des étapes nommées, lancé seul (`cargo test -p e2e --test <nn>_<nom>`). Chaque fichier lance sa
+  propre application sur son propre profil, en local comme en CI : le piège actuel des fichiers
+  d'un même run qui partagent un processus et un profil disparaît.
+- **Ce que le protocole ne sait pas faire**, et les deux portes de la saveur `e2e` :
+  - une `GlobalAction` (raccourci global, tray) : `devnotes --action <nom>` lancé en seconde
+    instance la transmet à la première par la socket d'instance unique, le chemin que « révéler »
+    prend déjà (remplace `emitGlobalAction`, qui émettait l'événement Tauri) ;
+  - un dialogue de fichiers : le trait `FileDialog` répond le chemin que le scénario a fixé
+    (`DEVNOTES_E2E_DIALOG`) ;
+  - un fichier déposé depuis l'explorateur n'est pas injectable : le scénario passe par
+    « Joindre » et ce dialogue.
+- **Règles inchangées** : un scénario passe seul et sème son propre état ; on attend des
+  conditions, jamais des durées ; on adresse les contrôles par `author_id` ; `groups.json` répartit
+  les scénarios en trois groupes par OS, un nouveau scénario rejoignant le groupe le plus court.
+- **Écrans** : Linux sous `xvfb-run` avec Mesa (lavapipe pour Vulkan, llvmpipe pour GL), Windows
+  avec WARP (DX12 logiciel). La capture d'écran exige une fenêtre rendue : xvfb la fournit.
 
-Jobs Rust, scénarios kittest, capture visuelle (désormais comparée à la version egui précédente) et
-construction des paquets.
+Le spike S10 (phase 0) valide ce pilote sur les deux OS de CI avant qu'on en dépende.
+
+### 8.4 La CI, workflow par workflow
+
+| Workflow › job                             | Aujourd'hui                                                    | Phase 1                                                   | À partir de la phase 2                                                                                                                              | Après la 1.0.0                       |
+| ------------------------------------------ | -------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `ci.yml` › `changes`                       | saute build et tests sur une PR de documentation               | inchangé                                                  | inchangé                                                                                                                                            | inchangé                             |
+| `lint-front`                               | ESLint, Prettier, `tsc` des e2e                                | inchangé                                                  | devient `lint-docs` : Prettier sur Markdown/JSON/YAML, `test:scripts` restants                                                                      | idem                                 |
+| `lint-rust`                                | `fmt` + `clippy` dans `src-tauri`, avec un faux `frontendDist` | `fmt` + `clippy --workspace --all-targets --all-features` | idem, sans faux `frontendDist`                                                                                                                      | idem                                 |
+| `build-front`, `test-front`, `sonar-front` | build Angular, Vitest + couverture, Sonar                      | inchangés                                                 | **supprimés**                                                                                                                                       | —                                    |
+| `test-rust`                                | `cargo test` Linux + Windows, couverture sous Linux            | `cargo test --workspace`                                  | + kittest et snapshots (Mesa sous Linux, WARP sous Windows)                                                                                         | idem                                 |
+| `sonar-rust`                               | sources `src-tauri`                                            | `crates/` + `src-tauri`                                   | `crates/`                                                                                                                                           | idem                                 |
+| `e2e-scenarios`                            | `e2e/groups.json` contre `e2e/specs`                           | inchangé                                                  | `crates/e2e/groups.json` contre `crates/e2e/tests` (`scripts/e2e-groups.mjs` adapté)                                                                | idem                                 |
+| `e2e.yml` › `build`                        | `npm ci` + `tauri build --debug --features e2e`                | inchangé                                                  | `cargo build -p app --features e2e`, binaire + `identity/` en artefact                                                                              | idem                                 |
+| `e2e.yml` › `group`                        | WebKitGTK + xvfb, `npm run test:e2e` scénario par scénario     | inchangé (filet de l'extraction)                          | Mesa + xvfb sous Linux, WARP sous Windows ; cache Rust du build, `cargo test -p e2e --test <scénario>` un par un ; captures et journaux en artefact | idem                                 |
+| **nouveau** `visual`                       | —                                                              | —                                                         | captures kittest comparées à la référence d'`angular-reference`, rapport HTML en artefact ; informatif jusqu'en P10, bloquant ensuite               | comparé à la version egui précédente |
+| `security-cargo.yml`                       | `src-tauri/Cargo.*`, `deny.toml`                               | chemins du workspace racine                               | idem                                                                                                                                                | idem                                 |
+| `security-npm.yml`                         | `npm audit` de l'application                                   | inchangé                                                  | réduit aux outils de build (sandbox, scripts)                                                                                                       | idem                                 |
+| `release.yml`                              | `tauri-action` : NSIS, MSI, deb, rpm, AppImage                 | inchangé, non lancé                                       | inchangé, non lancé                                                                                                                                 | `cargo-packager` (P11, § 4.3)        |
+| `stop.yml`                                 | annule un run en échec                                         | inchangé                                                  | inchangé                                                                                                                                            | inchangé                             |
+| `.github/actions/setup-rust`               | dépendances apt de Tauri                                       | + cache du workspace                                      | dépendances apt d'egui (xkbcommon, Mesa, GTK, appindicator)                                                                                         | idem                                 |
+
+Entre la phase 2 et le portage de chaque écran, la couverture e2e est partielle : les scénarios
+arrivent avec leurs écrans (colonne « Phase » de l'annexe D), et la phase 2 livre le pilote avec
+le début de `01-first-launch` (porte, création du coffre, déverrouillage). `cargo deny` couvre les
+nouvelles dépendances (licences compatibles GPL-3.0 : MIT/Apache, OFL pour les polices, ISC pour
+Lucide, licence Unicode pour ICU4X) ; la skill `dependency-audit` passe avant chaque ajout.
 
 ### 8.5 Liste de contrôle manuelle (par version)
 
@@ -1387,20 +1458,21 @@ différents.
 
 ## 10. Risques
 
-| #   | Risque                                                                                                                          | Prob.   | Impact | Atténuation                                                                                                              |
-| --- | ------------------------------------------------------------------------------------------------------------------------------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------------------ |
-| R1  | L'éditeur riche WYSIWYG coûte bien plus que prévu (caret multi-blocs, tableaux, IME, aller-retour Markdown exact)               | élevée  | élevé  | spike S6 ; modèle testé hors egui ; lecteur livré d'abord ; marge sur P4 — pas de repli : la 1.0.0 attend l'éditeur (D4) |
-| R2  | Le rendu du texte d'egui s'écarte trop de la WebView (graisses, crénage, flou à 100 %)                                          | moyenne | élevé  | spike S2 dès le début ; instances statiques ; seuils ajustés ; écart E1 assumé et montré tôt                             |
-| R3  | Réveil d'une fenêtre cachée (tray, raccourci global, seconde instance) peu fiable avec eframe                                   | moyenne | moyen  | spike S1 ; repli sur une boucle winit maison avec `EventLoopProxy`                                                       |
-| R4  | Index : mémoire excessive sur le corpus de stress, ou incohérence après une écriture oubliée                                    | moyenne | élevé  | un seul chemin `refresh` ; oracle + tests de propriétés ; `lz4` ; mesure S4                                              |
-| R5  | Coloration : grammaires manquantes ou différentes pour une partie des 142 langues                                               | moyenne | faible | table exhaustive testée ; `.sublime-syntax` maison ; repli texte                                                         |
-| R6  | Mermaid et Prettier sans équivalent fidèle                                                                                      | élevée  | moyen  | D1, D2 ; corpus d'or ; écarts listés                                                                                     |
-| R7  | Chaîne de paquets ou updater mal réglés à la première publication                                                               | moyenne | moyen  | spike S9 ; installation et mise à jour 1.0.0 → 1.0.1 testées en CI avant la publication                                  |
-| R8  | Pilotes graphiques (vieux GPU, VM sans accélération, Wayland exotique)                                                          | moyenne | moyen  | `wgpu` avec repli GL et WARP ; option `--renderer=gl` ; message clair au lieu d'un plantage                              |
-| R9  | Régressions d'accessibilité (AccessKit moins riche que le DOM)                                                                  | moyenne | moyen  | helper de nœuds obligatoire dans chaque widget ; audit P10 ; tests sur l'arbre                                           |
-| R10 | Dérive du planning : ~180 composants, effort sous-estimé                                                                        | élevée  | moyen  | phases livrables, jalons M1/M2, aucune publication intermédiaire à tenir, parallélisation P6/P7                          |
-| R11 | Évolution d'egui (API qui casse entre versions) pendant un an de travail                                                        | élevée  | faible | version épinglée, montée de version volontaire une fois par phase                                                        |
-| R12 | Perte de fonctions « gratuites » de la WebView (correcteur, menus contextuels, sélection de texte partout, zoom `Ctrl+molette`) | élevée  | faible | inventaire en P0 ; E5, E10 ; sélection de texte activée sur les étiquettes utiles                                        |
+| #   | Risque                                                                                                                          | Prob.   | Impact | Atténuation                                                                                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------- | ------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | L'éditeur riche WYSIWYG coûte bien plus que prévu (caret multi-blocs, tableaux, IME, aller-retour Markdown exact)               | élevée  | élevé  | spike S6 ; modèle testé hors egui ; lecteur livré d'abord ; marge sur P4 — pas de repli : la 1.0.0 attend l'éditeur (D4)                                                   |
+| R2  | Le rendu du texte d'egui s'écarte trop de la WebView (graisses, crénage, flou à 100 %)                                          | moyenne | élevé  | spike S2 dès le début ; instances statiques ; seuils ajustés ; écart E1 assumé et montré tôt                                                                               |
+| R3  | Réveil d'une fenêtre cachée (tray, raccourci global, seconde instance) peu fiable avec eframe                                   | moyenne | moyen  | spike S1 ; repli sur une boucle winit maison avec `EventLoopProxy`                                                                                                         |
+| R4  | Index : mémoire excessive sur le corpus de stress, ou incohérence après une écriture oubliée                                    | moyenne | élevé  | un seul chemin `refresh` ; oracle + tests de propriétés ; `lz4` ; mesure S4                                                                                                |
+| R5  | Coloration : grammaires manquantes ou différentes pour une partie des 142 langues                                               | moyenne | faible | table exhaustive testée ; `.sublime-syntax` maison ; repli texte                                                                                                           |
+| R6  | Mermaid et Prettier sans équivalent fidèle                                                                                      | élevée  | moyen  | D1, D2 ; corpus d'or ; écarts listés                                                                                                                                       |
+| R7  | Chaîne de paquets ou updater mal réglés à la première publication                                                               | moyenne | moyen  | spike S9 ; installation et mise à jour 1.0.0 → 1.0.1 testées en CI avant la publication                                                                                    |
+| R8  | Pilotes graphiques (vieux GPU, VM sans accélération, Wayland exotique)                                                          | moyenne | moyen  | `wgpu` avec repli GL et WARP ; option `--renderer=gl` ; message clair au lieu d'un plantage                                                                                |
+| R9  | Régressions d'accessibilité (AccessKit moins riche que le DOM)                                                                  | moyenne | moyen  | helper de nœuds obligatoire dans chaque widget ; audit P10 ; tests sur l'arbre                                                                                             |
+| R10 | Dérive du planning : ~180 composants, effort sous-estimé                                                                        | élevée  | moyen  | phases livrables, jalons M1/M2, aucune publication intermédiaire à tenir, parallélisation P6/P7                                                                            |
+| R11 | Évolution d'egui (API qui casse entre versions) pendant un an de travail                                                        | élevée  | faible | version épinglée, montée de version volontaire une fois par phase                                                                                                          |
+| R12 | Perte de fonctions « gratuites » de la WebView (correcteur, menus contextuels, sélection de texte partout, zoom `Ctrl+molette`) | élevée  | faible | inventaire en P0 ; E5, E10 ; sélection de texte activée sur les étiquettes utiles                                                                                          |
+| R13 | `egui_inspection` est jeune (0.37) : protocole qui change, ou pilote e2e instable en CI                                         | moyenne | moyen  | spike S10 ; version épinglée ; le protocole n'est appelé que depuis le pilote `e2e`, un seul endroit à adapter ; repli : petit canal de contrôle maison sur le même modèle |
 
 ---
 
@@ -1432,9 +1504,17 @@ Arrêtées le 2026-11-02 ; seule D1 attend une mesure.
 - **`CLAUDE.md`** : commandes (plus de npm pour l'application), principes (frontière cœur/UI à la
   place de l'IPC), pièges retirés (`@defer`, CSP, `bindings.ts`, WebKit, zoneless) et nouveaux
   (thread UI sans E/S, virtualisation, `author_id`, persistance d'eframe désactivée, champ secret).
-- **Skills** (`.claude/skills/`) : `angular-ui` → `egui-ui` ; `tauri-integration` →
-  `platform-integration` ; `desktop-e2e-testing` → scénarios kittest ; `verify-change` et
-  `add-feature` mis à jour ; `angular-developer` retiré de `PROVENANCE.md`.
+- **Skills** (`.claude/skills/`) :
+  - **déjà fait** (2026-11-02) : `rust-guidelines` vendue depuis `microsoft/rust-guidelines`
+    (copie non modifiée, `SKILL.md` local qui fixe les priorités) ; `egui-ui` écrite localement —
+    ni `emilk/egui` ni `rerun-io` ne publient de skill, et les packs communautaires décrivent
+    d'autres architectures (`PROVENANCE.md`) ; règle clean code / KISS ajoutée à `CLAUDE.md` ;
+  - **en phase 2** : `angular-ui` et `angular-developer` retirées ; `desktop-e2e-testing` réécrite
+    pour le pilote `egui_inspection` ; `tauri-integration` → `platform-integration` ;
+    `verify-change` et `add-feature` mis à jour ; `egui-ui` complétée par ce que les premiers écrans
+    auront fixé ;
+  - **outil local facultatif** : `egui_mcp` dans son `.mcp.json` (local, jamais versionné) pour que
+    Claude Code voie et conduise l'application egui en cours d'écriture.
 - **`docs/security.md`** : index résident, champ secret, fin de la CSP.
 - **`docs/releasing.md`** : nouveau workflow de paquets et de signatures.
 - **`README.md`, `CONTRIBUTING.md`, `docs/tour.gif`** : prérequis (plus de Node ni de WebView2 pour
@@ -1541,48 +1621,48 @@ enveloppes Tauri d'une ligne ne vivent que pendant la phase 1.
 | `backup`                        | 3         | restauration : vide le `Mutex` et l'index d'abord                                                                                                                                                                                               |
 | `recovery`, `changelog`, `json` | 2, 2, 1   | inchangés                                                                                                                                                                                                                                       |
 
-## Annexe D — Scénarios e2e → scénarios kittest
+## Annexe D — Scénarios e2e : de WebdriverIO au pilote egui_inspection
 
-Chaque fichier devient `crates/app/tests/scenarios/<nn>_<nom>.rs`, même nom, même ordre,
-profil vierge, même groupe de CI.
+Chaque fichier devient `crates/e2e/tests/<nn>_<nom>.rs`, même nom, même ordre, même groupe de CI,
+lancé seul contre le binaire `--features e2e` sur un profil vierge (§ 8.3).
 
-| #   | Scénario             | Phase | Particularité du portage                                                                             |
-| --- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------- |
-| 01  | first-launch         | P3    | échantillons semés en une transaction                                                                |
-| 02  | note-lifecycle       | P3    |                                                                                                      |
-| 03  | editing-a-note       | P4    |                                                                                                      |
-| 04  | trash-and-undo       | P3    |                                                                                                      |
-| 05  | spaces               | P3    |                                                                                                      |
-| 06  | search-and-filters   | P3    | les mesures de mise en page deviennent des assertions sur les boîtes AccessKit, à 640/1 100/1 330 px |
-| 07  | checklists           | P4    | réordonner au pointeur simulé                                                                        |
-| 08  | placeholder-fields   | P3    |                                                                                                      |
-| 09  | quick-palette        | P3    | `GlobalAction` injectée à la place du raccourci système                                              |
-| 10  | library-transfer     | P8    | `FileDialog` faussé                                                                                  |
-| 11  | attachments          | P4    | dépôt simulé par `RawInput::dropped_files`                                                           |
-| 12  | preferences          | P8    |                                                                                                      |
-| 13  | multiple-selection   | P3    |                                                                                                      |
-| 14  | tag-manager          | P3    |                                                                                                      |
-| 15  | preferences-on-disk  | P8    | relit les mêmes `preferences.json` que Tauri                                                         |
-| 16  | passphrase-change    | P8    |                                                                                                      |
-| 17  | folders              | P5    |                                                                                                      |
-| 18  | board                | P5    |                                                                                                      |
-| 19  | board-gesture        | P5    | hauteur d'en-tête de zone mesurée contre `ZONE_HEADER`                                               |
-| 20  | folder-descent       | P5    |                                                                                                      |
-| 21  | folders-travel       | P5    |                                                                                                      |
-| 22  | note-history         | P4    |                                                                                                      |
-| 23  | backups              | P8    |                                                                                                      |
-| 24  | forgotten-passphrase | P8    |                                                                                                      |
-| 25  | libraries            | P8    | reste le dernier ; changement de bibliothèque = réinitialisation de l'état                           |
-| 26  | formatting           | P4    | corpus d'or du formatage (D1)                                                                        |
-| 27  | json-explorer        | P4    |                                                                                                      |
-| 28  | areas                | P8    | `Ctrl+1/2/3` par position                                                                            |
-| 29  | tools                | P7    |                                                                                                      |
-| 30  | http                 | P6    | serveur local de test comme aujourd'hui                                                              |
-| 31  | http-environments    | P6    |                                                                                                      |
-| 32  | http-code            | P6    |                                                                                                      |
-| 33  | calc                 | P4    |                                                                                                      |
-| 34  | http-scripts         | P6    | hôte de scripts réel (`CARGO_BIN_EXE_devnotes`)                                                      |
-| 35  | http-runner          | P6    |                                                                                                      |
+| #   | Scénario             | Phase | Particularité du portage                                                                                                                              |
+| --- | -------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 01  | first-launch         | P2–P3 | porte et coffre en P2 ; échantillons semés en une transaction en P3                                                                                   |
+| 02  | note-lifecycle       | P3    |                                                                                                                                                       |
+| 03  | editing-a-note       | P4    |                                                                                                                                                       |
+| 04  | trash-and-undo       | P3    |                                                                                                                                                       |
+| 05  | spaces               | P3    |                                                                                                                                                       |
+| 06  | search-and-filters   | P3    | mesures de mise en page sur les boîtes de l'arbre AccessKit, fenêtre à 640/1 100/1 330 px (`Resize`)                                                  |
+| 07  | checklists           | P4    | réordonner par événements pointeur injectés                                                                                                           |
+| 08  | placeholder-fields   | P3    |                                                                                                                                                       |
+| 09  | quick-palette        | P3    | `devnotes --action palette` en seconde instance, à la place de `emitGlobalAction`                                                                     |
+| 10  | library-transfer     | P8    | dialogue de la saveur `e2e` (`DEVNOTES_E2E_DIALOG`)                                                                                                   |
+| 11  | attachments          | P4    | pièce jointe par « Joindre » et le dialogue `e2e` ; collage d'image par le vrai presse-papiers, sauté si la machine n'en offre pas, comme aujourd'hui |
+| 12  | preferences          | P8    |                                                                                                                                                       |
+| 13  | multiple-selection   | P3    |                                                                                                                                                       |
+| 14  | tag-manager          | P3    |                                                                                                                                                       |
+| 15  | preferences-on-disk  | P8    | relance réelle ; relit les `preferences.json`                                                                                                         |
+| 16  | passphrase-change    | P8    |                                                                                                                                                       |
+| 17  | folders              | P5    |                                                                                                                                                       |
+| 18  | board                | P5    |                                                                                                                                                       |
+| 19  | board-gesture        | P5    | glissers injectés ; hauteur d'en-tête de zone mesurée contre `ZONE_HEADER`                                                                            |
+| 20  | folder-descent       | P5    |                                                                                                                                                       |
+| 21  | folders-travel       | P5    |                                                                                                                                                       |
+| 22  | note-history         | P4    |                                                                                                                                                       |
+| 23  | backups              | P8    | relance réelle (la copie se prend au déverrouillage)                                                                                                  |
+| 24  | forgotten-passphrase | P8    |                                                                                                                                                       |
+| 25  | libraries            | P8    | reste le dernier ; changement de bibliothèque = réinitialisation de l'état                                                                            |
+| 26  | formatting           | P4    | corpus d'or du formatage (D1)                                                                                                                         |
+| 27  | json-explorer        | P4    |                                                                                                                                                       |
+| 28  | areas                | P8    | `Ctrl+1/2/3` par position                                                                                                                             |
+| 29  | tools                | P7    |                                                                                                                                                       |
+| 30  | http                 | P6    | serveur local de test comme aujourd'hui                                                                                                               |
+| 31  | http-environments    | P6    |                                                                                                                                                       |
+| 32  | http-code            | P6    |                                                                                                                                                       |
+| 33  | calc                 | P4    |                                                                                                                                                       |
+| 34  | http-scripts         | P6    | hôte de scripts réel : le binaire se relance lui-même                                                                                                 |
+| 35  | http-runner          | P6    |                                                                                                                                                       |
 
 ## Annexe E — Dépendances retirées et ajoutées
 
@@ -1596,7 +1676,7 @@ RxJS, GraphQL) et de test (Vitest, jsdom, WebdriverIO, angular-eslint…) ; côt
 
 | Rôle                | Crates                                                                                                                                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Interface           | `eframe` (feature `wgpu`, sans `persistence`), `egui`, `egui_extras` (images, dates ; sans `http`), `egui_kittest` (dev)                                                                                            |
+| Interface           | `eframe` (feature `wgpu`, sans `persistence`), `egui`, `egui_extras` (images, dates ; sans `http`), `egui_kittest` (dev) ; feature `inspection` d'eframe (`egui_inspection`) dans la seule saveur `e2e`             |
 | Texte               | `ropey`, `syntect` (`default-fancy`), `two-face`, `fontdb`                                                                                                                                                          |
 | Formatage (D1)      | `dprint-plugin-typescript`, `dprint-plugin-json`, `dprint-plugin-markdown`, `malva`, `markup_fmt`, `pretty_yaml`, `graphql-parser`                                                                                  |
 | Dessin et images    | `tiny-skia`, `resvg`/`usvg`, `image`                                                                                                                                                                                |
