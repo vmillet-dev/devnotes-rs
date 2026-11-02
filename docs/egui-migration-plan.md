@@ -38,7 +38,7 @@
 
 **Stratégie : un cœur partagé, deux coquilles, une bascule à parité** (« strangler »).
 
-1. On extrait d'abord tout le Rust existant dans une crate **`devnotes-core` sans Tauri**. Les 190
+1. On extrait d'abord tout le Rust existant dans une crate **`engine` sans Tauri**. Les 190
    commandes deviennent des fonctions Rust ordinaires ; l'application Tauri actuelle devient une
    coquille mince au-dessus et **continue d'être publiée** pendant toute la migration.
 2. On construit à côté une coquille **`devnotes` egui** qui appelle les mêmes fonctions, sans
@@ -73,7 +73,7 @@ cryptographie, de dérivation de clé ni de format de fichier n'est nécessaire.
 
 | Partie                            | Taille (lignes)                                                      | Devenir                            |
 | --------------------------------- | -------------------------------------------------------------------- | ---------------------------------- |
-| Rust `src-tauri/src/`             | 72 836                                                               | conservé (→ `devnotes-core`)       |
+| Rust `src-tauri/src/`             | 72 836                                                               | conservé (→ `engine`)              |
 | dont fichiers qui nomment `tauri` | 17 fichiers, 9 096 lignes                                            | réécrits en API sans Tauri         |
 | Commandes `#[tauri::command]`     | 190                                                                  | fonctions du cœur (annexe C)       |
 | TypeScript hors specs             | 52 255                                                               | réécrit en Rust/egui               |
@@ -180,54 +180,62 @@ sont eux-mêmes construits sur ces crates (`global-hotkey`, `tray-icon`, `muda`,
 ```
 Cargo.toml                    workspace (resolver 3, lints partagés : unsafe_code = forbid, pedantic)
 crates/
-├── devnotes-core/            ← src-tauri/src actuel, sans Tauri : métier, SQL, coffre, HTTP, outils
+├── engine/                   ← src-tauri/src actuel, sans Tauri : métier, SQL, coffre, HTTP, outils
 │   ├── src/notes/ …          mêmes features, même découpage <feature>.rs / model.rs / store.rs
 │   ├── src/index/            NOUVEAU : index de notes en mémoire (§ 3.5)
 │   ├── src/host.rs           NOUVEAU : traits Paths + EventSink (remplacent AppHandle/emit)
 │   ├── migrations/  resources/  sandbox/   (déplacés tels quels)
 │   ├── benches/  tests/
-├── devnotes-text/            NOUVEAU : noyau d'édition (rope, sélection, annuler, recherche),
+├── text/                     NOUVEAU : noyau d'édition (rope, sélection, annuler, recherche),
 │                             coloration (syntect), formatage (Prettier-like), champs {{}}
-├── devnotes-richtext/        NOUVEAU : modèle de document Markdown, parse/sérialise, échappement
-├── devnotes-drawing/         NOUVEAU : scène compatible Fabric, géométrie, rendu PNG/SVG
-├── devnotes-diagram/         NOUVEAU : rendu des blocs mermaid (§ 3.9)
-├── devnotes-i18n/            NOUVEAU : fr.json/en.json, pluriels ICU, clés générées
-├── devnotes-platform/        NOUVEAU : tray, raccourcis globaux, autostart, instance unique,
+├── richtext/                 NOUVEAU : modèle de document Markdown, parse/sérialise, échappement
+├── drawing/                  NOUVEAU : scène compatible Fabric, géométrie, rendu PNG/SVG
+├── diagram/                  NOUVEAU : rendu des blocs mermaid (§ 3.9)
+├── i18n/                     NOUVEAU : fr.json/en.json, pluriels ICU, clés générées
+├── platform/                 NOUVEAU : tray, raccourcis globaux, autostart, instance unique,
 │                             notifications, dialogues, presse-papiers, ouverture, updater, chemins
-├── devnotes-ui/              NOUVEAU : l'application egui (thème, widgets, zones, état)
-└── devnotes/                 NOUVEAU : binaire (main : hôte de scripts ou eframe)
+├── ui/                       NOUVEAU : l'application egui (thème, widgets, zones, état)
+└── app/                      NOUVEAU : le binaire `devnotes` (main : hôte de scripts ou eframe)
 src-tauri/                    coquille Tauri actuelle, mince, jusqu'à la bascule — puis supprimée
 src/ e2e/ package.json …      front Angular, jusqu'à la bascule — puis supprimés
 ```
 
-`devnotes-core` garde le nom de bibliothèque `devnotes_core` ; les benchs et tests d'intégration
-suivent. Le binaire final s'appelle toujours `devnotes` (`devnotes.exe`) : l'installeur, le
-raccourci, l'entrée de démarrage automatique et la relance en hôte de scripts
-(`--devnotes-script-host`, lu dans `main` avant toute fenêtre) en dépendent.
+**Nommage.** Les crates portent un nom court, sans préfixe : le dossier `crates/` et le workspace
+disent déjà de quel projet elles sont, et aucune n'est publiée. Le cœur s'appelle **`engine`** et
+non `core` : une dépendance nommée `core` masquerait la crate `core` de Rust, que les macros
+dérivées (serde, diesel, thiserror…) désignent en `::core::…`. Les autres noms (`text`, `ui`,
+`i18n`…) ne heurtent ni la bibliothèque standard ni une dépendance du workspace ; un nouveau nom est
+vérifié contre `Cargo.lock` avant d'être pris. Les benchs et tests d'intégration du cœur importent
+`engine` au lieu de `devnotes_lib`.
+
+Le binaire final s'appelle toujours `devnotes` (`devnotes.exe`), déclaré par `[[bin]] name =
+"devnotes"` dans la crate `app` : l'installeur, le raccourci, l'entrée de démarrage automatique et
+la relance en hôte de scripts (`--devnotes-script-host`, lu dans `main` avant toute fenêtre) en
+dépendent.
 
 ```mermaid
 flowchart LR
-  bin[devnotes bin] --> ui[devnotes-ui]
-  bin --> core
-  ui --> core[devnotes-core]
-  ui --> text[devnotes-text]
-  ui --> rich[devnotes-richtext]
-  ui --> draw[devnotes-drawing]
-  ui --> diag[devnotes-diagram]
-  ui --> i18n[devnotes-i18n]
-  ui --> plat[devnotes-platform]
-  rich --> text
-  tauri[src-tauri, temporaire] --> core
+  app["app (binaire devnotes)"] --> ui
+  app --> engine
+  ui --> engine
+  ui --> text
+  ui --> richtext
+  ui --> drawing
+  ui --> diagram
+  ui --> i18n
+  ui --> platform
+  richtext --> text
+  tauri["src-tauri (temporaire)"] --> engine
 ```
 
 ### 3.2 Règles de dépendance (elles remplacent la frontière IPC)
 
-| Crate                                                | Peut dépendre de                     | Ne doit jamais dépendre de                 |
-| ---------------------------------------------------- | ------------------------------------ | ------------------------------------------ |
-| `devnotes-core`                                      | Diesel, crypto, reqwest, tokio       | egui, eframe, winit, Tauri, platform       |
-| `devnotes-text`, `-richtext`, `-drawing`, `-diagram` | `unicode-*`, `syntect`, `tiny-skia`… | egui (le rendu egui est dans `ui`), Diesel |
-| `devnotes-platform`                                  | crates natives (tray-icon, rfd…)     | egui, Diesel, core                         |
-| `devnotes-ui`                                        | tout ce qui précède                  | Diesel, `rusqlite`, SQL brut               |
+| Crate                                    | Peut dépendre de                     | Ne doit jamais dépendre de                 |
+| ---------------------------------------- | ------------------------------------ | ------------------------------------------ |
+| `engine`                                 | Diesel, crypto, reqwest, tokio       | egui, eframe, winit, Tauri, `platform`     |
+| `text`, `richtext`, `drawing`, `diagram` | `unicode-*`, `syntect`, `tiny-skia`… | egui (le rendu egui est dans `ui`), Diesel |
+| `platform`                               | crates natives (tray-icon, rfd…)     | egui, Diesel, `engine`                     |
+| `ui`                                     | tout ce qui précède                  | Diesel, `rusqlite`, SQL brut               |
 
 Les principes de `CLAUDE.md` se transposent :
 
@@ -235,10 +243,10 @@ Les principes de `CLAUDE.md` se transposent :
   demande une vue au cœur. La différence : la vue n'est plus sérialisée en JSON, elle est passée par
   valeur ou par `Arc`.
 - **Feature-first côté cœur** : `<feature>.rs` ne contient plus de `#[tauri::command]` mais des
-  fonctions de service (`notes::query_notes(core: &Core, query)`, § 3.3.3) — valider, verrouiller,
+  fonctions de service (`notes::query_notes(engine: &Engine, query)`, § 3.3.3) — valider, verrouiller,
   déléguer, traduire l'erreur — exactement le rôle des commandes actuelles. `model.rs` et
   `store.rs` ne bougent pas.
-- **L'arborescence de l'UI a la forme de l'écran** : `devnotes-ui/src/notes/` (`sidebar`,
+- **L'arborescence de l'UI a la forme de l'écran** : `ui/src/notes/` (`sidebar`,
   `header`, `canvas`, `overlays`, `ui`), `tools/`, `http/`, `titlebar/`, `banners/` contiennent du
   dessin ; `state/`, `services/`, `api/`, `backend.rs` contiennent ce qui n'a pas de place à
   l'écran ; `widgets/` remplace `shared/` et n'accède à aucun état global.
@@ -262,13 +270,13 @@ flowchart TB
     api -->|"Backend::run / spawn → Pending"| backend["Backend"]
     backend -->|"pool « db » (bloquant)"| core
     backend -->|"runtime tokio (réseau)"| core
-    subgraph core["devnotes-core : Arc#lt;Core#gt;"]
+    subgraph core["engine : Arc#lt;Engine#gt;"]
       db["Db = Mutex#lt;Option#lt;Library#gt;#gt;"]
       idx["NoteIndex (RwLock, instantanés Arc)"]
       net["Sending · Runs · Sockets · Restored"]
     end
-    core -->|"CoreEvent via EventSink"| chan["canal d'événements"]
-    plat["devnotes-platform : tray, raccourcis, instance unique, dépôts"] -->|"GlobalAction"| chan
+    core -->|"EngineEvent via EventSink"| chan["canal d'événements"]
+    plat["platform : tray, raccourcis, instance unique, dépôts"] -->|"GlobalAction"| chan
     chan -->|"vidé en début de frame + request_repaint"| state
   end
   core --> disk[("Profil : bibliothèques, vault.json, preferences.json")]
@@ -281,19 +289,19 @@ Trois règles tiennent tout le reste :
    `Backend` et revient par un `Pending` ; aucun `block_on`, aucun verrou pris depuis le dessin.
 2. **Le cœur ne sait rien de l'interface.** Il ne connaît ni egui ni Tauri : il reçoit deux traits
    (`Paths`, `EventSink`) et renvoie des valeurs ou des `AppError`.
-3. **Une seule façade nomme les fonctions du cœur** : `devnotes-ui/src/api/`. C'est l'équivalent de
+3. **Une seule façade nomme les fonctions du cœur** : `ui/src/api/`. C'est l'équivalent de
    la règle actuelle « seuls `core/data/` et `core/ipc/` appellent les commandes ». Les types du
    modèle (`NotesQuery`, `DisplayNote`, `Language`, `HttpRequest`…) sont, eux, utilisés partout tels
    quels : plus de types miroirs, plus de `note.mapper.ts`.
 
-#### 3.3.2 `Core` : la racine de composition
+#### 3.3.2 `Engine` : la racine de composition
 
 Aujourd'hui l'état natif est enregistré dans Tauri (`app.manage(Db)`, `Restored`, `Sending`, `Runs`,
 `Sockets`) et retrouvé par `app.state::<…>()`. Il devient une structure possédée par la coquille :
 
 ```rust
-// devnotes-core/src/core.rs — créée une fois par la coquille, partagée en Arc<Core>
-pub struct Core {
+// engine/src/lib.rs — créée une fois par la coquille, partagée en Arc<Engine>
+pub struct Engine {
     db: Db,                           // Mutex<Option<Library>> : inchangé
     index: NoteIndex,                 // § 3.5 ; vide tant que la bibliothèque est fermée
     sending: http::send::Sending,     // envois en vol, corps gardés par id
@@ -305,7 +313,7 @@ pub struct Core {
     runtime: tokio::runtime::Handle,  // fourni par la coquille
 }
 
-impl Core {
+impl Engine {
     /// Aucune E/S lourde : la bibliothèque reste fermée jusqu'à `vault::unlock`.
     pub fn new(paths: Arc<dyn Paths>, events: Arc<dyn EventSink>, runtime: Handle) -> Self;
 }
@@ -313,11 +321,11 @@ impl Core {
 
 | État                                                      | Propriétaire                                                                         | Où il vit                                |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------- |
-| Connexion SQLite + clé (`Library`)                        | `Core.db`                                                                            | pool « db »                              |
-| Index de notes                                            | `Core.index`                                                                         | pool rayon (construction), lu partout    |
-| Envois, exécutions, sockets, restauration mise de côté    | `Core.sending/runs/sockets/restored`                                                 | runtime tokio                            |
+| Connexion SQLite + clé (`Library`)                        | `Engine.db`                                                                          | pool « db »                              |
+| Index de notes                                            | `Engine.index`                                                                       | pool rayon (construction), lu partout    |
+| Envois, exécutions, sockets, restauration mise de côté    | `Engine.sending/runs/sockets/restored`                                               | runtime tokio                            |
 | Préférences de l'application et de la bibliothèque        | `ui::services::preferences` (mêmes fichiers) ; le cœur relit seul `automaticBackups` | thread UI (cache) + écriture hors thread |
-| Tray, raccourcis globaux, instance unique, démarrage auto | `devnotes-platform`                                                                  | thread plateforme                        |
+| Tray, raccourcis globaux, instance unique, démarrage auto | `platform`                                                                           | thread plateforme                        |
 | Brouillons, sélection, onglets, focus, menus ouverts      | `AppState`                                                                           | thread UI                                |
 
 #### 3.3.3 L'API du cœur : trois familles de fonctions
@@ -327,14 +335,14 @@ signature change, et elle dit sur quel thread on l'appelle :
 
 ```rust
 // 1. Données : synchrones et bloquantes — appelées sur le pool « db », jamais sur le thread UI.
-pub fn query_notes(core: &Core, query: NotesQuery) -> Result<NotesView, AppError>;
-pub fn update_note(core: &Core, id: &str, patch: NotePatch) -> Result<DisplayNote, AppError>;
-pub fn unlock(core: &Core, passphrase: Zeroizing<String>) -> Result<(), AppError>;
+pub fn query_notes(engine: &Engine, query: NotesQuery) -> Result<NotesView, AppError>;
+pub fn update_note(engine: &Engine, id: &str, patch: NotePatch) -> Result<DisplayNote, AppError>;
+pub fn unlock(engine: &Engine, passphrase: Zeroizing<String>) -> Result<(), AppError>;
 
 // 2. Réseau : asynchrones, sur le runtime du cœur ; ne tiennent jamais le verrou en attendant.
-pub async fn send_http_request(core: Arc<Core>, request: SendRequest) -> Result<SentResponse, AppError>;
-pub fn cancel_http_send(core: &Core, id: &str);
-pub async fn connect_websocket(core: Arc<Core>, request: ConnectRequest) -> Result<(), AppError>;
+pub async fn send_http_request(engine: Arc<Engine>, request: SendRequest) -> Result<SentResponse, AppError>;
+pub fn cancel_http_send(engine: &Engine, id: &str);
+pub async fn connect_websocket(engine: Arc<Engine>, request: ConnectRequest) -> Result<(), AppError>;
 
 // 3. Outils : fonctions pures, comme aujourd'hui dans tools/* (le `off_thread` part dans la coquille).
 pub fn convert_case(request: &CaseRequest) -> CaseAnswer;
@@ -349,10 +357,10 @@ pub async fn query_notes<R: Runtime>(query: NotesQuery, app: AppHandle<R>) -> Re
     blocking(app, move |_, db| { let mut connection = lock(db)?; /* fetch, decorations, view::build */ }).await
 }
 
-// Demain — devnotes-core/src/notes.rs
-pub fn query_notes(core: &Core, query: NotesQuery) -> Result<NotesView, AppError> {
-    let decorations = { let mut c = lock(core.db())?; store::decorations(&mut c, &query)? }; // verrou relâché
-    let index = core.index().read()?;            // jamais le verrou de la base
+// Demain — engine/src/notes.rs
+pub fn query_notes(engine: &Engine, query: NotesQuery) -> Result<NotesView, AppError> {
+    let decorations = { let mut c = lock(engine.db())?; store::decorations(&mut c, &query)? }; // verrou relâché
+    let index = engine.index().read()?;            // jamais le verrou de la base
     Ok(view::build(index.matching(&query), index.facets(&query), &query, decorations))
 }
 ```
@@ -365,15 +373,15 @@ front Angular ne voient rien.
 
 **Ce qui sort du cœur.** Quatre endroits touchent encore la plateforme depuis Rust :
 
-| Aujourd'hui                                                    | Demain                                                                                                    |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `attach_clipboard_image` lit le presse-papiers (plugin)        | l'UI lit l'image (`arboard`), le cœur reçoit des octets : `attachments::attach_image(core, note_id, png)` |
-| `copy_qr_code` écrit dans le presse-papiers (plugin)           | le cœur rend le PNG, l'UI le copie                                                                        |
-| `backup::take` lit `automaticBackups` par `tauri-plugin-store` | le cœur lit `preferences.json` lui-même (`serde_json`, `Paths::profile`, `layout::PREFERENCES`)           |
-| `resource_dir()`, `app_data_dir()`                             | `Paths`                                                                                                   |
+| Aujourd'hui                                                    | Demain                                                                                                      |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `attach_clipboard_image` lit le presse-papiers (plugin)        | l'UI lit l'image (`arboard`), le cœur reçoit des octets : `attachments::attach_image(engine, note_id, png)` |
+| `copy_qr_code` écrit dans le presse-papiers (plugin)           | le cœur rend le PNG, l'UI le copie                                                                          |
+| `backup::take` lit `automaticBackups` par `tauri-plugin-store` | le cœur lit `preferences.json` lui-même (`serde_json`, `Paths::profile`, `layout::PREFERENCES`)             |
+| `resource_dir()`, `app_data_dir()`                             | `Paths`                                                                                                     |
 
 `desktop.rs` (tray, raccourcis globaux, `sync_tray`, `hold_quit`, `set_window_behavior`) quitte le
-cœur pour `devnotes-platform`, appelé par l'UI. Les dialogues de fichiers restent ce qu'ils sont
+cœur pour `platform`, appelé par l'UI. Les dialogues de fichiers restent ce qu'ils sont
 déjà : l'interface choisit le chemin, le cœur reçoit un chemin.
 
 **Erreurs.** `AppError { code, params, detail }` ne change pas. L'UI la traduit par un `match`
@@ -384,7 +392,7 @@ l'écran.
 #### 3.3.4 `Paths` et `EventSink` : ce que le cœur demande à sa coquille
 
 ```rust
-// devnotes-core/src/host.rs
+// engine/src/host.rs
 pub trait Paths: Send + Sync {
     fn profile(&self) -> &Path;       // app_data_dir : registre, libraries/, preferences.json
     fn resources(&self) -> &Path;     // identity/ (listes de l'outil identité)
@@ -392,11 +400,11 @@ pub trait Paths: Send + Sync {
 }
 
 pub trait EventSink: Send + Sync {
-    fn emit(&self, event: CoreEvent);
+    fn emit(&self, event: EngineEvent);
 }
 
 #[non_exhaustive]
-pub enum CoreEvent {
+pub enum EngineEvent {
     Socket { id: String, event: SocketEvent },   // remplace WEBSOCKET_EVENT
     Console(ConsoleEvent),                       // remplace HTTP_CONSOLE_EVENT
     Run(RunEvent),                               // remplace HTTP_RUN_EVENT
@@ -405,11 +413,11 @@ pub enum CoreEvent {
 }
 ```
 
-| Implémentation           | `Paths`                            | `EventSink`                                              |
-| ------------------------ | ---------------------------------- | -------------------------------------------------------- |
-| `src-tauri` (temporaire) | `app.path()` de Tauri              | `app.emit(...)` avec les noms d'événements actuels       |
-| `devnotes-ui`            | `devnotes-platform::paths` (§ 4.1) | `crossbeam::Sender<CoreEvent>` + `ctx.request_repaint()` |
-| tests                    | dossier temporaire                 | `RecordingSink` qui garde les événements                 |
+| Implémentation           | `Paths`                   | `EventSink`                                                |
+| ------------------------ | ------------------------- | ---------------------------------------------------------- |
+| `src-tauri` (temporaire) | `app.path()` de Tauri     | `app.emit(...)` avec les noms d'événements actuels         |
+| `ui`                     | `platform::paths` (§ 4.1) | `crossbeam::Sender<EngineEvent>` + `ctx.request_repaint()` |
+| tests                    | dossier temporaire        | `RecordingSink` qui garde les événements                   |
 
 `GlobalAction` (tray, raccourcis, seconde instance) ne passe pas par le cœur : la plateforme
 l'envoie sur le même canal que l'UI vide.
@@ -417,9 +425,9 @@ l'envoie sur le même canal que l'UI vide.
 #### 3.3.5 Côté interface : `Backend`, `api/`, `Pending`, `QueryCell`, `Revision`
 
 ```rust
-// devnotes-ui/src/backend.rs
+// ui/src/backend.rs
 pub struct Backend {
-    core: Arc<Core>,
+    engine: Arc<Engine>,
     db_pool: rayon::ThreadPool,        // 2–4 threads : la base n'a qu'un verrou
     runtime: tokio::runtime::Runtime,  // multi-thread, 2 workers : réseau, updater
     ctx: egui::Context,                // pour réveiller l'UI à chaque résolution
@@ -428,18 +436,18 @@ pub struct Backend {
 impl Backend {
     pub fn run<T: Send + 'static>(
         &self,
-        job: impl FnOnce(&Core) -> Result<T, AppError> + Send + 'static,
+        job: impl FnOnce(&Engine) -> Result<T, AppError> + Send + 'static,
     ) -> Pending<T>;
 
-    pub fn spawn<T, F>(&self, job: impl FnOnce(Arc<Core>) -> F + Send + 'static) -> Pending<T>
+    pub fn spawn<T, F>(&self, job: impl FnOnce(Arc<Engine>) -> F + Send + 'static) -> Pending<T>
     where
         F: Future<Output = Result<T, AppError>> + Send + 'static,
         T: Send + 'static;
 }
 
-// devnotes-ui/src/api/notes.rs — une fonction par service, rien d'autre
+// ui/src/api/notes.rs — une fonction par service, rien d'autre
 pub fn query(backend: &Backend, query: NotesQuery) -> Pending<NotesView> {
-    backend.run(move |core| devnotes_core::notes::query_notes(core, query))
+    backend.run(move |e| engine::notes::query_notes(e, query))
 }
 ```
 
@@ -480,7 +488,7 @@ dossier temporaire).
 
 `DevNotesApp::update` fait toujours la même chose, dans cet ordre :
 
-1. **Vider les entrées** : `CoreEvent`, `GlobalAction`, fichiers déposés, révélation demandée par une
+1. **Vider les entrées** : `EngineEvent`, `GlobalAction`, fichiers déposés, révélation demandée par une
    seconde instance.
 2. **Récolter les `Pending`** : chaque état adopte ses réponses ; une écriture adoptée incrémente
    `Revision`.
@@ -493,14 +501,14 @@ dossier temporaire).
 
 #### 3.3.8 Cycles de vie
 
-| Moment                            | Ce qui se passe                                                                                                                                                                                                                                                                                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Lancement**                     | `main` : `--devnotes-script-host` → servir les scripts et sortir ; sinon chemins, journal, instance unique (une seconde instance demande « révéler » et sort), thread plateforme (tray, raccourcis), `Core::new` (bibliothèque fermée), eframe avec la fenêtre invisible à la géométrie restaurée, puis montrée. Première frame : `vault::state` → la porte. |
-| **Déverrouillage**                | `api::vault::unlock(Zeroizing)` sur le pool « db » : `gate::unlock`, puis les corvées de `sweep` (copie de sauvegarde, purge de la corbeille et de l'historique, fichiers orphelins, copies en clair) ; puis construction de l'index sur rayon avec `IndexProgress`. L'UI affiche les premières sections dès la première tranche.                            |
-| **Changement de bibliothèque**    | `api::libraries::open` (§ 3.3.6, point 4), puis `AppState::reset_library_scope()` : préférences de la bibliothèque rouvertes, états des notes et du HTTP remis à zéro, réglages de l'application gardés, retour à la porte. C'est ce que fait aujourd'hui le rechargement de la page.                                                                        |
-| **Restauration d'une sauvegarde** | même vidage, restauration, puis porte.                                                                                                                                                                                                                                                                                                                       |
-| **Fermer la fenêtre**             | avec un tray : `CancelClose` + fenêtre cachée ; sans tray : comme Quitter.                                                                                                                                                                                                                                                                                   |
-| **Quitter**                       | `HttpLeave` demande pour les requêtes non enregistrées ; brouillons d'éditeur validés (attente bornée) ; raccourcis libérés, tray retiré ; copies en clair balayées ; géométrie écrite ; sortie.                                                                                                                                                             |
+| Moment                            | Ce qui se passe                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Lancement**                     | `main` : `--devnotes-script-host` → servir les scripts et sortir ; sinon chemins, journal, instance unique (une seconde instance demande « révéler » et sort), thread plateforme (tray, raccourcis), `Engine::new` (bibliothèque fermée), eframe avec la fenêtre invisible à la géométrie restaurée, puis montrée. Première frame : `vault::state` → la porte. |
+| **Déverrouillage**                | `api::vault::unlock(Zeroizing)` sur le pool « db » : `gate::unlock`, puis les corvées de `sweep` (copie de sauvegarde, purge de la corbeille et de l'historique, fichiers orphelins, copies en clair) ; puis construction de l'index sur rayon avec `IndexProgress`. L'UI affiche les premières sections dès la première tranche.                              |
+| **Changement de bibliothèque**    | `api::libraries::open` (§ 3.3.6, point 4), puis `AppState::reset_library_scope()` : préférences de la bibliothèque rouvertes, états des notes et du HTTP remis à zéro, réglages de l'application gardés, retour à la porte. C'est ce que fait aujourd'hui le rechargement de la page.                                                                          |
+| **Restauration d'une sauvegarde** | même vidage, restauration, puis porte.                                                                                                                                                                                                                                                                                                                         |
+| **Fermer la fenêtre**             | avec un tray : `CancelClose` + fenêtre cachée ; sans tray : comme Quitter.                                                                                                                                                                                                                                                                                     |
+| **Quitter**                       | `HttpLeave` demande pour les requêtes non enregistrées ; brouillons d'éditeur validés (attente bornée) ; raccourcis libérés, tray retiré ; copies en clair balayées ; géométrie écrite ; sortie.                                                                                                                                                               |
 
 #### 3.3.9 Trois parcours de bout en bout
 
@@ -509,11 +517,11 @@ sequenceDiagram
   participant D as Dessin (thread UI)
   participant S as NotesQueryState
   participant B as Backend (pool db)
-  participant C as devnotes-core
+  participant C as engine
   D->>S: Action::Search("psql")
   Note over S: params changent : QueryCell relance (1 en vol + le plus récent)
   S->>B: api::notes::query(query)
-  B->>C: notes::query_notes(core, query)
+  B->>C: notes::query_notes(engine, query)
   C->>C: index.read() → view::build (aucun verrou de base)
   C-->>B: NotesView (Arc#lt;IndexedNote#gt;)
   B-->>S: Pending résolu + request_repaint
@@ -525,7 +533,7 @@ sequenceDiagram
   participant E as Éditeur
   participant N as NotesState
   participant B as Backend (pool db)
-  participant C as devnotes-core
+  participant C as engine
   E->>N: perte de focus → apply_patch(id, patch)
   Note over N: table UNCHANGED : rien n'a bougé → aucun appel
   N->>B: api::notes::update(id, patch)
@@ -538,10 +546,10 @@ sequenceDiagram
 sequenceDiagram
   participant T as HttpSendState
   participant B as Backend (tokio)
-  participant C as devnotes-core
+  participant C as engine
   participant K as EventSink → canal
   T->>B: api::http::send(request)
-  B->>C: send_http_request(core, request)
+  B->>C: send_http_request(engine, request)
   C->>C: verrou : héritage, variables, cookies → relâché
   C->>K: Console(...) pendant les scripts et les sauts
   C->>C: envoi reqwest, redirections une à une
@@ -558,19 +566,19 @@ flowchart LR
     wv["WebView Angular"] -->|invoke| cmds["src-tauri : une ligne par commande + conversion des vues"]
   end
   subgraph egui["devnotes (egui) — en construction"]
-    ui["devnotes-ui"] --> api["api/"]
+    ui["ui"] --> api["api/"]
   end
-  cmds --> core[("devnotes-core (même version, même dépôt)")]
+  cmds --> core[("engine (même version, même dépôt)")]
   api --> core
   core --> lock{{"verrou de profil (fd-lock)"}}
   lock --> disk[("Profil partagé")]
 ```
 
 - `src-tauri` ne garde que : `lib.rs` (builder, plugins, `collect_commands!`), `desktop.rs`, une
-  enveloppe `#[tauri::command]` d'une ligne par service (`blocking(core, |c| service(c, args))`),
+  enveloppe `#[tauri::command]` d'une ligne par service (`blocking(engine, |e| service(e, args))`),
   `TauriHost` (`Paths` + `EventSink`), et la conversion des nouvelles vues vers les types sérialisés
   actuels. `bindings.ts` ne change pas, le front Angular non plus.
-- Les deux coquilles se construisent dans le même workspace sur le même `devnotes-core` : un
+- Les deux coquilles se construisent dans le même workspace sur le même `engine` : un
   correctif du cœur part dans les deux.
 - Le verrou de profil empêche les deux applications d'ouvrir le même profil en même temps.
 - À la bascule, `src-tauri`, la conversion des vues, `TauriHost` et les dérivations `specta`
@@ -679,7 +687,7 @@ Règles du mode immédiat, à faire respecter en revue :
   un test Rust sur ces jetons (contraste 4,5:1 pour le texte, 3:1 pour les traits).
 - **Mixins → widgets** : chaque mixin de `_mixins.scss` (`surface`, `accent-state`,
   `unstyled-control`, `status-badge`, `priority-dot`, `text-field`, `eases`, `enters`…) devient une
-  fonction de peinture ou un widget de `devnotes-ui/src/widgets/`. Les widgets egui natifs ne sont
+  fonction de peinture ou un widget de `ui/src/widgets/`. Les widgets egui natifs ne sont
   utilisés que restylés via `Visuals`/`Style` ; les composants visibles (cartes, puces, menus,
   segmentés, boîtes de dialogue) sont **peints à la main** pour coller au CSS.
 - **Polices** : Inter et JetBrains Mono, embarquées (`include_bytes!`), mêmes tailles en px que le
@@ -711,13 +719,13 @@ Règles du mode immédiat, à faire respecter en revue :
 ### 3.8 Texte et édition : un noyau commun
 
 egui fournit `TextEdit`, suffisant pour les **champs d'une ligne** (recherche, noms, filtres) et
-les petits textes. Pour le reste, un noyau d'édition dans `devnotes-text`, sans egui, testé seul :
+les petits textes. Pour le reste, un noyau d'édition dans la crate `text`, sans egui, testé seul :
 
 - tampon `ropey`, positions en graphèmes (`unicode-segmentation`), sélection simple, historique
   annuler/rétablir regroupé par frappe, opérations (insérer, supprimer mot/ligne, indenter /
   désindenter avec `indentUnit`, déplacer des lignes, commenter), recherche et remplacement (casse,
   mot entier, regex, compteur de correspondances) ;
-- un widget egui `EditorView` par-dessus, dans `devnotes-ui/src/widgets/editor/` : galley par
+- un widget egui `EditorView` par-dessus, dans `ui/src/widgets/editor/` : galley par
   ligne visible, gouttière (numéros, marques), **indentation suspendue** des lignes repliées (que
   `TextEdit` ne sait pas faire), décorations (champs `{{x}}` donnés par
   `notes::placeholder::field_spans`, correspondances de recherche, résultats Calcul en marge),
@@ -735,13 +743,13 @@ d'annulation** (celui de `TextEdit` garde des copies du texte dans la mémoire d
 
 | Brique actuelle                                 | Remplacement                                                                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ----------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **CodeMirror 6** (éditeur, recherche)           | noyau `devnotes-text` + `EditorView` (§ 3.8)                                  | même raccourcis, même barre de recherche (« Code editor: find-and-replace bar… »)                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **CodeMirror 6** (éditeur, recherche)           | noyau `text` + `EditorView` (§ 3.8)                                           | même raccourcis, même barre de recherche (« Code editor: find-and-replace bar… »)                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | **Lezer / grammaires CodeMirror** (142 langues) | `syntect` + `two-face` (grammaires de bat), moteur `fancy-regex` (pas de C)   | les 7 classes `tok-*` de `_code-theme.scss` se mappent sur les portées TextMate (`keyword`, `string`, `constant`, `entity.name`, `variable.other.member`, `meta`, `comment`, `markup.deleted`) ; jeu de syntaxes chargé paresseusement sur un thread au démarrage ; une table langue → syntaxe testée de façon exhaustive (`Language` est un enum fermé) ; repli « texte » pour les modes hérités sans grammaire, comblés par des `.sublime-syntax` maison si besoin (HCL, Nix, Prisma, Solidity, Zig sont déjà des modes maison) |
-| **TipTap** (Note WYSIWYG)                       | `devnotes-richtext` (modèle) + widget egui `RichEditor`                       | § 3.9.1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| **Fabric.js** (Dessin)                          | `devnotes-drawing` + widget `DrawingCanvas`                                   | § 3.9.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| **Mermaid**                                     | `devnotes-diagram`                                                            | § 3.9.3                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **TipTap** (Note WYSIWYG)                       | `richtext` (modèle) + widget egui `RichEditor`                                | § 3.9.1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Fabric.js** (Dessin)                          | `drawing` + widget `DrawingCanvas`                                            | § 3.9.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Mermaid**                                     | `diagram`                                                                     | § 3.9.3                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | **Prettier** (12 parseurs)                      | décision **D1** : formateurs natifs (recommandé) ou Prettier dans QuickJS     | § 3.9.4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| **Transloco** + transpileur ICU                 | `devnotes-i18n`                                                               | § 3.11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Transloco** + transpileur ICU                 | `i18n`                                                                        | § 3.11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `Intl.*`                                        | ICU4X (`icu`, données fr/en)                                                  | § 3.11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `<input type="date">` natif                     | sélecteur de date dessiné (`egui_extras::DatePickerButton` restylé ou maison) | écart E4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
@@ -758,7 +766,7 @@ compteur de mots.
 
 Conception :
 
-1. **Modèle** (`devnotes-richtext`, sans egui) : document = blocs (`Paragraph`, `Heading(n)`,
+1. **Modèle** (`richtext`, sans egui) : document = blocs (`Paragraph`, `Heading(n)`,
    `List{ordered, items}`, `Task`, `Quote`, `CodeBlock{lang, text}`, `Table`, `Image`, `Rule`) ;
    contenu en ligne = texte + marques (gras, italique, barré, code, lien). Positions et sélections
    exprimées dans ce modèle ; transactions annulables.
@@ -779,7 +787,7 @@ Présenter et l'aide), puis éditeur.
 #### 3.9.2 Le Dessin
 
 Le corps reste **la scène Fabric telle quelle** (`{ version, scene }`) : c'est un format stocké et
-exporté, il ne change pas. `devnotes-drawing` lit et écrit le sous-ensemble utilisé — `Rect`,
+exporté, il ne change pas. `drawing` lit et écrit le sous-ensemble utilisé — `Rect`,
 `Ellipse`, `Polygon` (losange), `Path` (flèches, main levée en `M/Q/L`), `Textbox`, groupes,
 sélection active — avec les propriétés Fabric (`left`/`top` **au centre** depuis Fabric 7,
 `scaleX/Y`, `angle`, `strokeWidth`…) et les propriétés propres (`id`, `hue`, `from`, `to`, `ends`).
@@ -801,7 +809,7 @@ Pas de moteur Mermaid complet en Rust aujourd'hui. Décision **D2** :
 - **Recommandé** : évaluer au spike S7 les moteurs natifs disponibles (il en existe de jeunes, par
   exemple `mermaid-rs-renderer` — à vérifier) sur les types réellement écrits par l'utilisateur
   (organigramme, séquence, classes, états, Gantt, camembert). S'il passe, l'intégrer ; sinon,
-  écrire dans `devnotes-diagram` un rendu des **organigrammes et diagrammes de séquence** (mise en
+  écrire dans `diagram` un rendu des **organigrammes et diagrammes de séquence** (mise en
   page par `layout-rs` ou une implémentation de Sugiyama), les autres types restant affichés comme
   code avec « type non pris en charge ».
 - Dans tous les cas : couleurs depuis les jetons, erreur de syntaxe qui nomme sa ligne, cache des
@@ -824,7 +832,7 @@ Contrainte conservée : on donne du texte, jamais du code, et chaque `{{…}}` r
   standalone n'a pas besoin de DOM. Sortie identique, mais un interpréteur : à mesurer (bytecode
   précompilé, hôte gardé chaud) ; acceptable seulement si p95 < 500 ms pour 13 kB.
 
-### 3.10 Intégration plateforme (`devnotes-platform`)
+### 3.10 Intégration plateforme (`platform`)
 
 | Besoin (plugin Tauri)         | Crate / solution                                                                                                     | Points d'attention                                                                                                                                                                                                                                                                              |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -852,7 +860,7 @@ par exemple) passe par une lecture sûre (registre via `winreg`, `gsettings`) ou
 
 ### 3.11 i18n
 
-- `fr.json` et `en.json` restent la source (déplacés dans `devnotes-i18n/translations/`, intégrés
+- `fr.json` et `en.json` restent la source (déplacés dans `i18n/translations/`, intégrés
   par `include_str!`). Le format ne change pas : les traductions existantes sont réutilisées
   telles quelles.
 - Un `build.rs` génère une constante par clé : une clé mal écrite **ne compile pas** ; les clés
@@ -901,7 +909,7 @@ d'export et de sauvegarde, hôte de scripts isolé.
 
 ### 4.1 Chemins
 
-Tauri résout ses dossiers à partir de l'identifiant `com.devnotes.app`. `devnotes-platform::paths`
+Tauri résout ses dossiers à partir de l'identifiant `com.devnotes.app`. `platform::paths`
 les reproduit **exactement** et un test les compare à ceux de Tauri tant que la coquille existe :
 
 | Rôle                                                                                   | Windows                                | Linux                                                                  |
@@ -1114,9 +1122,9 @@ décision consignée (ADR courte dans `docs/egui-migration/adr/`).
 
 ### Phase 1 — Le cœur sans Tauri, et l'index (4 S)
 
-1. Créer le workspace ; `git mv src-tauri/src` (hors coquille) vers `crates/devnotes-core/src`,
+1. Créer le workspace ; `git mv src-tauri/src` (hors coquille) vers `crates/engine/src`,
    avec `migrations/`, `resources/`, `sandbox/`, `benches/`, `tests/`.
-2. Introduire `Core` et `host.rs` (§ 3.3.2, § 3.3.4) : `trait Paths` et `trait EventSink` ;
+2. Introduire `Engine` et `host.rs` (§ 3.3.2, § 3.3.4) : `trait Paths` et `trait EventSink` ;
    remplacer les usages d'`AppHandle`, `app.state`, `emit`, `resource_dir`, `app_data_dir` ; sortir
    du cœur le presse-papiers (`attach_clipboard_image`, `copy_qr_code`), la lecture de
    `automaticBackups` par le plugin `store`, et `desktop.rs`.
@@ -1132,12 +1140,12 @@ décision consignée (ADR courte dans `docs/egui-migration/adr/`).
    beaucoup plus rapide).
 
 **Fin de phase** : `cargo test`, `clippy --all-targets --all-features`, e2e verts ; benchs
-`index_*` dans `architecture.md` ; aucun `use tauri` dans `devnotes-core`.
+`index_*` dans `architecture.md` ; aucun `use tauri` dans `engine`.
 
 ### Phase 2 — Fondations de l'interface (5 S)
 
-- **Binaire** `devnotes` : `main` lit `--devnotes-script-host` d'abord, puis `--profile`, puis lance
-  eframe. Fenêtre invisible à la géométrie restaurée, puis montrée.
+- **Binaire** `devnotes` (crate `app`) : `main` lit `--devnotes-script-host` d'abord, puis
+  `--profile`, puis lance eframe. Fenêtre invisible à la géométrie restaurée, puis montrée.
 - **Backend** : `Pending`, `QueryCell`, `Revision`, canal d'événements (§ 3.3).
 - **Thème** : jetons, deux thèmes, deux densités, thème système, polices, icônes, mouvement,
   focus, barres de défilement, test de contraste.
@@ -1195,7 +1203,7 @@ Placée avant le tableau : c'est le chemin critique et le plus risqué.
   dépôt, collage d'image, ouverture), panneau des révisions (diff), panneau des champs, côte à côte,
   barre de recherche ; création qui n'écrit rien tant que ça n'en vaut pas la peine
   (`draftMaterialisation`) ; brouillons validés sur perte de focus et à chaque fermeture.
-- **Noyau + éditeur de code (3 S)** — `devnotes-text`, `EditorView`, coloration, gouttière, champs,
+- **Noyau + éditeur de code (3 S)** — crate `text`, `EditorView`, coloration, gouttière, champs,
   recherche/remplacement, indentation, bouton Formater (D1), explorateur JSON (arbre + graphe).
 - **Liste et Calcul (1 S)** — réordonner au pointeur et `Alt+↑/↓` ; feuille Calcul avec résultats en
   marge (`evaluate_calc`), `CalcFormatter` en Rust.
@@ -1278,7 +1286,7 @@ mise à jour.
 
 ### Phase 9 — Plateforme (3 S, en parallèle dès la fin de P1)
 
-Tout le § 3.10 dans `devnotes-platform`, chaque élément derrière un trait faussable : tray et ses
+Tout le § 3.10 dans la crate `platform`, chaque élément derrière un trait faussable : tray et ses
 libellés, raccourcis globaux (`set_global_shortcuts` et sa réponse), démarrage automatique,
 instance unique, notifications, fermer/minimiser vers le tray, quitter (avec requêtes non
 enregistrées), dépôt de fichiers, presse-papiers image, ouverture des pièces jointes (copies en
@@ -1319,8 +1327,8 @@ l'ancien fichier, **updater** (§ 4.4).
 
 | Couche      | Outil                                                                                    | Remplace                              | Règle                                                                                                                                       |
 | ----------- | ---------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Métier      | `cargo test` dans `devnotes-core` (inchangé) + tests de propriétés de l'index            | —                                     | ce qui est montré se teste ici                                                                                                              |
-| Noyaux      | tests unitaires de `devnotes-text`, `-richtext`, `-drawing`, `-i18n`                     | specs CodeMirror/TipTap/Fabric/format | corpus d'aller-retour : Markdown (sortie TipTap actuelle), scènes Fabric, formatage (corpus d'or), coloration (une ligne par langue)        |
+| Métier      | `cargo test` dans `engine` (inchangé) + tests de propriétés de l'index                   | —                                     | ce qui est montré se teste ici                                                                                                              |
+| Noyaux      | tests unitaires de `text`, `richtext`, `drawing`, `i18n`                                 | specs CodeMirror/TipTap/Fabric/format | corpus d'aller-retour : Markdown (sortie TipTap actuelle), scènes Fabric, formatage (corpus d'or), coloration (une ligne par langue)        |
 | État        | tests Rust des structures d'état contre le **vrai cœur** sur une bibliothèque temporaire | specs des stores avec faux dépôts     | plus de faux qui ré-implémentent une règle : seule la plateforme est faussée (dialogues, fenêtre, presse-papiers, notifications, horloge)   |
 | Composants  | `egui_kittest` : un widget ou un écran, requêtes par `author_id`/rôle/libellé            | specs de composants Vitest            | asserter sur l'arbre AccessKit, pas sur les pixels                                                                                          |
 | Scénarios   | `egui_kittest` : l'application entière, un profil vierge par scénario                    | 35 scénarios WebdriverIO              | annexe D ; « relancer » recrée l'application sur le même profil (une vraie relance cette fois) ; attendre des conditions, jamais des durées |
@@ -1439,7 +1447,7 @@ différents.
 
 ## Annexe A — Composants Angular → modules egui
 
-Chemins relatifs à `crates/devnotes-ui/src/`. Un composant Angular devient en général une fonction
+Chemins relatifs à `crates/ui/src/`. Un composant Angular devient en général une fonction
 de dessin (`fn show(ui, state, actions)`) ou un widget ; les gabarits, styles et l'état du composant
 se retrouvent dans le même fichier Rust.
 
@@ -1457,20 +1465,20 @@ se retrouvent dans le même fichier Rust.
 
 ### Zone Notes (55 composants)
 
-| Angular (`notes/…`)                                                                                                                                                                                                                                                             | egui (`notes/…`)                                    | Phase  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------ |
-| `notes-page`, `notes-sidebar`, `library-tree`                                                                                                                                                                                                                                   | `page.rs`, `sidebar/`                               | P3     |
-| `header/*` : `notes-header`, `search-box`, `view-switch`, `sort-menu`, `space-switcher`, `folder-switcher`, `folder-breadcrumb`, `new-note-button`, `space-editor`, `folder-editor`, `selection-bar`, `facets-panel`, `kind-rail`, `tag-rail`, `language-rail`, `priority-rail` | `header/`                                           | P3     |
-| `canvas/notes-canvas`, `note-section`, `note-card`, `note-card-menu`, `note-outline`, `calc-lines`, `focus-card`                                                                                                                                                                | `canvas/` (grille virtualisée, carte, menu)         | P3     |
-| `canvas/board/*` : `board`, `board-zone`, `board-tidy`                                                                                                                                                                                                                          | `canvas/board/`                                     | P5     |
-| `overlays/notes-overlays`, `undo-bar`, `trash-panel`, `tag-manager`, `folder-name-prompt`, `image-lightbox`                                                                                                                                                                     | `overlays/`                                         | P3, P4 |
-| `overlays/note-editor-overlay/*` : `note-editor-overlay`, `header-summary`, `lifecycle-badge`, `attachment-strip`, `revision-panel`, `placeholder-panel`, `side-by-side`, `search-bar`, `format-button`, `json-view`                                                            | `overlays/editor/`                                  | P4     |
-| `code-editor` (+ `editing`, `field-marks`, `hanging-indent`, `line-marks`, `search-panel`, `theme`)                                                                                                                                                                             | `overlays/editor/code.rs` sur `devnotes-text`       | P4     |
-| `calc-editor`, `checklist-editor`                                                                                                                                                                                                                                               | `overlays/editor/{calc,checklist}.rs`               | P4     |
-| `rich-text-editor` (+ `rich-text.engine`, `markdown-text`, `rich-text-diagrams`, `rich-text-drawings`, `rich-text-search`)                                                                                                                                                      | `overlays/editor/rich.rs` sur `devnotes-richtext`   | P4     |
-| `drawing-editor` (+ `drawing-scene`, `drawing-geometry`)                                                                                                                                                                                                                        | `overlays/editor/drawing.rs` sur `devnotes-drawing` | P4     |
-| `presentation`, `mind-map`                                                                                                                                                                                                                                                      | `overlays/presentation/`                            | P4     |
-| `ui/*` : `copy-button`, `placeholder-fields`, `priority-pill`, `tag-pill`                                                                                                                                                                                                       | `notes/ui/`                                         | P3     |
+| Angular (`notes/…`)                                                                                                                                                                                                                                                             | egui (`notes/…`)                            | Phase  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------ |
+| `notes-page`, `notes-sidebar`, `library-tree`                                                                                                                                                                                                                                   | `page.rs`, `sidebar/`                       | P3     |
+| `header/*` : `notes-header`, `search-box`, `view-switch`, `sort-menu`, `space-switcher`, `folder-switcher`, `folder-breadcrumb`, `new-note-button`, `space-editor`, `folder-editor`, `selection-bar`, `facets-panel`, `kind-rail`, `tag-rail`, `language-rail`, `priority-rail` | `header/`                                   | P3     |
+| `canvas/notes-canvas`, `note-section`, `note-card`, `note-card-menu`, `note-outline`, `calc-lines`, `focus-card`                                                                                                                                                                | `canvas/` (grille virtualisée, carte, menu) | P3     |
+| `canvas/board/*` : `board`, `board-zone`, `board-tidy`                                                                                                                                                                                                                          | `canvas/board/`                             | P5     |
+| `overlays/notes-overlays`, `undo-bar`, `trash-panel`, `tag-manager`, `folder-name-prompt`, `image-lightbox`                                                                                                                                                                     | `overlays/`                                 | P3, P4 |
+| `overlays/note-editor-overlay/*` : `note-editor-overlay`, `header-summary`, `lifecycle-badge`, `attachment-strip`, `revision-panel`, `placeholder-panel`, `side-by-side`, `search-bar`, `format-button`, `json-view`                                                            | `overlays/editor/`                          | P4     |
+| `code-editor` (+ `editing`, `field-marks`, `hanging-indent`, `line-marks`, `search-panel`, `theme`)                                                                                                                                                                             | `overlays/editor/code.rs` sur `text`        | P4     |
+| `calc-editor`, `checklist-editor`                                                                                                                                                                                                                                               | `overlays/editor/{calc,checklist}.rs`       | P4     |
+| `rich-text-editor` (+ `rich-text.engine`, `markdown-text`, `rich-text-diagrams`, `rich-text-drawings`, `rich-text-search`)                                                                                                                                                      | `overlays/editor/rich.rs` sur `richtext`    | P4     |
+| `drawing-editor` (+ `drawing-scene`, `drawing-geometry`)                                                                                                                                                                                                                        | `overlays/editor/drawing.rs` sur `drawing`  | P4     |
+| `presentation`, `mind-map`                                                                                                                                                                                                                                                      | `overlays/presentation/`                    | P4     |
+| `ui/*` : `copy-button`, `placeholder-fields`, `priority-pill`, `tag-pill`                                                                                                                                                                                                       | `notes/ui/`                                 | P3     |
 
 ### Zone HTTP (41 composants)
 
@@ -1492,7 +1500,7 @@ se retrouvent dans le même fichier Rust.
 
 ## Annexe B — Stores et services → état Rust
 
-| Angular                                                                                                                                                                                                                                          | egui (`devnotes-ui/src/…`)                                                          |
+| Angular                                                                                                                                                                                                                                          | egui (`ui/src/…`)                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
 | `NotesQueryStore`                                                                                                                                                                                                                                | `state/notes_query.rs` : `QueryCell<NotesQuery, NotesView>` sur l'index             |
 | `NoteSelectionStore`                                                                                                                                                                                                                             | `state/selection.rs` (indices dans la liste visible, plage Maj)                     |
@@ -1507,13 +1515,13 @@ se retrouvent dans le même fichier Rust.
 | `SettingsStore`, `SettingsDraftStore`, `PreferencesService`, `LibraryPreferencesService`                                                                                                                                                         | `services/settings.rs`, `services/preferences.rs`                                   |
 | `ShortcutBindingsStore`, `CANVAS_KEYS`                                                                                                                                                                                                           | `services/shortcuts.rs`, `notes/canvas/keys.rs`                                     |
 | `ClockService`, relative time                                                                                                                                                                                                                    | `services/clock.rs`, `services/time.rs`                                             |
-| `StatusNotifier`, `ErrorNotifier`, `DesktopNotifier`                                                                                                                                                                                             | `services/status.rs`, `services/errors.rs`, `devnotes-platform::notify`             |
-| `ClipboardService`, `FileDialogService`, `AppWindowService`, `FileDropService`, `TrayService`, `AutostartService`, `ExternalLinksService`                                                                                                        | traits de `devnotes-platform`                                                       |
+| `StatusNotifier`, `ErrorNotifier`, `DesktopNotifier`                                                                                                                                                                                             | `services/status.rs`, `services/errors.rs`, `platform::notify`                      |
+| `ClipboardService`, `FileDialogService`, `AppWindowService`, `FileDropService`, `TrayService`, `AutostartService`, `ExternalLinksService`                                                                                                        | traits de `platform`                                                                |
 | `UpdatesService`, `AppInfoService`                                                                                                                                                                                                               | `services/updates.rs`, `app_info` du cœur                                           |
-| `FormatterService` + worker Prettier, `field-shield`                                                                                                                                                                                             | `devnotes-text::format`                                                             |
-| `highlighter`, `grammars`                                                                                                                                                                                                                        | `devnotes-text::highlight`                                                          |
-| `MermaidRenderer`                                                                                                                                                                                                                                | `devnotes-diagram`                                                                  |
-| Transloco, `plural-transpiler`, `LocaleService`                                                                                                                                                                                                  | `devnotes-i18n`                                                                     |
+| `FormatterService` + worker Prettier, `field-shield`                                                                                                                                                                                             | `text::format`                                                                      |
+| `highlighter`, `grammars`                                                                                                                                                                                                                        | `text::highlight`                                                                   |
+| `MermaidRenderer`                                                                                                                                                                                                                                | `diagram`                                                                           |
+| Transloco, `plural-transpiler`, `LocaleService`                                                                                                                                                                                                  | `i18n`                                                                              |
 | `OneInFlight`                                                                                                                                                                                                                                    | `backend::QueryCell`                                                                |
 
 ## Annexe C — Commandes Tauri → API du cœur
@@ -1531,14 +1539,14 @@ enveloppes Tauri d'une ligne vivent jusqu'à la bascule.
 | `spaces`                        | 6         | suppression : `refresh` des notes déplacées                                                                                                                                                                                                     |
 | `transfer`                      | 5         | dialogues côté UI, reconstruction de l'index après import                                                                                                                                                                                       |
 | `libraries`                     | 5         | `open_library` : vide et reconstruit l'index, ferme les sockets, réinitialise l'état de l'UI                                                                                                                                                    |
-| `desktop`                       | 5         | `sync_tray`, `set_global_shortcuts`, `release_global_shortcuts`, `set_window_behavior`, `hold_quit` → appels directs à `devnotes-platform`, plus de commandes                                                                                   |
+| `desktop`                       | 5         | `sync_tray`, `set_global_shortcuts`, `release_global_shortcuts`, `set_window_behavior`, `hold_quit` → appels directs à `platform`, plus de commandes                                                                                            |
 | `vault`                         | 4         | inchangé ; la phrase arrive en `Zeroizing<String>`                                                                                                                                                                                              |
 | `backup`                        | 3         | restauration : vide le `Mutex` et l'index d'abord                                                                                                                                                                                               |
 | `recovery`, `changelog`, `json` | 2, 2, 1   | inchangés                                                                                                                                                                                                                                       |
 
 ## Annexe D — Scénarios e2e → scénarios kittest
 
-Chaque fichier devient `crates/devnotes/tests/scenarios/<nn>_<nom>.rs`, même nom, même ordre,
+Chaque fichier devient `crates/app/tests/scenarios/<nn>_<nom>.rs`, même nom, même ordre,
 profil vierge, même groupe de CI.
 
 | #   | Scénario             | Phase | Particularité du portage                                                                             |
