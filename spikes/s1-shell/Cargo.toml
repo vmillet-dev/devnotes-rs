@@ -8,5 +8,6 @@ publish.workspace = true
 eframe = { version = "0.37", default-features = false, features = ["accesskit", "default_fonts", "wgpu", "wayland", "x11"] }
 interprocess = "2"
 tray-icon = "0.21"
+gtk = "0.18"
 global-hotkey = "0.7"
 rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }

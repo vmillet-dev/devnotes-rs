@@ -1,0 +1,16 @@
+card-title	inter	14	650	0	180	1	Note 1234 — étape de déploiement en production
+header-search	inter	13	400	0	600	1	Rechercher dans les notes, les tags et les sources…
+body-500	inter	14	500	0	600	1	Déverrouiller la bibliothèque — 30 000 notes
+weight-400	inter	14	400	0	600	1	Inter 400 · Quelle graisse ?
+weight-600	inter	14	600	0	600	1	Inter 600 · Quelle graisse ?
+weight-650	inter	14	650	0	600	1	Inter 650 · Quelle graisse ?
+weight-700	inter	14	700	0	600	1	Inter 700 · Quelle graisse ?
+tag-spaced	inter	11	600	0.66	600	1	OPS · DÉPLOIEMENT · RUNBOOK
+mono-code	mono	12	400	0	600	1	kubectl rollout restart deployment/api --namespace prod
+mono-bold	mono	12	700	0	600	1	SELECT calls, mean_exec_time FROM pg_stat_statements;
+preview-3rows	mono	12	400	0	220	3	const keysOf = <T extends object>(value: T) => Object.keys(value); // déploiement de la nouvelle version
+emoji	inter	14	400	0	600	1	Épinglée 📌 jointe 📎 corbeille 🗑 fait ✅
+cjk	inter	14	400	0	600	1	日本語のメモ · 中文笔记 · 한국어
+arabic	inter	14	400	0	600	1	مرحبا بالعالم
+hebrew	inter	14	400	0	600	1	שלום עולם
+devanagari	inter	14	400	0	600	1	नमस्ते दुनिया
