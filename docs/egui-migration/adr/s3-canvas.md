@@ -28,6 +28,9 @@ polices par défaut d'egui. Même machine que S4 (4 vCPU Xeon 2,1 GHz).
 
 Première frame (atlas de polices vide) : 3,4 ms. ~34 500 sommets par frame, ~50 cartes visibles.
 
+Sous Windows 11 (Ryzen 7 9800X3D) : molette p99 **0,60 ms**, saut p99 1,09 ms, survol p99
+0,34 ms, première frame 6,1 ms (`spikes/out/s3-win.txt`).
+
 ## Décision
 
 **Le schéma du § 3.6 est validé tel quel** : rangées virtuelles à décalages précalculés,

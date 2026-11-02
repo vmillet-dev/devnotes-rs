@@ -40,6 +40,10 @@ comparées à l'œil.
 | camembert                                    | ✅                          | ✅                                          | ✅                         |
 | erreur `graph TD\n  A -->`                   | erreur typée + `SourceSpan` | « 1:1 », ligne fausse                       | « line 2 », juste          |
 
+Rejoué sous Windows 11 (`spikes/out/s7-win.txt`) : mêmes rendus, `merman` entre 0,5 et 9 ms par
+diagramme (organigramme à sous-graphes imbriqués : 9 ms, fidèle), même erreur typée sur
+`error-2.mmd`.
+
 ## Décision
 
 **D2 : `merman`.** Seul candidat qui rend correctement tous les diagrammes du jeu, y compris

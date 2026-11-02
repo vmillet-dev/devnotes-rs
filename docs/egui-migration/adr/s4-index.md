@@ -34,12 +34,27 @@ référence du § 6.2.
 | Filtre espace + type + tag, p95   | 0,2 ms               | 0,4 ms               | 0,3 ms             | 0,3 ms             | —                               |
 | Facettes (tags, types, dossiers)  | 0,4 ms               | 0,4 ms               | 2,0 ms             | 0,4 ms             | `list_tags` ≤ 5 / 10 ms         |
 
+Sous Windows 11 (Ryzen 7 9800X3D, 16 fils ; mémoire = ensemble de travail,
+`K32GetProcessMemoryInfo`) — `spikes/out/s4-win.txt` :
+
+| Mesure                            | Réaliste, clair | Réaliste, `lz4` | Stress, clair | Stress, `lz4` |
+| --------------------------------- | --------------- | --------------- | ------------- | ------------- |
+| Première tranche (2 000 notes)    | 57 ms           | 54 ms           | 53 ms         | 60 ms         |
+| Index complet                     | 0,23 s          | 0,22 s          | 0,59 s        | 0,65 s        |
+| Mémoire résidente (processus)     | 110 Mo          | 56 Mo           | 476 Mo        | **104 Mo**    |
+| Recherche absente (pire cas), p95 | 0,5 ms          | 1,8 ms          | 6,8 ms        | 8,3 ms        |
+
+Contrairement à glibc, l'allocateur de Windows rend les pages libérées : `lz4` y divise la mémoire
+résidente du stress par 4,5.
+
 ## Décision
 
 **Le texte plié reste en clair.** Le corpus de stress tient en 465 Mo pour 900 Mo de budget ; la
 compression du texte plié multiplie la recherche par 2,5 à 3 et ne baisse même pas la mémoire
 résidente du stress (467 Mo) : l'allocateur garde les pages libérées par le déchiffrement
-parallèle. La règle 6 du § 3.5 n'est pas déclenchée.
+parallèle. La règle 6 du § 3.5 n'est pas déclenchée. Sous Windows, `lz4` baisse bien la mémoire
+(104 contre 476 Mo), mais le texte clair tient déjà le budget et la recherche y reste plus rapide :
+la décision ne change pas.
 
 ## Conséquences
 

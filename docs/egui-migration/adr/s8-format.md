@@ -31,6 +31,10 @@ QuickJS : chargement à froid de Prettier + 9 plugins 253 ms (une fois), 28 Mo r
 Natifs : `dprint-plugin-typescript` 0.96 trie les imports par défaut, `markup_fmt` demande un
 formateur externe pour `<script>`/`<style>` (non branché ici), `pretty_yaml` perd le CRLF.
 
+Sous Windows 11 (Ryzen 7 9800X3D) — `spikes/out/s8-qjs-win.txt` : sortie identique à Node sur
+les 19 fixtures ; p95 TypeScript **159 ms**, JSON 150, Markdown 235, SCSS 53, YAML 59 ms ;
+chargement à froid 125 ms ; ensemble de travail 32 Mo. Natifs : mêmes écarts que sous Linux.
+
 ## Décision
 
 **D1 : Prettier dans QuickJS.** Le critère est tenu (340 ms ≤ 500 ms, sur une machine plus lente
@@ -45,7 +49,8 @@ toutes les fixtures : plus de corpus d'or du formatage à relire, plus d'écart 
 - Le paquet Prettier (2,4 Mo de JS pour les 10 fichiers) est empaqueté comme le bac à sable
   (`sandbox/build.mjs`) : `package.json` garde la dépendance `prettier`, figée à la version
   actuelle. Précompiler en bytecode est une optimisation possible du chargement, non nécessaire.
-- La marge n'est que de ×1,5 sur le TS de 13 kB : un snippet de 40 kB dépasse la seconde. Le
+- La marge n'est que de ×1,5 sur le TS de 13 kB dans le conteneur (×3 sur la machine Windows) :
+  un snippet de 40 kB peut dépasser la seconde. Le
   formatage reste asynchrone (`Pending`), avec le même indicateur qu'aujourd'hui.
 - Les formateurs natifs (100× plus rapides) restent le repli si une mesure sur la machine de
   référence infirme celle-ci ; la liste des écarts ci-dessus en est le point de départ.

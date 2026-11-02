@@ -1,6 +1,6 @@
 # S6 — Éditeur riche : faisable ; E15 retiré (sauf Wayland pur)
 
-- **Statut** : accepté (2026-11-02) ; collage HTML **non vérifié sous Windows**
+- **Statut** : accepté (2026-11-02) ; collage HTML vérifié sous Linux X11 et Windows 11
 - **Ticket** : #1141 · plan § 3.9.1, § 7 phase 4, R1, E15
 - **Prototype** : jetable, non conservé dans le dépôt
 
@@ -40,7 +40,8 @@ niveau 2 et le caret suit (règles du `StarterKit` : `#`…`######`, `- * +`, `1
 | Plateforme                        | Résultat                                                                                        |
 | --------------------------------- | ----------------------------------------------------------------------------------------------- |
 | X11 (Xvfb + `xclip -t text/html`) | ✅ le HTML exact (`<p><b>Gras</b> et <a href=…>lien</a></p><ul>…`)                              |
-| Windows                           | implémenté (`CF_HTML`, « HTML Format ») d'après le source ; non testé                           |
+| Windows (copie depuis Edge)       | ✅ le fragment HTML (`<p><b>Gras</b> et <a href=…>lien</a> – é</p><ul>…`), accents intacts      |
+| Windows (`Set-Clipboard -AsHtml`) | ⚠️ le `CF_HTML` brut : en-tête `Version:0.9…StartFragment…`, page entière et `\0` final         |
 | Wayland natif                     | seulement par le protocole `wlr-data-control` (feature `wayland-data-control`), absent de GNOME |
 
 ## Décision
@@ -66,3 +67,8 @@ niveau 2 et le caret suit (règles du `StarterKit` : `#`…`######`, `- * +`, `1
   position est un chemin de blocs, pas un indice).
 - `GetExtLinux` d'`arboard` choisit la sélection (`CLIPBOARD` vs `PRIMARY`) : le collage lit
   `CLIPBOARD`.
+- Sous Windows, `arboard` n'extrait le fragment que si les décalages de l'en-tête `CF_HTML` sont
+  justes ; sinon il rend le format brut (cas de PowerShell 5.1). Le collage retire donc un en-tête
+  `Version:` et ne garde que ce qui est entre `<!--StartFragment-->` et `<!--EndFragment-->`.
+- Sous Windows, l'aller-retour et les tests (`cargo test -p s6-rich`) donnent le même résultat
+  que sous Linux : 21 / 21 octet pour octet, 25 / 25 stables, 3 tests kittest verts.

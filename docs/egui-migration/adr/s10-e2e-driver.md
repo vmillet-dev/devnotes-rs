@@ -1,6 +1,6 @@
-# S10 — Pilote e2e : `egui_inspection` validé sous Linux (xvfb + Mesa)
+# S10 — Pilote e2e : `egui_inspection` validé sous Linux (xvfb + Mesa) et Windows (WARP)
 
-- **Statut** : accepté pour Linux ; **Windows (WARP) non vérifié** (2026-11-02)
+- **Statut** : accepté pour Linux et Windows (2026-11-02)
 - **Ticket** : #1145 · plan § 8.3, R13
 - **Prototype** : jetable, non conservé dans le dépôt
 
@@ -35,6 +35,21 @@ llvmpipe) : ✅.
 six tests de rendu en parallèle (fils de test par défaut, 4 vCPU) : ✅ 5 exécutions sur 5 sous
 lavapipe (1,1–1,4 s, contre 3,1 s en série), ✅ sous GL.
 
+### Windows
+
+Windows 11, RTX 5070 Ti. `app` prend `S10_SOFTWARE=1` pour n'accepter qu'un adaptateur CPU (WARP,
+« Microsoft Basic Render Driver », DX12), comme sur un runner sans GPU.
+
+| Configuration                    | Résultat                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| GPU (Vulkan, choisi par défaut)  | ✅ 4 exécutions sur 4, scénario en 1,3–2,8 s                                    |
+| WARP (DX12 logiciel)             | ✅ **6 exécutions sur 6**, scénario en 1,8–1,9 s ; capture juste                |
+| `wgpu_devices` (WARP, parallèle) | ✅ 6 sur 6, 0,8–1,0 s (3,1 s en série) ; ✅ aussi `WGPU_BACKEND=dx12`, `vulkan` |
+
+Le port s'ouvre **≈ 510 ms** après le lancement (120–160 ms sous Linux) : création de la fenêtre
+et énumération des adaptateurs. `egui_kittest` choisit de lui-même un adaptateur CPU : WARP dès
+que DX12 est là.
+
 ## Décision
 
 - **Le pilote `egui_inspection` est retenu** ; pas de canal de contrôle maison. Le protocole
@@ -46,15 +61,17 @@ lavapipe (1,1–1,4 s, contre 3,1 s en série), ✅ sous GL.
 
 ## Conséquences
 
-- R13 baisse à **faible** pour Linux. La version reste épinglée (protocole v1 : un changement non
+- R13 baisse à **faible** pour Linux et Windows. La version reste épinglée (protocole v1 : un changement non
   additif en change le numéro, que la poignée de main refuse).
 - Une touche s'injecte avec son `physical_key` (`Event::Key { physical_key: Some(…) }`) : les
   scénarios qui pressent un raccourci doivent le remplir, puisque `keys::dispatch` lit la
   position (ADR S5).
 - La capture demande une fenêtre rendue : en CI Linux, `xvfb-run` suffit, sans gestionnaire de
   fenêtres.
+- La saveur `e2e` force l'adaptateur logiciel par `native_adapter_selector` : eframe ne lit pas de
+  variable d'environnement pour choisir l'adaptateur, et un runner Windows peut offrir Vulkan.
 
 ## Reste à vérifier
 
-Le runner Windows avec WARP (DX12 logiciel) : même scénario, mêmes tests de rendu parallèles ;
-c'est la première tâche de P2, avec le pilote réel de `crates/e2e`.
+Le runner Windows de GitHub lui-même (session non interactive) : même `driver` avec
+`S10_SOFTWARE=1`, même test `wgpu_devices` ; première tâche de P2.

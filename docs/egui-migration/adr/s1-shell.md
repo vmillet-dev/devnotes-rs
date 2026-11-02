@@ -1,7 +1,7 @@
 # S1 — Coquille : eframe suffit ; Linux en X11 quand `DISPLAY` existe (D15)
 
-- **Statut** : accepté pour Linux X11 et pour D15 ; **Windows et vrais bureaux Wayland non vérifiés**
-  (2026-11-02)
+- **Statut** : accepté pour Linux X11, Windows 11 et D15 ; **mise à l'échelle > 100 % sous Windows
+  et vrais bureaux Wayland non vérifiés** (2026-11-02)
 - **Ticket** : #1136 · plan § 3.10, D15, D16, D29, R3
 - **Prototype** : jetable, non conservé dans le dépôt
 
@@ -38,6 +38,30 @@ X11, Windows et macOS les émettent ; pas de `wl_data_device` côté réception 
 
 Clavier (X11, positions AZERTY posées par `xmodmap`) : voir l'ADR S5.
 
+### Windows
+
+Environnement : Windows 11 Pro (26300), Ryzen 7 9800X3D, RTX 5070 Ti, écran 2560 × 1440 à 100 %,
+disposition AZERTY fr-FR ; même binaire en release. Le tray est construit sur le thread de winit,
+dont la boucle de messages le sert (pas de GTK : `gtk` n'est une dépendance que sous Linux).
+
+| Point                                                             | Résultat                                                                                                        |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Fenêtre créée invisible, montrée à la 1re frame                   | ✅ trouvée invisible à 375 ms, visible à 819 ms du lancement ; première frame à ≈ 440 ms du processus           |
+| Instance unique (`interprocess`, tube nommé)                      | ✅ après correction (ci-dessous) ; `hide`, `reveal`, `quit` transmis ; révélation en **108 ms** de bout en bout |
+| Raccourci global Ctrl+Maj+D sur la fenêtre cachée                 | ✅ révélée en 70 ms                                                                                             |
+| Fermeture (`WM_CLOSE`) vers le tray, puis clic gauche sur le tray | ✅ cachée, processus vivant ; révélée en 44 ms                                                                  |
+| Plein écran, puis fenêtré                                         | ✅ 0,0 → 2560 × 1440, puis retour à 916 × 639                                                                   |
+| Dépôt d'un fichier (vrai glisser à la souris, OLE)                | ✅ `dropped "…\dropped note.md"`, effet `Copy`                                                                  |
+| Dialogue natif (`rfd`, `IFileDialog`)                             | ✅ Échap → `None` ; chemin tapé + Entrée → `Some(chemin)`                                                       |
+| Backend                                                           | Vulkan (et non DX12) : wgpu préfère Vulkan quand le pilote l'offre                                              |
+
+**Piège** : quand le tube nommé existe déjà, Windows répond `ERROR_ACCESS_DENIED`
+(`ErrorKind::PermissionDenied`), pas `AddrInUse` ; la seconde instance paniquait au lieu de se
+connecter. `platform` doit lire les deux comme « une instance tourne déjà ».
+
+Le clic sur le tray est le message que l'Explorateur poste à la fenêtre cachée de `tray-icon`
+(`WM_USER_TRAYICON` + `WM_LBUTTONUP`), pas un clic sur l'icône elle-même.
+
 ## Décision
 
 - **eframe suffit** : la fenêtre cachée se réveille depuis un autre thread par la commande de
@@ -58,9 +82,11 @@ Clavier (X11, positions AZERTY posées par `xmodmap`) : voir l'ADR S5.
 - Le dialogue de fichiers doit savoir s'il y a un portail **avant** de l'ouvrir (présence de
   `org.freedesktop.portal.Desktop` sur le bus de session) pour répondre une erreur nommée au lieu
   d'une annulation silencieuse.
+- Sous Windows, la seconde instance reconnaît `PermissionDenied` comme `AddrInUse` (ci-dessus).
 
-## Reste à vérifier (hors de ce conteneur)
+## Reste à vérifier
 
-Windows 10/11 (DX12, mise à l'échelle 100–200 %, plein écran, tray, raccourci global, tube
-nommé), un vrai bureau GNOME et KDE en XWayland (dépôt depuis le gestionnaire de fichiers, tray,
-plein écran), le clic de menu du tray, le dialogue avec un portail réel.
+Windows : mise à l'échelle 125–200 % (un réglage système à changer à la main), Windows 10, DX12
+forcé (`WGPU_BACKEND=dx12`), un clic réel sur l'icône du tray et son menu. Linux : un vrai bureau
+GNOME et KDE en XWayland (dépôt depuis le gestionnaire de fichiers, tray, plein écran), le clic de
+menu du tray, le dialogue avec un portail réel.

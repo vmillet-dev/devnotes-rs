@@ -1,7 +1,7 @@
 # S2 — Polices : fichiers variables, `system_fonts`, seuil SSIM 0,95
 
-- **Statut** : accepté (2026-11-02) ; comparé à Chromium sous Linux, **pas encore à WebView2 sous
-  Windows** (la référence de D24)
+- **Statut** : accepté (2026-11-02) ; comparé à Chromium sous Linux et à Edge (ClearType, le moteur
+  et le lissage de WebView2) sous Windows
 - **Ticket** : #1137 · plan § 3.7 « Polices », § 5.2, § 5.3 E1/E2/E8, R2
 - **Prototype** : jetable, non conservé dans le dépôt
 
@@ -49,6 +49,33 @@ Lecture des images :
 - **ligatures** : JetBrains Mono dessine `=>` en une ligature dans les deux moteurs ; le CSS de
   l'application ne les coupe que dans les références (`_mixins.scss`).
 
+### Windows
+
+Mêmes échantillons, epaint sous Windows 11 (`wgpu`), comparés à Edge
+(`CHANNEL=msedge node chromium.mjs`), qui dessine en ClearType (franges colorées, comme WebView2) ;
+même résultat en fenêtre ou sans tête. Sorties de ce passage : `spikes/out/s2win-headed/`,
+`spikes/out/s2win-headed-ssim.txt`.
+
+| Échantillon                  | SSIM 100 %  | 125 %       | 150 %       | Largeur egui / Edge |
+| ---------------------------- | ----------- | ----------- | ----------- | ------------------- |
+| Inter 400–700, dont 650      | 0,966–0,969 | 0,971–0,973 | 0,973–0,979 | 0,994–1,006         |
+| titre de carte tronqué       | 0,970       | 0,969       | 0,976       | 0,995–1,000         |
+| recherche, étiquette espacée | 0,968–0,976 | 0,972–0,974 | 0,974–0,980 | 0,997–1,000         |
+| JetBrains Mono 400/700       | 0,967–0,969 | 0,975–0,977 | 0,977–0,981 | 0,996–1,000         |
+| aperçu sur 3 rangées         | 0,944       | 0,873       | 0,899       | 0,994–1,000         |
+| devanagari                   | 0,979       | 0,978       | 0,978       | 1,000–1,011         |
+| CJK (police système)         | 0,215       | 0,177       | 0,201       | 0,944–0,950         |
+| arabe                        | 0,272       | 0,292       | 0,286       | 1,000               |
+| hébreu                       | 0,372       | 0,435       | 0,376       | 0,982–1,000         |
+| émoji                        | 0,674       | 0,688       | 0,703       | 1,036–1,038         |
+
+- le latin reste au-dessus de 0,95 malgré ClearType, que l'image en niveaux de gris de `ssim.py`
+  ne gomme pas entièrement ;
+- **CJK** : rendu juste, sans glyphe manquant, mais `system_fonts` prend une seule police pour les
+  trois écritures là où Edge en choisit une par écriture : les formes diffèrent, d'où le SSIM ;
+- **émoji** : le repli système d'egui trouve Segoe UI Emoji et les dessine **en couleur** ;
+- arabe et hébreu : même ordre logique que sous Linux (pas de bidi dans epaint).
+
 ## Décision
 
 - **Fichiers variables** : on embarque les fichiers variables d'aujourd'hui (Inter, JetBrains
@@ -59,7 +86,8 @@ Lecture des images :
   (monochrome) embarqué avant le repli système, pour que l'émoji ne dépende pas de la machine.
 - **Seuil SSIM : 0,95** pour une capture, inchangé ; le texte latin seul est entre 0,966 et 0,984
   à toutes les échelles. Un état qui contient de l'arabe, de l'hébreu ou des émoji est comparé
-  hors de ces zones (masque) : ce sont des écarts listés, pas des régressions.
+  hors de ces zones (masque) : ce sont des écarts listés, pas des régressions. Le CJK est masqué
+  lui aussi sous Windows.
 - **E1 confirmé** (rastérisation différente, largeurs à ± 0,6 % : sous la tolérance de ± 2 % du
   § 5.1) ; **E2 confirmé** ; **E8 restreint** à l'ordre bidi de l'arabe et de l'hébreu : le
   façonnage des trois écritures est couvert.
@@ -70,6 +98,8 @@ Lecture des images :
 - Ligatures : `TextFormat` n'expose pas de traits OpenType en 0.37 ; si l'on veut les couper
   partout dans le code (comme les références le font), il faut une police sans `calt`/`liga`
   (instance de JetBrains Mono « NL ») plutôt qu'un réglage : à décider avec l'écran du snippet.
-- Comparé ici à Chromium sous Linux (lissage en niveaux de gris) ; la référence de D24 est
-  WebView2 sous Windows (ClearType). Le seuil se revérifie au gel de la référence en P1, sur les
-  mêmes échantillons.
+- Le seuil de 0,95 tient contre la référence de D24 (ClearType sous Windows) comme contre
+  Chromium sous Linux. Il se revérifie au gel de la référence en P1, sur des captures de WebView2
+  elle-même.
+- Noto Emoji (monochrome) embarqué passe devant Segoe UI Emoji : sous Windows, l'émoji perd la
+  couleur que le repli système lui donnerait. C'est voulu (même rendu partout).

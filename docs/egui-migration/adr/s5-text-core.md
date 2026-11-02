@@ -1,6 +1,7 @@
 # S5 — Noyau d'édition : `ropey` + `EditorView`, coloration `onig` hors du thread UI (D22)
 
-- **Statut** : accepté (2026-11-02) ; **IME japonais sous Windows non vérifié**
+- **Statut** : accepté (2026-11-02) ; rejoué sous Windows 11 ; **IME japonais sous Windows non
+  vérifié**
 - **Ticket** : #1140 · plan § 3.8, § 3.9, § 3.12, D14, D22, E11
 - **Prototype** : jetable, non conservé dans le dépôt
 
@@ -47,10 +48,30 @@ modificateurs ont un `egui::Key`. Mesuré sous X11 avec les positions AZERTY : l
 A arrive en `key A, physical Q` ; Ctrl+A en `A / Q` ; « & » (Digit1 sans Maj) en `Num1`. Touches
 mortes françaises : « ^ » puis « e » donne `Text("ê")`, « ¨ » puis « i » `Text("ï")`.
 
+### Windows
+
+Windows 11, Ryzen 7 9800X3D. Entrées : le même TypeScript (`.ts` de `src/` bout à bout, 1 Mo) ;
+le `package-lock.json` ne fait plus que 656 kB, le JSON est donc ce fichier deux fois dans un
+tableau, indenté, coupé à 1 Mo.
+
+| Moteur        | 1 Mo JSON p50 / max | 1 Mo TypeScript p50 / max | Ligne la plus lente (TS) |
+| ------------- | ------------------- | ------------------------- | ------------------------ |
+| `fancy-regex` | 161 / 176 ms        | **5 948 / 6 322 ms**      | 36 ms                    |
+| `onig`        | 164 / 176 ms        | **1 478 / 1 531 ms**      | 8 ms                     |
+
+Noyau et vue (`onig`) : frappe au milieu p50 1,1 · p95 **1,9** · p99 3,3 ms ; saut déjà colorié
+p50 4,9 · p95 13 · max 29 ms ; premier saut au milieu jamais colorié 684 ms.
+
+Touches (`spikes/s1-shell/drive-win.ps1`, codes de balayage passés par la disposition AZERTY
+active) : la touche marquée A arrive en `key A, physical Q` ; Ctrl+A en `A / Q` ; « & » en
+`Num1` + `Text("&")` ; « é » en `Num2` + `Text("é")` ; « ^ » puis « e » : `OpenBracket`, `E`,
+`Text("ê")` ; Maj+« ¨ » puis « i » : `OpenBracket`, `I`, `Text("ï")`. Les mêmes que sous X11,
+pièges compris.
+
 ## Décision
 
 - **D22 : `onig`.** Aucun des deux moteurs ne tient 200 ms ; le critère renvoie à `onig`, 4,8 fois
-  plus rapide que `fancy-regex` sur TypeScript.
+  plus rapide que `fancy-regex` sur TypeScript (4 fois sous Windows).
 - **API du noyau** (crate `text`, sans egui) : `Buffer` (rope, annulation regroupée, éditions
   qui invalident les points de reprise à partir de leur ligne) et `Highlighter` (points de
   reprise tous les N lignes, états clonables, plages par ligne demandées pour une fenêtre de
@@ -80,5 +101,6 @@ mortes françaises : « ^ » puis « e » donne `Text("ê")`, « ¨ » puis « i
 
 ## Reste à vérifier
 
-IME japonais sous Windows (`ImeOutput` au caret), touches mortes sous Windows, et une
-disposition AZERTY complète par `setxkbmap` (sans effet sous ce Xvfb) sur une vraie machine.
+IME japonais sous Windows (`ImeOutput` au caret ; aucune langue japonaise installée sur la
+machine de mesure) et une disposition AZERTY complète par `setxkbmap` (sans effet sous ce Xvfb)
+sur une vraie machine Linux.

@@ -1,7 +1,8 @@
 # S9 — Paquets et mises à jour : `cargo-packager-updater` (D26)
 
-- **Statut** : accepté pour D26 et la signature ; **NSIS et AppImage non construits ici** (voir
-  « Reste à vérifier ») (2026-11-02)
+- **Statut** : accepté pour D26, la signature et NSIS (construit, installé, mis à jour et
+  désinstallé sous Windows 11) ; **AppImage non construite** (voir « Reste à vérifier »)
+  (2026-11-02)
 - **Ticket** : #1144 · plan § 4.1, § 4.3, D8, D26, D27, R7
 - **Prototype** : jetable, non conservé dans le dépôt
 
@@ -36,6 +37,28 @@ Le remplacement de l'AppImage a été testé sur l'exécutable lui-même posé �
 AppImage (`APPIMAGE=…/DevNotes.AppImage`) : c'est exactement ce que fait le client (il renomme le
 fichier pointé par `$APPIMAGE`, écrit le nouveau, rend les droits).
 
+### Windows
+
+Windows 11, `cargo-packager` 0.11.8 (`cargo install --locked`), qui télécharge NSIS 3.09 dans
+`%LOCALAPPDATA%\.cargo-packager\NSIS` au premier paquet. Même paire de test générée par
+`tauri signer generate`, effacée après l'essai. Manifestes servis en local
+(`python -m http.server` sur `127.0.0.1`).
+
+| Point                                                      | Résultat                                                                                                                        |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `cargo packager -p s9-packages --release -f nsis`, signé   | ✅ `devnotes-s9_0.1.0_x64-setup.exe` et `0.2.0` (2,5 Mo), chacun avec son `.sig`                                                |
+| Installation silencieuse par utilisateur (`/S`)            | ✅ sans droits d'administrateur : `%LOCALAPPDATA%\DevNotes S9\`, clé de désinstallation sous `HKCU`, raccourci du menu Démarrer |
+| Ressources                                                 | ✅ `identity\names.txt` **à côté de l'exécutable** (le préfixe `resources/` tombe) ; trouvées par le binaire installé           |
+| `latest.json` tel que `release.yml` l'écrit aujourd'hui    | ❌ refusé : `missing field 'format'` (comme sous Linux)                                                                         |
+| Installeur 0.2.0 altéré d'un octet                         | ✅ « The signature verification failed », l'installé reste en 0.1.0                                                             |
+| Signature valide, autre clé publique (celle de l'app)      | ✅ « The signature was created with a different key than the one provided »                                                     |
+| Mise à jour 0.1.0 → 0.2.0, `"format": "nsis"`, mode passif | ✅ téléchargée, vérifiée, installée : l'exécutable installé répond 0.2.0, `DisplayVersion` 0.2.0 ; ≈ 3 s de bout en bout        |
+| Désinstallation silencieuse (`uninstall.exe /S`)           | ✅ dossier, clé de désinstallation et menu Démarrer retirés ; ⚠️ `HKCU\Software\DevNotes\DevNotes S9` reste (ci-dessous)        |
+
+Le client lance l'installeur par `powershell Start-Process <installeur> /P /R` puis appelle
+`std::process::exit(0)` : le `println!("installed")` qui suit n'est jamais atteint. La relance
+par `/R` n'a pas été observée (le binaire de test sort aussitôt lancé).
+
 ## Décision
 
 - **D26 : `cargo-packager-updater`.** Il couvre NSIS passif et le remplacement de l'AppImage,
@@ -56,11 +79,17 @@ fichier pointé par `$APPIMAGE`, écrit le nouveau, rend les droits).
 - `cargo-generate-rpm` n'a pas su lire des champs hérités du workspace (`edition.workspace`) : à
   revérifier avec `version.workspace = true` (D27), sinon les champs sont passés à la ligne de
   commande.
-- Chemins du § 4.1 confirmés pour deb et rpm ; AppImage (`$APPDIR/usr/lib/…`) et Windows (à côté
-  de l'exécutable) restent à voir sur un paquet réel.
+- Chemins du § 4.1 confirmés pour deb, rpm et NSIS (à côté de l'exécutable, sans `resources/`) ;
+  l'AppImage (`$APPDIR/usr/lib/…`) reste à voir sur un paquet réel.
+- **`download_and_install` termine le processus** sous Windows : l'appli enregistre tout
+  (brouillons, géométrie, préférences) et ferme la bibliothèque **avant** de l'appeler.
+- Le client a besoin de `powershell.exe` pour lancer l'installeur.
+- Le modèle NSIS écrit `HKCU\Software\<publisher>\<product-name>` (dossier d'installation, pour une
+  réinstallation) et la désinstallation ne l'efface pas : une valeur orpheline, sans données de
+  l'utilisateur. À accepter, ou à retirer par un modèle NSIS à nous (`nsis.template`) en P11.
 
 ## Reste à vérifier (runners de CI)
 
-Construire NSIS par utilisateur sur le runner Windows et l'AppImage sur le runner Linux (réseau
-vers GitHub permis), puis rejouer `--update` contre un `latest.json` de test : installation NSIS
-passive puis relance. C'est le test « 1.0.0 → 1.0.1 » du § 4.3, avancé au premier job de paquets.
+Construire l'AppImage sur le runner Linux (réseau vers GitHub permis) et la mettre à jour ;
+construire NSIS sur le runner Windows (sans session interactive) ; voir la relance par `/R` avec
+une vraie fenêtre. C'est le test « 1.0.0 → 1.0.1 » du § 4.3, avancé au premier job de paquets.
