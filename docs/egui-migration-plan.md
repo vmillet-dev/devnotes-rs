@@ -457,11 +457,11 @@ l'écran.
 #### 3.3.4 `Paths` et `EventSink` : ce que le cœur demande à sa coquille
 
 ```rust
-// engine/src/host.rs
-pub trait Paths: Send + Sync {
-    fn profile(&self) -> &Path;       // app_data_dir : registre, libraries/, preferences.json
-    fn resources(&self) -> &Path;     // identity/ (listes de l'outil identité)
-    fn plaintext(&self) -> PathBuf;   // copies en clair des pièces jointes ouvertes
+// engine/src/host.rs — Paths est une struct (phase 1) : chaque coquille ne fait que remplir
+// deux chemins, un trait n'aurait pas de second usage. Les copies en clair sont profile/open/.
+pub struct Paths {
+    pub profile: PathBuf,             // app_data_dir : registre, libraries/, preferences.json
+    pub resources: PathBuf,           // identity/ (listes de l'outil identité)
 }
 
 pub trait EventSink: Send + Sync {
@@ -1512,7 +1512,7 @@ Windows de S10) et P11 (S9) ; aucune ne remet en cause une décision prise ici s
 
 1. Créer le workspace ; `git mv src-tauri/src` (hors coquille) vers `crates/engine/src`,
    avec `migrations/`, `resources/`, `sandbox/`, `benches/`, `tests/`.
-2. Introduire `Engine` et `host.rs` (§ 3.3.2, § 3.3.4) : `trait Paths` et `trait EventSink` ;
+2. Introduire `Engine` et `host.rs` (§ 3.3.2, § 3.3.4) : `struct Paths` et `trait EventSink` ;
    remplacer les usages d'`AppHandle`, `app.state`, `emit`, `resource_dir`, `app_data_dir` ; sortir
    du cœur le presse-papiers (`attach_clipboard_image`, `copy_qr_code`), la lecture de
    `automaticBackups` par le plugin `store`, et `desktop.rs`.

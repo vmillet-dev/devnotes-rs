@@ -1126,8 +1126,8 @@ is corrected or a list completed without building the application again.
 - **A Tauri resource**: `crates/engine/resources/identity/` (`names.txt`, `places/*.txt`) is
   declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
   on Windows and in a development or e2e build (`tauri-build` copies it into the target
-  directory), under the package's own folder on Linux. The two commands take the
-  `AppHandle` for nothing else: `resource_dir()`, joined with `identity`. No Tauri permission
+  directory), under the package's own folder on Linux. The two commands read
+  `Paths::resources`, which the shell resolves from `resource_dir()`, joined with `identity`. No Tauri permission
   is involved — Rust reads the files, the page never does.
 - **Read once, kept for the session** (`data::library`): every file is read at the first card
   and its text given away for as long as the application runs, every name drawn afterwards
@@ -5215,7 +5215,7 @@ already locked. ⚠️ `libraries::open_directory(app)` reads and parses `librar
 every call, so it is kept for what runs while **no** library is open: `vault_state`,
 `create_vault`, `unlock_vault` and the recovery commands. Reading the thumbnail of a
 screenshot used to pay that lookup plus two `create_dir_all`; `attachments/` is now created
-once, by `vault::gate::install`. A module that reaches for `app_data_dir()` directly writes
+once, by `vault::gate::install`. A module that reaches for `Paths::profile` directly writes
 into the profile, which holds no library. The one directory that lives there on purpose is
 `open/`, the decrypted attachment copies: they are ephemeral and swept wholesale, and one
 directory means one sweep catches every library's leftovers.
@@ -5281,7 +5281,9 @@ first launch's own pick of the seeded space is shown, not remembered: nothing wa
 
 ⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
 launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
-out of that file before the front end has booted (`backup::copies::wanted`).
+out of that file before the front end has booted (`backup::copies::wanted`). Rust reads the
+JSON file itself (`backup::wanted_by_preference`), not through `tauri-plugin-store`: the core
+knows no plugin.
 
 ⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
 opened once. A space id means nothing in another library, and a samples marker carried
@@ -5477,12 +5479,33 @@ ids, parents, positions, the request's kind (`http`, `graphql`, `websocket`) and
 - The launch copy and a restore carry them, being in the database; the library export
   (`transfer::Bundle`) does not — a collection travels in a file of its own.
 
+## The engine and its host
+
+The core (`crates/engine`) owns its state in one `Engine`, which the shell creates once and
+manages as an `Arc<Engine>`: the `Db` slot (empty until `vault::unlock`), the sends, runs and
+sockets under way, the restore set aside. It asks the shell for two things only (`host.rs`):
+
+- **`Paths`**, a plain struct resolved before the engine exists: `profile` (`app_data_dir()`:
+  the registry, `libraries/`, the application's `preferences.json`, `open/`) and `resources`
+  (`resource_dir()`: the identity lists). A struct, not a trait: every host only fills in two
+  paths.
+- **`EventSink`**, the one trait: what the core says unasked, as an `EngineEvent` (a socket's
+  traffic, a script's console, a run's steps). The Tauri shell's `TauriHost` emits each under
+  the name the front listens to (`WEBSOCKET_EVENT`, `HTTP_CONSOLE_EVENT`, `HTTP_RUN_EVENT`);
+  tests keep them in a `RecordingSink`.
+
+What reaches the platform stays out of the core's work: the clipboard is read before an
+attachment is stored and written after a QR code is drawn, and a decrypted attachment is opened
+once its copy is written — by the command, not inside the body that holds the lock. ⚠️ During
+the egui migration the commands still live in `crates/engine` and take an `AppHandle` to find
+the engine (`db::engine`); `db::blocking` hands their body `&Engine`.
+
 ## Persistence (Rust)
 
 Storage is **SQLite**, queried through **Diesel** and embedded via `libsqlite3-sys` with the
 `bundled` feature — SQLite is compiled from source and statically linked, so nothing has to be
-installed or shipped alongside the executable. The database file lives in Tauri's
-`app_data_dir()`.
+installed or shipped alongside the executable. The database file lives under the profile
+(`Paths::profile`, Tauri's `app_data_dir()`).
 
 - **The store is plain functions.** `notes::store` and `spaces::store` take a
   `&mut SqliteConnection`; the `#[tauri::command]`s sit on top. That is what makes persistence
