@@ -32,6 +32,7 @@ mod http_runner;
 mod http_scripts;
 mod http_send;
 mod notes;
+mod profile;
 mod spaces;
 mod transfer;
 mod websocket;

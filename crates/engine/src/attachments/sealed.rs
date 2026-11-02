@@ -55,6 +55,27 @@ mod tests {
         Vault::derive("a passphrase", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
     }
 
+    #[test]
+    fn the_decrypted_copies_live_under_the_profile_and_go_in_one_sweep() {
+        let profile = tempfile::tempdir().unwrap();
+        let paths = Paths {
+            profile: profile.path().to_path_buf(),
+            resources: profile.path().to_path_buf(),
+        };
+        let directory = plaintext_directory(&paths);
+        assert_eq!(
+            directory,
+            profile.path().join(crate::layout::PLAINTEXT_COPIES)
+        );
+
+        sweep_plaintext(&paths);
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(directory.join("capture.png"), b"png").unwrap();
+        sweep_plaintext(&paths);
+
+        assert!(!directory.exists());
+    }
+
     /// The property the name has to have, asserted without waiting for a coincidence.
     #[test]
     fn two_scratch_directories_are_never_the_same_one() {

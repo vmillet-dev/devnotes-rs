@@ -330,7 +330,7 @@ jobs:
             -Dsonar.tests=crates,src-tauri
             -Dsonar.test.inclusions=crates/*/tests/**,crates/*/benches/**,src-tauri/tests/**
             -Dsonar.exclusions=crates/engine/sandbox/dist/**,crates/engine/sandbox/node_modules/**
-            -Dsonar.coverage.exclusions=crates/engine/src/**/*.js,crates/engine/sandbox/*.mjs
+            -Dsonar.coverage.exclusions=crates/engine/src/**/*.js,crates/engine/sandbox/*.mjs,src-tauri/**
             -Dsonar.rust.cargo.manifestPaths=Cargo.toml
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true

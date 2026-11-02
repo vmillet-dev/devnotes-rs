@@ -49,3 +49,37 @@ impl EventSink for RecordingSink {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{EngineEvent, EventSink, RecordingSink};
+    use crate::http::runner::{RunEvent, RunStep};
+
+    fn finished(id: &str) -> EngineEvent {
+        EngineEvent::Run(RunEvent {
+            id: id.to_string(),
+            step: RunStep::Finished {
+                cancelled: false,
+                millis: 1,
+            },
+        })
+    }
+
+    #[test]
+    fn a_recording_sink_keeps_what_it_is_told_in_order() {
+        let sink = RecordingSink::default();
+
+        sink.emit(finished("first"));
+        sink.emit(finished("second"));
+
+        let ids: Vec<String> = sink
+            .events()
+            .into_iter()
+            .filter_map(|event| match event {
+                EngineEvent::Run(event) => Some(event.id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(ids, ["first", "second"]);
+    }
+}
