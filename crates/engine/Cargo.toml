@@ -44,6 +44,7 @@ zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2
 aes-gcm = { version = "0.11.1", features = ["zeroize"] }
 argon2 = "0.6.0"
 zeroize = "1.9.0"
+rayon = "1.11.0"
 getrandom = "0.4.3"
 similar = "3.2.0"
 pulldown-cmark = { version = "0.13.4", default-features = false }

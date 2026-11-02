@@ -23,6 +23,12 @@ pub enum EngineEvent {
     Socket(WebsocketEvent),
     Console(ConsoleEvent),
     Run(RunEvent),
+    /// How many notes of `total` the index holds while it fills after an unlock.
+    IndexProgress {
+        done: u32,
+        total: u32,
+    },
+    IndexReady,
 }
 
 pub trait EventSink: Send + Sync {

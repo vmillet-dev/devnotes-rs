@@ -22,6 +22,8 @@ impl<R: Runtime> EventSink for TauriHost<R> {
             EngineEvent::Socket(event) => self.0.emit(WEBSOCKET_EVENT, event),
             EngineEvent::Console(event) => self.0.emit(HTTP_CONSOLE_EVENT, event),
             EngineEvent::Run(event) => self.0.emit(HTTP_RUN_EVENT, event),
+            // The front end does not wait on the index: a query finishes it.
+            EngineEvent::IndexProgress { .. } | EngineEvent::IndexReady => return,
         };
         if let Err(error) = sent {
             log::warn!("An engine event did not reach the window: {error}");

@@ -4,7 +4,7 @@ use super::run;
 use engine::error::AppError;
 use engine::vault::PassphraseChange;
 use engine::vault::VaultState;
-use engine::{Engine, vault};
+use engine::{Engine, index, vault};
 use std::sync::Arc;
 use tauri::State;
 
@@ -26,7 +26,9 @@ pub async fn create_vault(
     run(&engine, move |engine| {
         vault::create_vault(engine, passphrase)
     })
-    .await
+    .await?;
+    tauri::async_runtime::spawn(index::fill(Arc::clone(&engine)));
+    Ok(())
 }
 
 /// Off the main thread: deriving the key is slow on purpose, and would freeze the window over
@@ -41,7 +43,10 @@ pub async fn unlock_vault(
     run(&engine, move |engine| {
         vault::unlock_vault(engine, passphrase)
     })
-    .await
+    .await?;
+    // The index fills behind the gate, a slice a job: the canvas does not wait for it.
+    tauri::async_runtime::spawn(index::fill(Arc::clone(&engine)));
+    Ok(())
 }
 
 /// A new phrase over the same library, from the preferences panel.

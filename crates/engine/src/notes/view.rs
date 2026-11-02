@@ -143,6 +143,11 @@ impl Criteria {
     }
 
     pub fn passes(&self, note: &Note) -> bool {
+        self.passes_rails(note) && (self.needle.is_empty() || matches_search(note, &self.needle))
+    }
+
+    /// Everything but the search: the quick filter and the rails.
+    pub fn passes_rails(&self, note: &Note) -> bool {
         let filter = match self.filter {
             NoteFilter::All => true,
             NoteFilter::Pinned => note.pinned,
@@ -161,9 +166,8 @@ impl Criteria {
             || (note.kind.has_language() && self.languages.contains(&note.language));
         let kinds = self.kinds.is_empty() || self.kinds.contains(&note.kind);
         let priorities = self.priorities.is_empty() || self.priorities.contains(&note.priority);
-        let search = self.needle.is_empty() || matches_search(note, &self.needle);
 
-        filter && tags && languages && kinds && priorities && search
+        filter && tags && languages && kinds && priorities
     }
 }
 
@@ -454,15 +458,29 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     // Collected while filtering: finding the same match twice is paid for twice.
     let mut hits: HashMap<String, SearchHit> = HashMap::new();
     if !needle.is_empty() {
-        notes.retain(|note| match find_match(note, needle) {
+        notes.retain(|note| match answers(note, &Folded::of(note), needle) {
             None => false,
-            Some(SearchMatch::Title) => true,
-            Some(SearchMatch::Elsewhere(hit)) => {
+            Some(None) => true,
+            Some(Some(hit)) => {
                 hits.insert(note.id.clone(), hit);
                 true
             }
         });
     }
+
+    arrange(notes, hits, facets, request)
+}
+
+/// [`build`] past the search, over the notes that answered it and the quotes of those found
+/// elsewhere than in their title: the index searches its own folded text, then comes here.
+pub(crate) fn arrange(
+    mut notes: Vec<Note>,
+    mut hits: HashMap<String, SearchHit>,
+    facets: Facets,
+    request: &NotesQuery,
+) -> NotesView {
+    let criteria = Criteria::from(request);
+    let needle = criteria.needle();
 
     // A quick filter keeps the view chronological; a search, a facet or an opened folder
     // switches to a flat list. `build_sections` knows nothing of folders: the inside of one is
@@ -605,54 +623,66 @@ fn apply_search_hits(view: &mut NotesView, hits: &mut HashMap<String, SearchHit>
 /// only handles ASCII. The items count like the content, a todo list having no body. The
 /// board reuses this rather than growing a second, subtly different match.
 pub fn matches_search(note: &Note, needle: &str) -> bool {
-    find_match(note, needle).is_some()
+    answers(note, &Folded::of(note), needle).is_some()
 }
 
-fn find_match(note: &Note, needle: &str) -> Option<SearchMatch> {
-    if contains_folded(&note.title, needle) {
-        return Some(SearchMatch::Title);
+/// What a search reads of a note, folded: per query on a note just read, once by the index.
+#[derive(Debug, Default)]
+pub struct Folded {
+    pub title: String,
+    pub tags: Vec<String>,
+    pub content: String,
+    pub items: Vec<String>,
+    pub source: String,
+}
+
+impl Folded {
+    pub fn of(note: &Note) -> Self {
+        Self {
+            title: fold(&note.title),
+            tags: note.tags.iter().map(|tag| fold(tag)).collect(),
+            content: fold(&note.content),
+            items: note.items.iter().map(|item| fold(&item.text)).collect(),
+            source: fold(&note.source),
+        }
+    }
+}
+
+/// `None` when the note does not answer `needle`; `Some(None)` when the card already shows
+/// what did, its title; otherwise the quote of what matched.
+pub fn answers(note: &Note, folded: &Folded, needle: &str) -> Option<Option<SearchHit>> {
+    let hit = |field, text: &str| {
+        Some(Some(SearchHit {
+            field,
+            excerpt: clip(text),
+        }))
+    };
+    if folded.title.contains(needle) {
+        return Some(None);
     }
 
-    if let Some(tag) = note.tags.iter().find(|tag| contains_folded(tag, needle)) {
-        return Some(SearchMatch::elsewhere(SearchField::Tag, tag));
+    if let Some(at) = folded.tags.iter().position(|tag| tag.contains(needle)) {
+        return hit(SearchField::Tag, &note.tags[at]);
     }
 
     // The Markdown only adds characters, so a body without the needle is skipped unparsed.
-    if contains_folded(&note.content, needle)
+    if folded.content.contains(needle)
         && let Some(line) = note
             .readable_body()
             .lines()
             .find(|line| contains_folded(line, needle))
     {
-        return Some(SearchMatch::elsewhere(SearchField::Body, line.trim()));
+        return hit(SearchField::Body, line.trim());
     }
 
-    if let Some(item) = note
-        .items
-        .iter()
-        .find(|item| contains_folded(&item.text, needle))
-    {
-        return Some(SearchMatch::elsewhere(SearchField::Item, &item.text));
+    if let Some(at) = folded.items.iter().position(|item| item.contains(needle)) {
+        return hit(SearchField::Item, &note.items[at].text);
     }
 
-    contains_folded(&note.source, needle)
-        .then(|| SearchMatch::elsewhere(SearchField::Source, &note.source))
-}
-
-/// A note either fails to match, matches on something the card already shows, or
-/// matches on something it does not and can quote.
-enum SearchMatch {
-    Title,
-    Elsewhere(SearchHit),
-}
-
-impl SearchMatch {
-    fn elsewhere(field: SearchField, text: &str) -> Self {
-        Self::Elsewhere(SearchHit {
-            field,
-            excerpt: clip(text),
-        })
+    if folded.source.contains(needle) {
+        return hit(SearchField::Source, &note.source);
     }
+    None
 }
 
 /// A card shows one line, and a body may hold a minified payload on one.

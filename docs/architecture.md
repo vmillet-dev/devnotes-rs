@@ -5504,6 +5504,22 @@ once its copy is written — by the shell's wrapper, not by the core. Opening a 
 restoring a copy closes the sockets and cancels the sends and runs first
 (`Engine::let_go_of_the_network`). Nothing in `crates/engine` names Tauri.
 
+### The notes index
+
+`index::NoteIndex`, in the `Engine` and touched on the db thread alone, holds the live notes of
+the open library decrypted, with their folded text (`view::Folded`: title, tags, body, items,
+source), and the decorations a card needs (attachment counts, every folder's chip, the global
+`{{field}}` values). An entry is an `Arc` never changed in place, and wipes its texts when it
+goes (`zeroize`); nothing of the index reaches the disk.
+
+It fills after an unlock (`index::fill`, spawned by the shell's `unlock_vault` and
+`create_vault`): newest first, a slice of 2 000 notes a job of the queue, opened and folded in
+parallel (rayon), `IndexProgress` after each slice and `IndexReady` at the end. ⚠️ A slice is
+read in the order of `notes_updated_at` (`store::newest`, a keyset on `updated_at` then `id`):
+sorting itself, SQLite would read every sealed body before the first row. A slice read for a
+library closed since stops (`Library::number`); opening a library or restoring a copy empties
+the index first.
+
 ## Persistence (Rust)
 
 Storage is **SQLite**, queried through **Diesel** and embedded via `libsqlite3-sys` with the
