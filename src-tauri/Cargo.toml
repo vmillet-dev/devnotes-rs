@@ -1,21 +1,15 @@
 [package]
 name = "devnotes"
-version = "0.16.2"
 description = "A developer's notes and snippets manager for the desktop"
-authors = ["Valentin MILLET"]
-edition = "2024"
-# The pinned toolchain's (`rust-toolchain.toml`): below it, Cargo's MSRV-aware resolver quietly
-# holds crates back (Tauri 2.12 needs 1.90) while their npm twins move on.
-rust-version = "1.97"
-repository = "https://github.com/vmillet-dev/devnotes-rs"
-license = "GPL-3.0-only"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
 readme = "../README.md"
 default-run = "devnotes"
 autobenches = false
-
-[package.metadata.devnotes]
-display-name = "DevNotes"
-author-handle = "@vmillet-dev"
 
 [lib]
 name = "devnotes_lib"
@@ -40,9 +34,9 @@ e2e = ["dep:tauri-plugin-wdio", "dep:tauri-plugin-wdio-webdriver"]
 [build-dependencies]
 # The build half of the 2.11 line below.
 tauri-build = { version = "~2.6", features = [] }
-toml = "1.1"
 
 [dependencies]
+engine = { path = "../crates/engine" }
 # ~2.11 until `tauri-plugin-wdio-webdriver` (the e2e harness) builds against 2.12's `windows` 0.62.
 # Every plugin then resolves to the newest release that still takes 2.11.
 tauri = { version = "~2.11", features = ["tray-icon"] }
@@ -50,14 +44,6 @@ tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 specta = { version = "=2.0.0-rc.25", features = ["chrono"] }
 specta-typescript = "=0.0.12"
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = { version = "1.0.151", features = ["preserve_order", "raw_value"] }
-diesel = { version = "2.3.13", features = ["sqlite"] }
-diesel_migrations = { version = "2.3.2", features = ["sqlite"] }
-libsqlite3-sys = { version = "0.38.2", features = ["bundled"] }
-uuid = { version = "1.27.0", features = ["v4", "v7"] }
-chrono = { version = "0.4.45", features = ["serde"] }
-base64 = "0.23.1"
-png = "0.18.1"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-dialog = "2.7.3"
 tauri-plugin-opener = "2.5.5"
@@ -75,72 +61,10 @@ tauri-plugin-single-instance = "2.4.5"
 tauri-plugin-wdio = { version = "1.4.0", optional = true }
 tauri-plugin-wdio-webdriver = { version = "1.4.0", optional = true }
 log = "0.4.34"
-thiserror = "2.0.21"
-unicode-normalization = "0.1.25"
-zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2"] }
-aes-gcm = { version = "0.11.1", features = ["zeroize"] }
-argon2 = "0.6.0"
-zeroize = "1.9.0"
-getrandom = "0.4.3"
-similar = "3.2.0"
-pulldown-cmark = { version = "0.13.4", default-features = false }
-deunicode = "1.6.2"
-url = "2.5.8"
-reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "http2", "form", "multipart", "charset"] }
-rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
-tokio = { version = "1.53.1", default-features = false, features = ["rt", "sync", "macros", "time"] }
-tokio-tungstenite = { version = "0.30.0", default-features = false, features = ["connect", "__rustls-tls"] }
-rustls-platform-verifier = "0.7.0"
-futures-util = { version = "0.3.33", default-features = false, features = ["sink", "std"] }
-percent-encoding = "2.3.2"
-md-5 = "0.11.0"
-sha1 = "0.11.0"
-sha2 = "0.11.0"
-sha3 = "0.12.0"
-hmac = "0.13.0"
-toml = "1.1.3"
-quick-xml = "0.42.0"
-yaml-rust2 = "0.13.0"
-chrono-tz = "0.10.4"
-iana-time-zone = "0.1.65"
-croner = "4.0.1"
-rust_decimal = { version = "1.43.0", default-features = false, features = ["std", "maths"] }
-iban_validate = "5.0.1"
-unicode-segmentation = "1.13.3"
-qrcode = { version = "0.14.1", default-features = false }
-ipnet = "2.12.2"
-psl = "2.1.241"
-rquickjs = "0.14.0"
+serde_json = "1.0.151"
 
 [dev-dependencies]
-# The mock runtime `tests/commands` calls the commands through.
 tauri = { version = "2.11.6", features = ["test"] }
-tempfile = "3.27.0"
-criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 
-[[bench]]
-name = "commands"
-harness = false
-
-# ⚠️ Its own target so `cargo bench` stays usable: it seeds 26 000 notes.
-[[bench]]
-name = "corpus_size"
-harness = false
-
-[profile.release]
-lto = true
-codegen-units = 1
-strip = true
-
-[lints.rust]
-unsafe_code = "forbid"
-rust_2018_idioms = { level = "warn", priority = -1 }
-unreachable_pub = "warn"
-
-[lints.clippy]
-all = { level = "deny", priority = -1 }
-pedantic = { level = "deny", priority = -1 }
-missing_errors_doc = "allow"
-missing_panics_doc = "allow"
-must_use_candidate = "allow"
-module_name_repetitions = "allow"
+[lints]
+workspace = true

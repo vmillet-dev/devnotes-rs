@@ -1,89 +1,16 @@
-// A module holding commands is `pub`: `#[specta::specta]` resolves its macro from the crate
-// root. The rest is `pub(crate)`, so `unreachable_pub` and `dead_code` can see them.
-pub mod attachments;
-pub mod backup;
-pub mod changelog;
-pub mod db;
+//! The Tauri shell over `engine`: the plugins, the window, the tray and the one list of
+//! commands the front end may call.
+
 pub mod desktop;
-pub mod error;
-pub mod folders;
-pub mod http;
-pub mod json;
-pub mod libraries;
-pub mod notes;
-pub mod recovery;
-pub mod spaces;
-pub mod tools;
-pub mod transfer;
-pub mod vault;
 
-pub(crate) mod app_info;
-pub(crate) mod closed_enum;
-pub(crate) mod count;
-pub(crate) mod layout;
-pub(crate) mod name;
-
+use engine::{app_info, attachments, backup, db, http, layout, notes, vault};
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
 use tauri_specta::{Builder, collect_commands};
 
-use attachments::{
-    attach_clipboard_image, attach_file, delete_attachment, list_attachments, open_attachment,
-    read_attachment, save_attachment,
-};
-use backup::{list_backups, restore_backup, take_restored_aside};
-use changelog::{app_changelog, release_notes};
 use desktop::{
     hold_quit, release_global_shortcuts, set_global_shortcuts, set_window_behavior, sync_tray,
 };
-use folders::{
-    arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
-    list_folders, move_folder, move_folder_back, recolour_folder, rename_folder, save_board_layout,
-};
-use http::{
-    add_graphql_variables, cancel_http_run, cancel_http_send, check_http_headers,
-    check_http_variables, clear_http_cookies, clear_http_history, close_websocket,
-    connect_websocket, count_http_contents, count_http_cookies, count_http_history,
-    create_http_collection, create_http_environment, create_http_folder, create_http_request,
-    create_http_request_in, delete_http_cookie, delete_http_cookie_domain, delete_http_environment,
-    delete_http_history_entry, delete_http_item, describe_graphql, describe_http_body,
-    duplicate_http_environment, duplicate_http_item, forget_http_response, generate_http_code,
-    get_http_request, http_cookies, http_environments, http_history, http_history_draft,
-    http_history_entry, http_history_onto_request, http_response_image, http_response_note,
-    http_run_order, http_settings, http_tree, http_variables, implied_http_headers,
-    inherited_http_settings, move_http_item, read_http_headers, read_http_run_data,
-    rename_http_item, reorder_http_collection, restore_http_history_entry, run_http_collection,
-    save_http_environment, save_http_globals, save_http_request, save_http_response,
-    save_http_run_order, save_http_settings, search_http_requests, send_http_request,
-    send_websocket, sync_http_query,
-};
-use json::explore_json;
-use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
-use notes::{
-    convert_note, count_notes_tagged, create_note, delete_note, delete_notes, delete_tags,
-    detect_language, drawing_picture, drawing_thumbnail, duplicate_note, empty_trash,
-    evaluate_calc, field_spans, fill_placeholders, get_note, list_drawings,
-    list_global_placeholders, list_revisions, list_tags, list_trash, move_notes, move_notes_back,
-    present_note, purge_notes, query_notes, remove_tag, rename_tags, restore_notes,
-    restore_priorities, restore_revision, restore_tags, restore_trash, revision_diff, seed_samples,
-    set_global_placeholders, set_pinned, set_placeholder_values, set_priority, tag_notes,
-    untag_notes, update_note,
-};
-use recovery::{archive_locked_library, set_aside_damaged_library};
-use spaces::{
-    count_space_contents, create_space, delete_space, list_spaces, pin_space, rename_space,
-};
-use tools::{
-    check_digits, convert_case, convert_data, convert_size, copy_qr_code, current_instant,
-    decode_bytes, decode_jwt, describe_cidr, describe_colour, describe_cron, describe_instant,
-    describe_permissions, describe_qr_code, diff_json, diff_text, encode_base64_file, encode_bytes,
-    estimate_transfer, export_identities, fix_line_breaks, generate_identifiers, generate_identity,
-    generate_json, generate_passwords, hash_input, inspect_identifier, lorem_ipsum,
-    measure_durations, parse_url, place_in_zones, save_bytes, save_qr_code, search_time_zones,
-    text_stats, time_in_zone, url_codec,
-};
-use transfer::{count_export, export_is_protected, export_notes, import_notes, share_notes};
-use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
 
 /// From the manifest: a relative path would follow the current directory.
 const BINDINGS_PATH: &str = concat!(
@@ -105,191 +32,191 @@ pub fn export_bindings() -> Result<(), specta_typescript::Error> {
 fn ipc_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
-            query_notes::<tauri::Wry>,
-            get_note::<tauri::Wry>,
-            drawing_picture::<tauri::Wry>,
-            drawing_thumbnail::<tauri::Wry>,
-            list_drawings::<tauri::Wry>,
-            create_note::<tauri::Wry>,
-            duplicate_note::<tauri::Wry>,
-            detect_language,
-            evaluate_calc,
-            present_note,
-            field_spans,
-            explore_json,
-            convert_case,
-            fix_line_breaks,
-            parse_url,
-            url_codec,
-            encode_bytes,
-            encode_base64_file,
-            decode_bytes,
-            save_bytes,
-            hash_input,
-            generate_passwords,
-            generate_identifiers,
-            inspect_identifier,
-            text_stats,
-            describe_qr_code,
-            save_qr_code,
-            copy_qr_code::<tauri::Wry>,
-            describe_cidr,
-            describe_colour,
-            convert_data,
-            generate_json,
-            generate_identity::<tauri::Wry>,
-            export_identities::<tauri::Wry>,
-            lorem_ipsum,
-            diff_json,
-            diff_text,
-            describe_instant,
-            current_instant,
-            measure_durations,
-            search_time_zones,
-            place_in_zones,
-            time_in_zone,
-            describe_cron,
-            convert_size,
-            estimate_transfer,
-            describe_permissions,
-            check_digits,
-            decode_jwt,
-            seed_samples::<tauri::Wry>,
-            update_note::<tauri::Wry>,
-            convert_note::<tauri::Wry>,
-            list_revisions::<tauri::Wry>,
-            revision_diff::<tauri::Wry>,
-            restore_revision::<tauri::Wry>,
-            delete_note::<tauri::Wry>,
-            delete_notes::<tauri::Wry>,
-            restore_notes::<tauri::Wry>,
-            list_trash::<tauri::Wry>,
-            restore_trash::<tauri::Wry>,
-            purge_notes::<tauri::Wry>,
-            empty_trash::<tauri::Wry>,
-            move_notes::<tauri::Wry>,
-            move_notes_back::<tauri::Wry>,
-            tag_notes::<tauri::Wry>,
-            untag_notes::<tauri::Wry>,
-            remove_tag::<tauri::Wry>,
-            restore_tags::<tauri::Wry>,
-            set_pinned::<tauri::Wry>,
-            set_priority::<tauri::Wry>,
-            restore_priorities::<tauri::Wry>,
-            count_notes_tagged::<tauri::Wry>,
-            list_tags::<tauri::Wry>,
-            rename_tags::<tauri::Wry>,
-            delete_tags::<tauri::Wry>,
-            fill_placeholders::<tauri::Wry>,
-            set_placeholder_values::<tauri::Wry>,
-            list_global_placeholders::<tauri::Wry>,
-            set_global_placeholders::<tauri::Wry>,
-            list_folders::<tauri::Wry>,
-            http_tree::<tauri::Wry>,
-            search_http_requests::<tauri::Wry>,
-            create_http_collection::<tauri::Wry>,
-            create_http_folder::<tauri::Wry>,
-            create_http_request::<tauri::Wry>,
-            create_http_request_in::<tauri::Wry>,
-            get_http_request::<tauri::Wry>,
-            save_http_request::<tauri::Wry>,
-            rename_http_item::<tauri::Wry>,
-            count_http_contents::<tauri::Wry>,
-            delete_http_item::<tauri::Wry>,
-            duplicate_http_item::<tauri::Wry>,
-            move_http_item::<tauri::Wry>,
-            reorder_http_collection::<tauri::Wry>,
-            sync_http_query,
-            http_settings::<tauri::Wry>,
-            save_http_settings::<tauri::Wry>,
-            inherited_http_settings::<tauri::Wry>,
-            describe_http_body,
-            implied_http_headers::<tauri::Wry>,
-            check_http_headers,
-            read_http_headers,
-            describe_graphql,
-            add_graphql_variables,
-            connect_websocket::<tauri::Wry>,
-            send_websocket::<tauri::Wry>,
-            close_websocket::<tauri::Wry>,
-            send_http_request::<tauri::Wry>,
-            cancel_http_send::<tauri::Wry>,
-            run_http_collection::<tauri::Wry>,
-            http_run_order::<tauri::Wry>,
-            save_http_run_order::<tauri::Wry>,
-            cancel_http_run::<tauri::Wry>,
-            read_http_run_data,
-            save_http_response::<tauri::Wry>,
-            forget_http_response::<tauri::Wry>,
-            http_response_image::<tauri::Wry>,
-            http_response_note::<tauri::Wry>,
-            http_history::<tauri::Wry>,
-            http_history_entry::<tauri::Wry>,
-            http_history_draft::<tauri::Wry>,
-            http_history_onto_request::<tauri::Wry>,
-            delete_http_history_entry::<tauri::Wry>,
-            restore_http_history_entry::<tauri::Wry>,
-            count_http_history::<tauri::Wry>,
-            clear_http_history::<tauri::Wry>,
-            http_cookies::<tauri::Wry>,
-            delete_http_cookie::<tauri::Wry>,
-            delete_http_cookie_domain::<tauri::Wry>,
-            count_http_cookies::<tauri::Wry>,
-            clear_http_cookies::<tauri::Wry>,
-            http_environments::<tauri::Wry>,
-            create_http_environment::<tauri::Wry>,
-            save_http_environment::<tauri::Wry>,
-            save_http_globals::<tauri::Wry>,
-            duplicate_http_environment::<tauri::Wry>,
-            delete_http_environment::<tauri::Wry>,
-            check_http_variables,
-            http_variables::<tauri::Wry>,
-            generate_http_code::<tauri::Wry>,
-            board_view::<tauri::Wry>,
-            save_board_layout::<tauri::Wry>,
-            arrange_board::<tauri::Wry>,
-            create_folder::<tauri::Wry>,
-            rename_folder::<tauri::Wry>,
-            recolour_folder::<tauri::Wry>,
-            delete_folder::<tauri::Wry>,
-            move_folder::<tauri::Wry>,
-            move_folder_back::<tauri::Wry>,
-            file_notes::<tauri::Wry>,
-            file_notes_back::<tauri::Wry>,
-            list_spaces::<tauri::Wry>,
-            count_space_contents::<tauri::Wry>,
-            create_space::<tauri::Wry>,
-            rename_space::<tauri::Wry>,
-            pin_space::<tauri::Wry>,
-            delete_space::<tauri::Wry>,
-            attach_file::<tauri::Wry>,
-            attach_clipboard_image::<tauri::Wry>,
-            list_attachments::<tauri::Wry>,
-            read_attachment::<tauri::Wry>,
-            open_attachment::<tauri::Wry>,
-            save_attachment::<tauri::Wry>,
-            delete_attachment::<tauri::Wry>,
-            export_notes::<tauri::Wry>,
-            count_export::<tauri::Wry>,
-            import_notes::<tauri::Wry>,
-            share_notes::<tauri::Wry>,
-            export_is_protected,
-            vault_state::<tauri::Wry>,
-            create_vault::<tauri::Wry>,
-            unlock_vault::<tauri::Wry>,
-            change_passphrase::<tauri::Wry>,
-            set_aside_damaged_library::<tauri::Wry>,
-            archive_locked_library::<tauri::Wry>,
-            list_backups::<tauri::Wry>,
-            restore_backup::<tauri::Wry>,
-            take_restored_aside,
-            list_libraries::<tauri::Wry>,
-            create_library::<tauri::Wry>,
-            open_library::<tauri::Wry>,
-            rename_library::<tauri::Wry>,
-            delete_library::<tauri::Wry>,
-            app_changelog,
-            release_notes,
+            engine::query_notes::<tauri::Wry>,
+            engine::get_note::<tauri::Wry>,
+            engine::drawing_picture::<tauri::Wry>,
+            engine::drawing_thumbnail::<tauri::Wry>,
+            engine::list_drawings::<tauri::Wry>,
+            engine::create_note::<tauri::Wry>,
+            engine::duplicate_note::<tauri::Wry>,
+            engine::detect_language,
+            engine::evaluate_calc,
+            engine::present_note,
+            engine::field_spans,
+            engine::explore_json,
+            engine::convert_case,
+            engine::fix_line_breaks,
+            engine::parse_url,
+            engine::url_codec,
+            engine::encode_bytes,
+            engine::encode_base64_file,
+            engine::decode_bytes,
+            engine::save_bytes,
+            engine::hash_input,
+            engine::generate_passwords,
+            engine::generate_identifiers,
+            engine::inspect_identifier,
+            engine::text_stats,
+            engine::describe_qr_code,
+            engine::save_qr_code,
+            engine::copy_qr_code::<tauri::Wry>,
+            engine::describe_cidr,
+            engine::describe_colour,
+            engine::convert_data,
+            engine::generate_json,
+            engine::generate_identity::<tauri::Wry>,
+            engine::export_identities::<tauri::Wry>,
+            engine::lorem_ipsum,
+            engine::diff_json,
+            engine::diff_text,
+            engine::describe_instant,
+            engine::current_instant,
+            engine::measure_durations,
+            engine::search_time_zones,
+            engine::place_in_zones,
+            engine::time_in_zone,
+            engine::describe_cron,
+            engine::convert_size,
+            engine::estimate_transfer,
+            engine::describe_permissions,
+            engine::check_digits,
+            engine::decode_jwt,
+            engine::seed_samples::<tauri::Wry>,
+            engine::update_note::<tauri::Wry>,
+            engine::convert_note::<tauri::Wry>,
+            engine::list_revisions::<tauri::Wry>,
+            engine::revision_diff::<tauri::Wry>,
+            engine::restore_revision::<tauri::Wry>,
+            engine::delete_note::<tauri::Wry>,
+            engine::delete_notes::<tauri::Wry>,
+            engine::restore_notes::<tauri::Wry>,
+            engine::list_trash::<tauri::Wry>,
+            engine::restore_trash::<tauri::Wry>,
+            engine::purge_notes::<tauri::Wry>,
+            engine::empty_trash::<tauri::Wry>,
+            engine::move_notes::<tauri::Wry>,
+            engine::move_notes_back::<tauri::Wry>,
+            engine::tag_notes::<tauri::Wry>,
+            engine::untag_notes::<tauri::Wry>,
+            engine::remove_tag::<tauri::Wry>,
+            engine::restore_tags::<tauri::Wry>,
+            engine::set_pinned::<tauri::Wry>,
+            engine::set_priority::<tauri::Wry>,
+            engine::restore_priorities::<tauri::Wry>,
+            engine::count_notes_tagged::<tauri::Wry>,
+            engine::list_tags::<tauri::Wry>,
+            engine::rename_tags::<tauri::Wry>,
+            engine::delete_tags::<tauri::Wry>,
+            engine::fill_placeholders::<tauri::Wry>,
+            engine::set_placeholder_values::<tauri::Wry>,
+            engine::list_global_placeholders::<tauri::Wry>,
+            engine::set_global_placeholders::<tauri::Wry>,
+            engine::list_folders::<tauri::Wry>,
+            engine::http_tree::<tauri::Wry>,
+            engine::search_http_requests::<tauri::Wry>,
+            engine::create_http_collection::<tauri::Wry>,
+            engine::create_http_folder::<tauri::Wry>,
+            engine::create_http_request::<tauri::Wry>,
+            engine::create_http_request_in::<tauri::Wry>,
+            engine::get_http_request::<tauri::Wry>,
+            engine::save_http_request::<tauri::Wry>,
+            engine::rename_http_item::<tauri::Wry>,
+            engine::count_http_contents::<tauri::Wry>,
+            engine::delete_http_item::<tauri::Wry>,
+            engine::duplicate_http_item::<tauri::Wry>,
+            engine::move_http_item::<tauri::Wry>,
+            engine::reorder_http_collection::<tauri::Wry>,
+            engine::sync_http_query,
+            engine::http_settings::<tauri::Wry>,
+            engine::save_http_settings::<tauri::Wry>,
+            engine::inherited_http_settings::<tauri::Wry>,
+            engine::describe_http_body,
+            engine::implied_http_headers::<tauri::Wry>,
+            engine::check_http_headers,
+            engine::read_http_headers,
+            engine::describe_graphql,
+            engine::add_graphql_variables,
+            engine::connect_websocket::<tauri::Wry>,
+            engine::send_websocket::<tauri::Wry>,
+            engine::close_websocket::<tauri::Wry>,
+            engine::send_http_request::<tauri::Wry>,
+            engine::cancel_http_send::<tauri::Wry>,
+            engine::run_http_collection::<tauri::Wry>,
+            engine::http_run_order::<tauri::Wry>,
+            engine::save_http_run_order::<tauri::Wry>,
+            engine::cancel_http_run::<tauri::Wry>,
+            engine::read_http_run_data,
+            engine::save_http_response::<tauri::Wry>,
+            engine::forget_http_response::<tauri::Wry>,
+            engine::http_response_image::<tauri::Wry>,
+            engine::http_response_note::<tauri::Wry>,
+            engine::http_history::<tauri::Wry>,
+            engine::http_history_entry::<tauri::Wry>,
+            engine::http_history_draft::<tauri::Wry>,
+            engine::http_history_onto_request::<tauri::Wry>,
+            engine::delete_http_history_entry::<tauri::Wry>,
+            engine::restore_http_history_entry::<tauri::Wry>,
+            engine::count_http_history::<tauri::Wry>,
+            engine::clear_http_history::<tauri::Wry>,
+            engine::http_cookies::<tauri::Wry>,
+            engine::delete_http_cookie::<tauri::Wry>,
+            engine::delete_http_cookie_domain::<tauri::Wry>,
+            engine::count_http_cookies::<tauri::Wry>,
+            engine::clear_http_cookies::<tauri::Wry>,
+            engine::http_environments::<tauri::Wry>,
+            engine::create_http_environment::<tauri::Wry>,
+            engine::save_http_environment::<tauri::Wry>,
+            engine::save_http_globals::<tauri::Wry>,
+            engine::duplicate_http_environment::<tauri::Wry>,
+            engine::delete_http_environment::<tauri::Wry>,
+            engine::check_http_variables,
+            engine::http_variables::<tauri::Wry>,
+            engine::generate_http_code::<tauri::Wry>,
+            engine::board_view::<tauri::Wry>,
+            engine::save_board_layout::<tauri::Wry>,
+            engine::arrange_board::<tauri::Wry>,
+            engine::create_folder::<tauri::Wry>,
+            engine::rename_folder::<tauri::Wry>,
+            engine::recolour_folder::<tauri::Wry>,
+            engine::delete_folder::<tauri::Wry>,
+            engine::move_folder::<tauri::Wry>,
+            engine::move_folder_back::<tauri::Wry>,
+            engine::file_notes::<tauri::Wry>,
+            engine::file_notes_back::<tauri::Wry>,
+            engine::list_spaces::<tauri::Wry>,
+            engine::count_space_contents::<tauri::Wry>,
+            engine::create_space::<tauri::Wry>,
+            engine::rename_space::<tauri::Wry>,
+            engine::pin_space::<tauri::Wry>,
+            engine::delete_space::<tauri::Wry>,
+            engine::attach_file::<tauri::Wry>,
+            engine::attach_clipboard_image::<tauri::Wry>,
+            engine::list_attachments::<tauri::Wry>,
+            engine::read_attachment::<tauri::Wry>,
+            engine::open_attachment::<tauri::Wry>,
+            engine::save_attachment::<tauri::Wry>,
+            engine::delete_attachment::<tauri::Wry>,
+            engine::export_notes::<tauri::Wry>,
+            engine::count_export::<tauri::Wry>,
+            engine::import_notes::<tauri::Wry>,
+            engine::share_notes::<tauri::Wry>,
+            engine::export_is_protected,
+            engine::vault_state::<tauri::Wry>,
+            engine::create_vault::<tauri::Wry>,
+            engine::unlock_vault::<tauri::Wry>,
+            engine::change_passphrase::<tauri::Wry>,
+            engine::set_aside_damaged_library::<tauri::Wry>,
+            engine::archive_locked_library::<tauri::Wry>,
+            engine::list_backups::<tauri::Wry>,
+            engine::restore_backup::<tauri::Wry>,
+            engine::take_restored_aside,
+            engine::list_libraries::<tauri::Wry>,
+            engine::create_library::<tauri::Wry>,
+            engine::open_library::<tauri::Wry>,
+            engine::rename_library::<tauri::Wry>,
+            engine::delete_library::<tauri::Wry>,
+            engine::app_changelog,
+            engine::release_notes,
             sync_tray,
             set_global_shortcuts,
             release_global_shortcuts::<tauri::Wry>,
@@ -419,24 +346,6 @@ fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// The launch chores, run after the unlock: nothing can be read before it, and none of
-/// them is fatal.
-pub(crate) fn sweep<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) {
-    let db = handle.state::<db::Db>();
-
-    // ⚠️ The copy before the sweeps: it is worth most holding what retention will purge.
-    backup::take(handle, &db);
-
-    notes::trash::sweep_at_startup(&db);
-    http::history::sweep_at_startup(&db);
-    if let Err(error) = attachments::files::sweep_orphan_files(&db) {
-        log::warn!("Orphan attachment files not swept: {error}");
-    }
-    // The decrypted copies `open_attachment` wrote: another application may still hold
-    // them on close, so they go at the next launch at the latest.
-    attachments::sealed::sweep_plaintext(handle);
-}
-
 /// Both are refused when there is no tray to find the window in (see `desktop`).
 fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
     match event {
@@ -461,15 +370,6 @@ fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
         }
         _ => {}
     }
-}
-
-/// Started with this first argument, the application is a script host and nothing else: no
-/// window, no library (`http::scripts::child`).
-pub use http::scripts::child::ARG as SCRIPT_HOST_ARG;
-
-/// The script host's `main`: its exit code.
-pub fn serve_scripts() -> i32 {
-    http::scripts::child::serve()
 }
 
 pub fn run() {

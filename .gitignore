@@ -2,6 +2,7 @@
 
 # Compiled output
 /dist
+/target
 /tmp
 /out-tsc
 /bazel-out
@@ -48,4 +49,4 @@ testem.log
 Thumbs.db
 
 # The script libraries are bundled from their own install: only `dist/` is kept.
-/src-tauri/sandbox/node_modules
+/crates/engine/sandbox/node_modules
