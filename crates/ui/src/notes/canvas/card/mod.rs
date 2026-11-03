@@ -29,6 +29,8 @@ pub(super) struct Context<'a> {
     pub(super) thumbnails: &'a Thumbnails,
     /// The spaces and folders a note can be filed into or moved to.
     pub(super) library: &'a crate::state::spaces::SpacesState,
+    /// The card a first `Delete` armed: a second one sends it to the trash.
+    pub(super) armed: Option<&'a str>,
 }
 
 const FOOTER_HEIGHT: f32 = 18.0;
@@ -38,7 +40,7 @@ pub(super) fn show(
     rect: Rect,
     note: &DisplayNote,
     context: &Context<'_>,
-    actions: &mut Actions,
+    (canvas_view, actions): (&mut super::CanvasView, &mut Actions),
 ) {
     let p = palette(ui.ctx());
     let padding = spacing(ui.ctx()).card;
@@ -56,12 +58,30 @@ pub(super) fn show(
     open.widget_info(|| WidgetInfo::labeled(Role::Button, true, &title));
     address(ui, &open, "note-card-open");
     crate::theme::focus::ring(ui, &open, CornerRadius::same(10));
+    if canvas_view.request.as_deref() == Some(note.id.as_str()) {
+        open.request_focus();
+        canvas_view.request = None;
+    }
+    if open.has_focus() {
+        canvas_view.focused = Some(note.id.clone());
+        // The arrows and Escape are the canvas's table's: egui would move the focus itself.
+        let kept = egui::EventFilter {
+            horizontal_arrows: true,
+            vertical_arrows: true,
+            escape: true,
+            ..egui::EventFilter::default()
+        };
+        ui.memory_mut(|memory| memory.set_focus_lock_filter(open.id, kept));
+    }
     if open.clicked() {
         actions.push(crate::action::Action::Notes(
             crate::notes::Action::OpenNote(note.id.clone()),
         ));
     }
-    let (fill, edge) = if ui.rect_contains_pointer(rect) {
+    let armed = context.armed == Some(note.id.as_str());
+    let (fill, edge) = if armed {
+        (p.bg_2, p.red)
+    } else if ui.rect_contains_pointer(rect) {
         (p.bg_2, p.line)
     } else {
         (p.bg_1, p.line_soft)
@@ -88,8 +108,28 @@ pub(super) fn show(
         pos2(inner.right(), footer.top() - footer_gap),
     );
     body::show(ui, room, note, context, actions);
-    footer::show(ui, footer, note, context);
+    if armed {
+        arming(ui, footer, context.language);
+    } else {
+        footer::show(ui, footer, note, context);
+    }
     actions::show(ui, rect, note, context, actions);
+}
+
+/// In the footer's place, real words and both keys: what finishes the deletion, and the way out.
+fn arming(ui: &mut Ui, footer: Rect, language: i18n::Language) {
+    let p = palette(ui.ctx());
+    let words = i18n::translate(language, keys::notes::DELETE_ARMED, &[]);
+    let shown = galley(
+        ui,
+        &words,
+        &Font::proportional(11.0, 600.0, 1.2),
+        p.red,
+        footer.width(),
+        1,
+    );
+    let at = pos2(footer.left(), footer.center().y - shown.size().y / 2.0);
+    text_at(ui, at, shown, &words, "note-card-arming");
 }
 
 /// The title on two lines at most, the kind's badge on its first line. Answers where it ends.

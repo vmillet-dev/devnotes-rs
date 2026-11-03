@@ -3,7 +3,9 @@
 //! nothing found.
 
 mod card;
+pub mod grid;
 pub mod rows;
+pub mod shortcuts;
 
 use egui::emath::GuiRounding as _;
 use egui::text::{LayoutJob, TextFormat};
@@ -21,7 +23,16 @@ use crate::theme::{palette, spacing};
 use crate::widgets::{self, Button, address, interact, priority_dot};
 use rows::{CARD_HEIGHT, HEADING_HEIGHT, Row, Rows};
 
-pub fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+/// What only the canvas's drawing sees: the card with the focus, the one asked to take it, and
+/// how many columns the cards were laid out in — what the arrows move through.
+#[derive(Default)]
+pub struct CanvasView {
+    pub focused: Option<String>,
+    pub request: Option<String>,
+    pub columns: usize,
+}
+
+pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions: &mut Actions) {
     let query = &state.notes_query;
     let language = state.language;
     let canvas = spacing(ui.ctx()).canvas;
@@ -61,8 +72,28 @@ pub fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         clock: state.clock.as_ref(),
         thumbnails: &state.caches.thumbnails,
         library: &state.spaces,
+        armed: state.selection.armed(),
     };
-    sections(ui, view, &context, actions);
+    sections(ui, view, &context, canvas_view, actions);
+    hint(ui, language);
+}
+
+/// The keys that matter, on the bottom edge whatever is above it.
+fn hint(ui: &mut Ui, language: i18n::Language) {
+    let p = palette(ui.ctx());
+    let words = i18n::translate(language, keys::notes::KEYBOARD_HINT, &[]);
+    let width = widgets::arrowed(ui, None, &words, 11.0, p.text_2);
+    let region = ui.max_rect();
+    let band = Rect::from_min_max(pos2(region.left(), region.bottom() - 24.0), region.max);
+    let mut band_ui = ui.new_child(UiBuilder::new().max_rect(band));
+    band_ui
+        .painter()
+        .rect_filled(band, CornerRadius::ZERO, p.bg_0.gamma_multiply(0.92));
+    let rect = Rect::from_center_size(band.center(), vec2(width, 14.0));
+    let response = band_ui.allocate_rect(rect, Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
+    address(&band_ui, &response, "canvas-keyboard-hint");
+    widgets::arrowed(&band_ui, Some(rect.left_center()), &words, 11.0, p.text_2);
 }
 
 fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
@@ -81,7 +112,13 @@ fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
     ui.painter().galley(rect.min, galley, Color32::TRANSPARENT);
 }
 
-fn sections(ui: &mut Ui, view: &NotesView, context: &card::Context<'_>, actions: &mut Actions) {
+fn sections(
+    ui: &mut Ui,
+    view: &NotesView,
+    context: &card::Context<'_>,
+    canvas_view: &mut CanvasView,
+    actions: &mut Actions,
+) {
     let s = spacing(ui.ctx());
     egui::ScrollArea::vertical()
         .id_salt("canvas")
@@ -91,6 +128,17 @@ fn sections(ui: &mut Ui, view: &NotesView, context: &card::Context<'_>, actions:
             let rows = Rows::of(view, width, s.grid, s.section);
             let origin = ui.min_rect().min + Vec2::splat(s.canvas);
             ui.set_height(rows.height() + 2.0 * s.canvas);
+            canvas_view.columns = rows.columns();
+            // A card asked to take the focus may be scrolled out of view, so not drawn.
+            if let Some(top) = canvas_view
+                .request
+                .as_deref()
+                .and_then(|id| rows.top_of(view, id))
+            {
+                let rect = Rect::from_min_size(origin + vec2(0.0, top), vec2(width, CARD_HEIGHT));
+                ui.scroll_to_rect(rect, None);
+            }
+            canvas_view.focused = None;
             let top = viewport.top() - s.canvas;
             for (at, row) in rows.visible(top, viewport.bottom() - s.canvas) {
                 let min = origin + vec2(0.0, at);
@@ -100,25 +148,20 @@ fn sections(ui: &mut Ui, view: &NotesView, context: &card::Context<'_>, actions:
                         heading(ui, rect, &view.sections[section], context.language);
                     }
                     Row::Cards { section, first } => {
-                        cards(ui, min, &rows, view, section, first, context, actions);
+                        let at = (&rows, view, section, first);
+                        cards(ui, min, at, context, canvas_view, actions);
                     }
                 }
             }
         });
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "one row of one section, where it goes"
-)]
 fn cards(
     ui: &mut Ui,
     min: egui::Pos2,
-    rows: &Rows,
-    view: &NotesView,
-    section: usize,
-    first: usize,
+    (rows, view, section, first): (&Rows, &NotesView, usize, usize),
     context: &card::Context<'_>,
+    canvas_view: &mut CanvasView,
     actions: &mut Actions,
 ) {
     let grid = spacing(ui.ctx()).grid;
@@ -138,7 +181,7 @@ fn cards(
                     rect,
                     &view.display(shown_card),
                     context,
-                    actions,
+                    (canvas_view, actions),
                 );
             }
             None => ghost(&mut cell_ui, rect, context.language, actions),

@@ -85,6 +85,32 @@ impl Rows {
     }
 
     /// The rows that cross `top..bottom`, with where each starts.
+    /// Where the row holding note `id` starts, if the view holds it.
+    pub fn top_of(&self, view: &NotesView, id: &str) -> Option<f32> {
+        let (section, at) = view
+            .sections
+            .iter()
+            .enumerate()
+            .find_map(|(section, shown)| {
+                shown
+                    .cards
+                    .iter()
+                    .position(|card| card.id == id)
+                    .map(|at| (section, at))
+            })?;
+        self.all
+            .iter()
+            .zip(&self.tops)
+            .find_map(|(row, top)| match row {
+                Row::Cards { section: s, first }
+                    if *s == section && (*first..*first + self.columns).contains(&at) =>
+                {
+                    Some(*top)
+                }
+                _ => None,
+            })
+    }
+
     pub fn visible(&self, top: f32, bottom: f32) -> impl Iterator<Item = (f32, Row)> + '_ {
         self.range(top, bottom)
             .map(|index| (self.tops[index], self.all[index]))

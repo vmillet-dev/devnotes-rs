@@ -210,7 +210,14 @@ impl eframe::App for DevNotesApp {
             }
         });
         let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
-        let levels: &[&[keys::Binding]] = if notes_shown {
+        // A modal over the canvas takes its keys: the canvas's stand aside.
+        let levels: &[&[keys::Binding]] = if notes_shown && !self.state.editor.is_open() {
+            &[
+                &keys::NOTES,
+                &notes::canvas::shortcuts::CANVAS,
+                &keys::APPLICATION,
+            ]
+        } else if notes_shown {
             &[&keys::NOTES, &keys::APPLICATION]
         } else {
             &[&keys::APPLICATION]

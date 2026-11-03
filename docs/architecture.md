@@ -4689,6 +4689,18 @@ the editor under « (copy) »), file into a folder of its space, move to another
 two clicks. ⚠️ The pill is drawn in the card's layer, after its click surface: in an area above
 it, clicks went through to the card.
 
+The canvas's keys are one table (`canvas::shortcuts::CANVAS`), read by `keys::dispatch` after the
+focused widget, above the application's and below the notes area's, and never while a text field
+has the focus — ⚠️ known by its asking for the IME, not by `egui_wants_keyboard_input`, which is
+true for a focused button too. They read the character: `Ctrl+N` and `Ctrl+Shift+N/L/M/D` make a
+draft of each kind, the arrows move the focus, `C` copies, `P` pins, `0`…`4` set a priority,
+`Delete` arms the card (its footer says how to finish or back out) and a second one trashes it,
+Escape steps back — what is armed, then the search, then up a folder. Enter is the card button's
+own. The focus is egui's, on the card's button, which keeps the arrows and Escape from egui's own
+focus moves; where the arrows go is `canvas::grid::neighbour`, read from the core's sections and
+the column count last laid out, not from what is drawn, and a card asked to take the focus is
+scrolled to first.
+
 The rail can be put away (`library-rail-toggle`, the application setting `showLibraryRail`): the
 space and folder switchers then take its place in the header, their rows' ⋯ opening the same
 panels as the rail (`notes::panel`, shared). While a folder is open, its breadcrumb replaces

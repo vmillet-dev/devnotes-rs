@@ -94,7 +94,7 @@ pub(crate) fn text(
     )
 }
 
-/// Words whose arrows (↑ → ↓) are painted as icons: none of the embedded faces has them, and
+/// Words whose arrows (← ↑ → ↓) are painted as icons: none of the embedded faces has them, and
 /// the system's are a different hand. Laid out from `left` on the line through `middle`;
 /// answers the width taken, which `at = None` measures without painting.
 pub(crate) fn arrowed(
@@ -109,6 +109,7 @@ pub(crate) fn arrowed(
     loop {
         let found = rest.char_indices().find_map(|(index, glyph)| {
             let icon = match glyph {
+                '←' => crate::theme::icons::Icon::ArrowLeft,
                 '↑' => crate::theme::icons::Icon::ArrowUp,
                 '→' => crate::theme::icons::Icon::ArrowRight,
                 '↓' => crate::theme::icons::Icon::ArrowDown,

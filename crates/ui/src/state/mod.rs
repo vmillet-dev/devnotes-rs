@@ -5,6 +5,7 @@ pub mod editor;
 pub mod notes;
 pub mod notes_query;
 mod query;
+pub mod selection;
 pub mod spaces;
 
 pub use query::QueryCell;
@@ -74,6 +75,7 @@ pub struct AppState {
     pub notes_view: crate::notes::View,
     pub notes: notes::NotesState,
     pub editor: editor::EditorState,
+    pub selection: selection::SelectionState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -100,6 +102,7 @@ impl AppState {
             notes_view: crate::notes::View::default(),
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
+            selection: selection::SelectionState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -316,12 +319,103 @@ impl AppState {
                 self.notes.duplicate(backend, id, title);
             }
             crate::notes::Action::Copy(id) => self.notes.copy(backend, id),
+            crate::notes::Action::Canvas(key) => self.canvas_key(key, ctx, backend),
             crate::notes::Action::CloseNote => self.editor.close(),
             crate::notes::Action::FocusSearch => {
                 self.notes_view.focus_search = true;
                 // Taken by the next frame, which nothing else may ask for.
                 ctx.request_repaint();
             }
+        }
+    }
+
+    /// A key of the canvas: the card it acts on is the one with the focus, as last drawn.
+    fn canvas_key(
+        &mut self,
+        key: crate::notes::canvas::shortcuts::CanvasKey,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::canvas::shortcuts::CanvasKey;
+        let focused = self.notes_view.canvas.focused.clone();
+        let note = focused.as_deref().and_then(|id| {
+            self.notes_query
+                .view()
+                .and_then(|view| view.cards().find(|card| card.id == id))
+        });
+        let pinned = note.map(|card| card.pinned);
+        match key {
+            CanvasKey::New(kind) => self.new_note(Some(kind)),
+            CanvasKey::Move(direction) => {
+                let Some(view) = self.notes_query.view() else {
+                    return;
+                };
+                let sections: Vec<Vec<&str>> = view
+                    .sections
+                    .iter()
+                    .map(|section| section.cards.iter().map(|card| card.id.as_str()).collect())
+                    .collect();
+                let columns = self.notes_view.canvas.columns;
+                let to = crate::notes::canvas::grid::neighbour(
+                    &sections,
+                    columns,
+                    focused.as_deref(),
+                    direction,
+                );
+                if let Some(to) = to {
+                    self.notes_view.canvas.request = Some(to.to_owned());
+                    ctx.request_repaint();
+                }
+            }
+            CanvasKey::Copy => {
+                if let Some(id) = focused {
+                    self.notes.copy(backend, id);
+                }
+            }
+            CanvasKey::Pin => {
+                if let (Some(id), Some(pinned)) = (focused, pinned) {
+                    self.notes.pin(backend, id, !pinned);
+                }
+            }
+            CanvasKey::Priority(priority) => {
+                if let Some(id) = focused {
+                    self.notes.prioritise(backend, id, priority);
+                }
+            }
+            CanvasKey::Trash => {
+                if let Some(id) = focused
+                    && self.selection.arm(&id)
+                {
+                    self.notes.delete(backend, id);
+                }
+            }
+            CanvasKey::StepBack => self.step_back(),
+        }
+    }
+
+    /// Escape, down the ladder and one rung at a time: what is armed, then the search, then up
+    /// a folder — leaving is the biggest step, so it comes last.
+    fn step_back(&mut self) {
+        if self.selection.disarm() {
+            return;
+        }
+        if !self.notes_query.typed().is_empty() {
+            self.notes_query.clear_search();
+            return;
+        }
+        let Some(open) = self.spaces.active_folder() else {
+            return;
+        };
+        let parent = self
+            .spaces
+            .folders()
+            .iter()
+            .find(|folder| folder.id == open)
+            .map(|folder| (folder.space_id.clone(), folder.parent_id.clone()));
+        match parent {
+            Some((_, Some(parent))) => self.spaces.choose_folder(&parent),
+            Some((space, None)) => self.spaces.choose_space(Some(space)),
+            None => {}
         }
     }
 
@@ -378,6 +472,7 @@ impl AppState {
         self.notes_query = NotesQueryState::default();
         self.spaces = spaces::SpacesState::default();
         self.editor = editor::EditorState::default();
+        self.selection = selection::SelectionState::default();
         self.notes_view = crate::notes::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());

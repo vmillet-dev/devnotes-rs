@@ -2,6 +2,7 @@
 //! out: two rules about a row in the database, proved on the assembled window.
 
 use e2e::{App, step};
+use egui::{Key, Modifiers};
 
 const CARDS: usize = 6;
 const TITLE: &str = "Rotate the staging certificate";
@@ -58,6 +59,25 @@ fn note_lifecycle() {
         app.eventually("the editor is closed", |tree| !tree.has("editor-title"));
         cards(&mut app, CARDS + 1, "no card more");
     });
+
+    step(
+        "each kind opens from its own key, and writes nothing untouched",
+        || {
+            for (key, shift) in [(Key::N, false), (Key::N, true), (Key::L, true)] {
+                let modifiers = if shift {
+                    Modifiers::COMMAND | Modifiers::SHIFT
+                } else {
+                    Modifiers::COMMAND
+                };
+                app.press(key, modifiers);
+                app.wait_for("editor-title");
+                app.click("editor-close");
+                app.eventually("the editor is closed", |tree| !tree.has("editor-title"));
+            }
+            cards(&mut app, CARDS + 1, "no card more");
+            assert!(app.has("canvas-keyboard-hint"));
+        },
+    );
 
     step("a note opened from its card shows what was written", || {
         app.click_where("note-card-open", |node| node.label() == Some(TITLE));

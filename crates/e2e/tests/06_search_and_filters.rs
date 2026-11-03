@@ -40,6 +40,13 @@ fn search_and_filters() {
         },
     );
 
+    step("down from the field to the card it found", || {
+        app.press(Key::ArrowDown, Modifiers::NONE);
+        app.eventually("the card has the focus", |tree| {
+            tree.focused().starts_with("note-card-open")
+        });
+    });
+
     step("it folds case the way Rust does", || {
         search(&mut app, "WITHRETRY");
         app.eventually("the same card", |tree| tree.count("note-card") == 1);

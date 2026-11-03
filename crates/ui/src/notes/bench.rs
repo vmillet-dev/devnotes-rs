@@ -36,7 +36,15 @@ pub(crate) fn area(backend: Backend, profile: tempfile::TempDir) -> Harness<'sta
                 let mut view = std::mem::take(&mut bench.state.notes_view);
                 crate::notes::show(ui, &bench.state, &mut view, &mut actions);
                 bench.state.notes_view = view;
-                if let Some(action) = crate::keys::dispatch(&ctx, &[&crate::keys::NOTES]) {
+                let levels: &[&[crate::keys::Binding]] = if bench.state.editor.is_open() {
+                    &[&crate::keys::NOTES]
+                } else {
+                    &[
+                        &crate::keys::NOTES,
+                        &crate::notes::canvas::shortcuts::CANVAS,
+                    ]
+                };
+                if let Some(action) = crate::keys::dispatch(&ctx, levels) {
                     actions.push(action);
                 }
                 for action in actions.drain().collect::<Vec<_>>() {
