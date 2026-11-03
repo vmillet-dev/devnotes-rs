@@ -8,10 +8,15 @@ use engine::Paths;
 use platform::instance::Message;
 use platform::window::Geometry;
 
+use crate::action::{Action, Actions, GlobalAction};
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
+use crate::keys;
 use crate::state::AppState;
 use crate::theme;
+
+/// How long the exit waits for the database queue to empty (D19).
+const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// What `main` prepares before the window exists.
 pub struct Startup {
@@ -41,6 +46,9 @@ impl DevNotesApp {
     pub fn new(cc: &eframe::CreationContext<'_>, startup: Startup) -> std::io::Result<Self> {
         startup.waker.fill(&cc.egui_ctx);
         cc.egui_ctx.set_fonts(theme::fonts::definitions());
+        // Like the reference's WebView: Ctrl+plus is not a zoom.
+        cc.egui_ctx
+            .options_mut(|options| options.zoom_with_keyboard = false);
         let state = AppState::new(startup.reduced_motion);
         state.apply_look(&cc.egui_ctx);
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
@@ -105,16 +113,28 @@ impl eframe::App for DevNotesApp {
         for input in self.inputs.try_iter() {
             match input {
                 Input::Instance(Message::Reveal) => reveal(ctx),
-                // The events and the global actions are read by the screens they concern.
-                Input::Instance(Message::Action(_)) | Input::Engine(_) => {}
+                Input::Instance(Message::Action(name)) => match GlobalAction::named(&name) {
+                    Some(action) => self.state.apply(Action::Global(action), ctx),
+                    None => log::warn!("A second launch asked for an unknown action"),
+                },
+                // Read by the screens they concern, as they are ported.
+                Input::Engine(_) => {}
             }
         }
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
     }
 
+    /// Draw, then the keys the widgets left, then the actions: always in this order (§ 3.3.7).
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let mut actions = Actions::default();
         egui::CentralPanel::default().show(ui, |_| {});
+        if let Some(action) = keys::dispatch(ui.ctx(), &[&keys::APPLICATION]) {
+            actions.push(action);
+        }
+        for action in actions.drain() {
+            self.state.apply(action, ui.ctx());
+        }
     }
 
     /// The window's colour before anything is drawn over it, from the first frame.
@@ -123,6 +143,9 @@ impl eframe::App for DevNotesApp {
     }
 
     fn on_exit(&mut self) {
+        if !self.backend.drain(EXIT_LIMIT) {
+            log::warn!("The exit did not wait any longer for the database to finish");
+        }
         let Some(geometry) = self.geometry else {
             return;
         };

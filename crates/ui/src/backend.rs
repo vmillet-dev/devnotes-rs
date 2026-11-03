@@ -109,6 +109,16 @@ impl Backend {
         )
     }
 
+    /// The one wait the UI thread is allowed (D19): at the exit, the window already gone, until
+    /// every job queued before has run — drafts, an import, a restore — or `limit` has passed.
+    /// `false` when it had not finished.
+    pub fn drain(&self, limit: std::time::Duration) -> bool {
+        let done = engine::db::submit(&self.engine, |_| Ok(()));
+        self.runtime
+            .block_on(async { tokio::time::timeout(limit, done).await })
+            .is_ok()
+    }
+
     /// Tests only: waits until everything launched has answered. A condition, never a duration.
     #[cfg(test)]
     pub fn settle(&self) {
@@ -241,6 +251,20 @@ mod tests {
         let mut next = backend.db(|_| Ok("the queue goes on"));
         backend.settle();
         assert_eq!(next.poll().unwrap().unwrap(), "the queue goes on");
+    }
+
+    #[test]
+    fn the_exit_waits_for_what_was_queued_before_it() {
+        let (backend, _profile) = testing::backend();
+        let written = Arc::new(Mutex::new(false));
+        let flag = Arc::clone(&written);
+        let _write = backend.db(move |_| {
+            *flag.lock().unwrap() = true;
+            Ok(())
+        });
+
+        assert!(backend.drain(std::time::Duration::from_secs(30)));
+        assert!(*written.lock().unwrap());
     }
 
     #[test]
