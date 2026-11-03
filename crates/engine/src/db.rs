@@ -119,6 +119,20 @@ where
     engine.queue.run(move || job(&held)).await
 }
 
+/// [`run`], queued at the call rather than at the first poll: the interface sends from its
+/// thread and waits elsewhere, and two jobs sent in a row must still run in that order.
+pub fn submit<T, F>(
+    engine: &Arc<Engine>,
+    job: F,
+) -> impl Future<Output = Result<T, AppError>> + use<T, F>
+where
+    T: Send + 'static,
+    F: FnOnce(&Engine) -> Result<T, AppError> + Send + 'static,
+{
+    let held = Arc::clone(engine);
+    engine.queue.submit(move || job(&held))
+}
+
 /// For the integration tests, which call a data function on their own thread, one at a time.
 #[doc(hidden)]
 pub fn run_here<T>(engine: &Engine, job: impl FnOnce(&Engine) -> T) -> T {

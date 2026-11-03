@@ -4,10 +4,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crossbeam_channel::Receiver;
-use engine::{Engine, Paths};
+use engine::Paths;
 use platform::instance::Message;
 use platform::window::Geometry;
 
+use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
 use crate::theme::{self, Appearance, Density};
 
@@ -25,9 +26,7 @@ pub struct Startup {
 }
 
 pub struct DevNotesApp {
-    engine: Arc<Engine>,
-    /// ⚠️ After `engine`: fields drop in order, and the engine's tasks run on it.
-    _runtime: tokio::runtime::Runtime,
+    backend: Backend,
     inputs: Receiver<Input>,
     window_file: PathBuf,
     geometry: Option<Geometry>,
@@ -42,19 +41,9 @@ impl DevNotesApp {
         cc.egui_ctx.set_fonts(theme::fonts::definitions());
         theme::motion::set_reduced(&cc.egui_ctx, startup.reduced_motion);
         theme::apply(&cc.egui_ctx, Appearance::default(), Density::default());
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(2)
-            .thread_name("devnotes-network")
-            .enable_all()
-            .build()?;
-        let engine = Arc::new(Engine::new(
-            startup.paths,
-            Arc::new(startup.inbox),
-            runtime.handle().clone(),
-        ));
+        let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
         Ok(Self {
-            engine,
-            _runtime: runtime,
+            backend,
             inputs: startup.inputs,
             window_file: startup.window_file,
             geometry: startup.geometry,
@@ -62,8 +51,8 @@ impl DevNotesApp {
         })
     }
 
-    pub fn engine(&self) -> &Arc<Engine> {
-        &self.engine
+    pub fn backend(&self) -> &Backend {
+        &self.backend
     }
 
     /// The size and place to reopen at: the last ones the window had unmaximised, so that a
@@ -218,7 +207,10 @@ mod tests {
             Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
         harness.step();
 
-        let state = engine::db::run_here(harness.state().engine(), engine::vault::vault_state);
+        let state = engine::db::run_here(
+            harness.state().backend().engine(),
+            engine::vault::vault_state,
+        );
 
         assert_eq!(state.unwrap(), engine::vault::VaultState::Absent);
     }

@@ -5315,9 +5315,11 @@ dependencies = [
  "engine",
  "log",
  "platform",
+ "rayon",
  "resvg",
  "tempfile",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]
