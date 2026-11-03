@@ -46,15 +46,11 @@ runs:
       shell: bash
       run: echo "CARGO_PROFILE_DEV_DEBUG=line-tables-only" >> "$GITHUB_ENV"
 
-    # `workspaces` is mandatory: the Cargo project lives in src-tauri/, not at the root.
-    # Without it the action finds nothing and the cache stays empty without saying so.
-    #
     # ⚠️ Saved from main alone, in a quota of ten gigabytes at about one per key: a version
     # branch saving its own copy of every key had GitHub evict main's Windows E2E entry, and
     # every pull request then built it from nothing. A pull request or a `dev/**` push reads
     # main's entry instead — whole when Cargo.lock matches, by prefix when it moved.
     - uses: Swatinem/rust-cache@v2
       with:
-        workspaces: src-tauri
         shared-key: ${{ inputs.shared-key }}
         save-if: ${{ inputs.save-if == 'true' && github.ref == 'refs/heads/main' }}

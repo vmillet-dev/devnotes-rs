@@ -1,0 +1,11032 @@
+[
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 déc. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "mardi 1 décembre 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 déc. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "mardi 1 décembre 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1'234'567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01.12.2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 déc. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "mardi, 1 décembre 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "12/01/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "Dec 1, 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "Tuesday, December 1, 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 Dec 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "Tuesday, 1 December 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01.12.2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1. Dez. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "Dienstag, 1. Dezember 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 dic 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "martes, 1 de diciembre de 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 dic 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "martedì 1 dicembre 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 de dez. de 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "terça-feira, 1 de dezembro de 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01-12-2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 dec 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "dinsdag 1 december 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01.12.2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 gru 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "wtorek, 1 grudnia 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "−0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "−12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "2026-12-01",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 dec. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "tisdag 1 december 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01.12.2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 дек. 2026 г.",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "вторник, 1 декабря 2026 г.",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "2026/12/01",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "2026年12月1日",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "2026年12月1日火曜日",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "2026/12/01",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "2026年12月1日",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "2026年12月1日星期二",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 568",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1 km",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-13 %",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5e+3",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,9",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,0",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,0 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,0",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,50 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,00",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,00 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,50 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,30e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,00",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,891",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,500 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,500 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,300e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,8910",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,0000",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,0000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,0000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89100",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,50000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,00001",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,00000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,50000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,30000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,00000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,891000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,500000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,500000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,300000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,8910000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,0000120",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,0000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,0000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89100000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,50000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,00001200",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,00000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,50000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,30000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,00000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,891000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,500000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,500000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,300000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,8910000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,0000120000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,0000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,0000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89100000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,50000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,00001200000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,00000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,50000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,30000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,00000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,891000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,500000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,000000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,500000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,300000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,000000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,8910000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5000000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,0000120000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,0000000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5000000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3000000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,0000000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89100000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,50000000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,00001200000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25,00000000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,50000000000000 %",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,30000000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "fr",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4,00000000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "12/01/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "Dec 1, 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "Tuesday, December 1, 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 déc. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-FR",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "mardi 1 décembre 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1'234'567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01.12.2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 déc. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "fr-CH",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "mardi, 1 décembre 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "12/01/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "Dec 1, 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-US",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "Tuesday, December 1, 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 Dec 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "en-GB",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "Tuesday, 1 December 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01.12.2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1. Dez. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "de-DE",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "Dienstag, 1. Dezember 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 dic 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "es-ES",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "martes, 1 de diciembre de 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 dic 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "it-IT",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "martedì 1 dicembre 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01/12/2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 de dez. de 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pt-BR",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "terça-feira, 1 de dezembro de 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1.234.567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01-12-2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 dec 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "nl-NL",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "dinsdag 1 december 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01.12.2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 gru 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "pl-PL",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "wtorek, 1 grudnia 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "−0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "−12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "2026-12-01",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 dec. 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "sv-SE",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "tisdag 1 december 2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1 234 567,89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0,5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0,000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12,5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "01.12.2026",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5,3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "1 дек. 2026 г.",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ru-RU",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "вторник, 1 декабря 2026 г.",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "2026/12/01",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "2026年12月1日",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "ja-JP",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "2026年12月1日火曜日",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "2026/12/01",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "short"
+    },
+    "output": {
+      "text": "2026年12月1日",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "date",
+      "date": "2026-12-01"
+    },
+    "options": {
+      "lang": "en",
+      "locale": "zh-CN",
+      "decimals": "auto",
+      "date": "long"
+    },
+    "output": {
+      "text": "2026年12月1日星期二",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,568",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1 km",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-13%",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5e+3",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "0",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.9",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.0",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.0%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "1",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.0",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.50 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.00",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.00%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.50%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.30e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "2",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.00",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.891",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.500 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.500%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.300e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "3",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.8910",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.0000",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.0000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "4",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.0000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89100",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.50000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.00001",
+      "approx": true
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.00000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.50000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.30000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "5",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.00000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.891000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.500000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.500000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.300000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "6",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.8910000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.0000120",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.0000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "7",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.0000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89100000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.50000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.00001200",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.00000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.50000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.30000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "8",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.00000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.891000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.500000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.500000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.300000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "9",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.8910000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.0000120000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.0000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "10",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.0000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89100000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.50000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.00001200000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.00000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.50000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.30000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "11",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.00000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.891000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.500000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.000012000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.000000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.500000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.300000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "12",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.000000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.8910000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.5000000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.0000120000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.0000000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.5000000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.3000000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "13",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.0000000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "1234567.891",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "1,234,567.89100000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "-0.5",
+      "unit": {
+        "unit": "kilometre",
+        "per": null
+      }
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-0.50000000000000 km",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "number",
+      "value": "0.000012",
+      "unit": null
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0.00001200000000",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "25",
+      "signed": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "+25.00000000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "percent",
+      "value": "-12.5",
+      "signed": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-12.50000000000000%",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "base",
+      "digits": "FF",
+      "radix": 16,
+      "negative": false
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "0xFF",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "scientific",
+      "mantissa": "5.3",
+      "exponent": 3
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "5.30000000000000e+3",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "fraction",
+      "numerator": "1",
+      "denominator": "5",
+      "negative": true
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "-1/5",
+      "approx": false
+    }
+  },
+  {
+    "input": {
+      "kind": "multiplier",
+      "value": "4"
+    },
+    "options": {
+      "lang": "en",
+      "locale": null,
+      "decimals": "14",
+      "date": "numeric"
+    },
+    "output": {
+      "text": "×4.00000000000000",
+      "approx": false
+    }
+  },
+  {
+    "input": [
+      "1.5",
+      "2.25",
+      "-0.75"
+    ],
+    "options": {
+      "footer": "sum"
+    },
+    "output": "3"
+  },
+  {
+    "input": [
+      "1.5",
+      "2.25",
+      "-0.75"
+    ],
+    "options": {
+      "footer": "mean"
+    },
+    "output": "1"
+  },
+  {
+    "input": [
+      "0.1",
+      "0.2"
+    ],
+    "options": {
+      "footer": "sum"
+    },
+    "output": "0.3"
+  },
+  {
+    "input": [
+      "0.1",
+      "0.2"
+    ],
+    "options": {
+      "footer": "mean"
+    },
+    "output": "0.15"
+  },
+  {
+    "input": [
+      "1000000",
+      "0.000001"
+    ],
+    "options": {
+      "footer": "sum"
+    },
+    "output": "1000000.000001"
+  },
+  {
+    "input": [
+      "1000000",
+      "0.000001"
+    ],
+    "options": {
+      "footer": "mean"
+    },
+    "output": "500000.0000005"
+  },
+  {
+    "input": "1234567.891",
+    "options": {
+      "lang": "fr",
+      "helper": "formatDecimal"
+    },
+    "output": "1 234 567,891"
+  },
+  {
+    "input": "-1234",
+    "options": {
+      "lang": "fr",
+      "helper": "formatDecimal"
+    },
+    "output": "-1 234"
+  },
+  {
+    "input": "0.5",
+    "options": {
+      "lang": "fr",
+      "helper": "formatDecimal"
+    },
+    "output": "0,5"
+  },
+  {
+    "input": "0.000012",
+    "options": {
+      "lang": "fr",
+      "helper": "formatScientific",
+      "decimals": 2
+    },
+    "output": {
+      "text": "1,2 × 10⁻⁵",
+      "exact": true
+    }
+  },
+  {
+    "input": "1234567.891",
+    "options": {
+      "lang": "en",
+      "helper": "formatDecimal"
+    },
+    "output": "1,234,567.891"
+  },
+  {
+    "input": "-1234",
+    "options": {
+      "lang": "en",
+      "helper": "formatDecimal"
+    },
+    "output": "-1,234"
+  },
+  {
+    "input": "0.5",
+    "options": {
+      "lang": "en",
+      "helper": "formatDecimal"
+    },
+    "output": "0.5"
+  },
+  {
+    "input": "0.000012",
+    "options": {
+      "lang": "en",
+      "helper": "formatScientific",
+      "decimals": 2
+    },
+    "output": {
+      "text": "1.2 × 10⁻⁵",
+      "exact": true
+    }
+  },
+  {
+    "input": "1234567.891",
+    "options": {
+      "lang": "de",
+      "helper": "formatDecimal"
+    },
+    "output": "1,234,567.891"
+  },
+  {
+    "input": "-1234",
+    "options": {
+      "lang": "de",
+      "helper": "formatDecimal"
+    },
+    "output": "-1,234"
+  },
+  {
+    "input": "0.5",
+    "options": {
+      "lang": "de",
+      "helper": "formatDecimal"
+    },
+    "output": "0.5"
+  },
+  {
+    "input": "0.000012",
+    "options": {
+      "lang": "de",
+      "helper": "formatScientific",
+      "decimals": 2
+    },
+    "output": {
+      "text": "1.2 × 10⁻⁵",
+      "exact": true
+    }
+  }
+]

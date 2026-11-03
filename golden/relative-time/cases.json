@@ -1,0 +1,1302 @@
+[
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.justNow",
+      "text": "à l’instant"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expired",
+      "text": "expirée"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.now",
+      "text": "à moins d’une minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.now",
+      "text": "à moins d’une minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:59:30.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.minutesAgo",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1 min"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:30.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresToday",
+      "text": "expire aujourd’hui"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:59:30.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.now",
+      "text": "à moins d’une minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:30.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.now",
+      "text": "à moins d’une minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:59:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.minutesAgo",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1 min"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:01:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresToday",
+      "text": "expire aujourd’hui"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:59:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.minutes",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1 minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:01:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.minutes",
+      "params": {
+        "count": 1
+      },
+      "text": "dans 1 minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:01:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.minutesAgo",
+      "params": {
+        "count": 59
+      },
+      "text": "il y a 59 min"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:59:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresToday",
+      "text": "expire aujourd’hui"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:01:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.minutes",
+      "params": {
+        "count": 59
+      },
+      "text": "il y a 59 minutes"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:59:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.minutes",
+      "params": {
+        "count": 59
+      },
+      "text": "dans 59 minutes"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.hoursAgo",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1h"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T10:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresToday",
+      "text": "expire aujourd’hui"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.hours",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1 heure"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T10:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.hours",
+      "params": {
+        "count": 1
+      },
+      "text": "dans 1 heure"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-24T10:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.hoursAgo",
+      "params": {
+        "count": 23
+      },
+      "text": "il y a 23h"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-26T08:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 1
+      },
+      "text": "expire dans 1j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-24T10:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.hours",
+      "params": {
+        "count": 23
+      },
+      "text": "il y a 23 heures"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-26T08:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.hours",
+      "params": {
+        "count": 23
+      },
+      "text": "dans 23 heures"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-24T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.daysAgo",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-26T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 1
+      },
+      "text": "expire dans 1j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-24T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.days",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1 jour"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-26T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.days",
+      "params": {
+        "count": 1
+      },
+      "text": "dans 1 jour"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-19T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.daysAgo",
+      "params": {
+        "count": 6
+      },
+      "text": "il y a 6j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-31T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 6
+      },
+      "text": "expire dans 6j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-19T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.days",
+      "params": {
+        "count": 6
+      },
+      "text": "il y a 6 jours"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-31T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.days",
+      "params": {
+        "count": 6
+      },
+      "text": "dans 6 jours"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-06-15T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.daysAgo",
+      "params": {
+        "count": 40
+      },
+      "text": "il y a 40j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-09-03T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 40
+      },
+      "text": "expire dans 40j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-06-15T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.months",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1 mois"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-09-03T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.months",
+      "params": {
+        "count": 1
+      },
+      "text": "dans 1 mois"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2025-06-20T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.daysAgo",
+      "params": {
+        "count": 400
+      },
+      "text": "il y a 400j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2027-08-29T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 400
+      },
+      "text": "expire dans 400j"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2025-06-20T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.years",
+      "params": {
+        "count": 1
+      },
+      "text": "il y a 1 an"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2027-08-29T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "fr",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.years",
+      "params": {
+        "count": 1
+      },
+      "text": "dans 1 an"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.justNow",
+      "text": "just now"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expired",
+      "text": "expired"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.now",
+      "text": "within a minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.now",
+      "text": "within a minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:59:30.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.minutesAgo",
+      "params": {
+        "count": 1
+      },
+      "text": "1 min ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:30.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresToday",
+      "text": "expires today"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:59:30.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.now",
+      "text": "within a minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:00:30.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.now",
+      "text": "within a minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:59:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.minutesAgo",
+      "params": {
+        "count": 1
+      },
+      "text": "1 min ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:01:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresToday",
+      "text": "expires today"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:59:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.minutes",
+      "params": {
+        "count": 1
+      },
+      "text": "1 minute ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:01:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.minutes",
+      "params": {
+        "count": 1
+      },
+      "text": "in 1 minute"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:01:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.minutesAgo",
+      "params": {
+        "count": 59
+      },
+      "text": "59 min ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:59:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresToday",
+      "text": "expires today"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:01:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.minutes",
+      "params": {
+        "count": 59
+      },
+      "text": "59 minutes ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T09:59:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.minutes",
+      "params": {
+        "count": 59
+      },
+      "text": "in 59 minutes"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.hoursAgo",
+      "params": {
+        "count": 1
+      },
+      "text": "1h ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T10:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresToday",
+      "text": "expires today"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T08:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.hours",
+      "params": {
+        "count": 1
+      },
+      "text": "1 hour ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-25T10:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.hours",
+      "params": {
+        "count": 1
+      },
+      "text": "in 1 hour"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-24T10:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.hoursAgo",
+      "params": {
+        "count": 23
+      },
+      "text": "23h ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-26T08:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 1
+      },
+      "text": "expires in 1d"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-24T10:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.hours",
+      "params": {
+        "count": 23
+      },
+      "text": "23 hours ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-26T08:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.hours",
+      "params": {
+        "count": 23
+      },
+      "text": "in 23 hours"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-24T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.daysAgo",
+      "params": {
+        "count": 1
+      },
+      "text": "1d ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-26T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 1
+      },
+      "text": "expires in 1d"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-24T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.days",
+      "params": {
+        "count": 1
+      },
+      "text": "1 day ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-26T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.days",
+      "params": {
+        "count": 1
+      },
+      "text": "in 1 day"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-19T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.daysAgo",
+      "params": {
+        "count": 6
+      },
+      "text": "6d ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-31T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 6
+      },
+      "text": "expires in 6d"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-19T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.days",
+      "params": {
+        "count": 6
+      },
+      "text": "6 days ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-07-31T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.days",
+      "params": {
+        "count": 6
+      },
+      "text": "in 6 days"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-06-15T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.daysAgo",
+      "params": {
+        "count": 40
+      },
+      "text": "40d ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-09-03T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 40
+      },
+      "text": "expires in 40d"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-06-15T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.months",
+      "params": {
+        "count": 1
+      },
+      "text": "1 month ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2026-09-03T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.months",
+      "params": {
+        "count": 1
+      },
+      "text": "in 1 month"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2025-06-20T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "relative"
+    },
+    "output": {
+      "key": "time.daysAgo",
+      "params": {
+        "count": 400
+      },
+      "text": "400d ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2027-08-29T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "expiry"
+    },
+    "output": {
+      "key": "time.expiresIn",
+      "params": {
+        "count": 400
+      },
+      "text": "expires in 400d"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2025-06-20T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.past.years",
+      "params": {
+        "count": 1
+      },
+      "text": "1 year ago"
+    }
+  },
+  {
+    "input": {
+      "now": "2026-07-25T09:00:00.000Z",
+      "at": "2027-08-29T09:00:00.000Z"
+    },
+    "options": {
+      "lang": "en",
+      "kind": "span"
+    },
+    "output": {
+      "key": "time.span.future.years",
+      "params": {
+        "count": 1
+      },
+      "text": "in 1 year"
+    }
+  }
+]

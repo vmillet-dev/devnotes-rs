@@ -9,9 +9,11 @@ on:
   pull_request:
     branches: [main, 'dev/**']
     paths:
+      - 'Cargo.toml'
+      - 'crates/*/Cargo.toml'
       - 'src-tauri/Cargo.toml'
-      - 'src-tauri/Cargo.lock'
-      - 'src-tauri/deny.toml'
+      - 'Cargo.lock'
+      - 'deny.toml'
       - '.github/workflows/security-cargo.yml'
   schedule:
     # Monday morning, so the week starts with the answer rather than ends with it.
@@ -42,5 +44,5 @@ jobs:
       # review, not a per-pull-request gate.
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
-          manifest-path: src-tauri/Cargo.toml
+          manifest-path: Cargo.toml
           command: check advisories

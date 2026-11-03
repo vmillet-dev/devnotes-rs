@@ -17,7 +17,7 @@ version: 2
 # falls behind it until raised by hand. npm's default already raises `package.json`.
 updates:
   - package-ecosystem: cargo
-    directory: /src-tauri
+    directory: /
     schedule:
       interval: weekly
       day: monday

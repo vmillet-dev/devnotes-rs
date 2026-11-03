@@ -1,0 +1,503 @@
+use engine::error::ErrorCode;
+use engine::http::model::{
+    HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpPlace, HttpRequestDraft, HttpRequestPatch,
+    NewPlace, RequestDocument, RequestKind,
+};
+use engine::http::{
+    count_http_contents, create_http_collection, create_http_folder, create_http_request,
+    create_http_request_in, delete_http_item, duplicate_http_item, get_http_request, http_tree,
+    move_http_item, rename_http_item, reorder_http_collection, save_http_request,
+};
+
+use super::{Session, code};
+
+fn item(kind: HttpItemKind, id: &str) -> HttpItem {
+    HttpItem {
+        kind,
+        id: id.to_string(),
+    }
+}
+
+fn draft(collection_id: &str, folder_id: Option<&str>, name: &str) -> HttpRequestDraft {
+    HttpRequestDraft {
+        collection_id: collection_id.to_string(),
+        folder_id: folder_id.map(str::to_string),
+        name: name.to_string(),
+        kind: RequestKind::Http,
+        method: HttpMethod::Get,
+        document: RequestDocument {
+            url: "https://api.exemple.fr".to_string(),
+            ..RequestDocument::default()
+        },
+    }
+}
+
+fn names(session: &Session) -> Vec<String> {
+    fn walk(nodes: &[HttpNode], into: &mut Vec<String>) {
+        for node in nodes {
+            match node {
+                HttpNode::Folder { folder, children } => {
+                    into.push(folder.name.clone());
+                    walk(children, into);
+                }
+                HttpNode::Request { request } => into.push(request.name.clone()),
+            }
+        }
+    }
+    let mut seen = Vec::new();
+    for node in session.call(http_tree).unwrap().collections {
+        seen.push(node.collection.name);
+        walk(&node.children, &mut seen);
+    }
+    seen
+}
+
+#[test]
+fn a_collection_is_built_edited_moved_copied_counted_and_deleted() {
+    let session = Session::open();
+    let api = session
+        .call(|e| create_http_collection(e, "  API  ".to_string()))
+        .unwrap();
+    let other = session
+        .call(|e| create_http_collection(e, "Autre".to_string()))
+        .unwrap();
+    let auth = session
+        .call(|e| create_http_folder(e, api.id.clone(), None, "Auth".to_string()))
+        .unwrap();
+    let login = session
+        .call(|e| create_http_request(e, draft(&api.id, Some(&auth.id), "Login")))
+        .unwrap();
+    assert_eq!(names(&session), vec!["API", "Auth", "Login", "Autre"]);
+
+    let patch = HttpRequestPatch {
+        name: Some(" Se connecter ".to_string()),
+        method: Some(HttpMethod::Post),
+        ..HttpRequestPatch::default()
+    };
+    let saved = session
+        .call(|e| save_http_request(e, login.id.clone(), patch))
+        .unwrap();
+    assert_eq!(
+        (saved.name.as_str(), saved.method),
+        ("Se connecter", HttpMethod::Post)
+    );
+    let read = session
+        .call(|e| get_http_request(e, login.id.clone()))
+        .unwrap();
+    assert_eq!(read.document.url, "https://api.exemple.fr");
+
+    session
+        .call(|e| {
+            rename_http_item(
+                e,
+                item(HttpItemKind::Folder, &auth.id),
+                "Jetons".to_string(),
+            )
+        })
+        .unwrap();
+    let copy = session
+        .call(|e| {
+            duplicate_http_item(
+                e,
+                item(HttpItemKind::Request, &login.id),
+                "Se connecter (copie)".to_string(),
+            )
+        })
+        .unwrap();
+    session
+        .call(|e| {
+            move_http_item(
+                e,
+                copy.clone(),
+                HttpPlace {
+                    collection_id: other.id.clone(),
+                    folder_id: None,
+                    index: 0,
+                },
+            )
+        })
+        .unwrap();
+    session
+        .call(|e| reorder_http_collection(e, other.id.clone(), 0))
+        .unwrap();
+    assert_eq!(
+        names(&session),
+        vec![
+            "Autre",
+            "Se connecter (copie)",
+            "API",
+            "Jetons",
+            "Se connecter"
+        ]
+    );
+
+    let contents = session
+        .call(|e| count_http_contents(e, item(HttpItemKind::Collection, &api.id)))
+        .unwrap();
+    assert_eq!((contents.folders, contents.requests), (1, 1));
+    session
+        .call(|e| delete_http_item(e, item(HttpItemKind::Collection, &api.id)))
+        .unwrap();
+    assert_eq!(names(&session), vec!["Autre", "Se connecter (copie)"]);
+}
+
+#[test]
+fn a_blank_name_a_missing_item_and_a_locked_library_are_refused_by_code() {
+    let session = Session::open();
+    assert_eq!(
+        code(session.call(|e| create_http_collection(e, "   ".to_string()))),
+        ErrorCode::InvalidInput
+    );
+    assert_eq!(
+        code(session.call(|e| get_http_request(e, "absent".to_string()))),
+        ErrorCode::HttpItemNotFound
+    );
+    assert_eq!(
+        code(session.call(|e| rename_http_item(
+            e,
+            item(HttpItemKind::Request, "absent"),
+            "x".to_string()
+        ))),
+        ErrorCode::HttpItemNotFound
+    );
+    assert_eq!(
+        code(session.call(|e| move_http_item(
+            e,
+            item(HttpItemKind::Collection, "c"),
+            HttpPlace {
+                collection_id: "absent".to_string(),
+                folder_id: None,
+                index: 0,
+            }
+        ))),
+        ErrorCode::HttpItemNotFound
+    );
+
+    assert_eq!(code(Session::locked().call(http_tree)), ErrorCode::Locked);
+}
+
+#[test]
+fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
+    use engine::http::model::{ContainerSettings, RequestAuth, RequestBody};
+    use engine::http::{
+        describe_http_body, http_settings, inherited_http_settings, save_http_settings,
+    };
+
+    let session = Session::open();
+    let api = session
+        .call(|e| create_http_collection(e, "API".to_string()))
+        .unwrap();
+    let factures = session
+        .call(|e| create_http_folder(e, api.id.clone(), None, "Factures".to_string()))
+        .unwrap();
+    let bearer = RequestAuth::Bearer {
+        token: "{{accessToken}}".to_string(),
+    };
+    let settings = ContainerSettings {
+        auth: bearer.clone(),
+        headers: Vec::new(),
+        ..ContainerSettings::default()
+    };
+    session
+        .call(|e| {
+            save_http_settings(
+                e,
+                item(HttpItemKind::Folder, &factures.id),
+                settings.clone(),
+            )
+        })
+        .unwrap();
+
+    let read = session
+        .call(|e| http_settings(e, item(HttpItemKind::Folder, &factures.id)))
+        .unwrap();
+    assert_eq!(read, settings);
+    let inherited = session
+        .call(|e| inherited_http_settings(e, api.id.clone(), Some(factures.id.clone())))
+        .unwrap();
+    assert_eq!(inherited.auth, bearer);
+    assert_eq!(
+        code(session.call(|e| http_settings(e, item(HttpItemKind::Request, "r")))),
+        ErrorCode::InvalidInput
+    );
+
+    let json = || RequestBody::Json {
+        text: "{\"a\":".to_string(),
+    };
+    let broken = session
+        .wait(|_| describe_http_body(json(), HttpMethod::Post))
+        .unwrap();
+    assert_eq!(broken.content_type.as_deref(), Some("application/json"));
+    assert!(broken.problem.is_some());
+    assert!(!broken.unusual);
+    // The same body once the method is a `GET`: sent all the same, and said.
+    for (method, unusual) in [
+        (HttpMethod::Get, true),
+        (HttpMethod::Head, true),
+        (HttpMethod::Delete, false),
+        (HttpMethod::Options, false),
+    ] {
+        let said = session
+            .wait(|_| describe_http_body(json(), method))
+            .unwrap();
+        assert_eq!(said.unusual, unusual, "{method:?}");
+    }
+    let none = session
+        .wait(|_| describe_http_body(RequestBody::None, HttpMethod::Get))
+        .unwrap();
+    assert_eq!(
+        (none.content_type, none.problem, none.unusual),
+        (None, None, false)
+    );
+}
+
+/// Key `X-Recette: 1` in a folder's settings was stored as typed, and every request under the
+/// folder then failed « this URL cannot be sent ».
+#[test]
+fn a_header_that_cannot_be_sent_is_refused_in_the_settings_marked_and_read_from_its_line() {
+    use engine::http::model::{ContainerSettings, HeaderFault, KeyValue};
+    use engine::http::{check_http_headers, http_settings, read_http_headers, save_http_settings};
+
+    let session = Session::open();
+    let api = session
+        .call(|e| create_http_collection(e, "API".to_string()))
+        .unwrap();
+    let recette = session
+        .call(|e| create_http_folder(e, api.id.clone(), None, "Recette".to_string()))
+        .unwrap();
+    let row = |key: &str, value: &str, enabled: bool| KeyValue {
+        enabled,
+        key: key.to_string(),
+        value: value.to_string(),
+        ..KeyValue::default()
+    };
+    let save = |headers: Vec<KeyValue>| {
+        let settings = ContainerSettings {
+            headers,
+            ..ContainerSettings::default()
+        };
+        session.call(|e| save_http_settings(e, item(HttpItemKind::Folder, &recette.id), settings))
+    };
+    let kept = || {
+        session
+            .call(|e| http_settings(e, item(HttpItemKind::Folder, &recette.id)))
+            .unwrap()
+            .headers
+    };
+
+    let refused = save(vec![row("X-Recette: 1", "rsgfdregr", true)]).unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpHeaderName);
+    assert_eq!(
+        (
+            refused.params.get("header").map(String::as_str),
+            refused.params.get("source").map(String::as_str)
+        ),
+        (Some("X-Recette: 1"), Some("request"))
+    );
+    assert!(kept().is_empty());
+
+    let refused = save(vec![row("X-Trace", "a\nb", true)]).unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpHeaderValue);
+    assert_eq!(
+        refused.params.get("header").map(String::as_str),
+        Some("X-Trace")
+    );
+
+    // Switched off, it is not sent: kept as typed, beside the one that is.
+    save(vec![
+        row("X-Recette: 1", "rsgfdregr", false),
+        row("X-Recette", "1", true),
+        row("X-{{tenant}}", "{{token}}", true),
+    ])
+    .unwrap();
+    assert_eq!(kept().len(), 3);
+
+    let faults = session
+        .wait(|_| {
+            check_http_headers(vec![
+                row("Accept", "*/*", true),
+                row("X Recette", "1", true),
+                row("X Recette", "1", false),
+            ])
+        })
+        .unwrap();
+    assert_eq!(faults, vec![None, Some(HeaderFault::Name), None]);
+
+    let read = session
+        .wait(|_| {
+            read_http_headers(":authority: api.exemple.fr\nX-Recette: 1\naccept: */*".to_string())
+        })
+        .unwrap();
+    assert_eq!(
+        read,
+        vec![row("X-Recette", "1", true), row("accept", "*/*", true)]
+    );
+}
+
+#[test]
+fn the_query_and_its_table_are_kept_in_step_through_the_command() {
+    use engine::http::query::QuerySide;
+    use engine::http::sync_http_query;
+
+    let session = Session::open();
+    let synced = session
+        .wait(|_| sync_http_query("/x?a=1".to_string(), Vec::new(), QuerySide::Url))
+        .unwrap();
+
+    assert_eq!(synced.params[0].key, "a");
+}
+
+/// On a library with no collection, a first save sent its reader to the rail and back. The
+/// save creates what it lacks, in one write — or writes nothing at all.
+#[test]
+fn a_first_save_creates_the_collection_or_the_folder_it_lacks_or_nothing_at_all() {
+    let session = Session::open();
+    let before = names(&session).len();
+    let new = |collection: Option<&str>, folder: Option<&str>| NewPlace {
+        collection: collection.map(str::to_string),
+        folder: folder.map(str::to_string),
+    };
+
+    // A collection that does not exist yet: the request at its root, whatever place it named.
+    let first = session
+        .call(|e| {
+            create_http_request_in(
+                e,
+                draft("nowhere", Some("nowhere"), "Santé"),
+                new(Some("  Boutique  "), None),
+            )
+        })
+        .unwrap();
+    assert_eq!(first.folder_id, None);
+    assert_eq!(names(&session)[before..], ["Boutique", "Santé"]);
+
+    // A folder under the place the draft names — a collection's root, then a folder.
+    let second = session
+        .call(|e| {
+            create_http_request_in(
+                e,
+                draft(&first.collection_id, None, "Lister"),
+                new(None, Some("Commandes")),
+            )
+        })
+        .unwrap();
+    let commandes = second.folder_id.clone().unwrap();
+    session
+        .call(|e| {
+            create_http_request_in(
+                e,
+                draft(&first.collection_id, Some(&commandes), "Anciennes"),
+                new(None, Some("Archives")),
+            )
+        })
+        .unwrap();
+    assert_eq!(
+        names(&session)[before..],
+        [
+            "Boutique",
+            "Santé",
+            "Commandes",
+            "Lister",
+            "Archives",
+            "Anciennes"
+        ]
+    );
+
+    // Both at once: the folder goes in the new collection, the request in the folder.
+    let both = session
+        .call(|e| {
+            create_http_request_in(
+                e,
+                draft(&first.collection_id, Some(&commandes), "Chercher"),
+                new(Some("Catalogue"), Some("Produits")),
+            )
+        })
+        .unwrap();
+    assert_ne!(both.collection_id, first.collection_id);
+    assert_eq!(
+        names(&session)[before + 6..],
+        ["Catalogue", "Produits", "Chercher"]
+    );
+
+    // Refused whole: a request, a folder or a collection without a name, a place that is not
+    // there — and no collection is left behind, empty, by any of them.
+    let held = names(&session);
+    for (request, place) in [
+        (draft("nowhere", None, "   "), new(Some("Orpheline"), None)),
+        (
+            draft("nowhere", None, "Seule"),
+            new(Some("Orpheline"), Some("  ")),
+        ),
+        (draft("nowhere", None, "Seule"), new(Some(" "), None)),
+    ] {
+        assert_eq!(
+            code(session.call(|e| create_http_request_in(e, request, place))),
+            ErrorCode::InvalidInput
+        );
+    }
+    assert_eq!(
+        code(session.call(|e| create_http_request_in(
+            e,
+            draft("absent", None, "Seule"),
+            new(None, Some("Dossier"))
+        ))),
+        ErrorCode::HttpItemNotFound
+    );
+    assert_eq!(names(&session), held);
+}
+
+/// GraphQL and WebSocket were the last two entries of the method menu: a kind filed among
+/// verbs. It is chosen when the request is created, and nothing changes it afterwards.
+#[test]
+fn a_request_is_created_of_its_kind_and_keeps_it_through_an_update_and_a_copy() {
+    use engine::http::graphql::GraphqlDocument;
+
+    let session = Session::open();
+    let api = session
+        .call(|e| create_http_collection(e, "API".to_string()))
+        .unwrap();
+    let asked = HttpRequestDraft {
+        kind: RequestKind::Graphql,
+        ..draft(&api.id, None, "Produits")
+    };
+    let created = session.call(|e| create_http_request(e, asked)).unwrap();
+    assert_eq!(created.kind, RequestKind::Graphql);
+
+    // An update has no kind to carry: one written on the wire all the same is not read.
+    let mut patch: HttpRequestPatch =
+        serde_json::from_str(r#"{"kind":"websocket","method":"POST"}"#).unwrap();
+    patch.document = Some(RequestDocument {
+        graphql: GraphqlDocument {
+            query: "{ products { id } }".to_string(),
+            ..GraphqlDocument::default()
+        },
+        ..RequestDocument::default()
+    });
+    let saved = session
+        .call(|e| save_http_request(e, created.id.clone(), patch))
+        .unwrap();
+    assert_eq!(
+        (saved.kind, saved.method),
+        (RequestKind::Graphql, HttpMethod::Post)
+    );
+    let read = session
+        .call(|e| get_http_request(e, created.id.clone()))
+        .unwrap();
+    assert_eq!(read.kind, RequestKind::Graphql);
+    assert_eq!(read.document.graphql.query, "{ products { id } }");
+
+    let copy = session
+        .call(|e| {
+            duplicate_http_item(
+                e,
+                item(HttpItemKind::Request, &created.id),
+                "Produits (copie)".to_string(),
+            )
+        })
+        .unwrap();
+    let copied = session
+        .call(|e| get_http_request(e, copy.id.clone()))
+        .unwrap();
+    assert_eq!(copied.kind, RequestKind::Graphql);
+    assert_eq!(copied.document.graphql.query, "{ products { id } }");
+}

@@ -2,6 +2,7 @@
 
 # Compiled output
 /dist
+/target
 /tmp
 /out-tsc
 /bazel-out
@@ -27,6 +28,7 @@ yarn-error.log
 /connect.lock
 /coverage
 /e2e/logs
+/e2e/reference-captures
 /libpeerconnection.log
 testem.log
 /typings
@@ -48,4 +50,4 @@ testem.log
 Thumbs.db
 
 # The script libraries are bundled from their own install: only `dist/` is kept.
-/src-tauri/sandbox/node_modules
+/crates/engine/sandbox/node_modules

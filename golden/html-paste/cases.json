@@ -1,0 +1,46 @@
+[
+  {
+    "input": "<p>Du <b>gras</b>, de l’<i>italique</i> et <a href=\"https://exemple.fr\">un lien</a>.</p>",
+    "output": "Du **gras**, de l’*italique* et [un lien](https://exemple.fr)."
+  },
+  {
+    "input": "<h1>Titre</h1><h2>Sous-titre</h2><p>Texte</p>",
+    "output": "# Titre\n\n## Sous-titre\n\nTexte"
+  },
+  {
+    "input": "<ul><li>un</li><li>deux<ul><li>deux bis</li></ul></li></ul>",
+    "output": "- un\n- deux\n  - deux bis"
+  },
+  {
+    "input": "<ol><li>un</li><li>deux</li></ol>",
+    "output": "1. un\n2. deux"
+  },
+  {
+    "input": "<blockquote><p>Une citation</p></blockquote>",
+    "output": "> Une citation"
+  },
+  {
+    "input": "<table><tr><th>a</th><th>b</th></tr><tr><td>1</td><td>2</td></tr></table>",
+    "output": "| a   | b   |\n| --- | --- |\n| 1   | 2   |"
+  },
+  {
+    "input": "<pre><code>npm run build</code></pre>",
+    "output": "```\nnpm run build\n```"
+  },
+  {
+    "input": "<pre><code><b>npm</b> run build</code></pre>",
+    "output": "```\nnpm run build\n```"
+  },
+  {
+    "input": "<div style=\"font-family: monospace\">const a = 1;<br>const b = 2;</div>",
+    "output": "const a = 1;  \nconst b = 2;"
+  },
+  {
+    "input": "<p><span style=\"font-weight:700\">gras par style</span></p>",
+    "output": "**gras par style**"
+  },
+  {
+    "input": "<meta charset=\"utf-8\"><p>Copié depuis {{une page}}</p>",
+    "output": "Copié depuis {{une page}}"
+  }
+]

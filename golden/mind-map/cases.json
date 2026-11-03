@@ -1,0 +1,695 @@
+[
+  {
+    "input": {
+      "title": "Seule",
+      "map": []
+    },
+    "output": {
+      "nodes": [
+        {
+          "key": "root",
+          "text": "Seule",
+          "slide": null,
+          "depth": 0,
+          "left": 50,
+          "top": 50
+        }
+      ],
+      "links": []
+    }
+  },
+  {
+    "input": {
+      "title": "Une branche",
+      "map": [
+        {
+          "text": "Introduction",
+          "slide": 1,
+          "children": []
+        }
+      ]
+    },
+    "output": {
+      "nodes": [
+        {
+          "key": "root",
+          "text": "Introduction",
+          "slide": 1,
+          "depth": 0,
+          "left": 50,
+          "top": 50
+        }
+      ],
+      "links": []
+    }
+  },
+  {
+    "input": {
+      "title": "Déploiement",
+      "map": [
+        {
+          "text": "Préparer",
+          "slide": 1,
+          "children": [
+            {
+              "text": "Sauvegarde",
+              "slide": 1,
+              "children": []
+            },
+            {
+              "text": "Prévenir l’astreinte",
+              "slide": 1,
+              "children": []
+            }
+          ]
+        },
+        {
+          "text": "Basculer",
+          "slide": 2,
+          "children": [
+            {
+              "text": "DNS",
+              "slide": 2,
+              "children": []
+            }
+          ]
+        },
+        {
+          "text": "Vérifier",
+          "slide": 3,
+          "children": []
+        }
+      ]
+    },
+    "output": {
+      "nodes": [
+        {
+          "key": "root",
+          "text": "Déploiement",
+          "slide": null,
+          "depth": 0,
+          "left": 50,
+          "top": 50
+        },
+        {
+          "key": "root.0",
+          "text": "Préparer",
+          "slide": 1,
+          "depth": 1,
+          "left": 78.99137802864844,
+          "top": 50
+        },
+        {
+          "key": "root.0.0",
+          "text": "Sauvegarde",
+          "slide": 1,
+          "depth": 2,
+          "left": 91,
+          "top": 9.000000000000007
+        },
+        {
+          "key": "root.0.1",
+          "text": "Prévenir l’astreinte",
+          "slide": 1,
+          "depth": 2,
+          "left": 91,
+          "top": 91
+        },
+        {
+          "key": "root.1",
+          "text": "Basculer",
+          "slide": 2,
+          "depth": 1,
+          "left": 29.500000000000004,
+          "top": 70.5
+        },
+        {
+          "key": "root.1.0",
+          "text": "DNS",
+          "slide": 2,
+          "depth": 2,
+          "left": 9.000000000000007,
+          "top": 91
+        },
+        {
+          "key": "root.2",
+          "text": "Vérifier",
+          "slide": 3,
+          "depth": 1,
+          "left": 29.499999999999996,
+          "top": 29.500000000000004
+        }
+      ],
+      "links": [
+        {
+          "key": "root.0",
+          "from": {
+            "key": "root",
+            "text": "Déploiement",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.0",
+            "text": "Préparer",
+            "slide": 1,
+            "depth": 1,
+            "left": 78.99137802864844,
+            "top": 50
+          }
+        },
+        {
+          "key": "root.0.0",
+          "from": {
+            "key": "root.0",
+            "text": "Préparer",
+            "slide": 1,
+            "depth": 1,
+            "left": 78.99137802864844,
+            "top": 50
+          },
+          "to": {
+            "key": "root.0.0",
+            "text": "Sauvegarde",
+            "slide": 1,
+            "depth": 2,
+            "left": 91,
+            "top": 9.000000000000007
+          }
+        },
+        {
+          "key": "root.0.1",
+          "from": {
+            "key": "root.0",
+            "text": "Préparer",
+            "slide": 1,
+            "depth": 1,
+            "left": 78.99137802864844,
+            "top": 50
+          },
+          "to": {
+            "key": "root.0.1",
+            "text": "Prévenir l’astreinte",
+            "slide": 1,
+            "depth": 2,
+            "left": 91,
+            "top": 91
+          }
+        },
+        {
+          "key": "root.1",
+          "from": {
+            "key": "root",
+            "text": "Déploiement",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.1",
+            "text": "Basculer",
+            "slide": 2,
+            "depth": 1,
+            "left": 29.500000000000004,
+            "top": 70.5
+          }
+        },
+        {
+          "key": "root.1.0",
+          "from": {
+            "key": "root.1",
+            "text": "Basculer",
+            "slide": 2,
+            "depth": 1,
+            "left": 29.500000000000004,
+            "top": 70.5
+          },
+          "to": {
+            "key": "root.1.0",
+            "text": "DNS",
+            "slide": 2,
+            "depth": 2,
+            "left": 9.000000000000007,
+            "top": 91
+          }
+        },
+        {
+          "key": "root.2",
+          "from": {
+            "key": "root",
+            "text": "Déploiement",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.2",
+            "text": "Vérifier",
+            "slide": 3,
+            "depth": 1,
+            "left": 29.499999999999996,
+            "top": 29.500000000000004
+          }
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "title": "Profond",
+      "map": [
+        {
+          "text": "Niveau un",
+          "slide": 1,
+          "children": [
+            {
+              "text": "Niveau deux",
+              "slide": 1,
+              "children": [
+                {
+                  "text": "Niveau trois",
+                  "slide": 1,
+                  "children": [
+                    {
+                      "text": "Niveau quatre",
+                      "slide": 1,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "output": {
+      "nodes": [
+        {
+          "key": "root",
+          "text": "Niveau un",
+          "slide": 1,
+          "depth": 0,
+          "left": 50,
+          "top": 50
+        },
+        {
+          "key": "root.0",
+          "text": "Niveau deux",
+          "slide": 1,
+          "depth": 1,
+          "left": 63.66666666666667,
+          "top": 63.666666666666664
+        },
+        {
+          "key": "root.0.0",
+          "text": "Niveau trois",
+          "slide": 1,
+          "depth": 2,
+          "left": 77.33333333333334,
+          "top": 77.33333333333333
+        },
+        {
+          "key": "root.0.0.0",
+          "text": "Niveau quatre",
+          "slide": 1,
+          "depth": 3,
+          "left": 91,
+          "top": 91
+        }
+      ],
+      "links": [
+        {
+          "key": "root.0",
+          "from": {
+            "key": "root",
+            "text": "Niveau un",
+            "slide": 1,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.0",
+            "text": "Niveau deux",
+            "slide": 1,
+            "depth": 1,
+            "left": 63.66666666666667,
+            "top": 63.666666666666664
+          }
+        },
+        {
+          "key": "root.0.0",
+          "from": {
+            "key": "root.0",
+            "text": "Niveau deux",
+            "slide": 1,
+            "depth": 1,
+            "left": 63.66666666666667,
+            "top": 63.666666666666664
+          },
+          "to": {
+            "key": "root.0.0",
+            "text": "Niveau trois",
+            "slide": 1,
+            "depth": 2,
+            "left": 77.33333333333334,
+            "top": 77.33333333333333
+          }
+        },
+        {
+          "key": "root.0.0.0",
+          "from": {
+            "key": "root.0.0",
+            "text": "Niveau trois",
+            "slide": 1,
+            "depth": 2,
+            "left": 77.33333333333334,
+            "top": 77.33333333333333
+          },
+          "to": {
+            "key": "root.0.0.0",
+            "text": "Niveau quatre",
+            "slide": 1,
+            "depth": 3,
+            "left": 91,
+            "top": 91
+          }
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "title": "Large",
+      "map": [
+        {
+          "text": "Branche 0 au titre plutôt long pour un nœud",
+          "slide": 1,
+          "children": []
+        },
+        {
+          "text": "Branche 1 au titre plutôt long pour un nœud",
+          "slide": 2,
+          "children": []
+        },
+        {
+          "text": "Branche 2 au titre plutôt long pour un nœud",
+          "slide": 3,
+          "children": []
+        },
+        {
+          "text": "Branche 3 au titre plutôt long pour un nœud",
+          "slide": 4,
+          "children": []
+        },
+        {
+          "text": "Branche 4 au titre plutôt long pour un nœud",
+          "slide": 5,
+          "children": []
+        },
+        {
+          "text": "Branche 5 au titre plutôt long pour un nœud",
+          "slide": 6,
+          "children": []
+        },
+        {
+          "text": "Branche 6 au titre plutôt long pour un nœud",
+          "slide": 7,
+          "children": []
+        },
+        {
+          "text": "Branche 7 au titre plutôt long pour un nœud",
+          "slide": 8,
+          "children": []
+        },
+        {
+          "text": "Branche 8 au titre plutôt long pour un nœud",
+          "slide": 9,
+          "children": []
+        }
+      ]
+    },
+    "output": {
+      "nodes": [
+        {
+          "key": "root",
+          "text": "Large",
+          "slide": null,
+          "depth": 0,
+          "left": 50,
+          "top": 50
+        },
+        {
+          "key": "root.0",
+          "text": "Branche 0 au titre plutôt long pour un nœud",
+          "slide": 1,
+          "depth": 1,
+          "left": 64.23915056868829,
+          "top": 11.472602547777761
+        },
+        {
+          "key": "root.1",
+          "text": "Branche 1 au titre plutôt long pour un nœud",
+          "slide": 2,
+          "depth": 1,
+          "left": 86.05479490444449,
+          "top": 29.5
+        },
+        {
+          "key": "root.2",
+          "text": "Branche 2 au titre plutôt long pour un nœud",
+          "slide": 3,
+          "depth": 1,
+          "left": 91,
+          "top": 57.119575284344144
+        },
+        {
+          "key": "root.3",
+          "text": "Branche 3 au titre plutôt long pour un nœud",
+          "slide": 4,
+          "depth": 1,
+          "left": 76.76084943131173,
+          "top": 81.4078221678781
+        },
+        {
+          "key": "root.4",
+          "text": "Branche 4 au titre plutôt long pour un nœud",
+          "slide": 5,
+          "depth": 1,
+          "left": 50,
+          "top": 91
+        },
+        {
+          "key": "root.5",
+          "text": "Branche 5 au titre plutôt long pour un nœud",
+          "slide": 6,
+          "depth": 1,
+          "left": 23.239150568688284,
+          "top": 81.4078221678781
+        },
+        {
+          "key": "root.6",
+          "text": "Branche 6 au titre plutôt long pour un nœud",
+          "slide": 7,
+          "depth": 1,
+          "left": 9,
+          "top": 57.119575284344144
+        },
+        {
+          "key": "root.7",
+          "text": "Branche 7 au titre plutôt long pour un nœud",
+          "slide": 8,
+          "depth": 1,
+          "left": 13.945205095555515,
+          "top": 29.499999999999996
+        },
+        {
+          "key": "root.8",
+          "text": "Branche 8 au titre plutôt long pour un nœud",
+          "slide": 9,
+          "depth": 1,
+          "left": 35.760849431311684,
+          "top": 11.472602547777761
+        }
+      ],
+      "links": [
+        {
+          "key": "root.0",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.0",
+            "text": "Branche 0 au titre plutôt long pour un nœud",
+            "slide": 1,
+            "depth": 1,
+            "left": 64.23915056868829,
+            "top": 11.472602547777761
+          }
+        },
+        {
+          "key": "root.1",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.1",
+            "text": "Branche 1 au titre plutôt long pour un nœud",
+            "slide": 2,
+            "depth": 1,
+            "left": 86.05479490444449,
+            "top": 29.5
+          }
+        },
+        {
+          "key": "root.2",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.2",
+            "text": "Branche 2 au titre plutôt long pour un nœud",
+            "slide": 3,
+            "depth": 1,
+            "left": 91,
+            "top": 57.119575284344144
+          }
+        },
+        {
+          "key": "root.3",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.3",
+            "text": "Branche 3 au titre plutôt long pour un nœud",
+            "slide": 4,
+            "depth": 1,
+            "left": 76.76084943131173,
+            "top": 81.4078221678781
+          }
+        },
+        {
+          "key": "root.4",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.4",
+            "text": "Branche 4 au titre plutôt long pour un nœud",
+            "slide": 5,
+            "depth": 1,
+            "left": 50,
+            "top": 91
+          }
+        },
+        {
+          "key": "root.5",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.5",
+            "text": "Branche 5 au titre plutôt long pour un nœud",
+            "slide": 6,
+            "depth": 1,
+            "left": 23.239150568688284,
+            "top": 81.4078221678781
+          }
+        },
+        {
+          "key": "root.6",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.6",
+            "text": "Branche 6 au titre plutôt long pour un nœud",
+            "slide": 7,
+            "depth": 1,
+            "left": 9,
+            "top": 57.119575284344144
+          }
+        },
+        {
+          "key": "root.7",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.7",
+            "text": "Branche 7 au titre plutôt long pour un nœud",
+            "slide": 8,
+            "depth": 1,
+            "left": 13.945205095555515,
+            "top": 29.499999999999996
+          }
+        },
+        {
+          "key": "root.8",
+          "from": {
+            "key": "root",
+            "text": "Large",
+            "slide": null,
+            "depth": 0,
+            "left": 50,
+            "top": 50
+          },
+          "to": {
+            "key": "root.8",
+            "text": "Branche 8 au titre plutôt long pour un nœud",
+            "slide": 9,
+            "depth": 1,
+            "left": 35.760849431311684,
+            "top": 11.472602547777761
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,2790 @@
+[
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.numeric",
+      "lang": "fr",
+      "day": "2-digit",
+      "month": "2-digit",
+      "year": "numeric"
+    },
+    "output": "25/07/2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.numeric",
+      "lang": "fr",
+      "day": "2-digit",
+      "month": "2-digit",
+      "year": "numeric"
+    },
+    "output": "01/01/2027"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.numeric",
+      "lang": "fr",
+      "day": "2-digit",
+      "month": "2-digit",
+      "year": "numeric"
+    },
+    "output": "01/01/2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.numeric",
+      "lang": "fr",
+      "day": "2-digit",
+      "month": "2-digit",
+      "year": "numeric"
+    },
+    "output": "08/11/1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.numeric",
+      "lang": "en",
+      "day": "2-digit",
+      "month": "2-digit",
+      "year": "numeric"
+    },
+    "output": "07/25/2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.numeric",
+      "lang": "en",
+      "day": "2-digit",
+      "month": "2-digit",
+      "year": "numeric"
+    },
+    "output": "01/01/2027"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.numeric",
+      "lang": "en",
+      "day": "2-digit",
+      "month": "2-digit",
+      "year": "numeric"
+    },
+    "output": "01/01/2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.numeric",
+      "lang": "en",
+      "day": "2-digit",
+      "month": "2-digit",
+      "year": "numeric"
+    },
+    "output": "11/08/1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.short",
+      "lang": "fr",
+      "day": "numeric",
+      "month": "short",
+      "year": "numeric"
+    },
+    "output": "25 juil. 2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.short",
+      "lang": "fr",
+      "day": "numeric",
+      "month": "short",
+      "year": "numeric"
+    },
+    "output": "1 janv. 2027"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.short",
+      "lang": "fr",
+      "day": "numeric",
+      "month": "short",
+      "year": "numeric"
+    },
+    "output": "1 janv. 2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.short",
+      "lang": "fr",
+      "day": "numeric",
+      "month": "short",
+      "year": "numeric"
+    },
+    "output": "8 nov. 1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.short",
+      "lang": "en",
+      "day": "numeric",
+      "month": "short",
+      "year": "numeric"
+    },
+    "output": "Jul 25, 2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.short",
+      "lang": "en",
+      "day": "numeric",
+      "month": "short",
+      "year": "numeric"
+    },
+    "output": "Jan 1, 2027"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.short",
+      "lang": "en",
+      "day": "numeric",
+      "month": "short",
+      "year": "numeric"
+    },
+    "output": "Jan 1, 2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.short",
+      "lang": "en",
+      "day": "numeric",
+      "month": "short",
+      "year": "numeric"
+    },
+    "output": "Nov 8, 1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.long",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "samedi 25 juillet 2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.long",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "vendredi 1 janvier 2027"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.long",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "vendredi 1 janvier 2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.long",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "lundi 8 novembre 1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.long",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "Saturday, July 25, 2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.long",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "Friday, January 1, 2027"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.long",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "Friday, January 1, 2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "calc-format DATE_STYLES.long",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "Monday, November 8, 1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "http-history.store draft name",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit"
+    },
+    "output": "11:05"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "http-history.store draft name",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit"
+    },
+    "output": "00:59"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "http-history.store draft name",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit"
+    },
+    "output": "01:00"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "http-history.store draft name",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit"
+    },
+    "output": "05:25"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "http-history.store draft name",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit"
+    },
+    "output": "11:05 AM"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "http-history.store draft name",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit"
+    },
+    "output": "12:59 AM"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "http-history.store draft name",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit"
+    },
+    "output": "01:00 AM"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "http-history.store draft name",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit"
+    },
+    "output": "05:25 AM"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "history-page day",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long"
+    },
+    "output": "samedi 25 juillet"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "history-page day",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long"
+    },
+    "output": "vendredi 1 janvier"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "history-page day",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long"
+    },
+    "output": "vendredi 1 janvier"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "history-page day",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long"
+    },
+    "output": "lundi 8 novembre"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "history-page day",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long"
+    },
+    "output": "Saturday, July 25"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "history-page day",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long"
+    },
+    "output": "Friday, January 1"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "history-page day",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long"
+    },
+    "output": "Friday, January 1"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "history-page day",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long"
+    },
+    "output": "Monday, November 8"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "history-page time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit"
+    },
+    "output": "11:05:07"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "history-page time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit"
+    },
+    "output": "00:59:59"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "history-page time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit"
+    },
+    "output": "01:00:00"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "history-page time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit"
+    },
+    "output": "05:25:55"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "history-page time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit"
+    },
+    "output": "11:05:07 AM"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "history-page time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit"
+    },
+    "output": "12:59:59 AM"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "history-page time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit"
+    },
+    "output": "01:00:00 AM"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "history-page time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit"
+    },
+    "output": "05:25:55 AM"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "cookie-jar-dialog expiry",
+      "lang": "fr",
+      "dateStyle": "medium",
+      "timeStyle": "short"
+    },
+    "output": "25 juil. 2026, 11:05"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "cookie-jar-dialog expiry",
+      "lang": "fr",
+      "dateStyle": "medium",
+      "timeStyle": "short"
+    },
+    "output": "1 janv. 2027, 00:59"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "cookie-jar-dialog expiry",
+      "lang": "fr",
+      "dateStyle": "medium",
+      "timeStyle": "short"
+    },
+    "output": "1 janv. 2027, 01:00"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "cookie-jar-dialog expiry",
+      "lang": "fr",
+      "dateStyle": "medium",
+      "timeStyle": "short"
+    },
+    "output": "8 nov. 1971, 05:25"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "cookie-jar-dialog expiry",
+      "lang": "en",
+      "dateStyle": "medium",
+      "timeStyle": "short"
+    },
+    "output": "Jul 25, 2026, 11:05 AM"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "cookie-jar-dialog expiry",
+      "lang": "en",
+      "dateStyle": "medium",
+      "timeStyle": "short"
+    },
+    "output": "Jan 1, 2027, 12:59 AM"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "cookie-jar-dialog expiry",
+      "lang": "en",
+      "dateStyle": "medium",
+      "timeStyle": "short"
+    },
+    "output": "Jan 1, 2027, 1:00 AM"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "cookie-jar-dialog expiry",
+      "lang": "en",
+      "dateStyle": "medium",
+      "timeStyle": "short"
+    },
+    "output": "Nov 8, 1971, 5:25 AM"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "socket-log time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "fractionalSecondDigits": 3
+    },
+    "output": "11:05:07,123"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "socket-log time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "fractionalSecondDigits": 3
+    },
+    "output": "00:59:59,999"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "socket-log time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "fractionalSecondDigits": 3
+    },
+    "output": "01:00:00,000"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "socket-log time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "fractionalSecondDigits": 3
+    },
+    "output": "05:25:55,000"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "socket-log time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "fractionalSecondDigits": 3
+    },
+    "output": "11:05:07.123 AM"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "socket-log time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "fractionalSecondDigits": 3
+    },
+    "output": "12:59:59.999 AM"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "socket-log time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "fractionalSecondDigits": 3
+    },
+    "output": "01:00:00.000 AM"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "socket-log time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "fractionalSecondDigits": 3
+    },
+    "output": "05:25:55.000 AM"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "dates-tool day",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "samedi 25 juillet 2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "dates-tool day",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "vendredi 1 janvier 2027"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "dates-tool day",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "vendredi 1 janvier 2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "dates-tool day",
+      "lang": "fr",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "lundi 8 novembre 1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "dates-tool day",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "Saturday, July 25, 2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "dates-tool day",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "Friday, January 1, 2027"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "dates-tool day",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "Friday, January 1, 2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "dates-tool day",
+      "lang": "en",
+      "weekday": "long",
+      "day": "numeric",
+      "month": "long",
+      "year": "numeric"
+    },
+    "output": "Monday, November 8, 1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "dates-tool time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "hourCycle": "h23"
+    },
+    "output": "11:05:07"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "dates-tool time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "hourCycle": "h23"
+    },
+    "output": "00:59:59"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "dates-tool time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "hourCycle": "h23"
+    },
+    "output": "01:00:00"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "dates-tool time",
+      "lang": "fr",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "hourCycle": "h23"
+    },
+    "output": "05:25:55"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "dates-tool time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "hourCycle": "h23"
+    },
+    "output": "11:05:07"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "dates-tool time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "hourCycle": "h23"
+    },
+    "output": "00:59:59"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "dates-tool time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "hourCycle": "h23"
+    },
+    "output": "01:00:00"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "dates-tool time",
+      "lang": "en",
+      "hour": "2-digit",
+      "minute": "2-digit",
+      "second": "2-digit",
+      "hourCycle": "h23"
+    },
+    "output": "05:25:55"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "durations day",
+      "lang": "fr",
+      "day": "numeric",
+      "month": "long",
+      "timeZone": "UTC"
+    },
+    "output": "25 juillet"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "durations day",
+      "lang": "fr",
+      "day": "numeric",
+      "month": "long",
+      "timeZone": "UTC"
+    },
+    "output": "31 décembre"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "durations day",
+      "lang": "fr",
+      "day": "numeric",
+      "month": "long",
+      "timeZone": "UTC"
+    },
+    "output": "1 janvier"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "durations day",
+      "lang": "fr",
+      "day": "numeric",
+      "month": "long",
+      "timeZone": "UTC"
+    },
+    "output": "8 novembre"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "durations day",
+      "lang": "en",
+      "day": "numeric",
+      "month": "long",
+      "timeZone": "UTC"
+    },
+    "output": "July 25"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "durations day",
+      "lang": "en",
+      "day": "numeric",
+      "month": "long",
+      "timeZone": "UTC"
+    },
+    "output": "December 31"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "durations day",
+      "lang": "en",
+      "day": "numeric",
+      "month": "long",
+      "timeZone": "UTC"
+    },
+    "output": "January 1"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "durations day",
+      "lang": "en",
+      "day": "numeric",
+      "month": "long",
+      "timeZone": "UTC"
+    },
+    "output": "November 8"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "identity-tool birth",
+      "lang": "fr",
+      "dateStyle": "long",
+      "timeZone": "UTC"
+    },
+    "output": "25 juillet 2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "identity-tool birth",
+      "lang": "fr",
+      "dateStyle": "long",
+      "timeZone": "UTC"
+    },
+    "output": "31 décembre 2026"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "identity-tool birth",
+      "lang": "fr",
+      "dateStyle": "long",
+      "timeZone": "UTC"
+    },
+    "output": "1 janvier 2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "identity-tool birth",
+      "lang": "fr",
+      "dateStyle": "long",
+      "timeZone": "UTC"
+    },
+    "output": "8 novembre 1971"
+  },
+  {
+    "input": "2026-07-25T09:05:07.123Z",
+    "options": {
+      "site": "identity-tool birth",
+      "lang": "en",
+      "dateStyle": "long",
+      "timeZone": "UTC"
+    },
+    "output": "July 25, 2026"
+  },
+  {
+    "input": "2026-12-31T23:59:59.999Z",
+    "options": {
+      "site": "identity-tool birth",
+      "lang": "en",
+      "dateStyle": "long",
+      "timeZone": "UTC"
+    },
+    "output": "December 31, 2026"
+  },
+  {
+    "input": "2027-01-01T00:00:00.000Z",
+    "options": {
+      "site": "identity-tool birth",
+      "lang": "en",
+      "dateStyle": "long",
+      "timeZone": "UTC"
+    },
+    "output": "January 1, 2027"
+  },
+  {
+    "input": "1971-11-08T04:25:55.000Z",
+    "options": {
+      "site": "identity-tool birth",
+      "lang": "en",
+      "dateStyle": "long",
+      "timeZone": "UTC"
+    },
+    "output": "November 8, 1971"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "fr",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "0,0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "fr",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "fr",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "1,3"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "fr",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "12,3"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "fr",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "1 000,0"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "fr",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "1 234 567,9"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "fr",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "-1 234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "en",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "0.0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "en",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "en",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "1.3"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "en",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "12.3"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "en",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "1,000.0"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "en",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "1,234,567.9"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "response-pane tenths",
+      "lang": "en",
+      "minimumFractionDigits": 1,
+      "maximumFractionDigits": 1
+    },
+    "output": "-1,234.5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "fr",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "0,0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "fr",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "fr",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "1,3"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "fr",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "12,3"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "fr",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "1 000,0"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "fr",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "1 234 567,9"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "fr",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "-1 234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "en",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "0.0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "en",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "en",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "1.3"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "en",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "12.3"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "en",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "1,000.0"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "en",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "1,234,567.9"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "runner-results seconds",
+      "lang": "en",
+      "maximumFractionDigits": 1,
+      "minimumFractionDigits": 1
+    },
+    "output": "-1,234.5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "response-view size",
+      "lang": "fr",
+      "maximumFractionDigits": 2
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "response-view size",
+      "lang": "fr",
+      "maximumFractionDigits": 2
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "response-view size",
+      "lang": "fr",
+      "maximumFractionDigits": 2
+    },
+    "output": "1,25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "response-view size",
+      "lang": "fr",
+      "maximumFractionDigits": 2
+    },
+    "output": "12,35"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "response-view size",
+      "lang": "fr",
+      "maximumFractionDigits": 2
+    },
+    "output": "999,95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "response-view size",
+      "lang": "fr",
+      "maximumFractionDigits": 2
+    },
+    "output": "1 234 567,89"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "response-view size",
+      "lang": "fr",
+      "maximumFractionDigits": 2
+    },
+    "output": "-1 234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "response-view size",
+      "lang": "en",
+      "maximumFractionDigits": 2
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "response-view size",
+      "lang": "en",
+      "maximumFractionDigits": 2
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "response-view size",
+      "lang": "en",
+      "maximumFractionDigits": 2
+    },
+    "output": "1.25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "response-view size",
+      "lang": "en",
+      "maximumFractionDigits": 2
+    },
+    "output": "12.35"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "response-view size",
+      "lang": "en",
+      "maximumFractionDigits": 2
+    },
+    "output": "999.95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "response-view size",
+      "lang": "en",
+      "maximumFractionDigits": 2
+    },
+    "output": "1,234,567.89"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "response-view size",
+      "lang": "en",
+      "maximumFractionDigits": 2
+    },
+    "output": "-1,234.5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "search-bar count",
+      "lang": "fr"
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "search-bar count",
+      "lang": "fr"
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "search-bar count",
+      "lang": "fr"
+    },
+    "output": "1,25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "search-bar count",
+      "lang": "fr"
+    },
+    "output": "12,345"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "search-bar count",
+      "lang": "fr"
+    },
+    "output": "999,95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "search-bar count",
+      "lang": "fr"
+    },
+    "output": "1 234 567,891"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "search-bar count",
+      "lang": "fr"
+    },
+    "output": "-1 234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "search-bar count",
+      "lang": "en"
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "search-bar count",
+      "lang": "en"
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "search-bar count",
+      "lang": "en"
+    },
+    "output": "1.25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "search-bar count",
+      "lang": "en"
+    },
+    "output": "12.345"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "search-bar count",
+      "lang": "en"
+    },
+    "output": "999.95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "search-bar count",
+      "lang": "en"
+    },
+    "output": "1,234,567.891"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "search-bar count",
+      "lang": "en"
+    },
+    "output": "-1,234.5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "fr",
+      "maximumFractionDigits": 1
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "fr",
+      "maximumFractionDigits": 1
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "fr",
+      "maximumFractionDigits": 1
+    },
+    "output": "1,3"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "fr",
+      "maximumFractionDigits": 1
+    },
+    "output": "12,3"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "fr",
+      "maximumFractionDigits": 1
+    },
+    "output": "1 000"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "fr",
+      "maximumFractionDigits": 1
+    },
+    "output": "1 234 567,9"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "fr",
+      "maximumFractionDigits": 1
+    },
+    "output": "-1 234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "en",
+      "maximumFractionDigits": 1
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "en",
+      "maximumFractionDigits": 1
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "en",
+      "maximumFractionDigits": 1
+    },
+    "output": "1.3"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "en",
+      "maximumFractionDigits": 1
+    },
+    "output": "12.3"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "en",
+      "maximumFractionDigits": 1
+    },
+    "output": "1,000"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "en",
+      "maximumFractionDigits": 1
+    },
+    "output": "1,234,567.9"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "json-explorer size",
+      "lang": "en",
+      "maximumFractionDigits": 1
+    },
+    "output": "-1,234.5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "fr",
+      "minimumFractionDigits": 2
+    },
+    "output": "0,00"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "fr",
+      "minimumFractionDigits": 2
+    },
+    "output": "-0,50"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "fr",
+      "minimumFractionDigits": 2
+    },
+    "output": "1,25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "fr",
+      "minimumFractionDigits": 2
+    },
+    "output": "12,345"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "fr",
+      "minimumFractionDigits": 2
+    },
+    "output": "999,95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "fr",
+      "minimumFractionDigits": 2
+    },
+    "output": "1 234 567,891"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "fr",
+      "minimumFractionDigits": 2
+    },
+    "output": "-1 234,50"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "en",
+      "minimumFractionDigits": 2
+    },
+    "output": "0.00"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "en",
+      "minimumFractionDigits": 2
+    },
+    "output": "-0.50"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "en",
+      "minimumFractionDigits": 2
+    },
+    "output": "1.25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "en",
+      "minimumFractionDigits": 2
+    },
+    "output": "12.345"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "en",
+      "minimumFractionDigits": 2
+    },
+    "output": "999.95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "en",
+      "minimumFractionDigits": 2
+    },
+    "output": "1,234,567.891"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "settings-page hint",
+      "lang": "en",
+      "minimumFractionDigits": 2
+    },
+    "output": "-1,234.50"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "colour-tool",
+      "lang": "fr",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "0,00"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "colour-tool",
+      "lang": "fr",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "-0,50"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "colour-tool",
+      "lang": "fr",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "1,25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "colour-tool",
+      "lang": "fr",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "12,35"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "colour-tool",
+      "lang": "fr",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "999,95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "colour-tool",
+      "lang": "fr",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "1 234 567,89"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "colour-tool",
+      "lang": "fr",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "-1 234,50"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "colour-tool",
+      "lang": "en",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "0.00"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "colour-tool",
+      "lang": "en",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "-0.50"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "colour-tool",
+      "lang": "en",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "1.25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "colour-tool",
+      "lang": "en",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "12.35"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "colour-tool",
+      "lang": "en",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "999.95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "colour-tool",
+      "lang": "en",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "1,234,567.89"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "colour-tool",
+      "lang": "en",
+      "minimumFractionDigits": 2,
+      "maximumFractionDigits": 2
+    },
+    "output": "-1,234.50"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "durations number",
+      "lang": "fr",
+      "maximumFractionDigits": 6
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "durations number",
+      "lang": "fr",
+      "maximumFractionDigits": 6
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "durations number",
+      "lang": "fr",
+      "maximumFractionDigits": 6
+    },
+    "output": "1,25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "durations number",
+      "lang": "fr",
+      "maximumFractionDigits": 6
+    },
+    "output": "12,345"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "durations number",
+      "lang": "fr",
+      "maximumFractionDigits": 6
+    },
+    "output": "999,95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "durations number",
+      "lang": "fr",
+      "maximumFractionDigits": 6
+    },
+    "output": "1 234 567,891"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "durations number",
+      "lang": "fr",
+      "maximumFractionDigits": 6
+    },
+    "output": "-1 234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "durations number",
+      "lang": "en",
+      "maximumFractionDigits": 6
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "durations number",
+      "lang": "en",
+      "maximumFractionDigits": 6
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "durations number",
+      "lang": "en",
+      "maximumFractionDigits": 6
+    },
+    "output": "1.25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "durations number",
+      "lang": "en",
+      "maximumFractionDigits": 6
+    },
+    "output": "12.345"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "durations number",
+      "lang": "en",
+      "maximumFractionDigits": 6
+    },
+    "output": "999.95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "durations number",
+      "lang": "en",
+      "maximumFractionDigits": 6
+    },
+    "output": "1,234,567.891"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "durations number",
+      "lang": "en",
+      "maximumFractionDigits": 6
+    },
+    "output": "-1,234.5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "transfer number",
+      "lang": "fr"
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "transfer number",
+      "lang": "fr"
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "transfer number",
+      "lang": "fr"
+    },
+    "output": "1,25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "transfer number",
+      "lang": "fr"
+    },
+    "output": "12,345"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "transfer number",
+      "lang": "fr"
+    },
+    "output": "999,95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "transfer number",
+      "lang": "fr"
+    },
+    "output": "1 234 567,891"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "transfer number",
+      "lang": "fr"
+    },
+    "output": "-1 234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "transfer number",
+      "lang": "en"
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "transfer number",
+      "lang": "en"
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "transfer number",
+      "lang": "en"
+    },
+    "output": "1.25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "transfer number",
+      "lang": "en"
+    },
+    "output": "12.345"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "transfer number",
+      "lang": "en"
+    },
+    "output": "999.95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "transfer number",
+      "lang": "en"
+    },
+    "output": "1,234,567.891"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "transfer number",
+      "lang": "en"
+    },
+    "output": "-1,234.5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "+1,25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "+12,35"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "+999,95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "+1 234 567,89"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "-1 234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "+1.25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "+12.35"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "+999.95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "+1,234,567.89"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "calc-format signed",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "signDisplay": "exceptZero"
+    },
+    "output": "-1,234.5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "-0,5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "1,25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "12,35"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "999,95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "1234567,89"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "fr",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "-1234,5"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "0"
+  },
+  {
+    "input": -0.5,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "-0.5"
+  },
+  {
+    "input": 1.25,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "1.25"
+  },
+  {
+    "input": 12.345,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "12.35"
+  },
+  {
+    "input": 999.95,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "999.95"
+  },
+  {
+    "input": 1234567.891,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "1234567.89"
+  },
+  {
+    "input": -1234.5,
+    "options": {
+      "site": "calc-format ungrouped",
+      "lang": "en",
+      "minimumFractionDigits": 0,
+      "maximumFractionDigits": 2,
+      "useGrouping": false
+    },
+    "output": "-1234.5"
+  },
+  {
+    "input": [
+      "un",
+      "deux",
+      "trois"
+    ],
+    "options": {
+      "site": "cron-tool",
+      "lang": "fr",
+      "type": "conjunction"
+    },
+    "output": "un, deux et trois"
+  },
+  {
+    "input": [
+      "un",
+      "deux"
+    ],
+    "options": {
+      "site": "note-picker",
+      "lang": "fr",
+      "type": "disjunction"
+    },
+    "output": "un ou deux"
+  },
+  {
+    "input": "FR",
+    "options": {
+      "site": "checks-tool",
+      "lang": "fr",
+      "type": "region"
+    },
+    "output": "France"
+  },
+  {
+    "input": "DE",
+    "options": {
+      "site": "checks-tool",
+      "lang": "fr",
+      "type": "region"
+    },
+    "output": "Allemagne"
+  },
+  {
+    "input": "GB",
+    "options": {
+      "site": "checks-tool",
+      "lang": "fr",
+      "type": "region"
+    },
+    "output": "Royaume-Uni"
+  },
+  {
+    "input": "CH",
+    "options": {
+      "site": "checks-tool",
+      "lang": "fr",
+      "type": "region"
+    },
+    "output": "Suisse"
+  },
+  {
+    "input": "BE",
+    "options": {
+      "site": "checks-tool",
+      "lang": "fr",
+      "type": "region"
+    },
+    "output": "Belgique"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "fr"
+    },
+    "output": "one"
+  },
+  {
+    "input": 1,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "fr"
+    },
+    "output": "one"
+  },
+  {
+    "input": 2,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "fr"
+    },
+    "output": "other"
+  },
+  {
+    "input": 5,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "fr"
+    },
+    "output": "other"
+  },
+  {
+    "input": 21,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "fr"
+    },
+    "output": "other"
+  },
+  {
+    "input": 1000,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "fr"
+    },
+    "output": "other"
+  },
+  {
+    "input": 1000000,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "fr"
+    },
+    "output": "many"
+  },
+  {
+    "input": 1.5,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "fr"
+    },
+    "output": "one"
+  },
+  {
+    "input": [
+      "un",
+      "deux",
+      "trois"
+    ],
+    "options": {
+      "site": "cron-tool",
+      "lang": "en",
+      "type": "conjunction"
+    },
+    "output": "un, deux, and trois"
+  },
+  {
+    "input": [
+      "un",
+      "deux"
+    ],
+    "options": {
+      "site": "note-picker",
+      "lang": "en",
+      "type": "disjunction"
+    },
+    "output": "un or deux"
+  },
+  {
+    "input": "FR",
+    "options": {
+      "site": "checks-tool",
+      "lang": "en",
+      "type": "region"
+    },
+    "output": "France"
+  },
+  {
+    "input": "DE",
+    "options": {
+      "site": "checks-tool",
+      "lang": "en",
+      "type": "region"
+    },
+    "output": "Germany"
+  },
+  {
+    "input": "GB",
+    "options": {
+      "site": "checks-tool",
+      "lang": "en",
+      "type": "region"
+    },
+    "output": "United Kingdom"
+  },
+  {
+    "input": "CH",
+    "options": {
+      "site": "checks-tool",
+      "lang": "en",
+      "type": "region"
+    },
+    "output": "Switzerland"
+  },
+  {
+    "input": "BE",
+    "options": {
+      "site": "checks-tool",
+      "lang": "en",
+      "type": "region"
+    },
+    "output": "Belgium"
+  },
+  {
+    "input": 0,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "en"
+    },
+    "output": "other"
+  },
+  {
+    "input": 1,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "en"
+    },
+    "output": "one"
+  },
+  {
+    "input": 2,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "en"
+    },
+    "output": "other"
+  },
+  {
+    "input": 5,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "en"
+    },
+    "output": "other"
+  },
+  {
+    "input": 21,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "en"
+    },
+    "output": "other"
+  },
+  {
+    "input": 1000,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "en"
+    },
+    "output": "other"
+  },
+  {
+    "input": 1000000,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "en"
+    },
+    "output": "other"
+  },
+  {
+    "input": 1.5,
+    "options": {
+      "site": "plural-transpiler",
+      "lang": "en"
+    },
+    "output": "other"
+  }
+]

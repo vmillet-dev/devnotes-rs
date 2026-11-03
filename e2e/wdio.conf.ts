@@ -11,12 +11,13 @@ const repo = resolve(here, '..');
 /**
  * Built by `npm run e2e:build`, which links the `e2e` Cargo feature and merges
  * `tauri.e2e.conf.json`. A release binary carries neither and cannot be driven.
- * `CARGO_TARGET_DIR` is read as cargo reads it under the Tauri CLI, from `src-tauri/`.
+ * Cargo writes it to the workspace's `target/`, or under `CARGO_TARGET_DIR`, which is read as
+ * cargo reads it under the Tauri CLI: from `src-tauri/`.
  */
 const appBinary = resolve(
-  repo,
-  'src-tauri',
-  process.env['CARGO_TARGET_DIR'] ?? 'target',
+  process.env['CARGO_TARGET_DIR']
+    ? resolve(repo, 'src-tauri', process.env['CARGO_TARGET_DIR'])
+    : resolve(repo, 'target'),
   'debug',
   process.platform === 'win32' ? 'devnotes.exe' : 'devnotes',
 );
@@ -26,6 +27,9 @@ const appBinary = resolve(
  * turn. A name that matches no file fails here: a run that ran nothing would pass.
  */
 function specs(): string[] {
+  // The visual reference: kept, never part of a scenario run.
+  if (process.env['E2E_CAPTURE'] === '1') return ['./reference/screens.e2e.ts'];
+
   const name = process.env['E2E_SPEC'];
   if (!name) return ['./specs/**/*.e2e.ts'];
 

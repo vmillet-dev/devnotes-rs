@@ -457,11 +457,11 @@ l'écran.
 #### 3.3.4 `Paths` et `EventSink` : ce que le cœur demande à sa coquille
 
 ```rust
-// engine/src/host.rs
-pub trait Paths: Send + Sync {
-    fn profile(&self) -> &Path;       // app_data_dir : registre, libraries/, preferences.json
-    fn resources(&self) -> &Path;     // identity/ (listes de l'outil identité)
-    fn plaintext(&self) -> PathBuf;   // copies en clair des pièces jointes ouvertes
+// engine/src/host.rs — Paths est une struct (phase 1) : chaque coquille ne fait que remplir
+// deux chemins, un trait n'aurait pas de second usage. Les copies en clair sont profile/open/.
+pub struct Paths {
+    pub profile: PathBuf,             // app_data_dir : registre, libraries/, preferences.json
+    pub resources: PathBuf,           // identity/ (listes de l'outil identité)
 }
 
 pub trait EventSink: Send + Sync {
@@ -1313,39 +1313,23 @@ pour gagner du temps ; seules les limites techniques du § 5.3 s'écartent.
 
 ### 5.2 Méthode
 
-1. **Gel d'une référence** (fin de phase 1, depuis `angular-reference`, 1 S) : le harnais e2e
-   actuel parcourt un catalogue d'environ 150 états (chaque écran, menu, boîte de dialogue, état
-   vide, état d'erreur ; sombre/clair ; confortable/compact ; 1 100×720, 1 920×1 080, 640×480) et
-   enregistre pour chacun :
-   - une capture PNG ;
-   - un **relevé de géométrie** : la boîte de chaque élément `data-testid` (et de quelques autres)
-     en JSON.
-2. **Reproductible (D24)** — sans quoi les deux côtés ne montreraient pas la même chose :
-   - **un seul moteur de référence** : WebView2 sous Windows, à 100 % (WebKitGTK rend autrement) ;
-   - **horloge figée** au même instant des deux côtés, fuseau `Europe/Paris` (fixé par `tzutil`
-     sur le runner Windows) : sinon « il y a 3 min » et les sections changent d'une capture à
-     l'autre. La saveur e2e d'Angular lit cet instant par une commande réservée à la saveur `e2e` —
-     seul changement du front en phase 1 ; kittest le donne au faux `Clock` ;
-   - **mêmes données** : un export en clair au format actuel, au contenu fictif et aux instants
-     fixes, versionné (`docs/egui-migration/reference/library.json`) et importé dans un profil
-     vierge avant chaque état, par les deux harnais ;
-   - **un catalogue écrit une fois** : `docs/egui-migration/reference/states.json` (identifiant,
-     zone, thème, densité, taille, description d'une ligne). Les gestes qui amènent à chaque état
-     s'écrivent deux fois — WebdriverIO en P1, kittest avec l'écran — sous le même identifiant ;
-   - **où vivent les captures** : les relevés JSON, petits, sont versionnés dans
-     `docs/egui-migration/reference/geometry/` ; les PNG sont les fichiers d'une pré-version GitHub
-     `angular-reference` (une archive), que le job `visual` télécharge — un artefact de CI expire,
-     une pré-version non, et elle ne compte pas comme « dernière version » pour l'updater.
-3. **Côté egui**, les mêmes états sont produits par des scénarios `egui_kittest` (rendu `wgpu`,
-   logiciel en CI : lavapipe sous Linux, WARP sous Windows) qui exportent capture et géométrie
-   (boîtes des nœuds AccessKit par `author_id`).
-4. **Comparaison automatique** : géométrie à ± 1 px (± 2 % pour ce qui dépend d'une largeur de
-   texte) ; capture comparée en SSIM (seuil 0,95, confirmé au spike S2 : le texte latin seul est entre
-   0,966 et 0,984 à 100, 125 et 150 % ; les zones d'arabe, d'hébreu et d'émoji sont masquées), pas
-   en pixels exacts.
-5. **Rapport** : une page HTML générée côte à côte (référence, egui, différence) pour la relecture
-   humaine ; chaque écart est soit corrigé, soit inscrit au § 5.3.
-6. Les mesures qui sont déjà des spécifications restent des tests : « la première carte dans la
+1. **Une référence capturée une fois** (fin de phase 1, depuis `angular-reference`) : le
+   harnais WebdriverIO `e2e/reference/screens.e2e.ts` parcourt environ 150 écrans (chaque zone,
+   menu, boîte de dialogue, éditeur et outil ; sombre et clair ; quelques-uns en compact et à
+   1 920×1 080 et 640×480) et enregistre une capture PNG de chacun, sous WebView2 à 100 %. Il est
+   inactif : ni scénario e2e ni job de chaque PR, il ne tourne que sur une PR portant l'étiquette
+   `reference-capture`, et ce qu'il n'a pas pu atteindre est listé dans `missed.json`.
+2. **Les PNG sont les fichiers d'une pré-version GitHub `angular-reference`** (une archive) : un
+   artefact de CI expire, une pré-version non, et elle ne compte pas comme « dernière version »
+   pour l'updater.
+3. **La comparaison se fait à l'œil**, écran par écran, avec la capture de référence ; chaque écart
+   est soit corrigé, soit inscrit au § 5.3. Pas d'horloge figée ni de données fixes : les dates
+   relatives et les notes d'exemple peuvent différer d'une capture à l'autre, sans gêner l'œil.
+4. **L'automatisation est remise à plus tard** (relevé de géométrie, scénarios `egui_kittest`
+   qui exportent capture et boîtes AccessKit, score SSIM) : elle demanderait d'écrire chaque écran
+   deux fois et de figer l'heure et les données des deux côtés, pour ce qu'un coup d'œil voit
+   aussi.
+5. Les mesures qui sont déjà des spécifications restent des tests : « la première carte dans la
    moitié haute à 1 100×720 », la barre d'en-tête qui ne déborde pas et passe sur deux rangées
    selon les planchers (`FLOORS`), la barre de sélection qui flotte sans rien déplacer
    (`06-search-and-filters`), la hauteur d'en-tête de zone (`19-board-gesture`).
@@ -1512,7 +1496,7 @@ Windows de S10) et P11 (S9) ; aucune ne remet en cause une décision prise ici s
 
 1. Créer le workspace ; `git mv src-tauri/src` (hors coquille) vers `crates/engine/src`,
    avec `migrations/`, `resources/`, `sandbox/`, `benches/`, `tests/`.
-2. Introduire `Engine` et `host.rs` (§ 3.3.2, § 3.3.4) : `trait Paths` et `trait EventSink` ;
+2. Introduire `Engine` et `host.rs` (§ 3.3.2, § 3.3.4) : `struct Paths` et `trait EventSink` ;
    remplacer les usages d'`AppHandle`, `app.state`, `emit`, `resource_dir`, `app_data_dir` ; sortir
    du cœur le presse-papiers (`attach_clipboard_image`, `copy_qr_code`), la lecture de
    `automaticBackups` par le plugin `store`, et `desktop.rs`.
@@ -1528,9 +1512,8 @@ Windows de S10) et P11 (S9) ; aucune ne remet en cause une décision prise ici s
    `Changed` de chaque commande qui écrit (annexe C) ; brancher `query_notes`, `board_view`,
    `list_tags`, `count_*` et la palette sur l'index ; garder l'ancien chemin en oracle de test.
 6. **Corpus d'or** (D25, 0,5 S) : les capturer depuis le JavaScript encore présent.
-7. **Référence visuelle** (D24, 1 S) : instant figé dans la saveur e2e d'Angular, export de
-   référence, `states.json`, gestes WebdriverIO des ~150 états ; poser l'étiquette
-   `angular-reference`, capturer, publier la pré-version.
+7. **Référence visuelle** (D24, 0,5 S) : le harnais de capture des ~150 écrans, inactif ; poser
+   l'étiquette `angular-reference`, capturer, publier la pré-version.
 
 **Fin de phase** : `cargo test`, `clippy --all-targets --all-features`, les 35 e2e verts ; benchs
 `index_*` dans `architecture.md` ; aucun `use tauri` dans `engine` ; corpus d'or versionnés ;
@@ -1565,7 +1548,7 @@ Windows de S10) et P11 (S9) ; aucune ne remet en cause une décision prise ici s
 - **Écrans de porte** : `vault-gate` (création, déverrouillage, plancher de 12 caractères à la
   création seulement), `passphrase-prompt`, bannières (erreur, toast d'état), barre de titre avec
   bascule de zone et de thème, coquille des trois zones (`Ctrl+1/2/3` par `KeyboardEvent.code`).
-- **Tests et CI** : harnais kittest + export capture/géométrie, comparaison à la référence (§ 5.2) ;
+- **Tests et CI** : harnais kittest, écrans comparés à l'œil avec la référence (§ 5.2) ;
   saveur `e2e`, crate `e2e` (pilote, § 8.3) et début de `01-first-launch` ; workflows adaptés
   (§ 8.4) ; skill `desktop-e2e-testing` réécrite pour ce pilote.
 
@@ -1812,7 +1795,7 @@ reste à faire tourner avant d'en dépendre.
 | `e2e-scenarios`                            | `e2e/groups.json` contre `e2e/specs`                           | inchangé                                                  | `crates/e2e/groups.json` contre `crates/e2e/tests` (`scripts/e2e-groups.mjs` adapté)                                                                | idem                                                                  |
 | `e2e.yml` › `build`                        | `npm ci` + `tauri build --debug --features e2e`                | inchangé                                                  | `cargo build -p app --features e2e`, binaire + `identity/` en artefact                                                                              | idem                                                                  |
 | `e2e.yml` › `group`                        | WebKitGTK + xvfb, `npm run test:e2e` scénario par scénario     | inchangé (filet de l'extraction)                          | Mesa + xvfb sous Linux, WARP sous Windows ; cache Rust du build, `cargo test -p e2e --test <scénario>` un par un ; captures et journaux en artefact | idem                                                                  |
-| **nouveau** `visual`                       | —                                                              | —                                                         | captures kittest comparées à la référence d'`angular-reference`, rapport HTML en artefact ; informatif jusqu'en P10, bloquant ensuite               | comparé à la version egui précédente                                  |
+| **nouveau** `visual`                       | —                                                              | —                                                         | remis à plus tard (§ 5.2) : les écrans se comparent à l'œil aux captures d'`angular-reference`                                                      | comparé à la version egui précédente                                  |
 | `security-cargo.yml`                       | `src-tauri/Cargo.*`, `deny.toml`                               | chemins du workspace racine                               | idem                                                                                                                                                | idem                                                                  |
 | `security-npm.yml`                         | `npm audit` de l'application                                   | inchangé                                                  | réduit aux outils de build (sandbox, scripts)                                                                                                       | idem                                                                  |
 | `release.yml`                              | `tauri-action` : NSIS, MSI, deb, rpm, AppImage                 | inchangé, non lancé                                       | inchangé, non lancé                                                                                                                                 | `cargo-packager` (P11, § 4.3), version de `[workspace.package]` (D27) |
@@ -1863,8 +1846,8 @@ chaque crate les lit dans ses propres tests.
 - **Comment** : des specs `*.golden.spec.ts`, inertes sans `GOLDEN_WRITE=1`, lancées par
   `npm run golden` dans l'environnement jsdom des tests actuels ; elles restent sur
   `angular-reference` pour être relancées. Ce qui exige un vrai navigateur (Mermaid mesure son
-  texte, Fabric dessine sur un `canvas`) est capturé par le harnais e2e en même temps que la
-  référence visuelle (§ 5.2).
+  texte, Fabric dessine sur un `canvas`) a pour référence les captures de la référence visuelle
+  (§ 5.2).
 
 | Sujet             | Source                                                      | Cas                                                                                                                                                                                      | Lu par                  |
 | ----------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
@@ -1955,7 +1938,7 @@ d'abord.
 | D21 | Formats localisés                                       | **écrits à la main** (`i18n::format`, fr/en), prouvés par le corpus d'or `Intl` ; pas d'ICU4X ; langue du système par `sys-locale`                                                                                                                                                                                                                                                       | § 3.11, annexe E                                                                                         |
 | D22 | Moteur de regex de la coloration                        | **`onig`** (S5 : 1 Mo de TypeScript en 2,7 s contre 12,9 s pour `fancy-regex`, aucun des deux sous 200 ms). Critère : `fancy-regex` si 1 Mo de JSON et 1 Mo de TypeScript se colorent en ≤ 200 ms (p95) ; sinon `onig` (du C compilé par `cc`, comme SQLite : « pas de C » n'est pas une règle du projet). La coloration ne bloque jamais le thread UI                                   | § 3.6, § 3.9, ADR S5, E11                                                                                |
 | D23 | Texte et images d'un Dessin                             | **une coupure de ligne** (celle de Fabric, dans `drawing`) pour l'éditeur et les images ; **une voie d'image** : le SVG d'export, rastérisé par `resvg`                                                                                                                                                                                                                                  | § 3.9.2, E14                                                                                             |
-| D24 | Référence visuelle                                      | WebView2 sous Windows à 100 % ; horloge figée, fuseau `Europe/Paris` ; export de référence versionné ; `states.json` ; PNG en pré-version GitHub                                                                                                                                                                                                                                         | § 5.2, P1                                                                                                |
+| D24 | Référence visuelle                                      | Captures PNG seules, WebView2 sous Windows à 100 %, comparées à l'œil ; harnais inactif ; PNG en pré-version GitHub ; automatisation remise à plus tard                                                                                                                                                                                                                                  | § 5.2, P1                                                                                                |
 | D25 | Corpus d'or                                             | **livrable de P1**, dans `golden/`, générés par des specs `*.golden.spec.ts` gardées sur `angular-reference` ; liste au § 8.6                                                                                                                                                                                                                                                            | § 8.6, P1                                                                                                |
 | D26 | Signature et client de mise à jour                      | signé par `cargo-packager` avec la clé actuelle ; artefacts : `.exe` NSIS et `.AppImage` ; client **`cargo-packager-updater`** (S9 : clé Tauri acceptée, AppImage remplacée en place, NSIS passif `/P /R`) ; `latest.json` gagne un champ `format` par plateforme                                                                                                                        | § 4.3, ADR S9                                                                                            |
 | D27 | Numéro de version                                       | **`[workspace.package] version`** seul ; plus de version dans `package.json` ; `release.yml` compare `Cargo.toml` et `Cargo.lock`                                                                                                                                                                                                                                                        | § 4.3, § 8.4                                                                                             |

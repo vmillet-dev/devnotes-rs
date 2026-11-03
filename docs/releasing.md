@@ -7,7 +7,7 @@ state to clean up if it stops.
 ## The three steps
 
 1. **Bump the version.** `npm version <x.y.z> --no-git-tag-version` covers `package.json`
-   and its lockfile; `src-tauri/Cargo.toml` is edited by hand, then `cargo update -p devnotes`
+   and its lockfile; the root `Cargo.toml` (`[workspace.package]`) is edited by hand, then `cargo update -p devnotes`
    writes the Cargo lockfile. Merge to `main` and wait for CI to go green — the release
    refuses to start on a commit CI has not passed.
 
@@ -81,7 +81,7 @@ is an addition.
 
 ## Why the changelog is committed before the tag
 
-`src-tauri/src/changelog.rs` pulls `CHANGELOG.md` in with `include_str!`, so the file is
+`crates/engine/src/changelog.rs` pulls `CHANGELOG.md` in with `include_str!`, so the file is
 baked into the binary at compile time. A release whose changelog was written after the build
 would ship a binary that cannot show its own release notes in "What's new".
 

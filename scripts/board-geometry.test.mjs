@@ -12,7 +12,7 @@ import { describe, it } from 'node:test';
  * the Angular builder compiles its specs for a browser. Not here, and cannot be: `ZONE_HEADER`,
  * whose height comes from the text it lands on.
  */
-const BOARD_RS = 'src-tauri/src/folders/board.rs';
+const BOARD_RS = 'crates/engine/src/folders/board.rs';
 const MIXINS = 'src/styles/_mixins.scss';
 const ZONE_SCSS = 'src/app/notes/canvas/board/board-zone/board-zone.component.scss';
 const BOARD_SCSS = 'src/app/notes/canvas/board/board.component.scss';

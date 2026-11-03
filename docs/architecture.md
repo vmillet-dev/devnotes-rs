@@ -17,7 +17,7 @@ shortcut, attachments, and import / export / share.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
 tags, languages, quick filters), grouping into display sections, facet aggregation and tag
-normalisation, and the choice of what a card's footer shows all run in `src-tauri/src/notes/`.
+normalisation, and the choice of what a card's footer shows all run in `crates/engine/src/notes/`.
 The front-end describes what the user asked for and renders the view it gets back — it does
 not filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels
 must age on their own, without a round trip), the ISO ↔ `Date` conversion at the serialisation
@@ -50,7 +50,8 @@ src/                Angular front-end
 ├── assets/         static images
 ├── styles/         global theme (styles.scss) and SCSS partials
 └── testing/        test doubles, fixtures and shared providers
-src-tauri/          Rust back-end
+Cargo.toml          the Cargo workspace: shared version, lints and release profile
+crates/engine/      Rust back-end, the core (migrations/, resources/, sandbox/, tests/, benches/)
 ├── src/notes/      the notes feature: model, language, view, placeholder, trash, store/
 ├── src/spaces/     the spaces feature: model, SQL
 ├── src/attachments/ the attachments feature: model, SQL (the bytes live on disk)
@@ -58,10 +59,16 @@ src-tauri/          Rust back-end
 ├── src/tools/      the Outils area: one pure module per group of tools, no lock, no store
 ├── src/db.rs       connection, migrations, schema, stored-instant format
 ├── src/error.rs    the three errors and the translation between them
+└── src/lib.rs      the modules, every command re-exported at the root
+src-tauri/          the Tauri shell over the core
 ├── src/desktop.rs  tray and global shortcuts — native glue, not a feature
-├── src/lib.rs      Tauri builder, database setup + command registration
+├── src/lib.rs      Tauri builder, plugins, native state + command registration
 └── capabilities/   Tauri v2 permission manifests
 ```
+
+⚠️ The shell registers a core command as `engine::<command>`: `#[tauri::command]` and
+`#[specta::specta]` export their macros at the root of the crate that declares the command,
+so `engine/src/lib.rs` re-exports each command there.
 
 ### Feature-first, not layer-first
 
@@ -548,7 +555,7 @@ Cython over Python, JSON-LD over JSON, a Vue or Angular template over its HTML) 
 other's score, so it always outscores it once its own sign is there. A shebang names its
 interpreter (`python3`, `node`, `perl`…), any other being a shell as before.
 
-⚠️ **`src-tauri/tests/corpus/` is what says whether this is better rather than differently
+⚠️ **`crates/engine/tests/corpus/` is what says whether this is better rather than differently
 wrong.** One file per case, named `<language>[-<variant>].txt`, read from disk and asserted
 in bulk — adding a case is adding a file. Every detectable language has one, and each language
 added since has a `txt-weak-<tag>.txt` holding only what it shares with others, which must
@@ -1116,11 +1123,11 @@ sums the files.
 ⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
 is corrected or a list completed without building the application again.
 
-- **A Tauri resource**: `src-tauri/resources/identity/` (`names.txt`, `places/*.txt`) is
+- **A Tauri resource**: `crates/engine/resources/identity/` (`names.txt`, `places/*.txt`) is
   declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
   on Windows and in a development or e2e build (`tauri-build` copies it into the target
-  directory), under the package's own folder on Linux. The two commands take the
-  `AppHandle` for nothing else: `resource_dir()`, joined with `identity`. No Tauri permission
+  directory), under the package's own folder on Linux. The two commands read
+  `Paths::resources`, which the shell resolves from `resource_dir()`, joined with `identity`. No Tauri permission
   is involved — Rust reads the files, the page never does.
 - **Read once, kept for the session** (`data::library`): every file is read at the first card
   and its text given away for as long as the application runs, every name drawn afterwards
@@ -1210,7 +1217,7 @@ is corrected or a list completed without building the application again.
 
 **Adding a tool**, the whole of it:
 
-1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.
+1. `crates/engine/src/tools/<module>.rs`: the function, its request and answer types, its tests.
 2. `tools.rs`: a command through `off_thread`; `lib.rs`: a line in `collect_commands!`; then
    `npm run bindings`.
 3. `core/data/tools.repository.ts`: a method, and its twin in `FakeToolsRepository`; the types
@@ -1375,7 +1382,7 @@ Rules of the house:
 
 ### Display sections
 
-Sections are built in Rust (`src-tauri/src/notes/view.rs`) and arrive ready to render.
+Sections are built in Rust (`crates/engine/src/notes/view.rs`) and arrive ready to render.
 The front-end preserves the order it receives and never drops or merges a section.
 
 The classification into `pinned`, `today`, `week` and `older` is **exhaustive**: apart from
@@ -2866,7 +2873,7 @@ answers on its standard output.
   Ajv, tv4, xml2js, cheerio (its slim build), csv-parse, and Node's assert, buffer, events, path,
   punycode, querystring, stream, string_decoder, timers, url, util as their browser polyfills —
   about 1 MB, each evaluated on its first `require`. They are bundled by
-  `src-tauri/sandbox/build.mjs` from its own `package.json` (not the application's: none of it
+  `crates/engine/sandbox/build.mjs` from its own `package.json` (not the application's: none of it
   reaches the WebView) into `sandbox/dist/`, which is committed with a manifest and the
   libraries' licences; `libraries::tests` holds the table to the manifest. Node's modules are
   left out of the other bundles, so one copy serves them all. Nothing else is found: `fs`,
@@ -4244,7 +4251,7 @@ a time, and four flags would allow a state where two of them are stacked and the
 the loser keeps the keyboard.
 
 - **"Nouveautés"** renders `CHANGELOG.md`, the repository's own, **embedded in the binary** by
-  `include_str!` (`src-tauri/src/changelog.rs`) and read through `app_changelog`. The Markdown
+  `include_str!` (`crates/engine/src/changelog.rs`) and read through `app_changelog`. The Markdown
   is parsed **in Rust** (`changelog/model.rs`) into releases, categories and entries, so the
   front renders a typed structure with the components it already has: no Markdown renderer to
   pull in, no `innerHTML`, nothing for the CSP to forbid. The grammar is deliberately thin —
@@ -4513,7 +4520,7 @@ the one place that branches on a cause.
 ### Error contract
 
 Commands return `Result<T, AppError>`, never `Result<T, String>`. An `AppError`
-(`src-tauri/src/error.rs`) carries a stable **code**, its interpolation **params**
+(`crates/engine/src/error.rs`) carries a stable **code**, its interpolation **params**
 and a technical **detail**:
 
 ```json
@@ -4626,14 +4633,18 @@ who remember to touch the select. Three things keep it honest:
 
 ### Rules
 
-- A new command needs **one** registration: `collect_commands![…]` in `src-tauri/src/lib.rs`.
-  Make it an `async fn` whose body runs in `db::blocking` when it takes the lock — see the
-  threading note under [Persistence](#persistence-rust) — **and** annotate it
-  `#[specta::specta]`, then regenerate; an
-  unannotated function will not compile inside `collect_commands!`. A command handed an
-  `AppHandle` is generic over `R: Runtime` and registered as `name::<tauri::Wry>`: that is what
-  lets `tests/commands` call it on the mock runtime, and specta needs the concrete type.
-- A module holding commands is `pub`, and that is not decoration: `#[specta::specta]`
+- **A command is a service function of the core and a wrapper of one line in the shell.**
+  The function lives in `crates/engine/src/<feature>.rs`, in one of three families: a **data**
+  function (`fn name(engine: &Engine, …)`, synchronous, called on the db queue), a **network**
+  one (`async fn name(engine: Arc<Engine>, …)`, which reaches the queue itself through
+  `db::run` and never holds the lock while it waits), or a pure **tool** (`off_thread`). The
+  wrapper, in `src-tauri/src/commands/<feature>.rs`, keeps the arguments in the order the front
+  sends them, takes `State<'_, Arc<Engine>>`, and calls `run(&engine, |e| feature::name(e, …))`
+  for a data function; its doc comment is the function's, copied, since `bindings.ts` carries
+  it. Then one registration in `collect_commands![…]` (`src-tauri/src/lib.rs`), annotated
+  `#[specta::specta]`, and `npm run bindings`. `tests/commands` calls the service functions on
+  an engine over a temporary profile, without Tauri.
+- A module holding wrappers is `pub`, and that is not decoration: `#[specta::specta]`
   generates a macro per command that `collect_commands!` resolves from the crate root.
   Everything else is `pub(crate)` or narrower, so that `dead_code` and `unreachable_pub` —
   both denied in `Cargo.toml` — still have something to say. A blanket `pub` silenced them
@@ -4971,11 +4982,27 @@ still verify. Binding it would mean threading the row identity through every sea
 call in the stores; it buys nothing against the threat above, where the attacker reads the
 file rather than edits it and hands it back.
 
-⚠️ Nor is it a defence against a machine already compromised while DevNotes runs. The
-plaintext is in the heap as ordinary `String`s, never zeroized: every body `query_notes` matched
-against, the previews it sent (a few lines each, not the whole body), and the note open in the
-editor — so it can reach swap, a hibernation image or a crash dump. And the key is in this
-process’s memory for the length of the session, and there is no idle re-lock.
+⚠️ Nor is it a defence against a machine already compromised while DevNotes runs. Since the
+notes index (« The notes index »), **the whole open library is in memory in the clear** for as
+long as it is open: every note's title, body, source, tags, items and field values, their folded
+copies, the folder names and the global `{{field}}` values. That changes nothing at rest — no
+index is ever written to disk, and a cache sealed on disk would be a new file format — but it
+changes what a read of the process's memory reveals: no longer the notes a search happened to
+open, but all of them. What is done about it:
+
+- an index entry wipes its texts when it is dropped (`zeroize`), and so do the folder names
+  and global values the index replaces or drops;
+- the index is emptied when another library is opened, when a copy is restored, and when the
+  application exits (`Engine::wipe_index`, from the shell's `RunEvent::Exit`);
+- nothing of it is logged, nor sent in an event (`IndexProgress` carries two counts).
+
+What is not: the copies a view makes are ordinary `String`s, dropped unwiped, as before the
+index — the notes `query_notes` matched and the previews it sent, the note open in the editor.
+Pages of the heap can reach swap, a hibernation image or a crash dump, wiped or not, and a
+process killed outside `RunEvent::Exit` frees its memory without wiping it. The key is in the
+process's memory for the length of the session. **There is no « lock » action, and the
+migration adds none**: the vault has `vault_state`, `create_vault`, `unlock_vault` and
+`change_passphrase`, nothing that closes a library short of opening another or quitting.
 
 ### The pieces
 
@@ -5208,7 +5235,7 @@ already locked. ⚠️ `libraries::open_directory(app)` reads and parses `librar
 every call, so it is kept for what runs while **no** library is open: `vault_state`,
 `create_vault`, `unlock_vault` and the recovery commands. Reading the thumbnail of a
 screenshot used to pay that lookup plus two `create_dir_all`; `attachments/` is now created
-once, by `vault::gate::install`. A module that reaches for `app_data_dir()` directly writes
+once, by `vault::gate::install`. A module that reaches for `Paths::profile` directly writes
 into the profile, which holds no library. The one directory that lives there on purpose is
 `open/`, the decrypted attachment copies: they are ephemeral and swept wholesale, and one
 directory means one sweep catches every library's leftovers.
@@ -5274,7 +5301,9 @@ first launch's own pick of the seeded space is shown, not remembered: nothing wa
 
 ⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
 launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
-out of that file before the front end has booted (`backup::copies::wanted`).
+out of that file before the front end has booted (`backup::copies::wanted`). Rust reads the
+JSON file itself (`backup::wanted_by_preference`), not through `tauri-plugin-store`: the core
+knows no plugin.
 
 ⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
 opened once. A space id means nothing in another library, and a samples marker carried
@@ -5470,12 +5499,73 @@ ids, parents, positions, the request's kind (`http`, `graphql`, `websocket`) and
 - The launch copy and a restore carry them, being in the database; the library export
   (`transfer::Bundle`) does not — a collection travels in a file of its own.
 
+## The engine and its host
+
+The core (`crates/engine`) owns its state in one `Engine`, which the shell creates once and
+manages as an `Arc<Engine>`: the `Db` slot (empty until `vault::unlock`), the sends, runs and
+sockets under way, the restore set aside. It asks the shell for two things only (`host.rs`):
+
+- **`Paths`**, a plain struct resolved before the engine exists: `profile` (`app_data_dir()`:
+  the registry, `libraries/`, the application's `preferences.json`, `open/`) and `resources`
+  (`resource_dir()`: the identity lists). A struct, not a trait: every host only fills in two
+  paths.
+- **`EventSink`**, the one trait: what the core says unasked, as an `EngineEvent` (a socket's
+  traffic, a script's console, a run's steps). The Tauri shell's `TauriHost` emits each under
+  the name the front listens to (`WEBSOCKET_EVENT`, `HTTP_CONSOLE_EVENT`, `HTTP_RUN_EVENT`);
+  tests keep them in a `RecordingSink`.
+
+What reaches the platform stays out of the core's work: the clipboard is read before an
+attachment is stored and written after a QR code is drawn, and a decrypted attachment is opened
+once its copy is written — by the shell's wrapper, not by the core. Opening a library or
+restoring a copy closes the sockets and cancels the sends and runs first
+(`Engine::let_go_of_the_network`). Nothing in `crates/engine` names Tauri.
+
+### The notes index
+
+`index::NoteIndex`, in the `Engine` and touched on the db thread alone, holds the live notes of
+the open library decrypted, with their folded text (`view::Folded`: title, tags, body, items,
+source), and the decorations a card needs (attachment counts, every folder's chip, the global
+`{{field}}` values). An entry is an `Arc` never changed in place, and wipes its texts when it
+goes (`zeroize`); nothing of the index reaches the disk.
+
+It fills after an unlock (`index::fill`, spawned by the shell's `unlock_vault` and
+`create_vault`): newest first, a slice of 2 000 notes a job of the queue, opened and folded in
+parallel (rayon), `IndexProgress` after each slice and `IndexReady` at the end. ⚠️ A slice is
+read in the order of `notes_updated_at` (`store::newest`, a keyset on `updated_at` then `id`):
+sorting itself, SQLite would read every sealed body before the first row. A slice read for a
+library closed since stops (`Library::number`); opening a library or restoring a copy empties
+the index first.
+
+**Who reads it.** `query_notes` (the list and the palette), `board_view` and `list_tags` read the
+index, never a sealed column: `NoteIndex::select` keeps what `store::fetch` kept (space,
+folders, quick filter, rails) in the same order, `facets` counts what the SQL counted,
+`index::search` runs `view::answers` over the folded text in parallel, and `view::arrange` is
+`view::build` past its search — the one definition of sections, ranking and quotes. Only the
+folders under an opened one are still asked of SQLite (plain ids). A read waits for no slice:
+one that arrives while the index fills finishes it first (`NoteIndex::ready`), since the views
+cannot yet say they are partial. ⚠️ Tags that differ only in case count as one, as under
+`COLLATE NOCASE`, named by their smallest spelling. `count_notes_tagged` stays in SQL: it counts
+the trashed notes too, which a rename touches. The path the index replaced (SQL, every body
+opened, `view::build`) is kept as a `#[cfg(test)]` oracle: `index/oracle.rs` chains random
+writes through the service functions and compares both answers to random queries after each.
+
+**One path keeps it true.** A service function that writes what the index holds goes through
+`Engine::write(|db| …)`, whose closure answers its value and an `index::Changed`: the notes it
+touched (re-read, or dropped when no longer live), and whether the attachment counts, the
+folders or the global values moved. `write` refreshes the index once the closure returned —
+its transactions committed. A corpus-wide write (renaming or dropping a tag, deleting a space or
+a folder, an import, the first launch's samples) says `Changed::everything()`: the index is
+emptied and the next read builds it whole. No service function refreshes the index itself.
+⚠️ A write that forgets to declare leaves the index silently wrong: `tests/commands/index.rs`
+checks the index against one rebuilt from the database right after each write
+(`Engine::index_matches_library`).
+
 ## Persistence (Rust)
 
 Storage is **SQLite**, queried through **Diesel** and embedded via `libsqlite3-sys` with the
 `bundled` feature — SQLite is compiled from source and statically linked, so nothing has to be
-installed or shipped alongside the executable. The database file lives in Tauri's
-`app_data_dir()`.
+installed or shipped alongside the executable. The database file lives under the profile
+(`Paths::profile`, Tauri's `app_data_dir()`).
 
 - **The store is plain functions.** `notes::store` and `spaces::store` take a
   `&mut SqliteConnection`; the `#[tauri::command]`s sit on top. That is what makes persistence
@@ -5512,10 +5602,27 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   so it occupies a Tokio **worker** — a pool the size of the core count, shared with the
   updater and the plugins — for its whole duration, waiting on the lock included. At 8000 notes
   `query_notes` holds that lock for ~430 ms, and each command queued behind it would park a
-  worker of its own. `db::blocking(app, |app, db| …)` runs the body on Tokio's **blocking** pool
-  instead and hands it the handle and the `Db`; `bindings.ts` is unaffected, the generated
-  TypeScript having always been promise-based. A body that panics answers
-  `StorageError::Unavailable`, the answer the lock it would have poisoned gives. `blocking`
+  worker of its own. `db::blocking(app, |engine, db| …)` drops the body in the engine's **db
+  queue** instead (`db::queue`) and hands it the `Engine` and the `Db`; `bindings.ts` is
+  unaffected, the generated TypeScript having always been promise-based. A body that panics
+  answers `StorageError::Unavailable`, the answer the lock it would have poisoned gives, and the
+  queue goes on with the next one.
+
+  **One thread, in order.** The queue is one thread that runs its jobs in the order they
+  arrive: two writes sent one after the other land in that order (two commands could overtake
+  each other on Tokio's pool before), and the `Mutex` is never contended. ⚠️ `db::lock` asserts
+  in debug builds that it runs on that thread; the crate's unit tests, which lock in-memory
+  libraries on their own thread, are exempt. A job never waits on another job, nor on the
+  network. Async code that holds the engine reaches the queue through `db::blocking_on`. Sends
+  and sockets run on the runtime the shell passes to `Engine::new`.
+
+  **A send in three steps.** It _reads_ in a job (inheritance, variables, the jar, and the
+  number of the library open), _sends_ on the runtime without coming back to the queue, then
+  _writes_ in a job: history, cookies, the variables the scripts wrote — merged into what is
+  there by then, never overwritten, so two sends at once keep both. Each `Library` gets a
+  number from a process counter when it is opened (`Library::number`); the write step goes
+  through `db::lock_library` and writes nothing, and says so in the log, if another library was
+  opened since the read. `blocking`
   and the commands are generic over `R: Runtime`, so a test runs them on Tauri's mock runtime. The commands
   that never take the lock — the registry of libraries, `export_is_protected`, the changelog —
   stay `(async)`: a short read of a file.
@@ -5526,7 +5633,7 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   before any command can run — a command creating its own on first call would race another
   doing the same.
 
-- **Migrations.** They live as SQL files in `src-tauri/migrations/`, are compiled into the
+- **Migrations.** They live as SQL files in `crates/engine/migrations/`, are compiled into the
   binary by `embed_migrations!`, and are tracked in the `__diesel_schema_migrations` table.
   Evolving the model means adding a `YYYY-MM-DD-HHMMSS_name/` directory — never editing a
   shipped migration, it has already run on user machines. Each migration is atomic. A database
@@ -6121,7 +6228,7 @@ application's file — both serve 0.3.x, the release before the one that introdu
 
 ### Benchmarks
 
-`cargo bench` from `src-tauri/`. They are **not in CI**: a timing assertion on a shared
+`cargo bench -p engine`. They are **not in CI**: a timing assertion on a shared
 runner flaps, and a suite that flaps is a suite everyone learns to ignore. They run
 locally, on demand.
 
@@ -6132,7 +6239,7 @@ cargo bench -- --baseline main        # after
 
 That comparison is the whole reason the harness is **criterion** and not divan, which is
 lighter and pleasanter but does not offer it out of the box. ⚠️ The baseline it writes lives
-in `src-tauri/target/criterion/`, which is gitignored: it is local to one machine and dies
+in `target/criterion/`, which is gitignored: it is local to one machine and dies
 with `cargo clean`. The table below is the durable record.
 
 ⚠️ **They run below the command boundary, not through Tauri.** A command is four lines —
@@ -6281,6 +6388,36 @@ rows dereferences a ~13 kB note row; the notes table was 10 MB at 800 notes and 
 the file through a mapping (`mmap_size`) halved it, which points the same way: the cost is
 pages copied, not tags compared.
 
+#### The index on the reference corpora
+
+`cargo bench -p engine --bench index` (`benches/reference.rs` builds the two libraries of the egui
+migration plan, § 6.1, on disk first). Windows 11, Ryzen 7 9800X3D, release profile, the machine
+in use meanwhile — orders of magnitude, not a record. **Realistic**: 30 000 notes (20 000
+snippets of ~1.5 kB, 5 000 Notes of ~4 kB, 3 000 lists of 20 items, 1 500 Calcul sheets, 500
+Dessins of ~20 kB), 4 spaces, 300 folders, 600 tags, 2 000 attachments, and the HTTP side (2 000
+requests, 20 000 history entries, 500 cookies). **Stress**: 30 000 snippets of ~13 kB and the same
+HTTP.
+
+| Group, measure                             | Realistic | Stress  | Budget (plan § 6.2) |
+| ------------------------------------------ | --------- | ------- | ------------------- |
+| `index_build`, every slice                 | 1.87 s    | 2.98 s  | ≤ 1.5 s / ≤ 4 s     |
+| `index_query`, search matching nothing     | 12.1 ms   | 22.2 ms | ≤ 50 / 120 ms       |
+| `index_query`, space + tag + pinned        | 3.0 ms    | 3.2 ms  | —                   |
+| `index_query`, unfiltered                  | 661 ms    | 289 ms  | —                   |
+| `index_query`, search `etape` (most match) | 701 ms    | 269 ms  | ≤ 50 / 120 ms       |
+| `index_query`, `list_tags`                 | 7.6 ms    | 7.7 ms  | ≤ 5 / 10 ms         |
+| `index_refresh`, `update_note` (title)     | 0.44 ms   | 0.56 ms | ≤ 5 ms              |
+| `index_refresh`, tag then untag 100 notes  | 4.2 ms    | 10.1 ms | ≤ 30 ms             |
+
+**The search is no longer what costs; the view is.** Finding nothing reads every folded text
+and stays inside its budget. A query that keeps most notes costs what the view of today's shape
+costs: every kept note is copied, decorated and cut to its card — a Note's Markdown outline and a
+Calcul sheet's evaluation for each, which is why the realistic corpus, with 6 500 of those, is
+the slower one. The plan's phase 2 changes exactly that (`NotesView` of `Arc` entries, previews
+for the cards drawn alone). Two measures are over their budget on this run: the realistic build
+(the 60 000 checklist items and the side tables, read per slice) and `list_tags`, which walks
+every note's tags at each call.
+
 Unit tests run with Vitest through the `@angular/build:unit-test` builder in a jsdom
 environment (configured in `angular.json`'s `test` target and `vitest-base.config.ts`), so
 no browser is needed. Specs sit next to the file they cover. Coverage thresholds are set at
@@ -6315,7 +6452,7 @@ results, several sections) pins one with `setView`. `lastQuery` and `queryCount`
 the store asked for — which is the part of querying the front-end still owns.
 
 That split also decides where a test belongs: assertions about _what is shown_ (which notes
-match, which section they land in, how tags are cleaned) go in `src-tauri/`, while the
+match, which section they land in, how tags are cleaned) go in `crates/engine/`, while the
 front-end specs cover assembling the query, pacing it, and reacting to what comes back.
 
 Component specs follow one consistent pattern:
@@ -6349,14 +6486,14 @@ Component specs follow one consistent pattern:
 
 ### Rust
 
-`cargo test` from `src-tauri/` runs everything. `cargo clippy -- -D warnings` and
-`cargo fmt --check` gate the code; `Cargo.toml` sets `unsafe_code = "forbid"` and
+`cargo test --workspace` runs everything. `cargo clippy -- -D warnings` and
+`cargo fmt --check` gate the code; the workspace `Cargo.toml` sets `unsafe_code = "forbid"` and
 `deny(clippy::all)`.
 
 Unit tests are inline `#[cfg(test)] mod tests` blocks at the bottom of the file they cover —
 the idiomatic Rust form, and the one that keeps a test next to what it asserts. Shared
 fixtures for the notes tests live in `notes::fixtures`, a `#[cfg(test)]` module in `notes.rs`.
-`src-tauri/tests/` holds the integration binaries, which see only the crate's public API. Their
+`crates/engine/tests/` holds the integration binaries, which see only the crate's public API. Their
 instants, the space and the plain snippet they build on are `tests/common/mod.rs`, once;
 `notes` is a directory (`tests/notes/main.rs` and one module per subject — writes, trash,
 tags, fields, queries, revisions…) rather than one file of a hundred tests. A test that writes
@@ -6589,7 +6726,7 @@ behind the Windows build. `e2e.yml` holds two jobs:
   is embedded in the binary; Windows needs no DLL beside it.
 - **`group`** is one job per group, `max-parallel: 3` per platform: it installs what the binary
   loads — WebKitGTK and an X server on Linux, never the toolchain — runs `npm ci` and downloads
-  the binary into `src-tauri/target/debug`, where `wdio.conf.ts` looks, once; then runs
+  the binary into `target/debug`, where `wdio.conf.ts` looks, once; then runs
   `E2E_SPEC=<name> npm run test:e2e` for each of its scenarios in turn, stopping at the first
   that fails. No cargo runs there. `fail-fast: true`: the first red group cancels the others.
 
