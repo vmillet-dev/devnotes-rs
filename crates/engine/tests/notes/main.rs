@@ -141,7 +141,7 @@ fn all_notes() -> NotesQuery {
 fn matched_ids(view: &NotesView) -> Vec<String> {
     view.sections
         .iter()
-        .flat_map(|section| section.notes.iter().map(|note| note.id.clone()))
+        .flat_map(|section| section.cards.iter().map(|card| card.id.clone()))
         .collect()
 }
 

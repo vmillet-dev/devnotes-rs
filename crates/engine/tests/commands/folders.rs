@@ -213,9 +213,9 @@ fn a_card_names_the_sub_folder_it_comes_from_and_no_other() {
     inside.folder_id = Some(sql.clone());
     let view = session.call(|e| query_notes(e, inside)).unwrap();
     let chips: Vec<Option<String>> = view.sections[0]
-        .notes
+        .cards
         .iter()
-        .map(|note| note.folder.as_ref().map(|folder| folder.name.clone()))
+        .map(|card| view.display(card).folder.map(|folder| folder.name))
         .collect();
     assert_eq!(chips.len(), 2);
     assert!(chips.contains(&None) && chips.contains(&Some("Perf".to_string())));
