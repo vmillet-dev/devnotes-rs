@@ -8,7 +8,7 @@
   },
   "private": true,
   "scripts": {
-    "test:scripts": "node --test scripts/release-notes.test.mjs scripts/e2e-groups.test.mjs",
+    "test:scripts": "node --test scripts/release-notes.test.mjs",
     "lint": "prettier --check .",
     "format": "prettier --write .",
     "icons": "node scripts/icons.mjs"

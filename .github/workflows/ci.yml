@@ -241,39 +241,66 @@ jobs:
 
       - *stop-the-run
 
-  e2e-scenarios:
-    name: E2E scenarios
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-22.04
-    timeout-minutes: 5
-    outputs:
-      groups: ${{ steps.list.outputs.groups }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          sparse-checkout: |
-            crates/e2e
-            scripts
-
-      - id: list
-        run: |
-          groups=$(node scripts/e2e-groups.mjs)
-          echo "groups=$groups" >> "$GITHUB_OUTPUT"
-          echo "$groups" | jq -r '.[] | "group \(.name): \(.specs | length) scenarios, \(.specs | join(", "))"'
-
-      - *stop-the-run
-
-  # `e2e.yml` once per platform: its build, then its groups. Neither waits for the other.
-  # One failing scenario decides the run: the other platform is cancelled with it.
+  # From `changes` on, beside the Rust tests: the flavour, then every scenario of `crates/e2e`,
+  # one after the other, each its own process and profile (D31). One failing scenario decides the
+  # run: the other platform is cancelled with it.
   e2e:
     name: E2E (${{ matrix.os }})
-    needs: e2e-scenarios
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        shell: bash
+
     strategy:
       fail-fast: true
       matrix:
-        os: [windows-latest, ubuntu-22.04]
-    uses: ./.github/workflows/e2e.yml
-    with:
-      os: ${{ matrix.os }}
-      groups: ${{ needs.e2e-scenarios.outputs.groups }}
+        os: [ubuntu-22.04, windows-latest]
+
+    # One target directory for the flavour and the driver: they share what they compile, and no
+    # other build overwrites the flavour.
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/e2e
+      DEVNOTES_E2E_OUTPUT: ${{ github.workspace }}/scenarios
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          shared-key: e2e-${{ matrix.os }}
+          save-if: 'true'
+
+      # The capture needs a rendered window, which xvfb gives without a window manager.
+      - name: X server
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y --no-install-recommends xvfb
+
+      - name: Build the flavour
+        run: cargo build -p app --features e2e --locked
+
+      - name: Scenarios
+        run: |
+          start=$(date +%s)
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" cargo test -p e2e --locked -- --nocapture
+          else
+            cargo test -p e2e --locked -- --nocapture
+          fi
+          echo "\`e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+
+      # Captures, and for a failed scenario its last screen and the application's log; never the
+      # profile, whose library is the run's. Named per attempt: a re-run that passes would
+      # otherwise replace the files of the attempt that failed.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-${{ matrix.os }}-${{ github.run_attempt }}
+          path: scenarios
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - *stop-the-run
