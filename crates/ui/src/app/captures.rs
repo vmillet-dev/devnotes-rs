@@ -8,7 +8,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 
 use super::DevNotesApp;
-use super::tests::startup;
+use super::tests::{STEPS, startup};
 use crate::services::time::fake::FakeClock;
 use crate::testing::PASSPHRASE;
 
@@ -18,6 +18,7 @@ fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
     let startup = startup(profile);
     let mut harness = Harness::builder()
         .with_size(SIZE)
+        .with_max_steps(STEPS)
         .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
     harness.state_mut().state.clock = Box::new(FakeClock::at("2026-11-03T09:30:00Z"));
     settle(&mut harness);

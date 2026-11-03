@@ -238,6 +238,10 @@ mod tests {
     use super::*;
     use crate::inputs;
 
+    /// Frames a run may take to settle: the core's events wake the window as they come — the
+    /// index filling behind an unlock takes six on a slow runner, past kittest's four.
+    pub(super) const STEPS: u64 = 32;
+
     pub(super) fn startup(directory: &std::path::Path) -> Startup {
         startup_with(directory, inputs::channel())
     }
@@ -381,6 +385,7 @@ mod tests {
         let startup = startup(directory);
         let mut harness = Harness::builder()
             .with_size(egui::vec2(1100.0, 720.0))
+            .with_max_steps(STEPS)
             .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
         harness.state().backend().settle();
         harness.run();
