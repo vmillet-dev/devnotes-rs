@@ -132,10 +132,76 @@ fn the_canvas_of_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "canvas-empty");
 
-    for title in ["psql prod", "curl health", "", "docker compose up"] {
-        crate::testing::note(&harness.state().backend, title);
-    }
+    kinds(&harness.state().backend);
     harness.state_mut().state.revision.bump();
     settle(&mut harness);
     capture(&mut harness, "canvas-notes");
+}
+
+/// One note of each kind, with marks, tags and a search's worth of words.
+fn kinds(backend: &crate::backend::Backend) {
+    use engine::notes::checklist::ChecklistItem;
+    use engine::notes::kind::NoteKind;
+    use engine::notes::model::NotePatch;
+    let shapes = [
+        (
+            "psql prod",
+            NoteKind::Snippet,
+            "psql -h {{host}} -U admin\nSELECT count(*) FROM users;",
+            vec!["db", "prod", "ops"],
+            Vec::new(),
+        ),
+        (
+            "Deploy checklist",
+            NoteKind::Note,
+            "# Release\n\nShip on Friday.\n\n- build\n- [x] tag\n- [ ] announce",
+            vec!["release"],
+            Vec::new(),
+        ),
+        (
+            "Groceries",
+            NoteKind::Checklist,
+            "",
+            Vec::new(),
+            vec![("milk", true), ("bread", false), ("eggs", false)],
+        ),
+        (
+            "Budget",
+            NoteKind::Calc,
+            "loyer = 800 €\ncharges = 120,5 €\ntotal",
+            Vec::new(),
+            Vec::new(),
+        ),
+        ("Sketch", NoteKind::Drawing, "", Vec::new(), Vec::new()),
+        (
+            "",
+            NoteKind::Snippet,
+            "curl -s https://example.test/health",
+            Vec::new(),
+            Vec::new(),
+        ),
+    ];
+    for (title, kind, content, tags, items) in shapes {
+        let id = crate::testing::note(backend, "seed").id.clone();
+        let patch = NotePatch {
+            title: Some(title.to_string()),
+            kind: Some(kind),
+            content: Some(content.to_string()),
+            tags: Some(tags.into_iter().map(String::from).collect()),
+            items: Some(
+                items
+                    .into_iter()
+                    .map(|(text, done)| ChecklistItem {
+                        text: text.to_string(),
+                        done,
+                    })
+                    .collect(),
+            ),
+            pinned: Some(title == "psql prod"),
+            ..NotePatch::default()
+        };
+        let mut written = backend.db(move |engine| engine::notes::update_note(engine, id, patch));
+        backend.settle();
+        written.poll().unwrap().unwrap();
+    }
 }

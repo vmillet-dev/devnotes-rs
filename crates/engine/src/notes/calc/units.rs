@@ -3,7 +3,7 @@
 //! and are never converted into each other.
 
 use rust_decimal::Decimal;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::tools::sizes::SizeUnit;
 
@@ -121,7 +121,7 @@ pub enum Dimension {
 }
 
 /// Named, never spelled: the front writes each in the language on screen, `Go` or `GB`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum UnitId {
     Nanometre,

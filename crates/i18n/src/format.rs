@@ -73,14 +73,52 @@ enum Sign {
     ExceptZero,
 }
 
+/// An exact decimal as the core wrote it (`-1234567.891`), between `min` and `max` decimals,
+/// rounded half away from zero: text in, text out, never through a float, which would invent
+/// figures past the fifteenth. `signed` writes `+` before what is not zero.
+pub fn exact(
+    value: &str,
+    (min, max): (usize, usize),
+    signed: bool,
+    grouped: bool,
+    language: Language,
+) -> String {
+    let magnitude = value.strip_prefix('-');
+    let sign = if signed {
+        Sign::ExceptZero
+    } else {
+        Sign::Negative
+    };
+    written(
+        magnitude.unwrap_or(value),
+        magnitude.is_some(),
+        language,
+        Digits::new(min, max),
+        sign,
+        grouped,
+    )
+}
+
 fn decimal(value: f64, language: Language, digits: Digits, sign: Sign, grouped: bool) -> String {
     // The shortest decimal that reads back as `value`, as ICU rounds it: 12.345 is 12.35.
     let shortest = format!("{}", value.abs());
-    let (whole, fraction) = round(&shortest, digits);
+    let negative = value.is_sign_negative() && value != 0.0;
+    written(&shortest, negative, language, digits, sign, grouped)
+}
+
+fn written(
+    magnitude: &str,
+    negative: bool,
+    language: Language,
+    digits: Digits,
+    sign: Sign,
+    grouped: bool,
+) -> String {
+    let (whole, fraction) = round(magnitude, digits);
     let is_zero =
         whole.bytes().all(|byte| byte == b'0') && fraction.bytes().all(|byte| byte == b'0');
     let mut out = String::new();
-    if value.is_sign_negative() && !(sign == Sign::ExceptZero && is_zero) && value != 0.0 {
+    if negative && !(sign == Sign::ExceptZero && is_zero) {
         out.push('-');
     } else if sign == Sign::ExceptZero && !is_zero {
         out.push('+');

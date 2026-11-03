@@ -1,5 +1,7 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
+pub mod drawing_pictures;
+pub mod notes;
 pub mod notes_query;
 mod query;
 
@@ -9,7 +11,6 @@ use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
 use crate::gate::{Gate, GateView};
-use crate::notes;
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 use crate::services::settings::Settings;
@@ -34,7 +35,9 @@ impl Revision {
 /// they: one field, emptied when another library opens (D17). Not wiped byte by byte; the
 /// threat model says so.
 #[derive(Default)]
-pub struct LibraryCaches {}
+pub struct LibraryCaches {
+    pub thumbnails: drawing_pictures::Thumbnails,
+}
 
 /// The three areas, in the switch's order, which is also the order of their keys.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -61,6 +64,7 @@ pub struct AppState {
     library_preferences_read: Option<Pending<Preferences>>,
     pub revision: Revision,
     pub notes_query: NotesQueryState,
+    pub notes: notes::NotesState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -82,6 +86,7 @@ impl AppState {
             library_preferences_read: None,
             revision: Revision::default(),
             notes_query: NotesQueryState::default(),
+            notes: notes::NotesState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -109,6 +114,8 @@ impl AppState {
                     .report(i18n::keys::errors::LIBRARY_ACTION_FAILED, &error),
             }
         }
+        self.notes.update(&mut self.revision, &mut self.errors);
+        self.caches.thumbnails.update(ctx, backend);
         if self.gate.is_open() {
             let now = self.clock.now();
             self.notes_query
@@ -117,10 +124,6 @@ impl AppState {
     }
 
     /// At the end of the frame, in the order the actions were pushed.
-    #[allow(
-        clippy::needless_pass_by_value,
-        reason = "the notes' actions carry what they move"
-    )]
     pub fn apply(&mut self, action: Action, ctx: &egui::Context, backend: &Backend) {
         match action {
             Action::App(AppAction::ShowArea(area)) => {
@@ -135,7 +138,7 @@ impl AppState {
             Action::App(AppAction::DismissError) => self.errors.dismiss(),
             Action::App(AppAction::DismissStatus) => self.status.dismiss(),
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
-            Action::Notes(notes::Action::Reload) => self.revision.bump(),
+            Action::Notes(action) => self.apply_notes(action, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
@@ -146,6 +149,16 @@ impl AppState {
                 | GlobalAction::Palette
                 | GlobalAction::PaletteHere,
             ) => {}
+        }
+    }
+
+    fn apply_notes(&mut self, action: crate::notes::Action, backend: &Backend) {
+        match action {
+            crate::notes::Action::Reload => self.revision.bump(),
+            crate::notes::Action::SetItems { id, items } => {
+                self.notes.set_items(backend, id, items);
+            }
+            crate::notes::Action::Thumbnail(stamp) => self.caches.thumbnails.ask(backend, stamp),
         }
     }
 

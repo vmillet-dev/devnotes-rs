@@ -47,7 +47,7 @@ fn bench() -> Harness<'static, Bench> {
             SearchField::new(&mut bench.searched, "Rechercher", "search")
                 .key("Ctrl K")
                 .show(ui);
-            hue_badge(ui, "sql", crate::theme::palette(ui.ctx()).blue);
+            hue_badge(ui, "sql", crate::theme::palette(ui.ctx()).blue, None);
             priority_dot(ui, engine::notes::priority::Priority::High);
             Kbd("Ctrl").show(ui);
             spinner(ui, 16.0, "Chargement");
