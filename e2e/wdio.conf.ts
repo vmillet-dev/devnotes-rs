@@ -27,6 +27,9 @@ const appBinary = resolve(
  * turn. A name that matches no file fails here: a run that ran nothing would pass.
  */
 function specs(): string[] {
+  // The visual reference: kept, never part of a scenario run.
+  if (process.env['E2E_CAPTURE'] === '1') return ['./reference/screens.e2e.ts'];
+
   const name = process.env['E2E_SPEC'];
   if (!name) return ['./specs/**/*.e2e.ts'];
 

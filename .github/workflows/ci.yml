@@ -387,3 +387,4 @@ jobs:
     with:
       os: ${{ matrix.os }}
       groups: ${{ needs.e2e-scenarios.outputs.groups }}
+      capture: ${{ contains(github.event.pull_request.labels.*.name, 'reference-capture') }}
