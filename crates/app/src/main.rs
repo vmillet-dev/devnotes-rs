@@ -145,7 +145,42 @@ fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
     use super::*;
+
+    #[test]
+    fn a_second_launch_hands_its_message_over_and_succeeds() {
+        let profile = tempfile::tempdir().unwrap();
+        let Ok(Claim::First(first)) = instance::claim(profile.path()) else {
+            panic!("the profile was taken");
+        };
+        let (heard, hearing) = mpsc::channel();
+        first
+            .serve(move |message| heard.send(message).unwrap())
+            .unwrap();
+
+        assert_eq!(hand_over(profile.path(), None), ExitCode::SUCCESS);
+        assert_eq!(
+            hand_over(profile.path(), Some("palette".to_string())),
+            ExitCode::SUCCESS
+        );
+
+        let wait = Duration::from_secs(10);
+        assert_eq!(hearing.recv_timeout(wait).unwrap(), Message::Reveal);
+        assert_eq!(
+            hearing.recv_timeout(wait).unwrap(),
+            Message::Action("palette".to_string())
+        );
+    }
+
+    #[test]
+    fn a_second_launch_with_nobody_to_answer_fails() {
+        let profile = tempfile::tempdir().unwrap();
+
+        assert_eq!(hand_over(profile.path(), None), ExitCode::FAILURE);
+    }
 
     #[test]
     fn a_first_launch_opens_hidden_and_centred_at_the_default_size() {
