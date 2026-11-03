@@ -79,6 +79,38 @@ fn wipe_values(values: &mut BTreeMap<String, String>) {
     }
 }
 
+/// What a write touched, for the index to read again (`Engine::write`).
+#[derive(Debug, Default)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "one flag a decoration the index keeps, read again whole"
+)]
+pub struct Changed {
+    /// Notes whose row or side tables changed; one no longer live leaves the index.
+    pub notes: Vec<String>,
+    pub attachments: bool,
+    pub folders: bool,
+    pub globals: bool,
+    /// Too many notes to name: the next read builds the index again.
+    pub rebuild: bool,
+}
+
+impl Changed {
+    pub fn notes(ids: impl IntoIterator<Item = String>) -> Self {
+        Self {
+            notes: ids.into_iter().collect(),
+            ..Self::default()
+        }
+    }
+
+    pub fn everything() -> Self {
+        Self {
+            rebuild: true,
+            ..Self::default()
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct NoteIndex {
     /// The library it holds (`Library::number`); `None` before an unlock and after a switch.
@@ -141,6 +173,82 @@ impl NoteIndex {
         }
         self.complete = i64::try_from(read).unwrap_or(i64::MAX) < SLICE;
         Ok(!self.complete)
+    }
+
+    /// Reads again what `changed` names. An index not started on `library` has nothing to
+    /// keep true: the next read builds it whole.
+    pub(crate) fn refresh(
+        &mut self,
+        library: &mut Library,
+        changed: &Changed,
+    ) -> Result<(), StorageError> {
+        if self.library != Some(library.number()) {
+            return Ok(());
+        }
+        if changed.rebuild {
+            self.clear();
+            return Ok(());
+        }
+        if changed.attachments {
+            self.attachment_counts = crate::attachments::store::counts(library.db())?;
+        }
+        if changed.folders {
+            self.folders = crate::folders::store::by_id(library, None)?;
+        }
+        if changed.globals {
+            wipe_values(&mut self.globals);
+            self.globals = store::global_placeholder_values(library)?;
+        }
+        if !changed.notes.is_empty() {
+            let fresh = store::live(library, &changed.notes)?;
+            for id in &changed.notes {
+                self.notes.remove(id);
+            }
+            for note in fresh {
+                self.notes
+                    .insert(note.id.clone(), Arc::new(IndexedNote::of(note)));
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether this index holds what one built now from `library` would: the tests' check that
+    /// no write forgot to say what it changed. One not started on `library` has nothing to be
+    /// wrong about. `Err` says the first difference.
+    #[doc(hidden)]
+    pub fn matches(&self, library: &mut Library) -> Result<(), String> {
+        if self.library != Some(library.number()) {
+            return Ok(());
+        }
+        let mut fresh = Self::default();
+        fresh.start(library).map_err(|error| error.to_string())?;
+        while fresh
+            .next_slice(library)
+            .map_err(|error| error.to_string())?
+        {}
+
+        let mut ids: Vec<&String> = self.notes.keys().collect();
+        let mut expected: Vec<&String> = fresh.notes.keys().collect();
+        ids.sort();
+        expected.sort();
+        if ids != expected {
+            return Err(format!("notes {ids:?}, expected {expected:?}"));
+        }
+        for (id, entry) in &fresh.notes {
+            if self.notes[id].note != entry.note {
+                return Err(format!("note {id} differs"));
+            }
+        }
+        if self.attachment_counts != fresh.attachment_counts {
+            return Err("attachment counts differ".to_string());
+        }
+        if self.folders != fresh.folders {
+            return Err("folders differ".to_string());
+        }
+        if self.globals != fresh.globals {
+            return Err("global values differ".to_string());
+        }
+        Ok(())
     }
 
     pub fn len(&self) -> usize {

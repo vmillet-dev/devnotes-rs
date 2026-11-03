@@ -25,6 +25,7 @@ use crate::count::saturating_u32 as count;
 use crate::db::{Library, lock};
 use crate::error::{AppError, StorageError};
 use crate::folders;
+use crate::index::Changed;
 use crate::spaces::model::SpaceDraft;
 use language::Language;
 use model::{DisplayNote, NoteDraft, NotePatch, SampleNote, TagUsage};
@@ -96,11 +97,14 @@ fn picture_of(
 }
 
 pub fn create_note(engine: &Engine, draft: NoteDraft) -> Result<DisplayNote, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
-    let note = store::create(&mut connection, draft, Utc::now())?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
+        let note = store::create(&mut connection, draft, Utc::now())?;
 
-    Ok(display(&mut connection, note)?)
+        let answer = display(&mut connection, note)?;
+        let changed = Changed::notes([answer.note.id.clone()]);
+        Ok((answer, changed))
+    })
 }
 
 /// What a paste into an empty Note is. Asked by the front end before it writes: typing keeps
@@ -134,11 +138,17 @@ pub fn field_spans(content: String) -> Vec<placeholder::FieldSpan> {
 /// A copy to start another note from, attachments included and history left behind. The
 /// title is the front end's: its suffix is a translation.
 pub fn duplicate_note(engine: &Engine, id: String, title: String) -> Result<DisplayNote, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
-    let note = duplicate::duplicate(&mut connection, &id, title, Utc::now())?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
+        let note = duplicate::duplicate(&mut connection, &id, title, Utc::now())?;
 
-    Ok(display(&mut connection, note)?)
+        let answer = display(&mut connection, note)?;
+        let changed = Changed {
+            attachments: true,
+            ..Changed::notes([answer.note.id.clone()])
+        };
+        Ok((answer, changed))
+    })
 }
 
 /// The first launch: the space, its folders and the notes in one transaction, since a space
@@ -150,42 +160,43 @@ pub fn seed_samples(
     folders: Vec<String>,
     notes: Vec<SampleNote>,
 ) -> Result<crate::spaces::model::Space, AppError> {
-    let db = &engine.db;
-    let name = SpaceDraft { name: space_name }.validated_name()?;
-    let folder_names = folders
-        .iter()
-        .map(|folder| crate::folders::model::validated_name(folder))
-        .collect::<Result<Vec<_>, _>>()?;
+    engine.write(|db| {
+        let name = SpaceDraft { name: space_name }.validated_name()?;
+        let folder_names = folders
+            .iter()
+            .map(|folder| crate::folders::model::validated_name(folder))
+            .collect::<Result<Vec<_>, _>>()?;
 
-    let mut connection = lock(db)?;
+        let mut connection = lock(db)?;
 
-    Ok(store::seed(
-        &mut connection,
-        &name,
-        &folder_names,
-        notes,
-        Utc::now(),
-    )?)
+        let answer = store::seed(&mut connection, &name, &folder_names, notes, Utc::now())?;
+        let changed = Changed::everything();
+        Ok((answer, changed))
+    })
 }
 
 pub fn update_note(engine: &Engine, id: String, patch: NotePatch) -> Result<DisplayNote, AppError> {
-    // Read before anything is locked: two PNGs, or the patch is refused.
-    let drawn = patch
-        .pictures
-        .as_ref()
-        .map(drawing::DrawingPictures::decoded)
-        .transpose()?;
-    // `Some(None)`: the pictures are taken away, the drawing having been emptied.
-    let mut connection = lock(&engine.db)?;
-    let note = store::update_drawn(
-        &mut connection,
-        &id,
-        &patch,
-        drawn.as_ref().map(Option::as_ref),
-        Utc::now(),
-    )?;
+    engine.write(|db| {
+        // Read before anything is locked: two PNGs, or the patch is refused.
+        let drawn = patch
+            .pictures
+            .as_ref()
+            .map(drawing::DrawingPictures::decoded)
+            .transpose()?;
+        // `Some(None)`: the pictures are taken away, the drawing having been emptied.
+        let mut connection = lock(db)?;
+        let note = store::update_drawn(
+            &mut connection,
+            &id,
+            &patch,
+            drawn.as_ref().map(Option::as_ref),
+            Utc::now(),
+        )?;
 
-    Ok(display(&mut connection, note)?)
+        let answer = display(&mut connection, note)?;
+        let changed = Changed::notes([id.clone()]);
+        Ok((answer, changed))
+    })
 }
 
 /// The note rewritten as `into`, with the body it had: its undo is that body written back.
@@ -194,13 +205,16 @@ pub fn convert_note(
     id: String,
     into: kind::NoteKind,
 ) -> Result<convert::NoteConversion, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
-    let (note, previous) = store::convert(&mut connection, &id, into, Utc::now())?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
+        let (note, previous) = store::convert(&mut connection, &id, into, Utc::now())?;
 
-    Ok(convert::NoteConversion {
-        note: display(&mut connection, note)?,
-        previous,
+        let answer = convert::NoteConversion {
+            note: display(&mut connection, note)?,
+            previous,
+        };
+        let changed = Changed::notes([id.clone()]);
+        Ok((answer, changed))
     })
 }
 
@@ -242,38 +256,46 @@ pub fn restore_revision(
     id: String,
     revision_id: String,
 ) -> Result<DisplayNote, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
-    let note = store::restore_revision(&mut connection, &id, &revision_id)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
+        let note = store::restore_revision(&mut connection, &id, &revision_id)?;
 
-    Ok(display(&mut connection, note)?)
+        let answer = display(&mut connection, note)?;
+        let changed = Changed::notes([id.clone()]);
+        Ok((answer, changed))
+    })
 }
 
 /// Moves to the trash: the note comes back through [`restore_notes`] for
 /// [`trash::RETENTION`].
 pub fn delete_note(engine: &Engine, id: String) -> Result<(), AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::trash::trash(&mut connection, &id, Utc::now())?)
+        store::trash::trash(&mut connection, &id, Utc::now())?;
+        let changed = Changed::notes([id.clone()]);
+        Ok(((), changed))
+    })
 }
 
 pub fn delete_notes(engine: &Engine, ids: Vec<String>) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(count(store::trash::trash_many(
-        &mut connection,
-        &ids,
-        Utc::now(),
-    )?))
+        let answer = count(store::trash::trash_many(&mut connection, &ids, Utc::now())?);
+        let changed = Changed::notes(ids.clone());
+        Ok((answer, changed))
+    })
 }
 
 pub fn restore_notes(engine: &Engine, ids: Vec<String>) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(count(store::trash::restore_many(&mut connection, &ids)?))
+        let answer = count(store::trash::restore_many(&mut connection, &ids)?);
+        let changed = Changed::notes(ids.clone());
+        Ok((answer, changed))
+    })
 }
 
 /// Purges first: the trash must never show a note a restart would erase. `search` narrows it
@@ -292,14 +314,17 @@ pub fn list_trash(engine: &Engine, search: String) -> Result<Vec<TrashedNote>, A
 
 /// What the trash lists for `search` back where it was: the way out of a mistaken bulk deletion.
 pub fn restore_trash(engine: &Engine, search: String) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
-    let ids: Vec<String> = trash_matching(&mut connection, &search)?
-        .into_iter()
-        .map(|(note, _)| note.id)
-        .collect();
+    engine.write(|db| {
+        let mut connection = lock(db)?;
+        let ids: Vec<String> = trash_matching(&mut connection, &search)?
+            .into_iter()
+            .map(|(note, _)| note.id)
+            .collect();
 
-    Ok(count(store::trash::restore_many(&mut connection, &ids)?))
+        let answer = count(store::trash::restore_many(&mut connection, &ids)?);
+        let changed = Changed::notes(ids.clone());
+        Ok((answer, changed))
+    })
 }
 
 fn trash_matching(
@@ -315,18 +340,29 @@ fn trash_matching(
 }
 
 pub fn purge_notes(engine: &Engine, ids: Vec<String>) -> Result<u32, AppError> {
-    let db = &engine.db;
-    Ok(count(trash::purge(db, ids)?))
+    engine.write(|db| {
+        let changed = Changed {
+            attachments: true,
+            ..Changed::notes(ids.clone())
+        };
+        Ok((count(trash::purge(db, ids)?), changed))
+    })
 }
 
 pub fn empty_trash(engine: &Engine) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let ids = {
-        let mut connection = lock(db)?;
-        store::trash::trashed_ids(&mut connection)?
-    };
+    engine.write(|db| {
+        let ids = {
+            let mut connection = lock(db)?;
+            store::trash::trashed_ids(&mut connection)?
+        };
 
-    Ok(count(trash::purge(db, ids)?))
+        let answer = count(trash::purge(db, ids)?);
+        let changed = Changed {
+            attachments: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 pub fn move_notes(
@@ -334,15 +370,13 @@ pub fn move_notes(
     ids: Vec<String>,
     space_id: String,
 ) -> Result<Vec<model::NotePlacement>, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::move_many(
-        &mut connection,
-        &ids,
-        &space_id,
-        Utc::now(),
-    )?)
+        let answer = store::move_many(&mut connection, &ids, &space_id, Utc::now())?;
+        let changed = Changed::notes(ids.clone());
+        Ok((answer, changed))
+    })
 }
 
 /// The undo of [`move_notes`]: each note goes back to the space it left.
@@ -350,13 +384,13 @@ pub fn move_notes_back(
     engine: &Engine,
     placements: Vec<model::NotePlacement>,
 ) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(count(store::restore_placements(
-        &mut connection,
-        &placements,
-    )?))
+        let answer = count(store::restore_placements(&mut connection, &placements)?);
+        let changed = Changed::notes(placements.iter().map(|one| one.note_id.clone()));
+        Ok((answer, changed))
+    })
 }
 
 /// Normalized here as everywhere else, or a typed `#urgent` would not join `urgent`.
@@ -365,25 +399,26 @@ pub fn tag_notes(
     ids: Vec<String>,
     tags: Vec<String>,
 ) -> Result<Vec<model::NoteTag>, AppError> {
-    let db = &engine.db;
-    let normalized = model::normalize_tags(&tags);
+    engine.write(|db| {
+        let normalized = model::normalize_tags(&tags);
 
-    let mut connection = lock(db)?;
+        let mut connection = lock(db)?;
 
-    Ok(store::tag_many(
-        &mut connection,
-        &ids,
-        &normalized,
-        Utc::now(),
-    )?)
+        let answer = store::tag_many(&mut connection, &ids, &normalized, Utc::now())?;
+        let changed = Changed::notes(ids.clone());
+        Ok((answer, changed))
+    })
 }
 
 /// The undo of [`tag_notes`]: exactly the pairs it added, and nothing wider.
 pub fn untag_notes(engine: &Engine, pairs: Vec<model::NoteTag>) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(count(store::untag_many(&mut connection, &pairs)?))
+        let answer = count(store::untag_many(&mut connection, &pairs)?);
+        let changed = Changed::notes(pairs.iter().map(|one| one.note_id.clone()));
+        Ok((answer, changed))
+    })
 }
 
 /// Answers the pairs it took off: normalized like every tag, so `#Urgent` finds `urgent`.
@@ -392,22 +427,28 @@ pub fn remove_tag(
     ids: Vec<String>,
     tag: String,
 ) -> Result<Vec<model::NoteTag>, AppError> {
-    let db = &engine.db;
-    let Some(tag) = model::normalize_tags(&[tag]).into_iter().next() else {
-        return Ok(Vec::new());
-    };
+    engine.write(|db| {
+        let Some(tag) = model::normalize_tags(&[tag]).into_iter().next() else {
+            return Ok((Vec::new(), Changed::default()));
+        };
 
-    let mut connection = lock(db)?;
+        let mut connection = lock(db)?;
 
-    Ok(store::remove_tag(&mut connection, &ids, &tag, Utc::now())?)
+        let answer = store::remove_tag(&mut connection, &ids, &tag, Utc::now())?;
+        let changed = Changed::notes(ids.clone());
+        Ok((answer, changed))
+    })
 }
 
 /// The undo of [`remove_tag`]: exactly the pairs it took off.
 pub fn restore_tags(engine: &Engine, pairs: Vec<model::NoteTag>) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(count(store::restore_tags(&mut connection, &pairs)?))
+        let answer = count(store::restore_tags(&mut connection, &pairs)?);
+        let changed = Changed::notes(pairs.iter().map(|one| one.note_id.clone()));
+        Ok((answer, changed))
+    })
 }
 
 /// Answers the notes whose pin changed; undone by the same call, the other way, over those.
@@ -416,10 +457,13 @@ pub fn set_pinned(
     ids: Vec<String>,
     pinned: bool,
 ) -> Result<Vec<String>, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::set_pinned_many(&mut connection, &ids, pinned)?)
+        let answer = store::set_pinned_many(&mut connection, &ids, pinned)?;
+        let changed = Changed::notes(answer.clone());
+        Ok((answer, changed))
+    })
 }
 
 /// Answers each note whose priority moved, with the one it had; `updated_at` stays.
@@ -428,10 +472,13 @@ pub fn set_priority(
     ids: Vec<String>,
     priority: Priority,
 ) -> Result<Vec<model::NotePriority>, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::set_priority_many(&mut connection, &ids, priority)?)
+        let answer = store::set_priority_many(&mut connection, &ids, priority)?;
+        let changed = Changed::notes(ids.clone());
+        Ok((answer, changed))
+    })
 }
 
 /// The undo of [`set_priority`]: each note gets back the priority it had.
@@ -439,13 +486,13 @@ pub fn restore_priorities(
     engine: &Engine,
     previous: Vec<model::NotePriority>,
 ) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    engine.write(|db| {
+        let mut connection = lock(db)?;
 
-    Ok(count(store::restore_priorities(
-        &mut connection,
-        &previous,
-    )?))
+        let answer = count(store::restore_priorities(&mut connection, &previous)?);
+        let changed = Changed::notes(previous.iter().map(|one| one.note_id.clone()));
+        Ok((answer, changed))
+    })
 }
 
 /// What a corpus-wide tag action is about to touch, asked before it runs.
@@ -477,22 +524,28 @@ pub fn list_tags(engine: &Engine) -> Result<Vec<TagUsage>, AppError> {
 /// Renames one tag or merges several: renaming onto an existing tag is a merge anyway,
 /// since a note cannot carry one twice.
 pub fn rename_tags(engine: &Engine, tags: Vec<String>, into: String) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let (sources, target) = model::retagging(&tags, &into)?;
+    engine.write(|db| {
+        let (sources, target) = model::retagging(&tags, &into)?;
 
-    let mut connection = lock(db)?;
+        let mut connection = lock(db)?;
 
-    Ok(count(store::retag(&mut connection, &sources, &target)?))
+        let answer = count(store::retag(&mut connection, &sources, &target)?);
+        let changed = Changed::everything();
+        Ok((answer, changed))
+    })
 }
 
 /// A list rather than one tag at a time: one round trip per tag is one lock per tag.
 pub fn delete_tags(engine: &Engine, tags: Vec<String>) -> Result<u32, AppError> {
-    let db = &engine.db;
-    let tags = model::normalize_tags(&tags);
+    engine.write(|db| {
+        let tags = model::normalize_tags(&tags);
 
-    let mut connection = lock(db)?;
+        let mut connection = lock(db)?;
 
-    Ok(count(store::drop_tags(&mut connection, &tags)?))
+        let answer = count(store::drop_tags(&mut connection, &tags)?);
+        let changed = Changed::everything();
+        Ok((answer, changed))
+    })
 }
 
 /// A command of its own rather than a `NotePatch` field, so `updated_at` stays put: filling a
@@ -502,13 +555,16 @@ pub fn set_placeholder_values(
     id: String,
     values: BTreeMap<String, String>,
 ) -> Result<DisplayNote, AppError> {
-    let db = &engine.db;
-    let retained = placeholder::normalize_values(values);
+    engine.write(|db| {
+        let retained = placeholder::normalize_values(values);
 
-    let mut connection = lock(db)?;
-    let note = store::set_placeholder_values(&mut connection, &id, &retained)?;
+        let mut connection = lock(db)?;
+        let note = store::set_placeholder_values(&mut connection, &id, &retained)?;
 
-    Ok(display(&mut connection, note)?)
+        let answer = display(&mut connection, note)?;
+        let changed = Changed::notes([id.clone()]);
+        Ok((answer, changed))
+    })
 }
 
 /// No note identifier: the palette fills an unsaved draft as readily as a saved note.
@@ -540,13 +596,19 @@ pub fn set_global_placeholders(
     engine: &Engine,
     values: BTreeMap<String, String>,
 ) -> Result<BTreeMap<String, String>, AppError> {
-    let db = &engine.db;
-    let retained = placeholder::normalize_values(values);
+    engine.write(|db| {
+        let retained = placeholder::normalize_values(values);
 
-    let mut connection = lock(db)?;
-    store::replace_global_placeholder_values(&mut connection, &retained)?;
+        let mut connection = lock(db)?;
+        store::replace_global_placeholder_values(&mut connection, &retained)?;
 
-    Ok(retained)
+        let answer = retained;
+        let changed = Changed {
+            globals: true,
+            ..Changed::default()
+        };
+        Ok((answer, changed))
+    })
 }
 
 /// What only the database knows, each a query of its own: hence not in [`model::decorate`].

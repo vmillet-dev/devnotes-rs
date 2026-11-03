@@ -6,6 +6,7 @@ pub mod store;
 use crate::Engine;
 use crate::db::lock;
 use crate::error::AppError;
+use crate::index::Changed;
 use model::{Space, SpaceContents, SpaceDraft};
 
 pub fn list_spaces(engine: &Engine) -> Result<Vec<Space>, AppError> {
@@ -49,12 +50,15 @@ pub fn count_space_contents(engine: &Engine, id: String) -> Result<SpaceContents
 }
 
 pub fn delete_space(engine: &Engine, id: String, target_space_id: String) -> Result<(), AppError> {
-    let db = &engine.db;
-    // A space as its own refuge would see its notes swept away by the cascade right
-    // after the transfer.
-    model::validate_move_target(&id, &target_space_id)?;
+    engine.write(|db| {
+        // A space as its own refuge would see its notes swept away by the cascade right
+        // after the transfer.
+        model::validate_move_target(&id, &target_space_id)?;
 
-    let mut connection = lock(db)?;
+        let mut connection = lock(db)?;
 
-    Ok(store::delete(&mut connection, &id, &target_space_id)?)
+        store::delete(&mut connection, &id, &target_space_id)?;
+        let changed = Changed::everything();
+        Ok(((), changed))
+    })
 }

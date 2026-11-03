@@ -71,6 +71,31 @@ impl Engine {
         self.index.lock().map_err(|_| StorageError::Unavailable)
     }
 
+    /// The one way to write what the index holds: `job` answers its value and what it changed,
+    /// and the index reads that again once `job` has returned, its transactions committed. A
+    /// refresh that fails leaves an index the next read builds whole, never a stale one.
+    pub(crate) fn write<T>(
+        &self,
+        job: impl FnOnce(&db::Db) -> Result<(T, index::Changed), error::AppError>,
+    ) -> Result<T, error::AppError> {
+        let (value, changed) = job(&self.db)?;
+        let mut library = db::lock(&self.db)?;
+        let mut index = self.index()?;
+        if let Err(error) = index.refresh(&mut library, &changed) {
+            log::warn!("The notes index is read again from scratch: {error}");
+            index.clear();
+        }
+        Ok(value)
+    }
+
+    /// Whether the index holds what the open library does: see `NoteIndex::matches`.
+    #[doc(hidden)]
+    pub fn index_matches_library(&self) -> Result<(), String> {
+        let mut library = db::lock(&self.db).map_err(|error| error.to_string())?;
+        let index = self.index().map_err(|error| error.to_string())?;
+        index.matches(&mut library)
+    }
+
     /// How many notes the index holds, for the tests.
     #[doc(hidden)]
     pub fn indexed(&self) -> usize {

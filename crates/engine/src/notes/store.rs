@@ -213,6 +213,20 @@ pub(crate) fn newest(
     Ok(notes)
 }
 
+/// The live notes among `ids`, opened: what the index reads again after a write.
+pub(crate) fn live(connection: &mut Library, ids: &[String]) -> Result<Vec<Note>, StorageError> {
+    let mut notes = Vec::new();
+    for chunk in ids.chunks(related::BIND_AT_MOST) {
+        let rows = notes::table
+            .filter(notes::deleted_at.is_null())
+            .filter(notes::id.eq_any(chunk))
+            .select(NoteRow::as_select())
+            .load::<NoteRow>(connection.db())?;
+        notes.extend(opened(connection, rows, None)?);
+    }
+    Ok(notes)
+}
+
 pub(crate) fn count_live(connection: &mut Library) -> Result<i64, StorageError> {
     Ok(notes::table
         .filter(notes::deleted_at.is_null())
