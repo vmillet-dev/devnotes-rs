@@ -4525,6 +4525,30 @@ egui's focus navigation.
 `Backend::drain` queues a last job and waits up to 30 s for it, so everything sent before it
 (drafts, an import, a restore) has run; then the geometry is written.
 
+### Preferences, settings and the notifiers
+
+The two `preferences.json` keep the reference's format — one flat object of `devnotes.*` keys,
+each a string — so the core still reads `automaticBackups` from the application's file itself.
+`services::preferences::Preferences` keeps every key it read, those this version does not know
+included, and is written staged then renamed. The application's file is read by `main` before
+the window exists; the open library's (`devnotes.notes.*`) is read again on the db queue each
+time a library opens (`AppState::reset_library_scope`). Both are written on the db queue, so two
+changes in a row land in that order.
+
+`services::settings::Settings` is the typed part (locale, theme, density, the last area), read
+with defaults for anything unknown and written back without touching the rest; a setting joins
+it with the screen that reads it. `SettingsDraft` is what the preferences panel edits: only the
+theme and the density are previewed before « Apply », and the native side reads the applied
+settings, never the draft.
+
+`services::time`: an injectable `Clock` (`SystemClock`, a `FakeClock` in tests) and
+`relative(at, clock)`, which answers the label and **how long it holds**, the next frame asked
+for exactly then. `services::status::StatusNotifier` keeps the toast's last report, numbered so
+the same words said twice show twice; `services::errors::ErrorNotifier` the banner's last
+failure: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
+choosing its sub-key by one parameter), or the action's own when the code says nothing better.
+⚠️ The error's `detail` goes to the log, never to the screen.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in
@@ -6061,7 +6085,7 @@ mark fading). The three entrances (`Rise`, `Lift`, `Fade`) are an opacity and a 
 from the first frame an element is drawn after a frame it was not, as a CSS animation runs on an
 element that did not exist a frame ago. **One switch**, `motion::set_reduced`, cuts all of it —
 the system's wish read by `platform::motion` (the registry under Windows, `gsettings` under
-GNOME), the preference adding to it. A test sweeps `crates/ui/src` for a duration typed anywhere
+GNOME), as the reference's `prefers-reduced-motion` was: there is no setting of its own. A test sweeps `crates/ui/src` for a duration typed anywhere
 else, as `motion.test.mjs` did.
 
 **The focus ring** (`theme::focus`) is 2 px of `amber_edge`, 2 px outside the control, and shows

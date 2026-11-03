@@ -12,6 +12,7 @@ use crate::action::{Action, Actions, GlobalAction};
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
 use crate::keys;
+use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::theme;
 
@@ -24,8 +25,10 @@ pub struct Startup {
     pub window_file: PathBuf,
     /// The geometry the window was opened at, kept as the last known one.
     pub geometry: Option<Geometry>,
-    /// Whether the system asks for less motion; the preference adds to it.
+    /// Whether the system asks for less motion.
     pub reduced_motion: bool,
+    /// The application's `preferences.json`, read before the window existed.
+    pub preferences: Preferences,
     pub inbox: Inbox,
     pub waker: Waker,
     pub inputs: Receiver<Input>,
@@ -49,7 +52,7 @@ impl DevNotesApp {
         // Like the reference's WebView: Ctrl+plus is not a zoom.
         cc.egui_ctx
             .options_mut(|options| options.zoom_with_keyboard = false);
-        let state = AppState::new(startup.reduced_motion);
+        let state = AppState::new(startup.preferences, startup.reduced_motion);
         state.apply_look(&cc.egui_ctx);
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
         Ok(Self {
@@ -114,13 +117,14 @@ impl eframe::App for DevNotesApp {
             match input {
                 Input::Instance(Message::Reveal) => reveal(ctx),
                 Input::Instance(Message::Action(name)) => match GlobalAction::named(&name) {
-                    Some(action) => self.state.apply(Action::Global(action), ctx),
+                    Some(action) => self.state.apply(Action::Global(action), ctx, &self.backend),
                     None => log::warn!("A second launch asked for an unknown action"),
                 },
                 // Read by the screens they concern, as they are ported.
                 Input::Engine(_) => {}
             }
         }
+        self.state.update();
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
     }
@@ -133,7 +137,7 @@ impl eframe::App for DevNotesApp {
             actions.push(action);
         }
         for action in actions.drain() {
-            self.state.apply(action, ui.ctx());
+            self.state.apply(action, ui.ctx(), &self.backend);
         }
     }
 
@@ -178,6 +182,7 @@ mod tests {
             window_file: directory.join("window.json"),
             geometry: None,
             reduced_motion: false,
+            preferences: Preferences::default(),
             inbox,
             waker,
             inputs: receiver,

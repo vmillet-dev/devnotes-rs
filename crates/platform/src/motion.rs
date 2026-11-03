@@ -1,6 +1,6 @@
 //! Whether the system asks for less motion, read through safe means only (D7): the registry
-//! under Windows, `gsettings` under GNOME. Elsewhere, and when neither answers, the preference
-//! alone decides.
+//! under Windows, `gsettings` under GNOME — what the reference's `prefers-reduced-motion` read.
+//! Elsewhere, and when neither answers, the interface moves.
 
 /// Windows turns « Animation effects » off by clearing `MinAnimate`, among other flags.
 #[cfg(windows)]
