@@ -4500,6 +4500,31 @@ as the screen is ported. Three pieces replace the reference's `resource()`, `lin
   undo history holds what was typed — then puts the application's look back, which outlives a
   switch. Not wiped byte by byte: the threat model says so.
 
+### A frame, its actions and its keys
+
+`DevNotesApp` does the same thing every frame, in this order (plan § 3.3.7): `logic` drains the
+inputs (engine events, a second launch's `reveal` or `action <name>`), adopts the answers that
+arrived and asks the `QueryCell`s again; `ui` draws, then reads the keys the widgets left, then
+applies the actions. **Drawing never changes the state**: it reads a screen's state, may change
+its view (text being typed, a menu open, a scroll), and pushes `Action`s — `Action::App` for the
+frame (an area, the look), `Action::Global` for what comes from outside the window (capture, new
+note, palette, quit); each area's own variant joins when the area is ported. `AppState::apply`
+runs them at the end of the frame, in the order pushed.
+
+**One order for the keyboard** (D14, `ui::keys`). An input method composing keeps every key; the
+focused widget consumes what it handles while drawing; then `keys::dispatch` reads what is left
+by level — the top modal, then the area on screen, then the application (`keys::APPLICATION`:
+`Ctrl+1/2/3`) — and the first level that knows the key takes it and consumes it. While a text
+field has the focus, only the entries marked `while_typing` are read: the « editable target »
+guards of the reference, written table by table. A binding reads its key **by position** (a W3C
+`code`: on AZERTY the key that types « & » is still `Ctrl+1`) or **by character** (the canvas's
+keys), and its modifiers exactly. egui's keyboard zoom is off, as the WebView's was; Tab keeps
+egui's focus navigation.
+
+**At the exit** the db queue is drained — the one wait the UI thread is allowed (D19):
+`Backend::drain` queues a last job and waits up to 30 s for it, so everything sent before it
+(drafts, an import, a restore) has run; then the geometry is written.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in
