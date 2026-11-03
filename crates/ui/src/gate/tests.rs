@@ -68,6 +68,25 @@ fn settle(harness: &mut Harness<'_, Screen>) {
     harness.run();
 }
 
+/// Until `author_id` is drawn: an answer may ask the core again, and that answer comes later.
+fn settle_until(harness: &mut Harness<'_, Screen>, author_id: &str) {
+    for _ in 0..10 {
+        if present(harness, author_id) {
+            return;
+        }
+        settle(harness);
+    }
+    panic!(
+        "{author_id} never drawn; the vault is {:?}, the work {}",
+        harness.state().gate.vault,
+        if harness.state().gate.work.is_some() {
+            "pending"
+        } else {
+            "done"
+        }
+    );
+}
+
 #[test]
 fn a_first_launch_asks_for_a_phrase_twice_and_holds_it_to_twelve_characters() {
     let (backend, profile) = testing::backend();
@@ -163,4 +182,50 @@ fn a_forgotten_phrase_asks_before_archiving_and_can_be_left() {
     node(&harness, "vault-keep-trying").click();
     harness.run();
     assert!(present(&harness, "vault-passphrase"));
+}
+
+#[test]
+fn archiving_a_forgotten_library_says_where_and_starts_a_new_one() {
+    let profile = testing::locked();
+    let backend = testing::backend_on(profile.path());
+    let mut harness = screen(backend, profile);
+    harness.run();
+
+    node(&harness, "vault-forgotten").click();
+    harness.run();
+    node(&harness, "vault-archive-confirm").click();
+    settle_until(&mut harness, "vault-confirmation");
+
+    assert!(harness.state().status.latest().is_some());
+    assert!(harness.state().errors.notice().is_none());
+}
+
+#[test]
+fn opening_another_library_asks_for_its_own_phrase() {
+    let profile = testing::locked();
+    let backend = testing::backend_on(profile.path());
+    let other = engine::libraries::create_library(backend.engine(), "Travail".to_string())
+        .unwrap()
+        .id;
+    let mut harness = screen(backend, profile);
+    settle(&mut harness);
+
+    let screen = harness.state_mut();
+    let rank = screen
+        .gate
+        .registry
+        .as_ref()
+        .unwrap()
+        .libraries
+        .iter()
+        .position(|entry| entry.id == other)
+        .unwrap();
+    screen.view.switch_to = Some(rank);
+    screen
+        .gate
+        .apply(Action::SwitchLibrary, &mut screen.view, &screen.backend);
+    settle_until(&mut harness, "vault-confirmation");
+
+    let open = engine::libraries::list_libraries(harness.state().backend.engine()).open;
+    assert_eq!(open.as_deref(), Some(other.as_str()));
 }
