@@ -5965,6 +5965,17 @@ does not exist — an enum of the cases, matched once, is better wherever the se
   and none hedges a plural with « (s) ».
 - Both files have the same keys, and a name one language fills in, the other reads too, filled
   in or counted (« il y a {{count}} mois » counts in English): two tests.
+- **Localised formats are written by hand** (D21, `i18n::format`): one function per pattern the
+  interface uses, named by its use — `date_short` (« 25 juil. 2026 »), `time_millis` (« 11:05:07,123 »),
+  `fixed`, `at_most`, `signed`, `ungrouped`, `and_list`, `or_list`, `country` (the IBAN
+  registry's countries only)… A date arrives as the wall-clock value to show; the caller puts it
+  in the local zone, or in UTC where the screen says so. Numbers round the shortest decimal half
+  away from zero, as ICU does (12.345 is 12.35 at two digits), and French groups with a narrow
+  no-break space. `golden/intl` — every `Intl` call of the reference with its options, at its
+  edge values — is read back by a test. No ICU.
+- **Ageing labels** are `i18n::time`: `relative` (« il y a 3 min »), `expiry` (in local calendar
+  days: an expiry is the end of its day), `span` (« dans 2 jours », the largest whole unit). They
+  answer a `Message`, `now` given; `golden/relative-time` is read back by a test.
 - **The language** is a preference (`system` / `fr` / `en`); `system` is
   `Language::of_system()`, the first of the system's preferred languages (`sys-locale`) whose
   primary tag is `fr` or `en`, English otherwise.
