@@ -17,6 +17,13 @@ impl ErrorNotifier {
         self.notice = Some(message_of(error).unwrap_or_else(|| Message::new(fallback)));
     }
 
+    /// The same, the fallback carrying what was typed: « Folder “Runbooks” could not be
+    /// created ».
+    pub fn report_message(&mut self, fallback: Message, error: &AppError) {
+        log::warn!("{}: {}", fallback.key.path(), error.detail);
+        self.notice = Some(message_of(error).unwrap_or(fallback));
+    }
+
     pub fn notice(&self) -> Option<&Message> {
         self.notice.as_ref()
     }

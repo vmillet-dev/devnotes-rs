@@ -22,6 +22,8 @@ pub enum AppAction {
     SetAppearance(Appearance),
     DismissError,
     DismissStatus,
+    /// The library rail's width, once its edge rests.
+    SetRailWidth(u16),
 }
 
 /// Asked from outside the window: a global shortcut, the tray, a second launch.

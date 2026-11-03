@@ -4,16 +4,18 @@
 pub mod calc;
 pub mod canvas;
 pub mod language;
+pub mod sidebar;
 pub mod ui;
 
-use egui::{Role, Sense, Ui, UiBuilder, WidgetInfo};
+use egui::{Rect, Role, Sense, Ui, UiBuilder, WidgetInfo, vec2};
 use engine::notes::kind::NoteKind;
 use engine::notes::priority::Priority;
 use i18n::{Key, keys};
 
+use engine::folders::model::FolderColour;
 use engine::notes::checklist::ChecklistItem;
 
-use crate::action::Actions;
+use crate::action::{Action as Asked, Actions, AppAction};
 use crate::state::AppState;
 use crate::state::drawing_pictures::Stamp;
 use crate::widgets::address;
@@ -30,14 +32,86 @@ pub enum Action {
     },
     /// A drawing's picture, for the card that just showed it.
     Thumbnail(Stamp),
+    /// `None`: every space.
+    ChooseSpace(Option<String>),
+    /// In its own space, which is then the one shown.
+    ChooseFolder(String),
+    /// What deleting it would move and take, for its panel.
+    CountSpace(String),
+    CreateSpace(String),
+    RenameSpace {
+        id: String,
+        name: String,
+    },
+    PinSpace {
+        id: String,
+        pinned: bool,
+    },
+    /// Its notes go to `refuge` first.
+    DeleteSpace {
+        id: String,
+        refuge: String,
+    },
+    CreateFolder {
+        space_id: String,
+        parent_id: Option<String>,
+        name: String,
+    },
+    RenameFolder {
+        id: String,
+        name: String,
+    },
+    RecolourFolder {
+        id: String,
+        colour: FolderColour,
+    },
+    DeleteFolder(String),
 }
 
-pub fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+/// The rail's edge, which widens it.
+const EDGE: f32 = 8.0;
+
+/// What only the area's drawing sees (D13).
+#[derive(Default)]
+pub struct View {
+    pub sidebar: sidebar::SidebarView,
+    /// While its edge moves; the setting is written once the pointer rests.
+    rail_width: Option<f32>,
+}
+
+/// The rail on the left, as wide as the setting says, and the canvas beside it.
+pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Main, true, "area-notes"));
     address(ui, &response, "area-notes");
-    let mut ui = ui.new_child(UiBuilder::new().max_rect(region));
-    canvas::show(&mut ui, state, actions);
+    let (min, max) = crate::services::settings::RAIL_WIDTH;
+    let mut width = view
+        .rail_width
+        .unwrap_or_else(|| f32::from(state.settings.rail_width))
+        .clamp(f32::from(min), f32::from(max))
+        .round();
+    // Cut by hand: a horizontal layout hands its children the height of one line.
+    let rail = Rect::from_min_size(region.min, vec2(width, region.height()));
+    let edge = Rect::from_min_size(rail.right_top(), vec2(EDGE, region.height()));
+    let rest = Rect::from_min_max(edge.right_top(), region.max);
+    let mut rail_ui = ui.new_child(UiBuilder::new().max_rect(rail));
+    rail_ui.set_clip_rect(rail);
+    sidebar::show(&mut rail_ui, state, &mut view.sidebar, actions);
+    let mut edge_ui = ui.new_child(UiBuilder::new().max_rect(edge));
+    width += crate::widgets::split_handle(&mut edge_ui, "library-rail-edge");
+    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(rest));
+    canvas::show(&mut canvas_ui, state, actions);
+    view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
+    let width = view.rail_width.unwrap_or(width);
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "within RAIL_WIDTH"
+    )]
+    let rested = width.round() as u16;
+    if rested != state.settings.rail_width && !ui.input(|input| input.pointer.any_down()) {
+        actions.push(Asked::App(AppAction::SetRailWidth(rested)));
+    }
 }
 
 /// « Snippets », the heading of a kind's section.

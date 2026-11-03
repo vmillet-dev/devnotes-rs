@@ -90,10 +90,28 @@ impl Tree {
     }
 
     pub fn count(&self, author_id: &str) -> usize {
-        self.nodes
+        self.all(author_id).len()
+    }
+
+    /// Every node wearing `author_id`, top to bottom: the rows of a list.
+    pub fn all(&self, author_id: &str) -> Vec<&Node> {
+        let mut found: Vec<&Node> = self
+            .nodes
             .iter()
-            .filter(|(_, node)| node.author_id() == Some(author_id))
-            .count()
+            .map(|(_, node)| node)
+            .filter(|node| node.author_id() == Some(author_id))
+            .collect();
+        // The tree is in no order of its own.
+        found.sort_by(|a, b| top(a).total_cmp(&top(b)));
+        found
+    }
+
+    /// What each of them says, as [`Self::text`] does.
+    pub fn texts(&self, author_id: &str) -> Vec<String> {
+        self.all(author_id)
+            .into_iter()
+            .map(|node| node.label().or(node.value()).unwrap_or_default().to_owned())
+            .collect()
     }
 
     /// What a node says: its name, or its value for a node that has no name.
@@ -101,6 +119,10 @@ impl Tree {
         let node = self.find(author_id)?;
         node.label().or(node.value()).map(str::to_owned)
     }
+}
+
+fn top(node: &Node) -> f64 {
+    node.bounds().map_or(f64::INFINITY, |bounds| bounds.y0)
 }
 
 /// The application, running on `profile`: a real process, a real window.
@@ -202,10 +224,20 @@ impl App {
 
     /// Clicks the middle of a control, once it is shown.
     pub fn click(&mut self, author_id: &str) {
-        self.wait_for(author_id);
+        self.click_where(author_id, |_| true);
+    }
+
+    /// Clicks the first `author_id` that `which` picks, once it is shown: a row of a list, by
+    /// what the user named it.
+    pub fn click_where(&mut self, author_id: &str, which: impl Fn(&Node) -> bool) {
+        self.eventually(&format!("{author_id} is shown"), |tree| {
+            tree.all(author_id).into_iter().any(&which)
+        });
         let bounds = self
             .tree()
-            .find(author_id)
+            .all(author_id)
+            .into_iter()
+            .find(|node| which(node))
             .and_then(Node::bounds)
             .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
         #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
@@ -222,6 +254,14 @@ impl App {
         self.apply(vec![Event::PointerMoved(pos)]);
         self.apply(vec![button(true)]);
         self.apply(vec![button(false)]);
+    }
+
+    /// Through the gate of a blank profile: the phrase twice, and the library opens.
+    pub fn create_library(&mut self) {
+        self.fill("vault-passphrase", PASSPHRASE);
+        self.fill("vault-confirmation", PASSPHRASE);
+        self.click("vault-submit");
+        self.wait_for("area-notes");
     }
 
     /// Types into the control that has the focus.

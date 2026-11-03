@@ -5,6 +5,7 @@
 mod card;
 pub mod rows;
 
+use egui::emath::GuiRounding as _;
 use egui::text::{LayoutJob, TextFormat};
 use egui::{
     Color32, CornerRadius, FontFamily, FontId, Rect, Role, Sense, Shape, Stroke, Ui, UiBuilder,
@@ -125,7 +126,9 @@ fn cards(
     for (column, cell) in (first..cells.min(first + rows.columns())).enumerate() {
         #[expect(clippy::cast_precision_loss, reason = "a handful of columns")]
         let left = column as f32 * (rows.card_width() + grid);
-        let rect = Rect::from_min_size(min + vec2(left, 0.0), vec2(rows.card_width(), CARD_HEIGHT));
+        // On whole points: a badge laid out right to left from a fraction is drawn blurred.
+        let rect = Rect::from_min_size(min + vec2(left, 0.0), vec2(rows.card_width(), CARD_HEIGHT))
+            .round_ui();
         let mut cell_ui = ui.new_child(UiBuilder::new().max_rect(rect).id_salt((section, cell)));
         match shown.cards.get(cell) {
             Some(shown_card) => {

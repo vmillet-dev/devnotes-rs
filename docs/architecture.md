@@ -4661,6 +4661,19 @@ attachment), its folder and two tags. Previews are monochrome until syntax colou
 the editors. A sheet's results are written by `notes::calc::value`, the reference's formatter in
 Rust, held by the core's golden cases (`golden/calc-format`).
 
+The library rail (`notes::sidebar`) is drawn left of the canvas, as wide as the application setting
+`libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds both
+lists — every space's folders, since the rail draws the whole library — asked again with the
+revision, and the space and folder chosen, remembered in the library's preferences
+(`activeSpace`, `activeFolder`). An id no space or folder answers to any more reads as « every
+space » or « every folder »: a space deleted elsewhere hides no note. `sidebar::tree` flattens
+the library into rows; what nests in what is `folders::model::Lineage`'s, siblings ordered by
+`view::fold` of their name. A row's ⋯ opens its panel under it, one at a time: a space is
+pinned, renamed (written when the field is left, or on Enter), and deleted in two steps with a
+refuge chosen and what moves counted by the core first; a folder is recoloured, renamed, given a
+sub-folder, and deleted, what it held going up a level. The rail's folder moves (drag and
+`Alt`+arrows) come with the board.
+
 A drawing's picture is never in the list: the card asks for it by `Stamp` (id and `updated_at`, so
 a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
 reads it on the db queue, decodes the PNG on the compute queue, uploads it once and keeps the last
