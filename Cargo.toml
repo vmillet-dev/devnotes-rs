@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/engine", "src-tauri"]
 
 [workspace.package]
-version = "0.16.2"
+version = "0.18.0"
 edition = "2024"
 # The pinned toolchain's (`rust-toolchain.toml`): below it, Cargo's MSRV-aware resolver quietly
 # holds crates back (Tauri 2.12 needs 1.90) while their npm twins move on.
