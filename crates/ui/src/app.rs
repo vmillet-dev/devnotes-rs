@@ -17,6 +17,8 @@ pub struct Startup {
     pub window_file: PathBuf,
     /// The geometry the window was opened at, kept as the last known one.
     pub geometry: Option<Geometry>,
+    /// Whether the system asks for less motion; the preference adds to it.
+    pub reduced_motion: bool,
     pub inbox: Inbox,
     pub waker: Waker,
     pub inputs: Receiver<Input>,
@@ -37,6 +39,8 @@ impl DevNotesApp {
     /// closed: the first frame is the gate.
     pub fn new(cc: &eframe::CreationContext<'_>, startup: Startup) -> std::io::Result<Self> {
         startup.waker.fill(&cc.egui_ctx);
+        cc.egui_ctx.set_fonts(theme::fonts::definitions());
+        theme::motion::set_reduced(&cc.egui_ctx, startup.reduced_motion);
         theme::apply(&cc.egui_ctx, Appearance::default(), Density::default());
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
@@ -101,6 +105,7 @@ impl eframe::App for DevNotesApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
             self.shown = true;
         }
+        theme::focus::track(ctx);
         for input in self.inputs.try_iter() {
             match input {
                 Input::Instance(Message::Reveal) => reveal(ctx),
@@ -153,6 +158,7 @@ mod tests {
             },
             window_file: directory.join("window.json"),
             geometry: None,
+            reduced_motion: false,
             inbox,
             waker,
             inputs: receiver,

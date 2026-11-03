@@ -22,7 +22,7 @@ e2e = []
 engine = { path = "../engine" }
 platform = { path = "../platform" }
 ui = { path = "../ui" }
-eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "clipboard", "default_fonts", "system_fonts", "wayland", "wgpu", "x11"] }
+eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "clipboard", "system_fonts", "wayland", "wgpu", "x11"] }
 egui = "0.37.0"
 flexi_logger = { version = "0.31.10", default-features = false }
 log = "0.4.34"
