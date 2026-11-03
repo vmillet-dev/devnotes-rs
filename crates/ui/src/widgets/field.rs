@@ -95,13 +95,24 @@ impl<'a> TextField<'a> {
     }
 }
 
-/// The search of an area: the magnifier, the field, and the key that reaches it.
+/// The search of an area: the magnifier, the field, the cross that empties it, and the key that
+/// reaches it — or, once something is searched, how much was found.
 pub struct SearchField<'a> {
     value: &'a mut String,
     name: &'a str,
     author_id: &'a str,
     hint: &'a str,
     key: Option<&'a str>,
+    matched: Option<&'a str>,
+    clear: Option<(&'a str, &'a str)>,
+    width: Option<f32>,
+}
+
+/// What the search's controls did this frame.
+pub struct Searched {
+    pub field: Response,
+    /// The cross: the typed text, and nothing else.
+    pub cleared: bool,
 }
 
 impl<'a> SearchField<'a> {
@@ -112,6 +123,9 @@ impl<'a> SearchField<'a> {
             author_id,
             hint: "",
             key: None,
+            matched: None,
+            clear: None,
+            width: None,
         }
     }
 
@@ -128,41 +142,116 @@ impl<'a> SearchField<'a> {
         self
     }
 
-    pub fn show(self, ui: &mut Ui) -> Response {
+    /// Takes the key's place: the key is needed before a search, the count after.
+    #[must_use]
+    pub fn matched(mut self, matched: Option<&'a str>) -> Self {
+        self.matched = matched;
+        self
+    }
+
+    /// The cross shown while something is typed: its name and its `author_id`.
+    #[must_use]
+    pub fn clear(mut self, label: &'a str, author_id: &'a str) -> Self {
+        self.clear = Some((label, author_id));
+        self
+    }
+
+    /// The box's width, all of what is left without it.
+    #[must_use]
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Some(width);
+        self
+    }
+
+    pub fn show(self, ui: &mut Ui) -> Searched {
         let p = palette(ui.ctx());
+        let id = ui.next_auto_id();
+        let focused = ui.memory(|memory| memory.has_focus(id.with("field")));
+        let edge = if focused { p.amber_edge } else { p.line };
+        let width = self.width.unwrap_or_else(|| ui.available_width());
         egui::Frame::new()
             .fill(p.bg_1)
-            .stroke(Stroke::new(1.0, p.line))
+            .stroke(Stroke::new(1.0, edge))
             .corner_radius(CornerRadius::same(8))
-            .inner_margin(Margin::symmetric(10, 6))
+            .inner_margin(Margin::symmetric(10, 4))
             .show(ui, |ui| {
+                ui.set_width(width - 22.0);
                 ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 8.0;
                     let (glyph, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
                     icons::paint(ui, glyph, Icon::Search, p.text_2);
-                    let key_room = self.key.map_or(0.0, |key| {
-                        super::text(ui, key, 10.5, 400.0, FontFamily::Monospace, p.text_1)
-                            .size()
-                            .x
-                            + 20.0
-                    });
+                    let trailing = self.trailing_width(ui);
                     let response = ui.add(
                         TextEdit::singleline(self.value)
+                            .id(id.with("field"))
                             .frame(egui::Frame::new())
-                            .margin(Margin::ZERO)
+                            .margin(Margin::symmetric(0, 4))
                             .hint_text(self.hint)
                             .text_color(p.text_0)
-                            .desired_width(ui.available_width() - key_room),
+                            .font(FontId::new(13.0, FontFamily::Proportional))
+                            .desired_width((ui.available_width() - trailing).max(24.0)),
                     );
                     name(ui, &response, self.name);
                     address(ui, &response, self.author_id);
-                    if let Some(key) = self.key {
+                    let mut cleared = false;
+                    if let Some((label, author_id)) = self.clear
+                        && !self.value.is_empty()
+                    {
+                        cleared = super::IconButton::new(Icon::X, label, author_id)
+                            .show(ui)
+                            .clicked();
+                    }
+                    if let Some(matched) = self.matched {
+                        let galley = super::text(
+                            ui,
+                            matched,
+                            11.0,
+                            400.0,
+                            FontFamily::Proportional,
+                            p.text_2,
+                        );
+                        let (rect, count) = ui.allocate_exact_size(galley.size(), Sense::hover());
+                        count.widget_info(|| WidgetInfo::labeled(Role::Label, true, matched));
+                        address(ui, &count, "search-matched");
+                        ui.painter().galley(rect.min, galley, p.text_2);
+                    } else if let Some(key) = self.key {
                         super::Kbd(key).show(ui);
                     }
-                    response
+                    Searched {
+                        field: response,
+                        cleared,
+                    }
                 })
                 .inner
             })
             .inner
+    }
+
+    /// Room for what follows the field: the cross, then the count or the key.
+    fn trailing_width(&self, ui: &Ui) -> f32 {
+        let gap = ui.spacing().item_spacing.x;
+        let cross = if self.clear.is_some() && !self.value.is_empty() {
+            super::MIN_TARGET + gap
+        } else {
+            0.0
+        };
+        let words = self.matched.or(self.key).unwrap_or_default();
+        let after = if words.is_empty() {
+            0.0
+        } else {
+            super::text(
+                ui,
+                words,
+                11.0,
+                400.0,
+                FontFamily::Monospace,
+                Color32::WHITE,
+            )
+            .size()
+            .x + 12.0
+                + gap
+        };
+        cross + after
     }
 }
 

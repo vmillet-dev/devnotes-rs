@@ -209,7 +209,13 @@ impl eframe::App for DevNotesApp {
                 }
             }
         });
-        if let Some(action) = keys::dispatch(ui.ctx(), &[&keys::APPLICATION]) {
+        let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
+        let levels: &[&[keys::Binding]] = if notes_shown {
+            &[&keys::NOTES, &keys::APPLICATION]
+        } else {
+            &[&keys::APPLICATION]
+        };
+        if let Some(action) = keys::dispatch(ui.ctx(), levels) {
             actions.push(action);
         }
         for action in actions.drain() {

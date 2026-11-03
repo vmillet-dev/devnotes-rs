@@ -164,6 +164,7 @@ impl AppState {
                     self.seeding = Some(api::notes::seed_samples(backend, samples));
                 }
                 self.spaces.restore(&preferences);
+                self.notes_query.restore(&preferences);
                 self.library_preferences = preferences;
             }
             Err(error) => self
@@ -214,7 +215,7 @@ impl AppState {
                 self.save_settings(backend);
             }
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
-            Action::Notes(action) => self.apply_notes(action, backend),
+            Action::Notes(action) => self.apply_notes(action, ctx, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
@@ -228,7 +229,12 @@ impl AppState {
         }
     }
 
-    fn apply_notes(&mut self, action: crate::notes::Action, backend: &Backend) {
+    fn apply_notes(
+        &mut self,
+        action: crate::notes::Action,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
         match action {
             crate::notes::Action::Reload => self.revision.bump(),
             crate::notes::Action::SetItems { id, items } => {
@@ -268,6 +274,22 @@ impl AppState {
                 self.spaces.recolour_folder(backend, id, colour);
             }
             crate::notes::Action::DeleteFolder(id) => self.spaces.delete_folder(backend, id),
+            crate::notes::Action::Search(typed) => self.notes_query.type_search(ctx, typed),
+            crate::notes::Action::ClearSearch => self.notes_query.clear_search(),
+            crate::notes::Action::SetFilter(filter) => self.notes_query.set_filter(filter),
+            crate::notes::Action::Arrange(arrangement) => {
+                self.notes_query.arrange(arrangement);
+                arrangement.write(&mut self.library_preferences);
+                drop(api::preferences::write_library(
+                    backend,
+                    self.library_preferences.clone(),
+                ));
+            }
+            crate::notes::Action::FocusSearch => {
+                self.notes_view.focus_search = true;
+                // Taken by the next frame, which nothing else may ask for.
+                ctx.request_repaint();
+            }
         }
     }
 

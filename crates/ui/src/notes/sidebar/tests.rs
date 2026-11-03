@@ -1,134 +1,15 @@
 //! The rail over a real core, drawn with the canvas beside it as the area draws them.
 
-use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use engine::folders::model::{Folder, FolderColour, FolderDraft};
-use engine::spaces::model::{Space, SpaceDraft};
+use engine::folders::model::FolderColour;
 
-use crate::action::Actions;
-use crate::backend::Backend;
-use crate::gate::IndexFill;
-use crate::services::preferences::Preferences;
-use crate::state::AppState;
+use crate::notes::bench::{
+    Bench, area, cards, click, click_id, folder, names, remembered, settle, space, spaces_of,
+    type_and_enter,
+};
 use crate::state::spaces::ACTIVE_SPACE_KEY;
 use crate::testing;
-
-struct Bench {
-    backend: Backend,
-    state: AppState,
-    _profile: tempfile::TempDir,
-}
-
-fn area(backend: Backend, profile: tempfile::TempDir) -> Harness<'static, Bench> {
-    let mut state = AppState::new(Preferences::default(), true);
-    state.language = i18n::Language::En;
-    let mut harness = testing::harness()
-        .with_size(vec2(1_100.0, 700.0))
-        .build_ui_state(
-            |ui, bench: &mut Bench| {
-                crate::theme::motion::set_reduced(ui.ctx(), true);
-                let ctx = ui.ctx().clone();
-                bench
-                    .state
-                    .update_library(&ctx, &bench.backend, IndexFill::Ready);
-                let mut actions = Actions::default();
-                let mut view = std::mem::take(&mut bench.state.notes_view);
-                crate::notes::show(ui, &bench.state, &mut view, &mut actions);
-                bench.state.notes_view = view;
-                for action in actions.drain().collect::<Vec<_>>() {
-                    bench.state.apply(action, &ctx, &bench.backend);
-                }
-            },
-            Bench {
-                backend,
-                state,
-                _profile: profile,
-            },
-        );
-    settle(&mut harness);
-    harness
-}
-
-fn settle(harness: &mut Harness<'_, Bench>) {
-    testing::settle(harness, |bench| &bench.backend);
-}
-
-fn space(backend: &Backend, name: &str) -> Space {
-    let draft = SpaceDraft { name: name.into() };
-    engine::db::run_here(backend.engine(), move |engine| {
-        engine::spaces::create_space(engine, draft)
-    })
-    .unwrap()
-}
-
-fn folder(backend: &Backend, space: &Space, parent: Option<&Folder>, name: &str) -> Folder {
-    let draft = FolderDraft {
-        space_id: space.id.clone(),
-        name: name.into(),
-        parent_id: parent.map(|parent| parent.id.clone()),
-    };
-    engine::db::run_here(backend.engine(), move |engine| {
-        engine::folders::create_folder(engine, draft)
-    })
-    .unwrap()
-}
-
-/// The names of the rows wearing `author_id`, top to bottom.
-fn names(harness: &Harness<'_, Bench>, author_id: &str) -> Vec<String> {
-    harness
-        .query_all_by(|node| node.author_id() == Some(author_id))
-        .map(|node| node.accesskit_node().label().unwrap_or_default())
-        .collect()
-}
-
-fn click(harness: &mut Harness<'_, Bench>, author_id: &str, name: &str) {
-    harness
-        .get_by(|node| node.author_id() == Some(author_id) && node.label().as_deref() == Some(name))
-        .click();
-    settle(harness);
-}
-
-fn click_id(harness: &mut Harness<'_, Bench>, author_id: &str) {
-    harness
-        .get_by(|node| node.author_id() == Some(author_id))
-        .click();
-    settle(harness);
-}
-
-/// Into the field that has the focus, then Enter.
-fn type_and_enter(harness: &mut Harness<'_, Bench>, author_id: &str, words: &str) {
-    let field = harness.get_by(|node| node.author_id() == Some(author_id));
-    field.type_text(words);
-    settle(harness);
-    harness.key_press(egui::Key::Enter);
-    settle(harness);
-}
-
-fn cards(harness: &Harness<'_, Bench>) -> usize {
-    harness
-        .query_all_by(|node| node.author_id() == Some("note-card"))
-        .count()
-}
-
-fn spaces_of(harness: &Harness<'_, Bench>) -> Vec<Space> {
-    engine::db::run_here(
-        harness.state().backend.engine(),
-        engine::spaces::list_spaces,
-    )
-    .unwrap()
-}
-
-fn remembered(harness: &Harness<'_, Bench>, key: &str) -> Option<String> {
-    let directory = engine::db::run_here(
-        harness.state().backend.engine(),
-        engine::libraries::open_library_directory,
-    )
-    .unwrap();
-    Preferences::read(&directory.join(engine::layout::PREFERENCES))
-        .get(key)
-        .map(str::to_owned)
-}
 
 #[test]
 fn spaces_and_their_folders_are_a_tree() {

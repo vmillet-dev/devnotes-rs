@@ -51,7 +51,7 @@ pub fn menu<'a>(anchor: &Response, items: &'a [MenuItem<'a>]) -> Option<&'a str>
 }
 
 /// The surface a menu is drawn on: `bg-2`, 8 px, 4 px inside, the dropdown's shadow.
-fn frame(ctx: &egui::Context) -> egui::Frame {
+pub fn frame(ctx: &egui::Context) -> egui::Frame {
     let p = palette(ctx);
     egui::Frame::new()
         .fill(p.bg_2)

@@ -38,6 +38,15 @@ pub static APPLICATION: [Binding; 3] = [
     area(Key::Num3, Area::Http),
 ];
 
+/// The notes area's, read while it is on screen.
+pub static NOTES: [Binding; 1] = [Binding {
+    key: Key::K,
+    modifiers: Modifiers::COMMAND,
+    read: Read::Character,
+    while_typing: true,
+    action: Action::Notes(crate::notes::Action::FocusSearch),
+}];
+
 const fn area(key: Key, area: Area) -> Binding {
     Binding {
         key,
