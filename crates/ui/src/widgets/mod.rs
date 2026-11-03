@@ -5,12 +5,22 @@
 
 mod badge;
 mod button;
+mod dialog;
 mod field;
+mod layout;
+mod list;
+mod menu;
+mod release_notes;
 mod segmented;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, RailToggle, SplitButton};
+pub use dialog::{DialogStack, Layer, dialog};
 pub use field::{Checkbox, SearchField, TextField};
+pub use layout::{rail_frame, split_handle, tooltip};
+pub use list::{code_viewer, virtual_list};
+pub use menu::{ChoiceMenu, FILTER_FROM, MenuItem, Naming, menu};
+pub use release_notes::release_notes;
 pub use segmented::Segmented;
 
 use std::sync::Arc;
