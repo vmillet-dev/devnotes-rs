@@ -4283,8 +4283,9 @@ not look alike would read as three unrelated windows.
 
 ### The first launch
 
-A brand-new installation opens on **sample notes**, in a space of their own
-(`SampleNotesService`, `core/state/`). This is not decoration: a virgin database has
+A brand-new library opens on **sample notes**, in a space of their own
+(`ui::services::samples`, seeded from `AppState` once the library's preferences are read). This
+is not decoration: a virgin database has
 no space, and creating a note with nowhere to file it is refused on purpose — so without them
 the first screen is empty, silent, and offers a "+ Nouvelle note" button that does nothing.
 
@@ -4300,19 +4301,23 @@ ordinary notes: editing or trashing them is the point, and the written guide beh
 user-facing string ever comes out of the back end: it would ship French into an English
 interface. It also means the samples arrive in the language the application starts in. The two
 snippet bodies are the exception and are hard-coded in the service — they are _code_ and
-_data_, so they are not translated, and the fields could not be: Transloco reads `{{name}}` as
-an interpolation and would replace a snippet's fields with empty strings on the way out.
+_data_, so they are not translated, and the fields could not be: a translation reads `{{name}}`
+as one of its parameters and would replace a snippet's fields with empty strings on the way out.
 
 ⚠️ **Two guards decide a first launch, not one.** A preference marker
 (`devnotes.notes.samplesSeeded`) alone would re-seed anyone whose preferences file went missing;
 "no space at all" alone would re-seed the day the last space disappears. Together they only ever
-match a database that has never been written to. The marker is written **after** the seeding,
+match a database that has never been written to: the marker is read with the library's
+preferences, and the space is counted on the db queue just before `seed_samples`, in the same
+job. Nothing reads notes meanwhile, so the canvas never shows the empty library first. The marker
+is written **after** the seeding,
 because the seeding is one write: `seed_samples` creates the space and its notes in a
 single transaction, so there is no halfway. ⚠️ It used to be six round trips, and a process
 killed between any two left a space standing with nothing in it — which both guards then read
-as "already seeded", leaving that install with an empty canvas for good. An installation that
-predates the samples is marked as skipped so the check stops running on every launch. A failure is silent: the canvas reports its own, and a second banner
-about samples nobody asked for would only add noise.
+as "already seeded", leaving that install with an empty canvas for good. A library that has a
+space and no marker is marked as skipped, so the check stops running on every open. A failure is
+silent (a line in the log): the canvas reports its own, and a second banner about samples nobody
+asked for would only add noise.
 
 ### Import, export and copying out
 
