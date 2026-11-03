@@ -129,7 +129,8 @@ impl From<f64> for Value {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Message {
     pub key: Key,
-    pub params: Vec<(&'static str, Value)>,
+    /// Named by the template's `{{name}}`s; an error from the core brings its own names.
+    pub params: Vec<(String, Value)>,
 }
 
 impl Message {
@@ -141,13 +142,18 @@ impl Message {
     }
 
     #[must_use]
-    pub fn with(mut self, name: &'static str, value: impl Into<Value>) -> Self {
-        self.params.push((name, value.into()));
+    pub fn with(mut self, name: impl Into<String>, value: impl Into<Value>) -> Self {
+        self.params.push((name.into(), value.into()));
         self
     }
 
     pub fn text(&self, language: Language) -> String {
-        translate(language, self.key, &self.params)
+        let params: Vec<(&str, Value)> = self
+            .params
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.clone()))
+            .collect();
+        translate(language, self.key, &params)
     }
 }
 

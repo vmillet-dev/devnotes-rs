@@ -68,3 +68,11 @@ pub fn delete_library(engine: &Engine, id: String) -> Result<(), AppError> {
 
     Ok(delete_in(profile, &id)?)
 }
+
+/// Where the open, unlocked library lives: its own `preferences.json` sits there. `Locked`
+/// while none is.
+pub fn open_library_directory(engine: &Engine) -> Result<PathBuf, AppError> {
+    let library = crate::db::lock(&engine.db)?;
+
+    Ok(library.directory().to_path_buf())
+}

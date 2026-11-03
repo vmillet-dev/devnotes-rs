@@ -7,6 +7,7 @@ mod app;
 pub mod backend;
 pub mod inputs;
 pub mod keys;
+pub mod services;
 pub mod state;
 #[cfg(test)]
 mod testing;

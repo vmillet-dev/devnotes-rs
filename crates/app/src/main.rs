@@ -72,6 +72,9 @@ fn hand_over(profile: &Path, action: Option<String>) -> ExitCode {
 
 fn run(locations: Locations, instance: Instance) -> eframe::Result {
     let restored = platform::window::read(&locations.window);
+    let preferences = ui::services::preferences::Preferences::read(
+        &locations.profile.join(engine::layout::PREFERENCES),
+    );
     let (inbox, waker, inputs) = ui::inputs::channel();
     let heard = inbox.clone();
     if let Err(error) =
@@ -87,6 +90,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
         window_file: locations.window,
         geometry: restored,
         reduced_motion: platform::motion::system_prefers_reduced(),
+        preferences,
         inbox,
         waker,
         inputs,

@@ -5308,15 +5308,18 @@ dependencies = [
 name = "ui"
 version = "0.18.0"
 dependencies = [
+ "chrono",
  "crossbeam-channel",
  "eframe",
  "egui",
  "egui_kittest",
  "engine",
+ "i18n",
  "log",
  "platform",
  "rayon",
  "resvg",
+ "serde_json",
  "tempfile",
  "tokio",
  "zeroize",
