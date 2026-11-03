@@ -1,6 +1,7 @@
 //! A note's card: a fixed 150 px, its title and kind on top, what the note holds by its kind,
 //! and the footer at the bottom (`note-card` in the reference).
 
+mod actions;
 mod body;
 mod footer;
 
@@ -26,6 +27,8 @@ pub(super) struct Context<'a> {
     pub(super) language: i18n::Language,
     pub(super) clock: &'a dyn Clock,
     pub(super) thumbnails: &'a Thumbnails,
+    /// The spaces and folders a note can be filed into or moved to.
+    pub(super) library: &'a crate::state::spaces::SpacesState,
 }
 
 const FOOTER_HEIGHT: f32 = 18.0;
@@ -86,6 +89,7 @@ pub(super) fn show(
     );
     body::show(ui, room, note, context, actions);
     footer::show(ui, footer, note, context);
+    actions::show(ui, rect, note, context, actions);
 }
 
 /// The title on two lines at most, the kind's badge on its first line. Answers where it ends.

@@ -4682,6 +4682,13 @@ carries a title or a body, then the note is created once — what is left while 
 in flight waits for its id and is sent after — in the space shown (the first one for « all
 spaces ») and the folder shown.
 
+Under the pointer a card shows its pill over its bottom edge (`canvas::card::actions`): copy (the
+note read whole by id, then onto the clipboard and said) and the ⋯ of its menu — open, pin,
+priority › (a sub-menu of its own, egui keeping one popup in memory), copy, duplicate (opened in
+the editor under « (copy) »), file into a folder of its space, move to another space, delete in
+two clicks. ⚠️ The pill is drawn in the card's layer, after its click surface: in an area above
+it, clicks went through to the card.
+
 The rail can be put away (`library-rail-toggle`, the application setting `showLibraryRail`): the
 space and folder switchers then take its place in the header, their rows' ⋯ opening the same
 panels as the rail (`notes::panel`, shared). While a folder is open, its breadcrumb replaces

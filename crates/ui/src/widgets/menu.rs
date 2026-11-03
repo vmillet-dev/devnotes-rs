@@ -130,7 +130,7 @@ fn arrows(ui: &Ui, ids: &[Id]) {
 }
 
 /// An entry: 5 × 8, 6 px, 12 px; `bg-3` under the pointer; amber when it is the value.
-fn entry(
+pub fn entry(
     ui: &mut Ui,
     label: &str,
     author_id: &str,

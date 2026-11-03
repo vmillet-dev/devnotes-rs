@@ -44,3 +44,8 @@ pub fn delete(backend: &Backend, id: String) -> Pending<()> {
 pub fn sort_key(name: &str) -> String {
     engine::notes::view::fold(name)
 }
+
+/// Into `folder`, or out of every folder for `None`.
+pub fn file(backend: &Backend, ids: Vec<String>, folder: Option<String>) -> Pending<()> {
+    backend.db(move |engine| folders::file_notes(engine, ids, folder).map(drop))
+}

@@ -60,6 +60,7 @@ pub fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         language,
         clock: state.clock.as_ref(),
         thumbnails: &state.caches.thumbnails,
+        library: &state.spaces,
     };
     sections(ui, view, &context, actions);
 }
