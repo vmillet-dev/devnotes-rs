@@ -25,7 +25,8 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "bindings": "cargo run -p devnotes --features bindings --bin export-bindings",
-    "icons": "node scripts/icons.mjs"
+    "icons": "node scripts/icons.mjs",
+    "golden": "node scripts/golden.mjs"
   },
   "private": true,
   "dependencies": {

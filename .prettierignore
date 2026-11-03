@@ -21,3 +21,6 @@ docs/scratch-folders.html
 .claude/skills/seo
 .claude/skills/core-web-vitals
 .claude/skills/accessibility
+
+# Written by `npm run golden`, byte for byte.
+golden/*/
