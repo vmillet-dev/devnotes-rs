@@ -28,6 +28,7 @@ yarn-error.log
 /connect.lock
 /coverage
 /e2e/logs
+/e2e/reference-captures
 /libpeerconnection.log
 testem.log
 /typings

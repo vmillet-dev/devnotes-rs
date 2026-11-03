@@ -14,6 +14,11 @@ on:
         description: The groups of `e2e/groups.json`, as a JSON array of name and specs.
         required: true
         type: string
+      capture:
+        description: Also capture the visual reference (`e2e/reference/`), on Windows only.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -181,3 +186,43 @@ jobs:
           retention-days: 7
 
       - *stop-the-run
+
+  # The visual reference of the Angular application: one PNG a screen, for the eye (egui
+  # migration plan, § 5.2). Inactive unless a pull request wears `reference-capture`; WebView2
+  # alone, as the reference is one engine. What it could not reach is in `missed.json`.
+  reference:
+    name: Visual reference
+    needs: build
+    if: inputs.capture && inputs.os == 'windows-latest'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: e2e-app-${{ inputs.os }}
+          path: target/debug
+
+      - name: Capture the screens
+        run: E2E_CAPTURE=1 npm run test:e2e
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: visual-reference-${{ github.run_attempt }}
+          path: |
+            e2e/reference-captures
+            e2e/logs
+          if-no-files-found: ignore
+          retention-days: 90
