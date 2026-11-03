@@ -66,10 +66,16 @@ fn band(ui: &mut Ui, message: &Message, language: Language, band: Band) -> bool 
                 }
                 let dismiss_room = 34.0;
                 let text = egui::RichText::new(&said).size(12.5).color(p.text_0);
-                let words = ui.add_sized(
-                    Vec2::new(ui.available_width() - dismiss_room, 18.0),
-                    egui::Label::new(text).wrap(),
-                );
+                let words = ui
+                    .allocate_ui_with_layout(
+                        Vec2::new(ui.available_width() - dismiss_room, 18.0),
+                        egui::Layout::left_to_right(egui::Align::Center),
+                        |ui| {
+                            ui.set_width(ui.available_width());
+                            ui.add(egui::Label::new(text).wrap())
+                        },
+                    )
+                    .inner;
                 let label = i18n::translate(language, keys::errors::DISMISS, &[]);
                 let close = widgets::interact(
                     ui,

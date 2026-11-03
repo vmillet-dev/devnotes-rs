@@ -168,7 +168,7 @@ impl eframe::App for DevNotesApp {
         if let Some(notice) = self.state.errors.notice() {
             let notice = notice.clone();
             egui::Panel::top("error-banner")
-                .frame(egui::Frame::NONE)
+                .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
                 .show(ui, |ui| {
                     if banners::error_banner(ui, &notice, language) {
                         actions.push(Action::App(AppAction::DismissError));
@@ -178,7 +178,7 @@ impl eframe::App for DevNotesApp {
         if let Some((_, status)) = self.state.status.latest() {
             let status = status.clone();
             egui::Panel::top("status-toast")
-                .frame(egui::Frame::NONE)
+                .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
                 .show(ui, |ui| {
                     if banners::status_toast(ui, &status, language) {
                         actions.push(Action::App(AppAction::DismissStatus));
