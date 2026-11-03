@@ -9,7 +9,6 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::model::{Folder, FolderColour, Lineage, Seat};
 use crate::count::saturating_u32;
@@ -45,14 +44,13 @@ pub const LOOSE_COLUMNS: usize = 4;
 /// Added to [`default_zone_width`] only, never taken off a count; generous on purpose.
 pub const SCROLLBAR: i32 = 18;
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardQuery {
     /// Required, unlike `NotesQuery::space_id`: a board across every space has no zones.
     pub space_id: String,
     /// The folder whose board this is, `None` for the space's: its sub-folders are the zones.
     #[serde(default)]
-    #[specta(optional)]
     pub root_id: Option<String>,
     pub search: String,
     pub filter: NoteFilter,
@@ -115,7 +113,7 @@ pub struct ZoneContents {
     pub nested: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardFrame {
     pub x: i32,
@@ -124,7 +122,7 @@ pub struct BoardFrame {
     pub height: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardPoint {
     pub x: i32,
@@ -132,7 +130,7 @@ pub struct BoardPoint {
 }
 
 /// `flatten`: the front end draws this with the same card component the canvas uses.
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardNote {
     #[serde(flatten)]
@@ -145,7 +143,7 @@ pub struct BoardNote {
 }
 
 /// A sub-folder named under a zone's title, opened by a click: the board draws one level.
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardChild {
     pub id: String,
@@ -155,7 +153,7 @@ pub struct BoardChild {
     pub count: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardZone {
     pub folder: Folder,
@@ -165,7 +163,7 @@ pub struct BoardZone {
     pub children: Vec<BoardChild>,
 }
 
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardView {
     pub zones: Vec<BoardZone>,
@@ -207,7 +205,7 @@ impl BoardView {
 }
 
 /// One zone that moved. A batch of these is what a gesture eventually writes.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZonePlacement {
     pub folder_id: String,
@@ -216,7 +214,7 @@ pub struct ZonePlacement {
 
 /// One loose card that moved. Filing is not here: it goes through `file_notes`, whose answer
 /// the undo puts back. A position has no undo of its own.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CardPlacement {
     pub note_id: String,
@@ -612,7 +610,7 @@ pub fn build<S: std::hash::BuildHasher>(
 
 /// A whole board's geometry: every zone's frame and every loose card's place. What a tidy-up
 /// writes, and, read back first, what its undo puts back.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardLayout {
     pub zones: Vec<ZonePlacement>,
@@ -623,7 +621,7 @@ pub struct BoardLayout {
 ///
 /// Two scopes rather than one with a warning: what goes to pieces is the loose cards, and a
 /// zone placed and sized by hand is the only manual work the board holds.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum BoardScope {
     /// The loose cards alone, flowed under the zones as they stand.
@@ -634,7 +632,7 @@ pub enum BoardScope {
 }
 
 /// What a tidy-up did, and what it takes to walk it back.
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardArrangement {
     /// What actually moved: a board already in order moves nothing, and opens no undo.

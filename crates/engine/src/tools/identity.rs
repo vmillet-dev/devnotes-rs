@@ -16,7 +16,6 @@ use std::path::Path;
 
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use self::data::{Land, Library, Place};
 pub use self::data::{ListProblem, UnreadableList};
@@ -101,7 +100,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IdentityRequest {
     pub country: Country,
@@ -114,14 +113,14 @@ pub struct IdentityRequest {
     pub seed: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Identifier {
     pub kind: IdentifierKind,
     pub value: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Birth {
     /// `YYYY-MM-DD`.
@@ -130,7 +129,7 @@ pub struct Birth {
     pub region: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Address {
     /// The number and the street, in the order the country writes them.
@@ -142,7 +141,7 @@ pub struct Address {
     pub formatted: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Bank {
     pub name: String,
@@ -153,7 +152,7 @@ pub struct Bank {
     pub local: Vec<Identifier>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Company {
     pub name: String,
@@ -162,7 +161,7 @@ pub struct Company {
 
 /// ⚠️ These names are what « Copier en JSON » and an export write: renaming one breaks whoever
 /// reads the files.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Identity {
     pub country: Country,
@@ -181,7 +180,7 @@ pub struct Identity {
     pub company: Company,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IdentityAnswer {
     /// The seed that was used: the one given, or the one drawn.
@@ -221,7 +220,7 @@ impl CsvSeparator {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum PeopleExport {
     Written {
@@ -237,7 +236,7 @@ pub enum PeopleExport {
 }
 
 /// A person, or the list that kept one from being drawn.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum IdentityOutcome {
     Drawn { answer: Box<IdentityAnswer> },
@@ -549,7 +548,7 @@ fn exported(
 }
 
 /// What a batch is made of, beside the person asked for.
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PeopleBatch {
     /// The countries that take their turn after the request's own; none is that one alone.

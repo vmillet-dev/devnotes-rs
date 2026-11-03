@@ -3,14 +3,13 @@
 
 use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::numbers::{self, NumberProblem};
 use crate::count::saturating_u32;
 
 pub const MAX_DECIMALS: u32 = 12;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SizeUnit {
     Bit,
@@ -116,7 +115,7 @@ impl SizeUnit {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SizesRequest {
     /// A number, with its unit or without one.
@@ -127,7 +126,7 @@ pub struct SizesRequest {
     pub decimals: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SizeRow {
     pub unit: SizeUnit,
@@ -136,7 +135,7 @@ pub struct SizeRow {
 }
 
 /// What one decimal unit is in the binary unit of the same rank: `1 GB = 0.931 GiB`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SizeGap {
     pub decimal: SizeUnit,
@@ -145,7 +144,7 @@ pub struct SizeGap {
     pub rounded: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

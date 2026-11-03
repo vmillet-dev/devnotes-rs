@@ -7,7 +7,6 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use similar::{ChangeTag, DiffTag, TextDiff};
-use specta::Type;
 
 use super::kind::NoteKind;
 use super::model::Note;
@@ -34,7 +33,7 @@ pub(crate) fn worth_keeping(before: &Note, after: &Note) -> bool {
 ///
 /// Metadata only: twenty bodies across the bridge to draw twenty dates would be the whole
 /// history.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Revision {
     pub id: String,
@@ -52,7 +51,7 @@ pub(crate) fn describe(id: String, taken_at: DateTime<Utc>, content: &str) -> Re
 }
 
 /// One line of a kept body, compared with the text restoring it would replace.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DiffLine {
     /// In both: restoring leaves it where it is.

@@ -5,14 +5,13 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::error::ValidationError;
 
 /// The two pictures the front takes of a drawing when it saves it, as PNG data URIs: a small
 /// one for its card, a large one for a Note that embeds it. Both empty: the drawing was emptied,
 /// and has no picture any more.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawingPictures {
     pub thumbnail: String,
@@ -20,7 +19,7 @@ pub struct DrawingPictures {
 }
 
 /// A drawing a Note can embed: what its menu names it by.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawingRef {
     pub id: String,

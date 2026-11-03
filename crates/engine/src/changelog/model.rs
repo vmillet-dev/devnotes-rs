@@ -3,9 +3,8 @@
 //! one above. Reshaping the file past that empties "Nouveautés".
 
 use serde::Serialize;
-use specta::Type;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangelogRelease {
     /// `0.1.1`, or whatever the heading names. Square brackets are dropped.
@@ -16,7 +15,7 @@ pub struct ChangelogRelease {
 }
 
 /// One `### ` heading, or the anonymous one a release with no category gets.       
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangelogSection {
     /// Empty for that anonymous category: the front then renders no heading.
@@ -30,7 +29,7 @@ pub struct ChangelogSection {
 /// spans, so nothing has to be trusted, sanitised or handed to `innerHTML`.
 pub type ChangelogEntry = Vec<ChangelogSpan>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SpanKind {
     Plain,
@@ -38,7 +37,7 @@ pub enum SpanKind {
     Code,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangelogSpan {
     pub kind: SpanKind,

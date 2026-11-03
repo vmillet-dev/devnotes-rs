@@ -2,12 +2,11 @@
 //! format is a reader that answers a `Node` whose spans are UTF-16 offsets into its own text.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::parse::{JsonError, Node, parse};
 use super::{toml, xml, yaml};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StructureFormat {
     Json,
@@ -17,7 +16,7 @@ pub enum StructureFormat {
 }
 
 /// What the tree leaves out of the text, said rather than hidden.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum JsonNotice {
     /// A stream of several YAML documents: the first one is explored.

@@ -13,7 +13,6 @@ use std::collections::HashMap;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::Serialize;
-use specta::Type;
 
 use eval::{Context, Notation, Parser, Quantity, Shown, Value};
 use lexer::{Tok, Token};
@@ -21,7 +20,7 @@ use units::{Css, Dim, Dimension, UnitId};
 use words::CalcWord;
 
 /// One unit, or one over another: `€/h`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalcUnit {
     pub unit: UnitId,
@@ -29,7 +28,7 @@ pub struct CalcUnit {
 }
 
 /// Exact decimals as text: a float would round them before the front decides how to.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -75,7 +74,7 @@ pub enum CalcValue {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpanPart {
     pub value: String,
@@ -83,7 +82,7 @@ pub struct SpanPart {
 }
 
 /// Why a line has no result. It stays on its line: the others go on computing.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -134,7 +133,7 @@ pub enum CalcError {
     Unsupported,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -164,7 +163,7 @@ pub enum CalcLine {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TokenKind {
     Number,
@@ -179,7 +178,7 @@ pub enum TokenKind {
 }
 
 /// What the editor colours, in UTF-16 units from the start of the line.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalcSpan {
     pub start: u32,
@@ -187,7 +186,7 @@ pub struct CalcSpan {
     pub kind: TokenKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalcRow {
     pub line: CalcLine,
@@ -198,7 +197,7 @@ pub struct CalcRow {
 
 /// A name, the line it was given on, its value there and the lines that read it before it
 /// was given another. Zero-based lines.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalcVariable {
     pub name: String,
@@ -207,7 +206,7 @@ pub struct CalcVariable {
     pub uses: Vec<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalcSheet {
     pub rows: Vec<CalcRow>,
@@ -215,7 +214,7 @@ pub struct CalcSheet {
 }
 
 /// One of the last lines a card shows: what was written, and what it gave.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalcCardLine {
     pub expression: String,

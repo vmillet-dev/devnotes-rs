@@ -6,7 +6,6 @@ use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use qrcode::bits::Bits;
 use qrcode::{Color, EcLevel, QrCode, Version};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::files::{self, FileProblem};
 use crate::count::saturating_u32;
@@ -24,7 +23,7 @@ const MAILTO: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'.')
     .remove(b'~');
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum QrCorrection {
     Low,
@@ -54,7 +53,7 @@ impl QrCorrection {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WifiSecurity {
     Wpa,
@@ -62,7 +61,7 @@ pub enum WifiSecurity {
     Open,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -94,7 +93,7 @@ pub enum QrContent {
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QrRequest {
     pub content: QrContent,
@@ -102,7 +101,7 @@ pub struct QrRequest {
     pub margin: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -130,14 +129,14 @@ pub enum QrAnswer {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum QrFormat {
     Svg,
     Png,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

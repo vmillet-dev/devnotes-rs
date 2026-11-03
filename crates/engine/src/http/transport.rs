@@ -2,12 +2,11 @@
 //! A collection and a folder set defaults; a request overrides them, field by field.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::settings::HttpOrigin;
 
 /// Each field unset inherits: from the folder above, the collection, then `Transport::default`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct TransportSettings {
     pub timeout_ms: Option<u32>,
@@ -19,7 +18,7 @@ pub struct TransportSettings {
 }
 
 /// The settings resolved, every field decided.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Transport {
     pub timeout_ms: u32,

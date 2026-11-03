@@ -9,6 +9,4 @@ all-features = true
 [advisories]
 unmaintained = "workspace"
 unsound = "all"
-ignore = [
-    { id = "RUSTSEC-2024-0429", reason = "glib 0.18 is pinned by Tauri's gtk-rs 0.18 and unreachable from our code; drop this when Tauri moves to gtk-rs 0.20+" },
-]
+ignore = []

@@ -3,12 +3,11 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
-use specta::Type;
 
 use super::response::pretty_json;
 use crate::json::parse::JsonError;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct GraphqlDocument {
     pub query: String,
@@ -20,7 +19,7 @@ pub struct GraphqlDocument {
     pub as_get: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphqlAnswer {
     /// The named operations, in the order written.
@@ -35,7 +34,7 @@ pub struct GraphqlAnswer {
     pub unknown: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum QueryFault {
     UnclosedBrace,
@@ -47,7 +46,7 @@ pub enum QueryFault {
 }
 
 /// Where a query stops reading: the sign at fault, by its line and column from 1.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryProblem {
     pub fault: QueryFault,
@@ -75,7 +74,7 @@ struct Scanned {
     problem: Option<QueryProblem>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphqlError {
     pub message: String,
@@ -85,7 +84,7 @@ pub struct GraphqlError {
     pub location: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GraphqlResult {
     /// `data` laid out, its numbers as they came; `None` when the answer had none.

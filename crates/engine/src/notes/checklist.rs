@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 /// No identifier: the position is the identity — `note_items` is keyed on
 /// `(note_id, position)`, and a write rewrites the whole list.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChecklistItem {
     pub text: String,

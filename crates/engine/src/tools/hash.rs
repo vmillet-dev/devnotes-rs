@@ -9,14 +9,13 @@ use base64::engine::general_purpose::{STANDARD, STANDARD_NO_PAD};
 use hmac::{KeyInit, Mac, SimpleHmac};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
-use specta::Type;
 use zeroize::Zeroize;
 
 use super::files::{self, FileProblem};
 use crate::count::saturating_u32;
 
 /// In the order the tool lists them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum HashAlgorithm {
     #[serde(rename = "md5")]
     Md5,
@@ -57,14 +56,14 @@ impl HashAlgorithm {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DigestEncoding {
     Hex,
     Base64,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum HashInput {
     Text {
@@ -76,7 +75,7 @@ pub enum HashInput {
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HashRequest {
     /// `None` to read a pasted digest's shape alone.
@@ -89,7 +88,7 @@ pub struct HashRequest {
     pub expected: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DigestValue {
     pub algorithm: HashAlgorithm,
@@ -98,7 +97,7 @@ pub struct DigestValue {
 }
 
 /// What a digest is from its length alone: an HMAC has the shape of the hash it uses.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DigestShape {
     Hex {
@@ -114,7 +113,7 @@ pub enum DigestShape {
     Unknown,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DigestVerdict {
     Matches {
@@ -126,7 +125,7 @@ pub enum DigestVerdict {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

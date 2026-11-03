@@ -13,7 +13,6 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use serde::Serialize;
-use specta::Type;
 
 use super::Country;
 use crate::closed_enum::closed_enum;
@@ -33,7 +32,7 @@ closed_enum! {
 }
 
 /// A list that could not be used: which one, and where it was looked for.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UnreadableList {
     pub problem: ListProblem,

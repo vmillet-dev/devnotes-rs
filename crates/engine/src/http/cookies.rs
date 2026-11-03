@@ -5,12 +5,11 @@ pub mod store;
 
 use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 use url::{Host, Url};
 
 use super::model::KeyValue;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JarCookie {
     pub name: String,

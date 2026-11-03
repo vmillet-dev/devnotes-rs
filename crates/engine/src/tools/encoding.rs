@@ -2,7 +2,6 @@
 
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::count::saturating_u32;
 
@@ -32,7 +31,7 @@ const WHOLE: &AsciiSet = &COMPONENT
     .remove(b')')
     .remove(b'#');
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum UrlScope {
     /// One value of a query or of a path: its `/`, `?` and `&` are escaped too.
@@ -41,14 +40,14 @@ pub enum UrlScope {
     Whole,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CodecDirection {
     Encode,
     Decode,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UrlCodecRequest {
     pub text: String,
@@ -56,7 +55,7 @@ pub struct UrlCodecRequest {
     pub scope: UrlScope,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum UrlCodecAnswer {
     Done {

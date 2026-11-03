@@ -8,7 +8,6 @@ use chrono::{DateTime, Datelike, Days, LocalResult, NaiveDate, NaiveTime, TimeZo
 use chrono_tz::Tz;
 use croner::parser::{CronParser, Seconds, Year};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::dates::{self, Parsed, Refusal};
 use crate::count::saturating_u32;
@@ -27,7 +26,7 @@ const MONTHS: [&str; 12] = [
 ];
 const DAYS: [&str; 7] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CronField {
     Second,
@@ -63,7 +62,7 @@ impl CronField {
 }
 
 /// One item of a field's list. A day of the week is 0 (Sunday) to 7 (Sunday again).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -104,7 +103,7 @@ pub enum Piece {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FieldReading {
     pub field: CronField,
@@ -115,7 +114,7 @@ pub struct FieldReading {
     pub pieces: Vec<Piece>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CronProblem {
     Empty,
@@ -132,7 +131,7 @@ pub enum CronProblem {
     Refused,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Run {
     pub date: String,
@@ -143,7 +142,7 @@ pub struct Run {
     pub epoch_milliseconds: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -164,7 +163,7 @@ pub enum CronCheck {
     Skipped,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WindowEnd {
     From,
@@ -174,7 +173,7 @@ pub enum WindowEnd {
 /// The runs between two moments: « will this run on Friday afternoon? ».
 // One answer is built a request and sent: nothing stores these for a `Box` to make smaller.
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -206,7 +205,7 @@ pub enum CronWindow {
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CronRequest {
     pub expression: String,
@@ -223,7 +222,7 @@ pub struct CronRequest {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

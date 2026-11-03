@@ -8,7 +8,6 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use hmac::{KeyInit, Mac, SimpleHmac};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use specta::Type;
 use zeroize::Zeroize;
 
 use crate::count::saturating_u32;
@@ -22,7 +21,7 @@ const BASE64URL: GeneralPurpose = GeneralPurpose::new(
 /// The claims RFC 7519 and `OpenID Connect` write as seconds since the epoch.
 const DATED: [&str; 4] = ["exp", "nbf", "iat", "auth_time"];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Segment {
     Header,
@@ -30,7 +29,7 @@ pub enum Segment {
     Signature,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AlgorithmFamily {
     Hmac,
@@ -57,7 +56,7 @@ impl AlgorithmFamily {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DatedClaim {
     pub name: String,
@@ -66,7 +65,7 @@ pub struct DatedClaim {
     pub epoch_milliseconds: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TokenState {
     Valid,
@@ -76,7 +75,7 @@ pub enum TokenState {
     Undated,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Verification {
     /// No secret typed.
@@ -90,7 +89,7 @@ pub enum Verification {
     UnreadableSecret,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum JwtProblem {
     /// Not three segments; five is an encrypted token (JWE), not decoded here.
@@ -101,7 +100,7 @@ pub enum JwtProblem {
     NotObject,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JwtRequest {
     pub token: String,
@@ -110,7 +109,7 @@ pub struct JwtRequest {
     pub secret_is_base64: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

@@ -3,7 +3,6 @@
 use std::collections::{BTreeSet, VecDeque};
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::parse::{JsonError, Node, Span, Value};
 use super::read::{JsonNotice, StructureFormat, read};
@@ -28,7 +27,7 @@ const NODE_GAP: u32 = 1;
 const MIN_WIDTH: u32 = 16;
 const MAX_WIDTH: u32 = 48;
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum JsonOpening {
     /// Whole when small, its first level otherwise.
@@ -40,12 +39,11 @@ pub enum JsonOpening {
     Paths {
         paths: Vec<String>,
         #[serde(default)]
-        #[specta(optional)]
         reveal: Option<String>,
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonQuery {
     pub text: String,
@@ -54,7 +52,7 @@ pub struct JsonQuery {
     pub opening: JsonOpening,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum JsonKind {
     Object,
@@ -66,7 +64,7 @@ pub enum JsonKind {
     Datetime,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonRow {
     /// `id`, or `[0]` in an array.
@@ -87,7 +85,7 @@ pub struct JsonRow {
     pub hit: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonNode {
     pub id: u32,
@@ -110,7 +108,7 @@ pub struct JsonNode {
     pub hit: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonGraph {
     pub nodes: Vec<JsonNode>,
@@ -120,7 +118,7 @@ pub struct JsonGraph {
     pub folded: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonLine {
     pub depth: u32,
@@ -136,7 +134,7 @@ pub struct JsonLine {
     pub hit: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonStats {
     pub keys: u32,
@@ -145,7 +143,7 @@ pub struct JsonStats {
     pub bytes: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonView {
     /// `None` is "JSON valide"; the rest is then empty.

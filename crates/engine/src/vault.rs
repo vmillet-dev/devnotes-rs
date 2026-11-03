@@ -10,7 +10,6 @@ pub(crate) mod gate;
 pub mod key;
 
 use serde::Serialize;
-use specta::Type;
 
 use zeroize::{Zeroize, Zeroizing};
 
@@ -30,7 +29,7 @@ pub fn secret<S: Zeroize>(value: S) -> Zeroizing<S> {
 }
 
 /// What the front end renders before it renders anything else.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum VaultState {
     /// A library that has never been encrypted: the first launch asks for a passphrase
@@ -83,7 +82,7 @@ pub fn unlock_vault(engine: &Engine, passphrase: Zeroizing<String>) -> Result<()
 
 /// What a change reached. `backupsLeft` is the honest half: a key file copied somewhere else
 /// still opens with the retired phrase.
-#[derive(Debug, Clone, Copy, Serialize, Type)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PassphraseChange {
     pub backups_rewrapped: u32,

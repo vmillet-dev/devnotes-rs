@@ -1,11 +1,10 @@
 //! The network address written otherwise: as one integer, in full, and in the reverse DNS tree.
 
 use serde::Serialize;
-use specta::Type;
 
 use super::{IpFamily, Net};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -24,7 +23,7 @@ pub enum ReverseDns {
     Classless { zone: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrForms {
     pub integer: String,

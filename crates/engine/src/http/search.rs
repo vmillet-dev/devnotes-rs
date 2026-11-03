@@ -3,7 +3,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use specta::Type;
 
 use super::model::{HttpMethod, RequestKind};
 use crate::notes::view::fold;
@@ -12,7 +11,7 @@ use crate::notes::view::fold;
 pub const MAX_HITS: usize = 8;
 
 /// A request as the palette shows it: its URL as typed, `{{baseUrl}}` and all.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RequestHit {
     pub id: String,

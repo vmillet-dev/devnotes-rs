@@ -7,7 +7,6 @@ use super::transport::TransportSettings;
 use super::websocket::WebsocketDocument;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::closed_enum::closed_enum;
 use crate::error::ValidationError;
@@ -51,7 +50,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum HttpItemKind {
     Collection,
@@ -59,7 +58,7 @@ pub enum HttpItemKind {
     Request,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpItem {
     pub kind: HttpItemKind,
@@ -68,7 +67,7 @@ pub struct HttpItem {
 
 /// What a collection or a folder hands its requests (#478, #484). Each field is
 /// `#[serde(default)]`: one added later needs no migration.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ContainerSettings {
     /// `Inherit` on a collection is no auth at all: nothing is above it.
@@ -80,12 +79,11 @@ pub struct ContainerSettings {
     /// Run around each request under it: before the request's own, and after it.
     pub scripts: RequestScripts,
     /// The order the runner last left: the runner's to write, never the settings dialog's.
-    #[specta(optional)]
     pub run_order: Vec<RunEntry>,
 }
 
 /// A request in a run's order, and whether it runs.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunEntry {
     pub id: String,
@@ -94,7 +92,7 @@ pub struct RunEntry {
 
 /// A value of a JSON answer written into the active environment — the globals with « Aucun » —
 /// after each send: `body.access_token` into `accessToken`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Extraction {
     pub path: String,
@@ -104,7 +102,7 @@ pub struct Extraction {
 
 /// The JavaScript a request, a folder or a collection runs around a send; a blank one runs
 /// nothing.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct RequestScripts {
     /// Before it leaves: it can change the request.
@@ -117,7 +115,7 @@ pub struct RequestScripts {
 
 /// What a request sends as its body. A file is a path, read by Rust when the request is sent:
 /// its bytes never enter the library.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -170,7 +168,7 @@ impl RequestBody {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct FormPart {
     pub enabled: bool,
@@ -193,7 +191,7 @@ impl Default for FormPart {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum KeyPlace {
     #[default]
@@ -202,7 +200,7 @@ pub enum KeyPlace {
 }
 
 /// `Inherit` takes the auth of the nearest folder, then the collection, that sets one.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -228,7 +226,7 @@ pub enum RequestAuth {
 
 /// A request's parts, sealed as one document. Each field is `#[serde(default)]`: one added
 /// later needs no migration, and a document written by an older version still opens.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct RequestDocument {
     pub url: String,
@@ -252,7 +250,7 @@ pub struct RequestDocument {
 }
 
 /// A row of a request's parameters or headers.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct KeyValue {
     pub enabled: bool,
@@ -274,7 +272,7 @@ impl Default for KeyValue {
 }
 
 /// What stops a header from being sent: the editor marks its row by it, a send names it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum HeaderFault {
     Name,
@@ -334,7 +332,7 @@ pub fn headers_from_text(text: &str) -> Vec<KeyValue> {
         .collect()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpCollection {
     pub id: String,
@@ -343,7 +341,7 @@ pub struct HttpCollection {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpFolder {
     pub id: String,
@@ -354,7 +352,7 @@ pub struct HttpFolder {
 }
 
 /// A request as the tree lists it: no document, which is read by id when it opens.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpRequestSummary {
     pub id: String,
@@ -366,7 +364,7 @@ pub struct HttpRequestSummary {
     pub position: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpRequest {
     pub id: String,
@@ -380,7 +378,7 @@ pub struct HttpRequest {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpRequestDraft {
     pub collection_id: String,
@@ -393,29 +391,24 @@ pub struct HttpRequestDraft {
 
 /// What a request's first save creates on its way: the collection to put it in, a folder
 /// under the place it names, or both — the folder then goes in the new collection.
-#[derive(Debug, Clone, Default, Deserialize, Type)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewPlace {
-    #[specta(optional)]
     pub collection: Option<String>,
-    #[specta(optional)]
     pub folder: Option<String>,
 }
 
 /// A field left out is untouched. ⚠️ No `kind`: it is chosen when a request is created, so
 /// there is nothing here to refuse.
-#[derive(Debug, Clone, Default, Deserialize, Type)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpRequestPatch {
-    #[specta(optional)]
     pub name: Option<String>,
-    #[specta(optional)]
     pub method: Option<HttpMethod>,
-    #[specta(optional)]
     pub document: Option<RequestDocument>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -431,7 +424,7 @@ pub enum HttpNode {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpCollectionNode {
     pub collection: HttpCollection,
@@ -439,14 +432,14 @@ pub struct HttpCollectionNode {
 }
 
 /// Built by Rust: the front draws it and never joins a request to its folder itself.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpTree {
     pub collections: Vec<HttpCollectionNode>,
 }
 
 /// What a deletion takes with it, said before it happens.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpContents {
     pub folders: u32,
@@ -454,7 +447,7 @@ pub struct HttpContents {
 }
 
 /// Under which parent, and at which rank among its folders and requests.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpPlace {
     pub collection_id: String,

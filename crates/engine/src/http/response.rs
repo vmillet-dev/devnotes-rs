@@ -2,13 +2,12 @@
 //! module only gathers bytes.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::model::KeyValue;
 use crate::notes::language::Language;
 
 /// A `Set-Cookie`, its attributes named.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Cookie {
     pub name: String,

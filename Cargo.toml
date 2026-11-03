@@ -1,12 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["crates/engine", "src-tauri"]
+members = ["crates/engine"]
 
 [workspace.package]
 version = "0.18.0"
 edition = "2024"
 # The pinned toolchain's (`rust-toolchain.toml`): below it, Cargo's MSRV-aware resolver quietly
-# holds crates back (Tauri 2.12 needs 1.90) while their npm twins move on.
+# holds crates back.
 rust-version = "1.97"
 authors = ["Valentin MILLET"]
 repository = "https://github.com/vmillet-dev/devnotes-rs"

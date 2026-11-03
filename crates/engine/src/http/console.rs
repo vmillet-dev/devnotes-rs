@@ -7,7 +7,6 @@ use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::history;
 use super::model::KeyValue;
@@ -22,7 +21,7 @@ use crate::error::{AppError, ErrorCode};
 pub const HTTP_CONSOLE_EVENT: &str = "http-console";
 
 /// The script a line comes from: its kind, and the request, folder or collection that holds it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConsoleOrigin {
     pub kind: ScriptKind,
@@ -44,7 +43,7 @@ impl ConsoleOrigin {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -94,7 +93,7 @@ pub enum ConsoleLine {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConsoleEvent {
     /// The send it belongs to, under the id the front sent it with.

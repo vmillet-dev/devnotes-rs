@@ -6,13 +6,12 @@ use chrono::{
     SecondsFormat, TimeZone, Utc,
 };
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::count::saturating_u32;
 
 const NANOS_PER_SECOND: i128 = 1_000_000_000;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Magnitude {
     Seconds,
@@ -42,7 +41,7 @@ impl Magnitude {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstantRequest {
     pub text: String,
@@ -50,7 +49,7 @@ pub struct InstantRequest {
     pub magnitude: Option<Magnitude>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ReadAs {
     Unix,
@@ -60,7 +59,7 @@ pub enum ReadAs {
     Rfc2822,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstantForms {
     pub unix_seconds: String,
@@ -83,7 +82,7 @@ pub struct InstantForms {
     pub epoch_milliseconds: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

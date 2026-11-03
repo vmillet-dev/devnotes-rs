@@ -1,11 +1,7 @@
-# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
-
 # Compiled output
 /dist
 /target
 /tmp
-/out-tsc
-/bazel-out
 
 # Node
 /node_modules
@@ -23,15 +19,9 @@ yarn-error.log
 *.sublime-workspace
 
 # Miscellaneous
-/.angular/cache
-.sass-cache/
-/connect.lock
 /coverage
-/e2e/logs
-/e2e/reference-captures
-/libpeerconnection.log
-testem.log
-/typings
+/.angular
+/reference/angular/e2e/logs
 # Claude Code: skills, rules and the shared permissions are versioned, local state is not.
 .claude/*
 !.claude/skills/

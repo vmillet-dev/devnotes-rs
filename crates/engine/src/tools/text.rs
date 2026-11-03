@@ -1,12 +1,11 @@
 //! The Texte panel: the case converter, whose slug is one of its rows, and the line breaks.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::count::saturating_u32;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TextCase {
     Camel,
@@ -26,7 +25,7 @@ pub enum TextCase {
 
 /// What a case is for. The code cases strip accents when asked; the text cases keep them, and
 /// keep the apostrophe that binds an elided word to the next (`l'été`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CaseGroup {
     Code,
@@ -59,7 +58,7 @@ const CASES: [TextCase; 13] = [
     TextCase::Lower,
 ];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TitleLanguage {
     /// Every word capitalised.
@@ -68,7 +67,7 @@ pub enum TitleLanguage {
     French,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CaseRequest {
     pub text: String,
@@ -80,7 +79,7 @@ pub struct CaseRequest {
     pub slug: SlugOptions,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CaseConversion {
     pub case: TextCase,
@@ -88,7 +87,7 @@ pub struct CaseConversion {
     pub value: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CaseAnswer {
     /// Empty for a text without a word.
@@ -321,7 +320,7 @@ pub fn convert_case(request: &CaseRequest) -> CaseAnswer {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SlugSeparator {
     Dash,
@@ -339,7 +338,7 @@ impl SlugSeparator {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SlugOptions {
     pub separator: SlugSeparator,
@@ -371,7 +370,7 @@ fn slugify(text: &str, options: SlugOptions) -> String {
     slug
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LineEnding {
     Lf,
@@ -389,7 +388,7 @@ impl LineEnding {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FinalNewline {
     Keep,
@@ -397,7 +396,7 @@ pub enum FinalNewline {
     Remove,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LineBreaksRequest {
     pub text: String,
@@ -407,7 +406,7 @@ pub struct LineBreaksRequest {
     pub final_newline: FinalNewline,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EndingCounts {
     pub lf: u32,
@@ -428,7 +427,7 @@ impl EndingCounts {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FinalNewlineChange {
     Unchanged,
@@ -436,7 +435,7 @@ pub enum FinalNewlineChange {
     Removed,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LineBreaksAnswer {
     /// In the text as it was given.

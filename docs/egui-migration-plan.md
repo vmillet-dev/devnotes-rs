@@ -55,8 +55,8 @@ bêta, aucune compatibilité promise avec les versions Tauri.
    d'or des bibliothèques JavaScript qui vont disparaître (D25) sont capturés depuis elle.
 2. **Phase 2 et suivantes** : Angular, les e2e WebdriverIO et `src-tauri` quittent `main` ; on y
    construit l'application **egui** (`devnotes`), qui appelle `engine` sans IPC, sans
-   sérialisation, sans WebView. L'application Angular se consulte depuis l'étiquette quand un écran
-   est porté.
+   sérialisation, sans WebView. Les sources Angular et ses scénarios restent, jamais construits,
+   dans `reference/angular/` (et entiers sur l'étiquette) : on les relit quand un écran est porté.
 3. **1.0.0** quand l'application egui atteint la parité fonctionnelle (35 scénarios portés),
    visuelle (toute l'application, même apparence) et de performance (budgets du § 6).
 
@@ -240,7 +240,7 @@ crates/
 ├── ui/                       NOUVEAU : l'application egui (thème, widgets, zones, état)
 └── app/                      NOUVEAU : le binaire `devnotes` (main : hôte de scripts ou eframe)
 src-tauri/                    coquille Tauri mince : phase 1 seulement (filet des e2e), supprimée en P2
-src/ e2e/ angular.json …      front Angular et e2e : supprimés en P2, consultables sur angular-reference
+reference/angular/            sources Angular et e2e WebdriverIO, en lecture seule depuis P2 (jamais construits)
 ```
 
 **Nommage.** Les crates portent un nom court, sans préfixe : le dossier `crates/` et le workspace
@@ -1521,10 +1521,12 @@ Windows de S10) et P11 (S9) ; aucune ne remet en cause une décision prise ici s
 
 ### Phase 2 — Fondations de l'interface (5,5 S)
 
-- **Nettoyage** : retirer de `main` `src/`, `e2e/`, `src-tauri/`, `angular.json`, `tsconfig*`,
+- **Nettoyage** : `src/` et `e2e/` passent dans `reference/angular/`, en lecture seule (décidé le
+  2026-11-03 : relire un composant sans changer de branche) ; retirer de `main` `src-tauri/`,
+  `angular.json`, `tsconfig*`,
   `eslint.config.mjs`, `vitest-base.config.ts`, les dépendances npm de l'application et les crates
   Tauri/specta ; Node ne reste que pour `sandbox/build.mjs` et les scripts de release. `NotesView`
-  passe aux instantanés `Arc` (§ 3.3.3). L'application Angular se consulte depuis
+  passe aux instantanés `Arc` (§ 3.3.3). L'application Angular se lance depuis
   `angular-reference` (`git worktree`).
 - **Binaire** `devnotes` (crate `app`) : `main` lit `--devnotes-script-host` d'abord, puis
   `--profile` (défaut `com.devnotes.app.dev`, D16), puis lance eframe. Crochet de panique (D18),
