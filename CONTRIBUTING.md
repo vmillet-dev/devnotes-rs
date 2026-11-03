@@ -19,8 +19,11 @@ pins — for Prettier, the icons and the release scripts only.
 
 ```bash
 npm install
-cargo build --workspace
+cargo run -p app -- --profile ../devnotes-profile
 ```
+
+`--profile` keeps the run apart from an installed DevNotes: its libraries, logs and window
+geometry all go in that directory.
 
 ## What CI checks
 
