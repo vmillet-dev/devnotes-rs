@@ -543,7 +543,7 @@ fn footer_of(note: &Note) -> NoteFooter {
     }
 }
 
-fn expires_soon(note: &Note, now: DateTime<Utc>) -> bool {
+pub(crate) fn expires_soon(note: &Note, now: DateTime<Utc>) -> bool {
     let NoteLifecycle::Expires { at } = note.lifecycle else {
         return false;
     };

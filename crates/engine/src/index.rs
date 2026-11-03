@@ -17,7 +17,7 @@ use crate::folders::model::NoteFolder;
 use crate::notes::kind::NoteKind;
 use crate::notes::model::Note;
 use crate::notes::store;
-use crate::notes::view::{self, Criteria, Decorations, Facets, Folded, NotesQuery, SearchHit};
+use crate::notes::view::{self, Card, Criteria, Decorations, Facets, Folded, NotesQuery};
 use crate::{Engine, EngineEvent};
 
 /// Notes read and opened per job of the queue.
@@ -27,13 +27,14 @@ const SLICE: i64 = 2_000;
 const SLICE: i64 = 3;
 
 /// A note as the index holds it. Never changed in place: a write replaces the `Arc`.
+#[derive(Debug)]
 pub struct IndexedNote {
     pub note: Note,
     pub folded: Folded,
 }
 
 impl IndexedNote {
-    fn of(note: Note) -> Self {
+    pub(crate) fn of(note: Note) -> Self {
         let folded = Folded::of(&note);
         Self { note, folded }
     }
@@ -270,12 +271,11 @@ impl NoteIndex {
         &self,
         query: &NotesQuery,
         folders: Option<&HashSet<String>>,
-    ) -> (Vec<&IndexedNote>, Facets) {
+    ) -> (Vec<&Arc<IndexedNote>>, Facets) {
         let criteria = Criteria::from(query);
-        let mut kept: Vec<&IndexedNote> = self
+        let mut kept: Vec<&Arc<IndexedNote>> = self
             .notes
             .values()
-            .map(Arc::as_ref)
             .filter(|entry| {
                 let note = &entry.note;
                 query
@@ -345,12 +345,12 @@ impl NoteIndex {
     }
 
     /// What a card carries beside its note, for the whole library.
-    pub(crate) fn decorations(&self) -> Decorations {
-        Decorations {
+    pub(crate) fn decorations(&self) -> Arc<Decorations> {
+        Arc::new(Decorations {
             attachment_counts: self.attachment_counts.clone(),
             folders: self.folders.clone(),
             globals: self.globals.clone(),
-        }
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -370,35 +370,22 @@ impl NoteIndex {
     }
 }
 
-/// The notes among `entries` that answer `needle`, in their order, copied for the view to
-/// cut, and the quotes of those found elsewhere than in their title. Searched in parallel.
-pub(crate) fn search(
-    entries: &[&IndexedNote],
-    needle: &str,
-) -> (Vec<Note>, HashMap<String, SearchHit>) {
+/// The cards of `entries` that answer `needle`, in their order, each with the quote of a match
+/// found elsewhere than in its title. Searched in parallel; nothing is copied.
+pub(crate) fn search(entries: &[&Arc<IndexedNote>], needle: &str) -> Vec<Card> {
+    let card = |entry: &Arc<IndexedNote>, hit| Card {
+        note: Arc::clone(entry),
+        hit,
+    };
     if needle.is_empty() {
-        return (
-            entries.iter().map(|entry| entry.note.clone()).collect(),
-            HashMap::new(),
-        );
+        return entries.iter().map(|entry| card(entry, None)).collect();
     }
-    let found: Vec<(Note, Option<SearchHit>)> = entries
+    entries
         .par_iter()
         .filter_map(|entry| {
-            view::answers(&entry.note, &entry.folded, needle).map(|hit| (entry.note.clone(), hit))
+            view::answers(&entry.note, &entry.folded, needle).map(|hit| card(entry, hit))
         })
-        .collect();
-    let mut hits = HashMap::new();
-    let notes = found
-        .into_iter()
-        .map(|(note, hit)| {
-            if let Some(hit) = hit {
-                hits.insert(note.id.clone(), hit);
-            }
-            note
-        })
-        .collect();
-    (notes, hits)
+        .collect()
 }
 
 /// Fills the index of the library just unlocked, a slice a job, saying how far it got. Stops
