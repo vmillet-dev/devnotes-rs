@@ -177,3 +177,27 @@ fn info(language: Language) -> (&'static str, &'static str, Hue) {
         Language::Txt => ("TXT", "Text", Hue::Neutral),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+
+    #[test]
+    fn every_language_has_a_label_and_a_name_of_its_own() {
+        let mut names = HashSet::new();
+        for language in Language::ALL {
+            assert!(!label(language).is_empty(), "{language:?}");
+            assert!(names.insert(name(language)), "{language:?}");
+        }
+    }
+
+    #[test]
+    fn a_language_is_named_and_coloured_by_its_family() {
+        assert_eq!(label(Language::Ts), "TS");
+        assert_eq!(name(Language::Ts), "TypeScript");
+        assert_eq!(hue(Language::Ts), Hue::Blue);
+        assert_eq!(hue(Language::Js), Hue::Amber);
+    }
+}

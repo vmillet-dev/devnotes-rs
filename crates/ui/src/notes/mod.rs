@@ -49,3 +49,25 @@ fn priority_section(priority: Priority) -> Key {
         Priority::Urgent => keys::notes::priority::URGENT,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+
+    #[test]
+    fn every_kind_and_priority_heads_a_section_of_its_own() {
+        for locale in [i18n::Language::En, i18n::Language::Fr] {
+            let mut headings = HashSet::new();
+            let keys = NoteKind::ALL
+                .map(kind_plural)
+                .into_iter()
+                .chain(Priority::ALL.map(priority_section));
+            for key in keys {
+                let heading = i18n::translate(locale, key, &[]);
+                assert!(headings.insert(heading.clone()), "{heading}");
+            }
+        }
+    }
+}
