@@ -89,6 +89,13 @@ impl Tree {
         self.find(author_id).is_some()
     }
 
+    pub fn count(&self, author_id: &str) -> usize {
+        self.nodes
+            .iter()
+            .filter(|(_, node)| node.author_id() == Some(author_id))
+            .count()
+    }
+
     /// What a node says: its name, or its value for a node that has no name.
     pub fn text(&self, author_id: &str) -> Option<String> {
         let node = self.find(author_id)?;

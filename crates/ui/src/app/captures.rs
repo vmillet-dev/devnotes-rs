@@ -130,7 +130,7 @@ fn the_canvas_of_an_open_library() {
     type_into(&mut harness, "vault-confirmation", PASSPHRASE);
     click(&mut harness, "vault-submit");
     settle(&mut harness);
-    capture(&mut harness, "canvas-empty");
+    capture(&mut harness, "canvas-samples");
 
     kinds(&harness.state().backend);
     harness.state_mut().state.revision.bump();

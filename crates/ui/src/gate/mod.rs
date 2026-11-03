@@ -132,8 +132,8 @@ impl Gate {
                 && *view.confirmation == *view.passphrase)
     }
 
-    /// The answers that arrived. `true` when another library was just opened: the caller resets
-    /// what belonged to the previous one.
+    /// The answers that arrived. `true` when a library was just opened, or another chosen: the
+    /// caller resets what belonged to the previous one and reads the new one's preferences.
     pub fn update(
         &mut self,
         backend: &Backend,
@@ -159,7 +159,7 @@ impl Gate {
             Work::Opening(pending) => {
                 if let Some(answer) = pending.poll() {
                     self.work = None;
-                    self.opened(answer, errors);
+                    switched = self.opened(answer, errors);
                 }
             }
             Work::Moving(pending, report) => {
@@ -195,16 +195,18 @@ impl Gate {
         switched
     }
 
-    fn opened(&mut self, answer: Result<(), AppError>, errors: &mut ErrorNotifier) {
+    fn opened(&mut self, answer: Result<(), AppError>, errors: &mut ErrorNotifier) -> bool {
         match answer {
             Ok(()) => {
                 self.vault = Some(VaultState::Unlocked);
                 self.index = IndexFill::Empty;
+                return true;
             }
             Err(error) if error.code == ErrorCode::WrongPassphrase => self.refused = true,
             Err(error) if error.code == ErrorCode::LibraryDamaged => self.damaged = true,
             Err(error) => errors.report(keys::errors::UNLOCK_FAILED, &error),
         }
+        false
     }
 
     /// What the index says while it fills behind the gate.

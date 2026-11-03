@@ -413,6 +413,64 @@ mod tests {
         assert!(!present(&harness, "area-switch"));
     }
 
+    fn count(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> usize {
+        use egui_kittest::kittest::Queryable;
+        harness
+            .query_all_by(|node| node.author_id() == Some(author_id))
+            .count()
+    }
+
+    fn seeded_mark(harness: &Harness<'_, DevNotesApp>) -> Option<String> {
+        let directory = engine::db::run_here(
+            harness.state().backend().engine(),
+            engine::libraries::open_library_directory,
+        )
+        .unwrap();
+        let file = directory.join(engine::layout::PREFERENCES);
+        Preferences::read(&file)
+            .get(crate::services::samples::SEEDED_KEY)
+            .map(str::to_owned)
+    }
+
+    #[test]
+    fn a_new_library_opens_on_its_samples_seeded_once() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+
+        assert_eq!(count(&harness, "note-card"), 6);
+        // The list is left out of the folders on purpose.
+        assert_eq!(count(&harness, "note-card-folder"), 5);
+        assert_eq!(seeded_mark(&harness).as_deref(), Some("true"));
+
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        app.state.reset_library_scope(&ctx, &app.backend);
+        settle(&mut harness);
+
+        assert_eq!(count(&harness, "note-card"), 6);
+    }
+
+    #[test]
+    fn the_mark_lost_does_not_seed_a_library_that_has_a_space() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let file = engine::db::run_here(
+            harness.state().backend().engine(),
+            engine::libraries::open_library_directory,
+        )
+        .unwrap()
+        .join(engine::layout::PREFERENCES);
+        std::fs::remove_file(file).unwrap();
+
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        app.state.reset_library_scope(&ctx, &app.backend);
+        settle(&mut harness);
+
+        assert_eq!(count(&harness, "note-card"), 6);
+        assert_eq!(seeded_mark(&harness).as_deref(), Some("skipped"));
+    }
+
     #[test]
     fn the_switch_and_its_keys_change_the_area() {
         let directory = tempfile::tempdir().unwrap();

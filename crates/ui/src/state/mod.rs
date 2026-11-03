@@ -13,6 +13,7 @@ use crate::backend::{Backend, Pending};
 use crate::gate::{Gate, GateView};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
+use crate::services::samples;
 use crate::services::settings::Settings;
 use crate::services::status::StatusNotifier;
 use crate::services::time::{Clock, SystemClock};
@@ -62,6 +63,8 @@ pub struct AppState {
     /// The open library's file (`devnotes.notes.*`), read again each time one opens.
     pub library_preferences: Preferences,
     library_preferences_read: Option<Pending<Preferences>>,
+    /// The first launch's samples, being written; nothing reads notes meanwhile.
+    seeding: Option<Pending<bool>>,
     pub revision: Revision,
     pub notes_query: NotesQueryState,
     pub notes: notes::NotesState,
@@ -84,6 +87,7 @@ impl AppState {
             preferences,
             library_preferences: Preferences::default(),
             library_preferences_read: None,
+            seeding: None,
             revision: Revision::default(),
             notes_query: NotesQueryState::default(),
             notes: notes::NotesState::default(),
@@ -103,23 +107,62 @@ impl AppState {
         {
             self.reset_library_scope(ctx, backend);
         }
-        if let Some(pending) = &mut self.library_preferences_read
-            && let Some(answer) = pending.poll()
-        {
-            self.library_preferences_read = None;
-            match answer {
-                Ok(preferences) => self.library_preferences = preferences,
-                Err(error) => self
-                    .errors
-                    .report(i18n::keys::errors::LIBRARY_ACTION_FAILED, &error),
-            }
-        }
+        self.adopt_library_preferences(backend);
+        self.adopt_seeding(backend);
         self.notes.update(&mut self.revision, &mut self.errors);
         self.caches.thumbnails.update(ctx, backend);
-        if self.gate.is_open() {
+        if self.gate.is_open() && self.library_preferences_read.is_none() && self.seeding.is_none()
+        {
             let now = self.clock.now();
             self.notes_query
                 .update(ctx, backend, now, self.revision, self.gate.index);
+        }
+    }
+
+    /// The open library's preferences; a library that was never seeded is seeded now.
+    fn adopt_library_preferences(&mut self, backend: &Backend) {
+        let Some(answer) = self
+            .library_preferences_read
+            .as_mut()
+            .and_then(Pending::poll)
+        else {
+            return;
+        };
+        self.library_preferences_read = None;
+        match answer {
+            Ok(preferences) => {
+                if preferences.get(samples::SEEDED_KEY).is_none() {
+                    let samples = samples::samples(self.language, self.clock.now());
+                    self.seeding = Some(api::notes::seed_samples(backend, samples));
+                }
+                self.library_preferences = preferences;
+            }
+            Err(error) => self
+                .errors
+                .report(i18n::keys::errors::LIBRARY_ACTION_FAILED, &error),
+        }
+    }
+
+    /// ⚠️ The mark is written after the samples, never before: a seeding cut short rolls back
+    /// whole, and the next open finds neither the mark nor a space, and seeds again.
+    fn adopt_seeding(&mut self, backend: &Backend) {
+        let Some(answer) = self.seeding.as_mut().and_then(Pending::poll) else {
+            return;
+        };
+        self.seeding = None;
+        match answer {
+            Ok(seeded) => {
+                let mark = if seeded { "true" } else { "skipped" };
+                self.library_preferences.set(samples::SEEDED_KEY, mark);
+                drop(api::preferences::write_library(
+                    backend,
+                    self.library_preferences.clone(),
+                ));
+                self.revision.bump();
+            }
+            // Silent: the canvas says its own failures, and samples nobody asked for are not
+            // worth a banner.
+            Err(error) => log::warn!("The samples were not seeded: {:?}", error.code),
         }
     }
 
@@ -178,6 +221,7 @@ impl AppState {
     pub fn reset_library_scope(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.library_preferences = Preferences::default();
         self.library_preferences_read = Some(api::preferences::library(backend));
+        self.seeding = None;
         self.caches = LibraryCaches::default();
         self.notes_query = NotesQueryState::default();
         self.revision.bump();
