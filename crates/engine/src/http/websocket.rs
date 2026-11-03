@@ -179,6 +179,7 @@ impl Sockets {
     /// handshake did, its failure a code like a send's.
     pub async fn connect(
         &self,
+        runtime: &tokio::runtime::Handle,
         events: Arc<dyn EventSink>,
         id: String,
         outgoing: Outgoing,
@@ -233,13 +234,13 @@ impl Sockets {
         emit(events.as_ref(), &id, SocketEvent::Opened { url, protocol });
 
         let (outbound, inbound) = mpsc::unbounded_channel();
-        let task = tauri::async_runtime::spawn(run(events, id.clone(), stream, inbound));
+        let task = runtime.spawn(run(events, id.clone(), stream, inbound));
         if let Ok(mut open) = self.open.lock()
             && let Some(previous) = open.insert(
                 id,
                 Socket {
                     outbound,
-                    task: task.inner().abort_handle(),
+                    task: task.abort_handle(),
                 },
             )
         {

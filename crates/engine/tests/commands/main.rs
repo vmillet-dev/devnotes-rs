@@ -25,6 +25,7 @@ mod common;
 
 mod attachments;
 mod backups;
+mod concurrency;
 mod folders;
 mod http;
 mod http_environments;
@@ -65,7 +66,8 @@ impl Session {
             resources: profile.path().to_path_buf(),
         };
         let app = mock_app();
-        let engine = Engine::new(paths, Arc::new(Emitted(app.handle().clone())));
+        let runtime = tauri::async_runtime::handle().inner().clone();
+        let engine = Engine::new(paths, Arc::new(Emitted(app.handle().clone())), runtime);
         *engine.db().lock().unwrap() = library;
         app.manage(Arc::new(engine));
 

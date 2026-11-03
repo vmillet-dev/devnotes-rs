@@ -85,6 +85,7 @@ pub use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
 
 /// The core's state, created once by the shell and shared behind an `Arc`.
 pub struct Engine {
+    pub(crate) queue: db::queue::DbQueue,
     pub(crate) db: db::Db,
     pub(crate) restored: backup::Restored,
     pub(crate) sending: http::send::Sending,
@@ -92,12 +93,15 @@ pub struct Engine {
     pub(crate) sockets: http::websocket::Sockets,
     pub(crate) paths: Paths,
     pub(crate) events: Arc<dyn EventSink>,
+    /// The shell's: sends and sockets run on it.
+    pub(crate) runtime: tokio::runtime::Handle,
 }
 
 impl Engine {
-    /// No library is open: `vault::unlock` opens one.
-    pub fn new(paths: Paths, events: Arc<dyn EventSink>) -> Self {
+    /// Starts the db thread; no library is open: `vault::unlock` opens one.
+    pub fn new(paths: Paths, events: Arc<dyn EventSink>, runtime: tokio::runtime::Handle) -> Self {
         Self {
+            queue: db::queue::DbQueue::start(),
             db: db::Db::new(None),
             restored: backup::Restored::default(),
             sending: http::send::Sending::default(),
@@ -105,6 +109,7 @@ impl Engine {
             sockets: http::websocket::Sockets::default(),
             paths,
             events,
+            runtime,
         }
     }
 
