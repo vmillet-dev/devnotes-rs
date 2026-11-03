@@ -164,3 +164,53 @@ fn a_forgotten_phrase_asks_before_archiving_and_can_be_left() {
     harness.run();
     assert!(present(&harness, "vault-passphrase"));
 }
+
+#[test]
+fn archiving_a_forgotten_library_says_where_and_starts_a_new_one() {
+    let profile = testing::locked();
+    let backend = testing::backend_on(profile.path());
+    let mut harness = screen(backend, profile);
+    harness.run();
+
+    node(&harness, "vault-forgotten").click();
+    harness.run();
+    node(&harness, "vault-archive-confirm").click();
+    settle(&mut harness);
+    settle(&mut harness);
+
+    assert!(harness.state().status.latest().is_some());
+    assert!(harness.state().errors.notice().is_none());
+    assert!(present(&harness, "vault-confirmation"));
+}
+
+#[test]
+fn opening_another_library_asks_for_its_own_phrase() {
+    let profile = testing::locked();
+    let backend = testing::backend_on(profile.path());
+    let other = engine::libraries::create_library(backend.engine(), "Travail".to_string())
+        .unwrap()
+        .id;
+    let mut harness = screen(backend, profile);
+    settle(&mut harness);
+
+    let screen = harness.state_mut();
+    let rank = screen
+        .gate
+        .registry
+        .as_ref()
+        .unwrap()
+        .libraries
+        .iter()
+        .position(|entry| entry.id == other)
+        .unwrap();
+    screen.view.switch_to = Some(rank);
+    screen
+        .gate
+        .apply(Action::SwitchLibrary, &mut screen.view, &screen.backend);
+    settle(&mut harness);
+    settle(&mut harness);
+
+    let open = engine::libraries::list_libraries(harness.state().backend.engine()).open;
+    assert_eq!(open.as_deref(), Some(other.as_str()));
+    assert!(present(&harness, "vault-confirmation"));
+}
