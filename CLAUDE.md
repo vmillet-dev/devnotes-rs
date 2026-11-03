@@ -79,7 +79,7 @@ Read in `reference/angular/`; the egui mechanism is in the plan (§ 3.3–3.12).
 - Every library operation reports through the status notifier, even when nothing changed.
 - A card is two layers (→ "A card is two layers"). Every drag is a pointer gesture plus a keyboard twin. The board dims, never narrows; gestures commit on release, snapped to `GRID_PX`, saved debounced. Escape falls through modal → overlay → selection → search → up a folder level. The canvas keyboard is one table (`CANVAS_KEYS`); arrangement is the library's (`devnotes.notes.arrangement`). → "The board: the second view of a space", "Descending into a folder".
 - A preference is applied on a button (only theme and density preview before Apply). Global shortcuts are first come, first served and stored by W3C `code`. The window starts hidden and is shown when ready; its geometry is remembered without visibility. A silenced update is a version written down (`skippedUpdate`). → "Preferences", "Shortcuts: two vocabularies, two storage paths", "Window geometry".
-- Theming: the tokens of `reference/angular/src/styles/styles.scss`, dark the base, light with its own amber; text ≥ 4.5:1. Accessibility: 24×24 targets, destructive controls red at rest, modals stacked by the rungs of `dialog.model.ts`. → "Theming", "Accessibility", "The modal frame".
+- Theming: `ui::theme::tokens` (copied from the reference's `styles.scss`), read through `theme::palette(ctx)` / `theme::spacing(ctx)`; no colour, gap or duration literal elsewhere. Dark the base, light with its own amber; text ≥ 4.5:1, held by a Rust test. Accessibility: 24×24 targets, destructive controls red at rest, modals stacked by the rungs of `dialog.model.ts`. → "Theming", "Accessibility", "The modal frame".
 
 ### Tests
 
