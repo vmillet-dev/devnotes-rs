@@ -22,14 +22,20 @@ const TEXTS: Readonly<Record<PrettierParser, readonly string[]>> = {
   scss: ['.a{.b{color:$main;&:hover{color:darken($main,10%)}}}'],
   less: ['@main:#333;.a{color:@main;.b{width:~"calc(100% - {{gutter}})"}}'],
   html: ['<div><p>Bonjour {{name}}</p><ul><li>un</li><li>deux</li></ul></div>'],
-  vue: ['<template><div :class="{a:b}">{{ message }}</div></template>\n<script>export default {data(){return {message:"x"}}}</script>'],
+  vue: [
+    '<template><div :class="{a:b}">{{ message }}</div></template>\n<script>export default {data(){return {message:"x"}}}</script>',
+  ],
   angular: ['<div *ngIf="shown" (click)="toggle()">{{ label }}</div>'],
   markdown: ['# Titre\n\n* un\n* deux\n\n|a|b|\n|-|-|\n|1|2|\n\nVoir {{lien}}.'],
   yaml: ['a:   1\nb:\n    - x\n    - "{{value}}"\n'],
   graphql: ['query($id:ID!){user(id:$id){name,posts(first:{{count}}){title}}}'],
 };
 
-const SETTINGS: readonly { readonly name: string; readonly settings: PrettierSettings; readonly indent: string }[] = [
+const SETTINGS: readonly {
+  readonly name: string;
+  readonly settings: PrettierSettings;
+  readonly indent: string;
+}[] = [
   { name: 'default, editor of two spaces', settings: DEFAULT_PRETTIER_SETTINGS, indent: '  ' },
   { name: 'default, editor of a tab', settings: DEFAULT_PRETTIER_SETTINGS, indent: '\t' },
 ];

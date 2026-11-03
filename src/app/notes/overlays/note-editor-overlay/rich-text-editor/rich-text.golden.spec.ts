@@ -84,9 +84,9 @@ const PASTED_HTML: readonly string[] = [
 function samples(): string[] {
   const contents = (translations: Record<string, unknown>): string[] => {
     const notes = (translations['notes'] as Record<string, Record<string, unknown>>)['samples'];
-    return Object.entries(notes)
-      .filter(([key, value]) => key.endsWith('Content') && typeof value === 'string')
-      .map(([, value]) => value as string);
+    return Object.values(notes)
+      .map((sample) => (sample as Record<string, unknown>)['content'])
+      .filter((content): content is string => typeof content === 'string');
   };
   return [...contents(fr), ...contents(en)];
 }
@@ -128,6 +128,10 @@ describe.runIf(writingGolden)('golden: rich text', () => {
   });
 
   it('captures HTML pasted into an empty Note as the Markdown it becomes', () => {
+    // jsdom has no ClipboardEvent, which `pasteHTML` builds when given none.
+    globalThis.ClipboardEvent ??= class extends Event {
+      readonly clipboardData = null;
+    } as unknown as typeof ClipboardEvent;
     const cases: GoldenCase[] = PASTED_HTML.map((input) => {
       const made = editor('');
       made.view.pasteHTML(input);
@@ -152,7 +156,11 @@ describe.runIf(writingGolden)('golden: rich text', () => {
         'addKeyboardShortcuts',
         context,
       );
-      const rules = getExtensionField<(() => { find: unknown }[]) | undefined>(extension, 'addInputRules', context);
+      const rules = getExtensionField<(() => { find: unknown }[]) | undefined>(
+        extension,
+        'addInputRules',
+        context,
+      );
       return {
         input: extension.name,
         output: {

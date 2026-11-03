@@ -1,0 +1,1003 @@
+[
+  {
+    "input": {
+      "parser": "babel",
+      "text": "const a = {b:1}\nconst c = 2;"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "const a = { b: 1 };\nconst c = 2;",
+      "cursor": 0,
+      "changedLines": [
+        0
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "const a = {b:1}\nconst c = 2;"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "const a = { b: 1 };\nconst c = 2;",
+      "cursor": 0,
+      "changedLines": [
+        0
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "call(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\", \"cccccccccccccccccccc\")"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "call(\n  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',\n  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',\n  'cccccccccccccccccccc',\n);",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "call(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\", \"cccccccccccccccccccc\")"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "call(\n\t'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',\n\t'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',\n\t'cccccccccccccccccccc',\n);",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "fetch(\"{{baseUrl}}/users/{{id}}\", {headers:{Authorization:\"Bearer {{token}}\"}})"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "fetch('{{baseUrl}}/users/{{id}}', { headers: { Authorization: 'Bearer {{token}}' } });",
+      "cursor": 0,
+      "changedLines": [
+        0
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "fetch(\"{{baseUrl}}/users/{{id}}\", {headers:{Authorization:\"Bearer {{token}}\"}})"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "fetch('{{baseUrl}}/users/{{id}}', { headers: { Authorization: 'Bearer {{token}}' } });",
+      "cursor": 0,
+      "changedLines": [
+        0
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "if (a) { b() }\n"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "if (a) {\n  b();\n}\n",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "if (a) { b() }\n"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "if (a) {\n\tb();\n}\n",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "const broken = {"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "syntax",
+      "line": 1,
+      "column": 17
+    }
+  },
+  {
+    "input": {
+      "parser": "babel",
+      "text": "const broken = {"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "syntax",
+      "line": 1,
+      "column": 17
+    }
+  },
+  {
+    "input": {
+      "parser": "typescript",
+      "text": "function keysOf<T extends object>(value:T){return Object.keys(value) as (keyof T)[]}"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "function keysOf<T extends object>(value: T) {\n  return Object.keys(value) as (keyof T)[];\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "typescript",
+      "text": "function keysOf<T extends object>(value:T){return Object.keys(value) as (keyof T)[]}"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "function keysOf<T extends object>(value: T) {\n\treturn Object.keys(value) as (keyof T)[];\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "typescript",
+      "text": "const url = `{{host}}/api/${version}`;"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "unchanged"
+    }
+  },
+  {
+    "input": {
+      "parser": "typescript",
+      "text": "const url = `{{host}}/api/${version}`;"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "unchanged"
+    }
+  },
+  {
+    "input": {
+      "parser": "json",
+      "text": "{\"a\":1,\"b\":[1,2,3],\"token\":\"{{token}}\"}"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "{ \"a\": 1, \"b\": [1, 2, 3], \"token\": \"{{token}}\" }",
+      "cursor": 0,
+      "changedLines": [
+        0
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "json",
+      "text": "{\"a\":1,\"b\":[1,2,3],\"token\":\"{{token}}\"}"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "{ \"a\": 1, \"b\": [1, 2, 3], \"token\": \"{{token}}\" }",
+      "cursor": 0,
+      "changedLines": [
+        0
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "json",
+      "text": "{\"nested\":{\"deep\":{\"value\":true}}}\n"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "{ \"nested\": { \"deep\": { \"value\": true } } }\n",
+      "cursor": 0,
+      "changedLines": [
+        0
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "json",
+      "text": "{\"nested\":{\"deep\":{\"value\":true}}}\n"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "{ \"nested\": { \"deep\": { \"value\": true } } }\n",
+      "cursor": 0,
+      "changedLines": [
+        0
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "css",
+      "text": "a{color:red}"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "a {\n  color: red;\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "css",
+      "text": "a{color:red}"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "a {\n\tcolor: red;\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "css",
+      "text": "a{color:red}\n"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "a {\n  color: red;\n}\n",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "css",
+      "text": "a{color:red}\n"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "a {\n\tcolor: red;\n}\n",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "css",
+      "text": ".card{margin:{{gap}}px;padding:0 4px}"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": ".card {\n  margin: {{gap}}px;\n  padding: 0 4px;\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "css",
+      "text": ".card{margin:{{gap}}px;padding:0 4px}"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": ".card {\n\tmargin: {{gap}}px;\n\tpadding: 0 4px;\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "scss",
+      "text": ".a{.b{color:$main;&:hover{color:darken($main,10%)}}}"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": ".a {\n  .b {\n    color: $main;\n    &:hover {\n      color: darken($main, 10%);\n    }\n  }\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "scss",
+      "text": ".a{.b{color:$main;&:hover{color:darken($main,10%)}}}"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": ".a {\n\t.b {\n\t\tcolor: $main;\n\t\t&:hover {\n\t\t\tcolor: darken($main, 10%);\n\t\t}\n\t}\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "less",
+      "text": "@main:#333;.a{color:@main;.b{width:~\"calc(100% - {{gutter}})\"}}"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "@main: #333;\n.a {\n  color: @main;\n  .b {\n    width: ~'calc(100% - {{gutter}})';\n  }\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "less",
+      "text": "@main:#333;.a{color:@main;.b{width:~\"calc(100% - {{gutter}})\"}}"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "@main: #333;\n.a {\n\tcolor: @main;\n\t.b {\n\t\twidth: ~'calc(100% - {{gutter}})';\n\t}\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "html",
+      "text": "<div><p>Bonjour {{name}}</p><ul><li>un</li><li>deux</li></ul></div>"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "<div>\n  <p>Bonjour {{name}}</p>\n  <ul>\n    <li>un</li>\n    <li>deux</li>\n  </ul>\n</div>",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "html",
+      "text": "<div><p>Bonjour {{name}}</p><ul><li>un</li><li>deux</li></ul></div>"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "<div>\n\t<p>Bonjour {{name}}</p>\n\t<ul>\n\t\t<li>un</li>\n\t\t<li>deux</li>\n\t</ul>\n</div>",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "vue",
+      "text": "<template><div :class=\"{a:b}\">{{ message }}</div></template>\n<script>export default {data(){return {message:\"x\"}}}</script>"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "<template><div :class=\"{ a: b }\">{{ message }}</div></template>\n<script>\nexport default {\n  data() {\n    return { message: 'x' };\n  },\n};\n</script>",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "vue",
+      "text": "<template><div :class=\"{a:b}\">{{ message }}</div></template>\n<script>export default {data(){return {message:\"x\"}}}</script>"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "<template><div :class=\"{ a: b }\">{{ message }}</div></template>\n<script>\nexport default {\n\tdata() {\n\t\treturn { message: 'x' };\n\t},\n};\n</script>",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "angular",
+      "text": "<div *ngIf=\"shown\" (click)=\"toggle()\">{{ label }}</div>"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "unchanged"
+    }
+  },
+  {
+    "input": {
+      "parser": "angular",
+      "text": "<div *ngIf=\"shown\" (click)=\"toggle()\">{{ label }}</div>"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "unchanged"
+    }
+  },
+  {
+    "input": {
+      "parser": "markdown",
+      "text": "# Titre\n\n* un\n* deux\n\n|a|b|\n|-|-|\n|1|2|\n\nVoir {{lien}}."
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "# Titre\n\n- un\n- deux\n\n| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\nVoir {{lien}}.",
+      "cursor": 0,
+      "changedLines": [
+        2,
+        3,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "markdown",
+      "text": "# Titre\n\n* un\n* deux\n\n|a|b|\n|-|-|\n|1|2|\n\nVoir {{lien}}."
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "# Titre\n\n- un\n- deux\n\n| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\nVoir {{lien}}.",
+      "cursor": 0,
+      "changedLines": [
+        2,
+        3,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "yaml",
+      "text": "a:   1\nb:\n    - x\n    - \"{{value}}\"\n"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "a: 1\nb:\n  - x\n  - '{{value}}'\n",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        2,
+        3
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "yaml",
+      "text": "a:   1\nb:\n    - x\n    - \"{{value}}\"\n"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "a: 1\nb:\n    - x\n    - '{{value}}'\n",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        3
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "graphql",
+      "text": "query($id:ID!){user(id:$id){name,posts(first:{{count}}){title}}}"
+    },
+    "options": {
+      "name": "default, editor of two spaces",
+      "printWidth": 100,
+      "tabWidth": 2,
+      "useTabs": false,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "query ($id: ID!) {\n  user(id: $id) {\n    name\n    posts(first: {{count}}) {\n      title\n    }\n  }\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  {
+    "input": {
+      "parser": "graphql",
+      "text": "query($id:ID!){user(id:$id){name,posts(first:{{count}}){title}}}"
+    },
+    "options": {
+      "name": "default, editor of a tab",
+      "printWidth": 100,
+      "tabWidth": 4,
+      "useTabs": true,
+      "singleQuote": true,
+      "semi": true,
+      "trailingComma": "all"
+    },
+    "output": {
+      "kind": "formatted",
+      "text": "query ($id: ID!) {\n\tuser(id: $id) {\n\t\tname\n\t\tposts(first: {{count}}) {\n\t\t\ttitle\n\t\t}\n\t}\n}",
+      "cursor": 0,
+      "changedLines": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  }
+]

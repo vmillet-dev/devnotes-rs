@@ -1,0 +1,114 @@
+[
+  {
+    "input": "{{app}} garde vos snippets, vos notes et vos listes à portée de clavier. Tout reste sur cette machine, chiffré ; rien ne part sur le réseau.\n\n## Où sont les choses\n- **Notes**, **Outils** et **HTTP** : les trois zones, sur le côté (Ctrl+1, Ctrl+2, Ctrl+3).\n- Les cartes se rangent seules : épinglées, aujourd’hui, cette semaine, plus ancien. La vue **Tableau**, en haut, montre les dossiers comme des zones.\n- Le menu **À propos** tient la prise en main et tous les raccourcis.\n\n## Les touches qui comptent\n| Touches | Pour |\n| --- | --- |\n| Ctrl+K | Chercher dans les notes, ou dans les outils |\n| Ctrl+N · Ctrl+Maj+N | Un snippet · une Note |\n| Entrée · C · P | Ouvrir · copier · épingler la carte |\n| Ctrl+Alt+P | Coller une note depuis n’importe quelle application |\n\nCes exemples sont faits pour être modifiés, ou mis à la corbeille.",
+    "output": "{{app}} garde vos snippets, vos notes et vos listes à portée de clavier. Tout reste sur cette machine, chiffré ; rien ne part sur le réseau.\n\n## Où sont les choses\n\n- **Notes**, **Outils** et **HTTP** : les trois zones, sur le côté (Ctrl+1, Ctrl+2, Ctrl+3).\n- Les cartes se rangent seules : épinglées, aujourd’hui, cette semaine, plus ancien. La vue **Tableau**, en haut, montre les dossiers comme des zones.\n- Le menu **À propos** tient la prise en main et tous les raccourcis.\n\n## Les touches qui comptent\n\n\n| Touches             | Pour                                                |\n| ------------------- | --------------------------------------------------- |\n| Ctrl+K              | Chercher dans les notes, ou dans les outils         |\n| Ctrl+N · Ctrl+Maj+N | Un snippet · une Note                               |\n| Entrée · C · P      | Ouvrir · copier · épingler la carte                 |\n| Ctrl+Alt+P          | Coller une note depuis n’importe quelle application |\n\n\nCes exemples sont faits pour être modifiés, ou mis à la corbeille."
+  },
+  {
+    "input": "Une Note s’écrit mise en forme et s’enregistre en Markdown : titres, tâches, tableaux, blocs de code.\n\n## Avant\n- [x] Geler les merges sur `main`\n- [ ] Prévenir le support\n- [ ] Sauvegarder la base\n\n## Où\n| Environnement | Adresse | Qui |\n| --- | --- | --- |\n| Préproduction | staging.exemple.fr | Équipe API |\n| Production | app.exemple.fr | Astreinte |\n\n## Vérifier\n```bash\nkubectl rollout status deploy/billing --timeout=120s\ncurl -fsS https://app.exemple.fr/health\n```",
+    "output": "Une Note s’écrit mise en forme et s’enregistre en Markdown : titres, tâches, tableaux, blocs de code.\n\n## Avant\n\n- [x] Geler les merges sur `main`\n- [ ] Prévenir le support\n- [ ] Sauvegarder la base\n\n## Où\n\n\n| Environnement | Adresse            | Qui        |\n| ------------- | ------------------ | ---------- |\n| Préproduction | staging.exemple.fr | Équipe API |\n| Production    | app.exemple.fr     | Astreinte  |\n\n\n## Vérifier\n\n```bash\nkubectl rollout status deploy/billing --timeout=120s\ncurl -fsS https://app.exemple.fr/health\n```"
+  },
+  {
+    "input": "{{app}} keeps your snippets, your notes and your lists within reach of the keyboard. Everything stays on this machine, encrypted; nothing goes over the network.\n\n## Where things are\n- **Notes**, **Tools** and **HTTP**: the three areas, at the side (Ctrl+1, Ctrl+2, Ctrl+3).\n- Cards file themselves: pinned, today, this week, older. The **Board** view, at the top, shows folders as zones.\n- The **About** menu holds the getting-started guide and every shortcut.\n\n## The keys that matter\n| Keys | For |\n| --- | --- |\n| Ctrl+K | Search the notes, or the tools |\n| Ctrl+N · Ctrl+Shift+N | A snippet · a Note |\n| Enter · C · P | Open · copy · pin the card |\n| Ctrl+Alt+P | Paste a note from any application |\n\nThese samples are made to be edited, or sent to the trash.",
+    "output": "{{app}} keeps your snippets, your notes and your lists within reach of the keyboard. Everything stays on this machine, encrypted; nothing goes over the network.\n\n## Where things are\n\n- **Notes**, **Tools** and **HTTP**: the three areas, at the side (Ctrl+1, Ctrl+2, Ctrl+3).\n- Cards file themselves: pinned, today, this week, older. The **Board** view, at the top, shows folders as zones.\n- The **About** menu holds the getting-started guide and every shortcut.\n\n## The keys that matter\n\n\n| Keys                  | For                               |\n| --------------------- | --------------------------------- |\n| Ctrl+K                | Search the notes, or the tools    |\n| Ctrl+N · Ctrl+Shift+N | A snippet · a Note                |\n| Enter · C · P         | Open · copy · pin the card        |\n| Ctrl+Alt+P            | Paste a note from any application |\n\n\nThese samples are made to be edited, or sent to the trash."
+  },
+  {
+    "input": "A Note is written formatted and stored as Markdown: headings, tasks, tables, code blocks.\n\n## Before\n- [x] Freeze the merges on `main`\n- [ ] Warn the support team\n- [ ] Back the database up\n\n## Where\n| Environment | Address | Who |\n| --- | --- | --- |\n| Staging | staging.example.com | API team |\n| Production | app.example.com | On call |\n\n## Check\n```bash\nkubectl rollout status deploy/billing --timeout=120s\ncurl -fsS https://app.example.com/health\n```",
+    "output": "A Note is written formatted and stored as Markdown: headings, tasks, tables, code blocks.\n\n## Before\n\n- [x] Freeze the merges on `main`\n- [ ] Warn the support team\n- [ ] Back the database up\n\n## Where\n\n\n| Environment | Address             | Who      |\n| ----------- | ------------------- | -------- |\n| Staging     | staging.example.com | API team |\n| Production  | app.example.com     | On call  |\n\n\n## Check\n\n```bash\nkubectl rollout status deploy/billing --timeout=120s\ncurl -fsS https://app.example.com/health\n```"
+  },
+  {
+    "input": "# Titre\n\n## Sous-titre\n\n### Trois",
+    "output": "# Titre\n\n## Sous-titre\n\n### Trois"
+  },
+  {
+    "input": "Du **gras**, de l’*italique*, du ~~barré~~ et du `code`.",
+    "output": "Du **gras**, de l’*italique*, du ~~barré~~ et du `code`."
+  },
+  {
+    "input": "- un\n- deux\n  - deux bis\n- trois",
+    "output": "- un\n- deux\n  - deux bis\n- trois"
+  },
+  {
+    "input": "1. un\n2. deux\n3. trois",
+    "output": "1. un\n2. deux\n3. trois"
+  },
+  {
+    "input": "- [ ] à faire\n- [x] fait",
+    "output": "- [ ] à faire\n- [x] fait"
+  },
+  {
+    "input": "> Une citation\n> sur deux lignes",
+    "output": "> Une citation\n> sur deux lignes"
+  },
+  {
+    "input": "```sql\nSELECT * FROM notes;\n```",
+    "output": "```sql\nSELECT * FROM notes;\n```"
+  },
+  {
+    "input": "```mermaid\nflowchart LR\n  a --> b\n```",
+    "output": "```mermaid\nflowchart LR\n  a --> b\n```"
+  },
+  {
+    "input": "| a | b |\n| --- | --- |\n| 1 | 2 |",
+    "output": "| a   | b   |\n| --- | --- |\n| 1   | 2   |"
+  },
+  {
+    "input": "[un lien](https://exemple.fr) et https://nu.exemple.fr",
+    "output": "[un lien](https://exemple.fr) et [https://nu.exemple.fr](https://nu.exemple.fr)"
+  },
+  {
+    "input": "![image](devnotes:drawing/abc)",
+    "output": "![image](devnotes:drawing/abc)"
+  },
+  {
+    "input": "---",
+    "output": "---"
+  },
+  {
+    "input": "Ligne un  \nligne deux",
+    "output": "Ligne un  \nligne deux"
+  },
+  {
+    "input": "Un saut\\\ndur",
+    "output": "Un saut  \ndur"
+  },
+  {
+    "input": "<div>du HTML brut</div>",
+    "output": "du HTML brut"
+  },
+  {
+    "input": "Une note[^1].\n\n[^1]: en bas de page",
+    "output": "Une note\\[^1].\n\n\\[^1]: en bas de page"
+  },
+  {
+    "input": "Titre souligné\n==============",
+    "output": "# Titre souligné"
+  },
+  {
+    "input": "Sous-titre souligné\n-------------------",
+    "output": "## Sous-titre souligné"
+  },
+  {
+    "input": "[référence][ref]\n\n[ref]: https://exemple.fr",
+    "output": "[référence](https://exemple.fr)"
+  },
+  {
+    "input": "Un {{champ}} et {{autre_champ}} au milieu",
+    "output": "Un {{champ}} et {{autre_champ}} au milieu"
+  },
+  {
+    "input": "2 * 3 * 4",
+    "output": "2 * 3 * 4"
+  },
+  {
+    "input": "Une tabulation &#9; codée",
+    "output": "Une tabulation \t codée"
+  },
+  {
+    "input": "*étoile* _souligné_ __gras__",
+    "output": "*étoile* *souligné* **gras**"
+  },
+  {
+    "input": "\\# pas un titre",
+    "output": "# pas un titre"
+  }
+]

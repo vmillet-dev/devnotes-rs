@@ -1,0 +1,464 @@
+[
+  {
+    "input": "link",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "paragraph",
+    "output": {
+      "shortcuts": [
+        "Mod-Alt-0"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "spacedEmphasis",
+    "output": {
+      "shortcuts": [],
+      "inputRules": [
+        "/(?:^|\\s)(\\*(?!\\s+\\*)(?:\\s[^*]*|[^*]*\\s)\\*(?!\\s+\\*))$/",
+        "/(?:^|\\s)(_(?!\\s+_)(?:\\s[^_]*|[^_]*\\s)_(?!\\s+_))$/"
+      ]
+    }
+  },
+  {
+    "input": "listItemBranchingDeleteKeymap",
+    "output": {
+      "shortcuts": [
+        "Delete",
+        "Mod-Delete"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "taskItemBranchingDeleteKeymap",
+    "output": {
+      "shortcuts": [
+        "Delete",
+        "Mod-Delete"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "editable",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "clipboardTextSerializer",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "commands",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "focusEvents",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "keymap",
+    "output": {
+      "shortcuts": [
+        "Backspace",
+        "Delete",
+        "Enter",
+        "Mod-Backspace",
+        "Mod-Delete",
+        "Mod-Enter",
+        "Mod-a",
+        "Shift-Backspace"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "tabindex",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "drop",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "paste",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "delete",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "textDirection",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "starterKit",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "bold",
+    "output": {
+      "shortcuts": [
+        "Mod-B",
+        "Mod-b"
+      ],
+      "inputRules": [
+        "/(?:^|\\s)(\\*\\*(?!\\s+\\*\\*)((?:[^*]+))\\*\\*(?!\\s+\\*\\*))$/",
+        "/(?:^|\\s)(__(?!\\s+__)((?:[^_]+))__(?!\\s+__))$/"
+      ]
+    }
+  },
+  {
+    "input": "blockquote",
+    "output": {
+      "shortcuts": [
+        "Backspace",
+        "Mod-Shift-b"
+      ],
+      "inputRules": [
+        "/^\\s*>\\s$/"
+      ]
+    }
+  },
+  {
+    "input": "bulletList",
+    "output": {
+      "shortcuts": [
+        "Mod-Shift-8"
+      ],
+      "inputRules": [
+        "/^\\s*([-+*])\\s$/"
+      ]
+    }
+  },
+  {
+    "input": "code",
+    "output": {
+      "shortcuts": [
+        "Mod-e"
+      ],
+      "inputRules": [
+        "(text) => {\n\tconst match = /`([^`]+)`(?!`)$/.exec(text);\n\tif (!match) return null;\n\tif (match.index > 0 && text[match.index - 1] === \"`\") return null;\n\treturn {\n\t\tindex: match.index,\n\t\ttext: match[0],\n\t\treplaceWith: match[1]\n\t};\n}"
+      ]
+    }
+  },
+  {
+    "input": "codeBlock",
+    "output": {
+      "shortcuts": [
+        "ArrowDown",
+        "ArrowUp",
+        "Backspace",
+        "Enter",
+        "Mod-Alt-c",
+        "Shift-Tab",
+        "Tab"
+      ],
+      "inputRules": [
+        "/^```([a-z]+)?[\\s\\n]$/",
+        "/^~~~([a-z]+)?[\\s\\n]$/"
+      ]
+    }
+  },
+  {
+    "input": "doc",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "dropCursor",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "gapCursor",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "hardBreak",
+    "output": {
+      "shortcuts": [
+        "Mod-Enter",
+        "Shift-Enter"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "heading",
+    "output": {
+      "shortcuts": [
+        "Mod-Alt-1",
+        "Mod-Alt-2",
+        "Mod-Alt-3",
+        "Mod-Alt-4",
+        "Mod-Alt-5",
+        "Mod-Alt-6"
+      ],
+      "inputRules": [
+        "/^(#{1,1})\\s$/",
+        "/^(#{1,2})\\s$/",
+        "/^(#{1,3})\\s$/",
+        "/^(#{1,4})\\s$/",
+        "/^(#{1,5})\\s$/",
+        "/^(#{1,6})\\s$/"
+      ]
+    }
+  },
+  {
+    "input": "undoRedo",
+    "output": {
+      "shortcuts": [
+        "Mod-y",
+        "Mod-z",
+        "Mod-я",
+        "Shift-Mod-z",
+        "Shift-Mod-я"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "horizontalRule",
+    "output": {
+      "shortcuts": [],
+      "inputRules": [
+        "/^(?:---|—-|___\\s|\\*\\*\\*\\s)$/"
+      ]
+    }
+  },
+  {
+    "input": "italic",
+    "output": {
+      "shortcuts": [
+        "Mod-I",
+        "Mod-i"
+      ],
+      "inputRules": [
+        "/(?:^|\\s)(\\*(?!\\s+\\*)((?:[^*]+))\\*(?!\\s+\\*))$/",
+        "/(?:^|\\s)(_(?!\\s+_)((?:[^_]+))_(?!\\s+_))$/"
+      ]
+    }
+  },
+  {
+    "input": "listItem",
+    "output": {
+      "shortcuts": [
+        "Enter",
+        "Shift-Tab",
+        "Tab"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "listKeymap",
+    "output": {
+      "shortcuts": [
+        "Backspace",
+        "Delete",
+        "Mod-Backspace",
+        "Mod-Delete",
+        "Tab"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "orderedList",
+    "output": {
+      "shortcuts": [
+        "Mod-Shift-7"
+      ],
+      "inputRules": [
+        "/^(\\d+)\\.\\s$/"
+      ]
+    }
+  },
+  {
+    "input": "strike",
+    "output": {
+      "shortcuts": [
+        "Mod-Shift-s"
+      ],
+      "inputRules": [
+        "/(?:^|\\s)(~~(?!\\s+~~)((?:[^~]+))~~(?!\\s+~~))$/"
+      ]
+    }
+  },
+  {
+    "input": "text",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "trailingNode",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "markdown",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "tableKit",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "table",
+    "output": {
+      "shortcuts": [
+        "Backspace",
+        "Delete",
+        "Mod-Backspace",
+        "Mod-Delete",
+        "Shift-Tab",
+        "Tab"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "tableCell",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "tableHeader",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "tableRow",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "taskList",
+    "output": {
+      "shortcuts": [
+        "Mod-Shift-9"
+      ],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "taskItem",
+    "output": {
+      "shortcuts": [
+        "Enter",
+        "Shift-Tab",
+        "Tab"
+      ],
+      "inputRules": [
+        "/^\\s*(\\[([( |x])?\\])\\s$/"
+      ]
+    }
+  },
+  {
+    "input": "codeHighlight",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "diagrams",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "image",
+    "output": {
+      "shortcuts": [],
+      "inputRules": [
+        "/(?:^|\\s)(!\\[(.+|:?)]\\((\\S+)(?:(?:\\s+)[\"'](\\S+)[\"'])?\\))$/"
+      ]
+    }
+  },
+  {
+    "input": "placeholder",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "textSearch",
+    "output": {
+      "shortcuts": [],
+      "inputRules": []
+    }
+  },
+  {
+    "input": "tabCharacter",
+    "output": {
+      "shortcuts": [
+        "Shift-Tab",
+        "Tab"
+      ],
+      "inputRules": []
+    }
+  }
+]

@@ -1,0 +1,198 @@
+[
+  {
+    "input": "# pas un titre",
+    "options": {
+      "startsLine": false
+    },
+    "output": "# pas un titre"
+  },
+  {
+    "input": "# pas un titre",
+    "options": {
+      "startsLine": true
+    },
+    "output": "# pas un titre"
+  },
+  {
+    "input": "2 * 3 * 4",
+    "options": {
+      "startsLine": false
+    },
+    "output": "2 * 3 * 4"
+  },
+  {
+    "input": "2 * 3 * 4",
+    "options": {
+      "startsLine": true
+    },
+    "output": "2 * 3 * 4"
+  },
+  {
+    "input": "1. pas une liste",
+    "options": {
+      "startsLine": false
+    },
+    "output": "1. pas une liste"
+  },
+  {
+    "input": "1. pas une liste",
+    "options": {
+      "startsLine": true
+    },
+    "output": "1. pas une liste"
+  },
+  {
+    "input": "- pas une puce",
+    "options": {
+      "startsLine": false
+    },
+    "output": "- pas une puce"
+  },
+  {
+    "input": "- pas une puce",
+    "options": {
+      "startsLine": true
+    },
+    "output": "- pas une puce"
+  },
+  {
+    "input": "> pas une citation",
+    "options": {
+      "startsLine": false
+    },
+    "output": "> pas une citation"
+  },
+  {
+    "input": "> pas une citation",
+    "options": {
+      "startsLine": true
+    },
+    "output": "> pas une citation"
+  },
+  {
+    "input": "un *mot* et un _autre_",
+    "options": {
+      "startsLine": false
+    },
+    "output": "un \\*mot\\* et un \\_autre\\_"
+  },
+  {
+    "input": "un *mot* et un _autre_",
+    "options": {
+      "startsLine": true
+    },
+    "output": "un \\*mot\\* et un \\_autre\\_"
+  },
+  {
+    "input": "[crochets] et (parenthèses)",
+    "options": {
+      "startsLine": false
+    },
+    "output": "\\[crochets] et (parenthèses)"
+  },
+  {
+    "input": "[crochets] et (parenthèses)",
+    "options": {
+      "startsLine": true
+    },
+    "output": "\\[crochets] et (parenthèses)"
+  },
+  {
+    "input": "un {{champ}} *gardé*",
+    "options": {
+      "startsLine": false
+    },
+    "output": "un {{champ}} \\*gardé\\*"
+  },
+  {
+    "input": "un {{champ}} *gardé*",
+    "options": {
+      "startsLine": true
+    },
+    "output": "un {{champ}} \\*gardé\\*"
+  },
+  {
+    "input": "C:\\Users\\moi",
+    "options": {
+      "startsLine": false
+    },
+    "output": "C:\\Users\\moi"
+  },
+  {
+    "input": "C:\\Users\\moi",
+    "options": {
+      "startsLine": true
+    },
+    "output": "C:\\Users\\moi"
+  },
+  {
+    "input": "`backtick` et ~tilde~",
+    "options": {
+      "startsLine": false
+    },
+    "output": "\\`backtick\\` et \\~tilde~"
+  },
+  {
+    "input": "`backtick` et ~tilde~",
+    "options": {
+      "startsLine": true
+    },
+    "output": "\\`backtick\\` et \\~tilde~"
+  },
+  {
+    "input": "| a | b |",
+    "options": {
+      "startsLine": false
+    },
+    "output": "| a | b |"
+  },
+  {
+    "input": "| a | b |",
+    "options": {
+      "startsLine": true
+    },
+    "output": "| a | b |"
+  },
+  {
+    "input": "<balise>",
+    "options": {
+      "startsLine": false
+    },
+    "output": "\\<balise>"
+  },
+  {
+    "input": "<balise>",
+    "options": {
+      "startsLine": true
+    },
+    "output": "\\<balise>"
+  },
+  {
+    "input": "+ plus",
+    "options": {
+      "startsLine": false
+    },
+    "output": "+ plus"
+  },
+  {
+    "input": "+ plus",
+    "options": {
+      "startsLine": true
+    },
+    "output": "+ plus"
+  },
+  {
+    "input": "***",
+    "options": {
+      "startsLine": false
+    },
+    "output": "\\*\\*\\*"
+  },
+  {
+    "input": "***",
+    "options": {
+      "startsLine": true
+    },
+    "output": "\\*\\*\\*"
+  }
+]

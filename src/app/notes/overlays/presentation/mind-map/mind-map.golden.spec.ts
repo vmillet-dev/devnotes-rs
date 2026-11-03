@@ -30,7 +30,13 @@ const OUTLINES: readonly { readonly title: string; readonly map: readonly MapNod
       {
         text: 'Niveau un',
         slide: 1,
-        children: [{ text: 'Niveau deux', slide: 1, children: [{ text: 'Niveau trois', slide: 1, children: [leaf('Niveau quatre', 1)] }] }],
+        children: [
+          {
+            text: 'Niveau deux',
+            slide: 1,
+            children: [{ text: 'Niveau trois', slide: 1, children: [leaf('Niveau quatre', 1)] }],
+          },
+        ],
       },
     ],
   },
@@ -53,18 +59,24 @@ function samples(): Map<string, string> {
 
 describe.runIf(writingGolden)('golden: presentation and highlighting', () => {
   it('captures where the mind map places each outline', () => {
-    const cases: GoldenCase[] = OUTLINES.map(({ title, map }) => ({ input: { title, map }, output: layoutMindMap(title, map) }));
+    const cases: GoldenCase[] = OUTLINES.map(({ title, map }) => ({
+      input: { title, map },
+      output: layoutMindMap(title, map),
+    }));
     writeGolden('mind-map', cases);
   });
 
   it('captures the tok-* classes each grammar puts on a sample of its language', async () => {
     const corpus = samples();
     const cases: GoldenCase[] = [];
-    for (const tag of LANGUAGES as readonly LanguageTag[]) {
+    for (const tag of Object.keys(LANGUAGES) as LanguageTag[]) {
       const sample = corpus.get(tag);
       if (sample === undefined || GRAMMARS[tag] === null) continue;
       const grammar = await loadGrammar(tag);
-      cases.push({ input: { language: tag, text: sample }, output: highlightRanges(sample, grammar?.language ?? null) });
+      cases.push({
+        input: { language: tag, text: sample },
+        output: highlightRanges(sample, grammar?.language ?? null),
+      });
     }
     writeGolden('syntax-tokens', cases);
   }, 120_000);
