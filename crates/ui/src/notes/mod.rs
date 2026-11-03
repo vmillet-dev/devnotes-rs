@@ -3,6 +3,7 @@
 
 pub mod calc;
 pub mod canvas;
+mod header;
 pub mod language;
 pub mod sidebar;
 pub mod ui;
@@ -14,6 +15,7 @@ use i18n::{Key, keys};
 
 use engine::folders::model::FolderColour;
 use engine::notes::checklist::ChecklistItem;
+use engine::notes::view::NoteFilter;
 
 use crate::action::{Action as Asked, Actions, AppAction};
 use crate::state::AppState;
@@ -66,6 +68,13 @@ pub enum Action {
         colour: FolderColour,
     },
     DeleteFolder(String),
+    /// What the field shows; asked of the core once the keys rest.
+    Search(String),
+    ClearSearch,
+    SetFilter(NoteFilter),
+    Arrange(crate::state::notes_query::Arrangement),
+    /// `Ctrl+K`: the caret into the search.
+    FocusSearch,
 }
 
 /// The rail's edge, which widens it.
@@ -77,6 +86,8 @@ pub struct View {
     pub sidebar: sidebar::SidebarView,
     /// While its edge moves; the setting is written once the pointer rests.
     rail_width: Option<f32>,
+    /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
+    pub(crate) focus_search: bool,
 }
 
 /// The rail on the left, as wide as the setting says, and the canvas beside it.
@@ -99,7 +110,13 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     sidebar::show(&mut rail_ui, state, &mut view.sidebar, actions);
     let mut edge_ui = ui.new_child(UiBuilder::new().max_rect(edge));
     width += crate::widgets::split_handle(&mut edge_ui, "library-rail-edge");
-    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(rest));
+    let mut header_ui = ui.new_child(UiBuilder::new().max_rect(rest));
+    header::show(&mut header_ui, state, &mut view.focus_search, actions);
+    let below = Rect::from_min_max(
+        egui::pos2(rest.left(), header_ui.min_rect().bottom()),
+        rest.max,
+    );
+    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
     canvas::show(&mut canvas_ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);
@@ -157,3 +174,6 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+pub(crate) mod bench;

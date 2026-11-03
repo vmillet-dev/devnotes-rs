@@ -256,6 +256,21 @@ impl App {
         self.apply(vec![button(false)]);
     }
 
+    /// Clicks the `n`th `author_id` from the top, counting from 0: a choice among several whose
+    /// words are the system's language.
+    pub fn click_nth(&mut self, author_id: &str, n: usize) {
+        self.eventually(&format!("{author_id} #{n} is shown"), |tree| {
+            tree.count(author_id) > n
+        });
+        let tree = self.tree();
+        let target = tree.all(author_id)[n];
+        let label = target.label().map(str::to_owned);
+        let at = top(target);
+        self.click_where(author_id, |node| {
+            node.label().map(str::to_owned) == label && (top(node) - at).abs() < 0.5
+        });
+    }
+
     /// Through the gate of a blank profile: the phrase twice, and the library opens.
     pub fn create_library(&mut self) {
         self.fill("vault-passphrase", PASSPHRASE);

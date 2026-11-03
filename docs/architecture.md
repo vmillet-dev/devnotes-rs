@@ -4661,6 +4661,17 @@ attachment), its folder and two tags. Previews are monochrome until syntax colou
 the editors. A sheet's results are written by `notes::calc::value`, the reference's formatter in
 Rust, held by the core's golden cases (`golden/calc-format`).
 
+The header (`notes::header`) asks, and `NotesQueryState` holds what it asked: the search as typed,
+the search the core is asked for (the typed one once the keys have rested 150 ms, a deadline in
+egui's time and not a timer), the quick filter (all, pinned, untriaged), and the arrangement —
+order, grouping, pinned first — which is the library's (`devnotes.notes.arrangement`, the
+reference's JSON). All of them are parameters of the one `QueryCell`, so a search typed faster
+than the core answers asks once, and a stale answer is dropped. The search shows the count once
+something is filtered, zero included, and its cross empties the field alone; `Ctrl+K` is the
+notes area's key (`keys::NOTES`). The List/Board switch keeps the board disabled until the board
+is ported. Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
+embedded face has them.
+
 The library rail (`notes::sidebar`) is drawn left of the canvas, as wide as the application setting
 `libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds both
 lists — every space's folders, since the rail draws the whole library — asked again with the

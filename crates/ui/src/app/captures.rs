@@ -136,6 +136,9 @@ fn the_canvas_of_an_open_library() {
     harness.state_mut().state.revision.bump();
     settle(&mut harness);
     capture(&mut harness, "canvas-notes");
+
+    click(&mut harness, "sort-trigger");
+    capture(&mut harness, "header-sort-menu");
 }
 
 /// One note of each kind, with marks, tags and a search's worth of words.
