@@ -2,7 +2,6 @@
 //! both, with the `chmod` commands that set it and what a umask leaves a new file.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::count::saturating_u32;
 
@@ -10,7 +9,7 @@ const SETUID: u32 = 0o4000;
 const SETGID: u32 = 0o2000;
 const STICKY: u32 = 0o1000;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FileType {
     Regular,
@@ -37,7 +36,7 @@ impl FileType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Class {
     Owner,
@@ -76,7 +75,7 @@ impl Class {
 
 /// A row of the grid: its four boxes are four booleans, not a state machine.
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClassRights {
     pub class: Class,
@@ -87,7 +86,7 @@ pub struct ClassRights {
     pub special: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Mode {
     /// The twelve bits, `0o7777` at most.
@@ -100,7 +99,7 @@ pub struct Mode {
     pub classes: Vec<ClassRights>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ModeProblem {
     /// Neither octal digits nor a mode string.
@@ -116,7 +115,7 @@ pub enum ModeProblem {
 }
 
 /// A mode that is probably a mistake: legal, but rarely what was meant.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ModeWarning {
     /// The group holds less than everybody: the others have a right it lacks.
@@ -153,7 +152,7 @@ fn warnings(bits: u32) -> Vec<ModeWarning> {
     .collect()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -174,7 +173,7 @@ pub enum ModeReading {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -192,7 +191,7 @@ pub enum UmaskReading {
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PermissionsRequest {
     /// `755`, `0644`, `4755`, `rwxr-xr-x`, `drwxr-xr-x`.
@@ -200,7 +199,7 @@ pub struct PermissionsRequest {
     pub umask: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PermissionsAnswer {
     pub mode: ModeReading,

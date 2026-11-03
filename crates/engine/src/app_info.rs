@@ -3,10 +3,9 @@
 //! crate. No version here: the front asks the running binary, which cannot go stale.
 
 use serde::Serialize;
-use specta::Type;
 
 /// A constant rather than a command: the titlebar reads the name synchronously.
-#[derive(Serialize, Type)]
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppMetadata {
     /// What the user is shown, which is not the crate name (`devnotes`).

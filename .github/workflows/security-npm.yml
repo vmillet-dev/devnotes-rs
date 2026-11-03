@@ -44,8 +44,7 @@ jobs:
       # is a job everyone learns to ignore.
       #
       # ⚠️ `--omit=dev` reads the section a package is *declared* in, not what is
-      # actually bundled — `cosmiconfig` counts as production because transloco is a
-      # dependency. It is a coarse cut, and it errs on the safe side.
+      # actually bundled. It is a coarse cut, and it errs on the safe side.
       - name: Advisories that block
         run: npm audit --omit=dev --audit-level=high
 

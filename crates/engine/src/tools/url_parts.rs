@@ -2,10 +2,9 @@
 
 use percent_encoding::percent_decode_str;
 use serde::Serialize;
-use specta::Type;
 use url::{ParseError, Url};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryParameter {
     pub name: String,
@@ -13,7 +12,7 @@ pub struct QueryParameter {
 }
 
 /// The user and the password decoded, the path as written, the query both ways.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UrlParts {
     pub scheme: String,
@@ -29,7 +28,7 @@ pub struct UrlParts {
     pub fragment: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum UrlProblem {
     Empty,
@@ -42,7 +41,7 @@ pub enum UrlProblem {
     Other,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum UrlAnswer {
     Parsed { parts: UrlParts },

@@ -9,7 +9,6 @@ use base64::alphabet;
 use base64::engine::DecodePaddingMode;
 use base64::engine::general_purpose::{GeneralPurpose, GeneralPurposeConfig};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::files::{self, FileProblem};
 use super::image::{self, ImageFormat};
@@ -19,7 +18,7 @@ use crate::count::saturating_u32;
 /// the bridge whole, a third heavier than the bytes.
 pub(crate) const PREVIEW_LIMIT: usize = 2 * 1024 * 1024;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ByteEncoding {
     Base64,
@@ -56,7 +55,7 @@ fn base64_engine(url: bool) -> GeneralPurpose {
     )
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EncodeRequest {
     pub text: String,
@@ -66,14 +65,14 @@ pub struct EncodeRequest {
 }
 
 /// The first character UTF-8 writes in more than one byte: « é » takes 2.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WideCharacter {
     pub character: String,
     pub bytes: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Encodings {
     pub characters: u32,
@@ -150,7 +149,7 @@ pub fn encode(request: &EncodeRequest) -> Encodings {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -181,7 +180,7 @@ pub fn encode_file(path: &str) -> Base64FileAnswer {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DecodeProblem {
     /// A character outside the alphabet, or padding in the middle.
@@ -195,7 +194,7 @@ pub enum DecodeProblem {
     TooLarge,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -219,7 +218,7 @@ pub enum DecodedBytes {
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DecodeRequest {
     pub text: String,
@@ -227,7 +226,7 @@ pub struct DecodeRequest {
     pub reading: Option<ByteEncoding>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -245,7 +244,7 @@ pub enum ImagePreview {
 }
 
 /// The decoded bytes are a picture: which kind, how large when its header says, and itself.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DecodedImage {
     pub format: ImageFormat,
@@ -254,7 +253,7 @@ pub struct DecodedImage {
     pub preview: ImagePreview,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DecodeAnswer {
     pub read_as: ByteEncoding,
@@ -594,7 +593,7 @@ pub fn decode(request: &DecodeRequest) -> DecodeAnswer {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SavedBytes {
     Saved { bytes: u32 },

@@ -9,12 +9,11 @@ use chrono::{
 };
 use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::dates::{self, Parsed, Refusal};
 use crate::count::saturating_u32;
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DurationsRequest {
     pub from: String,
@@ -22,7 +21,7 @@ pub struct DurationsRequest {
     pub duration: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DurationsAnswer {
     /// Where a date written without an offset is read: the machine's zone, UTC without one.
@@ -32,7 +31,7 @@ pub struct DurationsAnswer {
     pub duration: Option<DurationAnswer>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum GapField {
     From,
@@ -40,7 +39,7 @@ pub enum GapField {
 }
 
 /// What a calendar counts: whole months first, each of its own length, then the wall clock.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalendarGap {
     pub years: u32,
@@ -52,7 +51,7 @@ pub struct CalendarGap {
 }
 
 /// What a clock counts between the two instants, cut several ways.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Elapsed {
     pub days: u32,
@@ -66,7 +65,7 @@ pub struct Elapsed {
 }
 
 /// The two counts part when the zone's offset differs at either end: a daylight-saving change.
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Transition {
     /// The local date the clocks changed on — the last change, when there were several.
@@ -79,7 +78,7 @@ pub struct Transition {
     pub wall_minutes: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -106,7 +105,7 @@ pub enum GapAnswer {
 }
 
 /// Each part as typed: a fraction is allowed on the last one only, so they are `f64`.
-#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DurationParts {
     pub years: f64,
@@ -119,7 +118,7 @@ pub struct DurationParts {
 }
 
 /// A day is counted as 24 hours, and a week as 7 of them.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DurationTotals {
     pub seconds: f64,
@@ -127,7 +126,7 @@ pub struct DurationTotals {
     pub hours: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DurationProblem {
     /// Not what an ISO duration or a unit of words may hold here.
@@ -141,7 +140,7 @@ pub enum DurationProblem {
     FractionNotLast,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

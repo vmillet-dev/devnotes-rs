@@ -4,7 +4,6 @@
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::Serialize;
-use specta::Type;
 use uuid::Uuid;
 
 use super::{Change, JarCookie};
@@ -13,14 +12,14 @@ use crate::db::{Library, iso8601};
 use crate::error::StorageError;
 use crate::vault::key::Vault;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredCookie {
     pub id: String,
     pub cookie: JarCookie,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CookieDomain {
     pub domain: String,

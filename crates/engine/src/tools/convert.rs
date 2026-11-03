@@ -6,13 +6,12 @@ mod xml;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Number, Value};
-use specta::Type;
 use yaml_rust2::yaml::Hash;
 use yaml_rust2::{Yaml, YamlEmitter, YamlLoader};
 
 use crate::count::saturating_u32;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DataFormat {
     Json,
@@ -21,7 +20,7 @@ pub enum DataFormat {
     Yaml,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConvertRequest {
     pub text: String,
@@ -29,7 +28,7 @@ pub struct ConvertRequest {
     pub to: DataFormat,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Crossing {
     /// TOML has no `null`, and one in a list cannot be left out without moving the others.
@@ -44,7 +43,7 @@ pub enum Crossing {
     XmlAttribute,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ConvertAnswer {
     Converted {

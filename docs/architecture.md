@@ -5,70 +5,39 @@ For build/run instructions see [CONTRIBUTING](../CONTRIBUTING.md).
 
 ## Overview
 
-DevNotes is a Tauri v2 desktop app: an Angular single-page front-end rendered in a WebView,
-and a Rust process that owns everything native (storage, encryption, the filesystem).
-The two halves talk only through Tauri's `invoke()` bridge.
-
-Notes and spaces are complete end to end: the front-end has no in-memory dataset left, every
-read and write goes through `invoke()`, and the Rust commands persist to an embedded SQLite
-database. Built on top of that: a 30-day trash with undo, multiple selection and bulk actions,
-corpus-wide tag management, `{{fields}}` in snippets, one palette on a global
-shortcut, attachments, and import / export / share.
+DevNotes is a desktop application being rewritten from Angular + Tauri to **egui**, in one Rust
+process (`docs/egui-migration-plan.md`). The core, `crates/engine`, owns everything that is not
+drawing: storage, encryption, the in-memory index of notes, HTTP, the tools. The egui interface
+calls it directly, through one façade and three queues, with no serialisation in between. The
+Angular application it replaces is kept, never built, in `reference/angular/`; the sections of
+this document that still describe it say so.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
 tags, languages, quick filters), grouping into display sections, facet aggregation and tag
 normalisation, and the choice of what a card's footer shows all run in `crates/engine/src/notes/`.
-The front-end describes what the user asked for and renders the view it gets back — it does
-not filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels
-must age on their own, without a round trip), the ISO ↔ `Date` conversion at the serialisation
-boundary, syntax highlighting (it colours the in-flight editor draft, which is not persisted
-yet — a round trip per keystroke), formatting a snippet with Prettier (the same draft, and
-Prettier is JavaScript), searching the tools' catalogue (its names are translated), and plain UI
-concerns like keyboard shortcuts and drafts.
+The interface describes what the user asked for and draws the view it gets back — it does not
+filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels must age
+on their own, without a round trip), syntax highlighting (it colours the in-flight editor draft,
+which is not persisted yet), and plain UI concerns like keyboard shortcuts and drafts.
 
 ```
-src/                Angular front-end
-├── app/
-│   ├── app.component.*   the frame: titlebar, banners, the areas behind @defer, their keys
-│   ├── core/       everything that has no place on screen
-│   │   ├── model/      the vocabulary: note, space, checklist, variable, language
-│   │   ├── data/       repositories and the wire mapper
-│   │   ├── state/      the stores, flat
-│   │   ├── ipc/        generated bindings, error contract, native events
-│   │   └── services/   one folder per subject: i18n, errors, time, preferences,
-│   │                   settings, updates, app-info, clipboard, dialogs, window,
-│   │                   shortcuts, autostart, tray, notifications, areas, tools
-│   ├── notes/      the page at the root, then its four zones: sidebar/ (the library
-│   │               rail), header/ (above the canvas), canvas/ (the cards),
-│   │               overlays/ (drawn over the page), plus ui/ for what two of them share
-│   ├── tools/      the Outils area: its page, rail/, home/, frame/, and catalogue/ with one
-│   │               folder per tool
-│   ├── titlebar/   titlebar.component, then file-menu/ and about-menu/ with the panels
-│   │               each of them opens, nested where they open from
-│   ├── banners/    error banner, status toast, update prompt — siblings of the page
-│   └── shared/     what crosses two areas of the screen: the modal frame, a11y directives
-├── assets/         static images
-├── styles/         global theme (styles.scss) and SCSS partials
-└── testing/        test doubles, fixtures and shared providers
 Cargo.toml          the Cargo workspace: shared version, lints and release profile
-crates/engine/      Rust back-end, the core (migrations/, resources/, sandbox/, tests/, benches/)
+crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches/)
 ├── src/notes/      the notes feature: model, language, view, placeholder, trash, store/
+├── src/index/      the decrypted, folded notes of the open library, in memory
 ├── src/spaces/     the spaces feature: model, SQL
 ├── src/attachments/ the attachments feature: model, SQL (the bytes live on disk)
 ├── src/transfer/   import, export and share: bundle rules, the file, the exchange format
 ├── src/tools/      the Outils area: one pure module per group of tools, no lock, no store
-├── src/db.rs       connection, migrations, schema, stored-instant format
+├── src/host.rs     what the core asks of its shell: paths and an event sink
+├── src/db.rs       connection, migrations, schema, stored-instant format, the db queue
 ├── src/error.rs    the three errors and the translation between them
-└── src/lib.rs      the modules, every command re-exported at the root
-src-tauri/          the Tauri shell over the core
-├── src/desktop.rs  tray and global shortcuts — native glue, not a feature
-├── src/lib.rs      Tauri builder, plugins, native state + command registration
-└── capabilities/   Tauri v2 permission manifests
+└── src/lib.rs      the modules and the `Engine`
+crates/i18n/translations/  fr.json and en.json, the interface's strings
+crates/app/icons/   the application icons (`npm run icons`)
+golden/             outputs of the JavaScript libraries, captured before they left
+reference/angular/  the Angular application and its WebdriverIO scenarios, for reading only
 ```
-
-⚠️ The shell registers a core command as `engine::<command>`: `#[tauri::command]` and
-`#[specta::specta]` export their macros at the root of the crate that declares the command,
-so `engine/src/lib.rs` re-exports each command there.
 
 ### Feature-first, not layer-first
 
@@ -160,6 +129,11 @@ also derives `specta::Type`, which is what lets tauri-specta generate the front-
 `bindings.ts` from them.
 
 ## Front-end
+
+> **Angular reference.** This section describes the Angular application, which left the build in
+> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
+> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> screen by screen (`docs/egui-migration-plan.md` § 12).
 
 ### Where a file goes
 
@@ -4480,6 +4454,11 @@ Keep this seam intact: no component or store calls a command, the repositories d
 
 ## IPC boundary (Angular ↔ Rust)
 
+> **Angular reference.** This section describes the Angular application, which left the build in
+> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
+> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> screen by screen (`docs/egui-migration-plan.md` § 12).
+
 **The boundary is generated, not written.** `src/app/core/ipc/bindings.ts` is produced by
 [tauri-specta](https://docs.rs/tauri-specta) from the Rust signatures: one typed function per
 command, plus a TypeScript type for every struct and enum that crosses the bridge. It is
@@ -6192,38 +6171,6 @@ that sealed a 0.1.x library written in the clear. What it keeps: gathering a pre
 library into `libraries/<id>/`, and moving the library-scoped preferences out of the
 application's file — both serve 0.3.x, the release before the one that introduced them.
 
-## Tauri configuration
-
-- `src-tauri/tauri.conf.json` wires the pipeline to Angular: `beforeDevCommand` /
-  `beforeBuildCommand` run the npm scripts, `devUrl` must match the Angular dev server port
-  (1420, fixed in `angular.json`), and `frontendDist` must match Angular's build output path.
-- `src-tauri/capabilities/default.json` is the v2 permission manifest for the main window.
-  Any new plugin or restricted API needs its permission listed there, or the call is denied
-  at runtime — that is where `updater:default` and `process:allow-restart` come from.
-- **`opener:allow-open-url` carries a scope**, not the bare permission: `http://*` and
-  `https://*`, for the About dialog and a link Ctrl+clicked in a Note, and nothing else —
-  no `file:`, no scheme a program registered for itself. It is the WebView's only escape hatch
-  to the system, and `ExternalLinksService` refuses any other scheme before the call as well.
-  The About dialog needs the plugin precisely because the CSP is locked to `'self'` — a plain `<a href>` leads nowhere — and
-  `AppInfoService` (`core/services/app-info/`) is its seam, alongside `getVersion()`. That one needs no
-  permission of its own: `core:app:allow-version` already ships inside `core:default`.
-- `serde_json` is a **runtime** dependency, not just a dev one: `generate_context!` embeds the
-  `plugins` section of `tauri.conf.json` as JSON, and drops the section without it.
-- **CSP is enabled.** `csp` locks production down to same-origin resources; `devCsp`
-  additionally allows the dev server's websocket and inline scripts for hot reload. Both
-  keep `ipc:` and `http://ipc.localhost` in `connect-src` — without them `invoke()` is
-  blocked. Loading anything remote means widening these, deliberately.
-- ⚠️ **The CSP is a control, not a formality.** `attach_file` takes any path — it is the native
-  picker's answer, so there is nothing to check it against — and `read_attachment` hands the
-  bytes back as a `data:` URI: together they read any file the account can read into the
-  WebView. That is harmless only because no code can be injected there: `script-src 'self'`
-  with no `'unsafe-inline'`, the one `[innerHTML]` (the highlighter) escaping before it
-  renders, and nothing loaded from anywhere else. `devCsp` carries `'unsafe-inline'` for the
-  dev server; it is the shape somebody copies when widening the production one in a hurry, and
-  it must not be.
-- ⚠️ **The Prettier worker runs outside it.** Tauri sets the header on the HTML response only,
-  and a worker's policy is its own response's: see "Formatting a snippet with Prettier".
-
 ## Testing
 
 ### Benchmarks
@@ -6529,6 +6476,11 @@ Test names and comments are in English, like the front-end specs. `notes::store:
 survives only as a `#[cfg(test)]` helper — no command returns a raw list.
 
 ### End to end
+
+> **Angular reference.** This section describes the Angular application, which left the build in
+> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
+> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> screen by screen (`docs/egui-migration-plan.md` § 12).
 
 `npm run test:e2e` drives the **assembled application**: the real binary, a real WebView, the
 real IPC bridge and a real SQLite file. It is the only suite that can see a missing capability,

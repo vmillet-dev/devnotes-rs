@@ -2,12 +2,11 @@
 //! would have notes filed into it.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::error::ValidationError;
 use crate::name;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Space {
     pub id: String,
@@ -20,7 +19,7 @@ pub struct Space {
 
 /// What deleting a space takes or moves: its notes, the trashed ones included, go to the refuge
 /// and leave their folder; its folders go with it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpaceContents {
     /// The live notes, which the confirmation names; the trashed ones move along silently.
@@ -28,7 +27,7 @@ pub struct SpaceContents {
     pub folders: u32,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpaceDraft {
     pub name: String,

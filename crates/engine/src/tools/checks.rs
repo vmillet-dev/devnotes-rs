@@ -5,7 +5,6 @@ use std::str::FromStr;
 
 use iban::{Iban, ParseIbanError};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::count::saturating_u32;
 
@@ -101,14 +100,14 @@ const IBAN_LENGTHS: [(&str, usize); 87] = [
     ("YE", 30),
 ];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CheckKind {
     Luhn,
     Iban,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CardNetwork {
     Visa,
@@ -224,7 +223,7 @@ pub(crate) fn iban_check_digits(country: &str, bban: &str) -> String {
 
 /// The French RIB's key, over the bank, the branch and the account, a letter of the account read
 /// as a digit (`A` and `J` as 1, `B`, `K` and `S` as 2…).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RibKey {
     pub given: String,
@@ -271,7 +270,7 @@ fn french_account(bban: &str) -> Option<(String, RibKey)> {
     ))
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckRequest {
     pub text: String,
@@ -279,7 +278,7 @@ pub struct CheckRequest {
     pub kind: Option<CheckKind>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -308,7 +307,7 @@ pub enum IbanVerdict {
     UnknownCountry,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

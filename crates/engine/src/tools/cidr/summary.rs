@@ -5,11 +5,10 @@ use std::net::IpAddr;
 use std::str::FromStr;
 
 use serde::Serialize;
-use specta::Type;
 
 use super::{IpFamily, Net, blocks_between, ones, parse, split_ip};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FamilySummary {
     pub family: IpFamily,
@@ -20,7 +19,7 @@ pub struct FamilySummary {
     pub extra: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrSummary {
     /// IPv4 first, then IPv6, each when the list holds some.

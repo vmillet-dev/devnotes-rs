@@ -5,12 +5,11 @@ use std::io::{ErrorKind, Read};
 use std::path::Path;
 
 use serde::Serialize;
-use specta::Type;
 
 /// Past this, a tool that has to send what it made of a file back across the bridge refuses it.
 pub(crate) const MAX_SENT_BYTES: u64 = 10 * 1024 * 1024;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FileProblem {
     NotFound,

@@ -6,7 +6,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::model::{
     HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpRequest, HttpTree, RequestKind, RunEntry,
@@ -18,7 +17,7 @@ use crate::error::{AppError, ErrorCode, FileContext};
 pub const HTTP_RUN_EVENT: &str = "http-run";
 
 /// The rows of a data file, each an iteration; its columns are `pm.iterationData`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunData {
     pub columns: Vec<String>,
@@ -146,7 +145,7 @@ fn from_csv(text: &str) -> Result<RunData, DataFault> {
 
 /// What a run is asked to do: its switches are the runner's checkboxes, each its own.
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunRequest {
     /// Chosen by the front: what its events and « Annuler » name it by.
@@ -170,7 +169,7 @@ pub struct RunRequest {
 }
 
 /// An error as its code and the values its sentence states.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunError {
     pub code: ErrorCode,
@@ -178,7 +177,7 @@ pub struct RunError {
 }
 
 /// One request of one iteration, once it ended.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunResult {
     pub iteration: u32,
@@ -211,7 +210,7 @@ impl RunResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -234,7 +233,7 @@ pub enum RunStep {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunEvent {
     pub id: String,

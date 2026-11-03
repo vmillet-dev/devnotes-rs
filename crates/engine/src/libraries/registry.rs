@@ -5,13 +5,12 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::error::{FileContext, StorageError};
 use crate::layout::{DATABASE, KEY_FILE, LIBRARIES, LIBRARY_DIRECTORIES, LIBRARY_FILES, REGISTRY};
 
 /// One library, as the interface lists it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LibraryEntry {
     pub id: String,
@@ -22,7 +21,7 @@ pub struct LibraryEntry {
 }
 
 /// What the File menu draws: the libraries, and which of them is open.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Registry {
     pub libraries: Vec<LibraryEntry>,

@@ -23,7 +23,7 @@ env:
 
 jobs:
   # A pull request that touches documentation alone builds and runs nothing: a README cannot
-  # break the application, and a flaky scenario must not block it. Lint front still runs, as
+  # break the application, and a flaky scenario must not block it. Lint docs still runs, as
   # Prettier checks the Markdown. A push, to main or a milestone branch, checks everything.
   changes:
     name: Changes
@@ -45,7 +45,7 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          code=$(git diff --name-only "$BASE" HEAD | grep -vE '\.md$|^docs/|^LICENSE$' || true)
+          code=$(git diff --name-only "$BASE" HEAD | grep -vE '\.md$|^docs/|^reference/|^LICENSE$' || true)
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
@@ -66,8 +66,8 @@ jobs:
           gh workflow run stop.yml --repo "$GITHUB_REPOSITORY" --ref "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           -f run="$GITHUB_RUN_ID" || echo "::notice::This token cannot stop the run"
 
-  lint-front:
-    name: Lint front
+  lint-docs:
+    name: Lint docs
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
@@ -80,12 +80,10 @@ jobs:
 
       - run: npm ci
 
-      # ESLint (template accessibility rules included) plus the Prettier check, which also
-      # covers this workflow file.
+      # Prettier over the Markdown, JSON and YAML, this workflow file included.
       - run: npm run lint
 
-      # The release-notes generator is neither Angular nor Rust: its runner is Node's own,
-      # with no dependency to install.
+      # The release scripts run on Node's own test runner.
       - run: npm run test:scripts
 
       - *stop-the-run
@@ -106,118 +104,10 @@ jobs:
           shared-key: lint-ubuntu-22.04
           save-if: 'true'
 
-      # `generate_context!` reads frontendDist at compile time. Making this job depend on the
-      # front-end build would serialise it for nothing: it validates Rust, not the bundle.
-      - name: Placeholder frontendDist
-        run: |
-          mkdir -p dist/devnotes/browser
-          printf '<!doctype html><title>ci</title>' > dist/devnotes/browser/index.html
-
       - run: cargo fmt --all --check
 
-      # `--all-features` is what type-checks the `e2e` feature. Without it a break in
-      # the end-to-end harness only surfaces at the next `npm run e2e:build`.
+      # `--all-features` is what type-checks the `e2e` feature.
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-
-      - *stop-the-run
-
-  build-front:
-    name: Build front
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - run: npm ci
-
-      - name: Build
-        run: |
-          start=$(date +%s)
-          npm run build
-          echo "\`build-front\` — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
-
-      # Not consumed by `test-front`: angular.json's `test` target rebuilds its own dev build
-      # (buildTarget "::development"). Kept short, as evidence and for debugging.
-      - uses: actions/upload-artifact@v7
-        with:
-          name: front-dist
-          path: dist/devnotes/browser
-          retention-days: 1
-
-      - *stop-the-run
-
-  test-front:
-    name: Test front
-    needs: build-front
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - run: npm ci
-
-      # The 80% coverage thresholds are the guard.
-      - name: Test
-        run: |
-          start=$(date +%s)
-          npm run test:coverage
-          echo "\`test-front\` — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: front-coverage
-          path: coverage
-          retention-days: 7
-
-      - *stop-the-run
-
-  sonar-front:
-    name: Sonar Front
-    needs: test-front
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
-
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: front-coverage
-          path: coverage
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v8
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=devnotes-front
-            -Dsonar.organization=vmillet-dev
-            -Dsonar.sources=src
-            -Dsonar.tests=src
-            -Dsonar.test.inclusions=src/**/*.spec.ts
-            -Dsonar.coverage.exclusions=src/**/*.spec.ts,src/main.ts,src/test.ts,src/testing/*.ts,src/**/bindings.ts,src/**/*.repository.ts,src/**/*.worker.ts
-            -Dsonar.javascript.lcov.reportPaths=coverage/devnotes/lcov.info
-            -Dsonar.cpd.exclusions=src/app/tools/catalogue/**/*.data.ts
-            -Dsonar.issue.ignore.multicriteria=mixins
-            -Dsonar.issue.ignore.multicriteria.mixins.ruleKey=css:S8776
-            -Dsonar.issue.ignore.multicriteria.mixins.resourceKey=src/styles/_mixins.scss
-            -Dsonar.qualitygate.wait=true
 
       - *stop-the-run
 
@@ -246,11 +136,6 @@ jobs:
         with:
           shared-key: test-${{ matrix.os }}
           save-if: 'true'
-
-      - name: Placeholder frontendDist
-        run: |
-          mkdir -p dist/devnotes/browser
-          printf '<!doctype html><title>ci</title>' > dist/devnotes/browser/index.html
 
       - name: Install cargo-llvm-cov
         if: runner.os == 'Linux'
@@ -307,11 +192,6 @@ jobs:
         with:
           shared-key: rust-sonar
 
-      - name: Placeholder frontendDist
-        run: |
-          mkdir -p dist/devnotes/browser
-          printf '<!doctype html><title>ci</title>' > dist/devnotes/browser/index.html
-
       - name: Download Rust coverage
         uses: actions/download-artifact@v8
         with:
@@ -326,65 +206,13 @@ jobs:
           args: >
             -Dsonar.organization=vmillet-dev
             -Dsonar.projectKey=devnotes-rust
-            -Dsonar.sources=crates,src-tauri
-            -Dsonar.tests=crates,src-tauri
-            -Dsonar.test.inclusions=crates/*/tests/**,crates/*/benches/**,src-tauri/tests/**
+            -Dsonar.sources=crates
+            -Dsonar.tests=crates
+            -Dsonar.test.inclusions=crates/*/tests/**,crates/*/benches/**
             -Dsonar.exclusions=crates/engine/sandbox/dist/**,crates/engine/sandbox/node_modules/**
-            -Dsonar.coverage.exclusions=crates/engine/src/**/*.js,crates/engine/sandbox/*.mjs,src-tauri/**
+            -Dsonar.coverage.exclusions=crates/engine/src/**/*.js,crates/engine/sandbox/*.mjs
             -Dsonar.rust.cargo.manifestPaths=Cargo.toml
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true
 
       - *stop-the-run
-
-  # The end-to-end suite is the only one that launches the assembled application: real binary,
-  # real WebView, real SQLite file on disk. Both platforms of the release matrix are covered, and
-  # they do not break the same way: the WebView is WebView2 on Windows and WebKitGTK on Linux,
-  # and above all Windows conflates `data_dir()` and `config_dir()` (both `%APPDATA%\<id>`)
-  # where Linux keeps them apart. It is the only runner able to disprove a path — it has already
-  # caught a `preferences.json` looked for in the wrong place.
-  #
-  # Three steps: the groups are read here; then `e2e.yml`, once per platform, builds the binary
-  # and runs three groups on three runners, each scenario alone in turn, against that binary and
-  # a virgin profile. Three per platform rather than a runner per scenario: a pull request takes
-  # six runners, so several open at once do not queue behind one another.
-
-  # `e2e/groups.json`, checked against the spec files: a scenario in no group, in two, or with
-  # no file fails here rather than going unrun.
-  e2e-scenarios:
-    name: E2E scenarios
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-22.04
-    timeout-minutes: 5
-    outputs:
-      groups: ${{ steps.list.outputs.groups }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          sparse-checkout: |
-            e2e
-            scripts
-
-      - id: list
-        run: |
-          groups=$(node scripts/e2e-groups.mjs)
-          echo "groups=$groups" >> "$GITHUB_OUTPUT"
-          echo "$groups" | jq -r '.[] | "group \(.name): \(.specs | length) scenarios, \(.specs | join(", "))"'
-
-      - *stop-the-run
-
-  # `e2e.yml` once per platform: its build, then its groups. Neither waits for the other.
-  # One failing scenario decides the run: the other platform is cancelled with it.
-  e2e:
-    name: E2E (${{ matrix.os }})
-    needs: e2e-scenarios
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [windows-latest, ubuntu-22.04]
-    uses: ./.github/workflows/e2e.yml
-    with:
-      os: ${{ matrix.os }}
-      groups: ${{ needs.e2e-scenarios.outputs.groups }}
-      capture: ${{ contains(github.event.pull_request.labels.*.name, 'reference-capture') }}

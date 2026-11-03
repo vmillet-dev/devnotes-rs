@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, HashMap};
 
 use chrono::{DateTime, Datelike, FixedOffset, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 use unicode_normalization::char::{decompose_canonical, is_combining_mark};
 
 use super::kind::NoteKind;
@@ -12,7 +11,7 @@ use super::priority::Priority;
 use crate::count::saturating_u32;
 use crate::folders::model::NoteFolder;
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotesQuery {
     /// `None` = every space: a choice, not an absence of one.
@@ -20,7 +19,6 @@ pub struct NotesQuery {
     /// `None` = every folder, filed or not. No "unfiled" filter: the absence of a chip already
     /// says it.
     #[serde(default)]
-    #[specta(optional)]
     pub folder_id: Option<String>,
     pub search: String,
     pub filter: NoteFilter,
@@ -31,14 +29,11 @@ pub struct NotesQuery {
     pub priorities: Vec<Priority>,
     /// Left out by the palette: the modification date, newest first.
     #[serde(default)]
-    #[specta(optional)]
     pub order: NoteOrder,
     #[serde(default)]
-    #[specta(optional)]
     pub grouping: Grouping,
     /// The palette's order: how the title answers the search, the last edit breaking ties.
     #[serde(default)]
-    #[specta(optional)]
     pub ranked: bool,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
@@ -49,14 +44,14 @@ pub struct NotesQuery {
 }
 
 /// What the list view is ordered by. The board keeps the places its cards were given.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteOrder {
     pub key: SortKey,
     pub direction: SortDirection,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SortKey {
     #[default]
@@ -69,7 +64,7 @@ pub enum SortKey {
 }
 
 /// How the list view gathers its cards. A search or a facet still makes one flat list.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Grouping {
     #[default]
@@ -79,7 +74,7 @@ pub enum Grouping {
     None,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SortDirection {
     #[default]
@@ -88,7 +83,7 @@ pub enum SortDirection {
 }
 
 /// `Untriaged` = notes with a deadline, those whose fate is not decided.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NoteFilter {
     All,
@@ -208,7 +203,7 @@ impl Facets {
 }
 
 /// How many of the space's notes carry a value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FacetCount<T> {
     pub value: T,
@@ -282,7 +277,7 @@ enum Layout {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotesView {
     pub sections: Vec<NoteSection>,
@@ -302,7 +297,7 @@ pub struct NotesView {
 
 /// No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
 /// biggest thing on the card. That case is `SearchMatch::Title`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SearchField {
     Tag,
@@ -313,7 +308,7 @@ pub enum SearchField {
 }
 
 /// What made a note match, and where.
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchHit {
     pub field: SearchField,
@@ -321,7 +316,7 @@ pub struct SearchHit {
     pub excerpt: String,
 }
 
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteSection {
     pub key: NoteSectionKey,
@@ -335,7 +330,7 @@ pub struct NoteSection {
 }
 
 /// A translation key on the front-end side: no readable label crosses the bridge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NoteSectionKey {
     Pinned,
@@ -364,7 +359,7 @@ impl NoteSectionKey {
 }
 
 /// Declared in the order the format sections run: snippets by language, then the other kinds.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(tag = "group", rename_all = "camelCase")]
 pub enum SectionGroup {
     Language {
