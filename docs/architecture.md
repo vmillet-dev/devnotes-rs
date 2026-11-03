@@ -6655,6 +6655,30 @@ The tests split by what they need in order to run:
 Test names and comments are in English, like the front-end specs. `notes::store::list`
 survives only as a `#[cfg(test)]` helper — no command returns a raw list.
 
+### The interface
+
+`crates/ui` is tested with `egui_kittest`, inline like the rest. `testing::harness()` is a
+harness drawing with the application's fonts; `testing::backend()` a real core over an empty
+temporary profile, `testing::unlocked()` the same with a library created through the gate's
+calls; `services::time::fake::FakeClock` the time. A control is found by its `author_id` —
+the `data-testid` its Angular twin had, set by `widgets::address` — so a ported scenario reads
+like the old one. The harness refuses a control without an accessible name (kittest's check,
+on by default and left on).
+
+**A test waits on conditions, never on a number of frames.** `testing::settle` waits until the
+core has nothing in flight — answers, and the work it goes on with after one, such as the index
+filling behind an unlock (`Backend::background`) — then lets the window draw, and goes round
+again while drawing launches more. It returns once a drawing launched nothing: everything
+answered is then on screen. A window that still repaints at that point repaints forever, and the
+test fails. `testing::locked()` closes a library before a second core opens its profile, as a
+process that ended leaves it. The widget bench runs with reduced motion, so its spinner rests.
+
+`app::captures` drives the whole window (`DevNotesApp`) through the gate's states, the title
+bar and the banners, and renders each in both themes on a software adapter — WARP on Windows,
+lavapipe on Linux — into `DEVNOTES_CAPTURES` when it is set. `test-rust` sets it and uploads
+the PNGs as `captures-<os>`, to be looked at beside the reference's captures. Nothing compares
+pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
+
 ### End to end
 
 > **Angular reference.** This section describes the Angular application, which left the build in
