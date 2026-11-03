@@ -142,3 +142,43 @@ fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
 fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_first_launch_opens_hidden_and_centred_at_the_default_size() {
+        let options = options(None);
+
+        assert_eq!(options.viewport.visible, Some(false));
+        assert_eq!(
+            options.viewport.inner_size,
+            Some(egui::vec2(1_100.0, 720.0))
+        );
+        assert_eq!(
+            options.viewport.min_inner_size,
+            Some(egui::vec2(640.0, 480.0))
+        );
+        assert!(options.viewport.icon.is_some());
+        assert!(options.centered);
+        assert!(!options.persist_window);
+    }
+
+    #[test]
+    fn a_later_launch_opens_where_the_window_was() {
+        let options = options(Some(Geometry {
+            x: 40.0,
+            y: 30.0,
+            width: 900.0,
+            height: 600.0,
+            maximized: true,
+        }));
+
+        assert_eq!(options.viewport.visible, Some(false));
+        assert_eq!(options.viewport.inner_size, Some(egui::vec2(900.0, 600.0)));
+        assert_eq!(options.viewport.position, Some(egui::pos2(40.0, 30.0)));
+        assert_eq!(options.viewport.maximized, Some(true));
+        assert!(!options.centered);
+    }
+}
