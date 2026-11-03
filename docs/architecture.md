@@ -6388,6 +6388,36 @@ rows dereferences a ~13 kB note row; the notes table was 10 MB at 800 notes and 
 the file through a mapping (`mmap_size`) halved it, which points the same way: the cost is
 pages copied, not tags compared.
 
+#### The index on the reference corpora
+
+`cargo bench -p engine --bench index` (`benches/reference.rs` builds the two libraries of the egui
+migration plan, § 6.1, on disk first). Windows 11, Ryzen 7 9800X3D, release profile, the machine
+in use meanwhile — orders of magnitude, not a record. **Realistic**: 30 000 notes (20 000
+snippets of ~1.5 kB, 5 000 Notes of ~4 kB, 3 000 lists of 20 items, 1 500 Calcul sheets, 500
+Dessins of ~20 kB), 4 spaces, 300 folders, 600 tags, 2 000 attachments, and the HTTP side (2 000
+requests, 20 000 history entries, 500 cookies). **Stress**: 30 000 snippets of ~13 kB and the same
+HTTP.
+
+| Group, measure                             | Realistic | Stress  | Budget (plan § 6.2) |
+| ------------------------------------------ | --------- | ------- | ------------------- |
+| `index_build`, every slice                 | 1.87 s    | 2.98 s  | ≤ 1.5 s / ≤ 4 s     |
+| `index_query`, search matching nothing     | 12.1 ms   | 22.2 ms | ≤ 50 / 120 ms       |
+| `index_query`, space + tag + pinned        | 3.0 ms    | 3.2 ms  | —                   |
+| `index_query`, unfiltered                  | 661 ms    | 289 ms  | —                   |
+| `index_query`, search `etape` (most match) | 701 ms    | 269 ms  | ≤ 50 / 120 ms       |
+| `index_query`, `list_tags`                 | 7.6 ms    | 7.7 ms  | ≤ 5 / 10 ms         |
+| `index_refresh`, `update_note` (title)     | 0.44 ms   | 0.56 ms | ≤ 5 ms              |
+| `index_refresh`, tag then untag 100 notes  | 4.2 ms    | 10.1 ms | ≤ 30 ms             |
+
+**The search is no longer what costs; the view is.** Finding nothing reads every folded text
+and stays inside its budget. A query that keeps most notes costs what the view of today's shape
+costs: every kept note is copied, decorated and cut to its card — a Note's Markdown outline and a
+Calcul sheet's evaluation for each, which is why the realistic corpus, with 6 500 of those, is
+the slower one. The plan's phase 2 changes exactly that (`NotesView` of `Arc` entries, previews
+for the cards drawn alone). Two measures are over their budget on this run: the realistic build
+(the 60 000 checklist items and the side tables, read per slice) and `list_tags`, which walks
+every note's tags at each call.
+
 Unit tests run with Vitest through the `@angular/build:unit-test` builder in a jsdom
 environment (configured in `angular.json`'s `test` target and `vitest-base.config.ts`), so
 no browser is needed. Specs sit next to the file they cover. Coverage thresholds are set at
