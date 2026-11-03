@@ -6665,6 +6665,14 @@ the `data-testid` its Angular twin had, set by `widgets::address` — so a porte
 like the old one. The harness refuses a control without an accessible name (kittest's check,
 on by default and left on).
 
+**A test waits on conditions, never on a number of frames.** `testing::settle` waits until the
+core has nothing in flight — answers, and the work it goes on with after one, such as the index
+filling behind an unlock (`Backend::background`) — then lets the window draw, and goes round
+again while drawing launches more. It returns once a drawing launched nothing: everything
+answered is then on screen. A window that still repaints at that point repaints forever, and the
+test fails. `testing::locked()` closes a library before a second core opens its profile, as a
+process that ended leaves it. The widget bench runs with reduced motion, so its spinner rests.
+
 `app::captures` drives the whole window (`DevNotesApp`) through the gate's states, the title
 bar and the banners, and renders each in both themes on a software adapter — WARP on Windows,
 lavapipe on Linux — into `DEVNOTES_CAPTURES` when it is set. `test-rust` sets it and uploads

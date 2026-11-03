@@ -8,7 +8,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 
 use super::DevNotesApp;
-use super::tests::{STEPS, startup};
+use super::tests::startup;
 use crate::services::time::fake::FakeClock;
 use crate::testing::PASSPHRASE;
 
@@ -18,7 +18,6 @@ fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
     let startup = startup(profile);
     let mut harness = Harness::builder()
         .with_size(SIZE)
-        .with_max_steps(STEPS)
         .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
     harness.state_mut().state.clock = Box::new(FakeClock::at("2026-11-03T09:30:00Z"));
     settle(&mut harness);
@@ -26,15 +25,14 @@ fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
 }
 
 fn settle(harness: &mut Harness<'_, DevNotesApp>) {
-    harness.state().backend.settle();
-    harness.run();
+    super::tests::settle(harness);
 }
 
 fn click(harness: &mut Harness<'_, DevNotesApp>, author_id: &str) {
     harness
         .get_by(|node| node.author_id() == Some(author_id))
         .click();
-    harness.run();
+    settle(harness);
 }
 
 fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &str) {
@@ -42,7 +40,7 @@ fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &st
     harness
         .get_by(|node| node.author_id() == Some(author_id))
         .type_text(words);
-    harness.run();
+    settle(harness);
 }
 
 /// Draws the window as it stands, then again in the other theme, and gives the first one back.
@@ -55,7 +53,7 @@ fn capture(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
         };
         // kittest draws its pointer, and where a click left it.
         harness.event(egui::Event::PointerGone);
-        harness.run();
+        settle(harness);
         let image = harness
             .render()
             .expect("a software adapter draws the window");
@@ -120,6 +118,6 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     state
         .status
         .report(i18n::Message::new(i18n::keys::settings::COPIED));
-    harness.run();
+    settle(&mut harness);
     capture(&mut harness, "banners-http");
 }

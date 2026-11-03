@@ -19,6 +19,25 @@ pub(crate) fn frame(ctx: &egui::Context, time: f64, draw: impl FnMut(&mut egui::
     output.textures_delta.clear();
 }
 
+/// Until the core has nothing left to do and the window has drawn everything it answered: a
+/// condition, never a number of frames. Every answer is in before the window draws; drawing may
+/// ask the core again, and then the two go round once more. Drawn with nothing launched, all is
+/// on screen — and a window still repainting then repaints forever, which fails.
+pub(crate) fn settle<State>(
+    harness: &mut egui_kittest::Harness<'_, State>,
+    backend: impl Fn(&State) -> &crate::backend::Backend,
+) {
+    loop {
+        backend(harness.state()).settle();
+        let launched = backend(harness.state()).launched();
+        let drawn = harness.try_run().is_ok();
+        if backend(harness.state()).launched() == launched {
+            assert!(drawn, "the window keeps repainting with nothing left to do");
+            return;
+        }
+    }
+}
+
 /// A real core over an empty profile, its events kept. The directory goes with the guard.
 pub(crate) fn backend() -> (crate::backend::Backend, tempfile::TempDir) {
     let profile = tempfile::tempdir().unwrap();

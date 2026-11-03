@@ -15,23 +15,25 @@ pub fn state(backend: &Backend) -> Pending<VaultState> {
 
 /// The first launch. The index fills behind the gate, a slice a job of the queue.
 pub fn create(backend: &Backend, passphrase: Zeroizing<String>) -> Pending<()> {
+    let filling = backend.background();
     backend.spawn(move |engine| async move {
         db::run(Arc::clone(&engine), move |engine| {
             vault::create_vault(engine, passphrase)
         })
         .await?;
-        tokio::spawn(index::fill(engine));
+        filling.run(index::fill(engine));
         Ok(())
     })
 }
 
 pub fn unlock(backend: &Backend, passphrase: Zeroizing<String>) -> Pending<()> {
+    let filling = backend.background();
     backend.spawn(move |engine| async move {
         db::run(Arc::clone(&engine), move |engine| {
             vault::unlock_vault(engine, passphrase)
         })
         .await?;
-        tokio::spawn(index::fill(engine));
+        filling.run(index::fill(engine));
         Ok(())
     })
 }

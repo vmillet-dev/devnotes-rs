@@ -119,10 +119,52 @@ impl Backend {
             .is_ok()
     }
 
-    /// Tests only: waits until everything launched has answered. A condition, never a duration.
+    /// Work the core goes on with after answering — the index filling behind an unlock —
+    /// counted until it ends like an answer, so that waiting for the core waits for it too.
+    pub fn background(&self) -> Background {
+        self.in_flight.add();
+        Background {
+            waker: self.waker.clone(),
+            in_flight: Arc::clone(&self.in_flight),
+        }
+    }
+
+    /// Tests only: waits until everything launched has answered or ended. A condition, never a
+    /// duration.
     #[cfg(test)]
     pub fn settle(&self) {
         self.in_flight.wait_for_none();
+    }
+
+    /// Tests only: how many jobs were ever launched, answered or not.
+    #[cfg(test)]
+    pub fn launched(&self) -> usize {
+        self.in_flight
+            .launched
+            .load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+/// See [`Backend::background`]: counted from its creation, so that a job failing before it
+/// starts the work still lets it go.
+pub struct Background {
+    waker: Waker,
+    in_flight: Arc<InFlight>,
+}
+
+impl Background {
+    pub fn run(self, work: impl Future<Output = ()> + Send + 'static) {
+        tokio::spawn(async move {
+            work.await;
+            drop(self);
+        });
+    }
+}
+
+impl Drop for Background {
+    fn drop(&mut self) {
+        self.waker.wake();
+        self.in_flight.remove();
     }
 }
 
@@ -180,15 +222,18 @@ impl<T> Drop for Answer<T> {
     }
 }
 
-/// How many answers are still to come.
+/// How many answers, and how much work behind them, are still to come.
 #[derive(Default)]
 struct InFlight {
     count: Mutex<usize>,
     changed: Condvar,
+    launched: std::sync::atomic::AtomicUsize,
 }
 
 impl InFlight {
     fn add(&self) {
+        self.launched
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         if let Ok(mut count) = self.count.lock() {
             *count += 1;
         }

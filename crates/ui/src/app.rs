@@ -238,9 +238,9 @@ mod tests {
     use super::*;
     use crate::inputs;
 
-    /// Frames a run may take to settle: the core's events wake the window as they come — the
-    /// index filling behind an unlock takes six on a slow runner, past kittest's four.
-    pub(super) const STEPS: u64 = 32;
+    pub(super) fn settle(harness: &mut Harness<'_, DevNotesApp>) {
+        crate::testing::settle(harness, DevNotesApp::backend);
+    }
 
     pub(super) fn startup(directory: &std::path::Path) -> Startup {
         startup_with(directory, inputs::channel())
@@ -368,7 +368,7 @@ mod tests {
         harness
             .get_by(|node| node.author_id() == Some(author_id))
             .click();
-        harness.run();
+        settle(harness);
     }
 
     fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &str) {
@@ -377,7 +377,7 @@ mod tests {
         harness
             .get_by(|node| node.author_id() == Some(author_id))
             .type_text(words);
-        harness.run();
+        settle(harness);
     }
 
     /// Through the gate, as a first launch does it.
@@ -385,10 +385,8 @@ mod tests {
         let startup = startup(directory);
         let mut harness = Harness::builder()
             .with_size(egui::vec2(1100.0, 720.0))
-            .with_max_steps(STEPS)
             .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
-        harness.state().backend().settle();
-        harness.run();
+        settle(&mut harness);
         type_into(&mut harness, "vault-passphrase", crate::testing::PASSPHRASE);
         type_into(
             &mut harness,
@@ -396,8 +394,7 @@ mod tests {
             crate::testing::PASSPHRASE,
         );
         click(&mut harness, "vault-submit");
-        harness.state().backend().settle();
-        harness.run();
+        settle(&mut harness);
         assert!(harness.state().state().gate.is_open());
         harness
     }
@@ -407,8 +404,7 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let mut harness =
             Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
-        harness.state().backend().settle();
-        harness.run();
+        settle(&mut harness);
 
         assert!(present(&harness, "theme-toggle"));
         assert!(!present(&harness, "area-switch"));
@@ -424,7 +420,7 @@ mod tests {
         assert!(present(&harness, "area-tools"));
 
         harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::Num3);
-        harness.run();
+        settle(&mut harness);
         assert!(present(&harness, "area-http"));
         assert_eq!(harness.state().state().settings.area, Area::Http);
     }
@@ -434,7 +430,7 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let mut harness =
             Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
-        harness.run();
+        settle(&mut harness);
         let before = harness.ctx.theme();
 
         click(&mut harness, "theme-toggle");
@@ -455,7 +451,7 @@ mod tests {
         state
             .status
             .report(i18n::Message::new(i18n::keys::attachments::SAVED));
-        harness.run();
+        settle(&mut harness);
         assert!(present(&harness, "error-banner"));
         assert!(present(&harness, "status-toast"));
 

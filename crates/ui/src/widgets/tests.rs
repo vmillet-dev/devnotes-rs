@@ -1,4 +1,4 @@
-//! The spinner never rests, so these frames are counted rather than settled.
+//! The bench runs with reduced motion: its spinner then rests, and every test settles.
 
 use egui::accesskit::Role;
 use egui_kittest::Harness;
@@ -21,6 +21,7 @@ struct Bench {
 fn bench() -> Harness<'static, Bench> {
     crate::testing::harness().build_ui_state(
         |ui, bench: &mut Bench| {
+            crate::theme::motion::set_reduced(ui.ctx(), true);
             if Button::new("Enregistrer", "save")
                 .kind(Kind::Filled)
                 .show(ui)
@@ -58,7 +59,7 @@ fn bench() -> Harness<'static, Bench> {
 #[test]
 fn every_control_is_named_and_addressed() {
     let mut harness = bench();
-    harness.run_steps(4);
+    harness.run();
 
     for (author_id, role, name) in [
         ("save", Role::Button, "Enregistrer"),
@@ -86,7 +87,7 @@ fn every_control_is_named_and_addressed() {
 #[test]
 fn no_interactive_control_is_under_24_pixels() {
     let mut harness = bench();
-    harness.run_steps(4);
+    harness.run();
 
     for role in [Role::Button, Role::CheckBox, Role::RadioButton] {
         for node in harness.query_all_by_role(role) {
@@ -103,7 +104,7 @@ fn no_interactive_control_is_under_24_pixels() {
 #[test]
 fn a_click_acts_and_a_disabled_button_does_not() {
     let mut harness = bench();
-    harness.run_steps(4);
+    harness.run();
 
     harness
         .get_by(|node| node.author_id() == Some("save"))
@@ -111,7 +112,7 @@ fn a_click_acts_and_a_disabled_button_does_not() {
     harness
         .get_by(|node| node.author_id() == Some("later"))
         .click();
-    harness.run_steps(4);
+    harness.run();
 
     assert_eq!(harness.state().clicks, 1);
     let later = harness.get_by(|node| node.author_id() == Some("later"));
@@ -121,7 +122,7 @@ fn a_click_acts_and_a_disabled_button_does_not() {
 #[test]
 fn a_checkbox_and_a_segment_change_their_value() {
     let mut harness = bench();
-    harness.run_steps(4);
+    harness.run();
 
     harness
         .get_by(|node| node.author_id() == Some("item-done"))
@@ -129,7 +130,7 @@ fn a_checkbox_and_a_segment_change_their_value() {
     harness
         .get_by(|node| node.author_id() == Some("density-1"))
         .click();
-    harness.run_steps(4);
+    harness.run();
 
     assert!(harness.state().checked);
     assert_eq!(harness.state().density, 1);
@@ -143,16 +144,16 @@ fn a_checkbox_and_a_segment_change_their_value() {
 #[test]
 fn a_field_takes_what_is_typed() {
     let mut harness = bench();
-    harness.run_steps(4);
+    harness.run();
 
     harness
         .get_by(|node| node.author_id() == Some("name-field"))
         .click();
-    harness.run_steps(4);
+    harness.run();
     harness
         .get_by(|node| node.author_id() == Some("name-field"))
         .type_text("Travail");
-    harness.run_steps(4);
+    harness.run();
 
     assert_eq!(harness.state().typed, "Travail");
 }
@@ -171,7 +172,7 @@ fn look() {
         let mut harness = bench();
         crate::theme::apply(&harness.ctx, theme, crate::theme::Density::Comfortable);
         harness.set_size(egui::vec2(420.0, 620.0));
-        harness.run_steps(4);
+        harness.run();
         let image = harness.render().unwrap();
         image
             .save(std::path::Path::new(&directory).join(format!("widgets-{name}.png")))
