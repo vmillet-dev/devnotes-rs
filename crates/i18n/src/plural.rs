@@ -110,7 +110,7 @@ fn parse_branches(branches: &str) -> Vec<(&str, &str)> {
 }
 
 /// The CLDR plural category, as `Intl.PluralRules` gives it for the two languages.
-fn category(count: f64, language: Language) -> &'static str {
+pub(crate) fn category(count: f64, language: Language) -> &'static str {
     let integer = count.abs().trunc();
     let whole = count.fract().abs() < f64::EPSILON;
     match language {
