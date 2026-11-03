@@ -57,6 +57,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_log_is_written_in_its_directory() {
+        let directory = tempfile::tempdir().unwrap();
+
+        let logger = start(directory.path()).unwrap();
+        log::warn!("a line the test looks for");
+        logger.flush();
+
+        let written: String = std::fs::read_dir(directory.path())
+            .unwrap()
+            .map(|entry| std::fs::read_to_string(entry.unwrap().path()).unwrap())
+            .collect();
+        assert!(written.contains("a line the test looks for"), "{written}");
+    }
+
+    #[test]
     fn a_panic_is_reported_by_its_place_and_never_by_its_message() {
         let reports = Arc::new(Mutex::new(Vec::new()));
         let kept = Arc::clone(&reports);

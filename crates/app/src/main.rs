@@ -143,3 +143,78 @@ fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
 fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    use super::*;
+
+    #[test]
+    fn a_second_launch_hands_its_message_over_and_succeeds() {
+        let profile = tempfile::tempdir().unwrap();
+        let Ok(Claim::First(first)) = instance::claim(profile.path()) else {
+            panic!("the profile was taken");
+        };
+        let (heard, hearing) = mpsc::channel();
+        first
+            .serve(move |message| heard.send(message).unwrap())
+            .unwrap();
+
+        assert_eq!(hand_over(profile.path(), None), ExitCode::SUCCESS);
+        assert_eq!(
+            hand_over(profile.path(), Some("palette".to_string())),
+            ExitCode::SUCCESS
+        );
+
+        let wait = Duration::from_secs(10);
+        assert_eq!(hearing.recv_timeout(wait).unwrap(), Message::Reveal);
+        assert_eq!(
+            hearing.recv_timeout(wait).unwrap(),
+            Message::Action("palette".to_string())
+        );
+    }
+
+    #[test]
+    fn a_second_launch_with_nobody_to_answer_fails() {
+        let profile = tempfile::tempdir().unwrap();
+
+        assert_eq!(hand_over(profile.path(), None), ExitCode::FAILURE);
+    }
+
+    #[test]
+    fn a_first_launch_opens_hidden_and_centred_at_the_default_size() {
+        let options = options(None);
+
+        assert_eq!(options.viewport.visible, Some(false));
+        assert_eq!(
+            options.viewport.inner_size,
+            Some(egui::vec2(1_100.0, 720.0))
+        );
+        assert_eq!(
+            options.viewport.min_inner_size,
+            Some(egui::vec2(640.0, 480.0))
+        );
+        assert!(options.viewport.icon.is_some());
+        assert!(options.centered);
+        assert!(!options.persist_window);
+    }
+
+    #[test]
+    fn a_later_launch_opens_where_the_window_was() {
+        let options = options(Some(Geometry {
+            x: 40.0,
+            y: 30.0,
+            width: 900.0,
+            height: 600.0,
+            maximized: true,
+        }));
+
+        assert_eq!(options.viewport.visible, Some(false));
+        assert_eq!(options.viewport.inner_size, Some(egui::vec2(900.0, 600.0)));
+        assert_eq!(options.viewport.position, Some(egui::pos2(40.0, 30.0)));
+        assert_eq!(options.viewport.maximized, Some(true));
+        assert!(!options.centered);
+    }
+}

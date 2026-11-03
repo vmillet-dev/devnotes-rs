@@ -246,6 +246,7 @@ dependencies = [
  "flexi_logger",
  "log",
  "platform",
+ "tempfile",
  "tokio",
  "ui",
  "winit",
