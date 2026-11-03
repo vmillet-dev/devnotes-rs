@@ -7,8 +7,9 @@ import type { HttpRequestDraft, NoteDraft } from '@core/ipc/bindings';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { trash } from '../pageobjects/overlays.page.js';
+import { rail } from '../pageobjects/sidebar.page.js';
 import { fileMenu, settings, titlebar } from '../pageobjects/titlebar.page.js';
-import { emitGlobalAction, press, testid, waitForCanvas } from '../support/app.js';
+import { emitGlobalAction, hover, press, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId } from '../support/bridge.js';
 
 /**
@@ -29,6 +30,8 @@ const SIZES: readonly Size[] = [DEFAULT_SIZE, [1920, 1080], [640, 480]];
 interface Screen {
   readonly id: string;
   readonly reach: () => Promise<void>;
+  /** Puts back a preference `reach` changed, so the next screens do not inherit it. */
+  readonly undo?: () => Promise<void>;
 }
 
 // The data every screen shows, beside what the first launch seeds.
@@ -182,6 +185,15 @@ function inNote(title: string, step: () => Promise<void>): () => Promise<void> {
   };
 }
 
+/** The board is a space's: « all spaces » has none. */
+async function board(): Promise<void> {
+  const work = (await bridge.listSpaces()).find((space) => space.name === 'Projets');
+  if (!work) throw new Error('no Projets space');
+  await tap(`${testid('space-option')}[data-space-id="${work.id}"]`);
+  await tap(testid('view-board'));
+  await shows(testid('board'));
+}
+
 async function preferences(page: string): Promise<void> {
   await fileMenu.openPreferences();
   await settings.open(page);
@@ -257,14 +269,36 @@ const TOOLS = [
 /** Drawn in both themes. */
 const SCREENS: readonly Screen[] = [
   { id: 'notes-list', reach: () => area('notes') },
-  { id: 'notes-board', reach: inArea('notes', () => tap(testid('view-board'))) },
+  {
+    id: 'notes-board',
+    reach: inArea('notes', () => board()),
+    undo: async () => {
+      await tap(testid('view-list'));
+      await tap(testid('space-option-all'));
+    },
+  },
   { id: 'notes-search', reach: inArea('notes', () => canvas.search('production')) },
   { id: 'notes-search-empty', reach: inArea('notes', () => canvas.search('zzzz introuvable')) },
   { id: 'notes-facets', reach: inArea('notes', () => canvas.openFacets()) },
   { id: 'notes-sort-menu', reach: inArea('notes', () => tap(testid('sort-trigger'))) },
   { id: 'notes-new-kind-menu', reach: inArea('notes', () => tap(testid('new-note-kind'))) },
-  { id: 'notes-space-switcher', reach: inArea('notes', () => tap(testid('space-switcher'))) },
-  { id: 'notes-folder-switcher', reach: inArea('notes', () => tap(testid('folder-switcher'))) },
+  // The switchers stand in for the rail while it is hidden.
+  {
+    id: 'notes-space-switcher',
+    reach: inArea('notes', async () => {
+      await rail.hide();
+      await tap(testid('space-switcher'));
+    }),
+    undo: () => rail.show(),
+  },
+  {
+    id: 'notes-folder-switcher',
+    reach: inArea('notes', async () => {
+      await rail.hide();
+      await tap(testid('folder-switcher'));
+    }),
+    undo: () => rail.show(),
+  },
   {
     id: 'notes-card-menu',
     reach: inArea('notes', async () => {
@@ -284,7 +318,7 @@ const SCREENS: readonly Screen[] = [
     id: 'notes-fields-form',
     reach: async () => {
       await area('notes');
-      const card = await canvas.cardWithTitle(TITLES.snippet);
+      const card = await canvas.openCardMenu(TITLES.snippet);
       await card.$(testid('note-card-copy')).click();
       await shows(testid('placeholder-form'));
     },
@@ -359,7 +393,13 @@ const SCREENS: readonly Screen[] = [
   },
   { id: 'http-home', reach: () => area('http') },
   { id: 'http-request', reach: openRequest },
-  { id: 'http-folder-menu', reach: inArea('http', () => tap(testid('http-node-menu'))) },
+  {
+    id: 'http-folder-menu',
+    reach: inArea('http', async () => {
+      await hover(testid('http-node'));
+      await tap(testid('http-node-menu'));
+    }),
+  },
   { id: 'http-graphql', reach: () => newTab('graphql') },
   { id: 'http-websocket', reach: () => newTab('websocket') },
   { id: 'http-environments', reach: inArea('http', () => tap(testid('http-environments-open'))) },
@@ -408,6 +448,10 @@ async function capture(id: string, screen: Screen, theme: Theme, [width, height]
     taken.push(id);
   } catch (error) {
     missed.push({ id, error: firstLine(error) });
+  } finally {
+    await screen
+      .undo?.()
+      .catch((error: unknown) => missed.push({ id: `${id} (undo)`, error: firstLine(error) }));
   }
 }
 
