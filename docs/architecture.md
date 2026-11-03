@@ -5975,36 +5975,25 @@ Treated as part of the definition of done, and partly enforced by
 
 ## Theming
 
-All colors, fonts and shadows are CSS custom properties defined on `:root` in the global
-`src/styles/styles.scss`; components only consume them via `var(…)`.
+Every colour, shadow, gap and duration of the interface is a token of `ui::theme`, copied one
+for one from the reference's `styles.scss` (`reference/angular/src/styles/`): `tokens::DARK` and
+`tokens::LIGHT` (a `Palette` each), `tokens::COMFORTABLE` and `tokens::COMPACT` (a `Spacing`),
+`tokens::TITLEBAR_HEIGHT`, and the four durations of `theme::motion`. A widget reads them through
+`theme::palette(ctx)` and `theme::spacing(ctx)`, never a literal. The CSS `--*-rgb` triplets are
+gone: a tint is the colour itself at an alpha.
 
-Those variables **must** stay in the global stylesheet. Angular's emulated encapsulation
-rewrites a `:root` selector written inside a `*.component.scss` into a form that never
-matches `<html>`, silently invalidating every variable.
+`theme::apply(ctx, appearance, density)` sets egui's style for **both** themes at once
+(`set_style_of`), then the preference (`System`, `Dark`, `Light`): egui switches by itself when
+the system does, so a « system » theme follows live. The window's own title bar is told the
+same (`ViewportCommand::SetTheme`). Dark stays the base: `Appearance::default()` is `System`,
+and the window is created hidden, so nothing flashes before the first frame. egui's own
+widgets are restyled from the palette (`Visuals`); the visible components are painted by hand
+from it.
 
-Recurring style patterns (unstyled control, card surface, accent state, focus ring, tinted
-badge) are SCSS mixins in `src/styles/_mixins.scss`, imported as `@use 'mixins' as *;` —
-resolved via `stylePreprocessorOptions.includePaths` in `angular.json`. Colors needing
-translucency are also exposed as RGB triplets (e.g. `--amber-rgb`, which is the **fill**) so
-`rgba()` never hard-codes a hex value. ⚠️ The triplets are **comma-separated**: write `rgba(var(--amber-rgb), 0.1)`, never
-`rgb(var(--amber-rgb) / 10%)` — the slash over commas is invalid, and the browser drops the whole
-declaration without a word.
-
-**Two sweeps read the shipped files**, both `node --test` rather than `*.spec.ts` because the
-Angular builder compiles its specs for a browser, where `node:fs` does not exist:
-`palette.test.mjs` for contrast, and `focus-rings.test.mjs` for a control styled with no
-`:focus-visible` — the linter cannot see a missing one, and four had accumulated. A badge's hue
-needs no sweep: `LANGUAGES` gives every language one of six, by type. ⚠️ Each is named in `test:scripts` one by one; Node 24 will not expand a directory.
-
-`styles.scss` also carries the `.visually-hidden` utility and a `prefers-reduced-motion`
-block.
-
-**Light theme.** `:root` stays the dark palette and `:root[data-theme='light']` redefines the
-colours only — fonts, shadows and spacing are shared. Dark stays the base on purpose: the
-preference lives in a file nothing can read before Angular has booted, so any other order would
-flash white at launch. `color-scheme` switches with the palette, which is what repaints the
-native `<select>`s, scrollbars and autofill. The syntax-highlighting theme needs nothing: it
-only ever consumed these variables.
+**Contrast is a Rust test** (`theme::tokens::tests`, which replaced `palette.test.mjs`): every
+text colour at 4.5:1 on the four surfaces, a badge's label on the strongest tint (0.15) and a
+status on its fill (0.3), the edge at 3:1, the ink on solid amber. The palette is destructured
+without `..` there: a colour added to it does not compile until it is given a role.
 
 **The accent is three variables, one per job.** `#e8a33d` on white is 2.16:1, and what that
 rules out depends entirely on what it is being used for — a surface only has to carry the ink
@@ -6022,39 +6011,22 @@ the light theme show the same amber everywhere it is a surface. Only the line an
 down. One token doing all three meant drawing the whole accent at the _label's_ darkness, which
 is where a warm hue lands at 4.5:1 on white, and which read as mustard.
 
-`--amber-dim` is the softer hairline a hover draws, and `--amber-ink` the text laid on the
-fill; with the same fill in both themes there is one of each. `scripts/palette.test.mjs` holds
-each of the three to its own bar, in both themes, and fails if the fill is ever declared twice.
+`amber_dim` is the softer hairline a hover draws, and `amber_ink` the text laid on the fill; with
+the same fill in both themes there is one of each. The contrast test holds each of the three to
+its own bar, in both themes, and fails if the fill differs between them.
 
-**Two badge mixins, with opposite trades.** A tint moves the background toward the colour it is
-made of, so a hue drawn on a tint of itself loses about a point of contrast. `tint-badge` keeps
-the tinted fill and makes the label neutral — for a **state**: active, pinned, expiring.
-`hue-badge` keeps the hue in the label and goes neutral behind it — for a badge whose **hue is
-the information**, as on a language badge — and carries a hairline in the hue, because `--bg-3`
-sits at 1.1:1 against the light theme's surfaces and a neutral fill alone left bare text there.
-`palette.test.mjs` measures the composite a badge is drawn on, not only the plain surface.
+**Two badge styles, with opposite trades.** A tint moves the background toward the colour it is
+made of, so a hue drawn on a tint of itself loses about a point of contrast. A **state** badge
+(active, pinned, expiring) keeps the tinted fill and makes the label neutral; a badge whose
+**hue is the information** (a language) keeps the hue in the label, goes neutral behind it and
+carries a hairline in the hue. The test measures the composite a badge is drawn on, not only
+the plain surface.
 
-**Density.** `:root[data-density='compact']` tightens four variables — `--space-card`,
-`--space-grid`, `--space-section`, `--space-canvas` — and nothing else. Typography is
-untouched: shrinking the text would be a zoom, not a density. Four named gaps rather than a
-global factor, because these four are what decide how many cards fit on screen.
-
-They reach past the canvas where a surface claims them: the topbar's padding, the library rail's
-own padding and its rows, and a dialog's default padding and gap are written in terms of the four,
-so "Compact" tightens the whole window. A rail row is `calc(var(--space-grid) / 4 + 2px)`:
-5px, 4px in Compact, which keeps it above the 24px target. The board's surface stays out of it: its
-geometry is computed in Rust, and a padding there would offset every gesture. A dialog that sets
-its own `--dialog-padding` keeps it.
-
-Fonts are self-hosted through the `@fontsource-variable` packages listed in `angular.json`'s
-`styles` array. They used to come from Google Fonts, which on a desktop app meant degraded
-typography offline and a CSP that could not be locked down.
-
-**Variable, and every script kept.** The per-weight `@fontsource` packages shipped each weight
-of each script twice, as woff2 and woff: 118 files, 1.49 MB embedded in the binary for the few
-the WebView ever loads. The `wght` files carry every weight in one woff2 per script — 13 files,
-~300 kB — and `unicode-range` still loads only the scripts on screen. Cyrillic and Greek stay:
-a note is free text. The family names carry the `Variable` suffix.
+**Density.** Compact tightens four gaps — card, grid, section, canvas — and nothing else.
+Typography is untouched: shrinking the text would be a zoom, not a density. Four named gaps
+rather than a global factor, because these four decide how many cards fit on screen; the
+surfaces that claim them (the top bar, the library rail, a dialog's padding) are written in
+terms of them, and a rail row stays above the 24 px target in Compact.
 
 ## Application updates
 

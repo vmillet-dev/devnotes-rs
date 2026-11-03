@@ -9,7 +9,7 @@ use platform::instance::Message;
 use platform::window::Geometry;
 
 use crate::inputs::{Inbox, Input, Waker};
-use crate::theme;
+use crate::theme::{self, Appearance, Density};
 
 /// What `main` prepares before the window exists.
 pub struct Startup {
@@ -37,6 +37,7 @@ impl DevNotesApp {
     /// closed: the first frame is the gate.
     pub fn new(cc: &eframe::CreationContext<'_>, startup: Startup) -> std::io::Result<Self> {
         startup.waker.fill(&cc.egui_ctx);
+        theme::apply(&cc.egui_ctx, Appearance::default(), Density::default());
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .thread_name("devnotes-network")
@@ -112,13 +113,12 @@ impl eframe::App for DevNotesApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(theme::BG_0))
-            .show(ui, |_| {});
+        egui::CentralPanel::default().show(ui, |_| {});
     }
 
-    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        theme::BG_0.to_normalized_gamma_f32()
+    /// The window's colour before anything is drawn over it, from the first frame.
+    fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {
+        visuals.panel_fill.to_normalized_gamma_f32()
     }
 
     fn on_exit(&mut self) {
