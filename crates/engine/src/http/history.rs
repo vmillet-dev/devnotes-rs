@@ -8,7 +8,6 @@ use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use serde_json::value::RawValue;
 use url::Url;
@@ -29,7 +28,7 @@ pub const BODY_KEPT: usize = 256 * 1024;
 const MASK: &str = "••••••••";
 
 /// What a list shows, sealed apart from the record so a list opens no body.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySummary {
     pub name: String,
@@ -54,21 +53,21 @@ pub struct HistorySummary {
     pub environment: Option<SentEnvironment>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SentEnvironment {
     pub name: String,
     pub colour: crate::folders::model::FolderColour,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryRecord {
     pub exchange: Exchange,
     pub response: Option<SentResponse>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryItem {
     pub id: String,
@@ -101,7 +100,7 @@ pub fn url_parts(url: &str) -> (String, String) {
     (host.to_string(), tail.to_string())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryDay {
     /// `2026-10-07`, the local day.
@@ -110,7 +109,7 @@ pub struct HistoryDay {
 }
 
 /// Read to be shown; and handed back as it was read to undo its deletion.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryEntry {
     pub item: HistoryItem,
@@ -465,7 +464,7 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
 }
 
 /// An entry sent again: what it was called, and the request it rebuilds.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryDraft {
     pub name: String,

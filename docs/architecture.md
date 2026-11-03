@@ -5,70 +5,41 @@ For build/run instructions see [CONTRIBUTING](../CONTRIBUTING.md).
 
 ## Overview
 
-DevNotes is a Tauri v2 desktop app: an Angular single-page front-end rendered in a WebView,
-and a Rust process that owns everything native (storage, encryption, the filesystem).
-The two halves talk only through Tauri's `invoke()` bridge.
-
-Notes and spaces are complete end to end: the front-end has no in-memory dataset left, every
-read and write goes through `invoke()`, and the Rust commands persist to an embedded SQLite
-database. Built on top of that: a 30-day trash with undo, multiple selection and bulk actions,
-corpus-wide tag management, `{{fields}}` in snippets, one palette on a global
-shortcut, attachments, and import / export / share.
+DevNotes is a desktop application being rewritten from Angular + Tauri to **egui**, in one Rust
+process (`docs/egui-migration-plan.md`). The core, `crates/engine`, owns everything that is not
+drawing: storage, encryption, the in-memory index of notes, HTTP, the tools. The egui interface
+calls it directly, through one façade and three queues, with no serialisation in between. The
+Angular application it replaces is kept, never built, in `reference/angular/`; the sections of
+this document that still describe it say so.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
 tags, languages, quick filters), grouping into display sections, facet aggregation and tag
 normalisation, and the choice of what a card's footer shows all run in `crates/engine/src/notes/`.
-The front-end describes what the user asked for and renders the view it gets back — it does
-not filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels
-must age on their own, without a round trip), the ISO ↔ `Date` conversion at the serialisation
-boundary, syntax highlighting (it colours the in-flight editor draft, which is not persisted
-yet — a round trip per keystroke), formatting a snippet with Prettier (the same draft, and
-Prettier is JavaScript), searching the tools' catalogue (its names are translated), and plain UI
-concerns like keyboard shortcuts and drafts.
+The interface describes what the user asked for and draws the view it gets back — it does not
+filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels must age
+on their own, without a round trip), syntax highlighting (it colours the in-flight editor draft,
+which is not persisted yet), and plain UI concerns like keyboard shortcuts and drafts.
 
 ```
-src/                Angular front-end
-├── app/
-│   ├── app.component.*   the frame: titlebar, banners, the areas behind @defer, their keys
-│   ├── core/       everything that has no place on screen
-│   │   ├── model/      the vocabulary: note, space, checklist, variable, language
-│   │   ├── data/       repositories and the wire mapper
-│   │   ├── state/      the stores, flat
-│   │   ├── ipc/        generated bindings, error contract, native events
-│   │   └── services/   one folder per subject: i18n, errors, time, preferences,
-│   │                   settings, updates, app-info, clipboard, dialogs, window,
-│   │                   shortcuts, autostart, tray, notifications, areas, tools
-│   ├── notes/      the page at the root, then its four zones: sidebar/ (the library
-│   │               rail), header/ (above the canvas), canvas/ (the cards),
-│   │               overlays/ (drawn over the page), plus ui/ for what two of them share
-│   ├── tools/      the Outils area: its page, rail/, home/, frame/, and catalogue/ with one
-│   │               folder per tool
-│   ├── titlebar/   titlebar.component, then file-menu/ and about-menu/ with the panels
-│   │               each of them opens, nested where they open from
-│   ├── banners/    error banner, status toast, update prompt — siblings of the page
-│   └── shared/     what crosses two areas of the screen: the modal frame, a11y directives
-├── assets/         static images
-├── styles/         global theme (styles.scss) and SCSS partials
-└── testing/        test doubles, fixtures and shared providers
 Cargo.toml          the Cargo workspace: shared version, lints and release profile
-crates/engine/      Rust back-end, the core (migrations/, resources/, sandbox/, tests/, benches/)
+crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches/)
 ├── src/notes/      the notes feature: model, language, view, placeholder, trash, store/
+├── src/index/      the decrypted, folded notes of the open library, in memory
 ├── src/spaces/     the spaces feature: model, SQL
 ├── src/attachments/ the attachments feature: model, SQL (the bytes live on disk)
 ├── src/transfer/   import, export and share: bundle rules, the file, the exchange format
 ├── src/tools/      the Outils area: one pure module per group of tools, no lock, no store
-├── src/db.rs       connection, migrations, schema, stored-instant format
+├── src/host.rs     what the core asks of its shell: paths and an event sink
+├── src/db.rs       connection, migrations, schema, stored-instant format, the db queue
 ├── src/error.rs    the three errors and the translation between them
-└── src/lib.rs      the modules, every command re-exported at the root
-src-tauri/          the Tauri shell over the core
-├── src/desktop.rs  tray and global shortcuts — native glue, not a feature
-├── src/lib.rs      Tauri builder, plugins, native state + command registration
-└── capabilities/   Tauri v2 permission manifests
+└── src/lib.rs      the modules and the `Engine`
+crates/platform/   paths, window geometry: what is asked of the operating system
+crates/ui/         the egui interface: the frame, its state, its screens
+crates/app/        the `devnotes` binary (main) and its icons (`npm run icons`)
+crates/i18n/translations/  fr.json and en.json, the interface's strings
+golden/             outputs of the JavaScript libraries, captured before they left
+reference/angular/  the Angular application and its WebdriverIO scenarios, for reading only
 ```
-
-⚠️ The shell registers a core command as `engine::<command>`: `#[tauri::command]` and
-`#[specta::specta]` export their macros at the root of the crate that declares the command,
-so `engine/src/lib.rs` re-exports each command there.
 
 ### Feature-first, not layer-first
 
@@ -160,6 +131,11 @@ also derives `specta::Type`, which is what lets tauri-specta generate the front-
 `bindings.ts` from them.
 
 ## Front-end
+
+> **Angular reference.** This section describes the Angular application, which left the build in
+> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
+> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> screen by screen (`docs/egui-migration-plan.md` § 12).
 
 ### Where a file goes
 
@@ -1832,13 +1808,15 @@ way — the kind menu names it and offers nothing.
 
 ### A list sends previews, and the body is read by id
 
-`query_notes` and `board_view` send each body cut to what a card shows —
-`notes::model::PREVIEW_LINES` lines, and at most `PREVIEW_CHARS` characters, since a minified
-file is one line — and say so with `DisplayNote.truncated`. The cut is the **last** pass of
-`view::build` and `board::build`: the fields, the matching and the search excerpt read the
-whole body first, so a list still knows a snippet has a `{{field}}` on its fortieth line, and
-still quotes the line a search found there. The card draws what it is sent; it no longer
-slices anything itself.
+A card shows each body cut to its room — `notes::model::PREVIEW_LINES` lines, and at most
+`PREVIEW_CHARS` characters, since a minified file is one line — and says so with
+`DisplayNote.truncated`. `query_notes` answers no copy at all: its sections hold
+`view::Card`s, the index's own `Arc<IndexedNote>` entries with the quote of what the search
+found, and `NotesView::display(card)` computes what one card draws (footer, fields, chip,
+counter, preview) for the cards on screen only. The cut is its **last** pass, as it is of
+`board::build`: the fields, the matching and the search excerpt read the whole body first, so a
+list still knows a snippet has a `{{field}}` on its fortieth line, and still quotes the line a
+search found there.
 
 ⚠️ **A note from a list is never edited.** `NotesStore.openNote` takes an id and reads the note
 with `get_note`, every time: a draft seeded from a preview would write the first lines back
@@ -4478,7 +4456,183 @@ query does not mention the deleted space and would otherwise show nothing new.
 
 Keep this seam intact: no component or store calls a command, the repositories do.
 
+## Backend and events (interface ↔ core)
+
+The interface calls the core in the same process, through **one façade**, `ui::api` — the only
+place that names an engine function, one file per feature, each function choosing its queue
+once — and **one backend**, `ui::Backend`, which owns the `Arc<Engine>` and its tokio runtime.
+The UI thread does no I/O, crypto or waiting: every call returns a `Pending<T>`, polled each
+frame (`poll` answers once), and the worker that resolves it wakes the window.
+
+| Queue     | For                                                    | Runs on                        |
+| --------- | ------------------------------------------------------ | ------------------------------ |
+| `db`      | anything touching the database or the index, reads too | the core's one db thread (D11) |
+| `compute` | pure work: formatting, a tool, highlighting, decoding  | rayon's pool                   |
+| `spawn`   | the network, and what chains db jobs around it         | tokio                          |
+
+⚠️ `Backend::db` **queues at the call** (`engine::db::submit`), on the UI thread: two writes sent
+one after the other run in that order. Handing the job to a task that queued it later let two
+of them swap. A job that panics answers `StorageUnavailable` on every queue and the queue goes
+on (D18); an `Answer` dropped without a word still answers, so **no `Pending` is ever left
+unanswered**. Dropping a `Pending` does not stop work begun on the database.
+
+Creating or unlocking a library is a `spawn` that runs the vault's db job and then starts
+`index::fill`, which fills the index a slice a job behind the gate. What the core says unasked
+(`EngineEvent`) and what a second launch asks arrive on the input channel, drained at the start
+of each frame. State tests run against the real core on a temporary profile and wait with
+`Backend::settle()` — a condition, never a duration (`ui::testing`).
+
+### State between frames
+
+`ui::state::AppState` is the root of what the interface remembers; each screen's state joins it
+as the screen is ported. Three pieces replace the reference's `resource()`, `linkedSignal`,
+`OneInFlight`, `NotesRevision` and the reload of the page:
+
+- **`QueryCell<P, T>`**: a value asked of the core again whenever its parameters change, compared
+  by value. `want(params)` records what the screen depends on; `update(launch)`, once a frame,
+  adopts the answer that arrived — unless newer parameters were wanted since, a stale search is
+  dropped — and asks for what is wanted when nothing is in flight. **One call in flight, the
+  latest waiting**; the last value stays while the next loads, and after an error.
+- **`Revision`**: bumped after every write the interface adopts, and part of the parameters of
+  every query that reads notes, so the list and the board ask again together.
+- **`LibraryCaches`**: the one field holding every cache of a library's content (D17).
+  `AppState::reset_library_scope` empties it and **egui's whole widget memory** — a text field's
+  undo history holds what was typed — then puts the application's look back, which outlives a
+  switch. Not wiped byte by byte: the threat model says so.
+
+### A frame, its actions and its keys
+
+`DevNotesApp` does the same thing every frame, in this order (plan § 3.3.7): `logic` drains the
+inputs (engine events, a second launch's `reveal` or `action <name>`), adopts the answers that
+arrived and asks the `QueryCell`s again; `ui` draws, then reads the keys the widgets left, then
+applies the actions. **Drawing never changes the state**: it reads a screen's state, may change
+its view (text being typed, a menu open, a scroll), and pushes `Action`s — `Action::App` for the
+frame (an area, the look), `Action::Global` for what comes from outside the window (capture, new
+note, palette, quit); each area's own variant joins when the area is ported. `AppState::apply`
+runs them at the end of the frame, in the order pushed.
+
+**One order for the keyboard** (D14, `ui::keys`). An input method composing keeps every key; the
+focused widget consumes what it handles while drawing; then `keys::dispatch` reads what is left
+by level — the top modal, then the area on screen, then the application (`keys::APPLICATION`:
+`Ctrl+1/2/3`) — and the first level that knows the key takes it and consumes it. While a text
+field has the focus, only the entries marked `while_typing` are read: the « editable target »
+guards of the reference, written table by table. A binding reads its key **by position** (a W3C
+`code`: on AZERTY the key that types « & » is still `Ctrl+1`) or **by character** (the canvas's
+keys), and its modifiers exactly. egui's keyboard zoom is off, as the WebView's was; Tab keeps
+egui's focus navigation.
+
+**At the exit** the db queue is drained — the one wait the UI thread is allowed (D19):
+`Backend::drain` queues a last job and waits up to 30 s for it, so everything sent before it
+(drafts, an import, a restore) has run; then the geometry is written.
+
+### Preferences, settings and the notifiers
+
+The two `preferences.json` keep the reference's format — one flat object of `devnotes.*` keys,
+each a string — so the core still reads `automaticBackups` from the application's file itself.
+`services::preferences::Preferences` keeps every key it read, those this version does not know
+included, and is written staged then renamed. The application's file is read by `main` before
+the window exists; the open library's (`devnotes.notes.*`) is read again on the db queue each
+time a library opens (`AppState::reset_library_scope`). Both are written on the db queue, so two
+changes in a row land in that order.
+
+`services::settings::Settings` is the typed part (locale, theme, density, the last area), read
+with defaults for anything unknown and written back without touching the rest; a setting joins
+it with the screen that reads it. `SettingsDraft` is what the preferences panel edits: only the
+theme and the density are previewed before « Apply », and the native side reads the applied
+settings, never the draft.
+
+`services::time`: an injectable `Clock` (`SystemClock`, a `FakeClock` in tests) and
+`relative(at, clock)`, which answers the label and **how long it holds**, the next frame asked
+for exactly then. `services::status::StatusNotifier` keeps the toast's last report, numbered so
+the same words said twice show twice; `services::errors::ErrorNotifier` the banner's last
+failure: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
+choosing its sub-key by one parameter), or the action's own when the code says nothing better.
+⚠️ The error's `detail` goes to the log, never to the screen.
+
+### The widget kit
+
+`ui::widgets` replaces the reference's `shared/`: components painted by hand after its CSS,
+reading the theme and nothing else. **Every one goes through `widgets::interact`**, which
+allocates at least 24 × 24 px for anything clickable (WCAG 2.5.8), gives the AccessKit node its
+role and name, sets its `author_id` — the `data-testid` its Angular twin had, which kittest and
+the e2e driver find it by — and paints the focus ring. `egui::Ui::interact` is refused
+elsewhere by `disallowed-methods` (`crates/ui/clippy.toml`), which is what `focus-rings.test.mjs`
+checked. A text field carries its accessible name apart from its hint: kittest refuses a field
+without one.
+
+- `Button`: `Outline` (a dialog's action — `surface` at 6 px, 6 × 12, 12 px, amber under the
+  pointer), `Filled` (the primary, solid amber), `Quiet` (text alone, filled when pressed),
+  `Destructive` (**red at rest**, `bg-3` and a red edge when armed or hovered); `.large()` is the
+  gate's submit. `IconButton`, `SplitButton`, `RailToggle` (32 px).
+- `Chip`, `priority_dot`, `hue_badge` (a kind's or a language's: the hue in the label, a neutral
+  fill, a hairline in the hue), `Kbd`, `spinner`.
+- `Segmented` (the segment on is filled, its label bright), `TextField` (the reference's
+  `.input`: 9 × 11 on `bg-1`, red when refused), `SearchField`, `Checkbox`.
+
+- `menu` (an `egui::Popup` on the reference's surface: `bg-2`, 8 px, 4 px inside, the dropdown's
+  shadow): the first entry takes the focus, egui's arrow navigation walks the rest, → opens a
+  sub-menu and ← comes back, Escape closes. ⚠️ egui keeps **one** popup in its memory — the parent —
+  so a sub-menu keeps its open state apart. `ChoiceMenu` names its value (`Naming::Value`) or its
+  own label, and from `FILTER_FROM` (9) entries puts a filter on top that takes the focus.
+- `DialogStack` and `dialog`: one rung per layer of `dialog.model.ts` (editor … passphrase), the
+  higher drawn over the lower and served first by Escape; an `egui::Modal` blocks what is under it
+  and keeps Tab inside; the fitted frame is `bg-1`, 14 px, `line`, the overlay's shadow, 480 px,
+  over a solid scrim (E7). The focus goes back to the opener — **the frame after**, once no modal
+  layer blocks it (`DialogStack::begin_frame`), since egui drops a focus given while one does.
+- `virtual_list` (uniform rows, only those in view drawn — 30 000 rows draw fewer than twenty),
+  `code_viewer` (read-only, numbered in `line_no`), `rail_frame` and `split_handle` (a drag or the
+  arrows, 16 px a press, within bounds), `tooltip` (drawn, E3), `release_notes` (the core's runs:
+  plain, strong, code).
+
+Hover colours ease over `motion::FAST`; a disabled control is drawn at half strength.
+`DEVNOTES_LOOK=<dir> cargo test -p ui widgets::tests::look` renders the kit in both themes, to
+look at.
+
+### The gate
+
+`ui::gate` is the first screen of a launch and of every library switch: nothing else is drawn
+until the library is open. `Gate` asks the vault's state and the registry, and draws one panel
+in the middle of the window (`surface`, 420 px, 28 px inside), naming its library — a choice menu
+when there are several — then asking what it needs: a phrase **twice, held to
+`vault::MINIMUM_LENGTH` (12)** for a library that has none yet; the phrase **at any length** to
+unlock one; nothing but « set it aside » for a damaged or keyless one; a confirmation before
+archiving one whose phrase is forgotten. A wrong phrase says so on the problem line, whose room
+is kept so the button never moves; `LibraryDamaged` turns the form into the damaged panel.
+Opening another library re-asks everything and resets the library scope.
+
+⚠️ **The phrase is typed into `gate::passphrase::PassphraseField`, never egui's `TextEdit`**,
+which keeps an undo history in egui's memory. The field keeps nothing of its own: the text is a
+`Zeroizing<String>` the gate's view owns, typed at its end (letters, a paste, an input method's
+committed text, Backspace; Enter submits), and `passphrase::take` hands it to the core and
+leaves the field empty — the core wipes it once used. A test types a phrase and looks for it in
+egui's memory and in the AccessKit tree. `gate::prompt` is the same field in a modal on the
+`Passphrase` rung, for a file sealed with a phrase of its own (protect: the floor and twice;
+unlock: any length).
+
+The index fills behind the gate after an unlock (`IndexProgress`, `IndexReady`), and `Gate` keeps
+how far it got: the views say they are partial until it is whole.
+
+### The title bar, and the two bands under it
+
+The window keeps the system's decorations, so `ui::titlebar` is a bar inside it, 38 px on
+`bg-0`: the area switch on the left, the application's name centred on the window, the theme
+toggle on the right. The switch is drawn only once the library is open — every area acts on it.
+Its options are icons named for the screen reader and the tooltip (`area-option-notes`, `-tools`,
+`-http`), in the order of `Ctrl+1/2/3`, which `keys::APPLICATION` reads by position. The toggle
+names what it switches **to**, its icon and its label alike, and writes the appearance like the
+preferences panel does. Until the screens arrive, an area is an empty room addressed
+`area-notes`, `area-tools` or `area-http`.
+
+`ui::banners` draws the `ErrorNotifier`'s failure (red, announced assertively, `error-banner`)
+and the `StatusNotifier`'s report (green, announced politely, `status-toast`) as top panels
+under the bar, one of each, each until its X is pressed (`DismissError`, `DismissStatus`).
+
 ## IPC boundary (Angular ↔ Rust)
+
+> **Angular reference.** This section describes the Angular application, which left the build in
+> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
+> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> screen by screen (`docs/egui-migration-plan.md` § 12).
 
 **The boundary is generated, not written.** `src/app/core/ipc/bindings.ts` is produced by
 [tauri-specta](https://docs.rs/tauri-specta) from the Rust signatures: one typed function per
@@ -5505,20 +5659,42 @@ The core (`crates/engine`) owns its state in one `Engine`, which the shell creat
 manages as an `Arc<Engine>`: the `Db` slot (empty until `vault::unlock`), the sends, runs and
 sockets under way, the restore set aside. It asks the shell for two things only (`host.rs`):
 
-- **`Paths`**, a plain struct resolved before the engine exists: `profile` (`app_data_dir()`:
-  the registry, `libraries/`, the application's `preferences.json`, `open/`) and `resources`
-  (`resource_dir()`: the identity lists). A struct, not a trait: every host only fills in two
-  paths.
+- **`Paths`**, a plain struct resolved before the engine exists: `profile` (the registry,
+  `libraries/`, the application's `preferences.json`, `open/`) and `resources` (the identity
+  lists). A struct, not a trait: every host only fills in two paths.
 - **`EventSink`**, the one trait: what the core says unasked, as an `EngineEvent` (a socket's
-  traffic, a script's console, a run's steps). The Tauri shell's `TauriHost` emits each under
-  the name the front listens to (`WEBSOCKET_EVENT`, `HTTP_CONSOLE_EVENT`, `HTTP_RUN_EVENT`);
-  tests keep them in a `RecordingSink`.
+  traffic, a script's console, a run's steps, the index filling). The interface's `Inbox` posts
+  each on its input channel and wakes the window; tests keep them in a `RecordingSink`.
 
 What reaches the platform stays out of the core's work: the clipboard is read before an
 attachment is stored and written after a QR code is drawn, and a decrypted attachment is opened
-once its copy is written — by the shell's wrapper, not by the core. Opening a library or
+once its copy is written — by the interface, not by the core. Opening a library or
 restoring a copy closes the sockets and cancels the sends and runs first
-(`Engine::let_go_of_the_network`). Nothing in `crates/engine` names Tauri.
+(`Engine::let_go_of_the_network`). Nothing in `crates/engine` names egui or Tauri.
+
+### The binary, its profile and its window
+
+`crates/app` builds `devnotes`. `main` reads `--devnotes-script-host` before anything else
+(the core's `serve_scripts`: no window, no log), then `--profile <directory>`, which puts the
+whole profile, its logs and the window's geometry in that directory — tests and development
+only. Without it, `platform::paths::Locations::installed` resolves the profile
+`com.devnotes.app.dev` (D16; the Angular reference keeps `com.devnotes.app`): roaming data on
+Windows, `$XDG_DATA_HOME` and `$XDG_CONFIG_HOME` on Linux, the logs under the local data
+directory. The resources are found beside the executable, under `lib/devnotes` in a Linux
+package, or in `crates/engine/resources` for a binary run from `target/`.
+
+**One application per profile (D16).** Before the log, `platform::instance::claim` binds a local socket named after a digest of the canonical profile path (a named pipe on Windows, the abstract namespace on Linux). A second launch that cannot bind it connects, sends `reveal` — or `action <name>` from the `e2e` flavour, its way to press a global shortcut — and exits; the first hears it on a thread of its own and brings its window forward. ⚠️ Windows answers a pipe already taken with « access denied », not « address in use ». A claim that fails otherwise stops the launch: a second writer would leave the index silently wrong. Two profiles never collide, so a scenario never meets a development instance.
+
+The log (`flexi_logger`, `devnotes.log`, three files of 5 MB) starts before the window, and a
+panic hook replaces the default one: it logs where and on which thread, **never the message** —
+a panic slicing a string quotes it (D18). Then the input channel and its `Waker` are made, and
+eframe opens the window **hidden** at the geometry `platform::window` read back (size, place,
+maximised; never whether it was visible), with eframe's persistence off: it would write egui's
+state, text fields included, in clear on disk. The creation closure fills the `Waker` and
+creates the tokio runtime and the `Engine` (D20); `App::logic`, which runs while the window is
+hidden, shows it on the first frame. Under Linux, X11 is taken whenever `DISPLAY` exists
+(D15). The geometry is written on exit, the size the window had unmaximised kept under a
+maximised one.
 
 ### The notes index
 
@@ -5539,8 +5715,10 @@ the index first.
 **Who reads it.** `query_notes` (the list and the palette), `board_view` and `list_tags` read the
 index, never a sealed column: `NoteIndex::select` keeps what `store::fetch` kept (space,
 folders, quick filter, rails) in the same order, `facets` counts what the SQL counted,
-`index::search` runs `view::answers` over the folded text in parallel, and `view::arrange` is
-`view::build` past its search — the one definition of sections, ranking and quotes. Only the
+`index::search` runs `view::answers` over the folded text in parallel and answers shared cards,
+and `view::arrange` is `view::build` past its search — the one definition of sections, ranking
+and quotes. A view holds its `Arc`s, so it is drawn without any lock, and an entry a write
+replaced is freed (and wiped) when the last view holding it goes. Only the
 folders under an opened one are still asked of SQLite (plain ids). A read waits for no slice:
 one that arrives while the index fills finishes it first (`NoteIndex::ready`), since the views
 cannot yet say they are partial. ⚠️ Tags that differ only in case count as one, as under
@@ -5865,60 +6043,45 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
 
 ## i18n
 
-UI strings live in `src/app/core/services/i18n/translations/{fr,en}.json` and render through
-Transloco's `transloco` pipe. French is the fallback locale.
+The interface's strings are `crates/i18n/translations/{fr,en}.json`, in the format the Angular
+reference wrote them (plan § 3.11). The `i18n` crate embeds both and **generates one constant
+per key at build time** (`build.rs`, from `fr.json`): `vault.unlockTitle` is
+`i18n::keys::vault::UNLOCK_TITLE`, a segment that is a Rust keyword takes `r#`, `fr-FR` becomes
+`FR_FR`. A misspelled key does not compile; two segments that would make the same name stop the
+build. A key composed at run time goes through `Key::find`, which answers `None` for one that
+does not exist — an enum of the cases, matched once, is better wherever the set is known.
 
-- Translations are `import()`ed rather than fetched over HTTP — a small desktop binary gains
-  nothing from `HttpClient` and a round-trip. **One chunk per language**, imported when it
-  becomes active: both used to sit in the initial bundle, ~68 kB of which one half is never
-  read. ⚠️ `LocaleService.restore()` resolves only once the active one is in, and
-  `startApplication()` awaits it, or the first render shows empty labels. Specs read both
-  files synchronously through their own loader (`provideTranslocoTesting`), since they assert
-  on text right after a render. The files deliberately sit **outside** `src/assets`, where the
-  assets glob would copy them into `dist` a second time, never to be read.
-- **The choice belongs to `SettingsStore`** (`locale`: `system` / `fr` / `en`, default
-  `system`), exactly like the theme. `LocaleService` is what _resolves_ it and pushes it to
-  Transloco and `<html lang>` — the same shape as the three services that carry a preference
-  down to the native side. The preferences panel is the one control that writes it.
-- `system` resolves through `resolveSystemLocale()` (`core/services/i18n/locale.model.ts`), which reads
-  `navigator.languages` — the WebView takes it from the OS — and falls back to
-  `SYSTEM_FALLBACK_LOCALE` (English) when the machine speaks neither language. Nothing is
-  persisted while the preference stays on `system`, so DevNotes keeps following the OS.
-- ⚠️ `DEFAULT_LOCALE` is a different thing: Transloco's fallback _bundle_, the file that
-  answers when a key is missing from the other one.
-- `LocaleService.restore()` runs from the app initializer, **after** `SettingsStore.restore()`
-  and before `TrayService.start()`, which builds the tray with translated labels. The effect
-  alone would only flush after the first render, showing the interface in one language then
-  the other.
-- Code that produces user-visible text returns a **`TranslationRef`** (`{ key, params }`)
-  instead of a formatted string, so translation always happens in the template. This applies
-  to error messages too.
-- **The application's name is never written in a translation.** A string carries `{{app}}`, and
-  `AppTranslocoLoader` adds one key to every language: `app: APP_INFO.name`. No interceptor and
-  no transpiler — Transloco's own transpiler resolves an interpolation it cannot find in the
-  params against a **sibling key of the same translation**, so a key is all the mechanism
-  needed. It costs one line in the loader, no call site passes a parameter, and a string that
-  carries parameters of its own (`{{palette}}`, `{{version}}`) still resolves both. A spec on
-  the shipped locale files refuses a string that spells the name out.
-- **A count is an ICU plural, read by a transpiler of our own** (`plural-transpiler.ts`, about
-  sixty lines over `Intl.PluralRules`). ⚠️ Not `@jsverse/transloco-messageformat`: it compiles
-  each message with `new Function`, the CSP is `script-src 'self'`, and the application boots
-  onto an error banner and seeds nothing — which the unit suite cannot see, jsdom having no
-  policy to violate. The grammar is deliberately tiny: `plural`, exact `=N`, the categories
-  `Intl.PluralRules` answers, and `#`; no `select`, no `selectordinal`, no nesting. Plain
-  `{{name}}` stays `DefaultTranspiler`'s, which is what keeps the `{{app}}` sibling key working.
-  `TranslocoService` asks for the transpiler in its own constructor, so the service is resolved
-  on the first render rather than injected. `=0` is written out wherever zero reads badly —
-  French calls zero `one` — and two specs on the shipped files refuse "(s)" and any brace that is
-  neither an interpolation nor a plural.
-- ⚠️ **Transloco replaces an unknown `{{name}}` with the empty string**, so no translated string
-  can carry a snippet's `{{fields}}`: the sample snippet bodies are hard-coded in
-  `core/services/samples/sample-notes.service.ts`, and a guide chapter that names a key receives
-  it as an interpolation parameter.
-- A new string means adding it to **both** locale files.
-- Nothing user-visible is hard-coded in the Rust back-end. A new note is created with an
-  empty title and source, and the UI renders translated placeholders — storing
-  "Nouvelle note" would freeze French into the data.
+- Code returns a **`Message`** (`{ key, params }`), never a sentence: the text is chosen where it
+  is drawn, by `Message::text(language)` or `i18n::translate`. Nothing user-visible is written in
+  Rust outside the two files: a new note has an empty title, and the interface draws a translated
+  placeholder.
+- **Plurals** are the reference's ICU subset, ported (`i18n::plural`): `{name, plural, =N {…} one
+{…} other {…}}`, `#`, no `select`, no nesting; an exact `=N` wins over a category (French calls
+  zero `one`), and the categories are CLDR's for the two languages — French `one` for an integer
+  part of 0 or 1 (1.5 included), `many` for a whole million. `golden/plurals` (every plural key
+  of both files at 0, 1, 2, 5, 21, 1 000, 1 000 000 and 1.5) is read back by a test.
+- Then `{{name}}` is filled; ⚠️ **a parameter not given is left empty**, as Transloco did — so
+  no translated string can carry a snippet's `{{fields}}`, and user content is never interpolated
+  into a template. `{{app}}` is the application's name, read by `build.rs` from the engine's
+  `[package.metadata.devnotes] display-name`: no translation spells it out (a test refuses it),
+  and none hedges a plural with « (s) ».
+- Both files have the same keys, and a name one language fills in, the other reads too, filled
+  in or counted (« il y a {{count}} mois » counts in English): two tests.
+- **Localised formats are written by hand** (D21, `i18n::format`): one function per pattern the
+  interface uses, named by its use — `date_short` (« 25 juil. 2026 »), `time_millis` (« 11:05:07,123 »),
+  `fixed`, `at_most`, `signed`, `ungrouped`, `and_list`, `or_list`, `country` (the IBAN
+  registry's countries only)… A date arrives as the wall-clock value to show; the caller puts it
+  in the local zone, or in UTC where the screen says so. Numbers round the shortest decimal half
+  away from zero, as ICU does (12.345 is 12.35 at two digits), and French groups with a narrow
+  no-break space. `golden/intl` — every `Intl` call of the reference with its options, at its
+  edge values — is read back by a test. No ICU.
+- **Ageing labels** are `i18n::time`: `relative` (« il y a 3 min »), `expiry` (in local calendar
+  days: an expiry is the end of its day), `span` (« dans 2 jours », the largest whole unit). They
+  answer a `Message`, `now` given; `golden/relative-time` is read back by a test.
+- **The language** is a preference (`system` / `fr` / `en`); `system` is
+  `Language::of_system()`, the first of the system's preferred languages (`sys-locale`) whose
+  primary tag is `fr` or `en`, English otherwise.
+- A new string means adding it to **both** files.
 
 ## Accessibility
 
@@ -5968,36 +6131,50 @@ Treated as part of the definition of done, and partly enforced by
 
 ## Theming
 
-All colors, fonts and shadows are CSS custom properties defined on `:root` in the global
-`src/styles/styles.scss`; components only consume them via `var(…)`.
+Every colour, shadow, gap and duration of the interface is a token of `ui::theme`, copied one
+for one from the reference's `styles.scss` (`reference/angular/src/styles/`): `tokens::DARK` and
+`tokens::LIGHT` (a `Palette` each), `tokens::COMFORTABLE` and `tokens::COMPACT` (a `Spacing`),
+`tokens::TITLEBAR_HEIGHT`, and the four durations of `theme::motion`. A widget reads them through
+`theme::palette(ctx)` and `theme::spacing(ctx)`, never a literal. The CSS `--*-rgb` triplets are
+gone: a tint is the colour itself at an alpha.
 
-Those variables **must** stay in the global stylesheet. Angular's emulated encapsulation
-rewrites a `:root` selector written inside a `*.component.scss` into a form that never
-matches `<html>`, silently invalidating every variable.
+`theme::apply(ctx, appearance, density)` sets egui's style for **both** themes at once
+(`set_style_of`), then the preference (`System`, `Dark`, `Light`): egui switches by itself when
+the system does, so a « system » theme follows live. The window's own title bar is told the
+same (`ViewportCommand::SetTheme`). Dark stays the base: `Appearance::default()` is `System`,
+and the window is created hidden, so nothing flashes before the first frame. egui's own
+widgets are restyled from the palette (`Visuals`); the visible components are painted by hand
+from it.
 
-Recurring style patterns (unstyled control, card surface, accent state, focus ring, tinted
-badge) are SCSS mixins in `src/styles/_mixins.scss`, imported as `@use 'mixins' as *;` —
-resolved via `stylePreprocessorOptions.includePaths` in `angular.json`. Colors needing
-translucency are also exposed as RGB triplets (e.g. `--amber-rgb`, which is the **fill**) so
-`rgba()` never hard-codes a hex value. ⚠️ The triplets are **comma-separated**: write `rgba(var(--amber-rgb), 0.1)`, never
-`rgb(var(--amber-rgb) / 10%)` — the slash over commas is invalid, and the browser drops the whole
-declaration without a word.
+**Type.** Inter and JetBrains Mono are embedded as the variable TrueType files the reference
+loaded (Latin and Latin Extended, `theme::fonts`), so the CSS weights, 650 included, apply as
+written (ADR S2); Noto Emoji, monochrome, comes next, so an emoji is drawn the same on every
+machine; eframe's `system_fonts` finds the rest (CJK) on demand. egui's own fonts are not
+compiled in. The body is 14 px. Licences and sources: `crates/ui/assets/README.md`.
 
-**Two sweeps read the shipped files**, both `node --test` rather than `*.spec.ts` because the
-Angular builder compiles its specs for a browser, where `node:fs` does not exist:
-`palette.test.mjs` for contrast, and `focus-rings.test.mjs` for a control styled with no
-`:focus-visible` — the linter cannot see a missing one, and four had accumulated. A badge's hue
-needs no sweep: `LANGUAGES` gives every language one of six, by type. ⚠️ Each is named in `test:scripts` one by one; Node 24 will not expand a directory.
+**Icons** are Lucide's paths (`theme::icons::Icon`), rasterised by resvg into a white alpha mask
+at the size asked × `pixels_per_point`, cached per size in the context's memory, and tinted by
+the colour they are painted in — `currentColor`. The interface draws no emoji of its own any
+more: 📎 🖼 ⏳ are `Paperclip`, `Image`, `Hourglass`.
 
-`styles.scss` also carries the `.visually-hidden` utility and a `prefers-reduced-motion`
-block.
+**Motion** is `theme::motion`: `FAST` (120 ms, what follows the pointer, also egui's own
+`animation_time`), `ENTER` (160 ms, what enters), `TURN` (a spinner's 800 ms), `MARK` (2 s, a
+mark fading). The three entrances (`Rise`, `Lift`, `Fade`) are an opacity and a 4 px offset
+from the first frame an element is drawn after a frame it was not, as a CSS animation runs on an
+element that did not exist a frame ago. **One switch**, `motion::set_reduced`, cuts all of it —
+the system's wish read by `platform::motion` (the registry under Windows, `gsettings` under
+GNOME), as the reference's `prefers-reduced-motion` was: there is no setting of its own. A test sweeps `crates/ui/src` for a duration typed anywhere
+else, as `motion.test.mjs` did.
 
-**Light theme.** `:root` stays the dark palette and `:root[data-theme='light']` redefines the
-colours only — fonts, shadows and spacing are shared. Dark stays the base on purpose: the
-preference lives in a file nothing can read before Angular has booted, so any other order would
-flash white at launch. `color-scheme` switches with the palette, which is what repaints the
-native `<select>`s, scrollbars and autofill. The syntax-highlighting theme needs nothing: it
-only ever consumed these variables.
+**The focus ring** (`theme::focus`) is 2 px of `amber_edge`, 2 px outside the control, and shows
+only after the keyboard moved: `focus::track` reads, once a frame, whether the last input that
+moves around was a key (Tab, arrows, Enter, Space, Escape…) or a pointer press — typing does not
+count. Scrollbars are 9 px.
+
+**Contrast is a Rust test** (`theme::tokens::tests`, which replaced `palette.test.mjs`): every
+text colour at 4.5:1 on the four surfaces, a badge's label on the strongest tint (0.15) and a
+status on its fill (0.3), the edge at 3:1, the ink on solid amber. The palette is destructured
+without `..` there: a colour added to it does not compile until it is given a role.
 
 **The accent is three variables, one per job.** `#e8a33d` on white is 2.16:1, and what that
 rules out depends entirely on what it is being used for — a surface only has to carry the ink
@@ -6015,39 +6192,22 @@ the light theme show the same amber everywhere it is a surface. Only the line an
 down. One token doing all three meant drawing the whole accent at the _label's_ darkness, which
 is where a warm hue lands at 4.5:1 on white, and which read as mustard.
 
-`--amber-dim` is the softer hairline a hover draws, and `--amber-ink` the text laid on the
-fill; with the same fill in both themes there is one of each. `scripts/palette.test.mjs` holds
-each of the three to its own bar, in both themes, and fails if the fill is ever declared twice.
+`amber_dim` is the softer hairline a hover draws, and `amber_ink` the text laid on the fill; with
+the same fill in both themes there is one of each. The contrast test holds each of the three to
+its own bar, in both themes, and fails if the fill differs between them.
 
-**Two badge mixins, with opposite trades.** A tint moves the background toward the colour it is
-made of, so a hue drawn on a tint of itself loses about a point of contrast. `tint-badge` keeps
-the tinted fill and makes the label neutral — for a **state**: active, pinned, expiring.
-`hue-badge` keeps the hue in the label and goes neutral behind it — for a badge whose **hue is
-the information**, as on a language badge — and carries a hairline in the hue, because `--bg-3`
-sits at 1.1:1 against the light theme's surfaces and a neutral fill alone left bare text there.
-`palette.test.mjs` measures the composite a badge is drawn on, not only the plain surface.
+**Two badge styles, with opposite trades.** A tint moves the background toward the colour it is
+made of, so a hue drawn on a tint of itself loses about a point of contrast. A **state** badge
+(active, pinned, expiring) keeps the tinted fill and makes the label neutral; a badge whose
+**hue is the information** (a language) keeps the hue in the label, goes neutral behind it and
+carries a hairline in the hue. The test measures the composite a badge is drawn on, not only
+the plain surface.
 
-**Density.** `:root[data-density='compact']` tightens four variables — `--space-card`,
-`--space-grid`, `--space-section`, `--space-canvas` — and nothing else. Typography is
-untouched: shrinking the text would be a zoom, not a density. Four named gaps rather than a
-global factor, because these four are what decide how many cards fit on screen.
-
-They reach past the canvas where a surface claims them: the topbar's padding, the library rail's
-own padding and its rows, and a dialog's default padding and gap are written in terms of the four,
-so "Compact" tightens the whole window. A rail row is `calc(var(--space-grid) / 4 + 2px)`:
-5px, 4px in Compact, which keeps it above the 24px target. The board's surface stays out of it: its
-geometry is computed in Rust, and a padding there would offset every gesture. A dialog that sets
-its own `--dialog-padding` keeps it.
-
-Fonts are self-hosted through the `@fontsource-variable` packages listed in `angular.json`'s
-`styles` array. They used to come from Google Fonts, which on a desktop app meant degraded
-typography offline and a CSP that could not be locked down.
-
-**Variable, and every script kept.** The per-weight `@fontsource` packages shipped each weight
-of each script twice, as woff2 and woff: 118 files, 1.49 MB embedded in the binary for the few
-the WebView ever loads. The `wght` files carry every weight in one woff2 per script — 13 files,
-~300 kB — and `unicode-range` still loads only the scripts on screen. Cyrillic and Greek stay:
-a note is free text. The family names carry the `Variable` suffix.
+**Density.** Compact tightens four gaps — card, grid, section, canvas — and nothing else.
+Typography is untouched: shrinking the text would be a zoom, not a density. Four named gaps
+rather than a global factor, because these four decide how many cards fit on screen; the
+surfaces that claim them (the top bar, the library rail, a dialog's padding) are written in
+terms of them, and a rail row stays above the 24 px target in Compact.
 
 ## Application updates
 
@@ -6191,38 +6351,6 @@ What 0.5.0 dropped: the adoption of 0.1.0's `PRAGMA user_version` history, and t
 that sealed a 0.1.x library written in the clear. What it keeps: gathering a pre-registry
 library into `libraries/<id>/`, and moving the library-scoped preferences out of the
 application's file — both serve 0.3.x, the release before the one that introduced them.
-
-## Tauri configuration
-
-- `src-tauri/tauri.conf.json` wires the pipeline to Angular: `beforeDevCommand` /
-  `beforeBuildCommand` run the npm scripts, `devUrl` must match the Angular dev server port
-  (1420, fixed in `angular.json`), and `frontendDist` must match Angular's build output path.
-- `src-tauri/capabilities/default.json` is the v2 permission manifest for the main window.
-  Any new plugin or restricted API needs its permission listed there, or the call is denied
-  at runtime — that is where `updater:default` and `process:allow-restart` come from.
-- **`opener:allow-open-url` carries a scope**, not the bare permission: `http://*` and
-  `https://*`, for the About dialog and a link Ctrl+clicked in a Note, and nothing else —
-  no `file:`, no scheme a program registered for itself. It is the WebView's only escape hatch
-  to the system, and `ExternalLinksService` refuses any other scheme before the call as well.
-  The About dialog needs the plugin precisely because the CSP is locked to `'self'` — a plain `<a href>` leads nowhere — and
-  `AppInfoService` (`core/services/app-info/`) is its seam, alongside `getVersion()`. That one needs no
-  permission of its own: `core:app:allow-version` already ships inside `core:default`.
-- `serde_json` is a **runtime** dependency, not just a dev one: `generate_context!` embeds the
-  `plugins` section of `tauri.conf.json` as JSON, and drops the section without it.
-- **CSP is enabled.** `csp` locks production down to same-origin resources; `devCsp`
-  additionally allows the dev server's websocket and inline scripts for hot reload. Both
-  keep `ipc:` and `http://ipc.localhost` in `connect-src` — without them `invoke()` is
-  blocked. Loading anything remote means widening these, deliberately.
-- ⚠️ **The CSP is a control, not a formality.** `attach_file` takes any path — it is the native
-  picker's answer, so there is nothing to check it against — and `read_attachment` hands the
-  bytes back as a `data:` URI: together they read any file the account can read into the
-  WebView. That is harmless only because no code can be injected there: `script-src 'self'`
-  with no `'unsafe-inline'`, the one `[innerHTML]` (the highlighter) escaping before it
-  renders, and nothing loaded from anywhere else. `devCsp` carries `'unsafe-inline'` for the
-  dev server; it is the shape somebody copies when widening the production one in a hurry, and
-  it must not be.
-- ⚠️ **The Prettier worker runs outside it.** Tauri sets the header on the HTML response only,
-  and a worker's policy is its own response's: see "Formatting a snippet with Prettier".
 
 ## Testing
 
@@ -6401,20 +6529,19 @@ HTTP.
 | Group, measure                             | Realistic | Stress  | Budget (plan § 6.2) |
 | ------------------------------------------ | --------- | ------- | ------------------- |
 | `index_build`, every slice                 | 1.87 s    | 2.98 s  | ≤ 1.5 s / ≤ 4 s     |
-| `index_query`, search matching nothing     | 12.1 ms   | 22.2 ms | ≤ 50 / 120 ms       |
-| `index_query`, space + tag + pinned        | 3.0 ms    | 3.2 ms  | —                   |
-| `index_query`, unfiltered                  | 661 ms    | 289 ms  | —                   |
-| `index_query`, search `etape` (most match) | 701 ms    | 269 ms  | ≤ 50 / 120 ms       |
+| `index_query`, search matching nothing     | 12.2 ms   | 22.4 ms | ≤ 50 / 120 ms       |
+| `index_query`, space + tag + pinned        | 2.6 ms    | 2.6 ms  | —                   |
+| `index_query`, unfiltered                  | 10.5 ms   | 10.9 ms | —                   |
+| `index_query`, search `etape` (most match) | 10.9 ms   | 10.9 ms | ≤ 50 / 120 ms       |
 | `index_query`, `list_tags`                 | 7.6 ms    | 7.7 ms  | ≤ 5 / 10 ms         |
 | `index_refresh`, `update_note` (title)     | 0.44 ms   | 0.56 ms | ≤ 5 ms              |
 | `index_refresh`, tag then untag 100 notes  | 4.2 ms    | 10.1 ms | ≤ 30 ms             |
 
-**The search is no longer what costs; the view is.** Finding nothing reads every folded text
-and stays inside its budget. A query that keeps most notes costs what the view of today's shape
-costs: every kept note is copied, decorated and cut to its card — a Note's Markdown outline and a
-Calcul sheet's evaluation for each, which is why the realistic corpus, with 6 500 of those, is
-the slower one. The plan's phase 2 changes exactly that (`NotesView` of `Arc` entries, previews
-for the cards drawn alone). Two measures are over their budget on this run: the realistic build
+**Neither the search nor the view costs any more.** Finding nothing reads every folded text and
+stays inside its budget. A query that keeps most notes used to cost what the view cost — every
+kept note copied, decorated and cut to its card, 661 ms on the realistic corpus — until the view
+held the index's `Arc` entries and computed a card only for the cards shown (`NotesView::display`):
+what is left is sorting and sectioning 30 000 shared entries. Two measures are over their budget on this run: the realistic build
 (the 60 000 checklist items and the side tables, read per slice) and `list_tags`, which walks
 every note's tags at each call.
 
@@ -6528,7 +6655,71 @@ The tests split by what they need in order to run:
 Test names and comments are in English, like the front-end specs. `notes::store::list`
 survives only as a `#[cfg(test)]` helper — no command returns a raw list.
 
+### The interface
+
+`crates/ui` is tested with `egui_kittest`, inline like the rest. `testing::harness()` is a
+harness drawing with the application's fonts; `testing::backend()` a real core over an empty
+temporary profile, `testing::unlocked()` the same with a library created through the gate's
+calls; `services::time::fake::FakeClock` the time. A control is found by its `author_id` —
+the `data-testid` its Angular twin had, set by `widgets::address` — so a ported scenario reads
+like the old one. The harness refuses a control without an accessible name (kittest's check,
+on by default and left on).
+
+**A test waits on conditions, never on a number of frames.** `testing::settle` waits until the
+core has nothing in flight — answers, and the work it goes on with after one, such as the index
+filling behind an unlock (`Backend::background`) — then lets the window draw, and goes round
+again while drawing launches more. It returns once a drawing launched nothing: everything
+answered is then on screen. A window that still repaints at that point repaints forever, and the
+test fails. `testing::locked()` closes a library before a second core opens its profile, as a
+process that ended leaves it. The widget bench runs with reduced motion, so its spinner rests.
+
+`app::captures` drives the whole window (`DevNotesApp`) through the gate's states, the title
+bar and the banners, and renders each in both themes on a software adapter — WARP on Windows,
+lavapipe on Linux — into `DEVNOTES_CAPTURES` when it is set. `test-rust` sets it and uploads
+the PNGs as `captures-<os>`, to be looked at beside the reference's captures. Nothing compares
+pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
+
+### The scenarios, on the assembled window
+
+A scenario drives the **real application** — the built binary, a real window, real `wgpu`, a
+real SQLite file — on a blank profile, and knows of it only what it shows. The binary is the
+`e2e` flavour, `cargo build -p app --features e2e --target-dir target/e2e`: eframe's
+`inspection` feature, the software adapter whatever the machine offers (WARP, lavapipe, as on
+the runners), and two doors the protocol has no way through — `--action <name>` from a second
+launch for a global action, and `platform::dialog::from_scenario`, a file dialog answering the
+path in `DEVNOTES_E2E_DIALOG`. ⚠️ **Its inspection port has no authentication**: a release
+build of the flavour does not compile (`compile_error!`), and `lint-rust` checks that the
+default build does not link `egui_inspection`. Its own target directory keeps every other build
+from overwriting it.
+
+`crates/e2e` is the driver. `App::launch` starts the flavour with `--profile <dir>` and
+`EGUI_INSPECTION=127.0.0.1:<free port>`, and speaks egui's inspection protocol: it reads the
+AccessKit tree, finds a control by its `author_id`, clicks the middle of its box, types, presses
+a key at its place (the area keys read the position), captures the window. `eventually` reads
+the tree until its condition holds: `Settle` waits for egui to be idle, not for the core,
+whose answer arrives a frame later. `relaunch` asks `--action quit`, waits for the process to
+end its queue drained, and starts it again on the same profile. A failed scenario leaves its
+last screen and the application's log in `target/e2e/scenarios/<scenario>/`, beside its
+captures.
+
+One file per scenario, `crates/e2e/tests/<nn>_<name>.rs`, one `#[test]` of named steps
+(`e2e::step`): `cargo test -p e2e --test 01_first_launch` runs one, `cargo test -p e2e` all of
+them, one file after the other. Each launches its own application on its own profile, so the
+files never share a process. `cargo test --workspace` is run with `--exclude e2e`.
+`crates/e2e/clippy.toml` refuses `std::thread::sleep`: a scenario waits on conditions, never
+durations.
+
+In CI, the `e2e` job of `ci.yml` runs once per platform from `changes` on, beside the Rust
+tests: it builds the flavour into its cached `target/`, runs `cargo test -p e2e` — under
+`xvfb-run` with lavapipe on Linux, on WARP on Windows — and uploads `scenarios/`. The scenarios are not split into groups
+(plan, D31): when the suite grows long, it is split by file name, never by a list kept by hand.
+
 ### End to end
+
+> **Angular reference.** This section describes the Angular application, which left the build in
+> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
+> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> screen by screen (`docs/egui-migration-plan.md` § 12).
 
 `npm run test:e2e` drives the **assembled application**: the real binary, a real WebView, the
 real IPC bridge and a real SQLite file. It is the only suite that can see a missing capability,

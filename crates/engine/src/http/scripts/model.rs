@@ -4,7 +4,6 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::closed_enum::closed_enum;
 use crate::http::model::{
@@ -40,7 +39,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Script {
     /// Chosen by whoever builds the job: what a failure and a test name it by.
@@ -391,7 +390,7 @@ pub struct VariableWrite {
     pub secret: bool,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct TestResult {
     pub name: String,
@@ -457,7 +456,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ScriptFailure {
     pub kind: FailureKind,
@@ -522,7 +521,7 @@ pub struct LogEntry {
 }
 
 /// A script that stopped, as the front names it: what failed, where, and whose script it was.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ScriptStop {
     pub kind: FailureKind,
@@ -573,7 +572,7 @@ pub enum ScriptError {
     },
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Extracted {
     pub path: String,
@@ -583,7 +582,7 @@ pub struct Extracted {
 }
 
 /// What the scripts after the answer left beside it; what they logged is the console's.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ScriptsAnswer {
     pub failure: Option<ScriptStop>,

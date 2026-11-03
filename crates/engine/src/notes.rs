@@ -50,19 +50,11 @@ pub fn query_notes(engine: &Engine, query: NotesQuery) -> Result<NotesView, AppE
     drop(connection);
 
     let (entries, facets) = index.select(&query, folders.as_ref());
-    let (notes, hits) = crate::index::search(&entries, view::Criteria::from(&query).needle());
+    let cards = crate::index::search(&entries, view::Criteria::from(&query).needle());
     let decorations = index.decorations();
     drop(index);
 
-    let mut view = view::arrange(notes, hits, facets, &query);
-    decorations.apply(view.notes_mut());
-    for note in view.notes_mut() {
-        if !query.keeps_chip(note.folder_id.as_deref()) {
-            note.folder = None;
-        }
-    }
-
-    Ok(view)
+    Ok(view::arrange(cards, facets, &query, decorations))
 }
 
 /// The path the index replaced, kept as its oracle: SQL, every body opened, `view::build`.
@@ -80,12 +72,7 @@ pub(crate) fn query_notes_from_database(
     drop(connection);
 
     let mut view = view::build(notes, facets, query);
-    decorations.apply(view.notes_mut());
-    for note in view.notes_mut() {
-        if !query.keeps_chip(note.folder_id.as_deref()) {
-            note.folder = None;
-        }
-    }
+    view.decorations = std::sync::Arc::new(decorations);
 
     Ok(view)
 }

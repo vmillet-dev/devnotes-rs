@@ -736,12 +736,12 @@ fn long_body() -> String {
         .join("\n")
 }
 
-fn only_note(view: &NotesView) -> &DisplayNote {
-    let mut notes = view.sections.iter().flat_map(|section| &section.notes);
-    let note = notes.next().expect("a note");
-    assert!(notes.next().is_none(), "one note only");
+fn only_note(view: &NotesView) -> DisplayNote {
+    let mut cards = view.cards();
+    let card = cards.next().expect("a note");
+    assert!(cards.next().is_none(), "one note only");
 
-    note
+    view.display(card)
 }
 
 /// A list sends the head of a long body; the editor reads the rest with `get`.

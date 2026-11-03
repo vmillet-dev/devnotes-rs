@@ -1,7 +1,6 @@
 //! Passwords, drawn from the operating system's generator: never a seeded one.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::count::saturating_u32;
 
@@ -21,7 +20,7 @@ pub const MIN_LENGTH: u32 = 4;
 pub const MAX_LENGTH: u32 = 256;
 pub const MAX_PASSWORDS: u32 = 50;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CharacterSet {
     Lowercase,
@@ -41,7 +40,7 @@ impl CharacterSet {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PasswordRequest {
     pub length: u32,
@@ -51,7 +50,7 @@ pub struct PasswordRequest {
     pub count: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Strength {
     VeryWeak,
@@ -74,7 +73,7 @@ impl Strength {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

@@ -1,4 +1,4 @@
-// Regenerates src-tauri/icons from src-tauri/icons/devnotes.svg: `npm run icons`.
+// Regenerates crates/app/icons from crates/app/icons/devnotes.svg: `npm run icons`.
 //
 // ⚠️ The Windows .ico is not `tauri icon`'s: 16, 24 and 32 px come from the hand-hinted
 // drawings in icons/source/, whose lines sit on whole pixels. Scaled from the master they blur,
@@ -9,7 +9,7 @@ import { Buffer } from 'node:buffer';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const ICONS = 'src-tauri/icons';
+const ICONS = 'crates/app/icons';
 const HINTED = [16, 24, 32];
 const SCALED = [48, 64, 256];
 

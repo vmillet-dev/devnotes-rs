@@ -2,7 +2,6 @@
 
 use super::transport::{self, Limits, SetBy, Transport, TransportSettings};
 use serde::Serialize;
-use specta::Type;
 
 use super::model::{
     ContainerSettings, HttpItemKind, KeyValue, RequestAuth, RequestBody, RequestScripts,
@@ -10,7 +9,7 @@ use super::model::{
 use super::variables::{VariableLayer, VariableScope};
 
 /// Where an inherited value was set: what the request says it comes from.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpOrigin {
     pub kind: HttpItemKind,
@@ -18,7 +17,7 @@ pub struct HttpOrigin {
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InheritedHeader {
     pub header: KeyValue,
@@ -26,14 +25,14 @@ pub struct InheritedHeader {
 }
 
 /// A folder's or the collection's scripts, and whose they are.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InheritedScripts {
     pub from: HttpOrigin,
     pub scripts: RequestScripts,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Inherited {
     /// Never `Inherit`: what a request inheriting gets, `None` when nothing above sets one.

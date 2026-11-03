@@ -7,7 +7,6 @@ use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::attachments::model::Attachment;
 use crate::error::{StorageError, ValidationError};
@@ -26,7 +25,7 @@ use crate::spaces::model::Space;
 pub const FORMAT_VERSION: u32 = 1;
 
 /// What an export takes.
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ExportScope {
     Library,
@@ -40,7 +39,7 @@ pub enum ExportScope {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Bundle {
     pub version: u32,
@@ -58,7 +57,7 @@ pub struct Bundle {
     pub attachments: Vec<Attachment>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Type)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportReport {
     pub notes: u32,
@@ -84,7 +83,7 @@ impl ExportReport {
 }
 
 /// `skipped`: notes already present or whose space is missing, so an import can be replayed.
-#[derive(Debug, Clone, Copy, Default, Serialize, Type)]
+#[derive(Debug, Clone, Copy, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportReport {
     pub spaces_created: u32,

@@ -4,14 +4,13 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::count::saturating_u32;
 
 pub const MAX_FREQUENCIES: usize = 300;
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatsRequest {
     pub text: String,
@@ -21,7 +20,7 @@ pub struct StatsRequest {
 }
 
 /// What a reader cannot see, or would take for something else.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Invisible {
     Space,
@@ -66,7 +65,7 @@ impl Invisible {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Frequency {
     pub character: String,
@@ -78,7 +77,7 @@ pub struct Frequency {
     pub share: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextStats {
     /// As a reader counts them: `é` written as `e` and an accent is one, and so is a flag.

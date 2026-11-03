@@ -5,7 +5,6 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::closed_enum::closed_enum;
 use crate::error::ValidationError;
@@ -31,7 +30,7 @@ impl FolderColour {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: String,
@@ -46,19 +45,18 @@ pub struct Folder {
     pub parent_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FolderDraft {
     pub space_id: String,
     pub name: String,
     #[serde(default)]
-    #[specta(optional)]
     pub parent_id: Option<String>,
 }
 
 /// What a card shows, resolved by the back end: the front end never joins an id against
 /// a list it happens to hold.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteFolder {
     pub id: String,
@@ -70,22 +68,19 @@ pub struct NoteFolder {
 
 /// Where a folder was before it moved, the only thing that can put it back: its parent, and
 /// its zone's frame on that parent's board.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FolderMove {
     pub folder_id: String,
-    #[specta(optional)]
     pub parent_id: Option<String>,
-    #[specta(optional)]
     pub frame: Option<crate::folders::board::BoardFrame>,
 }
 
 /// Which folder each note left, the only thing that can put a filing back; `None` was loose.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteFiling {
     pub note_id: String,
-    #[specta(optional)]
     pub folder_id: Option<String>,
 }
 

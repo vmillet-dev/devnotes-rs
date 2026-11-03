@@ -6,7 +6,6 @@ use std::collections::BTreeMap;
 
 use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::calc::{self, CalcCardLine};
 use super::checklist::{self, ChecklistItem};
@@ -19,7 +18,7 @@ use super::priority::Priority;
 use super::view::SearchHit;
 use crate::folders::model::NoteFolder;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     pub id: String,
@@ -27,7 +26,6 @@ pub struct Note {
     /// The folder travels with an export; where its zone sits must never join this model,
     /// which `transfer::Bundle` deserialises.
     #[serde(default)]
-    #[specta(optional)]
     pub folder_id: Option<String>,
     pub title: String,
     pub language: Language,
@@ -54,20 +52,19 @@ pub struct Note {
     pub placeholder_values: BTreeMap<String, String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum NoteLifecycle {
     Permanent,
     Expires { at: DateTime<Utc> },
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteDraft {
     pub space_id: String,
     /// Set by the two places that file a new note: the board and the inside of a folder.
     #[serde(default)]
-    #[specta(optional)]
     pub folder_id: Option<String>,
     pub title: String,
     pub language: Language,
@@ -79,7 +76,6 @@ pub struct NoteDraft {
     #[serde(default)]
     pub kind: NoteKind,
     #[serde(default)]
-    #[specta(optional)]
     pub priority: Priority,
     #[serde(default)]
     pub items: Vec<ChecklistItem>,
@@ -89,43 +85,30 @@ pub struct NoteDraft {
 ///
 /// An index into the folders the same command creates, which have no id yet. `None` stays
 /// loose, which the first launch shows on purpose.
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SampleNote {
     #[serde(default)]
-    #[specta(optional)]
     pub folder: Option<u32>,
     pub draft: NoteDraft,
 }
 
-/// ⚠️ A field set to `None` stays unchanged, and `#[specta(optional)]` makes the key omissible
-/// in TypeScript: without it the front sends `null` for what it does not touch, overwriting it.
-#[derive(Debug, Clone, Default, Deserialize, Type)]
+/// A field set to `None` stays unchanged.
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotePatch {
-    #[specta(optional)]
     pub space_id: Option<String>,
-    #[specta(optional)]
     pub title: Option<String>,
-    #[specta(optional)]
     pub language: Option<Language>,
-    #[specta(optional)]
     pub content: Option<String>,
-    #[specta(optional)]
     pub source: Option<String>,
-    #[specta(optional)]
     pub tags: Option<Vec<String>>,
-    #[specta(optional)]
     pub pinned: Option<bool>,
-    #[specta(optional)]
     pub lifecycle: Option<NoteLifecycle>,
-    #[specta(optional)]
     pub kind: Option<NoteKind>,
     /// Replaces the whole list, like `tags`: a position is all the identity an item has.
-    #[specta(optional)]
     pub items: Option<Vec<ChecklistItem>>,
     /// A Dessin's two pictures, taken as it is saved; written beside the body, not in it.
-    #[specta(optional)]
     pub pictures: Option<drawing::DrawingPictures>,
 }
 
@@ -226,7 +209,7 @@ const EXPIRING_SOON: TimeDelta = TimeDelta::days(3);
 
 /// The decision, not the rendering: the dated variants carry a date and not a label,
 /// so "4 min ago" ages on screen without a round trip.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum NoteFooter {
     Source {
@@ -246,7 +229,7 @@ pub enum NoteFooter {
 }
 
 /// `flatten`: the front end has a single note type.
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DisplayNote {
     #[serde(flatten)]
@@ -277,7 +260,7 @@ pub struct DisplayNote {
 }
 
 /// One line of a Note as a card draws it, read from its Markdown by `notes::markdown`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum OutlineLine {
     Heading {
@@ -332,7 +315,7 @@ impl OutlineLine {
 }
 
 /// A Note shown a slide at a time, as `notes::markdown::present` cuts it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Presentation {
     /// Each slide's Markdown, as the body holds it: the slide is drawn by the rich editor.
@@ -342,7 +325,7 @@ pub struct Presentation {
 }
 
 /// A heading of the Note in its mind map, with the slide it is on and the headings under it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MapNode {
     pub text: String,
@@ -560,7 +543,7 @@ fn footer_of(note: &Note) -> NoteFooter {
     }
 }
 
-fn expires_soon(note: &Note, now: DateTime<Utc>) -> bool {
+pub(crate) fn expires_soon(note: &Note, now: DateTime<Utc>) -> bool {
     let NoteLifecycle::Expires { at } = note.lifecycle else {
         return false;
     };
@@ -571,19 +554,18 @@ fn expires_soon(note: &Note, now: DateTime<Utc>) -> bool {
 }
 
 /// Where a note sat before a batch moved it — the only thing that can put it back.
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotePlacement {
     pub note_id: String,
     pub space_id: String,
     /// The folder the move took it out of, which the undo puts it back into while it exists.
     #[serde(default)]
-    #[specta(optional)]
     pub folder_id: Option<String>,
 }
 
 /// A note's priority before a batch moved it: its undo puts back each note's own.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotePriority {
     pub note_id: String,
@@ -592,14 +574,14 @@ pub struct NotePriority {
 
 /// One tag on one note: a batch answers pair by pair, so its undo cannot strip a tag the note
 /// already carried.
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteTag {
     pub note_id: String,
     pub tag: String,
 }
 
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TagUsage {
     pub tag: String,

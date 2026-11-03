@@ -9,6 +9,25 @@ all-features = true
 [advisories]
 unmaintained = "workspace"
 unsound = "all"
-ignore = [
-    { id = "RUSTSEC-2024-0429", reason = "glib 0.18 is pinned by Tauri's gtk-rs 0.18 and unreachable from our code; drop this when Tauri moves to gtk-rs 0.20+" },
+ignore = []
+
+# What the application may ship under GPL-3.0-only: the licences the tree holds today. A new one
+# is a decision, not a line to add.
+[licenses]
+confidence-threshold = 0.9
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CDLA-Permissive-2.0",
+    "GPL-3.0-only",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
 ]

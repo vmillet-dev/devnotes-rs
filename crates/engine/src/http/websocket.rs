@@ -10,7 +10,6 @@ use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};
 use rustls_platform_verifier::ConfigVerifierExt;
 use serde::{Deserialize, Serialize};
-use specta::Type;
 use tokio::sync::mpsc;
 use tokio::task::AbortHandle;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -32,7 +31,7 @@ pub const MESSAGE_SHOWN: usize = 64 * 1024;
 const CLOSE_GRACE: Duration = Duration::from_secs(3);
 
 /// A request's own WebSocket part: what it asks the server, and what it keeps to send again.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WebsocketDocument {
     /// `Sec-WebSocket-Protocol`, in the order of preference.
@@ -40,14 +39,14 @@ pub struct WebsocketDocument {
     pub messages: Vec<SavedMessage>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct SavedMessage {
     pub name: String,
     pub text: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WebsocketEvent {
     /// The id the front connected under.
@@ -56,7 +55,7 @@ pub struct WebsocketEvent {
     pub event: SocketEvent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

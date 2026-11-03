@@ -6,7 +6,6 @@ use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::count::saturating_u32;
 use crate::error::{FileContext, StorageError, ValidationError};
@@ -14,7 +13,7 @@ use crate::error::{FileContext, StorageError, ValidationError};
 /// 10 MB: past that it is no longer a screenshot pasted next to a note.
 pub const MAX_BYTES: u64 = 10 * 1024 * 1024;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Attachment {
     pub id: String,

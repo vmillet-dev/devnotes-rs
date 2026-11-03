@@ -3,7 +3,6 @@
 //! keeps its meaning for everyone; the front proposes the spelling of the one on screen.
 
 use serde::Serialize;
-use specta::Type;
 
 use super::lexer::{Tok, Token};
 use crate::closed_enum::closed_enum;
@@ -118,7 +117,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WordClass {
     /// Reserved: `en = 5` is an error on its line, never a name.
@@ -395,7 +394,7 @@ pub(super) fn scale_at(tokens: &[Token], at: usize) -> Option<(u64, usize)> {
 }
 
 /// A concept and its spellings, as the front's completion reads them.
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WordEntry {
     pub word: CalcWord,

@@ -7,7 +7,6 @@ use std::fmt::Write;
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_512};
-use specta::Type;
 use uuid::{Uuid, Variant};
 
 use super::random::{NoRandomness, uniform};
@@ -22,7 +21,7 @@ const BASE36: &[u8; 36] = b"0123456789abcdefghijklmnopqrstuvwxyz";
 const KSUID_EPOCH: i64 = 1_400_000_000;
 const CUID2_LENGTH: usize = 24;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum IdKind {
     UuidV4,
@@ -34,7 +33,7 @@ pub enum IdKind {
     Ksuid,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NanoAlphabet {
     /// `A-Za-z0-9_-`, `NanoID`'s own.
@@ -55,7 +54,7 @@ impl NanoAlphabet {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IdentifiersRequest {
     pub kind: IdKind,
@@ -262,7 +261,7 @@ pub fn generate(request: &IdentifiersRequest) -> Result<Vec<String>, NoRandomnes
         .collect())
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum UuidVariant {
     Ncs,
@@ -273,14 +272,14 @@ pub enum UuidVariant {
 }
 
 /// What was drawn rather than stamped: the characters as pasted, and the bits they hold.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RandomPart {
     pub text: String,
     pub bits: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

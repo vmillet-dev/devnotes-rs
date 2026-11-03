@@ -7,7 +7,6 @@ mod schema;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
-use specta::Type;
 
 use crate::count::saturating_u32;
 
@@ -216,14 +215,14 @@ fn like_number(number: &Number, draw: &mut Draw) -> Value {
 
 // --- The command's shape.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum JsonSource {
     Schema,
     Example,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateRequest {
     pub source: JsonSource,
@@ -233,7 +232,7 @@ pub struct GenerateRequest {
     pub seed: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Unsupported {
     pub keyword: String,
@@ -241,7 +240,7 @@ pub struct Unsupported {
     pub path: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum GenerateAnswer {
     Generated {

@@ -4,7 +4,6 @@
 
 use rust_decimal::Decimal;
 use serde::Serialize;
-use specta::Type;
 
 use crate::tools::sizes::SizeUnit;
 
@@ -105,7 +104,7 @@ impl Dim {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Dimension {
     Number,
@@ -122,7 +121,7 @@ pub enum Dimension {
 }
 
 /// Named, never spelled: the front writes each in the language on screen, `Go` or `GB`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum UnitId {
     Nanometre,
@@ -545,7 +544,7 @@ pub fn table() -> Vec<UnitDef> {
 
 /// A unit and what it measures: the editor proposes, after `en` or `à`, the units of the kind
 /// the line holds. Their symbols are the front's, in the language on screen.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UnitEntry {
     pub id: UnitId,

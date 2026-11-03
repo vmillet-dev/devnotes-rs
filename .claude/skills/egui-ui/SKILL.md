@@ -1,14 +1,14 @@
 ---
 name: egui-ui
-description: Use when writing or reviewing the egui interface of the migration (crates/ui, crates/app, the phase 0 spikes) — screens, widgets, state, theme, kittest tests, or looking at the running egui app. The Angular front in src/ keeps angular-ui while it exists.
+description: Use when writing or reviewing the egui interface (crates/ui, crates/app) — screens, widgets, state, theme, kittest tests, or looking at the running egui app.
 ---
 
 # egui UI
 
 Sources of truth: `docs/egui-migration-plan.md` (§ 3.3–3.8 architecture, § 5 visual parity, § 8
 tests), then `docs/architecture.md` as sections are ported. The look to reproduce is the Angular
-application: `src/` while it exists, the `angular-reference` tag afterwards, and the reference
-captures (§ 5.2).
+application, kept in `reference/angular/` (whole at the `angular-reference` tag): read a screen's
+component and its SCSS before porting it, and its captures (§ 5.2).
 
 ## Rules
 
@@ -34,22 +34,43 @@ captures (§ 5.2).
 - Every interactive widget has an accessible name and carries, as its AccessKit `author_id`, the
   `data-testid` its Angular twin had (§ 3.12, § 8.2).
 - No user-visible string in code: an `i18n` key and its params (§ 3.11).
+- **Widgets go through `widgets::interact`** (at least 24 × 24, role and name, `author_id`, focus
+  ring); `Ui::interact` is refused elsewhere by `crates/ui/clippy.toml`. A label or frame that is
+  not clickable gets its id with `widgets::address`.
+- A secret is typed into `gate::passphrase::PassphraseField`, never `TextEdit` (whose undo history
+  keeps copies in egui's memory), held in a `Zeroizing<String>` and handed over by `take`.
+- egui keeps **one popup open in memory**: a sub-menu needs its own open state (`open_bool`). egui
+  moves the focus with the arrows inside a menu by itself — do not add a second move. A modal's
+  focus goes back to its opener only once `top_modal_layer()` is `None` (`DialogStack`).
+- A panel whose colours are translucent (the banners) sits on an explicit fill: under it is the
+  clear colour, transparent in a kittest render.
 
 ## Tests
 
-- **Screen and widget**: `egui_kittest::Harness`, queried by label, role or `author_id`. Its
-  accessibility check panics on an input widget without a name: keep it on.
-- **Snapshot**: `Harness::snapshot` (features `wgpu` + `snapshot`), small images, default
-  thresholds; accept a change with `UPDATE_SNAPSHOTS=true cargo test` and look at the image first.
-- **End to end**: the assembled binary, driven through `egui_inspection` (§ 8); one scenario per
-  file, a virgin profile each, waits on conditions, never on durations.
+- **Screen and widget**: `testing::harness()` (the application's fonts — egui's defaults are not
+  loaded), queried by `author_id`. Its accessibility check panics on an input widget without a
+  name: keep it on. State tests run over a real core: `testing::backend()` on an empty temporary
+  profile, `testing::unlocked()` with a library created, `testing::locked()` closed for a later
+  launch. **Wait on conditions, never on a number of frames**: `testing::settle(harness, …)`
+  waits for the core to be idle and the window to have drawn it, and fails if the window repaints
+  forever. Work the core goes on with after an answer is started through `Backend::background`,
+  so that it is waited for too. No `run_steps(n)`, no `with_max_steps`: a bench with a spinner
+  runs with reduced motion.
+- **The whole window**: `Harness::new_eframe` / `build_eframe` over `DevNotesApp`, through the gate
+  like a person (`app.rs` tests).
+- **Captures, not snapshots** (D24): `app::captures` renders the window's states in both themes into
+  `DEVNOTES_CAPTURES` for a look by eye beside the reference's captures; CI uploads them. Nothing
+  compares pixels; a new screen adds its states there.
+- **End to end**: the assembled binary, driven through `egui_inspection` (`desktop-e2e-testing`).
 
 ## Looking at the running app
 
-Build with the `e2e` feature (it turns on eframe's `inspection`), run with `EGUI_INSPECTION=1`
-(binds `127.0.0.1:5719`), then drive it with `egui_mcp` (`cargo install egui_mcp`, declared in
-your local `.mcp.json`): widget tree, click, type, screenshot. Never in a release build: the port
-has no authentication.
+`cargo run -p app -- --profile <temp dir>` and a screenshot of the window, in both themes (the
+toggle is in the title bar); a test library's phrase is `testing::PASSPHRASE`, never a real one.
+To drive it, build the `e2e` flavour (`cargo build -p app --features e2e --target-dir target/e2e`),
+run it with `EGUI_INSPECTION=1` (binds `127.0.0.1:5719`) and attach `egui_mcp` (`cargo install
+egui_mcp`, declared in your **local** `.mcp.json`, never versioned): widget tree, click, type,
+screenshot. Never in a release build: the port has no authentication.
 
 ## References
 

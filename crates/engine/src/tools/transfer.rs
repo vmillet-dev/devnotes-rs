@@ -4,7 +4,6 @@
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::numbers::{self, NumberProblem};
 use super::sizes::{self, QuantityProblem, SizeUnit};
@@ -12,7 +11,7 @@ use crate::count::saturating_u32;
 
 pub const EFFICIENCY_PERCENT: (u32, u32) = (50, 100);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum RateUnit {
     BitPerSecond,
@@ -42,7 +41,7 @@ impl RateUnit {
 }
 
 /// The connections every estimate is also given for, by their rate in bits per second.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Connection {
     Fibre,
@@ -56,7 +55,7 @@ const CONNECTIONS: [(Connection, u64); 3] = [
     (Connection::Adsl, 10_000_000),
 ];
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferRequest {
     /// A quantity, with its unit or without one.
@@ -70,7 +69,7 @@ pub struct TransferRequest {
 }
 
 /// A length of time to the nearest second, for the front to spell. Past a year it stays in days.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferTime {
     pub days: u32,
@@ -81,7 +80,7 @@ pub struct TransferTime {
     pub under_a_second: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionEstimate {
     /// `None` for the rate typed.
@@ -91,14 +90,14 @@ pub struct ConnectionEstimate {
     pub span: TransferTime,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TransferField {
     Size,
     Rate,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

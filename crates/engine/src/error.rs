@@ -4,7 +4,6 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 use thiserror::Error;
 
 use crate::http::model::{HeaderFault, HttpItemKind};
@@ -123,7 +122,7 @@ impl<T, E: std::fmt::Display> FileContext<T> for Result<T, E> {
 
 /// ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
 /// (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ErrorCode {
     NoteNotFound,
@@ -192,7 +191,7 @@ pub enum ErrorCode {
     HttpRunData,
 }
 
-#[derive(Debug, Serialize, Type)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppError {
     pub code: ErrorCode,

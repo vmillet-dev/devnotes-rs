@@ -56,15 +56,32 @@ impl DbQueue {
         T: Send + 'static,
         F: FnOnce() -> Result<T, AppError> + Send + 'static,
     {
+        self.submit(job).await
+    }
+
+    /// Queues `job` now, in the caller's order, and answers a future of its result: what
+    /// keeps two calls made one after the other in that order when the waiting is done
+    /// elsewhere.
+    pub(crate) fn submit<T, F>(
+        &self,
+        job: F,
+    ) -> impl Future<Output = Result<T, AppError>> + use<T, F>
+    where
+        T: Send + 'static,
+        F: FnOnce() -> Result<T, AppError> + Send + 'static,
+    {
         let (answer, answered) = oneshot::channel();
         let job: Job = Box::new(move || {
             let result = catch_unwind(AssertUnwindSafe(job))
                 .unwrap_or_else(|_| Err(StorageError::Unavailable.into()));
             let _ = answer.send(result);
         });
-        self.0.send(job).map_err(|_| StorageError::Unavailable)?;
+        let queued = self.0.send(job).map_err(|_| StorageError::Unavailable);
 
-        answered.await.map_err(|_| StorageError::Unavailable)?
+        async move {
+            queued?;
+            answered.await.map_err(|_| StorageError::Unavailable)?
+        }
     }
 }
 

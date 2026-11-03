@@ -5,7 +5,6 @@
 pub mod store;
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use crate::closed_enum::closed_enum;
 use crate::error::ValidationError;
@@ -21,7 +20,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Variable {
     pub enabled: bool,
@@ -30,12 +29,11 @@ pub struct Variable {
     pub kind: VariableKind,
     /// The request whose last send wrote it — by an extraction or a script —: « remplie par Login ».
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[specta(optional)]
     pub filled_by: Option<FilledBy>,
 }
 
 /// A request that writes a variable at each send; no id for a draft never saved.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct FilledBy {
     pub request_id: Option<String>,
@@ -55,7 +53,7 @@ impl Default for Variable {
 }
 
 /// What a set's table marks on a row: it is kept as typed, and left out when resolving.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum VariableFault {
     /// Not a name a `{{…}}` can hold.
@@ -76,7 +74,7 @@ pub struct EnvironmentDocument {
     pub variables: Vec<Variable>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Environment {
     pub id: String,
@@ -89,7 +87,7 @@ pub struct Environment {
     pub position: u32,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpEnvironments {
     pub globals: Vec<Variable>,
@@ -97,16 +95,12 @@ pub struct HttpEnvironments {
 }
 
 /// A field left out is untouched.
-#[derive(Debug, Clone, Default, Deserialize, Type)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnvironmentPatch {
-    #[specta(optional)]
     pub name: Option<String>,
-    #[specta(optional)]
     pub colour: Option<FolderColour>,
-    #[specta(optional)]
     pub protected: Option<bool>,
-    #[specta(optional)]
     pub variables: Option<Vec<Variable>>,
 }
 

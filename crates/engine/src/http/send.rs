@@ -10,7 +10,6 @@ use std::time::{Duration, Instant};
 use base64::Engine;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use specta::Type;
 use tokio::task::AbortHandle;
 use url::Url;
 use uuid::Uuid;
@@ -45,7 +44,7 @@ pub const SHOWN_LIMIT: usize = 1024 * 1024;
 /// What is read at all: past it the reading stops.
 pub const KEPT_LIMIT: usize = 64 * 1024 * 1024;
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SendRequest {
     /// Chosen by the front, so it can cancel the send it started and save what came back.
@@ -67,7 +66,7 @@ pub struct SendRequest {
     pub confirmed: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Redirect {
     pub status: u16,
@@ -81,7 +80,7 @@ pub struct Redirect {
     pub cookies: Vec<Cookie>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SentResponse {
     pub status: u16,
@@ -115,7 +114,7 @@ pub struct SentResponse {
     pub scripts: ScriptsAnswer,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Exchange {
     pub method: HttpMethod,
@@ -124,7 +123,7 @@ pub struct Exchange {
     pub body: SentBody,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -190,7 +189,7 @@ pub enum SendError {
 }
 
 /// Who put a header on a request that no row of its own wrote.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ImpliedSource {
     Body,
@@ -203,7 +202,7 @@ pub enum ImpliedSource {
 }
 
 /// A header sent without a row of the request's own: the editor lists them under its table.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImpliedHeader {
     pub name: String,
@@ -783,7 +782,7 @@ struct Kept {
 }
 
 /// An answer's text as a note keeps it, and whether a secret was masked in it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteText {
     pub text: String,

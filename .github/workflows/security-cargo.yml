@@ -11,7 +11,6 @@ on:
     paths:
       - 'Cargo.toml'
       - 'crates/*/Cargo.toml'
-      - 'src-tauri/Cargo.toml'
       - 'Cargo.lock'
       - 'deny.toml'
       - '.github/workflows/security-cargo.yml'
@@ -38,11 +37,10 @@ jobs:
       # Reads `Cargo.lock` and the advisory database; it compiles nothing, which is
       # why this job needs no Rust toolchain and no cargo cache.
       #
-      # ⚠️ `advisories` alone, and it is the repository's only advisory net — Dependabot
-      # alerts are off. `licenses`, `bans` and `sources` stood here and never made a
-      # decision in 25 runs; the GPL-3.0 compatibility of the tree is a release-time
-      # review, not a per-pull-request gate.
+      # ⚠️ The repository's only advisory net — Dependabot alerts are off. `licenses` came
+      # back with the egui tree, whose dozens of new crates arrive by pull request: one under a
+      # licence GPL-3.0 cannot ship is refused while it can still be replaced.
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           manifest-path: Cargo.toml
-          command: check advisories
+          command: check advisories licenses

@@ -1,7 +1,6 @@
 //! Colours in HEX, RGB, HSL and OKLCH, and the WCAG contrast between two of them.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 /// sRGB, each channel 0–1 — or past it, for an OKLCH colour sRGB cannot show.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -12,7 +11,7 @@ struct Rgba {
     a: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Notation {
     Hex,
@@ -21,7 +20,7 @@ pub enum Notation {
     Oklch,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Notations {
     pub hex: String,
@@ -30,7 +29,7 @@ pub struct Notations {
     pub oklch: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -49,14 +48,14 @@ pub enum ColourReading {
     Empty,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextSizes {
     pub normal: bool,
     pub large: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WcagLevel {
     /// 4.5:1 for body text.
@@ -75,7 +74,7 @@ impl WcagLevel {
 }
 
 /// The nearest text colour that reaches the next level on this background, for body text.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -92,7 +91,7 @@ pub enum ContrastFix {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Contrast {
     pub ratio: f64,
@@ -102,7 +101,7 @@ pub struct Contrast {
     pub fix: Option<ContrastFix>,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ColourRequest {
     pub colour: String,
@@ -110,7 +109,7 @@ pub struct ColourRequest {
     pub against: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ColourAnswer {
     pub colour: ColourReading,

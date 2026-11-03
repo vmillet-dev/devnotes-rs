@@ -12,7 +12,6 @@ use std::str::FromStr;
 
 use ipnet::{IpNet, ipv4_mask_to_prefix, ipv6_mask_to_prefix};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 pub use forms::{CidrForms, ReverseDns};
 pub use masks::MaskRow;
@@ -25,7 +24,7 @@ const SPLIT_CHOICES: u8 = 3;
 /// 2¹²⁸, the addresses of `::/0`: one more than a `u128` holds.
 const ALL_IPV6: &str = "340282366920938463463374607431768211456";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum IpFamily {
     V4,
@@ -41,7 +40,7 @@ impl IpFamily {
     }
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Type)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrRequest {
     pub network: String,
@@ -55,7 +54,7 @@ pub struct CidrRequest {
     pub list: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CidrProblem {
     Unreadable,
@@ -64,7 +63,7 @@ pub enum CidrProblem {
     WrongFamily,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum BlockKind {
     ThisNetwork,
@@ -87,7 +86,7 @@ pub enum BlockKind {
     Mixed,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrBlock {
     pub family: IpFamily,
@@ -118,7 +117,7 @@ pub struct CidrBlock {
     pub forms: CidrForms,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -134,14 +133,14 @@ pub enum CidrMembership {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Subnet {
     pub cidr: String,
     pub usable: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrSplit {
     pub prefix: u8,
@@ -150,7 +149,7 @@ pub struct CidrSplit {
     pub more: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrAnswer {
     pub block: Option<CidrBlock>,

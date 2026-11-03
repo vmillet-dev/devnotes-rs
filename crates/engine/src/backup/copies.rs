@@ -116,21 +116,19 @@ fn link_files(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// One copy, as the interface lists it. `bytes` is `f64` because specta refuses the integer
-/// types JSON cannot carry exactly.
-#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+/// One copy, as the interface lists it.
+#[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Backup {
     /// The folder's name, which is its stamp, and what a restore asks for.
     pub id: String,
     pub taken_at: DateTime<Utc>,
     /// The database alone: the attachments are shared with the library and the other copies.
-    pub bytes: f64,
+    pub bytes: u64,
     /// Whether the key file travelled with it: without one, restoring loses the library.
     pub openable: bool,
 }
 
-#[allow(clippy::cast_precision_loss)]
 fn describe(copy: &Path) -> Option<Backup> {
     let at = taken_at(copy)?;
     let database = copy.join(layout::DATABASE);
@@ -139,7 +137,7 @@ fn describe(copy: &Path) -> Option<Backup> {
     Some(Backup {
         id: copy.file_name()?.to_str()?.to_string(),
         taken_at: at,
-        bytes: bytes as f64,
+        bytes,
         openable: database.is_file() && copy.join(KEY_FILE).is_file(),
     })
 }
@@ -409,9 +407,7 @@ pub(crate) mod tests {
         let database = std::fs::metadata(target.join(layout::DATABASE))
             .unwrap()
             .len();
-        #[allow(clippy::cast_precision_loss)]
-        let expected = database as f64;
-        assert!((list(&directory)[0].bytes - expected).abs() < f64::EPSILON);
+        assert_eq!(list(&directory)[0].bytes, database);
     }
 
     #[test]
@@ -755,7 +751,7 @@ pub(crate) mod tests {
             assert_eq!(copies.len(), 2);
             // Newest first, the order the panel wants and the pruning uses.
             assert_eq!(copies[0].taken_at, at(25));
-            assert!(copies[0].bytes > 0.0);
+            assert!(copies[0].bytes > 0);
             assert!(copies.iter().all(|copy| copy.openable));
         }
     }

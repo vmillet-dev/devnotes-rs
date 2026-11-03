@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 
-use chrono::{DateTime, Datelike, FixedOffset, TimeDelta, Utc};
+use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
-use specta::Type;
 use unicode_normalization::char::{decompose_canonical, is_combining_mark};
 
 use super::kind::NoteKind;
@@ -11,8 +11,9 @@ use super::model::{self, DisplayNote, Note, NoteLifecycle};
 use super::priority::Priority;
 use crate::count::saturating_u32;
 use crate::folders::model::NoteFolder;
+use crate::index::IndexedNote;
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotesQuery {
     /// `None` = every space: a choice, not an absence of one.
@@ -20,7 +21,6 @@ pub struct NotesQuery {
     /// `None` = every folder, filed or not. No "unfiled" filter: the absence of a chip already
     /// says it.
     #[serde(default)]
-    #[specta(optional)]
     pub folder_id: Option<String>,
     pub search: String,
     pub filter: NoteFilter,
@@ -31,14 +31,11 @@ pub struct NotesQuery {
     pub priorities: Vec<Priority>,
     /// Left out by the palette: the modification date, newest first.
     #[serde(default)]
-    #[specta(optional)]
     pub order: NoteOrder,
     #[serde(default)]
-    #[specta(optional)]
     pub grouping: Grouping,
     /// The palette's order: how the title answers the search, the last edit breaking ties.
     #[serde(default)]
-    #[specta(optional)]
     pub ranked: bool,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
@@ -49,14 +46,14 @@ pub struct NotesQuery {
 }
 
 /// What the list view is ordered by. The board keeps the places its cards were given.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteOrder {
     pub key: SortKey,
     pub direction: SortDirection,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SortKey {
     #[default]
@@ -69,7 +66,7 @@ pub enum SortKey {
 }
 
 /// How the list view gathers its cards. A search or a facet still makes one flat list.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Grouping {
     #[default]
@@ -79,7 +76,7 @@ pub enum Grouping {
     None,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SortDirection {
     #[default]
@@ -88,7 +85,7 @@ pub enum SortDirection {
 }
 
 /// `Untriaged` = notes with a deadline, those whose fate is not decided.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NoteFilter {
     All,
@@ -208,7 +205,7 @@ impl Facets {
 }
 
 /// How many of the space's notes carry a value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FacetCount<T> {
     pub value: T,
@@ -282,8 +279,7 @@ enum Layout {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct NotesView {
     pub sections: Vec<NoteSection>,
     /// The space's, not the current filter's: facets drawn from filtered notes would empty
@@ -296,13 +292,35 @@ pub struct NotesView {
     pub tag_counts: Vec<FacetCount<String>>,
     pub language_counts: Vec<FacetCount<Language>>,
     pub is_filtering: bool,
-    /// `u32` and not `usize`: Specta refuses what JSON cannot carry exactly.
     pub matched: u32,
+    /// What a card carries beside its note, read by [`Self::display`].
+    pub decorations: Arc<Decorations>,
+    now: DateTime<Utc>,
+    today: NaiveDate,
+    by_creation: bool,
+    opened_folder: Option<String>,
+}
+
+/// A note of the view: the index's own entry, shared rather than copied, and the quote of what
+/// the search found in it. What its card draws is [`NotesView::display`], for the cards shown.
+#[derive(Debug, Clone)]
+pub struct Card {
+    pub note: Arc<IndexedNote>,
+    /// `None` outside a search, and for a note found by its own title.
+    pub hit: Option<SearchHit>,
+}
+
+impl std::ops::Deref for Card {
+    type Target = Note;
+
+    fn deref(&self) -> &Note {
+        &self.note.note
+    }
 }
 
 /// No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
 /// biggest thing on the card. That case is `SearchMatch::Title`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SearchField {
     Tag,
@@ -313,7 +331,7 @@ pub enum SearchField {
 }
 
 /// What made a note match, and where.
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchHit {
     pub field: SearchField,
@@ -321,8 +339,7 @@ pub struct SearchHit {
     pub excerpt: String,
 }
 
-#[derive(Debug, Clone, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct NoteSection {
     pub key: NoteSectionKey,
     /// Unique among the sections, where the key is not: every format section is `format`.
@@ -330,12 +347,12 @@ pub struct NoteSection {
     /// What a priority or a format section gathers, which the front names.
     pub group: Option<SectionGroup>,
     pub has_expiring_notes: bool,
-    pub notes: Vec<DisplayNote>,
+    pub cards: Vec<Card>,
     pub show_create_ghost: bool,
 }
 
 /// A translation key on the front-end side: no readable label crosses the bridge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NoteSectionKey {
     Pinned,
@@ -364,7 +381,7 @@ impl NoteSectionKey {
 }
 
 /// Declared in the order the format sections run: snippets by language, then the other kinds.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(tag = "group", rename_all = "camelCase")]
 pub enum SectionGroup {
     Language {
@@ -415,22 +432,40 @@ impl NotesQuery {
     /// Which chip a card keeps: none for the folder opened, whose breadcrumb already names it,
     /// and the deepest folder's for a note from below it.
     pub fn keeps_chip(&self, folder_id: Option<&str>) -> bool {
-        folder_id.is_some() && folder_id != self.folder_id.as_deref()
+        keeps_chip(self.folder_id.as_deref(), folder_id)
     }
 }
 
+fn keeps_chip(opened: Option<&str>, folder_id: Option<&str>) -> bool {
+    folder_id.is_some() && folder_id != opened
+}
+
 impl NotesView {
-    /// Every note of every section, for the passes that decorate them after [`build`].
-    pub fn notes_mut(&mut self) -> impl Iterator<Item = &mut DisplayNote> {
-        self.sections
-            .iter_mut()
-            .flat_map(|section| section.notes.iter_mut())
+    /// What `card`'s card draws: its footer, fields, chip and counter, and its body cut to a
+    /// preview. Computed for the cards shown only, from the shared entry.
+    pub fn display(&self, card: &Card) -> DisplayNote {
+        let mut note = model::decorate(card.note.note.clone(), self.now);
+        note.search_hit.clone_from(&card.hit);
+        if self.by_creation {
+            note.dated_by_creation();
+        }
+        note.cut_to_preview(self.today);
+        self.decorations.apply([&mut note]);
+        if !keeps_chip(self.opened_folder.as_deref(), note.folder_id.as_deref()) {
+            note.folder = None;
+        }
+        note
+    }
+
+    /// Every card of every section, in their order.
+    pub fn cards(&self) -> impl Iterator<Item = &Card> {
+        self.sections.iter().flat_map(|section| &section.cards)
     }
 }
 
 /// What a card carries beside its note, read from other tables, and so apart from [`build`],
 /// which reads no database. The canvas, the board and a single note all go through `apply`.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Decorations {
     pub attachment_counts: HashMap<String, u32>,
     /// Every folder of the view's space; which chips a card keeps is the view's to say.
@@ -452,32 +487,36 @@ impl Decorations {
     }
 }
 
-pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> NotesView {
-    let criteria = Criteria::from(request);
-    let needle = criteria.needle();
-    // Collected while filtering: finding the same match twice is paid for twice.
-    let mut hits: HashMap<String, SearchHit> = HashMap::new();
-    if !needle.is_empty() {
-        notes.retain(|note| match answers(note, &Folded::of(note), needle) {
-            None => false,
-            Some(None) => true,
-            Some(Some(hit)) => {
-                hits.insert(note.id.clone(), hit);
-                true
-            }
-        });
-    }
+/// The view of `notes` read from the database, every one folded here: the path the index
+/// replaced, kept as its oracle. Undecorated: set [`NotesView::decorations`] after.
+pub fn build(notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> NotesView {
+    let needle = Criteria::from(request).needle().to_string();
+    let cards = notes
+        .into_iter()
+        .filter_map(|note| {
+            let entry = IndexedNote::of(note);
+            let hit = if needle.is_empty() {
+                None
+            } else {
+                answers(&entry.note, &entry.folded, &needle)?
+            };
+            Some(Card {
+                note: Arc::new(entry),
+                hit,
+            })
+        })
+        .collect();
 
-    arrange(notes, hits, facets, request)
+    arrange(cards, facets, request, Arc::default())
 }
 
-/// [`build`] past the search, over the notes that answered it and the quotes of those found
-/// elsewhere than in their title: the index searches its own folded text, then comes here.
+/// [`build`] past the search, over the cards that answered it: the index searches its own
+/// folded text, then comes here.
 pub(crate) fn arrange(
-    mut notes: Vec<Note>,
-    mut hits: HashMap<String, SearchHit>,
+    mut cards: Vec<Card>,
     facets: Facets,
     request: &NotesQuery,
+    decorations: Arc<Decorations>,
 ) -> NotesView {
     let criteria = Criteria::from(request);
     let needle = criteria.needle();
@@ -486,9 +525,9 @@ pub(crate) fn arrange(
     // switches to a flat list. `build_sections` knows nothing of folders: the inside of one is
     // already sorted by being there.
     if request.ranked && !needle.is_empty() {
-        rank_notes(&mut notes, needle);
+        rank_cards(&mut cards, needle);
     } else {
-        order_notes(&mut notes, request.order);
+        order_cards(&mut cards, request.order);
     }
 
     let inside_folder = request.folder_id.is_some();
@@ -510,12 +549,12 @@ pub(crate) fn arrange(
             Grouping::None => Layout::Whole,
         }
     };
-    let matched = saturating_u32(notes.len());
+    let matched = saturating_u32(cards.len());
 
     let offset = offset_from_minutes(request.tz_offset_minutes);
 
-    let mut view = NotesView {
-        sections: build_sections(notes, layout, request.pinned_first, request.now, offset),
+    NotesView {
+        sections: build_sections(cards, layout, request.pinned_first, request.now, offset),
         available_tags: facets.tag_names(),
         available_languages: facets.language_names(),
         kind_counts: facets.kinds,
@@ -524,23 +563,17 @@ pub(crate) fn arrange(
         language_counts: facets.languages,
         is_filtering,
         matched,
-    };
-
-    // A pass of its own, like the attachment counter: threading a second value through
-    // `build_sections` would cost every section test an argument.
-    apply_search_hits(&mut view, &mut hits);
-    if request.order.key == SortKey::Created {
-        view.notes_mut().for_each(DisplayNote::dated_by_creation);
+        decorations,
+        now: request.now,
+        today: request.now.with_timezone(&offset).date_naive(),
+        by_creation: request.order.key == SortKey::Created,
+        opened_folder: request.folder_id.clone(),
     }
-    let today = request.now.with_timezone(&offset).date_naive();
-    view.notes_mut().for_each(|note| note.cut_to_preview(today));
-    view
 }
 
 /// How well a title answers the search, lower first: all of it, its start, the start of one
 /// of its words, anywhere in it; then a note found by its tags, body, items or context.
 fn title_rank(title: &str, needle: &str) -> u8 {
-    let title = fold(title);
     if title == needle {
         0
     } else if title.starts_with(needle) {
@@ -558,12 +591,12 @@ fn title_rank(title: &str, needle: &str) -> u8 {
 }
 
 /// `psql` opened the note edited last that held it in its body, not « Connexion psql ».
-fn rank_notes(notes: &mut [Note], needle: &str) {
-    let ranks: HashMap<String, u8> = notes
+fn rank_cards(cards: &mut [Card], needle: &str) {
+    let ranks: HashMap<String, u8> = cards
         .iter()
-        .map(|note| (note.id.clone(), title_rank(&note.title, needle)))
+        .map(|card| (card.id.clone(), title_rank(&card.note.folded.title, needle)))
         .collect();
-    notes.sort_by(|a, b| {
+    cards.sort_by(|a, b| {
         ranks[&a.id]
             .cmp(&ranks[&b.id])
             .then_with(|| b.updated_at.cmp(&a.updated_at))
@@ -573,19 +606,8 @@ fn rank_notes(notes: &mut [Note], needle: &str) {
 
 /// Ties fall on the modification date, newest first, then the id: a card never swaps places
 /// with its neighbour between two refreshes, whichever way the list runs.
-fn order_notes(notes: &mut [Note], order: NoteOrder) {
-    // Titles are sealed, so SQL cannot order them; folded once, not per comparison, so that
-    // case and accents do not scatter them.
-    let titles: HashMap<String, String> = if order.key == SortKey::Title {
-        notes
-            .iter()
-            .map(|note| (note.id.clone(), fold(&note.title)))
-            .collect()
-    } else {
-        HashMap::new()
-    };
-
-    notes.sort_by(|a, b| {
+fn order_cards(cards: &mut [Card], order: NoteOrder) {
+    cards.sort_by(|a, b| {
         let primary = match order.key {
             SortKey::Modified => a.updated_at.cmp(&b.updated_at),
             SortKey::Created => a.created_at.cmp(&b.created_at),
@@ -594,7 +616,8 @@ fn order_notes(notes: &mut [Note], order: NoteOrder) {
                 .kind
                 .cmp(&b.kind)
                 .then_with(|| a.language.as_str().cmp(b.language.as_str())),
-            SortKey::Title => titles.get(&a.id).cmp(&titles.get(&b.id)),
+            // Folded, so that case and accents do not scatter them.
+            SortKey::Title => a.note.folded.title.cmp(&b.note.folded.title),
         };
         let directed = match order.direction {
             SortDirection::Descending => primary.reverse(),
@@ -607,16 +630,6 @@ fn order_notes(notes: &mut [Note], order: NoteOrder) {
                 .then_with(|| a.id.cmp(&b.id))
         })
     });
-}
-
-fn apply_search_hits(view: &mut NotesView, hits: &mut HashMap<String, SearchHit>) {
-    if hits.is_empty() {
-        return;
-    }
-
-    for note in view.notes_mut() {
-        note.search_hit = hits.remove(&note.id);
-    }
 }
 
 /// `needle` is expected folded and trimmed. Folded in Rust, not SQL: without ICU, `LOWER()`
@@ -756,66 +769,61 @@ fn is_within(date: &DateTime<FixedOffset>, now: &DateTime<FixedOffset>, window: 
 
 fn section(
     key: NoteSectionKey,
-    notes: Vec<Note>,
+    cards: Vec<Card>,
     show_create_ghost: bool,
     now: DateTime<Utc>,
 ) -> NoteSection {
-    let notes: Vec<DisplayNote> = notes
-        .into_iter()
-        .map(|note| model::decorate(note, now))
-        .collect();
-
     NoteSection {
         // The results of a filter are a count, not a list to triage.
         has_expiring_notes: key != NoteSectionKey::Results
-            && notes.iter().any(|note| note.expiring_soon),
+            && cards.iter().any(|card| model::expires_soon(card, now)),
         key,
         id: key.as_str().to_string(),
         group: None,
-        notes,
+        cards,
         show_create_ghost,
     }
 }
 
 fn gathered(
     group: SectionGroup,
-    notes: Vec<Note>,
+    cards: Vec<Card>,
     show_create_ghost: bool,
     now: DateTime<Utc>,
 ) -> NoteSection {
     NoteSection {
         id: group.id(),
         group: Some(group),
-        ..section(group.key(), notes, show_create_ghost, now)
+        ..section(group.key(), cards, show_create_ghost, now)
     }
 }
 
 /// The partition is stable: at equal pinning, the order the list was sorted in holds.
-fn hoisted(mut notes: Vec<Note>, pinned_first: bool) -> Vec<Note> {
+fn hoisted(mut cards: Vec<Card>, pinned_first: bool) -> Vec<Card> {
     if pinned_first {
-        notes.sort_by_key(|note| !note.pinned);
+        cards.sort_by_key(|card| !card.pinned);
     }
-    notes
+    cards
 }
 
 /// From the most pressing down. "None" is always there: it hosts the create card, and it is
 /// where a new note lands.
-fn by_priority(notes: Vec<Note>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
-    let mut groups: BTreeMap<std::cmp::Reverse<Priority>, Vec<Note>> = BTreeMap::new();
+fn by_priority(cards: Vec<Card>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
+    let mut groups: BTreeMap<std::cmp::Reverse<Priority>, Vec<Card>> = BTreeMap::new();
     groups.entry(std::cmp::Reverse(Priority::None)).or_default();
-    for note in notes {
+    for card in cards {
         groups
-            .entry(std::cmp::Reverse(note.priority))
+            .entry(std::cmp::Reverse(card.priority))
             .or_default()
-            .push(note);
+            .push(card);
     }
 
     groups
         .into_iter()
-        .map(|(std::cmp::Reverse(priority), notes)| {
+        .map(|(std::cmp::Reverse(priority), cards)| {
             gathered(
                 SectionGroup::Priority { priority },
-                hoisted(notes, pinned_first),
+                hoisted(cards, pinned_first),
                 priority == Priority::None,
                 now,
             )
@@ -824,13 +832,13 @@ fn by_priority(notes: Vec<Note>, pinned_first: bool, now: DateTime<Utc>) -> Vec<
 }
 
 /// The create card rides the last section, or a section of its own when there is none.
-fn by_format(notes: Vec<Note>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
-    let mut groups: BTreeMap<SectionGroup, Vec<Note>> = BTreeMap::new();
-    for note in notes {
+fn by_format(cards: Vec<Card>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
+    let mut groups: BTreeMap<SectionGroup, Vec<Card>> = BTreeMap::new();
+    for card in cards {
         groups
-            .entry(SectionGroup::format_of(&note))
+            .entry(SectionGroup::format_of(&card))
             .or_default()
-            .push(note);
+            .push(card);
     }
     if groups.is_empty() {
         return whole(Vec::new(), pinned_first, now);
@@ -840,35 +848,35 @@ fn by_format(notes: Vec<Note>, pinned_first: bool, now: DateTime<Utc>) -> Vec<No
     groups
         .into_iter()
         .enumerate()
-        .map(|(at, (group, notes))| gathered(group, hoisted(notes, pinned_first), at == last, now))
+        .map(|(at, (group, cards))| gathered(group, hoisted(cards, pinned_first), at == last, now))
         .collect()
 }
 
-fn whole(notes: Vec<Note>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
+fn whole(cards: Vec<Card>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
     vec![section(
         NoteSectionKey::All,
-        hoisted(notes, pinned_first),
+        hoisted(cards, pinned_first),
         true,
         now,
     )]
 }
 
 fn results(
-    notes: Vec<Note>,
+    cards: Vec<Card>,
     pinned_first: bool,
     create_ghost: bool,
     now: DateTime<Utc>,
 ) -> Vec<NoteSection> {
     vec![section(
         NoteSectionKey::Results,
-        hoisted(notes, pinned_first),
+        hoisted(cards, pinned_first),
         create_ghost,
         now,
     )]
 }
 
 fn build_sections(
-    notes: Vec<Note>,
+    cards: Vec<Card>,
     layout: Layout,
     pinned_first: bool,
     now: DateTime<Utc>,
@@ -876,10 +884,10 @@ fn build_sections(
 ) -> Vec<NoteSection> {
     let local_now = now.with_timezone(&offset);
     let by_creation = match layout {
-        Layout::Flat { create_ghost } => return results(notes, pinned_first, create_ghost, now),
-        Layout::ByPriority => return by_priority(notes, pinned_first, now),
-        Layout::ByFormat => return by_format(notes, pinned_first, now),
-        Layout::Whole => return whole(notes, pinned_first, now),
+        Layout::Flat { create_ghost } => return results(cards, pinned_first, create_ghost, now),
+        Layout::ByPriority => return by_priority(cards, pinned_first, now),
+        Layout::ByFormat => return by_format(cards, pinned_first, now),
+        Layout::Whole => return whole(cards, pinned_first, now),
         Layout::Dated { by_creation } => by_creation,
     };
 
@@ -888,25 +896,25 @@ fn build_sections(
     let mut this_week = Vec::new();
     let mut older = Vec::new();
 
-    for note in notes {
+    for card in cards {
         // Without the hoist the "pinned" section disappears rather than being empty.
-        if pinned_first && note.pinned {
-            pinned.push(note);
+        if pinned_first && card.pinned {
+            pinned.push(card);
             continue;
         }
 
         let dated = if by_creation {
-            note.created_at
+            card.created_at
         } else {
-            note.updated_at
+            card.updated_at
         }
         .with_timezone(&offset);
         if is_same_local_day(&dated, &local_now) {
-            today.push(note);
+            today.push(card);
         } else if is_within(&dated, &local_now, A_WEEK) {
-            this_week.push(note);
+            this_week.push(card);
         } else {
-            older.push(note);
+            older.push(card);
         }
     }
 
@@ -934,6 +942,30 @@ mod tests {
     use super::*;
     use crate::notes::checklist::ChecklistItem;
     use crate::notes::fixtures::{NOW, at, note as sample};
+
+    fn card(note: Note) -> Card {
+        Card {
+            note: Arc::new(IndexedNote::of(note)),
+            hit: None,
+        }
+    }
+
+    /// [`super::build_sections`] over notes just read.
+    fn build_sections(
+        notes: Vec<Note>,
+        layout: Layout,
+        pinned_first: bool,
+        now: DateTime<Utc>,
+        offset: FixedOffset,
+    ) -> Vec<NoteSection> {
+        let cards = notes.into_iter().map(card).collect();
+        super::build_sections(cards, layout, pinned_first, now, offset)
+    }
+
+    /// What the first card of `view` draws.
+    fn first_displayed(view: &NotesView) -> DisplayNote {
+        view.display(view.cards().next().unwrap())
+    }
 
     fn request() -> NotesQuery {
         NotesQuery {
@@ -1069,7 +1101,7 @@ mod tests {
         let ids = |view: &NotesView| -> Vec<String> {
             view.sections
                 .iter()
-                .flat_map(|section| section.notes.iter().map(|note| note.note.id.clone()))
+                .flat_map(|section| section.cards.iter().map(|card| card.id.clone()))
                 .collect()
         };
 
@@ -1286,9 +1318,13 @@ mod tests {
             notes.iter().map(|note| note.title.as_str()).collect()
         }
 
-        fn ordered(mut notes: Vec<Note>, key: SortKey, direction: SortDirection) -> Vec<Note> {
-            order_notes(&mut notes, NoteOrder { key, direction });
-            notes
+        fn ordered(notes: Vec<Note>, key: SortKey, direction: SortDirection) -> Vec<Note> {
+            let mut cards: Vec<Card> = notes.into_iter().map(card).collect();
+            order_cards(&mut cards, NoteOrder { key, direction });
+            cards
+                .into_iter()
+                .map(|card| card.note.note.clone())
+                .collect()
         }
 
         /// Sealed titles are ordered here, folded: case and accents do not scatter them.
@@ -1378,15 +1414,7 @@ mod tests {
             );
             let plain = build(vec![note("a", "Un")], Facets::default(), &request());
 
-            let footer = |view: &NotesView| {
-                view.sections
-                    .iter()
-                    .flat_map(|s| &s.notes)
-                    .next()
-                    .unwrap()
-                    .footer
-                    .clone()
-            };
+            let footer = |view: &NotesView| first_displayed(view).footer;
             assert!(matches!(footer(&view), model::NoteFooter::Created { .. }));
             assert!(matches!(footer(&plain), model::NoteFooter::Age { .. }));
         }
@@ -1565,11 +1593,7 @@ mod tests {
                 },
             );
 
-            view.sections
-                .into_iter()
-                .flat_map(|section| section.notes)
-                .next()
-                .and_then(|note| note.search_hit)
+            view.cards().next().and_then(|card| card.hit.clone())
         }
 
         #[test]
@@ -1728,7 +1752,7 @@ mod tests {
             sections
                 .iter()
                 .filter(|section| section.key == key)
-                .flat_map(|section| section.notes.iter().map(|note| note.id.clone()))
+                .flat_map(|section| section.cards.iter().map(|note| note.id.clone()))
                 .collect()
         }
 
@@ -1803,12 +1827,12 @@ mod tests {
             let ids: Vec<&str> = sections.iter().map(|section| section.id.as_str()).collect();
             assert_eq!(ids, ["priority-urgent", "priority-low", "priority-none"]);
             let urgent: Vec<&str> = sections[0]
-                .notes
+                .cards
                 .iter()
-                .map(|note| note.note.id.as_str())
+                .map(|card| card.id.as_str())
                 .collect();
             assert_eq!(urgent, ["urgent pinned", "urgent"]);
-            assert!(sections[2].notes.is_empty() && sections[2].show_create_ghost);
+            assert!(sections[2].cards.is_empty() && sections[2].show_create_ghost);
         }
 
         #[test]
@@ -1880,7 +1904,7 @@ mod tests {
 
             let placed: Vec<String> = sections
                 .iter()
-                .flat_map(|section| section.notes.iter().map(|note| note.id.clone()))
+                .flat_map(|section| section.cards.iter().map(|note| note.id.clone()))
                 .collect();
             assert_eq!(placed.len(), 3);
             assert_eq!(ids_in(&sections, NoteSectionKey::Today), ["today"]);
@@ -2036,7 +2060,7 @@ mod tests {
             );
 
             assert_eq!(keys(&sections), [NoteSectionKey::Results]);
-            assert_eq!(sections[0].notes.len(), 2);
+            assert_eq!(sections[0].cards.len(), 2);
             assert!(!sections[0].show_create_ghost);
         }
 

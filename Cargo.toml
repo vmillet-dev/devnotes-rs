@@ -1,16 +1,24 @@
 [workspace]
 resolver = "3"
-members = ["crates/engine", "src-tauri"]
+members = ["crates/engine", "crates/i18n", "crates/platform", "crates/ui", "crates/app", "crates/e2e"]
 
 [workspace.package]
 version = "0.18.0"
 edition = "2024"
 # The pinned toolchain's (`rust-toolchain.toml`): below it, Cargo's MSRV-aware resolver quietly
-# holds crates back (Tauri 2.12 needs 1.90) while their npm twins move on.
+# holds crates back.
 rust-version = "1.97"
 authors = ["Valentin MILLET"]
 repository = "https://github.com/vmillet-dev/devnotes-rs"
 license = "GPL-3.0-only"
+
+# Deriving a key is slow on purpose; unoptimised, every test that unlocks a library paid it
+# many times over.
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3
 
 [profile.release]
 lto = true

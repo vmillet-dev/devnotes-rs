@@ -1020,7 +1020,7 @@ mod board {
             let mut on_the_date_view: Vec<String> = dated
                 .sections
                 .iter()
-                .flat_map(|section| section.notes.iter().map(|note| note.title.clone()))
+                .flat_map(|section| section.cards.iter().map(|card| card.title.clone()))
                 .collect();
 
             let board = view(

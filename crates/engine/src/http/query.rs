@@ -2,18 +2,17 @@
 //! decoded or encoded: `{{page}}` and `%20` read back exactly as they were typed.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::model::KeyValue;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum QuerySide {
     Url,
     Params,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncedQuery {
     pub url: String,

@@ -1,26 +1,20 @@
 dist
-out-tsc
 node_modules
-.angular
 coverage
 target
-# Schémas générés par Tauri au build.
-src-tauri/gen
-# Bindings générés par tauri-specta : réécrits à chaque build Rust, les reformater
-# ferait diverger le fichier de ce que le générateur produit.
-src/app/core/ipc/bindings.ts
 package-lock.json
+# The Angular application, kept as a reference for porting: never built nor formatted again.
+reference
 # Maquette statique de référence : conservée telle quelle, hors périmètre du formatage.
 docs/scratch-mockup-v2.html
 docs/scratch-folders.html
 # Vendored skills (.claude/skills/PROVENANCE.md): kept byte-identical to their source.
 .claude/skills/frontend-design
 .claude/skills/webapp-testing
-.claude/skills/angular-developer
 .claude/skills/rust-guidelines/guidelines
 .claude/skills/seo
 .claude/skills/core-web-vitals
 .claude/skills/accessibility
 
-# Written by `npm run golden`, byte for byte.
+# Written by `npm run golden` on `angular-reference`, byte for byte.
 golden/*/

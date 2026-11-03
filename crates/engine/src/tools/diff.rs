@@ -5,7 +5,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use similar::{Algorithm, DiffOp, capture_diff_slices};
-use specta::Type;
 
 use super::convert::{DataFormat, detect, read_value};
 use crate::count::saturating_u32;
@@ -15,7 +14,7 @@ pub(crate) const MAX_ROWS: usize = 20_000;
 /// A value in the list of changes is cut to this many characters.
 const SUMMARY_CHARS: usize = 40;
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonDiffRequest {
     pub a: String,
@@ -29,14 +28,14 @@ pub struct JsonDiffRequest {
     pub ignore_whitespace: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum JsonDiffSide {
     A,
     B,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum JsonChangeKind {
     Added,
@@ -47,7 +46,7 @@ pub enum JsonChangeKind {
 }
 
 /// What a value was, as the list of changes shows it: itself when short, its size otherwise.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ValueSummary {
     Scalar { text: String },
@@ -55,7 +54,7 @@ pub enum ValueSummary {
     Array { items: u32 },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonChange {
     pub kind: JsonChangeKind,
@@ -64,7 +63,7 @@ pub struct JsonChange {
     pub after: Option<ValueSummary>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonDiffCounts {
     pub added: u32,
@@ -72,7 +71,7 @@ pub struct JsonDiffCounts {
     pub modified: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonDiffLine {
     /// One-based, in that side's own text.
@@ -80,7 +79,7 @@ pub struct JsonDiffLine {
     pub text: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum JsonDiffRowKind {
     Same,
@@ -90,7 +89,7 @@ pub enum JsonDiffRowKind {
 }
 
 /// One row of the side-by-side view: a side without a line is a gap.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonDiffRow {
     pub kind: JsonDiffRowKind,
@@ -100,7 +99,7 @@ pub struct JsonDiffRow {
     pub path: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

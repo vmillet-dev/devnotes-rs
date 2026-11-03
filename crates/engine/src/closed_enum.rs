@@ -13,20 +13,7 @@ macro_rules! closed_enum {
         }
     ) => {
         $(#[$meta])*
-        #[derive(
-            Debug,
-            Clone,
-            Copy,
-            Default,
-            PartialEq,
-            Eq,
-            PartialOrd,
-            Ord,
-            Hash,
-            serde::Serialize,
-            serde::Deserialize,
-            specta::Type,
-        )]
+        #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
         $vis enum $name {
             $(
                 $(#[$variant_meta])*

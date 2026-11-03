@@ -1,7 +1,6 @@
 //! Lorem ipsum: words, sentences or paragraphs, from the classic vocabulary.
 
 use serde::{Deserialize, Serialize};
-use specta::Type;
 
 use super::{Draw, seed_or_draw};
 
@@ -120,7 +119,7 @@ fn paragraph(draw: &mut Draw, opening: bool) -> String {
         .join(" ")
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LoremUnit {
     Words,
@@ -128,7 +127,7 @@ pub enum LoremUnit {
     Paragraphs,
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoremRequest {
     pub unit: LoremUnit,
@@ -138,7 +137,7 @@ pub struct LoremRequest {
     pub seed: Option<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoremAnswer {
     pub text: String,

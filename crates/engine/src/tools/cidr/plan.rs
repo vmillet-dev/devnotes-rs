@@ -2,11 +2,10 @@
 //! every subnet starts on its own boundary and nothing is lost between two of them.
 
 use serde::Serialize;
-use specta::Type;
 
 use super::{IpFamily, Net, address, blocks_between, usable, usable_count};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -27,7 +26,7 @@ pub enum PlanLine {
     Unreadable { text: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrPlan {
     /// In address order, which is the largest need first; the unreadable lines last.

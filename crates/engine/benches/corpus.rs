@@ -10,6 +10,7 @@
 #![allow(dead_code)]
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use chrono::{DateTime, TimeDelta, Utc};
 use engine::db::Library;
@@ -18,7 +19,7 @@ use engine::db;
 use engine::notes::checklist::ChecklistItem;
 use engine::notes::kind::NoteKind;
 use engine::notes::language::Language;
-use engine::notes::model::{NoteDraft, NoteLifecycle};
+use engine::notes::model::{DisplayNote, NoteDraft, NoteLifecycle};
 use engine::notes::priority::Priority;
 use engine::notes::store;
 use engine::notes::view::{self, NotesQuery};
@@ -112,16 +113,23 @@ fn draft(seed: usize, space_id: &str) -> NoteDraft {
     }
 }
 
-/// Everything `query_notes` does, in its order, serialisation included — the string it
-/// returns is what would cross the bridge.
-pub(crate) fn run_query(corpus: &mut Corpus, request: &NotesQuery) -> String {
+/// The cards a screen shows at most: the rest of a view is never displayed.
+const SHOWN: usize = 40;
+
+/// Everything the database path of `query_notes` does, in its order, then the cards of one
+/// screen displayed.
+pub(crate) fn run_query(corpus: &mut Corpus, request: &NotesQuery) -> Vec<DisplayNote> {
     let (notes, facets) = store::fetch(&mut corpus.connection, request).expect("a view");
     let decorations = store::decorations(&mut corpus.connection).expect("the decorations");
 
     let mut built = view::build(notes, facets, request);
-    decorations.apply(built.notes_mut());
+    built.decorations = Arc::new(decorations);
 
-    serde_json::to_string(&built).expect("a serialisable view")
+    built
+        .cards()
+        .take(SHOWN)
+        .map(|card| built.display(card))
+        .collect()
 }
 
 /// Seeded once per benchmark group, never inside a `b.iter`.

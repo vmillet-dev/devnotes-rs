@@ -1,7 +1,6 @@
 //! Every prefix of the family beside its mask and its size: the table a block is read against.
 
 use serde::Serialize;
-use specta::Type;
 
 use super::{IpFamily, Net, address, count, usable};
 
@@ -10,7 +9,7 @@ const V6_PREFIXES: [u8; 21] = [
     16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 80, 96, 112, 120, 124, 126, 127, 128,
 ];
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MaskRow {
     pub prefix: u8,

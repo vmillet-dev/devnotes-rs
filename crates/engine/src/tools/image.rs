@@ -3,7 +3,6 @@
 //! a header say enough, and nothing here draws a pixel.
 
 use serde::Serialize;
-use specta::Type;
 
 use crate::closed_enum::closed_enum;
 
@@ -34,7 +33,7 @@ impl ImageFormat {
 }
 
 /// `None` for a size its header does not state: an SVG drawn to whatever box it is given.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Recognised {
     pub format: ImageFormat,
