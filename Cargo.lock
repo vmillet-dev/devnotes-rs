@@ -5463,6 +5463,7 @@ dependencies = [
 name = "ui"
 version = "0.19.0"
 dependencies = [
+ "base64 0.23.1",
  "chrono",
  "crossbeam-channel",
  "eframe",
@@ -5472,6 +5473,7 @@ dependencies = [
  "i18n",
  "log",
  "platform",
+ "png",
  "rayon",
  "resvg",
  "serde_json",

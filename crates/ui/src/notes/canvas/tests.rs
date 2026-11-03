@@ -4,35 +4,44 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use super::*;
 use crate::backend::Backend;
 use crate::gate::IndexFill;
-use crate::state::Revision;
 use crate::testing;
 
-struct Bench {
-    backend: Backend,
-    query: NotesQueryState,
-    actions: Actions,
+pub(super) struct Bench {
+    pub(super) backend: Backend,
+    pub(super) state: AppState,
+    pub(super) actions: Actions,
     _profile: tempfile::TempDir,
 }
 
-fn canvas(backend: Backend, profile: tempfile::TempDir) -> Harness<'static, Bench> {
+/// The canvas alone over a real core, the view asked as the application asks it.
+pub(super) fn canvas(backend: Backend, profile: tempfile::TempDir) -> Harness<'static, Bench> {
+    let mut state = AppState::new(crate::services::preferences::Preferences::default(), true);
+    state.language = i18n::Language::En;
     let mut harness = testing::harness()
         .with_size(vec2(1_100.0, 700.0))
         .build_ui_state(
             |ui, bench: &mut Bench| {
                 crate::theme::motion::set_reduced(ui.ctx(), true);
                 let now = chrono::Utc::now();
-                bench.query.update(
+                let state = &mut bench.state;
+                state.notes.update(&mut state.revision, &mut state.errors);
+                state.caches.thumbnails.update(ui.ctx(), &bench.backend);
+                state.notes_query.update(
                     ui.ctx(),
                     &bench.backend,
                     now,
-                    Revision::default(),
+                    state.revision,
                     IndexFill::Ready,
                 );
-                show(ui, &bench.query, i18n::Language::En, &mut bench.actions);
+                show(ui, &bench.state, &mut bench.actions);
+                let ctx = ui.ctx().clone();
+                for action in bench.actions.drain().collect::<Vec<_>>() {
+                    bench.state.apply(action, &ctx, &bench.backend);
+                }
             },
             Bench {
                 backend,
-                query: NotesQueryState::default(),
+                state,
                 actions: Actions::default(),
                 _profile: profile,
             },
@@ -86,7 +95,10 @@ fn of_thirty_thousand_notes_only_the_rows_in_view_are_drawn() {
     // Four columns at this width, four rows and a part in 700 px.
     assert!((4..=24).contains(&first), "{first} cards drawn");
     assert!(cards(&harness) <= 24);
-    assert_eq!(harness.state().query.view().unwrap().matched, 30_000);
+    assert_eq!(
+        harness.state().state.notes_query.view().unwrap().matched,
+        30_000
+    );
 }
 
 #[test]
@@ -105,13 +117,11 @@ fn a_view_that_failed_offers_to_retry() {
 
     let mut harness = canvas(backend, profile);
     harness.get_by(|node| node.author_id() == Some("canvas-error"));
+    let before = harness.state().state.revision;
     harness
         .get_by(|node| node.author_id() == Some("canvas-retry"))
         .click();
     harness.run();
 
-    assert_eq!(
-        harness.state_mut().actions.drain().collect::<Vec<_>>(),
-        [Action::Notes(crate::notes::Action::Reload)]
-    );
+    assert_ne!(harness.state().state.revision, before);
 }

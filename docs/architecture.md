@@ -4646,6 +4646,21 @@ order, empty ones included (they are exhaustive); the cell after a section's las
 found (`matched == 0`, `canvas-no-results`) or a failure with its retry (`canvas-retry`, which
 bumps the revision) instead of the sections.
 
+A card (`canvas::card`) draws the core's `DisplayNote` and decides nothing about it: its title on
+two lines at most beside the kind's badge (`notes::ui::kind_badge`: a snippet's format and hue from
+`notes::language`, the others their kind), then what the kind previews — a snippet's first lines in
+the mono face, a Note's outline, a list's progress and open items (ticking one writes it through
+`state::notes`, not optimistically), a sheet's last results, a drawing's picture — and the footer:
+when it changed (or its source, or its expiry), its marks (priority pill, pin, fields to fill,
+attachment), its folder and two tags. Previews are monochrome until syntax colouring arrives with
+the editors. A sheet's results are written by `notes::calc::value`, the reference's formatter in
+Rust, held by the core's golden cases (`golden/calc-format`).
+
+A drawing's picture is never in the list: the card asks for it by `Stamp` (id and `updated_at`, so
+a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
+reads it on the db queue, decodes the PNG on the compute queue, uploads it once and keeps the last
+256; it is library content, so it lives in `LibraryCaches` and goes with the library scope.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

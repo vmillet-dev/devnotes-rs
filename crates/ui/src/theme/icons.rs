@@ -55,6 +55,8 @@ pub enum Icon {
     Paperclip,
     Image,
     Hourglass,
+    /// A snippet's `{{fields}}`, on its card.
+    Zap,
     /// The error banner's « ⚠ ».
     TriangleAlert,
 }
@@ -218,6 +220,9 @@ impl Icon {
                 "M12 9v4",
                 "M12 17h.01",
             ],
+            Self::Zap => &[
+                "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z",
+            ],
             Self::Hourglass => &[
                 "M5 22h14",
                 "M5 2h14",
@@ -305,7 +310,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 43] = [
+    const ALL: [Icon; 44] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
@@ -348,6 +353,7 @@ mod tests {
         Icon::Paperclip,
         Icon::Image,
         Icon::Hourglass,
+        Icon::Zap,
         Icon::TriangleAlert,
     ];
 

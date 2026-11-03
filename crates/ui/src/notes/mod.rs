@@ -1,16 +1,21 @@
 //! The notes area: the canvas of cards, the header over it and the rail beside it, as they are
 //! ported (plan § 7 « Phase 3 »).
 
+pub mod calc;
 pub mod canvas;
 pub mod language;
+pub mod ui;
 
 use egui::{Role, Sense, Ui, UiBuilder, WidgetInfo};
 use engine::notes::kind::NoteKind;
 use engine::notes::priority::Priority;
 use i18n::{Key, keys};
 
+use engine::notes::checklist::ChecklistItem;
+
 use crate::action::Actions;
-use crate::state::notes_query::NotesQueryState;
+use crate::state::AppState;
+use crate::state::drawing_pictures::Stamp;
 use crate::widgets::address;
 
 /// What the area's controls ask, applied at the end of the frame.
@@ -18,14 +23,21 @@ use crate::widgets::address;
 pub enum Action {
     /// The view, asked again after it failed to load.
     Reload,
+    /// A todo list's items, ticked from its card: the whole list.
+    SetItems {
+        id: String,
+        items: Vec<ChecklistItem>,
+    },
+    /// A drawing's picture, for the card that just showed it.
+    Thumbnail(Stamp),
 }
 
-pub fn show(ui: &mut Ui, query: &NotesQueryState, language: i18n::Language, actions: &mut Actions) {
+pub fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Main, true, "area-notes"));
     address(ui, &response, "area-notes");
     let mut ui = ui.new_child(UiBuilder::new().max_rect(region));
-    canvas::show(&mut ui, query, language, actions);
+    canvas::show(&mut ui, state, actions);
 }
 
 /// « Snippets », the heading of a kind's section.

@@ -15,12 +15,14 @@ use i18n::{Key, keys};
 
 use super::language as languages;
 use crate::action::{Action, Actions, GlobalAction};
-use crate::state::notes_query::NotesQueryState;
+use crate::state::AppState;
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, Button, address, interact, priority_dot};
 use rows::{CARD_HEIGHT, HEADING_HEIGHT, Row, Rows};
 
-pub fn show(ui: &mut Ui, query: &NotesQueryState, language: i18n::Language, actions: &mut Actions) {
+pub fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+    let query = &state.notes_query;
+    let language = state.language;
     let canvas = spacing(ui.ctx()).canvas;
     let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Region, true, "canvas"));
@@ -53,7 +55,12 @@ pub fn show(ui: &mut Ui, query: &NotesQueryState, language: i18n::Language, acti
         });
         return;
     }
-    sections(ui, view, language, actions);
+    let context = card::Context {
+        language,
+        clock: state.clock.as_ref(),
+        thumbnails: &state.caches.thumbnails,
+    };
+    sections(ui, view, &context, actions);
 }
 
 fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
@@ -72,7 +79,7 @@ fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
     ui.painter().galley(rect.min, galley, Color32::TRANSPARENT);
 }
 
-fn sections(ui: &mut Ui, view: &NotesView, language: i18n::Language, actions: &mut Actions) {
+fn sections(ui: &mut Ui, view: &NotesView, context: &card::Context<'_>, actions: &mut Actions) {
     let s = spacing(ui.ctx());
     egui::ScrollArea::vertical()
         .id_salt("canvas")
@@ -88,10 +95,10 @@ fn sections(ui: &mut Ui, view: &NotesView, language: i18n::Language, actions: &m
                 match row {
                     Row::Heading { section } => {
                         let rect = Rect::from_min_size(min, vec2(width, HEADING_HEIGHT));
-                        heading(ui, rect, &view.sections[section], language);
+                        heading(ui, rect, &view.sections[section], context.language);
                     }
                     Row::Cards { section, first } => {
-                        cards(ui, min, &rows, view, section, first, language, actions);
+                        cards(ui, min, &rows, view, section, first, context, actions);
                     }
                 }
             }
@@ -109,7 +116,7 @@ fn cards(
     view: &NotesView,
     section: usize,
     first: usize,
-    language: i18n::Language,
+    context: &card::Context<'_>,
     actions: &mut Actions,
 ) {
     let grid = spacing(ui.ctx()).grid;
@@ -121,8 +128,16 @@ fn cards(
         let rect = Rect::from_min_size(min + vec2(left, 0.0), vec2(rows.card_width(), CARD_HEIGHT));
         let mut cell_ui = ui.new_child(UiBuilder::new().max_rect(rect).id_salt((section, cell)));
         match shown.cards.get(cell) {
-            Some(shown_card) => card::show(&mut cell_ui, rect, &view.display(shown_card), language),
-            None => ghost(&mut cell_ui, rect, language, actions),
+            Some(shown_card) => {
+                card::show(
+                    &mut cell_ui,
+                    rect,
+                    &view.display(shown_card),
+                    context,
+                    actions,
+                );
+            }
+            None => ghost(&mut cell_ui, rect, context.language, actions),
         }
     }
 }
@@ -255,4 +270,4 @@ fn dashed(rect: Rect, stroke: Stroke) -> Vec<Shape> {
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

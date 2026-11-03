@@ -188,7 +188,7 @@ impl eframe::App for DevNotesApp {
         egui::CentralPanel::default().show(ui, |ui| {
             if self.state.gate.is_open() {
                 match self.state.settings.area {
-                    Area::Notes => notes::show(ui, &self.state.notes_query, language, &mut actions),
+                    Area::Notes => notes::show(ui, &self.state, &mut actions),
                     area => area_shell(ui, area),
                 }
             } else {

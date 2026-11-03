@@ -32,7 +32,7 @@ pub struct Binding {
 }
 
 /// Every area's key, `Ctrl` and its rank in the switch, read by position.
-pub const APPLICATION: [Binding; 3] = [
+pub static APPLICATION: [Binding; 3] = [
     area(Key::Num1, Area::Notes),
     area(Key::Num2, Area::Tools),
     area(Key::Num3, Area::Http),
