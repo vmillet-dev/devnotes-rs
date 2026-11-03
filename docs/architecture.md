@@ -4456,6 +4456,32 @@ query does not mention the deleted space and would otherwise show nothing new.
 
 Keep this seam intact: no component or store calls a command, the repositories do.
 
+## Backend and events (interface ↔ core)
+
+The interface calls the core in the same process, through **one façade**, `ui::api` — the only
+place that names an engine function, one file per feature, each function choosing its queue
+once — and **one backend**, `ui::Backend`, which owns the `Arc<Engine>` and its tokio runtime.
+The UI thread does no I/O, crypto or waiting: every call returns a `Pending<T>`, polled each
+frame (`poll` answers once), and the worker that resolves it wakes the window.
+
+| Queue     | For                                                    | Runs on                        |
+| --------- | ------------------------------------------------------ | ------------------------------ |
+| `db`      | anything touching the database or the index, reads too | the core's one db thread (D11) |
+| `compute` | pure work: formatting, a tool, highlighting, decoding  | rayon's pool                   |
+| `spawn`   | the network, and what chains db jobs around it         | tokio                          |
+
+⚠️ `Backend::db` **queues at the call** (`engine::db::submit`), on the UI thread: two writes sent
+one after the other run in that order. Handing the job to a task that queued it later let two
+of them swap. A job that panics answers `StorageUnavailable` on every queue and the queue goes
+on (D18); an `Answer` dropped without a word still answers, so **no `Pending` is ever left
+unanswered**. Dropping a `Pending` does not stop work begun on the database.
+
+Creating or unlocking a library is a `spawn` that runs the vault's db job and then starts
+`index::fill`, which fills the index a slice a job behind the gate. What the core says unasked
+(`EngineEvent`) and what a second launch asks arrive on the input channel, drained at the start
+of each frame. State tests run against the real core on a temporary profile and wait with
+`Backend::settle()` — a condition, never a duration (`ui::testing`).
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

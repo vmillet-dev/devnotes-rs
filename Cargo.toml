@@ -12,6 +12,14 @@ authors = ["Valentin MILLET"]
 repository = "https://github.com/vmillet-dev/devnotes-rs"
 license = "GPL-3.0-only"
 
+# Deriving a key is slow on purpose; unoptimised, every test that unlocks a library paid it
+# many times over.
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3
+
 [profile.release]
 lto = true
 codegen-units = 1
