@@ -5520,6 +5520,19 @@ sorting itself, SQLite would read every sealed body before the first row. A slic
 library closed since stops (`Library::number`); opening a library or restoring a copy empties
 the index first.
 
+**Who reads it.** `query_notes` (the list and the palette), `board_view` and `list_tags` read the
+index, never a sealed column: `NoteIndex::select` keeps what `store::fetch` kept (space,
+folders, quick filter, rails) in the same order, `facets` counts what the SQL counted,
+`index::search` runs `view::answers` over the folded text in parallel, and `view::arrange` is
+`view::build` past its search — the one definition of sections, ranking and quotes. Only the
+folders under an opened one are still asked of SQLite (plain ids). A read waits for no slice:
+one that arrives while the index fills finishes it first (`NoteIndex::ready`), since the views
+cannot yet say they are partial. ⚠️ Tags that differ only in case count as one, as under
+`COLLATE NOCASE`, named by their smallest spelling. `count_notes_tagged` stays in SQL: it counts
+the trashed notes too, which a rename touches. The path the index replaced (SQL, every body
+opened, `view::build`) is kept as a `#[cfg(test)]` oracle: `index/oracle.rs` chains random
+writes through the service functions and compares both answers to random queries after each.
+
 **One path keeps it true.** A service function that writes what the index holds goes through
 `Engine::write(|db| …)`, whose closure answers its value and an `index::Changed`: the notes it
 touched (re-read, or dropped when no longer live), and whether the attachment counts, the

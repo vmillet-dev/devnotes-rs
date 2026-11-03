@@ -16,7 +16,7 @@ pub mod store;
 pub mod trash;
 pub mod view;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use chrono::Utc;
 
@@ -36,17 +36,50 @@ use trash::TrashedNote;
 use view::{NotesQuery, NotesView};
 
 /// No command returns the raw list: it would invite re-filtering on the front end.
+///
+/// Read from the index: no SQLite, no decryption, but for the folders under an opened one.
 pub fn query_notes(engine: &Engine, query: NotesQuery) -> Result<NotesView, AppError> {
+    let mut connection = lock(&engine.db)?;
+    let folders = match query.folder_id.as_deref() {
+        Some(id) => Some(folders::store::subtree(connection.db(), id)?),
+        None => None,
+    }
+    .map(|ids| ids.into_iter().collect::<HashSet<_>>());
+    let mut index = engine.index()?;
+    index.ready(&mut connection)?;
+    drop(connection);
+
+    let (entries, facets) = index.select(&query, folders.as_ref());
+    let (notes, hits) = crate::index::search(&entries, view::Criteria::from(&query).needle());
+    let decorations = index.decorations();
+    drop(index);
+
+    let mut view = view::arrange(notes, hits, facets, &query);
+    decorations.apply(view.notes_mut());
+    for note in view.notes_mut() {
+        if !query.keeps_chip(note.folder_id.as_deref()) {
+            note.folder = None;
+        }
+    }
+
+    Ok(view)
+}
+
+/// The path the index replaced, kept as its oracle: SQL, every body opened, `view::build`.
+#[cfg(test)]
+pub(crate) fn query_notes_from_database(
+    engine: &Engine,
+    query: &NotesQuery,
+) -> Result<NotesView, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
-    let (notes, facets) = store::fetch(&mut connection, &query)?;
+    let (notes, facets) = store::fetch(&mut connection, query)?;
 
     let mut decorations = store::decorations(&mut connection)?;
     decorations.folders = folders::store::by_id(&mut connection, query.space_id.as_deref())?;
-    // The search and the sections read nothing more: every other command waits on this lock.
     drop(connection);
 
-    let mut view = view::build(notes, facets, &query);
+    let mut view = view::build(notes, facets, query);
     decorations.apply(view.notes_mut());
     for note in view.notes_mut() {
         if !query.keeps_chip(note.folder_id.as_deref()) {
@@ -509,14 +542,17 @@ pub fn count_notes_tagged(engine: &Engine, tags: Vec<String>) -> Result<u32, App
 }
 
 pub fn list_tags(engine: &Engine) -> Result<Vec<TagUsage>, AppError> {
-    let db = &engine.db;
-    let mut connection = lock(db)?;
+    let mut connection = lock(&engine.db)?;
+    let mut index = engine.index()?;
+    index.ready(&mut connection)?;
 
-    Ok(store::tag_usage(&mut connection)?
+    Ok(index
+        .facets(None)
+        .tags
         .into_iter()
-        .map(|(tag, notes)| TagUsage {
-            tag,
-            note_count: count(notes),
+        .map(|facet| TagUsage {
+            tag: facet.value,
+            note_count: facet.count,
         })
         .collect())
 }
