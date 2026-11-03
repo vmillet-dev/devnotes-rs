@@ -53,6 +53,25 @@ pub(crate) fn unlocked() -> (crate::backend::Backend, tempfile::TempDir) {
     (backend, profile)
 }
 
+/// A real library, created then closed: what a later launch finds on the profile.
+pub(crate) fn locked() -> tempfile::TempDir {
+    let (backend, profile) = unlocked();
+    close_library(&backend);
+    profile
+}
+
+/// Closes the open library on the db queue, as a process that ends leaves it. ⚠️ Dropping the
+/// backend is not enough: the index it began filling may still hold the core on another thread,
+/// and the file with it — a second core on the profile then finds `database is locked`.
+pub(crate) fn close_library(backend: &crate::backend::Backend) {
+    let open = engine::libraries::list_libraries(backend.engine())
+        .open
+        .expect("a library is open");
+    let mut closed = backend.db(move |engine| engine::libraries::open_library(engine, open));
+    backend.settle();
+    closed.poll().unwrap().unwrap();
+}
+
 mod tests {
     #[test]
     #[should_panic(expected = "lack accessible name")]
