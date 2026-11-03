@@ -6679,6 +6679,35 @@ lavapipe on Linux — into `DEVNOTES_CAPTURES` when it is set. `test-rust` sets 
 the PNGs as `captures-<os>`, to be looked at beside the reference's captures. Nothing compares
 pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
 
+### The scenarios, on the assembled window
+
+A scenario drives the **real application** — the built binary, a real window, real `wgpu`, a
+real SQLite file — on a blank profile, and knows of it only what it shows. The binary is the
+`e2e` flavour, `cargo build -p app --features e2e --target-dir target/e2e`: eframe's
+`inspection` feature, the software adapter whatever the machine offers (WARP, lavapipe, as on
+the runners), and two doors the protocol has no way through — `--action <name>` from a second
+launch for a global action, and `platform::dialog::from_scenario`, a file dialog answering the
+path in `DEVNOTES_E2E_DIALOG`. ⚠️ **Its inspection port has no authentication**: a release
+build of the flavour does not compile (`compile_error!`), and `lint-rust` checks that the
+default build does not link `egui_inspection`. Its own target directory keeps every other build
+from overwriting it.
+
+`crates/e2e` is the driver. `App::launch` starts the flavour with `--profile <dir>` and
+`EGUI_INSPECTION=127.0.0.1:<free port>`, and speaks egui's inspection protocol: it reads the
+AccessKit tree, finds a control by its `author_id`, clicks the middle of its box, types, presses
+a key at its place (the area keys read the position), captures the window. `eventually` reads
+the tree until its condition holds: `Settle` waits for egui to be idle, not for the core,
+whose answer arrives a frame later. `relaunch` asks `--action quit`, waits for the process to
+end its queue drained, and starts it again on the same profile. A failed scenario leaves its
+last screen and the application's log in `target/e2e/scenarios/<scenario>/`, beside its
+captures.
+
+One file per scenario, `crates/e2e/tests/<nn>_<name>.rs`, one `#[test]` of named steps
+(`e2e::step`), run alone: `cargo test -p e2e --test 01_first_launch`. Each launches its own
+application on its own profile, so the files never share a process. `cargo test --workspace`
+is run with `--exclude e2e`. `crates/e2e/clippy.toml` refuses `std::thread::sleep`: a
+scenario waits on conditions, never durations.
+
 ### End to end
 
 > **Angular reference.** This section describes the Angular application, which left the build in

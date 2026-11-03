@@ -34,7 +34,7 @@ npm run lint && npm run test:scripts
 ```
 
 ```bash
-cargo fmt --all --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace
+cargo fmt --all --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace --exclude e2e
 ```
 
 `--all-features` is not optional: it is what compiles the `e2e` flavour, which nothing else

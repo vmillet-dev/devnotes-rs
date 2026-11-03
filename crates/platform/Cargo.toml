@@ -9,6 +9,10 @@ repository.workspace = true
 license.workspace = true
 publish = false
 
+[features]
+# The dialog a scenario answers: only in the `e2e` flavour.
+e2e = []
+
 [dependencies]
 dirs = "6.0.0"
 interprocess = "2.4.7"

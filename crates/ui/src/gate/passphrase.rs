@@ -78,7 +78,7 @@ impl<'a> PassphraseField<'a> {
         if response.clicked() {
             response.request_focus();
         }
-        let typed = if response.has_focus() && self.enabled {
+        let typed = if widgets::takes_keys(ui, &response) && self.enabled {
             edit(ui, self.value)
         } else {
             Typed::default()
@@ -200,6 +200,24 @@ mod tests {
         assert!(!format!("{:?}", node.accesskit_node()).contains("hunter2"));
         let remembered = harness.ctx.memory(|memory| format!("{:?}", memory.data));
         assert!(!remembered.contains("hunter2"), "egui keeps a copy");
+    }
+
+    #[test]
+    fn a_field_takes_what_is_typed_while_the_window_has_no_focus() {
+        let mut harness = form();
+        harness.input_mut().focused = false;
+        harness.run();
+        harness
+            .get_by(|node| node.author_id() == Some("phrase"))
+            .click();
+        harness.run();
+
+        harness
+            .get_by(|node| node.author_id() == Some("phrase"))
+            .type_text("typed all the same");
+        harness.run();
+
+        assert_eq!(harness.state().phrase.as_str(), "typed all the same");
     }
 
     #[test]
