@@ -6700,6 +6700,12 @@ application on its own profile, so the files never share a process. `cargo test 
 is run with `--exclude e2e`. `crates/e2e/clippy.toml` refuses `std::thread::sleep`: a
 scenario waits on conditions, never durations.
 
+In CI, `e2e-scenarios` reads `crates/e2e/groups.json` through `scripts/e2e-groups.mjs`, which
+refuses a scenario in no group, in two, or with no file, and `e2e.yml` runs once per platform: a
+build job makes the flavour and the scenarios' executables, then up to three groups run them one
+by one — under `xvfb-run` with lavapipe on Linux, on WARP on Windows — and upload
+`scenarios/`. A new scenario joins the group with the shortest run.
+
 ### End to end
 
 > **Angular reference.** This section describes the Angular application, which left the build in

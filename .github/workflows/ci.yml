@@ -149,11 +149,6 @@ jobs:
           shared-key: test-${{ matrix.os }}
           save-if: 'true'
 
-      # kittest draws on a software adapter: lavapipe here, WARP on Windows, which ships with it.
-      - name: Software Vulkan
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers
-
       - name: Install cargo-llvm-cov
         if: runner.os == 'Linux'
         uses: taiki-e/install-action@cargo-llvm-cov
@@ -245,3 +240,40 @@ jobs:
             -Dsonar.qualitygate.wait=true
 
       - *stop-the-run
+
+  e2e-scenarios:
+    name: E2E scenarios
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      groups: ${{ steps.list.outputs.groups }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            crates/e2e
+            scripts
+
+      - id: list
+        run: |
+          groups=$(node scripts/e2e-groups.mjs)
+          echo "groups=$groups" >> "$GITHUB_OUTPUT"
+          echo "$groups" | jq -r '.[] | "group \(.name): \(.specs | length) scenarios, \(.specs | join(", "))"'
+
+      - *stop-the-run
+
+  # `e2e.yml` once per platform: its build, then its groups. Neither waits for the other.
+  # One failing scenario decides the run: the other platform is cancelled with it.
+  e2e:
+    name: E2E (${{ matrix.os }})
+    needs: e2e-scenarios
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+    uses: ./.github/workflows/e2e.yml
+    with:
+      os: ${{ matrix.os }}
+      groups: ${{ needs.e2e-scenarios.outputs.groups }}

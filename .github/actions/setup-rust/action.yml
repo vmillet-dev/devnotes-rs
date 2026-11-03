@@ -1,5 +1,5 @@
 name: Setup Rust
-description: Tauri system dependencies, Rust toolchain and a cargo cache shared between jobs.
+description: What egui loads at run time, Rust toolchain and a cargo cache shared between jobs.
 
 inputs:
   shared-key:
@@ -13,15 +13,15 @@ inputs:
 runs:
   using: composite
   steps:
-    # webkit2gtk-4.1 exists from Ubuntu 22.04 on; patchelf is required by the AppImage bundler.
-    - name: Tauri system dependencies
+    # Nothing to link: Wayland, X11, xkbcommon and fontconfig are opened at run time. What
+    # kittest draws on is, a software Vulkan (lavapipe); Windows has WARP.
+    - name: Software Vulkan and xkbcommon
       if: runner.os == 'Linux'
       shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          build-essential curl file libayatana-appindicator3-dev libgtk-3-dev \
-          librsvg2-dev libssl-dev libwebkit2gtk-4.1-dev libxdo-dev patchelf wget
+          libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers
 
     # Read from `rust-toolchain.toml` rather than written here: two places would end up
     # diverging, and drift is precisely what pinning avoids.
