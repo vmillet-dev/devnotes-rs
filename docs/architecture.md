@@ -1806,13 +1806,15 @@ way — the kind menu names it and offers nothing.
 
 ### A list sends previews, and the body is read by id
 
-`query_notes` and `board_view` send each body cut to what a card shows —
-`notes::model::PREVIEW_LINES` lines, and at most `PREVIEW_CHARS` characters, since a minified
-file is one line — and say so with `DisplayNote.truncated`. The cut is the **last** pass of
-`view::build` and `board::build`: the fields, the matching and the search excerpt read the
-whole body first, so a list still knows a snippet has a `{{field}}` on its fortieth line, and
-still quotes the line a search found there. The card draws what it is sent; it no longer
-slices anything itself.
+A card shows each body cut to its room — `notes::model::PREVIEW_LINES` lines, and at most
+`PREVIEW_CHARS` characters, since a minified file is one line — and says so with
+`DisplayNote.truncated`. `query_notes` answers no copy at all: its sections hold
+`view::Card`s, the index's own `Arc<IndexedNote>` entries with the quote of what the search
+found, and `NotesView::display(card)` computes what one card draws (footer, fields, chip,
+counter, preview) for the cards on screen only. The cut is its **last** pass, as it is of
+`board::build`: the fields, the matching and the search excerpt read the whole body first, so a
+list still knows a snippet has a `{{field}}` on its fortieth line, and still quotes the line a
+search found there.
 
 ⚠️ **A note from a list is never edited.** `NotesStore.openNote` takes an id and reads the note
 with `get_note`, every time: a draft seeded from a preview would write the first lines back
@@ -5518,8 +5520,10 @@ the index first.
 **Who reads it.** `query_notes` (the list and the palette), `board_view` and `list_tags` read the
 index, never a sealed column: `NoteIndex::select` keeps what `store::fetch` kept (space,
 folders, quick filter, rails) in the same order, `facets` counts what the SQL counted,
-`index::search` runs `view::answers` over the folded text in parallel, and `view::arrange` is
-`view::build` past its search — the one definition of sections, ranking and quotes. Only the
+`index::search` runs `view::answers` over the folded text in parallel and answers shared cards,
+and `view::arrange` is `view::build` past its search — the one definition of sections, ranking
+and quotes. A view holds its `Arc`s, so it is drawn without any lock, and an entry a write
+replaced is freed (and wiped) when the last view holding it goes. Only the
 folders under an opened one are still asked of SQLite (plain ids). A read waits for no slice:
 one that arrives while the index fills finishes it first (`NoteIndex::ready`), since the views
 cannot yet say they are partial. ⚠️ Tags that differ only in case count as one, as under

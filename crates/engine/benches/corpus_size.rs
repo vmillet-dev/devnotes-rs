@@ -60,18 +60,12 @@ fn query_by_corpus_size(c: &mut Criterion) {
         let mut corpus = build_of(size);
 
         for (name, request) in [("open", query("")), ("search", query("étape"))] {
-            // Printed rather than measured: the payload is a size, not a duration, and it
-            // is half of what the ticket is about.
-            let payload = run_query(&mut corpus, &request).len();
-            println!("{size} notes, {name}: {payload} bytes on the wire");
-
             group.bench_with_input(BenchmarkId::new(name, size), &size, |b, _| {
                 b.iter(|| black_box(run_query(&mut corpus, &request)));
             });
 
-            // The same query stopped before the view is built and serialised: the gap
-            // between the two is what a lighter wire shape could take away, and what a
-            // LIMIT could not.
+            // The same query stopped before the view is built: the gap between the two is
+            // what the view costs, and what a LIMIT could not take away.
             group.bench_with_input(
                 BenchmarkId::new(format!("{name}, read only"), size),
                 &size,

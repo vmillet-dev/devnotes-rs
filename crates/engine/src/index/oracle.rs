@@ -15,7 +15,9 @@ use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
 use crate::notes::model::{NoteDraft, NoteLifecycle, NotePatch};
 use crate::notes::priority::Priority;
-use crate::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery, SortDirection, SortKey};
+use crate::notes::view::{
+    Grouping, NoteFilter, NoteOrder, NotesQuery, NotesView, SortDirection, SortKey,
+};
 use crate::spaces::model::SpaceDraft;
 use crate::{Engine, Paths, RecordingSink, folders, notes, spaces};
 
@@ -260,6 +262,40 @@ impl World {
     }
 }
 
+/// Everything the screen draws of `view`: its sections, each card as it is displayed, and the
+/// rails.
+fn drawn(view: &NotesView) -> serde_json::Value {
+    let sections: Vec<serde_json::Value> = view
+        .sections
+        .iter()
+        .map(|section| {
+            serde_json::json!({
+                "key": section.key,
+                "id": section.id,
+                "group": section.group,
+                "expiring": section.has_expiring_notes,
+                "ghost": section.show_create_ghost,
+                "cards": section
+                    .cards
+                    .iter()
+                    .map(|card| view.display(card))
+                    .collect::<Vec<_>>(),
+            })
+        })
+        .collect();
+    serde_json::json!({
+        "sections": sections,
+        "tags": view.available_tags,
+        "languages": view.available_languages,
+        "kinds": view.kind_counts,
+        "priorities": view.priority_counts,
+        "tagCounts": view.tag_counts,
+        "languageCounts": view.language_counts,
+        "filtering": view.is_filtering,
+        "matched": view.matched,
+    })
+}
+
 #[test]
 fn every_query_answers_what_the_database_answers_through_random_writes() {
     for seed in [7, 1_234, 98_765] {
@@ -272,8 +308,8 @@ fn every_query_answers_what_the_database_answers_through_random_writes() {
                 let from_database =
                     notes::query_notes_from_database(&world.engine, &query).unwrap();
                 assert_eq!(
-                    serde_json::to_value(&from_index).unwrap(),
-                    serde_json::to_value(&from_database).unwrap(),
+                    drawn(&from_index),
+                    drawn(&from_database),
                     "seed {seed}, step {step}, {query:?}"
                 );
             }
