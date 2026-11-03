@@ -262,7 +262,7 @@ jobs:
 
     # The flavour in `target/debug`, where the cache is: nothing else builds `app` in this job.
     env:
-      DEVNOTES_E2E_BIN: ${{ github.workspace }}/target/debug/devnotes${{ runner.os == 'Windows' && '.exe' || '' }}
+      DEVNOTES_E2E_BIN: ${{ github.workspace }}/target/debug/devnotes${{ matrix.os == 'windows-latest' && '.exe' || '' }}
       DEVNOTES_E2E_OUTPUT: ${{ github.workspace }}/scenarios
 
     steps:
