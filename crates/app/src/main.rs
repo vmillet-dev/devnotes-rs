@@ -11,6 +11,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use engine::app_info::METADATA;
+use platform::instance::{self, Claim, Instance, Message};
 use platform::paths::{self, Locations};
 use platform::window::Geometry;
 
@@ -35,10 +36,20 @@ fn main() -> ExitCode {
         eprintln!("devnotes: the system names no directory for the profile");
         return ExitCode::FAILURE;
     };
+    // Before the log: a second launch writes nothing of its own.
+    let instance = match instance::claim(&locations.profile) {
+        Ok(Claim::First(instance)) => instance,
+        Ok(Claim::Taken) => return hand_over(&locations.profile, arguments.action),
+        Err(error) => {
+            // Fails closed: a second writer would make the index silently wrong.
+            eprintln!("devnotes: the profile could not be claimed: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
     let _logger = logging::start(&locations.logs);
     logging::install_panic_hook();
 
-    match run(locations) {
+    match run(locations, instance) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             log::error!("The window did not open: {error}");
@@ -47,9 +58,27 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(locations: Locations) -> eframe::Result {
+/// The profile is open in another process: it reveals its window, or runs `action`.
+fn hand_over(profile: &Path, action: Option<String>) -> ExitCode {
+    let message = action.map_or(Message::Reveal, Message::Action);
+    match instance::send(profile, &message) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("devnotes: the running instance did not answer: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run(locations: Locations, instance: Instance) -> eframe::Result {
     let restored = platform::window::read(&locations.window);
     let (inbox, waker, inputs) = ui::inputs::channel();
+    let heard = inbox.clone();
+    if let Err(error) =
+        instance.serve(move |message| heard.post(ui::inputs::Input::Instance(message)))
+    {
+        log::warn!("Second launches will not be heard: {error}");
+    }
     let startup = ui::Startup {
         paths: engine::Paths {
             profile: locations.profile,

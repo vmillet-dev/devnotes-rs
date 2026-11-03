@@ -8,6 +8,8 @@ use engine::{EngineEvent, EventSink};
 
 pub enum Input {
     Engine(EngineEvent),
+    /// What a second launch on the same profile asked.
+    Instance(platform::instance::Message),
 }
 
 /// Wakes the interface from any thread, once its context exists.
