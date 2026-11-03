@@ -10,7 +10,8 @@ use platform::window::Geometry;
 
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
-use crate::theme::{self, Appearance, Density};
+use crate::state::AppState;
+use crate::theme;
 
 /// What `main` prepares before the window exists.
 pub struct Startup {
@@ -27,6 +28,7 @@ pub struct Startup {
 
 pub struct DevNotesApp {
     backend: Backend,
+    state: AppState,
     inputs: Receiver<Input>,
     window_file: PathBuf,
     geometry: Option<Geometry>,
@@ -39,11 +41,12 @@ impl DevNotesApp {
     pub fn new(cc: &eframe::CreationContext<'_>, startup: Startup) -> std::io::Result<Self> {
         startup.waker.fill(&cc.egui_ctx);
         cc.egui_ctx.set_fonts(theme::fonts::definitions());
-        theme::motion::set_reduced(&cc.egui_ctx, startup.reduced_motion);
-        theme::apply(&cc.egui_ctx, Appearance::default(), Density::default());
+        let state = AppState::new(startup.reduced_motion);
+        state.apply_look(&cc.egui_ctx);
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
         Ok(Self {
             backend,
+            state,
             inputs: startup.inputs,
             window_file: startup.window_file,
             geometry: startup.geometry,
@@ -53,6 +56,10 @@ impl DevNotesApp {
 
     pub fn backend(&self) -> &Backend {
         &self.backend
+    }
+
+    pub fn state(&self) -> &AppState {
+        &self.state
     }
 
     /// The size and place to reopen at: the last ones the window had unmaximised, so that a

@@ -4482,6 +4482,24 @@ Creating or unlocking a library is a `spawn` that runs the vault's db job and th
 of each frame. State tests run against the real core on a temporary profile and wait with
 `Backend::settle()` — a condition, never a duration (`ui::testing`).
 
+### State between frames
+
+`ui::state::AppState` is the root of what the interface remembers; each screen's state joins it
+as the screen is ported. Three pieces replace the reference's `resource()`, `linkedSignal`,
+`OneInFlight`, `NotesRevision` and the reload of the page:
+
+- **`QueryCell<P, T>`**: a value asked of the core again whenever its parameters change, compared
+  by value. `want(params)` records what the screen depends on; `update(launch)`, once a frame,
+  adopts the answer that arrived — unless newer parameters were wanted since, a stale search is
+  dropped — and asks for what is wanted when nothing is in flight. **One call in flight, the
+  latest waiting**; the last value stays while the next loads, and after an error.
+- **`Revision`**: bumped after every write the interface adopts, and part of the parameters of
+  every query that reads notes, so the list and the board ask again together.
+- **`LibraryCaches`**: the one field holding every cache of a library's content (D17).
+  `AppState::reset_library_scope` empties it and **egui's whole widget memory** — a text field's
+  undo history holds what was typed — then puts the application's look back, which outlives a
+  switch. Not wiped byte by byte: the threat model says so.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in
