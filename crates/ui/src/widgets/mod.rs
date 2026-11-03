@@ -57,6 +57,13 @@ pub fn interact(
     response
 }
 
+/// Whether the keys of the frame are `response`'s to take: the focus egui keeps, as its own
+/// fields read it. ⚠️ Not `Response::has_focus`, which also asks the window's focus — a style
+/// question, the caret's — and a window without it under xvfb then takes no key at all.
+pub fn takes_keys(ui: &Ui, response: &Response) -> bool {
+    ui.memory(|memory| memory.has_focus(response.id))
+}
+
 /// The node's `author_id`: what kittest and the e2e driver find a control by.
 pub fn address(ui: &Ui, response: &Response, author_id: &str) {
     ui.ctx().accesskit_node_builder(response.id, |node| {

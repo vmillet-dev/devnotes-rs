@@ -42,7 +42,7 @@ pub fn split_handle(ui: &mut Ui, author_id: &str) -> f32 {
         ui.ctx().set_cursor_icon(CursorIcon::ResizeHorizontal);
     }
     let mut moved = response.drag_delta().x;
-    if response.has_focus() {
+    if super::takes_keys(ui, &response) {
         ui.input_mut(|input| {
             if input.consume_key(Modifiers::NONE, Key::ArrowLeft) {
                 moved -= STEP;
