@@ -10,8 +10,12 @@ license.workspace = true
 publish = false
 
 [dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 serde_json = "1.0.151"
 sys-locale = "0.3.2"
+
+[dev-dependencies]
+chrono-tz = "0.10.4"
 
 [build-dependencies]
 serde_json = "1.0.151"
