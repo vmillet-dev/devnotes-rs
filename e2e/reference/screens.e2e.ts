@@ -8,7 +8,7 @@ import type { HttpRequestDraft, NoteDraft } from '@core/ipc/bindings';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { trash } from '../pageobjects/overlays.page.js';
 import { fileMenu, settings, titlebar } from '../pageobjects/titlebar.page.js';
-import { emitGlobalAction, testid, waitForCanvas } from '../support/app.js';
+import { emitGlobalAction, press, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId } from '../support/bridge.js';
 
 /**
@@ -154,8 +154,11 @@ async function shows(selector: string): Promise<void> {
   await $(selector).waitForDisplayed({ timeout: 10_000 });
 }
 
-async function area(id: 'notes' | 'tools' | 'http'): Promise<void> {
-  await tap(`app-titlebar ${testid('area-option')}[data-area="${id}"]`);
+const AREA_KEYS = { notes: '1', tools: '2', http: '3' } as const;
+
+/** By its shortcut: the titlebar's switch is drawn only while the rails are hidden. */
+async function area(id: keyof typeof AREA_KEYS): Promise<void> {
+  await press(AREA_KEYS[id], ['Control']);
   await shows(testid(id === 'notes' ? 'canvas' : `${id}-page`));
 }
 
@@ -390,6 +393,8 @@ const COMPACT = new Set([
 const missed: { id: string; error: string }[] = [];
 const taken: string[] = [];
 
+const firstLine = (error: unknown): string => String(error).split('\n')[0] ?? '';
+
 async function capture(id: string, screen: Screen, theme: Theme, [width, height]: Size): Promise<void> {
   try {
     await browser.refresh();
@@ -402,7 +407,7 @@ async function capture(id: string, screen: Screen, theme: Theme, [width, height]
     await browser.saveScreenshot(join(OUT, `${id}.png`));
     taken.push(id);
   } catch (error) {
-    missed.push({ id, error: String(error).split('\n')[0] ?? '' });
+    missed.push({ id, error: firstLine(error) });
   }
 }
 
@@ -426,32 +431,34 @@ describe('visual reference', () => {
     writeFileSync(join(OUT, 'taken.json'), `${JSON.stringify(taken, null, 2)}\n`);
   });
 
-  it('captures every screen in both themes', async () => {
-    for (const theme of ['dark', 'light'] as const) {
-      for (const screen of SCREENS) await capture(`${screen.id}--${theme}`, screen, theme, DEFAULT_SIZE);
+  // One test a capture: mocha's timeout is a test's, and a capture never fails one.
+  for (const theme of ['dark', 'light'] as const) {
+    for (const screen of SCREENS) {
+      it(`${screen.id} (${theme})`, () => capture(`${screen.id}--${theme}`, screen, theme, DEFAULT_SIZE));
     }
-  });
+  }
 
-  it('captures every tool', async () => {
-    for (const screen of TOOL_SCREENS) await capture(`${screen.id}--dark`, screen, 'dark', DEFAULT_SIZE);
-  });
+  for (const screen of TOOL_SCREENS) {
+    it(`${screen.id} (dark)`, () => capture(`${screen.id}--dark`, screen, 'dark', DEFAULT_SIZE));
+  }
 
-  it('captures the screens that answer the window at each size', async () => {
-    for (const screen of SCREENS.filter(({ id }) => SIZED.has(id))) {
-      for (const size of SIZES.slice(1))
-        await capture(`${screen.id}--dark--${size.join('x')}`, screen, 'dark', size);
+  for (const screen of SCREENS.filter(({ id }) => SIZED.has(id))) {
+    for (const size of SIZES.slice(1)) {
+      const name = `${screen.id}--dark--${size.join('x')}`;
+      it(name, () => capture(name, screen, 'dark', size));
     }
-  });
+  }
 
-  it('captures the compact density', async () => {
+  it('switches to the compact density', async () => {
     try {
       await setDensity('compact');
     } catch (error) {
-      missed.push({ id: 'density-compact', error: String(error).split('\n')[0] ?? '' });
-      return;
-    }
-    for (const screen of SCREENS.filter(({ id }) => COMPACT.has(id))) {
-      await capture(`${screen.id}--dark--compact`, screen, 'dark', DEFAULT_SIZE);
+      missed.push({ id: 'density-compact', error: firstLine(error) });
     }
   });
+
+  for (const screen of SCREENS.filter(({ id }) => COMPACT.has(id))) {
+    const name = `${screen.id}--dark--compact`;
+    it(name, () => capture(name, screen, 'dark', DEFAULT_SIZE));
+  }
 });
