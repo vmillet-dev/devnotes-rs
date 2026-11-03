@@ -260,10 +260,9 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest]
 
-    # One target directory for the flavour and the driver: they share what they compile, and no
-    # other build overwrites the flavour.
+    # The flavour in `target/debug`, where the cache is: nothing else builds `app` in this job.
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/target/e2e
+      DEVNOTES_E2E_BIN: ${{ github.workspace }}/target/debug/devnotes${{ runner.os == 'Windows' && '.exe' || '' }}
       DEVNOTES_E2E_OUTPUT: ${{ github.workspace }}/scenarios
 
     steps:
