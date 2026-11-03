@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use crossbeam_channel::Receiver;
 use engine::{Engine, Paths};
+use platform::instance::Message;
 use platform::window::Geometry;
 
 use crate::inputs::{Inbox, Input, Waker};
@@ -84,6 +85,13 @@ impl DevNotesApp {
     }
 }
 
+/// Brought back from the tray, from under other windows, or from the taskbar.
+fn reveal(ctx: &egui::Context) {
+    ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+    ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+}
+
 impl eframe::App for DevNotesApp {
     /// Runs while the window is hidden too: eframe draws nothing then, so the window is shown
     /// from here, once it exists at its restored geometry.
@@ -92,8 +100,13 @@ impl eframe::App for DevNotesApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
             self.shown = true;
         }
-        // Read by the screens as they come; until then, nothing waits for them.
-        self.inputs.try_iter().for_each(drop);
+        for input in self.inputs.try_iter() {
+            match input {
+                Input::Instance(Message::Reveal) => reveal(ctx),
+                // The events and the global actions are read by the screens they concern.
+                Input::Instance(Message::Action(_)) | Input::Engine(_) => {}
+            }
+        }
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
     }
@@ -126,7 +139,13 @@ mod tests {
     use crate::inputs;
 
     fn startup(directory: &std::path::Path) -> Startup {
-        let (inbox, waker, receiver) = inputs::channel();
+        startup_with(directory, inputs::channel())
+    }
+
+    fn startup_with(
+        directory: &std::path::Path,
+        (inbox, waker, receiver): (Inbox, Waker, Receiver<Input>),
+    ) -> Startup {
         Startup {
             paths: Paths {
                 profile: directory.to_path_buf(),
@@ -162,6 +181,28 @@ mod tests {
             harness.step();
             assert_eq!(visible_requests(&harness), 0);
         }
+    }
+
+    #[test]
+    fn a_second_launch_brings_the_window_to_the_front() {
+        let directory = tempfile::tempdir().unwrap();
+        let (inbox, waker, receiver) = inputs::channel();
+        let posted = inbox.clone();
+        let mut harness = Harness::new_eframe(|cc| {
+            DevNotesApp::new(cc, startup_with(directory.path(), (inbox, waker, receiver))).unwrap()
+        });
+
+        posted.post(Input::Instance(Message::Reveal));
+        harness.step();
+
+        let commands: Vec<&egui::ViewportCommand> = harness
+            .output()
+            .viewport_output
+            .values()
+            .flat_map(|viewport| &viewport.commands)
+            .collect();
+        assert!(commands.contains(&&egui::ViewportCommand::Visible(true)));
+        assert!(commands.contains(&&egui::ViewportCommand::Focus));
     }
 
     #[test]

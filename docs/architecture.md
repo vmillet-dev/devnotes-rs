@@ -5512,6 +5512,8 @@ Windows, `$XDG_DATA_HOME` and `$XDG_CONFIG_HOME` on Linux, the logs under the lo
 directory. The resources are found beside the executable, under `lib/devnotes` in a Linux
 package, or in `crates/engine/resources` for a binary run from `target/`.
 
+**One application per profile (D16).** Before the log, `platform::instance::claim` binds a local socket named after a digest of the canonical profile path (a named pipe on Windows, the abstract namespace on Linux). A second launch that cannot bind it connects, sends `reveal` — or `action <name>` from the `e2e` flavour, its way to press a global shortcut — and exits; the first hears it on a thread of its own and brings its window forward. ⚠️ Windows answers a pipe already taken with « access denied », not « address in use ». A claim that fails otherwise stops the launch: a second writer would leave the index silently wrong. Two profiles never collide, so a scenario never meets a development instance.
+
 The log (`flexi_logger`, `devnotes.log`, three files of 5 MB) starts before the window, and a
 panic hook replaces the default one: it logs where and on which thread, **never the message** —
 a panic slicing a string quotes it (D18). Then the input channel and its `Waker` are made, and
