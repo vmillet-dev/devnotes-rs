@@ -85,6 +85,7 @@ fn the_gate_in_each_of_its_states() {
     type_into(&mut creating, "vault-confirmation", PASSPHRASE);
     click(&mut creating, "vault-submit");
     settle(&mut creating);
+    crate::testing::close_library(&creating.state().backend);
     drop(creating);
 
     let mut harness = launch(profile.path());
