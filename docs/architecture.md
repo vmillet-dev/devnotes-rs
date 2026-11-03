@@ -4549,6 +4549,30 @@ failure: the sentence its code says (an exhaustive `match` on `ErrorCode`, a cod
 choosing its sub-key by one parameter), or the action's own when the code says nothing better.
 ⚠️ The error's `detail` goes to the log, never to the screen.
 
+### The widget kit
+
+`ui::widgets` replaces the reference's `shared/`: components painted by hand after its CSS,
+reading the theme and nothing else. **Every one goes through `widgets::interact`**, which
+allocates at least 24 × 24 px for anything clickable (WCAG 2.5.8), gives the AccessKit node its
+role and name, sets its `author_id` — the `data-testid` its Angular twin had, which kittest and
+the e2e driver find it by — and paints the focus ring. `egui::Ui::interact` is refused
+elsewhere by `disallowed-methods` (`crates/ui/clippy.toml`), which is what `focus-rings.test.mjs`
+checked. A text field carries its accessible name apart from its hint: kittest refuses a field
+without one.
+
+- `Button`: `Outline` (a dialog's action — `surface` at 6 px, 6 × 12, 12 px, amber under the
+  pointer), `Filled` (the primary, solid amber), `Quiet` (text alone, filled when pressed),
+  `Destructive` (**red at rest**, `bg-3` and a red edge when armed or hovered); `.large()` is the
+  gate's submit. `IconButton`, `SplitButton`, `RailToggle` (32 px).
+- `Chip`, `priority_dot`, `hue_badge` (a kind's or a language's: the hue in the label, a neutral
+  fill, a hairline in the hue), `Kbd`, `spinner`.
+- `Segmented` (the segment on is filled, its label bright), `TextField` (the reference's
+  `.input`: 9 × 11 on `bg-1`, red when refused), `SearchField`, `Checkbox`.
+
+Hover colours ease over `motion::FAST`; a disabled control is drawn at half strength.
+`DEVNOTES_LOOK=<dir> cargo test -p ui widgets::tests::look` renders the kit in both themes, to
+look at.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

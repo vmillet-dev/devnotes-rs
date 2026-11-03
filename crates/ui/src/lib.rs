@@ -12,5 +12,6 @@ pub mod state;
 #[cfg(test)]
 mod testing;
 pub mod theme;
+pub mod widgets;
 
 pub use app::{DevNotesApp, Startup};
