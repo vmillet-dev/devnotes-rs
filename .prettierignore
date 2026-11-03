@@ -11,7 +11,6 @@ docs/scratch-folders.html
 # Vendored skills (.claude/skills/PROVENANCE.md): kept byte-identical to their source.
 .claude/skills/frontend-design
 .claude/skills/webapp-testing
-.claude/skills/angular-developer
 .claude/skills/rust-guidelines/guidelines
 .claude/skills/seo
 .claude/skills/core-web-vitals
