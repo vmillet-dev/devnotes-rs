@@ -1,0 +1,26 @@
+[package]
+name = "ui"
+description = "The egui interface of DevNotes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+engine = { path = "../engine" }
+platform = { path = "../platform" }
+eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "clipboard", "default_fonts", "system_fonts", "wayland", "wgpu", "x11"] }
+egui = "0.37.0"
+crossbeam-channel = "0.5.15"
+log = "0.4.34"
+tokio = { version = "1.53.1", default-features = false, features = ["rt-multi-thread", "net", "time"] }
+
+[dev-dependencies]
+egui_kittest = { version = "0.37.0", features = ["eframe"] }
+tempfile = "3.27.0"
+
+[lints]
+workspace = true

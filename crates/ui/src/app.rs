@@ -1,0 +1,208 @@
+//! The application frame: what every frame does, in its order (plan § 3.3.7).
+
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use crossbeam_channel::Receiver;
+use engine::{Engine, Paths};
+use platform::window::Geometry;
+
+use crate::inputs::{Inbox, Input, Waker};
+use crate::theme;
+
+/// What `main` prepares before the window exists.
+pub struct Startup {
+    pub paths: Paths,
+    pub window_file: PathBuf,
+    /// The geometry the window was opened at, kept as the last known one.
+    pub geometry: Option<Geometry>,
+    pub inbox: Inbox,
+    pub waker: Waker,
+    pub inputs: Receiver<Input>,
+}
+
+pub struct DevNotesApp {
+    engine: Arc<Engine>,
+    /// ⚠️ After `engine`: fields drop in order, and the engine's tasks run on it.
+    _runtime: tokio::runtime::Runtime,
+    inputs: Receiver<Input>,
+    window_file: PathBuf,
+    geometry: Option<Geometry>,
+    shown: bool,
+}
+
+impl DevNotesApp {
+    /// Where the core is born, once the waker can reach the window (D20). The library stays
+    /// closed: the first frame is the gate.
+    pub fn new(cc: &eframe::CreationContext<'_>, startup: Startup) -> std::io::Result<Self> {
+        startup.waker.fill(&cc.egui_ctx);
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_name("devnotes-network")
+            .enable_all()
+            .build()?;
+        let engine = Arc::new(Engine::new(
+            startup.paths,
+            Arc::new(startup.inbox),
+            runtime.handle().clone(),
+        ));
+        Ok(Self {
+            engine,
+            _runtime: runtime,
+            inputs: startup.inputs,
+            window_file: startup.window_file,
+            geometry: startup.geometry,
+            shown: false,
+        })
+    }
+
+    pub fn engine(&self) -> &Arc<Engine> {
+        &self.engine
+    }
+
+    /// The size and place to reopen at: the last ones the window had unmaximised, so that a
+    /// window closed maximised comes back maximised over the size it had before.
+    fn remember(&mut self, viewport: &egui::ViewportInfo) {
+        if viewport.minimized == Some(true) {
+            return;
+        }
+        if viewport.maximized == Some(true) {
+            if let Some(geometry) = &mut self.geometry {
+                geometry.maximized = true;
+            }
+            return;
+        }
+        if let (Some(outer), Some(inner)) = (viewport.outer_rect, viewport.inner_rect) {
+            self.geometry = Some(Geometry {
+                x: outer.min.x,
+                y: outer.min.y,
+                width: inner.width(),
+                height: inner.height(),
+                maximized: false,
+            });
+        }
+    }
+}
+
+impl eframe::App for DevNotesApp {
+    /// Runs while the window is hidden too: eframe draws nothing then, so the window is shown
+    /// from here, once it exists at its restored geometry.
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if !self.shown {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+            self.shown = true;
+        }
+        // Read by the screens as they come; until then, nothing waits for them.
+        self.inputs.try_iter().for_each(drop);
+        let viewport = ctx.input(|input| input.viewport().clone());
+        self.remember(&viewport);
+    }
+
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default()
+            .frame(egui::Frame::new().fill(theme::BG_0))
+            .show(ui, |_| {});
+    }
+
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        theme::BG_0.to_normalized_gamma_f32()
+    }
+
+    fn on_exit(&mut self) {
+        let Some(geometry) = self.geometry else {
+            return;
+        };
+        if let Err(error) = platform::window::write(&self.window_file, &geometry) {
+            log::warn!("The window geometry was not written: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use egui_kittest::Harness;
+
+    use super::*;
+    use crate::inputs;
+
+    fn startup(directory: &std::path::Path) -> Startup {
+        let (inbox, waker, receiver) = inputs::channel();
+        Startup {
+            paths: Paths {
+                profile: directory.to_path_buf(),
+                resources: directory.to_path_buf(),
+            },
+            window_file: directory.join("window.json"),
+            geometry: None,
+            inbox,
+            waker,
+            inputs: receiver,
+        }
+    }
+
+    fn visible_requests(harness: &Harness<'_, DevNotesApp>) -> usize {
+        harness
+            .output()
+            .viewport_output
+            .values()
+            .flat_map(|viewport| &viewport.commands)
+            .filter(|command| matches!(command, egui::ViewportCommand::Visible(true)))
+            .count()
+    }
+
+    #[test]
+    fn the_window_is_shown_once_its_first_frame_is_ready() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+
+        // The harness runs its first frames while it is built: the request is behind us.
+        assert!(harness.state().shown);
+        for _ in 0..3 {
+            harness.step();
+            assert_eq!(visible_requests(&harness), 0);
+        }
+    }
+
+    #[test]
+    fn the_engine_starts_on_a_profile_with_no_library_yet() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        harness.step();
+
+        let state = engine::db::run_here(harness.state().engine(), engine::vault::vault_state);
+
+        assert_eq!(state.unwrap(), engine::vault::VaultState::Absent);
+    }
+
+    #[test]
+    fn a_maximised_window_keeps_the_size_it_had_before() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        let placed = egui::ViewportInfo {
+            outer_rect: Some(egui::Rect::from_min_size(
+                egui::pos2(10.0, 20.0),
+                egui::vec2(820.0, 640.0),
+            )),
+            inner_rect: Some(egui::Rect::from_min_size(
+                egui::pos2(10.0, 50.0),
+                egui::vec2(800.0, 600.0),
+            )),
+            ..Default::default()
+        };
+        let app = harness.state_mut();
+
+        app.remember(&placed);
+        app.remember(&egui::ViewportInfo {
+            maximized: Some(true),
+            ..placed.clone()
+        });
+
+        let geometry = app.geometry.unwrap();
+        assert!(geometry.maximized);
+        assert!((geometry.width - 800.0).abs() < f32::EPSILON);
+        assert!((geometry.x - 10.0).abs() < f32::EPSILON);
+    }
+}

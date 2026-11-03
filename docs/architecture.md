@@ -33,8 +33,10 @@ crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches
 ├── src/db.rs       connection, migrations, schema, stored-instant format, the db queue
 ├── src/error.rs    the three errors and the translation between them
 └── src/lib.rs      the modules and the `Engine`
+crates/platform/   paths, window geometry: what is asked of the operating system
+crates/ui/         the egui interface: the frame, its state, its screens
+crates/app/        the `devnotes` binary (main) and its icons (`npm run icons`)
 crates/i18n/translations/  fr.json and en.json, the interface's strings
-crates/app/icons/   the application icons (`npm run icons`)
 golden/             outputs of the JavaScript libraries, captured before they left
 reference/angular/  the Angular application and its WebdriverIO scenarios, for reading only
 ```
@@ -5486,20 +5488,40 @@ The core (`crates/engine`) owns its state in one `Engine`, which the shell creat
 manages as an `Arc<Engine>`: the `Db` slot (empty until `vault::unlock`), the sends, runs and
 sockets under way, the restore set aside. It asks the shell for two things only (`host.rs`):
 
-- **`Paths`**, a plain struct resolved before the engine exists: `profile` (`app_data_dir()`:
-  the registry, `libraries/`, the application's `preferences.json`, `open/`) and `resources`
-  (`resource_dir()`: the identity lists). A struct, not a trait: every host only fills in two
-  paths.
+- **`Paths`**, a plain struct resolved before the engine exists: `profile` (the registry,
+  `libraries/`, the application's `preferences.json`, `open/`) and `resources` (the identity
+  lists). A struct, not a trait: every host only fills in two paths.
 - **`EventSink`**, the one trait: what the core says unasked, as an `EngineEvent` (a socket's
-  traffic, a script's console, a run's steps). The Tauri shell's `TauriHost` emits each under
-  the name the front listens to (`WEBSOCKET_EVENT`, `HTTP_CONSOLE_EVENT`, `HTTP_RUN_EVENT`);
-  tests keep them in a `RecordingSink`.
+  traffic, a script's console, a run's steps, the index filling). The interface's `Inbox` posts
+  each on its input channel and wakes the window; tests keep them in a `RecordingSink`.
 
 What reaches the platform stays out of the core's work: the clipboard is read before an
 attachment is stored and written after a QR code is drawn, and a decrypted attachment is opened
-once its copy is written — by the shell's wrapper, not by the core. Opening a library or
+once its copy is written — by the interface, not by the core. Opening a library or
 restoring a copy closes the sockets and cancels the sends and runs first
-(`Engine::let_go_of_the_network`). Nothing in `crates/engine` names Tauri.
+(`Engine::let_go_of_the_network`). Nothing in `crates/engine` names egui or Tauri.
+
+### The binary, its profile and its window
+
+`crates/app` builds `devnotes`. `main` reads `--devnotes-script-host` before anything else
+(the core's `serve_scripts`: no window, no log), then `--profile <directory>`, which puts the
+whole profile, its logs and the window's geometry in that directory — tests and development
+only. Without it, `platform::paths::Locations::installed` resolves the profile
+`com.devnotes.app.dev` (D16; the Angular reference keeps `com.devnotes.app`): roaming data on
+Windows, `$XDG_DATA_HOME` and `$XDG_CONFIG_HOME` on Linux, the logs under the local data
+directory. The resources are found beside the executable, under `lib/devnotes` in a Linux
+package, or in `crates/engine/resources` for a binary run from `target/`.
+
+The log (`flexi_logger`, `devnotes.log`, three files of 5 MB) starts before the window, and a
+panic hook replaces the default one: it logs where and on which thread, **never the message** —
+a panic slicing a string quotes it (D18). Then the input channel and its `Waker` are made, and
+eframe opens the window **hidden** at the geometry `platform::window` read back (size, place,
+maximised; never whether it was visible), with eframe's persistence off: it would write egui's
+state, text fields included, in clear on disk. The creation closure fills the `Waker` and
+creates the tokio runtime and the `Engine` (D20); `App::logic`, which runs while the window is
+hidden, shows it on the first frame. Under Linux, X11 is taken whenever `DISPLAY` exists
+(D15). The geometry is written on exit, the size the window had unmaximised kept under a
+maximised one.
 
 ### The notes index
 
