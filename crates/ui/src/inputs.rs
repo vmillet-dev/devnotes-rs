@@ -58,3 +58,40 @@ pub fn channel() -> (Inbox, Waker, Receiver<Input>) {
     };
     (inbox, waker, receiver)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_engine_event_reaches_the_interface_and_wakes_it() {
+        let (inbox, waker, inputs) = channel();
+        let ctx = egui::Context::default();
+        waker.fill(&ctx);
+
+        inbox.emit(EngineEvent::IndexReady);
+
+        assert!(matches!(
+            inputs.try_recv(),
+            Ok(Input::Engine(EngineEvent::IndexReady))
+        ));
+        assert!(ctx.has_requested_repaint());
+    }
+
+    #[test]
+    fn what_arrives_before_the_window_waits_in_the_channel() {
+        let (inbox, _waker, inputs) = channel();
+
+        inbox.emit(EngineEvent::IndexProgress { done: 1, total: 2 });
+
+        assert_eq!(inputs.len(), 1);
+    }
+
+    #[test]
+    fn what_arrives_after_the_interface_is_gone_is_dropped() {
+        let (inbox, _waker, inputs) = channel();
+        drop(inputs);
+
+        inbox.emit(EngineEvent::IndexReady);
+    }
+}
