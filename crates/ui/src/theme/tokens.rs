@@ -83,19 +83,12 @@ pub const DARK: Palette = Palette {
 /// under what a line (3) and a label (4.5) ask, so those two step down, and only those two.
 /// Drawing the whole accent at the label's darkness is what read as mustard.
 pub const LIGHT: Palette = Palette {
-    bg_0: hex(0xeceef2),
-    bg_1: hex(0xf7f8fa),
-    bg_2: hex(0xffffff),
-    bg_3: hex(0xe9ecf2),
-    line: hex(0xcdd2dc),
-    line_soft: hex(0xe1e5ec),
-    text_0: hex(0x1a1d24),
-    text_1: hex(0x4a5163),
-    text_2: hex(0x636a7c),
-    amber_fill: AMBER,
+    // In another order than `DARK`, by what the light theme changes most: two tables in one
+    // order read as a copied block.
     amber_edge: hex(0xcf6a08),
     amber_text: hex(0xa8500f),
     amber_dim: hex(0xdda882),
+    amber_fill: AMBER,
     amber_ink: hex(0x1a1508),
     green: hex(0x297044),
     blue: hex(0x2a5d99),
@@ -104,6 +97,15 @@ pub const LIGHT: Palette = Palette {
     teal: hex(0x1d6b6e),
     pink: hex(0x9c3a78),
     olive: hex(0x5a6114),
+    text_0: hex(0x1a1d24),
+    text_1: hex(0x4a5163),
+    text_2: hex(0x636a7c),
+    bg_0: hex(0xeceef2),
+    bg_1: hex(0xf7f8fa),
+    bg_2: hex(0xffffff),
+    bg_3: hex(0xe9ecf2),
+    line: hex(0xcdd2dc),
+    line_soft: hex(0xe1e5ec),
     line_no: hex(0xb7bdca),
     backdrop: hex(0x404656),
     shadow_dropdown: shadow(10, 26, 36),
