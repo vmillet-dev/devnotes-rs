@@ -86,6 +86,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
         },
         window_file: locations.window,
         geometry: restored,
+        reduced_motion: platform::motion::system_prefers_reduced(),
         inbox,
         waker,
         inputs,

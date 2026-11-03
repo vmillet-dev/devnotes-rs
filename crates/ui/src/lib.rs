@@ -3,6 +3,8 @@
 
 mod app;
 pub mod inputs;
+#[cfg(test)]
+mod testing;
 pub mod theme;
 
 pub use app::{DevNotesApp, Startup};

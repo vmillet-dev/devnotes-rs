@@ -2,9 +2,13 @@
 //! densities, and the egui `Style` drawn from them. A widget reads its colours from
 //! [`palette`] and its gaps from [`spacing`], never a literal.
 
+pub mod focus;
+pub mod fonts;
+pub mod icons;
 pub mod motion;
 pub mod tokens;
 
+use egui::style::ScrollStyle;
 use egui::{Color32, Context, Id, Stroke, Style, SystemTheme, Theme, ThemePreference, Visuals};
 
 use tokens::{COMFORTABLE, COMPACT, DARK, LIGHT, Palette, Spacing};
@@ -47,11 +51,13 @@ impl Appearance {
 /// Both themes' styles are set at once: egui switches between them by itself when the system
 /// does, for a « system » preference.
 pub fn apply(ctx: &Context, appearance: Appearance, density: Density) {
+    let reduced = motion::reduced(ctx);
     ctx.set_style_of(Theme::Dark, style(&DARK, Theme::Dark));
     ctx.set_style_of(Theme::Light, style(&LIGHT, Theme::Light));
     ctx.set_theme(appearance.preference());
     ctx.send_viewport_cmd(egui::ViewportCommand::SetTheme(appearance.title_bar()));
     ctx.data_mut(|data| data.insert_temp(density_id(), density));
+    motion::set_reduced(ctx, reduced);
 }
 
 /// The colours of the theme on screen.
@@ -76,10 +82,18 @@ fn density_id() -> Id {
 /// egui's own widgets restyled after the reference; the visible components are painted by
 /// hand from the palette, and only lean on this for what egui draws itself.
 fn style(palette: &Palette, theme: Theme) -> Style {
-    Style {
+    let mut style = Style {
         visuals: visuals(palette, theme),
+        text_styles: fonts::text_styles(),
+        animation_time: motion::FAST,
         ..Style::default()
-    }
+    };
+    // 9 px, a rounded handle on no rail.
+    style.spacing.scroll = ScrollStyle {
+        bar_width: 9.0,
+        ..ScrollStyle::solid()
+    };
+    style
 }
 
 fn visuals(palette: &Palette, theme: Theme) -> Visuals {
@@ -152,7 +166,7 @@ mod tests {
     use super::*;
 
     fn harness(system: Theme) -> Harness<'static> {
-        Harness::builder().with_theme(system).build_ui(|ui| {
+        crate::testing::harness().with_theme(system).build_ui(|ui| {
             ui.label("·");
         })
     }

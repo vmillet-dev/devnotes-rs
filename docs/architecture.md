@@ -5964,6 +5964,31 @@ and the window is created hidden, so nothing flashes before the first frame. egu
 widgets are restyled from the palette (`Visuals`); the visible components are painted by hand
 from it.
 
+**Type.** Inter and JetBrains Mono are embedded as the variable TrueType files the reference
+loaded (Latin and Latin Extended, `theme::fonts`), so the CSS weights, 650 included, apply as
+written (ADR S2); Noto Emoji, monochrome, comes next, so an emoji is drawn the same on every
+machine; eframe's `system_fonts` finds the rest (CJK) on demand. egui's own fonts are not
+compiled in. The body is 14 px. Licences and sources: `crates/ui/assets/README.md`.
+
+**Icons** are Lucide's paths (`theme::icons::Icon`), rasterised by resvg into a white alpha mask
+at the size asked × `pixels_per_point`, cached per size in the context's memory, and tinted by
+the colour they are painted in — `currentColor`. The interface draws no emoji of its own any
+more: 📎 🖼 ⏳ are `Paperclip`, `Image`, `Hourglass`.
+
+**Motion** is `theme::motion`: `FAST` (120 ms, what follows the pointer, also egui's own
+`animation_time`), `ENTER` (160 ms, what enters), `TURN` (a spinner's 800 ms), `MARK` (2 s, a
+mark fading). The three entrances (`Rise`, `Lift`, `Fade`) are an opacity and a 4 px offset
+from the first frame an element is drawn after a frame it was not, as a CSS animation runs on an
+element that did not exist a frame ago. **One switch**, `motion::set_reduced`, cuts all of it —
+the system's wish read by `platform::motion` (the registry under Windows, `gsettings` under
+GNOME), the preference adding to it. A test sweeps `crates/ui/src` for a duration typed anywhere
+else, as `motion.test.mjs` did.
+
+**The focus ring** (`theme::focus`) is 2 px of `amber_edge`, 2 px outside the control, and shows
+only after the keyboard moved: `focus::track` reads, once a frame, whether the last input that
+moves around was a key (Tab, arrows, Enter, Space, Escape…) or a pointer press — typing does not
+count. Scrollbars are 9 px.
+
 **Contrast is a Rust test** (`theme::tokens::tests`, which replaced `palette.test.mjs`): every
 text colour at 4.5:1 on the four surfaces, a badge's label on the strongest tint (0.15) and a
 status on its fill (0.3), the edge at 3:1, the ink on solid amber. The palette is destructured
