@@ -33,3 +33,8 @@ pub fn seed_samples(backend: &Backend, samples: Samples) -> Pending<bool> {
         Ok(true)
     })
 }
+
+/// The whole note, body included: opening one never starts from a preview.
+pub fn get(backend: &Backend, id: String) -> Pending<DisplayNote> {
+    backend.db(move |engine| notes::get_note(engine, id))
+}

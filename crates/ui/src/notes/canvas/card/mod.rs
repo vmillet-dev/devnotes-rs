@@ -47,6 +47,17 @@ pub(super) fn show(
     let response = ui.allocate_rect(rect, Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Article, true, &title));
     address(ui, &response, "note-card");
+    // ⚠️ The click surface is a layer under the card's controls, not the card: what is drawn
+    // after it, a task's box, takes the click first.
+    let open = ui.allocate_rect(rect, Sense::click());
+    open.widget_info(|| WidgetInfo::labeled(Role::Button, true, &title));
+    address(ui, &open, "note-card-open");
+    crate::theme::focus::ring(ui, &open, CornerRadius::same(10));
+    if open.clicked() {
+        actions.push(crate::action::Action::Notes(
+            crate::notes::Action::OpenNote(note.id.clone()),
+        ));
+    }
     let (fill, edge) = if ui.rect_contains_pointer(rect) {
         (p.bg_2, p.line)
     } else {

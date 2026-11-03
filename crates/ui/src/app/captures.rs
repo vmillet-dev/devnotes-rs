@@ -63,7 +63,16 @@ fn capture(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
                 .save(Path::new(directory).join(format!("{name}-{theme}.png")))
                 .unwrap();
         }
-        click(harness, "theme-toggle");
+        // By its action, not its button: a click would close what the capture shows.
+        let other = match harness.ctx.theme() {
+            egui::Theme::Dark => crate::theme::Appearance::Light,
+            egui::Theme::Light => crate::theme::Appearance::Dark,
+        };
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        let action = crate::action::Action::App(crate::action::AppAction::SetAppearance(other));
+        app.state.apply(action, &ctx, &app.backend);
+        settle(harness);
     }
 }
 
@@ -139,6 +148,15 @@ fn the_canvas_of_an_open_library() {
 
     click(&mut harness, "sort-trigger");
     capture(&mut harness, "header-sort-menu");
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "editor-stand-in");
 }
 
 /// One note of each kind, with marks, tags and a search's worth of words.
