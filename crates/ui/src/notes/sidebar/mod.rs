@@ -2,7 +2,6 @@
 //! rename, recolour, a folder inside, delete (`library-tree` in the reference). A row says where
 //! to go; `AppState` turns it into the space and the folder the canvas shows.
 
-mod panel;
 mod row;
 mod tree;
 
@@ -12,11 +11,11 @@ use egui::{FontFamily, Margin, Pos2, Ui};
 use i18n::keys;
 
 use crate::action::{Action, Actions};
+use crate::notes::panel::{self, Draft, FolderEdit, SpaceEdit};
 use crate::state::AppState;
 use crate::theme::icons::Icon;
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, IconButton};
-use panel::{Draft, FolderEdit, SpaceEdit};
 use row::{Lead, Mark, Name};
 use tree::Row;
 

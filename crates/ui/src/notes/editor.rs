@@ -3,87 +3,46 @@
 //! and a Dessin's scene is not text, so only its title is edited here.
 
 use egui::{FontFamily, FontId, Id, Margin, Stroke, TextEdit, Ui};
-use engine::notes::checklist::ChecklistItem;
 use engine::notes::kind::NoteKind;
-use engine::notes::model::DisplayNote;
 use i18n::keys;
 
 use crate::action::{Action, Actions};
 use crate::notes::Action as Asked;
 use crate::state::AppState;
-use crate::state::editor::Body;
+use crate::state::editor::{Body, Opened, body_of};
 use crate::theme::icons::Icon;
 use crate::theme::{palette, spacing};
 use crate::widgets::{IconButton, TextField, address};
 
-const DONE: &str = "[x] ";
-
-/// What is being typed, for the note it was opened on.
+/// What is being typed, for the opening it began in.
 pub(super) struct Draft {
-    id: String,
+    session: u64,
     title: String,
     body: String,
     focus: bool,
 }
 
 impl Draft {
-    fn of(note: &DisplayNote) -> Self {
+    fn of(open: &Opened) -> Self {
         Self {
-            id: note.id.clone(),
-            title: note.title.clone(),
-            body: text_of(note),
+            session: open.session,
+            title: open.title.clone(),
+            body: open.text.clone(),
             focus: true,
         }
     }
 }
 
-/// The body as the field shows it.
-fn text_of(note: &DisplayNote) -> String {
-    if note.kind != NoteKind::Checklist {
-        return note.content.clone();
-    }
-    note.items
-        .iter()
-        .map(|item| {
-            if item.done {
-                format!("{DONE}{}", item.text)
-            } else {
-                item.text.clone()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-/// The field read back: a list's lines are its tasks, the empty ones dropped.
-fn body_of(kind: NoteKind, text: &str) -> Body {
-    if kind != NoteKind::Checklist {
-        return Body::Content(text.to_owned());
-    }
-    let items = text
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(|line| match line.strip_prefix(DONE) {
-            Some(text) => ChecklistItem {
-                text: text.to_owned(),
-                done: true,
-            },
-            None => ChecklistItem {
-                text: line.to_owned(),
-                done: false,
-            },
-        })
-        .collect();
-    Body::Items(items)
-}
-
 pub(super) fn show(ui: &Ui, state: &AppState, draft: &mut Option<Draft>, actions: &mut Actions) {
-    let Some(note) = state.editor.note() else {
+    let Some(open) = state.editor.opened().filter(|open| open.is_ready()) else {
         *draft = None;
         return;
     };
-    if draft.as_ref().is_none_or(|draft| draft.id != note.id) {
-        *draft = Some(Draft::of(note));
+    if draft
+        .as_ref()
+        .is_none_or(|draft| draft.session != open.session)
+    {
+        *draft = Some(Draft::of(open));
     }
     let Some(editing) = draft else { return };
     let p = palette(ui.ctx());
@@ -98,14 +57,9 @@ pub(super) fn show(ui: &Ui, state: &AppState, draft: &mut Option<Draft>, actions
     let shown = egui::Modal::new(Id::unique("stand-in-editor"))
         .backdrop_color(p.backdrop.gamma_multiply(0.7))
         .frame(frame)
-        .show(ui.ctx(), |ui| fields(ui, state, note, editing, actions));
+        .show(ui.ctx(), |ui| fields(ui, state, open, editing, actions));
     if shown.inner || shown.should_close() {
-        let (title, body) = changes(note, editing);
-        actions.push(Action::Notes(Asked::SaveNote {
-            id: note.id.clone(),
-            title,
-            body,
-        }));
+        save(open, editing, actions);
         actions.push(Action::Notes(Asked::CloseNote));
         *draft = None;
     }
@@ -115,7 +69,7 @@ pub(super) fn show(ui: &Ui, state: &AppState, draft: &mut Option<Draft>, actions
 fn fields(
     ui: &mut Ui,
     state: &AppState,
-    note: &DisplayNote,
+    open: &Opened,
     editing: &mut Draft,
     actions: &mut Actions,
 ) -> bool {
@@ -145,7 +99,7 @@ fn fields(
             .show(ui)
             .clicked();
     });
-    if note.kind != NoteKind::Drawing {
+    if open.kind != NoteKind::Drawing {
         let p = palette(ui.ctx());
         let label = tr(keys::editor::CONTENT_LABEL);
         let rows = ((size.y * 0.6) / 18.0).max(6.0);
@@ -163,67 +117,42 @@ fn fields(
                 .desired_rows(rows)
                 .desired_width(f32::INFINITY),
         );
-        body.widget_info(|| {
-            egui::WidgetInfo::labeled(egui::Role::MultilineTextInput, true, &label)
-        });
+        // Its name only: the field's own node carries what it holds.
+        ui.ctx()
+            .accesskit_node_builder(body.id, |node| node.set_label(label.clone()));
         address(ui, &body, "editor-body");
         left |= body.lost_focus();
     }
     if left {
-        let (title, body) = changes(note, editing);
-        actions.push(Action::Notes(Asked::SaveNote {
-            id: note.id.clone(),
-            title,
-            body,
-        }));
+        save(open, editing, actions);
     }
     closed
 }
 
-/// What differs from the note as last saved; `None` for a field left as it was.
-fn changes(note: &DisplayNote, editing: &Draft) -> (Option<String>, Option<Body>) {
-    let title = (editing.title != note.title).then(|| editing.title.clone());
-    let body = (note.kind != NoteKind::Drawing && editing.body != text_of(note))
-        .then(|| body_of(note.kind, &editing.body));
-    (title, body)
+/// What differs from the note as last saved; nothing for a field left as it was.
+fn save(open: &Opened, editing: &Draft, actions: &mut Actions) {
+    let title = (editing.title != open.title).then(|| editing.title.clone());
+    let body: Option<Body> = (open.kind != NoteKind::Drawing && editing.body != open.text)
+        .then(|| body_of(open.kind, &editing.body));
+    if title.is_some() || body.is_some() {
+        actions.push(Action::Notes(Asked::SaveNote {
+            session: open.session,
+            title,
+            body,
+        }));
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn a_list_is_one_task_a_line_a_done_one_marked() {
-        let Body::Items(items) = body_of(NoteKind::Checklist, "milk\n[x] bread\n\n  \neggs") else {
-            panic!("a list reads as items");
-        };
-
-        let read: Vec<_> = items
-            .iter()
-            .map(|item| (item.text.as_str(), item.done))
-            .collect();
-        assert_eq!(read, [("milk", false), ("bread", true), ("eggs", false)]);
-    }
-
-    #[test]
-    fn a_note_reads_as_its_text() {
-        assert_eq!(
-            body_of(NoteKind::Note, "# Release\n"),
-            Body::Content("# Release\n".into())
-        );
-    }
-}
-
-#[cfg(test)]
-mod over_a_core {
     use egui_kittest::kittest::{NodeT, Queryable};
     use engine::notes::model::NotePatch;
 
-    use crate::notes::bench::{area, click_id, settle};
+    use crate::notes::bench::{Bench, area, cards, click_id, settle};
     use crate::testing;
 
     fn stored(
-        harness: &egui_kittest::Harness<'_, crate::notes::bench::Bench>,
+        harness: &egui_kittest::Harness<'_, Bench>,
         id: &str,
     ) -> engine::notes::model::DisplayNote {
         let id = id.to_owned();
@@ -231,6 +160,17 @@ mod over_a_core {
             engine::notes::get_note(engine, id)
         })
         .unwrap()
+    }
+
+    fn written(harness: &egui_kittest::Harness<'_, Bench>) -> usize {
+        harness
+            .state()
+            .state
+            .notes_query
+            .view()
+            .unwrap()
+            .cards()
+            .count()
     }
 
     #[test]
@@ -318,5 +258,32 @@ mod over_a_core {
             .value()
             .unwrap_or_default();
         assert_eq!(progress, "1/2");
+    }
+
+    #[test]
+    fn a_new_note_is_written_once_and_only_once_worth_keeping() {
+        let (backend, profile) = testing::unlocked();
+        testing::note(&backend, "psql prod");
+        let mut harness = area(backend, profile);
+
+        click_id(&mut harness, "new-note");
+        assert_eq!(written(&harness), 1);
+        click_id(&mut harness, "editor-close");
+        assert_eq!(written(&harness), 1);
+
+        click_id(&mut harness, "new-note");
+        harness
+            .get_by(|node| node.author_id() == Some("editor-title"))
+            .type_text("Rotate the certificate");
+        settle(&mut harness);
+        click_id(&mut harness, "editor-body");
+        harness
+            .get_by(|node| node.author_id() == Some("editor-body"))
+            .type_text("openssl req -new");
+        settle(&mut harness);
+        click_id(&mut harness, "editor-close");
+
+        assert_eq!(written(&harness), 2);
+        assert_eq!(cards(&harness), 2);
     }
 }

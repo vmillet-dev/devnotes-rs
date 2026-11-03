@@ -4676,7 +4676,16 @@ Until phase 4's editors, a card's click surface (`note-card-open`, a layer under
 opens a stand-in editor (`notes::editor`, `state::editor`): the note read whole by id
 (`get_note`), its title and body as plain text — a list one task a line, `[x] ` before a done
 one; a Dessin's title only — written when a field is left and when it closes. It is a
-development tool, and goes with phase 4 (D4).
+development tool, and goes with phase 4 (D4). « + New note » (or its kind menu, the ghost card,
+the global shortcut) opens it on a draft that has no id: nothing is written until a field left
+carries a title or a body, then the note is created once — what is left while that creation is
+in flight waits for its id and is sent after — in the space shown (the first one for « all
+spaces ») and the folder shown.
+
+The rail can be put away (`library-rail-toggle`, the application setting `showLibraryRail`): the
+space and folder switchers then take its place in the header, their rows' ⋯ opening the same
+panels as the rail (`notes::panel`, shared). While a folder is open, its breadcrumb replaces
+them — back to its space, the folders above it, its name, its panel.
 
 The library rail (`notes::sidebar`) is drawn left of the canvas, as wide as the application setting
 `libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds both

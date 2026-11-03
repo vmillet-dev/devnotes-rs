@@ -148,6 +148,7 @@ fn the_canvas_of_an_open_library() {
 
     click(&mut harness, "sort-trigger");
     capture(&mut harness, "header-sort-menu");
+    click(&mut harness, "sort-trigger");
 
     harness
         .get_by(|node| {
@@ -157,6 +158,14 @@ fn the_canvas_of_an_open_library() {
         .click();
     settle(&mut harness);
     capture(&mut harness, "editor-stand-in");
+
+    click(&mut harness, "editor-close");
+    click(&mut harness, "new-note-kind");
+    capture(&mut harness, "header-new-note-menu");
+    click(&mut harness, "new-note-kind");
+    click(&mut harness, "library-rail-toggle");
+    click(&mut harness, "space-switcher");
+    capture(&mut harness, "header-switchers");
 }
 
 /// One note of each kind, with marks, tags and a search's worth of words.

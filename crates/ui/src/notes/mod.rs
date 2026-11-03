@@ -6,6 +6,7 @@ pub mod canvas;
 mod editor;
 mod header;
 pub mod language;
+mod panel;
 pub mod sidebar;
 pub mod ui;
 
@@ -78,13 +79,15 @@ pub enum Action {
     FocusSearch,
     /// Into the stand-in editor, read whole by id.
     OpenNote(String),
-    /// `None` leaves a field as it is.
+    /// The fields left in an opening; `None` leaves a field as it is.
     SaveNote {
-        id: String,
+        session: u64,
         title: Option<String>,
         body: Option<crate::state::editor::Body>,
     },
     CloseNote,
+    /// A draft of that kind, or of the preferred one: written once worth keeping.
+    NewNote(Option<engine::notes::kind::NoteKind>),
 }
 
 /// The rail's edge, which widens it.
@@ -98,6 +101,7 @@ pub struct View {
     rail_width: Option<f32>,
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
     pub(crate) focus_search: bool,
+    header: header::HeaderView,
     editor: Option<editor::Draft>,
 }
 
@@ -113,16 +117,24 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         .clamp(f32::from(min), f32::from(max))
         .round();
     // Cut by hand: a horizontal layout hands its children the height of one line.
-    let rail = Rect::from_min_size(region.min, vec2(width, region.height()));
-    let edge = Rect::from_min_size(rail.right_top(), vec2(EDGE, region.height()));
-    let rest = Rect::from_min_max(edge.right_top(), region.max);
-    let mut rail_ui = ui.new_child(UiBuilder::new().max_rect(rail));
-    rail_ui.set_clip_rect(rail);
-    sidebar::show(&mut rail_ui, state, &mut view.sidebar, actions);
-    let mut edge_ui = ui.new_child(UiBuilder::new().max_rect(edge));
-    width += crate::widgets::split_handle(&mut edge_ui, "library-rail-edge");
+    let mut rest = region;
+    if state.settings.rail_shown {
+        let rail = Rect::from_min_size(region.min, vec2(width, region.height()));
+        let edge = Rect::from_min_size(rail.right_top(), vec2(EDGE, region.height()));
+        rest = Rect::from_min_max(edge.right_top(), region.max);
+        let mut rail_ui = ui.new_child(UiBuilder::new().max_rect(rail));
+        rail_ui.set_clip_rect(rail);
+        sidebar::show(&mut rail_ui, state, &mut view.sidebar, actions);
+        let mut edge_ui = ui.new_child(UiBuilder::new().max_rect(edge));
+        width += crate::widgets::split_handle(&mut edge_ui, "library-rail-edge");
+    }
     let mut header_ui = ui.new_child(UiBuilder::new().max_rect(rest));
-    header::show(&mut header_ui, state, &mut view.focus_search, actions);
+    header::show(
+        &mut header_ui,
+        state,
+        (&mut view.header, &mut view.focus_search),
+        actions,
+    );
     let below = Rect::from_min_max(
         egui::pos2(rest.left(), header_ui.min_rect().bottom()),
         rest.max,

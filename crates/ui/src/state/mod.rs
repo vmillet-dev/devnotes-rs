@@ -127,7 +127,8 @@ impl AppState {
     /// What reads the open library, once its preferences are in and its samples seeded.
     pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
         self.notes.update(&mut self.revision, &mut self.errors);
-        self.editor.update(&mut self.revision, &mut self.errors);
+        self.editor
+            .update(backend, &mut self.revision, &mut self.errors);
         self.caches.thumbnails.update(ctx, backend);
         if self
             .spaces
@@ -214,6 +215,10 @@ impl AppState {
             }
             Action::App(AppAction::DismissError) => self.errors.dismiss(),
             Action::App(AppAction::DismissStatus) => self.status.dismiss(),
+            Action::App(AppAction::ToggleRail) => {
+                self.settings.rail_shown = !self.settings.rail_shown;
+                self.save_settings(backend);
+            }
             Action::App(AppAction::SetRailWidth(width)) => {
                 self.settings.rail_width = width;
                 self.save_settings(backend);
@@ -223,12 +228,10 @@ impl AppState {
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
-            // The capture, the new note and the palette arrive with the notes area.
+            Action::Global(GlobalAction::NewNote) => self.new_note(None),
+            // The capture and the palette arrive with the notes area.
             Action::Global(
-                GlobalAction::Capture
-                | GlobalAction::NewNote
-                | GlobalAction::Palette
-                | GlobalAction::PaletteHere,
+                GlobalAction::Capture | GlobalAction::Palette | GlobalAction::PaletteHere,
             ) => {}
         }
     }
@@ -290,9 +293,12 @@ impl AppState {
                 ));
             }
             crate::notes::Action::OpenNote(id) => self.editor.open(backend, id),
-            crate::notes::Action::SaveNote { id, title, body } => {
-                self.editor.save(backend, id, title, body);
-            }
+            crate::notes::Action::SaveNote {
+                session,
+                title,
+                body,
+            } => self.editor.save(backend, session, title, body),
+            crate::notes::Action::NewNote(kind) => self.new_note(kind),
             crate::notes::Action::CloseNote => self.editor.close(),
             crate::notes::Action::FocusSearch => {
                 self.notes_view.focus_search = true;
@@ -300,6 +306,23 @@ impl AppState {
                 ctx.request_repaint();
             }
         }
+    }
+
+    /// In the space shown, or the first one for « all spaces », and the folder shown.
+    fn new_note(&mut self, kind: Option<engine::notes::kind::NoteKind>) {
+        let space = self
+            .spaces
+            .active_space()
+            .map(str::to_owned)
+            .or_else(|| self.spaces.spaces().first().map(|space| space.id.clone()));
+        let Some(space) = space else {
+            self.errors
+                .notify(i18n::Message::new(i18n::keys::errors::SPACE_REQUIRED));
+            return;
+        };
+        let folder = self.spaces.active_folder().map(str::to_owned);
+        let kind = kind.unwrap_or(engine::notes::kind::NoteKind::Snippet);
+        self.editor.draft(kind, space, folder);
     }
 
     /// The settings into the application's file, through the db queue, the other keys kept.

@@ -134,3 +134,100 @@ fn the_board_is_not_offered_yet() {
     let board = harness.get_by(|node| node.author_id() == Some("view-board"));
     assert!(board.accesskit_node().is_disabled());
 }
+
+fn hide_the_rail(harness: &mut egui_kittest::Harness<'_, crate::notes::bench::Bench>) {
+    click_id(harness, "library-rail-toggle");
+    assert!(!harness.state().state.settings.rail_shown);
+}
+
+#[test]
+fn the_switchers_take_the_rails_place_when_it_is_put_away() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "in home");
+    let work = crate::notes::bench::space(&backend, "Work");
+    let mut harness = area(backend, profile);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("space-switcher"))
+            .is_none()
+    );
+
+    hide_the_rail(&mut harness);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("space-option"))
+            .is_none()
+    );
+    click_id(&mut harness, "space-switcher");
+    click(&mut harness, "space-option", "Work");
+
+    assert_eq!(
+        harness.state().state.spaces.active_space(),
+        Some(work.id.as_str())
+    );
+    let name = harness
+        .get_by(|node| node.author_id() == Some("space-switcher-name"))
+        .accesskit_node()
+        .value()
+        .unwrap_or_default();
+    assert_eq!(name, "Work");
+    assert_eq!(cards(&harness), 0);
+}
+
+#[test]
+fn a_space_is_made_from_the_switcher() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "in home");
+    let mut harness = area(backend, profile);
+    hide_the_rail(&mut harness);
+
+    click_id(&mut harness, "space-switcher");
+    click_id(&mut harness, "space-create-open");
+    crate::notes::bench::type_and_enter(&mut harness, "space-create-input", "Reading");
+
+    let spaces = crate::notes::bench::spaces_of(&harness);
+    assert!(spaces.iter().any(|space| space.name == "Reading"));
+}
+
+#[test]
+fn a_folder_open_is_a_breadcrumb_back_to_its_space() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "in home");
+    let home = crate::notes::bench::spaces_of_backend(&backend)[0].clone();
+    let runbooks = crate::notes::bench::folder(&backend, &home, None, "Runbooks");
+    crate::notes::bench::folder(&backend, &home, Some(&runbooks), "api");
+    let mut harness = area(backend, profile);
+    hide_the_rail(&mut harness);
+
+    click_id(&mut harness, "folder-switcher");
+    click(&mut harness, "folder-option", "api");
+
+    let here = harness
+        .get_by(|node| node.author_id() == Some("folder-breadcrumb-name"))
+        .accesskit_node()
+        .value()
+        .unwrap_or_default();
+    assert_eq!(here, "api");
+    click(&mut harness, "folder-breadcrumb-step", "Runbooks");
+    assert_eq!(
+        harness.state().state.spaces.active_folder(),
+        Some(runbooks.id.as_str())
+    );
+    click_id(&mut harness, "folder-breadcrumb-back");
+    assert_eq!(harness.state().state.spaces.active_folder(), None);
+    harness.get_by(|node| node.author_id() == Some("folder-switcher"));
+}
+
+#[test]
+fn the_kind_menu_opens_a_draft_of_its_kind() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "in home");
+    let mut harness = area(backend, profile);
+
+    click_id(&mut harness, "new-note-kind");
+    click_id(&mut harness, "new-note-checklist");
+
+    let opened = harness.state().state.editor.opened().unwrap();
+    assert_eq!(opened.kind, engine::notes::kind::NoteKind::Checklist);
+    harness.get_by(|node| node.author_id() == Some("editor-title"));
+}

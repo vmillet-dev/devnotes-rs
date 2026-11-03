@@ -24,6 +24,11 @@ impl ErrorNotifier {
         self.notice = Some(message_of(error).unwrap_or(fallback));
     }
 
+    /// What is refused before the core is asked: nothing to log.
+    pub fn notify(&mut self, message: Message) {
+        self.notice = Some(message);
+    }
+
     pub fn notice(&self) -> Option<&Message> {
         self.notice.as_ref()
     }
