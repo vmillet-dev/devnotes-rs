@@ -87,7 +87,7 @@ fn a_note_written_through_the_commands_reads_back_and_is_found() {
     assert_eq!(updated.note.title, "psql to prod");
     assert_eq!(read.note.title, "psql to prod");
     assert_eq!(found.matched, 1);
-    assert_eq!(found.sections[0].notes[0].note.id, id);
+    assert_eq!(found.sections[0].cards[0].id, id);
 }
 
 #[test]
@@ -137,9 +137,13 @@ fn the_samples_arrive_in_one_space_with_their_folders() {
 
     assert_eq!(session.spaces(), ["Samples"]);
     assert_eq!(seeded.matched, 1);
-    assert_eq!(seeded.sections[0].notes[0].note.space_id, space.id);
+    assert_eq!(seeded.sections[0].cards[0].space_id, space.id);
     assert_eq!(
-        seeded.sections[0].notes[0].folder.as_ref().unwrap().name,
+        seeded
+            .display(&seeded.sections[0].cards[0])
+            .folder
+            .unwrap()
+            .name,
         "Notes"
     );
 }
