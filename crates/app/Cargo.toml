@@ -1,0 +1,35 @@
+[package]
+name = "app"
+description = "A developer's notes and snippets manager for the desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+readme = "../../README.md"
+publish = false
+
+[[bin]]
+name = "devnotes"
+path = "src/main.rs"
+
+[dependencies]
+engine = { path = "../engine" }
+platform = { path = "../platform" }
+ui = { path = "../ui" }
+eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "clipboard", "default_fonts", "system_fonts", "wayland", "wgpu", "x11"] }
+egui = "0.37.0"
+flexi_logger = { version = "0.31.10", default-features = false }
+log = "0.4.34"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# The one eframe uses, for its X11 switch (D15).
+winit = { version = "0.30.13", default-features = false, features = ["x11"] }
+
+[dev-dependencies]
+tempfile = "3.27.0"
+tokio = { version = "1.53.1", default-features = false, features = ["rt-multi-thread"] }
+
+[lints]
+workspace = true
