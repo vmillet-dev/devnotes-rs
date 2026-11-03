@@ -5916,60 +5916,34 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
 
 ## i18n
 
-UI strings live in `src/app/core/services/i18n/translations/{fr,en}.json` and render through
-Transloco's `transloco` pipe. French is the fallback locale.
+The interface's strings are `crates/i18n/translations/{fr,en}.json`, in the format the Angular
+reference wrote them (plan § 3.11). The `i18n` crate embeds both and **generates one constant
+per key at build time** (`build.rs`, from `fr.json`): `vault.unlockTitle` is
+`i18n::keys::vault::UNLOCK_TITLE`, a segment that is a Rust keyword takes `r#`, `fr-FR` becomes
+`FR_FR`. A misspelled key does not compile; two segments that would make the same name stop the
+build. A key composed at run time goes through `Key::find`, which answers `None` for one that
+does not exist — an enum of the cases, matched once, is better wherever the set is known.
 
-- Translations are `import()`ed rather than fetched over HTTP — a small desktop binary gains
-  nothing from `HttpClient` and a round-trip. **One chunk per language**, imported when it
-  becomes active: both used to sit in the initial bundle, ~68 kB of which one half is never
-  read. ⚠️ `LocaleService.restore()` resolves only once the active one is in, and
-  `startApplication()` awaits it, or the first render shows empty labels. Specs read both
-  files synchronously through their own loader (`provideTranslocoTesting`), since they assert
-  on text right after a render. The files deliberately sit **outside** `src/assets`, where the
-  assets glob would copy them into `dist` a second time, never to be read.
-- **The choice belongs to `SettingsStore`** (`locale`: `system` / `fr` / `en`, default
-  `system`), exactly like the theme. `LocaleService` is what _resolves_ it and pushes it to
-  Transloco and `<html lang>` — the same shape as the three services that carry a preference
-  down to the native side. The preferences panel is the one control that writes it.
-- `system` resolves through `resolveSystemLocale()` (`core/services/i18n/locale.model.ts`), which reads
-  `navigator.languages` — the WebView takes it from the OS — and falls back to
-  `SYSTEM_FALLBACK_LOCALE` (English) when the machine speaks neither language. Nothing is
-  persisted while the preference stays on `system`, so DevNotes keeps following the OS.
-- ⚠️ `DEFAULT_LOCALE` is a different thing: Transloco's fallback _bundle_, the file that
-  answers when a key is missing from the other one.
-- `LocaleService.restore()` runs from the app initializer, **after** `SettingsStore.restore()`
-  and before `TrayService.start()`, which builds the tray with translated labels. The effect
-  alone would only flush after the first render, showing the interface in one language then
-  the other.
-- Code that produces user-visible text returns a **`TranslationRef`** (`{ key, params }`)
-  instead of a formatted string, so translation always happens in the template. This applies
-  to error messages too.
-- **The application's name is never written in a translation.** A string carries `{{app}}`, and
-  `AppTranslocoLoader` adds one key to every language: `app: APP_INFO.name`. No interceptor and
-  no transpiler — Transloco's own transpiler resolves an interpolation it cannot find in the
-  params against a **sibling key of the same translation**, so a key is all the mechanism
-  needed. It costs one line in the loader, no call site passes a parameter, and a string that
-  carries parameters of its own (`{{palette}}`, `{{version}}`) still resolves both. A spec on
-  the shipped locale files refuses a string that spells the name out.
-- **A count is an ICU plural, read by a transpiler of our own** (`plural-transpiler.ts`, about
-  sixty lines over `Intl.PluralRules`). ⚠️ Not `@jsverse/transloco-messageformat`: it compiles
-  each message with `new Function`, the CSP is `script-src 'self'`, and the application boots
-  onto an error banner and seeds nothing — which the unit suite cannot see, jsdom having no
-  policy to violate. The grammar is deliberately tiny: `plural`, exact `=N`, the categories
-  `Intl.PluralRules` answers, and `#`; no `select`, no `selectordinal`, no nesting. Plain
-  `{{name}}` stays `DefaultTranspiler`'s, which is what keeps the `{{app}}` sibling key working.
-  `TranslocoService` asks for the transpiler in its own constructor, so the service is resolved
-  on the first render rather than injected. `=0` is written out wherever zero reads badly —
-  French calls zero `one` — and two specs on the shipped files refuse "(s)" and any brace that is
-  neither an interpolation nor a plural.
-- ⚠️ **Transloco replaces an unknown `{{name}}` with the empty string**, so no translated string
-  can carry a snippet's `{{fields}}`: the sample snippet bodies are hard-coded in
-  `core/services/samples/sample-notes.service.ts`, and a guide chapter that names a key receives
-  it as an interpolation parameter.
-- A new string means adding it to **both** locale files.
-- Nothing user-visible is hard-coded in the Rust back-end. A new note is created with an
-  empty title and source, and the UI renders translated placeholders — storing
-  "Nouvelle note" would freeze French into the data.
+- Code returns a **`Message`** (`{ key, params }`), never a sentence: the text is chosen where it
+  is drawn, by `Message::text(language)` or `i18n::translate`. Nothing user-visible is written in
+  Rust outside the two files: a new note has an empty title, and the interface draws a translated
+  placeholder.
+- **Plurals** are the reference's ICU subset, ported (`i18n::plural`): `{name, plural, =N {…} one
+{…} other {…}}`, `#`, no `select`, no nesting; an exact `=N` wins over a category (French calls
+  zero `one`), and the categories are CLDR's for the two languages — French `one` for an integer
+  part of 0 or 1 (1.5 included), `many` for a whole million. `golden/plurals` (every plural key
+  of both files at 0, 1, 2, 5, 21, 1 000, 1 000 000 and 1.5) is read back by a test.
+- Then `{{name}}` is filled; ⚠️ **a parameter not given is left empty**, as Transloco did — so
+  no translated string can carry a snippet's `{{fields}}`, and user content is never interpolated
+  into a template. `{{app}}` is the application's name, read by `build.rs` from the engine's
+  `[package.metadata.devnotes] display-name`: no translation spells it out (a test refuses it),
+  and none hedges a plural with « (s) ».
+- Both files have the same keys, and a name one language fills in, the other reads too, filled
+  in or counted (« il y a {{count}} mois » counts in English): two tests.
+- **The language** is a preference (`system` / `fr` / `en`); `system` is
+  `Language::of_system()`, the first of the system's preferred languages (`sys-locale`) whose
+  primary tag is `fr` or `en`, English otherwise.
+- A new string means adding it to **both** files.
 
 ## Accessibility
 
