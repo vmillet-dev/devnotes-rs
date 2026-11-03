@@ -127,7 +127,7 @@ fn options(restored: Option<Geometry>) -> eframe::NativeOptions {
 }
 
 /// D15: under native Wayland, winit 0.30 delivers no dropped file and cannot hide the window,
-/// so X11 (XWayland) is taken whenever a display offers it.
+/// so X11 (`XWayland`) is taken whenever a display offers it.
 #[cfg(target_os = "linux")]
 fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
     use winit::platform::x11::EventLoopBuilderExtX11;
