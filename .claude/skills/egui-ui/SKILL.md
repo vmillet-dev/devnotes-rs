@@ -50,8 +50,12 @@ component and its SCSS before porting it, and its captures (§ 5.2).
 - **Screen and widget**: `testing::harness()` (the application's fonts — egui's defaults are not
   loaded), queried by `author_id`. Its accessibility check panics on an input widget without a
   name: keep it on. State tests run over a real core: `testing::backend()` on an empty temporary
-  profile, `testing::unlocked()` with a library created; `backend.settle()` then `harness.run()`
-  before reading an answer. Something that repaints forever (a spinner) needs `run_steps(n)`.
+  profile, `testing::unlocked()` with a library created, `testing::locked()` closed for a later
+  launch. **Wait on conditions, never on a number of frames**: `testing::settle(harness, …)`
+  waits for the core to be idle and the window to have drawn it, and fails if the window repaints
+  forever. Work the core goes on with after an answer is started through `Backend::background`,
+  so that it is waited for too. No `run_steps(n)`, no `with_max_steps`: a bench with a spinner
+  runs with reduced motion.
 - **The whole window**: `Harness::new_eframe` / `build_eframe` over `DevNotesApp`, through the gate
   like a person (`app.rs` tests).
 - **Captures, not snapshots** (D24): `app::captures` renders the window's states in both themes into
