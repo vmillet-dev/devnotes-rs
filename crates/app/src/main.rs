@@ -7,6 +7,10 @@
 mod arguments;
 mod logging;
 
+// The inspection port answers anyone on the machine, without a password.
+#[cfg(all(feature = "e2e", not(debug_assertions)))]
+compile_error!("the e2e flavour is never a release build");
+
 use std::path::Path;
 use std::process::ExitCode;
 
@@ -127,8 +131,40 @@ fn options(restored: Option<Geometry>) -> eframe::NativeOptions {
         centered: restored.is_none(),
         persist_window: false,
         event_loop_builder: x11_when_possible(),
+        wgpu_options: wgpu_options(),
         ..Default::default()
     }
+}
+
+/// The `e2e` flavour draws on the software adapter whatever the machine offers, as the runners
+/// do (WARP, lavapipe): eframe reads no variable to choose one.
+#[cfg(feature = "e2e")]
+fn wgpu_options() -> eframe::egui_wgpu::WgpuConfiguration {
+    use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
+    use eframe::wgpu;
+
+    let mut setup = WgpuSetupCreateNew::without_display_handle();
+    setup.native_adapter_selector = Some(std::sync::Arc::new(|adapters, surface| {
+        let draws_here = |adapter: &&wgpu::Adapter| {
+            surface.is_none_or(|surface| adapter.is_surface_supported(surface))
+        };
+        adapters
+            .iter()
+            .filter(draws_here)
+            .find(|adapter| adapter.get_info().device_type == wgpu::DeviceType::Cpu)
+            .or_else(|| adapters.iter().find(draws_here))
+            .cloned()
+            .ok_or_else(|| "no adapter draws on this window".to_string())
+    }));
+    WgpuConfiguration {
+        wgpu_setup: WgpuSetup::CreateNew(setup),
+        ..Default::default()
+    }
+}
+
+#[cfg(not(feature = "e2e"))]
+fn wgpu_options() -> eframe::egui_wgpu::WgpuConfiguration {
+    eframe::egui_wgpu::WgpuConfiguration::default()
 }
 
 /// D15: under native Wayland, winit 0.30 delivers no dropped file and cannot hide the window,

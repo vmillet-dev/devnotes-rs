@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [features]
 # The flavour the end-to-end scenarios drive: never in a release.
-e2e = []
+e2e = ["eframe/inspection", "platform/e2e"]
 
 [dependencies]
 engine = { path = "../engine" }

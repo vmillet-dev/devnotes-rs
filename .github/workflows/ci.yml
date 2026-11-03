@@ -109,6 +109,14 @@ jobs:
       # `--all-features` is what type-checks the `e2e` feature.
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
+      # The inspection port answers anyone on the machine: only the `e2e` flavour links it.
+      - name: No inspection port outside the e2e flavour
+        run: |
+          if cargo tree -p app --edges normal --invert egui_inspection --locked > /dev/null 2>&1; then
+            echo "::error::the default build of app links egui_inspection"
+            exit 1
+          fi
+
       - *stop-the-run
 
   test-rust:
@@ -159,6 +167,7 @@ jobs:
 
           cargo llvm-cov \
             --workspace \
+            --exclude e2e \
             --locked \
             --lcov \
             --output-path coverage/lcov.info
@@ -172,6 +181,7 @@ jobs:
 
           cargo test \
             --workspace \
+            --exclude e2e \
             --locked
 
           echo "\`test-rust\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"

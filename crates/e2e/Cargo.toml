@@ -1,0 +1,18 @@
+[package]
+name = "e2e"
+description = "The end-to-end driver: the e2e flavour of devnotes, launched and driven from outside"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+egui = { version = "0.37.0", default-features = false }
+egui_inspection = "0.37.0"
+tempfile = "3.27.0"
+
+[lints]
+workspace = true
