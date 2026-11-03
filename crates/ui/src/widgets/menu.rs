@@ -83,7 +83,7 @@ fn entries<'a>(ui: &mut Ui, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
             continue;
         }
         let opens = response.clicked()
-            || (response.has_focus()
+            || (super::takes_keys(ui, &response)
                 && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowRight)));
         // Its own open state: egui keeps one popup in its memory, and the parent is that one.
         let open_id = response.id.with("children");
