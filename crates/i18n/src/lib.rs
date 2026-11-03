@@ -5,7 +5,10 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+pub mod format;
 mod plural;
+mod regions;
+pub mod time;
 
 /// One constant per key, checked at build time: `keys::vault::UNLOCK_TITLE`.
 pub mod keys {
