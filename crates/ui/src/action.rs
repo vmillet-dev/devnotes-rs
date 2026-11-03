@@ -19,6 +19,8 @@ pub enum Action {
 pub enum AppAction {
     ShowArea(Area),
     SetAppearance(Appearance),
+    DismissError,
+    DismissStatus,
 }
 
 /// Asked from outside the window: a global shortcut, the tray, a second launch.

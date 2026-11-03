@@ -4612,6 +4612,21 @@ unlock: any length).
 The index fills behind the gate after an unlock (`IndexProgress`, `IndexReady`), and `Gate` keeps
 how far it got: the views say they are partial until it is whole.
 
+### The title bar, and the two bands under it
+
+The window keeps the system's decorations, so `ui::titlebar` is a bar inside it, 38 px on
+`bg-0`: the area switch on the left, the application's name centred on the window, the theme
+toggle on the right. The switch is drawn only once the library is open — every area acts on it.
+Its options are icons named for the screen reader and the tooltip (`area-option-notes`, `-tools`,
+`-http`), in the order of `Ctrl+1/2/3`, which `keys::APPLICATION` reads by position. The toggle
+names what it switches **to**, its icon and its label alike, and writes the appearance like the
+preferences panel does. Until the screens arrive, an area is an empty room addressed
+`area-notes`, `area-tools` or `area-http`.
+
+`ui::banners` draws the `ErrorNotifier`'s failure (red, announced assertively, `error-banner`)
+and the `StatusNotifier`'s report (green, announced politely, `status-toast`) as top panels
+under the bar, one of each, each until its X is pressed (`DismissError`, `DismissStatus`).
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in
