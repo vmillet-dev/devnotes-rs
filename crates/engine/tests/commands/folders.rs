@@ -21,7 +21,7 @@ fn folder(session: &Session, space_id: &str, name: &str) -> String {
         name: name.to_string(),
     };
 
-    session.call(|app| create_folder(draft, app)).unwrap().id
+    session.call(|e| create_folder(e, draft)).unwrap().id
 }
 
 fn board(space_id: &str) -> BoardQuery {
@@ -45,25 +45,20 @@ fn a_folder_is_created_renamed_recoloured_and_deleted() {
     let id = folder(&session, &space, "Scripts");
 
     let renamed = session
-        .call(|app| rename_folder(id.clone(), "Shell".to_string(), app))
+        .call(|e| rename_folder(e, id.clone(), "Shell".to_string()))
         .unwrap();
     let recoloured = session
-        .call(|app| recolour_folder(id.clone(), FolderColour::Amber, app))
+        .call(|e| recolour_folder(e, id.clone(), FolderColour::Amber))
         .unwrap();
     let listed = session
-        .call(|app| list_folders(Some(space.clone()), app))
+        .call(|e| list_folders(e, Some(space.clone())))
         .unwrap();
-    session.call(|app| delete_folder(id.clone(), app)).unwrap();
+    session.call(|e| delete_folder(e, id.clone())).unwrap();
 
     assert_eq!(renamed.name, "Shell");
     assert_eq!(recoloured.colour, FolderColour::Amber);
     assert_eq!(listed.len(), 1);
-    assert!(
-        session
-            .call(|app| list_folders(None, app))
-            .unwrap()
-            .is_empty()
-    );
+    assert!(session.call(|e| list_folders(e, None)).unwrap().is_empty());
 }
 
 /// Checked before the lock, like every name.
@@ -78,7 +73,7 @@ fn a_folder_without_a_readable_name_is_refused() {
     };
 
     assert!(matches!(
-        code(session.call(|app| create_folder(draft, app))),
+        code(session.call(|e| create_folder(e, draft))),
         ErrorCode::InvalidInput
     ));
 }
@@ -88,7 +83,7 @@ fn a_folder_that_does_not_exist_is_named_as_such() {
     let session = Session::open();
 
     assert!(matches!(
-        code(session.call(|app| rename_folder("missing".to_string(), "Shell".to_string(), app))),
+        code(session.call(|e| rename_folder(e, "missing".to_string(), "Shell".to_string()))),
         ErrorCode::FolderNotFound
     ));
 }
@@ -99,17 +94,17 @@ fn a_filing_is_undone_by_the_filings_it_answered() {
     let space = session.space("Personal");
     let zone = folder(&session, &space, "Scripts");
     let note = session
-        .call(|app| create_note(snippet(&space), app))
+        .call(|e| create_note(e, snippet(&space)))
         .unwrap()
         .note
         .id;
 
     let filings = session
-        .call(|app| file_notes(vec![note.clone()], Some(zone.clone()), app))
+        .call(|e| file_notes(e, vec![note.clone()], Some(zone.clone())))
         .unwrap();
-    let filed = session.call(|app| board_view(board(&space), app)).unwrap();
-    let undone = session.call(|app| file_notes_back(filings, app)).unwrap();
-    let unfiled = session.call(|app| board_view(board(&space), app)).unwrap();
+    let filed = session.call(|e| board_view(e, board(&space))).unwrap();
+    let undone = session.call(|e| file_notes_back(e, filings)).unwrap();
+    let unfiled = session.call(|e| board_view(e, board(&space))).unwrap();
 
     assert_eq!(filed.zones[0].notes.len(), 1);
     assert!(filed.loose.is_empty());
@@ -136,11 +131,11 @@ fn a_saved_layout_is_what_a_tidy_up_hands_back() {
     };
 
     session
-        .call(|app| save_board_layout(None, vec![placement], Vec::new(), app))
+        .call(|e| save_board_layout(e, None, vec![placement], Vec::new()))
         .unwrap();
-    let saved = session.call(|app| board_view(board(&space), app)).unwrap();
+    let saved = session.call(|e| board_view(e, board(&space))).unwrap();
     let arranged = session
-        .call(|app| arrange_board(space.clone(), None, BoardScope::Everything, app))
+        .call(|e| arrange_board(e, space.clone(), None, BoardScope::Everything))
         .unwrap();
 
     assert_eq!(saved.zones[0].frame, frame);
@@ -174,17 +169,17 @@ fn sub_folder(session: &Session, space_id: &str, parent: &str, name: &str) -> St
         name: name.to_string(),
     };
 
-    session.call(|app| create_folder(draft, app)).unwrap().id
+    session.call(|e| create_folder(e, draft)).unwrap().id
 }
 
 fn filed_note(session: &Session, space_id: &str, folder_id: &str) -> String {
     let id = session
-        .call(|app| create_note(snippet(space_id), app))
+        .call(|e| create_note(e, snippet(space_id)))
         .unwrap()
         .note
         .id;
     session
-        .call(|app| file_notes(vec![id.clone()], Some(folder_id.to_string()), app))
+        .call(|e| file_notes(e, vec![id.clone()], Some(folder_id.to_string())))
         .unwrap();
     id
 }
@@ -200,7 +195,7 @@ fn a_card_names_the_sub_folder_it_comes_from_and_no_other() {
     let own = filed_note(&session, &space, &sql);
     let deeper = filed_note(&session, &space, &perf);
 
-    let board = session.call(|app| board_view(board(&space), app)).unwrap();
+    let board = session.call(|e| board_view(e, board(&space))).unwrap();
     let chip = |id: &str| {
         board.zones[0]
             .notes
@@ -216,7 +211,7 @@ fn a_card_names_the_sub_folder_it_comes_from_and_no_other() {
 
     let mut inside = notes_query(&space);
     inside.folder_id = Some(sql.clone());
-    let view = session.call(|app| query_notes(inside, app)).unwrap();
+    let view = session.call(|e| query_notes(e, inside)).unwrap();
     let chips: Vec<Option<String>> = view.sections[0]
         .notes
         .iter()
@@ -234,12 +229,12 @@ fn a_folder_moved_into_another_comes_back_with_its_undo() {
     let perf = folder(&session, &space, "Perf");
 
     let was = session
-        .call(|app| move_folder(perf.clone(), Some(sql.clone()), app))
+        .call(|e| move_folder(e, perf.clone(), Some(sql.clone())))
         .unwrap();
-    let nested = session.call(|app| board_view(board(&space), app)).unwrap();
-    let refused = session.call(|app| move_folder(sql.clone(), Some(perf.clone()), app));
-    let back = session.call(|app| move_folder_back(was, app)).unwrap();
-    let flat = session.call(|app| board_view(board(&space), app)).unwrap();
+    let nested = session.call(|e| board_view(e, board(&space))).unwrap();
+    let refused = session.call(|e| move_folder(e, sql.clone(), Some(perf.clone())));
+    let back = session.call(|e| move_folder_back(e, was)).unwrap();
+    let flat = session.call(|e| board_view(e, board(&space))).unwrap();
 
     assert_eq!(nested.zones.len(), 1);
     assert_eq!(nested.zones[0].children[0].id, perf);

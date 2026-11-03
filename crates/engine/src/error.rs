@@ -111,7 +111,7 @@ pub enum StorageError {
 }
 
 /// Turns any failure into a [`StorageError::File`] named after what it was about.
-pub(crate) trait FileContext<T> {
+pub trait FileContext<T> {
     fn context(self, what: impl std::fmt::Display) -> Result<T, StorageError>;
 }
 

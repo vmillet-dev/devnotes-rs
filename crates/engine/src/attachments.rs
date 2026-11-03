@@ -8,12 +8,12 @@ pub mod model;
 pub mod sealed;
 pub mod store;
 
-use base64::Engine;
+use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
-use tauri::{AppHandle, Runtime};
 
-use crate::db::{Db, blocking, lock};
-use crate::error::{AppError, FileContext, StorageError};
+use crate::Engine;
+use crate::db::{Db, lock};
+use crate::error::{AppError, StorageError};
 use files::{
     directory, read_outside_lock, read_within_limit, remove_files, store_new, write_plain,
     write_plaintext_copy,
@@ -23,119 +23,74 @@ use model::Attachment;
 /// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. With
 /// `read_attachment` this reads any file the account can read into the `WebView`, and what keeps
 /// that harmless is the CSP — `script-src 'self'`, nothing remote — not this function.
-#[tauri::command]
-#[specta::specta]
-pub async fn attach_file<R: Runtime>(
-    note_id: String,
-    path: String,
-    app: AppHandle<R>,
-) -> Result<Attachment, AppError> {
-    blocking(app, move |_, db| {
-        let file_name = model::display_name(&path)?;
-        let bytes = read_within_limit(&path)?;
-        model::validate_size(bytes.len() as u64, &file_name)?;
-        Ok(store_new(note_id, file_name, &bytes, db)?)
-    })
-    .await
+pub fn attach_file(engine: &Engine, note_id: String, path: String) -> Result<Attachment, AppError> {
+    let db = &engine.db;
+    let file_name = model::display_name(&path)?;
+    let bytes = read_within_limit(&path)?;
+    model::validate_size(bytes.len() as u64, &file_name)?;
+    Ok(store_new(note_id, file_name, &bytes, db)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn list_attachments<R: Runtime>(
-    note_id: String,
-    app: AppHandle<R>,
-) -> Result<Vec<Attachment>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn list_attachments(engine: &Engine, note_id: String) -> Result<Vec<Attachment>, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::list(&mut connection, &note_id)?)
-    })
-    .await
+    Ok(store::list(&mut connection, &note_id)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn read_attachment<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<String, AppError> {
-    blocking(app, move |_, db| {
-        let (attachment, bytes) = read_outside_lock(db, &id)?;
+pub fn read_attachment(engine: &Engine, id: String) -> Result<String, AppError> {
+    let db = &engine.db;
+    let (attachment, bytes) = read_outside_lock(db, &id)?;
 
-        Ok(format!(
-            "data:{};base64,{}",
-            attachment.mime_type,
-            STANDARD.encode(bytes)
-        ))
-    })
-    .await
+    Ok(format!(
+        "data:{};base64,{}",
+        attachment.mime_type,
+        STANDARD.encode(bytes)
+    ))
 }
 
-/// The call starts from Rust: opening a path from the front end would mean allowing
-/// `opener:allow-open-path` over a whole directory.
+/// The decrypted copy of an attachment, for the desktop to open: the shell opens the path it
+/// answers.
 ///
 /// ⚠️ The one place a decrypted copy reaches the disk: the program the desktop picks reads a
 /// path. It goes under the profile's `open/` ([`sealed::plaintext_directory`]) and is swept
 /// on exit and at the next launch, since that program may still hold it on close.
-#[tauri::command]
-#[specta::specta]
-pub async fn open_attachment<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
-    let copy = blocking(app.clone(), move |engine, db| {
-        let (attachment, bytes) = read_outside_lock(db, &id)?;
-        let directory = sealed::plaintext_directory(&engine.paths);
+pub fn decrypted_copy(engine: &Engine, id: String) -> Result<std::path::PathBuf, AppError> {
+    let (attachment, bytes) = read_outside_lock(&engine.db, &id)?;
+    let directory = sealed::plaintext_directory(&engine.paths);
 
-        Ok(write_plaintext_copy(&directory, &attachment, &bytes)?)
-    })
-    .await?;
-
-    tauri_plugin_opener::OpenerExt::opener(&app)
-        .open_path(copy.to_string_lossy(), None::<&str>)
-        .context("open")?;
-
-    Ok(())
+    Ok(write_plaintext_copy(&directory, &attachment, &bytes)?)
 }
 
 /// The path comes from a native picker; the write stays here.
-#[tauri::command]
-#[specta::specta]
-pub async fn save_attachment<R: Runtime>(
-    id: String,
-    path: String,
-    app: AppHandle<R>,
-) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let (_, bytes) = read_outside_lock(db, &id)?;
+pub fn save_attachment(engine: &Engine, id: String, path: String) -> Result<(), AppError> {
+    let db = &engine.db;
+    let (_, bytes) = read_outside_lock(db, &id)?;
 
-        Ok(write_plain(&path, &bytes)?)
-    })
-    .await
+    Ok(write_plain(&path, &bytes)?)
 }
 
-/// The bytes do not cross the bridge: the clipboard is read natively, as raw RGBA.
-#[tauri::command]
-#[specta::specta]
-pub async fn attach_clipboard_image<R: Runtime>(
+/// An image the interface read, as raw RGBA, stored as a PNG.
+pub fn attach_image(
+    engine: &Engine,
     note_id: String,
     file_name: String,
-    app: AppHandle<R>,
+    (width, height): (u32, u32),
+    rgba: &[u8],
 ) -> Result<Attachment, AppError> {
-    let image = tauri_plugin_clipboard_manager::ClipboardExt::clipboard(&app)
-        .read_image()
-        .context("clipboard image")?;
-    let (width, height, rgba) = (image.width(), image.height(), image.rgba().to_vec());
-
-    blocking(app, move |_, db| {
-        let png = model::encode_png(width, height, &rgba)?;
-        model::validate_size(png.len() as u64, &model::png_name(&file_name))?;
-        Ok(store_new(note_id, model::png_name(&file_name), &png, db)?)
-    })
-    .await
+    let png = model::encode_png(width, height, rgba)?;
+    model::validate_size(png.len() as u64, &model::png_name(&file_name))?;
+    Ok(store_new(
+        note_id,
+        model::png_name(&file_name),
+        &png,
+        &engine.db,
+    )?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_attachment<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
-    blocking(app, move |_, db| Ok(delete(db, &id)?)).await
+pub fn delete_attachment(engine: &Engine, id: String) -> Result<(), AppError> {
+    let db = &engine.db;
+    Ok(delete(db, &id)?)
 }
 
 /// The record, then the file, which is removed outside the lock.

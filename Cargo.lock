@@ -1306,6 +1306,7 @@ checksum = "abd57806937c9cc163efc8ea3910e00a62e2aeb0b8119f1793a978088f8f6b04"
 name = "devnotes"
 version = "0.16.2"
 dependencies = [
+ "chrono",
  "engine",
  "log",
  "serde",
@@ -1660,9 +1661,6 @@ dependencies = [
  "sha3",
  "similar",
  "specta",
- "tauri",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-opener",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",

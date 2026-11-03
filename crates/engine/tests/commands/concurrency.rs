@@ -8,14 +8,14 @@ use std::path::PathBuf;
 use std::sync::{Arc, mpsc};
 use std::thread;
 
-use engine::Engine;
 use engine::db::{Db, open_in_memory};
+use engine::error::ErrorCode;
 use engine::http::model::RequestScripts;
 use engine::http::scripts::process::host_from;
 use engine::http::{count_http_cookies, http_environments, http_history, send_http_request};
+use engine::libraries::{create_library, open_library};
 use engine::notes::model::NotePatch;
 use engine::notes::{create_note, get_note, update_note};
-use tauri::Manager;
 
 use super::Session;
 use super::common::snippet;
@@ -26,7 +26,7 @@ fn two_edits_sent_in_a_row_land_in_that_order() {
     let session = Session::open();
     let space = session.space("Personal");
     let id = session
-        .call(|app| create_note(snippet(&space), app))
+        .call(|e| create_note(e, snippet(&space)))
         .unwrap()
         .note
         .id;
@@ -35,17 +35,19 @@ fn two_edits_sent_in_a_row_land_in_that_order() {
         ..NotePatch::default()
     };
 
-    let app = session.0.handle().clone();
-    let (first, second) = tauri::async_runtime::block_on(async {
-        tokio::join!(
-            update_note(id.clone(), titled("first"), app.clone()),
-            update_note(id.clone(), titled("second"), app.clone()),
-        )
-    });
+    let edit = |title: &'static str| {
+        let id = id.clone();
+        engine::db::run(Arc::clone(&session.engine), move |e| {
+            update_note(e, id, titled(title))
+        })
+    };
+    let (first, second) = session
+        .runtime
+        .block_on(async { tokio::join!(edit("first"), edit("second")) });
     first.unwrap();
     second.unwrap();
 
-    let read = session.call(|app| get_note(id.clone(), app)).unwrap();
+    let read = session.call(|e| get_note(e, id.clone())).unwrap();
     assert_eq!(read.note.title, "second");
 }
 
@@ -71,18 +73,18 @@ fn a_send_that_ends_after_another_library_was_opened_writes_nothing_into_it() {
     let session = Session::open();
     let (port, arrived, release) = held();
 
-    let sending = tauri::async_runtime::spawn(send_http_request(
+    let sending = session.runtime.spawn(send_http_request(
+        Arc::clone(&session.engine),
         request(&format!("http://127.0.0.1:{port}/")),
-        session.0.handle().clone(),
     ));
     arrived.recv().unwrap();
     // What `open_library` then `unlock_vault` leave: another library, another number.
-    *session.0.state::<Arc<Engine>>().db().lock().unwrap() = Some(open_in_memory().unwrap());
+    *session.engine.db().lock().unwrap() = Some(open_in_memory().unwrap());
     release.send(()).unwrap();
-    tauri::async_runtime::block_on(sending).unwrap().unwrap();
+    session.runtime.block_on(sending).unwrap().unwrap();
 
     assert_eq!(session.call(count_http_cookies).unwrap(), 0);
-    assert!(session.call(|app| http_history(0, app)).unwrap().is_empty());
+    assert!(session.call(|e| http_history(e, 0)).unwrap().is_empty());
 }
 
 #[test]
@@ -107,11 +109,11 @@ fn two_sends_at_once_keep_both_cookies_and_both_variables() {
         sent
     };
 
-    let app = session.0.handle().clone();
-    let (a, b) = tauri::async_runtime::block_on(async {
+    let engine = &session.engine;
+    let (a, b) = session.runtime.block_on(async {
         tokio::join!(
-            send_http_request(sent("a", "env.set('first', 'a');"), app.clone()),
-            send_http_request(sent("b", "env.set('second', 'b');"), app.clone()),
+            send_http_request(Arc::clone(engine), sent("a", "env.set('first', 'a');")),
+            send_http_request(Arc::clone(engine), sent("b", "env.set('second', 'b');")),
         )
     });
     a.unwrap();
@@ -139,4 +141,23 @@ fn the_library_is_never_locked_off_the_db_thread() {
     }));
 
     assert!(locked.is_err());
+}
+
+#[test]
+fn opening_another_library_cancels_the_send_under_way() {
+    let session = Session::open();
+    let (port, arrived, _release) = held();
+    let other = session
+        .call(|e| create_library(e, "Other".to_string()))
+        .unwrap();
+
+    let sending = session.runtime.spawn(send_http_request(
+        Arc::clone(&session.engine),
+        request(&format!("http://127.0.0.1:{port}/")),
+    ));
+    arrived.recv().unwrap();
+    session.call(|e| open_library(e, other.id)).unwrap();
+
+    let answer = session.runtime.block_on(sending).unwrap();
+    assert_eq!(answer.unwrap_err().code, ErrorCode::HttpCancelled);
 }

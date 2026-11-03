@@ -3,11 +3,12 @@
 //! them says where.
 
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+
 use std::time::Duration;
 
+use engine::EngineEvent;
 use engine::error::ErrorCode;
-use engine::http::console::{ConsoleEvent, ConsoleLine, HTTP_CONSOLE_EVENT};
+use engine::http::console::{ConsoleEvent, ConsoleLine};
 use engine::http::environments::{EnvironmentPatch, FilledBy, Variable, VariableKind};
 use engine::http::model::{
     ContainerSettings, Extraction, HttpItem, HttpItemKind, HttpMethod, RequestScripts,
@@ -19,27 +20,25 @@ use engine::http::{
     http_history_entry, http_settings, save_http_environment, save_http_settings,
     send_http_request,
 };
-use tauri::Listener;
 
 use super::Session;
 use super::http_send::{header_of, request, response, serve};
 
 /// The console's lines as they cross, for the session of the test.
-fn console(session: &Session) -> Arc<Mutex<Vec<ConsoleEvent>>> {
-    let heard = Arc::new(Mutex::new(Vec::new()));
-    let kept = Arc::clone(&heard);
-    session.0.listen_any(HTTP_CONSOLE_EVENT, move |event| {
-        if let Ok(event) = serde_json::from_str::<ConsoleEvent>(event.payload()) {
-            kept.lock().unwrap().push(event);
-        }
-    });
-    heard
+fn console(session: &Session) -> Vec<ConsoleEvent> {
+    session
+        .heard
+        .events()
+        .into_iter()
+        .filter_map(|event| match event {
+            EngineEvent::Console(event) => Some(event),
+            _ => None,
+        })
+        .collect()
 }
 
-fn logs(heard: &Arc<Mutex<Vec<ConsoleEvent>>>) -> Vec<String> {
+fn logs(heard: &[ConsoleEvent]) -> Vec<String> {
     heard
-        .lock()
-        .unwrap()
         .iter()
         .filter_map(|event| match &event.line {
             ConsoleLine::Log { text, .. } => Some(text.clone()),
@@ -64,7 +63,7 @@ fn scripts(before: &str, after: &str) -> RequestScripts {
 /// An environment holding `token`, a secret.
 fn environment(session: &Session, name: &str, protected: bool) -> String {
     let id = session
-        .call(|app| create_http_environment(name.to_string(), app))
+        .call(|e| create_http_environment(e, name.to_string()))
         .unwrap()
         .id;
     let patch = EnvironmentPatch {
@@ -78,7 +77,7 @@ fn environment(session: &Session, name: &str, protected: bool) -> String {
         ..EnvironmentPatch::default()
     };
     session
-        .call(|app| save_http_environment(id.clone(), patch, app))
+        .call(|e| save_http_environment(e, id.clone(), patch))
         .unwrap();
     id
 }
@@ -104,9 +103,7 @@ fn a_script_before_changes_what_leaves_and_what_the_scripts_write_is_kept() {
          console.log('token', env.get('token'));",
         "env.set('orderId', String(res.json().id));",
     );
-
-    let heard = console(&session);
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     let seen = seen.recv().unwrap();
     assert!(seen.head.starts_with("GET /orders "), "{}", seen.head);
@@ -114,10 +111,8 @@ fn a_script_before_changes_what_leaves_and_what_the_scripts_write_is_kept() {
     assert!(answer.scripts.failure.is_none());
     assert!(answer.scripts.wrote);
     // A secret in force is never shown in clear, not even in what a script logged.
-    assert_eq!(logs(&heard), ["token {{token}}"]);
-    let traffic: Vec<String> = heard
-        .lock()
-        .unwrap()
+    assert_eq!(logs(&console(&session)), ["token {{token}}"]);
+    let traffic: Vec<String> = console(&session)
         .iter()
         .filter_map(|event| match &event.line {
             ConsoleLine::Out { method, url, .. } => Some(format!("→ {method} {url}")),
@@ -132,13 +127,7 @@ fn a_script_before_changes_what_leaves_and_what_the_scripts_write_is_kept() {
             "← 200".to_string()
         ]
     );
-    assert!(
-        heard
-            .lock()
-            .unwrap()
-            .iter()
-            .all(|event| event.id == "tab-1")
-    );
+    assert!(console(&session).iter().all(|event| event.id == "tab-1"));
     let sets = session.call(http_environments).unwrap();
     let kept = sets
         .environments
@@ -156,7 +145,7 @@ fn a_script_before_changes_what_leaves_and_what_the_scripts_write_is_kept() {
 fn a_script_that_throws_before_the_send_keeps_the_request_in_and_says_whose_it_is() {
     let session = hosted();
     let api = session
-        .call(|app| create_http_collection("API".to_string(), app))
+        .call(|e| create_http_collection(e, "API".to_string()))
         .unwrap();
     let settings = ContainerSettings {
         scripts: scripts("const a = 1;\nthrow new Error('no token');", ""),
@@ -167,15 +156,13 @@ fn a_script_that_throws_before_the_send_keeps_the_request_in_and_says_whose_it_i
         id: api.id.clone(),
     };
     session
-        .call(|app| save_http_settings(item, settings, app))
+        .call(|e| save_http_settings(e, item, settings))
         .unwrap();
     let (port, seen) = serve(1, |_, _| ok());
     let mut sent = request(&format!("http://127.0.0.1:{port}/"));
     sent.collection_id = Some(api.id.clone());
 
-    let error = session
-        .call(|app| send_http_request(sent, app))
-        .unwrap_err();
+    let error = session.wait(|e| send_http_request(e, sent)).unwrap_err();
 
     assert_eq!(error.code, ErrorCode::HttpScript);
     assert_eq!(error.params["failure"], FailureKind::Error.to_string());
@@ -191,7 +178,7 @@ fn a_script_that_throws_before_the_send_keeps_the_request_in_and_says_whose_it_i
 fn a_script_after_the_answer_that_fails_leaves_the_answer_shown() {
     let session = hosted();
     let api = session
-        .call(|app| create_http_collection("API".to_string(), app))
+        .call(|e| create_http_collection(e, "API".to_string()))
         .unwrap();
     let (port, _seen) = serve(1, |_, _| ok());
     let mut sent = request(&format!("http://127.0.0.1:{port}/"));
@@ -201,7 +188,7 @@ fn a_script_after_the_answer_that_fails_leaves_the_answer_shown() {
         "pm.collectionVariables.set('lastId', res.json().id);\nres.json().missing.field;",
     );
 
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     assert_eq!(answer.status, 200);
     let failure = answer.scripts.failure.unwrap();
@@ -214,7 +201,7 @@ fn a_script_after_the_answer_that_fails_leaves_the_answer_shown() {
         kind: HttpItemKind::Collection,
         id: api.id,
     };
-    let held = session.call(|app| http_settings(item, app)).unwrap();
+    let held = session.call(|e| http_settings(e, item)).unwrap();
     assert_eq!(held.variables[0].name, "lastId");
     assert_eq!(held.variables[0].value, "7");
 }
@@ -229,7 +216,7 @@ fn a_protected_environment_refuses_what_the_script_made_a_change_unless_confirme
     sent.document.scripts = scripts("pm.request.method = 'post';", "");
 
     let error = session
-        .call(|app| send_http_request(sent.clone(), app))
+        .wait(|e| send_http_request(e, sent.clone()))
         .unwrap_err();
     assert_eq!(error.code, ErrorCode::HttpScriptProtected);
     assert_eq!(error.params["method"], HttpMethod::Post.to_string());
@@ -237,7 +224,7 @@ fn a_protected_environment_refuses_what_the_script_made_a_change_unless_confirme
     assert!(seen.recv_timeout(Duration::from_millis(300)).is_err());
 
     sent.confirmed = true;
-    session.call(|app| send_http_request(sent, app)).unwrap();
+    session.wait(|e| send_http_request(e, sent)).unwrap();
     assert!(seen.recv().unwrap().head.starts_with("POST / "));
 }
 
@@ -246,13 +233,11 @@ fn a_script_can_skip_its_request_or_name_a_method_that_does_not_exist() {
     let session = hosted();
     let mut sent = request("http://127.0.0.1:9/");
     sent.document.scripts = scripts("pm.execution.skipRequest();", "");
-    let skipped = session.call(|app| send_http_request(sent.clone(), app));
+    let skipped = session.wait(|e| send_http_request(e, sent.clone()));
     assert_eq!(skipped.unwrap_err().code, ErrorCode::HttpScriptSkipped);
 
     sent.document.scripts = scripts("pm.request.method = 'PURGE';", "");
-    let error = session
-        .call(|app| send_http_request(sent, app))
-        .unwrap_err();
+    let error = session.wait(|e| send_http_request(e, sent)).unwrap_err();
     assert_eq!(error.code, ErrorCode::HttpScriptMethod);
     assert_eq!(error.params["method"], "PURGE");
 }
@@ -264,7 +249,7 @@ fn with_no_environment_chosen_a_script_writes_the_globals() {
     let mut sent = request(&format!("http://127.0.0.1:{port}/"));
     sent.document.scripts = scripts("env.set('tenant', 'acme');", "");
 
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     assert!(answer.scripts.wrote);
     let sets = session.call(http_environments).unwrap();
@@ -277,7 +262,7 @@ fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
     let session = hosted();
     let staging = environment(&session, "Staging", false);
     let api = session
-        .call(|app| create_http_collection("API".to_string(), app))
+        .call(|e| create_http_collection(e, "API".to_string()))
         .unwrap();
     let settings = ContainerSettings {
         scripts: RequestScripts {
@@ -293,7 +278,7 @@ fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
         id: api.id.clone(),
     };
     session
-        .call(|app| save_http_settings(item, settings, app))
+        .call(|e| save_http_settings(e, item, settings))
         .unwrap();
     let (port, _seen) = serve(1, |_, _| ok());
     let mut sent = request(&format!("http://127.0.0.1:{port}/"));
@@ -307,7 +292,7 @@ fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
             .to_string(),
     };
 
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     let tests = &answer.scripts.tests;
     let names: Vec<(&str, bool)> = tests
@@ -341,9 +326,9 @@ fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
     assert_eq!(trace.line, Some(2));
 
     // Kept with the history entry.
-    let day = &session.call(|app| http_history(0, app)).unwrap()[0];
+    let day = &session.call(|e| http_history(e, 0)).unwrap()[0];
     let entry = session
-        .call(|app| http_history_entry(day.items[0].id.clone(), app))
+        .call(|e| http_history_entry(e, day.items[0].id.clone()))
         .unwrap();
     let kept = entry.record.response.unwrap().scripts.tests;
     assert_eq!(kept.len(), 4);
@@ -370,7 +355,7 @@ fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_fille
         ..EnvironmentPatch::default()
     };
     session
-        .call(|app| save_http_environment(staging.clone(), patch, app))
+        .call(|e| save_http_environment(e, staging.clone(), patch))
         .unwrap();
     let (port, _seen) = serve(1, |_, _| {
         response(
@@ -399,9 +384,7 @@ fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_fille
             secret: false,
         },
     ];
-
-    let heard = console(&session);
-    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    let answer = session.wait(|e| send_http_request(e, sent)).unwrap();
 
     let found: Vec<(&str, bool)> = answer
         .scripts
@@ -411,8 +394,8 @@ fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_fille
         .collect();
     assert_eq!(found, [("accessToken", true), ("refresh", false)]);
     // Made a secret by the rule, it is masked in what the script logged before it.
-    assert_eq!(logs(&heard), ["{{accessToken}}"]);
-    let missed = heard.lock().unwrap().iter().any(|event| {
+    assert_eq!(logs(&console(&session)), ["{{accessToken}}"]);
+    let missed = console(&session).iter().any(|event| {
         matches!(&event.line, ConsoleLine::Missed { path, variable } if path == "body.refresh_token" && variable == "refresh")
     });
     assert!(missed, "the path that led nowhere said in the console");

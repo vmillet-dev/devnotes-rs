@@ -3,11 +3,11 @@
 pub mod calc;
 pub mod checklist;
 pub mod convert;
-pub(crate) mod drawing;
+pub mod drawing;
 pub(crate) mod duplicate;
 pub mod kind;
 pub mod language;
-pub(crate) mod markdown;
+pub mod markdown;
 pub mod model;
 pub mod placeholder;
 pub mod priority;
@@ -19,10 +19,10 @@ pub mod view;
 use std::collections::BTreeMap;
 
 use chrono::Utc;
-use tauri::{AppHandle, Runtime};
 
+use crate::Engine;
 use crate::count::saturating_u32 as count;
-use crate::db::{Library, blocking, lock};
+use crate::db::{Library, lock};
 use crate::error::{AppError, StorageError};
 use crate::folders;
 use crate::spaces::model::SpaceDraft;
@@ -35,115 +35,76 @@ use trash::TrashedNote;
 use view::{NotesQuery, NotesView};
 
 /// No command returns the raw list: it would invite re-filtering on the front end.
-#[tauri::command]
-#[specta::specta]
-pub async fn query_notes<R: Runtime>(
-    query: NotesQuery,
-    app: AppHandle<R>,
-) -> Result<NotesView, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let (notes, facets) = store::fetch(&mut connection, &query)?;
+pub fn query_notes(engine: &Engine, query: NotesQuery) -> Result<NotesView, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let (notes, facets) = store::fetch(&mut connection, &query)?;
 
-        let mut decorations = store::decorations(&mut connection)?;
-        decorations.folders = folders::store::by_id(&mut connection, query.space_id.as_deref())?;
-        // The search and the sections read nothing more: every other command waits on this lock.
-        drop(connection);
+    let mut decorations = store::decorations(&mut connection)?;
+    decorations.folders = folders::store::by_id(&mut connection, query.space_id.as_deref())?;
+    // The search and the sections read nothing more: every other command waits on this lock.
+    drop(connection);
 
-        let mut view = view::build(notes, facets, &query);
-        decorations.apply(view.notes_mut());
-        for note in view.notes_mut() {
-            if !query.keeps_chip(note.folder_id.as_deref()) {
-                note.folder = None;
-            }
+    let mut view = view::build(notes, facets, &query);
+    decorations.apply(view.notes_mut());
+    for note in view.notes_mut() {
+        if !query.keeps_chip(note.folder_id.as_deref()) {
+            note.folder = None;
         }
+    }
 
-        Ok(view)
-    })
-    .await
+    Ok(view)
 }
 
 /// The whole note. A list sends previews ([`DisplayNote::truncated`]), so the editor and
 /// every copy of a long body read it here.
-#[tauri::command]
-#[specta::specta]
-pub async fn get_note<R: Runtime>(id: String, app: AppHandle<R>) -> Result<DisplayNote, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let note = store::get(&mut connection, &id)?;
+pub fn get_note(engine: &Engine, id: String) -> Result<DisplayNote, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let note = store::get(&mut connection, &id)?;
 
-        Ok(display(&mut connection, note)?)
-    })
-    .await
+    Ok(display(&mut connection, note)?)
 }
 
 /// A Dessin's small picture, for its card, which asks for it once it is drawn: a list sends
 /// none, so that a search opens no picture. `None` when there is none to show.
-#[tauri::command]
-#[specta::specta]
-pub async fn drawing_thumbnail<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<Option<String>, AppError> {
-    picture_of(app, id, pictures::Which::Thumbnail).await
+pub fn drawing_thumbnail(engine: &Engine, id: String) -> Result<Option<String>, AppError> {
+    picture_of(engine, &id, pictures::Which::Thumbnail)
 }
 
 /// A Dessin's large picture, for a Note that embeds it by its id.
-#[tauri::command]
-#[specta::specta]
-pub async fn drawing_picture<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<Option<String>, AppError> {
-    picture_of(app, id, pictures::Which::Picture).await
+pub fn drawing_picture(engine: &Engine, id: String) -> Result<Option<String>, AppError> {
+    picture_of(engine, &id, pictures::Which::Picture)
 }
 
 /// The drawings a Note can embed, by title: their titles alone are opened.
-#[tauri::command]
-#[specta::specta]
-pub async fn list_drawings<R: Runtime>(
-    app: AppHandle<R>,
-) -> Result<Vec<drawing::DrawingRef>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let (connection, vault) = connection.split();
-        Ok(pictures::drawings(connection, vault)?)
-    })
-    .await
+pub fn list_drawings(engine: &Engine) -> Result<Vec<drawing::DrawingRef>, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let (connection, vault) = connection.split();
+    Ok(pictures::drawings(connection, vault)?)
 }
 
-async fn picture_of<R: Runtime>(
-    app: AppHandle<R>,
-    id: String,
+fn picture_of(
+    engine: &Engine,
+    id: &str,
     which: pictures::Which,
 ) -> Result<Option<String>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let (connection, vault) = connection.split();
-        Ok(pictures::read(connection, vault, &id, which)?)
-    })
-    .await
+    let mut connection = lock(&engine.db)?;
+    let (connection, vault) = connection.split();
+    Ok(pictures::read(connection, vault, id, which)?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn create_note<R: Runtime>(
-    draft: NoteDraft,
-    app: AppHandle<R>,
-) -> Result<DisplayNote, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let note = store::create(&mut connection, draft, Utc::now())?;
+pub fn create_note(engine: &Engine, draft: NoteDraft) -> Result<DisplayNote, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let note = store::create(&mut connection, draft, Utc::now())?;
 
-        Ok(display(&mut connection, note)?)
-    })
-    .await
+    Ok(display(&mut connection, note)?)
 }
 
 /// What a paste into an empty Note is. Asked by the front end before it writes: typing keeps
 /// a Note prose, and only a paste of code turns it into a snippet with a language.
-#[tauri::command]
-#[specta::specta]
 #[allow(clippy::needless_pass_by_value)]
 pub fn detect_language(content: String) -> Language {
     language::from_content(&content)
@@ -151,16 +112,12 @@ pub fn detect_language(content: String) -> Language {
 
 /// A Note cut into slides, with the mind map of its headings: what « Présenter » shows. The
 /// draft is sent rather than the stored body, so what is presented is what is on screen.
-#[tauri::command]
-#[specta::specta]
 pub async fn present_note(markdown: String) -> Result<model::Presentation, AppError> {
     crate::tools::off_thread(move || markdown::present(&markdown)).await
 }
 
 /// A Calcul note's sheet, every line computed, as it is typed: no lock, and nothing stored.
 /// `today` is the local day of the window, as the notes' sections reckon it.
-#[tauri::command]
-#[specta::specta]
 pub async fn evaluate_calc(
     sheet: String,
     today: chrono::NaiveDate,
@@ -169,8 +126,6 @@ pub async fn evaluate_calc(
 }
 
 /// Where the fields of a text lie, for the code field to mark them: what a field is stays here.
-#[tauri::command]
-#[specta::specta]
 #[allow(clippy::needless_pass_by_value)]
 pub fn field_spans(content: String) -> Vec<placeholder::FieldSpan> {
     placeholder::spans(&content)
@@ -178,60 +133,42 @@ pub fn field_spans(content: String) -> Vec<placeholder::FieldSpan> {
 
 /// A copy to start another note from, attachments included and history left behind. The
 /// title is the front end's: its suffix is a translation.
-#[tauri::command]
-#[specta::specta]
-pub async fn duplicate_note<R: Runtime>(
-    id: String,
-    title: String,
-    app: AppHandle<R>,
-) -> Result<DisplayNote, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let note = duplicate::duplicate(&mut connection, &id, title, Utc::now())?;
+pub fn duplicate_note(engine: &Engine, id: String, title: String) -> Result<DisplayNote, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let note = duplicate::duplicate(&mut connection, &id, title, Utc::now())?;
 
-        Ok(display(&mut connection, note)?)
-    })
-    .await
+    Ok(display(&mut connection, note)?)
 }
 
 /// The first launch: the space, its folders and the notes in one transaction, since a space
 /// standing alone reads as "already seeded" for good. The strings stay on the front end, with
 /// the translations. Answers the space it made, which the front end opens on.
-#[tauri::command]
-#[specta::specta]
-pub async fn seed_samples<R: Runtime>(
+pub fn seed_samples(
+    engine: &Engine,
     space_name: String,
     folders: Vec<String>,
     notes: Vec<SampleNote>,
-    app: AppHandle<R>,
 ) -> Result<crate::spaces::model::Space, AppError> {
-    blocking(app, move |_, db| {
-        let name = SpaceDraft { name: space_name }.validated_name()?;
-        let folder_names = folders
-            .iter()
-            .map(|folder| crate::folders::model::validated_name(folder))
-            .collect::<Result<Vec<_>, _>>()?;
+    let db = &engine.db;
+    let name = SpaceDraft { name: space_name }.validated_name()?;
+    let folder_names = folders
+        .iter()
+        .map(|folder| crate::folders::model::validated_name(folder))
+        .collect::<Result<Vec<_>, _>>()?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::seed(
-            &mut connection,
-            &name,
-            &folder_names,
-            notes,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(store::seed(
+        &mut connection,
+        &name,
+        &folder_names,
+        notes,
+        Utc::now(),
+    )?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn update_note<R: Runtime>(
-    id: String,
-    patch: NotePatch,
-    app: AppHandle<R>,
-) -> Result<DisplayNote, AppError> {
+pub fn update_note(engine: &Engine, id: String, patch: NotePatch) -> Result<DisplayNote, AppError> {
     // Read before anything is locked: two PNGs, or the patch is refused.
     let drawn = patch
         .pictures
@@ -239,182 +176,130 @@ pub async fn update_note<R: Runtime>(
         .map(drawing::DrawingPictures::decoded)
         .transpose()?;
     // `Some(None)`: the pictures are taken away, the drawing having been emptied.
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let note = store::update_drawn(
-            &mut connection,
-            &id,
-            &patch,
-            drawn.as_ref().map(Option::as_ref),
-            Utc::now(),
-        )?;
+    let mut connection = lock(&engine.db)?;
+    let note = store::update_drawn(
+        &mut connection,
+        &id,
+        &patch,
+        drawn.as_ref().map(Option::as_ref),
+        Utc::now(),
+    )?;
 
-        Ok(display(&mut connection, note)?)
-    })
-    .await
+    Ok(display(&mut connection, note)?)
 }
 
 /// The note rewritten as `into`, with the body it had: its undo is that body written back.
-#[tauri::command]
-#[specta::specta]
-pub async fn convert_note<R: Runtime>(
+pub fn convert_note(
+    engine: &Engine,
     id: String,
     into: kind::NoteKind,
-    app: AppHandle<R>,
 ) -> Result<convert::NoteConversion, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let (note, previous) = store::convert(&mut connection, &id, into, Utc::now())?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let (note, previous) = store::convert(&mut connection, &id, into, Utc::now())?;
 
-        Ok(convert::NoteConversion {
-            note: display(&mut connection, note)?,
-            previous,
-        })
+    Ok(convert::NoteConversion {
+        note: display(&mut connection, note)?,
+        previous,
     })
-    .await
 }
 
 /// The bodies kept beside a note, newest first.
 ///
 /// Instants and sizes, never the bodies.
-#[tauri::command]
-#[specta::specta]
-pub async fn list_revisions<R: Runtime>(
-    id: String,
-    app: AppHandle<R>,
-) -> Result<Vec<Revision>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn list_revisions(engine: &Engine, id: String) -> Result<Vec<Revision>, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        let (connection, vault) = connection.split();
+    let (connection, vault) = connection.split();
 
-        Ok(store::revisions::list(connection, vault, &id)?)
-    })
-    .await
+    Ok(store::revisions::list(connection, vault, &id)?)
 }
 
 /// What going back to a kept body would change, line by line, against the current text.
-#[tauri::command]
-#[specta::specta]
-pub async fn revision_diff<R: Runtime>(
+pub fn revision_diff(
+    engine: &Engine,
     id: String,
     revision_id: String,
-    app: AppHandle<R>,
 ) -> Result<Vec<DiffLine>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let (connection, vault) = connection.split();
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let (connection, vault) = connection.split();
 
-        let Some((current, version)) =
-            store::revisions::compare(connection, vault, &id, &revision_id)?
-        else {
-            return Err(StorageError::RevisionNotFound(revision_id).into());
-        };
+    let Some((current, version)) = store::revisions::compare(connection, vault, &id, &revision_id)?
+    else {
+        return Err(StorageError::RevisionNotFound(revision_id).into());
+    };
 
-        Ok(revision::diff(&current, &version))
-    })
-    .await
+    Ok(revision::diff(&current, &version))
 }
 
 /// Goes back to a kept body, dropping it and every body kept after it from the history.
 ///
 /// Leaves `updated_at` alone: putting something back is not editing it.
-#[tauri::command]
-#[specta::specta]
-pub async fn restore_revision<R: Runtime>(
+pub fn restore_revision(
+    engine: &Engine,
     id: String,
     revision_id: String,
-    app: AppHandle<R>,
 ) -> Result<DisplayNote, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let note = store::restore_revision(&mut connection, &id, &revision_id)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let note = store::restore_revision(&mut connection, &id, &revision_id)?;
 
-        Ok(display(&mut connection, note)?)
-    })
-    .await
+    Ok(display(&mut connection, note)?)
 }
 
 /// Moves to the trash: the note comes back through [`restore_notes`] for
 /// [`trash::RETENTION`].
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_note<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn delete_note(engine: &Engine, id: String) -> Result<(), AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::trash::trash(&mut connection, &id, Utc::now())?)
-    })
-    .await
+    Ok(store::trash::trash(&mut connection, &id, Utc::now())?)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_notes<R: Runtime>(
-    ids: Vec<String>,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn delete_notes(engine: &Engine, ids: Vec<String>) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::trash::trash_many(
-            &mut connection,
-            &ids,
-            Utc::now(),
-        )?))
-    })
-    .await
+    Ok(count(store::trash::trash_many(
+        &mut connection,
+        &ids,
+        Utc::now(),
+    )?))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn restore_notes<R: Runtime>(
-    ids: Vec<String>,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn restore_notes(engine: &Engine, ids: Vec<String>) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::trash::restore_many(&mut connection, &ids)?))
-    })
-    .await
+    Ok(count(store::trash::restore_many(&mut connection, &ids)?))
 }
 
 /// Purges first: the trash must never show a note a restart would erase. `search` narrows it
 /// the way the canvas search does, folded; empty lists everything.
-#[tauri::command]
-#[specta::specta]
-pub async fn list_trash<R: Runtime>(
-    search: String,
-    app: AppHandle<R>,
-) -> Result<Vec<TrashedNote>, AppError> {
-    blocking(app, move |_, db| {
-        trash::purge_expired(db)?;
+pub fn list_trash(engine: &Engine, search: String) -> Result<Vec<TrashedNote>, AppError> {
+    let db = &engine.db;
+    trash::purge_expired(db)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(trash_matching(&mut connection, &search)?
-            .into_iter()
-            .map(|(note, deleted_at)| trash::trashed(note, deleted_at))
-            .collect())
-    })
-    .await
+    Ok(trash_matching(&mut connection, &search)?
+        .into_iter()
+        .map(|(note, deleted_at)| trash::trashed(note, deleted_at))
+        .collect())
 }
 
 /// What the trash lists for `search` back where it was: the way out of a mistaken bulk deletion.
-#[tauri::command]
-#[specta::specta]
-pub async fn restore_trash<R: Runtime>(search: String, app: AppHandle<R>) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let ids: Vec<String> = trash_matching(&mut connection, &search)?
-            .into_iter()
-            .map(|(note, _)| note.id)
-            .collect();
+pub fn restore_trash(engine: &Engine, search: String) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let ids: Vec<String> = trash_matching(&mut connection, &search)?
+        .into_iter()
+        .map(|(note, _)| note.id)
+        .collect();
 
-        Ok(count(store::trash::restore_many(&mut connection, &ids)?))
-    })
-    .await
+    Ok(count(store::trash::restore_many(&mut connection, &ids)?))
 }
 
 fn trash_matching(
@@ -429,330 +314,239 @@ fn trash_matching(
         .collect())
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn purge_notes<R: Runtime>(ids: Vec<String>, app: AppHandle<R>) -> Result<u32, AppError> {
-    blocking(app, move |_, db| Ok(count(trash::purge(db, ids)?))).await
+pub fn purge_notes(engine: &Engine, ids: Vec<String>) -> Result<u32, AppError> {
+    let db = &engine.db;
+    Ok(count(trash::purge(db, ids)?))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn empty_trash<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let ids = {
-            let mut connection = lock(db)?;
-            store::trash::trashed_ids(&mut connection)?
-        };
+pub fn empty_trash(engine: &Engine) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let ids = {
+        let mut connection = lock(db)?;
+        store::trash::trashed_ids(&mut connection)?
+    };
 
-        Ok(count(trash::purge(db, ids)?))
-    })
-    .await
+    Ok(count(trash::purge(db, ids)?))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn move_notes<R: Runtime>(
+pub fn move_notes(
+    engine: &Engine,
     ids: Vec<String>,
     space_id: String,
-    app: AppHandle<R>,
 ) -> Result<Vec<model::NotePlacement>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::move_many(
-            &mut connection,
-            &ids,
-            &space_id,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(store::move_many(
+        &mut connection,
+        &ids,
+        &space_id,
+        Utc::now(),
+    )?)
 }
 
 /// The undo of [`move_notes`]: each note goes back to the space it left.
-#[tauri::command]
-#[specta::specta]
-pub async fn move_notes_back<R: Runtime>(
+pub fn move_notes_back(
+    engine: &Engine,
     placements: Vec<model::NotePlacement>,
-    app: AppHandle<R>,
 ) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::restore_placements(
-            &mut connection,
-            &placements,
-        )?))
-    })
-    .await
+    Ok(count(store::restore_placements(
+        &mut connection,
+        &placements,
+    )?))
 }
 
 /// Normalized here as everywhere else, or a typed `#urgent` would not join `urgent`.
-#[tauri::command]
-#[specta::specta]
-pub async fn tag_notes<R: Runtime>(
+pub fn tag_notes(
+    engine: &Engine,
     ids: Vec<String>,
     tags: Vec<String>,
-    app: AppHandle<R>,
 ) -> Result<Vec<model::NoteTag>, AppError> {
-    blocking(app, move |_, db| {
-        let normalized = model::normalize_tags(&tags);
+    let db = &engine.db;
+    let normalized = model::normalize_tags(&tags);
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::tag_many(
-            &mut connection,
-            &ids,
-            &normalized,
-            Utc::now(),
-        )?)
-    })
-    .await
+    Ok(store::tag_many(
+        &mut connection,
+        &ids,
+        &normalized,
+        Utc::now(),
+    )?)
 }
 
 /// The undo of [`tag_notes`]: exactly the pairs it added, and nothing wider.
-#[tauri::command]
-#[specta::specta]
-pub async fn untag_notes<R: Runtime>(
-    pairs: Vec<model::NoteTag>,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn untag_notes(engine: &Engine, pairs: Vec<model::NoteTag>) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::untag_many(&mut connection, &pairs)?))
-    })
-    .await
+    Ok(count(store::untag_many(&mut connection, &pairs)?))
 }
 
 /// Answers the pairs it took off: normalized like every tag, so `#Urgent` finds `urgent`.
-#[tauri::command]
-#[specta::specta]
-pub async fn remove_tag<R: Runtime>(
+pub fn remove_tag(
+    engine: &Engine,
     ids: Vec<String>,
     tag: String,
-    app: AppHandle<R>,
 ) -> Result<Vec<model::NoteTag>, AppError> {
-    blocking(app, move |_, db| {
-        let Some(tag) = model::normalize_tags(&[tag]).into_iter().next() else {
-            return Ok(Vec::new());
-        };
+    let db = &engine.db;
+    let Some(tag) = model::normalize_tags(&[tag]).into_iter().next() else {
+        return Ok(Vec::new());
+    };
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(store::remove_tag(&mut connection, &ids, &tag, Utc::now())?)
-    })
-    .await
+    Ok(store::remove_tag(&mut connection, &ids, &tag, Utc::now())?)
 }
 
 /// The undo of [`remove_tag`]: exactly the pairs it took off.
-#[tauri::command]
-#[specta::specta]
-pub async fn restore_tags<R: Runtime>(
-    pairs: Vec<model::NoteTag>,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn restore_tags(engine: &Engine, pairs: Vec<model::NoteTag>) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::restore_tags(&mut connection, &pairs)?))
-    })
-    .await
+    Ok(count(store::restore_tags(&mut connection, &pairs)?))
 }
 
 /// Answers the notes whose pin changed; undone by the same call, the other way, over those.
-#[tauri::command]
-#[specta::specta]
-pub async fn set_pinned<R: Runtime>(
+pub fn set_pinned(
+    engine: &Engine,
     ids: Vec<String>,
     pinned: bool,
-    app: AppHandle<R>,
 ) -> Result<Vec<String>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::set_pinned_many(&mut connection, &ids, pinned)?)
-    })
-    .await
+    Ok(store::set_pinned_many(&mut connection, &ids, pinned)?)
 }
 
 /// Answers each note whose priority moved, with the one it had; `updated_at` stays.
-#[tauri::command]
-#[specta::specta]
-pub async fn set_priority<R: Runtime>(
+pub fn set_priority(
+    engine: &Engine,
     ids: Vec<String>,
     priority: Priority,
-    app: AppHandle<R>,
 ) -> Result<Vec<model::NotePriority>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::set_priority_many(&mut connection, &ids, priority)?)
-    })
-    .await
+    Ok(store::set_priority_many(&mut connection, &ids, priority)?)
 }
 
 /// The undo of [`set_priority`]: each note gets back the priority it had.
-#[tauri::command]
-#[specta::specta]
-pub async fn restore_priorities<R: Runtime>(
+pub fn restore_priorities(
+    engine: &Engine,
     previous: Vec<model::NotePriority>,
-    app: AppHandle<R>,
 ) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::restore_priorities(
-            &mut connection,
-            &previous,
-        )?))
-    })
-    .await
+    Ok(count(store::restore_priorities(
+        &mut connection,
+        &previous,
+    )?))
 }
 
 /// What a corpus-wide tag action is about to touch, asked before it runs.
-#[tauri::command]
-#[specta::specta]
-pub async fn count_notes_tagged<R: Runtime>(
-    tags: Vec<String>,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let normalized = model::normalize_tags(&tags);
+pub fn count_notes_tagged(engine: &Engine, tags: Vec<String>) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let normalized = model::normalize_tags(&tags);
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::count_notes_tagged(
-            &mut connection,
-            &normalized,
-        )?))
-    })
-    .await
+    Ok(count(store::count_notes_tagged(
+        &mut connection,
+        &normalized,
+    )?))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn list_tags<R: Runtime>(app: AppHandle<R>) -> Result<Vec<TagUsage>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn list_tags(engine: &Engine) -> Result<Vec<TagUsage>, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::tag_usage(&mut connection)?
-            .into_iter()
-            .map(|(tag, notes)| TagUsage {
-                tag,
-                note_count: count(notes),
-            })
-            .collect())
-    })
-    .await
+    Ok(store::tag_usage(&mut connection)?
+        .into_iter()
+        .map(|(tag, notes)| TagUsage {
+            tag,
+            note_count: count(notes),
+        })
+        .collect())
 }
 
 /// Renames one tag or merges several: renaming onto an existing tag is a merge anyway,
 /// since a note cannot carry one twice.
-#[tauri::command]
-#[specta::specta]
-pub async fn rename_tags<R: Runtime>(
-    tags: Vec<String>,
-    into: String,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let (sources, target) = model::retagging(&tags, &into)?;
+pub fn rename_tags(engine: &Engine, tags: Vec<String>, into: String) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let (sources, target) = model::retagging(&tags, &into)?;
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::retag(&mut connection, &sources, &target)?))
-    })
-    .await
+    Ok(count(store::retag(&mut connection, &sources, &target)?))
 }
 
 /// A list rather than one tag at a time: one round trip per tag is one lock per tag.
-#[tauri::command]
-#[specta::specta]
-pub async fn delete_tags<R: Runtime>(
-    tags: Vec<String>,
-    app: AppHandle<R>,
-) -> Result<u32, AppError> {
-    blocking(app, move |_, db| {
-        let tags = model::normalize_tags(&tags);
+pub fn delete_tags(engine: &Engine, tags: Vec<String>) -> Result<u32, AppError> {
+    let db = &engine.db;
+    let tags = model::normalize_tags(&tags);
 
-        let mut connection = lock(db)?;
+    let mut connection = lock(db)?;
 
-        Ok(count(store::drop_tags(&mut connection, &tags)?))
-    })
-    .await
+    Ok(count(store::drop_tags(&mut connection, &tags)?))
 }
 
 /// A command of its own rather than a `NotePatch` field, so `updated_at` stays put: filling a
 /// field is not editing the note.
-#[tauri::command]
-#[specta::specta]
-pub async fn set_placeholder_values<R: Runtime>(
+pub fn set_placeholder_values(
+    engine: &Engine,
     id: String,
     values: BTreeMap<String, String>,
-    app: AppHandle<R>,
 ) -> Result<DisplayNote, AppError> {
-    blocking(app, move |_, db| {
-        let retained = placeholder::normalize_values(values);
+    let db = &engine.db;
+    let retained = placeholder::normalize_values(values);
 
-        let mut connection = lock(db)?;
-        let note = store::set_placeholder_values(&mut connection, &id, &retained)?;
+    let mut connection = lock(db)?;
+    let note = store::set_placeholder_values(&mut connection, &id, &retained)?;
 
-        Ok(display(&mut connection, note)?)
-    })
-    .await
+    Ok(display(&mut connection, note)?)
 }
 
 /// No note identifier: the palette fills an unsaved draft as readily as a saved note.
 /// The database is read only for the global variables.
-#[tauri::command]
-#[specta::specta]
-pub async fn fill_placeholders<R: Runtime>(
+pub fn fill_placeholders(
+    engine: &Engine,
     content: String,
     values: BTreeMap<String, String>,
-    app: AppHandle<R>,
 ) -> Result<String, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
-        let globals = store::global_placeholder_values(&mut connection)?;
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+    let globals = store::global_placeholder_values(&mut connection)?;
 
-        Ok(placeholder::fill(
-            &content,
-            &placeholder::resolve(&globals, &values),
-        ))
-    })
-    .await
+    Ok(placeholder::fill(
+        &content,
+        &placeholder::resolve(&globals, &values),
+    ))
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn list_global_placeholders<R: Runtime>(
-    app: AppHandle<R>,
-) -> Result<BTreeMap<String, String>, AppError> {
-    blocking(app, move |_, db| {
-        let mut connection = lock(db)?;
+pub fn list_global_placeholders(engine: &Engine) -> Result<BTreeMap<String, String>, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
 
-        Ok(store::global_placeholder_values(&mut connection)?)
-    })
-    .await
+    Ok(store::global_placeholder_values(&mut connection)?)
 }
 
 /// Stores the whole set: what is not sent is what the user removed.
-#[tauri::command]
-#[specta::specta]
-pub async fn set_global_placeholders<R: Runtime>(
+pub fn set_global_placeholders(
+    engine: &Engine,
     values: BTreeMap<String, String>,
-    app: AppHandle<R>,
 ) -> Result<BTreeMap<String, String>, AppError> {
-    blocking(app, move |_, db| {
-        let retained = placeholder::normalize_values(values);
+    let db = &engine.db;
+    let retained = placeholder::normalize_values(values);
 
-        let mut connection = lock(db)?;
-        store::replace_global_placeholder_values(&mut connection, &retained)?;
+    let mut connection = lock(db)?;
+    store::replace_global_placeholder_values(&mut connection, &retained)?;
 
-        Ok(retained)
-    })
-    .await
+    Ok(retained)
 }
 
 /// What only the database knows, each a query of its own: hence not in [`model::decorate`].

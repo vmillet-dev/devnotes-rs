@@ -421,6 +421,14 @@ impl Runs {
         Some(at.clone())
     }
 
+    pub fn cancel_all(&self) {
+        if let Ok(mut running) = self.running.lock() {
+            running
+                .values_mut()
+                .for_each(|(cancelled, _)| *cancelled = true);
+        }
+    }
+
     pub fn finish(&self, id: &str) {
         if let Ok(mut running) = self.running.lock() {
             running.remove(id);

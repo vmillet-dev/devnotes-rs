@@ -24,7 +24,7 @@ fn variable(name: &str, value: &str, kind: VariableKind) -> Variable {
 fn environments_are_made_written_copied_and_deleted_through_their_commands() {
     let session = Session::open();
     let local = session
-        .call(|app| create_http_environment("  Local  ".to_string(), app))
+        .call(|e| create_http_environment(e, "  Local  ".to_string()))
         .unwrap();
     assert_eq!(local.name, "Local");
 
@@ -35,7 +35,7 @@ fn environments_are_made_written_copied_and_deleted_through_their_commands() {
         variables: Some(vec![variable("token", "t0k3n", VariableKind::Secret)]),
     };
     let saved = session
-        .call(|app| save_http_environment(local.id.clone(), patch, app))
+        .call(|e| save_http_environment(e, local.id.clone(), patch))
         .unwrap();
     assert_eq!(
         (saved.name.as_str(), saved.colour, saved.protected),
@@ -44,17 +44,17 @@ fn environments_are_made_written_copied_and_deleted_through_their_commands() {
 
     let globals = vec![variable("tenant", "acme", VariableKind::Text)];
     let kept = session
-        .call(|app| save_http_globals(globals.clone(), app))
+        .call(|e| save_http_globals(e, globals.clone()))
         .unwrap();
     assert_eq!(kept, globals);
 
     let copy = session
-        .call(|app| duplicate_http_environment(local.id.clone(), "Dev (copie)".to_string(), app))
+        .call(|e| duplicate_http_environment(e, local.id.clone(), "Dev (copie)".to_string()))
         .unwrap();
     assert_eq!(copy.variables, saved.variables);
 
     session
-        .call(|app| delete_http_environment(local.id.clone(), app))
+        .call(|e| delete_http_environment(e, local.id.clone()))
         .unwrap();
     let all = session.call(http_environments).unwrap();
     assert_eq!(all.globals, globals);
@@ -71,14 +71,14 @@ fn environments_are_made_written_copied_and_deleted_through_their_commands() {
 fn a_blank_name_a_name_held_twice_and_a_set_gone_each_answer_their_code() {
     let session = Session::open();
     assert_eq!(
-        code(session.call(|app| create_http_environment("   ".to_string(), app))),
+        code(session.call(|e| create_http_environment(e, "   ".to_string()))),
         ErrorCode::InvalidInput
     );
     let local = session
-        .call(|app| create_http_environment("Local".to_string(), app))
+        .call(|e| create_http_environment(e, "Local".to_string()))
         .unwrap();
     assert_eq!(
-        code(session.call(|app| create_http_environment("LOCAL".to_string(), app))),
+        code(session.call(|e| create_http_environment(e, "LOCAL".to_string()))),
         ErrorCode::DuplicateEnvironmentName
     );
     let renaming = EnvironmentPatch {
@@ -86,21 +86,23 @@ fn a_blank_name_a_name_held_twice_and_a_set_gone_each_answer_their_code() {
         ..EnvironmentPatch::default()
     };
     assert_eq!(
-        code(session.call(|app| save_http_environment(local.id.clone(), renaming, app))),
+        code(session.call(|e| save_http_environment(e, local.id.clone(), renaming))),
         ErrorCode::InvalidInput
     );
     assert_eq!(
-        code(session.call(|app| duplicate_http_environment(local.id.clone(), String::new(), app))),
+        code(session.call(|e| duplicate_http_environment(e, local.id.clone(), String::new()))),
         ErrorCode::InvalidInput
     );
     assert_eq!(
-        code(session.call(|app| delete_http_environment("gone".to_string(), app))),
+        code(session.call(|e| delete_http_environment(e, "gone".to_string()))),
         ErrorCode::HttpEnvironmentNotFound
     );
     assert_eq!(
-        code(session.call(|app| {
-            save_http_environment("gone".to_string(), EnvironmentPatch::default(), app)
-        })),
+        code(session.call(|e| save_http_environment(
+            e,
+            "gone".to_string(),
+            EnvironmentPatch::default()
+        ))),
         ErrorCode::HttpEnvironmentNotFound
     );
 }
@@ -109,7 +111,7 @@ fn a_blank_name_a_name_held_twice_and_a_set_gone_each_answer_their_code() {
 fn the_variables_are_judged_row_by_row() {
     let session = Session::open();
     let faults = session
-        .call(|_| {
+        .wait(|_| {
             check_http_variables(vec![
                 variable("baseUrl", "https://exemple.fr", VariableKind::Text),
                 variable("base url", "", VariableKind::Text),

@@ -9,7 +9,7 @@ DevNotes — desktop notes app for developers. **Angular 22** (standalone, signa
 Principles:
 
 - **Data processing belongs to Rust** (`crates/engine/src/notes/`): `query_notes` returns a ready-to-render `NotesView`. Front-end exceptions: relative-time formatting, ISO↔`Date`, syntax highlighting, Prettier, searching the tools catalogue/references, pure UI.
-- **Rust is feature-first**: `<feature>.rs` = `#[tauri::command]`s (validate, lock, delegate, translate error); `<feature>/model.rs` = types and rules (no Diesel, no Tauri); `<feature>/store.rs` = SQL (no rules). Root keeps `error`, `db`, `desktop`, and library plumbing (`vault`, `libraries`, `layout`, `backup`, `recovery`). → "Feature-first, not layer-first".
+- **Rust is feature-first**: `crates/engine/src/<feature>.rs` = service functions (validate, lock, delegate, translate error), each wrapped in one line by `src-tauri/src/commands/<feature>.rs`; `<feature>/model.rs` = types and rules (no Diesel, no Tauri); `<feature>/store.rs` = SQL (no rules). Root keeps `error`, `db`, `desktop`, and library plumbing (`vault`, `libraries`, `layout`, `backup`, `recovery`). → "Feature-first, not layer-first".
 - **The front-end tree is the shape of the screen**: `notes/{sidebar,header,canvas,overlays,ui}`, `tools/`, `http/`, `titlebar/`, `banners/` hold components only; everything without a place on screen is in `core/` (`model`, `data`, `state`, `ipc`, `utils`, `services/<subject>`); `shared/` crosses areas and injects nothing (except `DialogComponent`). ⚠️ `core/ipc/` stays at the root of `core/` (`bindings.ts` is written there). → "Where a file goes".
 - **Clean code, KISS — the code is maintained by a human.** Concise but plainly readable: the simplest design that works, small functions with one job, names that say what things are, early returns over nesting, no abstraction (trait, generic, macro, layer) before its second real use, no cleverness to save a few lines; delete rather than add when both fix it. Rust idiom: `rust-guidelines`, where the project's rules win.
 - Language: English for code, comments and UI strings in code. **Comments record decisions, not narration**: only a load-bearing ordering, platform trap, non-obvious invariant, or a rejected approach; one or two lines, ~10 % of a file at most; no issue numbers; ⚠️ only for traps that cost a day.
@@ -39,9 +39,9 @@ Principles:
 
 ### Rust back-end
 
-- ⚠️ **A command taking the lock is `async` and runs its body in `db::blocking`**, on the engine's one db thread, in order (`lock` asserts it in debug); a send writes only into the library it read from (`Library::number`); with an `AppHandle`, generic over `R: Runtime`, registered as `name::<tauri::Wry>`. One lock serialises everything. ⚠️ HTTP sends and WebSockets never hold it; `open_library` closes every socket. → "Persistence (Rust)", "Who holds the lock", "Sending a request, and its answer", "A WebSocket".
+- ⚠️ **A data function takes `&Engine` and runs on the engine's one db thread** (the wrapper calls `run(&engine, |e| …)`), in order (`lock` asserts it in debug); a network one takes `Arc<Engine>` and reaches the queue through `db::run`; a send writes only into the library it read from (`Library::number`). Nothing in `crates/engine` names Tauri. One lock serialises everything. ⚠️ HTTP sends and WebSockets never hold it; `open_library` and a restore close every socket and cancel sends and runs. → "Persistence (Rust)", "Who holds the lock", "Sending a request, and its answer", "A WebSocket".
 - HTTP history masks before sealing; the cookie jar is sealed whole and matched in Rust. → "The history of what was sent", "How a request travels, and the cookie jar".
-- A module holding commands is `pub`, the rest `pub(crate)`.
+- A module holding service functions or wrappers is `pub`, the rest `pub(crate)`.
 - **Migrations are append-only** (`crates/engine/migrations/`); `db/schema.rs` is hand-written, so add a column in both. `PRAGMA foreign_keys` is per connection (`db::configure`); `db::iso8601` always writes milliseconds. → "Persistence (Rust)", "How far back an upgrade reaches".
 - Every read filters `deleted_at IS NULL`; trash retention 30 days. `updated_at` moves only when the user edited the note (deleting a space, retag, restore, undo, field fill, priority never touch it). → "The trash, and undoing a deletion".
 - **Search is Rust** (`view::fold` lowercases and strips accents). **Tags**: `notes::model::normalize_tags` only; renaming onto an existing tag merges. **Batches** answer what they changed and undo exactly that. → "Multiple selection and bulk actions".
@@ -60,7 +60,7 @@ Principles:
 
 ### IPC boundary
 
-- **Generated**: `#[tauri::command]` + `#[specta::specta]`, add to `collect_commands!` in `lib.rs`, run `npm run bindings`; `u32`, not `usize`/`i64`. Only `core/data/` and `core/ipc/` call generated commands; repositories `unwrap()` the `Result` into `IpcError`. → "IPC boundary".
+- **Generated**: the wrapper carries `#[tauri::command]` + `#[specta::specta]` and the function's doc comment, add it to `collect_commands!` in `src-tauri/src/lib.rs`, run `npm run bindings`; `u32`, not `usize`/`i64`. Only `core/data/` and `core/ipc/` call generated commands; repositories `unwrap()` the `Result` into `IpcError`. → "IPC boundary".
 - **Errors are codes**: a new `ErrorCode` needs `CODE_KEYS` (both locales) and `IPC_ERROR_CODES`. → "Error contract".
 - ⚠️ `rename_all` on an enum does not rename struct-variant fields: add `rename_all_fields = "camelCase"`.
 - `NotePatch`: a missing field is untouched (`#[specta(optional)]`), `null` overwrites. Conversion only where the wire shape differs (`note.mapper.ts`). → "Serialisation contract".

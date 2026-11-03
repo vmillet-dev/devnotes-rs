@@ -22,6 +22,14 @@ pub(crate) fn on_db_thread() -> bool {
     ON_DB_THREAD.get()
 }
 
+/// Runs `job` here as if this were the db thread: `db::run_here`, for the integration tests.
+pub(crate) fn as_db_thread<T>(job: impl FnOnce() -> T) -> T {
+    let was = ON_DB_THREAD.replace(true);
+    let answer = job();
+    ON_DB_THREAD.set(was);
+    answer
+}
+
 pub(crate) struct DbQueue(mpsc::Sender<Job>);
 
 impl DbQueue {

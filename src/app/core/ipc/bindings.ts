@@ -167,7 +167,7 @@ export const commands = {
 	listGlobalPlaceholders: () => typedError<{ [key in string]: string }, AppError>(__TAURI_INVOKE("list_global_placeholders")),
 	/**  Stores the whole set: what is not sent is what the user removed. */
 	setGlobalPlaceholders: (values: { [key in string]: string }) => typedError<{ [key in string]: string }, AppError>(__TAURI_INVOKE("set_global_placeholders", { values })),
-	/**  `None` = every space, like [`crate::notes::view::NotesQuery::space_id`]. */
+	/**  `None` = every space, like [`engine::notes::view::NotesQuery::space_id`]. */
 	listFolders: (spaceId: string | null) => typedError<Folder[], AppError>(__TAURI_INVOKE("list_folders", { spaceId })),
 	httpTree: () => typedError<HttpTree, AppError>(__TAURI_INVOKE("http_tree")),
 	/**  The palette's requests, ranked here: the URL is read from each sealed document. */
@@ -335,7 +335,7 @@ export const commands = {
 	renameFolder: (id: string, name: string) => typedError<Folder, AppError>(__TAURI_INVOKE("rename_folder", { id, name })),
 	recolourFolder: (id: string, colour: FolderColour) => typedError<Folder, AppError>(__TAURI_INVOKE("recolour_folder", { id, colour })),
 	/**
-	 *  No refuge, unlike [`crate::spaces::delete_space`]: what it held goes to its parent, or
+	 *  No refuge, unlike [`engine::spaces::delete_space`]: what it held goes to its parent, or
 	 *  loose at the top of the space.
 	 */
 	deleteFolder: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_folder", { id })),
@@ -347,7 +347,7 @@ export const commands = {
 	/**  The undo of [`move_folder`]; `false` when its old parent is gone or no longer a place for it. */
 	moveFolderBack: (was: FolderMove) => typedError<boolean, AppError>(__TAURI_INVOKE("move_folder_back", { was })),
 	/**
-	 *  A batch, like [`crate::notes::move_notes`]: the selection bar files a whole selection,
+	 *  A batch, like [`engine::notes::move_notes`]: the selection bar files a whole selection,
 	 *  and a drop on the board is a batch of one. `folderId` absent unfiles.
 	 */
 	fileNotes: (ids: string[], folderId: string | null) => typedError<NoteFiling[], AppError>(__TAURI_INVOKE("file_notes", { ids, folderId })),
@@ -373,10 +373,6 @@ export const commands = {
 	/**
 	 *  The call starts from Rust: opening a path from the front end would mean allowing
 	 *  `opener:allow-open-path` over a whole directory.
-	 * 
-	 *  ⚠️ The one place a decrypted copy reaches the disk: the program the desktop picks reads a
-	 *  path. It goes under the profile's `open/` ([`sealed::plaintext_directory`]) and is swept
-	 *  on exit and at the next launch, since that program may still hold it on close.
 	 */
 	openAttachment: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("open_attachment", { id })),
 	/**  The path comes from a native picker; the write stays here. */
@@ -441,7 +437,7 @@ export const commands = {
 	restoreBackup: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("restore_backup", { id })),
 	/**  Where the library the last restore replaced went, once: the page it reloaded says it. */
 	takeRestoredAside: () => __TAURI_INVOKE<string | null>("take_restored_aside"),
-	/**  The libraries, and which one is open. */
+	/**  The libraries, and which one is open. Off the queue: a short read of a file. */
 	listLibraries: () => typedError<Registry, AppError>(__TAURI_INVOKE("list_libraries")),
 	/**  Adds one, and leaves it closed: opening it is a second, deliberate gesture. */
 	createLibrary: (name: string) => typedError<LibraryEntry, AppError>(__TAURI_INVOKE("create_library", { name })),

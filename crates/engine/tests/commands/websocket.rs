@@ -6,11 +6,11 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use engine::EngineEvent;
 use engine::error::ErrorCode;
 use engine::http::model::RequestDocument;
-use engine::http::websocket::{SocketEvent, WEBSOCKET_EVENT, WebsocketDocument, WebsocketEvent};
+use engine::http::websocket::{SocketEvent, WebsocketDocument};
 use engine::http::{WebsocketRequest, close_websocket, connect_websocket, send_websocket};
-use tauri::Listener;
 use tokio_tungstenite::tungstenite::{self, Message};
 
 use super::{Session, code};
@@ -83,15 +83,34 @@ fn request(url: &str) -> WebsocketRequest {
 #[test]
 fn a_socket_opens_echoes_and_closes_each_step_an_event() {
     let session = Session::open();
-    let (heard, events) = mpsc::channel::<WebsocketEvent>();
-    session.0.handle().listen(WEBSOCKET_EVENT, move |event| {
-        let _ = heard.send(serde_json::from_str(event.payload()).unwrap());
-    });
-    let next = || events.recv_timeout(Duration::from_secs(5)).unwrap().event;
+    let seen = std::cell::Cell::new(0);
+    let next = || {
+        let waited = std::time::Instant::now();
+        loop {
+            let said: Vec<SocketEvent> = session
+                .heard
+                .events()
+                .into_iter()
+                .filter_map(|event| match event {
+                    EngineEvent::Socket(event) => Some(event.event),
+                    _ => None,
+                })
+                .collect();
+            if let Some(event) = said.get(seen.get()) {
+                seen.set(seen.get() + 1);
+                return event.clone();
+            }
+            assert!(
+                waited.elapsed() < Duration::from_secs(5),
+                "no socket event came"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+    };
     let (port, agent) = echo();
 
     session
-        .call(|app| connect_websocket(request(&format!("ws://127.0.0.1:{port}/")), app))
+        .wait(|e| connect_websocket(e, request(&format!("ws://127.0.0.1:{port}/"))))
         .unwrap();
     // The handshake is composed like a request: it names the application too.
     assert_eq!(
@@ -111,7 +130,7 @@ fn a_socket_opens_echoes_and_closes_each_step_an_event() {
 
     assert!(
         session
-            .call(|app| send_websocket("socket-1".to_string(), "hello".to_string(), app))
+            .call(|e| send_websocket(e, "socket-1".to_string(), "hello".to_string()))
             .unwrap()
     );
     assert_eq!(
@@ -133,13 +152,13 @@ fn a_socket_opens_echoes_and_closes_each_step_an_event() {
 
     assert!(
         session
-            .call(|app| close_websocket("socket-1".to_string(), app))
+            .call(|e| close_websocket(e, "socket-1".to_string()))
             .unwrap()
     );
     assert!(matches!(next(), SocketEvent::Closed { .. }));
     assert!(
         !session
-            .call(|app| send_websocket("socket-1".to_string(), "late".to_string(), app))
+            .call(|e| send_websocket(e, "socket-1".to_string(), "late".to_string()))
             .unwrap()
     );
 }
@@ -151,12 +170,12 @@ fn a_socket_names_a_host_that_does_not_resolve_and_refuses_a_scheme_that_is_not_
     let session = Session::open();
     // `.invalid` is reserved never to resolve.
     assert_eq!(
-        code(session.call(|app| connect_websocket(request("ws://devnotes.invalid/"), app))),
+        code(session.wait(|e| connect_websocket(e, request("ws://devnotes.invalid/")))),
         ErrorCode::HttpUnresolved
     );
 
     let refused = session
-        .call(|app| connect_websocket(request("https://echo.exemple.fr/live?x=1"), app))
+        .wait(|e| connect_websocket(e, request("https://echo.exemple.fr/live?x=1")))
         .unwrap_err();
     assert_eq!(refused.code, ErrorCode::HttpWebsocketScheme);
     assert_eq!(
@@ -164,7 +183,7 @@ fn a_socket_names_a_host_that_does_not_resolve_and_refuses_a_scheme_that_is_not_
         Some("wss://echo.exemple.fr/live?x=1")
     );
     let refused = session
-        .call(|app| connect_websocket(request("ftp://exemple.fr"), app))
+        .wait(|e| connect_websocket(e, request("ftp://exemple.fr")))
         .unwrap_err();
     assert_eq!(refused.code, ErrorCode::HttpWebsocketScheme);
     assert_eq!(refused.params.get("twin"), None);
@@ -177,9 +196,7 @@ fn a_closed_port_and_a_refused_handshake_fail_by_code() {
     let port = closed.local_addr().unwrap().port();
     drop(closed);
     assert_eq!(
-        code(
-            session.call(|app| connect_websocket(request(&format!("ws://127.0.0.1:{port}/")), app))
-        ),
+        code(session.wait(|e| connect_websocket(e, request(&format!("ws://127.0.0.1:{port}/"))))),
         ErrorCode::HttpRefused
     );
 
@@ -193,7 +210,7 @@ fn a_closed_port_and_a_refused_handshake_fail_by_code() {
         thread::sleep(Duration::from_secs(1));
     });
     let refused = session
-        .call(|app| connect_websocket(request(&format!("ws://127.0.0.1:{port}/")), app))
+        .wait(|e| connect_websocket(e, request(&format!("ws://127.0.0.1:{port}/"))))
         .unwrap_err();
     assert_eq!(refused.code, ErrorCode::HttpWebsocketRefused);
     assert_eq!(
