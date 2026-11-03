@@ -5,6 +5,7 @@ pub mod api;
 mod app;
 pub mod backend;
 pub mod inputs;
+pub mod state;
 #[cfg(test)]
 mod testing;
 pub mod theme;
