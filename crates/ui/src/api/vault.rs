@@ -36,6 +36,16 @@ pub fn unlock(backend: &Backend, passphrase: Zeroizing<String>) -> Pending<()> {
     })
 }
 
+/// A library SQLite refuses to read, moved aside: the folder it went to.
+pub fn set_aside(backend: &Backend) -> Pending<String> {
+    backend.db(engine::recovery::set_aside_damaged_library)
+}
+
+/// A library whose phrase is forgotten, archived sealed: the folder it went to.
+pub fn archive(backend: &Backend) -> Pending<String> {
+    backend.db(engine::recovery::archive_locked_library)
+}
+
 #[cfg(test)]
 mod tests {
     use engine::error::ErrorCode;

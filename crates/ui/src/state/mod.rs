@@ -7,6 +7,7 @@ pub use query::QueryCell;
 use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
+use crate::gate::{Gate, GateView};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 use crate::services::settings::Settings;
@@ -44,6 +45,9 @@ pub enum Area {
 /// The root of the interface's state. Each screen joins it as a pair — its state, which other
 /// screens and the core see, and its view, which only its drawing sees (D13) — as it is ported.
 pub struct AppState {
+    /// Nothing else is drawn until it says the library is open.
+    pub gate: Gate,
+    pub gate_view: GateView,
     /// The application's settings, which outlive a library switch.
     pub settings: Settings,
     pub language: i18n::Language,
@@ -65,6 +69,8 @@ impl AppState {
     pub fn new(preferences: Preferences, reduced_motion: bool) -> Self {
         let settings = Settings::read(&preferences);
         Self {
+            gate: Gate::default(),
+            gate_view: GateView::default(),
             language: settings.locale.language(),
             settings,
             preferences,
@@ -80,7 +86,13 @@ impl AppState {
     }
 
     /// Once a frame, before drawing: the answers that arrived are adopted.
-    pub fn update(&mut self) {
+    pub fn update(&mut self, ctx: &egui::Context, backend: &Backend) {
+        if self
+            .gate
+            .update(backend, &mut self.status, &mut self.errors)
+        {
+            self.reset_library_scope(ctx, backend);
+        }
         if let Some(pending) = &mut self.library_preferences_read
             && let Some(answer) = pending.poll()
         {
@@ -106,6 +118,7 @@ impl AppState {
                 self.apply_look(ctx);
                 self.save_settings(backend);
             }
+            Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
@@ -181,7 +194,7 @@ mod tests {
 
         state.reset_library_scope(&ctx, &backend);
         backend.settle();
-        state.update();
+        state.update(&ctx, &backend);
 
         assert_eq!(
             state.library_preferences.get("devnotes.notes.arrangement"),

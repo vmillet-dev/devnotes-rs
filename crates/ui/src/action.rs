@@ -10,6 +10,7 @@ use crate::theme::Appearance;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
     App(AppAction),
+    Gate(crate::gate::Action),
     Global(GlobalAction),
 }
 

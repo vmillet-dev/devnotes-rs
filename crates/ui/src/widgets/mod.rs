@@ -65,7 +65,7 @@ pub fn address(ui: &Ui, response: &Response, author_id: &str) {
 }
 
 /// Text at a size and a CSS weight, the variable font's `wght` axis set (ADR S2).
-fn text(
+pub(crate) fn text(
     ui: &Ui,
     words: &str,
     size: f32,

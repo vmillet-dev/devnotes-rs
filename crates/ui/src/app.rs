@@ -4,17 +4,17 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crossbeam_channel::Receiver;
-use engine::Paths;
+use engine::{EngineEvent, Paths};
 use platform::instance::Message;
 use platform::window::Geometry;
 
 use crate::action::{Action, Actions, GlobalAction};
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
-use crate::keys;
 use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::theme;
+use crate::{gate, keys};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -52,9 +52,10 @@ impl DevNotesApp {
         // Like the reference's WebView: Ctrl+plus is not a zoom.
         cc.egui_ctx
             .options_mut(|options| options.zoom_with_keyboard = false);
-        let state = AppState::new(startup.preferences, startup.reduced_motion);
+        let mut state = AppState::new(startup.preferences, startup.reduced_motion);
         state.apply_look(&cc.egui_ctx);
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
+        state.gate.ask(&backend);
         Ok(Self {
             backend,
             state,
@@ -120,11 +121,15 @@ impl eframe::App for DevNotesApp {
                     Some(action) => self.state.apply(Action::Global(action), ctx, &self.backend),
                     None => log::warn!("A second launch asked for an unknown action"),
                 },
+                Input::Engine(EngineEvent::IndexProgress { done, total }) => {
+                    self.state.gate.index_progress(done, total);
+                }
+                Input::Engine(EngineEvent::IndexReady) => self.state.gate.index_ready(),
                 // Read by the screens they concern, as they are ported.
                 Input::Engine(_) => {}
             }
         }
-        self.state.update();
+        self.state.update(ctx, &self.backend);
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
     }
@@ -132,7 +137,22 @@ impl eframe::App for DevNotesApp {
     /// Draw, then the keys the widgets left, then the actions: always in this order (§ 3.3.7).
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let mut actions = Actions::default();
-        egui::CentralPanel::default().show(ui, |_| {});
+        egui::CentralPanel::default().show(ui, |ui| {
+            if !self.state.gate.is_open() {
+                let mut asked = Vec::new();
+                let language = self.state.language;
+                gate::show(
+                    ui,
+                    &self.state.gate,
+                    &mut self.state.gate_view,
+                    language,
+                    &mut asked,
+                );
+                for action in asked {
+                    actions.push(Action::Gate(action));
+                }
+            }
+        });
         if let Some(action) = keys::dispatch(ui.ctx(), &[&keys::APPLICATION]) {
             actions.push(action);
         }

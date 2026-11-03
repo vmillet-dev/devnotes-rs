@@ -4588,6 +4588,30 @@ Hover colours ease over `motion::FAST`; a disabled control is drawn at half stre
 `DEVNOTES_LOOK=<dir> cargo test -p ui widgets::tests::look` renders the kit in both themes, to
 look at.
 
+### The gate
+
+`ui::gate` is the first screen of a launch and of every library switch: nothing else is drawn
+until the library is open. `Gate` asks the vault's state and the registry, and draws one panel
+in the middle of the window (`surface`, 420 px, 28 px inside), naming its library — a choice menu
+when there are several — then asking what it needs: a phrase **twice, held to
+`vault::MINIMUM_LENGTH` (12)** for a library that has none yet; the phrase **at any length** to
+unlock one; nothing but « set it aside » for a damaged or keyless one; a confirmation before
+archiving one whose phrase is forgotten. A wrong phrase says so on the problem line, whose room
+is kept so the button never moves; `LibraryDamaged` turns the form into the damaged panel.
+Opening another library re-asks everything and resets the library scope.
+
+⚠️ **The phrase is typed into `gate::passphrase::PassphraseField`, never egui's `TextEdit`**,
+which keeps an undo history in egui's memory. The field keeps nothing of its own: the text is a
+`Zeroizing<String>` the gate's view owns, typed at its end (letters, a paste, an input method's
+committed text, Backspace; Enter submits), and `passphrase::take` hands it to the core and
+leaves the field empty — the core wipes it once used. A test types a phrase and looks for it in
+egui's memory and in the AccessKit tree. `gate::prompt` is the same field in a modal on the
+`Passphrase` rung, for a file sealed with a phrase of its own (protect: the floor and twice;
+unlock: any length).
+
+The index fills behind the gate after an unlock (`IndexProgress`, `IndexReady`), and `Gate` keeps
+how far it got: the views say they are partial until it is whole.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

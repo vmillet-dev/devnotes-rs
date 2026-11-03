@@ -5,6 +5,7 @@ pub mod action;
 pub mod api;
 mod app;
 pub mod backend;
+pub mod gate;
 pub mod inputs;
 pub mod keys;
 pub mod services;
