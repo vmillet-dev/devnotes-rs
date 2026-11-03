@@ -1,0 +1,21 @@
+[package]
+name = "i18n"
+description = "The interface's translations: keys checked at build time, plurals, the system's language"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde_json = "1.0.151"
+sys-locale = "0.3.2"
+
+[build-dependencies]
+serde_json = "1.0.151"
+toml = "1.1.3"
+
+[lints]
+workspace = true
