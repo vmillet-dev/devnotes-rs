@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use egui::accesskit::{Node, TreeUpdate};
+use egui::accesskit::{Node, NodeId, TreeUpdate};
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use egui_inspection::protocol::{self, Request, Response};
 
@@ -54,13 +54,35 @@ pub fn step(name: &str, run: impl FnOnce()) {
 }
 
 /// What the window shows at one frame.
-pub struct Tree(Vec<Node>);
+pub struct Tree {
+    nodes: Vec<(NodeId, Node)>,
+    focus: Option<NodeId>,
+}
 
 impl Tree {
     pub fn find(&self, author_id: &str) -> Option<&Node> {
-        self.0
+        self.nodes
             .iter()
+            .map(|(_, node)| node)
             .find(|node| node.author_id() == Some(author_id))
+    }
+
+    /// The control that has the focus, as a failure names it.
+    pub fn focused(&self) -> String {
+        let node = self
+            .nodes
+            .iter()
+            .find(|(id, _)| Some(*id) == self.focus)
+            .map(|(_, node)| node);
+        match node {
+            Some(node) => format!(
+                "{} ({:?} {:?})",
+                node.author_id().unwrap_or("no author_id"),
+                node.role(),
+                node.label().unwrap_or_default()
+            ),
+            None => "nothing".to_owned(),
+        }
     }
 
     pub fn has(&self, author_id: &str) -> bool {
@@ -131,13 +153,16 @@ impl App {
 
     pub fn tree(&mut self) -> Tree {
         match self.ask(&Request::GetTree) {
-            Response::Tree { accesskit, .. } => Tree(
-                accesskit
-                    .map(|TreeUpdate { nodes, .. }| nodes.into_iter().map(|(_, node)| node))
-                    .into_iter()
-                    .flatten()
-                    .collect(),
-            ),
+            Response::Tree { accesskit, .. } => match accesskit {
+                Some(TreeUpdate { nodes, focus, .. }) => Tree {
+                    nodes,
+                    focus: Some(focus),
+                },
+                None => Tree {
+                    nodes: Vec::new(),
+                    focus: None,
+                },
+            },
             other => panic!("a tree was asked, {other:?} came back"),
         }
     }
@@ -147,12 +172,14 @@ impl App {
         let until = Instant::now() + PATIENCE;
         loop {
             self.ask(&Request::Settle { max_steps: 10 });
-            if holds(&self.tree()) {
+            let tree = self.tree();
+            if holds(&tree) {
                 return;
             }
             assert!(
                 Instant::now() < until,
-                "{what}: still not true after {PATIENCE:?}"
+                "{what}: still not true after {PATIENCE:?}; the focus is on {}",
+                tree.focused()
             );
         }
     }
