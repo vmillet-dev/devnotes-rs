@@ -1,6 +1,7 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
 pub mod drawing_pictures;
+pub mod editor;
 pub mod notes;
 pub mod notes_query;
 mod query;
@@ -72,6 +73,7 @@ pub struct AppState {
     /// The area's view: only its drawing reads it (D13).
     pub notes_view: crate::notes::View,
     pub notes: notes::NotesState,
+    pub editor: editor::EditorState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -97,6 +99,7 @@ impl AppState {
             spaces: spaces::SpacesState::default(),
             notes_view: crate::notes::View::default(),
             notes: notes::NotesState::default(),
+            editor: editor::EditorState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -115,8 +118,6 @@ impl AppState {
         }
         self.adopt_library_preferences(backend);
         self.adopt_seeding(backend);
-        self.notes.update(&mut self.revision, &mut self.errors);
-        self.caches.thumbnails.update(ctx, backend);
         if self.gate.is_open() && self.library_preferences_read.is_none() && self.seeding.is_none()
         {
             self.update_library(ctx, backend, self.gate.index);
@@ -125,6 +126,9 @@ impl AppState {
 
     /// What reads the open library, once its preferences are in and its samples seeded.
     pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
+        self.notes.update(&mut self.revision, &mut self.errors);
+        self.editor.update(&mut self.revision, &mut self.errors);
+        self.caches.thumbnails.update(ctx, backend);
         if self
             .spaces
             .update(backend, &mut self.revision, &mut self.errors)
@@ -285,6 +289,11 @@ impl AppState {
                     self.library_preferences.clone(),
                 ));
             }
+            crate::notes::Action::OpenNote(id) => self.editor.open(backend, id),
+            crate::notes::Action::SaveNote { id, title, body } => {
+                self.editor.save(backend, id, title, body);
+            }
+            crate::notes::Action::CloseNote => self.editor.close(),
             crate::notes::Action::FocusSearch => {
                 self.notes_view.focus_search = true;
                 // Taken by the next frame, which nothing else may ask for.
@@ -313,6 +322,7 @@ impl AppState {
         self.caches = LibraryCaches::default();
         self.notes_query = NotesQueryState::default();
         self.spaces = spaces::SpacesState::default();
+        self.editor = editor::EditorState::default();
         self.notes_view = crate::notes::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());

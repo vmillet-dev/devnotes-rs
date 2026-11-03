@@ -3,6 +3,7 @@
 
 pub mod calc;
 pub mod canvas;
+mod editor;
 mod header;
 pub mod language;
 pub mod sidebar;
@@ -75,6 +76,15 @@ pub enum Action {
     Arrange(crate::state::notes_query::Arrangement),
     /// `Ctrl+K`: the caret into the search.
     FocusSearch,
+    /// Into the stand-in editor, read whole by id.
+    OpenNote(String),
+    /// `None` leaves a field as it is.
+    SaveNote {
+        id: String,
+        title: Option<String>,
+        body: Option<crate::state::editor::Body>,
+    },
+    CloseNote,
 }
 
 /// The rail's edge, which widens it.
@@ -88,6 +98,7 @@ pub struct View {
     rail_width: Option<f32>,
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
     pub(crate) focus_search: bool,
+    editor: Option<editor::Draft>,
 }
 
 /// The rail on the left, as wide as the setting says, and the canvas beside it.
@@ -118,6 +129,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     );
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
     canvas::show(&mut canvas_ui, state, actions);
+    editor::show(ui, state, &mut view.editor, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);
     #[expect(

@@ -4672,6 +4672,12 @@ notes area's key (`keys::NOTES`). The List/Board switch keeps the board disabled
 is ported. Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
 embedded face has them.
 
+Until phase 4's editors, a card's click surface (`note-card-open`, a layer under its controls)
+opens a stand-in editor (`notes::editor`, `state::editor`): the note read whole by id
+(`get_note`), its title and body as plain text — a list one task a line, `[x] ` before a done
+one; a Dessin's title only — written when a field is left and when it closes. It is a
+development tool, and goes with phase 4 (D4).
+
 The library rail (`notes::sidebar`) is drawn left of the canvas, as wide as the application setting
 `libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds both
 lists — every space's folders, since the rail draws the whole library — asked again with the
