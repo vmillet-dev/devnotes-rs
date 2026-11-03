@@ -121,3 +121,21 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "banners-http");
 }
+
+#[test]
+fn the_canvas_of_an_open_library() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    capture(&mut harness, "canvas-empty");
+
+    for title in ["psql prod", "curl health", "", "docker compose up"] {
+        crate::testing::note(&harness.state().backend, title);
+    }
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    capture(&mut harness, "canvas-notes");
+}

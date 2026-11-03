@@ -4627,6 +4627,25 @@ preferences panel does. Until the screens arrive, an area is an empty room addre
 and the `StatusNotifier`'s report (green, announced politely, `status-toast`) as top panels
 under the bar, one of each, each until its X is pressed (`DismissError`, `DismissStatus`).
 
+### The notes canvas
+
+`ui::notes` draws the area; `state::notes_query::NotesQueryState` holds the view it draws, a
+`QueryCell` over `api::notes::query`. Its parameters are what the view depends on, compared by
+value — the space, the folder, the **local day** (the instant is not one: the sections move at
+midnight, which `request_repaint_after` asks for, and not every frame), the `Revision`, and how
+far the index is (each slice it adds is asked again). It is updated only while the library is
+open, and emptied with the library scope.
+
+The list view is `notes::canvas`. `canvas::rows::Rows` flattens the view into rows of one
+height — a section's heading, then its cards a row at a time — with the column count of the
+reference's `repeat(auto-fill, minmax(220px, 1fr))` and cards a fixed 150 px. Their tops are
+worked out once a frame and only the rows that cross the viewport are drawn
+(`ScrollArea::show_viewport`): of 30 000 notes, a screenful. Sections are the core's, in its
+order, empty ones included (they are exhaustive); the cell after a section's last card is its
+« paste or create » ghost when the core says so. The region (`canvas`) says loading, nothing
+found (`matched == 0`, `canvas-no-results`) or a failure with its retry (`canvas-retry`, which
+bumps the revision) instead of the sections.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

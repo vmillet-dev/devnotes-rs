@@ -16,7 +16,7 @@ use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::state::Area;
 use crate::theme;
-use crate::{banners, gate, keys, titlebar};
+use crate::{banners, gate, keys, notes, titlebar};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -187,7 +187,10 @@ impl eframe::App for DevNotesApp {
         }
         egui::CentralPanel::default().show(ui, |ui| {
             if self.state.gate.is_open() {
-                area_shell(ui, self.state.settings.area);
+                match self.state.settings.area {
+                    Area::Notes => notes::show(ui, &self.state.notes_query, language, &mut actions),
+                    area => area_shell(ui, area),
+                }
             } else {
                 let mut asked = Vec::new();
                 gate::show(

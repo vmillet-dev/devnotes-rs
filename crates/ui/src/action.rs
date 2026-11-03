@@ -7,10 +7,11 @@ use crate::theme::Appearance;
 
 /// An area's own actions join as a variant of their own (`Notes`, `Http`, `Tools`) when the area
 /// is ported.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     App(AppAction),
     Gate(crate::gate::Action),
+    Notes(crate::notes::Action),
     Global(GlobalAction),
 }
 
