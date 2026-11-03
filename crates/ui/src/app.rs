@@ -229,13 +229,16 @@ impl eframe::App for DevNotesApp {
 }
 
 #[cfg(test)]
+mod captures;
+
+#[cfg(test)]
 mod tests {
     use egui_kittest::Harness;
 
     use super::*;
     use crate::inputs;
 
-    fn startup(directory: &std::path::Path) -> Startup {
+    pub(super) fn startup(directory: &std::path::Path) -> Startup {
         startup_with(directory, inputs::channel())
     }
 

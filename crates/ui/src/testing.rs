@@ -52,3 +52,14 @@ pub(crate) fn unlocked() -> (crate::backend::Backend, tempfile::TempDir) {
     created.poll().unwrap().unwrap();
     (backend, profile)
 }
+
+mod tests {
+    #[test]
+    #[should_panic(expected = "lack accessible name")]
+    fn the_harness_refuses_a_control_without_a_name() {
+        let mut harness = super::harness().build_ui(|ui| {
+            ui.add(egui::Button::new(""));
+        });
+        harness.run();
+    }
+}
