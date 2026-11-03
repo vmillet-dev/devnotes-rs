@@ -103,6 +103,18 @@ describe('AppComponent', () => {
       expect(notesPage().nativeElement.classList).not.toContain('away');
     });
 
+    /** The landing waited on frames past the page: once gone, its injector answered NG0205. */
+    it('stops looking for where the keyboard lands once the page is gone', async () => {
+      await withVault('unlocked');
+      const cancel = vi.spyOn(window, 'cancelAnimationFrame');
+
+      press('Digit3');
+      fixture.destroy();
+
+      expect(cancel).toHaveBeenCalledWith(expect.any(Number));
+      cancel.mockRestore();
+    });
+
     /**
      * One state, one key, three areas: the canvas had the key, HTTP a copy of it, the tools
      * neither — and they drew their rail whatever had been chosen.
