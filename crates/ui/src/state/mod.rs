@@ -1,5 +1,6 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
+pub mod notes_query;
 mod query;
 
 pub use query::QueryCell;
@@ -8,12 +9,14 @@ use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
 use crate::gate::{Gate, GateView};
+use crate::notes;
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 use crate::services::settings::Settings;
 use crate::services::status::StatusNotifier;
 use crate::services::time::{Clock, SystemClock};
 use crate::theme;
+use notes_query::NotesQueryState;
 
 /// Bumped after every write the interface adopts: the queries that read notes carry it among
 /// their parameters, so the list and the board ask again together. Writes are not optimistic:
@@ -57,6 +60,7 @@ pub struct AppState {
     pub library_preferences: Preferences,
     library_preferences_read: Option<Pending<Preferences>>,
     pub revision: Revision,
+    pub notes_query: NotesQueryState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -77,6 +81,7 @@ impl AppState {
             library_preferences: Preferences::default(),
             library_preferences_read: None,
             revision: Revision::default(),
+            notes_query: NotesQueryState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -104,9 +109,18 @@ impl AppState {
                     .report(i18n::keys::errors::LIBRARY_ACTION_FAILED, &error),
             }
         }
+        if self.gate.is_open() {
+            let now = self.clock.now();
+            self.notes_query
+                .update(ctx, backend, now, self.revision, self.gate.index);
+        }
     }
 
     /// At the end of the frame, in the order the actions were pushed.
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "the notes' actions carry what they move"
+    )]
     pub fn apply(&mut self, action: Action, ctx: &egui::Context, backend: &Backend) {
         match action {
             Action::App(AppAction::ShowArea(area)) => {
@@ -121,6 +135,7 @@ impl AppState {
             Action::App(AppAction::DismissError) => self.errors.dismiss(),
             Action::App(AppAction::DismissStatus) => self.status.dismiss(),
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
+            Action::Notes(notes::Action::Reload) => self.revision.bump(),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
@@ -151,6 +166,7 @@ impl AppState {
         self.library_preferences = Preferences::default();
         self.library_preferences_read = Some(api::preferences::library(backend));
         self.caches = LibraryCaches::default();
+        self.notes_query = NotesQueryState::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());
         self.apply_look(ctx);

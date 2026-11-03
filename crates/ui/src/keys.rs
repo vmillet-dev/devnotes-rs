@@ -21,7 +21,7 @@ pub enum Read {
     Character,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Binding {
     pub key: Key,
     pub modifiers: Modifiers,
@@ -78,7 +78,7 @@ pub fn dispatch(ctx: &Context, levels: &[&[Binding]]) -> Option<Action> {
                     };
                     pressed == binding.key && modifiers.matches_exact(binding.modifiers)
                 })
-                .map(|binding| (at, binding.action))
+                .map(|binding| (at, binding.action.clone()))
         })?;
         input.events.remove(at);
         Some(action)
@@ -153,7 +153,7 @@ mod tests {
                 } else {
                     vec![&area, &APPLICATION]
                 };
-                frame.heard = frame.heard.or(dispatch(ui.ctx(), &levels));
+                frame.heard = frame.heard.take().or(dispatch(ui.ctx(), &levels));
             },
             Frame {
                 events: Vec::new(),
@@ -165,7 +165,7 @@ mod tests {
         harness.run();
         harness.state_mut().events = events;
         harness.step();
-        harness.state().heard
+        harness.state().heard.clone()
     }
 
     #[test]

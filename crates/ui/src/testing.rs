@@ -72,6 +72,62 @@ pub(crate) fn unlocked() -> (crate::backend::Backend, tempfile::TempDir) {
     (backend, profile)
 }
 
+/// A snippet titled `title` in `space_id`, as the core takes it.
+pub(crate) fn snippet(space_id: String, title: String) -> engine::notes::model::NoteDraft {
+    use engine::notes::model::{NoteDraft, NoteLifecycle};
+    NoteDraft {
+        space_id,
+        folder_id: None,
+        title,
+        language: engine::notes::language::Language::Sql,
+        content: "SELECT 1;".to_string(),
+        source: String::new(),
+        tags: Vec::new(),
+        pinned: false,
+        lifecycle: NoteLifecycle::Permanent,
+        kind: engine::notes::kind::NoteKind::Snippet,
+        priority: engine::notes::priority::Priority::None,
+        items: Vec::new(),
+    }
+}
+
+/// A snippet titled `title` in the library's first space, made if there is none, written through the core.
+pub(crate) fn note(
+    backend: &crate::backend::Backend,
+    title: &str,
+) -> engine::notes::model::DisplayNote {
+    let title = title.to_string();
+    let mut created = backend.db(move |engine| {
+        let space = match engine::spaces::list_spaces(engine)?.into_iter().next() {
+            Some(space) => space,
+            None => engine::spaces::create_space(
+                engine,
+                engine::spaces::model::SpaceDraft {
+                    name: "Home".to_string(),
+                },
+            )?,
+        };
+        engine::notes::create_note(engine, snippet(space.id, title))
+    });
+    backend.settle();
+    created.poll().unwrap().unwrap()
+}
+
+/// `count` snippets in a space of their own, in one transaction: a corpus, quickly.
+pub(crate) fn corpus(backend: &crate::backend::Backend, count: usize) {
+    let notes = (0..count)
+        .map(|index| engine::notes::model::SampleNote {
+            folder: None,
+            draft: snippet(String::new(), format!("note {index}")),
+        })
+        .collect();
+    let mut seeded = backend.db(move |engine| {
+        engine::notes::seed_samples(engine, "Corpus".to_string(), Vec::new(), notes)
+    });
+    backend.settle();
+    seeded.poll().unwrap().unwrap();
+}
+
 /// A real library, created then closed: what a later launch finds on the profile.
 pub(crate) fn locked() -> tempfile::TempDir {
     let (backend, profile) = unlocked();
