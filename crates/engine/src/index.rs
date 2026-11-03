@@ -131,10 +131,14 @@ pub struct NoteIndex {
 impl Drop for NoteIndex {
     fn drop(&mut self) {
         wipe_values(&mut self.globals);
-        for folder in self.folders.values_mut() {
-            folder.name.zeroize();
-            folder.path.zeroize();
-        }
+        wipe_folders(&mut self.folders);
+    }
+}
+
+fn wipe_folders(folders: &mut HashMap<String, NoteFolder>) {
+    for folder in folders.values_mut() {
+        folder.name.zeroize();
+        folder.path.zeroize();
     }
 }
 
@@ -194,6 +198,7 @@ impl NoteIndex {
             self.attachment_counts = crate::attachments::store::counts(library.db())?;
         }
         if changed.folders {
+            wipe_folders(&mut self.folders);
             self.folders = crate::folders::store::by_id(library, None)?;
         }
         if changed.globals {

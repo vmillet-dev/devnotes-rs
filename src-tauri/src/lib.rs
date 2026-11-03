@@ -448,6 +448,7 @@ pub fn run() {
             // session. Best effort — the sweep at launch covers a locked file or a crash.
             if matches!(event, tauri::RunEvent::Exit) {
                 let engine = handle.state::<Arc<Engine>>();
+                engine.wipe_index();
                 attachments::sealed::sweep_plaintext(engine.paths());
             }
         });

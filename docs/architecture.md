@@ -4982,11 +4982,27 @@ still verify. Binding it would mean threading the row identity through every sea
 call in the stores; it buys nothing against the threat above, where the attacker reads the
 file rather than edits it and hands it back.
 
-⚠️ Nor is it a defence against a machine already compromised while DevNotes runs. The
-plaintext is in the heap as ordinary `String`s, never zeroized: every body `query_notes` matched
-against, the previews it sent (a few lines each, not the whole body), and the note open in the
-editor — so it can reach swap, a hibernation image or a crash dump. And the key is in this
-process’s memory for the length of the session, and there is no idle re-lock.
+⚠️ Nor is it a defence against a machine already compromised while DevNotes runs. Since the
+notes index (« The notes index »), **the whole open library is in memory in the clear** for as
+long as it is open: every note's title, body, source, tags, items and field values, their folded
+copies, the folder names and the global `{{field}}` values. That changes nothing at rest — no
+index is ever written to disk, and a cache sealed on disk would be a new file format — but it
+changes what a read of the process's memory reveals: no longer the notes a search happened to
+open, but all of them. What is done about it:
+
+- an index entry wipes its texts when it is dropped (`zeroize`), and so do the folder names
+  and global values the index replaces or drops;
+- the index is emptied when another library is opened, when a copy is restored, and when the
+  application exits (`Engine::wipe_index`, from the shell's `RunEvent::Exit`);
+- nothing of it is logged, nor sent in an event (`IndexProgress` carries two counts).
+
+What is not: the copies a view makes are ordinary `String`s, dropped unwiped, as before the
+index — the notes `query_notes` matched and the previews it sent, the note open in the editor.
+Pages of the heap can reach swap, a hibernation image or a crash dump, wiped or not, and a
+process killed outside `RunEvent::Exit` frees its memory without wiping it. The key is in the
+process's memory for the length of the session. **There is no « lock » action, and the
+migration adds none**: the vault has `vault_state`, `create_vault`, `unlock_vault` and
+`change_passphrase`, nothing that closes a library short of opening another or quitting.
 
 ### The pieces
 
