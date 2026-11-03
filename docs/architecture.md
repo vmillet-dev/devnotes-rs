@@ -6702,7 +6702,7 @@ is run with `--exclude e2e`. `crates/e2e/clippy.toml` refuses `std::thread::slee
 scenario waits on conditions, never durations.
 
 In CI, the `e2e` job of `ci.yml` runs once per platform from `changes` on, beside the Rust
-tests: it builds the flavour, runs `cargo test -p e2e` — under `xvfb-run` with lavapipe on
+tests: it builds the flavour into its cached `target/`, runs `cargo test -p e2e` — under `xvfb-run` with lavapipe on
 Linux, on WARP on Windows — and uploads `scenarios/`. The scenarios are not split into groups
 (plan, D31): when the suite grows long, it is split by file name, never by a list kept by hand.
 
