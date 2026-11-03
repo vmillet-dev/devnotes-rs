@@ -4,13 +4,14 @@ pub mod drawing_pictures;
 pub mod notes;
 pub mod notes_query;
 mod query;
+pub mod spaces;
 
 pub use query::QueryCell;
 
 use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
-use crate::gate::{Gate, GateView};
+use crate::gate::{Gate, GateView, IndexFill};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 use crate::services::samples;
@@ -67,6 +68,9 @@ pub struct AppState {
     seeding: Option<Pending<bool>>,
     pub revision: Revision,
     pub notes_query: NotesQueryState,
+    pub spaces: spaces::SpacesState,
+    /// The area's view: only its drawing reads it (D13).
+    pub notes_view: crate::notes::View,
     pub notes: notes::NotesState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
@@ -90,6 +94,8 @@ impl AppState {
             seeding: None,
             revision: Revision::default(),
             notes_query: NotesQueryState::default(),
+            spaces: spaces::SpacesState::default(),
+            notes_view: crate::notes::View::default(),
             notes: notes::NotesState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
@@ -113,10 +119,32 @@ impl AppState {
         self.caches.thumbnails.update(ctx, backend);
         if self.gate.is_open() && self.library_preferences_read.is_none() && self.seeding.is_none()
         {
-            let now = self.clock.now();
-            self.notes_query
-                .update(ctx, backend, now, self.revision, self.gate.index);
+            self.update_library(ctx, backend, self.gate.index);
         }
+    }
+
+    /// What reads the open library, once its preferences are in and its samples seeded.
+    pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
+        if self
+            .spaces
+            .update(backend, &mut self.revision, &mut self.errors)
+        {
+            self.remember_place(backend);
+        }
+        let now = self.clock.now();
+        let place = (self.spaces.active_space(), self.spaces.active_folder());
+        self.notes_query
+            .update(ctx, backend, now, place, (self.revision, index));
+    }
+
+    /// The space and the folder shown, into the library's preferences: the next launch opens
+    /// on them.
+    fn remember_place(&mut self, backend: &Backend) {
+        self.spaces.remember(&mut self.library_preferences);
+        drop(api::preferences::write_library(
+            backend,
+            self.library_preferences.clone(),
+        ));
     }
 
     /// The open library's preferences; a library that was never seeded is seeded now.
@@ -135,6 +163,7 @@ impl AppState {
                     let samples = samples::samples(self.language, self.clock.now());
                     self.seeding = Some(api::notes::seed_samples(backend, samples));
                 }
+                self.spaces.restore(&preferences);
                 self.library_preferences = preferences;
             }
             Err(error) => self
@@ -180,6 +209,10 @@ impl AppState {
             }
             Action::App(AppAction::DismissError) => self.errors.dismiss(),
             Action::App(AppAction::DismissStatus) => self.status.dismiss(),
+            Action::App(AppAction::SetRailWidth(width)) => {
+                self.settings.rail_width = width;
+                self.save_settings(backend);
+            }
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
             Action::Notes(action) => self.apply_notes(action, backend),
             Action::Global(GlobalAction::Quit) => {
@@ -202,6 +235,39 @@ impl AppState {
                 self.notes.set_items(backend, id, items);
             }
             crate::notes::Action::Thumbnail(stamp) => self.caches.thumbnails.ask(backend, stamp),
+            crate::notes::Action::ChooseSpace(id) => {
+                self.spaces.choose_space(id);
+                self.remember_place(backend);
+            }
+            crate::notes::Action::ChooseFolder(id) => {
+                self.spaces.choose_folder(&id);
+                self.remember_place(backend);
+            }
+            crate::notes::Action::CountSpace(id) => self.spaces.count(id),
+            crate::notes::Action::CreateSpace(name) => self.spaces.create_space(backend, &name),
+            crate::notes::Action::RenameSpace { id, name } => {
+                self.spaces.rename_space(backend, id, &name);
+            }
+            crate::notes::Action::PinSpace { id, pinned } => {
+                self.spaces.pin_space(backend, id, pinned);
+            }
+            crate::notes::Action::DeleteSpace { id, refuge } => {
+                self.spaces.delete_space(backend, id, refuge);
+            }
+            crate::notes::Action::CreateFolder {
+                space_id,
+                parent_id,
+                name,
+            } => self
+                .spaces
+                .create_folder(backend, space_id, parent_id, &name),
+            crate::notes::Action::RenameFolder { id, name } => {
+                self.spaces.rename_folder(backend, id, &name);
+            }
+            crate::notes::Action::RecolourFolder { id, colour } => {
+                self.spaces.recolour_folder(backend, id, colour);
+            }
+            crate::notes::Action::DeleteFolder(id) => self.spaces.delete_folder(backend, id),
         }
     }
 
@@ -224,6 +290,8 @@ impl AppState {
         self.seeding = None;
         self.caches = LibraryCaches::default();
         self.notes_query = NotesQueryState::default();
+        self.spaces = spaces::SpacesState::default();
+        self.notes_view = crate::notes::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());
         self.apply_look(ctx);

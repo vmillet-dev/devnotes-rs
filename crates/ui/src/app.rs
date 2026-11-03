@@ -188,7 +188,11 @@ impl eframe::App for DevNotesApp {
         egui::CentralPanel::default().show(ui, |ui| {
             if self.state.gate.is_open() {
                 match self.state.settings.area {
-                    Area::Notes => notes::show(ui, &self.state, &mut actions),
+                    Area::Notes => {
+                        let mut view = std::mem::take(&mut self.state.notes_view);
+                        notes::show(ui, &self.state, &mut view, &mut actions);
+                        self.state.notes_view = view;
+                    }
                     area => area_shell(ui, area),
                 }
             } else {

@@ -8,7 +8,7 @@ use engine::notes::view::SearchField;
 use i18n::{Message, keys};
 
 use super::{Context, Font, galley, label, text_at};
-use crate::notes::ui::priority_pill;
+use crate::notes::ui::{folder_hue, priority_pill};
 use crate::services::time;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
@@ -167,13 +167,7 @@ fn folder_chip(
     path: &str,
 ) -> f32 {
     let p = palette(ui.ctx());
-    let hue = match colour {
-        FolderColour::Blue => p.blue,
-        FolderColour::Amber => p.amber_text,
-        FolderColour::Purple => p.purple,
-        FolderColour::Green => p.green,
-        FolderColour::Red => p.red,
-    };
+    let hue = folder_hue(ui, colour);
     let text = galley(
         ui,
         name,

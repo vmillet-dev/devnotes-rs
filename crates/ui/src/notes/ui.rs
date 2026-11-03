@@ -1,9 +1,10 @@
-//! What the notes' screens share: a kind's badge, a priority's pill.
+//! What the notes' screens share: a kind's badge, a priority's pill, a folder's hue.
 
 use egui::{
     Color32, CornerRadius, FontFamily, Pos2, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui,
     Vec2, WidgetInfo,
 };
+use engine::folders::model::FolderColour;
 use engine::notes::kind::NoteKind;
 use engine::notes::language::Language;
 use engine::notes::priority::Priority;
@@ -115,5 +116,17 @@ pub fn tick_box(ui: &Ui, rect: Rect, done: bool, colour: Color32) {
     );
     if done {
         icons::paint(ui, square.shrink(1.0), Icon::Check, colour);
+    }
+}
+
+/// The five hues a folder is told apart by, on the board, the rail and its cards' chips.
+pub fn folder_hue(ui: &Ui, colour: FolderColour) -> Color32 {
+    let p = palette(ui.ctx());
+    match colour {
+        FolderColour::Blue => p.blue,
+        FolderColour::Amber => p.amber_text,
+        FolderColour::Purple => p.purple,
+        FolderColour::Green => p.green,
+        FolderColour::Red => p.red,
     }
 }

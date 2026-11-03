@@ -31,19 +31,20 @@ pub struct NotesQueryState {
 
 impl NotesQueryState {
     /// Once a frame, with the library open. `true` when the view or its error changed.
+    /// `place` is the space and the folder shown, `None` for every one.
     pub fn update(
         &mut self,
         ctx: &egui::Context,
         backend: &Backend,
         now: DateTime<Utc>,
-        revision: Revision,
-        index: IndexFill,
+        place: (Option<&str>, Option<&str>),
+        (revision, index): (Revision, IndexFill),
     ) -> bool {
         let local = now.with_timezone(&Local);
         ctx.request_repaint_after(until_midnight(&local));
         self.cell.want(Params {
-            space_id: None,
-            folder_id: None,
+            space_id: place.0.map(str::to_owned),
+            folder_id: place.1.map(str::to_owned),
             day: local.date_naive(),
             revision,
             index,
@@ -113,9 +114,21 @@ mod tests {
     fn settled(state: &mut NotesQueryState, backend: &Backend, revision: Revision) {
         let ctx = egui::Context::default();
         let now = Utc::now();
-        state.update(&ctx, backend, now, revision, IndexFill::Ready);
+        state.update(
+            &ctx,
+            backend,
+            now,
+            (None, None),
+            (revision, IndexFill::Ready),
+        );
         backend.settle();
-        state.update(&ctx, backend, now, revision, IndexFill::Ready);
+        state.update(
+            &ctx,
+            backend,
+            now,
+            (None, None),
+            (revision, IndexFill::Ready),
+        );
     }
 
     #[test]

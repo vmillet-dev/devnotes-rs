@@ -30,8 +30,8 @@ pub(super) fn canvas(backend: Backend, profile: tempfile::TempDir) -> Harness<'s
                     ui.ctx(),
                     &bench.backend,
                     now,
-                    state.revision,
-                    IndexFill::Ready,
+                    (None, None),
+                    (state.revision, IndexFill::Ready),
                 );
                 show(ui, &bench.state, &mut bench.actions);
                 let ctx = ui.ctx().clone();

@@ -18,6 +18,7 @@ pub struct TextField<'a> {
     hint: &'a str,
     invalid: bool,
     password: bool,
+    compact: bool,
 }
 
 impl<'a> TextField<'a> {
@@ -30,7 +31,15 @@ impl<'a> TextField<'a> {
             hint: "",
             invalid: false,
             password: false,
+            compact: false,
         }
+    }
+
+    /// A rail's: 12.5 px on 5 × 7, a 6 px corner.
+    #[must_use]
+    pub fn compact(mut self) -> Self {
+        self.compact = true;
+        self
     }
 
     #[must_use]
@@ -56,11 +65,16 @@ impl<'a> TextField<'a> {
     pub fn show(self, ui: &mut Ui) -> Response {
         let p = palette(ui.ctx());
         let edge = if self.invalid { p.red } else { p.line };
+        let (size, corner, margin) = if self.compact {
+            (12.5, 6, Margin::symmetric(7, 5))
+        } else {
+            (14.0, 8, Margin::symmetric(11, 9))
+        };
         let frame = egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, edge))
-            .corner_radius(CornerRadius::same(8))
-            .inner_margin(Margin::symmetric(11, 9));
+            .corner_radius(CornerRadius::same(corner))
+            .inner_margin(margin);
         frame
             .show(ui, |ui| {
                 let response = ui.add(
@@ -70,7 +84,7 @@ impl<'a> TextField<'a> {
                         .password(self.password)
                         .hint_text(self.hint)
                         .text_color(p.text_0)
-                        .font(FontId::new(14.0, FontFamily::Proportional))
+                        .font(FontId::new(size, FontFamily::Proportional))
                         .desired_width(f32::INFINITY),
                 );
                 name(ui, &response, self.name);
