@@ -149,11 +149,6 @@ jobs:
           shared-key: test-${{ matrix.os }}
           save-if: 'true'
 
-      # kittest draws on a software adapter: lavapipe here, WARP on Windows, which ships with it.
-      - name: Software Vulkan
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers
-
       - name: Install cargo-llvm-cov
         if: runner.os == 'Linux'
         uses: taiki-e/install-action@cargo-llvm-cov
@@ -243,5 +238,68 @@ jobs:
             -Dsonar.rust.cargo.manifestPaths=Cargo.toml
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true
+
+      - *stop-the-run
+
+  # From `changes` on, beside the Rust tests: the flavour, then every scenario of `crates/e2e`,
+  # one after the other, each its own process and profile (D31). One failing scenario decides the
+  # run: the other platform is cancelled with it.
+  e2e:
+    name: E2E (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+
+    # The flavour in `target/debug`, where the cache is: nothing else builds `app` in this job.
+    env:
+      DEVNOTES_E2E_BIN: ${{ github.workspace }}/target/debug/devnotes${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+      DEVNOTES_E2E_OUTPUT: ${{ github.workspace }}/scenarios
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          shared-key: e2e-${{ matrix.os }}
+          save-if: 'true'
+
+      # The capture needs a rendered window, which xvfb gives without a window manager.
+      - name: X server
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y --no-install-recommends xvfb
+
+      - name: Build the flavour
+        run: cargo build -p app --features e2e --locked
+
+      - name: Scenarios
+        run: |
+          start=$(date +%s)
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" cargo test -p e2e --locked -- --nocapture
+          else
+            cargo test -p e2e --locked -- --nocapture
+          fi
+          echo "\`e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+
+      # Captures, and for a failed scenario its last screen and the application's log; never the
+      # profile, whose library is the run's. Named per attempt: a re-run that passes would
+      # otherwise replace the files of the attempt that failed.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-${{ matrix.os }}-${{ github.run_attempt }}
+          path: scenarios
+          if-no-files-found: ignore
+          retention-days: 7
 
       - *stop-the-run

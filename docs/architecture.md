@@ -6703,10 +6703,16 @@ last screen and the application's log in `target/e2e/scenarios/<scenario>/`, bes
 captures.
 
 One file per scenario, `crates/e2e/tests/<nn>_<name>.rs`, one `#[test]` of named steps
-(`e2e::step`), run alone: `cargo test -p e2e --test 01_first_launch`. Each launches its own
-application on its own profile, so the files never share a process. `cargo test --workspace`
-is run with `--exclude e2e`. `crates/e2e/clippy.toml` refuses `std::thread::sleep`: a
-scenario waits on conditions, never durations.
+(`e2e::step`): `cargo test -p e2e --test 01_first_launch` runs one, `cargo test -p e2e` all of
+them, one file after the other. Each launches its own application on its own profile, so the
+files never share a process. `cargo test --workspace` is run with `--exclude e2e`.
+`crates/e2e/clippy.toml` refuses `std::thread::sleep`: a scenario waits on conditions, never
+durations.
+
+In CI, the `e2e` job of `ci.yml` runs once per platform from `changes` on, beside the Rust
+tests: it builds the flavour into its cached `target/`, runs `cargo test -p e2e` — under
+`xvfb-run` with lavapipe on Linux, on WARP on Windows — and uploads `scenarios/`. The scenarios are not split into groups
+(plan, D31): when the suite grows long, it is split by file name, never by a list kept by hand.
 
 ### End to end
 
