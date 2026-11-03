@@ -1,6 +1,6 @@
 //! Notes: the view the canvas draws.
 
-use engine::notes::model::{DisplayNote, NotePatch};
+use engine::notes::model::{DisplayNote, NoteDraft, NotePatch};
 use engine::notes::view::{NotesQuery, NotesView};
 use engine::{notes, spaces};
 
@@ -37,4 +37,9 @@ pub fn seed_samples(backend: &Backend, samples: Samples) -> Pending<bool> {
 /// The whole note, body included: opening one never starts from a preview.
 pub fn get(backend: &Backend, id: String) -> Pending<DisplayNote> {
     backend.db(move |engine| notes::get_note(engine, id))
+}
+
+/// A new note, once it is worth keeping.
+pub fn create(backend: &Backend, draft: NoteDraft) -> Pending<DisplayNote> {
+    backend.db(move |engine| notes::create_note(engine, draft))
 }

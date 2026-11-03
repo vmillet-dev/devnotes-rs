@@ -119,6 +119,10 @@ pub(crate) fn cards(harness: &Harness<'_, Bench>) -> usize {
         .count()
 }
 
+pub(crate) fn spaces_of_backend(backend: &Backend) -> Vec<Space> {
+    engine::db::run_here(backend.engine(), engine::spaces::list_spaces).unwrap()
+}
+
 pub(crate) fn spaces_of(harness: &Harness<'_, Bench>) -> Vec<Space> {
     engine::db::run_here(
         harness.state().backend.engine(),

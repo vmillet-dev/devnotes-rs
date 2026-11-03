@@ -24,6 +24,8 @@ pub enum AppAction {
     DismissStatus,
     /// The library rail's width, once its edge rests.
     SetRailWidth(u16),
+    /// The library rail shown or put away: the switchers take its place.
+    ToggleRail,
 }
 
 /// Asked from outside the window: a global shortcut, the tray, a second launch.

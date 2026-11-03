@@ -2,7 +2,9 @@
 //! the quick filter, the order (`notes-header` in the reference). Each change is an action; the
 //! query state asks the core again.
 
+mod new_note;
 mod sort;
+mod switchers;
 
 use egui::{
     Color32, CornerRadius, FontFamily, Margin, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
@@ -20,7 +22,20 @@ const GAP: f32 = 10.0;
 /// The search's widths: its floor, and where it stops growing.
 const SEARCH: (f32, f32) = (140.0, 520.0);
 
-pub(super) fn show(ui: &mut Ui, state: &AppState, focus_search: &mut bool, actions: &mut Actions) {
+/// What only the header's drawing sees: what its menus show.
+#[derive(Default)]
+pub(super) struct HeaderView {
+    space_menu: switchers::Menu,
+    folder_menu: switchers::Menu,
+    crumb: Option<crate::notes::panel::FolderEdit>,
+}
+
+pub(super) fn show(
+    ui: &mut Ui,
+    state: &AppState,
+    (view, focus_search): (&mut HeaderView, &mut bool),
+    actions: &mut Actions,
+) {
     let s = spacing(ui.ctx());
     #[expect(clippy::cast_possible_truncation, reason = "a few points")]
     let (grid, canvas) = (s.grid.round() as i8, s.canvas.round() as i8);
@@ -29,8 +44,8 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, focus_search: &mut bool, actio
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = GAP;
-                view_switch(ui, state);
                 let language = state.language;
+                where_one_is(ui, state, view, actions);
                 let filters = [
                     (
                         NoteFilter::All,
@@ -50,7 +65,8 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, focus_search: &mut bool, actio
                     .map(|(filter, label)| (*filter, label.as_str()))
                     .collect();
                 let quick = Segmented::new(&filters, "quick-filter");
-                let after = quick.width(ui) + GAP + 32.0 + GAP;
+                let new_note = new_note::width(ui, language);
+                let after = quick.width(ui) + GAP + 32.0 + GAP + new_note + GAP;
                 let width = (ui.available_width() - after).clamp(SEARCH.0, SEARCH.1);
                 search(ui, state, width, focus_search, actions);
                 let mut chosen = state.notes_query.filter();
@@ -58,12 +74,41 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, focus_search: &mut bool, actio
                     push(actions, crate::notes::Action::SetFilter(chosen));
                 }
                 sort::show(ui, state, actions);
+                ui.add_space((ui.available_width() - new_note).max(0.0));
+                ui.scope(|ui| new_note::show(ui, state, actions));
             });
         });
     let rect = shown.response.rect;
     let p = palette(ui.ctx());
     ui.painter()
         .hline(rect.x_range(), rect.bottom(), Stroke::new(1.0, p.line_soft));
+}
+
+/// The rail toggle, then the folder open or the switchers, and the view.
+fn where_one_is(ui: &mut Ui, state: &AppState, view: &mut HeaderView, actions: &mut Actions) {
+    let label = i18n::translate(state.language, keys::sidebar::TOGGLE, &[]);
+    let shown = state.settings.rail_shown;
+    if widgets::RailToggle::new(&label, "library-rail-toggle", shown)
+        .show(ui)
+        .clicked()
+    {
+        actions.push(Action::App(crate::action::AppAction::ToggleRail));
+    }
+    let spaces = &state.spaces;
+    let open = spaces
+        .active_folder()
+        .and_then(|id| spaces.folders().iter().find(|folder| folder.id == id));
+    if let Some(folder) = open {
+        switchers::breadcrumb(ui, state, folder, &mut view.crumb, actions);
+        return;
+    }
+    if !shown {
+        switchers::space_switcher(ui, state, &mut view.space_menu, actions);
+    }
+    view_switch(ui, state);
+    if !shown {
+        switchers::folder_switcher(ui, state, &mut view.folder_menu, actions);
+    }
 }
 
 fn push(actions: &mut Actions, action: crate::notes::Action) {

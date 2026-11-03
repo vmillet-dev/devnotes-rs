@@ -8,13 +8,16 @@ use engine::folders::model::{Folder, FolderColour};
 use engine::spaces::model::{Space, SpaceContents};
 use i18n::{Key, keys};
 
-use super::push;
-use crate::action::Actions;
+use crate::action::{Action as Asked, Actions};
 use crate::notes::Action;
 use crate::notes::ui::folder_hue;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, Button, ChoiceMenu, Kind, TextField, interact};
+
+fn push(actions: &mut Actions, action: Action) {
+    actions.push(Asked::Notes(action));
+}
 
 /// A name being typed, and whether its field still has to take the focus.
 pub(super) struct Draft {

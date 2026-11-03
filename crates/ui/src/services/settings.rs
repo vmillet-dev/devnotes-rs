@@ -35,6 +35,7 @@ pub struct Settings {
     pub area: Area,
     /// The library rail's, in points, within `RAIL_WIDTH`.
     pub rail_width: u16,
+    pub rail_shown: bool,
 }
 
 /// The reference's `RAIL_WIDTH`.
@@ -48,6 +49,7 @@ impl Default for Settings {
             density: Density::default(),
             area: Area::default(),
             rail_width: RAIL_WIDTH.0,
+            rail_shown: true,
         }
     }
 }
@@ -57,6 +59,7 @@ const THEME: &str = "devnotes.theme";
 const DENSITY: &str = "devnotes.density";
 const AREA: &str = "devnotes.area";
 const RAIL: &str = "devnotes.libraryRailWidth";
+const RAIL_SHOWN: &str = "devnotes.showLibraryRail";
 
 impl Settings {
     /// A value this version does not know is the default, never an error.
@@ -72,6 +75,7 @@ impl Settings {
                 .map_or(RAIL_WIDTH.0, |width| {
                     width.clamp(RAIL_WIDTH.0, RAIL_WIDTH.1)
                 }),
+            rail_shown: preferences.get(RAIL_SHOWN) != Some("false"),
         }
     }
 
@@ -82,6 +86,7 @@ impl Settings {
         preferences.set(DENSITY, name_of(&DENSITIES, self.density));
         preferences.set(AREA, name_of(&AREAS, self.area));
         preferences.set(RAIL, &self.rail_width.to_string());
+        preferences.set(RAIL_SHOWN, if self.rail_shown { "true" } else { "false" });
     }
 }
 
@@ -173,6 +178,7 @@ mod tests {
             density: Density::Compact,
             area: Area::Http,
             rail_width: 240,
+            rail_shown: false,
         };
 
         chosen.write(&mut preferences);
