@@ -6,6 +6,7 @@ pub mod trash;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use diesel::prelude::*;
+use rayon::prelude::*;
 use uuid::Uuid;
 
 use chrono::{DateTime, TimeDelta, Utc};
@@ -173,6 +174,50 @@ fn open_all(rows: Vec<NoteRow>, vault: &Vault) -> Result<Vec<Note>, StorageError
     rows.into_iter()
         .map(|row| NoteRow::open(row, vault))
         .collect()
+}
+
+/// A slice of the live notes for the index, newest first from just after `after` (the
+/// `updated_at` and id of the last one read), opened in parallel.
+///
+/// ⚠️ Read in the order of `notes_updated_at`: sorting itself, SQLite would read every sealed
+/// body before the first row.
+pub(crate) fn newest(
+    connection: &mut Library,
+    after: Option<&(String, String)>,
+    limit: i64,
+) -> Result<Vec<Note>, StorageError> {
+    let mut query = notes::table
+        .filter(notes::deleted_at.is_null())
+        .select(NoteRow::as_select())
+        .into_boxed();
+    if let Some((updated_at, id)) = after {
+        query = query.filter(
+            notes::updated_at
+                .lt(updated_at.clone())
+                .or(notes::updated_at
+                    .eq(updated_at.clone())
+                    .and(notes::id.gt(id.clone()))),
+        );
+    }
+    let rows = query
+        .order((notes::updated_at.desc(), notes::id.asc()))
+        .limit(limit)
+        .load::<NoteRow>(connection.db())?;
+
+    let (db, vault) = connection.split();
+    let mut notes = rows
+        .into_par_iter()
+        .map(|row| NoteRow::open(row, vault))
+        .collect::<Result<Vec<_>, _>>()?;
+    related::attach_related(db, vault, &mut notes, None)?;
+    Ok(notes)
+}
+
+pub(crate) fn count_live(connection: &mut Library) -> Result<i64, StorageError> {
+    Ok(notes::table
+        .filter(notes::deleted_at.is_null())
+        .count()
+        .get_result(connection.db())?)
 }
 
 /// Opens the rows and attaches their side tables.

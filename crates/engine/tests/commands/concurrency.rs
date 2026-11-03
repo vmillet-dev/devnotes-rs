@@ -161,3 +161,28 @@ fn opening_another_library_cancels_the_send_under_way() {
     let answer = session.runtime.block_on(sending).unwrap();
     assert_eq!(answer.unwrap_err().code, ErrorCode::HttpCancelled);
 }
+
+#[test]
+fn the_index_fills_after_an_unlock_and_empties_when_another_library_opens() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    for _ in 0..3 {
+        session.call(|e| create_note(e, snippet(&space))).unwrap();
+    }
+    let other = session
+        .call(|e| create_library(e, "Other".to_string()))
+        .unwrap();
+
+    session.wait(engine::index::fill);
+    assert_eq!(session.engine.indexed(), 3);
+    assert!(
+        session
+            .heard
+            .events()
+            .iter()
+            .any(|event| matches!(event, engine::EngineEvent::IndexReady))
+    );
+
+    session.call(|e| open_library(e, other.id)).unwrap();
+    assert_eq!(session.engine.indexed(), 0);
+}

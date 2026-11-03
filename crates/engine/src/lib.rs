@@ -7,6 +7,7 @@ pub mod error;
 pub mod folders;
 pub mod host;
 pub mod http;
+pub mod index;
 pub mod json;
 pub mod libraries;
 pub mod notes;
@@ -22,7 +23,9 @@ pub(crate) mod count;
 pub mod layout;
 pub(crate) mod name;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard};
+
+use error::StorageError;
 
 pub use host::{EngineEvent, EventSink, Paths, RecordingSink};
 
@@ -30,6 +33,8 @@ pub use host::{EngineEvent, EventSink, Paths, RecordingSink};
 pub struct Engine {
     pub(crate) queue: db::queue::DbQueue,
     pub(crate) db: db::Db,
+    /// Behind its own lock, always taken after the library's.
+    pub(crate) index: Mutex<index::NoteIndex>,
     pub(crate) restored: backup::Restored,
     pub(crate) sending: http::send::Sending,
     pub(crate) runs: http::runner::Runs,
@@ -46,6 +51,7 @@ impl Engine {
         Self {
             queue: db::queue::DbQueue::start(),
             db: db::Db::new(None),
+            index: Mutex::new(index::NoteIndex::default()),
             restored: backup::Restored::default(),
             sending: http::send::Sending::default(),
             runs: http::runner::Runs::default(),
@@ -61,6 +67,16 @@ impl Engine {
         &self.db
     }
 
+    pub(crate) fn index(&self) -> Result<MutexGuard<'_, index::NoteIndex>, StorageError> {
+        self.index.lock().map_err(|_| StorageError::Unavailable)
+    }
+
+    /// How many notes the index holds, for the tests.
+    #[doc(hidden)]
+    pub fn indexed(&self) -> usize {
+        self.index.lock().map_or(0, |index| index.len())
+    }
+
     pub fn paths(&self) -> &Paths {
         &self.paths
     }
@@ -68,6 +84,9 @@ impl Engine {
     /// What runs for the library about to be closed, whose writes would go nowhere: the sockets,
     /// the runs and the sends. A send that still ends writes nothing (`Library::number`).
     pub(crate) fn let_go_of_the_network(&self) {
+        if let Ok(mut index) = self.index.lock() {
+            index.clear();
+        }
         self.sockets.close_all();
         self.runs.cancel_all();
         self.sending.cancel_all();
