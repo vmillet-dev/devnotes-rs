@@ -4569,6 +4569,21 @@ without one.
 - `Segmented` (the segment on is filled, its label bright), `TextField` (the reference's
   `.input`: 9 × 11 on `bg-1`, red when refused), `SearchField`, `Checkbox`.
 
+- `menu` (an `egui::Popup` on the reference's surface: `bg-2`, 8 px, 4 px inside, the dropdown's
+  shadow): the first entry takes the focus, egui's arrow navigation walks the rest, → opens a
+  sub-menu and ← comes back, Escape closes. ⚠️ egui keeps **one** popup in its memory — the parent —
+  so a sub-menu keeps its open state apart. `ChoiceMenu` names its value (`Naming::Value`) or its
+  own label, and from `FILTER_FROM` (9) entries puts a filter on top that takes the focus.
+- `DialogStack` and `dialog`: one rung per layer of `dialog.model.ts` (editor … passphrase), the
+  higher drawn over the lower and served first by Escape; an `egui::Modal` blocks what is under it
+  and keeps Tab inside; the fitted frame is `bg-1`, 14 px, `line`, the overlay's shadow, 480 px,
+  over a solid scrim (E7). The focus goes back to the opener — **the frame after**, once no modal
+  layer blocks it (`DialogStack::begin_frame`), since egui drops a focus given while one does.
+- `virtual_list` (uniform rows, only those in view drawn — 30 000 rows draw fewer than twenty),
+  `code_viewer` (read-only, numbered in `line_no`), `rail_frame` and `split_handle` (a drag or the
+  arrows, 16 px a press, within bounds), `tooltip` (drawn, E3), `release_notes` (the core's runs:
+  plain, strong, code).
+
 Hover colours ease over `motion::FAST`; a disabled control is drawn at half strength.
 `DEVNOTES_LOOK=<dir> cargo test -p ui widgets::tests::look` renders the kit in both themes, to
 look at.
