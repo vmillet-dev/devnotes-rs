@@ -1,0 +1,155 @@
+name: E2E
+
+# One platform's end-to-end run: the `e2e` flavour and the scenarios' executables, then its groups
+# of scenarios against them. `ci.yml` calls it once per platform, so the groups of one start as
+# soon as its own build is ready — a matrix of builds would hold them until the slower platform
+# had built too.
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: The runner image, `windows-latest` or `ubuntu-22.04`.
+        required: true
+        type: string
+      groups:
+        description: The groups of `crates/e2e/groups.json`, as a JSON array of name and specs.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          shared-key: e2e-${{ inputs.os }}
+          save-if: 'true'
+
+      # The flavour in a target directory of its own, as locally; each scenario is a test
+      # executable of `crates/e2e`, built once here and run by name in the groups.
+      - name: Build the flavour and the scenarios
+        run: |
+          start=$(date +%s)
+          cargo build -p app --features e2e --target-dir target/e2e --locked
+          mkdir -p dist/scenarios
+          cp "target/e2e/debug/devnotes$EXE" dist/
+          cargo test -p e2e --no-run --locked --message-format=json \
+            | jq -r 'select(.reason == "compiler-artifact" and .profile.test and .target.kind == ["test"]) | "\(.target.name) \(.executable)"' \
+            | while read -r name executable; do cp "$executable" "dist/scenarios/$name$EXE"; done
+          ls dist/scenarios
+          echo "\`build-e2e\` (${{ inputs.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          EXE: ${{ runner.os == 'Windows' && '.exe' || '' }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: e2e-app-${{ inputs.os }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 1
+
+      # A failed job hands its run to `stop.yml`, which cancels it, and every other run of its
+      # commit, seconds later. ⚠️ Not `gh run cancel` here: cancelled from inside, the job would
+      # end « cancelled » and hide what failed. A Dependabot run is read-only and says so.
+      - &stop-the-run
+        name: Stop the run
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh workflow run stop.yml --repo "$GITHUB_REPOSITORY" --ref "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          -f run="$GITHUB_RUN_ID" || echo "::notice::This token cannot stop the run"
+
+  # No cargo here: the executables come from `build`. A group is a runner that sets up once and
+  # runs its scenarios one after the other, each its own process and profile: nothing in one
+  # scenario depends on the one before it.
+  group:
+    name: group ${{ matrix.group.name }}
+    needs: build
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 40
+    strategy:
+      # The first failure cancels this platform's other groups: the run's result is known.
+      fail-fast: true
+      max-parallel: 3
+      matrix:
+        group: ${{ fromJSON(inputs.groups) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The identity tool's lists are read from the source tree, where the flavour was built.
+      - uses: actions/checkout@v7
+
+      # What the window loads at run time; the capture needs a rendered window, which xvfb
+      # gives without a window manager. Windows draws on WARP, which ships with it.
+      - name: X server and software Vulkan
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xvfb
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: e2e-app-${{ inputs.os }}
+          path: dist
+
+      - name: Executable bits
+        if: runner.os == 'Linux'
+        run: chmod +x dist/devnotes dist/scenarios/*
+
+      # One process per scenario; the group stops at its first failure. Each leaves its captures,
+      # and on failure its last screen and the application's log, in `scenarios/<name>/`.
+      - name: Run group ${{ matrix.group.name }}
+        env:
+          SPECS: ${{ join(matrix.group.specs, ' ') }}
+          EXE: ${{ runner.os == 'Windows' && '.exe' || '' }}
+          DEVNOTES_E2E_BIN: ${{ github.workspace }}/dist/devnotes${{ runner.os == 'Windows' && '.exe' || '' }}
+          DEVNOTES_E2E_OUTPUT: ${{ github.workspace }}/scenarios
+        run: |
+          for spec in $SPECS; do
+            echo "::group::$spec"
+            start=$(date +%s)
+            status=0
+            if [ "$RUNNER_OS" = "Linux" ]; then
+              xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" "dist/scenarios/$spec$EXE" --nocapture || status=$?
+            else
+              "dist/scenarios/$spec$EXE" --nocapture || status=$?
+            fi
+            echo "::endgroup::"
+            if [ "$status" -ne 0 ]; then
+              echo "::error title=E2E::$spec failed (${{ inputs.os }}, group ${{ matrix.group.name }})"
+              echo "\`$spec\` (${{ inputs.os }}) — failed after $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+              exit "$status"
+            fi
+            echo "\`$spec\` (${{ inputs.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      # Named per attempt: a re-run that passes would otherwise replace the files of the attempt
+      # that failed. Never the profile, whose library is the run's.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-${{ inputs.os }}-group-${{ matrix.group.name }}-${{ github.run_attempt }}
+          path: scenarios
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - *stop-the-run

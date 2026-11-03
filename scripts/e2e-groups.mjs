@@ -2,17 +2,18 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 /**
- * CI runs the e2e scenarios in the groups of `e2e/groups.json`, three per OS, so that a pull
- * request takes six runners and not one per scenario. This is the one reader of that file: it
- * refuses a scenario left out, listed twice or unknown, and prints the matrix `e2e.yml` runs.
+ * CI runs the e2e scenarios in the groups of `crates/e2e/groups.json`, up to three per OS, so
+ * that a pull request takes six runners and not one per scenario. This is the one reader of that
+ * file: it refuses a scenario left out, listed twice or unknown, and prints the matrix the `e2e`
+ * job runs.
  */
-export const GROUPS = 'e2e/groups.json';
-export const SPECS = 'e2e/specs';
+export const GROUPS = 'crates/e2e/groups.json';
+export const SPECS = 'crates/e2e/tests';
 
 export function scenarioNames(directory = SPECS) {
   return readdirSync(directory)
-    .filter((file) => file.endsWith('.e2e.ts'))
-    .map((file) => file.slice(0, -'.e2e.ts'.length))
+    .filter((file) => file.endsWith('.rs'))
+    .map((file) => file.slice(0, -'.rs'.length))
     .sort();
 }
 
@@ -45,7 +46,7 @@ export function groupProblems(groups, scenarios) {
   return problems;
 }
 
-/** `[{ name, specs }]`, each group's scenarios in their numeric order, as `01-first-launch` needs. */
+/** `[{ name, specs }]`, each group's scenarios in their numeric order, as `01_first_launch` needs. */
 export function matrix(groups) {
   return Object.entries(groups).map(([name, specs]) => ({ name, specs: [...specs].sort() }));
 }
