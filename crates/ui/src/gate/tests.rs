@@ -115,8 +115,7 @@ fn a_first_launch_asks_for_a_phrase_twice_and_holds_it_to_twelve_characters() {
 
 #[test]
 fn an_unlock_takes_any_length_and_says_when_the_phrase_is_wrong() {
-    let (first, profile) = testing::unlocked();
-    drop(first);
+    let profile = testing::locked();
     let backend = testing::backend_on(profile.path());
     let mut harness = screen(backend, profile);
     harness.run();
@@ -151,8 +150,7 @@ fn an_unlock_takes_any_length_and_says_when_the_phrase_is_wrong() {
 
 #[test]
 fn a_forgotten_phrase_asks_before_archiving_and_can_be_left() {
-    let (first, profile) = testing::unlocked();
-    drop(first);
+    let profile = testing::locked();
     let backend = testing::backend_on(profile.path());
     let mut harness = screen(backend, profile);
     harness.run();

@@ -73,8 +73,7 @@ mod tests {
 
     #[test]
     fn a_library_reopens_with_its_phrase_and_only_with_it() {
-        let (first, profile) = testing::unlocked();
-        drop(first);
+        let profile = testing::locked();
         let backend = testing::backend_on(profile.path());
         assert_eq!(
             settled(&backend, state(&backend)).unwrap(),
