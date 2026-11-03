@@ -55,6 +55,8 @@ pub enum Icon {
     Paperclip,
     Image,
     Hourglass,
+    /// The error banner's « ⚠ ».
+    TriangleAlert,
 }
 
 impl Icon {
@@ -211,6 +213,11 @@ impl Icon {
                 "M9 7a2 2 0 1 0 0 4a2 2 0 1 0 0-4z",
                 "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21",
             ],
+            Self::TriangleAlert => &[
+                "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
+                "M12 9v4",
+                "M12 17h.01",
+            ],
             Self::Hourglass => &[
                 "M5 22h14",
                 "M5 2h14",
@@ -298,7 +305,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 42] = [
+    const ALL: [Icon; 43] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
@@ -341,6 +348,7 @@ mod tests {
         Icon::Paperclip,
         Icon::Image,
         Icon::Hourglass,
+        Icon::TriangleAlert,
     ];
 
     fn coverage(image: &ColorImage) -> usize {

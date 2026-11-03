@@ -8,13 +8,15 @@ use engine::{EngineEvent, Paths};
 use platform::instance::Message;
 use platform::window::Geometry;
 
+use crate::action::AppAction;
 use crate::action::{Action, Actions, GlobalAction};
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
 use crate::services::preferences::Preferences;
 use crate::state::AppState;
+use crate::state::Area;
 use crate::theme;
-use crate::{gate, keys};
+use crate::{banners, gate, keys, titlebar};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -98,6 +100,19 @@ impl DevNotesApp {
     }
 }
 
+/// An area before its screens: the whole room, named, so that the switch has somewhere to go.
+/// Not drawn, it costs nothing, and its state stays in `AppState`.
+fn area_shell(ui: &mut egui::Ui, area: Area) {
+    let id = match area {
+        Area::Notes => "area-notes",
+        Area::Tools => "area-tools",
+        Area::Http => "area-http",
+    };
+    let (_, response) = ui.allocate_exact_size(ui.available_size(), egui::Sense::hover());
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Main, true, id));
+    crate::widgets::address(ui, &response, id);
+}
+
 /// Brought back from the tray, from under other windows, or from the taskbar.
 fn reveal(ctx: &egui::Context) {
     ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
@@ -137,10 +152,44 @@ impl eframe::App for DevNotesApp {
     /// Draw, then the keys the widgets left, then the actions: always in this order (§ 3.3.7).
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let mut actions = Actions::default();
+        let language = self.state.language;
+        egui::Panel::top("titlebar")
+            .exact_size(titlebar::HEIGHT)
+            .frame(egui::Frame::NONE)
+            .show(ui, |ui| {
+                titlebar::show(
+                    ui,
+                    self.state.settings.area,
+                    self.state.gate.is_open(),
+                    language,
+                    &mut actions,
+                );
+            });
+        if let Some(notice) = self.state.errors.notice() {
+            let notice = notice.clone();
+            egui::Panel::top("error-banner")
+                .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
+                .show(ui, |ui| {
+                    if banners::error_banner(ui, &notice, language) {
+                        actions.push(Action::App(AppAction::DismissError));
+                    }
+                });
+        }
+        if let Some((_, status)) = self.state.status.latest() {
+            let status = status.clone();
+            egui::Panel::top("status-toast")
+                .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
+                .show(ui, |ui| {
+                    if banners::status_toast(ui, &status, language) {
+                        actions.push(Action::App(AppAction::DismissStatus));
+                    }
+                });
+        }
         egui::CentralPanel::default().show(ui, |ui| {
-            if !self.state.gate.is_open() {
+            if self.state.gate.is_open() {
+                area_shell(ui, self.state.settings.area);
+            } else {
                 let mut asked = Vec::new();
-                let language = self.state.language;
                 gate::show(
                     ui,
                     &self.state.gate,
@@ -298,5 +347,114 @@ mod tests {
         assert!(geometry.maximized);
         assert!((geometry.width - 800.0).abs() < f32::EPSILON);
         assert!((geometry.x - 10.0).abs() < f32::EPSILON);
+    }
+
+    fn present(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> bool {
+        use egui_kittest::kittest::Queryable;
+        harness
+            .query_by(|node| node.author_id() == Some(author_id))
+            .is_some()
+    }
+
+    fn click(harness: &mut Harness<'_, DevNotesApp>, author_id: &str) {
+        use egui_kittest::kittest::Queryable;
+        harness
+            .get_by(|node| node.author_id() == Some(author_id))
+            .click();
+        harness.run();
+    }
+
+    fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &str) {
+        use egui_kittest::kittest::Queryable;
+        click(harness, author_id);
+        harness
+            .get_by(|node| node.author_id() == Some(author_id))
+            .type_text(words);
+        harness.run();
+    }
+
+    /// Through the gate, as a first launch does it.
+    fn open_library(directory: &std::path::Path) -> Harness<'static, DevNotesApp> {
+        let startup = startup(directory);
+        let mut harness = Harness::builder()
+            .with_size(egui::vec2(1100.0, 720.0))
+            .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
+        harness.state().backend().settle();
+        harness.run();
+        type_into(&mut harness, "vault-passphrase", crate::testing::PASSPHRASE);
+        type_into(
+            &mut harness,
+            "vault-confirmation",
+            crate::testing::PASSPHRASE,
+        );
+        click(&mut harness, "vault-submit");
+        harness.state().backend().settle();
+        harness.run();
+        assert!(harness.state().state().gate.is_open());
+        harness
+    }
+
+    #[test]
+    fn the_areas_are_offered_only_once_the_library_is_open() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        harness.state().backend().settle();
+        harness.run();
+
+        assert!(present(&harness, "theme-toggle"));
+        assert!(!present(&harness, "area-switch"));
+    }
+
+    #[test]
+    fn the_switch_and_its_keys_change_the_area() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        assert!(present(&harness, "area-notes"));
+
+        click(&mut harness, "area-option-tools");
+        assert!(present(&harness, "area-tools"));
+
+        harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::Num3);
+        harness.run();
+        assert!(present(&harness, "area-http"));
+        assert_eq!(harness.state().state().settings.area, Area::Http);
+    }
+
+    #[test]
+    fn the_toggle_switches_to_the_other_theme() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        harness.run();
+        let before = harness.ctx.theme();
+
+        click(&mut harness, "theme-toggle");
+
+        assert_ne!(harness.ctx.theme(), before);
+    }
+
+    #[test]
+    fn a_banner_stays_until_it_is_dismissed() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        let state = &mut harness.state_mut().state;
+        state.errors.report(
+            i18n::keys::errors::ATTACHMENTS_LOAD_FAILED,
+            &engine::error::AppError::from(engine::error::StorageError::Locked),
+        );
+        state
+            .status
+            .report(i18n::Message::new(i18n::keys::attachments::SAVED));
+        harness.run();
+        assert!(present(&harness, "error-banner"));
+        assert!(present(&harness, "status-toast"));
+
+        click(&mut harness, "error-dismiss");
+        click(&mut harness, "status-dismiss");
+
+        assert!(!present(&harness, "error-banner"));
+        assert!(!present(&harness, "status-toast"));
     }
 }

@@ -5,6 +5,7 @@ pub mod action;
 pub mod api;
 mod app;
 pub mod backend;
+mod banners;
 pub mod gate;
 pub mod inputs;
 pub mod keys;
@@ -13,6 +14,7 @@ pub mod state;
 #[cfg(test)]
 mod testing;
 pub mod theme;
+mod titlebar;
 pub mod widgets;
 
 pub use app::{DevNotesApp, Startup};

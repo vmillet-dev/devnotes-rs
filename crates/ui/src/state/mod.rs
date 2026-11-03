@@ -118,6 +118,8 @@ impl AppState {
                 self.apply_look(ctx);
                 self.save_settings(backend);
             }
+            Action::App(AppAction::DismissError) => self.errors.dismiss(),
+            Action::App(AppAction::DismissStatus) => self.status.dismiss(),
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
