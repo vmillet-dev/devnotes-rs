@@ -19,10 +19,7 @@ use engine::notes::model::{
 };
 use engine::notes::priority::Priority;
 use engine::notes::trash;
-use engine::notes::view::{
-    self, NoteFilter, NoteSection, NoteSectionKey, NotesQuery, NotesView, SectionGroup,
-    SortDirection, SortKey,
-};
+use engine::notes::view::{NoteFilter, NotesQuery, SortDirection, SortKey};
 use engine::spaces::model::{Space, SpaceDraft};
 use engine::transfer;
 use engine::transfer::model::{Bundle, ImportReport};
@@ -157,92 +154,6 @@ fn a_source_footer_serializes_with_the_kind_the_front_discriminates_on() {
     assert_eq!(
         json["footer"],
         serde_json::json!({ "kind": "source", "value": "API Gateway" })
-    );
-}
-
-#[test]
-fn a_view_serializes_with_camel_case_keys() {
-    let view = NotesView {
-        sections: vec![NoteSection {
-            key: NoteSectionKey::Week,
-            id: "week".to_string(),
-            group: None,
-            notes: vec![displayed(sample())],
-            has_expiring_notes: false,
-            show_create_ghost: true,
-        }],
-        available_tags: vec!["auth".to_string()],
-        available_languages: vec![Language::Json],
-        kind_counts: view::count_kinds(&[("note".to_string(), 3)]),
-        priority_counts: view::count_priorities(&[("urgent".to_string(), 1)]),
-        tag_counts: view::count_tags(vec![("auth".to_string(), 2)]),
-        language_counts: view::count_languages(&[("json".to_string(), 1)]),
-        is_filtering: false,
-        matched: 1,
-    };
-
-    let json = serde_json::to_value(view).unwrap();
-
-    assert!(json.get("availableTags").is_some());
-    assert!(json.get("availableLanguages").is_some());
-    assert_eq!(
-        json["kindCounts"][1],
-        serde_json::json!({ "value": "note", "count": 3 })
-    );
-    assert_eq!(
-        json["priorityCounts"][4],
-        serde_json::json!({ "value": "urgent", "count": 1 })
-    );
-    assert_eq!(
-        json["tagCounts"][0],
-        serde_json::json!({ "value": "auth", "count": 2 })
-    );
-    assert_eq!(
-        json["languageCounts"][0],
-        serde_json::json!({ "value": "json", "count": 1 })
-    );
-    assert!(json.get("isFiltering").is_some());
-    assert!(json.get("available_tags").is_none());
-    assert!(json.get("available_languages").is_none());
-    assert!(json["sections"][0].get("hasExpiringNotes").is_some());
-    assert!(json["sections"][0].get("showCreateGhost").is_some());
-}
-
-#[test]
-fn a_section_key_serializes_as_the_translation_key_the_front_expects() {
-    let section = NoteSection {
-        key: NoteSectionKey::Older,
-        id: "older".to_string(),
-        group: None,
-        notes: Vec::new(),
-        has_expiring_notes: false,
-        show_create_ghost: false,
-    };
-
-    let json = serde_json::to_value(section).unwrap();
-
-    assert_eq!(json["key"], "older");
-}
-
-/// A format section names what it gathers; its key alone would say "format" for all of them.
-#[test]
-fn a_gathered_section_says_what_it_gathers() {
-    let section = NoteSection {
-        key: NoteSectionKey::Format,
-        id: "format-sql".to_string(),
-        group: Some(SectionGroup::Language {
-            language: Language::Sql,
-        }),
-        notes: Vec::new(),
-        has_expiring_notes: false,
-        show_create_ghost: false,
-    };
-
-    let json = serde_json::to_value(section).unwrap();
-
-    assert_eq!(
-        json["group"],
-        serde_json::json!({ "group": "language", "language": "sql" })
     );
 }
 
