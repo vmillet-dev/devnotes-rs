@@ -3,6 +3,6 @@
 
 mod app;
 pub mod inputs;
-mod theme;
+pub mod theme;
 
 pub use app::{DevNotesApp, Startup};
