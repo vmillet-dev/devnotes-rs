@@ -201,6 +201,30 @@ fn the_copy_icon_waits_for_the_pointer() {
     );
 }
 
+/// The note's own copy, not a result's: its results follow as comments.
+#[test]
+fn copying_the_sheet_writes_its_results_as_comments() {
+    let (mut harness, _) = opened("2 + 2\nune phrase");
+
+    harness
+        .get_by(|node| node.author_id() == Some("editor-copy"))
+        .click();
+    let mut copied = None;
+    for _ in 0..60 {
+        harness.step();
+        harness.state().backend.settle();
+        copied = copied.or_else(|| {
+            let commands = &harness.output().platform_output.commands;
+            commands.iter().find_map(|command| match command {
+                egui::OutputCommand::CopyText(text) => Some(text.clone()),
+                _ => None,
+            })
+        });
+    }
+
+    assert_eq!(copied.as_deref(), Some("2 + 2 // 4\nune phrase"));
+}
+
 #[test]
 fn an_offset_is_read_in_utf16_units() {
     assert_eq!(char_at("a😀b", 3), Some(2));

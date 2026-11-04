@@ -128,6 +128,30 @@ fn the_card_shows_the_picture_taken_after_the_body_was_written() {
 }
 
 #[test]
+fn a_drawing_is_not_copied_as_text() {
+    let (mut harness, id) = opened("");
+    draw_rectangle(&mut harness);
+    close(&mut harness);
+
+    // The menu and the palette reach it; a card shows no copy button for a drawing.
+    let bench = harness.state_mut();
+    bench.state.notes.copy(&bench.backend, id);
+    let mut copied = false;
+    for _ in 0..60 {
+        harness.step();
+        harness.state().backend.settle();
+        let commands = &harness.output().platform_output.commands;
+        copied |= commands
+            .iter()
+            .any(|command| matches!(command, egui::OutputCommand::CopyText(_)));
+    }
+
+    assert!(!copied);
+    let (_, said) = harness.state().state.status.latest().unwrap();
+    assert_eq!(said.key, i18n::keys::notes::DRAWING_NOT_COPIED);
+}
+
+#[test]
 fn opened_and_closed_nothing_moves() {
     let scene = r#"{"version":1,"scene":{"objects":[]}}"#;
     let (mut harness, id) = opened(scene);

@@ -3,6 +3,7 @@
 
 use chrono::NaiveDate;
 use engine::notes::calc::CalcSheet;
+use engine::notes::model::DisplayNote;
 use i18n::keys;
 
 use crate::api;
@@ -13,6 +14,7 @@ use crate::services::errors::ErrorNotifier;
 pub struct CalcSheets {
     asked: Option<(u64, Pending<CalcSheet>)>,
     answer: Option<(u64, CalcSheet)>,
+    copying: Vec<(DisplayNote, Pending<CalcSheet>)>,
 }
 
 impl CalcSheets {
@@ -27,7 +29,28 @@ impl CalcSheets {
         self.asked = Some((session, api::notes::evaluate_calc(backend, text, today)));
     }
 
-    pub fn update(&mut self, errors: &mut ErrorNotifier) {
+    /// A copy carries the results: read whole, the note is computed before it reaches the clipboard.
+    pub fn copy(&mut self, backend: &Backend, note: DisplayNote, today: NaiveDate) {
+        let sheet = api::notes::evaluate_calc(backend, note.content.clone(), today);
+        self.copying.push((note, sheet));
+    }
+
+    /// The notes computed for a copy, each with its sheet.
+    pub fn update(&mut self, errors: &mut ErrorNotifier) -> Vec<(DisplayNote, CalcSheet)> {
+        self.adopt(errors);
+        let mut copied = Vec::new();
+        let copying = std::mem::take(&mut self.copying);
+        for (note, mut pending) in copying {
+            match pending.poll() {
+                None => self.copying.push((note, pending)),
+                Some(Ok(sheet)) => copied.push((note, sheet)),
+                Some(Err(error)) => errors.report(keys::errors::CALC_FAILED, &error),
+            }
+        }
+        copied
+    }
+
+    fn adopt(&mut self, errors: &mut ErrorNotifier) {
         let Some((session, pending)) = &mut self.asked else {
             return;
         };

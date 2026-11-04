@@ -167,7 +167,7 @@ impl AppState {
             self.editor.open(id);
         }
         for note in answered.copied {
-            self.copied(ctx, note);
+            self.copied(ctx, backend, note);
         }
         let time = ctx.input(|input| input.time);
         for done in answered.done {
@@ -208,7 +208,10 @@ impl AppState {
             &self.opener,
             &mut reports,
         );
-        self.calc.update(&mut self.errors);
+        for (note, sheet) in self.calc.update(&mut self.errors) {
+            let text = crate::notes::calc::copy_text(&note.content, &sheet, self.language);
+            self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
+        }
         self.follow_revisions(backend);
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
@@ -760,9 +763,24 @@ impl AppState {
 
     /// What copying yields, onto the clipboard, and said: what was copied, by its title.
     /// A note with `{{fields}}` asks for them first.
-    fn copied(&mut self, ctx: &egui::Context, note: engine::notes::model::DisplayNote) {
+    fn copied(
+        &mut self,
+        ctx: &egui::Context,
+        backend: &Backend,
+        note: engine::notes::model::DisplayNote,
+    ) {
+        if note.kind == engine::notes::kind::NoteKind::Drawing {
+            self.status
+                .report(i18n::Message::new(i18n::keys::notes::DRAWING_NOT_COPIED));
+            return;
+        }
         if !note.placeholders.is_empty() {
             self.fill.open(note);
+            return;
+        }
+        if note.kind == engine::notes::kind::NoteKind::Calc {
+            let today = self.clock.now().with_timezone(&chrono::Local).date_naive();
+            self.calc.copy(backend, note, today);
             return;
         }
         let text = note

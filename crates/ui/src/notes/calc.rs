@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 
 use engine::notes::calc::units::{Dimension, UnitEntry, UnitId};
 use engine::notes::calc::words::{CalcWord, WordClass, WordEntry};
-use engine::notes::calc::{CalcError, CalcUnit, CalcValue, SpanPart};
+use engine::notes::calc::{CalcError, CalcLine, CalcSheet, CalcUnit, CalcValue, SpanPart};
 use i18n::Language;
 
 use crate::api;
@@ -149,6 +149,23 @@ pub fn exact(value: &CalcValue, language: Language) -> String {
 }
 
 /// Said on its line in place of a result, a capital first.
+/// The text with each result after it as a comment: pasted into another sheet, the comments are
+/// read past and the same lines compute again.
+pub fn copy_text(text: &str, sheet: &CalcSheet, language: Language) -> String {
+    let lines = text.split('\n').enumerate().map(|(index, line)| {
+        let Some(CalcLine::Value { value, places, .. }) =
+            sheet.rows.get(index).map(|row| &row.line)
+        else {
+            return line.to_owned();
+        };
+        let shown = self::value(value, *places, language);
+        let approx = if shown.approx { "≈ " } else { "" };
+        let written = line.split("//").next().unwrap_or(line).trim_end();
+        format!("{written} // {approx}{}", shown.text)
+    });
+    lines.collect::<Vec<_>>().join("\n")
+}
+
 pub fn error(error: &CalcError, language: Language) -> String {
     let dimension = |dimension: Dimension| {
         let name = name_of(dimension);
@@ -383,6 +400,37 @@ fn is_money(unit: UnitId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn computed(text: &str) -> CalcSheet {
+        let today = chrono::NaiveDate::from_ymd_opt(2026, 11, 4).unwrap();
+        engine::notes::calc::evaluate(text, today)
+    }
+
+    #[test]
+    fn a_copy_writes_each_result_as_a_comment_in_place_of_the_old_one() {
+        let text = "# Budget\nttc = 100,521 € // ancien\nune phrase\n2 + 2";
+
+        let copied = copy_text(text, &computed(text), Language::Fr);
+
+        assert_eq!(
+            copied.replace(NBSP, " "),
+            "# Budget\nttc = 100,521 € // ≈ 100,52 €\nune phrase\n2 + 2 // 4"
+        );
+    }
+
+    #[test]
+    fn a_copy_reads_back_as_the_same_sheet() {
+        let text = "a = 100,521 €\nb = 4,99 €\ntotal\na × 12";
+        let sheet = computed(text);
+
+        let copied = copy_text(text, &sheet, Language::Fr);
+
+        let lines = |sheet: CalcSheet| {
+            let rows = sheet.rows.into_iter();
+            rows.map(|row| row.line).collect::<Vec<_>>()
+        };
+        assert_eq!(lines(computed(&copied)), lines(sheet));
+    }
 
     #[test]
     fn a_value_is_given_whole_with_no_thousands_grouped() {
