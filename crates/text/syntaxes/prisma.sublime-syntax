@@ -1,0 +1,30 @@
+%YAML 1.2
+---
+# Prisma's schema language: none of the grammars bundled has it.
+name: Prisma
+file_extensions: [prisma]
+scope: source.prisma
+contexts:
+  main:
+    - match: '//.*$'
+      scope: comment.line.double-slash.prisma
+    - match: '"'
+      push: string
+    - match: '\b(model|enum|type|view|datasource|generator)\b'
+      scope: keyword.declaration.prisma
+    - match: '\b(String|Boolean|Int|BigInt|Float|Decimal|DateTime|Json|Bytes|Unsupported)\b'
+      scope: storage.type.prisma
+    - match: '\b(true|false|null)\b'
+      scope: constant.language.prisma
+    - match: '\b-?\d+(\.\d+)?\b'
+      scope: constant.numeric.prisma
+    - match: '@@?[A-Za-z_][\w.]*'
+      scope: entity.name.function.attribute.prisma
+    - match: '\b[A-Za-z_]\w*(?=\s*\()'
+      scope: entity.name.function.prisma
+  string:
+    - meta_scope: string.quoted.double.prisma
+    - match: '\\.'
+      scope: constant.character.escape.prisma
+    - match: '"'
+      pop: true

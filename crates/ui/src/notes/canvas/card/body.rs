@@ -15,6 +15,7 @@ use super::{Context, Font, galley, label, text_at};
 use crate::action::{Action, Actions};
 use crate::notes::calc;
 use crate::notes::ui::tick_box;
+use crate::services::highlight;
 use crate::state::drawing_pictures::{Stamp, Thumbnail};
 use crate::theme::palette;
 use crate::widgets::{address, interact};
@@ -41,7 +42,12 @@ pub(super) fn show(
         NoteKind::Note if hit.is_none() => outline(ui, rect, &note.outline),
         NoteKind::Snippet if hit.is_none_or(|hit| hit.field == SearchField::Body) => {
             let shown = hit.map_or(note.content.as_str(), |hit| hit.excerpt.as_str());
-            code(ui, rect, shown);
+            code(
+                ui,
+                rect,
+                shown,
+                crate::notes::language::syntax(note.language),
+            );
         }
         _ => {
             let tag = hit.is_some_and(|hit| hit.field == SearchField::Tag);
@@ -51,18 +57,44 @@ pub(super) fn show(
     }
 }
 
-/// Monospaced, a line a row, cut at the card's edge rather than wrapped.
-fn code(ui: &mut Ui, rect: Rect, content: &str) {
+/// Monospaced, a line a row, cut at the card's edge rather than wrapped; coloured by the
+/// grammar of its language, plain in the card's grey where it has none.
+fn code(ui: &mut Ui, rect: Rect, content: &str, syntax: Option<&str>) {
     let p = palette(ui.ctx());
     let font = Font::mono(11.0, 1.55);
     label(ui, rect, content, "note-card-snippet");
     let painter = ui.painter().with_clip_rect(rect);
+    let coloured = syntax.map(|syntax| highlight::short(ui.ctx(), syntax, content));
     let mut top = rect.top();
-    for line in content.lines() {
+    for (at, line) in content.lines().enumerate() {
         if top + font.height() > rect.bottom() + 0.5 {
             break;
         }
-        let shown = galley(ui, line, &font, p.text_2, f32::INFINITY, 1);
+        let tokens = coloured.as_ref().and_then(|lines| lines.get(at));
+        let mut job = egui::text::LayoutJob::default();
+        let mut cut = 0;
+        let mut push = |job: &mut egui::text::LayoutJob, to: usize, colour, italics| {
+            let end = line
+                .char_indices()
+                .nth(to)
+                .map_or(line.len(), |(byte, _)| byte);
+            if end > cut {
+                let mut format = font.format(colour);
+                format.italics = italics;
+                job.append(&line[cut..end], 0.0, format);
+                cut = end;
+            }
+        };
+        let mut from = 0;
+        for (range, token) in tokens.into_iter().flatten() {
+            push(&mut job, range.start, p.text_2, false);
+            let (colour, italics) = highlight::colour(p, *token);
+            push(&mut job, range.end, colour, italics);
+            from = range.end;
+        }
+        let _ = from;
+        push(&mut job, line.chars().count(), p.text_2, false);
+        let shown = ui.fonts_mut(|fonts| fonts.layout_job(job));
         painter.galley(pos2(rect.left(), top), shown, Color32::TRANSPARENT);
         top += font.height();
     }

@@ -56,6 +56,8 @@ impl DevNotesApp {
             .options_mut(|options| options.zoom_with_keyboard = false);
         let mut state = AppState::new(startup.preferences, startup.reduced_motion);
         state.apply_look(&cc.egui_ctx);
+        // The grammars take a few hundred milliseconds to load: never on the frame.
+        std::thread::spawn(text::highlight::warm);
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
         state.gate.ask(&backend);
         Ok(Self {

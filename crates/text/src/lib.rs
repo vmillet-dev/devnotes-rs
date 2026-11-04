@@ -8,11 +8,14 @@
 
 mod buffer;
 mod diff;
+pub mod highlight;
 mod history;
 mod indent;
 mod search;
 mod shield;
 mod words;
+
+pub use ropey::Rope;
 
 pub use buffer::{Buffer, Direction, Edited, Selection, Unit};
 pub use diff::changed_lines;
