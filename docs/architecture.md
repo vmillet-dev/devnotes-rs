@@ -589,45 +589,47 @@ Prettier is JavaScript. `core/services/format/` holds all of it.
 ### Exploring a JSON snippet
 
 A snippet whose language Rust has a reader for — JSON, YAML, TOML, XML (not HTML) — has a band of its own: **Code /
-Graphe / Arbre**, and « YAML valide » or where the draft stops parsing. The model is Rust's —
-see [The JSON visualiser's model](#the-json-visualisers-model); the front draws it. Which
-languages have a reader is one table, `explorableFormat` in `core/model/json.model.ts`; the
-explorer takes the format as an input for its messages, and nothing else in it is per format.
+Graphe / Arbre**, « Côte à côte », and « YAML valide » or where the draft stops parsing. The model is Rust's —
+see [The JSON visualiser's model](#the-json-visualisers-model); the interface draws it. Which
+languages have a reader is one table, `json::read::explorable_format`; the explorer takes the
+format for its messages, and nothing else in it is per format.
 
-- **The explorer takes inputs only** (`shared/json-explorer/`: the explorer, its graph and its
-  tree), so an HTTP response can show one too. Its state is `JsonExplorerStore`, provided by
-  the **editor** and not at the root — two documents may be explored at once — and handed over
-  by `JsonViewComponent`, the editor's container, which is a `@defer` chunk imported on a line
-  of its own: the visualiser loads with a first Graphe or Arbre.
-- **The draft is explored as it is typed**, debounced, so the band answers for what is on
-  screen; a note just opened is explored at once, from its first level.
+- **The explorer reads no global state** (`ui::widgets::json_explorer`: the explorer, its graph and
+  its tree), so an HTTP response can show one too. Its state is the caller's `Explorer`, kept by
+  the **editor** (`overlays/editor/json_view.rs`) — two documents may be explored at once — and
+  the answer is `ExploredState`'s, a `QueryCell` on `compute` keyed on the opening: the view and
+  the text it was made of, whose spans point into it rather than into the draft typed since.
+- **The draft is explored as it is typed**, debounced (250 ms), so the band answers for what is
+  on screen; a note just opened is explored at once, from its first level. The editor asks only
+  when the query changed: an action is a repaint, and asking every frame never settles.
 - **Côte à côte**: the code on the left, the visualiser on the right, the line between them
-  `app-split-handle` standing up (`orientation: vertical`, ← → as its keyboard twin). The
-  layout, the code hidden or not and the share are `ExplorerLayoutStore`'s: the session's,
-  written nowhere. Under `SIDE_BY_SIDE_FROM` the body is not squeezed — the toggle is disabled
-  and says so — measured by a `ResizeObserver` on the body's frame once it exists. The two
-  select in step through `CodeSelection` (`code-selection.ts`, which the code editor
-  implements): a node chosen selects its span in the code without taking the focus and lights
-  its lines (`focusedLines`); the caret, moved by a key or a click, selects `entryAt` its
-  offset — never a selection the visualiser set, which carries no user event. ⚠️ The explorer is projected into
-  `app-side-by-side`, whose CSS cannot reach it: its pane is a one-cell grid that stretches it.
-  Narrower than 600 px (a container query), the selection panel goes under the graph with the
-  path and its actions alone: dropped whole, « Copier la valeur » had no size beside the code.
-  A string is copied by its own text, unquoted (`JsonRow.text`, `JsonLine.text`); anything else
-  as it is written.
-- **What is open is read back from each answer.** The front keeps no set of its own: it sends
+  `widgets::split_handle` (← → as its keyboard twin). The layout, the code hidden or not and the
+  share are `json_view::Layout`, kept by the notes area for the application's session and written
+  nowhere. Under 700 px of body it is not squeezed — the toggle is disabled and says so. The two
+  select in step: a node chosen selects its span in the code without taking the keys and lights
+  its lines (`EditorView::lit_lines`); the caret, moved by a key or a click, selects `entry_at`
+  its offset — never a selection the explorer set. Narrower than 600 px, the selection panel goes
+  under the graph with the path and its actions alone. A string is copied by its own text,
+  unquoted (`JsonRow.text`, `JsonLine.text`); anything else as it is written.
+- **What is open is read back from each answer.** The interface keeps no set of its own: it sends
   the paths of the nodes it was given, plus or minus the one clicked, and Rust decides what
   that opens, caps included. Opening a container opens one level. Stepping to a match sends
-  it as `reveal`, and Rust opens what is above it — the front never takes a path apart.
-- **The graph draws in the layout's units**: a node's `left` and `width` in `ch` of the
-  monospace font the plane is set in, its `top` in lines of 24 px; the edges are one SVG in
-  the same units, stretched, with `vector-effect: non-scaling-stroke`.
-- ⚠️ **Pointer events for the pan**, like every drag here, and the wheel scrolls it; the zoom
-  is three buttons. The keyboard twin is a cursor, one tab stop: the arrows walk a node's rows,
-  into a child and back up, Enter opens or closes, and Escape goes up — at the root it lets
-  go, and the editor closes.
+  it as `reveal`, and Rust opens what is above it — the interface never takes a path apart.
+- **The graph draws in the layout's units**: a node's `x` and `width` in columns of the
+  monospace font at 11.5 px, its `y` in lines of 24 px, times the zoom; the edges are cubic
+  curves in the same units. Only the nodes on the ground are drawn and named: the e2e driver
+  presses « Ajuster à l'écran » before counting them.
+- ⚠️ **One gesture for both**: a press that starts on a node moves it, anywhere else it pans,
+  and the wheel pans too; the zoom is three buttons. Every node, header and row takes its id from
+  its path (`widgets::region`), or a drag would lose its node when the culling changes. The
+  keyboard twin is a cursor and the ground the one tab stop: the arrows walk a node's rows, into a
+  child and back up, Enter opens or closes, Alt with an arrow moves the node, and Escape goes
+  up — at the root it lets go, and the editor closes. egui matches a key with extra Shift or Alt,
+  so Shift and Alt with an arrow are read first.
+- An entry's AccessKit node carries its path as its description and a container's state as
+  `expanded`: what kittest and the e2e driver find it by, untouched by translation.
 - "Voir dans le code" goes back to Code with the value **selected** — its span is in UTF-16
-  units, CodeMirror's own positions — and the body scrolled to it.
+  units, turned into the rope's characters (`utf16_cu_to_char`) — and the code takes the keys.
 
 ### The tools: one contract, and the rest written once
 
@@ -5819,7 +5821,7 @@ is not the WebView's thread's to parse.
 - **The matches cover the whole document**, open or not, in its order: stepping to one opens
   its ancestors.
 - **A node can be moved; the layout stays Rust's.** An offset per node, in the layout's own
-  units, kept by path in `JsonExplorerStore` — never in the note — so an edited document keeps
+  units, kept by path in the `Explorer` — never in the note — so an edited document keeps
   the place of every node whose path survives, and opening another note starts afresh. A
   gesture that starts on a node moves it, anywhere else it pans; it commits on `pointerup`, and
   the pointer is captured only once the press has travelled 4 px, or the click would land on the

@@ -15,6 +15,7 @@ mod segmented;
 
 pub mod date;
 pub mod editor;
+pub mod json_explorer;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
@@ -67,6 +68,13 @@ pub fn interact(
 /// question, the caret's — and a window without it under xvfb then takes no key at all.
 pub fn takes_keys(ui: &Ui, response: &Response) -> bool {
     ui.memory(|memory| memory.has_focus(response.id))
+}
+
+/// Room at a place already decided — a node on a ground, a pane — under an id that `salt`
+/// keeps whatever is drawn before it.
+pub fn region(ui: &mut Ui, rect: egui::Rect, salt: impl egui::AsIdSalt, sense: Sense) -> Response {
+    ui.new_child(egui::UiBuilder::new().id_salt(salt).max_rect(rect))
+        .allocate_rect(rect, sense)
 }
 
 /// The node's `author_id`: what kittest and the e2e driver find a control by.

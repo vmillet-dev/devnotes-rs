@@ -143,6 +143,7 @@ pub struct EditorView<'a> {
     font: FontId,
     decorations: &'a [Decoration],
     marked_lines: &'a [usize],
+    lit_lines: Range<usize>,
     colours: Option<Colours<'a>>,
     language: i18n::Language,
     completion: Option<Completion<'a>>,
@@ -165,6 +166,7 @@ impl<'a> EditorView<'a> {
             font: FontId::new(13.0, FontFamily::Monospace),
             decorations: &[],
             marked_lines: &[],
+            lit_lines: 0..0,
             colours: None,
             language: i18n::Language::En,
             completion: None,
@@ -247,6 +249,13 @@ impl<'a> EditorView<'a> {
     #[must_use]
     pub fn marked_lines(mut self, lines: &'a [usize]) -> Self {
         self.marked_lines = lines;
+        self
+    }
+
+    /// Lines lit from outside, zero-based: what the explorer beside the code has selected.
+    #[must_use]
+    pub fn lit_lines(mut self, lines: Range<usize>) -> Self {
+        self.lit_lines = lines;
         self
     }
 
@@ -369,6 +378,7 @@ impl<'a> EditorView<'a> {
                 decorations: self.decorations,
             },
             marked: self.marked_lines,
+            lit: self.lit_lines.clone(),
             hint: self.hint,
             gutter,
             focused,
@@ -454,6 +464,7 @@ fn ask_input_method(ui: &Ui, visible: Rect, caret: Rect) {
 struct Style<'a> {
     paint: geometry::Paint<'a>,
     marked: &'a [usize],
+    lit: Range<usize>,
     hint: &'a str,
     gutter: f32,
     focused: bool,
@@ -489,6 +500,15 @@ fn paint(
                 Vec2::new(visible.width(), height),
             );
             painter.rect_filled(row, 0.0, p.bg_2);
+        }
+        if style.lit.contains(&line) {
+            let row = Rect::from_min_size(
+                Pos2::new(visible.left(), at.y),
+                Vec2::new(visible.width(), height),
+            );
+            painter.rect_filled(row, 0.0, p.blue.gamma_multiply(0.1));
+            let bar = Rect::from_min_size(row.min, Vec2::new(3.0, height));
+            painter.rect_filled(bar, 0.0, p.blue);
         }
         if style.gutter > 0.0 {
             gutter_cell(

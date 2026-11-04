@@ -21,6 +21,8 @@ pub(super) struct CodeView {
     colouring: Option<Colouring>,
     fields: Vec<Decoration>,
     pub(super) search: SearchBar,
+    /// Lit from beside: what the explorer has selected.
+    pub(super) lit: std::ops::Range<usize>,
 }
 
 impl CodeView {
@@ -31,6 +33,7 @@ impl CodeView {
             colouring: None,
             fields: fields(text),
             search: SearchBar::default(),
+            lit: 0..0,
         }
     }
 
@@ -124,6 +127,7 @@ pub(super) fn show(ui: &mut Ui, code: &mut CodeView, language: Language, locale:
         .indent_unit(language::indent_unit(language))
         .comment(language::line_comment(language))
         .decorations(&decorations)
+        .lit_lines(code.lit.clone())
         .colours(&colours)
         .show(ui);
     if let Some(line) = output.changed {

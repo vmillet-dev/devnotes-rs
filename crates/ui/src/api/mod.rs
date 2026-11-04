@@ -6,6 +6,7 @@
 
 pub mod attachments;
 pub mod folders;
+pub mod json;
 pub mod libraries;
 pub mod notes;
 pub mod preferences;
