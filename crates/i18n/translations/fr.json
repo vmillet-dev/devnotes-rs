@@ -430,6 +430,12 @@
       "next": "Mois suivant",
       "month": "{{month}} {{year}}",
       "clear": "Sans échéance"
+    },
+    "menu": {
+      "cut": "Couper",
+      "copy": "Copier",
+      "paste": "Coller",
+      "selectAll": "Tout sélectionner"
     }
   },
   "lifecycle": {
