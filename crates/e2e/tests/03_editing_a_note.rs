@@ -85,6 +85,9 @@ fn drawings(app: &mut App, exported: &std::path::Path) {
         "Escape drops the tool, the selection, then the editor",
         || {
             app.drag_in("drawing-stage", (100.0, 75.0), (100.0, 75.0));
+            app.eventually("the stage has the keys", |tree| {
+                tree.focused().starts_with("drawing-stage")
+            });
             app.press(Key::O, Modifiers::NONE);
             app.eventually("the ellipse taken", |tree| {
                 pressed(tree, "drawing-tool-ellipse")
