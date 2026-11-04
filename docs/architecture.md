@@ -3963,16 +3963,17 @@ the library's `attachments/` (`libraries/<id>/attachments/`) under a name derive
 called `capture.png` must not overwrite each other, and a name coming from outside has no
 business deciding a write path.
 
-The bytes cross the bridge only on demand, as a `data:` URI: the WebView's CSP forbids loading
-a local file, and opening the `asset:` protocol would be a wide door for displaying a
-screenshot. That encoding costs a third more than the file, which is why `read_attachment`
-fetches **one** at a time and never the list.
+The bytes are read only on demand, as a `data:` URI, which costs a third more than the file: this
+is why `read_attachment` fetches **one** at a time and never the list. `state::attachments` follows
+the note open and holds no bytes but the one image shown, decoded on `compute`, from the closed
+list of D28 (`is_shown`); anything else offers « Open ». A file waits there until the note has a row:
+a draft is written for it, a dialog cancelled writes nothing.
 
 **Three ways in, two ways back out.** A file arrives through the picker, through a drag-drop
-onto the window (`FileDropService` — the drop is a _window_ event carrying real paths, a DOM
-`drop` handler would receive nothing), or as an image pasted into the editor. It leaves
-through `open_attachment` (the system's default application) or `save_attachment` (copied
-where the user asks). A file you can only read the name of is not attached, it is stored.
+onto the window (`RawInput::dropped_files`), or as an image pasted into the editor
+(`Event::PasteImage`, which egui sends when the clipboard holds no text). It leaves through
+`decrypted_copy` and `platform::desktop` (the system's default application) or `save_attachment`
+(copied where the user asks). A file you can only read the name of is not attached, it is stored.
 
 All three go through `AttachmentsStore`, which owns the order of operations rather than
 leaving it to the page: **attaching demands a note in the database**, so the draft is saved on

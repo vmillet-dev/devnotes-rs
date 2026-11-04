@@ -398,6 +398,23 @@ impl EditorState {
         true
     }
 
+    /// Written as it is: a file attached to it makes it worth keeping.
+    pub fn write_draft(&mut self, backend: &Backend) {
+        let Some(open) = self.open.as_ref().filter(|open| open.is_draft()) else {
+            return;
+        };
+        let session = open.session;
+        let writing = self.creating.iter().any(|it| it.session == session);
+        if let (Some(draft), false) = (&open.draft, writing) {
+            let pending = api::notes::create(backend, new_note(&draft.note));
+            self.creating.push(Creating {
+                session,
+                pending,
+                waiting: Edit::default(),
+            });
+        }
+    }
+
     /// A draft with nothing worth keeping only changes kind: there is no text to convert.
     pub fn convert_draft(&mut self, into: NoteKind) {
         let Some(open) = self.open.as_mut().filter(|open| open.is_draft()) else {

@@ -3,6 +3,7 @@
 //! is a draft of this view, keyed on the opening's session, and written when it is left and on
 //! every closing path, none of which leaves a field on its own.
 
+mod attachments;
 mod body;
 mod checklist;
 mod code;
@@ -43,6 +44,8 @@ pub(crate) struct EditorView {
     code: Option<code::CodeView>,
     /// A Dessin's editor: its scene is no text.
     drawing: Option<drawing::DrawingView>,
+    /// The attachment whose cross was clicked once.
+    removing: Option<String>,
     tag: String,
     /// The title takes the focus once, as the editor opens.
     focus: bool,
@@ -62,6 +65,7 @@ impl EditorView {
                 .then(|| code::CodeView::of(&note.content, note.language)),
             drawing: (note.kind == NoteKind::Drawing)
                 .then(|| drawing::DrawingView::open(&note.content)),
+            removing: None,
             tag: String::new(),
             focus: true,
             confirming_delete: false,
@@ -137,7 +141,9 @@ pub(crate) fn show(
             ui.set_max_size(size);
             panel(ui, state, (open.session, note), editing, actions)
         });
-    let dismissed = shown.should_close() && !(escaped && typing);
+    arrivals(ui, actions);
+    let lightbox = state.attachments.zoomed().is_some();
+    let dismissed = !lightbox && shown.should_close() && !(escaped && typing);
     // A field being typed in asks for the input method; a focused button asks for nothing.
     let focused = ctx.output(|output| output.ime.is_some());
     ctx.data_mut(|data| data.insert_temp(typing_id, focused));
@@ -547,6 +553,35 @@ fn close(session: u64, note: &DisplayNote, editing: &EditorView, actions: &mut A
     actions.push(editor(Editing::Close));
 }
 
+/// What reaches the window while a note is open: a file dropped, an image pasted. A text pasted
+/// is the field's.
+fn arrivals(ui: &Ui, actions: &mut Actions) {
+    use crate::state::attachments::Asked;
+    let (dropped, pasted) = ui.input(|input| {
+        let dropped: Vec<_> = input
+            .raw
+            .dropped_files
+            .iter()
+            .map(|file| file.path().to_path_buf())
+            .collect();
+        let pasted: Vec<_> = input
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                egui::Event::PasteImage(image) => Some(Arc::clone(image)),
+                _ => None,
+            })
+            .collect();
+        (dropped, pasted)
+    });
+    if !dropped.is_empty() {
+        actions.push(editor(Editing::Attachment(Asked::Dropped(dropped))));
+    }
+    for image in pasted {
+        actions.push(editor(Editing::Attachment(Asked::Pasted(image))));
+    }
+}
+
 /// What was drawn since they were last taken: two pictures are dear, so only on leaving.
 fn pictures(ui: &Ui, session: u64, editing: &mut EditorView, actions: &mut Actions) {
     let owed = editing.drawing.as_mut();
@@ -584,6 +619,8 @@ fn missing_pictures(
 pub(super) fn editor(editing: Editing) -> Action {
     Action::Notes(Asked::Editor(editing))
 }
+
+pub(in crate::notes::overlays) use attachments::{fitted, paint};
 
 #[cfg(test)]
 mod tests;

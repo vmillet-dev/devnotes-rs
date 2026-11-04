@@ -1,5 +1,6 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
+pub mod attachments;
 pub mod drawing_exports;
 pub mod drawing_pictures;
 pub mod editor;
@@ -93,6 +94,8 @@ pub struct AppState {
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
+    pub opener: std::sync::Arc<dyn platform::desktop::Opener + Send + Sync>,
+    pub attachments: attachments::AttachmentsState,
     pub exports: drawing_exports::DrawingExports,
     pub errors: ErrorNotifier,
     pub clock: Box<dyn Clock>,
@@ -129,6 +132,8 @@ impl AppState {
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             dialog: platform::dialog::system(),
+            opener: platform::desktop::system(),
+            attachments: attachments::AttachmentsState::default(),
             exports: drawing_exports::DrawingExports::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
@@ -185,6 +190,21 @@ impl AppState {
             .adopt(backend, &mut self.revision, &mut self.errors);
         self.editor.update(backend, self.revision, &mut self.errors);
         self.exports.update(&mut self.status, &mut self.errors);
+        if self.attachments.wants_row() {
+            self.editor.write_draft(backend);
+        }
+        let mut reports = attachments::Reports {
+            status: &mut self.status,
+            errors: &mut self.errors,
+            revision: &mut self.revision,
+        };
+        self.attachments.update(
+            ctx,
+            backend,
+            self.editor.open_id(),
+            &self.opener,
+            &mut reports,
+        );
         self.follow_revisions(backend);
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
@@ -500,6 +520,11 @@ impl AppState {
         match editing {
             Editing::Save { session, edit } => self.editor.save(backend, session, edit),
             Editing::Export(export) => self.exports.ask(backend, &self.dialog, export),
+            Editing::Attachment(asked) => {
+                let moment = self.clock.now().format("capture-%Y-%m-%d-%H-%M-%S");
+                self.attachments
+                    .ask(asked, backend, &self.dialog, moment.to_string());
+            }
             Editing::Pictures {
                 session,
                 content,
