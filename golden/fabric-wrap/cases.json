@@ -1,0 +1,14 @@
+[
+  { "input": "API gateway", "options": { "width": 180, "fontSize": 18 }, "output": ["API gateway"] },
+  { "input": "API gateway sits in front of every service we run", "options": { "width": 180, "fontSize": 18 }, "output": ["API gateway sits in", "front of every", "service we run"] },
+  { "input": "API gateway sits in front of every service we run", "options": { "width": 100, "fontSize": 18 }, "output": ["API", "gateway", "sits in front", "of every", "service we", "run"] },
+  { "input": "API gateway sits in front of every service we run", "options": { "width": 60, "fontSize": 12 }, "output": ["API", "gateway", "sits in", "front of", "every", "service", "we run"] },
+  { "input": "one\ntwo three\n\nfour", "options": { "width": 180, "fontSize": 18 }, "output": ["one", "two three", "", "four"] },
+  { "input": "a  double  space and a\ttab between words", "options": { "width": 90, "fontSize": 18 }, "output": ["a  double ", "space and", "a tab", "between", "words"] },
+  { "input": "supercalifragilisticexpialidocious fits nowhere", "options": { "width": 120, "fontSize": 18 }, "output": ["supercalifragilisticexpialidocious", "fits nowhere"] },
+  { "input": "trailing space ", "options": { "width": 60, "fontSize": 18 }, "output": ["trailing", "space "] },
+  { "input": "  leading spaces", "options": { "width": 60, "fontSize": 18 }, "output": [" ", "leading", "spaces"] },
+  { "input": "", "options": { "width": 180, "fontSize": 18 }, "output": [""] },
+  { "input": "Le déploiement a échoué à cause du cache", "options": { "width": 140, "fontSize": 16 }, "output": ["Le déploiement a", "échoué à cause", "du cache"] },
+  { "input": "The quick brown fox jumps over the lazy dog, twice over, then rests", "options": { "width": 240, "fontSize": 24 }, "output": ["The quick brown fox", "jumps over the lazy", "dog, twice over, then", "rests"] }
+]

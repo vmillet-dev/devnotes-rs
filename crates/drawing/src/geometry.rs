@@ -2,6 +2,8 @@
 //! head, where it leaves a shape it is bound to, a box dragged, a diamond's corners, a picture's
 //! scale and frame.
 
+use crate::scene::PathCommand;
+
 /// A point of the scene, in its units.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point {
@@ -54,16 +56,12 @@ pub fn arrow_path([x1, y1, x2, y2]: Ends) -> String {
     )
 }
 
-/// A number as JavaScript writes it: no `.0` on a whole one, no `-0`.
-fn number(value: f64) -> String {
+/// A number as JavaScript writes it: no `-0`.
+pub(crate) fn number(value: f64) -> String {
     if value == 0.0 {
         return "0".to_owned();
     }
-    if value.fract() == 0.0 && value.abs() < 1e15 {
-        #[expect(clippy::cast_possible_truncation, reason = "a whole number in range")]
-        return format!("{}", value as i64);
-    }
-    format!("{value}")
+    value.to_string()
 }
 
 impl Box {
@@ -162,6 +160,61 @@ pub fn scene_box(boxes: &[Box], margin: f64) -> Option<Box> {
     let top = boxes.iter().map(|b| b.top).reduce(f64::min)? - margin;
     let right = boxes.iter().map(|b| b.left + b.width).reduce(f64::max)? + margin;
     let bottom = boxes.iter().map(|b| b.top + b.height).reduce(f64::max)? + margin;
+    Some(Box {
+        left,
+        top,
+        width: right - left,
+        height: bottom - top,
+    })
+}
+
+/// What the commands of a path cover, curves to their furthest; `None` for no point at all.
+pub fn path_box(path: &[PathCommand]) -> Option<Box> {
+    let mut points = Vec::new();
+    let mut from = None;
+    for command in path {
+        match *command {
+            PathCommand::Move(to) | PathCommand::Line(to) => {
+                points.push(to);
+                from = Some(to);
+            }
+            PathCommand::Quad(control, to) => {
+                points.push(to);
+                if let Some(from) = from {
+                    points.extend(furthest(from, control, to).into_iter().flatten());
+                }
+                from = Some(to);
+            }
+            PathCommand::Close => {}
+        }
+    }
+    points_box(&points)
+}
+
+/// Where a curve turns, on each axis it turns on, as a point of the box around it.
+fn furthest(from: Point, control: Point, to: Point) -> [Option<Point>; 2] {
+    let at = |t: f64| Point {
+        x: quadratic(from.x, control.x, to.x, t),
+        y: quadratic(from.y, control.y, to.y, t),
+    };
+    let turn = |from: f64, control: f64, to: f64| {
+        let t = (from - control) / (from - 2.0 * control + to);
+        (t > 0.0 && t < 1.0).then(|| at(t))
+    };
+    [turn(from.x, control.x, to.x), turn(from.y, control.y, to.y)]
+}
+
+fn quadratic(from: f64, control: f64, to: f64, t: f64) -> f64 {
+    let rest = 1.0 - t;
+    rest * rest * from + 2.0 * rest * t * control + t * t * to
+}
+
+/// The box around some points; `None` for none.
+pub fn points_box(points: &[Point]) -> Option<Box> {
+    let left = points.iter().map(|point| point.x).reduce(f64::min)?;
+    let top = points.iter().map(|point| point.y).reduce(f64::min)?;
+    let right = points.iter().map(|point| point.x).reduce(f64::max)?;
+    let bottom = points.iter().map(|point| point.y).reduce(f64::max)?;
     Some(Box {
         left,
         top,

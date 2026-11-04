@@ -196,12 +196,45 @@ impl Object {
         self.number("rx", 0.0)
     }
 
+    /// A pen's line ends and bends round; everything else keeps Fabric's default.
+    pub fn line_cap(&self) -> &str {
+        self.words("strokeLineCap").unwrap_or("butt")
+    }
+
+    pub fn line_join(&self) -> &str {
+        self.words("strokeLineJoin").unwrap_or("miter")
+    }
+
+    /// A stroke that keeps its width when the object is scaled.
+    pub fn stroke_uniform(&self) -> bool {
+        self.fields.get("strokeUniform").and_then(Value::as_bool) == Some(true)
+    }
+
+    /// Mirrored, as a handle dragged past the opposite side leaves it.
+    pub fn flipped(&self) -> (bool, bool) {
+        let flip = |name| self.fields.get(name).and_then(Value::as_bool) == Some(true);
+        (flip("flipX"), flip("flipY"))
+    }
+
+    /// In degrees: Fabric's side handles lean an object with Shift held.
+    pub fn skew(&self) -> (f64, f64) {
+        (self.number("skewX", 0.0), self.number("skewY", 0.0))
+    }
+
     pub fn text(&self) -> Option<&str> {
         self.words("text")
     }
 
     pub fn font_size(&self) -> f64 {
         self.number("fontSize", 40.0)
+    }
+
+    pub fn font_family(&self) -> &str {
+        self.words("fontFamily").unwrap_or("sans-serif")
+    }
+
+    pub fn line_height(&self) -> f64 {
+        self.number("lineHeight", 1.16)
     }
 
     /// A polygon's corners, in its own plane.

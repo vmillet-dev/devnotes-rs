@@ -34,7 +34,7 @@ crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches
 ├── src/error.rs    the three errors and the translation between them
 └── src/lib.rs      the modules and the `Engine`
 crates/text/       the editing core, egui-free: rope, undo, search, indent, highlighting, {{…}} shield
-crates/drawing/    a Dessin, egui-free: the stored scene read and written, its geometry
+crates/drawing/    a Dessin, egui-free: the stored scene, its geometry, text lines, SVG and pictures
 crates/platform/   paths, window geometry: what is asked of the operating system
 crates/ui/         the egui interface: the frame, its state, its screens
 crates/app/        the `devnotes` binary (main) and its icons (`npm run icons`)
@@ -1792,6 +1792,11 @@ way — the kind menu names it and offers nothing.
 - **`crates/drawing` reads the scene** (`Drawing::read`, `write`): an object is the fields it was
   read with and is read through them, so a body comes back byte for byte (`golden/fabric`, what
   Fabric itself wrote); `serde_json`'s `preserve_order` and `float_roundtrip` are what hold that.
+- **One line break, one way to a picture** (D23): `text::wrap` is Fabric's `_wrapLine` on the advances
+  of the embedded fonts, for the editor and the pictures; a browser kerns, so a word can break
+  elsewhere (E14: one case of `golden/fabric-wrap`). `picture::svg` writes the export from the scene
+  and `resvg` rasterises it (`pictures`, 480 and 1,600 px). ⚠️ `resvg` knows no
+  `non-scaling-stroke`: a `strokeUniform` shape has its geometry scaled, not its plane.
 - **What is drawn keeps its colours by name.** Each object carries a `hue` (ink, blue…),
   painted from the tokens on `:root` (`paletteOf`), so a theme changed later redraws it; the
   pictures are taken on the theme's paper (`--bg-1`). ⚠️ Fabric 7 places an object by its
