@@ -36,6 +36,9 @@ pub struct Settings {
     /// The library rail's, in points, within `RAIL_WIDTH`.
     pub rail_width: u16,
     pub rail_shown: bool,
+    /// Display preferences of the editor, not of a note: they outlive moving to the next one.
+    pub editor_fullscreen: bool,
+    pub editor_header_folded: bool,
 }
 
 /// The reference's `RAIL_WIDTH`.
@@ -50,6 +53,8 @@ impl Default for Settings {
             area: Area::default(),
             rail_width: RAIL_WIDTH.0,
             rail_shown: true,
+            editor_fullscreen: false,
+            editor_header_folded: false,
         }
     }
 }
@@ -60,6 +65,8 @@ const DENSITY: &str = "devnotes.density";
 const AREA: &str = "devnotes.area";
 const RAIL: &str = "devnotes.libraryRailWidth";
 const RAIL_SHOWN: &str = "devnotes.showLibraryRail";
+const EDITOR_FULLSCREEN: &str = "devnotes.editorFullscreen";
+const EDITOR_HEADER_FOLDED: &str = "devnotes.editorHeaderFolded";
 
 impl Settings {
     /// A value this version does not know is the default, never an error.
@@ -76,6 +83,8 @@ impl Settings {
                     width.clamp(RAIL_WIDTH.0, RAIL_WIDTH.1)
                 }),
             rail_shown: preferences.get(RAIL_SHOWN) != Some("false"),
+            editor_fullscreen: preferences.get(EDITOR_FULLSCREEN) == Some("true"),
+            editor_header_folded: preferences.get(EDITOR_HEADER_FOLDED) == Some("true"),
         }
     }
 
@@ -86,8 +95,14 @@ impl Settings {
         preferences.set(DENSITY, name_of(&DENSITIES, self.density));
         preferences.set(AREA, name_of(&AREAS, self.area));
         preferences.set(RAIL, &self.rail_width.to_string());
-        preferences.set(RAIL_SHOWN, if self.rail_shown { "true" } else { "false" });
+        preferences.set(RAIL_SHOWN, flag(self.rail_shown));
+        preferences.set(EDITOR_FULLSCREEN, flag(self.editor_fullscreen));
+        preferences.set(EDITOR_HEADER_FOLDED, flag(self.editor_header_folded));
     }
+}
+
+fn flag(on: bool) -> &'static str {
+    if on { "true" } else { "false" }
 }
 
 fn chosen<T: Copy>(preferences: &Preferences, key: &str, choices: &[(&str, T)]) -> Option<T> {
@@ -179,6 +194,8 @@ mod tests {
             area: Area::Http,
             rail_width: 240,
             rail_shown: false,
+            editor_fullscreen: true,
+            editor_header_folded: true,
         };
 
         chosen.write(&mut preferences);

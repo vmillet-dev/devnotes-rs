@@ -189,7 +189,10 @@ fn the_canvas_of_an_open_library() {
         })
         .click();
     settle(&mut harness);
-    capture(&mut harness, "editor-stand-in");
+    capture(&mut harness, "editor-snippet");
+    click(&mut harness, "editor-fold-header");
+    capture(&mut harness, "editor-header-folded");
+    click(&mut harness, "editor-header-summary");
 
     click(&mut harness, "editor-close");
     harness.key_press_modifiers(

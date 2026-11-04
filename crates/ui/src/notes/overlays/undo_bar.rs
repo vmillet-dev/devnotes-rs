@@ -6,6 +6,7 @@ use egui::{
     Align2, CornerRadius, FontFamily, Margin, Order, Role, Sense, Stroke, StrokeKind, Ui,
     WidgetInfo, vec2,
 };
+use engine::notes::kind::NoteKind;
 use i18n::{Key, keys};
 
 use crate::action::{Action, Actions};
@@ -78,6 +79,13 @@ fn said(action: &Reversible) -> Key {
         Reversible::Pin { pinned: false, .. } => keys::undo::UNPINNED,
         Reversible::Priority(_) => keys::undo::PRIORITISED,
         Reversible::File(_) => keys::undo::FILED,
+        Reversible::Convert { into, .. } => match into {
+            NoteKind::Snippet => keys::undo::converted_into::SNIPPET,
+            NoteKind::Note => keys::undo::converted_into::NOTE,
+            NoteKind::Checklist => keys::undo::converted_into::CHECKLIST,
+            NoteKind::Calc => keys::undo::converted_into::CALC,
+            NoteKind::Drawing => keys::undo::converted_into::DRAWING,
+        },
     }
 }
 

@@ -423,7 +423,14 @@
     "itemPlaceholder": "Describe the task…",
     "removeItem": "Delete the task {{text}}",
     "moveItem": "Move the task {{text}} (Alt + arrows)",
-    "toggleItem": "Tick the task {{text}}"
+    "toggleItem": "Tick the task {{text}}",
+    "date": {
+      "empty": "dd/mm/yyyy",
+      "previous": "Previous month",
+      "next": "Next month",
+      "month": "{{month}} {{year}}",
+      "clear": "No deadline"
+    }
   },
   "lifecycle": {
     "neverExpires": "Never expires"

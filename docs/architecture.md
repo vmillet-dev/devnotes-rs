@@ -4712,15 +4712,24 @@ between one row and two. What does not narrow is measured as drawn, the same in 
 the search gives way first, then the switchers' names. ⚠️ The central panel has no margin of its
 own, as the reference: egui's 8 px cost the header its one row at the window's default width.
 
-Until phase 4's editors, a card's click surface (`note-card-open`, a layer under its controls)
-opens a stand-in editor (`notes::editor`, `state::editor`): the note read whole by id
-(`get_note`), its title and body as plain text — a list one task a line, `[x] ` before a done
-one; a Dessin's title only — written when a field is left and when it closes. It is a
-development tool, and goes with phase 4 (D4). « + New note » (or its kind menu, the ghost card,
-the global shortcut) opens it on a draft that has no id: nothing is written until a field left
-carries a title or a body, then the note is created once — what is left while that creation is
-in flight waits for its id and is sent after — in the space shown (the first one for « all
-spaces ») and the folder shown.
+A card's click surface (`note-card-open`, a layer under its controls) opens the note editor
+(`notes::overlays::editor`, `state::editor`), the reference's `note-editor-overlay`: a toolbar
+(title, language for a snippet, pin, priority, copy, delete in two clicks, fold, full screen,
+close), the header's two bands — context, tags and deadline; kind (a conversion menu, a Dessin
+named only), space › folder — or, folded, one line of what they hold, and the footer's counts.
+The note is read whole by id (`get_note`) through a `QueryCell` keyed on the revision, so a pin,
+a filing or an undo made anywhere shows at once. Title, context, body and the tag being typed
+are drafts of the view, keyed on the opening's session, written when a field is left and on
+every closing path; `Edit::changed_from` drops a field that did not move. Pin, priority, space,
+folder, deletion and a conversion go through `NotesState`, as from a card, and offer the undo; a
+conversion starts the drafts again from what the core wrote. ⚠️ egui drops the focus on Escape
+before the frame is drawn: the editor remembers whether a text field had it at the last frame,
+so a first Escape only leaves the field. « + New note » (or its kind menu, the ghost card, the
+global shortcut) opens it on a draft that has no id: the draft holds every change — pinned,
+filed, prioritised included — and nothing is written until it is worth keeping (the reference's
+`isWorthSaving`), then the note is created once; what is left while that creation is in flight
+waits for its id and is sent after. The bodies stay plain text until each kind's editor lands
+(phase 4): a list one task a line, `[x] ` before a done one; a Dessin has none.
 
 Under the pointer a card shows its pill over its bottom edge (`canvas::card::actions`): copy (the
 note read whole by id, then onto the clipboard and said) and the ⋯ of its menu — open, pin,

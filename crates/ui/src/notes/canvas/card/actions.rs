@@ -476,7 +476,7 @@ mod tests {
 
         assert_eq!(cards(&harness), 2);
         let opened = harness.state().state.editor.opened().unwrap();
-        assert_eq!(opened.title, "psql (copy)");
+        assert_eq!(opened.note().unwrap().title, "psql (copy)");
     }
 
     #[test]

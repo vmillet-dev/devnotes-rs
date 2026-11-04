@@ -824,7 +824,11 @@ mod tests {
         let state = &harness.state().state;
         assert!(!state.palette.is_open());
         assert_eq!(
-            state.editor.opened().map(|open| open.title.as_str()),
+            state
+                .editor
+                .opened()
+                .and_then(|open| open.note())
+                .map(|note| note.title.as_str()),
             Some("Reset the dev database")
         );
     }
@@ -852,7 +856,8 @@ mod tests {
                 .state
                 .editor
                 .opened()
-                .is_some_and(|open| open.title == "nothing matches this")
+                .and_then(|open| open.note())
+                .is_some_and(|note| note.title == "nothing matches this")
         });
     }
 

@@ -13,6 +13,8 @@ mod menu;
 mod release_notes;
 mod segmented;
 
+pub mod date;
+
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
 pub use dialog::{DialogStack, Layer, dialog};
