@@ -26,34 +26,33 @@ pub type Ends = [f64; 4];
 /// How long the head of an arrow is, along it.
 const HEAD: f64 = 12.0;
 
+/// How far the pen moves before a point of its line counts (Fabric's `decimate`).
+const PEN_DECIMATE: f64 = 0.4;
+
 /// Room around what is drawn, in a picture taken of it.
 pub const MARGIN: f64 = 24.0;
 
 /// The shaft to the foot of the head, then the head as a closed triangle the fill paints; one
 /// decimal kept, as the scene stores it.
-pub fn arrow_path([x1, y1, x2, y2]: Ends) -> String {
+pub fn arrow_path([x1, y1, x2, y2]: Ends) -> [PathCommand; 6] {
     let length = (x2 - x1).hypot(y2 - y1);
     let length = if length == 0.0 { 1.0 } else { length };
     let (ux, uy) = ((x2 - x1) / length, (y2 - y1) / length);
     let reach = HEAD.min(length);
     let (foot_x, foot_y) = (x2 - ux * reach, y2 - uy * reach);
     let half = reach / 2.0;
-    let (left_x, left_y) = (foot_x - uy * half, foot_y + ux * half);
-    let (right_x, right_y) = (foot_x + uy * half, foot_y - ux * half);
-    let at = |value: f64| number((value * 10.0).round() / 10.0);
-    format!(
-        "M {} {} L {} {} M {} {} L {} {} L {} {} Z",
-        at(x1),
-        at(y1),
-        at(foot_x),
-        at(foot_y),
-        at(x2),
-        at(y2),
-        at(left_x),
-        at(left_y),
-        at(right_x),
-        at(right_y)
-    )
+    let at = |x: f64, y: f64| Point {
+        x: (x * 10.0).round() / 10.0,
+        y: (y * 10.0).round() / 10.0,
+    };
+    [
+        PathCommand::Move(at(x1, y1)),
+        PathCommand::Line(at(foot_x, foot_y)),
+        PathCommand::Move(at(x2, y2)),
+        PathCommand::Line(at(foot_x - uy * half, foot_y + ux * half)),
+        PathCommand::Line(at(foot_x + uy * half, foot_y - ux * half)),
+        PathCommand::Close,
+    ]
 }
 
 /// A number as JavaScript writes it: no `-0`.
@@ -191,6 +190,47 @@ pub fn path_box(path: &[PathCommand]) -> Option<Box> {
     points_box(&points)
 }
 
+/// A line drawn by hand as the pen stores it (Fabric's `PencilBrush`): points too close to the
+/// last one dropped, then a curve through the middles of what is left. `None` for a line that
+/// went nowhere, which Fabric does not make.
+pub fn smooth_path(points: &[Point]) -> Option<Vec<PathCommand>> {
+    let points = decimated(points);
+    let (first, last) = (*points.first()?, *points.last()?);
+    if points.len() < 2 || points.iter().all(|point| *point == first) {
+        return None;
+    }
+    let mut path = vec![PathCommand::Move(first)];
+    for pair in points.windows(2) {
+        let (control, next) = (pair[0], pair[1]);
+        if control != next {
+            let middle = Point {
+                x: f64::midpoint(control.x, next.x),
+                y: f64::midpoint(control.y, next.y),
+            };
+            path.push(PathCommand::Quad(control, middle));
+        }
+    }
+    path.push(PathCommand::Line(last));
+    Some(path)
+}
+
+fn decimated(points: &[Point]) -> Vec<Point> {
+    let Some((&last, inner)) = points.split_last() else {
+        return Vec::new();
+    };
+    let mut kept: Vec<Point> = inner.first().copied().into_iter().collect();
+    for point in inner.iter().skip(1) {
+        if kept
+            .last()
+            .is_some_and(|held| (held.x - point.x).hypot(held.y - point.y) >= PEN_DECIMATE)
+        {
+            kept.push(*point);
+        }
+    }
+    kept.push(last);
+    kept
+}
+
 /// Where a curve turns, on each axis it turns on, as a point of the box around it.
 fn furthest(from: Point, control: Point, to: Point) -> [Option<Point>; 2] {
     let at = |t: f64| Point {
@@ -241,18 +281,21 @@ mod tests {
 
     #[test]
     fn an_arrow_is_its_shaft_to_the_head_then_the_head_closed() {
+        use PathCommand::{Close, Line, Move};
+
         assert_eq!(
             arrow_path([0.0, 0.0, 100.0, 0.0]),
-            "M 0 0 L 88 0 M 100 0 L 88 6 L 88 -6 Z"
+            [
+                Move(at(0.0, 0.0)),
+                Line(at(88.0, 0.0)),
+                Move(at(100.0, 0.0)),
+                Line(at(88.0, 6.0)),
+                Line(at(88.0, -6.0)),
+                Close
+            ]
         );
-        assert_eq!(
-            arrow_path([0.0, 0.0, 0.0, 4.0]),
-            "M 0 0 L 0 0 M 0 4 L -2 0 L 2 0 Z"
-        );
-        assert_eq!(
-            arrow_path([5.0, 5.0, 5.0, 5.0]),
-            "M 5 5 L 5 5 M 5 5 L 5 5 L 5 5 Z"
-        );
+        assert_eq!(arrow_path([0.0, 0.0, 0.0, 4.0])[3], Line(at(-2.0, 0.0)));
+        assert_eq!(arrow_path([5.0, 5.0, 5.0, 5.0])[3], Line(at(5.0, 5.0)));
     }
 
     #[test]

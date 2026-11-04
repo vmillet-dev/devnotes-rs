@@ -2,11 +2,13 @@
 //! and exported format that does not change. This crate reads and writes the part of it the
 //! editor and the pictures use, and keeps every other field as it was read. No egui, no engine.
 
+pub mod edit;
 pub mod geometry;
 pub mod picture;
 pub mod scene;
 pub mod text;
 
+pub use edit::{Editor, Frame, Grip, Tool};
 pub use geometry::{Box, Ends, Point};
 pub use picture::{Palette, Pictures, export_png, pictures, svg};
 pub use scene::{Drawing, Hue, Kind, Object, PathCommand};

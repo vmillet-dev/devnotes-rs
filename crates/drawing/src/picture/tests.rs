@@ -158,19 +158,19 @@ fn a_group_holds_its_children_and_an_unknown_type_is_not_drawn() {
 
 #[test]
 fn a_rotated_object_covers_more_than_its_size_and_a_uniform_stroke_is_not_scaled() {
-    let rotated = bounds(&scene(
+    let bounds = |object: &str| scene(object).objects[0].bounds();
+
+    let rotated = bounds(
         r#"{"type":"Rect","left":0,"top":0,"width":100,"height":100,"angle":45,"strokeWidth":0}"#,
-    ).objects[0]);
+    );
     assert!((rotated.width - 141.421_356).abs() < 1e-3);
 
-    let uniform = bounds(&scene(
+    let uniform = bounds(
         r#"{"type":"Rect","width":10,"height":10,"scaleX":3,"scaleY":3,"strokeWidth":2,"strokeUniform":true}"#,
-    ).objects[0]);
-    assert!((uniform.width - 32.0).abs() < 1e-9);
-    let scaled = bounds(
-        &scene(r#"{"type":"Rect","width":10,"height":10,"scaleX":3,"scaleY":3,"strokeWidth":2}"#)
-            .objects[0],
     );
+    assert!((uniform.width - 32.0).abs() < 1e-9);
+    let scaled =
+        bounds(r#"{"type":"Rect","width":10,"height":10,"scaleX":3,"scaleY":3,"strokeWidth":2}"#);
     assert!((scaled.width - 36.0).abs() < 1e-9);
 }
 

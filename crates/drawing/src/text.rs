@@ -115,6 +115,13 @@ pub fn line_step(font_size: f64, line_height: f64) -> f64 {
     font_size * SIZE_MULTIPLIER * line_height
 }
 
+/// The box a text's lines fill: the last line has no leading under it.
+pub fn text_height(lines: usize, font_size: f64, line_height: f64) -> f64 {
+    #[expect(clippy::cast_precision_loss, reason = "a count of lines")]
+    let leading = lines.saturating_sub(1) as f64;
+    leading * line_step(font_size, line_height) + font_size * SIZE_MULTIPLIER
+}
+
 /// The first baseline, down from the top of the text's box.
 pub fn first_baseline(font_size: f64) -> f64 {
     font_size * SIZE_MULTIPLIER * (1.0 - SIZE_FRACTION)
