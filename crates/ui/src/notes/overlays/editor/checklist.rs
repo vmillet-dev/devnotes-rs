@@ -225,7 +225,7 @@ fn row(
         TextEdit::singleline(&mut view.items[index].text)
             .id(id)
             .frame(egui::Frame::new())
-            .vertical_align(Align::Center)
+            .align(egui::Align2::LEFT_CENTER)
             .hint_text(hint)
             .text_color(if done { p.text_2 } else { p.text_0 })
             .font(FontId::new(13.5, FontFamily::Proportional)),
