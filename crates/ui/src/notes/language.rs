@@ -320,6 +320,169 @@ pub fn syntax(language: Language) -> Option<&'static str> {
     Some(name)
 }
 
+/// What Ctrl+/ puts before a line, as the language's grammar declared it; `None` where it has
+/// no line comment (HTML, CSS, JSON, Markdown…).
+#[expect(clippy::too_many_lines, reason = "one arm a family of languages")]
+pub fn line_comment(language: Language) -> Option<&'static str> {
+    use Language as L;
+    let token = match language {
+        L::Js
+        | L::Jsx
+        | L::Ts
+        | L::Tsx
+        | L::Rs
+        | L::Go
+        | L::Java
+        | L::Cs
+        | L::Php
+        | L::C
+        | L::Cpp
+        | L::Swift
+        | L::Kt
+        | L::Dart
+        | L::Scala
+        | L::Groovy
+        | L::Graphql
+        | L::Scss
+        | L::Less
+        | L::Sass
+        | L::Styl
+        | L::D
+        | L::Glsl
+        | L::Proto
+        | L::Prisma
+        | L::Sol
+        | L::Zig
+        | L::Objc
+        | L::Objcpp
+        | L::Nesc
+        | L::Haxe
+        | L::Ceylon
+        | L::Squirrel
+        | L::Webidl
+        | L::Idl
+        | L::Verilog
+        | L::Fs
+        | L::Gss
+        | L::Pegjs => "//",
+        L::Py
+        | L::Cython
+        | L::Rb
+        | L::Sh
+        | L::Ps1
+        | L::Yml
+        | L::Toml
+        | L::R
+        | L::Perl
+        | L::Ex
+        | L::Nginx
+        | L::Dockerfile
+        | L::Cmake
+        | L::Tf
+        | L::Nix
+        | L::Puppet
+        | L::Jl
+        | L::Cr
+        | L::Tcl
+        | L::Properties
+        | L::Coffee
+        | L::Http
+        | L::Gherkin
+        | L::Rpmspec
+        | L::Q
+        | L::Sieve
+        | L::Turtle
+        | L::Sparql
+        | L::Ntriples
+        | L::Nsis
+        | L::Mbox
+        | L::Ls => "#",
+        L::Sql | L::Lua | L::Hs | L::Elm | L::Vhdl | L::Eiffel | L::Cypher => "--",
+        L::Tex | L::Matlab | L::Erl | L::Mumps => "%",
+        L::Lisp | L::Clj | L::Scheme | L::Ini | L::Asterisk | L::Asm | L::Armasm | L::Z80 => ";",
+        L::Fortran => "!",
+        L::Vb | L::Vbs => "'",
+        L::Ml
+        | L::Sml
+        | L::Pascal
+        | L::Oz
+        | L::Factor
+        | L::Forth
+        | L::Apl
+        | L::Asn1
+        | L::Bf
+        | L::Cobol
+        | L::Dylan
+        | L::Ebnf
+        | L::Ecl
+        | L::Fcl
+        | L::Hxml
+        | L::Liquid
+        | L::Mathematica
+        | L::Mirc
+        | L::Modelica
+        | L::Mscgen
+        | L::Asc
+        | L::Pig
+        | L::Pug
+        | L::Sas
+        | L::Smalltalk
+        | L::Solr
+        | L::Spreadsheet
+        | L::Tiddlywiki
+        | L::Tiki
+        | L::Troff
+        | L::Ttcn
+        | L::Ttcncfg
+        | L::Velocity
+        | L::Wat
+        | L::Xquery
+        | L::Yacas
+        | L::Diff
+        | L::Dtd
+        | L::Json
+        | L::Jsonld
+        | L::Xml
+        | L::Html
+        | L::Vue
+        | L::Angular
+        | L::Css
+        | L::Jinja
+        | L::Textile
+        | L::Md
+        | L::Txt => return None,
+    };
+    Some(token)
+}
+
+/// One level of indentation by the language's habit (the reference's `indentUnit` with the
+/// setting at « language »): four spaces by their style guides, Go's tab, two spaces otherwise.
+pub fn indent_unit(language: Language) -> &'static str {
+    use Language as L;
+    match language {
+        L::Go => "\t",
+        L::Py
+        | L::Rs
+        | L::Java
+        | L::Cs
+        | L::Php
+        | L::C
+        | L::Cpp
+        | L::Objc
+        | L::Objcpp
+        | L::Cython
+        | L::Perl
+        | L::Erl
+        | L::Elm
+        | L::D
+        | L::Vb
+        | L::Sol
+        | L::Zig
+        | L::Groovy => "    ",
+        _ => "  ",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;

@@ -5,7 +5,9 @@
 
 mod body;
 mod checklist;
+mod code;
 mod header;
+mod search_bar;
 
 use egui::{Align, CornerRadius, Id, Layout, Margin, Rect, Stroke, Ui, UiBuilder, Vec2};
 use engine::notes::kind::NoteKind;
@@ -33,6 +35,8 @@ pub(crate) struct EditorView {
     source: String,
     body: String,
     checklist: checklist::ChecklistView,
+    /// A snippet's code, in the code editor.
+    code: Option<code::CodeView>,
     tag: String,
     /// The title takes the focus once, as the editor opens.
     focus: bool,
@@ -48,6 +52,8 @@ impl EditorView {
             source: note.source.clone(),
             body: body::text_of(note),
             checklist: checklist::ChecklistView::of(&note.items),
+            code: (note.kind == NoteKind::Snippet)
+                .then(|| code::CodeView::of(&note.content, note.language)),
             tag: String::new(),
             focus: true,
             confirming_delete: false,
@@ -156,7 +162,13 @@ fn panel(
     );
     let mut body_ui =
         ui.new_child(UiBuilder::new().max_rect(body_rect.shrink2(Vec2::new(20.0, 14.0))));
-    let left = if note.kind == NoteKind::Checklist {
+    let left = if let Some(code) = &mut editing.code {
+        let shown = code::show(&mut body_ui, code, note.language, state.language);
+        if shown.changed {
+            editing.body = code.text();
+        }
+        shown.left
+    } else if note.kind == NoteKind::Checklist {
         egui::ScrollArea::vertical()
             .auto_shrink(false)
             .show(&mut body_ui, |ui| {

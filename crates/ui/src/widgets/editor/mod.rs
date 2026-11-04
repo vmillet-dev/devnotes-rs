@@ -59,6 +59,10 @@ pub struct Editor {
     /// The caret is brought into view at the next frame.
     reveal: bool,
     choosing: bubbles::Choosing,
+    /// The text takes the focus at the next frame.
+    wants_focus: bool,
+    /// The lines the last frame drew.
+    visible: Range<usize>,
 }
 
 impl Editor {
@@ -78,6 +82,25 @@ impl Editor {
         let edit = text::rewrite(&self.buffer.text(), text, self.buffer.selection().head);
         let edited = self.buffer.apply(&edit);
         self.lines.forget_from(edited.first_line);
+    }
+
+    /// The lines the last frame drew; a first screenful before any.
+    pub fn visible_lines(&self) -> Range<usize> {
+        if self.visible.is_empty() {
+            0..self.buffer.line_count().min(80)
+        } else {
+            self.visible.clone()
+        }
+    }
+
+    /// The selection brought into view at the next frame.
+    pub fn reveal_selection(&mut self) {
+        self.reveal = true;
+    }
+
+    /// The text takes the keys at the next frame.
+    pub fn focus(&mut self) {
+        self.wants_focus = true;
     }
 
     /// `range` selected and shown.
@@ -280,6 +303,9 @@ impl<'a> EditorView<'a> {
         let visible = viewport.translate(origin.to_vec2());
         let mut response = ui.allocate_rect(visible, Sense::click_and_drag());
         let id = response.id;
+        if std::mem::take(&mut editor.wants_focus) {
+            ui.memory_mut(|memory| memory.request_focus(id));
+        }
         let focused = ui.memory(|memory| memory.has_focus(id));
         if focused {
             lock_focus(ui, id, bubbles::open(editor, self.completion.as_ref()));
@@ -406,6 +432,7 @@ fn paint(
     let head_line = editor.buffer.line_of(selection.head);
     let first = editor.lines.line_at(visible.top() - frame.top);
     let last = editor.lines.line_at(visible.bottom() - frame.top);
+    editor.visible = first..last + 1;
     let gutter_left = frame.text_left - PADDING - style.gutter;
     let selection_fill = ui.visuals().selection.bg_fill;
     for line in first..=last {
