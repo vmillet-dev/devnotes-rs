@@ -220,7 +220,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut DrawingView, title: &str, language: L
     paint(ui, view, stage.rect, language);
     typing(ui, view, stage.rect);
 
-    let holds = stage.has_focus() || view.typing.is_some();
+    let holds = has_keys(ui, &stage) || view.typing.is_some();
     let left = view.held_keys && !holds;
     view.held_keys = holds;
     Shown {
@@ -391,10 +391,15 @@ fn pointer(ui: &Ui, view: &mut DrawingView, stage: &Response) {
     }
 }
 
+/// ⚠️ Not `Response::has_focus`, which asks the window's focus too: that one is for style.
+fn has_keys(ui: &Ui, stage: &Response) -> bool {
+    ui.memory(|memory| memory.has_focus(stage.id))
+}
+
 /// The tools by their letter, the history by its keys; Escape first drops the tool, then the
 /// selection, and only then leaves, to the modal frame.
 fn keys_of(ui: &Ui, view: &mut DrawingView, stage: &Response) {
-    if view.typing.is_some() || !(stage.has_focus() || view.held_keys) {
+    if view.typing.is_some() || !(has_keys(ui, stage) || view.held_keys) {
         return;
     }
     let pressed = |modifiers, key| {

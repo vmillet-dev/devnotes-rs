@@ -188,6 +188,19 @@ fn is_open(harness: &Harness) -> bool {
         .is_some()
 }
 
+/// A window without the system's focus still answers the keys it is sent: a test's has none.
+#[test]
+fn the_stage_keeps_its_keys_in_a_window_without_the_focus() {
+    let (mut harness, _) = opened("");
+    draw_rectangle(&mut harness);
+    harness.input_mut().focused = false;
+    harness.run_steps(2);
+
+    press(&mut harness, Key::A, Modifiers::NONE);
+
+    assert!(pressed(&harness, "drawing-tool-arrow"));
+}
+
 #[test]
 fn undo_and_redo_by_their_keys_and_buttons_and_delete_removes_the_selection() {
     let (mut harness, _) = opened("");
