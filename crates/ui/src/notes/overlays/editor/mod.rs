@@ -5,6 +5,7 @@
 
 mod attachments;
 mod body;
+mod calc;
 mod checklist;
 mod code;
 mod drawing;
@@ -42,6 +43,8 @@ pub(crate) struct EditorView {
     checklist: checklist::ChecklistView,
     /// A snippet's code, in the code editor.
     code: Option<code::CodeView>,
+    /// A Calcul sheet, in its own editor.
+    sheet: Option<calc::CalcView>,
     /// A Dessin's editor: its scene is no text.
     drawing: Option<drawing::DrawingView>,
     /// The attachment whose cross was clicked once.
@@ -63,6 +66,7 @@ impl EditorView {
             checklist: checklist::ChecklistView::of(&note.items),
             code: (note.kind == NoteKind::Snippet)
                 .then(|| code::CodeView::of(&note.content, note.language)),
+            sheet: (note.kind == NoteKind::Calc).then(|| calc::CalcView::of(&note.content)),
             drawing: (note.kind == NoteKind::Drawing)
                 .then(|| drawing::DrawingView::open(&note.content)),
             removing: None,
@@ -192,6 +196,12 @@ fn panel(
             pictures(ui, session, editing, actions);
         }
         shown.save
+    } else if let Some(sheet) = &mut editing.sheet {
+        let shown = calc::show(&mut body_ui, sheet, state, session, actions);
+        if shown.changed {
+            editing.body = sheet.text();
+        }
+        shown.left
     } else if let Some(code) = &mut editing.code {
         let shown = code::show(&mut body_ui, code, note.language, state.language);
         if shown.changed {

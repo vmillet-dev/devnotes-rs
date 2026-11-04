@@ -1,6 +1,7 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
 pub mod attachments;
+pub mod calc_sheets;
 pub mod drawing_exports;
 pub mod drawing_pictures;
 pub mod editor;
@@ -97,6 +98,7 @@ pub struct AppState {
     pub opener: std::sync::Arc<dyn platform::desktop::Opener + Send + Sync>,
     pub attachments: attachments::AttachmentsState,
     pub exports: drawing_exports::DrawingExports,
+    pub calc: calc_sheets::CalcSheets,
     pub errors: ErrorNotifier,
     pub clock: Box<dyn Clock>,
     /// The system's wish; the look adds nothing to it.
@@ -135,6 +137,7 @@ impl AppState {
             opener: platform::desktop::system(),
             attachments: attachments::AttachmentsState::default(),
             exports: drawing_exports::DrawingExports::default(),
+            calc: calc_sheets::CalcSheets::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
             reduced_motion,
@@ -205,6 +208,7 @@ impl AppState {
             &self.opener,
             &mut reports,
         );
+        self.calc.update(&mut self.errors);
         self.follow_revisions(backend);
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
@@ -524,6 +528,10 @@ impl AppState {
                 let moment = self.clock.now().format("capture-%Y-%m-%d-%H-%M-%S");
                 self.attachments
                     .ask(asked, backend, &self.dialog, moment.to_string());
+            }
+            Editing::Evaluate { session, text } => {
+                let today = self.clock.now().with_timezone(&chrono::Local).date_naive();
+                self.calc.ask(backend, session, text, today);
             }
             Editing::Pictures {
                 session,
