@@ -4,6 +4,7 @@ pub mod drawing_pictures;
 pub mod editor;
 pub mod notes;
 pub mod notes_query;
+pub mod placeholder_fill;
 mod query;
 pub mod selection;
 pub mod spaces;
@@ -82,6 +83,7 @@ pub struct AppState {
     pub undo: undo::UndoState,
     pub trash: trash::TrashState,
     pub tags: tags::TagsState,
+    pub fill: placeholder_fill::FillState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -112,6 +114,7 @@ impl AppState {
             undo: undo::UndoState::default(),
             trash: trash::TrashState::default(),
             tags: tags::TagsState::default(),
+            fill: placeholder_fill::FillState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -143,7 +146,7 @@ impl AppState {
             self.editor.open(backend, id);
         }
         for note in answered.copied {
-            self.copied(ctx, &note);
+            self.copied(ctx, note);
         }
         let time = ctx.input(|input| input.time);
         for done in answered.done {
@@ -154,6 +157,11 @@ impl AppState {
             .update(ctx, backend, &mut self.revision, &mut self.errors);
         self.tags
             .update(backend, &mut self.revision, &mut self.errors);
+        let filled = self.fill.update(&mut self.revision, &mut self.errors);
+        for (text, said) in filled.copied {
+            ctx.copy_text(text);
+            self.status.report(said);
+        }
         self.editor
             .update(backend, &mut self.revision, &mut self.errors);
         self.caches.thumbnails.update(ctx, backend);
@@ -277,6 +285,12 @@ impl AppState {
             }
             Notes::DismissUndo => self.undo.dismiss(),
             Notes::Tags(asked) => self.tags.apply(asked, backend),
+            Notes::Fill(asked) => {
+                if let Some((text, said)) = self.fill.apply(asked, backend) {
+                    ctx.copy_text(text);
+                    self.status.report(said);
+                }
+            }
             Notes::Trash(asked) => {
                 self.trash
                     .apply(asked, backend, ctx.input(|input| input.time));
@@ -373,7 +387,11 @@ impl AppState {
             }
             Notes::Batch(batch) => self.batch(batch, backend),
             Notes::Facet(facet) => self.notes_query.press(facet),
-            overlay @ (Notes::Undo | Notes::DismissUndo | Notes::Tags(_) | Notes::Trash(_)) => {
+            overlay @ (Notes::Undo
+            | Notes::DismissUndo
+            | Notes::Tags(_)
+            | Notes::Fill(_)
+            | Notes::Trash(_)) => {
                 self.apply_overlay(overlay, ctx, backend);
             }
             Notes::Duplicate { id, title } => {
@@ -528,18 +546,23 @@ impl AppState {
     }
 
     /// What copying yields, onto the clipboard, and said: what was copied, by its title.
-    fn copied(&mut self, ctx: &egui::Context, note: &engine::notes::model::DisplayNote) {
+    /// A note with `{{fields}}` asks for them first.
+    fn copied(&mut self, ctx: &egui::Context, note: engine::notes::model::DisplayNote) {
+        if !note.placeholders.is_empty() {
+            self.fill.open(note);
+            return;
+        }
         let text = note
             .copy_text
             .clone()
             .unwrap_or_else(|| note.content.clone());
         ctx.copy_text(text);
-        let message = if note.title.is_empty() {
-            i18n::Message::new(i18n::keys::notes::COPIED_UNTITLED)
-        } else {
-            i18n::Message::new(i18n::keys::notes::COPIED_NOTE).with("title", note.title.as_str())
-        };
-        self.status.report(message);
+        self.status.report(placeholder_fill::copied_note(&note));
+    }
+
+    /// A modal over the canvas takes its keys: the canvas's stand aside.
+    pub fn modal_open(&self) -> bool {
+        self.editor.is_open() || self.trash.is_open() || self.tags.is_open() || self.fill.is_open()
     }
 
     /// In the space shown, or the first one for « all spaces », and the folder shown.
@@ -584,6 +607,7 @@ impl AppState {
         self.undo = undo::UndoState::default();
         self.trash = trash::TrashState::default();
         self.tags = tags::TagsState::default();
+        self.fill = placeholder_fill::FillState::default();
         self.notes_view = crate::notes::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());

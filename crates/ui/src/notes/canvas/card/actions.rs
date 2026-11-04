@@ -71,14 +71,18 @@ pub(super) fn show(
         .show(&mut ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 6.0;
-                if note.kind != NoteKind::Drawing {
-                    let copy = tr(keys::notes::COPY_CONTENT);
-                    if IconButton::new(Icon::Copy, &copy, "note-card-copy")
+                // A note with fields asks for them before it is copied.
+                let (icon, key, author_id) = if note.placeholders.is_empty() {
+                    (Icon::Copy, keys::notes::COPY_CONTENT, "note-card-copy")
+                } else {
+                    (Icon::Zap, keys::placeholders::TITLE, "note-card-fill")
+                };
+                if note.kind != NoteKind::Drawing
+                    && IconButton::new(icon, &tr(key), author_id)
                         .show(ui)
                         .clicked()
-                    {
-                        push(actions, Asked::Copy(note.id.clone()));
-                    }
+                {
+                    push(actions, Asked::Copy(note.id.clone()));
                 }
                 let label = i18n::translate(
                     language,

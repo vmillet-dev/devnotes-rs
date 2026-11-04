@@ -214,9 +214,7 @@ impl eframe::App for DevNotesApp {
             });
         let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
         // A modal over the canvas takes its keys: the canvas's stand aside.
-        let modal =
-            self.state.editor.is_open() || self.state.trash.is_open() || self.state.tags.is_open();
-        let levels: &[&[keys::Binding]] = if notes_shown && !modal {
+        let levels: &[&[keys::Binding]] = if notes_shown && !self.state.modal_open() {
             &[
                 &keys::NOTES,
                 &notes::canvas::shortcuts::CANVAS,
