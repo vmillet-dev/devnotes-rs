@@ -9,6 +9,7 @@ pub mod language;
 mod panel;
 pub mod sidebar;
 pub mod ui;
+mod undo_bar;
 
 use egui::{Rect, Role, Sense, Ui, UiBuilder, WidgetInfo, vec2};
 use engine::notes::kind::NoteKind;
@@ -126,6 +127,9 @@ pub enum Action {
     ClearSelection,
     /// On every ticked note still on screen.
     Batch(Batch),
+    /// The last write put back, from the undo bar.
+    Undo,
+    DismissUndo,
 }
 
 /// What the selection bar does to every ticked note at once.
@@ -194,6 +198,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
     editor::show(ui, state, &mut view.editor, actions);
+    undo_bar::show(ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);
     #[expect(

@@ -5,6 +5,7 @@ use engine::notes::priority::Priority;
 use engine::notes::view::{NotesQuery, NotesView};
 use engine::{notes, spaces};
 
+use super::undo::Reversible;
 use crate::backend::{Backend, Pending};
 use crate::services::samples::Samples;
 
@@ -45,23 +46,28 @@ pub fn create(backend: &Backend, draft: NoteDraft) -> Pending<DisplayNote> {
     backend.db(move |engine| notes::create_note(engine, draft))
 }
 
-pub fn pin(backend: &Backend, ids: Vec<String>, pinned: bool) -> Pending<()> {
-    backend.db(move |engine| notes::set_pinned(engine, ids, pinned).map(drop))
+pub fn pin(backend: &Backend, ids: Vec<String>, pinned: bool) -> Pending<Reversible> {
+    backend.db(move |engine| {
+        notes::set_pinned(engine, ids, pinned).map(|ids| Reversible::Pin { ids, pinned })
+    })
 }
 
 /// Triaging is not editing: `updated_at` stays where it was.
-pub fn prioritise(backend: &Backend, ids: Vec<String>, priority: Priority) -> Pending<()> {
-    backend.db(move |engine| notes::set_priority(engine, ids, priority).map(drop))
+pub fn prioritise(backend: &Backend, ids: Vec<String>, priority: Priority) -> Pending<Reversible> {
+    backend.db(move |engine| notes::set_priority(engine, ids, priority).map(Reversible::Priority))
 }
 
 /// Out of their folders, into another space.
-pub fn move_to(backend: &Backend, ids: Vec<String>, space_id: String) -> Pending<()> {
-    backend.db(move |engine| notes::move_notes(engine, ids, space_id).map(drop))
+pub fn move_to(backend: &Backend, ids: Vec<String>, space_id: String) -> Pending<Reversible> {
+    backend.db(move |engine| notes::move_notes(engine, ids, space_id).map(Reversible::Move))
 }
 
 /// Into the trash, which keeps them thirty days.
-pub fn delete(backend: &Backend, ids: Vec<String>) -> Pending<()> {
-    backend.db(move |engine| notes::delete_notes(engine, ids).map(drop))
+pub fn delete(backend: &Backend, ids: Vec<String>) -> Pending<Reversible> {
+    backend.db(move |engine| {
+        let count = notes::delete_notes(engine, ids.clone())?;
+        Ok(Reversible::Deletion { ids, count })
+    })
 }
 
 /// The copy, under the title the interface words.
@@ -70,10 +76,10 @@ pub fn duplicate(backend: &Backend, id: String, title: String) -> Pending<Displa
 }
 
 /// Through `normalize_tags`, the one keeper of what a tag is.
-pub fn tag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<()> {
-    backend.db(move |engine| notes::tag_notes(engine, ids, vec![tag]).map(drop))
+pub fn tag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<Reversible> {
+    backend.db(move |engine| notes::tag_notes(engine, ids, vec![tag]).map(Reversible::Tag))
 }
 
-pub fn untag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<()> {
-    backend.db(move |engine| notes::remove_tag(engine, ids, tag).map(drop))
+pub fn untag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<Reversible> {
+    backend.db(move |engine| notes::remove_tag(engine, ids, tag).map(Reversible::Untag))
 }
