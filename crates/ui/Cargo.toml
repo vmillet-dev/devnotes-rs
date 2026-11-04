@@ -26,6 +26,7 @@ zeroize = "1.9.0"
 log = "0.4.34"
 base64 = "0.23.1"
 png = "0.18.1"
+image = { version = "0.25.10", default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "webp"] }
 tokio = { version = "1.53.1", default-features = false, features = ["rt-multi-thread", "net", "time"] }
 
 [dev-dependencies]

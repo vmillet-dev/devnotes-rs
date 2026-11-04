@@ -37,6 +37,9 @@ pub(super) fn bands(
     band(ui, Margin::symmetric(20, 12), true, |ui| {
         placement(ui, state, (session, note), editing, actions);
     });
+    band(ui, Margin::symmetric(20, 8), true, |ui| {
+        super::attachments::show(ui, state, &mut editing.removing, actions);
+    });
 }
 
 /// The free-form breadcrumb a pinned card shows instead of its age.

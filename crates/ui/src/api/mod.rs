@@ -4,6 +4,7 @@
 //!
 //! A feature's file arrives with the first screen that calls it.
 
+pub mod attachments;
 pub mod folders;
 pub mod libraries;
 pub mod notes;

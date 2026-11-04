@@ -158,6 +158,7 @@ pub enum Editing {
         missing: bool,
     },
     Export(DrawingExport),
+    Attachment(crate::state::attachments::Asked),
     Pin(bool),
     Prioritise(Priority),
     MoveTo(String),
@@ -305,6 +306,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
     overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
     overlays::folder_prompt::show(ui, state, &mut view.folder_name, actions);
+    overlays::image_lightbox::show(ui, state, actions);
     overlays::undo_bar::show(ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);

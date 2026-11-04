@@ -3,6 +3,7 @@
 
 pub(crate) mod editor;
 pub(super) mod folder_prompt;
+pub(super) mod image_lightbox;
 pub(super) mod placeholder_form;
 pub(super) mod tag_manager;
 pub(super) mod trash_panel;
