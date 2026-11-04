@@ -3,7 +3,7 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use engine::notes::kind::NoteKind;
 use engine::notes::model::{DisplayNote, NotePatch};
 
-use super::css;
+use super::{css, file_name};
 use crate::notes::bench::{Bench, area, click_id, settle};
 use crate::testing;
 
@@ -115,6 +115,16 @@ fn a_tool_draws_on_the_stage_and_the_close_writes_it_with_its_pictures() {
     );
     assert!(note.content.contains(r#""hue":"ink""#));
     assert!(thumbnail(&harness, &id).is_some());
+}
+
+#[test]
+fn the_card_shows_the_picture_taken_after_the_body_was_written() {
+    let (mut harness, _) = opened("");
+
+    draw_rectangle(&mut harness);
+    close(&mut harness);
+
+    harness.get_by(|node| node.author_id() == Some("note-card-drawing"));
 }
 
 #[test]
@@ -259,6 +269,111 @@ fn the_footer_counts_the_shapes() {
 
     let stats = harness.get_by(|node| node.author_id() == Some("editor-stats"));
     assert!(stats.value().unwrap_or_default().contains('1'));
+}
+
+/// Answered by a file in a folder of its own, kept alive with the test.
+fn exporting_to(harness: &mut Harness, name: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+    let folder = tempfile::tempdir().unwrap();
+    let path = folder.path().join(name);
+    harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(path.clone()));
+    (folder, path)
+}
+
+fn said(harness: &Harness) -> String {
+    let state = &harness.state().state;
+    let (_, message) = state.status.latest().expect("the export reports");
+    message.text(state.language)
+}
+
+#[test]
+fn a_drawing_is_exported_as_a_png_and_says_where() {
+    let (mut harness, _) = opened("");
+    draw_rectangle(&mut harness);
+    let (_folder, path) = exporting_to(&mut harness, "sketch.png");
+
+    click_id(&mut harness, "drawing-export-png");
+    settle(&mut harness);
+
+    assert!(std::fs::read(&path).unwrap().starts_with(b"\x89PNG"));
+    assert!(said(&harness).contains("sketch.png"), "{}", said(&harness));
+}
+
+#[test]
+fn a_drawing_is_exported_as_its_svg() {
+    let (mut harness, _) = opened("");
+    draw_rectangle(&mut harness);
+    let (_folder, path) = exporting_to(&mut harness, "sketch.svg");
+
+    click_id(&mut harness, "drawing-export-svg");
+    settle(&mut harness);
+
+    let written = std::fs::read_to_string(&path).unwrap();
+    assert!(written.starts_with("<svg"), "{written}");
+    assert!(written.contains("<rect"));
+}
+
+struct Cancelled;
+
+impl platform::dialog::FileDialog for Cancelled {
+    fn open(&self) -> Option<std::path::PathBuf> {
+        None
+    }
+
+    fn save(&self, _name: &str) -> Option<std::path::PathBuf> {
+        None
+    }
+}
+
+#[test]
+fn a_dialog_cancelled_writes_nothing_and_says_nothing() {
+    let (mut harness, _) = opened("");
+    draw_rectangle(&mut harness);
+    harness.state_mut().state.dialog = std::sync::Arc::new(Cancelled);
+
+    click_id(&mut harness, "drawing-export-png");
+    settle(&mut harness);
+
+    assert!(harness.state().state.status.latest().is_none());
+    assert!(harness.state().state.errors.notice().is_none());
+}
+
+#[test]
+fn a_file_that_cannot_be_written_says_so() {
+    let (mut harness, _) = opened("");
+    draw_rectangle(&mut harness);
+    let (folder, _) = exporting_to(&mut harness, "unused.png");
+    let folder_itself = folder.path().to_path_buf();
+    harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(folder_itself));
+
+    click_id(&mut harness, "drawing-export-png");
+    settle(&mut harness);
+
+    assert!(harness.state().state.errors.notice().is_some());
+    assert!(harness.state().state.status.latest().is_none());
+}
+
+#[test]
+fn nothing_drawn_has_nothing_to_export() {
+    let (mut harness, _) = opened("");
+    let (_folder, path) = exporting_to(&mut harness, "sketch.png");
+
+    click_id(&mut harness, "drawing-export-png");
+    settle(&mut harness);
+
+    assert!(!path.exists());
+}
+
+#[test]
+fn a_file_is_named_after_the_title_with_what_no_system_refuses() {
+    use i18n::Language;
+
+    assert_eq!(
+        file_name("Archi: v2/final?", Language::En),
+        "Archi- v2-final-"
+    );
+    assert_eq!(file_name("  sketch\u{7} ", Language::En), "sketch");
+    assert_eq!(file_name("   ", Language::En), "Drawing");
+    assert_eq!(file_name("", Language::Fr), "Dessin");
 }
 
 #[test]

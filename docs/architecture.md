@@ -1812,9 +1812,10 @@ way — the kind menu names it and offers nothing.
 - **The editor**: a toolbar in the app's look (selection, rectangle, ellipse, diamond, arrow,
   freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool
   and gives back the selection it was taken over, then drops the selection, then leaves), a
-  history of the scene's states, and an export as PNG or SVG: the picture crosses as a data URI
-  to `save_bytes`, as the base64 tool's bytes do. The system's save dialog is the one step no
-  e2e reaches (`__TAURI_INTERNALS__.invoke` is frozen).
+  history of the scene's states, and an export as PNG or SVG (`drawing::export`), written with
+  `tools::write_file` where `FileDialog` says. ⚠️ `rfd`'s dialog blocks until answered, so the whole
+  export runs on `compute`, never on the window's thread. An e2e scenario answers it through
+  `DEVNOTES_E2E_DIALOG` (`App::launch_answering`).
 - **A Note embeds one by its id**: `![title](devnotes:drawing/<id>)`, the Markdown image of
   TipTap's extension, drawn by a node view that asks `drawing_picture` (`rich-text-drawings.ts`);
   the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose

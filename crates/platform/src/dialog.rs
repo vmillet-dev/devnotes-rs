@@ -1,14 +1,41 @@
-//! Choosing a file to read, or where to write one. The system's dialog arrives with the first
-//! screen that asks for one; an end-to-end scenario cannot reach it, so the `e2e` flavour
-//! answers the path the scenario fixed instead.
+//! Choosing a file to read, or where to write one. An end-to-end scenario cannot reach the
+//! system's dialog, so the `e2e` flavour answers the path the scenario fixed instead.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 pub trait FileDialog {
     /// A file to read: `None` when the person cancelled.
     fn open(&self) -> Option<PathBuf>;
     /// Where to write a file proposed as `name`: `None` when the person cancelled.
     fn save(&self, name: &str) -> Option<PathBuf>;
+}
+
+/// The system's dialog. ⚠️ It blocks until answered: never called on the window's thread.
+pub struct System;
+
+impl FileDialog for System {
+    fn open(&self) -> Option<PathBuf> {
+        rfd::FileDialog::new().pick_file()
+    }
+
+    fn save(&self, name: &str) -> Option<PathBuf> {
+        let dialog = rfd::FileDialog::new().set_file_name(name);
+        let extension = Path::new(name).extension().and_then(|it| it.to_str());
+        match extension {
+            Some(extension) => dialog.add_filter(extension, &[extension]).save_file(),
+            None => dialog.save_file(),
+        }
+    }
+}
+
+/// What the screens ask: the system's dialog, or in the `e2e` flavour the scenario's.
+pub fn system() -> Arc<dyn FileDialog + Send + Sync> {
+    #[cfg(feature = "e2e")]
+    if let Some(fixed) = from_scenario() {
+        return Arc::new(fixed);
+    }
+    Arc::new(System)
 }
 
 /// Answers one path to whatever is asked: a scenario's file, or a test's.

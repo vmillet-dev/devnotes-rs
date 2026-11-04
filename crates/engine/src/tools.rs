@@ -4,6 +4,8 @@
 //! files — the identity generator's lists, shipped as a resource — and takes the handle for
 //! where they are.
 
+pub use files::FileProblem;
+
 pub mod bases;
 pub mod checks;
 pub mod cidr;
@@ -105,6 +107,11 @@ pub async fn export_identities(
 
 pub async fn decode_bytes(request: bases::DecodeRequest) -> Result<bases::DecodeAnswer, AppError> {
     off_thread(move || bases::decode(&request)).await
+}
+
+/// Bytes written where the user chose: never a note.
+pub fn write_file(path: &str, bytes: &[u8]) -> Result<(), FileProblem> {
+    files::write(path, bytes)
 }
 
 pub async fn save_bytes(

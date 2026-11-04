@@ -3,18 +3,18 @@
 //! answers. The scene is saved once the hand pauses; its pictures go only when it is left, as
 //! taking two is dear.
 
-use drawing::{Editor, Fill, Frame, Grip, Hue, Mark, Point, Tool};
+use drawing::{Editor, Fill, Format, Frame, Grip, Hue, Mark, Point, Tool};
 use egui::epaint::{PathShape, PathStroke, TextShape};
 use egui::{
-    Color32, CornerRadius, CursorIcon, Key, Modifiers, Pos2, Rect, Response, Sense, Shape, Stroke,
-    StrokeKind, Ui, Vec2,
+    Align, Color32, CornerRadius, CursorIcon, Key, Layout, Modifiers, Pos2, Rect, Response, Sense,
+    Shape, Stroke, StrokeKind, Ui, Vec2,
 };
 use i18n::{Language, keys};
 
 use crate::theme::icons::Icon;
 use crate::theme::tokens::Palette;
 use crate::theme::{fonts, palette};
-use crate::widgets::{self, IconButton};
+use crate::widgets::{self, Button, IconButton};
 
 /// What is drawn is saved once the hand pauses: each save writes the scene.
 const SAVE_AFTER: f64 = 0.4;
@@ -72,6 +72,12 @@ struct Typing {
     settling: bool,
 }
 
+/// Right to left, as the toolbar lays them out.
+const EXPORTS: [(Format, i18n::Key, &str); 2] = [
+    (Format::Svg, keys::drawing::EXPORT_SVG, "drawing-export-svg"),
+    (Format::Png, keys::drawing::EXPORT_PNG, "drawing-export-png"),
+];
+
 pub(crate) struct DrawingView {
     editor: Editor,
     marks: Vec<Mark>,
@@ -111,6 +117,22 @@ impl DrawingView {
         self.editor.shapes()
     }
 
+    /// What to write, for the note of that title.
+    pub(super) fn export(
+        &self,
+        title: &str,
+        format: Format,
+        language: Language,
+        p: &Palette,
+    ) -> crate::notes::DrawingExport {
+        crate::notes::DrawingExport {
+            name: file_name(title, language),
+            content: self.editor.body(),
+            palette: std::sync::Arc::new(picture_palette(p)),
+            format,
+        }
+    }
+
     /// The body once more when its pictures are owed: `true` is theirs to take.
     pub(super) fn take_unpictured(&mut self) -> Option<String> {
         std::mem::take(&mut self.unpictured).then(|| self.editor.body())
@@ -120,6 +142,26 @@ impl DrawingView {
     pub(super) fn content_if_drawn(&self) -> Option<String> {
         (self.editor.shapes() > 0).then(|| self.editor.body())
     }
+}
+
+/// What a file name holds on every system: no control character, none of `\\ / : * ? " < > |`.
+fn file_name(title: &str, language: Language) -> String {
+    let printable: String = title
+        .chars()
+        .filter(|character| *character >= ' ')
+        .map(|character| {
+            if r#"\/:*?"<>|"#.contains(character) {
+                '-'
+            } else {
+                character
+            }
+        })
+        .collect();
+    let name = printable.trim();
+    if name.is_empty() {
+        return i18n::translate(language, keys::notes::kind_tag::DRAWING, &[]);
+    }
+    name.to_owned()
 }
 
 /// The colours of the pictures, from the tokens the stage paints with.
@@ -166,11 +208,12 @@ pub(super) struct Shown {
     pub(super) save: bool,
     /// The drawing was left: its pictures go with it.
     pub(super) left: bool,
+    pub(super) export: Option<Format>,
 }
 
 pub(super) fn show(ui: &mut Ui, view: &mut DrawingView, title: &str, language: Language) -> Shown {
     ui.spacing_mut().item_spacing = Vec2::ZERO;
-    toolbar(ui, view, language);
+    let export = toolbar(ui, view, language);
     let stage = stage(ui, view, title, language);
     keys_of(ui, view, &stage);
     pointer(ui, view, &stage);
@@ -183,6 +226,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut DrawingView, title: &str, language: L
     Shown {
         save: pause_over(ui, view) || left,
         left,
+        export,
     }
 }
 
@@ -205,9 +249,10 @@ fn pause_over(ui: &Ui, view: &mut DrawingView) -> bool {
     true
 }
 
-fn toolbar(ui: &mut Ui, view: &mut DrawingView, language: Language) {
+fn toolbar(ui: &mut Ui, view: &mut DrawingView, language: Language) -> Option<Format> {
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
+    let mut export = None;
     let row = ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
         for (tool, icon, key, name, _) in TOOLS {
@@ -247,6 +292,14 @@ fn toolbar(ui: &mut Ui, view: &mut DrawingView, language: Language) {
         {
             view.editor.remove_selection();
         }
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            let drawn = view.editor.shapes() > 0;
+            for (format, key, id) in EXPORTS {
+                if Button::new(&tr(key), id).enabled(drawn).show(ui).clicked() {
+                    export = Some(format);
+                }
+            }
+        });
     });
     ui.painter().hline(
         ui.max_rect().x_range(),
@@ -254,6 +307,7 @@ fn toolbar(ui: &mut Ui, view: &mut DrawingView, language: Language) {
         Stroke::new(1.0, p.line_soft),
     );
     ui.add_space(8.0);
+    export
 }
 
 fn swatch(ui: &mut Ui, view: &mut DrawingView, hue: Hue, language: Language) {

@@ -185,8 +185,20 @@ fn a_card_and_a_note_are_given_their_sizes() {
     assert_eq!(size_of(&pictures.picture).0, 1600);
     assert_eq!(
         pictures.picture,
-        export_png(&wide, &colours(), &fonts()).unwrap()
+        export(&wide, &colours(), &fonts(), Format::Png).unwrap()
     );
+}
+
+#[test]
+fn a_drawing_is_exported_as_its_svg_and_nothing_drawn_as_nothing() {
+    let written = export(&golden(), &colours(), &fonts(), Format::Svg).unwrap();
+
+    assert_eq!(
+        String::from_utf8(written).ok(),
+        svg(&golden(), &colours(), &fonts())
+    );
+    assert_eq!(export(&scene(""), &colours(), &fonts(), Format::Png), None);
+    assert_eq!(Format::Svg.extension(), "svg");
 }
 
 #[test]

@@ -133,6 +133,16 @@ pub enum Action {
 }
 
 /// What the editor asks of the note it has open, a draft or a note written.
+/// A drawing to write as a file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DrawingExport {
+    /// Before its extension.
+    pub name: String,
+    pub content: String,
+    pub palette: std::sync::Arc<drawing::Palette>,
+    pub format: drawing::Format,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Editing {
     /// The fields left in an opening; `None` leaves a field as it is.
@@ -147,6 +157,7 @@ pub enum Editing {
         palette: std::sync::Arc<drawing::Palette>,
         missing: bool,
     },
+    Export(DrawingExport),
     Pin(bool),
     Prioritise(Priority),
     MoveTo(String),

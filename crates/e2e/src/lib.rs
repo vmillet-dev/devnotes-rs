@@ -140,8 +140,19 @@ pub struct App {
 impl App {
     /// Launches the flavour on `profile` and waits until it answers.
     pub fn launch(scenario: &'static str, profile: &Path) -> Self {
+        Self::start(scenario, profile, Command::new(binary()))
+    }
+
+    /// As `launch`, every file dialog answering `dialog`: no driver reaches the system's.
+    pub fn launch_answering(scenario: &'static str, profile: &Path, dialog: &Path) -> Self {
+        let mut command = Command::new(binary());
+        command.env(platform::dialog::E2E_DIALOG, dialog);
+        Self::start(scenario, profile, command)
+    }
+
+    fn start(scenario: &'static str, profile: &Path, mut command: Command) -> Self {
         let port = free_port();
-        let mut child = Command::new(binary())
+        let mut child = command
             .arg("--profile")
             .arg(profile)
             .env(
@@ -276,6 +287,29 @@ impl App {
         self.apply(vec![Event::PointerMoved(pos)]);
         self.apply(vec![button(true)]);
         self.apply(vec![button(false)]);
+    }
+
+    /// A press at `from` and a release at `to`, in points from the control's corner.
+    pub fn drag_in(&mut self, author_id: &str, from: (f32, f32), to: (f32, f32)) {
+        self.wait_for(author_id);
+        let bounds = self
+            .tree()
+            .find(author_id)
+            .and_then(Node::bounds)
+            .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let corner = Pos2::new(bounds.x0 as f32, bounds.y0 as f32);
+        let (from, to) = (corner + from.into(), corner + to.into());
+        let button = |pos, pressed| Event::PointerButton {
+            pos,
+            button: PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        };
+        self.apply(vec![Event::PointerMoved(from)]);
+        self.apply(vec![button(from, true)]);
+        self.apply(vec![Event::PointerMoved(to)]);
+        self.apply(vec![button(to, false)]);
     }
 
     /// The pointer over the first `author_id` in reading order, once it is shown: what a card

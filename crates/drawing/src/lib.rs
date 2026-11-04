@@ -12,6 +12,6 @@ pub mod text;
 pub use edit::{Editor, Frame, Grip, Tool};
 pub use geometry::{Box, Ends, Point};
 pub use marks::{Fill, Mark, marks};
-pub use picture::{Palette, Pictures, export_png, pictures, svg};
+pub use picture::{Format, Palette, Pictures, export, pictures, svg};
 pub use scene::{Drawing, Hue, Kind, Object, PathCommand};
 pub use text::{Fonts, wrap};

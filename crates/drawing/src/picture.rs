@@ -22,6 +22,21 @@ pub struct Palette {
     pub paper: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Format {
+    Png,
+    Svg,
+}
+
+impl Format {
+    pub fn extension(self) -> &'static str {
+        match self {
+            Self::Png => "png",
+            Self::Svg => "svg",
+        }
+    }
+}
+
 /// A drawing's two pictures, as PNG.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pictures {
@@ -47,9 +62,18 @@ pub fn pictures(drawing: &Drawing, palette: &Palette, fonts: &Fonts) -> Option<P
     })
 }
 
-/// The whole drawing at the large picture's scale, as exported.
-pub fn export_png(drawing: &Drawing, palette: &Palette, fonts: &Fonts) -> Option<Vec<u8>> {
-    png(drawing, palette, fonts, PICTURE)
+/// The file a drawing is exported as: the large picture, or the SVG it is drawn from. `None`
+/// when nothing is drawn.
+pub fn export(
+    drawing: &Drawing,
+    palette: &Palette,
+    fonts: &Fonts,
+    format: Format,
+) -> Option<Vec<u8>> {
+    match format {
+        Format::Png => png(drawing, palette, fonts, PICTURE),
+        Format::Svg => svg(drawing, palette, fonts).map(String::into_bytes),
+    }
 }
 
 fn png(
