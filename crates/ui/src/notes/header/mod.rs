@@ -156,7 +156,8 @@ fn search(
         field.request_focus();
     }
     // Down from the field to what it found: the first card.
-    if field.has_focus() && ui.input(|input| input.key_pressed(egui::Key::ArrowDown)) {
+    if widgets::takes_keys(ui, &field) && ui.input(|input| input.key_pressed(egui::Key::ArrowDown))
+    {
         push(
             actions,
             crate::notes::Action::Canvas(crate::notes::canvas::shortcuts::CanvasKey::Move(

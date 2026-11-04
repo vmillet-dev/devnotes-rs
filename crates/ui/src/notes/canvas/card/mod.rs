@@ -62,7 +62,8 @@ pub(super) fn show(
         open.request_focus();
         canvas_view.request = None;
     }
-    if open.has_focus() {
+    // Not `has_focus`, which also asks the window's focus: under xvfb no card would ever have it.
+    if crate::widgets::takes_keys(ui, &open) {
         canvas_view.focused = Some(note.id.clone());
         // The arrows and Escape are the canvas's table's: egui would move the focus itself.
         let kept = egui::EventFilter {
