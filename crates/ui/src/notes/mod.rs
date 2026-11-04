@@ -88,6 +88,32 @@ pub enum Action {
     CloseNote,
     /// A draft of that kind, or of the preferred one: written once worth keeping.
     NewNote(Option<engine::notes::kind::NoteKind>),
+    Pin {
+        id: String,
+        pinned: bool,
+    },
+    Prioritise {
+        id: String,
+        priority: engine::notes::priority::Priority,
+    },
+    /// `None`: out of every folder.
+    File {
+        id: String,
+        folder: Option<String>,
+    },
+    MoveTo {
+        id: String,
+        space: String,
+    },
+    /// Into the trash.
+    Delete(String),
+    /// The copy is opened in the editor, under the title the interface words.
+    Duplicate {
+        id: String,
+        title: String,
+    },
+    /// Read whole, then onto the clipboard.
+    Copy(String),
 }
 
 /// The rail's edge, which widens it.

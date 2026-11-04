@@ -146,6 +146,17 @@ fn the_canvas_of_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "canvas-notes");
 
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .hover();
+    settle(&mut harness);
+    click(&mut harness, "note-card-menu");
+    capture(&mut harness, "card-menu");
+    click(&mut harness, "note-card-menu");
+
     click(&mut harness, "sort-trigger");
     capture(&mut harness, "header-sort-menu");
     click(&mut harness, "sort-trigger");

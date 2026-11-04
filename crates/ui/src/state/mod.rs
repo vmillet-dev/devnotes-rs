@@ -126,7 +126,13 @@ impl AppState {
 
     /// What reads the open library, once its preferences are in and its samples seeded.
     pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
-        self.notes.update(&mut self.revision, &mut self.errors);
+        let answered = self.notes.update(&mut self.revision, &mut self.errors);
+        if let Some(id) = answered.open {
+            self.editor.open(backend, id);
+        }
+        for note in answered.copied {
+            self.copied(ctx, &note);
+        }
         self.editor
             .update(backend, &mut self.revision, &mut self.errors);
         self.caches.thumbnails.update(ctx, backend);
@@ -299,6 +305,17 @@ impl AppState {
                 body,
             } => self.editor.save(backend, session, title, body),
             crate::notes::Action::NewNote(kind) => self.new_note(kind),
+            crate::notes::Action::Pin { id, pinned } => self.notes.pin(backend, id, pinned),
+            crate::notes::Action::Prioritise { id, priority } => {
+                self.notes.prioritise(backend, id, priority);
+            }
+            crate::notes::Action::File { id, folder } => self.notes.file(backend, id, folder),
+            crate::notes::Action::MoveTo { id, space } => self.notes.move_to(backend, id, space),
+            crate::notes::Action::Delete(id) => self.notes.delete(backend, id),
+            crate::notes::Action::Duplicate { id, title } => {
+                self.notes.duplicate(backend, id, title);
+            }
+            crate::notes::Action::Copy(id) => self.notes.copy(backend, id),
             crate::notes::Action::CloseNote => self.editor.close(),
             crate::notes::Action::FocusSearch => {
                 self.notes_view.focus_search = true;
@@ -306,6 +323,21 @@ impl AppState {
                 ctx.request_repaint();
             }
         }
+    }
+
+    /// What copying yields, onto the clipboard, and said: what was copied, by its title.
+    fn copied(&mut self, ctx: &egui::Context, note: &engine::notes::model::DisplayNote) {
+        let text = note
+            .copy_text
+            .clone()
+            .unwrap_or_else(|| note.content.clone());
+        ctx.copy_text(text);
+        let message = if note.title.is_empty() {
+            i18n::Message::new(i18n::keys::notes::COPIED_UNTITLED)
+        } else {
+            i18n::Message::new(i18n::keys::notes::COPIED_NOTE).with("title", note.title.as_str())
+        };
+        self.status.report(message);
     }
 
     /// In the space shown, or the first one for « all spaces », and the folder shown.

@@ -19,7 +19,9 @@ pub use dialog::{DialogStack, Layer, dialog};
 pub use field::{Checkbox, SearchField, Searched, TextField};
 pub use layout::{rail_frame, split_handle, tooltip};
 pub use list::{code_viewer, virtual_list};
-pub use menu::{ChoiceMenu, FILTER_FROM, MenuItem, Naming, frame as menu_frame, menu};
+pub use menu::{
+    ChoiceMenu, FILTER_FROM, MenuItem, Naming, entry as menu_entry, frame as menu_frame, menu,
+};
 pub use release_notes::release_notes;
 pub use segmented::Segmented;
 

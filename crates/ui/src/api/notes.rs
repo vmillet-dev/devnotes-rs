@@ -1,6 +1,7 @@
 //! Notes: the view the canvas draws.
 
 use engine::notes::model::{DisplayNote, NoteDraft, NotePatch};
+use engine::notes::priority::Priority;
 use engine::notes::view::{NotesQuery, NotesView};
 use engine::{notes, spaces};
 
@@ -42,4 +43,28 @@ pub fn get(backend: &Backend, id: String) -> Pending<DisplayNote> {
 /// A new note, once it is worth keeping.
 pub fn create(backend: &Backend, draft: NoteDraft) -> Pending<DisplayNote> {
     backend.db(move |engine| notes::create_note(engine, draft))
+}
+
+pub fn pin(backend: &Backend, ids: Vec<String>, pinned: bool) -> Pending<()> {
+    backend.db(move |engine| notes::set_pinned(engine, ids, pinned).map(drop))
+}
+
+/// Triaging is not editing: `updated_at` stays where it was.
+pub fn prioritise(backend: &Backend, ids: Vec<String>, priority: Priority) -> Pending<()> {
+    backend.db(move |engine| notes::set_priority(engine, ids, priority).map(drop))
+}
+
+/// Out of their folders, into another space.
+pub fn move_to(backend: &Backend, ids: Vec<String>, space_id: String) -> Pending<()> {
+    backend.db(move |engine| notes::move_notes(engine, ids, space_id).map(drop))
+}
+
+/// Into the trash, which keeps them thirty days.
+pub fn delete(backend: &Backend, ids: Vec<String>) -> Pending<()> {
+    backend.db(move |engine| notes::delete_notes(engine, ids).map(drop))
+}
+
+/// The copy, under the title the interface words.
+pub fn duplicate(backend: &Backend, id: String, title: String) -> Pending<DisplayNote> {
+    backend.db(move |engine| notes::duplicate_note(engine, id, title))
 }
