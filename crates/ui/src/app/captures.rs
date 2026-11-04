@@ -195,6 +195,14 @@ fn the_canvas_of_an_open_library() {
     click(&mut harness, "library-rail-toggle");
     click(&mut harness, "space-switcher");
     capture(&mut harness, "header-switchers");
+    click(&mut harness, "space-switcher");
+    click(&mut harness, "facets-toggle");
+    capture(&mut harness, "facets-panel");
+    click(&mut harness, "facets-toggle");
+    harness.set_size(egui::vec2(640.0, SIZE.y));
+    settle(&mut harness);
+    capture(&mut harness, "header-two-rows");
+    harness.set_size(SIZE);
 }
 
 /// One note of each kind, with marks, tags and a search's worth of words.

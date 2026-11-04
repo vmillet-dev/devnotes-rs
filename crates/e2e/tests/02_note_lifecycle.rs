@@ -47,6 +47,8 @@ fn note_lifecycle() {
             app.wait_for("editor-title");
             app.click("editor-close");
             app.eventually("the editor is closed", |tree| !tree.has("editor-title"));
+            // Under a header of two rows the top ones went out of view, and were not counted.
+            app.scroll_top("canvas");
             cards(&mut app, CARDS + 1, "no card more");
         },
     );

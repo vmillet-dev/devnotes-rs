@@ -185,30 +185,33 @@ impl eframe::App for DevNotesApp {
                     }
                 });
         }
-        egui::CentralPanel::default().show(ui, |ui| {
-            if self.state.gate.is_open() {
-                match self.state.settings.area {
-                    Area::Notes => {
-                        let mut view = std::mem::take(&mut self.state.notes_view);
-                        notes::show(ui, &self.state, &mut view, &mut actions);
-                        self.state.notes_view = view;
+        // Flush with the window, as the reference: egui's 8 px margin cost the header its one row.
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
+            .show(ui, |ui| {
+                if self.state.gate.is_open() {
+                    match self.state.settings.area {
+                        Area::Notes => {
+                            let mut view = std::mem::take(&mut self.state.notes_view);
+                            notes::show(ui, &self.state, &mut view, &mut actions);
+                            self.state.notes_view = view;
+                        }
+                        area => area_shell(ui, area),
                     }
-                    area => area_shell(ui, area),
+                } else {
+                    let mut asked = Vec::new();
+                    gate::show(
+                        ui,
+                        &self.state.gate,
+                        &mut self.state.gate_view,
+                        language,
+                        &mut asked,
+                    );
+                    for action in asked {
+                        actions.push(Action::Gate(action));
+                    }
                 }
-            } else {
-                let mut asked = Vec::new();
-                gate::show(
-                    ui,
-                    &self.state.gate,
-                    &mut self.state.gate_view,
-                    language,
-                    &mut asked,
-                );
-                for action in asked {
-                    actions.push(Action::Gate(action));
-                }
-            }
-        });
+            });
         let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
         // A modal over the canvas takes its keys: the canvas's stand aside.
         let modal = self.state.editor.is_open() || self.state.trash.is_open();

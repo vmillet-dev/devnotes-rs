@@ -144,13 +144,13 @@ pub(crate) fn arrowed(
 }
 
 /// How far a control is under the pointer, eased over `motion::FAST`.
-fn hovered(ui: &Ui, response: &Response) -> f32 {
+pub(crate) fn hovered(ui: &Ui, response: &Response) -> f32 {
     ui.ctx()
         .animate_bool_with_time(response.id.with("hover"), response.hovered(), motion::FAST)
 }
 
 /// A colour on its way to another, `t` from 0 to 1.
-fn towards(from: Color32, to: Color32, t: f32) -> Color32 {
+pub(crate) fn towards(from: Color32, to: Color32, t: f32) -> Color32 {
     from.lerp_to_gamma(to, t)
 }
 
