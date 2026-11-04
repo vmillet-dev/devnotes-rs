@@ -21,7 +21,7 @@ pub const ARRANGEMENT_KEY: &str = "devnotes.notes.arrangement";
 
 /// How long the search waits after the last key, in egui's seconds: barely needed with the
 /// index in memory, kept so a burst of keys asks once.
-const DEBOUNCE: f64 = 0.150;
+pub(super) const DEBOUNCE: f64 = 0.150;
 
 pub const SORT_KEYS: [SortKey; 5] = [
     SortKey::Modified,

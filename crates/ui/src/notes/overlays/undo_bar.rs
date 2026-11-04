@@ -15,7 +15,7 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, IconButton};
 
-pub(super) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
+pub(in crate::notes) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
     let now = ui.input(|input| input.time);
     let Some(action) = state.undo.banner(now) else {
         return;
@@ -45,7 +45,7 @@ pub(super) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
                         .show(ui)
                         .clicked()
                     {
-                        actions.push(Action::Notes(super::Action::DismissUndo));
+                        actions.push(Action::Notes(crate::notes::Action::DismissUndo));
                     }
                 });
             });
@@ -138,7 +138,7 @@ fn restore(ui: &mut Ui, language: i18n::Language, actions: &mut Actions) {
     );
     painter.galley(cap_rect.min + vec2(5.0, 1.0), key, p.text_2);
     if response.clicked() {
-        actions.push(Action::Notes(super::Action::Undo));
+        actions.push(Action::Notes(crate::notes::Action::Undo));
     }
 }
 

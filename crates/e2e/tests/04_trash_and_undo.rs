@@ -1,5 +1,6 @@
 //! Deleting a note does not delete it: it goes to the trash, and the undo bar, `Escape` while it
-//! offers, and `Ctrl+Z` after it has gone take it back.
+//! offers, and `Ctrl+Z` after it has gone take it back; the trash panel restores, purges and
+//! empties. The samples' titles are translated: rows are counted, never read.
 
 use e2e::{App, step};
 use egui::{Key, Modifiers};
@@ -12,11 +13,28 @@ fn cards(app: &mut App, count: usize, what: &str) {
 
 /// The first card, sent to the trash from the keyboard: the second press is the one that writes.
 fn delete_first(app: &mut App) {
+    let before = app.tree().count("note-card");
     app.press(Key::ArrowDown, Modifiers::NONE);
     app.press(Key::Delete, Modifiers::NONE);
     app.wait_for("note-card-arming");
     app.press(Key::Delete, Modifiers::NONE);
-    cards(app, CARDS - 1, "the note is in the trash");
+    cards(app, before - 1, "the note is in the trash");
+}
+
+/// Deleted, and the offer to take it back turned down.
+fn trash_first(app: &mut App) {
+    delete_first(app);
+    app.click("undo-dismiss");
+}
+
+fn rows(app: &mut App, count: usize, what: &str) {
+    app.eventually(what, |tree| tree.count("trash-row") == count);
+}
+
+fn emptied(app: &mut App) {
+    app.eventually("the trash says it is empty", |tree| {
+        tree.has("trash-empty-state") && tree.count("trash-row") == 0
+    });
 }
 
 #[test]
@@ -77,12 +95,73 @@ fn trash_and_undo() {
     );
 
     step("a dismissed offer is given up for good", || {
-        delete_first(&mut app);
-        app.click("undo-dismiss");
+        trash_first(&mut app);
         app.press(Key::Z, Modifiers::COMMAND);
         assert!(!app.has("undo-bar"));
         assert_eq!(app.tree().count("note-card"), CARDS - 1);
     });
 
+    trash_panel(&mut app);
     app.quit();
+}
+
+/// Starts with one note in the trash and the others on the canvas.
+fn trash_panel(app: &mut App) {
+    step("the trash panel restores what was deleted", || {
+        app.click("trash-open");
+        rows(app, 1, "the deleted note is listed");
+        app.capture("trash-panel");
+        app.click("trash-restore");
+        emptied(app);
+        app.click("trash-close");
+        cards(app, CARDS, "the note is back");
+    });
+
+    step("a row is purged for good on the second click", || {
+        trash_first(app);
+        app.click("trash-open");
+        rows(app, 1, "the deleted note is listed");
+        app.click("trash-purge");
+        assert_eq!(app.tree().count("trash-row"), 1);
+        app.click("trash-purge");
+        emptied(app);
+        app.press(Key::Escape, Modifiers::NONE);
+        app.eventually("Escape closes the panel", |tree| !tree.has("trash-close"));
+        assert_eq!(app.tree().count("note-card"), CARDS - 1);
+    });
+
+    step(
+        "a search narrows the trash, and restoring reaches what it found",
+        || {
+            for _ in 0..3 {
+                trash_first(app);
+            }
+            app.click("trash-open");
+            rows(app, 3, "the three deleted notes are listed");
+            app.fill("trash-search", "zz-nothing-zz");
+            app.eventually("the search finds nothing", |tree| {
+                tree.has("trash-empty-state") && !tree.has("trash-empty")
+            });
+            app.press(Key::A, Modifiers::COMMAND);
+            app.press(Key::Backspace, Modifiers::NONE);
+            rows(app, 3, "the whole trash is back");
+            app.click("trash-restore-all");
+            emptied(app);
+            app.click("trash-close");
+            cards(app, CARDS - 1, "the three notes are back");
+        },
+    );
+
+    step("emptying says what it erases, then erases it", || {
+        trash_first(app);
+        trash_first(app);
+        app.click("trash-open");
+        rows(app, 2, "the two deleted notes are listed");
+        app.click("trash-empty");
+        app.wait_for("trash-empty-warning");
+        app.click("trash-empty-confirm");
+        emptied(app);
+        app.click("trash-close");
+        cards(app, CARDS - 3, "the erased notes stay gone");
+    });
 }

@@ -2,6 +2,7 @@
 
 use engine::notes::model::{DisplayNote, NoteDraft, NotePatch};
 use engine::notes::priority::Priority;
+use engine::notes::trash::TrashedNote;
 use engine::notes::view::{NotesQuery, NotesView};
 use engine::{notes, spaces};
 
@@ -68,6 +69,30 @@ pub fn delete(backend: &Backend, ids: Vec<String>) -> Pending<Reversible> {
         let count = notes::delete_notes(engine, ids.clone())?;
         Ok(Reversible::Deletion { ids, count })
     })
+}
+
+/// What the search matches, as `view::fold` reads it; the expired purged first.
+pub fn list_trash(backend: &Backend, search: String) -> Pending<Vec<TrashedNote>> {
+    backend.db(move |engine| notes::list_trash(engine, search))
+}
+
+/// `updated_at` stays where it was: putting back is not editing.
+pub fn restore(backend: &Backend, ids: Vec<String>) -> Pending<u32> {
+    backend.db(move |engine| notes::restore_notes(engine, ids))
+}
+
+/// What the same search finds, or the whole trash.
+pub fn restore_trash(backend: &Backend, search: String) -> Pending<u32> {
+    backend.db(move |engine| notes::restore_trash(engine, search))
+}
+
+/// Only notes already in the trash: nothing shortens the retention.
+pub fn purge(backend: &Backend, ids: Vec<String>) -> Pending<u32> {
+    backend.db(move |engine| notes::purge_notes(engine, ids))
+}
+
+pub fn empty_trash(backend: &Backend) -> Pending<u32> {
+    backend.db(notes::empty_trash)
 }
 
 /// The copy, under the title the interface words.

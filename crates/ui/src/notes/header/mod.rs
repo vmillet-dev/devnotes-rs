@@ -15,6 +15,7 @@ use i18n::keys;
 
 use crate::action::{Action, Actions};
 use crate::state::AppState;
+use crate::theme::icons::Icon;
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, SearchField, Segmented, interact};
 
@@ -88,11 +89,22 @@ pub(super) fn show(
 fn where_one_is(ui: &mut Ui, state: &AppState, view: &mut HeaderView, actions: &mut Actions) {
     let label = i18n::translate(state.language, keys::sidebar::TOGGLE, &[]);
     let shown = state.settings.rail_shown;
-    if widgets::RailToggle::new(&label, "library-rail-toggle", shown)
+    if widgets::SquareButton::new(Icon::Sidebar, &label, "library-rail-toggle")
+        .pressed(shown)
         .show(ui)
         .clicked()
     {
         actions.push(Action::App(crate::action::AppAction::ToggleRail));
+    }
+    // Away from the filters and the primary action: a view on the notes, not a filter.
+    let trash = i18n::translate(state.language, keys::notes::TRASH, &[]);
+    if widgets::SquareButton::new(Icon::Trash, &trash, "trash-open")
+        .show(ui)
+        .clicked()
+    {
+        actions.push(Action::Notes(crate::notes::Action::Trash(
+            crate::notes::Trash::Open,
+        )));
     }
     let spaces = &state.spaces;
     let open = spaces

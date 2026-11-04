@@ -166,6 +166,12 @@ fn the_canvas_of_an_open_library() {
     click(&mut harness, "selection-pin");
     capture(&mut harness, "undo-bar");
     click(&mut harness, "undo-restore");
+    click(&mut harness, "selection-delete");
+    click(&mut harness, "selection-delete");
+    click(&mut harness, "trash-open");
+    capture(&mut harness, "trash-panel");
+    click(&mut harness, "trash-restore-all");
+    click(&mut harness, "trash-close");
     harness.key_press(egui::Key::Escape);
     settle(&mut harness);
 

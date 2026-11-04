@@ -6,10 +6,10 @@ pub mod canvas;
 mod editor;
 mod header;
 pub mod language;
+mod overlays;
 mod panel;
 pub mod sidebar;
 pub mod ui;
-mod undo_bar;
 
 use egui::{Rect, Role, Sense, Ui, UiBuilder, WidgetInfo, vec2};
 use engine::notes::kind::NoteKind;
@@ -130,6 +130,21 @@ pub enum Action {
     /// The last write put back, from the undo bar.
     Undo,
     DismissUndo,
+    Trash(Trash),
+}
+
+/// What the trash panel asks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Trash {
+    Open,
+    Close,
+    Search(String),
+    Restore(String),
+    /// For good: the second click on the row.
+    Purge(String),
+    /// What the search found, or all of it.
+    RestoreAll,
+    Empty,
 }
 
 /// What the selection bar does to every ticked note at once.
@@ -159,6 +174,7 @@ pub struct View {
     pub(crate) focus_search: bool,
     header: header::HeaderView,
     editor: Option<editor::Draft>,
+    trash: overlays::trash_panel::TrashView,
 }
 
 /// The rail on the left, as wide as the setting says, and the canvas beside it.
@@ -198,7 +214,8 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
     editor::show(ui, state, &mut view.editor, actions);
-    undo_bar::show(ui, state, actions);
+    overlays::trash_panel::show(ui, state, &mut view.trash, actions);
+    overlays::undo_bar::show(ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);
     #[expect(
