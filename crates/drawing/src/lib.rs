@@ -3,7 +3,11 @@
 //! editor and the pictures use, and keeps every other field as it was read. No egui, no engine.
 
 pub mod geometry;
+pub mod picture;
 pub mod scene;
+pub mod text;
 
 pub use geometry::{Box, Ends, Point};
+pub use picture::{Palette, Pictures, export_png, pictures, svg};
 pub use scene::{Drawing, Hue, Kind, Object, PathCommand};
+pub use text::{Fonts, wrap};

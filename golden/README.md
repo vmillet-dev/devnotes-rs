@@ -20,5 +20,6 @@ Each `<subject>/cases.json` is a list of `{ input, options?, output }`.
 | `relative-time`   | Relative, expiry and span labels from a second to a year, both locales                                                           | `relative-time.util`                               |
 | `calc-format`     | How a Calcul sheet writes each kind of value, its sum and its mean; each setting swept with the others at their default          | `CalcFormatter`                                    |
 | `fabric`          | A stored Dessin: each kind of object the editor makes, as Fabric serialises it, and an empty scene                               | Fabric 7.4.0 (`fabric/node`, not `npm run golden`) |
+| `fabric-wrap`     | Where a Textbox breaks its lines, at a width and a font size, with the embedded Inter                                            | Fabric 7.4.0 in Chromium, not `npm run golden`     |
 
 Captured on 2026-11-03 under Vitest 4.1.11 and jsdom 30.1.2. Mermaid (12.2.0) and Fabric (7.4.0) draw pictures: those references are the screenshots of the visual reference, not files here.
