@@ -65,7 +65,8 @@ pub(super) fn show(ui: &mut Ui, view: &mut ChecklistView, language: Language) ->
     progress(ui, &view.items, language);
     ui.add_space(10.0);
     let rows_top = ui.cursor().top();
-    let mut asked = None;
+    // A row left and another clicked come in the same frame: both count.
+    let mut asked = Vec::new();
     // The rows keep their places while one is dragged — a row moved under the pointer would
     // be another widget to egui — and a line shows where it would land.
     for index in 0..view.items.len() {
@@ -91,10 +92,10 @@ pub(super) fn show(ui: &mut Ui, view: &mut ChecklistView, language: Language) ->
         }
         let (outcome, grip) = row(&mut row_ui, view, index, language);
         if let Some(outcome) = outcome {
-            asked = Some((index, outcome));
+            asked.push((index, outcome));
         }
         if let Some(dropped) = drag(ui, view, index, &grip, rows_top) {
-            asked = Some((index, dropped));
+            asked.push((index, dropped));
         }
     }
     if let Some((from, to)) = view.dragging.filter(|(from, to)| from != to) {
@@ -108,11 +109,12 @@ pub(super) fn show(ui: &mut Ui, view: &mut ChecklistView, language: Language) ->
     #[expect(clippy::cast_precision_loss, reason = "a list's length")]
     let height = view.items.len() as f32 * (ROW + 2.0);
     ui.allocate_space(Vec2::new(ui.available_width(), height));
-    if let Some((index, outcome)) = asked {
+    for (index, outcome) in asked {
         let count = view.items.len();
         changed |= apply(view, index, outcome);
         if view.items.len() != count || view.focus.is_some() {
             settle_rows(ui, view, index);
+            break;
         }
     }
     ui.add_space(8.0);
@@ -223,6 +225,7 @@ fn row(
         TextEdit::singleline(&mut view.items[index].text)
             .id(id)
             .frame(egui::Frame::new())
+            .vertical_align(Align::Center)
             .hint_text(hint)
             .text_color(if done { p.text_2 } else { p.text_0 })
             .font(FontId::new(13.5, FontFamily::Proportional)),

@@ -215,3 +215,20 @@ fn a_pasted_line_reads_its_marker_and_its_box() {
     assert_eq!(pasted_item("plain line"), item("plain line", false));
     assert_eq!(pasted_item("-dash"), item("dash", false));
 }
+
+#[test]
+fn a_box_clicked_while_a_row_is_typed_in_is_ticked() {
+    let (mut harness, id) = list(&[item("milk", false), item("eggs", false)]);
+    focus_row(&mut harness, 1);
+    harness
+        .query_all_by(|node| node.author_id() == Some("checklist-check"))
+        .next()
+        .unwrap()
+        .click();
+    settle(&mut harness);
+
+    assert_eq!(
+        stored(&harness, &id),
+        owned(&[("milk", true), ("eggs", false)])
+    );
+}
