@@ -1,4 +1,5 @@
-//! What opens over the canvas: the trash, and the undo bar above every modal.
+//! What opens over the canvas: the trash, the tag manager, and the undo bar above every modal.
 
+pub(super) mod tag_manager;
 pub(super) mod trash_panel;
 pub(super) mod undo_bar;

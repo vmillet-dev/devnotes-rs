@@ -7,6 +7,7 @@ pub mod notes_query;
 mod query;
 pub mod selection;
 pub mod spaces;
+pub mod tags;
 pub mod trash;
 pub mod undo;
 
@@ -80,6 +81,7 @@ pub struct AppState {
     pub selection: selection::SelectionState,
     pub undo: undo::UndoState,
     pub trash: trash::TrashState,
+    pub tags: tags::TagsState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -109,6 +111,7 @@ impl AppState {
             selection: selection::SelectionState::default(),
             undo: undo::UndoState::default(),
             trash: trash::TrashState::default(),
+            tags: tags::TagsState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -149,6 +152,8 @@ impl AppState {
         self.undo.update(&mut self.revision, &mut self.errors);
         self.trash
             .update(ctx, backend, &mut self.revision, &mut self.errors);
+        self.tags
+            .update(backend, &mut self.revision, &mut self.errors);
         self.editor
             .update(backend, &mut self.revision, &mut self.errors);
         self.caches.thumbnails.update(ctx, backend);
@@ -258,55 +263,78 @@ impl AppState {
         }
     }
 
+    /// What opens over the canvas: the undo bar, the trash, the tag manager.
+    fn apply_overlay(
+        &mut self,
+        action: crate::notes::Action,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::Action as Notes;
+        match action {
+            Notes::Undo => {
+                self.undo.revert(backend);
+            }
+            Notes::DismissUndo => self.undo.dismiss(),
+            Notes::Tags(asked) => self.tags.apply(asked, backend),
+            Notes::Trash(asked) => {
+                self.trash
+                    .apply(asked, backend, ctx.input(|input| input.time));
+            }
+            _ => {}
+        }
+    }
+
     fn apply_notes(
         &mut self,
         action: crate::notes::Action,
         ctx: &egui::Context,
         backend: &Backend,
     ) {
+        use crate::notes::Action as Notes;
         match action {
-            crate::notes::Action::Reload => self.revision.bump(),
-            crate::notes::Action::SetItems { id, items } => {
+            Notes::Reload => self.revision.bump(),
+            Notes::SetItems { id, items } => {
                 self.notes.set_items(backend, id, items);
             }
-            crate::notes::Action::Thumbnail(stamp) => self.caches.thumbnails.ask(backend, stamp),
-            crate::notes::Action::ChooseSpace(id) => {
+            Notes::Thumbnail(stamp) => self.caches.thumbnails.ask(backend, stamp),
+            Notes::ChooseSpace(id) => {
                 self.spaces.choose_space(id);
                 self.remember_place(backend);
             }
-            crate::notes::Action::ChooseFolder(id) => {
+            Notes::ChooseFolder(id) => {
                 self.spaces.choose_folder(&id);
                 self.remember_place(backend);
             }
-            crate::notes::Action::CountSpace(id) => self.spaces.count(id),
-            crate::notes::Action::CreateSpace(name) => self.spaces.create_space(backend, &name),
-            crate::notes::Action::RenameSpace { id, name } => {
+            Notes::CountSpace(id) => self.spaces.count(id),
+            Notes::CreateSpace(name) => self.spaces.create_space(backend, &name),
+            Notes::RenameSpace { id, name } => {
                 self.spaces.rename_space(backend, id, &name);
             }
-            crate::notes::Action::PinSpace { id, pinned } => {
+            Notes::PinSpace { id, pinned } => {
                 self.spaces.pin_space(backend, id, pinned);
             }
-            crate::notes::Action::DeleteSpace { id, refuge } => {
+            Notes::DeleteSpace { id, refuge } => {
                 self.spaces.delete_space(backend, id, refuge);
             }
-            crate::notes::Action::CreateFolder {
+            Notes::CreateFolder {
                 space_id,
                 parent_id,
                 name,
             } => self
                 .spaces
                 .create_folder(backend, space_id, parent_id, &name),
-            crate::notes::Action::RenameFolder { id, name } => {
+            Notes::RenameFolder { id, name } => {
                 self.spaces.rename_folder(backend, id, &name);
             }
-            crate::notes::Action::RecolourFolder { id, colour } => {
+            Notes::RecolourFolder { id, colour } => {
                 self.spaces.recolour_folder(backend, id, colour);
             }
-            crate::notes::Action::DeleteFolder(id) => self.spaces.delete_folder(backend, id),
-            crate::notes::Action::Search(typed) => self.notes_query.type_search(ctx, typed),
-            crate::notes::Action::ClearSearch => self.notes_query.clear_search(),
-            crate::notes::Action::SetFilter(filter) => self.notes_query.set_filter(filter),
-            crate::notes::Action::Arrange(arrangement) => {
+            Notes::DeleteFolder(id) => self.spaces.delete_folder(backend, id),
+            Notes::Search(typed) => self.notes_query.type_search(ctx, typed),
+            Notes::ClearSearch => self.notes_query.clear_search(),
+            Notes::SetFilter(filter) => self.notes_query.set_filter(filter),
+            Notes::Arrange(arrangement) => {
                 self.notes_query.arrange(arrangement);
                 arrangement.write(&mut self.library_preferences);
                 drop(api::preferences::write_library(
@@ -314,52 +342,47 @@ impl AppState {
                     self.library_preferences.clone(),
                 ));
             }
-            crate::notes::Action::OpenNote(id) => self.editor.open(backend, id),
-            crate::notes::Action::SaveNote {
+            Notes::OpenNote(id) => self.editor.open(backend, id),
+            Notes::SaveNote {
                 session,
                 title,
                 body,
             } => self.editor.save(backend, session, title, body),
-            crate::notes::Action::NewNote(kind) => self.new_note(kind),
-            crate::notes::Action::Pin { id, pinned } => {
+            Notes::NewNote(kind) => self.new_note(kind),
+            Notes::Pin { id, pinned } => {
                 self.notes.pin(backend, vec![id], pinned);
             }
-            crate::notes::Action::Prioritise { id, priority } => {
+            Notes::Prioritise { id, priority } => {
                 self.notes.prioritise(backend, vec![id], priority);
             }
-            crate::notes::Action::File { id, folder } => {
+            Notes::File { id, folder } => {
                 self.notes.file(backend, vec![id], folder);
             }
-            crate::notes::Action::MoveTo { id, space } => {
+            Notes::MoveTo { id, space } => {
                 self.notes.move_to(backend, vec![id], space);
             }
-            crate::notes::Action::Delete(id) => self.notes.delete(backend, vec![id]),
-            crate::notes::Action::Check(id) => self.selection.toggle(&id),
-            crate::notes::Action::CheckRange { id, anchor } => {
+            Notes::Delete(id) => self.notes.delete(backend, vec![id]),
+            Notes::Check(id) => self.selection.toggle(&id),
+            Notes::CheckRange { id, anchor } => {
                 let order = self.on_screen();
                 let order: Vec<&str> = order.iter().map(String::as_str).collect();
                 self.selection.check_range(&order, anchor.as_deref(), &id);
             }
-            crate::notes::Action::ClearSelection => {
+            Notes::ClearSelection => {
                 self.selection.clear();
             }
-            crate::notes::Action::Batch(batch) => self.batch(batch, backend),
-            crate::notes::Action::Undo => {
-                self.undo.revert(backend);
+            Notes::Batch(batch) => self.batch(batch, backend),
+            Notes::Facet(facet) => self.notes_query.press(facet),
+            overlay @ (Notes::Undo | Notes::DismissUndo | Notes::Tags(_) | Notes::Trash(_)) => {
+                self.apply_overlay(overlay, ctx, backend);
             }
-            crate::notes::Action::DismissUndo => self.undo.dismiss(),
-            crate::notes::Action::Facet(facet) => self.notes_query.press(facet),
-            crate::notes::Action::Trash(asked) => {
-                self.trash
-                    .apply(asked, backend, ctx.input(|input| input.time));
-            }
-            crate::notes::Action::Duplicate { id, title } => {
+            Notes::Duplicate { id, title } => {
                 self.notes.duplicate(backend, id, title);
             }
-            crate::notes::Action::Copy(id) => self.notes.copy(backend, id),
-            crate::notes::Action::Canvas(key) => self.canvas_key(key, ctx, backend),
-            crate::notes::Action::CloseNote => self.editor.close(),
-            crate::notes::Action::FocusSearch => {
+            Notes::Copy(id) => self.notes.copy(backend, id),
+            Notes::Canvas(key) => self.canvas_key(key, ctx, backend),
+            Notes::CloseNote => self.editor.close(),
+            Notes::FocusSearch => {
                 self.notes_view.focus_search = true;
                 // Taken by the next frame, which nothing else may ask for.
                 ctx.request_repaint();
@@ -560,6 +583,7 @@ impl AppState {
         self.selection = selection::SelectionState::default();
         self.undo = undo::UndoState::default();
         self.trash = trash::TrashState::default();
+        self.tags = tags::TagsState::default();
         self.notes_view = crate::notes::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());

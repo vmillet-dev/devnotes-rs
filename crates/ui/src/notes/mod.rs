@@ -132,6 +132,20 @@ pub enum Action {
     DismissUndo,
     Trash(Trash),
     Facet(crate::state::notes_query::Facet),
+    Tags(Tags),
+}
+
+/// What the tag manager asks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Tags {
+    Open,
+    Close,
+    Toggle(String),
+    /// The ticked tags under one name: a rename for one, a merge for several. Proposed first.
+    Rename(String),
+    Delete,
+    Confirm,
+    Cancel,
 }
 
 /// What the trash panel asks.
@@ -176,6 +190,7 @@ pub struct View {
     header: header::HeaderView,
     editor: Option<editor::Draft>,
     trash: overlays::trash_panel::TrashView,
+    tag_manager: overlays::tag_manager::TagManagerView,
 }
 
 /// The rail on the left, as wide as the setting says, and the canvas beside it.
@@ -216,6 +231,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
     editor::show(ui, state, &mut view.editor, actions);
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
+    overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
     overlays::undo_bar::show(ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);

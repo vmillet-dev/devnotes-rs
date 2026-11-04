@@ -93,7 +93,7 @@ impl Tree {
         self.all(author_id).len()
     }
 
-    /// Every node wearing `author_id`, top to bottom: the rows of a list.
+    /// Every node wearing `author_id`, in reading order: top to bottom, then left to right.
     pub fn all(&self, author_id: &str) -> Vec<&Node> {
         let mut found: Vec<&Node> = self
             .nodes
@@ -102,7 +102,7 @@ impl Tree {
             .filter(|node| node.author_id() == Some(author_id))
             .collect();
         // The tree is in no order of its own.
-        found.sort_by(|a, b| top(a).total_cmp(&top(b)));
+        found.sort_by(|a, b| top(a).total_cmp(&top(b)).then(left(a).total_cmp(&left(b))));
         found
     }
 
@@ -123,6 +123,10 @@ impl Tree {
 
 fn top(node: &Node) -> f64 {
     node.bounds().map_or(f64::INFINITY, |bounds| bounds.y0)
+}
+
+fn left(node: &Node) -> f64 {
+    node.bounds().map_or(f64::INFINITY, |bounds| bounds.x0)
 }
 
 /// The application, running on `profile`: a real process, a real window.
@@ -256,13 +260,22 @@ impl App {
         self.apply(vec![button(false)]);
     }
 
-    /// The pointer over the first `author_id`, once it is shown: what a card shows on hover.
+    /// The pointer over the first `author_id` in reading order, once it is shown: what a card
+    /// shows on hover.
     pub fn hover(&mut self, author_id: &str) {
-        self.wait_for(author_id);
+        self.hover_nth(author_id, 0);
+    }
+
+    /// The pointer over the `n`th `author_id` in reading order, counting from 0.
+    pub fn hover_nth(&mut self, author_id: &str, n: usize) {
+        self.eventually(&format!("{author_id} #{n} is shown"), |tree| {
+            tree.count(author_id) > n
+        });
         let tree = self.tree();
         let bounds = tree
-            .find(author_id)
-            .and_then(Node::bounds)
+            .all(author_id)
+            .get(n)
+            .and_then(|node| node.bounds())
             .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
         #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
         let pos = Pos2::new(

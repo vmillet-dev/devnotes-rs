@@ -4679,6 +4679,13 @@ while a chip is pressed — a filter nobody can see is a filter nobody can undo.
 from the core, so pressing one zeroes no other. Escape clears the search and the rails together,
 as « clear the filters » does.
 
+The tag rail's « Manage » opens the tag manager (`notes::overlays::tag_manager`,
+`state::tags::TagsState`): the library's tags from `list_tags`, ticked, then renamed — a merge
+when several are ticked or the name exists — or deleted. Nothing runs before the core has counted
+the notes it touches (`count_notes_tagged`, each note once), and the confirmation takes the
+actions' place: the click that asked is where a second one would land. A write bumps the revision
+and reads the tags again.
+
 The header is one row while every control holds in it and two on purpose past that
 (`notes::header::layout`): the reference's floors decide, not the widths drawn, which differ
 between one row and two. What does not narrow is measured as drawn, the same in either layout;

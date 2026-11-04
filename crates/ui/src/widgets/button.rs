@@ -79,6 +79,19 @@ impl<'a> Button<'a> {
         self
     }
 
+    /// What a button of the default size with `label` takes in a row.
+    pub fn width(ui: &Ui, label: &str) -> f32 {
+        let probe = text(
+            ui,
+            label,
+            12.0,
+            400.0,
+            FontFamily::Proportional,
+            Color32::WHITE,
+        );
+        (probe.size().x + 24.0).max(super::MIN_TARGET)
+    }
+
     pub fn show(self, ui: &mut Ui) -> Response {
         let (size, weight, padding, corner) = match (self.large, self.kind) {
             (true, _) => (14.0, 600.0, Vec2::splat(10.0), 8),
