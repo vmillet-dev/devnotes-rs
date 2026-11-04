@@ -11,50 +11,19 @@ use crate::state::editor::Body;
 use crate::theme::palette;
 use crate::widgets;
 
-/// What precedes a done task, one a line, until the list has its own editor.
-const DONE: &str = "[x] ";
-
-/// The body as the field holds it: a list's tasks one a line.
+/// The body as its field holds it; a list's items have a field each.
 pub(super) fn text_of(note: &DisplayNote) -> String {
-    if note.kind != NoteKind::Checklist {
-        return note.content.clone();
-    }
-    note.items
-        .iter()
-        .map(|item| {
-            if item.done {
-                format!("{DONE}{}", item.text)
-            } else {
-                item.text.clone()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+    note.content.clone()
 }
 
-/// The field read back; `None` for a drawing, whose scene is not text.
-pub(super) fn body_of(note: &DisplayNote, text: &str) -> Option<Body> {
+/// The field read back: a list's items as its rows hold them; `None` for a drawing, whose scene
+/// is not text.
+pub(super) fn body_of(note: &DisplayNote, text: &str, items: &[ChecklistItem]) -> Option<Body> {
     match note.kind {
         NoteKind::Drawing => None,
-        NoteKind::Checklist => Some(Body::Items(items_of(text))),
+        NoteKind::Checklist => Some(Body::Items(items.to_vec())),
         NoteKind::Snippet | NoteKind::Note | NoteKind::Calc => Some(Body::Content(text.to_owned())),
     }
-}
-
-fn items_of(text: &str) -> Vec<ChecklistItem> {
-    text.lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(|line| match line.strip_prefix(DONE) {
-            Some(text) => ChecklistItem {
-                text: text.to_owned(),
-                done: true,
-            },
-            None => ChecklistItem {
-                text: line.to_owned(),
-                done: false,
-            },
-        })
-        .collect()
 }
 
 /// The field for the note's kind; `true` once it is left.
@@ -98,11 +67,15 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, note: &DisplayNote, body: &mut
 }
 
 /// The footer's words: tasks done, words, or the language, lines, bytes and line ending.
-pub(super) fn stats(note: &DisplayNote, typed: &str, language: Language) -> String {
+pub(super) fn stats(
+    note: &DisplayNote,
+    typed: &str,
+    items: &[ChecklistItem],
+    language: Language,
+) -> String {
     let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
     match note.kind {
         NoteKind::Checklist => {
-            let items = items_of(typed);
             let done = items.iter().filter(|item| item.done).count();
             i18n::translate(
                 language,
@@ -137,20 +110,5 @@ pub(super) fn stats(note: &DisplayNote, typed: &str, language: Language) -> Stri
             );
             format!("{head} · {lines}")
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_list_is_one_task_a_line_a_done_one_marked() {
-        let items = items_of("milk\n[x] bread\n\n  \neggs");
-        let read: Vec<_> = items
-            .iter()
-            .map(|item| (item.text.as_str(), item.done))
-            .collect();
-        assert_eq!(read, [("milk", false), ("bread", true), ("eggs", false)]);
     }
 }

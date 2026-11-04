@@ -4,6 +4,7 @@
 //! every closing path, none of which leaves a field on its own.
 
 mod body;
+mod checklist;
 mod header;
 
 use egui::{Align, CornerRadius, Id, Layout, Margin, Rect, Stroke, Ui, UiBuilder, Vec2};
@@ -31,6 +32,7 @@ pub(crate) struct EditorView {
     title: String,
     source: String,
     body: String,
+    checklist: checklist::ChecklistView,
     tag: String,
     /// The title takes the focus once, as the editor opens.
     focus: bool,
@@ -45,6 +47,7 @@ impl EditorView {
             title: note.title.clone(),
             source: note.source.clone(),
             body: body::text_of(note),
+            checklist: checklist::ChecklistView::of(&note.items),
             tag: String::new(),
             focus: true,
             confirming_delete: false,
@@ -62,7 +65,7 @@ impl EditorView {
         Edit {
             title: Some(self.title.clone()),
             source: Some(self.source.clone()),
-            body: body::body_of(note, &self.body),
+            body: body::body_of(note, &self.body, &self.checklist.items),
             tags,
             ..Edit::default()
         }
@@ -153,12 +156,22 @@ fn panel(
     );
     let mut body_ui =
         ui.new_child(UiBuilder::new().max_rect(body_rect.shrink2(Vec2::new(20.0, 14.0))));
-    if body::show(&mut body_ui, state, note, &mut editing.body) {
+    let left = if note.kind == NoteKind::Checklist {
+        egui::ScrollArea::vertical()
+            .auto_shrink(false)
+            .show(&mut body_ui, |ui| {
+                checklist::show(ui, &mut editing.checklist, state.language)
+            })
+            .inner
+    } else {
+        body::show(&mut body_ui, state, note, &mut editing.body)
+    };
+    if left {
         save(session, note, editing, actions);
     }
     let footer_rect = Rect::from_min_max(egui::pos2(whole.left(), body_rect.bottom()), whole.max);
     let mut footer_ui = ui.new_child(UiBuilder::new().max_rect(footer_rect));
-    footer(&mut footer_ui, state, note, &editing.body);
+    footer(&mut footer_ui, state, note, editing);
     ui.advance_cursor_after_rect(whole);
     closed
 }
@@ -421,13 +434,13 @@ fn delete(
     }
 }
 
-fn footer(ui: &mut Ui, state: &AppState, note: &DisplayNote, typed: &str) {
+fn footer(ui: &mut Ui, state: &AppState, note: &DisplayNote, editing: &EditorView) {
     let p = palette(ui.ctx());
     let rect = ui.max_rect();
     ui.painter()
         .hline(rect.x_range(), rect.top(), Stroke::new(1.0, p.line_soft));
     let language = state.language;
-    let counted = body::stats(note, typed, language);
+    let counted = body::stats(note, &editing.body, &editing.checklist.items, language);
     let modified = (!note.id.is_empty()).then(|| {
         let (said, _) = crate::services::time::relative(note.updated_at, state.clock.as_ref());
         format!(
