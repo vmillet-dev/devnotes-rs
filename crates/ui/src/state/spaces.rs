@@ -57,9 +57,24 @@ pub struct SpacesState {
     /// The space whose deletion is being considered, and what it would move and take.
     counted: Option<String>,
     contents: QueryCell<(String, Revision), SpaceContents>,
+    /// The palette's « New folder » waits for its name.
+    naming: bool,
 }
 
 impl SpacesState {
+    /// Across every space a folder has nowhere to go: nothing is asked.
+    pub fn ask_name(&mut self) {
+        self.naming = self.active_space().is_some();
+    }
+
+    pub fn naming(&self) -> bool {
+        self.naming
+    }
+
+    pub fn dismiss_naming(&mut self) {
+        self.naming = false;
+    }
+
     /// The space and the folder the library was left on, from its preferences.
     pub fn restore(&mut self, preferences: &Preferences) {
         let remembered = |key| {

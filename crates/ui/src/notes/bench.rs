@@ -23,25 +23,39 @@ pub(crate) struct Bench {
 pub(crate) fn area(backend: Backend, profile: tempfile::TempDir) -> Harness<'static, Bench> {
     let mut state = AppState::new(Preferences::default(), true);
     state.language = i18n::Language::En;
+    // Unlocked already: the gate learns it as the window's does, and stays open.
+    state.gate.ask(&backend);
     let mut harness = testing::harness()
         .with_size(vec2(1_100.0, 700.0))
         .build_ui_state(
             |ui, bench: &mut Bench| {
                 crate::theme::motion::set_reduced(ui.ctx(), true);
                 let ctx = ui.ctx().clone();
+                let state = &mut bench.state;
+                state
+                    .gate
+                    .update(&bench.backend, &mut state.status, &mut state.errors);
                 bench
                     .state
                     .update_library(&ctx, &bench.backend, IndexFill::Ready);
                 let mut actions = Actions::default();
                 let mut view = std::mem::take(&mut bench.state.notes_view);
                 crate::notes::show(ui, &bench.state, &mut view, &mut actions);
+                let mut palette = std::mem::take(&mut bench.state.palette_view);
+                crate::palette::show(&ctx, &bench.state, &mut palette, &mut actions);
+                bench.state.palette_view = palette;
+                crate::notes::fill_form(ui, &bench.state, &mut view, &mut actions);
                 bench.state.notes_view = view;
-                let levels: &[&[crate::keys::Binding]] = if bench.state.editor.is_open() {
-                    &[&crate::keys::NOTES]
+                // As the window reads them.
+                let levels: &[&[crate::keys::Binding]] = if bench.state.palette.is_open() {
+                    &[&crate::keys::APPLICATION]
+                } else if bench.state.modal_open() {
+                    &[&crate::keys::NOTES, &crate::keys::APPLICATION]
                 } else {
                     &[
                         &crate::keys::NOTES,
                         &crate::notes::canvas::shortcuts::CANVAS,
+                        &crate::keys::APPLICATION,
                     ]
                 };
                 if let Some(action) = crate::keys::dispatch(&ctx, levels) {

@@ -158,6 +158,21 @@ impl EditorState {
         });
     }
 
+    /// Named already, so worth keeping: written at once, the editor open on it.
+    pub fn draft_titled(
+        &mut self,
+        backend: &Backend,
+        (kind, space, folder): (NoteKind, String, Option<String>),
+        title: String,
+    ) {
+        self.draft(kind, space, folder);
+        let session = self.sessions;
+        if let Some(open) = self.open.as_mut() {
+            open.title.clone_from(&title);
+        }
+        self.save(backend, session, Some(title), None);
+    }
+
     pub fn close(&mut self) {
         self.open = None;
     }

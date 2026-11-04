@@ -7,6 +7,7 @@
 mod facets;
 mod layout;
 mod new_note;
+pub(crate) use new_note::shortcut;
 mod sort;
 mod switchers;
 

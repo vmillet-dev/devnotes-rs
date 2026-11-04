@@ -160,6 +160,24 @@ impl App {
         }
     }
 
+    /// A second launch on the same profile asking for `action`: it hands it to this one and
+    /// exits, as the global shortcut's will.
+    pub fn act(&mut self, action: &str) {
+        let status = Command::new(binary())
+            .arg("--profile")
+            .arg(&self.profile)
+            .arg("--action")
+            .arg(action)
+            .stdout(Stdio::null())
+            .status()
+            .expect("the second launch runs");
+        assert!(
+            status.success(),
+            "the second launch could not hand over {action}"
+        );
+        self.ask(&Request::Settle { max_steps: 10 });
+    }
+
     /// Closes the window as `Quit` does, waits for the process to end, and launches it again on
     /// the same profile: what a person closing and reopening the application sees.
     #[must_use]

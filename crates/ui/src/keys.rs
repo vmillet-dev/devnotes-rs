@@ -32,10 +32,18 @@ pub struct Binding {
 }
 
 /// Every area's key, `Ctrl` and its rank in the switch, read by position.
-pub static APPLICATION: [Binding; 3] = [
+pub static APPLICATION: [Binding; 4] = [
     area(Key::Num1, Area::Notes),
     area(Key::Num2, Area::Tools),
     area(Key::Num3, Area::Http),
+    // The window's own: the global shortcut, from another application, joins in P9.
+    Binding {
+        key: Key::P,
+        modifiers: Modifiers::COMMAND.plus(Modifiers::ALT),
+        read: Read::Position,
+        while_typing: true,
+        action: Action::Global(crate::action::GlobalAction::PaletteHere),
+    },
 ];
 
 /// The notes area's, read while it is on screen.

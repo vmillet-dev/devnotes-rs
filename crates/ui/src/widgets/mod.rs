@@ -94,7 +94,7 @@ pub(crate) fn text(
     )
 }
 
-/// Words whose arrows (← ↑ → ↓) are painted as icons: none of the embedded faces has them, and
+/// Words whose arrows (← ↑ → ↓, ↵ ⌫) are painted as icons: none of the embedded faces has them, and
 /// the system's are a different hand. Laid out from `left` on the line through `middle`;
 /// answers the width taken, which `at = None` measures without painting.
 pub(crate) fn arrowed(
@@ -113,6 +113,8 @@ pub(crate) fn arrowed(
                 '↑' => crate::theme::icons::Icon::ArrowUp,
                 '→' => crate::theme::icons::Icon::ArrowRight,
                 '↓' => crate::theme::icons::Icon::ArrowDown,
+                '↵' => crate::theme::icons::Icon::CornerDownLeft,
+                '⌫' => crate::theme::icons::Icon::Delete,
                 _ => return None,
             };
             Some((index, glyph.len_utf8(), icon))
