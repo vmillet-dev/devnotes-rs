@@ -27,6 +27,10 @@ impl LocaleChoice {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each is its own display choice"
+)]
 pub struct Settings {
     pub locale: LocaleChoice,
     pub theme: Appearance,
@@ -39,6 +43,7 @@ pub struct Settings {
     /// Display preferences of the editor, not of a note: they outlive moving to the next one.
     pub editor_fullscreen: bool,
     pub editor_header_folded: bool,
+    pub editor_fields_open: bool,
 }
 
 /// The reference's `RAIL_WIDTH`.
@@ -55,6 +60,7 @@ impl Default for Settings {
             rail_shown: true,
             editor_fullscreen: false,
             editor_header_folded: false,
+            editor_fields_open: true,
         }
     }
 }
@@ -67,6 +73,7 @@ const RAIL: &str = "devnotes.libraryRailWidth";
 const RAIL_SHOWN: &str = "devnotes.showLibraryRail";
 const EDITOR_FULLSCREEN: &str = "devnotes.editorFullscreen";
 const EDITOR_HEADER_FOLDED: &str = "devnotes.editorHeaderFolded";
+const EDITOR_FIELDS_OPEN: &str = "devnotes.editorFieldsPanel";
 
 impl Settings {
     /// A value this version does not know is the default, never an error.
@@ -85,6 +92,7 @@ impl Settings {
             rail_shown: preferences.get(RAIL_SHOWN) != Some("false"),
             editor_fullscreen: preferences.get(EDITOR_FULLSCREEN) == Some("true"),
             editor_header_folded: preferences.get(EDITOR_HEADER_FOLDED) == Some("true"),
+            editor_fields_open: preferences.get(EDITOR_FIELDS_OPEN) != Some("false"),
         }
     }
 
@@ -98,6 +106,7 @@ impl Settings {
         preferences.set(RAIL_SHOWN, flag(self.rail_shown));
         preferences.set(EDITOR_FULLSCREEN, flag(self.editor_fullscreen));
         preferences.set(EDITOR_HEADER_FOLDED, flag(self.editor_header_folded));
+        preferences.set(EDITOR_FIELDS_OPEN, flag(self.editor_fields_open));
     }
 }
 
@@ -196,6 +205,7 @@ mod tests {
             rail_shown: false,
             editor_fullscreen: true,
             editor_header_folded: true,
+            editor_fields_open: false,
         };
 
         chosen.write(&mut preferences);

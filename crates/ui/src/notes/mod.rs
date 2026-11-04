@@ -143,6 +143,25 @@ pub struct DrawingExport {
     pub format: drawing::Format,
 }
 
+/// What the editor's fields panel asks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Fields {
+    Keep(std::collections::BTreeMap<String, String>),
+    Preview {
+        session: u64,
+        content: String,
+        values: std::collections::BTreeMap<String, String>,
+    },
+    Copy {
+        content: String,
+        values: std::collections::BTreeMap<String, String>,
+    },
+    /// The text on screen, tokens and all.
+    CopyRaw(String),
+    /// `true`: open.
+    Fold(bool),
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Editing {
     /// The fields left in an opening; `None` leaves a field as it is.
@@ -158,6 +177,7 @@ pub enum Editing {
         missing: bool,
     },
     Export(DrawingExport),
+    Fields(Fields),
     Attachment(crate::state::attachments::Asked),
     /// A sheet, once the hand paused.
     Evaluate {

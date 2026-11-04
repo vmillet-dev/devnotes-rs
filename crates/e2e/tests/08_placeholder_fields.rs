@@ -1,6 +1,7 @@
 //! `{{fields}}` in a snippet: copied, the note asks for them first, from the card as from the
-//! keyboard; what is typed is kept, what is cancelled is not. The sample used is found by its
-//! code, which no translation touches.
+//! keyboard; what is typed is kept, what is cancelled is not. In the editor the panel counts them,
+//! folds and shows the body filled. The sample used is found by its code, which no translation
+//! touches.
 
 use e2e::{App, step};
 use egui::{Key, Modifiers};
@@ -19,6 +20,25 @@ fn open_from_card(app: &mut App) {
     app.hover("note-card-open");
     app.click("note-card-fill");
     app.wait_for("placeholder-form-hint");
+}
+
+fn open_editor(app: &mut App) {
+    app.click("note-card-open");
+    app.wait_for("editor-title");
+}
+
+fn close_editor(app: &mut App) {
+    app.click("editor-close");
+    app.eventually("the editor is closed", |tree| !tree.has("editor-title"));
+}
+
+/// `1/4`: what the panel's head counts.
+fn counted(tree: &e2e::Tree) -> String {
+    tree.all("placeholder-panel-toggle")
+        .first()
+        .and_then(|toggle| toggle.value())
+        .unwrap_or_default()
+        .to_owned()
 }
 
 fn closed(app: &mut App) {
@@ -90,6 +110,38 @@ fn placeholder_fields() {
         closed(&mut app);
         app.wait_for("status-toast");
     });
+
+    step(
+        "the editor's panel counts what is kept, default aside",
+        || {
+            open_editor(&mut app);
+            app.eventually("one field filled of four", |tree| counted(tree) == "1/4");
+            app.capture("fields-panel");
+        },
+    );
+
+    step("the body is shown filled, and given back", || {
+        app.click("placeholder-panel-preview");
+        app.eventually("the code gives way", |tree| !tree.has("editor-body"));
+        app.capture("fields-preview");
+        app.click("placeholder-panel-preview");
+        app.wait_for("editor-body");
+    });
+
+    step(
+        "folded, the panel stays so for the next note opened",
+        || {
+            app.click("placeholder-panel-toggle");
+            app.eventually("the fields gone", |tree| !tree.has("placeholder-input"));
+            close_editor(&mut app);
+            open_editor(&mut app);
+            app.wait_for("placeholder-panel-toggle");
+            assert!(!app.has("placeholder-input"));
+            app.click("placeholder-panel-toggle");
+            app.wait_for("placeholder-input");
+            close_editor(&mut app);
+        },
+    );
 
     app.quit();
 }

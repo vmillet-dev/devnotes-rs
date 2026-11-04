@@ -527,11 +527,8 @@ impl AppState {
         match editing {
             Editing::Save { session, edit } => self.editor.save(backend, session, edit),
             Editing::Export(export) => self.exports.ask(backend, &self.dialog, export),
-            Editing::Attachment(asked) => {
-                let moment = self.clock.now().format("capture-%Y-%m-%d-%H-%M-%S");
-                self.attachments
-                    .ask(asked, backend, &self.dialog, moment.to_string());
-            }
+            Editing::Fields(asked) => self.apply_fields(asked, ctx, backend),
+            Editing::Attachment(asked) => self.ask_attachment(asked, backend),
             Editing::Evaluate { session, text } => {
                 let today = self.clock.now().with_timezone(&chrono::Local).date_naive();
                 self.calc.ask(backend, session, text, today);
@@ -622,6 +619,44 @@ impl AppState {
             }
         }
         ctx.request_repaint();
+    }
+
+    fn ask_attachment(&mut self, asked: attachments::Asked, backend: &Backend) {
+        let moment = self.clock.now().format("capture-%Y-%m-%d-%H-%M-%S");
+        self.attachments
+            .ask(asked, backend, &self.dialog, moment.to_string());
+    }
+
+    fn apply_fields(
+        &mut self,
+        asked: crate::notes::Fields,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::Fields;
+        match asked {
+            Fields::Keep(values) => {
+                if let Some(id) = self.editor.open_id() {
+                    self.fill.keep(backend, id.to_owned(), values);
+                }
+            }
+            Fields::Preview {
+                session,
+                content,
+                values,
+            } => self.fill.ask_preview(backend, session, content, values),
+            Fields::Copy { content, values } => self.fill.copy(backend, content, values),
+            Fields::CopyRaw(text) => {
+                let note = self.editor.opened().and_then(|open| open.note());
+                if let Some(said) = note.map(placeholder_fill::copied_note) {
+                    self.copy_out(ctx, text, said);
+                }
+            }
+            Fields::Fold(open) => {
+                self.settings.editor_fields_open = open;
+                self.save_settings(backend);
+            }
+        }
     }
 
     /// The notes on screen, in the order they are drawn.

@@ -26,6 +26,7 @@ pub enum Icon {
     CornerDownLeft,
     /// Backspace's ⌫.
     Delete,
+    ChevronDown,
     ChevronRight,
     X,
     Plus,
@@ -111,6 +112,7 @@ impl Icon {
                 "m12 9 6 6",
                 "m18 9-6 6",
             ],
+            Self::ChevronDown => &["m6 9 6 6 6-6"],
             Self::ChevronRight => &["m9 18 6-6-6-6"],
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
             Self::Plus => &["M5 12h14", "M12 5v14"],
@@ -371,7 +373,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 61] = [
+    const ALL: [Icon; 62] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
@@ -383,6 +385,7 @@ mod tests {
         Icon::ArrowLeft,
         Icon::CornerDownLeft,
         Icon::Delete,
+        Icon::ChevronDown,
         Icon::ChevronRight,
         Icon::X,
         Icon::Plus,
