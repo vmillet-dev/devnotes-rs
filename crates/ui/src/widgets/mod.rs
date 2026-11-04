@@ -14,7 +14,7 @@ mod release_notes;
 mod segmented;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
-pub use button::{Button, IconButton, Kind, RailToggle, SplitButton};
+pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
 pub use dialog::{DialogStack, Layer, dialog};
 pub use field::{Checkbox, SearchField, Searched, TextField};
 pub use layout::{rail_frame, split_handle, tooltip};

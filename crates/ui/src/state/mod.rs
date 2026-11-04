@@ -7,6 +7,7 @@ pub mod notes_query;
 mod query;
 pub mod selection;
 pub mod spaces;
+pub mod trash;
 pub mod undo;
 
 pub use query::QueryCell;
@@ -78,6 +79,7 @@ pub struct AppState {
     pub editor: editor::EditorState,
     pub selection: selection::SelectionState,
     pub undo: undo::UndoState,
+    pub trash: trash::TrashState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -106,6 +108,7 @@ impl AppState {
             editor: editor::EditorState::default(),
             selection: selection::SelectionState::default(),
             undo: undo::UndoState::default(),
+            trash: trash::TrashState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -144,6 +147,8 @@ impl AppState {
             self.undo.record(done, time);
         }
         self.undo.update(&mut self.revision, &mut self.errors);
+        self.trash
+            .update(ctx, backend, &mut self.revision, &mut self.errors);
         self.editor
             .update(backend, &mut self.revision, &mut self.errors);
         self.caches.thumbnails.update(ctx, backend);
@@ -343,6 +348,10 @@ impl AppState {
                 self.undo.revert(backend);
             }
             crate::notes::Action::DismissUndo => self.undo.dismiss(),
+            crate::notes::Action::Trash(asked) => {
+                self.trash
+                    .apply(asked, backend, ctx.input(|input| input.time));
+            }
             crate::notes::Action::Duplicate { id, title } => {
                 self.notes.duplicate(backend, id, title);
             }
@@ -549,6 +558,7 @@ impl AppState {
         self.editor = editor::EditorState::default();
         self.selection = selection::SelectionState::default();
         self.undo = undo::UndoState::default();
+        self.trash = trash::TrashState::default();
         self.notes_view = crate::notes::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());

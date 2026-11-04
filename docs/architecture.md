@@ -4720,6 +4720,13 @@ The bar is an `Order::Tooltip` area, above the editor's modal. `Ctrl+Z` is never
 the canvas's keys stand aside while a field is typed into or the editor is open, and the field
 keeps its own.
 
+The trash panel (`notes::overlays::trash_panel`, opened by `trash-open` in the header) reads
+`state::trash::TrashState`, loaded when it opens and searched after the canvas's 150 ms pause; each
+restore, purge or emptying bumps the revision and reloads it. Its rows are all as tall — each line
+cut at its rows — so the list draws only those in view, and the list is as tall from its first
+frame as it will be: grown from the last frame's content, the modal crept up the screen and a
+click landed where it had been. While it is open, the canvas's keys stand aside as for the editor.
+
 The rail can be put away (`library-rail-toggle`, the application setting `showLibraryRail`): the
 space and folder switchers then take its place in the header, their rows' ⋯ opening the same
 panels as the rail (`notes::panel`, shared). While a folder is open, its breadcrumb replaces
