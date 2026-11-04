@@ -21,7 +21,10 @@ fn open(app: &mut App, title: &str) {
     app.click("search-input");
     app.press(Key::A, Modifiers::COMMAND);
     app.type_text(title);
-    app.eventually("the note alone", |tree| tree.count("note-card") == 1);
+    // By its title: the search before this one left a card alone too, until the debounce ends.
+    app.eventually("the note alone", |tree| {
+        tree.count("note-card") == 1 && tree.texts("note-card").contains(&title.to_owned())
+    });
     app.press(Key::ArrowDown, Modifiers::NONE);
     app.eventually("the card has the focus", |tree| {
         tree.focused().starts_with("note-card-open")
