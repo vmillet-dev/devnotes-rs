@@ -4711,6 +4711,15 @@ the selection go after disarming and before the search. ⚠️ The card's box is
 frame, shown or not: a widget that comes and goes moved the ids of every widget after it, and the
 ⋯ lost its menu.
 
+Every write of the card, the keys and the selection bar answers what it changed as an
+`api::undo::Reversible` — the core's own answer, as on the front — and `state::undo::UndoState`
+records the last one: the undo bar (`notes::undo_bar`) offers it for `UNDO_WINDOW`, on egui's
+clock and redrawn when it runs out; `Ctrl+Z` (in `CANVAS`) reads the record after the bar is
+gone; Escape takes it back only while the bar is up, after disarming and before the selection.
+The bar is an `Order::Tooltip` area, above the editor's modal. `Ctrl+Z` is never both histories:
+the canvas's keys stand aside while a field is typed into or the editor is open, and the field
+keeps its own.
+
 The rail can be put away (`library-rail-toggle`, the application setting `showLibraryRail`): the
 space and folder switchers then take its place in the header, their rows' ⋯ opening the same
 panels as the rail (`notes::panel`, shared). While a folder is open, its breadcrumb replaces

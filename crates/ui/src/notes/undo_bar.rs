@@ -228,4 +228,27 @@ mod tests {
         assert!(harness.state().state.undo.banner(f64::MAX).is_none());
         assert_eq!(cards(&harness), 0);
     }
+
+    fn said(harness: &Harness<'_, Bench>) -> String {
+        let node = harness.get_by(|node| node.author_id() == Some("undo-text"));
+        let node = node.accesskit_node();
+        node.label().or_else(|| node.value()).unwrap_or_default()
+    }
+
+    #[test]
+    fn a_batch_says_what_it_did_and_is_put_back_whole() {
+        let (backend, profile) = testing::unlocked();
+        testing::note(&backend, "one");
+        testing::note(&backend, "two");
+        let mut harness = area(backend, profile);
+        for key in [Key::ArrowDown, Key::X, Key::ArrowRight, Key::X] {
+            press(&mut harness, Modifiers::NONE, key);
+        }
+        click_id(&mut harness, "selection-pin");
+        assert_eq!(said(&harness), "2 notes pinned");
+
+        click_id(&mut harness, "undo-restore");
+        let view = harness.state().state.notes_query.view().unwrap();
+        assert!(view.cards().all(|card| !card.pinned));
+    }
 }

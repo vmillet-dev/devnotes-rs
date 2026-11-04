@@ -35,6 +35,8 @@ fn multiple_selection() {
     step("a tag reaches every ticked note, and only those", || {
         app.fill("selection-tag", "batchtag");
         app.press(Key::Enter, Modifiers::NONE);
+        // While the bar offers the tagging back, Escape would take it back.
+        app.click("undo-dismiss");
         app.press(Key::Escape, Modifiers::NONE);
         app.eventually("the selection is let go", |tree| {
             !tree.has("selection-count")
