@@ -14,6 +14,7 @@ mod release_notes;
 mod segmented;
 
 pub mod date;
+pub mod editor;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};

@@ -118,7 +118,8 @@ pub(crate) fn show(
             panel(ui, state, (open.session, note), editing, actions)
         });
     let dismissed = shown.should_close() && !(escaped && typing);
-    let focused = ctx.text_edit_focused();
+    // A field being typed in asks for the input method; a focused button asks for nothing.
+    let focused = ctx.output(|output| output.ime.is_some());
     ctx.data_mut(|data| data.insert_temp(typing_id, focused));
     if shown.inner || dismissed {
         close(open.session, note, editing, actions);
