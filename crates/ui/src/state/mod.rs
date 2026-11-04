@@ -7,6 +7,7 @@ pub mod notes_query;
 mod query;
 pub mod selection;
 pub mod spaces;
+pub mod undo;
 
 pub use query::QueryCell;
 
@@ -76,6 +77,7 @@ pub struct AppState {
     pub notes: notes::NotesState,
     pub editor: editor::EditorState,
     pub selection: selection::SelectionState,
+    pub undo: undo::UndoState,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -103,6 +105,7 @@ impl AppState {
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
             selection: selection::SelectionState::default(),
+            undo: undo::UndoState::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -136,6 +139,11 @@ impl AppState {
         for note in answered.copied {
             self.copied(ctx, &note);
         }
+        let time = ctx.input(|input| input.time);
+        for done in answered.done {
+            self.undo.record(done, time);
+        }
+        self.undo.update(&mut self.revision, &mut self.errors);
         self.editor
             .update(backend, &mut self.revision, &mut self.errors);
         self.caches.thumbnails.update(ctx, backend);
@@ -331,6 +339,10 @@ impl AppState {
                 self.selection.clear();
             }
             crate::notes::Action::Batch(batch) => self.batch(batch, backend),
+            crate::notes::Action::Undo => {
+                self.undo.revert(backend);
+            }
+            crate::notes::Action::DismissUndo => self.undo.dismiss(),
             crate::notes::Action::Duplicate { id, title } => {
                 self.notes.duplicate(backend, id, title);
             }
@@ -440,14 +452,26 @@ impl AppState {
                     self.notes.delete(backend, vec![id]);
                 }
             }
-            CanvasKey::StepBack => self.step_back(),
+            CanvasKey::Undo => {
+                self.undo.revert(backend);
+            }
+            CanvasKey::StepBack => self.step_back(ctx, backend),
         }
     }
 
-    /// Escape, down the ladder and one rung at a time: what is armed, the selection, the search, up
+    /// Escape, down the ladder and one rung at a time: what is armed, what the undo bar offers
+    /// (only while it is on screen: Escape must not quietly rewrite the corpus), the selection,
+    /// the search, up
     /// a folder — leaving is the biggest step, so it comes last.
-    fn step_back(&mut self) {
-        if self.selection.disarm() || self.selection.clear() {
+    fn step_back(&mut self, ctx: &egui::Context, backend: &Backend) {
+        if self.selection.disarm() {
+            return;
+        }
+        if self.undo.banner(ctx.input(|input| input.time)).is_some() {
+            self.undo.revert(backend);
+            return;
+        }
+        if self.selection.clear() {
             return;
         }
         if !self.notes_query.typed().is_empty() {
@@ -524,6 +548,7 @@ impl AppState {
         self.spaces = spaces::SpacesState::default();
         self.editor = editor::EditorState::default();
         self.selection = selection::SelectionState::default();
+        self.undo = undo::UndoState::default();
         self.notes_view = crate::notes::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());

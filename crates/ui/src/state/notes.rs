@@ -8,12 +8,13 @@ use i18n::{Key, keys};
 
 use super::Revision;
 use crate::api;
+use crate::api::undo::Reversible;
 use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
 
 #[derive(Default)]
 pub struct NotesState {
-    writes: Vec<(Key, Pending<()>)>,
+    writes: Vec<(Key, Pending<Reversible>)>,
     saves: Vec<Pending<DisplayNote>>,
     /// Opened in the editor once made, ready to be renamed.
     duplicates: Vec<Pending<DisplayNote>>,
@@ -28,6 +29,8 @@ pub struct Answered {
     pub open: Option<String>,
     /// A note read for the clipboard.
     pub copied: Vec<DisplayNote>,
+    /// What the writes answered, for the undo bar.
+    pub done: Vec<Reversible>,
 }
 
 impl NotesState {
@@ -93,8 +96,9 @@ impl NotesState {
         self.writes
             .retain_mut(|(failed, pending)| match pending.poll() {
                 None => true,
-                Some(Ok(())) => {
+                Some(Ok(done)) => {
                     revision.bump();
+                    answered.done.push(done);
                     false
                 }
                 Some(Err(error)) => {

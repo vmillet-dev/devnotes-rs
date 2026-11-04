@@ -256,6 +256,22 @@ impl App {
         self.apply(vec![button(false)]);
     }
 
+    /// The pointer over the first `author_id`, once it is shown: what a card shows on hover.
+    pub fn hover(&mut self, author_id: &str) {
+        self.wait_for(author_id);
+        let tree = self.tree();
+        let bounds = tree
+            .find(author_id)
+            .and_then(Node::bounds)
+            .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let pos = Pos2::new(
+            f64::midpoint(bounds.x0, bounds.x1) as f32,
+            f64::midpoint(bounds.y0, bounds.y1) as f32,
+        );
+        self.apply(vec![Event::PointerMoved(pos)]);
+    }
+
     /// Clicks the `n`th `author_id` from the top, counting from 0: a choice among several whose
     /// words are the system's language.
     pub fn click_nth(&mut self, author_id: &str, n: usize) {

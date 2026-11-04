@@ -163,6 +163,9 @@ fn the_canvas_of_an_open_library() {
     }
     settle(&mut harness);
     capture(&mut harness, "selection-bar");
+    click(&mut harness, "selection-pin");
+    capture(&mut harness, "undo-bar");
+    click(&mut harness, "undo-restore");
     harness.key_press(egui::Key::Escape);
     settle(&mut harness);
 

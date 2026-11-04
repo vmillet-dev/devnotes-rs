@@ -24,6 +24,8 @@ pub enum CanvasKey {
     /// Twice, the way the card's menu asks for two clicks: the focused card can be scrolled
     /// out of view.
     Trash,
+    /// The last write put back, even once the bar is gone: the gesture made without looking.
+    Undo,
     /// Down the ladder: what is armed, then the search, then up a folder.
     StepBack,
 }
@@ -46,7 +48,7 @@ const CREATE: Modifiers = Modifiers::COMMAND;
 const CREATE_SHIFT: Modifiers = Modifiers::COMMAND.plus(Modifiers::SHIFT);
 
 /// In reading order, which is the order the keyboard sheet lists them in.
-pub static CANVAS: [Binding; 20] = [
+pub static CANVAS: [Binding; 21] = [
     bound(Key::N, CREATE, CanvasKey::New(NoteKind::Snippet)),
     bound(Key::N, CREATE_SHIFT, CanvasKey::New(NoteKind::Note)),
     bound(Key::L, CREATE_SHIFT, CanvasKey::New(NoteKind::Checklist)),
@@ -67,6 +69,7 @@ pub static CANVAS: [Binding; 20] = [
     bare(Key::X, CanvasKey::Check),
     bare(Key::Delete, CanvasKey::Trash),
     bare(Key::Backspace, CanvasKey::Trash),
+    bound(Key::Z, Modifiers::COMMAND, CanvasKey::Undo),
     bare(Key::Escape, CanvasKey::StepBack),
 ];
 

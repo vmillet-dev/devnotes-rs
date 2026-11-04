@@ -5,6 +5,7 @@ use engine::folders::{
     model::{Folder, FolderColour, FolderDraft},
 };
 
+use super::undo::Reversible;
 use crate::backend::{Backend, Pending};
 
 /// Every space's: the rail draws the whole library. In creation order.
@@ -46,6 +47,6 @@ pub fn sort_key(name: &str) -> String {
 }
 
 /// Into `folder`, or out of every folder for `None`.
-pub fn file(backend: &Backend, ids: Vec<String>, folder: Option<String>) -> Pending<()> {
-    backend.db(move |engine| folders::file_notes(engine, ids, folder).map(drop))
+pub fn file(backend: &Backend, ids: Vec<String>, folder: Option<String>) -> Pending<Reversible> {
+    backend.db(move |engine| folders::file_notes(engine, ids, folder).map(Reversible::File))
 }

@@ -9,4 +9,5 @@ pub mod libraries;
 pub mod notes;
 pub mod preferences;
 pub mod spaces;
+pub mod undo;
 pub mod vault;

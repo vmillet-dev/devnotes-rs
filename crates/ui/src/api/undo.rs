@@ -1,0 +1,54 @@
+//! What a write answered that can put it back, and the call that does.
+
+use engine::folders::{self, model::NoteFiling};
+use engine::notes::{
+    self,
+    model::{NotePlacement, NotePriority, NoteTag},
+};
+
+use crate::backend::{Backend, Pending};
+
+/// Each variant carries what the core answered, never what the interface guessed: rebuilt from
+/// the selection, an undo would take off a tag the note already carried.
+#[derive(Debug, Clone)]
+pub enum Reversible {
+    Deletion { ids: Vec<String>, count: u32 },
+    Move(Vec<NotePlacement>),
+    Tag(Vec<NoteTag>),
+    Untag(Vec<NoteTag>),
+    Pin { ids: Vec<String>, pinned: bool },
+    Priority(Vec<NotePriority>),
+    File(Vec<NoteFiling>),
+}
+
+impl Reversible {
+    /// How many notes it touched: none is nothing to offer.
+    pub fn count(&self) -> usize {
+        match self {
+            Self::Deletion { count, .. } => *count as usize,
+            Self::Move(previous) => previous.len(),
+            Self::Tag(pairs) | Self::Untag(pairs) => pairs.len(),
+            Self::Pin { ids, .. } => ids.len(),
+            Self::Priority(previous) => previous.len(),
+            Self::File(previous) => previous.len(),
+        }
+    }
+}
+
+pub fn revert(backend: &Backend, action: Reversible) -> Pending<u32> {
+    backend.db(move |engine| match action {
+        Reversible::Deletion { ids, .. } => notes::restore_notes(engine, ids),
+        Reversible::Move(previous) => notes::move_notes_back(engine, previous),
+        Reversible::Tag(added) => notes::untag_notes(engine, added),
+        Reversible::Untag(removed) => notes::restore_tags(engine, removed),
+        Reversible::Pin { ids, pinned } => {
+            notes::set_pinned(engine, ids, !pinned).map(|ids| count(ids.len()))
+        }
+        Reversible::Priority(previous) => notes::restore_priorities(engine, previous),
+        Reversible::File(previous) => folders::file_notes_back(engine, previous),
+    })
+}
+
+fn count(len: usize) -> u32 {
+    u32::try_from(len).unwrap_or(u32::MAX)
+}
