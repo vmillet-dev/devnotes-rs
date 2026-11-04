@@ -4694,6 +4694,18 @@ fill (`fill_placeholders`: typed, else global, else the text's default), copies 
 keeps the values (`set_placeholder_values`, which leaves `updated_at`); « copy as is » copies the
 text, tokens included; cancelled, nothing is written.
 
+The palette (`ui::palette`, `state::palette`) is drawn by the window over whichever area is
+shown, the fields form after it: `Ctrl+Alt+P` in the window (`keys::APPLICATION`), or
+`devnotes --action palette` from a second launch, which hands the action over the profile's
+socket — the path the global shortcut takes in P9, with the hidden window and the desktop
+notification after a copy. It asks the core for the notes of every space, ranked
+(`ranked: true`), through a `QueryCell` of its own: the canvas's search must not change behind
+it. What is typed is read as a mode — `@` a scope or a space, `#` a tag, `>` a command — and a
+chosen chip narrows the search. The focus never leaves the field: the arrows, Tab, Enter and
+Backspace are taken from the input before the field reads them, and move a highlight. Requests and
+tools join with their areas; `> New folder` asks for the name in a prompt of its own
+(`notes::overlays::folder_prompt`).
+
 The header is one row while every control holds in it and two on purpose past that
 (`notes::header::layout`): the reference's floors decide, not the widths drawn, which differ
 between one row and two. What does not narrow is measured as drawn, the same in either layout;

@@ -247,7 +247,7 @@ fn kind_item(ui: &mut Ui, kind: NoteKind, mark: &str, name: &str, line: &str) ->
 }
 
 /// The canvas key each kind answers to (`canvas::shortcuts::CANVAS`).
-fn shortcut(kind: NoteKind) -> &'static str {
+pub(crate) fn shortcut(kind: NoteKind) -> &'static str {
     let mac = cfg!(target_os = "macos");
     match (kind, mac) {
         (NoteKind::Snippet, false) => "Ctrl+N",

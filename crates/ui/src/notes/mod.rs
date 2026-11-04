@@ -4,7 +4,7 @@
 pub mod calc;
 pub mod canvas;
 mod editor;
-mod header;
+pub(crate) mod header;
 pub mod language;
 mod overlays;
 mod panel;
@@ -134,6 +134,8 @@ pub enum Action {
     Facet(crate::state::notes_query::Facet),
     Tags(Tags),
     Fill(Fill),
+    /// The folder-name prompt put away.
+    DismissFolderName,
 }
 
 /// What the `{{fields}}` form asks.
@@ -203,6 +205,12 @@ pub struct View {
     trash: overlays::trash_panel::TrashView,
     tag_manager: overlays::tag_manager::TagManagerView,
     fill: overlays::placeholder_form::FillView,
+    folder_name: String,
+}
+
+/// The `{{fields}}` form, over the palette as over the canvas: drawn by the window, after both.
+pub fn fill_form(ui: &Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
+    overlays::placeholder_form::show(ui, state, &mut view.fill, actions);
 }
 
 /// The rail on the left, as wide as the setting says, and the canvas beside it.
@@ -244,7 +252,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     editor::show(ui, state, &mut view.editor, actions);
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
     overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
-    overlays::placeholder_form::show(ui, state, &mut view.fill, actions);
+    overlays::folder_prompt::show(ui, state, &mut view.folder_name, actions);
     overlays::undo_bar::show(ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);

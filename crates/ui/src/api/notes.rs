@@ -114,6 +114,11 @@ pub fn set_field_values(
     backend.db(move |engine| notes::set_placeholder_values(engine, id, values))
 }
 
+/// Case and accents folded, as the core's search reads text. Pure, under a microsecond (D12).
+pub fn fold(text: &str) -> String {
+    engine::notes::view::fold(text)
+}
+
 /// Every tag of the library, with the notes carrying it; read from the index.
 pub fn list_tags(backend: &Backend) -> Pending<Vec<TagUsage>> {
     backend.db(notes::list_tags)

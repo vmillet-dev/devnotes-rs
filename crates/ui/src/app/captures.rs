@@ -192,6 +192,23 @@ fn the_canvas_of_an_open_library() {
     capture(&mut harness, "editor-stand-in");
 
     click(&mut harness, "editor-close");
+    harness.key_press_modifiers(
+        egui::Modifiers::COMMAND | egui::Modifiers::ALT,
+        egui::Key::P,
+    );
+    settle(&mut harness);
+    capture(&mut harness, "palette-recent");
+    harness
+        .get_by(|node| node.author_id() == Some("palette-input"))
+        .type_text("psql");
+    // Past the search's pause, in egui's time.
+    for _ in 0..20 {
+        harness.step();
+    }
+    settle(&mut harness);
+    capture(&mut harness, "palette-search");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
     click(&mut harness, "new-note-kind");
     capture(&mut harness, "header-new-note-menu");
     click(&mut harness, "new-note-kind");

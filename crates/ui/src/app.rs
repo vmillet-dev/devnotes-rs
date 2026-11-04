@@ -212,9 +212,20 @@ impl eframe::App for DevNotesApp {
                     }
                 }
             });
+        if self.state.gate.is_open() {
+            let mut palette = std::mem::take(&mut self.state.palette_view);
+            crate::palette::show(ui.ctx(), &self.state, &mut palette, &mut actions);
+            self.state.palette_view = palette;
+            // Over the palette as over the canvas: drawn after both.
+            let mut view = std::mem::take(&mut self.state.notes_view);
+            notes::fill_form(ui, &self.state, &mut view, &mut actions);
+            self.state.notes_view = view;
+        }
         let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
         // A modal over the canvas takes its keys: the canvas's stand aside.
-        let levels: &[&[keys::Binding]] = if notes_shown && !self.state.modal_open() {
+        let levels: &[&[keys::Binding]] = if self.state.palette.is_open() {
+            &[&keys::APPLICATION]
+        } else if notes_shown && !self.state.modal_open() {
             &[
                 &keys::NOTES,
                 &notes::canvas::shortcuts::CANVAS,
