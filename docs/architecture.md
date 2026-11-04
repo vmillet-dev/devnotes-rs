@@ -1687,6 +1687,15 @@ boxes, quotes, tables, links, code blocks. No underline. A code block keeps its 
 fence, picked from the toolbar while the caret is in it (`txt` writes the fence bare). Sharing
 and exporting write a Note as the Markdown it is, where a snippet is fenced.
 
+- **The document is `richtext`'s** (egui migration, no egui in it): blocks and marked runs,
+  read by `pulldown-cmark` with the core's own options (`notes::markdown` holds the two equal in
+  a test) and written back byte for byte as the reference's editor wrote it — `golden/markdown`
+  and `golden/markdown-escape` pass whole. What the schema does not hold is read as what it shows:
+  raw HTML as its text, a footnote as its brackets, a reference link inline, a bare `https://`
+  address as a link to itself. `richtext::escape` is `escapeMarkdownText`, ported rule for rule.
+  Undo keeps the document and the selection before each transaction (`History`): a Note is a
+  few kilobytes.
+
 - **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
   `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as
   `a -&gt; b`. `rich-text.engine.ts` replaces its private `encodeTextForMarkdown` with

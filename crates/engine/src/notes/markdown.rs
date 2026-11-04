@@ -204,6 +204,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_rich_editor_reads_markdown_with_the_same_options() {
+        assert_eq!(OPTIONS, richtext::OPTIONS);
+    }
+
+    #[test]
     fn the_syntax_goes_and_the_words_stay() {
         assert_eq!(
             plain("# Release\n\nShip **today**, not *tomorrow* — ~~maybe~~ `v2`."),
