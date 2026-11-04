@@ -30,9 +30,14 @@ pub(crate) fn settle<State>(
     loop {
         backend(harness.state()).settle();
         let launched = backend(harness.state()).launched();
-        let drawn = harness.try_run().is_ok();
+        let drawn = harness.try_run();
         if backend(harness.state()).launched() == launched {
-            assert!(drawn, "the window keeps repainting with nothing left to do");
+            // A thread of its own, as the colouring's, answers when it can: frames more, not forever.
+            if let Err(error) = drawn
+                && error.steps_to_settle.is_none()
+            {
+                panic!("the window keeps repainting with nothing left to do: {error}");
+            }
             return;
         }
     }
