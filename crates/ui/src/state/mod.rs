@@ -6,6 +6,7 @@ pub mod drawing_exports;
 pub mod drawing_pictures;
 pub mod editor;
 pub mod explored;
+pub mod formatting;
 pub mod note_revisions;
 pub mod notes;
 pub mod notes_query;
@@ -101,6 +102,9 @@ pub struct AppState {
     pub exports: drawing_exports::DrawingExports,
     pub calc: calc_sheets::CalcSheets,
     pub explored: explored::ExploredState,
+    pub formatting: formatting::FormattingState,
+    /// The open library's, read with its preferences.
+    pub prettier: crate::notes::prettier::PrettierSettings,
     pub errors: ErrorNotifier,
     pub clock: Box<dyn Clock>,
     /// The system's wish; the look adds nothing to it.
@@ -141,6 +145,8 @@ impl AppState {
             exports: drawing_exports::DrawingExports::default(),
             calc: calc_sheets::CalcSheets::default(),
             explored: explored::ExploredState::default(),
+            formatting: formatting::FormattingState::default(),
+            prettier: crate::notes::prettier::PrettierSettings::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
             reduced_motion,
@@ -212,6 +218,10 @@ impl AppState {
             &mut reports,
         );
         self.explored.update(backend);
+        for saved in self.formatting.update() {
+            self.editor
+                .save_body(backend, saved.session, saved.id, saved.body);
+        }
         for (note, sheet) in self.calc.update(&mut self.errors) {
             let text = crate::notes::calc::copy_text(&note.content, &sheet, self.language);
             self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
@@ -292,6 +302,9 @@ impl AppState {
                 }
                 self.spaces.restore(&preferences);
                 self.notes_query.restore(&preferences);
+                self.prettier = crate::notes::prettier::PrettierSettings::read(
+                    preferences.get(crate::notes::prettier::KEY),
+                );
                 self.library_preferences = preferences;
             }
             Err(error) => self
@@ -529,7 +542,9 @@ impl AppState {
         use crate::notes::Editing;
         let id = self.editor.open_id().map(str::to_owned);
         match editing {
-            Editing::Save { session, edit } => self.editor.save(backend, session, edit),
+            Editing::Save { session, edit } => self.save_formatted(backend, session, edit),
+            Editing::Format { session, request } => self.formatting.ask(backend, session, request),
+            Editing::Prettier(settings) => self.set_prettier(settings, backend),
             Editing::Export(export) => self.exports.ask(backend, &self.dialog, export),
             Editing::Fields(asked) => self.apply_fields(asked, ctx, backend),
             Editing::Attachment(asked) => self.ask_attachment(asked, backend),
@@ -926,6 +941,50 @@ impl AppState {
     }
 
     /// The settings into the application's file, through the db queue, the other keys kept.
+    fn set_prettier(
+        &mut self,
+        settings: crate::notes::prettier::PrettierSettings,
+        backend: &Backend,
+    ) {
+        self.prettier = settings;
+        self.library_preferences
+            .set(crate::notes::prettier::KEY, &settings.written());
+        drop(api::preferences::write_library(
+            backend,
+            self.library_preferences.clone(),
+        ));
+    }
+
+    /// Formatted first when the library asks for it: the body is held back and written once,
+    /// formatted or, refused, as it was typed. A draft never written is saved as it is.
+    fn save_formatted(&mut self, backend: &Backend, session: u64, mut edit: editor::Edit) {
+        let note = self.editor.opened().and_then(editor::Opened::note);
+        let asked = note
+            .filter(|_| self.prettier.format_on_save)
+            .and_then(|note| {
+                let parser = crate::notes::language::formatter(note.language)?;
+                let Some(editor::Body::Content(text)) = &edit.body else {
+                    return None;
+                };
+                let changed = *text != note.content && !note.id.is_empty();
+                changed.then(|| {
+                    let indent = crate::notes::language::indent_unit(note.language);
+                    let request = text::format::Request {
+                        text: text.clone(),
+                        cursor: 0,
+                        parser,
+                        options: self.prettier.options(indent),
+                    };
+                    (note.id.clone(), request)
+                })
+            });
+        if let Some((id, request)) = asked {
+            edit.body = None;
+            self.formatting.save(backend, session, id, request);
+        }
+        self.editor.save(backend, session, edit);
+    }
+
     fn save_settings(&mut self, backend: &Backend) {
         self.settings.write(&mut self.preferences);
         // A write that fails says so in the log; nothing on screen waits for it.
@@ -940,6 +999,7 @@ impl AppState {
     /// keeps (a text field's undo history holds what was typed). The settings stay.
     pub fn reset_library_scope(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.library_preferences = Preferences::default();
+        self.prettier = crate::notes::prettier::PrettierSettings::default();
         self.library_preferences_read = Some(api::preferences::library(backend));
         self.seeding = None;
         self.caches = LibraryCaches::default();

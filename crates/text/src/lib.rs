@@ -8,6 +8,7 @@
 
 mod buffer;
 mod diff;
+pub mod format;
 pub mod highlight;
 mod history;
 mod indent;

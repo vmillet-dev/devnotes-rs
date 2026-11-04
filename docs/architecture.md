@@ -545,46 +545,39 @@ evidence now, not proof; a unit or a custom property is what makes it a styleshe
 
 ### Formatting a snippet with Prettier
 
-"Formater" (Shift+Alt+F) runs Prettier 3 on the editor's draft, **in the front**: the exception
-sits beside highlighting, for the same reason — the text is the unsaved draft — and because
-Prettier is JavaScript. `core/services/format/` holds all of it.
+"Formater" (Shift+Alt+F) runs Prettier itself — 3.9.10, as `package.json` pins it — on the
+editor's draft, **in QuickJS** (plan D1, ADR S8): the output is the reference's, byte for byte,
+on the whole `golden/format` corpus. `text::format` holds all of it; the editor asks through
+`FormattingState`, on `compute`.
 
-- **A worker, started by the first format and kept.** `PrettierWorker` builds it from
-  `prettier.worker.ts` (the Angular builder bundles a `new Worker(new URL(…))`); the worker
-  loads each language's plugins by `import()`, one chunk each (`prettier-plugins.ts`). Nothing
-  of Prettier is in the initial bundle: the worker is 25 kB over the wire, TypeScript's plugin
-  the heaviest at 166 kB, and each is fetched by the first format that needs it. The spike's
-  numbers (#458): a first format of 2,000 lines of TypeScript takes 158 ms on a developer
-  machine, 915 ms on the CI's WebKitGTK.
-- ⚠️ **The worker has no CSP.** Tauri puts `Content-Security-Policy` on the HTML only, and a
-  dedicated worker takes its policy from its own response: `new Function` succeeds inside it,
-  on both engines. Prettier never evaluates, so this costs nothing today — but the worker must
-  only ever be handed text to format (`FormatRequest`), never code to run.
-- **What runs is `prettier-runner.ts`**, apart from the worker's message glue, so its spec
-  drives the real Prettier and its real plugins. It answers `formatted` (the text, the caret,
-  the changed lines), `unchanged`, `syntax` (Prettier's one-based line and column), `fields`
-  or `failed` — never a throw.
-- **Every `{{…}}` is shielded** (`field-shield.ts`): read as code, `{{db_host}}` is two nested
+- **One host, started by the first format and kept** (`text::format::host`): a thread of its
+  own with one QuickJS runtime — a runtime is not shared between threads — in which
+  `standalone.js` and nine plugins are evaluated once. `npm run prettier` copies them into
+  `crates/text/prettier/` after a bump; they are compiled in (2.4 MB). A host that cannot start
+  answers every format `Failed`.
+- **Only text crosses**: the draft, the caret and Prettier's options, never code. The answer is
+  `Formatted` (the text, the caret, the changed lines), `Unchanged`, `Syntax` (Prettier's
+  one-based line and column), `Fields` or `Failed` — never a panic. Prettier counts the caret in
+  UTF-16 units, the editor in `char`s: converted on the way in and out.
+- **Every `{{…}}` is shielded** (`text::shield`): read as code, `{{db_host}}` is two nested
   blocks in JavaScript and a flow mapping in YAML. Each becomes an identifier of its own
   length, made of a two-letter marker absent from the text, and comes back in order afterwards.
-  One missing, copied or moved past another and the answer is `fields`: nothing is applied. A
-  field or not — Angular's `{{ user.name }}` is shielded too.
+  One missing, copied or moved past another and the answer is `Fields`: nothing is applied.
 - **The snippet keeps its own shape:** `endOfLine: 'auto'` (Prettier's `lf` would rewrite a
   CRLF snippet), and no final newline added where there was none.
-- **Through the editor's own history**: `rewrite` turns the answer into one edit of only what
-  differs, one CodeMirror transaction kept apart from the typing either side (`isolateHistory`),
-  so Ctrl+Z undoes a format in one step and the notice's "Annuler" is the same undo. An answer
-  about a text typed over meanwhile is dropped.
-- **The style is the library's** (`PrettierSettingsStore`, under `devnotes.notes.prettier`),
-  set from the button's chevron and applied as it is chosen, like the arrangement: every
-  snippet of a library formats alike. Its indentation is by default "Éditeur", the Tab key's
-  own level (`indentUnit`), so the two agree until the panel forces 2, 4 or Tab.
-- **Formatting on save** (off by default) runs on the body's blur and on close, through the
-  same service; its text comes back into the editor as a change from outside, still one step
-  of its history. Only a body that changed is formatted, a text Prettier refuses is saved as it is, and a
-  close waits for the answer only then: with the option off, nothing waits.
-- The button is `aria-disabled` rather than `disabled` on a language Prettier does not format:
-  a disabled button shows no tooltip, and this one says why.
+- **Through the editor's own history**: `Editor::replace_all` is one step, so Ctrl+Z undoes a
+  format and the notice's "Annuler" is the same step (`Editor::undo`). The lines it changed are
+  marked in the gutter until the next keystroke. An answer about a text typed over meanwhile is
+  dropped.
+- **The style is the library's** (`notes::prettier`, under `devnotes.notes.prettier`, read as
+  the reference wrote it), set from the button's chevron and applied as it is chosen. Its
+  indentation is by default "Éditeur", the Tab key's own level (`language::indent_unit`).
+- **Formatting on save** (off by default): a snippet's body that changed is held back from the
+  save and written once formatted — or as typed if Prettier refuses it — so the revisions keep
+  one body, not two. Written after the editor closed, it goes by id; still open, the field
+  follows unless it was typed into since. A draft never written is saved as it is.
+- The button stays drawn, disabled, on a language Prettier does not read
+  (`language::formatter`), its tooltip naming the language.
 
 ### Exploring a JSON snippet
 

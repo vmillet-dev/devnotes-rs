@@ -11,7 +11,8 @@
     "test:scripts": "node --test scripts/release-notes.test.mjs",
     "lint": "prettier --check .",
     "format": "prettier --write .",
-    "icons": "node scripts/icons.mjs"
+    "icons": "node scripts/icons.mjs",
+    "prettier": "node scripts/prettier.mjs"
   },
   "dependencies": {
     "prettier": "3.9.10"

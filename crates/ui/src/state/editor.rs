@@ -310,6 +310,24 @@ impl EditorState {
         }
     }
 
+    /// A body formatted on save: into the opening if it is still open, by id once it is closed.
+    pub fn save_body(&mut self, backend: &Backend, session: u64, id: String, body: String) {
+        let edit = Edit {
+            body: Some(Body::Content(body)),
+            ..Edit::default()
+        };
+        if self
+            .open
+            .as_ref()
+            .is_some_and(|open| open.session == session)
+        {
+            self.save(backend, session, edit);
+        } else {
+            self.writes
+                .push(api::notes::update(backend, id, edit.into_patch()));
+        }
+    }
+
     /// The pictures of the drawing left in `session`. `missing` takes them only if it has none.
     pub fn picture(
         &mut self,

@@ -10,6 +10,7 @@ mod checklist;
 mod code;
 mod drawing;
 mod fields;
+mod format;
 mod header;
 mod json_view;
 mod revisions;
@@ -52,6 +53,7 @@ pub(crate) struct EditorView {
     /// A Dessin's editor: its scene is no text.
     drawing: Option<drawing::DrawingView>,
     fields: fields::FieldsView,
+    format: format::FormatView,
     /// The attachment whose cross was clicked once.
     removing: Option<String>,
     tag: String,
@@ -76,6 +78,7 @@ impl EditorView {
             drawing: (note.kind == NoteKind::Drawing)
                 .then(|| drawing::DrawingView::open(&note.content)),
             fields: fields::FieldsView::of(note),
+            format: format::FormatView::default(),
             removing: None,
             tag: String::new(),
             focus: true,
@@ -179,6 +182,10 @@ fn panel(
 ) -> bool {
     let whole = ui.max_rect();
     ui.spacing_mut().item_spacing = Vec2::ZERO;
+    if editing.code.is_some() {
+        format::adopt(ui, state, session, editing);
+        format::shortcut(ui, state, (session, note), editing, actions);
+    }
     let closed = band(ui, Margin::symmetric(20, 12), true, |ui| {
         toolbar(ui, state, (session, note), editing, actions)
     });
@@ -237,6 +244,7 @@ fn panel(
             None => code::show(&mut body_ui, code, note.language, state.language),
         };
         if shown.changed {
+            editing.format.typed();
             editing.body = code.text();
         }
         shown.left
@@ -253,6 +261,7 @@ fn panel(
     if left {
         save(session, note, editing, actions);
     }
+    format::notice(ui, state, body_rect, editing);
     let history_rect = Rect::from_min_max(
         egui::pos2(whole.left(), body_rect.bottom()),
         egui::pos2(whole.right(), body_rect.bottom() + history),
@@ -343,6 +352,7 @@ fn toolbar(
             priority(ui, state, note, actions);
             pin(ui, state, note, labelled, actions);
             if note.kind.has_language() {
+                format::button(ui, state, (session, note), editing, labelled, actions);
                 language_menu(ui, state, note, actions);
             }
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
