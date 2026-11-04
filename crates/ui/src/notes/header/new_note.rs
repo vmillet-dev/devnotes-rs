@@ -228,9 +228,39 @@ fn kind_item(ui: &mut Ui, kind: NoteKind, mark: &str, name: &str, line: &str) ->
         overflow_character: Some('…'),
     };
     let line = ui.fonts_mut(|fonts| fonts.layout_job(job));
+    let keys = widgets::text(
+        ui,
+        shortcut(kind),
+        10.5,
+        400.0,
+        FontFamily::Monospace,
+        p.text_2,
+    );
+    ui.painter().galley(
+        pos2(rect.right() - 10.0 - keys.size().x, rect.top() + 8.0),
+        keys,
+        p.text_2,
+    );
     ui.painter()
         .galley(pos2(left, rect.top() + 24.0), line, p.text_2);
     response
+}
+
+/// The canvas key each kind answers to (`canvas::shortcuts::CANVAS`).
+fn shortcut(kind: NoteKind) -> &'static str {
+    let mac = cfg!(target_os = "macos");
+    match (kind, mac) {
+        (NoteKind::Snippet, false) => "Ctrl+N",
+        (NoteKind::Note, false) => "Ctrl+Shift+N",
+        (NoteKind::Checklist, false) => "Ctrl+Shift+L",
+        (NoteKind::Calc, false) => "Ctrl+Shift+M",
+        (NoteKind::Drawing, false) => "Ctrl+Shift+D",
+        (NoteKind::Snippet, true) => "⌘N",
+        (NoteKind::Note, true) => "⌘⇧N",
+        (NoteKind::Checklist, true) => "⌘⇧L",
+        (NoteKind::Calc, true) => "⌘⇧M",
+        (NoteKind::Drawing, true) => "⌘⇧D",
+    }
 }
 
 fn kind_id(kind: NoteKind) -> &'static str {

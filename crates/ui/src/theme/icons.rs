@@ -21,6 +21,7 @@ pub enum Icon {
     /// The sort's ⇅.
     ArrowUpDown,
     ArrowRight,
+    ArrowLeft,
     ChevronRight,
     X,
     Plus,
@@ -88,6 +89,7 @@ impl Icon {
             Self::ArrowDown => &["M12 5v14", "m19 12-7 7-7-7"],
             Self::ArrowUpDown => &["m21 16-4 4-4-4", "M17 20V4", "m3 8 4-4 4 4", "M7 4v16"],
             Self::ArrowRight => &["M5 12h14", "m12 5 7 7-7 7"],
+            Self::ArrowLeft => &["M19 12H5", "m12 19-7-7 7-7"],
             Self::ChevronRight => &["m9 18 6-6-6-6"],
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
             Self::Plus => &["M5 12h14", "M12 5v14"],
@@ -320,7 +322,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 48] = [
+    const ALL: [Icon; 49] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
@@ -329,6 +331,7 @@ mod tests {
         Icon::ArrowDown,
         Icon::ArrowUpDown,
         Icon::ArrowRight,
+        Icon::ArrowLeft,
         Icon::ChevronRight,
         Icon::X,
         Icon::Plus,

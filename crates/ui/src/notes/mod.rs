@@ -114,6 +114,8 @@ pub enum Action {
     },
     /// Read whole, then onto the clipboard.
     Copy(String),
+    /// A key of the canvas's table, on the card with the focus.
+    Canvas(canvas::shortcuts::CanvasKey),
 }
 
 /// The rail's edge, which widens it.
@@ -123,6 +125,7 @@ const EDGE: f32 = 8.0;
 #[derive(Default)]
 pub struct View {
     pub sidebar: sidebar::SidebarView,
+    pub canvas: canvas::CanvasView,
     /// While its edge moves; the setting is written once the pointer rests.
     rail_width: Option<f32>,
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
@@ -166,7 +169,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         rest.max,
     );
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
-    canvas::show(&mut canvas_ui, state, actions);
+    canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
     editor::show(ui, state, &mut view.editor, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);

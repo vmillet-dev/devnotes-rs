@@ -63,7 +63,8 @@ pub fn dispatch(ctx: &Context, levels: &[&[Binding]]) -> Option<Action> {
     if composing(ctx) {
         return None;
     }
-    let typing = ctx.egui_wants_keyboard_input();
+    // A text field asks for the IME while it has the focus; a focused button asks for nothing.
+    let typing = ctx.output(|output| output.ime.is_some());
     ctx.input_mut(|input| {
         let (at, action) = input.events.iter().enumerate().find_map(|(at, event)| {
             let Event::Key {

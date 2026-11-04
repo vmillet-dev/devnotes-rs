@@ -10,6 +10,7 @@ pub(super) struct Bench {
     pub(super) backend: Backend,
     pub(super) state: AppState,
     pub(super) actions: Actions,
+    pub(super) canvas: CanvasView,
     _profile: tempfile::TempDir,
 }
 
@@ -33,7 +34,7 @@ pub(super) fn canvas(backend: Backend, profile: tempfile::TempDir) -> Harness<'s
                     (None, None),
                     (state.revision, IndexFill::Ready),
                 );
-                show(ui, &bench.state, &mut bench.actions);
+                show(ui, &bench.state, &mut bench.canvas, &mut bench.actions);
                 let ctx = ui.ctx().clone();
                 for action in bench.actions.drain().collect::<Vec<_>>() {
                     bench.state.apply(action, &ctx, &bench.backend);
@@ -43,6 +44,7 @@ pub(super) fn canvas(backend: Backend, profile: tempfile::TempDir) -> Harness<'s
                 backend,
                 state,
                 actions: Actions::default(),
+                canvas: CanvasView::default(),
                 _profile: profile,
             },
         );

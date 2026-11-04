@@ -155,6 +155,16 @@ fn search(
     if std::mem::take(focus_search) {
         field.request_focus();
     }
+    // Down from the field to what it found: the first card.
+    if widgets::takes_keys(ui, &field) && ui.input(|input| input.key_pressed(egui::Key::ArrowDown))
+    {
+        push(
+            actions,
+            crate::notes::Action::Canvas(crate::notes::canvas::shortcuts::CanvasKey::Move(
+                crate::notes::canvas::grid::Direction::Down,
+            )),
+        );
+    }
     if searched.cleared {
         push(actions, crate::notes::Action::ClearSearch);
     } else if typed != query.typed() {
