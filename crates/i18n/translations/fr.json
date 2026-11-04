@@ -423,7 +423,14 @@
     "itemPlaceholder": "Décrire la tâche…",
     "removeItem": "Supprimer la tâche {{text}}",
     "moveItem": "Déplacer la tâche {{text}} (Alt + flèches)",
-    "toggleItem": "Cocher la tâche {{text}}"
+    "toggleItem": "Cocher la tâche {{text}}",
+    "date": {
+      "empty": "jj/mm/aaaa",
+      "previous": "Mois précédent",
+      "next": "Mois suivant",
+      "month": "{{month}} {{year}}",
+      "clear": "Sans échéance"
+    }
   },
   "lifecycle": {
     "neverExpires": "N’expire jamais"

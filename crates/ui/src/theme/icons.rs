@@ -70,6 +70,10 @@ pub enum Icon {
     Zap,
     /// The error banner's « ⚠ ».
     TriangleAlert,
+    Calendar,
+    /// The editor's full screen, and the way out of it.
+    Maximize,
+    Minimize,
 }
 
 impl Icon {
@@ -245,6 +249,14 @@ impl Icon {
             Self::Zap => &[
                 "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z",
             ],
+            Self::Calendar => &[
+                "M8 2v4",
+                "M16 2v4",
+                "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+                "M3 10h18",
+            ],
+            Self::Maximize => &["M15 3h6v6", "M9 21H3v-6", "M21 3l-7 7", "M3 21l7-7"],
+            Self::Minimize => &["M4 14h6v6", "M20 10h-6V4", "M14 10l7-7", "M3 21l7-7"],
             Self::Hourglass => &[
                 "M5 22h14",
                 "M5 2h14",
@@ -332,7 +344,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 51] = [
+    const ALL: [Icon; 54] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
@@ -384,6 +396,9 @@ mod tests {
         Icon::Hourglass,
         Icon::Zap,
         Icon::TriangleAlert,
+        Icon::Calendar,
+        Icon::Maximize,
+        Icon::Minimize,
     ];
 
     fn coverage(image: &ColorImage) -> usize {

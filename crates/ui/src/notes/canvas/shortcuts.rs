@@ -208,6 +208,9 @@ mod tests {
         settle(&mut harness);
 
         let opened = harness.state().state.editor.opened().unwrap();
-        assert_eq!(opened.kind, engine::notes::kind::NoteKind::Snippet);
+        assert_eq!(
+            opened.note().unwrap().kind,
+            engine::notes::kind::NoteKind::Snippet
+        );
     }
 }

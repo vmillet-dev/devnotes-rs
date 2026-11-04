@@ -3,7 +3,6 @@
 
 pub mod calc;
 pub mod canvas;
-mod editor;
 pub(crate) mod header;
 pub mod language;
 mod overlays;
@@ -78,15 +77,10 @@ pub enum Action {
     Arrange(crate::state::notes_query::Arrangement),
     /// `Ctrl+K`: the caret into the search.
     FocusSearch,
-    /// Into the stand-in editor, read whole by id.
+    /// Into the editor, read whole by id.
     OpenNote(String),
-    /// The fields left in an opening; `None` leaves a field as it is.
-    SaveNote {
-        session: u64,
-        title: Option<String>,
-        body: Option<crate::state::editor::Body>,
-    },
-    CloseNote,
+    /// What the editor asks of the note it has open.
+    Editor(Editing),
     /// A draft of that kind, or of the preferred one: written once worth keeping.
     NewNote(Option<engine::notes::kind::NoteKind>),
     Pin {
@@ -136,6 +130,34 @@ pub enum Action {
     Fill(Fill),
     /// The folder-name prompt put away.
     DismissFolderName,
+}
+
+/// What the editor asks of the note it has open, a draft or a note written.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Editing {
+    /// The fields left in an opening; `None` leaves a field as it is.
+    Save {
+        session: u64,
+        edit: crate::state::editor::Edit,
+    },
+    Pin(bool),
+    Prioritise(Priority),
+    MoveTo(String),
+    /// `None`: out of every folder.
+    File(Option<String>),
+    /// What is typed is written first: the core converts the text on screen.
+    Convert {
+        session: u64,
+        into: NoteKind,
+        edit: crate::state::editor::Edit,
+    },
+    /// Into the trash; a draft is only let go.
+    Delete,
+    /// Read as written, then onto the clipboard; a note with fields asks for them.
+    Copy,
+    Close,
+    Fullscreen(bool),
+    FoldHeader(bool),
 }
 
 /// What the `{{fields}}` form asks.
@@ -201,7 +223,7 @@ pub struct View {
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
     pub(crate) focus_search: bool,
     header: header::HeaderView,
-    editor: Option<editor::Draft>,
+    editor: Option<overlays::editor::EditorView>,
     trash: overlays::trash_panel::TrashView,
     tag_manager: overlays::tag_manager::TagManagerView,
     fill: overlays::placeholder_form::FillView,
@@ -249,7 +271,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     );
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
-    editor::show(ui, state, &mut view.editor, actions);
+    overlays::editor::show(ui, state, &mut view.editor, actions);
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
     overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
     overlays::folder_prompt::show(ui, state, &mut view.folder_name, actions);
@@ -279,7 +301,7 @@ fn kind_plural(kind: NoteKind) -> Key {
 }
 
 /// The heading of a priority's section: « No priority » for the notes without one.
-fn priority_section(priority: Priority) -> Key {
+pub(crate) fn priority_section(priority: Priority) -> Key {
     match priority {
         Priority::None => keys::sections::NO_PRIORITY,
         Priority::Low => keys::notes::priority::LOW,

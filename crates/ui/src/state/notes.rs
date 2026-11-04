@@ -81,6 +81,12 @@ impl NotesState {
             .push((keys::errors::BULK_ACTION_FAILED, pending));
     }
 
+    /// Into another kind: the core converts the body, the undo puts the old one back.
+    pub fn convert(&mut self, backend: &Backend, id: String, into: engine::notes::kind::NoteKind) {
+        let pending = api::notes::convert(backend, id, into);
+        self.writes.push((keys::errors::CONVERT_FAILED, pending));
+    }
+
     pub fn duplicate(&mut self, backend: &Backend, id: String, title: String) {
         self.duplicates
             .push(api::notes::duplicate(backend, id, title));

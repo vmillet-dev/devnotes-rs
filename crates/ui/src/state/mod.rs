@@ -148,13 +148,14 @@ impl AppState {
     pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
         let answered = self.notes.update(&mut self.revision, &mut self.errors);
         if let Some(id) = answered.open {
-            self.editor.open(backend, id);
+            self.editor.open(id);
         }
         for note in answered.copied {
             self.copied(ctx, note);
         }
         let time = ctx.input(|input| input.time);
         for done in answered.done {
+            self.follow_in_editor(&done);
             self.undo.record(done, time);
         }
         self.undo.update(&mut self.revision, &mut self.errors);
@@ -173,7 +174,8 @@ impl AppState {
             (self.clock.now(), pinned_first, self.revision),
         );
         self.editor
-            .update(backend, &mut self.revision, &mut self.errors);
+            .adopt(backend, &mut self.revision, &mut self.errors);
+        self.editor.update(backend, self.revision, &mut self.errors);
         self.caches.thumbnails.update(ctx, backend);
         if self
             .spaces
@@ -185,6 +187,20 @@ impl AppState {
         let place = (self.spaces.active_space(), self.spaces.active_folder());
         self.notes_query
             .update(ctx, backend, now, place, (self.revision, index));
+    }
+
+    /// A write made on the note open: converted, the editor's fields start again from what it now
+    /// holds; deleted, the editor closes.
+    fn follow_in_editor(&mut self, done: &api::undo::Reversible) {
+        use api::undo::Reversible;
+        let Some(open) = self.editor.open_id().map(str::to_owned) else {
+            return;
+        };
+        match done {
+            Reversible::Convert { id, .. } if *id == open => self.editor.reseed(&open),
+            Reversible::Deletion { ids, .. } if ids.contains(&open) => self.editor.close(),
+            _ => {}
+        }
     }
 
     /// The space and the folder shown, into the library's preferences: the next launch opens
@@ -393,12 +409,8 @@ impl AppState {
                     self.library_preferences.clone(),
                 ));
             }
-            Notes::OpenNote(id) => self.editor.open(backend, id),
-            Notes::SaveNote {
-                session,
-                title,
-                body,
-            } => self.editor.save(backend, session, title, body),
+            Notes::OpenNote(id) => self.editor.open(id),
+            Notes::Editor(editing) => self.apply_editing(editing, ctx, backend),
             Notes::NewNote(kind) => self.new_note(kind),
             Notes::Pin { id, pinned } => {
                 self.notes.pin(backend, vec![id], pinned);
@@ -437,13 +449,95 @@ impl AppState {
             }
             Notes::Copy(id) => self.notes.copy(backend, id),
             Notes::Canvas(key) => self.canvas_key(key, ctx, backend),
-            Notes::CloseNote => self.editor.close(),
             Notes::FocusSearch => {
                 self.notes_view.focus_search = true;
                 // Taken by the next frame, which nothing else may ask for.
                 ctx.request_repaint();
             }
         }
+    }
+
+    /// What the editor asks: a draft changes where it is, a note written goes through the same
+    /// writes as its card, the undo offered.
+    fn apply_editing(
+        &mut self,
+        editing: crate::notes::Editing,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::Editing;
+        let id = self.editor.open_id().map(str::to_owned);
+        match editing {
+            Editing::Save { session, edit } => self.editor.save(backend, session, edit),
+            Editing::Pin(pinned) => {
+                if !self
+                    .editor
+                    .change_draft(backend, |note| note.pinned = pinned)
+                    && let Some(id) = id
+                {
+                    self.notes.pin(backend, vec![id], pinned);
+                }
+            }
+            Editing::Prioritise(priority) => {
+                if !self
+                    .editor
+                    .change_draft(backend, |note| note.priority = priority)
+                    && let Some(id) = id
+                {
+                    self.notes.prioritise(backend, vec![id], priority);
+                }
+            }
+            Editing::MoveTo(space) => {
+                let into = space.clone();
+                let moved = self.editor.change_draft(backend, |note| {
+                    note.space_id = into;
+                    note.folder_id = None;
+                });
+                if !moved && let Some(id) = id {
+                    self.notes.move_to(backend, vec![id], space);
+                }
+            }
+            Editing::File(folder) => {
+                let into = folder.clone();
+                if !self
+                    .editor
+                    .change_draft(backend, |note| note.folder_id = into)
+                    && let Some(id) = id
+                {
+                    self.notes.file(backend, vec![id], folder);
+                }
+            }
+            Editing::Convert {
+                session,
+                into,
+                edit,
+            } => {
+                self.editor.save(backend, session, edit);
+                match id {
+                    Some(id) => self.notes.convert(backend, id, into),
+                    None => self.editor.convert_draft(into),
+                }
+            }
+            Editing::Delete => match id {
+                Some(id) => self.notes.delete(backend, vec![id]),
+                None => self.editor.close(),
+            },
+            Editing::Copy => {
+                if let Some(id) = id {
+                    self.notes.copy(backend, id);
+                }
+            }
+            Editing::Close => self.editor.close(),
+            Editing::Fullscreen(on) => {
+                self.settings.editor_fullscreen = on;
+                self.save_settings(backend);
+            }
+            Editing::FoldHeader(folded) => {
+                self.settings.editor_header_folded = folded;
+                self.save_settings(backend);
+            }
+        }
+        ctx.request_repaint();
     }
 
     /// The notes on screen, in the order they are drawn.
@@ -639,7 +733,7 @@ impl AppState {
         use crate::palette::commands::Command;
         use crate::palette::options::Chosen;
         match chosen {
-            Chosen::Note(id) => self.editor.open(backend, id),
+            Chosen::Note(id) => self.editor.open(id),
             Chosen::Space(id) => {
                 self.spaces.choose_space(Some(id));
                 self.remember_place(backend);

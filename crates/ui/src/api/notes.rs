@@ -20,6 +20,32 @@ pub fn drawing_thumbnail(backend: &Backend, id: String) -> Pending<Option<String
     backend.db(move |engine| notes::drawing_thumbnail(engine, id))
 }
 
+/// A draft as the editor shows it, before it has a row. Pure (D12).
+pub fn decorate(note: engine::notes::model::Note) -> DisplayNote {
+    engine::notes::model::decorate_now(note)
+}
+
+/// What a tag is, as `normalize_tags` alone decides. Pure (D12).
+pub fn normalize_tags(tags: &[String]) -> Vec<String> {
+    engine::notes::model::normalize_tags(tags)
+}
+
+/// Into another kind; the undo writes back the body the core answers it had.
+pub fn convert(
+    backend: &Backend,
+    id: String,
+    into: engine::notes::kind::NoteKind,
+) -> Pending<Reversible> {
+    backend.db(move |engine| {
+        let converted = notes::convert_note(engine, id.clone(), into)?;
+        Ok(Reversible::Convert {
+            id,
+            into,
+            previous: converted.previous,
+        })
+    })
+}
+
 /// A field set to `None` is left as it is.
 pub fn update(backend: &Backend, id: String, patch: NotePatch) -> Pending<DisplayNote> {
     backend.db(move |engine| notes::update_note(engine, id, patch))
