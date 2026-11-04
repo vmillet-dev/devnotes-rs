@@ -18,8 +18,19 @@ pub enum Icon {
     Filter,
     ArrowUp,
     ArrowDown,
+    /// The sort's ⇅.
+    ArrowUpDown,
+    ArrowRight,
+    ArrowLeft,
+    /// Enter's ↵.
+    CornerDownLeft,
+    /// Backspace's ⌫.
+    Delete,
     ChevronRight,
     X,
+    Plus,
+    /// A row's ⋯: what else it can be told.
+    Ellipsis,
     Pin,
     Star,
     /// A star that is on: the same drawing, full.
@@ -55,6 +66,8 @@ pub enum Icon {
     Paperclip,
     Image,
     Hourglass,
+    /// A snippet's `{{fields}}`, on its card.
+    Zap,
     /// The error banner's « ⚠ ».
     TriangleAlert,
 }
@@ -78,8 +91,19 @@ impl Icon {
             Self::Filter => &["M22 3H2l8 9.46V19l4 2v-8.54L22 3z"],
             Self::ArrowUp => &["m5 12 7-7 7 7", "M12 19V5"],
             Self::ArrowDown => &["M12 5v14", "m19 12-7 7-7-7"],
+            Self::ArrowUpDown => &["m21 16-4 4-4-4", "M17 20V4", "m3 8 4-4 4 4", "M7 4v16"],
+            Self::ArrowRight => &["M5 12h14", "m12 5 7 7-7 7"],
+            Self::ArrowLeft => &["M19 12H5", "m12 19-7-7 7-7"],
+            Self::CornerDownLeft => &["M20 4v7a4 4 0 0 1-4 4H4", "m9 10-5 5 5 5"],
+            Self::Delete => &[
+                "M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z",
+                "m12 9 6 6",
+                "m18 9-6 6",
+            ],
             Self::ChevronRight => &["m9 18 6-6-6-6"],
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
+            Self::Plus => &["M5 12h14", "M12 5v14"],
+            Self::Ellipsis => &["M12 12h.01", "M19 12h.01", "M5 12h.01"],
             Self::Pin => &[
                 "M12 17v5",
                 "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z",
@@ -218,6 +242,9 @@ impl Icon {
                 "M12 9v4",
                 "M12 17h.01",
             ],
+            Self::Zap => &[
+                "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z",
+            ],
             Self::Hourglass => &[
                 "M5 22h14",
                 "M5 2h14",
@@ -305,15 +332,22 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 43] = [
+    const ALL: [Icon; 51] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
         Icon::Filter,
         Icon::ArrowUp,
         Icon::ArrowDown,
+        Icon::ArrowUpDown,
+        Icon::ArrowRight,
+        Icon::ArrowLeft,
+        Icon::CornerDownLeft,
+        Icon::Delete,
         Icon::ChevronRight,
         Icon::X,
+        Icon::Plus,
+        Icon::Ellipsis,
         Icon::Pin,
         Icon::Star,
         Icon::StarFilled,
@@ -348,6 +382,7 @@ mod tests {
         Icon::Paperclip,
         Icon::Image,
         Icon::Hourglass,
+        Icon::Zap,
         Icon::TriangleAlert,
     ];
 

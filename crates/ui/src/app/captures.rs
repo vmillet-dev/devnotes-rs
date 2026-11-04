@@ -63,7 +63,16 @@ fn capture(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
                 .save(Path::new(directory).join(format!("{name}-{theme}.png")))
                 .unwrap();
         }
-        click(harness, "theme-toggle");
+        // By its action, not its button: a click would close what the capture shows.
+        let other = match harness.ctx.theme() {
+            egui::Theme::Dark => crate::theme::Appearance::Light,
+            egui::Theme::Light => crate::theme::Appearance::Dark,
+        };
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        let action = crate::action::Action::App(crate::action::AppAction::SetAppearance(other));
+        app.state.apply(action, &ctx, &app.backend);
+        settle(harness);
     }
 }
 
@@ -120,4 +129,175 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
         .report(i18n::Message::new(i18n::keys::settings::COPIED));
     settle(&mut harness);
     capture(&mut harness, "banners-http");
+}
+
+#[test]
+fn the_canvas_of_an_open_library() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    capture(&mut harness, "canvas-samples");
+
+    kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    capture(&mut harness, "canvas-notes");
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .hover();
+    settle(&mut harness);
+    click(&mut harness, "note-card-menu");
+    capture(&mut harness, "card-menu");
+    click(&mut harness, "note-card-menu");
+    click(&mut harness, "note-card-fill");
+    capture(&mut harness, "placeholder-form");
+    click(&mut harness, "placeholder-cancel");
+
+    for _ in 0..2 {
+        harness.key_press(egui::Key::ArrowRight);
+        harness.key_press(egui::Key::X);
+    }
+    settle(&mut harness);
+    capture(&mut harness, "selection-bar");
+    click(&mut harness, "selection-pin");
+    capture(&mut harness, "undo-bar");
+    click(&mut harness, "undo-restore");
+    click(&mut harness, "selection-delete");
+    click(&mut harness, "selection-delete");
+    click(&mut harness, "trash-open");
+    capture(&mut harness, "trash-panel");
+    click(&mut harness, "trash-restore-all");
+    click(&mut harness, "trash-close");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+
+    click(&mut harness, "sort-trigger");
+    capture(&mut harness, "header-sort-menu");
+    click(&mut harness, "sort-trigger");
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "editor-stand-in");
+
+    click(&mut harness, "editor-close");
+    harness.key_press_modifiers(
+        egui::Modifiers::COMMAND | egui::Modifiers::ALT,
+        egui::Key::P,
+    );
+    settle(&mut harness);
+    capture(&mut harness, "palette-recent");
+    harness
+        .get_by(|node| node.author_id() == Some("palette-input"))
+        .type_text("psql");
+    // Past the search's pause, in egui's time.
+    for _ in 0..20 {
+        harness.step();
+    }
+    settle(&mut harness);
+    capture(&mut harness, "palette-search");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    click(&mut harness, "new-note-kind");
+    capture(&mut harness, "header-new-note-menu");
+    click(&mut harness, "new-note-kind");
+    click(&mut harness, "library-rail-toggle");
+    click(&mut harness, "space-switcher");
+    capture(&mut harness, "header-switchers");
+    click(&mut harness, "space-switcher");
+    click(&mut harness, "facets-toggle");
+    capture(&mut harness, "facets-panel");
+    click(&mut harness, "tag-manage");
+    harness
+        .get_all_by(|node| node.author_id() == Some("tag-item"))
+        .next()
+        .expect("the samples are tagged")
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "tag-manager");
+    click(&mut harness, "tag-manager-close");
+    click(&mut harness, "facets-toggle");
+    harness.set_size(egui::vec2(640.0, SIZE.y));
+    settle(&mut harness);
+    capture(&mut harness, "header-two-rows");
+    harness.set_size(SIZE);
+}
+
+/// One note of each kind, with marks, tags and a search's worth of words.
+fn kinds(backend: &crate::backend::Backend) {
+    use engine::notes::checklist::ChecklistItem;
+    use engine::notes::kind::NoteKind;
+    use engine::notes::model::NotePatch;
+    let shapes = [
+        (
+            "psql prod",
+            NoteKind::Snippet,
+            "psql -h {{host}} -U admin\nSELECT count(*) FROM users;",
+            vec!["db", "prod", "ops"],
+            Vec::new(),
+        ),
+        (
+            "Deploy checklist",
+            NoteKind::Note,
+            "# Release\n\nShip on Friday.\n\n- build\n- [x] tag\n- [ ] announce",
+            vec!["release"],
+            Vec::new(),
+        ),
+        (
+            "Groceries",
+            NoteKind::Checklist,
+            "",
+            Vec::new(),
+            vec![("milk", true), ("bread", false), ("eggs", false)],
+        ),
+        (
+            "Budget",
+            NoteKind::Calc,
+            "loyer = 800 €\ncharges = 120,5 €\ntotal",
+            Vec::new(),
+            Vec::new(),
+        ),
+        ("Sketch", NoteKind::Drawing, "", Vec::new(), Vec::new()),
+        (
+            "",
+            NoteKind::Snippet,
+            "curl -s https://example.test/health",
+            Vec::new(),
+            Vec::new(),
+        ),
+    ];
+    for (title, kind, content, tags, items) in shapes {
+        let id = crate::testing::note(backend, "seed").id.clone();
+        let patch = NotePatch {
+            title: Some(title.to_string()),
+            kind: Some(kind),
+            content: Some(content.to_string()),
+            tags: Some(tags.into_iter().map(String::from).collect()),
+            items: Some(
+                items
+                    .into_iter()
+                    .map(|(text, done)| ChecklistItem {
+                        text: text.to_string(),
+                        done,
+                    })
+                    .collect(),
+            ),
+            pinned: Some(title == "psql prod"),
+            ..NotePatch::default()
+        };
+        let mut written = backend.db(move |engine| engine::notes::update_note(engine, id, patch));
+        backend.settle();
+        written.poll().unwrap().unwrap();
+    }
 }

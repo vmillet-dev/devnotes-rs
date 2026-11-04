@@ -9,6 +9,8 @@ mod banners;
 pub mod gate;
 pub mod inputs;
 pub mod keys;
+pub mod notes;
+pub mod palette;
 pub mod services;
 pub mod state;
 #[cfg(test)]

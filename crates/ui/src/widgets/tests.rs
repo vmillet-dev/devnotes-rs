@@ -36,7 +36,9 @@ fn bench() -> Harness<'static, Bench> {
             Button::new("Plus tard", "later").enabled(false).show(ui);
             IconButton::new(Icon::Trash, "Corbeille", "trash").show(ui);
             SplitButton::new("Exporter", "Autres formats", "export").show(ui);
-            RailToggle::new("Masquer le rail", "rail-toggle", true).show(ui);
+            SquareButton::new(Icon::Sidebar, "Masquer le rail", "rail-toggle")
+                .pressed(true)
+                .show(ui);
             Chip::new("psql", "tag-chip", true).show(ui);
             Checkbox::new(&mut bench.checked, "Fait", "item-done").show(ui);
             Segmented::new(&[(0, "Confortable"), (1, "Compacte")], "density")
@@ -47,7 +49,7 @@ fn bench() -> Harness<'static, Bench> {
             SearchField::new(&mut bench.searched, "Rechercher", "search")
                 .key("Ctrl K")
                 .show(ui);
-            hue_badge(ui, "sql", crate::theme::palette(ui.ctx()).blue);
+            hue_badge(ui, "sql", crate::theme::palette(ui.ctx()).blue, None);
             priority_dot(ui, engine::notes::priority::Priority::High);
             Kbd("Ctrl").show(ui);
             spinner(ui, 16.0, "Chargement");

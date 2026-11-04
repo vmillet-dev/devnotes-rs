@@ -4283,8 +4283,9 @@ not look alike would read as three unrelated windows.
 
 ### The first launch
 
-A brand-new installation opens on **sample notes**, in a space of their own
-(`SampleNotesService`, `core/state/`). This is not decoration: a virgin database has
+A brand-new library opens on **sample notes**, in a space of their own
+(`ui::services::samples`, seeded from `AppState` once the library's preferences are read). This
+is not decoration: a virgin database has
 no space, and creating a note with nowhere to file it is refused on purpose — so without them
 the first screen is empty, silent, and offers a "+ Nouvelle note" button that does nothing.
 
@@ -4300,19 +4301,23 @@ ordinary notes: editing or trashing them is the point, and the written guide beh
 user-facing string ever comes out of the back end: it would ship French into an English
 interface. It also means the samples arrive in the language the application starts in. The two
 snippet bodies are the exception and are hard-coded in the service — they are _code_ and
-_data_, so they are not translated, and the fields could not be: Transloco reads `{{name}}` as
-an interpolation and would replace a snippet's fields with empty strings on the way out.
+_data_, so they are not translated, and the fields could not be: a translation reads `{{name}}`
+as one of its parameters and would replace a snippet's fields with empty strings on the way out.
 
 ⚠️ **Two guards decide a first launch, not one.** A preference marker
 (`devnotes.notes.samplesSeeded`) alone would re-seed anyone whose preferences file went missing;
 "no space at all" alone would re-seed the day the last space disappears. Together they only ever
-match a database that has never been written to. The marker is written **after** the seeding,
+match a database that has never been written to: the marker is read with the library's
+preferences, and the space is counted on the db queue just before `seed_samples`, in the same
+job. Nothing reads notes meanwhile, so the canvas never shows the empty library first. The marker
+is written **after** the seeding,
 because the seeding is one write: `seed_samples` creates the space and its notes in a
 single transaction, so there is no halfway. ⚠️ It used to be six round trips, and a process
 killed between any two left a space standing with nothing in it — which both guards then read
-as "already seeded", leaving that install with an empty canvas for good. An installation that
-predates the samples is marked as skipped so the check stops running on every launch. A failure is silent: the canvas reports its own, and a second banner
-about samples nobody asked for would only add noise.
+as "already seeded", leaving that install with an empty canvas for good. A library that has a
+space and no marker is marked as skipped, so the check stops running on every open. A failure is
+silent (a line in the log): the canvas reports its own, and a second banner about samples nobody
+asked for would only add noise.
 
 ### Import, export and copying out
 
@@ -4626,6 +4631,164 @@ preferences panel does. Until the screens arrive, an area is an empty room addre
 `ui::banners` draws the `ErrorNotifier`'s failure (red, announced assertively, `error-banner`)
 and the `StatusNotifier`'s report (green, announced politely, `status-toast`) as top panels
 under the bar, one of each, each until its X is pressed (`DismissError`, `DismissStatus`).
+
+### The notes canvas
+
+`ui::notes` draws the area; `state::notes_query::NotesQueryState` holds the view it draws, a
+`QueryCell` over `api::notes::query`. Its parameters are what the view depends on, compared by
+value — the space, the folder, the **local day** (the instant is not one: the sections move at
+midnight, which `request_repaint_after` asks for, and not every frame), the `Revision`, and how
+far the index is (each slice it adds is asked again). It is updated only while the library is
+open, and emptied with the library scope.
+
+The list view is `notes::canvas`. `canvas::rows::Rows` flattens the view into rows of one
+height — a section's heading, then its cards a row at a time — with the column count of the
+reference's `repeat(auto-fill, minmax(220px, 1fr))` and cards a fixed 150 px. Their tops are
+worked out once a frame and only the rows that cross the viewport are drawn
+(`ScrollArea::show_viewport`): of 30 000 notes, a screenful. Sections are the core's, in its
+order, empty ones included (they are exhaustive); the cell after a section's last card is its
+« paste or create » ghost when the core says so. The region (`canvas`) says loading, nothing
+found (`matched == 0`, `canvas-no-results`) or a failure with its retry (`canvas-retry`, which
+bumps the revision) instead of the sections.
+
+A card (`canvas::card`) draws the core's `DisplayNote` and decides nothing about it: its title on
+two lines at most beside the kind's badge (`notes::ui::kind_badge`: a snippet's format and hue from
+`notes::language`, the others their kind), then what the kind previews — a snippet's first lines in
+the mono face, a Note's outline, a list's progress and open items (ticking one writes it through
+`state::notes`, not optimistically), a sheet's last results, a drawing's picture — and the footer:
+when it changed (or its source, or its expiry), its marks (priority pill, pin, fields to fill,
+attachment), its folder and two tags. Previews are monochrome until syntax colouring arrives with
+the editors. A sheet's results are written by `notes::calc::value`, the reference's formatter in
+Rust, held by the core's golden cases (`golden/calc-format`).
+
+The header (`notes::header`) asks, and `NotesQueryState` holds what it asked: the search as typed,
+the search the core is asked for (the typed one once the keys have rested 150 ms, a deadline in
+egui's time and not a timer), the quick filter (all, pinned, untriaged), and the arrangement —
+order, grouping, pinned first — which is the library's (`devnotes.notes.arrangement`, the
+reference's JSON). All of them are parameters of the one `QueryCell`, so a search typed faster
+than the core answers asks once, and a stale answer is dropped. The search shows the count once
+something is filtered, zero included, and its cross empties the field alone; `Ctrl+K` is the
+notes area's key (`keys::NOTES`). The List/Board switch keeps the board disabled until the board
+is ported. Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
+embedded face has them.
+
+The facets (`notes::header::facets`) are the kind, priority, tag and format rails under the
+header, with the way out of them: shown while their toggle (`facets-toggle`) asks, and held open
+while a chip is pressed — a filter nobody can see is a filter nobody can undo. The chips are
+`NotesQueryState`'s `Facets`, parameters of the same `QueryCell`; the counts are the space's,
+from the core, so pressing one zeroes no other. Escape clears the search and the rails together,
+as « clear the filters » does.
+
+The tag rail's « Manage » opens the tag manager (`notes::overlays::tag_manager`,
+`state::tags::TagsState`): the library's tags from `list_tags`, ticked, then renamed — a merge
+when several are ticked or the name exists — or deleted. Nothing runs before the core has counted
+the notes it touches (`count_notes_tagged`, each note once), and the confirmation takes the
+actions' place: the click that asked is where a second one would land. A write bumps the revision
+and reads the tags again.
+
+Copying a note with `{{fields}}` — its card's ⚡ (`note-card-fill`, in place of the copy) or `C` —
+reads it whole and opens the fields form (`notes::overlays::placeholder_form`,
+`state::placeholder_fill`) instead: one row a field, seeded with the values the note stores, each
+default a hint and never a value, the first empty field focused. « Copy filled » asks the core to
+fill (`fill_placeholders`: typed, else global, else the text's default), copies the answer and
+keeps the values (`set_placeholder_values`, which leaves `updated_at`); « copy as is » copies the
+text, tokens included; cancelled, nothing is written.
+
+The palette (`ui::palette`, `state::palette`) is drawn by the window over whichever area is
+shown, the fields form after it: `Ctrl+Alt+P` in the window (`keys::APPLICATION`), or
+`devnotes --action palette` from a second launch, which hands the action over the profile's
+socket — the path the global shortcut takes in P9, with the hidden window and the desktop
+notification after a copy. It asks the core for the notes of every space, ranked
+(`ranked: true`), through a `QueryCell` of its own: the canvas's search must not change behind
+it. What is typed is read as a mode — `@` a scope or a space, `#` a tag, `>` a command — and a
+chosen chip narrows the search. The focus never leaves the field: the arrows, Tab, Enter and
+Backspace are taken from the input before the field reads them, and move a highlight. Requests and
+tools join with their areas; `> New folder` asks for the name in a prompt of its own
+(`notes::overlays::folder_prompt`).
+
+The header is one row while every control holds in it and two on purpose past that
+(`notes::header::layout`): the reference's floors decide, not the widths drawn, which differ
+between one row and two. What does not narrow is measured as drawn, the same in either layout;
+the search gives way first, then the switchers' names. ⚠️ The central panel has no margin of its
+own, as the reference: egui's 8 px cost the header its one row at the window's default width.
+
+Until phase 4's editors, a card's click surface (`note-card-open`, a layer under its controls)
+opens a stand-in editor (`notes::editor`, `state::editor`): the note read whole by id
+(`get_note`), its title and body as plain text — a list one task a line, `[x] ` before a done
+one; a Dessin's title only — written when a field is left and when it closes. It is a
+development tool, and goes with phase 4 (D4). « + New note » (or its kind menu, the ghost card,
+the global shortcut) opens it on a draft that has no id: nothing is written until a field left
+carries a title or a body, then the note is created once — what is left while that creation is
+in flight waits for its id and is sent after — in the space shown (the first one for « all
+spaces ») and the folder shown.
+
+Under the pointer a card shows its pill over its bottom edge (`canvas::card::actions`): copy (the
+note read whole by id, then onto the clipboard and said) and the ⋯ of its menu — open, pin,
+priority › (a sub-menu of its own, egui keeping one popup in memory), copy, duplicate (opened in
+the editor under « (copy) »), file into a folder of its space, move to another space, delete in
+two clicks. ⚠️ The pill is drawn in the card's layer, after its click surface: in an area above
+it, clicks went through to the card.
+
+The canvas's keys are one table (`canvas::shortcuts::CANVAS`), read by `keys::dispatch` after the
+focused widget, above the application's and below the notes area's, and never while a text field
+has the focus — ⚠️ known by its asking for the IME, not by `egui_wants_keyboard_input`, which is
+true for a focused button too. They read the character: `Ctrl+N` and `Ctrl+Shift+N/L/M/D` make a
+draft of each kind, the arrows move the focus, `C` copies, `P` pins, `0`…`4` set a priority,
+`Delete` arms the card (its footer says how to finish or back out) and a second one trashes it,
+Escape steps back — what is armed, then the search, then up a folder. Enter is the card button's
+own. The focus is egui's, on the card's button, which keeps the arrows and Escape from egui's own
+focus moves; where the arrows go is `canvas::grid::neighbour`, read from the core's sections and
+the column count last laid out, not from what is drawn, and a card asked to take the focus is
+scrolled to first.
+
+Several notes are ticked at once (`state::selection`): `Ctrl`-click or the card's box toggles one,
+`Shift`-click ticks from the card that had the focus the frame before (a click focuses what it
+clicks) to this one, `X` toggles the focused card. While any is ticked, the selection bar floats
+over the canvas, never in its flow: the count, then commands — move to a space, file into a
+folder or out of every one, a priority, a tag added or removed, pin or unpin, delete in two
+clicks. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
+the selection go after disarming and before the search. ⚠️ The card's box is allocated on every
+frame, shown or not: a widget that comes and goes moved the ids of every widget after it, and the
+⋯ lost its menu.
+
+Every write of the card, the keys and the selection bar answers what it changed as an
+`api::undo::Reversible` — the core's own answer, as on the front — and `state::undo::UndoState`
+records the last one: the undo bar (`notes::undo_bar`) offers it for `UNDO_WINDOW`, on egui's
+clock and redrawn when it runs out; `Ctrl+Z` (in `CANVAS`) reads the record after the bar is
+gone; Escape takes it back only while the bar is up, after disarming and before the selection.
+The bar is an `Order::Tooltip` area, above the editor's modal. `Ctrl+Z` is never both histories:
+the canvas's keys stand aside while a field is typed into or the editor is open, and the field
+keeps its own.
+
+The trash panel (`notes::overlays::trash_panel`, opened by `trash-open` in the header) reads
+`state::trash::TrashState`, loaded when it opens and searched after the canvas's 150 ms pause; each
+restore, purge or emptying bumps the revision and reloads it. Its rows are all as tall — each line
+cut at its rows — so the list draws only those in view, and the list is as tall from its first
+frame as it will be: grown from the last frame's content, the modal crept up the screen and a
+click landed where it had been. While it is open, the canvas's keys stand aside as for the editor.
+
+The rail can be put away (`library-rail-toggle`, the application setting `showLibraryRail`): the
+space and folder switchers then take its place in the header, their rows' ⋯ opening the same
+panels as the rail (`notes::panel`, shared). While a folder is open, its breadcrumb replaces
+them — back to its space, the folders above it, its name, its panel.
+
+The library rail (`notes::sidebar`) is drawn left of the canvas, as wide as the application setting
+`libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds both
+lists — every space's folders, since the rail draws the whole library — asked again with the
+revision, and the space and folder chosen, remembered in the library's preferences
+(`activeSpace`, `activeFolder`). An id no space or folder answers to any more reads as « every
+space » or « every folder »: a space deleted elsewhere hides no note. `sidebar::tree` flattens
+the library into rows; what nests in what is `folders::model::Lineage`'s, siblings ordered by
+`view::fold` of their name. A row's ⋯ opens its panel under it, one at a time: a space is
+pinned, renamed (written when the field is left, or on Enter), and deleted in two steps with a
+refuge chosen and what moves counted by the core first; a folder is recoloured, renamed, given a
+sub-folder, and deleted, what it held going up a level. The rail's folder moves (drag and
+`Alt`+arrows) come with the board.
+
+A drawing's picture is never in the list: the card asks for it by `Stamp` (id and `updated_at`, so
+a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
+reads it on the db queue, decodes the PNG on the compute queue, uploads it once and keeps the last
+256; it is library content, so it lives in `LibraryCaches` and goes with the library scope.
 
 ## IPC boundary (Angular ↔ Rust)
 

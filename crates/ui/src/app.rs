@@ -16,7 +16,7 @@ use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::state::Area;
 use crate::theme;
-use crate::{banners, gate, keys, titlebar};
+use crate::{banners, gate, keys, notes, titlebar};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -185,24 +185,58 @@ impl eframe::App for DevNotesApp {
                     }
                 });
         }
-        egui::CentralPanel::default().show(ui, |ui| {
-            if self.state.gate.is_open() {
-                area_shell(ui, self.state.settings.area);
-            } else {
-                let mut asked = Vec::new();
-                gate::show(
-                    ui,
-                    &self.state.gate,
-                    &mut self.state.gate_view,
-                    language,
-                    &mut asked,
-                );
-                for action in asked {
-                    actions.push(Action::Gate(action));
+        // Flush with the window, as the reference: egui's 8 px margin cost the header its one row.
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
+            .show(ui, |ui| {
+                if self.state.gate.is_open() {
+                    match self.state.settings.area {
+                        Area::Notes => {
+                            let mut view = std::mem::take(&mut self.state.notes_view);
+                            notes::show(ui, &self.state, &mut view, &mut actions);
+                            self.state.notes_view = view;
+                        }
+                        area => area_shell(ui, area),
+                    }
+                } else {
+                    let mut asked = Vec::new();
+                    gate::show(
+                        ui,
+                        &self.state.gate,
+                        &mut self.state.gate_view,
+                        language,
+                        &mut asked,
+                    );
+                    for action in asked {
+                        actions.push(Action::Gate(action));
+                    }
                 }
-            }
-        });
-        if let Some(action) = keys::dispatch(ui.ctx(), &[&keys::APPLICATION]) {
+            });
+        if self.state.gate.is_open() {
+            let mut palette = std::mem::take(&mut self.state.palette_view);
+            crate::palette::show(ui.ctx(), &self.state, &mut palette, &mut actions);
+            self.state.palette_view = palette;
+            // Over the palette as over the canvas: drawn after both.
+            let mut view = std::mem::take(&mut self.state.notes_view);
+            notes::fill_form(ui, &self.state, &mut view, &mut actions);
+            self.state.notes_view = view;
+        }
+        let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
+        // A modal over the canvas takes its keys: the canvas's stand aside.
+        let levels: &[&[keys::Binding]] = if self.state.palette.is_open() {
+            &[&keys::APPLICATION]
+        } else if notes_shown && !self.state.modal_open() {
+            &[
+                &keys::NOTES,
+                &notes::canvas::shortcuts::CANVAS,
+                &keys::APPLICATION,
+            ]
+        } else if notes_shown {
+            &[&keys::NOTES, &keys::APPLICATION]
+        } else {
+            &[&keys::APPLICATION]
+        };
+        if let Some(action) = keys::dispatch(ui.ctx(), levels) {
             actions.push(action);
         }
         for action in actions.drain() {
@@ -408,6 +442,64 @@ mod tests {
 
         assert!(present(&harness, "theme-toggle"));
         assert!(!present(&harness, "area-switch"));
+    }
+
+    fn count(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> usize {
+        use egui_kittest::kittest::Queryable;
+        harness
+            .query_all_by(|node| node.author_id() == Some(author_id))
+            .count()
+    }
+
+    fn seeded_mark(harness: &Harness<'_, DevNotesApp>) -> Option<String> {
+        let directory = engine::db::run_here(
+            harness.state().backend().engine(),
+            engine::libraries::open_library_directory,
+        )
+        .unwrap();
+        let file = directory.join(engine::layout::PREFERENCES);
+        Preferences::read(&file)
+            .get(crate::services::samples::SEEDED_KEY)
+            .map(str::to_owned)
+    }
+
+    #[test]
+    fn a_new_library_opens_on_its_samples_seeded_once() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+
+        assert_eq!(count(&harness, "note-card"), 6);
+        // The list is left out of the folders on purpose.
+        assert_eq!(count(&harness, "note-card-folder"), 5);
+        assert_eq!(seeded_mark(&harness).as_deref(), Some("true"));
+
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        app.state.reset_library_scope(&ctx, &app.backend);
+        settle(&mut harness);
+
+        assert_eq!(count(&harness, "note-card"), 6);
+    }
+
+    #[test]
+    fn the_mark_lost_does_not_seed_a_library_that_has_a_space() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let file = engine::db::run_here(
+            harness.state().backend().engine(),
+            engine::libraries::open_library_directory,
+        )
+        .unwrap()
+        .join(engine::layout::PREFERENCES);
+        std::fs::remove_file(file).unwrap();
+
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        app.state.reset_library_scope(&ctx, &app.backend);
+        settle(&mut harness);
+
+        assert_eq!(count(&harness, "note-card"), 6);
+        assert_eq!(seeded_mark(&harness).as_deref(), Some("skipped"));
     }
 
     #[test]

@@ -21,7 +21,7 @@ pub enum Read {
     Character,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Binding {
     pub key: Key,
     pub modifiers: Modifiers,
@@ -32,11 +32,28 @@ pub struct Binding {
 }
 
 /// Every area's key, `Ctrl` and its rank in the switch, read by position.
-pub const APPLICATION: [Binding; 3] = [
+pub static APPLICATION: [Binding; 4] = [
     area(Key::Num1, Area::Notes),
     area(Key::Num2, Area::Tools),
     area(Key::Num3, Area::Http),
+    // The window's own: the global shortcut, from another application, joins in P9.
+    Binding {
+        key: Key::P,
+        modifiers: Modifiers::COMMAND.plus(Modifiers::ALT),
+        read: Read::Position,
+        while_typing: true,
+        action: Action::Global(crate::action::GlobalAction::PaletteHere),
+    },
 ];
+
+/// The notes area's, read while it is on screen.
+pub static NOTES: [Binding; 1] = [Binding {
+    key: Key::K,
+    modifiers: Modifiers::COMMAND,
+    read: Read::Character,
+    while_typing: true,
+    action: Action::Notes(crate::notes::Action::FocusSearch),
+}];
 
 const fn area(key: Key, area: Area) -> Binding {
     Binding {
@@ -54,7 +71,8 @@ pub fn dispatch(ctx: &Context, levels: &[&[Binding]]) -> Option<Action> {
     if composing(ctx) {
         return None;
     }
-    let typing = ctx.egui_wants_keyboard_input();
+    // A text field asks for the IME while it has the focus; a focused button asks for nothing.
+    let typing = ctx.output(|output| output.ime.is_some());
     ctx.input_mut(|input| {
         let (at, action) = input.events.iter().enumerate().find_map(|(at, event)| {
             let Event::Key {
@@ -78,7 +96,7 @@ pub fn dispatch(ctx: &Context, levels: &[&[Binding]]) -> Option<Action> {
                     };
                     pressed == binding.key && modifiers.matches_exact(binding.modifiers)
                 })
-                .map(|binding| (at, binding.action))
+                .map(|binding| (at, binding.action.clone()))
         })?;
         input.events.remove(at);
         Some(action)
@@ -153,7 +171,7 @@ mod tests {
                 } else {
                     vec![&area, &APPLICATION]
                 };
-                frame.heard = frame.heard.or(dispatch(ui.ctx(), &levels));
+                frame.heard = frame.heard.take().or(dispatch(ui.ctx(), &levels));
             },
             Frame {
                 events: Vec::new(),
@@ -165,7 +183,7 @@ mod tests {
         harness.run();
         harness.state_mut().events = events;
         harness.step();
-        harness.state().heard
+        harness.state().heard.clone()
     }
 
     #[test]

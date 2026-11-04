@@ -1,19 +1,32 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
+pub mod drawing_pictures;
+pub mod editor;
+pub mod notes;
+pub mod notes_query;
+pub mod palette;
+pub mod placeholder_fill;
 mod query;
+pub mod selection;
+pub mod spaces;
+pub mod tags;
+pub mod trash;
+pub mod undo;
 
 pub use query::QueryCell;
 
 use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
-use crate::gate::{Gate, GateView};
+use crate::gate::{Gate, GateView, IndexFill};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
+use crate::services::samples;
 use crate::services::settings::Settings;
 use crate::services::status::StatusNotifier;
 use crate::services::time::{Clock, SystemClock};
 use crate::theme;
+use notes_query::NotesQueryState;
 
 /// Bumped after every write the interface adopts: the queries that read notes carry it among
 /// their parameters, so the list and the board ask again together. Writes are not optimistic:
@@ -31,7 +44,9 @@ impl Revision {
 /// they: one field, emptied when another library opens (D17). Not wiped byte by byte; the
 /// threat model says so.
 #[derive(Default)]
-pub struct LibraryCaches {}
+pub struct LibraryCaches {
+    pub thumbnails: drawing_pictures::Thumbnails,
+}
 
 /// The three areas, in the switch's order, which is also the order of their keys.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -56,7 +71,22 @@ pub struct AppState {
     /// The open library's file (`devnotes.notes.*`), read again each time one opens.
     pub library_preferences: Preferences,
     library_preferences_read: Option<Pending<Preferences>>,
+    /// The first launch's samples, being written; nothing reads notes meanwhile.
+    seeding: Option<Pending<bool>>,
     pub revision: Revision,
+    pub notes_query: NotesQueryState,
+    pub spaces: spaces::SpacesState,
+    /// The area's view: only its drawing reads it (D13).
+    pub notes_view: crate::notes::View,
+    pub notes: notes::NotesState,
+    pub editor: editor::EditorState,
+    pub selection: selection::SelectionState,
+    pub undo: undo::UndoState,
+    pub trash: trash::TrashState,
+    pub tags: tags::TagsState,
+    pub fill: placeholder_fill::FillState,
+    pub palette: palette::PaletteState,
+    pub palette_view: crate::palette::PaletteView,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
     pub errors: ErrorNotifier,
@@ -76,7 +106,20 @@ impl AppState {
             preferences,
             library_preferences: Preferences::default(),
             library_preferences_read: None,
+            seeding: None,
             revision: Revision::default(),
+            notes_query: NotesQueryState::default(),
+            spaces: spaces::SpacesState::default(),
+            notes_view: crate::notes::View::default(),
+            notes: notes::NotesState::default(),
+            editor: editor::EditorState::default(),
+            selection: selection::SelectionState::default(),
+            undo: undo::UndoState::default(),
+            trash: trash::TrashState::default(),
+            tags: tags::TagsState::default(),
+            fill: placeholder_fill::FillState::default(),
+            palette: palette::PaletteState::default(),
+            palette_view: crate::palette::PaletteView::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
             errors: ErrorNotifier::default(),
@@ -93,16 +136,113 @@ impl AppState {
         {
             self.reset_library_scope(ctx, backend);
         }
-        if let Some(pending) = &mut self.library_preferences_read
-            && let Some(answer) = pending.poll()
+        self.adopt_library_preferences(backend);
+        self.adopt_seeding(backend);
+        if self.gate.is_open() && self.library_preferences_read.is_none() && self.seeding.is_none()
         {
-            self.library_preferences_read = None;
-            match answer {
-                Ok(preferences) => self.library_preferences = preferences,
-                Err(error) => self
-                    .errors
-                    .report(i18n::keys::errors::LIBRARY_ACTION_FAILED, &error),
+            self.update_library(ctx, backend, self.gate.index);
+        }
+    }
+
+    /// What reads the open library, once its preferences are in and its samples seeded.
+    pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
+        let answered = self.notes.update(&mut self.revision, &mut self.errors);
+        if let Some(id) = answered.open {
+            self.editor.open(backend, id);
+        }
+        for note in answered.copied {
+            self.copied(ctx, note);
+        }
+        let time = ctx.input(|input| input.time);
+        for done in answered.done {
+            self.undo.record(done, time);
+        }
+        self.undo.update(&mut self.revision, &mut self.errors);
+        self.trash
+            .update(ctx, backend, &mut self.revision, &mut self.errors);
+        self.tags
+            .update(backend, &mut self.revision, &mut self.errors);
+        let filled = self.fill.update(&mut self.revision, &mut self.errors);
+        for (text, said) in filled.copied {
+            self.copy_out(ctx, text, said);
+        }
+        let pinned_first = self.notes_query.arrangement().pinned_first;
+        self.palette.update(
+            ctx,
+            backend,
+            (self.clock.now(), pinned_first, self.revision),
+        );
+        self.editor
+            .update(backend, &mut self.revision, &mut self.errors);
+        self.caches.thumbnails.update(ctx, backend);
+        if self
+            .spaces
+            .update(backend, &mut self.revision, &mut self.errors)
+        {
+            self.remember_place(backend);
+        }
+        let now = self.clock.now();
+        let place = (self.spaces.active_space(), self.spaces.active_folder());
+        self.notes_query
+            .update(ctx, backend, now, place, (self.revision, index));
+    }
+
+    /// The space and the folder shown, into the library's preferences: the next launch opens
+    /// on them.
+    fn remember_place(&mut self, backend: &Backend) {
+        self.spaces.remember(&mut self.library_preferences);
+        drop(api::preferences::write_library(
+            backend,
+            self.library_preferences.clone(),
+        ));
+    }
+
+    /// The open library's preferences; a library that was never seeded is seeded now.
+    fn adopt_library_preferences(&mut self, backend: &Backend) {
+        let Some(answer) = self
+            .library_preferences_read
+            .as_mut()
+            .and_then(Pending::poll)
+        else {
+            return;
+        };
+        self.library_preferences_read = None;
+        match answer {
+            Ok(preferences) => {
+                if preferences.get(samples::SEEDED_KEY).is_none() {
+                    let samples = samples::samples(self.language, self.clock.now());
+                    self.seeding = Some(api::notes::seed_samples(backend, samples));
+                }
+                self.spaces.restore(&preferences);
+                self.notes_query.restore(&preferences);
+                self.library_preferences = preferences;
             }
+            Err(error) => self
+                .errors
+                .report(i18n::keys::errors::LIBRARY_ACTION_FAILED, &error),
+        }
+    }
+
+    /// ⚠️ The mark is written after the samples, never before: a seeding cut short rolls back
+    /// whole, and the next open finds neither the mark nor a space, and seeds again.
+    fn adopt_seeding(&mut self, backend: &Backend) {
+        let Some(answer) = self.seeding.as_mut().and_then(Pending::poll) else {
+            return;
+        };
+        self.seeding = None;
+        match answer {
+            Ok(seeded) => {
+                let mark = if seeded { "true" } else { "skipped" };
+                self.library_preferences.set(samples::SEEDED_KEY, mark);
+                drop(api::preferences::write_library(
+                    backend,
+                    self.library_preferences.clone(),
+                ));
+                self.revision.bump();
+            }
+            // Silent: the canvas says its own failures, and samples nobody asked for are not
+            // worth a banner.
+            Err(error) => log::warn!("The samples were not seeded: {:?}", error.code),
         }
     }
 
@@ -120,18 +260,436 @@ impl AppState {
             }
             Action::App(AppAction::DismissError) => self.errors.dismiss(),
             Action::App(AppAction::DismissStatus) => self.status.dismiss(),
+            Action::App(AppAction::ToggleRail) => {
+                self.settings.rail_shown = !self.settings.rail_shown;
+                self.save_settings(backend);
+            }
+            Action::App(AppAction::SetRailWidth(width)) => {
+                self.settings.rail_width = width;
+                self.save_settings(backend);
+            }
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
+            Action::Notes(action) => self.apply_notes(action, ctx, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
-            // The capture, the new note and the palette arrive with the notes area.
-            Action::Global(
-                GlobalAction::Capture
-                | GlobalAction::NewNote
-                | GlobalAction::Palette
-                | GlobalAction::PaletteHere,
-            ) => {}
+            Action::Global(GlobalAction::NewNote) => self.new_note(None),
+            // Not before a library is open: there is nothing to search.
+            Action::Global(global @ (GlobalAction::Palette | GlobalAction::PaletteHere)) => {
+                if self.gate.is_open() {
+                    self.palette.open(backend, global == GlobalAction::Palette);
+                }
+            }
+            Action::Palette(asked) => self.apply_palette(asked, ctx, backend),
+            // The capture arrives with its own phase.
+            Action::Global(GlobalAction::Capture) => {}
         }
+    }
+
+    /// The spaces and the folders: chosen, made, renamed, deleted.
+    fn apply_place(&mut self, action: crate::notes::Action, backend: &Backend) {
+        use crate::notes::Action as Notes;
+        match action {
+            Notes::ChooseSpace(id) => {
+                self.spaces.choose_space(id);
+                self.remember_place(backend);
+            }
+            Notes::ChooseFolder(id) => {
+                self.spaces.choose_folder(&id);
+                self.remember_place(backend);
+            }
+            Notes::CountSpace(id) => self.spaces.count(id),
+            Notes::CreateSpace(name) => self.spaces.create_space(backend, &name),
+            Notes::RenameSpace { id, name } => {
+                self.spaces.rename_space(backend, id, &name);
+            }
+            Notes::PinSpace { id, pinned } => {
+                self.spaces.pin_space(backend, id, pinned);
+            }
+            Notes::DeleteSpace { id, refuge } => {
+                self.spaces.delete_space(backend, id, refuge);
+            }
+            Notes::CreateFolder {
+                space_id,
+                parent_id,
+                name,
+            } => self
+                .spaces
+                .create_folder(backend, space_id, parent_id, &name),
+            Notes::RenameFolder { id, name } => {
+                self.spaces.rename_folder(backend, id, &name);
+            }
+            Notes::RecolourFolder { id, colour } => {
+                self.spaces.recolour_folder(backend, id, colour);
+            }
+            Notes::DeleteFolder(id) => self.spaces.delete_folder(backend, id),
+            _ => {}
+        }
+    }
+
+    /// What opens over the canvas: the undo bar, the trash, the tag manager.
+    fn apply_overlay(
+        &mut self,
+        action: crate::notes::Action,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::Action as Notes;
+        match action {
+            Notes::Undo => {
+                self.undo.revert(backend);
+            }
+            Notes::DismissUndo => self.undo.dismiss(),
+            Notes::DismissFolderName => self.spaces.dismiss_naming(),
+            Notes::Tags(asked) => self.tags.apply(asked, backend),
+            Notes::Fill(asked) => {
+                if asked == crate::notes::Fill::Cancel {
+                    self.palette.copied();
+                }
+                if let Some((text, said)) = self.fill.apply(asked, backend) {
+                    self.copy_out(ctx, text, said);
+                }
+            }
+            Notes::Trash(asked) => {
+                self.trash
+                    .apply(asked, backend, ctx.input(|input| input.time));
+            }
+            _ => {}
+        }
+    }
+
+    fn apply_notes(
+        &mut self,
+        action: crate::notes::Action,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::Action as Notes;
+        match action {
+            Notes::Reload => self.revision.bump(),
+            Notes::SetItems { id, items } => {
+                self.notes.set_items(backend, id, items);
+            }
+            Notes::Thumbnail(stamp) => self.caches.thumbnails.ask(backend, stamp),
+            place @ (Notes::ChooseSpace(_)
+            | Notes::ChooseFolder(_)
+            | Notes::CountSpace(_)
+            | Notes::CreateSpace(_)
+            | Notes::RenameSpace { .. }
+            | Notes::PinSpace { .. }
+            | Notes::DeleteSpace { .. }
+            | Notes::CreateFolder { .. }
+            | Notes::RenameFolder { .. }
+            | Notes::RecolourFolder { .. }
+            | Notes::DeleteFolder(_)) => self.apply_place(place, backend),
+            Notes::Search(typed) => self.notes_query.type_search(ctx, typed),
+            Notes::ClearSearch => self.notes_query.clear_search(),
+            Notes::SetFilter(filter) => self.notes_query.set_filter(filter),
+            Notes::Arrange(arrangement) => {
+                self.notes_query.arrange(arrangement);
+                arrangement.write(&mut self.library_preferences);
+                drop(api::preferences::write_library(
+                    backend,
+                    self.library_preferences.clone(),
+                ));
+            }
+            Notes::OpenNote(id) => self.editor.open(backend, id),
+            Notes::SaveNote {
+                session,
+                title,
+                body,
+            } => self.editor.save(backend, session, title, body),
+            Notes::NewNote(kind) => self.new_note(kind),
+            Notes::Pin { id, pinned } => {
+                self.notes.pin(backend, vec![id], pinned);
+            }
+            Notes::Prioritise { id, priority } => {
+                self.notes.prioritise(backend, vec![id], priority);
+            }
+            Notes::File { id, folder } => {
+                self.notes.file(backend, vec![id], folder);
+            }
+            Notes::MoveTo { id, space } => {
+                self.notes.move_to(backend, vec![id], space);
+            }
+            Notes::Delete(id) => self.notes.delete(backend, vec![id]),
+            Notes::Check(id) => self.selection.toggle(&id),
+            Notes::CheckRange { id, anchor } => {
+                let order = self.on_screen();
+                let order: Vec<&str> = order.iter().map(String::as_str).collect();
+                self.selection.check_range(&order, anchor.as_deref(), &id);
+            }
+            Notes::ClearSelection => {
+                self.selection.clear();
+            }
+            Notes::Batch(batch) => self.batch(batch, backend),
+            Notes::Facet(facet) => self.notes_query.press(facet),
+            overlay @ (Notes::Undo
+            | Notes::DismissUndo
+            | Notes::Tags(_)
+            | Notes::Fill(_)
+            | Notes::DismissFolderName
+            | Notes::Trash(_)) => {
+                self.apply_overlay(overlay, ctx, backend);
+            }
+            Notes::Duplicate { id, title } => {
+                self.notes.duplicate(backend, id, title);
+            }
+            Notes::Copy(id) => self.notes.copy(backend, id),
+            Notes::Canvas(key) => self.canvas_key(key, ctx, backend),
+            Notes::CloseNote => self.editor.close(),
+            Notes::FocusSearch => {
+                self.notes_view.focus_search = true;
+                // Taken by the next frame, which nothing else may ask for.
+                ctx.request_repaint();
+            }
+        }
+    }
+
+    /// The notes on screen, in the order they are drawn.
+    pub fn on_screen(&self) -> Vec<String> {
+        self.notes_query.view().map_or_else(Vec::new, |view| {
+            view.cards().map(|card| card.id.clone()).collect()
+        })
+    }
+
+    /// The ticked notes still on screen; nothing is asked of the core for none.
+    fn batch(&mut self, batch: crate::notes::Batch, backend: &Backend) {
+        use crate::notes::Batch;
+        let order = self.on_screen();
+        let order: Vec<&str> = order.iter().map(String::as_str).collect();
+        let ids = self.selection.checked_in(&order);
+        if ids.is_empty() {
+            return;
+        }
+        match batch {
+            Batch::MoveTo(space) => self.notes.move_to(backend, ids, space),
+            Batch::File(folder) => self.notes.file(backend, ids, folder),
+            Batch::Prioritise(priority) => self.notes.prioritise(backend, ids, priority),
+            Batch::Tag(tag) => self.notes.tag(backend, ids, tag),
+            Batch::Untag(tag) => self.notes.untag(backend, ids, tag),
+            Batch::Pin(pinned) => self.notes.pin(backend, ids, pinned),
+            Batch::Delete => {
+                self.notes.delete(backend, ids);
+                self.selection.clear();
+            }
+        }
+    }
+
+    /// A key of the canvas: the card it acts on is the one with the focus, as last drawn.
+    fn canvas_key(
+        &mut self,
+        key: crate::notes::canvas::shortcuts::CanvasKey,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::canvas::shortcuts::CanvasKey;
+        let focused = self.notes_view.canvas.focused.clone();
+        let note = focused.as_deref().and_then(|id| {
+            self.notes_query
+                .view()
+                .and_then(|view| view.cards().find(|card| card.id == id))
+        });
+        let pinned = note.map(|card| card.pinned);
+        match key {
+            CanvasKey::New(kind) => self.new_note(Some(kind)),
+            CanvasKey::Move(direction) => {
+                let Some(view) = self.notes_query.view() else {
+                    return;
+                };
+                let sections: Vec<Vec<&str>> = view
+                    .sections
+                    .iter()
+                    .map(|section| section.cards.iter().map(|card| card.id.as_str()).collect())
+                    .collect();
+                let columns = self.notes_view.canvas.columns;
+                let to = crate::notes::canvas::grid::neighbour(
+                    &sections,
+                    columns,
+                    focused.as_deref(),
+                    direction,
+                );
+                if let Some(to) = to {
+                    self.notes_view.canvas.request = Some(to.to_owned());
+                    ctx.request_repaint();
+                }
+            }
+            CanvasKey::Copy => {
+                if let Some(id) = focused {
+                    self.notes.copy(backend, id);
+                }
+            }
+            CanvasKey::Pin => {
+                if let (Some(id), Some(pinned)) = (focused, pinned) {
+                    self.notes.pin(backend, vec![id], !pinned);
+                }
+            }
+            CanvasKey::Priority(priority) => {
+                if let Some(id) = focused {
+                    self.notes.prioritise(backend, vec![id], priority);
+                }
+            }
+            CanvasKey::Check => {
+                if let Some(id) = focused {
+                    self.selection.toggle(&id);
+                }
+            }
+            CanvasKey::Trash => {
+                if let Some(id) = focused
+                    && self.selection.arm(&id)
+                {
+                    self.notes.delete(backend, vec![id]);
+                }
+            }
+            CanvasKey::Undo => {
+                self.undo.revert(backend);
+            }
+            CanvasKey::StepBack => self.step_back(ctx, backend),
+        }
+    }
+
+    /// Escape, down the ladder and one rung at a time: what is armed, what the undo bar offers
+    /// (only while it is on screen: Escape must not quietly rewrite the corpus), the selection,
+    /// the search, up
+    /// a folder — leaving is the biggest step, so it comes last.
+    fn step_back(&mut self, ctx: &egui::Context, backend: &Backend) {
+        if self.selection.disarm() {
+            return;
+        }
+        if self.undo.banner(ctx.input(|input| input.time)).is_some() {
+            self.undo.revert(backend);
+            return;
+        }
+        if self.selection.clear() {
+            return;
+        }
+        if self.notes_query.has_user_filters() {
+            self.notes_query.clear_filters();
+            return;
+        }
+        let Some(open) = self.spaces.active_folder() else {
+            return;
+        };
+        let parent = self
+            .spaces
+            .folders()
+            .iter()
+            .find(|folder| folder.id == open)
+            .map(|folder| (folder.space_id.clone(), folder.parent_id.clone()));
+        match parent {
+            Some((_, Some(parent))) => self.spaces.choose_folder(&parent),
+            Some((space, None)) => self.spaces.choose_space(Some(space)),
+            None => {}
+        }
+    }
+
+    /// What copying yields, onto the clipboard, and said: what was copied, by its title.
+    /// A note with `{{fields}}` asks for them first.
+    fn copied(&mut self, ctx: &egui::Context, note: engine::notes::model::DisplayNote) {
+        if !note.placeholders.is_empty() {
+            self.fill.open(note);
+            return;
+        }
+        let text = note
+            .copy_text
+            .clone()
+            .unwrap_or_else(|| note.content.clone());
+        self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
+    }
+
+    /// Onto the clipboard, and said; a copy asked from the palette closes it.
+    fn copy_out(&mut self, ctx: &egui::Context, text: String, said: i18n::Message) {
+        ctx.copy_text(text);
+        if self.palette.copied() {
+            self.palette.close();
+        }
+        self.status.report(said);
+    }
+
+    fn apply_palette(
+        &mut self,
+        asked: crate::palette::Asked,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::palette::Asked;
+        use crate::palette::options::Chosen;
+        match asked {
+            Asked::Type(text) => self.palette.type_text(text, ctx.input(|input| input.time)),
+            Asked::Chip(chip) => self.palette.add_chip(chip),
+            Asked::Unchip(at) => self.palette.remove_chip(at),
+            Asked::Close => self.palette.close(),
+            Asked::Copy(id) => {
+                self.palette.copying();
+                self.notes.copy(backend, id);
+            }
+            Asked::Choose(chosen) => {
+                self.palette.close();
+                let area = match chosen {
+                    Chosen::Command(crate::palette::commands::Command::Area(area)) => area,
+                    _ => Area::Notes,
+                };
+                self.apply(Action::App(AppAction::ShowArea(area)), ctx, backend);
+                self.run_chosen(chosen, backend);
+            }
+        }
+    }
+
+    fn run_chosen(&mut self, chosen: crate::palette::options::Chosen, backend: &Backend) {
+        use crate::palette::commands::Command;
+        use crate::palette::options::Chosen;
+        match chosen {
+            Chosen::Note(id) => self.editor.open(backend, id),
+            Chosen::Space(id) => {
+                self.spaces.choose_space(Some(id));
+                self.remember_place(backend);
+            }
+            Chosen::Command(Command::Create(kind)) => self.new_note(Some(kind)),
+            Chosen::Command(Command::Folder) => self.spaces.ask_name(),
+            Chosen::Command(Command::Area(_)) => {}
+            Chosen::Create(title) => {
+                if let Some(place) = self.new_place() {
+                    let kind = engine::notes::kind::NoteKind::Snippet;
+                    self.editor
+                        .draft_titled(backend, (kind, place.0, place.1), title);
+                }
+            }
+        }
+    }
+
+    /// A modal over the canvas takes its keys: the canvas's stand aside.
+    pub fn modal_open(&self) -> bool {
+        self.editor.is_open()
+            || self.trash.is_open()
+            || self.tags.is_open()
+            || self.fill.is_open()
+            || self.palette.is_open()
+            || self.spaces.naming()
+    }
+
+    /// In the space shown, or the first one for « all spaces », and the folder shown.
+    fn new_note(&mut self, kind: Option<engine::notes::kind::NoteKind>) {
+        let Some((space, folder)) = self.new_place() else {
+            return;
+        };
+        let kind = kind.unwrap_or(engine::notes::kind::NoteKind::Snippet);
+        self.editor.draft(kind, space, folder);
+    }
+
+    /// Where a new note goes: the space and folder shown, or the first space for « all »; said
+    /// when there is none.
+    fn new_place(&mut self) -> Option<(String, Option<String>)> {
+        let space = self
+            .spaces
+            .active_space()
+            .map(str::to_owned)
+            .or_else(|| self.spaces.spaces().first().map(|space| space.id.clone()));
+        let Some(space) = space else {
+            self.errors
+                .notify(i18n::Message::new(i18n::keys::errors::SPACE_REQUIRED));
+            return None;
+        };
+        Some((space, self.spaces.active_folder().map(str::to_owned)))
     }
 
     /// The settings into the application's file, through the db queue, the other keys kept.
@@ -150,7 +708,18 @@ impl AppState {
     pub fn reset_library_scope(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.library_preferences = Preferences::default();
         self.library_preferences_read = Some(api::preferences::library(backend));
+        self.seeding = None;
         self.caches = LibraryCaches::default();
+        self.notes_query = NotesQueryState::default();
+        self.spaces = spaces::SpacesState::default();
+        self.editor = editor::EditorState::default();
+        self.selection = selection::SelectionState::default();
+        self.undo = undo::UndoState::default();
+        self.trash = trash::TrashState::default();
+        self.tags = tags::TagsState::default();
+        self.fill = placeholder_fill::FillState::default();
+        self.palette = palette::PaletteState::default();
+        self.notes_view = crate::notes::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());
         self.apply_look(ctx);

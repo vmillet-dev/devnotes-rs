@@ -7,10 +7,12 @@ use crate::theme::Appearance;
 
 /// An area's own actions join as a variant of their own (`Notes`, `Http`, `Tools`) when the area
 /// is ported.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     App(AppAction),
     Gate(crate::gate::Action),
+    Notes(crate::notes::Action),
+    Palette(crate::palette::Asked),
     Global(GlobalAction),
 }
 
@@ -21,6 +23,10 @@ pub enum AppAction {
     SetAppearance(Appearance),
     DismissError,
     DismissStatus,
+    /// The library rail's width, once its edge rests.
+    SetRailWidth(u16),
+    /// The library rail shown or put away: the switchers take its place.
+    ToggleRail,
 }
 
 /// Asked from outside the window: a global shortcut, the tray, a second launch.

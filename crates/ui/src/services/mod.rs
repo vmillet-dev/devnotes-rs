@@ -2,6 +2,7 @@
 
 pub mod errors;
 pub mod preferences;
+pub mod samples;
 pub mod settings;
 pub mod status;
 pub mod time;

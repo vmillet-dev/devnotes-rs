@@ -14,12 +14,14 @@ mod release_notes;
 mod segmented;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
-pub use button::{Button, IconButton, Kind, RailToggle, SplitButton};
+pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
 pub use dialog::{DialogStack, Layer, dialog};
-pub use field::{Checkbox, SearchField, TextField};
+pub use field::{Checkbox, SearchField, Searched, TextField};
 pub use layout::{rail_frame, split_handle, tooltip};
 pub use list::{code_viewer, virtual_list};
-pub use menu::{ChoiceMenu, FILTER_FROM, MenuItem, Naming, menu};
+pub use menu::{
+    ChoiceMenu, FILTER_FROM, MenuItem, Naming, entry as menu_entry, frame as menu_frame, menu,
+};
 pub use release_notes::release_notes;
 pub use segmented::Segmented;
 
@@ -92,14 +94,65 @@ pub(crate) fn text(
     )
 }
 
+/// Words whose arrows (← ↑ → ↓, ↵ ⌫) are painted as icons: none of the embedded faces has them, and
+/// the system's are a different hand. Laid out from `left` on the line through `middle`;
+/// answers the width taken, which `at = None` measures without painting.
+pub(crate) fn arrowed(
+    ui: &Ui,
+    at: Option<egui::Pos2>,
+    words: &str,
+    size: f32,
+    ink: Color32,
+) -> f32 {
+    let mut width = 0.0;
+    let mut rest = words;
+    loop {
+        let found = rest.char_indices().find_map(|(index, glyph)| {
+            let icon = match glyph {
+                '←' => crate::theme::icons::Icon::ArrowLeft,
+                '↑' => crate::theme::icons::Icon::ArrowUp,
+                '→' => crate::theme::icons::Icon::ArrowRight,
+                '↓' => crate::theme::icons::Icon::ArrowDown,
+                '↵' => crate::theme::icons::Icon::CornerDownLeft,
+                '⌫' => crate::theme::icons::Icon::Delete,
+                _ => return None,
+            };
+            Some((index, glyph.len_utf8(), icon))
+        });
+        let piece = found.map_or(rest, |(index, _, _)| &rest[..index]);
+        if !piece.is_empty() {
+            let galley = text(ui, piece, size, 400.0, FontFamily::Proportional, ink);
+            let piece_width = galley.size().x;
+            if let Some(at) = at {
+                let top = at.y - galley.size().y / 2.0;
+                ui.painter()
+                    .galley(egui::pos2(at.x + width, top), galley, ink);
+            }
+            width += piece_width;
+        }
+        let Some((index, length, icon)) = found else {
+            return width;
+        };
+        if let Some(at) = at {
+            let glyph = egui::Rect::from_center_size(
+                egui::pos2(at.x + width + size / 2.0, at.y),
+                Vec2::splat(size),
+            );
+            crate::theme::icons::paint(ui, glyph, icon, ink);
+        }
+        width += size;
+        rest = &rest[index + length..];
+    }
+}
+
 /// How far a control is under the pointer, eased over `motion::FAST`.
-fn hovered(ui: &Ui, response: &Response) -> f32 {
+pub(crate) fn hovered(ui: &Ui, response: &Response) -> f32 {
     ui.ctx()
         .animate_bool_with_time(response.id.with("hover"), response.hovered(), motion::FAST)
 }
 
 /// A colour on its way to another, `t` from 0 to 1.
-fn towards(from: Color32, to: Color32, t: f32) -> Color32 {
+pub(crate) fn towards(from: Color32, to: Color32, t: f32) -> Color32 {
     from.lerp_to_gamma(to, t)
 }
 

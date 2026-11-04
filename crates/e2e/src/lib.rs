@@ -89,11 +89,44 @@ impl Tree {
         self.find(author_id).is_some()
     }
 
+    pub fn count(&self, author_id: &str) -> usize {
+        self.all(author_id).len()
+    }
+
+    /// Every node wearing `author_id`, in reading order: top to bottom, then left to right.
+    pub fn all(&self, author_id: &str) -> Vec<&Node> {
+        let mut found: Vec<&Node> = self
+            .nodes
+            .iter()
+            .map(|(_, node)| node)
+            .filter(|node| node.author_id() == Some(author_id))
+            .collect();
+        // The tree is in no order of its own.
+        found.sort_by(|a, b| top(a).total_cmp(&top(b)).then(left(a).total_cmp(&left(b))));
+        found
+    }
+
+    /// What each of them says, as [`Self::text`] does.
+    pub fn texts(&self, author_id: &str) -> Vec<String> {
+        self.all(author_id)
+            .into_iter()
+            .map(|node| node.label().or(node.value()).unwrap_or_default().to_owned())
+            .collect()
+    }
+
     /// What a node says: its name, or its value for a node that has no name.
     pub fn text(&self, author_id: &str) -> Option<String> {
         let node = self.find(author_id)?;
         node.label().or(node.value()).map(str::to_owned)
     }
+}
+
+fn top(node: &Node) -> f64 {
+    node.bounds().map_or(f64::INFINITY, |bounds| bounds.y0)
+}
+
+fn left(node: &Node) -> f64 {
+    node.bounds().map_or(f64::INFINITY, |bounds| bounds.x0)
 }
 
 /// The application, running on `profile`: a real process, a real window.
@@ -125,6 +158,24 @@ impl App {
             child,
             stream,
         }
+    }
+
+    /// A second launch on the same profile asking for `action`: it hands it to this one and
+    /// exits, as the global shortcut's will.
+    pub fn act(&mut self, action: &str) {
+        let status = Command::new(binary())
+            .arg("--profile")
+            .arg(&self.profile)
+            .arg("--action")
+            .arg(action)
+            .stdout(Stdio::null())
+            .status()
+            .expect("the second launch runs");
+        assert!(
+            status.success(),
+            "the second launch could not hand over {action}"
+        );
+        self.ask(&Request::Settle { max_steps: 10 });
     }
 
     /// Closes the window as `Quit` does, waits for the process to end, and launches it again on
@@ -195,10 +246,20 @@ impl App {
 
     /// Clicks the middle of a control, once it is shown.
     pub fn click(&mut self, author_id: &str) {
-        self.wait_for(author_id);
+        self.click_where(author_id, |_| true);
+    }
+
+    /// Clicks the first `author_id` that `which` picks, once it is shown: a row of a list, by
+    /// what the user named it.
+    pub fn click_where(&mut self, author_id: &str, which: impl Fn(&Node) -> bool) {
+        self.eventually(&format!("{author_id} is shown"), |tree| {
+            tree.all(author_id).into_iter().any(&which)
+        });
         let bounds = self
             .tree()
-            .find(author_id)
+            .all(author_id)
+            .into_iter()
+            .find(|node| which(node))
             .and_then(Node::bounds)
             .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
         #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
@@ -215,6 +276,107 @@ impl App {
         self.apply(vec![Event::PointerMoved(pos)]);
         self.apply(vec![button(true)]);
         self.apply(vec![button(false)]);
+    }
+
+    /// The pointer over the first `author_id` in reading order, once it is shown: what a card
+    /// shows on hover.
+    pub fn hover(&mut self, author_id: &str) {
+        self.hover_nth(author_id, 0);
+    }
+
+    /// The pointer over the `n`th `author_id` in reading order, counting from 0.
+    pub fn hover_nth(&mut self, author_id: &str, n: usize) {
+        self.eventually(&format!("{author_id} #{n} is shown"), |tree| {
+            tree.count(author_id) > n
+        });
+        let tree = self.tree();
+        let bounds = tree
+            .all(author_id)
+            .get(n)
+            .and_then(|node| node.bounds())
+            .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let pos = Pos2::new(
+            f64::midpoint(bounds.x0, bounds.x1) as f32,
+            f64::midpoint(bounds.y0, bounds.y1) as f32,
+        );
+        self.apply(vec![Event::PointerMoved(pos)]);
+    }
+
+    /// Clicks the `n`th `author_id` from the top, counting from 0: a choice among several whose
+    /// words are the system's language.
+    pub fn click_nth(&mut self, author_id: &str, n: usize) {
+        self.eventually(&format!("{author_id} #{n} is shown"), |tree| {
+            tree.count(author_id) > n
+        });
+        let tree = self.tree();
+        let target = tree.all(author_id)[n];
+        let label = target.label().map(str::to_owned);
+        let at = top(target);
+        self.click_where(author_id, |node| {
+            node.label().map(str::to_owned) == label && (top(node) - at).abs() < 0.5
+        });
+    }
+
+    /// Through the gate of a blank profile: the phrase twice, and the library opens.
+    pub fn create_library(&mut self) {
+        self.fill("vault-passphrase", PASSPHRASE);
+        self.fill("vault-confirmation", PASSPHRASE);
+        self.click("vault-submit");
+        self.wait_for("area-notes");
+    }
+
+    /// Scrolls `within` down until `author_id` is drawn: a list draws only what is in view.
+    pub fn scroll_to(&mut self, within: &str, author_id: &str) {
+        self.wait_for(within);
+        for _ in 0..40 {
+            if self.has(author_id) {
+                return;
+            }
+            let Some(bounds) = self.tree().find(within).and_then(Node::bounds) else {
+                break;
+            };
+            #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+            let pos = Pos2::new(
+                f64::midpoint(bounds.x0, bounds.x1) as f32,
+                f64::midpoint(bounds.y0, bounds.y1) as f32,
+            );
+            self.apply(vec![
+                Event::PointerMoved(pos),
+                Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    delta: egui::vec2(0.0, -240.0),
+                    phase: egui::TouchPhase::Move,
+                    source: egui::MouseWheelSource::Wheel,
+                    modifiers: Modifiers::NONE,
+                },
+            ]);
+        }
+        self.wait_for(author_id);
+    }
+
+    /// Back to the top of `within`: rows out of view are not drawn, so not counted.
+    pub fn scroll_top(&mut self, within: &str) {
+        self.wait_for(within);
+        let Some(bounds) = self.tree().find(within).and_then(Node::bounds) else {
+            return;
+        };
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let pos = Pos2::new(
+            f64::midpoint(bounds.x0, bounds.x1) as f32,
+            f64::midpoint(bounds.y0, bounds.y1) as f32,
+        );
+        self.apply(vec![
+            Event::PointerMoved(pos),
+            Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta: egui::vec2(0.0, 100_000.0),
+                phase: egui::TouchPhase::Move,
+                source: egui::MouseWheelSource::Wheel,
+                modifiers: Modifiers::NONE,
+            },
+        ]);
+        self.ask(&Request::Settle { max_steps: 10 });
     }
 
     /// Types into the control that has the focus.
@@ -239,6 +401,12 @@ impl App {
         };
         self.apply(vec![event(true)]);
         self.apply(vec![event(false)]);
+    }
+
+    /// The window's inside, in points.
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.ask(&Request::Resize { width, height });
+        self.ask(&Request::Settle { max_steps: 10 });
     }
 
     /// The window as it stands, as `<output>/<scenario>/<name>.png`.

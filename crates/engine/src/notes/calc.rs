@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use eval::{Context, Notation, Parser, Quantity, Shown, Value};
 use lexer::{Tok, Token};
@@ -20,7 +20,7 @@ use units::{Css, Dim, Dimension, UnitId};
 use words::CalcWord;
 
 /// One unit, or one over another: `€/h`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalcUnit {
     pub unit: UnitId,
@@ -28,7 +28,7 @@ pub struct CalcUnit {
 }
 
 /// Exact decimals as text: a float would round them before the front decides how to.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -74,7 +74,7 @@ pub enum CalcValue {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpanPart {
     pub value: String,

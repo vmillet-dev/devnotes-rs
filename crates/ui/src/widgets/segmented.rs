@@ -19,6 +19,22 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
         Self { options, author_id }
     }
 
+    /// How wide it will be drawn: what a row lays out before it.
+    pub fn width(&self, ui: &Ui) -> f32 {
+        let p = palette(ui.ctx());
+        self.options
+            .iter()
+            .map(|(_, label)| {
+                text(ui, label, 11.5, 400.0, FontFamily::Proportional, p.text_2)
+                    .size()
+                    .x
+                    .max(super::MIN_TARGET - 20.0)
+                    + 20.0
+            })
+            .sum::<f32>()
+            + 2.0
+    }
+
     /// `selected` is changed by a click on another segment; the response says so.
     pub fn show(self, ui: &mut Ui, selected: &mut T) -> Response {
         let p = palette(ui.ctx());

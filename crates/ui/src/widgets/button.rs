@@ -79,6 +79,19 @@ impl<'a> Button<'a> {
         self
     }
 
+    /// What a button of the default size with `label` takes in a row.
+    pub fn width(ui: &Ui, label: &str) -> f32 {
+        let probe = text(
+            ui,
+            label,
+            12.0,
+            400.0,
+            FontFamily::Proportional,
+            Color32::WHITE,
+        );
+        (probe.size().x + 24.0).max(super::MIN_TARGET)
+    }
+
     pub fn show(self, ui: &mut Ui) -> Response {
         let (size, weight, padding, corner) = match (self.large, self.kind) {
             (true, _) => (14.0, 600.0, Vec2::splat(10.0), 8),
@@ -264,19 +277,28 @@ impl<'a> SplitButton<'a> {
 }
 
 /// The 32 px square that hides and shows a rail; amber while the rail is out.
-pub struct RailToggle<'a> {
+pub struct SquareButton<'a> {
+    icon: Icon,
     label: &'a str,
     author_id: &'a str,
     open: bool,
 }
 
-impl<'a> RailToggle<'a> {
-    pub fn new(label: &'a str, author_id: &'a str, open: bool) -> Self {
+impl<'a> SquareButton<'a> {
+    pub fn new(icon: Icon, label: &'a str, author_id: &'a str) -> Self {
         Self {
+            icon,
             label,
             author_id,
-            open,
+            open: false,
         }
+    }
+
+    /// Amber while what it shows is shown.
+    #[must_use]
+    pub fn pressed(mut self, open: bool) -> Self {
+        self.open = open;
+        self
     }
 
     pub fn show(self, ui: &mut Ui) -> Response {
@@ -301,7 +323,7 @@ impl<'a> RailToggle<'a> {
             StrokeKind::Inside,
         );
         let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(16.0));
-        icons::paint(ui, glyph, Icon::Sidebar, towards(rest, p.text_0, hover));
+        icons::paint(ui, glyph, self.icon, towards(rest, p.text_0, hover));
         response
     }
 }

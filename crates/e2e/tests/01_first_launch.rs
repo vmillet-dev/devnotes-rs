@@ -38,6 +38,19 @@ fn first_launch() {
         },
     );
 
+    // Nothing compares a seeded word: the samples are in the system's language.
+    step(
+        "a new library opens on its six samples, one left out of the folders",
+        || {
+            app.eventually("the six cards are drawn", |tree| {
+                tree.count("note-card") == 6
+            });
+            assert_eq!(app.tree().count("note-card-folder"), 5);
+            assert!(!app.has("error-banner"));
+            app.capture("first-launch-samples");
+        },
+    );
+
     let mut app = app.relaunch();
 
     step("a relaunch asks for the phrase once", || {
@@ -56,11 +69,17 @@ fn first_launch() {
         app.capture("gate-wrong");
     });
 
-    step("the phrase chosen opens the library", || {
-        app.fill("vault-passphrase", PASSPHRASE);
-        app.click("vault-submit");
-        app.wait_for("area-notes");
-    });
+    step(
+        "the phrase chosen opens the library, its samples seeded once",
+        || {
+            app.fill("vault-passphrase", PASSPHRASE);
+            app.click("vault-submit");
+            app.wait_for("area-notes");
+            app.eventually("the six cards are drawn", |tree| {
+                tree.count("note-card") == 6
+            });
+        },
+    );
 
     app.quit();
 }

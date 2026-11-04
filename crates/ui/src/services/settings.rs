@@ -26,19 +26,40 @@ impl LocaleChoice {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Settings {
     pub locale: LocaleChoice,
     pub theme: Appearance,
     pub density: Density,
     /// The area on screen at the last exit, shown again at the next launch.
     pub area: Area,
+    /// The library rail's, in points, within `RAIL_WIDTH`.
+    pub rail_width: u16,
+    pub rail_shown: bool,
+}
+
+/// The reference's `RAIL_WIDTH`.
+pub const RAIL_WIDTH: (u16, u16) = (160, 520);
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            locale: LocaleChoice::default(),
+            theme: Appearance::default(),
+            density: Density::default(),
+            area: Area::default(),
+            rail_width: RAIL_WIDTH.0,
+            rail_shown: true,
+        }
+    }
 }
 
 const LOCALE: &str = "devnotes.locale";
 const THEME: &str = "devnotes.theme";
 const DENSITY: &str = "devnotes.density";
 const AREA: &str = "devnotes.area";
+const RAIL: &str = "devnotes.libraryRailWidth";
+const RAIL_SHOWN: &str = "devnotes.showLibraryRail";
 
 impl Settings {
     /// A value this version does not know is the default, never an error.
@@ -48,6 +69,13 @@ impl Settings {
             theme: chosen(preferences, THEME, &THEMES).unwrap_or_default(),
             density: chosen(preferences, DENSITY, &DENSITIES).unwrap_or_default(),
             area: chosen(preferences, AREA, &AREAS).unwrap_or_default(),
+            rail_width: preferences
+                .get(RAIL)
+                .and_then(|width| width.parse::<u16>().ok())
+                .map_or(RAIL_WIDTH.0, |width| {
+                    width.clamp(RAIL_WIDTH.0, RAIL_WIDTH.1)
+                }),
+            rail_shown: preferences.get(RAIL_SHOWN) != Some("false"),
         }
     }
 
@@ -57,6 +85,8 @@ impl Settings {
         preferences.set(THEME, name_of(&THEMES, self.theme));
         preferences.set(DENSITY, name_of(&DENSITIES, self.density));
         preferences.set(AREA, name_of(&AREAS, self.area));
+        preferences.set(RAIL, &self.rail_width.to_string());
+        preferences.set(RAIL_SHOWN, if self.rail_shown { "true" } else { "false" });
     }
 }
 
@@ -147,6 +177,8 @@ mod tests {
             theme: Appearance::Light,
             density: Density::Compact,
             area: Area::Http,
+            rail_width: 240,
+            rail_shown: false,
         };
 
         chosen.write(&mut preferences);
