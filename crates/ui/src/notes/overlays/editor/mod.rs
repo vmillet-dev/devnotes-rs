@@ -6,9 +6,12 @@
 mod body;
 mod checklist;
 mod code;
+mod drawing;
 mod header;
 mod revisions;
 mod search_bar;
+
+use std::sync::Arc;
 
 use egui::{Align, CornerRadius, Id, Layout, Margin, Rect, Stroke, Ui, UiBuilder, Vec2};
 use engine::notes::kind::NoteKind;
@@ -18,7 +21,7 @@ use i18n::keys;
 use crate::action::{Action, Actions};
 use crate::notes::{Action as Asked, Editing};
 use crate::state::AppState;
-use crate::state::editor::{Edit, Opened};
+use crate::state::editor::{Body, Edit, Opened};
 use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, Button, ChoiceMenu, IconButton, Kind};
@@ -38,6 +41,8 @@ pub(crate) struct EditorView {
     checklist: checklist::ChecklistView,
     /// A snippet's code, in the code editor.
     code: Option<code::CodeView>,
+    /// A Dessin's editor: its scene is no text.
+    drawing: Option<drawing::DrawingView>,
     tag: String,
     /// The title takes the focus once, as the editor opens.
     focus: bool,
@@ -55,6 +60,8 @@ impl EditorView {
             checklist: checklist::ChecklistView::of(&note.items),
             code: (note.kind == NoteKind::Snippet)
                 .then(|| code::CodeView::of(&note.content, note.language)),
+            drawing: (note.kind == NoteKind::Drawing)
+                .then(|| drawing::DrawingView::open(&note.content)),
             tag: String::new(),
             focus: true,
             confirming_delete: false,
@@ -72,7 +79,10 @@ impl EditorView {
         Edit {
             title: Some(self.title.clone()),
             source: Some(self.source.clone()),
-            body: body::body_of(note, &self.body, &self.checklist.items),
+            body: match &self.drawing {
+                Some(drawing) => drawing.body().map(Body::Content),
+                None => body::body_of(note, &self.body, &self.checklist.items),
+            },
             tags,
             ..Edit::default()
         }
@@ -132,6 +142,8 @@ pub(crate) fn show(
     let focused = ctx.output(|output| output.ime.is_some());
     ctx.data_mut(|data| data.insert_temp(typing_id, focused));
     if shown.inner || dismissed {
+        pictures(ui, open.session, editing, actions);
+        missing_pictures(ui, open.session, note, editing, actions);
         close(open.session, note, editing, actions);
     }
 }
@@ -164,7 +176,13 @@ fn panel(
     );
     let mut body_ui =
         ui.new_child(UiBuilder::new().max_rect(body_rect.shrink2(Vec2::new(20.0, 14.0))));
-    let left = if let Some(code) = &mut editing.code {
+    let left = if let Some(view) = &mut editing.drawing {
+        let shown = drawing::show(&mut body_ui, view, &note.title, state.language);
+        if shown.left {
+            pictures(ui, session, editing, actions);
+        }
+        shown.save
+    } else if let Some(code) = &mut editing.code {
         let shown = code::show(&mut body_ui, code, note.language, state.language);
         if shown.changed {
             editing.body = code.text();
@@ -463,7 +481,17 @@ fn footer(ui: &mut Ui, state: &AppState, note: &DisplayNote, editing: &EditorVie
     ui.painter()
         .hline(rect.x_range(), rect.top(), Stroke::new(1.0, p.line_soft));
     let language = state.language;
-    let counted = body::stats(note, &editing.body, &editing.checklist.items, language);
+    let shapes = editing
+        .drawing
+        .as_ref()
+        .map_or(0, drawing::DrawingView::shapes);
+    let counted = body::stats(
+        note,
+        &editing.body,
+        &editing.checklist.items,
+        shapes,
+        language,
+    );
     let modified = (!note.id.is_empty()).then(|| {
         let (said, _) = crate::services::time::relative(note.updated_at, state.clock.as_ref());
         format!(
@@ -513,6 +541,40 @@ pub(super) fn save(session: u64, note: &DisplayNote, editing: &EditorView, actio
 fn close(session: u64, note: &DisplayNote, editing: &EditorView, actions: &mut Actions) {
     save(session, note, editing, actions);
     actions.push(editor(Editing::Close));
+}
+
+/// What was drawn since they were last taken: two pictures are dear, so only on leaving.
+fn pictures(ui: &Ui, session: u64, editing: &mut EditorView, actions: &mut Actions) {
+    let owed = editing.drawing.as_mut();
+    if let Some(content) = owed.and_then(drawing::DrawingView::take_unpictured) {
+        actions.push(editor(Editing::Pictures {
+            session,
+            content,
+            palette: Arc::new(drawing::picture_palette(palette(ui.ctx()))),
+            missing: false,
+        }));
+    }
+}
+
+/// A drawing that came by import has its scene and no picture: it takes them on being left,
+/// and no date moves.
+fn missing_pictures(
+    ui: &Ui,
+    session: u64,
+    note: &DisplayNote,
+    editing: &EditorView,
+    actions: &mut Actions,
+) {
+    let drawn = editing.drawing.as_ref();
+    let content = drawn.and_then(drawing::DrawingView::content_if_drawn);
+    if let Some(content) = content.filter(|_| !note.id.is_empty()) {
+        actions.push(editor(Editing::Pictures {
+            session,
+            content,
+            palette: Arc::new(drawing::picture_palette(palette(ui.ctx()))),
+            missing: true,
+        }));
+    }
 }
 
 pub(super) fn editor(editing: Editing) -> Action {

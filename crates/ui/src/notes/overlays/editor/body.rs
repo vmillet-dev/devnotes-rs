@@ -71,6 +71,7 @@ pub(super) fn stats(
     note: &DisplayNote,
     typed: &str,
     items: &[ChecklistItem],
+    shapes: usize,
     language: Language,
 ) -> String {
     let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
@@ -91,7 +92,11 @@ pub(super) fn stats(
             keys::editor::NOTE_STATS,
             &[("count", count(typed.split_whitespace().count()).into())],
         ),
-        NoteKind::Drawing => String::new(),
+        NoteKind::Drawing => i18n::translate(
+            language,
+            keys::editor::DRAWING_STATS,
+            &[("count", count(shapes).into())],
+        ),
         NoteKind::Snippet | NoteKind::Calc => {
             let head = if note.kind == NoteKind::Calc {
                 i18n::translate(language, keys::notes::kind_tag::CALC, &[])

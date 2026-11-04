@@ -4,9 +4,11 @@
 
 use serde_json::{Map, Value};
 
-use crate::geometry::{Ends, Point};
+use crate::geometry::{Box, Ends, Point, path_box, points_box};
 
 const OBJECTS: &str = "objects";
+/// What the scene says it was written by: a format that does not change keeps its number.
+const FABRIC: &str = "7.4.0";
 
 /// A drawing as stored: `{ version, scene }`, the scene's objects taken out to be worked on.
 #[derive(Debug, Clone, PartialEq)]
@@ -57,6 +59,19 @@ pub enum PathCommand {
 }
 
 impl Drawing {
+    /// A drawing with nothing on it.
+    pub fn empty() -> Self {
+        let mut body = Map::new();
+        body.insert("version".to_owned(), Value::from(1));
+        let mut scene = Map::new();
+        scene.insert("version".to_owned(), Value::from(FABRIC));
+        Self {
+            body,
+            scene,
+            objects: Vec::new(),
+        }
+    }
+
     /// `None` for a body that holds no scene, or one whose objects are not objects: what
     /// opens as a new drawing.
     pub fn read(content: &str) -> Option<Self> {
@@ -113,6 +128,80 @@ impl Object {
         };
         let children = take_objects(&mut fields)?;
         Some(Self { fields, children })
+    }
+
+    /// A new object of Fabric's `kind`, in `hue`, on nothing yet.
+    pub(crate) fn make(kind: &str, id: String, hue: Hue) -> Self {
+        let mut object = Self {
+            fields: Map::new(),
+            children: Vec::new(),
+        };
+        object.put("type", kind);
+        object.put("version", FABRIC);
+        object.put("originX", "center");
+        object.put("originY", "center");
+        object.put("id", id);
+        object.put("hue", hue.name());
+        object
+    }
+
+    pub(crate) fn put(&mut self, name: &str, value: impl Into<Value>) {
+        self.fields.insert(name.to_owned(), value.into());
+    }
+
+    /// As Fabric stores a number: two decimals, no `.0` on a whole one.
+    pub(crate) fn put_number(&mut self, name: &str, value: f64) {
+        self.put(name, stored(value));
+    }
+
+    pub(crate) fn set_hue(&mut self, hue: Hue) {
+        self.put("hue", hue.name());
+    }
+
+    pub(crate) fn set_centre(&mut self, at: Point) {
+        self.put_number("left", at.x);
+        self.put_number("top", at.y);
+    }
+
+    pub(crate) fn set_size(&mut self, width: f64, height: f64) {
+        self.put_number("width", width);
+        self.put_number("height", height);
+    }
+
+    pub(crate) fn set_scale(&mut self, x: f64, y: f64) {
+        self.put_number("scaleX", x);
+        self.put_number("scaleY", y);
+    }
+
+    pub(crate) fn set_angle(&mut self, degrees: f64) {
+        self.put_number("angle", degrees.rem_euclid(360.0));
+    }
+
+    /// `None` lets go of the shape, as `null` in the scene.
+    pub(crate) fn set_bound(&mut self, name: &str, id: Option<&str>) {
+        self.put(name, id.map_or(Value::Null, Value::from));
+    }
+
+    pub(crate) fn set_ends(&mut self, ends: Ends) {
+        self.put("ends", ends.to_vec());
+    }
+
+    /// The commands, and the box Fabric reads from them when a path is made.
+    pub(crate) fn set_path(&mut self, path: &[PathCommand]) {
+        let commands: Vec<Value> = path.iter().map(PathCommand::stored).collect();
+        self.put("path", commands);
+        if let Some(bounds) = path_box(path) {
+            self.set_size(bounds.width, bounds.height);
+            self.set_centre(bounds.centre());
+        }
+    }
+
+    pub(crate) fn set_points(&mut self, points: &[Point]) {
+        let points: Vec<Value> = points
+            .iter()
+            .map(|point| serde_json::json!({ "x": stored(point.x), "y": stored(point.y) }))
+            .collect();
+        self.put("points", points);
     }
 
     fn fields(&self) -> Map<String, Value> {
@@ -247,6 +336,52 @@ impl Object {
         self.list("path", PathCommand::read)
     }
 
+    /// Its size with its stroke, on the plane it sits on, before its rotation.
+    pub(crate) fn dimensions(&self) -> (f64, f64) {
+        let stroke = self.stroke_width();
+        let (scale_x, scale_y) = (self.scale_x().abs(), self.scale_y().abs());
+        if self.stroke_uniform() {
+            (
+                self.width() * scale_x + stroke,
+                self.height() * scale_y + stroke,
+            )
+        } else {
+            (
+                (self.width() + stroke) * scale_x,
+                (self.height() + stroke) * scale_y,
+            )
+        }
+    }
+
+    /// The box it covers on the plane it sits on, its stroke and its rotation counted.
+    pub fn bounds(&self) -> Box {
+        let (width, height) = self.dimensions();
+        let centre = self.centre();
+        let (sin, cos) = self.angle().to_radians().sin_cos();
+        let corners = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].map(|(x, y)| {
+            let (x, y) = (x * width / 2.0, y * height / 2.0);
+            Point {
+                x: centre.x + x * cos - y * sin,
+                y: centre.y + x * sin + y * cos,
+            }
+        });
+        points_box(&corners).unwrap_or(Box {
+            left: centre.x,
+            top: centre.y,
+            width: 0.0,
+            height: 0.0,
+        })
+    }
+
+    /// Whether a point falls on it: its whole box, as Fabric finds a target, not its ink.
+    pub fn contains(&self, at: Point) -> bool {
+        let (width, height) = self.dimensions();
+        let centre = self.centre();
+        let (sin, cos) = (-self.angle()).to_radians().sin_cos();
+        let (x, y) = (at.x - centre.x, at.y - centre.y);
+        (x * cos - y * sin).abs() <= width / 2.0 && (x * sin + y * cos).abs() <= height / 2.0
+    }
+
     fn words(&self, name: &str) -> Option<&str> {
         self.fields.get(name)?.as_str()
     }
@@ -262,6 +397,15 @@ impl Object {
         let list = self.fields.get(name).and_then(Value::as_array);
         list.into_iter().flatten().filter_map(read).collect()
     }
+}
+
+fn stored(value: f64) -> Value {
+    let rounded = (value * 100.0).round() / 100.0;
+    if rounded.fract() == 0.0 && rounded.abs() < 1e15 {
+        #[expect(clippy::cast_possible_truncation, reason = "a whole number, in range")]
+        return Value::from(rounded as i64);
+    }
+    Value::from(rounded)
 }
 
 fn point_of(value: &Value) -> Option<Point> {
@@ -302,6 +446,22 @@ impl Hue {
 }
 
 impl PathCommand {
+    fn stored(&self) -> Value {
+        let at = |letter: &str, points: &[Point]| {
+            let mut parts = vec![Value::from(letter)];
+            for point in points {
+                parts.extend([stored(point.x), stored(point.y)]);
+            }
+            Value::Array(parts)
+        };
+        match *self {
+            Self::Move(to) => at("M", &[to]),
+            Self::Line(to) => at("L", &[to]),
+            Self::Quad(control, to) => at("Q", &[control, to]),
+            Self::Close => at("Z", &[]),
+        }
+    }
+
     fn read(value: &Value) -> Option<Self> {
         let parts = value.as_array()?;
         let at = |index: usize| {

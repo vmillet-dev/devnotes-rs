@@ -4,7 +4,10 @@
 //! once. The editor's fields are drafts of their own, written when they are left and when the
 //! editor closes; a field that did not move is not sent (the reference's `UNCHANGED`).
 
+use std::sync::Arc;
+
 use engine::notes::checklist::ChecklistItem;
+use engine::notes::drawing::DrawingPictures;
 use engine::notes::kind::NoteKind;
 use engine::notes::language::Language;
 use engine::notes::model::{DisplayNote, Note, NoteDraft, NoteLifecycle, NotePatch};
@@ -146,6 +149,23 @@ impl Opened {
     }
 }
 
+/// A drawing's pictures on their way: read to see whether it has any, then taken. They go to
+/// the note once it has an id: a new drawing's first ones follow the write that makes it.
+struct Picturing {
+    session: u64,
+    id: Option<String>,
+    step: PictureStep,
+}
+
+enum PictureStep {
+    Checking {
+        has: Pending<Option<String>>,
+        scene: (String, Arc<drawing::Palette>),
+    },
+    Taking(Pending<DrawingPictures>),
+    Taken(DrawingPictures),
+}
+
 /// A draft being written, and what was left while it was: sent once it has an id.
 struct Creating {
     session: u64,
@@ -159,6 +179,7 @@ pub struct EditorState {
     sessions: u64,
     creating: Vec<Creating>,
     writes: Vec<Pending<DisplayNote>>,
+    picturing: Vec<Picturing>,
 }
 
 impl EditorState {
@@ -285,6 +306,71 @@ impl EditorState {
         }
     }
 
+    /// The pictures of the drawing left in `session`. `missing` takes them only if it has none.
+    pub fn picture(
+        &mut self,
+        backend: &Backend,
+        session: u64,
+        (content, palette): (String, Arc<drawing::Palette>),
+        missing: bool,
+    ) {
+        let id = self
+            .open
+            .as_ref()
+            .filter(|open| open.session == session)
+            .and_then(|open| open.id.clone());
+        let step = match id.clone().filter(|_| missing) {
+            Some(id) => PictureStep::Checking {
+                has: api::notes::drawing_thumbnail(backend, id),
+                scene: (content, palette),
+            },
+            None if missing => return,
+            None => PictureStep::Taking(api::notes::picture_drawing(backend, content, palette)),
+        };
+        self.picturing.push(Picturing { session, id, step });
+    }
+
+    /// What came back goes on to its next step; what is taken is written once the note has a row.
+    fn advance_pictures(&mut self, backend: &Backend, errors: &mut ErrorNotifier) {
+        let mut writes = Vec::new();
+        self.picturing.retain_mut(|entry| {
+            let step = std::mem::replace(
+                &mut entry.step,
+                PictureStep::Taken(DrawingPictures::default()),
+            );
+            entry.step = match step {
+                PictureStep::Checking { mut has, scene } => match has.poll() {
+                    None => PictureStep::Checking { has, scene },
+                    Some(Ok(None)) => {
+                        PictureStep::Taking(api::notes::picture_drawing(backend, scene.0, scene.1))
+                    }
+                    Some(_) => return false,
+                },
+                PictureStep::Taking(mut pending) => match pending.poll() {
+                    None => PictureStep::Taking(pending),
+                    Some(Ok(pictures)) => PictureStep::Taken(pictures),
+                    Some(Err(error)) => {
+                        errors.report(keys::errors::NOTE_SAVE_FAILED, &error);
+                        return false;
+                    }
+                },
+                taken @ PictureStep::Taken(_) => taken,
+            };
+            if let (PictureStep::Taken(pictures), Some(id)) = (&entry.step, &entry.id) {
+                writes.push((id.clone(), pictures.clone()));
+                return false;
+            }
+            true
+        });
+        for (id, pictures) in writes {
+            let patch = NotePatch {
+                pictures: Some(pictures),
+                ..NotePatch::default()
+            };
+            self.writes.push(api::notes::update(backend, id, patch));
+        }
+    }
+
     /// Pinned, prioritised, moved or filed while a draft: it changes here, written with the
     /// rest once worth keeping. `false` when the note open is not a draft.
     pub fn change_draft(&mut self, backend: &Backend, change: impl FnOnce(&mut Note)) -> bool {
@@ -397,13 +483,22 @@ impl EditorState {
                             waiting.into_patch(),
                         ));
                     }
+                    for entry in &mut self.picturing {
+                        if entry.session == session {
+                            entry.id = Some(note.id.clone());
+                        }
+                    }
                     if let Some(open) = self.open.as_mut().filter(|open| open.session == session) {
                         open.id = Some(note.id.clone());
                     }
                 }
-                Err(error) => errors.report(keys::errors::NOTE_CREATE_FAILED, &error),
+                Err(error) => {
+                    self.picturing.retain(|entry| entry.session != session);
+                    errors.report(keys::errors::NOTE_CREATE_FAILED, &error);
+                }
             }
         }
+        self.advance_pictures(backend, errors);
         self.writes.retain_mut(|pending| match pending.poll() {
             None => true,
             Some(Ok(_)) => {

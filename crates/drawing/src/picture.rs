@@ -86,7 +86,7 @@ fn png(
 
 /// What is drawn, with room around it; `None` when nothing is.
 fn frame(drawing: &Drawing) -> Option<Box> {
-    let boxes: Vec<Box> = drawing.objects.iter().map(bounds).collect();
+    let boxes: Vec<Box> = drawing.objects.iter().map(Object::bounds).collect();
     scene_box(&boxes, MARGIN)
 }
 
@@ -115,38 +115,6 @@ pub fn svg(drawing: &Drawing, palette: &Palette, fonts: &Fonts) -> Option<String
     }
     out.push_str("</svg>");
     Some(out)
-}
-
-/// The box an object covers on the plane it sits on, its stroke and its rotation counted.
-fn bounds(object: &Object) -> Box {
-    let stroke = object.stroke_width();
-    let (scale_x, scale_y) = (object.scale_x().abs(), object.scale_y().abs());
-    let (width, height) = if object.stroke_uniform() {
-        (
-            object.width() * scale_x + stroke,
-            object.height() * scale_y + stroke,
-        )
-    } else {
-        (
-            (object.width() + stroke) * scale_x,
-            (object.height() + stroke) * scale_y,
-        )
-    };
-    let centre = object.centre();
-    let (sin, cos) = object.angle().to_radians().sin_cos();
-    let corners = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].map(|(x, y)| {
-        let (x, y) = (x * width / 2.0, y * height / 2.0);
-        Point {
-            x: centre.x + x * cos - y * sin,
-            y: centre.y + x * sin + y * cos,
-        }
-    });
-    points_box(&corners).unwrap_or(Box {
-        left: centre.x,
-        top: centre.y,
-        width: 0.0,
-        height: 0.0,
-    })
 }
 
 fn write_object(out: &mut String, object: &Object, palette: &Palette, fonts: &Fonts) {

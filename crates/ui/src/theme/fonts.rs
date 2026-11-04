@@ -3,6 +3,8 @@
 //! are; Noto Emoji before the system's fonts, so an emoji looks the same on every machine.
 //! What none of them draws (CJK, say) comes from the system, found on demand by eframe.
 
+use std::sync::{Arc, LazyLock};
+
 use egui::{FontData, FontDefinitions, FontFamily, FontId, TextStyle};
 
 const FACES: [(&str, &[u8]); 5] = [
@@ -37,6 +39,19 @@ const MONO: [&str; 3] = [
 
 /// The body's size: every other size of the reference is written against it.
 pub const BASE: f32 = 14.0;
+
+/// What a Dessin's text is measured and pictured with: the interface's sans, the same files.
+pub fn for_drawings() -> Arc<drawing::Fonts> {
+    static FONTS: LazyLock<Arc<drawing::Fonts>> = LazyLock::new(|| {
+        let files: Vec<&'static [u8]> = SANS
+            .iter()
+            .filter_map(|name| FACES.iter().find(|(face, _)| face == name))
+            .map(|(_, bytes)| *bytes)
+            .collect();
+        Arc::new(drawing::Fonts::new(&files))
+    });
+    Arc::clone(&FONTS)
+}
 
 pub fn definitions() -> FontDefinitions {
     let mut definitions = FontDefinitions::empty();
