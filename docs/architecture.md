@@ -1544,12 +1544,12 @@ A `calc` note is a sheet: its body is text, as a snippet's is — sealed, search
 revisions kept, exported in a bare fence — with no language. Each line is computed as it is
 typed, and **the results are never stored**: they are computed when the sheet is read.
 
-**Rust computes, the front writes** (`notes::calc`; the footer's sum and mean are `calc::summary`,
+**Rust computes, the interface writes** (`notes::calc`; the footer's sum and mean are `calc::summary`,
 exact, and come back as values like any other). `evaluate_calc(sheet, today)` answers the
 whole sheet — one `CalcRow` a line, with its spans for the colours and, after `en` or `à`, the
 kind being converted — and `query_notes` gives a card its last four lines that gave something
 (`DisplayNote.calc`, read from the whole body before it is cut). Values cross as exact decimals
-in text, units as `UnitId`s, errors as codes: `CalcFormatter` (`core/services/calc/`) writes them
+in text, units as `UnitId`s, errors as codes: `ui::notes::calc` writes them
 in the language on screen — its decimal mark, `Go` or `GB`, `j` or `d`, the date — and says `≈`
 when the display rounds. `today` is the local day of the window (`CalcSheets.today`); the board,
 which knows no time zone, gives its cards the UTC day.

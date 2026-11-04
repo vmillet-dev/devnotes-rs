@@ -159,6 +159,11 @@ pub enum Editing {
     },
     Export(DrawingExport),
     Attachment(crate::state::attachments::Asked),
+    /// A sheet, once the hand paused.
+    Evaluate {
+        session: u64,
+        text: String,
+    },
     Pin(bool),
     Prioritise(Priority),
     MoveTo(String),

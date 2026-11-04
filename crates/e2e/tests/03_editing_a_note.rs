@@ -22,7 +22,9 @@ fn open(app: &mut App) {
     app.click("search-input");
     app.press(Key::A, Modifiers::COMMAND);
     app.type_text(TITLE);
-    app.eventually("the snippet alone", |tree| tree.count("note-card") == 1);
+    app.eventually("the snippet alone", |tree| {
+        tree.count("note-card") == 1 && tree.texts("note-card").contains(&TITLE.to_owned())
+    });
     app.click("note-card-open");
     app.wait_for("editor-body");
 }
@@ -48,7 +50,9 @@ fn open_sketch(app: &mut App) {
     app.click("search-input");
     app.press(Key::A, Modifiers::COMMAND);
     app.type_text(SKETCH);
-    app.eventually("the drawing alone", |tree| tree.count("note-card") == 1);
+    app.eventually("the drawing alone", |tree| {
+        tree.count("note-card") == 1 && tree.texts("note-card").contains(&SKETCH.to_owned())
+    });
     app.click("note-card-open");
     app.wait_for("drawing-stage");
 }

@@ -87,6 +87,33 @@ pub fn export_drawing(
     })
 }
 
+/// A sheet, every line computed, off the frame: nothing bounds it by the screen.
+pub fn evaluate_calc(
+    backend: &Backend,
+    sheet: String,
+    today: chrono::NaiveDate,
+) -> Pending<engine::notes::calc::CalcSheet> {
+    backend.compute(move |_| Ok(engine::notes::calc::evaluate(&sheet, today)))
+}
+
+/// What the footer says of the lines chosen. Pure (D12).
+pub fn calc_summary(
+    sheet: &engine::notes::calc::CalcSheet,
+    lines: &[u32],
+) -> engine::notes::calc::CalcSummary {
+    engine::notes::calc::summary(sheet, lines)
+}
+
+/// The words a sheet reads. Pure (D12).
+pub fn calc_words() -> Vec<engine::notes::calc::words::WordEntry> {
+    engine::notes::calc::words::catalogue()
+}
+
+/// The units a sheet reads. Pure (D12).
+pub fn calc_units() -> Vec<engine::notes::calc::units::UnitEntry> {
+    engine::notes::calc::units::catalogue()
+}
+
 /// A draft as the editor shows it, before it has a row. Pure (D12).
 pub fn decorate(note: engine::notes::model::Note) -> DisplayNote {
     engine::notes::model::decorate_now(note)

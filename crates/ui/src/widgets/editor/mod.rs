@@ -113,15 +113,25 @@ impl Editor {
     }
 }
 
+/// A line on screen and its first row.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Row {
+    pub line: usize,
+    pub rect: Rect,
+}
+
 /// What a frame did.
 pub struct Output {
     pub response: Response,
     /// The text changed, from this line on.
     pub changed: Option<usize>,
+    /// The lines on screen, for what the caller draws beside them.
+    pub rows: Vec<Row>,
 }
 
 pub struct EditorView<'a> {
     editor: &'a mut Editor,
+    margin: f32,
     author_id: &'a str,
     label: &'a str,
     hint: &'a str,
@@ -143,6 +153,7 @@ impl<'a> EditorView<'a> {
     pub fn new(editor: &'a mut Editor, label: &'a str, author_id: &'a str) -> Self {
         Self {
             editor,
+            margin: 0.0,
             author_id,
             label,
             hint: "",
@@ -245,6 +256,13 @@ impl<'a> EditorView<'a> {
         self
     }
 
+    /// Room kept on the right of the text, for what the caller draws there.
+    #[must_use]
+    pub fn margin(mut self, margin: f32) -> Self {
+        self.margin = margin;
+        self
+    }
+
     pub fn show(self, ui: &mut Ui) -> Output {
         let id = Id::unique(self.author_id).with(ui.scope_id());
         let row_height = ui.fonts_mut(|fonts| fonts.row_height(&self.font));
@@ -262,15 +280,21 @@ impl<'a> EditorView<'a> {
             egui::ScrollArea::both()
         };
         let mut changed = None;
+        let mut rows = Vec::new();
         let shown = scroll
             .id_salt(id.with("scroll"))
             .auto_shrink(false)
             .show_viewport(ui, |ui, viewport| {
-                self.body(ui, (viewport, gutter, row_height, char_width), &mut changed)
+                self.body(
+                    ui,
+                    (viewport, gutter, row_height, char_width),
+                    (&mut changed, &mut rows),
+                )
             });
         Output {
             response: shown.inner,
             changed,
+            rows,
         }
     }
 
@@ -278,10 +302,11 @@ impl<'a> EditorView<'a> {
         self,
         ui: &mut Ui,
         (viewport, gutter, row_height, char_width): (Rect, f32, f32, f32),
-        changed: &mut Option<usize>,
+        (changed, rows): (&mut Option<usize>, &mut Vec<Row>),
     ) -> Response {
         let origin = ui.max_rect().min;
-        let text_width = (ui.available_width() - gutter - 2.0 * PADDING).max(char_width * 8.0);
+        let room = ui.available_width() - gutter - 2.0 * PADDING - self.margin;
+        let text_width = room.max(char_width * 8.0);
         let frame = geometry::Frame {
             font: self.font.clone(),
             row_height,
@@ -349,6 +374,7 @@ impl<'a> EditorView<'a> {
             focused,
         };
         let caret = paint(ui, editor, &frame, visible, &style);
+        rows.extend(rows_on_screen(editor, &frame, visible));
         if focused {
             ask_input_method(ui, visible, caret);
         }
@@ -377,6 +403,23 @@ impl<'a> EditorView<'a> {
         crate::widgets::address(ui, &response, self.author_id);
         response
     }
+}
+
+fn rows_on_screen<'a>(
+    editor: &'a Editor,
+    frame: &'a geometry::Frame,
+    visible: Rect,
+) -> impl Iterator<Item = Row> + 'a {
+    editor.visible.clone().map(move |line| {
+        let at = geometry::origin(&editor.lines, line, frame);
+        Row {
+            line,
+            rect: Rect::from_min_size(
+                Pos2::new(visible.left(), at.y),
+                Vec2::new(visible.width(), frame.row_height),
+            ),
+        }
+    })
 }
 
 /// The keys the text keeps: Tab and the arrows; Escape too while a list is open, which it
