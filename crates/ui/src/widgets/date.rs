@@ -65,6 +65,11 @@ impl<'a> DateField<'a> {
         let probe = text(ui, &shown, 11.5, 400.0, FontFamily::Monospace, ink);
         let corner = CornerRadius::same(6);
         let name = self.name;
+        // ⚠️ Taken before the control is drawn: a focused button clicks on Enter, and egui's
+        // arrow navigation would carry the focus into the month's buttons.
+        let id = ui.next_auto_id();
+        let open = Popup::is_id_open(ui.ctx(), id.with("popup"));
+        let keys = if open { take_keys(ui) } else { Keys::default() };
         let response = interact(
             ui,
             Vec2::new(probe.size().x + 34.0, probe.size().y + 10.0),
@@ -91,6 +96,14 @@ impl<'a> DateField<'a> {
             Vec2::splat(12.0),
         );
         icons::paint(ui, glyph, Icon::Calendar, p.text_2);
+        if open {
+            let arrows = egui::EventFilter {
+                horizontal_arrows: true,
+                vertical_arrows: true,
+                ..Default::default()
+            };
+            ui.memory_mut(|memory| memory.set_focus_lock_filter(response.id, arrows));
+        }
         if takes_delete(ui, &response) {
             return Some(Picked::Cleared);
         }
@@ -106,7 +119,7 @@ impl<'a> DateField<'a> {
                 let cursor = ui
                     .data(|data| data.get_temp(cursor_id))
                     .unwrap_or(self.value.unwrap_or(self.today));
-                let (cursor, picked) = month(ui, cursor, &self);
+                let (cursor, picked) = month(ui, cursor, &self, keys);
                 ui.data_mut(|data| data.insert_temp(cursor_id, cursor));
                 if picked.is_some() {
                     Popup::close_id(ui.ctx(), Popup::default_response_id(&response));
@@ -115,6 +128,32 @@ impl<'a> DateField<'a> {
             })
             .and_then(|shown| shown.inner)
     }
+}
+
+/// The arrows and Enter pressed while the month is open: they are its, not the focus's.
+#[derive(Debug, Clone, Copy, Default)]
+struct Keys {
+    by: i64,
+    enter: bool,
+}
+
+fn take_keys(ui: &Ui) -> Keys {
+    ui.input_mut(|input| {
+        let moves = [
+            (Key::ArrowLeft, -1),
+            (Key::ArrowRight, 1),
+            (Key::ArrowUp, -7),
+            (Key::ArrowDown, 7),
+        ];
+        let mut keys = Keys::default();
+        for (key, by) in moves {
+            while input.consume_key(Modifiers::NONE, key) {
+                keys.by += by;
+            }
+        }
+        keys.enter = input.consume_key(Modifiers::NONE, Key::Enter);
+        keys
+    })
 }
 
 /// Delete or Backspace on the closed control: the day goes, the note becomes permanent again.
@@ -127,12 +166,17 @@ fn takes_delete(ui: &Ui, response: &Response) -> bool {
 }
 
 /// The month around `cursor`, from Monday; the day the arrows moved to, and the one picked.
-fn month(ui: &mut Ui, cursor: NaiveDate, field: &DateField<'_>) -> (NaiveDate, Option<Picked>) {
+fn month(
+    ui: &mut Ui,
+    cursor: NaiveDate,
+    field: &DateField<'_>,
+    keys: Keys,
+) -> (NaiveDate, Option<Picked>) {
     let p = palette(ui.ctx());
     let language = field.language;
     let tr = |key| i18n::translate(language, key, &[]);
-    let mut cursor = cursor;
-    let mut picked = None;
+    let mut cursor = shifted(cursor, keys.by);
+    let mut picked = keys.enter.then_some(Picked::Day(cursor));
     ui.spacing_mut().item_spacing = Vec2::splat(2.0);
     ui.horizontal(|ui| {
         let previous = tr(keys::editor::date::PREVIOUS);
@@ -197,22 +241,6 @@ fn month(ui: &mut Ui, cursor: NaiveDate, field: &DateField<'_>) -> (NaiveDate, O
     if super::Button::new(&clear, "date-clear").show(ui).clicked() {
         picked = Some(Picked::Cleared);
     }
-    ui.input_mut(|input| {
-        let moves = [
-            (Key::ArrowLeft, -1),
-            (Key::ArrowRight, 1),
-            (Key::ArrowUp, -7),
-            (Key::ArrowDown, 7),
-        ];
-        for (key, by) in moves {
-            if input.consume_key(Modifiers::NONE, key) {
-                cursor = shifted(cursor, by);
-            }
-        }
-        if input.consume_key(Modifiers::NONE, Key::Enter) {
-            picked = Some(Picked::Day(cursor));
-        }
-    });
     (cursor, picked)
 }
 

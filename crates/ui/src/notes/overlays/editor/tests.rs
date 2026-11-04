@@ -30,6 +30,16 @@ fn is_open(harness: &egui_kittest::Harness<'_, Bench>) -> bool {
         .is_some()
 }
 
+/// The menu's entry, not the rail's row of the same name under the editor.
+fn menu_entry(harness: &mut egui_kittest::Harness<'_, Bench>, name: &str) {
+    harness
+        .get_by(|node| {
+            node.role() == egui::accesskit::Role::MenuItem && node.label().as_deref() == Some(name)
+        })
+        .click();
+    settle(harness);
+}
+
 fn type_into(harness: &mut egui_kittest::Harness<'_, Bench>, id: &str, text: &str) {
     click_id(harness, id);
     harness
@@ -251,4 +261,194 @@ fn converting_rewrites_the_body_and_the_undo_puts_it_back() {
     click_id(&mut harness, "undo-restore");
     assert_eq!(stored(&harness, &id).kind, NoteKind::Snippet);
     assert_eq!(stored(&harness, &id).content, "SELECT 1;");
+}
+
+#[test]
+fn a_deadline_picked_makes_the_note_due_and_clearing_it_makes_it_permanent() {
+    use engine::notes::model::NoteLifecycle;
+    let (backend, profile) = testing::unlocked();
+    let id = testing::note(&backend, "psql").id.clone();
+    let mut harness = area(backend, profile);
+
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-deadline");
+    harness.key_press(egui::Key::ArrowRight);
+    harness.key_press(egui::Key::ArrowDown);
+    harness.key_press(egui::Key::Enter);
+    settle(&mut harness);
+
+    let NoteLifecycle::Expires { at } = stored(&harness, &id).lifecycle else {
+        panic!("the note has no deadline");
+    };
+    let today = chrono::Local::now().date_naive();
+    assert_eq!(
+        at.with_timezone(&chrono::Local).date_naive(),
+        today + chrono::Days::new(8)
+    );
+    harness.get_by(|node| node.author_id() == Some("editor-lifecycle"));
+
+    click_id(&mut harness, "editor-deadline");
+    click_id(&mut harness, "date-clear");
+    assert_eq!(stored(&harness, &id).lifecycle, NoteLifecycle::Permanent);
+}
+
+#[test]
+fn a_day_of_the_month_is_picked_by_the_pointer_and_delete_clears_it() {
+    use chrono::Datelike;
+    use engine::notes::model::NoteLifecycle;
+    let (backend, profile) = testing::unlocked();
+    let id = testing::note(&backend, "psql").id.clone();
+    let mut harness = area(backend, profile);
+
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-deadline");
+    click_id(&mut harness, "date-next");
+    click_id(&mut harness, "date-next");
+    click_id(&mut harness, "date-previous");
+    let day = chrono::Local::now().date_naive().with_day(1).unwrap() + chrono::Months::new(1);
+    let label = i18n::format::date_long(day, i18n::Language::En);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("date-day") && node.label().as_deref() == Some(&label)
+        })
+        .click();
+    settle(&mut harness);
+    let NoteLifecycle::Expires { at } = stored(&harness, &id).lifecycle else {
+        panic!("the note has no deadline");
+    };
+    assert_eq!(at.with_timezone(&chrono::Local).date_naive(), day);
+
+    harness
+        .get_by(|node| node.author_id() == Some("editor-deadline"))
+        .focus();
+    harness.key_press(egui::Key::Delete);
+    settle(&mut harness);
+    assert_eq!(stored(&harness, &id).lifecycle, NoteLifecycle::Permanent);
+}
+
+#[test]
+fn a_note_is_filed_moved_and_prioritised_from_its_header() {
+    use crate::notes::bench::{folder, space};
+    use engine::notes::priority::Priority;
+    let (backend, profile) = testing::unlocked();
+    let note = testing::note(&backend, "psql");
+    let home = crate::notes::bench::spaces_of_backend(&backend)
+        .into_iter()
+        .next()
+        .unwrap();
+    folder(&backend, &home, None, "Databases");
+    space(&backend, "Archive");
+    let id = note.id.clone();
+    let mut harness = area(backend, profile);
+
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-folder");
+    menu_entry(&mut harness, "Databases");
+    settle(&mut harness);
+    assert!(stored(&harness, &id).folder_id.is_some());
+
+    click_id(&mut harness, "editor-priority");
+    harness.get_by_label("High").click();
+    settle(&mut harness);
+    assert_eq!(stored(&harness, &id).priority, Priority::High);
+
+    click_id(&mut harness, "editor-space");
+    menu_entry(&mut harness, "Archive");
+    settle(&mut harness);
+    let moved = stored(&harness, &id);
+    assert_ne!(moved.space_id, home.id);
+    assert!(moved.folder_id.is_none(), "a move leaves the folder");
+}
+
+#[test]
+fn a_draft_filed_prioritised_and_moved_is_written_with_all_of_it() {
+    use crate::notes::bench::{folder, space};
+    use engine::notes::priority::Priority;
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql");
+    let home = crate::notes::bench::spaces_of_backend(&backend)
+        .into_iter()
+        .next()
+        .unwrap();
+    folder(&backend, &home, None, "Databases");
+    space(&backend, "Archive");
+    let mut harness = area(backend, profile);
+
+    click_id(&mut harness, "new-note");
+    // The first space, whichever it is: then into Home, its folder, and out to Archive.
+    click_id(&mut harness, "editor-space");
+    menu_entry(&mut harness, "Home");
+    click_id(&mut harness, "editor-folder");
+    menu_entry(&mut harness, "Databases");
+    let draft = harness.state().state.editor.opened().unwrap();
+    assert!(draft.is_draft());
+    assert!(draft.note().unwrap().folder_id.is_some());
+    click_id(&mut harness, "editor-space");
+    menu_entry(&mut harness, "Archive");
+    settle(&mut harness);
+    assert!(harness.state().state.editor.opened().unwrap().is_draft());
+    click_id(&mut harness, "editor-priority");
+    harness.get_by_label("Urgent").click();
+    settle(&mut harness);
+
+    let opened = harness.state().state.editor.opened().unwrap();
+    let note = opened.note().unwrap();
+    assert!(!opened.is_draft());
+    assert_eq!(note.priority, Priority::Urgent);
+    assert_ne!(note.space_id, home.id);
+}
+
+#[test]
+fn a_draft_converted_only_changes_kind_and_a_draft_deleted_is_let_go() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql");
+    let mut harness = area(backend, profile);
+
+    click_id(&mut harness, "new-note");
+    click_id(&mut harness, "editor-kind");
+    harness.get_by_label("Convert to a todo list").click();
+    settle(&mut harness);
+    let opened = harness.state().state.editor.opened().unwrap();
+    assert!(opened.is_draft());
+    assert_eq!(opened.note().unwrap().kind, NoteKind::Checklist);
+
+    click_id(&mut harness, "editor-delete");
+    click_id(&mut harness, "editor-delete");
+    assert!(!is_open(&harness));
+    assert_eq!(written(&harness), 1);
+}
+
+#[test]
+fn copying_from_the_editor_writes_first_and_full_screen_is_remembered() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql");
+    let mut harness = area(backend, profile);
+
+    click_id(&mut harness, "note-card-open");
+    type_into(&mut harness, "editor-body", "\nSELECT 2;");
+    harness
+        .get_by(|node| node.author_id() == Some("editor-copy"))
+        .click();
+    let mut copied = None;
+    for _ in 0..60 {
+        harness.step();
+        harness.state().backend.settle();
+        copied = copied.or_else(|| {
+            harness
+                .output()
+                .platform_output
+                .commands
+                .iter()
+                .find_map(|command| match command {
+                    egui::OutputCommand::CopyText(text) => Some(text.clone()),
+                    _ => None,
+                })
+        });
+    }
+    assert_eq!(copied.as_deref(), Some("SELECT 1;\nSELECT 2;"));
+
+    click_id(&mut harness, "editor-fullscreen");
+    assert!(harness.state().state.settings.editor_fullscreen);
+    click_id(&mut harness, "editor-fullscreen");
+    assert!(!harness.state().state.settings.editor_fullscreen);
 }
