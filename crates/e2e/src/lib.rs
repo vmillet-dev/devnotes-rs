@@ -384,6 +384,11 @@ impl App {
         self.apply(vec![Event::Text(text.to_owned())]);
     }
 
+    /// What the clipboard would hand the control that has the focus, as the window delivers it.
+    pub fn paste(&mut self, text: &str) {
+        self.apply(vec![Event::Paste(text.to_owned())]);
+    }
+
     /// Clicks a field, then types into it.
     pub fn fill(&mut self, author_id: &str, text: &str) {
         self.click(author_id);

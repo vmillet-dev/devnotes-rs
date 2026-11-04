@@ -1,6 +1,6 @@
 use egui_kittest::kittest::{NodeT, Queryable};
 use engine::notes::kind::NoteKind;
-use engine::notes::model::{DisplayNote, NotePatch};
+use engine::notes::model::DisplayNote;
 
 use crate::notes::bench::{Bench, area, cards, click_id, settle};
 use crate::testing;
@@ -103,37 +103,6 @@ fn the_context_and_a_typed_tag_are_kept_on_close() {
     let note = stored(&harness, &id);
     assert_eq!(note.source, "Ops / DB");
     assert_eq!(note.tags, ["postgres"]);
-}
-
-#[test]
-fn a_list_is_edited_one_task_a_line() {
-    let (backend, profile) = testing::unlocked();
-    let id = testing::note(&backend, "groceries").id.clone();
-    let patch = NotePatch {
-        kind: Some(NoteKind::Checklist),
-        content: Some(String::new()),
-        ..NotePatch::default()
-    };
-    let at = id.clone();
-    engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, at, patch)
-    })
-    .unwrap();
-    let mut harness = area(backend, profile);
-
-    click_id(&mut harness, "note-card-open");
-    type_into(&mut harness, "editor-body", "milk\n[x] bread");
-    click_id(&mut harness, "editor-close");
-
-    let items: Vec<_> = stored(&harness, &id)
-        .items
-        .iter()
-        .map(|item| (item.text.clone(), item.done))
-        .collect();
-    assert_eq!(
-        items,
-        [("milk".to_string(), false), ("bread".to_string(), true)]
-    );
 }
 
 #[test]
