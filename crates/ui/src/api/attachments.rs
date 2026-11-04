@@ -11,7 +11,7 @@ pub fn list(backend: &Backend, note: String) -> Pending<Vec<Attachment>> {
     backend.db(move |engine| attachments::list_attachments(engine, note))
 }
 
-pub fn attach(backend: &Backend, note: String, path: PathBuf) -> Pending<Attachment> {
+pub fn attach(backend: &Backend, note: String, path: &std::path::Path) -> Pending<Attachment> {
     let path = path.to_string_lossy().into_owned();
     backend.db(move |engine| attachments::attach_file(engine, note, path))
 }
@@ -31,7 +31,7 @@ pub fn attach_image(
     let rgba: Vec<u8> = image
         .pixels
         .iter()
-        .flat_map(|pixel| pixel.to_srgba_unmultiplied())
+        .flat_map(egui::Color32::to_srgba_unmultiplied)
         .collect();
     backend.db(move |engine| attachments::attach_image(engine, note, name, size, &rgba))
 }

@@ -253,7 +253,7 @@ impl AttachmentsState {
             return;
         };
         self.attaching = match self.queue.pop_front() {
-            Some(ToAttach::File(path)) => Some(api::attachments::attach(backend, note, path)),
+            Some(ToAttach::File(path)) => Some(api::attachments::attach(backend, note, &path)),
             Some(ToAttach::Image(name, image)) => {
                 Some(api::attachments::attach_image(backend, note, name, &image))
             }
