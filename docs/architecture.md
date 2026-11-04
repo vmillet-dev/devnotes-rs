@@ -1544,7 +1544,8 @@ A `calc` note is a sheet: its body is text, as a snippet's is — sealed, search
 revisions kept, exported in a bare fence — with no language. Each line is computed as it is
 typed, and **the results are never stored**: they are computed when the sheet is read.
 
-**Rust computes, the front writes** (`notes::calc`). `evaluate_calc(sheet, today)` answers the
+**Rust computes, the front writes** (`notes::calc`; the footer's sum and mean are `calc::summary`,
+exact, and come back as values like any other). `evaluate_calc(sheet, today)` answers the
 whole sheet — one `CalcRow` a line, with its spans for the colours and, after `en` or `à`, the
 kind being converted — and `query_notes` gives a card its last four lines that gave something
 (`DisplayNote.calc`, read from the whole body before it is cut). Values cross as exact decimals

@@ -113,19 +113,19 @@ hôte QuickJS séparé, explorateur JSON, et les fonctions pures des 32 dossiers
 
 Les « exceptions front-end » de `CLAUDE.md` disparaissent comme exceptions et deviennent du Rust :
 
-| Aujourd'hui (front)                                                            | Demain (Rust)                                            |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| Formatage du temps relatif, `ClockService`                                     | `ui::services::clock` + horloge injectable               |
-| ISO ↔ `Date` à la frontière                                                    | disparaît (types `chrono` de bout en bout)               |
-| Coloration syntaxique (CodeMirror/Lezer, 142 langues)                          | `syntect` + grammaires Sublime (§ 3.9)                   |
-| Prettier (worker JS, 12 parseurs)                                              | Prettier dans QuickJS, hôte gardé chaud (D1)             |
-| Recherche du catalogue d'outils et des références                              | le pli du cœur (`notes::view::fold`), appel direct (D12) |
-| `Intl.DateTimeFormat`/`NumberFormat`/`ListFormat`/`DisplayNames`/`PluralRules` | formateurs fr/en écrits à la main dans `i18n` (D21)      |
-| Transpileur ICU des pluriels de Transloco                                      | port Rust du transpileur existant                        |
-| `CalcFormatter`, `calc-format.ts`, `decimal-format.util.ts`                    | `notes::calc` : écriture, somme et moyenne du pied       |
-| Règles recopiées du cœur (`isVariableName`, motif des `{{champs}}`…)           | disparaissent : l'UI appelle la fonction du cœur (D12)   |
-| Langue du système (`navigator.languages`)                                      | `sys-locale`, même règle (§ 3.11)                        |
-| Brouillons, raccourcis, focus, glisser-déposer                                 | état egui                                                |
+| Aujourd'hui (front)                                                            | Demain (Rust)                                                                                         |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Formatage du temps relatif, `ClockService`                                     | `ui::services::clock` + horloge injectable                                                            |
+| ISO ↔ `Date` à la frontière                                                    | disparaît (types `chrono` de bout en bout)                                                            |
+| Coloration syntaxique (CodeMirror/Lezer, 142 langues)                          | `syntect` + grammaires Sublime (§ 3.9)                                                                |
+| Prettier (worker JS, 12 parseurs)                                              | Prettier dans QuickJS, hôte gardé chaud (D1)                                                          |
+| Recherche du catalogue d'outils et des références                              | le pli du cœur (`notes::view::fold`), appel direct (D12)                                              |
+| `Intl.DateTimeFormat`/`NumberFormat`/`ListFormat`/`DisplayNames`/`PluralRules` | formateurs fr/en écrits à la main dans `i18n` (D21)                                                   |
+| Transpileur ICU des pluriels de Transloco                                      | port Rust du transpileur existant                                                                     |
+| `CalcFormatter`, `calc-format.ts`, `decimal-format.util.ts`                    | `notes::calc` : somme et moyenne du pied ; `ui::notes::calc` : écriture (le cœur n'écrit pas de mots) |
+| Règles recopiées du cœur (`isVariableName`, motif des `{{champs}}`…)           | disparaissent : l'UI appelle la fonction du cœur (D12)                                                |
+| Langue du système (`navigator.languages`)                                      | `sys-locale`, même règle (§ 3.11)                                                                     |
+| Brouillons, raccourcis, focus, glisser-déposer                                 | état egui                                                                                             |
 
 L'inventaire complet de la logique TypeScript hors composants, fichier par fichier, avec sa
 destination, est l'**annexe F** : un fichier qui n'y figure pas n'a pas été oublié, il n'a pas de
@@ -1599,7 +1599,7 @@ l'infobulle du noyau, les règles de saisie, le collage HTML et les outils de ta
   champs, recherche/remplacement, indentation, complétion et infobulle (§ 3.8), bouton Formater
   (D1), explorateur JSON (arbre + graphe).
 - **Liste et Calcul (1 S)** — réordonner au pointeur et `Alt+↑/↓` ; feuille Calcul avec résultats en
-  marge (`evaluate_calc`), complétion des mots et valeur au survol, `CalcFormatter` en Rust.
+  marge (`evaluate_calc`), complétion des mots et valeur au survol, `CalcFormatter` en Rust, dans `ui::notes::calc`.
 - **Éditeur riche (4,5 S, recalé au S6)** — lecteur, puis éditeur (§ 3.9.1) : règles de saisie et raccourcis,
   blocs de code, liens, tableaux et leurs outils, collage HTML, images de Dessin, Mermaid (D2),
   recherche, compteur de mots.
@@ -2178,7 +2178,7 @@ suivent la phase 7 et ne sont pas détaillés ici. Les stores sont à l'annexe B
 | `core/model/json.model.ts`                                                                                                                                                                            | `explorableFormat`, lectures de l'arbre du visualiseur (`findSelection`, `lineage`, `trailOf`, `spanOf`…), décalages des nœuds                   | `explorableFormat` → cœur (`json`, à côté d'`explore_json`) ; lectures et décalages → `ui::widgets::json_explorer`           |
 | autres `core/model/*.model.ts` (`arrangement`, `board`, `calc`, `checklist`, `http-code`, `http-environment`, `language`, `note`, `priority`, `revision`, `space`, `tool-answers`, `vault`, `backup`) | types miroirs, petites lectures (`readArrangement`, `samePoint`, `unitsOf`)                                                                      | types : disparaissent (ceux du cœur, § 3.3.1) ; `readArrangement` → `ui::services::preferences` ; comparaisons → `PartialEq` |
 | `core/utils/relative-time.util.ts`, `local-day.util.ts`, `core/services/time/*`                                                                                                                       | temps relatif, jour local, horloge, anti-rebond                                                                                                  | `ui::services::{time, clock}` ; un anti-rebond devient une échéance de l'état (`request_repaint_after`)                      |
-| `core/utils/decimal-format.util.ts`, `core/services/calc/calc-format.ts`                                                                                                                              | écriture des nombres et des résultats Calcul, somme et moyenne du pied                                                                           | cœur, `notes::calc` (corpus `calc-format`)                                                                                   |
+| `core/utils/decimal-format.util.ts`, `core/services/calc/calc-format.ts`                                                                                                                              | écriture des nombres et des résultats Calcul ; somme et moyenne du pied                                                                          | `ui::notes::calc` ; cœur, `notes::calc::summary` (corpus `calc-format`)                                                      |
 | `core/services/calc/calc-words.ts`, `calc-sheets.service.ts`                                                                                                                                          | complétion sur la table `CALC_WORDS` du cœur, feuille écrite dans la langue affichée                                                             | `ui` (bulle de complétion du noyau, § 3.8)                                                                                   |
 | `core/services/format/*`                                                                                                                                                                              | formatage, `field-shield`, lignes touchées (`line-diff`), réglages Prettier                                                                      | `text::format` (D1) et le bouclier de `text` ; `line-diff` → `text` ; réglages → `ui::services::settings`                    |
 | `core/services/syntax/*`                                                                                                                                                                              | grammaires CodeMirror, surligneur des cartes, modes maison (HCL, Nix, Prisma, Solidity, Zig)                                                     | `text::highlight` (`syntect`, `.sublime-syntax` maison au besoin)                                                            |
