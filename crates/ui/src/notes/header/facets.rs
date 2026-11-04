@@ -349,33 +349,84 @@ fn tags(
     }
     rail(ui, |ui| {
         label(ui, &i18n::translate(language, keys::notes::TAGS, &[]));
-        egui::ScrollArea::horizontal()
-            .id_salt("tag-rail")
-            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 7.0;
-                    for tag in &view.available_tags {
-                        let count = view
-                            .tag_counts
-                            .iter()
-                            .find(|counted| &counted.value == tag)
-                            .map(|counted| counted.count);
-                        let words = format!("#{tag}");
-                        let chip = Chip {
-                            words: &words,
-                            count,
-                            lead: Lead::None,
-                            on: facets.tags.contains(tag),
-                            enabled: true,
-                        };
-                        if chip.show(ui, "tag-pill") {
-                            press(actions, Facet::Tag(tag.clone()));
-                        }
-                    }
-                });
-            });
+        let manage = i18n::translate(language, keys::notes::MANAGE_TAGS, &[]);
+        // Only the pills scroll: the button stays where it can be clicked.
+        let room = ui.available_width() - manage_width(ui, &manage) - 7.0;
+        ui.allocate_ui(vec2(room, 24.0), |ui| tag_pills(ui, view, facets, actions));
+        if manage_button(ui, &manage) {
+            actions.push(Action::Notes(crate::notes::Action::Tags(
+                crate::notes::Tags::Open,
+            )));
+        }
     });
+}
+
+fn tag_pills(ui: &mut Ui, view: &NotesView, facets: &Facets, actions: &mut Actions) {
+    egui::ScrollArea::horizontal()
+        .id_salt("tag-rail")
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 7.0;
+                for tag in &view.available_tags {
+                    let count = view
+                        .tag_counts
+                        .iter()
+                        .find(|counted| &counted.value == tag)
+                        .map(|counted| counted.count);
+                    let words = format!("#{tag}");
+                    let chip = Chip {
+                        words: &words,
+                        count,
+                        lead: Lead::None,
+                        on: facets.tags.contains(tag),
+                        enabled: true,
+                    };
+                    if chip.show(ui, "tag-pill") {
+                        press(actions, Facet::Tag(tag.clone()));
+                    }
+                }
+            });
+        });
+}
+
+fn manage_width(ui: &Ui, words: &str) -> f32 {
+    let galley = widgets::text(
+        ui,
+        words,
+        11.0,
+        400.0,
+        FontFamily::Proportional,
+        Color32::WHITE,
+    );
+    galley.size().x + 18.0
+}
+
+/// Opens the library's tag manager: it acts on exactly what this rail shows.
+fn manage_button(ui: &mut Ui, words: &str) -> bool {
+    let p = palette(ui.ctx());
+    let corner = CornerRadius::same(u8::MAX);
+    let response = interact(
+        ui,
+        vec2(manage_width(ui, words), 22.0),
+        Sense::click(),
+        "tag-manage",
+        || WidgetInfo::labeled(Role::Button, true, words),
+        corner,
+    );
+    let lit = hovered(ui, &response);
+    ui.painter().rect(
+        response.rect,
+        corner,
+        Color32::TRANSPARENT,
+        Stroke::new(1.0, towards(p.line_soft, p.amber_dim, lit)),
+        StrokeKind::Inside,
+    );
+    let ink = towards(p.text_2, p.amber_text, lit);
+    let galley = widgets::text(ui, words, 11.0, 400.0, FontFamily::Proportional, ink);
+    ui.painter()
+        .galley(response.rect.center() - galley.size() / 2.0, galley, ink);
+    response.clicked()
 }
 
 /// The badge carries the format's hue; tinted amber when pressed, it would lose the very clue

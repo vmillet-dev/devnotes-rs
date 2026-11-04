@@ -1,6 +1,6 @@
 //! Notes: the view the canvas draws.
 
-use engine::notes::model::{DisplayNote, NoteDraft, NotePatch};
+use engine::notes::model::{DisplayNote, NoteDraft, NotePatch, TagUsage};
 use engine::notes::priority::Priority;
 use engine::notes::trash::TrashedNote;
 use engine::notes::view::{NotesQuery, NotesView};
@@ -93,6 +93,25 @@ pub fn purge(backend: &Backend, ids: Vec<String>) -> Pending<u32> {
 
 pub fn empty_trash(backend: &Backend) -> Pending<u32> {
     backend.db(notes::empty_trash)
+}
+
+/// Every tag of the library, with the notes carrying it; read from the index.
+pub fn list_tags(backend: &Backend) -> Pending<Vec<TagUsage>> {
+    backend.db(notes::list_tags)
+}
+
+/// The notes carrying any of `tags`, each once: what a change would touch.
+pub fn count_tagged(backend: &Backend, tags: Vec<String>) -> Pending<u32> {
+    backend.db(move |engine| notes::count_notes_tagged(engine, tags))
+}
+
+/// Onto an existing tag, a merge. `updated_at` stays: a retag is aimed at no note.
+pub fn rename_tags(backend: &Backend, tags: Vec<String>, into: String) -> Pending<u32> {
+    backend.db(move |engine| notes::rename_tags(engine, tags, into))
+}
+
+pub fn delete_tags(backend: &Backend, tags: Vec<String>) -> Pending<u32> {
+    backend.db(move |engine| notes::delete_tags(engine, tags))
 }
 
 /// The copy, under the title the interface words.

@@ -198,6 +198,15 @@ fn the_canvas_of_an_open_library() {
     click(&mut harness, "space-switcher");
     click(&mut harness, "facets-toggle");
     capture(&mut harness, "facets-panel");
+    click(&mut harness, "tag-manage");
+    harness
+        .get_all_by(|node| node.author_id() == Some("tag-item"))
+        .next()
+        .expect("the samples are tagged")
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "tag-manager");
+    click(&mut harness, "tag-manager-close");
     click(&mut harness, "facets-toggle");
     harness.set_size(egui::vec2(640.0, SIZE.y));
     settle(&mut harness);
