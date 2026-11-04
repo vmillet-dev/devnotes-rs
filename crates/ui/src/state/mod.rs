@@ -1,5 +1,6 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
+pub mod drawing_exports;
 pub mod drawing_pictures;
 pub mod editor;
 pub mod note_revisions;
@@ -91,6 +92,8 @@ pub struct AppState {
     pub palette_view: crate::palette::PaletteView,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
+    pub dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
+    pub exports: drawing_exports::DrawingExports,
     pub errors: ErrorNotifier,
     pub clock: Box<dyn Clock>,
     /// The system's wish; the look adds nothing to it.
@@ -125,6 +128,8 @@ impl AppState {
             palette_view: crate::palette::PaletteView::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
+            dialog: platform::dialog::system(),
+            exports: drawing_exports::DrawingExports::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
             reduced_motion,
@@ -179,7 +184,11 @@ impl AppState {
         self.editor
             .adopt(backend, &mut self.revision, &mut self.errors);
         self.editor.update(backend, self.revision, &mut self.errors);
+        self.exports.update(&mut self.status, &mut self.errors);
         self.follow_revisions(backend);
+        for id in self.editor.take_redrawn() {
+            self.caches.thumbnails.redrawn(&id);
+        }
         self.caches.thumbnails.update(ctx, backend);
         if self
             .spaces
@@ -490,6 +499,7 @@ impl AppState {
         let id = self.editor.open_id().map(str::to_owned);
         match editing {
             Editing::Save { session, edit } => self.editor.save(backend, session, edit),
+            Editing::Export(export) => self.exports.ask(backend, &self.dialog, export),
             Editing::Pictures {
                 session,
                 content,

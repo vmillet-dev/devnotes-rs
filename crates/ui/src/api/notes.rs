@@ -42,6 +42,51 @@ pub fn picture_drawing(
     })
 }
 
+/// What became of an export.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Exported {
+    /// The file's name, its folders left out.
+    Saved(String),
+    Cancelled,
+    Unwritable,
+}
+
+/// A drawing written where the person says. Off the frame: the dialog blocks until answered.
+pub fn export_drawing(
+    backend: &Backend,
+    dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
+    export: crate::notes::DrawingExport,
+) -> Pending<Exported> {
+    backend.compute(move |_| {
+        let crate::notes::DrawingExport {
+            name,
+            content,
+            palette,
+            format,
+        } = export;
+        let name = format!("{name}.{}", format.extension());
+        let Some(path) = dialog.save(&name) else {
+            return Ok(Exported::Cancelled);
+        };
+        let fonts = crate::theme::fonts::for_drawings();
+        let written = drawing::Drawing::read(&content)
+            .and_then(|scene| drawing::export(&scene, &palette, &fonts, format));
+        let Some(bytes) = written else {
+            return Ok(Exported::Cancelled);
+        };
+        let shown = path.file_name().map_or_else(
+            || path.display().to_string(),
+            |name| name.to_string_lossy().into_owned(),
+        );
+        Ok(
+            match engine::tools::write_file(&path.to_string_lossy(), &bytes) {
+                Ok(()) => Exported::Saved(shown),
+                Err(_) => Exported::Unwritable,
+            },
+        )
+    })
+}
+
 /// A draft as the editor shows it, before it has a row. Pure (D12).
 pub fn decorate(note: engine::notes::model::Note) -> DisplayNote {
     engine::notes::model::decorate_now(note)

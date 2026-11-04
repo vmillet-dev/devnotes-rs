@@ -178,6 +178,10 @@ fn panel(
         ui.new_child(UiBuilder::new().max_rect(body_rect.shrink2(Vec2::new(20.0, 14.0))));
     let left = if let Some(view) = &mut editing.drawing {
         let shown = drawing::show(&mut body_ui, view, &note.title, state.language);
+        if let Some(format) = shown.export {
+            let export = view.export(&note.title, format, state.language, palette(ui.ctx()));
+            actions.push(editor(Editing::Export(export)));
+        }
         if shown.left {
             pictures(ui, session, editing, actions);
         }

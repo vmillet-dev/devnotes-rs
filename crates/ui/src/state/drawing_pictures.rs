@@ -65,6 +65,12 @@ impl Thumbnails {
         self.entries.insert(stamp, Entry::Reading(reading));
     }
 
+    /// Its pictures were taken, which moves no date: what is held of it is asked again.
+    pub fn redrawn(&mut self, id: &str) {
+        self.entries.retain(|stamp, _| stamp.id != id);
+        self.done.retain(|stamp| stamp.id != id);
+    }
+
     /// Once a frame: what was read goes to be decoded, what was decoded is uploaded.
     pub fn update(&mut self, ctx: &egui::Context, backend: &Backend) {
         let mut finished = Vec::new();

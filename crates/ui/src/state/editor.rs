@@ -180,6 +180,10 @@ pub struct EditorState {
     creating: Vec<Creating>,
     writes: Vec<Pending<DisplayNote>>,
     picturing: Vec<Picturing>,
+    /// Pictures being written, by note.
+    pictured: Vec<(String, Pending<DisplayNote>)>,
+    /// The notes whose pictures were written since the last frame asked.
+    redrawn: Vec<String>,
 }
 
 impl EditorState {
@@ -367,8 +371,14 @@ impl EditorState {
                 pictures: Some(pictures),
                 ..NotePatch::default()
             };
-            self.writes.push(api::notes::update(backend, id, patch));
+            let writing = api::notes::update(backend, id.clone(), patch);
+            self.pictured.push((id, writing));
         }
+    }
+
+    /// The notes whose pictures changed: a card holds what it read before them.
+    pub fn take_redrawn(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.redrawn)
     }
 
     /// Pinned, prioritised, moved or filed while a draft: it changes here, written with the
@@ -499,6 +509,19 @@ impl EditorState {
             }
         }
         self.advance_pictures(backend, errors);
+        let redrawn = &mut self.redrawn;
+        self.pictured
+            .retain_mut(|(id, pending)| match pending.poll() {
+                None => true,
+                Some(Ok(_)) => {
+                    redrawn.push(std::mem::take(id));
+                    false
+                }
+                Some(Err(error)) => {
+                    errors.report(keys::errors::NOTE_SAVE_FAILED, &error);
+                    false
+                }
+            });
         self.writes.retain_mut(|pending| match pending.poll() {
             None => true,
             Some(Ok(_)) => {
