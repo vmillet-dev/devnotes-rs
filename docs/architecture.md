@@ -4686,6 +4686,14 @@ the notes it touches (`count_notes_tagged`, each note once), and the confirmatio
 actions' place: the click that asked is where a second one would land. A write bumps the revision
 and reads the tags again.
 
+Copying a note with `{{fields}}` — its card's ⚡ (`note-card-fill`, in place of the copy) or `C` —
+reads it whole and opens the fields form (`notes::overlays::placeholder_form`,
+`state::placeholder_fill`) instead: one row a field, seeded with the values the note stores, each
+default a hint and never a value, the first empty field focused. « Copy filled » asks the core to
+fill (`fill_placeholders`: typed, else global, else the text's default), copies the answer and
+keeps the values (`set_placeholder_values`, which leaves `updated_at`); « copy as is » copies the
+text, tokens included; cancelled, nothing is written.
+
 The header is one row while every control holds in it and two on purpose past that
 (`notes::header::layout`): the reference's floors decide, not the widths drawn, which differ
 between one row and two. What does not narrow is measured as drawn, the same in either layout;

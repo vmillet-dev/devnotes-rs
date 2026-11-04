@@ -95,6 +95,25 @@ pub fn empty_trash(backend: &Backend) -> Pending<u32> {
     backend.db(notes::empty_trash)
 }
 
+/// `content` with its fields filled: the values typed, else the global variables, else the
+/// defaults written in the text.
+pub fn fill(
+    backend: &Backend,
+    content: String,
+    values: std::collections::BTreeMap<String, String>,
+) -> Pending<String> {
+    backend.db(move |engine| notes::fill_placeholders(engine, content, values))
+}
+
+/// What was typed into a note's fields, kept; `updated_at` stays: filling is not editing.
+pub fn set_field_values(
+    backend: &Backend,
+    id: String,
+    values: std::collections::BTreeMap<String, String>,
+) -> Pending<DisplayNote> {
+    backend.db(move |engine| notes::set_placeholder_values(engine, id, values))
+}
+
 /// Every tag of the library, with the notes carrying it; read from the index.
 pub fn list_tags(backend: &Backend) -> Pending<Vec<TagUsage>> {
     backend.db(notes::list_tags)

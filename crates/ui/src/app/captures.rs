@@ -156,6 +156,9 @@ fn the_canvas_of_an_open_library() {
     click(&mut harness, "note-card-menu");
     capture(&mut harness, "card-menu");
     click(&mut harness, "note-card-menu");
+    click(&mut harness, "note-card-fill");
+    capture(&mut harness, "placeholder-form");
+    click(&mut harness, "placeholder-cancel");
 
     for _ in 0..2 {
         harness.key_press(egui::Key::ArrowRight);

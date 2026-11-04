@@ -133,6 +133,17 @@ pub enum Action {
     Trash(Trash),
     Facet(crate::state::notes_query::Facet),
     Tags(Tags),
+    Fill(Fill),
+}
+
+/// What the `{{fields}}` form asks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Fill {
+    /// Filled with these, copied, and kept.
+    Submit(std::collections::BTreeMap<String, String>),
+    /// The text as it is, tokens included.
+    Raw,
+    Cancel,
 }
 
 /// What the tag manager asks.
@@ -191,6 +202,7 @@ pub struct View {
     editor: Option<editor::Draft>,
     trash: overlays::trash_panel::TrashView,
     tag_manager: overlays::tag_manager::TagManagerView,
+    fill: overlays::placeholder_form::FillView,
 }
 
 /// The rail on the left, as wide as the setting says, and the canvas beside it.
@@ -232,6 +244,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     editor::show(ui, state, &mut view.editor, actions);
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
     overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
+    overlays::placeholder_form::show(ui, state, &mut view.fill, actions);
     overlays::undo_bar::show(ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);
