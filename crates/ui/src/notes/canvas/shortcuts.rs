@@ -19,6 +19,8 @@ pub enum CanvasKey {
     Copy,
     Pin,
     Priority(Priority),
+    /// Ticks the focused card, or unticks it.
+    Check,
     /// Twice, the way the card's menu asks for two clicks: the focused card can be scrolled
     /// out of view.
     Trash,
@@ -44,7 +46,7 @@ const CREATE: Modifiers = Modifiers::COMMAND;
 const CREATE_SHIFT: Modifiers = Modifiers::COMMAND.plus(Modifiers::SHIFT);
 
 /// In reading order, which is the order the keyboard sheet lists them in.
-pub static CANVAS: [Binding; 19] = [
+pub static CANVAS: [Binding; 20] = [
     bound(Key::N, CREATE, CanvasKey::New(NoteKind::Snippet)),
     bound(Key::N, CREATE_SHIFT, CanvasKey::New(NoteKind::Note)),
     bound(Key::L, CREATE_SHIFT, CanvasKey::New(NoteKind::Checklist)),
@@ -62,6 +64,7 @@ pub static CANVAS: [Binding; 19] = [
     bare(Key::Num2, CanvasKey::Priority(Priority::Medium)),
     bare(Key::Num3, CanvasKey::Priority(Priority::High)),
     bare(Key::Num4, CanvasKey::Priority(Priority::Urgent)),
+    bare(Key::X, CanvasKey::Check),
     bare(Key::Delete, CanvasKey::Trash),
     bare(Key::Backspace, CanvasKey::Trash),
     bare(Key::Escape, CanvasKey::StepBack),

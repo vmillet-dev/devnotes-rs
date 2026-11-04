@@ -116,6 +116,29 @@ pub enum Action {
     Copy(String),
     /// A key of the canvas's table, on the card with the focus.
     Canvas(canvas::shortcuts::CanvasKey),
+    /// Ticked or unticked: `Ctrl`-click, the card's box, `X`.
+    Check(String),
+    /// `Shift`-click: from the card that had the focus to this one.
+    CheckRange {
+        id: String,
+        anchor: Option<String>,
+    },
+    ClearSelection,
+    /// On every ticked note still on screen.
+    Batch(Batch),
+}
+
+/// What the selection bar does to every ticked note at once.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Batch {
+    MoveTo(String),
+    /// `None` takes them out of their folders.
+    File(Option<String>),
+    Prioritise(engine::notes::priority::Priority),
+    Tag(String),
+    Untag(String),
+    Pin(bool),
+    Delete,
 }
 
 /// The rail's edge, which widens it.

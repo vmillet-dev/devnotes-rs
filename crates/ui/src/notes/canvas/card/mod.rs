@@ -31,6 +31,9 @@ pub(super) struct Context<'a> {
     pub(super) library: &'a crate::state::spaces::SpacesState,
     /// The card a first `Delete` armed: a second one sends it to the trash.
     pub(super) armed: Option<&'a str>,
+    /// The ticked cards: while any is, every card shows its box.
+    pub(super) selection: &'a crate::state::selection::SelectionState,
+    pub(super) selecting: bool,
 }
 
 const FOOTER_HEIGHT: f32 = 18.0;
@@ -75,13 +78,26 @@ pub(super) fn show(
         ui.memory_mut(|memory| memory.set_focus_lock_filter(open.id, kept));
     }
     if open.clicked() {
-        actions.push(crate::action::Action::Notes(
-            crate::notes::Action::OpenNote(note.id.clone()),
-        ));
+        let modifiers = ui.input(|input| input.modifiers);
+        let id = note.id.clone();
+        let asked = if modifiers.command {
+            crate::notes::Action::Check(id)
+        } else if modifiers.shift {
+            crate::notes::Action::CheckRange {
+                id,
+                anchor: canvas_view.anchor.clone(),
+            }
+        } else {
+            crate::notes::Action::OpenNote(id)
+        };
+        actions.push(crate::action::Action::Notes(asked));
     }
+    let checked = context.selection.is_checked(&note.id);
     let armed = context.armed == Some(note.id.as_str());
     let (fill, edge) = if armed {
         (p.bg_2, p.red)
+    } else if checked {
+        (p.bg_2, p.amber_edge)
     } else if ui.rect_contains_pointer(rect) {
         (p.bg_2, p.line)
     } else {
@@ -97,7 +113,17 @@ pub(super) fn show(
 
     let inner = rect.shrink(padding);
     let checklist = note.kind == engine::notes::kind::NoteKind::Checklist;
-    let title_bottom = title_row(ui, inner, &title, note, context.language);
+    let mut title_room = inner;
+    let ticking = checked || context.selecting || ui.rect_contains_pointer(rect);
+    if tick(ui, inner, &title, (checked, ticking), context.language) {
+        actions.push(crate::action::Action::Notes(crate::notes::Action::Check(
+            note.id.clone(),
+        )));
+    }
+    if ticking {
+        title_room.min.x += crate::widgets::MIN_TARGET + 2.0;
+    }
+    let title_bottom = title_row(ui, title_room, &title, note, context.language);
     let gap = if checklist { 6.0 } else { 8.0 };
     let footer_gap = if checklist { 4.0 } else { 8.0 };
     let footer = Rect::from_min_max(
@@ -131,6 +157,44 @@ fn arming(ui: &mut Ui, footer: Rect, language: i18n::Language) {
     );
     let at = pos2(footer.left(), footer.center().y - shown.size().y / 2.0);
     text_at(ui, at, shown, &words, "note-card-arming");
+}
+
+/// The card's box, before its title: ticked, the card joins the selection.
+/// ⚠️ Allocated on every frame, shown or not: a widget that comes and goes moves the ids of
+/// every one after it, and the ⋯'s menu lost its own.
+fn tick(
+    ui: &mut Ui,
+    inner: Rect,
+    title: &str,
+    (checked, shown): (bool, bool),
+    language: i18n::Language,
+) -> bool {
+    let p = palette(ui.ctx());
+    let label = i18n::translate(
+        language,
+        keys::notes::SELECT_NOTE,
+        &[("title", title.into())],
+    );
+    let target = Rect::from_min_size(
+        inner.min - vec2(4.0, 3.0),
+        egui::Vec2::splat(crate::widgets::MIN_TARGET),
+    );
+    let sense = if shown {
+        Sense::click()
+    } else {
+        Sense::hover()
+    };
+    let response = ui.allocate_rect(target, sense);
+    if !shown {
+        return false;
+    }
+    response.widget_info(|| WidgetInfo::selected(Role::CheckBox, true, checked, &label));
+    address(ui, &response, "note-card-check");
+    crate::theme::focus::ring(ui, &response, CornerRadius::same(4));
+    let colour = if checked { p.amber_text } else { p.text_2 };
+    let square = Rect::from_center_size(target.center(), egui::Vec2::splat(14.0));
+    crate::notes::ui::tick_box(ui, square, checked, colour);
+    response.clicked()
 }
 
 /// The title on two lines at most, the kind's badge on its first line. Answers where it ends.

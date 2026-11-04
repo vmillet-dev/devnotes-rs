@@ -68,3 +68,12 @@ pub fn delete(backend: &Backend, ids: Vec<String>) -> Pending<()> {
 pub fn duplicate(backend: &Backend, id: String, title: String) -> Pending<DisplayNote> {
     backend.db(move |engine| notes::duplicate_note(engine, id, title))
 }
+
+/// Through `normalize_tags`, the one keeper of what a tag is.
+pub fn tag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<()> {
+    backend.db(move |engine| notes::tag_notes(engine, ids, vec![tag]).map(drop))
+}
+
+pub fn untag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<()> {
+    backend.db(move |engine| notes::remove_tag(engine, ids, tag).map(drop))
+}
