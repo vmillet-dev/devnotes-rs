@@ -308,13 +308,29 @@ impl AppState {
                 body,
             } => self.editor.save(backend, session, title, body),
             crate::notes::Action::NewNote(kind) => self.new_note(kind),
-            crate::notes::Action::Pin { id, pinned } => self.notes.pin(backend, id, pinned),
-            crate::notes::Action::Prioritise { id, priority } => {
-                self.notes.prioritise(backend, id, priority);
+            crate::notes::Action::Pin { id, pinned } => {
+                self.notes.pin(backend, vec![id], pinned);
             }
-            crate::notes::Action::File { id, folder } => self.notes.file(backend, id, folder),
-            crate::notes::Action::MoveTo { id, space } => self.notes.move_to(backend, id, space),
-            crate::notes::Action::Delete(id) => self.notes.delete(backend, id),
+            crate::notes::Action::Prioritise { id, priority } => {
+                self.notes.prioritise(backend, vec![id], priority);
+            }
+            crate::notes::Action::File { id, folder } => {
+                self.notes.file(backend, vec![id], folder);
+            }
+            crate::notes::Action::MoveTo { id, space } => {
+                self.notes.move_to(backend, vec![id], space);
+            }
+            crate::notes::Action::Delete(id) => self.notes.delete(backend, vec![id]),
+            crate::notes::Action::Check(id) => self.selection.toggle(&id),
+            crate::notes::Action::CheckRange { id, anchor } => {
+                let order = self.on_screen();
+                let order: Vec<&str> = order.iter().map(String::as_str).collect();
+                self.selection.check_range(&order, anchor.as_deref(), &id);
+            }
+            crate::notes::Action::ClearSelection => {
+                self.selection.clear();
+            }
+            crate::notes::Action::Batch(batch) => self.batch(batch, backend),
             crate::notes::Action::Duplicate { id, title } => {
                 self.notes.duplicate(backend, id, title);
             }
@@ -325,6 +341,36 @@ impl AppState {
                 self.notes_view.focus_search = true;
                 // Taken by the next frame, which nothing else may ask for.
                 ctx.request_repaint();
+            }
+        }
+    }
+
+    /// The notes on screen, in the order they are drawn.
+    pub fn on_screen(&self) -> Vec<String> {
+        self.notes_query.view().map_or_else(Vec::new, |view| {
+            view.cards().map(|card| card.id.clone()).collect()
+        })
+    }
+
+    /// The ticked notes still on screen; nothing is asked of the core for none.
+    fn batch(&mut self, batch: crate::notes::Batch, backend: &Backend) {
+        use crate::notes::Batch;
+        let order = self.on_screen();
+        let order: Vec<&str> = order.iter().map(String::as_str).collect();
+        let ids = self.selection.checked_in(&order);
+        if ids.is_empty() {
+            return;
+        }
+        match batch {
+            Batch::MoveTo(space) => self.notes.move_to(backend, ids, space),
+            Batch::File(folder) => self.notes.file(backend, ids, folder),
+            Batch::Prioritise(priority) => self.notes.prioritise(backend, ids, priority),
+            Batch::Tag(tag) => self.notes.tag(backend, ids, tag),
+            Batch::Untag(tag) => self.notes.untag(backend, ids, tag),
+            Batch::Pin(pinned) => self.notes.pin(backend, ids, pinned),
+            Batch::Delete => {
+                self.notes.delete(backend, ids);
+                self.selection.clear();
             }
         }
     }
@@ -374,29 +420,34 @@ impl AppState {
             }
             CanvasKey::Pin => {
                 if let (Some(id), Some(pinned)) = (focused, pinned) {
-                    self.notes.pin(backend, id, !pinned);
+                    self.notes.pin(backend, vec![id], !pinned);
                 }
             }
             CanvasKey::Priority(priority) => {
                 if let Some(id) = focused {
-                    self.notes.prioritise(backend, id, priority);
+                    self.notes.prioritise(backend, vec![id], priority);
+                }
+            }
+            CanvasKey::Check => {
+                if let Some(id) = focused {
+                    self.selection.toggle(&id);
                 }
             }
             CanvasKey::Trash => {
                 if let Some(id) = focused
                     && self.selection.arm(&id)
                 {
-                    self.notes.delete(backend, id);
+                    self.notes.delete(backend, vec![id]);
                 }
             }
             CanvasKey::StepBack => self.step_back(),
         }
     }
 
-    /// Escape, down the ladder and one rung at a time: what is armed, then the search, then up
+    /// Escape, down the ladder and one rung at a time: what is armed, the selection, the search, up
     /// a folder — leaving is the biggest step, so it comes last.
     fn step_back(&mut self) {
-        if self.selection.disarm() {
+        if self.selection.disarm() || self.selection.clear() {
             return;
         }
         if !self.notes_query.typed().is_empty() {

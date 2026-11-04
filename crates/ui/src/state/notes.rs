@@ -40,30 +40,42 @@ impl NotesState {
         self.saves.push(api::notes::update(backend, id, patch));
     }
 
-    pub fn pin(&mut self, backend: &Backend, id: String, pinned: bool) {
-        let pending = api::notes::pin(backend, vec![id], pinned);
+    pub fn pin(&mut self, backend: &Backend, ids: Vec<String>, pinned: bool) {
+        let pending = api::notes::pin(backend, ids, pinned);
         self.writes.push((keys::errors::NOTE_SAVE_FAILED, pending));
     }
 
-    pub fn prioritise(&mut self, backend: &Backend, id: String, priority: Priority) {
-        let pending = api::notes::prioritise(backend, vec![id], priority);
+    pub fn prioritise(&mut self, backend: &Backend, ids: Vec<String>, priority: Priority) {
+        let pending = api::notes::prioritise(backend, ids, priority);
         self.writes.push((keys::errors::NOTE_SAVE_FAILED, pending));
     }
 
-    pub fn file(&mut self, backend: &Backend, id: String, folder: Option<String>) {
-        let pending = api::folders::file(backend, vec![id], folder);
+    pub fn file(&mut self, backend: &Backend, ids: Vec<String>, folder: Option<String>) {
+        let pending = api::folders::file(backend, ids, folder);
         self.writes.push((keys::errors::NOTE_MOVE_FAILED, pending));
     }
 
-    pub fn move_to(&mut self, backend: &Backend, id: String, space: String) {
-        let pending = api::notes::move_to(backend, vec![id], space);
+    pub fn move_to(&mut self, backend: &Backend, ids: Vec<String>, space: String) {
+        let pending = api::notes::move_to(backend, ids, space);
         self.writes.push((keys::errors::NOTE_MOVE_FAILED, pending));
     }
 
-    pub fn delete(&mut self, backend: &Backend, id: String) {
-        let pending = api::notes::delete(backend, vec![id]);
+    pub fn delete(&mut self, backend: &Backend, ids: Vec<String>) {
+        let pending = api::notes::delete(backend, ids);
         self.writes
             .push((keys::errors::NOTE_DELETE_FAILED, pending));
+    }
+
+    pub fn tag(&mut self, backend: &Backend, ids: Vec<String>, tag: String) {
+        let pending = api::notes::tag(backend, ids, tag);
+        self.writes
+            .push((keys::errors::BULK_ACTION_FAILED, pending));
+    }
+
+    pub fn untag(&mut self, backend: &Backend, ids: Vec<String>, tag: String) {
+        let pending = api::notes::untag(backend, ids, tag);
+        self.writes
+            .push((keys::errors::BULK_ACTION_FAILED, pending));
     }
 
     pub fn duplicate(&mut self, backend: &Backend, id: String, title: String) {

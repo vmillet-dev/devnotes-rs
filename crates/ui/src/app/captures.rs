@@ -157,6 +157,15 @@ fn the_canvas_of_an_open_library() {
     capture(&mut harness, "card-menu");
     click(&mut harness, "note-card-menu");
 
+    for _ in 0..2 {
+        harness.key_press(egui::Key::ArrowRight);
+        harness.key_press(egui::Key::X);
+    }
+    settle(&mut harness);
+    capture(&mut harness, "selection-bar");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+
     click(&mut harness, "sort-trigger");
     capture(&mut harness, "header-sort-menu");
     click(&mut harness, "sort-trigger");

@@ -4701,6 +4701,16 @@ focus moves; where the arrows go is `canvas::grid::neighbour`, read from the cor
 the column count last laid out, not from what is drawn, and a card asked to take the focus is
 scrolled to first.
 
+Several notes are ticked at once (`state::selection`): `Ctrl`-click or the card's box toggles one,
+`Shift`-click ticks from the card that had the focus the frame before (a click focuses what it
+clicks) to this one, `X` toggles the focused card. While any is ticked, the selection bar floats
+over the canvas, never in its flow: the count, then commands — move to a space, file into a
+folder or out of every one, a priority, a tag added or removed, pin or unpin, delete in two
+clicks. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
+the selection go after disarming and before the search. ⚠️ The card's box is allocated on every
+frame, shown or not: a widget that comes and goes moved the ids of every widget after it, and the
+⋯ lost its menu.
+
 The rail can be put away (`library-rail-toggle`, the application setting `showLibraryRail`): the
 space and folder switchers then take its place in the header, their rows' ⋯ opening the same
 panels as the rail (`notes::panel`, shared). While a folder is open, its breadcrumb replaces

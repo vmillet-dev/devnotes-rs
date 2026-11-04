@@ -5,6 +5,7 @@
 mod card;
 pub mod grid;
 pub mod rows;
+mod selection_bar;
 pub mod shortcuts;
 
 use egui::emath::GuiRounding as _;
@@ -30,6 +31,11 @@ pub struct CanvasView {
     pub focused: Option<String>,
     pub request: Option<String>,
     pub columns: usize,
+    /// The card that had the focus the frame before: a `Shift`-click focuses what it clicks.
+    pub anchor: Option<String>,
+    /// The selection bar's: a tag being typed, and a deletion waiting for its confirmation.
+    pub tag_draft: String,
+    pub confirm_delete: bool,
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions: &mut Actions) {
@@ -73,9 +79,12 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         thumbnails: &state.caches.thumbnails,
         library: &state.spaces,
         armed: state.selection.armed(),
+        selection: &state.selection,
+        selecting: !state.selection.checked_in(&on_screen(view)).is_empty(),
     };
     sections(ui, view, &context, canvas_view, actions);
     hint(ui, language);
+    selection_bar::show(ui, state, view, canvas_view, actions);
 }
 
 /// The keys that matter, on the bottom edge whatever is above it.
@@ -94,6 +103,10 @@ fn hint(ui: &mut Ui, language: i18n::Language) {
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     address(&band_ui, &response, "canvas-keyboard-hint");
     widgets::arrowed(&band_ui, Some(rect.left_center()), &words, 11.0, p.text_2);
+}
+
+fn on_screen(view: &NotesView) -> Vec<&str> {
+    view.cards().map(|card| card.id.as_str()).collect()
 }
 
 fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
@@ -138,7 +151,7 @@ fn sections(
                 let rect = Rect::from_min_size(origin + vec2(0.0, top), vec2(width, CARD_HEIGHT));
                 ui.scroll_to_rect(rect, None);
             }
-            canvas_view.focused = None;
+            canvas_view.anchor = canvas_view.focused.take();
             let top = viewport.top() - s.canvas;
             for (at, row) in rows.visible(top, viewport.bottom() - s.canvas) {
                 let min = origin + vec2(0.0, at);
