@@ -3,6 +3,7 @@
 //! cannot do, decorations given by the caller, the IME, Tab kept in the text, and the context
 //! menu. It knows no rule of the notes: colours, field ranges and marked lines are arguments.
 
+mod bubbles;
 mod geometry;
 mod input;
 
@@ -17,6 +18,7 @@ use text::{Buffer, Selection};
 
 use crate::theme::palette;
 
+pub use bubbles::Completion;
 pub use geometry::Lines;
 
 /// How far the text sits from the gutter, and the gutter from its numbers.
@@ -56,6 +58,7 @@ pub struct Editor {
     preedit: String,
     /// The caret is brought into view at the next frame.
     reveal: bool,
+    choosing: bubbles::Choosing,
 }
 
 impl Editor {
@@ -109,6 +112,8 @@ pub struct EditorView<'a> {
     marked_lines: &'a [usize],
     colours: Option<Colours<'a>>,
     language: i18n::Language,
+    completion: Option<Completion<'a>>,
+    hover: Option<&'a dyn Fn(usize) -> Option<String>>,
 }
 
 impl<'a> EditorView<'a> {
@@ -128,7 +133,23 @@ impl<'a> EditorView<'a> {
             marked_lines: &[],
             colours: None,
             language: i18n::Language::En,
+            completion: None,
+            hover: None,
         }
+    }
+
+    /// What the caller proposes for the word at the caret (`Editor::word_at_caret`).
+    #[must_use]
+    pub fn completion(mut self, completion: Option<Completion<'a>>) -> Self {
+        self.completion = completion;
+        self
+    }
+
+    /// The words for a position under the pointer, shown as a tooltip.
+    #[must_use]
+    pub fn hover(mut self, hover: &'a dyn Fn(usize) -> Option<String>) -> Self {
+        self.hover = Some(hover);
+        self
     }
 
     /// The context menu's.
@@ -261,13 +282,7 @@ impl<'a> EditorView<'a> {
         let id = response.id;
         let focused = ui.memory(|memory| memory.has_focus(id));
         if focused {
-            let filter = egui::EventFilter {
-                tab: true,
-                horizontal_arrows: true,
-                vertical_arrows: true,
-                escape: false,
-            };
-            ui.memory_mut(|memory| memory.set_focus_lock_filter(id, filter));
+            lock_focus(ui, id, bubbles::open(editor, self.completion.as_ref()));
         }
         input::pointer(ui, &response, editor, &frame);
         let keys = input::Keys {
@@ -276,8 +291,18 @@ impl<'a> EditorView<'a> {
             read_only: self.read_only,
             page: viewport.height(),
         };
-        if focused && let Some(first) = input::keyboard(ui, editor, &keys, &frame) {
+        // While the pointer is on the list, a click on it moves the focus there: it stays shown.
+        let listing = bubbles::open(editor, self.completion.as_ref())
+            && (focused || bubbles::pointer_on_list(ui, id));
+        if listing
+            && focused
+            && let Some(completion) = &self.completion
+            && let Some(first) = bubbles::keys(ui, editor, completion)
+        {
             *changed = Some(first);
+        }
+        if focused && let Some(first) = input::keyboard(ui, editor, &keys, &frame) {
+            *changed = Some(changed.map_or(first, |earlier| earlier.min(first)));
         }
         if let Some(first) = menu(&response, editor, &keys, self.language) {
             *changed = Some(changed.map_or(first, |earlier| earlier.min(first)));
@@ -299,18 +324,19 @@ impl<'a> EditorView<'a> {
         };
         let caret = paint(ui, editor, &frame, visible, &style);
         if focused {
-            let to_global = ui
-                .ctx()
-                .layer_transform_to_global(ui.layer_id())
-                .unwrap_or_default();
-            ui.ctx().output_mut(|output| {
-                output.ime = Some(egui::output::IMEOutput {
-                    purpose: egui::IMEPurpose::Normal,
-                    rect: to_global * visible,
-                    cursor_rect: to_global * caret,
-                    should_interrupt_composition: false,
-                });
-            });
+            ask_input_method(ui, visible, caret);
+        }
+        if listing
+            && changed.is_none()
+            && let Some(completion) = &self.completion
+            && let Some(first) = bubbles::list(ui, editor, completion, caret, id)
+        {
+            *changed = Some(first);
+            editor.lines.forget_from(first);
+            response.mark_changed();
+        }
+        if let Some(hover) = self.hover {
+            bubbles::tooltip(ui, &response, editor, &frame, hover);
         }
         if std::mem::take(&mut editor.reveal) {
             ui.scroll_to_rect(caret.expand2(Vec2::new(char_width * 4.0, row_height)), None);
@@ -325,6 +351,34 @@ impl<'a> EditorView<'a> {
         crate::widgets::address(ui, &response, self.author_id);
         response
     }
+}
+
+/// The keys the text keeps: Tab and the arrows; Escape too while a list is open, which it
+/// closes rather than leaving the text.
+fn lock_focus(ui: &Ui, id: egui::Id, escape: bool) {
+    let filter = egui::EventFilter {
+        tab: true,
+        horizontal_arrows: true,
+        vertical_arrows: true,
+        escape,
+    };
+    ui.memory_mut(|memory| memory.set_focus_lock_filter(id, filter));
+}
+
+/// Where the window puts the input method's window: at the caret.
+fn ask_input_method(ui: &Ui, visible: Rect, caret: Rect) {
+    let to_global = ui
+        .ctx()
+        .layer_transform_to_global(ui.layer_id())
+        .unwrap_or_default();
+    ui.ctx().output_mut(|output| {
+        output.ime = Some(egui::output::IMEOutput {
+            purpose: egui::IMEPurpose::Normal,
+            rect: to_global * visible,
+            cursor_rect: to_global * caret,
+            should_interrupt_composition: false,
+        });
+    });
 }
 
 /// What a frame paints besides the text.
