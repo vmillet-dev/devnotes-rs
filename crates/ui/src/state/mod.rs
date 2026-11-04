@@ -2,6 +2,7 @@
 
 pub mod drawing_pictures;
 pub mod editor;
+pub mod note_revisions;
 pub mod notes;
 pub mod notes_query;
 pub mod palette;
@@ -80,6 +81,7 @@ pub struct AppState {
     pub notes_view: crate::notes::View,
     pub notes: notes::NotesState,
     pub editor: editor::EditorState,
+    pub revisions: note_revisions::RevisionsState,
     pub selection: selection::SelectionState,
     pub undo: undo::UndoState,
     pub trash: trash::TrashState,
@@ -113,6 +115,7 @@ impl AppState {
             notes_view: crate::notes::View::default(),
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
+            revisions: note_revisions::RevisionsState::default(),
             selection: selection::SelectionState::default(),
             undo: undo::UndoState::default(),
             trash: trash::TrashState::default(),
@@ -176,6 +179,7 @@ impl AppState {
         self.editor
             .adopt(backend, &mut self.revision, &mut self.errors);
         self.editor.update(backend, self.revision, &mut self.errors);
+        self.follow_revisions(backend);
         self.caches.thumbnails.update(ctx, backend);
         if self
             .spaces
@@ -187,6 +191,23 @@ impl AppState {
         let place = (self.spaces.active_space(), self.spaces.active_folder());
         self.notes_query
             .update(ctx, backend, now, place, (self.revision, index));
+    }
+
+    /// The bodies kept beside the note open — none for a draft or a todo list — and a body put
+    /// back, which the editor's fields start again from.
+    fn follow_revisions(&mut self, backend: &Backend) {
+        let kept = self
+            .editor
+            .opened()
+            .and_then(|open| open.note().map(|note| (open.id(), note.kind)))
+            .and_then(|(id, kind)| id.filter(|_| kind != engine::notes::kind::NoteKind::Checklist));
+        self.revisions.follow(kept);
+        if let Some(id) = self
+            .revisions
+            .update(backend, &mut self.revision, &mut self.errors)
+        {
+            self.editor.reseed_when_read(&id);
+        }
     }
 
     /// A write made on the note open: converted, the editor's fields start again from what it now
@@ -532,6 +553,15 @@ impl AppState {
                 self.settings.editor_fullscreen = on;
                 self.save_settings(backend);
             }
+            Editing::Revisions(asked) => {
+                use crate::notes::Revisions;
+                match asked {
+                    Revisions::Toggle => self.revisions.toggle(),
+                    Revisions::Look(id) => self.revisions.look(backend, &id),
+                    Revisions::Back => self.revisions.close_preview(),
+                    Revisions::Restore => self.revisions.restore(backend),
+                }
+            }
             Editing::FoldHeader(folded) => {
                 self.settings.editor_header_folded = folded;
                 self.save_settings(backend);
@@ -807,6 +837,7 @@ impl AppState {
         self.notes_query = NotesQueryState::default();
         self.spaces = spaces::SpacesState::default();
         self.editor = editor::EditorState::default();
+        self.revisions = note_revisions::RevisionsState::default();
         self.selection = selection::SelectionState::default();
         self.undo = undo::UndoState::default();
         self.trash = trash::TrashState::default();

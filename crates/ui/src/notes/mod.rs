@@ -158,6 +158,18 @@ pub enum Editing {
     Close,
     Fullscreen(bool),
     FoldHeader(bool),
+    Revisions(Revisions),
+}
+
+/// What the history under the editor asks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Revisions {
+    Toggle,
+    /// A kept body compared with the current text.
+    Look(String),
+    Back,
+    /// Back to the body previewed.
+    Restore,
 }
 
 /// What the `{{fields}}` form asks.

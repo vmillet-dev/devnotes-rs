@@ -7,6 +7,7 @@ mod body;
 mod checklist;
 mod code;
 mod header;
+mod revisions;
 mod search_bar;
 
 use egui::{Align, CornerRadius, Id, Layout, Margin, Rect, Stroke, Ui, UiBuilder, Vec2};
@@ -156,9 +157,10 @@ fn panel(
         header::bands(ui, state, (session, note), editing, actions);
     }
     let footer_height = 34.0;
+    let history = revisions::height(state);
     let body_rect = Rect::from_min_max(
         egui::pos2(whole.left(), ui.cursor().top()),
-        egui::pos2(whole.right(), whole.bottom() - footer_height),
+        egui::pos2(whole.right(), whole.bottom() - footer_height - history),
     );
     let mut body_ui =
         ui.new_child(UiBuilder::new().max_rect(body_rect.shrink2(Vec2::new(20.0, 14.0))));
@@ -181,7 +183,16 @@ fn panel(
     if left {
         save(session, note, editing, actions);
     }
-    let footer_rect = Rect::from_min_max(egui::pos2(whole.left(), body_rect.bottom()), whole.max);
+    let history_rect = Rect::from_min_max(
+        egui::pos2(whole.left(), body_rect.bottom()),
+        egui::pos2(whole.right(), body_rect.bottom() + history),
+    );
+    if history > 0.0 {
+        let mut history_ui = ui.new_child(UiBuilder::new().max_rect(history_rect));
+        revisions::show(&mut history_ui, state, actions);
+    }
+    let footer_rect =
+        Rect::from_min_max(egui::pos2(whole.left(), history_rect.bottom()), whole.max);
     let mut footer_ui = ui.new_child(UiBuilder::new().max_rect(footer_rect));
     footer(&mut footer_ui, state, note, editing);
     ui.advance_cursor_after_rect(whole);

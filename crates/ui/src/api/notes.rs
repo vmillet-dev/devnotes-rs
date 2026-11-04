@@ -65,6 +65,28 @@ pub fn field_ranges(content: &str) -> Vec<std::ops::Range<usize>> {
         .collect()
 }
 
+/// The bodies kept beside a note, newest first: instants and sizes, never the bodies.
+pub fn list_revisions(
+    backend: &Backend,
+    id: String,
+) -> Pending<Vec<engine::notes::revision::Revision>> {
+    backend.db(move |engine| notes::list_revisions(engine, id))
+}
+
+/// What going back to a kept body would change, against the current text.
+pub fn revision_diff(
+    backend: &Backend,
+    id: String,
+    revision: String,
+) -> Pending<Vec<engine::notes::revision::DiffLine>> {
+    backend.db(move |engine| notes::revision_diff(engine, id, revision))
+}
+
+/// Back to a kept body, dropping it and every one kept after it; `updated_at` stays.
+pub fn restore_revision(backend: &Backend, id: String, revision: String) -> Pending<DisplayNote> {
+    backend.db(move |engine| notes::restore_revision(engine, id, revision))
+}
+
 /// A field set to `None` is left as it is.
 pub fn update(backend: &Backend, id: String, patch: NotePatch) -> Pending<DisplayNote> {
     backend.db(move |engine| notes::update_note(engine, id, patch))
