@@ -140,6 +140,13 @@ pub enum Editing {
         session: u64,
         edit: crate::state::editor::Edit,
     },
+    /// The drawing left: `missing` takes them only for a note that has none, as one imported.
+    Pictures {
+        session: u64,
+        content: String,
+        palette: std::sync::Arc<drawing::Palette>,
+        missing: bool,
+    },
     Pin(bool),
     Prioritise(Priority),
     MoveTo(String),

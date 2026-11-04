@@ -490,6 +490,14 @@ impl AppState {
         let id = self.editor.open_id().map(str::to_owned);
         match editing {
             Editing::Save { session, edit } => self.editor.save(backend, session, edit),
+            Editing::Pictures {
+                session,
+                content,
+                palette,
+                missing,
+            } => self
+                .editor
+                .picture(backend, session, (content, palette), missing),
             Editing::Pin(pinned) => {
                 if !self
                     .editor

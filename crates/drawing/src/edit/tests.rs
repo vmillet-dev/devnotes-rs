@@ -401,6 +401,24 @@ fn a_click_that_moves_nothing_is_no_state() {
 }
 
 #[test]
+fn a_click_leaves_an_arrow_where_it_stands_until_its_shape_moves() {
+    let body = r#"{"scene":{"objects":[
+        {"type":"Rect","id":"a","left":100,"top":100,"width":100,"height":100},
+        {"type":"Path","id":"b","from":"a","ends":[300,100,400,100],"path":[["M",300,100],["L",400,100]]}
+    ]}}"#;
+    let mut editor = Editor::open(body, Arc::new(fonts()));
+
+    drag(&mut editor, at(100.0, 100.0), at(100.0, 100.0));
+    assert_eq!(
+        object(&editor, 1).ends(),
+        Some([300.0, 100.0, 400.0, 100.0])
+    );
+
+    drag(&mut editor, at(100.0, 100.0), at(100.0, 110.0));
+    assert_ne!(object(&editor, 1).ends().unwrap()[0], 300.0);
+}
+
+#[test]
 fn escape_gives_back_the_selection_a_tool_took_over() {
     let mut editor = with_a_rectangle();
 

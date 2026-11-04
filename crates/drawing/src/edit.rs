@@ -512,7 +512,11 @@ impl Editor {
                 }
             }
             Gesture::Pen(points) => points.push(to),
-            Gesture::Moving { from, before, .. } => move_to(self, before, *from, to),
+            Gesture::Moving { from, before, .. } => {
+                if *from != to {
+                    move_to(self, before, *from, to);
+                }
+            }
             Gesture::Scaling {
                 grip,
                 frame,
@@ -569,10 +573,11 @@ impl Editor {
             Some(Gesture::Moving {
                 from, reselected, ..
             }) => {
-                if reselected && from == at {
+                if from != at {
+                    self.settle();
+                } else if reselected {
                     self.begin_text();
                 }
-                self.settle();
             }
             Some(Gesture::Scaling { .. } | Gesture::Rotating { .. }) => self.settle(),
         }

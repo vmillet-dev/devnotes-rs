@@ -20,6 +20,28 @@ pub fn drawing_thumbnail(backend: &Backend, id: String) -> Pending<Option<String
     backend.db(move |engine| notes::drawing_thumbnail(engine, id))
 }
 
+/// A drawing's two pictures, taken off the frame; both empty for a scene with nothing on it.
+pub fn picture_drawing(
+    backend: &Backend,
+    content: String,
+    palette: std::sync::Arc<drawing::Palette>,
+) -> Pending<engine::notes::drawing::DrawingPictures> {
+    backend.compute(move |_| {
+        let fonts = crate::theme::fonts::for_drawings();
+        let taken = drawing::Drawing::read(&content)
+            .and_then(|scene| drawing::pictures(&scene, &palette, &fonts));
+        let uri = engine::notes::drawing::uri_of;
+        Ok(engine::notes::drawing::DrawingPictures {
+            thumbnail: taken
+                .as_ref()
+                .map_or_else(String::new, |it| uri(&it.thumbnail)),
+            picture: taken
+                .as_ref()
+                .map_or_else(String::new, |it| uri(&it.picture)),
+        })
+    })
+}
+
 /// A draft as the editor shows it, before it has a row. Pure (D12).
 pub fn decorate(note: engine::notes::model::Note) -> DisplayNote {
     engine::notes::model::decorate_now(note)

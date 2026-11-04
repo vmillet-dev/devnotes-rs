@@ -12,6 +12,7 @@ publish = false
 [dependencies]
 engine = { path = "../engine" }
 text = { path = "../text" }
+drawing = { path = "../drawing" }
 platform = { path = "../platform" }
 eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "clipboard", "system_fonts", "wayland", "wgpu", "x11"] }
 egui = "0.37.0"

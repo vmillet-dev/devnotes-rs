@@ -1768,9 +1768,9 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
 
 ### A Dessin: a scene, and its pictures beside it
 
-A Dessin (`NoteKind::Drawing`) is drawn with Fabric.js (`drawing-editor/`, a chunk of its own,
-`@defer`red like TipTap). **Its body is the scene alone** — `{ version, scene }`, Fabric's
-own JSON — and Rust reads it only for its words (`notes::drawing::words`, the texts on it,
+A Dessin (`NoteKind::Drawing`) is drawn in `overlays/editor/drawing.rs` over `drawing::Editor`.
+**Its body is the scene alone** — `{ version, scene }`, the JSON of Fabric, which drew it in the
+reference — and Rust reads it only for its words (`notes::drawing::words`, the texts on it,
 through the groups): what a search matches and quotes, what a conversion or the Markdown share
 gives. It has no field (`{{x}}` written on it is words), no revision (a scene compares as no
 text), no copy (a card and the palette offer none: it is exported), and no conversion either
@@ -1804,6 +1804,10 @@ way — the kind menu names it and offers nothing.
 - **An arrow started or ended on a shape stays on its edge** (`from`/`to` ids, `ends`,
   `boundEnds`): it follows the shape as it moves, and a shape removed lets go of it. A path's
   box is read when it is made, so an arrow whose ends move is made again in its place.
+- **`drawing::Editor` holds every gesture**, in the scene's units, with no egui: `press`, `drag` and
+  `release`, a selection framed by its handles, each step read from the objects as they were when
+  the gesture began, so nothing drifts. The widget paints `marks`, the scene flattened to lines and
+  words. A click moves nothing: an arrow is rebound only when something moved.
 - **The editor**: a toolbar in the app's look (selection, rectangle, ellipse, diamond, arrow,
   freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool
   and gives back the selection it was taken over, then drops the selection, then leaves), a
