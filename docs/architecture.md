@@ -34,6 +34,7 @@ crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches
 ├── src/error.rs    the three errors and the translation between them
 └── src/lib.rs      the modules and the `Engine`
 crates/text/       the editing core, egui-free: rope, undo, search, indent, highlighting, {{…}} shield
+crates/drawing/    a Dessin, egui-free: the stored scene read and written, its geometry
 crates/platform/   paths, window geometry: what is asked of the operating system
 crates/ui/         the egui interface: the frame, its state, its screens
 crates/app/        the `devnotes` binary (main) and its icons (`npm run icons`)
@@ -1788,6 +1789,9 @@ way — the kind menu names it and offers nothing.
   (`redrawn`, which moves no date); a duplicate takes them, an export does not. A drawing
   that has none, as one that came by import, has them taken when it opens: the editor asks
   `hasPictures` and they go with its next flush.
+- **`crates/drawing` reads the scene** (`Drawing::read`, `write`): an object is the fields it was
+  read with and is read through them, so a body comes back byte for byte (`golden/fabric`, what
+  Fabric itself wrote); `serde_json`'s `preserve_order` and `float_roundtrip` are what hold that.
 - **What is drawn keeps its colours by name.** Each object carries a `hue` (ink, blue…),
   painted from the tokens on `:root` (`paletteOf`), so a theme changed later redraws it; the
   pictures are taken on the theme's paper (`--bg-1`). ⚠️ Fabric 7 places an object by its

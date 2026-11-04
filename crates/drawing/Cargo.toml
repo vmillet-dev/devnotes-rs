@@ -1,0 +1,16 @@
+[package]
+name = "drawing"
+description = "A Dessin's scene, read and written as Fabric stores it, and its geometry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde_json = { version = "1.0.151", features = ["float_roundtrip", "preserve_order"] }
+
+[lints]
+workspace = true
