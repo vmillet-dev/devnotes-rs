@@ -1,10 +1,14 @@
 //! Which notes are shown. It filters, sorts and groups nothing: `query_notes` does, and the
 //! canvas draws the view it answers.
 
+use std::collections::BTreeSet;
 use std::time::Duration;
 
 use chrono::{DateTime, Local, NaiveDate, Offset, TimeZone, Utc};
 use engine::error::AppError;
+use engine::notes::kind::NoteKind;
+use engine::notes::language::Language;
+use engine::notes::priority::Priority;
 use engine::notes::view::{
     Grouping, NoteFilter, NoteOrder, NotesQuery, NotesView, SortDirection, SortKey,
 };
@@ -137,6 +141,35 @@ fn grouping_name(grouping: Grouping) -> &'static str {
     }
 }
 
+/// The rails' choices: a note passes one rail if it matches any of its chips, and every rail.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Facets {
+    pub tags: BTreeSet<String>,
+    pub languages: BTreeSet<Language>,
+    pub kinds: BTreeSet<NoteKind>,
+    pub priorities: BTreeSet<Priority>,
+}
+
+impl Facets {
+    /// How many chips are pressed: the panel's toggle says it, and stays open while any is.
+    pub fn count(&self) -> usize {
+        self.tags.len() + self.languages.len() + self.kinds.len() + self.priorities.len()
+    }
+}
+
+/// A chip pressed or the « All » of its rail.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Facet {
+    Tag(String),
+    Language(Language),
+    Kind(NoteKind),
+    AllKinds,
+    Priority(Priority),
+    AllPriorities,
+    /// Every rail and the search at once: the way out of them.
+    Clear,
+}
+
 /// What the view depends on, compared by value: the instant is not among them, only the local
 /// day, so the sections move at midnight and not on every frame.
 #[derive(Debug, Clone, PartialEq)]
@@ -145,6 +178,7 @@ struct Params {
     folder_id: Option<String>,
     search: String,
     filter: NoteFilter,
+    facets: Facets,
     arrangement: Arrangement,
     day: NaiveDate,
     revision: Revision,
@@ -161,6 +195,7 @@ pub struct NotesQueryState {
     /// When the typed search is asked for, in egui's seconds.
     due: Option<f64>,
     filter: NoteFilter,
+    facets: Facets,
     arrangement: Arrangement,
 }
 
@@ -172,6 +207,7 @@ impl Default for NotesQueryState {
             search: String::new(),
             due: None,
             filter: NoteFilter::All,
+            facets: Facets::default(),
             arrangement: Arrangement::default(),
         }
     }
@@ -209,6 +245,7 @@ impl NotesQueryState {
             folder_id: place.1.map(str::to_owned),
             search: self.search.clone(),
             filter: self.filter,
+            facets: self.facets.clone(),
             arrangement: self.arrangement,
             day: local.date_naive(),
             revision,
@@ -233,6 +270,39 @@ impl NotesQueryState {
 
     pub fn typed(&self) -> &str {
         &self.typed
+    }
+
+    pub fn facets(&self) -> &Facets {
+        &self.facets
+    }
+
+    pub fn press(&mut self, facet: Facet) {
+        if facet == Facet::Clear {
+            self.clear_filters();
+            return;
+        }
+        let facets = &mut self.facets;
+        match facet {
+            Facet::Tag(tag) => toggle(&mut facets.tags, tag),
+            Facet::Language(language) => toggle(&mut facets.languages, language),
+            Facet::Kind(kind) => toggle(&mut facets.kinds, kind),
+            Facet::AllKinds => facets.kinds.clear(),
+            Facet::Priority(priority) => toggle(&mut facets.priorities, priority),
+            Facet::AllPriorities => facets.priorities.clear(),
+            Facet::Clear => {}
+        }
+    }
+
+    /// What clearing gives back: a search typed or a chip pressed. ⚠️ Not the view's
+    /// `is_filtering`, true inside an opened folder: Escape would never leave it.
+    pub fn has_user_filters(&self) -> bool {
+        !self.typed.is_empty() || self.facets.count() > 0
+    }
+
+    /// The search and every rail; the quick filter keeps its choice.
+    pub fn clear_filters(&mut self) {
+        self.clear_search();
+        self.facets = Facets::default();
     }
 
     pub fn filter(&self) -> NoteFilter {
@@ -277,16 +347,22 @@ fn query(params: &Params, now: DateTime<Utc>) -> NotesQuery {
         folder_id: params.folder_id.clone(),
         search: params.search.clone(),
         filter: params.filter,
-        tags: Vec::new(),
-        languages: Vec::new(),
-        kinds: Vec::new(),
-        priorities: Vec::new(),
+        tags: params.facets.tags.iter().cloned().collect(),
+        languages: params.facets.languages.iter().copied().collect(),
+        kinds: params.facets.kinds.iter().copied().collect(),
+        priorities: params.facets.priorities.iter().copied().collect(),
         order: params.arrangement.order,
         grouping: params.arrangement.grouping,
         ranked: false,
         now,
         tz_offset_minutes: tz_offset_minutes(now),
         pinned_first: params.arrangement.pinned_first,
+    }
+}
+
+fn toggle<T: Ord>(set: &mut BTreeSet<T>, value: T) {
+    if !set.remove(&value) {
+        set.insert(value);
     }
 }
 

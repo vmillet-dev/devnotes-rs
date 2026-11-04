@@ -348,6 +348,12 @@ impl App {
         self.apply(vec![event(false)]);
     }
 
+    /// The window's inside, in points.
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.ask(&Request::Resize { width, height });
+        self.ask(&Request::Settle { max_steps: 10 });
+    }
+
     /// The window as it stands, as `<output>/<scenario>/<name>.png`.
     pub fn capture(&mut self, name: &str) -> PathBuf {
         let png = match self.ask(&Request::GetScreenshot {

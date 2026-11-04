@@ -348,6 +348,7 @@ impl AppState {
                 self.undo.revert(backend);
             }
             crate::notes::Action::DismissUndo => self.undo.dismiss(),
+            crate::notes::Action::Facet(facet) => self.notes_query.press(facet),
             crate::notes::Action::Trash(asked) => {
                 self.trash
                     .apply(asked, backend, ctx.input(|input| input.time));
@@ -483,8 +484,8 @@ impl AppState {
         if self.selection.clear() {
             return;
         }
-        if !self.notes_query.typed().is_empty() {
-            self.notes_query.clear_search();
+        if self.notes_query.has_user_filters() {
+            self.notes_query.clear_filters();
             return;
         }
         let Some(open) = self.spaces.active_folder() else {

@@ -34,25 +34,54 @@ fn push(actions: &mut Actions, action: crate::notes::Action) {
     actions.push(Action::Notes(action));
 }
 
+/// The space shown, or « every space ».
+fn space_name(state: &AppState) -> String {
+    let spaces = &state.spaces;
+    spaces
+        .active_space()
+        .and_then(|id| spaces.spaces().iter().find(|space| space.id == id))
+        .map_or_else(
+            || i18n::translate(state.language, keys::notes::ALL_SPACES, &[]),
+            |space| space.name.clone(),
+        )
+}
+
+fn folder_name(state: &AppState) -> String {
+    i18n::translate(state.language, keys::folders::ALL_FOLDERS, &[])
+}
+
+/// Each switcher's width with its whole name, in the order they are drawn.
+pub(super) fn natural_widths(ui: &Ui, state: &AppState) -> [f32; 2] {
+    [space_name(state), folder_name(state)].map(|name| switch_width(ui, &name))
+}
+
+fn switch_width(ui: &Ui, name: &str) -> f32 {
+    let p = palette(ui.ctx());
+    let galley = widgets::text(ui, name, 12.5, 400.0, FontFamily::Proportional, p.text_0);
+    galley.size().x.min(NAME_WIDTH) + 44.0
+}
+
+/// Answers its width: the header narrows it to `widest` before it takes two rows.
 pub(super) fn space_switcher(
     ui: &mut Ui,
     state: &AppState,
     menu: &mut Menu,
+    widest: f32,
     actions: &mut Actions,
-) {
+) -> f32 {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let spaces = &state.spaces;
     let active = spaces.active_space();
-    let name = active
-        .and_then(|id| spaces.spaces().iter().find(|space| space.id == id))
-        .map_or_else(|| tr(keys::notes::ALL_SPACES), |space| space.name.clone());
+    let name = space_name(state);
     let button = switch(
         ui,
         &tr(keys::notes::SPACE_SWITCHER_LABEL),
         &name,
         "space-switcher",
+        widest,
     );
+    let width = button.rect.width();
     let shown = Popup::menu(&button)
         .frame(widgets::menu_frame(ui.ctx()))
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
@@ -130,14 +159,16 @@ pub(super) fn space_switcher(
     if shown.is_none() {
         *menu = Menu::List;
     }
+    width
 }
 
 pub(super) fn folder_switcher(
     ui: &mut Ui,
     state: &AppState,
     menu: &mut Menu,
+    widest: f32,
     actions: &mut Actions,
-) {
+) -> f32 {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let spaces = &state.spaces;
@@ -148,13 +179,15 @@ pub(super) fn folder_switcher(
         .iter()
         .filter(|folder| space.is_none_or(|space| folder.space_id == space))
         .collect();
-    let name = tr(keys::folders::ALL_FOLDERS);
+    let name = folder_name(state);
     let button = switch(
         ui,
         &tr(keys::folders::SWITCHER_LABEL),
         &name,
         "folder-switcher",
+        widest,
     );
+    let width = button.rect.width();
     let shown = Popup::menu(&button)
         .frame(widgets::menu_frame(ui.ctx()))
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
@@ -200,6 +233,7 @@ pub(super) fn folder_switcher(
     if shown.is_none() {
         *menu = Menu::List;
     }
+    width
 }
 
 /// Every folder of the space shown, each with its ⋯, then the way to make one.
@@ -355,10 +389,11 @@ pub(super) fn breadcrumb(
 }
 
 /// A switcher's button: its name cut to its room, and the chevron.
-fn switch(ui: &mut Ui, label: &str, name: &str, author_id: &str) -> Response {
+fn switch(ui: &mut Ui, label: &str, name: &str, author_id: &str, widest: f32) -> Response {
     let p = palette(ui.ctx());
     let galley = widgets::text(ui, name, 12.5, 400.0, FontFamily::Proportional, p.text_0);
-    let width = galley.size().x.min(NAME_WIDTH) + 44.0;
+    let width = switch_width(ui, name).min(widest);
+    let room = width - 44.0;
     let corner = CornerRadius::same(8);
     let response = interact(
         ui,
@@ -380,8 +415,8 @@ fn switch(ui: &mut Ui, label: &str, name: &str, author_id: &str) -> Response {
         StrokeKind::Inside,
     );
     let left = rect.left() + 12.0;
-    let shown = if galley.size().x > NAME_WIDTH {
-        cut(ui, name, NAME_WIDTH)
+    let shown = if galley.size().x > room {
+        cut(ui, name, room)
     } else {
         galley
     };

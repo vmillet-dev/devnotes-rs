@@ -131,6 +131,7 @@ pub enum Action {
     Undo,
     DismissUndo,
     Trash(Trash),
+    Facet(crate::state::notes_query::Facet),
 }
 
 /// What the trash panel asks.

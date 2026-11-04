@@ -4672,6 +4672,19 @@ notes area's key (`keys::NOTES`). The List/Board switch keeps the board disabled
 is ported. Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
 embedded face has them.
 
+The facets (`notes::header::facets`) are the kind, priority, tag and format rails under the
+header, with the way out of them: shown while their toggle (`facets-toggle`) asks, and held open
+while a chip is pressed — a filter nobody can see is a filter nobody can undo. The chips are
+`NotesQueryState`'s `Facets`, parameters of the same `QueryCell`; the counts are the space's,
+from the core, so pressing one zeroes no other. Escape clears the search and the rails together,
+as « clear the filters » does.
+
+The header is one row while every control holds in it and two on purpose past that
+(`notes::header::layout`): the reference's floors decide, not the widths drawn, which differ
+between one row and two. What does not narrow is measured as drawn, the same in either layout;
+the search gives way first, then the switchers' names. ⚠️ The central panel has no margin of its
+own, as the reference: egui's 8 px cost the header its one row at the window's default width.
+
 Until phase 4's editors, a card's click surface (`note-card-open`, a layer under its controls)
 opens a stand-in editor (`notes::editor`, `state::editor`): the note read whole by id
 (`get_note`), its title and body as plain text — a list one task a line, `[x] ` before a done

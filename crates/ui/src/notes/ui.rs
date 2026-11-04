@@ -26,17 +26,10 @@ pub fn kind_badge(
     let tr = |key| i18n::translate(locale, key, &[]);
     let mut icon = None;
     let (label, hue) = match kind {
-        NoteKind::Snippet => {
-            let hue = match languages::hue(language) {
-                Hue::Blue => p.blue,
-                Hue::Amber => p.amber_text,
-                Hue::Green => p.green,
-                Hue::Purple => p.purple,
-                Hue::Red => p.red,
-                Hue::Neutral => p.text_1,
-            };
-            (languages::label(language).to_string(), hue)
-        }
+        NoteKind::Snippet => (
+            languages::label(language).to_string(),
+            language_hue(ui, language),
+        ),
         NoteKind::Note => (tr(keys::notes::kind_tag::NOTE), p.purple),
         NoteKind::Checklist => {
             icon = Some(Icon::Check);
@@ -48,6 +41,19 @@ pub fn kind_badge(
     let response = hue_badge(ui, &label, hue, icon);
     address(ui, &response, "kind-badge");
     response
+}
+
+/// The colour of a format's family: the label names it, the hue only groups it.
+pub fn language_hue(ui: &Ui, language: Language) -> Color32 {
+    let p = palette(ui.ctx());
+    match languages::hue(language) {
+        Hue::Blue => p.blue,
+        Hue::Amber => p.amber_text,
+        Hue::Green => p.green,
+        Hue::Purple => p.purple,
+        Hue::Red => p.red,
+        Hue::Neutral => p.text_1,
+    }
 }
 
 /// Three bars, the name and the hue: three clues. Nothing for no priority.
