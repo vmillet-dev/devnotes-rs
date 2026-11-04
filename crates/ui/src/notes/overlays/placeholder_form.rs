@@ -7,7 +7,8 @@ use std::collections::BTreeMap;
 use egui::{CornerRadius, FontFamily, Id, Margin, Sense, Stroke, Ui, vec2};
 use engine::notes::kind::NoteKind;
 use engine::notes::model::DisplayNote;
-use i18n::keys;
+use engine::notes::placeholder::Placeholder;
+use i18n::{Language, keys};
 
 use crate::action::{Action, Actions};
 use crate::notes::{Action as Asked, Fill};
@@ -99,33 +100,12 @@ fn form(ui: &mut Ui, state: &AppState, note: &DisplayNote, view: &mut FillView) 
         let Some(value) = view.values.get_mut(at) else {
             continue;
         };
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
-            // The braces tie the row to the token in the text; the field's name is its label.
-            let name = format!("{{{{{}}}}}", field.name);
-            let galley = widgets::text(ui, &name, 12.0, 400.0, FontFamily::Monospace, p.amber_text);
-            let (rect, _) = ui.allocate_exact_size(vec2(NAME_WIDTH, 28.0), Sense::hover());
-            let at_y = rect.center().y - galley.size().y / 2.0;
-            ui.painter().with_clip_rect(rect).galley(
-                egui::pos2(rect.left(), at_y),
-                galley,
-                p.amber_text,
-            );
-            let label = i18n::translate(
-                language,
-                keys::placeholders::FIELD_LABEL,
-                &[("name", field.name.as_str().into())],
-            );
-            let input = TextField::new(value, &label, "placeholder-input")
-                .hint(&field.default_value)
-                .compact()
-                .show(ui);
-            if view.focus && at == first {
-                input.request_focus();
-                view.focus = false;
-            }
-            entered |= input.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter));
-        });
+        let input = field_row(ui, field, value, language);
+        if view.focus && at == first {
+            input.request_focus();
+            view.focus = false;
+        }
+        entered |= input.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter));
     }
     let top = ui.cursor().top();
     ui.painter()
@@ -155,6 +135,40 @@ fn form(ui: &mut Ui, state: &AppState, note: &DisplayNote, view: &mut FillView) 
         }
     });
     asked
+}
+
+/// A field's row, here and in the editor's panel. An empty one shows its default, which it never
+/// holds.
+pub(in crate::notes) fn field_row(
+    ui: &mut Ui,
+    field: &Placeholder,
+    value: &mut String,
+    language: Language,
+) -> egui::Response {
+    let p = palette(ui.ctx());
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 10.0;
+        // The braces tie the row to the token in the text; the field's name is its label.
+        let name = format!("{{{{{}}}}}", field.name);
+        let galley = widgets::text(ui, &name, 12.0, 400.0, FontFamily::Monospace, p.amber_text);
+        let (rect, _) = ui.allocate_exact_size(vec2(NAME_WIDTH, 28.0), Sense::hover());
+        let at_y = rect.center().y - galley.size().y / 2.0;
+        ui.painter().with_clip_rect(rect).galley(
+            egui::pos2(rect.left(), at_y),
+            galley,
+            p.amber_text,
+        );
+        let label = i18n::translate(
+            language,
+            keys::placeholders::FIELD_LABEL,
+            &[("name", field.name.as_str().into())],
+        );
+        TextField::new(value, &label, "placeholder-input")
+            .hint(&field.default_value)
+            .compact()
+            .show(ui)
+    })
+    .inner
 }
 
 /// Every field by name, raw: `notes::placeholder::fill` decides what an empty one is worth.

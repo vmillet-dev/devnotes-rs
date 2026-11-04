@@ -3781,6 +3781,12 @@ stored but out of sight until the token comes back; and writing a value **does n
 A field left empty is not stored (`normalize_values`): empty means "keep what the text
 suggests", and storing it would freeze that answer the day the default changes.
 
+**In the editor, the panel over the body holds them** (`overlays/editor/fields.rs`): a draft of
+the opening, written when a field is left and on the closing path, none of which leaves a field
+on its own. It follows the note as last read, so a token typed joins it once the body is written.
+The preview shows the body filled in place of the code, and folding the panel ends it: a
+read-only body without the button that caused it would be a trap.
+
 **A value can also belong to no note at all.** The preferences panel's "Variables" page edits
 `global_placeholders` (migration 7, `name` as the primary key, case-sensitive for the same
 reason as `note_placeholders`): a `{{host}}` that means the same thing in every snippet is

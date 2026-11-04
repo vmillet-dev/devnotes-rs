@@ -9,6 +9,7 @@ mod calc;
 mod checklist;
 mod code;
 mod drawing;
+mod fields;
 mod header;
 mod revisions;
 mod search_bar;
@@ -47,6 +48,7 @@ pub(crate) struct EditorView {
     sheet: Option<calc::CalcView>,
     /// A Dessin's editor: its scene is no text.
     drawing: Option<drawing::DrawingView>,
+    fields: fields::FieldsView,
     /// The attachment whose cross was clicked once.
     removing: Option<String>,
     tag: String,
@@ -69,6 +71,7 @@ impl EditorView {
             sheet: (note.kind == NoteKind::Calc).then(|| calc::CalcView::of(&note.content)),
             drawing: (note.kind == NoteKind::Drawing)
                 .then(|| drawing::DrawingView::open(&note.content)),
+            fields: fields::FieldsView::of(note),
             removing: None,
             tag: String::new(),
             focus: true,
@@ -178,6 +181,7 @@ fn panel(
     } else {
         header::bands(ui, state, (session, note), editing, actions);
     }
+    fields::show(ui, state, (session, note), editing, actions);
     let footer_height = 34.0;
     let history = revisions::height(state);
     let body_rect = Rect::from_min_max(
@@ -186,7 +190,15 @@ fn panel(
     );
     let mut body_ui =
         ui.new_child(UiBuilder::new().max_rect(body_rect.shrink2(Vec2::new(20.0, 14.0))));
-    let left = if let Some(view) = &mut editing.drawing {
+    let filled = state
+        .fill
+        .preview(session)
+        .filter(|_| editing.fields.previewing);
+    let left = if let Some(filled) = filled {
+        let lines: Vec<&str> = filled.lines().collect();
+        widgets::code_viewer(&mut body_ui, "editor-preview", &lines);
+        false
+    } else if let Some(view) = &mut editing.drawing {
         let shown = drawing::show(&mut body_ui, view, &note.title, state.language);
         if let Some(format) = shown.export {
             let export = view.export(&note.title, format, state.language, palette(ui.ctx()));
@@ -441,6 +453,7 @@ fn copy(
     labelled: bool,
     actions: &mut Actions,
 ) {
+    // A note with fields copies filled, from the values in the panel; « copy as is » stays there.
     let (icon, key, author_id) = if note.placeholders.is_empty() {
         (Icon::Copy, keys::notes::COPY, "editor-copy")
     } else {
@@ -454,7 +467,14 @@ fn copy(
     };
     if clicked {
         save(session, note, editing, actions);
-        actions.push(editor(Editing::Copy));
+        if note.placeholders.is_empty() {
+            actions.push(editor(Editing::Copy));
+        } else {
+            actions.push(editor(Editing::Fields(crate::notes::Fields::Copy {
+                content: editing.body.clone(),
+                values: editing.fields.values(note),
+            })));
+        }
     }
 }
 
@@ -558,8 +578,9 @@ pub(super) fn save(session: u64, note: &DisplayNote, editing: &EditorView, actio
 
 /// ⚠️ The one closing path, and it writes the drafts first: Escape, the backdrop and the close
 /// button leave no field on their own.
-fn close(session: u64, note: &DisplayNote, editing: &EditorView, actions: &mut Actions) {
+fn close(session: u64, note: &DisplayNote, editing: &mut EditorView, actions: &mut Actions) {
     save(session, note, editing, actions);
+    editing.fields.keep(note, actions);
     actions.push(editor(Editing::Close));
 }
 
