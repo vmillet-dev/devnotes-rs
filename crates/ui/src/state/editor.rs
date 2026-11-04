@@ -126,6 +126,8 @@ pub struct Opened {
     /// The note, read again at each revision; its id once the draft is written.
     read: QueryCell<(String, Revision), DisplayNote>,
     id: Option<String>,
+    /// A body put back: the fields start again from the next read.
+    reseed: bool,
 }
 
 impl Opened {
@@ -167,6 +169,7 @@ impl EditorState {
             draft: None,
             read: QueryCell::default(),
             id: Some(id),
+            reseed: false,
         });
     }
 
@@ -196,6 +199,7 @@ impl EditorState {
             draft: Some(api::notes::decorate(note)),
             read: QueryCell::default(),
             id: None,
+            reseed: false,
         });
     }
 
@@ -236,6 +240,13 @@ impl EditorState {
         if let Some(open) = self.open.as_mut().filter(|open| open.id() == Some(id)) {
             self.sessions += 1;
             open.session = self.sessions;
+        }
+    }
+
+    /// A body put back under the fields: they start again once the note is read again.
+    pub fn reseed_when_read(&mut self, id: &str) {
+        if let Some(open) = self.open.as_mut().filter(|open| open.id() == Some(id)) {
+            open.reseed = true;
         }
     }
 
@@ -333,8 +344,13 @@ impl EditorState {
             && let Some(id) = &open.id
         {
             open.read.want((id.clone(), revision));
-            open.read
+            let read = open
+                .read
                 .update(|(id, _)| api::notes::get(backend, id.clone()));
+            if read && std::mem::take(&mut open.reseed) {
+                // A session number of its own, past every one given: `sessions` follows below.
+                open.session = self.sessions + 1;
+            }
             if open.read.value().is_some() {
                 open.draft = None;
             } else if open.draft.is_none()
@@ -343,6 +359,9 @@ impl EditorState {
                 errors.report(keys::errors::NOTE_READ_FAILED, error);
                 self.open = None;
             }
+        }
+        if let Some(open) = &self.open {
+            self.sessions = self.sessions.max(open.session);
         }
     }
 
