@@ -324,6 +324,30 @@ impl App {
         self.wait_for(author_id);
     }
 
+    /// Back to the top of `within`: rows out of view are not drawn, so not counted.
+    pub fn scroll_top(&mut self, within: &str) {
+        self.wait_for(within);
+        let Some(bounds) = self.tree().find(within).and_then(Node::bounds) else {
+            return;
+        };
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let pos = Pos2::new(
+            f64::midpoint(bounds.x0, bounds.x1) as f32,
+            f64::midpoint(bounds.y0, bounds.y1) as f32,
+        );
+        self.apply(vec![
+            Event::PointerMoved(pos),
+            Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta: egui::vec2(0.0, 100_000.0),
+                phase: egui::TouchPhase::Move,
+                source: egui::MouseWheelSource::Wheel,
+                modifiers: Modifiers::NONE,
+            },
+        ]);
+        self.ask(&Request::Settle { max_steps: 10 });
+    }
+
     /// Types into the control that has the focus.
     pub fn type_text(&mut self, text: &str) {
         self.apply(vec![Event::Text(text.to_owned())]);
