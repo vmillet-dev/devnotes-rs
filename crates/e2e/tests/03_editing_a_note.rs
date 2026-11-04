@@ -62,27 +62,31 @@ fn editing_a_note() {
 
     step("the footer counts one line in the singular", || {
         app.eventually("« 1 line »", |tree| {
-            tree.text("editor-stats").is_some_and(|stats| {
-                stats.contains("· 1 ligne ·") || stats.contains("· 1 line ·")
-            })
+            tree.text("editor-stats")
+                .is_some_and(|stats| stats.contains("· 1 ligne ·") || stats.contains("· 1 line ·"))
         });
         app.capture("snippet-editor");
     });
 
-    step("Tab stays in the code, and the find bar finds in it", || {
-        app.click("editor-body");
-        app.press(Key::Home, Modifiers::COMMAND);
-        app.press(Key::Tab, Modifiers::NONE);
-        app.eventually("a level before the code", |tree| code(tree).starts_with("  kubectl"));
-        app.press(Key::F, Modifiers::COMMAND);
-        app.wait_for("search-field");
-        app.type_text("rollout");
-        app.eventually("one match, selected", |tree| {
-            tree.text("search-count").as_deref() == Some("1 / 1")
-        });
-        app.press(Key::Escape, Modifiers::NONE);
-        app.eventually("the bar is closed", |tree| !tree.has("search-field"));
-    });
+    step(
+        "Tab stays in the code, and the find bar finds in it",
+        || {
+            app.click("editor-body");
+            app.press(Key::Home, Modifiers::COMMAND);
+            app.press(Key::Tab, Modifiers::NONE);
+            app.eventually("a level before the code", |tree| {
+                code(tree).starts_with("  kubectl")
+            });
+            app.press(Key::F, Modifiers::COMMAND);
+            app.wait_for("search-field");
+            app.type_text("rollout");
+            app.eventually("one match, selected", |tree| {
+                tree.text("search-count").as_deref() == Some("1 / 1")
+            });
+            app.press(Key::Escape, Modifiers::NONE);
+            app.eventually("the bar is closed", |tree| !tree.has("search-field"));
+        },
+    );
 
     step("full screen and back keep the draft", || {
         app.click("editor-body");
@@ -95,17 +99,20 @@ fn editing_a_note() {
         app.eventually("the draft written", |tree| code(tree).ends_with("--watch"));
     });
 
-    step("the header folds, and stays folded from note to note", || {
-        app.click("editor-fold-header");
-        app.wait_for("editor-header-summary");
-        close(&mut app);
-        open(&mut app);
-        app.wait_for("editor-header-summary");
-        assert!(!app.has("editor-source"));
-        app.click("editor-header-summary");
-        app.wait_for("editor-source");
-        close(&mut app);
-    });
+    step(
+        "the header folds, and stays folded from note to note",
+        || {
+            app.click("editor-fold-header");
+            app.wait_for("editor-header-summary");
+            close(&mut app);
+            open(&mut app);
+            app.wait_for("editor-header-summary");
+            assert!(!app.has("editor-source"));
+            app.click("editor-header-summary");
+            app.wait_for("editor-source");
+            close(&mut app);
+        },
+    );
 
     app.quit();
 }
