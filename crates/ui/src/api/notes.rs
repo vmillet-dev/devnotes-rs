@@ -46,6 +46,25 @@ pub fn convert(
     })
 }
 
+/// Where each `{{field}}` is written, as `char` ranges: what the code editor decorates. Pure,
+/// one pass over the text (D12).
+pub fn field_ranges(content: &str) -> Vec<std::ops::Range<usize>> {
+    let spans = engine::notes::placeholder::spans(content);
+    // The core counts UTF-16 units, as the reference's front read them.
+    let mut chars = Vec::with_capacity(content.len() + 1);
+    for (at, c) in content.chars().enumerate() {
+        for _ in 0..c.len_utf16() {
+            chars.push(at);
+        }
+    }
+    chars.push(content.chars().count());
+    let at = |unit: u32| chars.get(unit as usize).copied().unwrap_or(chars.len());
+    spans
+        .into_iter()
+        .map(|span| at(span.from)..at(span.to))
+        .collect()
+}
+
 /// A field set to `None` is left as it is.
 pub fn update(backend: &Backend, id: String, patch: NotePatch) -> Pending<DisplayNote> {
     backend.db(move |engine| notes::update_note(engine, id, patch))
