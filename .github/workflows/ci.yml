@@ -281,15 +281,40 @@ jobs:
       - name: Build the flavour
         run: cargo build -p app --features e2e --locked
 
+      # The output kept, and the summary says what ran on each platform: a scenario skipped would
+      # otherwise show only as a shorter log. `set +e`: the table is written when one fails too.
       - name: Scenarios
         run: |
           start=$(date +%s)
+          output="$RUNNER_TEMP/scenarios.log"
+          set +e
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" cargo test -p e2e --locked -- --nocapture
+            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" cargo test -p e2e --locked -- --nocapture 2>&1 | tee "$output"
+            status=${PIPESTATUS[0]}
           else
-            cargo test -p e2e --locked -- --nocapture
+            cargo test -p e2e --locked -- --nocapture 2>&1 | tee "$output"
+            status=${PIPESTATUS[0]}
           fi
-          echo "\`e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+          set -e
+          {
+            echo "\`e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s"
+            echo
+            sed 's/\x1b\[[0-9;]*m//g' "$output" | awk '
+              match($0, /tests.[0-9a-z_]+\.rs/) { name = substr($0, RSTART + 6, RLENGTH - 9); order[++n] = name; next }
+              /Doc-tests/ { name = "" }
+              /^▶ / { steps[name]++ }
+              /^test result:/ && name != "" { result[name] = $3; time[name] = $NF }
+              END {
+                print "| Scenario | Steps | Result | Time |"
+                print "| --- | --- | --- | --- |"
+                for (i = 1; i <= n; i++) {
+                  k = order[i]
+                  sub(/\.$/, "", result[k])
+                  printf "| `%s` | %d | %s | %s |\n", k, steps[k], result[k] == "" ? "not run" : result[k], time[k]
+                }
+              }'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 
       # Captures, and for a failed scenario its last screen and the application's log; never the
       # profile, whose library is the run's. Named per attempt: a re-run that passes would
