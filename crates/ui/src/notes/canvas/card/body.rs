@@ -85,14 +85,11 @@ fn code(ui: &mut Ui, rect: Rect, content: &str, syntax: Option<&str>) {
                 cut = end;
             }
         };
-        let mut from = 0;
         for (range, token) in tokens.into_iter().flatten() {
             push(&mut job, range.start, p.text_2, false);
             let (colour, italics) = highlight::colour(p, *token);
             push(&mut job, range.end, colour, italics);
-            from = range.end;
         }
-        let _ = from;
         push(&mut job, line.chars().count(), p.text_2, false);
         let shown = ui.fonts_mut(|fonts| fonts.layout_job(job));
         painter.galley(pos2(rect.left(), top), shown, Color32::TRANSPARENT);
