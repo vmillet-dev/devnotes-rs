@@ -15,6 +15,9 @@ use crate::testing::PASSPHRASE;
 const SIZE: egui::Vec2 = egui::vec2(1100.0, 720.0);
 
 fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
+    // Loaded before the first frame, as the window has them a moment after: the captures show
+    // the colours.
+    text::highlight::warm();
     let startup = startup(profile);
     let mut harness = Harness::builder()
         .with_size(SIZE)

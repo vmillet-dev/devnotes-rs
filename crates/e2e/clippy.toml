@@ -1,5 +1,5 @@
 # Replaces the root's rather than adding to it: its line is repeated.
-doc-valid-idents = ["SQLite", "DevNotes", ".."]
+doc-valid-idents = ["SQLite", "DevNotes", "TextMate", ".."]
 
 # A scenario waits on a condition (`App::eventually`), never on a duration.
 disallowed-methods = [

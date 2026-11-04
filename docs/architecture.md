@@ -33,7 +33,7 @@ crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches
 ├── src/db.rs       connection, migrations, schema, stored-instant format, the db queue
 ├── src/error.rs    the three errors and the translation between them
 └── src/lib.rs      the modules and the `Engine`
-crates/text/       the editing core, egui-free: rope, selection, undo, search, indent, the {{…}} shield
+crates/text/       the editing core, egui-free: rope, undo, search, indent, highlighting, {{…}} shield
 crates/platform/   paths, window geometry: what is asked of the operating system
 crates/ui/         the egui interface: the frame, its state, its screens
 crates/app/        the `devnotes` binary (main) and its icons (`npm run icons`)
