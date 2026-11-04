@@ -179,6 +179,11 @@ pub enum Editing {
     Export(DrawingExport),
     Fields(Fields),
     Attachment(crate::state::attachments::Asked),
+    /// A snippet's document, explored once the hand paused.
+    Explore {
+        session: u64,
+        query: engine::json::model::JsonQuery,
+    },
     /// A sheet, once the hand paused.
     Evaluate {
         session: u64,
@@ -280,6 +285,7 @@ pub struct View {
     pub(crate) focus_search: bool,
     header: header::HeaderView,
     editor: Option<overlays::editor::EditorView>,
+    explorer_layout: overlays::editor::ExplorerLayout,
     trash: overlays::trash_panel::TrashView,
     tag_manager: overlays::tag_manager::TagManagerView,
     fill: overlays::placeholder_form::FillView,
@@ -327,7 +333,13 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     );
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
-    overlays::editor::show(ui, state, &mut view.editor, actions);
+    overlays::editor::show(
+        ui,
+        state,
+        &mut view.editor,
+        &mut view.explorer_layout,
+        actions,
+    );
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
     overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
     overlays::folder_prompt::show(ui, state, &mut view.folder_name, actions);

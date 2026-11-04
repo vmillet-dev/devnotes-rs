@@ -11,6 +11,7 @@ mod code;
 mod drawing;
 mod fields;
 mod header;
+mod json_view;
 mod revisions;
 mod search_bar;
 
@@ -44,6 +45,8 @@ pub(crate) struct EditorView {
     checklist: checklist::ChecklistView,
     /// A snippet's code, in the code editor.
     code: Option<code::CodeView>,
+    /// A snippet whose language has a reader: its explorer.
+    exploring: Option<json_view::Exploring>,
     /// A Calcul sheet, in its own editor.
     sheet: Option<calc::CalcView>,
     /// A Dessin's editor: its scene is no text.
@@ -68,6 +71,7 @@ impl EditorView {
             checklist: checklist::ChecklistView::of(&note.items),
             code: (note.kind == NoteKind::Snippet)
                 .then(|| code::CodeView::of(&note.content, note.language)),
+            exploring: json_view::Exploring::of(note),
             sheet: (note.kind == NoteKind::Calc).then(|| calc::CalcView::of(&note.content)),
             drawing: (note.kind == NoteKind::Drawing)
                 .then(|| drawing::DrawingView::open(&note.content)),
@@ -100,10 +104,13 @@ impl EditorView {
     }
 }
 
+pub(crate) use json_view::Layout as ExplorerLayout;
+
 pub(crate) fn show(
     ui: &Ui,
     state: &AppState,
     view: &mut Option<EditorView>,
+    layout: &mut ExplorerLayout,
     actions: &mut Actions,
 ) {
     let Some((open, note)) = state
@@ -146,7 +153,7 @@ pub(crate) fn show(
         .show(ctx, |ui| {
             ui.set_min_size(size);
             ui.set_max_size(size);
-            panel(ui, state, (open.session, note), editing, actions)
+            panel(ui, state, (open.session, note), editing, layout, actions)
         });
     arrivals(ui, actions);
     let lightbox = state.attachments.zoomed().is_some();
@@ -167,6 +174,7 @@ fn panel(
     state: &AppState,
     (session, note): (u64, &DisplayNote),
     editing: &mut EditorView,
+    layout: &mut ExplorerLayout,
     actions: &mut Actions,
 ) -> bool {
     let whole = ui.max_rect();
@@ -182,6 +190,12 @@ fn panel(
         header::bands(ui, state, (session, note), editing, actions);
     }
     fields::show(ui, state, (session, note), editing, actions);
+    if editing.code.is_some() {
+        json_view::follow(&mut editing.exploring, note);
+    }
+    if let Some(exploring) = &mut editing.exploring {
+        json_view::band(ui, state, session, exploring, layout, whole.width() - 40.0);
+    }
     let footer_height = 34.0;
     let history = revisions::height(state);
     let body_rect = Rect::from_min_max(
@@ -215,7 +229,13 @@ fn panel(
         }
         shown.left
     } else if let Some(code) = &mut editing.code {
-        let shown = code::show(&mut body_ui, code, note.language, state.language);
+        let shown = match &mut editing.exploring {
+            Some(exploring) => {
+                let at = (session, note);
+                json_view::body(&mut body_ui, state, at, exploring, code, layout, actions)
+            }
+            None => code::show(&mut body_ui, code, note.language, state.language),
+        };
         if shown.changed {
             editing.body = code.text();
         }

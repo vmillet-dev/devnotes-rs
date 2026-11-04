@@ -27,7 +27,7 @@ const NODE_GAP: u32 = 1;
 const MIN_WIDTH: u32 = 16;
 const MAX_WIDTH: u32 = 48;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum JsonOpening {
     /// Whole when small, its first level otherwise.
@@ -43,7 +43,7 @@ pub enum JsonOpening {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonQuery {
     pub text: String,

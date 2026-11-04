@@ -5,6 +5,7 @@ pub mod calc_sheets;
 pub mod drawing_exports;
 pub mod drawing_pictures;
 pub mod editor;
+pub mod explored;
 pub mod note_revisions;
 pub mod notes;
 pub mod notes_query;
@@ -99,6 +100,7 @@ pub struct AppState {
     pub attachments: attachments::AttachmentsState,
     pub exports: drawing_exports::DrawingExports,
     pub calc: calc_sheets::CalcSheets,
+    pub explored: explored::ExploredState,
     pub errors: ErrorNotifier,
     pub clock: Box<dyn Clock>,
     /// The system's wish; the look adds nothing to it.
@@ -138,6 +140,7 @@ impl AppState {
             attachments: attachments::AttachmentsState::default(),
             exports: drawing_exports::DrawingExports::default(),
             calc: calc_sheets::CalcSheets::default(),
+            explored: explored::ExploredState::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
             reduced_motion,
@@ -208,6 +211,7 @@ impl AppState {
             &self.opener,
             &mut reports,
         );
+        self.explored.update(backend);
         for (note, sheet) in self.calc.update(&mut self.errors) {
             let text = crate::notes::calc::copy_text(&note.content, &sheet, self.language);
             self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
@@ -529,6 +533,7 @@ impl AppState {
             Editing::Export(export) => self.exports.ask(backend, &self.dialog, export),
             Editing::Fields(asked) => self.apply_fields(asked, ctx, backend),
             Editing::Attachment(asked) => self.ask_attachment(asked, backend),
+            Editing::Explore { session, query } => self.explored.want(session, query),
             Editing::Evaluate { session, text } => {
                 let today = self.clock.now().with_timezone(&chrono::Local).date_naive();
                 self.calc.ask(backend, session, text, today);

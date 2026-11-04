@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::parse::{JsonError, Node, parse};
 use super::{toml, xml, yaml};
+use crate::notes::language::Language;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -38,5 +39,32 @@ pub(crate) fn read(text: &str, format: StructureFormat) -> Result<Read, JsonErro
         StructureFormat::Yaml => yaml::read(text),
         StructureFormat::Toml => toml::read(text),
         StructureFormat::Xml => xml::read(text),
+    }
+}
+
+/// The snippets whose language has a reader; HTML is not XML, and gets none.
+pub fn explorable_format(language: Language) -> Option<StructureFormat> {
+    match language {
+        Language::Json => Some(StructureFormat::Json),
+        Language::Yml => Some(StructureFormat::Yaml),
+        Language::Toml => Some(StructureFormat::Toml),
+        Language::Xml => Some(StructureFormat::Xml),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_languages_with_a_reader_are_explored() {
+        assert_eq!(
+            explorable_format(Language::Yml),
+            Some(StructureFormat::Yaml)
+        );
+        assert_eq!(explorable_format(Language::Xml), Some(StructureFormat::Xml));
+        assert_eq!(explorable_format(Language::Html), None);
+        assert_eq!(explorable_format(Language::Jsonld), None);
     }
 }

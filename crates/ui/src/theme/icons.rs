@@ -30,6 +30,7 @@ pub enum Icon {
     ChevronRight,
     X,
     Plus,
+    Minus,
     /// A row's ⋯: what else it can be told.
     Ellipsis,
     Pin,
@@ -116,6 +117,7 @@ impl Icon {
             Self::ChevronRight => &["m9 18 6-6-6-6"],
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
             Self::Plus => &["M5 12h14", "M12 5v14"],
+            Self::Minus => &["M5 12h14"],
             Self::Ellipsis => &["M12 12h.01", "M19 12h.01", "M5 12h.01"],
             Self::Pin => &[
                 "M12 17v5",
@@ -373,7 +375,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 62] = [
+    const ALL: [Icon; 63] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
@@ -389,6 +391,7 @@ mod tests {
         Icon::ChevronRight,
         Icon::X,
         Icon::Plus,
+        Icon::Minus,
         Icon::Ellipsis,
         Icon::Pin,
         Icon::Star,
