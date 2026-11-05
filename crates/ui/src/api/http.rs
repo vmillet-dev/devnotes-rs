@@ -2,6 +2,7 @@
 
 use engine::http::{
     self, BodyAnswer, VariablesRequest,
+    environments::{HttpEnvironments, Variable, VariableFault},
     graphql::{GraphqlAnswer, GraphqlDocument},
     model::{
         HeaderFault, HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest, HttpRequestDraft,
@@ -9,6 +10,7 @@ use engine::http::{
     },
     query::{QuerySide, SyncedQuery},
     send::{ImpliedHeader, SendRequest, SentResponse},
+    settings::Inherited,
     variables::UsedVariable,
 };
 
@@ -110,6 +112,40 @@ pub fn reorder_collection(backend: &Backend, id: String, index: u32) -> Pending<
 /// (D12).
 pub fn spans(text: &str) -> Vec<(std::ops::Range<usize>, String)> {
     http::variables::spans(text)
+}
+
+/// Why each variable cannot be used, if it cannot. Pure (D12).
+pub fn variable_faults(rows: &[Variable]) -> Vec<Option<VariableFault>> {
+    http::environments::variable_faults(rows)
+}
+
+/// The explorer's path as a rule reads it. Pure (D12).
+pub fn body_path(explorer_path: &str) -> String {
+    http::extract::body_path(explorer_path)
+}
+
+/// The name an extraction proposes. Pure (D12).
+pub fn variable_name_of(path: &str) -> String {
+    http::extract::variable_name_of(path)
+}
+
+/// Whether an extraction proposes a secret. Pure (D12).
+pub fn looks_secret(path: &str) -> bool {
+    http::extract::looks_secret(path)
+}
+
+/// What a request placed there inherits, and from where.
+pub fn inherited(
+    backend: &Backend,
+    collection_id: String,
+    folder_id: Option<String>,
+) -> Pending<Inherited> {
+    backend.db(move |engine| http::inherited_http_settings(engine, collection_id, folder_id))
+}
+
+/// The globals and every environment.
+pub fn environments(backend: &Backend) -> Pending<HttpEnvironments> {
+    backend.db(http::http_environments)
 }
 
 /// Why each header row cannot be sent, if it cannot. Pure (D12).

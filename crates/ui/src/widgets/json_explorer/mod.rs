@@ -268,6 +268,8 @@ pub struct Output {
     pub tree_proposed: bool,
     /// Picked by a click or a key this frame.
     pub chosen: Option<String>,
+    /// « Extract to a variable »: the path of the entry selected.
+    pub extract: Option<String>,
 }
 
 /// What the selection panel shows of the entry selected.
@@ -327,6 +329,8 @@ pub struct ExplorerView<'a> {
     language: Language,
     /// A code beside it to show a node in: not under an answer, which is read, not edited.
     with_code: bool,
+    /// « Extract to a variable » on the entry selected: under an answer alone.
+    extractable: bool,
 }
 
 impl<'a> ExplorerView<'a> {
@@ -339,7 +343,14 @@ impl<'a> ExplorerView<'a> {
             format: StructureFormat::Json,
             language: Language::Fr,
             with_code: true,
+            extractable: false,
         }
+    }
+
+    #[must_use]
+    pub fn extractable(mut self, extractable: bool) -> Self {
+        self.extractable = extractable;
+        self
     }
 
     #[must_use]
@@ -774,6 +785,13 @@ impl<'a> ExplorerView<'a> {
             }
             if self.with_code && Button::new(&show, "json-show-in-code").show(ui).clicked() {
                 output.show_in_code = Some(selected.span);
+            }
+            if self.extractable
+                && Button::new(&self.tr(keys::json::EXTRACT), "json-extract")
+                    .show(ui)
+                    .clicked()
+            {
+                output.extract = Some(selected.path.clone());
             }
         });
         if wide {

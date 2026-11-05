@@ -4992,6 +4992,22 @@ rewrites — Prettier's format, the `null`s of « Add » — reaches them throug
 typing moved on since it was asked (`HttpState::rewrite`). ⚠️ `Ctrl+Enter` in a box sends: the
 editor leaves it to `keys::dispatch` instead of writing a line.
 
+`http::request::auth` holds a request's auth: the secret half masked until asked for, and
+« Inherited » saying what it takes and from where (`inherited_http_settings`, a `QueryCell` on the
+place of the tab in front), the secret masked unless it is a `{{variable}}`. A draft has no place
+yet, so it says so. `http::request::transport` lays the settings out with what each unset field
+takes beside it; a number is settled once its field is left, since a timeout typed digit by
+digit passes through values the floor would raise. `http::variables_table` is the table of a
+request's variables, and of the environments' to come. `http::extract` is « Extract to a
+variable », opened from the explorer under an answer: the path, the name proposed and whether it
+reads as a secret are the core's (`extract::{body_path, variable_name_of, looks_secret}`, called
+directly, D12). A rule is a part of the draft, saved with the request; `http::request::extractions`
+reads and removes them, under « Scripts », where the scripts join them. `http::environment_picker`
+is at the end of the tabs' strip: the active environment is the library's
+(`devnotes.notes.http.environment`), one deleted since it was chosen is none, and a send and the
+variables' chips both resolve from it (`state::http::environments`). ⚠️ JetBrains Mono and Inter
+have no `→`: egui panics on a missing glyph in a test, so an arrow is an `Icon`.
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

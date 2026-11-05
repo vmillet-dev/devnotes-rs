@@ -131,7 +131,7 @@ fn row_of(
         ui,
         (Columns::at(columns.key, top), id.with("key")),
         (&mut part.key, &tr(keys::http::table::KEY), "http-part-key"),
-        (&hint, ink, true),
+        (&hint, ink, true, false),
     )
     .changed();
     let kind = tr(if part.file {
@@ -175,7 +175,7 @@ fn row_of(
                 &tr(keys::http::table::VALUE),
                 "http-part-value",
             ),
-            ("", ink, true),
+            ("", ink, true, false),
         )
         .changed();
     }

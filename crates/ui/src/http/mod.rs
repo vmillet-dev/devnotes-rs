@@ -2,10 +2,13 @@
 //! rail is the library's, and so is its width.
 
 mod close;
+mod environment_picker;
+mod extract;
 mod rail;
 mod request;
 mod response;
 mod tabs;
+mod variables_table;
 
 use egui::{Color32, Rect, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo, pos2};
 use engine::http::model::HttpMethod;
@@ -65,6 +68,13 @@ pub enum Action {
         key: String,
         target: crate::state::http::bodies::FileFor,
     },
+    /// A rule made from the answer; one on the same variable gives way to it.
+    AddExtraction {
+        key: String,
+        rule: engine::http::model::Extraction,
+    },
+    /// `None` sends with the globals alone.
+    ChooseEnvironment(Option<String>),
     /// The tab's draft, sent; `None` for the tab in front (`Ctrl+Enter`).
     Send(Option<String>),
     CancelSend(String),
@@ -120,6 +130,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         None => empty_workspace(&mut workspace, below, state.language, actions),
     }
     close::show(ui, state, actions);
+    extract::show(ui, state, view.response.extracting(), actions);
     if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }

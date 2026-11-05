@@ -57,6 +57,13 @@ pub(crate) struct ResponseView {
     body: body::BodyView,
 }
 
+impl ResponseView {
+    /// The form « Extract to a variable » opened from the explorer.
+    pub(crate) fn extracting(&mut self) -> &mut Option<crate::http::extract::Extracting> {
+        &mut self.body.extracting
+    }
+}
+
 pub(crate) fn show(
     ui: &mut Ui,
     state: &AppState,
