@@ -6979,8 +6979,9 @@ from overwriting it.
 `EGUI_INSPECTION=127.0.0.1:<free port>`, and speaks egui's inspection protocol: it reads the
 AccessKit tree, finds a control by its `author_id`, clicks the middle of its box, types, presses
 a key at its place (the area keys read the position), captures the window. `eventually` reads
-the tree until its condition holds: `Settle` waits for egui to be idle, not for the core,
-whose answer arrives a frame later. `relaunch` asks `--action quit`, waits for the process to
+the tree until its condition holds, with no `Settle` between reads: `Settle` waits for egui to
+be idle, not for the core, whose answer arrives frames later, and each read already renders a
+frame (up to 300 ms on WARP). `relaunch` asks `--action quit`, waits for the process to
 end its queue drained, and starts it again on the same profile. A failed scenario leaves its
 last screen and the application's log in `target/e2e/scenarios/<scenario>/`, beside its
 captures.

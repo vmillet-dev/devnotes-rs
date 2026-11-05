@@ -1755,11 +1755,11 @@ l'écran (`GetScreenshot`), redimensionner (`Resize`).
 - **Le pilote** : la crate `e2e` (`crates/e2e/`), quelques centaines de lignes. Il lance le binaire
   (`--profile <dossier temporaire>`, `EGUI_INSPECTION=127.0.0.1:<port libre>`), s'y connecte,
   trouve un nœud par `author_id`, clique au centre de sa boîte, tape, presse une touche, attend une
-  condition (`eventually`, adossé à `Settle`), capture l'écran et garde le journal en cas d'échec,
-  arrête et **relance réellement** l'application sur le même profil. `Settle` attend qu'egui soit
-  au repos, pas que le `Backend` ait répondu (une réponse arrive une frame plus tard, par le
-  `Waker`) : `eventually` relit donc l'arbre jusqu'à sa condition, `Settle` lui évite seulement de
-  relire pour rien.
+  condition (`eventually`), capture l'écran et garde le journal en cas d'échec, arrête et
+  **relance réellement** l'application sur le même profil. `Settle` attend qu'egui soit au repos,
+  pas que le `Backend` ait répondu (une réponse arrive une frame plus tard, par le `Waker`) :
+  `eventually` relit donc l'arbre jusqu'à sa condition, sans `Settle` entre deux lectures, chaque
+  lecture rendant déjà une frame (jusqu'à 300 ms sous WARP).
 - **Un fichier par scénario** : `crates/e2e/tests/<nn>_<nom>.rs`, un seul `#[test]` qui enchaîne
   des étapes nommées, lancé seul (`cargo test -p e2e --test <nn>_<nom>`). Chaque fichier lance sa
   propre application sur son propre profil, donc sa propre instance unique (D16), en local comme

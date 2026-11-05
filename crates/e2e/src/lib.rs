@@ -230,10 +230,11 @@ impl App {
     }
 
     /// Reads the tree until `holds` is true of it: answers arrive from the core frames later.
+    /// No `Settle` between reads: each read renders a frame, and a frame costs up to 300 ms on
+    /// WARP.
     pub fn eventually(&mut self, what: &str, holds: impl Fn(&Tree) -> bool) {
         let until = Instant::now() + PATIENCE;
         loop {
-            self.ask(&Request::Settle { max_steps: 10 });
             let tree = self.tree();
             if holds(&tree) {
                 return;
