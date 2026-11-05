@@ -5,14 +5,13 @@ use egui::{Ui, Vec2};
 use engine::http::model::Extraction;
 use i18n::keys;
 
-use super::edit;
-use crate::action::Actions;
-use crate::state::http::tabs::{DraftEdit, Tab};
+use crate::state::http::tabs::Tab;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, IconButton};
 
-pub(super) fn show(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n::Language) {
+/// The rules left, when one was removed.
+pub(super) fn show(ui: &mut Ui, tab: &Tab, language: i18n::Language) -> Option<Vec<Extraction>> {
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     let rules = &tab.draft.document.extractions;
@@ -30,11 +29,11 @@ pub(super) fn show(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n
             removed = Some(at);
         }
     }
-    if let Some(at) = removed {
+    removed.map(|at| {
         let mut rest = rules.clone();
         rest.remove(at);
-        edit(actions, tab, DraftEdit::Extractions(rest));
-    }
+        rest
+    })
 }
 
 /// `body.token → {{token}}`, and the cross that removes it; `true` on a click.

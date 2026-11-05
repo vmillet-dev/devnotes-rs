@@ -13,6 +13,7 @@ mod rail;
 mod request;
 mod response;
 mod save_request;
+mod scripts;
 mod socket_log;
 mod tabs;
 mod variables_table;
@@ -102,6 +103,18 @@ pub enum Action {
     EditSettings(Box<engine::http::model::ContainerSettings>),
     SaveSettings,
     CloseSettings,
+    /// « Open the script »: under a tab, or in a level's settings.
+    OpenScript {
+        key: String,
+        stop: Box<engine::http::scripts::model::ScriptStop>,
+    },
+    /// A level of the order: its settings, on the phase in view.
+    OpenLevel {
+        origin: engine::http::settings::HttpOrigin,
+        phase: engine::http::scripts::model::ScriptKind,
+    },
+    /// The editor has shown what was asked.
+    ScriptFocusTaken,
     /// A text on the tab's open socket.
     SendMessage {
         key: String,
@@ -349,6 +362,8 @@ mod dialogs_tests;
 mod environments_tests;
 #[cfg(test)]
 mod history_tests;
+#[cfg(test)]
+mod scripts_tests;
 #[cfg(test)]
 mod socket_tests;
 #[cfg(test)]

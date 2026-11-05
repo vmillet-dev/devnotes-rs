@@ -23,6 +23,7 @@ use engine::http::model::{
     Extraction, HttpContents, HttpItem, HttpMethod, HttpTree, RequestBody, RequestDocument,
     RequestKind,
 };
+use engine::http::scripts::model::{ScriptKind, ScriptLevel};
 use engine::http::send::ImpliedHeader;
 use engine::http::settings::Inherited;
 use engine::http::variables::UsedVariable;
@@ -168,6 +169,14 @@ fn part_of(draft: &tabs::Draft, part: Rewritten) -> &str {
     }
 }
 
+/// A tab asked to show one of its own scripts; taken by its editor.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScriptFocus {
+    pub key: String,
+    pub phase: ScriptKind,
+    pub line: Option<u32>,
+}
+
 /// What the workspace shows: the open requests, or a page from the rail's foot.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Page {
@@ -222,6 +231,7 @@ pub struct HttpState {
     environments: environments::Environments,
     page: Page,
     cookies: cookies::CookieJar,
+    script_focus: Option<ScriptFocus>,
     sockets: sockets::Sockets,
     history: history::History,
     /// How many sends « Clear » just removed: for the status line.
@@ -543,6 +553,54 @@ impl HttpState {
     pub fn ask_close(&mut self, key: &str) {
         let live = self.sockets.is_live(key);
         self.tabs.ask_close(key, live);
+    }
+
+    pub fn script_focus(&self) -> Option<&ScriptFocus> {
+        self.script_focus.as_ref()
+    }
+
+    pub fn script_focus_taken(&mut self) {
+        self.script_focus = None;
+    }
+
+    /// « Open the script »: the request's own tab, or the settings of what holds the script.
+    pub fn open_script(
+        &mut self,
+        backend: &Backend,
+        key: String,
+        stop: &engine::http::scripts::model::ScriptStop,
+    ) {
+        let phase = stop.script.unwrap_or_default();
+        let held = stop
+            .level
+            .is_some_and(|level| level != ScriptLevel::Request);
+        if held
+            && let Some(owner) = &stop.owner
+            && self.open_settings_of(backend, owner, (phase, stop.line))
+        {
+            return;
+        }
+        self.script_focus = Some(ScriptFocus {
+            key,
+            phase,
+            line: stop.line,
+        });
+    }
+
+    /// `false` when the tree no longer holds it.
+    pub fn open_settings_of(
+        &mut self,
+        backend: &Backend,
+        id: &str,
+        focus: (ScriptKind, Option<u32>),
+    ) -> bool {
+        let Some(container) = tree::container_of(self.tree(), id) else {
+            return false;
+        };
+        let mut form = containers::Form::open(backend, container);
+        form.focus = Some(focus);
+        self.container = Some(form);
+        true
     }
 
     pub fn cookies(&self) -> &cookies::CookieJar {

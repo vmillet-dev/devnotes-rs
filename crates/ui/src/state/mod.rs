@@ -666,6 +666,12 @@ impl AppState {
             }
             Http::StopAsking => self.http.stop_asking(),
             Http::Cookies(asked) => self.http.ask_cookies(backend, asked),
+            Http::OpenScript { key, stop } => self.http.open_script(backend, key, &stop),
+            Http::OpenLevel { origin, phase } => {
+                self.http
+                    .open_settings_of(backend, &origin.id, (phase, None));
+            }
+            Http::ScriptFocusTaken => self.http.script_focus_taken(),
             Http::SendMessage { key, text } => self.http.send_message(backend, &key, text),
             Http::ClearSocketLog(key) => self.http.clear_socket_log(&key),
             Http::History(asked) => self.http.ask_history(backend, asked),

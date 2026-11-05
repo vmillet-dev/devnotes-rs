@@ -223,6 +223,7 @@ fn a_rule_is_read_and_removed_under_the_scripts() {
             secret: true,
         }]),
     );
+    click_id(&mut harness, "http-script-phase-1");
     assert_eq!(
         said_by(&harness, "http-extraction").as_deref(),
         Some("body.token")

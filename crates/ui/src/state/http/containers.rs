@@ -2,6 +2,7 @@
 //! written on « Save ». Every request under it inherits them.
 
 use engine::http::model::{ContainerSettings, HttpItem, HttpItemKind};
+use engine::http::scripts::model::ScriptKind;
 use engine::http::settings::Inherited;
 use i18n::keys;
 
@@ -39,6 +40,8 @@ pub struct Form {
     pub settings: Option<ContainerSettings>,
     /// What a folder's « Inherited » takes; a collection has nothing above it.
     pub above: Option<Inherited>,
+    /// « Open the script »: the phase, and the line that stopped.
+    pub focus: Option<(ScriptKind, Option<u32>)>,
     reading: Option<Pending<ContainerSettings>>,
     reading_above: Option<Pending<Inherited>>,
     saving: Option<Pending<()>>,
@@ -58,6 +61,7 @@ impl Form {
             container,
             settings: None,
             above: None,
+            focus: None,
             saving: None,
         }
     }

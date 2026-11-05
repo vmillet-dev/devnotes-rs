@@ -287,6 +287,11 @@ pub fn close_socket(backend: &Backend, id: String) -> Pending<bool> {
     backend.compute(move |engine| http::close_websocket(engine, id))
 }
 
+/// How many tests a script declares. Pure (D12).
+pub fn tests_declared(source: &str) -> usize {
+    http::scripts::model::tests_declared(source)
+}
+
 /// The globals and every environment.
 pub fn environments(backend: &Backend) -> Pending<HttpEnvironments> {
     backend.db(http::http_environments)
