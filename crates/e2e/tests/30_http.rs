@@ -208,6 +208,20 @@ fn send(app: &mut App) {
             app.wait_for("http-response-idle");
         },
     );
+    step("the send in the history, read again, then reopened", || {
+        app.click("http-history-open");
+        app.wait_for("http-history-item");
+        app.click("http-history-item");
+        app.wait_for("http-history-url");
+        app.eventually("it reads like an answer", |tree| {
+            tree.text("http-response-status").as_deref() == Some("200 OK")
+        });
+        app.click("http-history-reopen");
+        app.wait_for("http-history-replace");
+        app.click("http-history-replace-confirm");
+        app.wait_for("http-url");
+        app.eventually("the page has gone", |tree| !tree.has("http-history"));
+    });
     step(
         "the cookie the answer set, in the jar, then thrown away",
         || {

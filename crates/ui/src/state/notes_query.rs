@@ -394,7 +394,7 @@ fn toggle<T: Ord>(set: &mut BTreeSet<T>, value: T) {
 }
 
 /// `Date#getTimezoneOffset()`'s sign, which the core reads: −120 for UTC+2.
-pub(super) fn tz_offset_minutes(now: DateTime<Utc>) -> i32 {
+pub(crate) fn tz_offset_minutes(now: DateTime<Utc>) -> i32 {
     -Local
         .offset_from_utc_datetime(&now.naive_utc())
         .fix()

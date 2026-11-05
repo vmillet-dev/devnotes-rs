@@ -26,6 +26,8 @@ pub enum AppAction {
     DismissStatus,
     /// The library rail's width, once its edge rests.
     SetRailWidth(u16),
+    /// The history list's width, once its edge rests.
+    SetHistoryWidth(u16),
     /// The library rail shown or put away: the switchers take its place.
     ToggleRail,
 }

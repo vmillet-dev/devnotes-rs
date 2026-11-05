@@ -7,6 +7,7 @@ pub mod code;
 pub mod containers;
 pub mod cookies;
 pub mod environments;
+pub mod history;
 pub mod moves;
 pub mod send;
 pub mod tabs;
@@ -172,6 +173,7 @@ pub enum Page {
     #[default]
     Requests,
     Environments,
+    History,
 }
 
 /// A deletion asked: what it takes with it, read before the question is shown.
@@ -219,6 +221,9 @@ pub struct HttpState {
     environments: environments::Environments,
     page: Page,
     cookies: cookies::CookieJar,
+    history: history::History,
+    /// How many sends « Clear » just removed: for the status line.
+    history_cleared: Option<u32>,
     code: code::CodeDialog,
     container: Option<containers::Form>,
     /// How many cookies the jar just threw away: for the status line.
@@ -441,6 +446,78 @@ impl HttpState {
     /// Where a draft can go: the places of the tree that was read.
     pub fn save_places(&self) -> Vec<tree::SavePlace> {
         tree::save_places(self.tree())
+    }
+
+    pub fn history(&self) -> &history::History {
+        &self.history
+    }
+
+    /// Once a frame, beside `update`: the history's days are cut in the local time of the clock.
+    pub fn update_history(
+        &mut self,
+        (ctx, backend): (&egui::Context, &Backend),
+        (now, tz_offset): (f64, i32),
+        errors: &mut ErrorNotifier,
+    ) {
+        let open = self.page == Page::History;
+        let asked = (open, self.revision, now, tz_offset);
+        let (cleared, reopened) = self.history.update((ctx, backend), asked, errors);
+        self.history_cleared = cleared;
+        match reopened {
+            Some(history::Reopened::Onto { request_id, draft }) => {
+                self.tabs
+                    .open_with(backend, request_id, draft.method, draft.document);
+                self.page = Page::Requests;
+            }
+            Some(history::Reopened::Draft { name, draft }) => {
+                self.tabs
+                    .open_draft(name, draft.kind, draft.method, draft.document);
+                self.page = Page::Requests;
+            }
+            None => {}
+        }
+    }
+
+    pub fn take_history_cleared(&mut self) -> Option<u32> {
+        self.history_cleared.take()
+    }
+
+    pub fn ask_history(&mut self, backend: &Backend, asked: history::Asked) {
+        match asked {
+            history::Asked::Reopen(replace) => self.reopen(backend, replace),
+            other => self.history.ask(backend, other),
+        }
+    }
+
+    /// The request a send goes back to, while the tree still holds it.
+    pub fn reopen_into(&self, item: &engine::http::history::HistoryItem) -> Option<&str> {
+        let id = item.request_id.as_deref()?;
+        tree::find_request(self.tree(), id).map(|held| held.name.as_str())
+    }
+
+    /// A send goes back onto the request it came from, as changes to save; a tab with changes of
+    /// its own is not written over without asking. That request gone, it is a draft.
+    fn reopen(&mut self, backend: &Backend, replace: bool) {
+        let Some(entry) = self.history.entry().cloned() else {
+            return;
+        };
+        let held = entry
+            .item
+            .request_id
+            .as_deref()
+            .and_then(|id| tree::find_request(self.tree(), id))
+            .map(|held| (held.id.clone(), held.name.clone()));
+        let Some((request_id, name)) = held else {
+            self.history
+                .reopen_draft(backend, entry.item.id.clone(), entry.item.sent_at);
+            return;
+        };
+        let dirty = self.tabs.tab(&request_id).is_some_and(tabs::Tab::is_dirty);
+        if dirty && !replace {
+            self.history.ask_replace(name);
+            return;
+        }
+        self.history.reopen_onto(backend, request_id, &entry);
     }
 
     pub fn cookies(&self) -> &cookies::CookieJar {

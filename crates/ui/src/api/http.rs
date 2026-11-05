@@ -6,6 +6,7 @@ use engine::http::{
     cookies::store::CookieDomain,
     environments::{EnvironmentPatch, HttpEnvironments, Variable, VariableFault},
     graphql::{GraphqlAnswer, GraphqlDocument},
+    history::{HistoryDay, HistoryDraft, HistoryEntry},
     model::{
         ContainerSettings, HeaderFault, HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest,
         HttpRequestDraft, HttpRequestPatch, HttpTree, KeyValue, NewPlace, RequestBody,
@@ -237,6 +238,40 @@ pub fn create_request_in(
         Some(create) => http::create_http_request_in(engine, draft, create),
         None => http::create_http_request(engine, draft),
     })
+}
+
+pub fn history(backend: &Backend, tz_offset_minutes: i32) -> Pending<Vec<HistoryDay>> {
+    backend.db(move |engine| http::http_history(engine, tz_offset_minutes))
+}
+
+pub fn history_entry(backend: &Backend, id: String) -> Pending<HistoryEntry> {
+    backend.db(move |engine| http::http_history_entry(engine, id))
+}
+
+pub fn count_history(backend: &Backend) -> Pending<u32> {
+    backend.db(http::count_http_history)
+}
+
+pub fn clear_history(backend: &Backend) -> Pending<u32> {
+    backend.db(http::clear_http_history)
+}
+
+/// Answers the entry as it was read, to undo its deletion.
+pub fn delete_history(backend: &Backend, id: String) -> Pending<HistoryEntry> {
+    backend.db(move |engine| http::delete_http_history_entry(engine, id))
+}
+
+pub fn restore_history(backend: &Backend, entry: HistoryEntry) -> Pending<()> {
+    backend.db(move |engine| http::restore_http_history_entry(engine, entry))
+}
+
+/// The send put back onto its request; `None` when that request is gone.
+pub fn history_onto(backend: &Backend, id: String) -> Pending<Option<HistoryDraft>> {
+    backend.db(move |engine| http::http_history_onto_request(engine, id))
+}
+
+pub fn history_draft(backend: &Backend, id: String) -> Pending<HistoryDraft> {
+    backend.db(move |engine| http::http_history_draft(engine, id))
 }
 
 /// The globals and every environment.

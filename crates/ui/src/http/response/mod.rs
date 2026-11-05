@@ -170,6 +170,18 @@ fn clear(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n::Language
     }
 }
 
+/// An answer read from the history: it has no tab to clear it from.
+pub(crate) fn recorded(
+    ui: &mut Ui,
+    state: &AppState,
+    (id, response): (&str, &SentResponse),
+    view: &mut ResponseView,
+    actions: &mut Actions,
+) {
+    bar(ui, state, (None, response), view, actions);
+    section_of(ui, state, (id, response), view, actions);
+}
+
 fn answered(
     ui: &mut Ui,
     state: &AppState,
@@ -177,7 +189,17 @@ fn answered(
     view: &mut ResponseView,
     actions: &mut Actions,
 ) {
-    bar(ui, state, (tab, response), view, actions);
+    bar(ui, state, (Some(tab), response), view, actions);
+    section_of(ui, state, (id, response), view, actions);
+}
+
+fn section_of(
+    ui: &mut Ui,
+    state: &AppState,
+    (id, response): (&str, &SentResponse),
+    view: &mut ResponseView,
+    actions: &mut Actions,
+) {
     match view.section {
         Section::Body => body::show(ui, state, (id, response), &mut view.body, actions),
         Section::Headers => rows(
@@ -197,14 +219,14 @@ fn answered(
 fn bar(
     ui: &mut Ui,
     state: &AppState,
-    (tab, response): (&Tab, &SentResponse),
+    (tab, response): (Option<&Tab>, &SentResponse),
     view: &mut ResponseView,
     actions: &mut Actions,
 ) {
     let p = palette(ui.ctx());
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing.x = 12.0;
         status(ui, response);
         let millis = i18n::translate(
@@ -259,23 +281,31 @@ fn bar(
                 view.section = section;
             }
         }
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
-            if Button::new(&tr(keys::http::response::CLEAR), "http-response-clear")
-                .show(ui)
-                .clicked()
-            {
-                actions.push(Asked::Http(Action::ClearResponse(tab.key.clone())));
-            }
-            let has_text = !response.binary && !response.body.is_empty();
-            if Button::new(&tr(keys::http::response::COPY), "http-response-copy")
-                .enabled(has_text)
-                .show(ui)
-                .clicked()
-            {
-                actions.push(Asked::Http(Action::Copy(response.body.clone())));
-            }
-        });
+        // Pushed to the end while there is room; on the next line, not over the tabs, otherwise.
+        let (copy, clear_words) = (
+            tr(keys::http::response::COPY),
+            tr(keys::http::response::CLEAR),
+        );
+        let gap = ui.spacing().item_spacing.x;
+        let ends = Button::width(ui, &copy)
+            + tab.map_or(0.0, |_| Button::width(ui, &clear_words) + gap)
+            + gap
+            + 1.0;
+        let room = ui.available_size_before_wrap().x - ends;
+        if room > 0.0 {
+            ui.add_space(room);
+        }
+        let has_text = !response.binary && !response.body.is_empty();
+        if Button::new(&copy, "http-response-copy")
+            .enabled(has_text)
+            .show(ui)
+            .clicked()
+        {
+            actions.push(Asked::Http(Action::Copy(response.body.clone())));
+        }
+        if let Some(tab) = tab {
+            clear(ui, tab, actions, language);
+        }
     });
 }
 

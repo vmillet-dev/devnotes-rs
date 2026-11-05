@@ -593,6 +593,10 @@ impl AppState {
                 self.settings.rail_width = width;
                 self.save_settings(backend);
             }
+            Action::App(AppAction::SetHistoryWidth(width)) => {
+                self.settings.history_list_width = width;
+                self.save_settings(backend);
+            }
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
             Action::Notes(action) => self.apply_notes(action, ctx, backend),
             Action::Http(action) => self.apply_http(action, ctx, backend),
@@ -662,6 +666,7 @@ impl AppState {
             }
             Http::StopAsking => self.http.stop_asking(),
             Http::Cookies(asked) => self.http.ask_cookies(backend, asked),
+            Http::History(asked) => self.http.ask_history(backend, asked),
             Http::Code(asked) => self.http.ask_code(asked),
             Http::CopyCode(text) => {
                 ctx.copy_text(text);
@@ -705,6 +710,13 @@ impl AppState {
 
     fn update_http(&mut self, ctx: &egui::Context, backend: &Backend, time: f64) {
         self.http.update((ctx, backend), time, &mut self.errors);
+        let tz_offset = notes_query::tz_offset_minutes(self.clock.now());
+        self.http
+            .update_history((ctx, backend), (time, tz_offset), &mut self.errors);
+        if let Some(count) = self.http.take_history_cleared() {
+            let cleared = i18n::Message::new(i18n::keys::http::history::CLEARED);
+            self.status.report(cleared.with("count", count));
+        }
         if let Some(count) = self.http.take_cookies_removed() {
             let removed = i18n::Message::new(i18n::keys::http::cookies::REMOVED);
             self.status.report(removed.with("count", count));
