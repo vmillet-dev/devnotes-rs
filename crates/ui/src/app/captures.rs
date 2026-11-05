@@ -264,6 +264,78 @@ fn the_board_of_the_samples() {
         .click();
     settle(&mut harness);
     capture(&mut harness, "board-zone-menu");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+
+    let card = harness
+        .get_all_by(|node| node.author_id() == Some("board-zone-card"))
+        .next()
+        .expect("a filed card")
+        .rect()
+        .center();
+    let held = drag_to(
+        &mut harness,
+        card,
+        egui::PointerButton::Primary,
+        egui::vec2(520.0, 40.0),
+    );
+    holding(&mut harness, "board-dragging");
+    release(&mut harness, held, egui::PointerButton::Primary);
+    let band = drag_to(
+        &mut harness,
+        card,
+        egui::PointerButton::Secondary,
+        egui::vec2(300.0, 260.0),
+    );
+    holding(&mut harness, "board-band");
+    release(&mut harness, band, egui::PointerButton::Secondary);
+}
+
+/// A press at `from`, then the pointer moved by `by` in steps and held there: where it is.
+fn drag_to(
+    harness: &mut Harness<'_, DevNotesApp>,
+    from: egui::Pos2,
+    button: egui::PointerButton,
+    by: egui::Vec2,
+) -> egui::Pos2 {
+    let press = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    harness.event(egui::Event::PointerMoved(from));
+    harness.step();
+    harness.event(press(from, true));
+    harness.step();
+    for step in [0.2, 0.4, 0.6, 0.8, 1.0] {
+        harness.event(egui::Event::PointerMoved(from + by * step));
+        harness.step();
+    }
+    from + by
+}
+
+fn release(harness: &mut Harness<'_, DevNotesApp>, at: egui::Pos2, button: egui::PointerButton) {
+    harness.event(egui::Event::PointerButton {
+        pos: at,
+        button,
+        pressed: false,
+        modifiers: egui::Modifiers::NONE,
+    });
+    settle(harness);
+}
+
+/// The window as it stands, the pointer still held: a gesture under way, in one theme.
+fn holding(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
+    let image = harness
+        .render()
+        .expect("a software adapter draws the window");
+    if let Some(directory) = std::env::var_os("DEVNOTES_CAPTURES") {
+        std::fs::create_dir_all(&directory).unwrap();
+        image
+            .save(Path::new(&directory).join(format!("{name}.png")))
+            .unwrap();
+    }
 }
 
 /// The Dessin of `kinds`, as it opens and with a shape selected.

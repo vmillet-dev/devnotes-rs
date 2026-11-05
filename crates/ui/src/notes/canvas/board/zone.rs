@@ -1,36 +1,48 @@
 //! A folder drawn as a titled, coloured region. Its notes flow inside it, in the columns
 //! `folders::board::columns_in` counts — the same Rust that sizes the zone lays its cards out,
-//! so the two cannot disagree — and its body scrolls when they outgrow it.
+//! so the two cannot disagree — and its body scrolls when they outgrow it. It moves by its
+//! header's grip and resizes by its corner, by the pointer or by the arrows once either has the
+//! focus: the keyboard twin of each drag.
 
 use egui::{
-    CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, Role, Sense, Stroke, StrokeKind, Ui,
-    UiBuilder, Vec2, WidgetInfo, pos2, vec2,
+    CornerRadius, FontFamily, Key, Popup, PopupCloseBehavior, Rect, Response, Role, Sense, Stroke,
+    StrokeKind, Ui, UiBuilder, Vec2, WidgetInfo, pos2, vec2,
 };
 use engine::folders::board::{
-    BoardChild, BoardFrame, BoardZone, CARD_HEIGHT, CARD_WIDTH, GAP, ZONE_BORDER, ZONE_HEADER,
-    ZONE_PADDING, ZONE_SUBFOLDERS, columns_in,
+    BoardChild, BoardFrame, BoardNote, BoardZone, CARD_HEIGHT, CARD_WIDTH, GAP, ZONE_BORDER,
+    ZONE_HEADER, ZONE_PADDING, ZONE_SUBFOLDERS, columns_in,
 };
 use i18n::keys;
 
-use super::{BoardScreen, px, seated};
+use super::gesture::{self, Kind};
+use super::{Hand, NOWHERE, px, seated};
 use crate::action::{Action, Actions};
+use crate::notes::BoardGesture;
 use crate::notes::canvas::{CanvasView, card};
 use crate::notes::panel::{self, FolderEdit};
 use crate::notes::ui::folder_hue;
 use crate::theme::icons::Icon;
 use crate::theme::palette;
-use crate::widgets::{self, address, interact};
+use crate::widgets::{self, Button, address, interact};
 
-/// `at`: where it is drawn and the frame it is drawn from, a move staged included.
+/// What a zone is drawn from: where, its frame now, whether a card dragged over it would land in
+/// it, and the cards it holds now, a drop staged included.
+pub(super) struct Drawn<'a> {
+    pub(super) rect: Rect,
+    pub(super) frame: BoardFrame,
+    pub(super) lit: bool,
+    pub(super) notes: Vec<&'a BoardNote>,
+}
+
 pub(super) fn show(
     ui: &mut Ui,
-    (rect, frame): (Rect, BoardFrame),
+    drawn: &Drawn<'_>,
     zone: &BoardZone,
-    context: &card::Context<'_>,
-    screen: &mut BoardScreen,
+    (context, menu, hand): (&card::Context<'_>, &mut Option<FolderEdit>, &mut Hand<'_>),
     (canvas_view, actions): (&mut CanvasView, &mut Actions),
 ) {
-    let folder = &zone.folder;
+    let (rect, folder) = (drawn.rect, &zone.folder);
+    let p = palette(ui.ctx());
     let hue = folder_hue(ui, folder.colour);
     let mut zone_ui = ui.new_child(
         UiBuilder::new()
@@ -40,19 +52,39 @@ pub(super) fn show(
     zone_ui.set_clip_rect(rect.intersect(ui.clip_rect()));
     let ui = &mut zone_ui;
     let corner = CornerRadius::same(10);
+    let moving = hand.moving().is_some_and(
+        |moving| matches!(&moving.kind, Kind::MoveZone(id) | Kind::ResizeZone(id) if *id == folder.id),
+    );
+    if moving {
+        ui.painter().add(p.shadow_overlay.as_shape(rect, corner));
+    }
+    let (fill, edge) = if drawn.lit {
+        (0.14, 2.0)
+    } else {
+        (0.08, px(ZONE_BORDER))
+    };
     ui.painter().rect(
         rect,
         corner,
-        hue.gamma_multiply(0.08),
-        Stroke::new(px(ZONE_BORDER), hue),
+        p.bg_0.lerp_to_gamma(hue, fill),
+        Stroke::new(edge, hue),
         StrokeKind::Inside,
     );
-    let node = ui.allocate_rect(rect, Sense::hover());
+    // It swallows the left button's drag, which must not draw a folder over a folder; the
+    // right one still sweeps from here.
+    let node = ui.allocate_rect(rect, Sense::drag());
     node.widget_info(|| WidgetInfo::labeled(Role::Region, true, &folder.name));
     address(ui, &node, "board-zone");
+    hand.grab(ui, &node, None, NOWHERE);
     let inside = rect.shrink(px(ZONE_BORDER));
     let head = Rect::from_min_size(inside.min, vec2(inside.width(), px(ZONE_HEADER)));
-    header(ui, head, zone, context.language, screen, actions);
+    header(
+        ui,
+        head,
+        (zone, drawn),
+        (context.language, menu, hand),
+        actions,
+    );
     let mut top = head.bottom();
     if !zone.children.is_empty() {
         let row = Rect::from_min_size(
@@ -63,23 +95,42 @@ pub(super) fn show(
         top = row.bottom();
     }
     let body = Rect::from_min_max(pos2(inside.left(), top), inside.max);
-    flow(ui, (body, frame), zone, context, (canvas_view, actions));
+    flow(
+        ui,
+        (body, drawn),
+        zone,
+        (context, &mut *hand),
+        (canvas_view, actions),
+    );
+    resize_corner(
+        ui,
+        rect,
+        (zone, drawn.frame),
+        context.language,
+        hand,
+        actions,
+    );
 }
 
-/// The swatch, the title that opens the folder, the count, and the ⋯ that edits it.
+/// The grip, the swatch, the title that opens the folder, the count, and the ⋯ that edits it —
+/// or, while a card is dragged over the zone, where it would land.
 fn header(
     ui: &mut Ui,
     head: Rect,
-    zone: &BoardZone,
-    language: i18n::Language,
-    screen: &mut BoardScreen,
+    (zone, drawn): (&BoardZone, &Drawn<'_>),
+    (language, menu_edit, hand): (i18n::Language, &mut Option<FolderEdit>, &mut Hand<'_>),
     actions: &mut Actions,
 ) {
     let p = palette(ui.ctx());
     let folder = &zone.folder;
     let hue = folder_hue(ui, folder.colour);
     let middle = head.center().y;
-    let mut left = head.left() + 12.0;
+    let grip_room = Rect::from_min_size(
+        pos2(head.left() + 6.0, middle - widgets::MIN_TARGET / 2.0),
+        Vec2::splat(widgets::MIN_TARGET),
+    );
+    grip(ui, grip_room, (zone, drawn.frame), language, hand, actions);
+    let mut left = grip_room.right() + 4.0;
     let swatch = Rect::from_min_size(pos2(left, middle - 4.5), Vec2::splat(9.0));
     ui.painter().rect_filled(swatch, CornerRadius::same(2), hue);
     left = swatch.right() + 9.0;
@@ -88,7 +139,7 @@ fn header(
         pos2(head.right() - 12.0 - widgets::MIN_TARGET / 2.0, middle),
         Vec2::splat(widgets::MIN_TARGET),
     );
-    let count = zone.notes.len().to_string();
+    let count = drawn.notes.len().to_string();
     let count_galley = widgets::text(ui, &count, 11.5, 400.0, FontFamily::Proportional, p.text_2);
     let name_room = (menu_room.left() - 9.0 - count_galley.size().x - 9.0 - left).max(0.0);
     let name = widgets::text(
@@ -134,16 +185,159 @@ fn header(
     shown.widget_info(|| WidgetInfo::labeled(Role::Label, true, &count));
     address(ui, &shown, "board-zone-count");
     ui.painter().galley(count_at, count_galley, p.text_2);
-    menu(ui, menu_room, zone, language, screen, actions);
+    if drawn.lit {
+        drop_here(ui, head, hue, language);
+    } else {
+        menu(
+            ui,
+            menu_room,
+            (zone, drawn.notes.len()),
+            language,
+            menu_edit,
+            actions,
+        );
+    }
 }
 
-/// The same panel the breadcrumb and the rail open: rename, recolour, a folder inside, delete.
+/// « Drop here », said before the pointer lifts, where the ⋯ was.
+fn drop_here(ui: &mut Ui, head: Rect, hue: egui::Color32, language: i18n::Language) {
+    let words = i18n::translate(language, keys::board::DROP_HERE, &[]);
+    let galley = widgets::text(ui, &words, 11.5, 400.0, FontFamily::Proportional, hue);
+    let at = pos2(
+        head.right() - 12.0 - galley.size().x,
+        head.center().y - galley.size().y / 2.0,
+    );
+    let rect = Rect::from_min_size(at, galley.size());
+    let response = ui.allocate_rect(rect, Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
+    address(ui, &response, "board-zone-drop");
+    ui.painter().galley(at, galley, hue);
+}
+
+/// A grip, not the whole header: the title opens the folder, and a drag started on it would
+/// have to swallow its own click. Focused, the arrows move the zone a dot at a time.
+fn grip(
+    ui: &mut Ui,
+    room: Rect,
+    (zone, frame): (&BoardZone, BoardFrame),
+    language: i18n::Language,
+    hand: &mut Hand<'_>,
+    actions: &mut Actions,
+) {
+    let p = palette(ui.ctx());
+    let label = i18n::translate(
+        language,
+        keys::board::MOVE_ZONE,
+        &[("name", zone.folder.name.as_str().into())],
+    );
+    let mut grip_ui = ui.new_child(UiBuilder::new().max_rect(room));
+    let response = interact(
+        &mut grip_ui,
+        room.size(),
+        Sense::click_and_drag(),
+        "board-zone-grip",
+        || WidgetInfo::labeled(Role::Button, true, &label),
+        CornerRadius::same(4),
+    );
+    let response = widgets::tooltip(response, &label);
+    let kind = Kind::MoveZone(zone.folder.id.clone());
+    hand.grab(ui, &response, Some(kind), frame);
+    let ink = if response.hovered() || response.has_focus() {
+        p.text_0
+    } else {
+        p.text_2.gamma_multiply(0.6)
+    };
+    // Six dots, ⠿: no embedded face has the braille block.
+    for column in [-2.5, 2.5] {
+        for row in [-4.0, 0.0, 4.0] {
+            let centre = room.center() + vec2(column, row);
+            ui.painter().circle_filled(centre, 1.2, ink);
+        }
+    }
+    nudge(ui, &response, (zone, frame), false, actions);
+}
+
+/// The corner that resizes: it captures and releases nothing, membership comes from the drop.
+fn resize_corner(
+    ui: &mut Ui,
+    rect: Rect,
+    (zone, frame): (&BoardZone, BoardFrame),
+    language: i18n::Language,
+    hand: &mut Hand<'_>,
+    actions: &mut Actions,
+) {
+    let label = i18n::translate(
+        language,
+        keys::board::RESIZE_ZONE,
+        &[("name", zone.folder.name.as_str().into())],
+    );
+    let room = Rect::from_min_max(rect.max - Vec2::splat(widgets::MIN_TARGET), rect.max);
+    let mut corner_ui = ui.new_child(UiBuilder::new().max_rect(room));
+    let response = interact(
+        &mut corner_ui,
+        room.size(),
+        Sense::click_and_drag(),
+        "board-zone-resize",
+        || WidgetInfo::labeled(Role::Button, true, &label),
+        CornerRadius::same(3),
+    );
+    let response = widgets::tooltip(response, &label);
+    let kind = Kind::ResizeZone(zone.folder.id.clone());
+    hand.grab(ui, &response, Some(kind), frame);
+    let hue = folder_hue(ui, zone.folder.colour);
+    let tip = rect.max - Vec2::splat(4.0);
+    let stroke = Stroke::new(2.0, hue);
+    ui.painter()
+        .line_segment([tip - vec2(12.0, 0.0), tip], stroke);
+    ui.painter()
+        .line_segment([tip - vec2(0.0, 12.0), tip], stroke);
+    nudge(ui, &response, (zone, frame), true, actions);
+}
+
+/// The arrows on a focused grip or corner: a dot of the lattice each, staged like a drag.
+fn nudge(
+    ui: &Ui,
+    response: &Response,
+    (zone, frame): (&BoardZone, BoardFrame),
+    resizing: bool,
+    actions: &mut Actions,
+) {
+    if !widgets::takes_keys(ui, response) {
+        return;
+    }
+    let kept = egui::EventFilter {
+        horizontal_arrows: true,
+        vertical_arrows: true,
+        ..egui::EventFilter::default()
+    };
+    ui.memory_mut(|memory| memory.set_focus_lock_filter(response.id, kept));
+    let steps = [
+        (Key::ArrowLeft, (-1, 0)),
+        (Key::ArrowRight, (1, 0)),
+        (Key::ArrowUp, (0, -1)),
+        (Key::ArrowDown, (0, 1)),
+    ];
+    for (key, step) in steps {
+        let pressed = ui.input_mut(|input| input.consume_key(egui::Modifiers::NONE, key));
+        if pressed {
+            actions.push(Action::Notes(crate::notes::Action::Board(
+                BoardGesture::MoveZone {
+                    folder_id: zone.folder.id.clone(),
+                    frame: gesture::nudged(frame, step, resizing),
+                },
+            )));
+        }
+    }
+}
+
+/// The same panel the breadcrumb and the rail open — rename, recolour, a folder inside, delete
+/// — under the one entry only a zone offers: its notes, every one of them ticked.
 fn menu(
     ui: &mut Ui,
     room: Rect,
-    zone: &BoardZone,
+    (zone, held): (&BoardZone, usize),
     language: i18n::Language,
-    screen: &mut BoardScreen,
+    menu_edit: &mut Option<FolderEdit>,
     actions: &mut Actions,
 ) {
     let folder = &zone.folder;
@@ -160,7 +354,24 @@ fn menu(
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
             ui.set_width(260.0);
-            let edit = match &mut screen.menu {
+            if held > 0 {
+                #[expect(clippy::cast_possible_truncation, reason = "a zone's cards")]
+                let count = held as u32;
+                let words = i18n::translate(
+                    language,
+                    keys::folders::SELECT_NOTES,
+                    &[("count", count.into())],
+                );
+                if Button::new(&words, "folder-select-notes")
+                    .show(ui)
+                    .clicked()
+                {
+                    let ticked = BoardGesture::SelectFolder(folder.id.clone());
+                    actions.push(Action::Notes(crate::notes::Action::Board(ticked)));
+                    ui.close();
+                }
+            }
+            let edit = match &mut *menu_edit {
                 Some(edit) if edit.id == folder.id => edit,
                 other => other.insert(FolderEdit::open(folder)),
             };
@@ -168,12 +379,9 @@ fn menu(
                 ui.close();
             }
         });
-    let open = screen
-        .menu
-        .as_ref()
-        .is_some_and(|edit| edit.id == folder.id);
+    let open = menu_edit.as_ref().is_some_and(|edit| edit.id == folder.id);
     if shown.is_none() && open {
-        screen.menu = None;
+        *menu_edit = None;
     }
 }
 
@@ -286,13 +494,14 @@ fn chip(ui: &mut Ui, child: &BoardChild) -> egui::Response {
 /// The cards, `columns_in` across, a row at a time, only the rows the ground shows.
 fn flow(
     ui: &mut Ui,
-    (body, frame): (Rect, BoardFrame),
+    (body, drawn): (Rect, &Drawn<'_>),
     zone: &BoardZone,
-    context: &card::Context<'_>,
+    (context, hand): (&card::Context<'_>, &mut Hand<'_>),
     (canvas_view, actions): (&mut CanvasView, &mut Actions),
 ) {
     let padding = px(ZONE_PADDING);
-    if zone.notes.is_empty() {
+    let notes = &drawn.notes;
+    if notes.is_empty() {
         let p = palette(ui.ctx());
         let words = i18n::translate(context.language, keys::board::EMPTY_ZONE, &[]);
         let galley = widgets::text(ui, &words, 11.5, 400.0, FontFamily::Proportional, p.text_2);
@@ -303,8 +512,10 @@ fn flow(
         ui.painter().galley(rect.min, galley, p.text_2);
         return;
     }
-    let columns = usize::try_from(columns_in(frame.width)).unwrap_or(1).max(1);
-    let rows = zone.notes.len().div_ceil(columns);
+    let columns = usize::try_from(columns_in(drawn.frame.width))
+        .unwrap_or(1)
+        .max(1);
+    let rows = notes.len().div_ceil(columns);
     let (width, height, gap) = (px(CARD_WIDTH), px(CARD_HEIGHT), px(GAP));
     #[expect(
         clippy::cast_precision_loss,
@@ -320,6 +531,10 @@ fn flow(
     egui::ScrollArea::vertical()
         .id_salt(("board-zone-body", &zone.folder.id))
         .auto_shrink([false, false])
+        .scroll_source(egui::scroll_area::ScrollSource {
+            drag: egui::scroll_area::DragScroll::Never,
+            ..egui::scroll_area::ScrollSource::default()
+        })
         .show(&mut body_ui, |ui| {
             let origin = ui.min_rect().min + Vec2::splat(padding);
             ui.set_min_size(vec2(body.width(), tall));
@@ -332,8 +547,7 @@ fn flow(
                 )
             };
             let requested = canvas_view.request.as_deref();
-            if let Some(at) = zone
-                .notes
+            if let Some(at) = notes
                 .iter()
                 .position(|entry| Some(entry.note.id.as_str()) == requested)
             {
@@ -347,10 +561,11 @@ fn flow(
             )]
             let row_at = |y: f32| ((y - origin.y) / (height + gap)).max(0.0) as usize;
             let first = row_at(clip.top()) * columns;
-            let last = ((row_at(clip.bottom()) + 1) * columns).min(zone.notes.len());
-            for (at, entry) in zone.notes.iter().enumerate().take(last).skip(first) {
+            let last = ((row_at(clip.bottom()) + 1) * columns).min(notes.len());
+            for (at, entry) in notes.iter().enumerate().take(last).skip(first) {
                 let shown = (&mut *canvas_view, &mut *actions);
-                seated(ui, seat(at), entry, "board-zone-card", context, shown);
+                let placed = (seat(at), "board-zone-card", true);
+                seated(ui, placed, entry, (context, &mut *hand), shown);
             }
         });
 }
