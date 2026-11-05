@@ -108,10 +108,12 @@ fn inside(app: &mut App) {
         "a search stays inside the folder, and drops the ghost",
         || {
             search(app, "EXPLAIN");
+            // The heading follows the field at once, the ghost the view once the search rests.
             app.eventually("found inside, the list no longer named after it", |tree| {
-                titles(tree) == [INSIDE] && !heading(tree).to_uppercase().starts_with("PERF")
+                titles(tree) == [INSIDE]
+                    && !heading(tree).to_uppercase().starts_with("PERF")
+                    && !tree.has("create-ghost")
             });
-            assert!(!app.tree().has("create-ghost"));
             search(app, "Dump");
             app.eventually(
                 "a note of the space outside it stays out of reach",
