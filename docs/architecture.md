@@ -1688,6 +1688,15 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   address as a link to itself. `richtext::escape` is `escapeMarkdownText`, ported rule for rule.
   Undo keeps the document and the selection before each transaction (`History`): a Note is a
   few kilobytes.
+- **Editing is `richtext::edit`'s**, the view `overlays/editor/rich.rs`'s. A caret is a path to a
+  leaf — a paragraph, a heading, a cell, a code block — through items, quotes and tables, and a
+  `char` offset; each operation takes the selection and answers the next one, as the reference's
+  keymap did: Enter in an empty item leaves the list, Backspace at an item's start lifts it, Tab
+  nests it under the one above. The view draws through `widgets::rich` (the reader's own
+  layout), which says where each leaf was laid out: the caret, a click and ↑ ↓ are read from those
+  galleys. A Note opened and left is written back untouched — the Markdown is rewritten only once
+  something changed. After a toolbar button the text takes the keys back, as the reference's
+  `mousedown` kept them. A task's box is a control of its own (`rich-task`).
 
 - **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
   `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as

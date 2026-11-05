@@ -549,6 +549,7 @@ impl AppState {
             Editing::Fields(asked) => self.apply_fields(asked, ctx, backend),
             Editing::Attachment(asked) => self.ask_attachment(asked, backend),
             Editing::Explore { session, query } => self.explored.want(session, query),
+            Editing::OpenLink(url) => self.open_link(&url),
             Editing::Evaluate { session, text } => {
                 let today = self.clock.now().with_timezone(&chrono::Local).date_naive();
                 self.calc.ask(backend, session, text, today);
@@ -624,15 +625,7 @@ impl AppState {
                 self.settings.editor_fullscreen = on;
                 self.save_settings(backend);
             }
-            Editing::Revisions(asked) => {
-                use crate::notes::Revisions;
-                match asked {
-                    Revisions::Toggle => self.revisions.toggle(),
-                    Revisions::Look(id) => self.revisions.look(backend, &id),
-                    Revisions::Back => self.revisions.close_preview(),
-                    Revisions::Restore => self.revisions.restore(backend),
-                }
-            }
+            Editing::Revisions(asked) => self.apply_revisions(asked, backend),
             Editing::FoldHeader(folded) => {
                 self.settings.editor_header_folded = folded;
                 self.save_settings(backend);
@@ -941,6 +934,21 @@ impl AppState {
     }
 
     /// The settings into the application's file, through the db queue, the other keys kept.
+    fn apply_revisions(&mut self, asked: crate::notes::Revisions, backend: &Backend) {
+        use crate::notes::Revisions;
+        match asked {
+            Revisions::Toggle => self.revisions.toggle(),
+            Revisions::Look(id) => self.revisions.look(backend, &id),
+            Revisions::Back => self.revisions.close_preview(),
+            Revisions::Restore => self.revisions.restore(backend),
+        }
+    }
+
+    /// The desktop's own browser: a URL goes the way a file does.
+    fn open_link(&self, url: &str) {
+        drop(self.opener.open(std::path::Path::new(url)));
+    }
+
     fn set_prettier(
         &mut self,
         settings: crate::notes::prettier::PrettierSettings,

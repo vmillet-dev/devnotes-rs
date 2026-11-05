@@ -14,6 +14,7 @@ mod format;
 mod header;
 mod json_view;
 mod revisions;
+mod rich;
 mod search_bar;
 
 use std::sync::Arc;
@@ -48,6 +49,8 @@ pub(crate) struct EditorView {
     code: Option<code::CodeView>,
     /// A snippet whose language has a reader: its explorer.
     exploring: Option<json_view::Exploring>,
+    /// A Note, formatted.
+    rich: Option<rich::RichEditor>,
     /// A Calcul sheet, in its own editor.
     sheet: Option<calc::CalcView>,
     /// A Dessin's editor: its scene is no text.
@@ -74,6 +77,7 @@ impl EditorView {
             code: (note.kind == NoteKind::Snippet)
                 .then(|| code::CodeView::of(&note.content, note.language)),
             exploring: json_view::Exploring::of(note),
+            rich: (note.kind == NoteKind::Note).then(|| rich::RichEditor::of(&note.content)),
             sheet: (note.kind == NoteKind::Calc).then(|| calc::CalcView::of(&note.content)),
             drawing: (note.kind == NoteKind::Drawing)
                 .then(|| drawing::DrawingView::open(&note.content)),
@@ -248,6 +252,14 @@ fn panel(
             editing.body = code.text();
         }
         shown.left
+    } else if let Some(view) = &mut editing.rich {
+        rich_body(
+            &mut body_ui,
+            view,
+            &mut editing.body,
+            state.language,
+            actions,
+        )
     } else if note.kind == NoteKind::Checklist {
         egui::ScrollArea::vertical()
             .auto_shrink(false)
@@ -262,6 +274,21 @@ fn panel(
         save(session, note, editing, actions);
     }
     format::notice(ui, state, body_rect, editing);
+    under_body(ui, state, note, editing, (body_rect, history), actions);
+    ui.advance_cursor_after_rect(whole);
+    closed
+}
+
+/// The history, when open, then the footer: from under the body to the panel's bottom.
+fn under_body(
+    ui: &mut Ui,
+    state: &AppState,
+    note: &DisplayNote,
+    editing: &EditorView,
+    (body_rect, history): (Rect, f32),
+    actions: &mut Actions,
+) {
+    let whole = ui.max_rect();
     let history_rect = Rect::from_min_max(
         egui::pos2(whole.left(), body_rect.bottom()),
         egui::pos2(whole.right(), body_rect.bottom() + history),
@@ -274,8 +301,24 @@ fn panel(
         Rect::from_min_max(egui::pos2(whole.left(), history_rect.bottom()), whole.max);
     let mut footer_ui = ui.new_child(UiBuilder::new().max_rect(footer_rect));
     footer(&mut footer_ui, state, note, editing);
-    ui.advance_cursor_after_rect(whole);
-    closed
+}
+
+/// A Note's body: its Markdown kept once it changed, a link followed. `true` once it is left.
+fn rich_body(
+    ui: &mut Ui,
+    view: &mut rich::RichEditor,
+    body: &mut String,
+    language: i18n::Language,
+    actions: &mut Actions,
+) -> bool {
+    let shown = rich::show(ui, view, language);
+    if let Some(markdown) = view.markdown().filter(|_| shown.changed) {
+        *body = markdown;
+    }
+    if let Some(url) = shown.link {
+        actions.push(editor(Editing::OpenLink(url)));
+    }
+    shown.left
 }
 
 /// A strip of the editor, a soft line under it.

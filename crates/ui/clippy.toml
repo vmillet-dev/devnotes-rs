@@ -1,5 +1,5 @@
 # Replaces the root's rather than adding to it: its line is repeated.
-doc-valid-idents = ["SQLite", "DevNotes", "TextMate", "QuickJS", ".."]
+doc-valid-idents = ["SQLite", "DevNotes", "TextMate", "QuickJS", "ProseMirror", "TipTap", ".."]
 
 # Every custom widget goes through `widgets::interact`, which names it, addresses it and gives
 # it its focus ring: a control made with `Ui::interact` would have none of the three.

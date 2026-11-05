@@ -5,10 +5,13 @@
 //!
 //! Offsets are `char`s, as the text editor counts them.
 
+pub mod edit;
 mod escape;
 mod history;
+pub mod inlines;
 mod model;
 mod read;
+pub mod tree;
 mod write;
 
 pub use escape::escape;
