@@ -96,6 +96,11 @@ pub fn evaluate_calc(
     backend.compute(move |_| Ok(engine::notes::calc::evaluate(&sheet, today)))
 }
 
+/// What a paste into an empty Note is: code makes it a snippet. Direct (D12): a paste is short.
+pub fn detect_language(text: &str) -> engine::notes::language::Language {
+    engine::notes::language::from_content(text)
+}
+
 /// What the footer says of the lines chosen. Pure (D12).
 pub fn calc_summary(
     sheet: &engine::notes::calc::CalcSheet,

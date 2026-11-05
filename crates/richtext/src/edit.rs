@@ -103,6 +103,62 @@ pub fn insert_text(
     selection
 }
 
+/// A document pasted at the caret: one paragraph's runs go into the text, marks kept; blocks
+/// go between the two halves of the caret's block. Into a cell or a code block, its text.
+pub fn insert_document(
+    document: &mut Document,
+    selection: &Selection,
+    pasted: Document,
+) -> Selection {
+    let selection = delete_selection(document, selection);
+    let Position { path, offset } = selection.head.clone();
+    let inline_only = matches!(pasted.blocks.as_slice(), [Block::Paragraph(_)]);
+    let plain = !matches!(
+        tree::block(document, &path),
+        Some(Block::Paragraph(_) | Block::Heading { .. })
+    );
+    if plain {
+        return insert_text(
+            document,
+            &selection,
+            &crate::write(&pasted),
+            &Marks::default(),
+        );
+    }
+    if inline_only && let [Block::Paragraph(runs)] = pasted.blocks.as_slice() {
+        let Some(LeafMut::Inlines(content)) = tree::leaf_mut(document, &path) else {
+            return selection;
+        };
+        let length = inlines::len(runs);
+        let (mut left, right) = inlines::split(content, offset);
+        left.extend(runs.iter().cloned());
+        left.extend(right);
+        inlines::normalize(&mut left);
+        *content = left;
+        return caret(path, offset + length);
+    }
+    let after = split(document, &selection);
+    let Some((blocks, index)) = tree::siblings_mut(document, &after.head.path) else {
+        return after;
+    };
+    let count = pasted.blocks.len();
+    blocks.splice(index..index, pasted.blocks);
+    let empty = |block: &Block| matches!(block, Block::Paragraph(content) if content.is_empty());
+    let mut landed = index + count;
+    if empty(&blocks[landed]) && landed + 1 < blocks.len() {
+        blocks.remove(landed);
+    }
+    if index > 0 && empty(&blocks[index - 1]) {
+        blocks.remove(index - 1);
+        landed -= 1;
+    }
+    let mut path = after.head.path;
+    if let Some(last) = path.last_mut() {
+        *last = landed.min(blocks.len() - 1);
+    }
+    Selection::caret(tree::clamp(document, &Position { path, offset: 0 }))
+}
+
 /// Shift+Enter: a line break inside the block.
 pub fn hard_break(document: &mut Document, selection: &Selection) -> Selection {
     let selection = delete_selection(document, selection);

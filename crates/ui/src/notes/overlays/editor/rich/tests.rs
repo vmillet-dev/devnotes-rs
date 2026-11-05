@@ -288,3 +288,63 @@ fn a_table_is_inserted_walked_with_tab_and_edited_from_its_tools() {
     click_id(&mut harness, "editor-close");
     assert_eq!(stored(&harness, &id), "fin");
 }
+
+/// What a page or an editor left on the clipboard besides the text.
+struct Clipboard(Option<String>);
+
+impl platform::clipboard::Clipboard for Clipboard {
+    fn html(&self) -> Option<String> {
+        self.0.clone()
+    }
+}
+
+fn paste(harness: &mut Harness<'_>, text: &str, html: Option<&str>) {
+    harness.state_mut().state.clipboard = std::sync::Arc::new(Clipboard(html.map(str::to_owned)));
+    harness.event(egui::Event::Paste(text.to_owned()));
+    settle(harness);
+}
+
+#[test]
+fn a_page_pasted_keeps_its_bold_and_its_link() {
+    let (mut harness, id) = note("");
+    click_id(&mut harness, "editor-rich");
+    paste(
+        &mut harness,
+        "Voir zqcopie et là",
+        Some("<p>Voir <strong>zqcopie</strong> et <a href=\"https://devnotes.fr\">là</a></p>"),
+    );
+    click_id(&mut harness, "editor-close");
+    assert_eq!(
+        stored(&harness, &id),
+        "Voir **zqcopie** et [là](https://devnotes.fr)"
+    );
+}
+
+#[test]
+fn code_pasted_into_an_empty_note_makes_it_a_snippet_and_text_pastes_as_text() {
+    let (mut harness, id) = note("");
+    click_id(&mut harness, "editor-rich");
+    paste(
+        &mut harness,
+        "{\n  \"id\": 42\n}",
+        Some("<pre><code>{}</code></pre>"),
+    );
+    crate::notes::bench::until(&mut harness, "a JSON snippet", |harness| {
+        let id = id.clone();
+        let note = engine::db::run_here(harness.state().backend.engine(), move |engine| {
+            engine::notes::get_note(engine, id)
+        })
+        .unwrap();
+        note.kind == NoteKind::Snippet && note.language == Language::Json
+    });
+
+    let (mut harness, id) = note("Voir");
+    at_end(&mut harness);
+    paste(&mut harness, " {\"a\": 1}", None);
+    click_id(&mut harness, "editor-close");
+    assert_eq!(
+        stored(&harness, &id),
+        "Voir {\"a\": 1}",
+        "a Note with words stays a Note"
+    );
+}

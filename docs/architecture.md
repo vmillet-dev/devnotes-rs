@@ -1697,6 +1697,12 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   galleys. A Note opened and left is written back untouched — the Markdown is rewritten only once
   something changed. After a toolbar button the text takes the keys back, as the reference's
   `mousedown` kept them. A task's box is a control of its own (`rich-task`).
+- **A paste reads the clipboard itself**: egui hands the field the text alone, so the editor asks
+  `platform::clipboard` (`arboard`) for the page's HTML. HTML the reference called formatted —
+  emphasis, a link, a heading, a list, a quote, a table, and no `pre` or `code` — goes in as
+  blocks (`richtext::from_html`, on `html5ever`'s tokenizer; `golden/html-paste` passes
+  whole); code pasted into an empty Note makes it a snippet, the conversion detecting its
+  language; anything else is text. A pasted image becomes an attachment, as in every editor.
 
 - **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
   `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as

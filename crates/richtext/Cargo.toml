@@ -10,6 +10,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+html5ever = "0.40.1"
 pulldown-cmark = { version = "0.13.4", default-features = false }
 
 [dev-dependencies]

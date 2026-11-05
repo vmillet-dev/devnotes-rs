@@ -41,6 +41,8 @@ const LABELS_FROM: f32 = 1_000.0;
 #[derive(Default)]
 pub(crate) struct EditorView {
     session: u64,
+    /// A kind changed in the same opening (code pasted into an empty Note) draws another body.
+    kind: NoteKind,
     title: String,
     source: String,
     body: String,
@@ -70,6 +72,7 @@ impl EditorView {
     fn of(open: &Opened, note: &DisplayNote) -> Self {
         Self {
             session: open.session,
+            kind: note.kind,
             title: note.title.clone(),
             source: note.source.clone(),
             body: body::text_of(note),
@@ -130,7 +133,7 @@ pub(crate) fn show(
     };
     if view
         .as_ref()
-        .is_none_or(|view| view.session != open.session)
+        .is_none_or(|view| view.session != open.session || view.kind != note.kind)
     {
         *view = Some(EditorView::of(open, note));
     }
@@ -255,9 +258,9 @@ fn panel(
     } else if let Some(view) = &mut editing.rich {
         rich_body(
             &mut body_ui,
-            view,
+            state,
+            (session, view),
             &mut editing.body,
-            state.language,
             actions,
         )
     } else if note.kind == NoteKind::Checklist {
@@ -303,15 +306,26 @@ fn under_body(
     footer(&mut footer_ui, state, note, editing);
 }
 
-/// A Note's body: its Markdown kept once it changed, a link followed. `true` once it is left.
+/// A Note's body: its Markdown kept once it changed, a link followed, code pasted into it empty
+/// made a snippet. `true` once it is left.
 fn rich_body(
     ui: &mut Ui,
-    view: &mut rich::RichEditor,
+    state: &AppState,
+    (session, view): (u64, &mut rich::RichEditor),
     body: &mut String,
-    language: i18n::Language,
     actions: &mut Actions,
 ) -> bool {
-    let shown = rich::show(ui, view, language);
+    let shown = rich::show(ui, view, state.language, state.clipboard.as_ref());
+    if let Some(code) = shown.code_paste {
+        actions.push(editor(Editing::Convert {
+            session,
+            into: NoteKind::Snippet,
+            edit: Edit {
+                body: Some(Body::Content(code)),
+                ..Edit::default()
+            },
+        }));
+    }
     if let Some(markdown) = view.markdown().filter(|_| shown.changed) {
         *body = markdown;
     }

@@ -8,6 +8,7 @@
 pub mod edit;
 mod escape;
 mod history;
+mod html;
 pub mod inlines;
 mod model;
 mod read;
@@ -18,6 +19,7 @@ mod write;
 
 pub use escape::escape;
 pub use history::History;
+pub use html::{formatted, from_html};
 pub use model::{Block, Cell, Document, Inline, Item, ListKind, Marks, Position, Selection};
 pub use read::{OPTIONS, read};
 pub use write::write;

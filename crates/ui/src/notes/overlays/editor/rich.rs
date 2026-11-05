@@ -236,6 +236,11 @@ impl RichEditor {
         self.reveal = true;
     }
 
+    /// Nothing written yet: one empty paragraph.
+    fn is_empty(&self) -> bool {
+        matches!(self.document.blocks.as_slice(), [richtext::Block::Paragraph(content)] if content.is_empty())
+    }
+
     /// Where a leaf laid out last frame puts the caret, on screen.
     fn caret_rect(&self) -> Option<Rect> {
         let head = &self.selection.head;
@@ -325,14 +330,22 @@ pub(super) struct Shown {
     pub(super) left: bool,
     /// A link followed with Ctrl+click: `http` and `https` alone.
     pub(super) link: Option<String>,
+    /// Code pasted into the empty Note: it becomes a snippet in the language detected.
+    pub(super) code_paste: Option<String>,
 }
 
-pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, language: Language) -> Shown {
+pub(super) fn show(
+    ui: &mut Ui,
+    view: &mut RichEditor,
+    language: Language,
+    clipboard: &dyn platform::clipboard::Clipboard,
+) -> Shown {
     let whole = ui.max_rect();
     let mut shown = Shown {
         changed: false,
         left: false,
         link: None,
+        code_paste: None,
     };
     let before = view.changes;
     let bar = Rect::from_min_max(whole.min, pos2(whole.right(), whole.top() + TOOLBAR_HEIGHT));
@@ -390,7 +403,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, language: Language) -> Sh
     pointer(ui, view, &surface);
     if focused {
         lock_keys(ui, surface.id);
-        keys(ui, view);
+        shown.code_paste = keys(ui, view, clipboard);
         paint_caret(ui, view, body);
     }
     shown.left = surface.lost_focus();
@@ -450,17 +463,18 @@ fn pointer(ui: &Ui, view: &mut RichEditor, surface: &egui::Response) {
     }
 }
 
-fn keys(ui: &Ui, view: &mut RichEditor) {
+/// The frame's keys and clipboard events; code pasted into the empty Note is answered.
+fn keys(
+    ui: &Ui,
+    view: &mut RichEditor,
+    clipboard: &dyn platform::clipboard::Clipboard,
+) -> Option<String> {
     let events = ui.input(|input| input.events.clone());
+    let mut code_paste = None;
     for event in events {
         match event {
             Event::Text(text) | Event::Ime(egui::ImeEvent::Commit(text)) => view.type_text(&text),
-            Event::Paste(text) => {
-                let text = text.replace("\r\n", "\n");
-                view.change(Step::Other, |document, selection| {
-                    edit::insert_text(document, selection, &text, &Marks::default())
-                });
-            }
+            Event::Paste(text) => code_paste = code_paste.or(paste(view, &text, clipboard)),
             Event::Copy => copy(ui, view),
             Event::Cut => {
                 copy(ui, view);
@@ -476,6 +490,33 @@ fn keys(ui: &Ui, view: &mut RichEditor) {
             _ => {}
         }
     }
+    code_paste
+}
+
+/// A page's formatting kept, code into the empty Note answered, anything else as text.
+fn paste(
+    view: &mut RichEditor,
+    text: &str,
+    clipboard: &dyn platform::clipboard::Clipboard,
+) -> Option<String> {
+    if let Some(html) = clipboard.html().filter(|html| richtext::formatted(html)) {
+        let pasted = richtext::from_html(&html);
+        view.change(Step::Other, |document, selection| {
+            edit::insert_document(document, selection, pasted)
+        });
+        return None;
+    }
+    let text = text.replace("\r\n", "\n");
+    let code = !text.trim().is_empty()
+        && view.is_empty()
+        && crate::api::notes::detect_language(&text) != engine::notes::language::Language::Txt;
+    if code {
+        return Some(text);
+    }
+    view.change(Step::Other, |document, selection| {
+        edit::insert_text(document, selection, &text, &Marks::default())
+    });
+    None
 }
 
 fn copy(ui: &Ui, view: &RichEditor) {
