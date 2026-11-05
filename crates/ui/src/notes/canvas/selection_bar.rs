@@ -168,8 +168,8 @@ fn placing(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     }
     let shown_space = state.spaces.active_space();
     let folders: Vec<_> = state
-        .spaces
-        .folders()
+        .folders
+        .list()
         .iter()
         .filter(|folder| shown_space.is_none_or(|space| folder.space_id == space))
         .collect();

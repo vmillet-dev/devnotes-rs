@@ -320,8 +320,8 @@ fn space_menu(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut A
 /// belongs to a space of its own. The last entry takes it out of every folder.
 fn folder_menu(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut Actions) {
     let folders: Vec<_> = state
-        .spaces
-        .folders()
+        .folders
+        .list()
         .iter()
         .filter(|folder| folder.space_id == note.space_id)
         .collect();

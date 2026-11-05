@@ -45,6 +45,8 @@ pub(super) struct Name {
     pub(super) author_id: &'static str,
     pub(super) mark: Mark,
     pub(super) active: bool,
+    /// A folder or a card dragged over it would land in it.
+    pub(super) lit: bool,
 }
 
 pub(super) struct Drawn {
@@ -145,7 +147,8 @@ fn name_button(ui: &mut Ui, width: f32, name: &Name) -> Response {
     let response = interact(
         ui,
         Vec2::new(width.max(MIN_TARGET), HEIGHT),
-        Sense::click(),
+        // A folder's row is dragged onto another; a press that never travels is its click.
+        Sense::click_and_drag(),
         name.author_id,
         || WidgetInfo::selected(Role::Button, true, active, label),
         corner,
@@ -159,6 +162,14 @@ fn name_button(ui: &mut Ui, width: f32, name: &Name) -> Response {
         (Color32::TRANSPARENT, p.text_1)
     };
     ui.painter().rect_filled(rect, corner, fill);
+    if name.lit {
+        ui.painter().rect_stroke(
+            rect,
+            corner,
+            Stroke::new(1.0, p.amber_edge),
+            egui::StrokeKind::Inside,
+        );
+    }
     let mut left = rect.left() + 8.0;
     let middle = rect.center().y;
     match name.mark {

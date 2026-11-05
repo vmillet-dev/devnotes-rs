@@ -4829,17 +4829,27 @@ panels as the rail (`notes::panel`, shared). While a folder is open, its breadcr
 them — back to its space, the folders above it, its name, its panel.
 
 The library rail (`notes::sidebar`) is drawn left of the canvas, as wide as the application setting
-`libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds both
-lists — every space's folders, since the rail draws the whole library — asked again with the
-revision, and the space and folder chosen, remembered in the library's preferences
-(`activeSpace`, `activeFolder`). An id no space or folder answers to any more reads as « every
+`libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds the
+spaces and the one chosen, `state::folders::FoldersState` every space's folders — the rail draws
+the whole library — and the one open; both are asked again with the revision and remembered in
+the library's preferences (`activeSpace`, `activeFolder`). `AppState` joins them: choosing a
+space leaves the folder, opening a folder shows its space, and `AppState::active_folder` is the
+open folder within the space shown. An id no space or folder answers to any more reads as « every
 space » or « every folder »: a space deleted elsewhere hides no note. `sidebar::tree` flattens
 the library into rows; what nests in what is `folders::model::Lineage`'s, siblings ordered by
 `view::fold` of their name. A row's ⋯ opens its panel under it, one at a time: a space is
 pinned, renamed (written when the field is left, or on Enter), and deleted in two steps with a
 refuge chosen and what moves counted by the core first; a folder is recoloured, renamed, given a
-sub-folder, and deleted, what it held going up a level. The rail's folder moves (drag and
-`Alt`+arrows) come with the board.
+sub-folder, and deleted, what it held going up a level. A folder's row is dragged onto another
+row — into that folder, or to the top of that space — or moved by `Alt+←` (up a level) and
+`Alt+→` (into the sibling above it); there is no order of siblings, so no `Alt+↑/↓`. The rail
+records its rows each frame and reports the gesture; whether the folder may go there is
+`AppState`'s, by `Lineage::check_move` and the space, and a refusal is said, never written. A
+move answers where the folder was, `Reversible::FolderMove`, which the undo bar names and puts
+back through `move_folder_back`. A card dragged on the board and let go of over a row of its
+space is filed there at any depth (`BoardGesture::FileOnRail`), the row lit while it is over
+it, and offered back like any filing. Inside an open folder, the list's one section is named
+after the folder until something is searched.
 
 A drawing's picture is never in the list: the card asks for it by `Stamp` (id and `updated_at`, so
 a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
