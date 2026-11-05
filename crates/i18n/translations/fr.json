@@ -334,7 +334,8 @@
       "diagram": {
         "edit": "Cliquer pour modifier le code du diagramme",
         "failed": "Le diagramme ne se lit pas.",
-        "failedAt": "Le diagramme ne se lit pas, ligne {{line}}."
+        "failedAt": "Le diagramme ne se lit pas, ligne {{line}}.",
+        "unsupported": "Type de diagramme non pris en charge"
       }
     },
     "languageLabel": "Format du contenu",
@@ -423,7 +424,20 @@
     "itemPlaceholder": "Décrire la tâche…",
     "removeItem": "Supprimer la tâche {{text}}",
     "moveItem": "Déplacer la tâche {{text}} (Alt + flèches)",
-    "toggleItem": "Cocher la tâche {{text}}"
+    "toggleItem": "Cocher la tâche {{text}}",
+    "date": {
+      "empty": "jj/mm/aaaa",
+      "previous": "Mois précédent",
+      "next": "Mois suivant",
+      "month": "{{month}} {{year}}",
+      "clear": "Sans échéance"
+    },
+    "menu": {
+      "cut": "Couper",
+      "copy": "Copier",
+      "paste": "Coller",
+      "selectAll": "Tout sélectionner"
+    }
   },
   "lifecycle": {
     "neverExpires": "N’expire jamais"

@@ -12,13 +12,25 @@ use crate::backend::{Backend, Pending};
 /// the selection, an undo would take off a tag the note already carried.
 #[derive(Debug, Clone)]
 pub enum Reversible {
-    Deletion { ids: Vec<String>, count: u32 },
+    Deletion {
+        ids: Vec<String>,
+        count: u32,
+    },
     Move(Vec<NotePlacement>),
     Tag(Vec<NoteTag>),
     Untag(Vec<NoteTag>),
-    Pin { ids: Vec<String>, pinned: bool },
+    Pin {
+        ids: Vec<String>,
+        pinned: bool,
+    },
     Priority(Vec<NotePriority>),
     File(Vec<NoteFiling>),
+    /// A change of kind, and the body the note had before it.
+    Convert {
+        id: String,
+        into: engine::notes::kind::NoteKind,
+        previous: engine::notes::convert::NoteBody,
+    },
 }
 
 impl Reversible {
@@ -31,6 +43,7 @@ impl Reversible {
             Self::Pin { ids, .. } => ids.len(),
             Self::Priority(previous) => previous.len(),
             Self::File(previous) => previous.len(),
+            Self::Convert { .. } => 1,
         }
     }
 }
@@ -46,6 +59,16 @@ pub fn revert(backend: &Backend, action: Reversible) -> Pending<u32> {
         }
         Reversible::Priority(previous) => notes::restore_priorities(engine, previous),
         Reversible::File(previous) => folders::file_notes_back(engine, previous),
+        Reversible::Convert { id, previous, .. } => {
+            let patch = notes::model::NotePatch {
+                kind: Some(previous.kind),
+                language: Some(previous.language),
+                content: Some(previous.content),
+                items: Some(previous.items),
+                ..notes::model::NotePatch::default()
+            };
+            notes::update_note(engine, id, patch).map(|_| 1)
+        }
     })
 }
 

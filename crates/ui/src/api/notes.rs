@@ -20,6 +20,200 @@ pub fn drawing_thumbnail(backend: &Backend, id: String) -> Pending<Option<String
     backend.db(move |engine| notes::drawing_thumbnail(engine, id))
 }
 
+/// A Dessin's large picture as a PNG data URI, for a Note that embeds it; `None` when it has none.
+pub fn drawing_picture(backend: &Backend, id: String) -> Pending<Option<String>> {
+    backend.db(move |engine| notes::drawing_picture(engine, id))
+}
+
+/// A drawing's two pictures, taken off the frame; both empty for a scene with nothing on it.
+pub fn picture_drawing(
+    backend: &Backend,
+    content: String,
+    palette: std::sync::Arc<drawing::Palette>,
+) -> Pending<engine::notes::drawing::DrawingPictures> {
+    backend.compute(move |_| {
+        let fonts = crate::theme::fonts::for_drawings();
+        let taken = drawing::Drawing::read(&content)
+            .and_then(|scene| drawing::pictures(&scene, &palette, &fonts));
+        let uri = engine::notes::drawing::uri_of;
+        Ok(engine::notes::drawing::DrawingPictures {
+            thumbnail: taken
+                .as_ref()
+                .map_or_else(String::new, |it| uri(&it.thumbnail)),
+            picture: taken
+                .as_ref()
+                .map_or_else(String::new, |it| uri(&it.picture)),
+        })
+    })
+}
+
+/// The draft on screen cut into slides, with the map of its headings.
+pub fn present_note(
+    backend: &Backend,
+    markdown: String,
+) -> Pending<engine::notes::model::Presentation> {
+    backend.spawn(move |_| engine::notes::present_note(markdown))
+}
+
+/// A `mermaid` block drawn, off the frame.
+pub fn draw_diagram(
+    backend: &Backend,
+    source: String,
+    theme: diagram::Theme,
+) -> Pending<diagram::Drawn> {
+    backend.compute(move |_| {
+        let drawn = crate::theme::fonts::for_diagrams()
+            .map_or(diagram::Drawn::Unsupported, |fonts| {
+                diagram::draw(&source, &theme, fonts)
+            });
+        Ok(drawn)
+    })
+}
+
+/// What became of an export.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Exported {
+    /// The file's name, its folders left out.
+    Saved(String),
+    Cancelled,
+    Unwritable,
+}
+
+/// A drawing written where the person says. Off the frame: the dialog blocks until answered.
+pub fn export_drawing(
+    backend: &Backend,
+    dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
+    export: crate::notes::DrawingExport,
+) -> Pending<Exported> {
+    backend.compute(move |_| {
+        let crate::notes::DrawingExport {
+            name,
+            content,
+            palette,
+            format,
+        } = export;
+        let name = format!("{name}.{}", format.extension());
+        let Some(path) = dialog.save(&name) else {
+            return Ok(Exported::Cancelled);
+        };
+        let fonts = crate::theme::fonts::for_drawings();
+        let written = drawing::Drawing::read(&content)
+            .and_then(|scene| drawing::export(&scene, &palette, &fonts, format));
+        let Some(bytes) = written else {
+            return Ok(Exported::Cancelled);
+        };
+        let shown = path.file_name().map_or_else(
+            || path.display().to_string(),
+            |name| name.to_string_lossy().into_owned(),
+        );
+        Ok(
+            match engine::tools::write_file(&path.to_string_lossy(), &bytes) {
+                Ok(()) => Exported::Saved(shown),
+                Err(_) => Exported::Unwritable,
+            },
+        )
+    })
+}
+
+/// A sheet, every line computed, off the frame: nothing bounds it by the screen.
+pub fn evaluate_calc(
+    backend: &Backend,
+    sheet: String,
+    today: chrono::NaiveDate,
+) -> Pending<engine::notes::calc::CalcSheet> {
+    backend.compute(move |_| Ok(engine::notes::calc::evaluate(&sheet, today)))
+}
+
+/// What a paste into an empty Note is: code makes it a snippet. Direct (D12): a paste is short.
+pub fn detect_language(text: &str) -> engine::notes::language::Language {
+    engine::notes::language::from_content(text)
+}
+
+/// What the footer says of the lines chosen. Pure (D12).
+pub fn calc_summary(
+    sheet: &engine::notes::calc::CalcSheet,
+    lines: &[u32],
+) -> engine::notes::calc::CalcSummary {
+    engine::notes::calc::summary(sheet, lines)
+}
+
+/// The words a sheet reads. Pure (D12).
+pub fn calc_words() -> Vec<engine::notes::calc::words::WordEntry> {
+    engine::notes::calc::words::catalogue()
+}
+
+/// The units a sheet reads. Pure (D12).
+pub fn calc_units() -> Vec<engine::notes::calc::units::UnitEntry> {
+    engine::notes::calc::units::catalogue()
+}
+
+/// A draft as the editor shows it, before it has a row. Pure (D12).
+pub fn decorate(note: engine::notes::model::Note) -> DisplayNote {
+    engine::notes::model::decorate_now(note)
+}
+
+/// What a tag is, as `normalize_tags` alone decides. Pure (D12).
+pub fn normalize_tags(tags: &[String]) -> Vec<String> {
+    engine::notes::model::normalize_tags(tags)
+}
+
+/// Into another kind; the undo writes back the body the core answers it had.
+pub fn convert(
+    backend: &Backend,
+    id: String,
+    into: engine::notes::kind::NoteKind,
+) -> Pending<Reversible> {
+    backend.db(move |engine| {
+        let converted = notes::convert_note(engine, id.clone(), into)?;
+        Ok(Reversible::Convert {
+            id,
+            into,
+            previous: converted.previous,
+        })
+    })
+}
+
+/// Where each `{{field}}` is written, as `char` ranges: what the code editor decorates. Pure,
+/// one pass over the text (D12).
+pub fn field_ranges(content: &str) -> Vec<std::ops::Range<usize>> {
+    let spans = engine::notes::placeholder::spans(content);
+    // The core counts UTF-16 units, as the reference's front read them.
+    let mut chars = Vec::with_capacity(content.len() + 1);
+    for (at, c) in content.chars().enumerate() {
+        for _ in 0..c.len_utf16() {
+            chars.push(at);
+        }
+    }
+    chars.push(content.chars().count());
+    let at = |unit: u32| chars.get(unit as usize).copied().unwrap_or(chars.len());
+    spans
+        .into_iter()
+        .map(|span| at(span.from)..at(span.to))
+        .collect()
+}
+
+/// The bodies kept beside a note, newest first: instants and sizes, never the bodies.
+pub fn list_revisions(
+    backend: &Backend,
+    id: String,
+) -> Pending<Vec<engine::notes::revision::Revision>> {
+    backend.db(move |engine| notes::list_revisions(engine, id))
+}
+
+/// What going back to a kept body would change, against the current text.
+pub fn revision_diff(
+    backend: &Backend,
+    id: String,
+    revision: String,
+) -> Pending<Vec<engine::notes::revision::DiffLine>> {
+    backend.db(move |engine| notes::revision_diff(engine, id, revision))
+}
+
+/// Back to a kept body, dropping it and every one kept after it; `updated_at` stays.
+pub fn restore_revision(backend: &Backend, id: String, revision: String) -> Pending<DisplayNote> {
+    backend.db(move |engine| notes::restore_revision(engine, id, revision))
+}
+
 /// A field set to `None` is left as it is.
 pub fn update(backend: &Backend, id: String, patch: NotePatch) -> Pending<DisplayNote> {
     backend.db(move |engine| notes::update_note(engine, id, patch))

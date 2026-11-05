@@ -3,11 +3,11 @@
 
 pub mod calc;
 pub mod canvas;
-mod editor;
 pub(crate) mod header;
 pub mod language;
 mod overlays;
 mod panel;
+pub mod prettier;
 pub mod sidebar;
 pub mod ui;
 
@@ -37,6 +37,10 @@ pub enum Action {
     },
     /// A drawing's picture, for the card that just showed it.
     Thumbnail(Stamp),
+    /// A drawing a Note embeds: its large picture, by id.
+    Picture(String),
+    /// A Note's `mermaid` block, by its source.
+    Diagram(String),
     /// `None`: every space.
     ChooseSpace(Option<String>),
     /// In its own space, which is then the one shown.
@@ -78,15 +82,10 @@ pub enum Action {
     Arrange(crate::state::notes_query::Arrangement),
     /// `Ctrl+K`: the caret into the search.
     FocusSearch,
-    /// Into the stand-in editor, read whole by id.
+    /// Into the editor, read whole by id.
     OpenNote(String),
-    /// The fields left in an opening; `None` leaves a field as it is.
-    SaveNote {
-        session: u64,
-        title: Option<String>,
-        body: Option<crate::state::editor::Body>,
-    },
-    CloseNote,
+    /// What the editor asks of the note it has open.
+    Editor(Editing),
     /// A draft of that kind, or of the preferred one: written once worth keeping.
     NewNote(Option<engine::notes::kind::NoteKind>),
     Pin {
@@ -136,6 +135,110 @@ pub enum Action {
     Fill(Fill),
     /// The folder-name prompt put away.
     DismissFolderName,
+}
+
+/// What the editor asks of the note it has open, a draft or a note written.
+/// A drawing to write as a file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DrawingExport {
+    /// Before its extension.
+    pub name: String,
+    pub content: String,
+    pub palette: std::sync::Arc<drawing::Palette>,
+    pub format: drawing::Format,
+}
+
+/// What the editor's fields panel asks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Fields {
+    Keep(std::collections::BTreeMap<String, String>),
+    Preview {
+        session: u64,
+        content: String,
+        values: std::collections::BTreeMap<String, String>,
+    },
+    Copy {
+        content: String,
+        values: std::collections::BTreeMap<String, String>,
+    },
+    /// The text on screen, tokens and all.
+    CopyRaw(String),
+    /// `true`: open.
+    Fold(bool),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Editing {
+    /// The fields left in an opening; `None` leaves a field as it is.
+    Save {
+        session: u64,
+        edit: crate::state::editor::Edit,
+    },
+    /// The drawing left: `missing` takes them only for a note that has none, as one imported.
+    Pictures {
+        session: u64,
+        content: String,
+        palette: std::sync::Arc<drawing::Palette>,
+        missing: bool,
+    },
+    Export(DrawingExport),
+    Fields(Fields),
+    Attachment(crate::state::attachments::Asked),
+    /// A snippet's document, explored once the hand paused.
+    Explore {
+        session: u64,
+        query: engine::json::model::JsonQuery,
+    },
+    /// The snippet's code formatted, as the editor holds it.
+    Format {
+        session: u64,
+        request: text::format::Request,
+    },
+    /// The library's formatting settings, applied as they are chosen.
+    Prettier(prettier::PrettierSettings),
+    /// A Note's link, followed with Ctrl+click: `http` and `https` alone.
+    OpenLink(String),
+    /// A sheet, once the hand paused.
+    Evaluate {
+        session: u64,
+        text: String,
+    },
+    Pin(bool),
+    Prioritise(Priority),
+    MoveTo(String),
+    /// `None`: out of every folder.
+    File(Option<String>),
+    /// What is typed is written first: the core converts the text on screen.
+    Convert {
+        session: u64,
+        into: NoteKind,
+        edit: crate::state::editor::Edit,
+    },
+    /// Into the trash; a draft is only let go.
+    Delete,
+    /// Read as written, then onto the clipboard; a note with fields asks for them.
+    Copy,
+    Close,
+    Fullscreen(bool),
+    FoldHeader(bool),
+    /// « Présenter »: the draft on screen, cut into slides.
+    Present {
+        title: String,
+        markdown: String,
+    },
+    StopPresenting,
+    Revisions(Revisions),
+}
+
+/// What the history under the editor asks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Revisions {
+    Toggle,
+    /// A kept body compared with the current text.
+    Look(String),
+    Back,
+    /// Back to the body previewed.
+    Restore,
 }
 
 /// What the `{{fields}}` form asks.
@@ -201,7 +304,9 @@ pub struct View {
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
     pub(crate) focus_search: bool,
     header: header::HeaderView,
-    editor: Option<editor::Draft>,
+    editor: Option<overlays::editor::EditorView>,
+    presentation: overlays::presentation::PresentationView,
+    explorer_layout: overlays::editor::ExplorerLayout,
     trash: overlays::trash_panel::TrashView,
     tag_manager: overlays::tag_manager::TagManagerView,
     fill: overlays::placeholder_form::FillView,
@@ -249,10 +354,18 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     );
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
-    editor::show(ui, state, &mut view.editor, actions);
+    overlays::editor::show(
+        ui,
+        state,
+        &mut view.editor,
+        &mut view.explorer_layout,
+        actions,
+    );
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
     overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
     overlays::folder_prompt::show(ui, state, &mut view.folder_name, actions);
+    overlays::image_lightbox::show(ui, state, actions);
+    overlays::presentation::show(ui, state, &mut view.presentation, actions);
     overlays::undo_bar::show(ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);
@@ -279,7 +392,7 @@ fn kind_plural(kind: NoteKind) -> Key {
 }
 
 /// The heading of a priority's section: « No priority » for the notes without one.
-fn priority_section(priority: Priority) -> Key {
+pub(crate) fn priority_section(priority: Priority) -> Key {
     match priority {
         Priority::None => keys::sections::NO_PRIORITY,
         Priority::Low => keys::notes::priority::LOW,

@@ -15,6 +15,9 @@ use crate::testing::PASSPHRASE;
 const SIZE: egui::Vec2 = egui::vec2(1100.0, 720.0);
 
 fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
+    // Loaded before the first frame, as the window has them a moment after: the captures show
+    // the colours.
+    text::highlight::warm();
     let startup = startup(profile);
     let mut harness = Harness::builder()
         .with_size(SIZE)
@@ -189,9 +192,13 @@ fn the_canvas_of_an_open_library() {
         })
         .click();
     settle(&mut harness);
-    capture(&mut harness, "editor-stand-in");
+    capture(&mut harness, "editor-snippet");
+    click(&mut harness, "editor-fold-header");
+    capture(&mut harness, "editor-header-folded");
+    click(&mut harness, "editor-header-summary");
 
     click(&mut harness, "editor-close");
+    drawing_editor(&mut harness);
     harness.key_press_modifiers(
         egui::Modifiers::COMMAND | egui::Modifiers::ALT,
         egui::Key::P,
@@ -234,11 +241,43 @@ fn the_canvas_of_an_open_library() {
     harness.set_size(SIZE);
 }
 
+/// The Dessin of `kinds`, as it opens and with a shape selected.
+fn drawing_editor(harness: &mut Harness<'_, DevNotesApp>) {
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open") && node.label().as_deref() == Some("Sketch")
+        })
+        .click();
+    settle(harness);
+    capture(harness, "editor-drawing");
+    let stage = harness
+        .get_by(|node| node.author_id() == Some("drawing-stage"))
+        .rect();
+    let shape = stage.min + egui::vec2(170.0, 90.0);
+    harness.event(egui::Event::PointerMoved(shape));
+    harness.run_steps(1);
+    for pressed in [true, false] {
+        harness.event(egui::Event::PointerButton {
+            pos: shape,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        });
+        harness.run_steps(1);
+    }
+    settle(harness);
+    capture(harness, "editor-drawing-selected");
+    click(harness, "editor-close");
+}
+
 /// One note of each kind, with marks, tags and a search's worth of words.
 fn kinds(backend: &crate::backend::Backend) {
     use engine::notes::checklist::ChecklistItem;
     use engine::notes::kind::NoteKind;
     use engine::notes::model::NotePatch;
+    let scenes: Vec<serde_json::Value> =
+        serde_json::from_str(include_str!("../../../../golden/fabric/cases.json")).unwrap();
+    let scene = scenes[0]["output"].as_str().unwrap().to_owned();
     let shapes = [
         (
             "psql prod",
@@ -268,7 +307,13 @@ fn kinds(backend: &crate::backend::Backend) {
             Vec::new(),
             Vec::new(),
         ),
-        ("Sketch", NoteKind::Drawing, "", Vec::new(), Vec::new()),
+        (
+            "Sketch",
+            NoteKind::Drawing,
+            scene.as_str(),
+            Vec::new(),
+            Vec::new(),
+        ),
         (
             "",
             NoteKind::Snippet,

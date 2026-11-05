@@ -5,6 +5,7 @@
 mod eval;
 mod lexer;
 mod maths;
+mod summary;
 pub mod units;
 pub mod words;
 
@@ -13,6 +14,8 @@ use std::collections::HashMap;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+
+pub use summary::{CalcSummary, summary};
 
 use eval::{Context, Notation, Parser, Quantity, Shown, Value};
 use lexer::{Tok, Token};

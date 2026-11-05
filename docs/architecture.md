@@ -33,6 +33,8 @@ crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches
 ├── src/db.rs       connection, migrations, schema, stored-instant format, the db queue
 ├── src/error.rs    the three errors and the translation between them
 └── src/lib.rs      the modules and the `Engine`
+crates/text/       the editing core, egui-free: rope, undo, search, indent, highlighting, {{…}} shield
+crates/drawing/    a Dessin, egui-free: the stored scene, its geometry, text lines, SVG and pictures
 crates/platform/   paths, window geometry: what is asked of the operating system
 crates/ui/         the egui interface: the frame, its state, its screens
 crates/app/        the `devnotes` binary (main) and its icons (`npm run icons`)
@@ -543,89 +545,84 @@ evidence now, not proof; a unit or a custom property is what makes it a styleshe
 
 ### Formatting a snippet with Prettier
 
-"Formater" (Shift+Alt+F) runs Prettier 3 on the editor's draft, **in the front**: the exception
-sits beside highlighting, for the same reason — the text is the unsaved draft — and because
-Prettier is JavaScript. `core/services/format/` holds all of it.
+"Formater" (Shift+Alt+F) runs Prettier itself — 3.9.10, as `package.json` pins it — on the
+editor's draft, **in QuickJS** (plan D1, ADR S8): the output is the reference's, byte for byte,
+on the whole `golden/format` corpus. `text::format` holds all of it; the editor asks through
+`FormattingState`, on `compute`.
 
-- **A worker, started by the first format and kept.** `PrettierWorker` builds it from
-  `prettier.worker.ts` (the Angular builder bundles a `new Worker(new URL(…))`); the worker
-  loads each language's plugins by `import()`, one chunk each (`prettier-plugins.ts`). Nothing
-  of Prettier is in the initial bundle: the worker is 25 kB over the wire, TypeScript's plugin
-  the heaviest at 166 kB, and each is fetched by the first format that needs it. The spike's
-  numbers (#458): a first format of 2,000 lines of TypeScript takes 158 ms on a developer
-  machine, 915 ms on the CI's WebKitGTK.
-- ⚠️ **The worker has no CSP.** Tauri puts `Content-Security-Policy` on the HTML only, and a
-  dedicated worker takes its policy from its own response: `new Function` succeeds inside it,
-  on both engines. Prettier never evaluates, so this costs nothing today — but the worker must
-  only ever be handed text to format (`FormatRequest`), never code to run.
-- **What runs is `prettier-runner.ts`**, apart from the worker's message glue, so its spec
-  drives the real Prettier and its real plugins. It answers `formatted` (the text, the caret,
-  the changed lines), `unchanged`, `syntax` (Prettier's one-based line and column), `fields`
-  or `failed` — never a throw.
-- **Every `{{…}}` is shielded** (`field-shield.ts`): read as code, `{{db_host}}` is two nested
+- **One host, started by the first format and kept** (`text::format::host`): a thread of its
+  own with one QuickJS runtime — a runtime is not shared between threads — in which
+  `standalone.js` and nine plugins are evaluated once. `npm run prettier` copies them into
+  `crates/text/prettier/` after a bump; they are compiled in (2.4 MB). A host that cannot start
+  answers every format `Failed`.
+- **Only text crosses**: the draft, the caret and Prettier's options, never code. The answer is
+  `Formatted` (the text, the caret, the changed lines), `Unchanged`, `Syntax` (Prettier's
+  one-based line and column), `Fields` or `Failed` — never a panic. Prettier counts the caret in
+  UTF-16 units, the editor in `char`s: converted on the way in and out.
+- **Every `{{…}}` is shielded** (`text::shield`): read as code, `{{db_host}}` is two nested
   blocks in JavaScript and a flow mapping in YAML. Each becomes an identifier of its own
   length, made of a two-letter marker absent from the text, and comes back in order afterwards.
-  One missing, copied or moved past another and the answer is `fields`: nothing is applied. A
-  field or not — Angular's `{{ user.name }}` is shielded too.
+  One missing, copied or moved past another and the answer is `Fields`: nothing is applied.
 - **The snippet keeps its own shape:** `endOfLine: 'auto'` (Prettier's `lf` would rewrite a
   CRLF snippet), and no final newline added where there was none.
-- **Through the editor's own history**: `rewrite` turns the answer into one edit of only what
-  differs, one CodeMirror transaction kept apart from the typing either side (`isolateHistory`),
-  so Ctrl+Z undoes a format in one step and the notice's "Annuler" is the same undo. An answer
-  about a text typed over meanwhile is dropped.
-- **The style is the library's** (`PrettierSettingsStore`, under `devnotes.notes.prettier`),
-  set from the button's chevron and applied as it is chosen, like the arrangement: every
-  snippet of a library formats alike. Its indentation is by default "Éditeur", the Tab key's
-  own level (`indentUnit`), so the two agree until the panel forces 2, 4 or Tab.
-- **Formatting on save** (off by default) runs on the body's blur and on close, through the
-  same service; its text comes back into the editor as a change from outside, still one step
-  of its history. Only a body that changed is formatted, a text Prettier refuses is saved as it is, and a
-  close waits for the answer only then: with the option off, nothing waits.
-- The button is `aria-disabled` rather than `disabled` on a language Prettier does not format:
-  a disabled button shows no tooltip, and this one says why.
+- **Through the editor's own history**: `Editor::replace_all` is one step, so Ctrl+Z undoes a
+  format and the notice's "Annuler" is the same step (`Editor::undo`). The lines it changed are
+  marked in the gutter until the next keystroke. An answer about a text typed over meanwhile is
+  dropped.
+- **The style is the library's** (`notes::prettier`, under `devnotes.notes.prettier`, read as
+  the reference wrote it), set from the button's chevron and applied as it is chosen. Its
+  indentation is by default "Éditeur", the Tab key's own level (`language::indent_unit`).
+- **Formatting on save** (off by default): a snippet's body that changed is held back from the
+  save and written once formatted — or as typed if Prettier refuses it — so the revisions keep
+  one body, not two. Written after the editor closed, it goes by id; still open, the field
+  follows unless it was typed into since. A draft never written is saved as it is.
+- The button stays drawn, disabled, on a language Prettier does not read
+  (`language::formatter`), its tooltip naming the language.
 
 ### Exploring a JSON snippet
 
 A snippet whose language Rust has a reader for — JSON, YAML, TOML, XML (not HTML) — has a band of its own: **Code /
-Graphe / Arbre**, and « YAML valide » or where the draft stops parsing. The model is Rust's —
-see [The JSON visualiser's model](#the-json-visualisers-model); the front draws it. Which
-languages have a reader is one table, `explorableFormat` in `core/model/json.model.ts`; the
-explorer takes the format as an input for its messages, and nothing else in it is per format.
+Graphe / Arbre**, « Côte à côte », and « YAML valide » or where the draft stops parsing. The model is Rust's —
+see [The JSON visualiser's model](#the-json-visualisers-model); the interface draws it. Which
+languages have a reader is one table, `json::read::explorable_format`; the explorer takes the
+format for its messages, and nothing else in it is per format.
 
-- **The explorer takes inputs only** (`shared/json-explorer/`: the explorer, its graph and its
-  tree), so an HTTP response can show one too. Its state is `JsonExplorerStore`, provided by
-  the **editor** and not at the root — two documents may be explored at once — and handed over
-  by `JsonViewComponent`, the editor's container, which is a `@defer` chunk imported on a line
-  of its own: the visualiser loads with a first Graphe or Arbre.
-- **The draft is explored as it is typed**, debounced, so the band answers for what is on
-  screen; a note just opened is explored at once, from its first level.
+- **The explorer reads no global state** (`ui::widgets::json_explorer`: the explorer, its graph and
+  its tree), so an HTTP response can show one too. Its state is the caller's `Explorer`, kept by
+  the **editor** (`overlays/editor/json_view.rs`) — two documents may be explored at once — and
+  the answer is `ExploredState`'s, a `QueryCell` on `compute` keyed on the opening: the view and
+  the text it was made of, whose spans point into it rather than into the draft typed since.
+- **The draft is explored as it is typed**, debounced (250 ms), so the band answers for what is
+  on screen; a note just opened is explored at once, from its first level. The editor asks only
+  when the query changed: an action is a repaint, and asking every frame never settles.
 - **Côte à côte**: the code on the left, the visualiser on the right, the line between them
-  `app-split-handle` standing up (`orientation: vertical`, ← → as its keyboard twin). The
-  layout, the code hidden or not and the share are `ExplorerLayoutStore`'s: the session's,
-  written nowhere. Under `SIDE_BY_SIDE_FROM` the body is not squeezed — the toggle is disabled
-  and says so — measured by a `ResizeObserver` on the body's frame once it exists. The two
-  select in step through `CodeSelection` (`code-selection.ts`, which the code editor
-  implements): a node chosen selects its span in the code without taking the focus and lights
-  its lines (`focusedLines`); the caret, moved by a key or a click, selects `entryAt` its
-  offset — never a selection the visualiser set, which carries no user event. ⚠️ The explorer is projected into
-  `app-side-by-side`, whose CSS cannot reach it: its pane is a one-cell grid that stretches it.
-  Narrower than 600 px (a container query), the selection panel goes under the graph with the
-  path and its actions alone: dropped whole, « Copier la valeur » had no size beside the code.
-  A string is copied by its own text, unquoted (`JsonRow.text`, `JsonLine.text`); anything else
-  as it is written.
-- **What is open is read back from each answer.** The front keeps no set of its own: it sends
+  `widgets::split_handle` (← → as its keyboard twin). The layout, the code hidden or not and the
+  share are `json_view::Layout`, kept by the notes area for the application's session and written
+  nowhere. Under 700 px of body it is not squeezed — the toggle is disabled and says so. The two
+  select in step: a node chosen selects its span in the code without taking the keys and lights
+  its lines (`EditorView::lit_lines`); the caret, moved by a key or a click, selects `entry_at`
+  its offset — never a selection the explorer set. Narrower than 600 px, the selection panel goes
+  under the graph with the path and its actions alone. A string is copied by its own text,
+  unquoted (`JsonRow.text`, `JsonLine.text`); anything else as it is written.
+- **What is open is read back from each answer.** The interface keeps no set of its own: it sends
   the paths of the nodes it was given, plus or minus the one clicked, and Rust decides what
   that opens, caps included. Opening a container opens one level. Stepping to a match sends
-  it as `reveal`, and Rust opens what is above it — the front never takes a path apart.
-- **The graph draws in the layout's units**: a node's `left` and `width` in `ch` of the
-  monospace font the plane is set in, its `top` in lines of 24 px; the edges are one SVG in
-  the same units, stretched, with `vector-effect: non-scaling-stroke`.
-- ⚠️ **Pointer events for the pan**, like every drag here, and the wheel scrolls it; the zoom
-  is three buttons. The keyboard twin is a cursor, one tab stop: the arrows walk a node's rows,
-  into a child and back up, Enter opens or closes, and Escape goes up — at the root it lets
-  go, and the editor closes.
+  it as `reveal`, and Rust opens what is above it — the interface never takes a path apart.
+- **The graph draws in the layout's units**: a node's `x` and `width` in columns of the
+  monospace font at 11.5 px, its `y` in lines of 24 px, times the zoom; the edges are cubic
+  curves in the same units. Only the nodes on the ground are drawn and named: the e2e driver
+  presses « Ajuster à l'écran » before counting them.
+- ⚠️ **One gesture for both**: a press that starts on a node moves it, anywhere else it pans,
+  and the wheel pans too; the zoom is three buttons. Every node, header and row takes its id from
+  its path (`widgets::region`), or a drag would lose its node when the culling changes. The
+  keyboard twin is a cursor and the ground the one tab stop: the arrows walk a node's rows, into a
+  child and back up, Enter opens or closes, Alt with an arrow moves the node, and Escape goes
+  up — at the root it lets go, and the editor closes. egui matches a key with extra Shift or Alt,
+  so Shift and Alt with an arrow are read first.
+- An entry's AccessKit node carries its path as its description and a container's state as
+  `expanded`: what kittest and the e2e driver find it by, untouched by translation.
 - "Voir dans le code" goes back to Code with the value **selected** — its span is in UTF-16
-  units, CodeMirror's own positions — and the body scrolled to it.
+  units, turned into the rope's characters (`utf16_cu_to_char`) — and the code takes the keys.
 
 ### The tools: one contract, and the rest written once
 
@@ -1542,11 +1539,12 @@ A `calc` note is a sheet: its body is text, as a snippet's is — sealed, search
 revisions kept, exported in a bare fence — with no language. Each line is computed as it is
 typed, and **the results are never stored**: they are computed when the sheet is read.
 
-**Rust computes, the front writes** (`notes::calc`). `evaluate_calc(sheet, today)` answers the
+**Rust computes, the interface writes** (`notes::calc`; the footer's sum and mean are `calc::summary`,
+exact, and come back as values like any other). `evaluate_calc(sheet, today)` answers the
 whole sheet — one `CalcRow` a line, with its spans for the colours and, after `en` or `à`, the
 kind being converted — and `query_notes` gives a card its last four lines that gave something
 (`DisplayNote.calc`, read from the whole body before it is cut). Values cross as exact decimals
-in text, units as `UnitId`s, errors as codes: `CalcFormatter` (`core/services/calc/`) writes them
+in text, units as `UnitId`s, errors as codes: `ui::notes::calc` writes them
 in the language on screen — its decimal mark, `Go` or `GB`, `j` or `d`, the date — and says `≈`
 when the display rounds. `today` is the local day of the window (`CalcSheets.today`); the board,
 which knows no time zone, gives its cards the UTC day.
@@ -1682,6 +1680,36 @@ boxes, quotes, tables, links, code blocks. No underline. A code block keeps its 
 fence, picked from the toolbar while the caret is in it (`txt` writes the fence bare). Sharing
 and exporting write a Note as the Markdown it is, where a snippet is fenced.
 
+- **The document is `richtext`'s** (egui migration, no egui in it): blocks and marked runs,
+  read by `pulldown-cmark` with the core's own options (`notes::markdown` holds the two equal in
+  a test) and written back byte for byte as the reference's editor wrote it — `golden/markdown`
+  and `golden/markdown-escape` pass whole. What the schema does not hold is read as what it shows:
+  raw HTML as its text, a footnote as its brackets, a reference link inline, a bare `https://`
+  address as a link to itself. `richtext::escape` is `escapeMarkdownText`, ported rule for rule.
+  Undo keeps the document and the selection before each transaction (`History`): a Note is a
+  few kilobytes.
+- **Editing is `richtext::edit`'s**, the view `overlays/editor/rich.rs`'s. A caret is a path to a
+  leaf — a paragraph, a heading, a cell, a code block — through items, quotes and tables, and a
+  `char` offset; each operation takes the selection and answers the next one, as the reference's
+  keymap did: Enter in an empty item leaves the list, Backspace at an item's start lifts it, Tab
+  nests it under the one above. The view draws through `widgets::rich` (the reader's own
+  layout), which says where each leaf was laid out: the caret, a click and ↑ ↓ are read from those
+  galleys. A Note opened and left is written back untouched — the Markdown is rewritten only once
+  something changed. After a toolbar button the text takes the keys back, as the reference's
+  `mousedown` kept them. A task's box is a control of its own (`rich-task`).
+- **A paste reads the clipboard itself**: egui hands the field the text alone, so the editor asks
+  `platform::clipboard` (`arboard`) for the page's HTML. HTML the reference called formatted —
+  emphasis, a link, a heading, a list, a quote, a table, and no `pre` or `code` — goes in as
+  blocks (`richtext::from_html`, on `html5ever`'s tokenizer; `golden/html-paste` passes
+  whole); code pasted into an empty Note makes it a snippet, the conversion detecting its
+  language; anything else is text. A pasted image becomes an attachment, as in every editor.
+- **An embedded drawing is read where it is shown**: `devnotes:drawing/<id>` asks
+  `LibraryCaches.pictures` (the large picture, by id, decoded off the frame and kept with the
+  thumbnails' limit); a drawing saved again drops it. Any other image stays as written: a Note
+  never fetches an address. **Ctrl+F and Ctrl+H** open the code's find bar over the text the reader
+  sees (`search_bar::Searchable`): no match crosses from one block into the next, and a
+  replacement wears what the match it replaces wore.
+
 - **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
   `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as
   `a -&gt; b`. `rich-text.engine.ts` replaces its private `encodeTextForMarkdown` with
@@ -1719,33 +1747,33 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   nothing loaded twice, a block drawn plain until its grammar has arrived. Tab indents as the code field does (`indentUnit`), and `withTabs`
   leaves a fence alone: nothing is escaped in one, so its `&#9;` is text. A card and a search
   read its lines as they are (`notes::markdown::plain`).
-- **A `mermaid` block is drawn under its code** (`rich-text-diagrams.ts`), offered first in the
-  block's language menu; a snippet has no Mermaid language. The drawing is a widget decoration
-  after the block, keyed by its rank, the theme and its source, so the caret and typing elsewhere
-  reuse it; typing in the block redraws once the keys pause (`REDRAW_AFTER_MS`), the last drawing
-  kept on screen meanwhile. Away from the caret — the editor blurred, or the selection elsewhere,
-  read from TipTap's `focus`/`blur` transaction metas — the code folds to its first line; a press
-  on the drawing puts the caret back in it. A parse error names its line (`lineOf` reads both of
-  Mermaid's parsers) and shows Mermaid's message. `MermaidRenderer` loads Mermaid as a chunk of
-  its own on the first diagram, at its `strict` level with error rendering suppressed, coloured
-  from the theme's tokens (Mermaid derives shades, so it is handed concrete colours, and a theme
-  change draws again); one drawing at a time, since its configuration and its measuring element
-  are global, and the last 64 kept. Its ESM build evaluates no code, so the CSP stays as it is;
-  the SVG it returns is read by an inert HTML parser, not `innerHTML`. The fence is stored as it
-  was typed, and a card shows the block's lines.
+- **A `mermaid` block is drawn under its code** (`widgets::rich`, D2), offered first in the
+  block's language menu; a snippet has no Mermaid language. The `diagram` crate draws it:
+  `merman` writes the SVG through its `resvg_safe` pipeline (labels as `<text>`, which `resvg`
+  paints), measuring them with the embedded Inter (`native-fonts`; without it labels are cut),
+  in Mermaid's `base` theme with its variables from the tokens; `resvg` paints it at twice its
+  size. Built without ELK. A parse error names its line, from the byte span `merman` gives, and
+  shows its message; a source that draws nothing else is « type not supported » and stays code.
+  `LibraryCaches.diagrams` keeps the last 64 drawings, by theme and source, uploaded once, and
+  draws one at a time on `compute`. The view asks for a source it has no drawing of; the editor
+  asks at once when nothing stands in its place and once typing pauses (`REDRAW_AFTER_SECS`)
+  otherwise, the last drawing in that place (egui's memory, by the block's rank) shown
+  meanwhile. Away from the caret the code folds to its first line; a click on the drawing puts
+  the caret at the end of its code. The fence is stored as it was typed, and a card shows the
+  block's lines.
 - **« Présenter » shows the Note full screen, a slide at a time.** Rust cuts the draft on
   screen, not the stored body (`present_note`, `notes::markdown::present`): a slide starts at
   each `#` or `##` heading and after each `---` rule outside any list, quote or fence, each slide
   a slice of the body so it is drawn as written, empty ones dropped; the headings come back as a
-  tree, each with the slide it is on. `PresentationComponent` puts the Note's title first as a
-  cover and draws each slide with `createRichViewer` — the editor's own blocks, colours and
-  diagrams, read only, a diagram without its code. ← → (and the keys a clicker sends), Home/End,
-  `M` for the map, Escape out through the modal frame (the `presentation` rung, over the
-  titlebar). The window goes full screen through `AppWindowService.enterFullscreen`
-  (`core:window:allow-set-fullscreen`), which answers whether it changed it: only that is given
-  back, so a window already full screen stays so. The map (`mind-map.layout.ts`) rings the
-  headings around the title, a share of the sector by leaves, stretched to the screen; its nodes
-  are buttons over an SVG of links, and one pressed opens its slide.
+  tree, each with the slide it is on. `overlays::presentation` puts the Note's title first as a
+  cover and draws each slide with `widgets::rich` read only and larger — the editor's own blocks,
+  colours and diagrams, a diagram without its code — centred by the height it took last frame.
+  ← → (and the keys a clicker sends), Home/End, `M` for the map, Escape out: a modal over
+  everything, the editor kept under it. `PresentationState` sends `ViewportCommand::Fullscreen`
+  only when the window was not full screen already, and gives back only what it took — on
+  leaving, and when another library opens. The map (`presentation::mind_map`, checked against
+  the `mind-map` corpus) rings the headings around the title, a share of the sector by leaves,
+  stretched to the screen; its headings are buttons over the links, one pressed opens its slide.
 - **The editor says what it holds.** A "Note" badge sits where a snippet has its format menu,
   and the footer counts the draft's words (`countWords`) where a snippet counts lines and bytes:
   presenting the draft is the front's job, as the line count is. The toolbar runs headings, what
@@ -1766,9 +1794,9 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
 
 ### A Dessin: a scene, and its pictures beside it
 
-A Dessin (`NoteKind::Drawing`) is drawn with Fabric.js (`drawing-editor/`, a chunk of its own,
-`@defer`red like TipTap). **Its body is the scene alone** — `{ version, scene }`, Fabric's
-own JSON — and Rust reads it only for its words (`notes::drawing::words`, the texts on it,
+A Dessin (`NoteKind::Drawing`) is drawn in `overlays/editor/drawing.rs` over `drawing::Editor`.
+**Its body is the scene alone** — `{ version, scene }`, the JSON of Fabric, which drew it in the
+reference — and Rust reads it only for its words (`notes::drawing::words`, the texts on it,
 through the groups): what a search matches and quotes, what a conversion or the Markdown share
 gives. It has no field (`{{x}}` written on it is words), no revision (a scene compares as no
 text), no copy (a card and the palette offer none: it is exported), and no conversion either
@@ -1787,6 +1815,14 @@ way — the kind menu names it and offers nothing.
   (`redrawn`, which moves no date); a duplicate takes them, an export does not. A drawing
   that has none, as one that came by import, has them taken when it opens: the editor asks
   `hasPictures` and they go with its next flush.
+- **`crates/drawing` reads the scene** (`Drawing::read`, `write`): an object is the fields it was
+  read with and is read through them, so a body comes back byte for byte (`golden/fabric`, what
+  Fabric itself wrote); `serde_json`'s `preserve_order` and `float_roundtrip` are what hold that.
+- **One line break, one way to a picture** (D23): `text::wrap` is Fabric's `_wrapLine` on the advances
+  of the embedded fonts, for the editor and the pictures; a browser kerns, so a word can break
+  elsewhere (E14: one case of `golden/fabric-wrap`). `picture::svg` writes the export from the scene
+  and `resvg` rasterises it (`pictures`, 480 and 1,600 px). ⚠️ `resvg` knows no
+  `non-scaling-stroke`: a `strokeUniform` shape has its geometry scaled, not its plane.
 - **What is drawn keeps its colours by name.** Each object carries a `hue` (ink, blue…),
   painted from the tokens on `:root` (`paletteOf`), so a theme changed later redraws it; the
   pictures are taken on the theme's paper (`--bg-1`). ⚠️ Fabric 7 places an object by its
@@ -1794,12 +1830,17 @@ way — the kind menu names it and offers nothing.
 - **An arrow started or ended on a shape stays on its edge** (`from`/`to` ids, `ends`,
   `boundEnds`): it follows the shape as it moves, and a shape removed lets go of it. A path's
   box is read when it is made, so an arrow whose ends move is made again in its place.
+- **`drawing::Editor` holds every gesture**, in the scene's units, with no egui: `press`, `drag` and
+  `release`, a selection framed by its handles, each step read from the objects as they were when
+  the gesture began, so nothing drifts. The widget paints `marks`, the scene flattened to lines and
+  words. A click moves nothing: an arrow is rebound only when something moved.
 - **The editor**: a toolbar in the app's look (selection, rectangle, ellipse, diamond, arrow,
   freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool
   and gives back the selection it was taken over, then drops the selection, then leaves), a
-  history of the scene's states, and an export as PNG or SVG: the picture crosses as a data URI
-  to `save_bytes`, as the base64 tool's bytes do. The system's save dialog is the one step no
-  e2e reaches (`__TAURI_INTERNALS__.invoke` is frozen).
+  history of the scene's states, and an export as PNG or SVG (`drawing::export`), written with
+  `tools::write_file` where `FileDialog` says. ⚠️ `rfd`'s dialog blocks until answered, so the whole
+  export runs on `compute`, never on the window's thread. An e2e scenario answers it through
+  `DEVNOTES_E2E_DIALOG` (`App::launch_answering`).
 - **A Note embeds one by its id**: `![title](devnotes:drawing/<id>)`, the Markdown image of
   TipTap's extension, drawn by a node view that asks `drawing_picture` (`rich-text-drawings.ts`);
   the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose
@@ -3765,6 +3806,12 @@ stored but out of sight until the token comes back; and writing a value **does n
 A field left empty is not stored (`normalize_values`): empty means "keep what the text
 suggests", and storing it would freeze that answer the day the default changes.
 
+**In the editor, the panel over the body holds them** (`overlays/editor/fields.rs`): a draft of
+the opening, written when a field is left and on the closing path, none of which leaves a field
+on its own. It follows the note as last read, so a token typed joins it once the body is written.
+The preview shows the body filled in place of the code, and folding the panel ends it: a
+read-only body without the button that caused it would be a trap.
+
 **A value can also belong to no note at all.** The preferences panel's "Variables" page edits
 `global_placeholders` (migration 7, `name` as the primary key, case-sensitive for the same
 reason as `note_placeholders`): a `{{host}}` that means the same thing in every snippet is
@@ -3947,16 +3994,17 @@ the library's `attachments/` (`libraries/<id>/attachments/`) under a name derive
 called `capture.png` must not overwrite each other, and a name coming from outside has no
 business deciding a write path.
 
-The bytes cross the bridge only on demand, as a `data:` URI: the WebView's CSP forbids loading
-a local file, and opening the `asset:` protocol would be a wide door for displaying a
-screenshot. That encoding costs a third more than the file, which is why `read_attachment`
-fetches **one** at a time and never the list.
+The bytes are read only on demand, as a `data:` URI, which costs a third more than the file: this
+is why `read_attachment` fetches **one** at a time and never the list. `state::attachments` follows
+the note open and holds no bytes but the one image shown, decoded on `compute`, from the closed
+list of D28 (`is_shown`); anything else offers « Open ». A file waits there until the note has a row:
+a draft is written for it, a dialog cancelled writes nothing.
 
 **Three ways in, two ways back out.** A file arrives through the picker, through a drag-drop
-onto the window (`FileDropService` — the drop is a _window_ event carrying real paths, a DOM
-`drop` handler would receive nothing), or as an image pasted into the editor. It leaves
-through `open_attachment` (the system's default application) or `save_attachment` (copied
-where the user asks). A file you can only read the name of is not attached, it is stored.
+onto the window (`RawInput::dropped_files`), or as an image pasted into the editor
+(`Event::PasteImage`, which egui sends when the clipboard holds no text). It leaves through
+`decrypted_copy` and `platform::desktop` (the system's default application) or `save_attachment`
+(copied where the user asks). A file you can only read the name of is not attached, it is stored.
 
 All three go through `AttachmentsStore`, which owns the order of operations rather than
 leaving it to the page: **attaching demands a note in the database**, so the draft is saved on
@@ -4712,15 +4760,24 @@ between one row and two. What does not narrow is measured as drawn, the same in 
 the search gives way first, then the switchers' names. ⚠️ The central panel has no margin of its
 own, as the reference: egui's 8 px cost the header its one row at the window's default width.
 
-Until phase 4's editors, a card's click surface (`note-card-open`, a layer under its controls)
-opens a stand-in editor (`notes::editor`, `state::editor`): the note read whole by id
-(`get_note`), its title and body as plain text — a list one task a line, `[x] ` before a done
-one; a Dessin's title only — written when a field is left and when it closes. It is a
-development tool, and goes with phase 4 (D4). « + New note » (or its kind menu, the ghost card,
-the global shortcut) opens it on a draft that has no id: nothing is written until a field left
-carries a title or a body, then the note is created once — what is left while that creation is
-in flight waits for its id and is sent after — in the space shown (the first one for « all
-spaces ») and the folder shown.
+A card's click surface (`note-card-open`, a layer under its controls) opens the note editor
+(`notes::overlays::editor`, `state::editor`), the reference's `note-editor-overlay`: a toolbar
+(title, language for a snippet, pin, priority, copy, delete in two clicks, fold, full screen,
+close), the header's two bands — context, tags and deadline; kind (a conversion menu, a Dessin
+named only), space › folder — or, folded, one line of what they hold, and the footer's counts.
+The note is read whole by id (`get_note`) through a `QueryCell` keyed on the revision, so a pin,
+a filing or an undo made anywhere shows at once. Title, context, body and the tag being typed
+are drafts of the view, keyed on the opening's session, written when a field is left and on
+every closing path; `Edit::changed_from` drops a field that did not move. Pin, priority, space,
+folder, deletion and a conversion go through `NotesState`, as from a card, and offer the undo; a
+conversion starts the drafts again from what the core wrote. ⚠️ egui drops the focus on Escape
+before the frame is drawn: the editor remembers whether a text field had it at the last frame,
+so a first Escape only leaves the field. « + New note » (or its kind menu, the ghost card, the
+global shortcut) opens it on a draft that has no id: the draft holds every change — pinned,
+filed, prioritised included — and nothing is written until it is worth keeping (the reference's
+`isWorthSaving`), then the note is created once; what is left while that creation is in flight
+waits for its id and is sent after. The bodies stay plain text until each kind's editor lands
+(phase 4): a list one task a line, `[x] ` before a done one; a Dessin has none.
 
 Under the pointer a card shows its pill over its bottom edge (`canvas::card::actions`): copy (the
 note read whole by id, then onto the clipboard and said) and the ⋯ of its menu — open, pin,
@@ -5787,7 +5844,7 @@ is not the WebView's thread's to parse.
 - **The matches cover the whole document**, open or not, in its order: stepping to one opens
   its ancestors.
 - **A node can be moved; the layout stays Rust's.** An offset per node, in the layout's own
-  units, kept by path in `JsonExplorerStore` — never in the note — so an edited document keeps
+  units, kept by path in the `Explorer` — never in the note — so an edited document keeps
   the place of every node whose path survives, and opening another note starts afresh. A
   gesture that starts on a node moves it, anywhere else it pans; it commits on `pointerup`, and
   the pointer is captured only once the press has travelled 4 px, or the click would land on the

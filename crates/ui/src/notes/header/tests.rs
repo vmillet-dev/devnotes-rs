@@ -228,6 +228,9 @@ fn the_kind_menu_opens_a_draft_of_its_kind() {
     click_id(&mut harness, "new-note-checklist");
 
     let opened = harness.state().state.editor.opened().unwrap();
-    assert_eq!(opened.kind, engine::notes::kind::NoteKind::Checklist);
+    assert_eq!(
+        opened.note().unwrap().kind,
+        engine::notes::kind::NoteKind::Checklist
+    );
     harness.get_by(|node| node.author_id() == Some("editor-title"));
 }

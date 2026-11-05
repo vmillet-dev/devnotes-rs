@@ -1,11 +1,19 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
+pub mod attachments;
+pub mod calc_sheets;
+pub mod diagrams;
+pub mod drawing_exports;
 pub mod drawing_pictures;
 pub mod editor;
+pub mod explored;
+pub mod formatting;
+pub mod note_revisions;
 pub mod notes;
 pub mod notes_query;
 pub mod palette;
 pub mod placeholder_fill;
+pub mod presentation;
 mod query;
 pub mod selection;
 pub mod spaces;
@@ -43,9 +51,21 @@ impl Revision {
 /// Every cache of a library's content — laid-out text, textures, memos, diagrams — and only
 /// they: one field, emptied when another library opens (D17). Not wiped byte by byte; the
 /// threat model says so.
-#[derive(Default)]
 pub struct LibraryCaches {
     pub thumbnails: drawing_pictures::Thumbnails,
+    /// The large pictures Notes embed.
+    pub pictures: drawing_pictures::Thumbnails,
+    pub diagrams: diagrams::Diagrams,
+}
+
+impl Default for LibraryCaches {
+    fn default() -> Self {
+        Self {
+            thumbnails: drawing_pictures::Thumbnails::default(),
+            pictures: drawing_pictures::Thumbnails::large(),
+            diagrams: diagrams::Diagrams::default(),
+        }
+    }
 }
 
 /// The three areas, in the switch's order, which is also the order of their keys.
@@ -80,6 +100,7 @@ pub struct AppState {
     pub notes_view: crate::notes::View,
     pub notes: notes::NotesState,
     pub editor: editor::EditorState,
+    pub revisions: note_revisions::RevisionsState,
     pub selection: selection::SelectionState,
     pub undo: undo::UndoState,
     pub trash: trash::TrashState,
@@ -89,6 +110,17 @@ pub struct AppState {
     pub palette_view: crate::palette::PaletteView,
     pub caches: LibraryCaches,
     pub status: StatusNotifier,
+    pub dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
+    pub opener: std::sync::Arc<dyn platform::desktop::Opener + Send + Sync>,
+    pub clipboard: std::sync::Arc<dyn platform::clipboard::Clipboard + Send + Sync>,
+    pub attachments: attachments::AttachmentsState,
+    pub exports: drawing_exports::DrawingExports,
+    pub calc: calc_sheets::CalcSheets,
+    pub explored: explored::ExploredState,
+    pub formatting: formatting::FormattingState,
+    pub presentation: presentation::PresentationState,
+    /// The open library's, read with its preferences.
+    pub prettier: crate::notes::prettier::PrettierSettings,
     pub errors: ErrorNotifier,
     pub clock: Box<dyn Clock>,
     /// The system's wish; the look adds nothing to it.
@@ -113,6 +145,7 @@ impl AppState {
             notes_view: crate::notes::View::default(),
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
+            revisions: note_revisions::RevisionsState::default(),
             selection: selection::SelectionState::default(),
             undo: undo::UndoState::default(),
             trash: trash::TrashState::default(),
@@ -122,6 +155,16 @@ impl AppState {
             palette_view: crate::palette::PaletteView::default(),
             caches: LibraryCaches::default(),
             status: StatusNotifier::default(),
+            dialog: platform::dialog::system(),
+            opener: platform::desktop::system(),
+            clipboard: platform::clipboard::system(),
+            attachments: attachments::AttachmentsState::default(),
+            exports: drawing_exports::DrawingExports::default(),
+            calc: calc_sheets::CalcSheets::default(),
+            explored: explored::ExploredState::default(),
+            formatting: formatting::FormattingState::default(),
+            presentation: presentation::PresentationState::default(),
+            prettier: crate::notes::prettier::PrettierSettings::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
             reduced_motion,
@@ -148,13 +191,14 @@ impl AppState {
     pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
         let answered = self.notes.update(&mut self.revision, &mut self.errors);
         if let Some(id) = answered.open {
-            self.editor.open(backend, id);
+            self.editor.open(id);
         }
         for note in answered.copied {
-            self.copied(ctx, note);
+            self.copied(ctx, backend, note);
         }
         let time = ctx.input(|input| input.time);
         for done in answered.done {
+            self.follow_in_editor(&done);
             self.undo.record(done, time);
         }
         self.undo.update(&mut self.revision, &mut self.errors);
@@ -173,8 +217,42 @@ impl AppState {
             (self.clock.now(), pinned_first, self.revision),
         );
         self.editor
-            .update(backend, &mut self.revision, &mut self.errors);
+            .adopt(backend, &mut self.revision, &mut self.errors);
+        self.editor.update(backend, self.revision, &mut self.errors);
+        self.exports.update(&mut self.status, &mut self.errors);
+        if self.attachments.wants_row() {
+            self.editor.write_draft(backend);
+        }
+        let mut reports = attachments::Reports {
+            status: &mut self.status,
+            errors: &mut self.errors,
+            revision: &mut self.revision,
+        };
+        self.attachments.update(
+            ctx,
+            backend,
+            self.editor.open_id(),
+            &self.opener,
+            &mut reports,
+        );
+        self.explored.update(backend);
+        for saved in self.formatting.update() {
+            self.editor
+                .save_body(backend, saved.session, saved.id, saved.body);
+        }
+        self.presentation.update(ctx, &mut self.errors);
+        for (note, sheet) in self.calc.update(&mut self.errors) {
+            let text = crate::notes::calc::copy_text(&note.content, &sheet, self.language);
+            self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
+        }
+        self.follow_revisions(backend);
+        for id in self.editor.take_redrawn() {
+            self.caches.thumbnails.redrawn(&id);
+            self.caches.pictures.redrawn(&id);
+        }
         self.caches.thumbnails.update(ctx, backend);
+        self.caches.pictures.update(ctx, backend);
+        self.caches.diagrams.update(ctx, backend);
         if self
             .spaces
             .update(backend, &mut self.revision, &mut self.errors)
@@ -185,6 +263,37 @@ impl AppState {
         let place = (self.spaces.active_space(), self.spaces.active_folder());
         self.notes_query
             .update(ctx, backend, now, place, (self.revision, index));
+    }
+
+    /// The bodies kept beside the note open — none for a draft or a todo list — and a body put
+    /// back, which the editor's fields start again from.
+    fn follow_revisions(&mut self, backend: &Backend) {
+        let kept = self
+            .editor
+            .opened()
+            .and_then(|open| open.note().map(|note| (open.id(), note.kind)))
+            .and_then(|(id, kind)| id.filter(|_| kind != engine::notes::kind::NoteKind::Checklist));
+        self.revisions.follow(kept);
+        if let Some(id) = self
+            .revisions
+            .update(backend, &mut self.revision, &mut self.errors)
+        {
+            self.editor.reseed_when_read(&id);
+        }
+    }
+
+    /// A write made on the note open: converted, the editor's fields start again from what it now
+    /// holds; deleted, the editor closes.
+    fn follow_in_editor(&mut self, done: &api::undo::Reversible) {
+        use api::undo::Reversible;
+        let Some(open) = self.editor.open_id().map(str::to_owned) else {
+            return;
+        };
+        match done {
+            Reversible::Convert { id, .. } if *id == open => self.editor.reseed(&open),
+            Reversible::Deletion { ids, .. } if ids.contains(&open) => self.editor.close(),
+            _ => {}
+        }
     }
 
     /// The space and the folder shown, into the library's preferences: the next launch opens
@@ -215,6 +324,9 @@ impl AppState {
                 }
                 self.spaces.restore(&preferences);
                 self.notes_query.restore(&preferences);
+                self.prettier = crate::notes::prettier::PrettierSettings::read(
+                    preferences.get(crate::notes::prettier::KEY),
+                );
                 self.library_preferences = preferences;
             }
             Err(error) => self
@@ -371,6 +483,11 @@ impl AppState {
                 self.notes.set_items(backend, id, items);
             }
             Notes::Thumbnail(stamp) => self.caches.thumbnails.ask(backend, stamp),
+            Notes::Picture(id) => {
+                let stamp = drawing_pictures::Thumbnails::embedded(&id);
+                self.caches.pictures.ask(backend, stamp);
+            }
+            Notes::Diagram(source) => self.caches.diagrams.ask(ctx, &source),
             place @ (Notes::ChooseSpace(_)
             | Notes::ChooseFolder(_)
             | Notes::CountSpace(_)
@@ -393,12 +510,8 @@ impl AppState {
                     self.library_preferences.clone(),
                 ));
             }
-            Notes::OpenNote(id) => self.editor.open(backend, id),
-            Notes::SaveNote {
-                session,
-                title,
-                body,
-            } => self.editor.save(backend, session, title, body),
+            Notes::OpenNote(id) => self.editor.open(id),
+            Notes::Editor(editing) => self.apply_editing(editing, ctx, backend),
             Notes::NewNote(kind) => self.new_note(kind),
             Notes::Pin { id, pinned } => {
                 self.notes.pin(backend, vec![id], pinned);
@@ -437,11 +550,155 @@ impl AppState {
             }
             Notes::Copy(id) => self.notes.copy(backend, id),
             Notes::Canvas(key) => self.canvas_key(key, ctx, backend),
-            Notes::CloseNote => self.editor.close(),
             Notes::FocusSearch => {
                 self.notes_view.focus_search = true;
                 // Taken by the next frame, which nothing else may ask for.
                 ctx.request_repaint();
+            }
+        }
+    }
+
+    /// What the editor asks: a draft changes where it is, a note written goes through the same
+    /// writes as its card, the undo offered.
+    fn apply_editing(
+        &mut self,
+        editing: crate::notes::Editing,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::Editing;
+        let id = self.editor.open_id().map(str::to_owned);
+        match editing {
+            Editing::Save { session, edit } => self.save_formatted(backend, session, edit),
+            Editing::Format { session, request } => self.formatting.ask(backend, session, request),
+            Editing::Prettier(settings) => self.set_prettier(settings, backend),
+            Editing::Export(export) => self.exports.ask(backend, &self.dialog, export),
+            Editing::Fields(asked) => self.apply_fields(asked, ctx, backend),
+            Editing::Attachment(asked) => self.ask_attachment(asked, backend),
+            Editing::Explore { session, query } => self.explored.want(session, query),
+            Editing::OpenLink(url) => self.open_link(&url),
+            Editing::Evaluate { session, text } => {
+                let today = self.clock.now().with_timezone(&chrono::Local).date_naive();
+                self.calc.ask(backend, session, text, today);
+            }
+            Editing::Pictures {
+                session,
+                content,
+                palette,
+                missing,
+            } => self
+                .editor
+                .picture(backend, session, (content, palette), missing),
+            Editing::Pin(pinned) => {
+                if !self
+                    .editor
+                    .change_draft(backend, |note| note.pinned = pinned)
+                    && let Some(id) = id
+                {
+                    self.notes.pin(backend, vec![id], pinned);
+                }
+            }
+            Editing::Prioritise(priority) => {
+                if !self
+                    .editor
+                    .change_draft(backend, |note| note.priority = priority)
+                    && let Some(id) = id
+                {
+                    self.notes.prioritise(backend, vec![id], priority);
+                }
+            }
+            Editing::MoveTo(space) => {
+                let into = space.clone();
+                let moved = self.editor.change_draft(backend, |note| {
+                    note.space_id = into;
+                    note.folder_id = None;
+                });
+                if !moved && let Some(id) = id {
+                    self.notes.move_to(backend, vec![id], space);
+                }
+            }
+            Editing::File(folder) => {
+                let into = folder.clone();
+                if !self
+                    .editor
+                    .change_draft(backend, |note| note.folder_id = into)
+                    && let Some(id) = id
+                {
+                    self.notes.file(backend, vec![id], folder);
+                }
+            }
+            Editing::Convert {
+                session,
+                into,
+                edit,
+            } => {
+                self.editor.save(backend, session, edit);
+                match id {
+                    Some(id) => self.notes.convert(backend, id, into),
+                    None => self.editor.convert_draft(into),
+                }
+            }
+            Editing::Delete => match id {
+                Some(id) => self.notes.delete(backend, vec![id]),
+                None => self.editor.close(),
+            },
+            Editing::Copy => {
+                if let Some(id) = id {
+                    self.notes.copy(backend, id);
+                }
+            }
+            Editing::Close => self.editor.close(),
+            Editing::Present { title, markdown } => {
+                self.presentation.ask(backend, title, markdown);
+            }
+            Editing::StopPresenting => self.presentation.close(ctx),
+            Editing::Fullscreen(on) => {
+                self.settings.editor_fullscreen = on;
+                self.save_settings(backend);
+            }
+            Editing::Revisions(asked) => self.apply_revisions(asked, backend),
+            Editing::FoldHeader(folded) => {
+                self.settings.editor_header_folded = folded;
+                self.save_settings(backend);
+            }
+        }
+        ctx.request_repaint();
+    }
+
+    fn ask_attachment(&mut self, asked: attachments::Asked, backend: &Backend) {
+        let moment = self.clock.now().format("capture-%Y-%m-%d-%H-%M-%S");
+        self.attachments
+            .ask(asked, backend, &self.dialog, moment.to_string());
+    }
+
+    fn apply_fields(
+        &mut self,
+        asked: crate::notes::Fields,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::Fields;
+        match asked {
+            Fields::Keep(values) => {
+                if let Some(id) = self.editor.open_id() {
+                    self.fill.keep(backend, id.to_owned(), values);
+                }
+            }
+            Fields::Preview {
+                session,
+                content,
+                values,
+            } => self.fill.ask_preview(backend, session, content, values),
+            Fields::Copy { content, values } => self.fill.copy(backend, content, values),
+            Fields::CopyRaw(text) => {
+                let note = self.editor.opened().and_then(|open| open.note());
+                if let Some(said) = note.map(placeholder_fill::copied_note) {
+                    self.copy_out(ctx, text, said);
+                }
+            }
+            Fields::Fold(open) => {
+                self.settings.editor_fields_open = open;
+                self.save_settings(backend);
             }
         }
     }
@@ -585,9 +842,24 @@ impl AppState {
 
     /// What copying yields, onto the clipboard, and said: what was copied, by its title.
     /// A note with `{{fields}}` asks for them first.
-    fn copied(&mut self, ctx: &egui::Context, note: engine::notes::model::DisplayNote) {
+    fn copied(
+        &mut self,
+        ctx: &egui::Context,
+        backend: &Backend,
+        note: engine::notes::model::DisplayNote,
+    ) {
+        if note.kind == engine::notes::kind::NoteKind::Drawing {
+            self.status
+                .report(i18n::Message::new(i18n::keys::notes::DRAWING_NOT_COPIED));
+            return;
+        }
         if !note.placeholders.is_empty() {
             self.fill.open(note);
+            return;
+        }
+        if note.kind == engine::notes::kind::NoteKind::Calc {
+            let today = self.clock.now().with_timezone(&chrono::Local).date_naive();
+            self.calc.copy(backend, note, today);
             return;
         }
         let text = note
@@ -639,7 +911,7 @@ impl AppState {
         use crate::palette::commands::Command;
         use crate::palette::options::Chosen;
         match chosen {
-            Chosen::Note(id) => self.editor.open(backend, id),
+            Chosen::Note(id) => self.editor.open(id),
             Chosen::Space(id) => {
                 self.spaces.choose_space(Some(id));
                 self.remember_place(backend);
@@ -693,6 +965,65 @@ impl AppState {
     }
 
     /// The settings into the application's file, through the db queue, the other keys kept.
+    fn apply_revisions(&mut self, asked: crate::notes::Revisions, backend: &Backend) {
+        use crate::notes::Revisions;
+        match asked {
+            Revisions::Toggle => self.revisions.toggle(),
+            Revisions::Look(id) => self.revisions.look(backend, &id),
+            Revisions::Back => self.revisions.close_preview(),
+            Revisions::Restore => self.revisions.restore(backend),
+        }
+    }
+
+    /// The desktop's own browser: a URL goes the way a file does.
+    fn open_link(&self, url: &str) {
+        drop(self.opener.open(std::path::Path::new(url)));
+    }
+
+    fn set_prettier(
+        &mut self,
+        settings: crate::notes::prettier::PrettierSettings,
+        backend: &Backend,
+    ) {
+        self.prettier = settings;
+        self.library_preferences
+            .set(crate::notes::prettier::KEY, &settings.written());
+        drop(api::preferences::write_library(
+            backend,
+            self.library_preferences.clone(),
+        ));
+    }
+
+    /// Formatted first when the library asks for it: the body is held back and written once,
+    /// formatted or, refused, as it was typed. A draft never written is saved as it is.
+    fn save_formatted(&mut self, backend: &Backend, session: u64, mut edit: editor::Edit) {
+        let note = self.editor.opened().and_then(editor::Opened::note);
+        let asked = note
+            .filter(|_| self.prettier.format_on_save)
+            .and_then(|note| {
+                let parser = crate::notes::language::formatter(note.language)?;
+                let Some(editor::Body::Content(text)) = &edit.body else {
+                    return None;
+                };
+                let changed = *text != note.content && !note.id.is_empty();
+                changed.then(|| {
+                    let indent = crate::notes::language::indent_unit(note.language);
+                    let request = text::format::Request {
+                        text: text.clone(),
+                        cursor: 0,
+                        parser,
+                        options: self.prettier.options(indent),
+                    };
+                    (note.id.clone(), request)
+                })
+            });
+        if let Some((id, request)) = asked {
+            edit.body = None;
+            self.formatting.save(backend, session, id, request);
+        }
+        self.editor.save(backend, session, edit);
+    }
+
     fn save_settings(&mut self, backend: &Backend) {
         self.settings.write(&mut self.preferences);
         // A write that fails says so in the log; nothing on screen waits for it.
@@ -707,12 +1038,15 @@ impl AppState {
     /// keeps (a text field's undo history holds what was typed). The settings stay.
     pub fn reset_library_scope(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.library_preferences = Preferences::default();
+        self.prettier = crate::notes::prettier::PrettierSettings::default();
         self.library_preferences_read = Some(api::preferences::library(backend));
         self.seeding = None;
+        self.presentation.close(ctx);
         self.caches = LibraryCaches::default();
         self.notes_query = NotesQueryState::default();
         self.spaces = spaces::SpacesState::default();
         self.editor = editor::EditorState::default();
+        self.revisions = note_revisions::RevisionsState::default();
         self.selection = selection::SelectionState::default();
         self.undo = undo::UndoState::default();
         self.trash = trash::TrashState::default();

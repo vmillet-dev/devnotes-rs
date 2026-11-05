@@ -18,3 +18,5 @@ docs/scratch-folders.html
 
 # Written by `npm run golden` on `angular-reference`, byte for byte.
 golden/*/
+# Prettier itself, copied by `npm run prettier`: kept as published.
+crates/text/prettier

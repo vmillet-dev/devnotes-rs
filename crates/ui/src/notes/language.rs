@@ -178,6 +178,333 @@ fn info(language: Language) -> (&'static str, &'static str, Hue) {
     }
 }
 
+/// The grammar `text::highlight` colours a language with; `None` is plain text, where no grammar
+/// bundled reads it (gap E11).
+#[expect(clippy::too_many_lines, reason = "one arm a language")]
+pub fn syntax(language: Language) -> Option<&'static str> {
+    let name = match language {
+        Language::Json | Language::Jsonld => "JSON",
+        Language::Js => "JavaScript",
+        Language::Jsx => "JavaScript (Babel)",
+        Language::Ts => "TypeScript",
+        Language::Tsx => "TypeScriptReact",
+        Language::Py | Language::Cython => "Python",
+        Language::Rs => "Rust",
+        Language::Go => "Go",
+        Language::Java => "Java",
+        Language::Cs => "C#",
+        Language::Php => "PHP",
+        Language::C | Language::Nesc => "C",
+        Language::Cpp => "C++",
+        Language::Sql => "SQL",
+        Language::Graphql => "GraphQL",
+        Language::Yml => "YAML",
+        Language::Toml => "TOML",
+        Language::Xml | Language::Dtd => "XML",
+        Language::Html | Language::Angular => "HTML",
+        Language::Vue => "Vue Component",
+        Language::Css | Language::Gss => "CSS",
+        Language::Scss => "SCSS",
+        Language::Less => "Less",
+        Language::Sass => "Sass",
+        Language::Sh => "Bourne Again Shell (bash)",
+        Language::Ps1 => "PowerShell",
+        Language::Kt => "Kotlin",
+        Language::Rb => "Ruby",
+        Language::Swift => "Swift",
+        Language::Dart => "Dart",
+        Language::Ex => "Elixir",
+        Language::Armasm => "ARM Assembly",
+        Language::Asm | Language::Z80 => "x86_64 Assembly",
+        Language::Clj => "Clojure",
+        Language::Cmake => "CMake",
+        Language::Coffee => "CoffeeScript",
+        Language::Lisp | Language::Scheme => "Lisp",
+        Language::Cr => "Crystal",
+        Language::D => "D",
+        Language::Diff => "Diff",
+        Language::Dockerfile => "Dockerfile",
+        Language::Elm => "Elm",
+        Language::Erl => "Erlang",
+        Language::Fs => "F#",
+        Language::Fortran => "Fortran (Modern)",
+        Language::Glsl => "GLSL",
+        Language::Groovy => "Groovy",
+        Language::Hs => "Haskell",
+        Language::Http => "HTTP Request and Response",
+        Language::Ini | Language::Asterisk => "INI",
+        Language::Jinja => "Jinja2",
+        Language::Jl => "Julia",
+        Language::Tex => "LaTeX",
+        Language::Ls => "LiveScript",
+        Language::Lua => "Lua",
+        Language::Matlab => "MATLAB",
+        Language::Mbox => "Email",
+        Language::Nginx => "nginx",
+        Language::Nix => "Nix",
+        Language::Nsis => "NSIS",
+        Language::Objc => "Objective-C",
+        Language::Objcpp => "Objective-C++",
+        Language::Ml => "OCaml",
+        Language::Pascal => "Pascal",
+        Language::Perl => "Perl",
+        Language::Prisma => "Prisma",
+        Language::Properties => "Java Properties",
+        Language::Proto => "Protocol Buffer",
+        Language::Puppet => "Puppet",
+        Language::R => "R",
+        Language::Scala => "Scala",
+        Language::Sol => "Solidity",
+        Language::Sml => "SML",
+        Language::Styl => "Stylus",
+        Language::Tcl => "Tcl",
+        Language::Tf => "Terraform",
+        Language::Textile => "Textile",
+        Language::Troff => "Groff/troff",
+        Language::Verilog => "Verilog",
+        Language::Vhdl => "VHDL",
+        Language::Zig => "Zig",
+        Language::Md => "Markdown",
+        Language::Apl
+        | Language::Asn1
+        | Language::Bf
+        | Language::Ceylon
+        | Language::Cobol
+        | Language::Cypher
+        | Language::Dylan
+        | Language::Ebnf
+        | Language::Ecl
+        | Language::Eiffel
+        | Language::Factor
+        | Language::Fcl
+        | Language::Forth
+        | Language::Gherkin
+        | Language::Haxe
+        | Language::Hxml
+        | Language::Idl
+        | Language::Liquid
+        | Language::Mathematica
+        | Language::Mirc
+        | Language::Modelica
+        | Language::Mscgen
+        | Language::Mumps
+        | Language::Ntriples
+        | Language::Oz
+        | Language::Pegjs
+        | Language::Asc
+        | Language::Pig
+        | Language::Pug
+        | Language::Q
+        | Language::Rpmspec
+        | Language::Sas
+        | Language::Sieve
+        | Language::Smalltalk
+        | Language::Solr
+        | Language::Sparql
+        | Language::Spreadsheet
+        | Language::Squirrel
+        | Language::Tiddlywiki
+        | Language::Tiki
+        | Language::Ttcn
+        | Language::Ttcncfg
+        | Language::Turtle
+        | Language::Vbs
+        | Language::Velocity
+        | Language::Vb
+        | Language::Webidl
+        | Language::Wat
+        | Language::Xquery
+        | Language::Yacas
+        | Language::Txt => return None,
+    };
+    Some(name)
+}
+
+/// What Ctrl+/ puts before a line, as the language's grammar declared it; `None` where it has
+/// no line comment (HTML, CSS, JSON, Markdown…).
+#[expect(clippy::too_many_lines, reason = "one arm a family of languages")]
+pub fn line_comment(language: Language) -> Option<&'static str> {
+    use Language as L;
+    let token = match language {
+        L::Js
+        | L::Jsx
+        | L::Ts
+        | L::Tsx
+        | L::Rs
+        | L::Go
+        | L::Java
+        | L::Cs
+        | L::Php
+        | L::C
+        | L::Cpp
+        | L::Swift
+        | L::Kt
+        | L::Dart
+        | L::Scala
+        | L::Groovy
+        | L::Graphql
+        | L::Scss
+        | L::Less
+        | L::Sass
+        | L::Styl
+        | L::D
+        | L::Glsl
+        | L::Proto
+        | L::Prisma
+        | L::Sol
+        | L::Zig
+        | L::Objc
+        | L::Objcpp
+        | L::Nesc
+        | L::Haxe
+        | L::Ceylon
+        | L::Squirrel
+        | L::Webidl
+        | L::Idl
+        | L::Verilog
+        | L::Fs
+        | L::Gss
+        | L::Pegjs => "//",
+        L::Py
+        | L::Cython
+        | L::Rb
+        | L::Sh
+        | L::Ps1
+        | L::Yml
+        | L::Toml
+        | L::R
+        | L::Perl
+        | L::Ex
+        | L::Nginx
+        | L::Dockerfile
+        | L::Cmake
+        | L::Tf
+        | L::Nix
+        | L::Puppet
+        | L::Jl
+        | L::Cr
+        | L::Tcl
+        | L::Properties
+        | L::Coffee
+        | L::Http
+        | L::Gherkin
+        | L::Rpmspec
+        | L::Q
+        | L::Sieve
+        | L::Turtle
+        | L::Sparql
+        | L::Ntriples
+        | L::Nsis
+        | L::Mbox
+        | L::Ls => "#",
+        L::Sql | L::Lua | L::Hs | L::Elm | L::Vhdl | L::Eiffel | L::Cypher => "--",
+        L::Tex | L::Matlab | L::Erl | L::Mumps => "%",
+        L::Lisp | L::Clj | L::Scheme | L::Ini | L::Asterisk | L::Asm | L::Armasm | L::Z80 => ";",
+        L::Fortran => "!",
+        L::Vb | L::Vbs => "'",
+        L::Ml
+        | L::Sml
+        | L::Pascal
+        | L::Oz
+        | L::Factor
+        | L::Forth
+        | L::Apl
+        | L::Asn1
+        | L::Bf
+        | L::Cobol
+        | L::Dylan
+        | L::Ebnf
+        | L::Ecl
+        | L::Fcl
+        | L::Hxml
+        | L::Liquid
+        | L::Mathematica
+        | L::Mirc
+        | L::Modelica
+        | L::Mscgen
+        | L::Asc
+        | L::Pig
+        | L::Pug
+        | L::Sas
+        | L::Smalltalk
+        | L::Solr
+        | L::Spreadsheet
+        | L::Tiddlywiki
+        | L::Tiki
+        | L::Troff
+        | L::Ttcn
+        | L::Ttcncfg
+        | L::Velocity
+        | L::Wat
+        | L::Xquery
+        | L::Yacas
+        | L::Diff
+        | L::Dtd
+        | L::Json
+        | L::Jsonld
+        | L::Xml
+        | L::Html
+        | L::Vue
+        | L::Angular
+        | L::Css
+        | L::Jinja
+        | L::Textile
+        | L::Md
+        | L::Txt => return None,
+    };
+    Some(token)
+}
+
+/// The grammar Prettier reads the language with (the reference's `PRETTIER_PARSERS`); `None`
+/// where it does not format it.
+pub fn formatter(language: Language) -> Option<text::format::Parser> {
+    use Language as L;
+    use text::format::Parser;
+    match language {
+        L::Js | L::Jsx => Some(Parser::Babel),
+        L::Ts | L::Tsx => Some(Parser::Typescript),
+        L::Json | L::Jsonld => Some(Parser::Json),
+        L::Css => Some(Parser::Css),
+        L::Scss => Some(Parser::Scss),
+        L::Less => Some(Parser::Less),
+        L::Html => Some(Parser::Html),
+        L::Vue => Some(Parser::Vue),
+        L::Angular => Some(Parser::Angular),
+        L::Md => Some(Parser::Markdown),
+        L::Yml => Some(Parser::Yaml),
+        L::Graphql => Some(Parser::Graphql),
+        _ => None,
+    }
+}
+
+/// One level of indentation by the language's habit (the reference's `indentUnit` with the
+/// setting at « language »): four spaces by their style guides, Go's tab, two spaces otherwise.
+pub fn indent_unit(language: Language) -> &'static str {
+    use Language as L;
+    match language {
+        L::Go => "\t",
+        L::Py
+        | L::Rs
+        | L::Java
+        | L::Cs
+        | L::Php
+        | L::C
+        | L::Cpp
+        | L::Objc
+        | L::Objcpp
+        | L::Cython
+        | L::Perl
+        | L::Erl
+        | L::Elm
+        | L::D
+        | L::Vb
+        | L::Sol
+        | L::Zig
+        | L::Groovy => "    ",
+        _ => "  ",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -199,5 +526,28 @@ mod tests {
         assert_eq!(name(Language::Ts), "TypeScript");
         assert_eq!(hue(Language::Ts), Hue::Blue);
         assert_eq!(hue(Language::Js), Hue::Amber);
+    }
+
+    #[test]
+    fn every_grammar_named_exists_and_the_common_languages_have_one() {
+        text::highlight::warm();
+        for language in Language::ALL {
+            if let Some(name) = syntax(language) {
+                assert!(text::highlight::has_syntax(name), "{language:?}: {name}");
+            }
+        }
+        let common = [
+            Language::Json,
+            Language::Ts,
+            Language::Py,
+            Language::Rs,
+            Language::Sql,
+        ];
+        assert!(
+            common
+                .into_iter()
+                .all(|language| syntax(language).is_some())
+        );
+        assert_eq!(syntax(Language::Txt), None);
     }
 }

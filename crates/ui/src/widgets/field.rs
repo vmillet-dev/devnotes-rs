@@ -104,6 +104,7 @@ pub struct SearchField<'a> {
     hint: &'a str,
     key: Option<&'a str>,
     matched: Option<&'a str>,
+    matched_id: &'a str,
     clear: Option<(&'a str, &'a str)>,
     width: Option<f32>,
 }
@@ -124,6 +125,7 @@ impl<'a> SearchField<'a> {
             hint: "",
             key: None,
             matched: None,
+            matched_id: "search-matched",
             clear: None,
             width: None,
         }
@@ -146,6 +148,13 @@ impl<'a> SearchField<'a> {
     #[must_use]
     pub fn matched(mut self, matched: Option<&'a str>) -> Self {
         self.matched = matched;
+        self
+    }
+
+    /// The count's own address, where two searches are on screen at once.
+    #[must_use]
+    pub fn matched_id(mut self, author_id: &'a str) -> Self {
+        self.matched_id = author_id;
         self
     }
 
@@ -212,7 +221,7 @@ impl<'a> SearchField<'a> {
                         );
                         let (rect, count) = ui.allocate_exact_size(galley.size(), Sense::hover());
                         count.widget_info(|| WidgetInfo::labeled(Role::Label, true, matched));
-                        address(ui, &count, "search-matched");
+                        address(ui, &count, self.matched_id);
                         ui.painter().galley(rect.min, galley, p.text_2);
                     } else if let Some(key) = self.key {
                         super::Kbd(key).show(ui);

@@ -12,6 +12,7 @@ publish = false
 [dependencies]
 egui = { version = "0.37.0", default-features = false }
 egui_inspection = "0.37.0"
+platform = { path = "../platform" }
 tempfile = "3.27.0"
 
 [lints]

@@ -11,7 +11,7 @@ use crate::error::ValidationError;
 /// The two pictures the front takes of a drawing when it saves it, as PNG data URIs: a small
 /// one for its card, a large one for a Note that embeds it. Both empty: the drawing was emptied,
 /// and has no picture any more.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawingPictures {
     pub thumbnail: String,
@@ -78,7 +78,7 @@ fn png(field: &'static str, uri: &str) -> Result<Vec<u8>, ValidationError> {
 }
 
 /// What an `<img>` is given back.
-pub(crate) fn uri_of(png: &[u8]) -> String {
+pub fn uri_of(png: &[u8]) -> String {
     format!("{PNG}{}", BASE64.encode(png))
 }
 

@@ -73,6 +73,11 @@ impl<P: PartialEq + Clone, T> QueryCell<P, T> {
         self.value.as_ref()
     }
 
+    /// What the last answer adopted was asked with.
+    pub fn answered(&self) -> Option<&P> {
+        self.answered.as_ref()
+    }
+
     /// The last answer was an error; the value before it is still there.
     pub fn error(&self) -> Option<&AppError> {
         self.error.as_ref()

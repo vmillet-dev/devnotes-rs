@@ -26,9 +26,13 @@ pub enum Icon {
     CornerDownLeft,
     /// Backspace's ⌫.
     Delete,
+    ChevronDown,
     ChevronRight,
     X,
     Plus,
+    Minus,
+    /// The Format button's three lines of text.
+    Format,
     /// A row's ⋯: what else it can be told.
     Ellipsis,
     Pin,
@@ -70,6 +74,18 @@ pub enum Icon {
     Zap,
     /// The error banner's « ⚠ ».
     TriangleAlert,
+    Calendar,
+    /// The editor's full screen, and the way out of it.
+    Maximize,
+    Minimize,
+    MousePointer,
+    Square,
+    Circle,
+    Diamond,
+    Pencil,
+    Undo,
+    Redo,
+    Play,
 }
 
 impl Icon {
@@ -100,9 +116,12 @@ impl Icon {
                 "m12 9 6 6",
                 "m18 9-6 6",
             ],
+            Self::ChevronDown => &["m6 9 6 6 6-6"],
             Self::ChevronRight => &["m9 18 6-6-6-6"],
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
             Self::Plus => &["M5 12h14", "M12 5v14"],
+            Self::Minus => &["M5 12h14"],
+            Self::Format => &["M4 6h16", "M4 12h10", "M4 18h13"],
             Self::Ellipsis => &["M12 12h.01", "M19 12h.01", "M5 12h.01"],
             Self::Pin => &[
                 "M12 17v5",
@@ -245,6 +264,35 @@ impl Icon {
             Self::Zap => &[
                 "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z",
             ],
+            Self::Calendar => &[
+                "M8 2v4",
+                "M16 2v4",
+                "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+                "M3 10h18",
+            ],
+            Self::MousePointer => &[
+                "M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z",
+            ],
+            Self::Square => {
+                &["M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"]
+            }
+            Self::Circle => &["M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z"],
+            Self::Diamond => &["M12 2.7 21.3 12 12 21.3 2.7 12z"],
+            Self::Pencil => &[
+                "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z",
+                "m15 5 4 4",
+            ],
+            Self::Undo => &[
+                "M9 14 4 9l5-5",
+                "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11",
+            ],
+            Self::Redo => &[
+                "m15 14 5-5-5-5",
+                "M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13",
+            ],
+            Self::Play => &["M6 3 20 12 6 21z"],
+            Self::Maximize => &["M15 3h6v6", "M9 21H3v-6", "M21 3l-7 7", "M3 21l7-7"],
+            Self::Minimize => &["M4 14h6v6", "M20 10h-6V4", "M14 10l7-7", "M3 21l7-7"],
             Self::Hourglass => &[
                 "M5 22h14",
                 "M5 2h14",
@@ -332,7 +380,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 51] = [
+    const ALL: [Icon; 65] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
@@ -344,9 +392,12 @@ mod tests {
         Icon::ArrowLeft,
         Icon::CornerDownLeft,
         Icon::Delete,
+        Icon::ChevronDown,
         Icon::ChevronRight,
         Icon::X,
         Icon::Plus,
+        Icon::Minus,
+        Icon::Format,
         Icon::Ellipsis,
         Icon::Pin,
         Icon::Star,
@@ -384,6 +435,17 @@ mod tests {
         Icon::Hourglass,
         Icon::Zap,
         Icon::TriangleAlert,
+        Icon::Calendar,
+        Icon::Maximize,
+        Icon::Minimize,
+        Icon::MousePointer,
+        Icon::Square,
+        Icon::Circle,
+        Icon::Diamond,
+        Icon::Pencil,
+        Icon::Undo,
+        Icon::Redo,
+        Icon::Play,
     ];
 
     fn coverage(image: &ColorImage) -> usize {

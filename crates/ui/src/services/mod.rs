@@ -1,6 +1,7 @@
 //! What has no place on screen: preferences and settings, the clock, the notifiers.
 
 pub mod errors;
+pub mod highlight;
 pub mod preferences;
 pub mod samples;
 pub mod settings;
