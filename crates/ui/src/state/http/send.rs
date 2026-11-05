@@ -59,7 +59,8 @@ impl Sends {
     }
 
     /// Answers arrived this frame, under whatever tab now holds their send.
-    pub fn update(&mut self) {
+    /// `true` when a send ended.
+    pub fn update(&mut self) -> bool {
         let mut settled = Vec::new();
         self.in_flight.retain_mut(|(id, pending)| {
             let Some(answer) = pending.poll() else {
@@ -76,11 +77,13 @@ impl Sends {
             settled.push((id.clone(), phase));
             false
         });
+        let ended = !settled.is_empty();
         for (id, phase) in settled {
             if let Some(sent) = self.by_tab.values_mut().find(|sent| sent.id == id) {
                 sent.phase = phase;
             }
         }
+        ended
     }
 
     /// The tab's draft as it is, from where it sits; a send already under way is let be.
@@ -89,6 +92,7 @@ impl Sends {
         backend: &Backend,
         tab: &Tab,
         (now, environment_id): (f64, Option<String>),
+        confirmed: bool,
     ) {
         if self.is_sending(&tab.key) {
             return;
@@ -105,7 +109,7 @@ impl Sends {
             name: tab.draft.name.clone(),
             request_id: tab.request_id.clone(),
             environment_id,
-            confirmed: false,
+            confirmed,
         };
         let pending = api::http::send(backend, request);
         let previous = self.by_tab.insert(

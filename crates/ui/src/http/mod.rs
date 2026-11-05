@@ -3,6 +3,7 @@
 
 mod close;
 mod environment_picker;
+mod environments;
 mod extract;
 mod rail;
 mod request;
@@ -16,6 +17,7 @@ use i18n::keys;
 
 use crate::action::{Action as Asked, Actions, AppAction};
 use crate::state::AppState;
+use crate::state::http::Page;
 use crate::state::http::tree::Badge;
 use crate::theme::palette;
 use crate::widgets::{self, address};
@@ -75,6 +77,15 @@ pub enum Action {
     },
     /// `None` sends with the globals alone.
     ChooseEnvironment(Option<String>),
+    Environments(crate::state::http::environments::Asked),
+    /// A name nothing sets: a row for it, on the page.
+    Define(String),
+    /// Sent all the same, under a protected environment.
+    SendAnyway(String),
+    StopAsking,
+    ShowPage(crate::state::http::Page),
+    /// From the rail's foot: the page shown is put away by the same button.
+    TogglePage(crate::state::http::Page),
     /// The tab's draft, sent; `None` for the tab in front (`Ctrl+Enter`).
     Send(Option<String>),
     CancelSend(String),
@@ -98,6 +109,7 @@ pub struct View {
     rail_width: widgets::RailWidth,
     rail: rail::RailView,
     editor: request::EditorView,
+    environments: environments::PageView,
     response: response::ResponseView,
     /// How tall the request's content was last drawn: what an automatic share follows.
     editor_height: f32,
@@ -121,6 +133,22 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
                 rail::show(ui, state, &mut view.rail, actions);
             });
     }
+    match state.http.page() {
+        Page::Environments => {
+            let mut page = ui.new_child(UiBuilder::new().max_rect(rest));
+            environments::show(&mut page, rest, state, &mut view.environments, actions);
+        }
+        Page::Requests => requests(ui, rest, state, view, actions),
+    }
+    close::show(ui, state, actions);
+    extract::show(ui, state, view.response.extracting(), actions);
+    if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
+        actions.push(Asked::App(AppAction::SetRailWidth(width)));
+    }
+}
+
+/// The open requests under their tabs.
+fn requests(ui: &mut Ui, rest: Rect, state: &AppState, view: &mut View, actions: &mut Actions) {
     let mut strip = ui.new_child(UiBuilder::new().max_rect(rest));
     tabs::show(&mut strip, state, actions);
     let below = Rect::from_min_max(rest.min + Vec2::new(0.0, tabs::HEIGHT), rest.max);
@@ -128,11 +156,6 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     match state.http.tabs().active() {
         Some(tab) => split(&mut workspace, below, state, (tab, view), actions),
         None => empty_workspace(&mut workspace, below, state.language, actions),
-    }
-    close::show(ui, state, actions);
-    extract::show(ui, state, view.response.extracting(), actions);
-    if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
-        actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }
 }
 
@@ -256,6 +279,8 @@ fn empty_workspace(ui: &mut Ui, region: Rect, language: i18n::Language, actions:
     }
 }
 
+#[cfg(test)]
+mod environments_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 

@@ -5006,7 +5006,21 @@ reads and removes them, under « Scripts », where the scripts join them. `http:
 is at the end of the tabs' strip: the active environment is the library's
 (`devnotes.notes.http.environment`), one deleted since it was chosen is none, and a send and the
 variables' chips both resolve from it (`state::http::environments`). ⚠️ JetBrains Mono and Inter
-have no `→`: egui panics on a missing glyph in a test, so an arrow is an `Icon`.
+have no `→` and no fullwidth `＋`: egui panics on a missing glyph in a test, so an arrow is an
+`Icon` and a plus is a plain `+`.
+
+`state::http::Page` is what the workspace shows: the open requests, or a page from the rail's
+foot, one at a time; a request opened from the rail leaves it. `http::environments` is the page
+of the globals and the environments. Its table keeps the rows as typed and writes them once the
+keys rest (`SAVE_AFTER`), on another set chosen and on leaving the page, then drops them once
+what is read back holds them; typing during a write keeps what was typed. Every write of this
+page bumps a revision of its own, so that a key typed does not read the tree again; a send that
+ends bumps the area's, since an extraction or a script may have written a variable. A secret
+shown in one set is masked in the next. Under a protected environment, what could change
+something waits for a yes under the request line (`environments::asks_before_sending`), and the
+yes goes to the core with the send (`confirmed`), a script then being free to change the
+environment. A chip nothing sets is a click from a row of its own on the page, in the active
+environment or the globals.
 
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send

@@ -171,7 +171,10 @@ pub(crate) fn show(
                     line(ui, state, tab, actions);
                     let used = state.http.used();
                     if !used.is_empty() {
-                        chips(ui, used, language);
+                        chips(ui, state, used, actions);
+                    }
+                    if state.http.environments().asking() == Some(tab.key.as_str()) {
+                        protected(ui, state, tab, actions);
                     }
                     section_tabs(ui, state, tab, view);
                     let section = view.section(tab.draft.kind);
@@ -322,8 +325,9 @@ fn kind_badge(ui: &mut Ui, kind: RequestKind, language: i18n::Language) {
 
 /// Each `{{name}}` the request holds, in the colour of where it resolves from; the tooltip says
 /// from where, or that nothing sets it.
-fn chips(ui: &mut Ui, used: &[UsedVariable], language: i18n::Language) {
+fn chips(ui: &mut Ui, state: &AppState, used: &[UsedVariable], actions: &mut Actions) {
     let p = palette(ui.ctx());
+    let language = state.language;
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = Vec2::splat(6.0);
         for known in used {
@@ -335,7 +339,7 @@ fn chips(ui: &mut Ui, used: &[UsedVariable], language: i18n::Language) {
             let response = interact(
                 ui,
                 size,
-                Sense::hover(),
+                Sense::click(),
                 "http-used-variable",
                 || WidgetInfo::labeled(Role::Label, true, &written),
                 CornerRadius::same(6),
@@ -361,14 +365,94 @@ fn chips(ui: &mut Ui, used: &[UsedVariable], language: i18n::Language) {
                     format!("{} · {from}", known.name)
                 }
                 None => format!(
-                    "{} · {}",
+                    "{} · {} · {}",
                     known.name,
-                    i18n::translate(language, keys::http::variables::used::NONE, &[])
+                    i18n::translate(language, keys::http::variables::used::NONE, &[]),
+                    define_words(state),
                 ),
             };
-            widgets::tooltip(response, &tip);
+            let response = widgets::tooltip(response, &tip);
+            if response.clicked() && known.resolved.is_none() {
+                actions.push(Asked::Http(Action::Define(known.name.clone())));
+            }
         }
     });
+}
+
+/// « Set in Staging », or in the globals with no environment.
+fn define_words(state: &AppState) -> String {
+    match state.http.environments().active() {
+        Some(active) => i18n::translate(
+            state.language,
+            keys::http::variables::used::DEFINE,
+            &[("name", active.name.as_str().into())],
+        ),
+        None => i18n::translate(
+            state.language,
+            keys::http::variables::used::DEFINE_GLOBALS,
+            &[],
+        ),
+    }
+}
+
+/// Under a protected environment, what could change something waits for this yes.
+fn protected(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
+    let p = palette(ui.ctx());
+    let language = state.language;
+    let tr = |key| i18n::translate(language, key, &[]);
+    let name = state
+        .http
+        .environments()
+        .active()
+        .map_or("", |active| active.name.as_str());
+    let (question, go) = if tab.draft.kind == RequestKind::Websocket {
+        (
+            i18n::translate(
+                language,
+                keys::http::environments::ASK_CONNECT,
+                &[("name", name.into())],
+            ),
+            tr(keys::http::environments::CONNECT_ANYWAY),
+        )
+    } else {
+        (
+            i18n::translate(
+                language,
+                keys::http::environments::ASK_SEND,
+                &[
+                    ("name", name.into()),
+                    ("method", tab.draft.method.as_str().into()),
+                ],
+            ),
+            tr(keys::http::environments::SEND_ANYWAY),
+        )
+    };
+    egui::Frame::new()
+        .fill(p.red.gamma_multiply(0.12))
+        .stroke(Stroke::new(1.0, p.red.gamma_multiply(0.5)))
+        .corner_radius(CornerRadius::same(8))
+        .inner_margin(Margin::symmetric(12, 8))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 10.0;
+                let words = egui::RichText::new(question).size(12.5).color(p.text_0);
+                let said = ui.add(egui::Label::new(words));
+                widgets::address(ui, &said, "http-protected-confirm");
+                if Button::new(&go, "http-protected-send")
+                    .kind(widgets::Kind::Destructive)
+                    .show(ui)
+                    .clicked()
+                {
+                    actions.push(Asked::Http(Action::SendAnyway(tab.key.clone())));
+                }
+                if Button::new(&tr(keys::http::rail::CANCEL), "http-protected-cancel")
+                    .show(ui)
+                    .clicked()
+                {
+                    actions.push(Asked::Http(Action::StopAsking));
+                }
+            });
+        });
 }
 
 fn section_tabs(ui: &mut Ui, state: &AppState, tab: &Tab, view: &mut EditorView) {

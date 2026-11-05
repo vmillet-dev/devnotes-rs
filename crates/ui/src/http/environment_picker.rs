@@ -5,13 +5,14 @@ use egui::{
     Color32, CornerRadius, FontFamily, Popup, PopupCloseBehavior, RectAlign, Response, Role, Sense,
     Stroke, Ui, Vec2, WidgetInfo, pos2,
 };
-use engine::http::environments::{Environment, Variable};
+use engine::http::environments::{Environment, variable_counts};
 use i18n::keys;
 
 use super::Action;
 use crate::action::{Action as Asked, Actions};
 use crate::notes::ui::folder_hue;
 use crate::state::AppState;
+use crate::state::http::Page;
 use crate::theme::palette;
 use crate::widgets::{self, interact};
 
@@ -133,6 +134,16 @@ fn panel(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             choose(actions, Some(environment.id.clone()));
         }
     }
+    ui.separator();
+    let manage = Entry {
+        name: &tr(keys::http::environments::MANAGE),
+        meta: "",
+        hue: None,
+        on: false,
+    };
+    if entry_of(ui, &manage, "http-environment-manage").clicked() {
+        actions.push(Asked::Http(Action::ShowPage(Page::Environments)));
+    }
 }
 
 fn choose(actions: &mut Actions, id: Option<String>) {
@@ -144,12 +155,11 @@ fn meta(environment: &Environment, language: i18n::Language) -> String {
     if environment.protected {
         return i18n::translate(language, keys::http::environments::PROTECTED_BADGE, &[]);
     }
-    let named = |variable: &&Variable| !variable.name.is_empty();
-    let count = environment.variables.iter().filter(named).count();
+    let count = variable_counts(&environment.variables).count;
     i18n::translate(
         language,
         keys::http::environments::COUNT,
-        &[("count", u32::try_from(count).unwrap_or(u32::MAX).into())],
+        &[("count", count.into())],
     )
 }
 
@@ -162,12 +172,16 @@ struct Entry<'a> {
 }
 
 fn entry(ui: &mut Ui, shown: &Entry<'_>) -> Response {
+    entry_of(ui, shown, "http-environment-option")
+}
+
+fn entry_of(ui: &mut Ui, shown: &Entry<'_>, author_id: &str) -> Response {
     let p = palette(ui.ctx());
     let response = interact(
         ui,
         Vec2::new(PANEL, ROW),
         Sense::click(),
-        "http-environment-option",
+        author_id,
         || WidgetInfo::selected(Role::MenuItem, true, shown.on, shown.name),
         CornerRadius::same(6),
     );
@@ -182,7 +196,9 @@ fn entry(ui: &mut Ui, shown: &Entry<'_>) -> Response {
             egui::Rect::from_center_size(pos2(rect.left() + 14.0, middle), Vec2::splat(12.0));
         crate::theme::icons::paint(ui, tick, crate::theme::icons::Icon::Check, p.amber_text);
     }
-    dot(ui, pos2(rect.left() + 32.0, middle), shown.hue);
+    if author_id != "http-environment-manage" {
+        dot(ui, pos2(rect.left() + 32.0, middle), shown.hue);
+    }
     let name = widgets::text(
         ui,
         shown.name,

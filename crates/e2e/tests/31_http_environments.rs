@@ -1,5 +1,6 @@
 //! The environment a request is sent with, and what a request sets for itself: the picker with no
-//! environment yet, then an auth and a setting saved and read back after a relaunch.
+//! environment yet, an auth and a setting saved and read back after a relaunch, then an
+//! environment made, its secret kept, and the question it asks once protected.
 
 use e2e::{App, step};
 use egui::accesskit::Node;
@@ -68,6 +69,63 @@ fn own_parts(app: &mut App) {
     );
 }
 
+fn an_environment(app: &mut App) {
+    step(
+        "an environment made, a secret typed, used from the picker",
+        || {
+            app.click("http-environment-picker");
+            app.click("http-environment-manage");
+            app.wait_for("http-environments");
+            app.click("http-environment-create-open");
+            app.fill("http-environment-create-input", "Production");
+            app.click("http-environment-create-submit");
+            app.wait_for("http-environment-name");
+            app.click_nth("http-variable-name", 0);
+            app.type_text("apiKey");
+            app.click_nth("http-variable-value", 0);
+            app.type_text("s3cret");
+            app.click_nth("http-variable-kind", 0);
+            app.click("http-variable-kind-2");
+            app.eventually("the value is masked", |tree| {
+                tree.has("http-variable-reveal")
+                    && tree
+                        .find("http-variable-value")
+                        .and_then(Node::value)
+                        .is_some_and(|value| value != "s3cret")
+            });
+            app.click("http-environment-use");
+            app.eventually("it is the active one", |tree| {
+                !tree.has("http-environment-use")
+            });
+        },
+    );
+}
+
+fn protected(app: &mut App) {
+    step("once protected, a POST asks before it leaves", || {
+        app.click("http-environment-protected");
+        app.wait_for("http-environment-protected-note");
+        app.click("http-environments-open");
+        app.wait_for("http-url");
+        app.click("http-method");
+        app.click("http-method-1");
+        let port = e2e::serve();
+        app.click("http-url");
+        app.press(Key::A, Modifiers::COMMAND);
+        app.type_text(&format!("http://127.0.0.1:{port}/json"));
+        app.click("http-send");
+        app.wait_for("http-protected-confirm");
+        assert!(!app.has("http-response-status"), "nothing left yet");
+        app.click("http-protected-cancel");
+        app.eventually("the question goes", |tree| {
+            !tree.has("http-protected-confirm")
+        });
+        app.click("http-send");
+        app.click("http-protected-send");
+        app.wait_for("http-response-status");
+    });
+}
+
 fn read_back(app: App) -> App {
     let mut app = app.relaunch();
     step("unlocked again, the secret is masked, then shown", || {
@@ -97,6 +155,8 @@ fn http_environments() {
     a_request(&mut app);
     picker(&mut app);
     own_parts(&mut app);
-    let app = read_back(app);
+    let mut app = read_back(app);
+    an_environment(&mut app);
+    protected(&mut app);
     app.quit();
 }

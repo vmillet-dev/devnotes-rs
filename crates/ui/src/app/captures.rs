@@ -277,6 +277,22 @@ fn the_http_request_editor() {
 }
 
 #[test]
+fn the_http_environments() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    click(&mut harness, "http-environments-open");
+    settle(&mut harness);
+    capture(&mut harness, "http-environments-globals");
+    click(&mut harness, "http-environment-create-open");
+    type_into(&mut harness, "http-environment-create-input", "Staging");
+    click(&mut harness, "http-environment-create-submit");
+    settle(&mut harness);
+    click(&mut harness, "http-environment-protected");
+    settle(&mut harness);
+    capture(&mut harness, "http-environments-set");
+}
+
+#[test]
 fn the_http_response() {
     let port = crate::testing::serve();
     let profile = tempfile::tempdir().unwrap();
