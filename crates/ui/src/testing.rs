@@ -178,6 +178,17 @@ pub(crate) fn serve() -> u16 {
                 }
                 let head = String::from_utf8_lossy(&head);
                 let path = head.split_whitespace().nth(1).unwrap_or("/").to_owned();
+                // A body sent is read whole: closing over it unread resets the connection.
+                let length = head
+                    .lines()
+                    .find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        name.eq_ignore_ascii_case("content-length")
+                            .then(|| value.trim().parse::<usize>().ok())?
+                    })
+                    .unwrap_or(0);
+                let mut sent = vec![0_u8; length];
+                let _ = stream.read_exact(&mut sent);
                 if path.starts_with("/slow") {
                     SLOW_ARRIVED.lock().unwrap().push(port);
                     std::thread::sleep(std::time::Duration::from_secs(5));
@@ -190,7 +201,10 @@ pub(crate) fn serve() -> u16 {
                         })
                         .collect();
                     ("200 OK", format!("[{}]", rows.join(",")))
-                } else if path.starts_with("/json") || path.starts_with("/slow") {
+                } else if path.starts_with("/json")
+                    || path.starts_with("/slow")
+                    || path.starts_with("/image")
+                {
                     (
                         "200 OK",
                         r#"{"name":"Ada","languages":["fr","en"],"admin":true}"#.to_owned(),
@@ -198,17 +212,38 @@ pub(crate) fn serve() -> u16 {
                 } else {
                     ("404 Not Found", "missing".to_owned())
                 };
-                let answer = format!(
-                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\n\
+                if path.starts_with("/redirect") {
+                    let answer = "HTTP/1.1 302 Found\r\nLocation: /json\r\n\
+                                  Content-Length: 0\r\nConnection: close\r\n\r\n";
+                    let _ = stream.write_all(answer.as_bytes());
+                    return;
+                }
+                let (kind, body) = if path.starts_with("/image") {
+                    ("image/png", picture())
+                } else {
+                    ("application/json", body.into_bytes())
+                };
+                let head = format!(
+                    "HTTP/1.1 {status}\r\nContent-Type: {kind}\r\n\
                      Set-Cookie: session=abc; Path=/\r\nContent-Length: {}\r\n\
-                     Connection: close\r\n\r\n{body}",
+                     Connection: close\r\n\r\n",
                     body.len()
                 );
-                let _ = stream.write_all(answer.as_bytes());
+                let _ = stream.write_all(head.as_bytes());
+                let _ = stream.write_all(&body);
             });
         }
     });
     port
+}
+
+/// A 4 × 4 PNG: what `/image` answers.
+fn picture() -> Vec<u8> {
+    let mut bytes = std::io::Cursor::new(Vec::new());
+    image::RgbaImage::from_pixel(4, 4, image::Rgba([240, 160, 40, 255]))
+        .write_to(&mut bytes, image::ImageFormat::Png)
+        .expect("a PNG is written");
+    bytes.into_inner()
 }
 
 mod tests {

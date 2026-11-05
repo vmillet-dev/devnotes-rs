@@ -1065,3 +1065,84 @@ fn http_body_budget() {
         frames[100], frames[190], frames[198]
     );
 }
+
+#[test]
+fn the_headers_and_a_redirect_followed_are_read_from_the_answer() {
+    let mut harness = sending_to("/redirect");
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+    assert_eq!(
+        said_by(&harness, "http-response-status").as_deref(),
+        Some("200 OK")
+    );
+
+    click_id(&mut harness, "http-response-section-headers");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-headers"))
+            .is_some()
+    );
+    click_id(&mut harness, "http-response-section-timeline");
+    assert!(
+        said_by(&harness, "http-response-redirect").is_some_and(|line| line.starts_with("302"))
+    );
+}
+
+#[test]
+fn a_body_sent_is_shown_in_the_timeline() {
+    let mut harness = sending_to("/json");
+    let key = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active_key()
+        .unwrap()
+        .to_owned();
+    harness
+        .state_mut()
+        .state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| {
+            draft.method = HttpMethod::Post;
+            draft.document.body = engine::http::model::RequestBody::Json {
+                text: r#"{"login":"ada"}"#.to_owned(),
+            };
+        });
+    settle(&mut harness);
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+
+    click_id(&mut harness, "http-response-section-timeline");
+    assert!(said_by(&harness, "http-response-sent").is_some_and(|sent| sent.starts_with("POST")));
+    assert!(said_by(&harness, "http-response-sent-body").is_some_and(|body| body.contains("ada")));
+}
+
+#[test]
+fn an_image_answer_is_shown_as_its_picture() {
+    let mut harness = sending_to("/image");
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+
+    crate::notes::bench::until(&mut harness, "the picture is shown", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-image"))
+            .is_some()
+    });
+}
+
+#[test]
+fn a_wide_rail_names_what_its_head_makes() {
+    let mut harness = paiements();
+    harness.state_mut().state.settings.rail_width = 300;
+    settle(&mut harness);
+
+    click_id(&mut harness, "http-collection-create-open");
+
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-create-input"))
+            .is_some()
+    );
+}

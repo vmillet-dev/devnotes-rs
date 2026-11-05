@@ -431,7 +431,7 @@ fn timeline(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
             if !response.redirects.is_empty() {
                 heading(ui, keys::http::response::timeline::REDIRECTS);
                 for redirect in &response.redirects {
-                    let line = format!("{} → {}", redirect.status, redirect.url);
+                    let line = format!("{} -> {}", redirect.status, redirect.url);
                     let shown = ui.label(
                         egui::RichText::new(line)
                             .monospace()

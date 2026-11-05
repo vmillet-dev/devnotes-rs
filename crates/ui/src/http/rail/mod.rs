@@ -127,7 +127,7 @@ fn head(ui: &mut Ui, view: &mut RailView, actions: &mut Actions, language: i18n:
     let new = i18n::translate(language, keys::http::rail::NEW_COLLECTION, &[]);
     let worded = (ui.available_width() + 8.0 >= WORDED_FROM).then(|| {
         format!(
-            "＋ {}",
+            "+ {}",
             i18n::translate(language, keys::http::rail::COLLECTION, &[])
         )
     });
