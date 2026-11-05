@@ -17,9 +17,8 @@ pub(super) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
         return;
     };
     let key = tab.key.clone();
-    let saved = tab.request_id.is_some();
     let shown = super::modal(ui, "http-close-dialog", |ui| {
-        body(ui, &tab.draft.name, saved, state.language)
+        body(ui, &tab.draft.name, state.language)
     });
     let mut close = |action| actions.push(Asked::Http(action));
     match shown.inner {
@@ -37,7 +36,7 @@ enum Choice {
     Save,
 }
 
-fn body(ui: &mut Ui, name: &str, saved: bool, language: i18n::Language) -> Option<Choice> {
+fn body(ui: &mut Ui, name: &str, language: i18n::Language) -> Option<Choice> {
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
@@ -56,12 +55,10 @@ fn body(ui: &mut Ui, name: &str, saved: bool, language: i18n::Language) -> Optio
     let mut chosen = None;
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
-        // A request never saved needs a place first: its question comes with the save dialog.
-        if saved
-            && Button::new(&tr(keys::http::editor::SAVE), "http-close-save")
-                .kind(Kind::Filled)
-                .show(ui)
-                .clicked()
+        if Button::new(&tr(keys::http::editor::SAVE), "http-close-save")
+            .kind(Kind::Filled)
+            .show(ui)
+            .clicked()
         {
             chosen = Some(Choice::Save);
         }

@@ -50,6 +50,47 @@ pub struct RailRow {
     pub badge: Option<Badge>,
 }
 
+/// A place a request can be saved in: a collection's root or a folder, by its path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SavePlace {
+    pub collection_id: String,
+    pub folder_id: Option<String>,
+    pub path: String,
+}
+
+pub fn save_places(tree: &HttpTree) -> Vec<SavePlace> {
+    let mut places = Vec::new();
+    for node in &tree.collections {
+        let collection = &node.collection;
+        places.push(SavePlace {
+            collection_id: collection.id.clone(),
+            folder_id: None,
+            path: collection.name.clone(),
+        });
+        folders_into(
+            &mut places,
+            &node.children,
+            &collection.id,
+            &collection.name,
+        );
+    }
+    places
+}
+
+fn folders_into(places: &mut Vec<SavePlace>, nodes: &[HttpNode], collection_id: &str, path: &str) {
+    for node in nodes {
+        if let HttpNode::Folder { folder, children } = node {
+            let here = format!("{path} / {}", folder.name);
+            places.push(SavePlace {
+                collection_id: collection_id.to_owned(),
+                folder_id: Some(folder.id.clone()),
+                path: here.clone(),
+            });
+            folders_into(places, children, collection_id, &here);
+        }
+    }
+}
+
 /// The rows a reader sees: what a collapsed collection or folder holds is left out.
 /// `collapsed` holds what was closed, not what was opened: a fresh tree shows whole.
 pub fn rail_rows(tree: &HttpTree, collapsed: &BTreeSet<String>) -> Vec<RailRow> {

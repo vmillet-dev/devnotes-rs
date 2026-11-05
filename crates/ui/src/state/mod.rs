@@ -662,6 +662,14 @@ impl AppState {
             }
             Http::StopAsking => self.http.stop_asking(),
             Http::Cookies(asked) => self.http.ask_cookies(backend, asked),
+            Http::Code(asked) => self.http.ask_code(asked),
+            Http::CopyCode(text) => {
+                ctx.copy_text(text);
+                self.status
+                    .report(i18n::Message::new(i18n::keys::http::code::COPIED));
+            }
+            Http::SaveTo { key, target } => self.http.tabs_mut().save_to(backend, &key, target),
+            Http::CancelSaveTo => self.http.tabs_mut().cancel_save_to(),
             Http::OpenSettings(container) => self.http.open_settings(backend, container),
             Http::EditSettings(settings) => self.http.edit_settings(*settings),
             Http::SaveSettings => self.http.save_settings(backend),

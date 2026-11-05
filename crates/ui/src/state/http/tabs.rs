@@ -9,8 +9,8 @@
 use engine::http::environments::Variable;
 use engine::http::graphql::GraphqlDocument;
 use engine::http::model::{
-    Extraction, HttpMethod, HttpRequest, HttpRequestPatch, HttpTree, KeyValue, RequestAuth,
-    RequestBody, RequestDocument, RequestKind,
+    Extraction, HttpMethod, HttpRequest, HttpRequestDraft, HttpRequestPatch, HttpTree, KeyValue,
+    NewPlace, RequestAuth, RequestBody, RequestDocument, RequestKind,
 };
 use engine::http::query::QuerySide;
 use engine::http::transport::TransportSettings;
@@ -146,6 +146,32 @@ fn read_stored(preferences: &Preferences) -> (Vec<String>, Option<String>) {
 }
 
 /// A draft on its way to Rust: what was sent, and whether the tab closes once it is written.
+/// What a first save creates on its way.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ToCreate {
+    Nothing,
+    /// It takes the request at its root, whatever the ids say.
+    Collection(String),
+    /// Under the place the ids name.
+    Folder(String),
+}
+
+/// Where a request never saved goes the first time it is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SaveTarget {
+    pub collection_id: String,
+    pub folder_id: Option<String>,
+    pub name: String,
+    pub create: ToCreate,
+}
+
+/// A draft on its way to its first write.
+struct Creating {
+    key: String,
+    pending: Pending<HttpRequest>,
+    then_close: bool,
+}
+
 struct Saving {
     key: String,
     sent: Draft,
@@ -163,6 +189,9 @@ pub struct Tabs {
     restoring: Option<(Pending<Vec<HttpRequest>>, Option<String>)>,
     opening: Vec<Pending<HttpRequest>>,
     saving: Vec<Saving>,
+    creating: Vec<Creating>,
+    /// A draft asked to save, and whether the tab closes after: the question is open.
+    asking_place: Option<(String, bool)>,
     /// A tab asked to close with changes in it: the question is open.
     closing: Option<String>,
     /// By tab, for as long as it is open.
@@ -170,6 +199,8 @@ pub struct Tabs {
 }
 
 pub struct Answered {
+    /// Drafts now saved, by their old key and the new one: what is kept by key follows.
+    pub rekeyed: Vec<(String, Tab)>,
     /// The tree is read again: a save changes a name or a method on the rail.
     pub saved: bool,
     pub changed_preferences: bool,
@@ -183,6 +214,7 @@ impl Tabs {
     /// Once a frame while the area is shown.
     pub fn update(&mut self, backend: &Backend, errors: &mut ErrorNotifier) -> Answered {
         let mut answered = Answered {
+            rekeyed: Vec::new(),
             saved: false,
             changed_preferences: false,
         };
@@ -225,6 +257,7 @@ impl Tabs {
             self.active = Some(request.id.clone());
             answered.changed_preferences = true;
         }
+        self.adopt_created(errors, &mut answered);
         let mut saved = Vec::new();
         self.saving.retain_mut(|saving| {
             let Some(answer) = saving.pending.poll() else {
@@ -375,11 +408,91 @@ impl Tabs {
         self.write(backend, key, true);
     }
 
+    /// The draft the place is being asked for.
+    pub fn asking_place(&self) -> Option<&Tab> {
+        let (key, _) = self.asking_place.as_ref()?;
+        self.find(key)
+    }
+
+    pub fn cancel_save_to(&mut self) {
+        self.asking_place = None;
+    }
+
+    /// The answer to that question: one write for the request and what it lacks.
+    pub fn save_to(&mut self, backend: &Backend, key: &str, target: SaveTarget) {
+        let then_close = self
+            .asking_place
+            .take()
+            .is_some_and(|(_, then_close)| then_close);
+        let Some(tab) = self.find(key) else {
+            return;
+        };
+        let draft = HttpRequestDraft {
+            collection_id: target.collection_id,
+            folder_id: target.folder_id,
+            name: target.name,
+            kind: tab.draft.kind,
+            method: tab.draft.method,
+            document: tab.draft.document.clone(),
+        };
+        let create = match target.create {
+            ToCreate::Nothing => None,
+            ToCreate::Collection(name) => Some(NewPlace {
+                collection: Some(name),
+                folder: None,
+            }),
+            ToCreate::Folder(name) => Some(NewPlace {
+                collection: None,
+                folder: Some(name),
+            }),
+        };
+        self.creating.push(Creating {
+            key: key.to_owned(),
+            pending: api::http::create_request_in(backend, draft, create),
+            then_close,
+        });
+    }
+
+    /// A draft written for the first time takes the request's id for its key.
+    fn adopt_created(&mut self, errors: &mut ErrorNotifier, answered: &mut Answered) {
+        let mut created = Vec::new();
+        self.creating.retain_mut(|creating| {
+            let Some(answer) = creating.pending.poll() else {
+                return true;
+            };
+            match answer {
+                Ok(request) => created.push((creating.key.clone(), request, creating.then_close)),
+                Err(error) => errors.report(i18n::keys::http::FAILED, &error),
+            }
+            false
+        });
+        for (key, request, then_close) in created {
+            let new_key = request.id.clone();
+            let Some(tab) = self.find_mut(&key) else {
+                continue;
+            };
+            *tab = Tab::of(&request);
+            answered.rekeyed.push((key.clone(), tab.clone()));
+            if let Some(left) = self.bodies_left.remove(&key) {
+                self.bodies_left.insert(new_key.clone(), left);
+            }
+            if self.active.as_deref() == Some(key.as_str()) {
+                self.active = Some(new_key.clone());
+            }
+            if then_close {
+                self.close(&new_key);
+            }
+            answered.saved = true;
+            answered.changed_preferences = true;
+        }
+    }
+
     fn write(&mut self, backend: &Backend, key: &str, then_close: bool) {
         let Some(tab) = self.find(key) else {
             return;
         };
         let Some(id) = tab.request_id.clone() else {
+            self.asking_place = Some((key.to_owned(), then_close));
             return;
         };
         let draft = tab.draft.clone();

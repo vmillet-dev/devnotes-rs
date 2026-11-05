@@ -261,7 +261,13 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
         } else {
             0.0
         };
-        let room = ui.available_width() - Button::width(ui, &save) - send_width - 10.0;
+        let code = tr(keys::http::code::OPEN);
+        let code_width = if sends {
+            Button::width(ui, &code) + 10.0
+        } else {
+            0.0
+        };
+        let room = ui.available_width() - Button::width(ui, &save) - send_width - code_width - 10.0;
         let scopes = url::scopes(state.http.used());
         let (label, hint) = (
             tr(keys::http::editor::URL),
@@ -296,6 +302,14 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
                 actions.push(Asked::Http(Action::CancelSend(tab.key.clone())));
             } else if pressed.clicked() {
                 actions.push(Asked::Http(Action::Send(Some(tab.key.clone()))));
+            }
+        }
+        if sends {
+            let pressed = Button::new(&code, "http-code-open").show(ui);
+            let pressed = widgets::tooltip(pressed, &tr(keys::http::code::OPEN_LABEL));
+            if pressed.clicked() {
+                let asked = crate::state::http::code::Asked::Open(tab.key.clone());
+                actions.push(Asked::Http(Action::Code(asked)));
             }
         }
         if Button::new(&save, "http-save")

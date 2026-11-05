@@ -36,10 +36,7 @@ pub(super) enum View {
 pub(super) struct BodyView {
     /// The send and the view the lines were cut for.
     cut_for: Option<(String, bool)>,
-    text: Arc<str>,
-    lines: Vec<Range<usize>>,
-    rope: text::Rope,
-    colouring: Option<Colouring>,
+    shown: TextLines,
     view: View,
     explorer: Explorer,
     pub(super) extracting: Option<crate::http::extract::Extracting>,
@@ -49,10 +46,7 @@ impl Default for BodyView {
     fn default() -> Self {
         Self {
             cut_for: None,
-            text: Arc::from(""),
-            lines: Vec::new(),
-            rope: text::Rope::new(),
-            colouring: None,
+            shown: TextLines::default(),
             view: View::Pretty,
             explorer: Explorer::default(),
             extracting: None,
@@ -77,13 +71,40 @@ impl BodyView {
         } else {
             &response.body
         };
-        self.text = Arc::from(shown);
-        self.lines = lines_of(&self.text);
-        self.rope = text::Rope::from_str(&self.text);
-        self.colouring = pretty
+        let syntax = pretty
             .then(|| crate::notes::language::syntax(response.language))
-            .flatten()
-            .and_then(|syntax| Colouring::new(ui.ctx(), syntax));
+            .flatten();
+        self.shown = TextLines::new(ui, shown, syntax);
+    }
+}
+
+/// A text read by lines: cut once, drawn by rows, coloured window by window.
+pub(crate) struct TextLines {
+    text: Arc<str>,
+    lines: Vec<Range<usize>>,
+    rope: text::Rope,
+    colouring: Option<Colouring>,
+}
+
+impl Default for TextLines {
+    fn default() -> Self {
+        Self {
+            text: Arc::from(""),
+            lines: Vec::new(),
+            rope: text::Rope::new(),
+            colouring: None,
+        }
+    }
+}
+
+impl TextLines {
+    pub(crate) fn new(ui: &Ui, text: &str, syntax: Option<&str>) -> Self {
+        Self {
+            text: Arc::from(text),
+            lines: lines_of(text),
+            rope: text::Rope::from_str(text),
+            colouring: syntax.and_then(|syntax| Colouring::new(ui.ctx(), syntax)),
+        }
     }
 }
 
@@ -133,7 +154,15 @@ pub(super) fn show(
     views(ui, view, (json, response), language);
     view.follow(ui, (id, response));
     match view.view {
-        View::Pretty | View::Raw => lines(ui, view, view.view == View::Pretty),
+        View::Pretty | View::Raw => {
+            let pretty = view.view == View::Pretty;
+            let author_id = if pretty {
+                "http-response-pretty"
+            } else {
+                "http-response-body"
+            };
+            view.shown.show(ui, author_id, pretty);
+        }
         View::Graph | View::Tree => explore(ui, state, (id, response), view, actions),
     }
 }
@@ -174,75 +203,75 @@ fn views(
     });
 }
 
+/// A text's accessible name stops here: it is for a screen reader's first words and a test.
+const LABEL_UP_TO: usize = 2_000;
+
 /// The lines in view alone, a gutter of numbers, the colours as they arrive.
-fn lines(ui: &mut Ui, view: &mut BodyView, coloured: bool) {
-    let p = palette(ui.ctx());
-    let count = view.lines.len();
-    let digits = count.max(1).ilog10() + 1;
-    let gutter = widgets::text(
-        ui,
-        &"8".repeat(digits as usize),
-        SIZE,
-        400.0,
-        FontFamily::Monospace,
-        p.line_no,
-    )
-    .size()
-    .x + 16.0;
-    let author_id = if coloured {
-        "http-response-pretty"
-    } else {
-        "http-response-body"
-    };
-    let shown = egui::ScrollArea::both()
-        .id_salt(("http-response-lines", author_id))
-        .auto_shrink([false, false])
-        .show_rows(ui, LINE, count, |ui, range| {
-            if coloured && let Some(colouring) = view.colouring.as_mut() {
-                colouring.window(&view.rope, range.clone());
-            }
-            ui.spacing_mut().item_spacing.y = 0.0;
-            for at in range {
-                let line = &view.text[view.lines[at].clone()];
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    let number = widgets::text(
-                        ui,
-                        &(at + 1).to_string(),
-                        SIZE,
-                        400.0,
-                        FontFamily::Monospace,
-                        p.line_no,
-                    );
-                    let (cell, _) =
-                        ui.allocate_exact_size(Vec2::new(gutter, LINE), egui::Sense::hover());
-                    ui.painter().galley(
-                        egui::pos2(cell.right() - 10.0 - number.size().x, cell.top() + 1.0),
-                        number,
-                        p.line_no,
-                    );
-                    let tokens = view
-                        .colouring
-                        .as_ref()
-                        .and_then(|colouring| colouring.line(at));
-                    let job = coloured_line(line, tokens, ui);
-                    let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
-                    let (rect, _) = ui.allocate_exact_size(
-                        Vec2::new(galley.size().x, LINE),
-                        egui::Sense::hover(),
-                    );
-                    ui.painter().galley(
-                        egui::pos2(rect.left(), rect.top() + 1.0),
-                        galley,
-                        p.text_0,
-                    );
-                });
-            }
-        });
-    let region = widgets::region(ui, shown.inner_rect, author_id, egui::Sense::hover());
-    let label = view.text.chars().take(200).collect::<String>();
-    region.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Document, true, &label));
-    widgets::address(ui, &region, author_id);
+impl TextLines {
+    pub(crate) fn show(&mut self, ui: &mut Ui, author_id: &str, coloured: bool) {
+        let p = palette(ui.ctx());
+        let count = self.lines.len();
+        let digits = count.max(1).ilog10() + 1;
+        let gutter = widgets::text(
+            ui,
+            &"8".repeat(digits as usize),
+            SIZE,
+            400.0,
+            FontFamily::Monospace,
+            p.line_no,
+        )
+        .size()
+        .x + 16.0;
+        let shown = egui::ScrollArea::both()
+            .id_salt(("http-response-lines", author_id))
+            .auto_shrink([false, false])
+            .show_rows(ui, LINE, count, |ui, range| {
+                if coloured && let Some(colouring) = self.colouring.as_mut() {
+                    colouring.window(&self.rope, range.clone());
+                }
+                ui.spacing_mut().item_spacing.y = 0.0;
+                for at in range {
+                    let line = &self.text[self.lines[at].clone()];
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().item_spacing.x = 0.0;
+                        let number = widgets::text(
+                            ui,
+                            &(at + 1).to_string(),
+                            SIZE,
+                            400.0,
+                            FontFamily::Monospace,
+                            p.line_no,
+                        );
+                        let (cell, _) =
+                            ui.allocate_exact_size(Vec2::new(gutter, LINE), egui::Sense::hover());
+                        ui.painter().galley(
+                            egui::pos2(cell.right() - 10.0 - number.size().x, cell.top() + 1.0),
+                            number,
+                            p.line_no,
+                        );
+                        let tokens = self
+                            .colouring
+                            .as_ref()
+                            .and_then(|colouring| colouring.line(at));
+                        let job = coloured_line(line, tokens, ui);
+                        let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
+                        let (rect, _) = ui.allocate_exact_size(
+                            Vec2::new(galley.size().x, LINE),
+                            egui::Sense::hover(),
+                        );
+                        ui.painter().galley(
+                            egui::pos2(rect.left(), rect.top() + 1.0),
+                            galley,
+                            p.text_0,
+                        );
+                    });
+                }
+            });
+        let region = widgets::region(ui, shown.inner_rect, author_id, egui::Sense::hover());
+        let label = self.text.chars().take(LABEL_UP_TO).collect::<String>();
+        region.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Document, true, &label));
+        widgets::address(ui, &region, author_id);
+    }
 }
 
 fn coloured_line(line: &str, tokens: Option<&text::highlight::Line>, ui: &Ui) -> LayoutJob {

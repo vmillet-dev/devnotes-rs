@@ -316,6 +316,32 @@ fn the_http_dialogs() {
 }
 
 #[test]
+fn the_http_code() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-code-open");
+    settle(&mut harness);
+    capture(&mut harness, "http-code-dialog");
+    click(&mut harness, "http-code-secrets");
+    settle(&mut harness);
+    capture(&mut harness, "http-code-secrets");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    click(&mut harness, "http-tab-new");
+    settle(&mut harness);
+    click(&mut harness, "http-save");
+    settle(&mut harness);
+    capture(&mut harness, "http-save-dialog");
+}
+
+#[test]
 fn the_http_response() {
     let port = crate::testing::serve();
     let profile = tempfile::tempdir().unwrap();
