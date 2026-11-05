@@ -20,6 +20,11 @@ pub fn drawing_thumbnail(backend: &Backend, id: String) -> Pending<Option<String
     backend.db(move |engine| notes::drawing_thumbnail(engine, id))
 }
 
+/// A Dessin's large picture as a PNG data URI, for a Note that embeds it; `None` when it has none.
+pub fn drawing_picture(backend: &Backend, id: String) -> Pending<Option<String>> {
+    backend.db(move |engine| notes::drawing_picture(engine, id))
+}
+
 /// A drawing's two pictures, taken off the frame; both empty for a scene with nothing on it.
 pub fn picture_drawing(
     backend: &Backend,

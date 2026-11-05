@@ -52,7 +52,7 @@ impl Query {
 
     /// What replaces `found`: `$&` and `$1` name the match and its groups in a regular
     /// expression, as they did in the reference; a text replaces as it is written.
-    pub(crate) fn replacement(&self, found: &str) -> String {
+    pub fn replacement(&self, found: &str) -> String {
         if !self.regexp {
             return self.replace.clone();
         }

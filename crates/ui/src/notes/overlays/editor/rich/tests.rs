@@ -348,3 +348,113 @@ fn code_pasted_into_an_empty_note_makes_it_a_snippet_and_text_pastes_as_text() {
         "a Note with words stays a Note"
     );
 }
+
+fn search_count(harness: &Harness<'_>) -> String {
+    harness
+        .get_by(|node| node.author_id() == Some("search-count"))
+        .accesskit_node()
+        .label()
+        .or_else(|| {
+            harness
+                .get_by(|node| node.author_id() == Some("search-count"))
+                .accesskit_node()
+                .value()
+        })
+        .unwrap_or_default()
+}
+
+#[test]
+fn the_find_bar_counts_in_the_text_read_and_replaces_keeping_the_marks() {
+    let (mut harness, id) = note("**Ship** it, ship it\n\nship");
+    click_id(&mut harness, "editor-rich");
+    press(&mut harness, Modifiers::COMMAND, Key::H);
+    harness
+        .get_by(|node| node.author_id() == Some("search-field"))
+        .type_text("ship");
+    settle(&mut harness);
+    assert_eq!(search_count(&harness), "1 / 3");
+    press(&mut harness, Modifiers::NONE, Key::Enter);
+    assert_eq!(search_count(&harness), "2 / 3");
+    click_id(&mut harness, "search-replace-field");
+    harness
+        .get_by(|node| node.author_id() == Some("search-replace-field"))
+        .type_text("go");
+    settle(&mut harness);
+    click_id(&mut harness, "search-replace-all");
+    click_id(&mut harness, "editor-close");
+    assert_eq!(stored(&harness, &id), "**go** it, go it\n\ngo");
+}
+
+/// A PNG of `side` pixels square, as the core keeps a picture.
+fn png_uri(side: u32) -> String {
+    use base64::Engine as _;
+    let mut bytes = Vec::new();
+    let mut encoder = png::Encoder::new(&mut bytes, side, side);
+    encoder.set_color(png::ColorType::Rgba);
+    let mut writer = encoder.write_header().unwrap();
+    let pixels = vec![200u8; usize::try_from(side * side * 4).unwrap()];
+    writer.write_image_data(&pixels).unwrap();
+    writer.finish().unwrap();
+    format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    )
+}
+
+#[test]
+fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
+    let (backend, profile) = testing::unlocked();
+    let seed = testing::note(&backend, "seed");
+    let space = seed.space_id.clone();
+    let drawing = engine::db::run_here(backend.engine(), move |engine| {
+        let draft = engine::notes::model::NoteDraft {
+            kind: NoteKind::Drawing,
+            content: String::new(),
+            ..testing::snippet(space, "Archi".to_owned())
+        };
+        let id = engine::notes::create_note(engine, draft)?.id.clone();
+        let pictures = engine::notes::drawing::DrawingPictures {
+            thumbnail: png_uri(4),
+            picture: png_uri(40),
+        };
+        let patch = engine::notes::model::NotePatch {
+            pictures: Some(pictures),
+            ..engine::notes::model::NotePatch::default()
+        };
+        engine::notes::update_note(engine, id.clone(), patch)?;
+        Ok::<_, engine::error::AppError>(id)
+    })
+    .unwrap();
+    let space = seed.space_id.clone();
+    let content =
+        format!("![le schéma](devnotes:drawing/{drawing})\n\n![perdu](devnotes:drawing/nope)");
+    engine::db::run_here(backend.engine(), move |engine| {
+        let draft = engine::notes::model::NoteDraft {
+            kind: NoteKind::Note,
+            language: Language::Txt,
+            content,
+            ..testing::snippet(space, "Standup".to_owned())
+        };
+        engine::notes::create_note(engine, draft)
+    })
+    .unwrap();
+    let mut harness = area(backend, profile);
+    harness
+        .get_by(|node| node.author_id() == Some("search-input"))
+        .focus();
+    harness.step();
+    harness
+        .get_by(|node| node.author_id() == Some("search-input"))
+        .type_text("Standup");
+    crate::notes::bench::until(&mut harness, "the Note alone", |harness| {
+        crate::notes::bench::cards(harness) == 1
+    });
+    click_id(&mut harness, "note-card-open");
+    crate::notes::bench::until(&mut harness, "both read", |harness| {
+        let said: Vec<String> = harness
+            .query_all_by(|node| node.author_id() == Some("rich-embed"))
+            .map(|node| node.accesskit_node().label().unwrap_or_default())
+            .collect();
+        said == ["le schéma", "Drawing not found"]
+    });
+}

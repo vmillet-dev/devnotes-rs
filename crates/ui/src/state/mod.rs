@@ -49,9 +49,19 @@ impl Revision {
 /// Every cache of a library's content — laid-out text, textures, memos, diagrams — and only
 /// they: one field, emptied when another library opens (D17). Not wiped byte by byte; the
 /// threat model says so.
-#[derive(Default)]
 pub struct LibraryCaches {
     pub thumbnails: drawing_pictures::Thumbnails,
+    /// The large pictures Notes embed.
+    pub pictures: drawing_pictures::Thumbnails,
+}
+
+impl Default for LibraryCaches {
+    fn default() -> Self {
+        Self {
+            thumbnails: drawing_pictures::Thumbnails::default(),
+            pictures: drawing_pictures::Thumbnails::large(),
+        }
+    }
 }
 
 /// The three areas, in the switch's order, which is also the order of their keys.
@@ -231,8 +241,10 @@ impl AppState {
         self.follow_revisions(backend);
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
+            self.caches.pictures.redrawn(&id);
         }
         self.caches.thumbnails.update(ctx, backend);
+        self.caches.pictures.update(ctx, backend);
         if self
             .spaces
             .update(backend, &mut self.revision, &mut self.errors)
@@ -463,6 +475,10 @@ impl AppState {
                 self.notes.set_items(backend, id, items);
             }
             Notes::Thumbnail(stamp) => self.caches.thumbnails.ask(backend, stamp),
+            Notes::Picture(id) => {
+                let stamp = drawing_pictures::Thumbnails::embedded(&id);
+                self.caches.pictures.ask(backend, stamp);
+            }
             place @ (Notes::ChooseSpace(_)
             | Notes::ChooseFolder(_)
             | Notes::CountSpace(_)

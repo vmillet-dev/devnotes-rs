@@ -37,6 +37,8 @@ pub enum Action {
     },
     /// A drawing's picture, for the card that just showed it.
     Thumbnail(Stamp),
+    /// A drawing a Note embeds: its large picture, by id.
+    Picture(String),
     /// `None`: every space.
     ChooseSpace(Option<String>),
     /// In its own space, which is then the one shown.
