@@ -4716,8 +4716,7 @@ order, grouping, pinned first — which is the library's (`devnotes.notes.arrang
 reference's JSON). All of them are parameters of the one `QueryCell`, so a search typed faster
 than the core answers asks once, and a stale answer is dropped. The search shows the count once
 something is filtered, zero included, and its cross empties the field alone; `Ctrl+K` is the
-notes area's key (`keys::NOTES`). The List/Board switch keeps the board disabled until the board
-is ported. Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
+notes area's key (`keys::NOTES`). The List/Board switch is the board's (below). Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
 embedded face has them.
 
 The facets (`notes::header::facets`) are the kind, priority, tag and format rails under the
@@ -4846,6 +4845,29 @@ A drawing's picture is never in the list: the card asks for it by `Stamp` (id an
 a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
 reads it on the db queue, decodes the PNG on the compute queue, uploads it once and keeps the last
 256; it is library content, so it lives in `LibraryCaches` and goes with the library scope.
+
+### The board, drawn
+
+The List/Board switch is remembered per space in the library's preferences
+(`devnotes.notes.view.<spaceId>`, `state::board::Mode`), and disabled on « all spaces », which
+has no zones. `AppState::board_place` is the one place that says whether the board is on screen:
+the space's, or the open folder's when it holds folders — one that holds none is the flat grid,
+whatever the switch says. `state::board::BoardState` is a `QueryCell` over `board_view`, with
+the list's criteria (`notes_query::Criteria`) among its parameters: the board reads the whole
+space and dims, it never narrows. While it shows, the selection, the arrows (zone by zone, then
+the ground, one step at a time) and the search's count read the board's cards, dimmed ones
+included, and the selection bar takes them as `selection_bar::Shown`.
+
+`notes::canvas::board` draws it: a dotted ground (`GRID_PX`) that pans both ways and never
+zooms, at least as large as what is seen, so past the content's edge it still takes the pointer;
+zones from their stored frames (`board::zone`), the same card as the list's, full size, and the
+loose cards where they were left. Only what crosses the viewport is drawn — zones and loose cards
+by their rectangle, a zone's cards by the rows its body shows — and every card's `Ui` is salted
+with its note's id, so what scrolls in and out moves no other id. ⚠️ A zone's cards flow in the
+columns `folders::board::columns_in` counts: the Rust that sizes a zone is the Rust that lays it
+out, and egui's scroll bars float over the body rather than taking a slice of the row, so the
+reference's one-pixel wrap cannot happen. A zone's title and its sub-folders' chips open their
+folder; its ⋯ opens the folder's panel, the rail's.
 
 ## IPC boundary (Angular ↔ Rust)
 

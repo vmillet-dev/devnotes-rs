@@ -36,6 +36,21 @@ pub(super) struct Context<'a> {
     pub(super) selecting: bool,
 }
 
+impl<'a> Context<'a> {
+    /// `on_screen`: the cards the view draws, which decide whether every box shows.
+    pub(super) fn of(state: &'a crate::state::AppState, on_screen: &[&str]) -> Self {
+        Self {
+            language: state.language,
+            clock: state.clock.as_ref(),
+            thumbnails: &state.caches.thumbnails,
+            library: &state.spaces,
+            armed: state.selection.armed(),
+            selection: &state.selection,
+            selecting: !state.selection.checked_in(on_screen).is_empty(),
+        }
+    }
+}
+
 const FOOTER_HEIGHT: f32 = 18.0;
 
 pub(super) fn show(

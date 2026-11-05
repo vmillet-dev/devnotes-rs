@@ -127,7 +127,7 @@ fn ctrl_k_puts_the_caret_in_the_search() {
 }
 
 #[test]
-fn the_board_is_not_offered_yet() {
+fn the_board_is_not_offered_across_every_space() {
     let (backend, profile) = testing::unlocked();
     let harness = area(backend, profile);
 
