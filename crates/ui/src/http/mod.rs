@@ -2,6 +2,7 @@
 //! rail is the library's, and so is its width.
 
 mod close;
+mod code;
 mod container_settings;
 mod cookie_jar;
 mod environment_picker;
@@ -10,6 +11,7 @@ mod extract;
 mod rail;
 mod request;
 mod response;
+mod save_request;
 mod tabs;
 mod variables_table;
 
@@ -83,6 +85,15 @@ pub enum Action {
     /// A name nothing sets: a row for it, on the page.
     Define(String),
     Cookies(crate::state::http::cookies::Asked),
+    Code(crate::state::http::code::Asked),
+    /// The code, to the clipboard.
+    CopyCode(String),
+    /// Where a draft goes the first time it is saved.
+    SaveTo {
+        key: String,
+        target: crate::state::http::tabs::SaveTarget,
+    },
+    CancelSaveTo,
     /// A collection's or a folder's settings, in their dialog.
     OpenSettings(crate::state::http::containers::Container),
     EditSettings(Box<engine::http::model::ContainerSettings>),
@@ -119,6 +130,8 @@ pub struct View {
     editor: request::EditorView,
     environments: environments::PageView,
     container: container_settings::DialogView,
+    code: code::CodeView,
+    save_form: Option<save_request::SaveForm>,
     response: response::ResponseView,
     /// How tall the request's content was last drawn: what an automatic share follows.
     editor_height: f32,
@@ -152,6 +165,8 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     close::show(ui, state, actions);
     cookie_jar::show(ui, state, actions);
     container_settings::show(ui, state, &mut view.container, actions);
+    code::show(ui, state, &mut view.code, actions);
+    save_request::show(ui, state, &mut view.save_form, actions);
     extract::show(ui, state, view.response.extracting(), actions);
     if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
@@ -307,6 +322,8 @@ fn empty_workspace(ui: &mut Ui, region: Rect, language: i18n::Language, actions:
     }
 }
 
+#[cfg(test)]
+mod code_tests;
 #[cfg(test)]
 mod dialogs_tests;
 #[cfg(test)]

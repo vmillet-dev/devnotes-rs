@@ -3,6 +3,7 @@
 //! guesses the result.
 
 pub mod bodies;
+pub mod code;
 pub mod containers;
 pub mod cookies;
 pub mod environments;
@@ -218,6 +219,7 @@ pub struct HttpState {
     environments: environments::Environments,
     page: Page,
     cookies: cookies::CookieJar,
+    code: code::CodeDialog,
     container: Option<containers::Form>,
     /// How many cookies the jar just threw away: for the status line.
     cookies_removed: Option<u32>,
@@ -261,6 +263,18 @@ impl HttpState {
             self.revision.bump();
         }
         self.forget_closed(backend);
+        for (old, tab) in &answered.rekeyed {
+            self.sends.rekey(old, &tab.key);
+            if let Some(place) = &tab.place {
+                let id = place.folder_id.clone();
+                self.unfold(id.as_deref().unwrap_or(&place.collection_id));
+            }
+        }
+        if let Some(tab) = self.code.key().and_then(|key| self.tabs.tab(key)) {
+            let environment = self.environments.active_id().map(str::to_owned);
+            let asked = (environment, self.revision);
+            self.code.update(backend, tab, asked, errors);
+        }
         if answered.saved {
             self.revision.bump();
         }
@@ -414,6 +428,19 @@ impl HttpState {
         if done {
             self.revision.bump();
         }
+    }
+
+    pub fn code(&self) -> &code::CodeDialog {
+        &self.code
+    }
+
+    pub fn ask_code(&mut self, asked: code::Asked) {
+        self.code.ask(asked);
+    }
+
+    /// Where a draft can go: the places of the tree that was read.
+    pub fn save_places(&self) -> Vec<tree::SavePlace> {
+        tree::save_places(self.tree())
     }
 
     pub fn cookies(&self) -> &cookies::CookieJar {

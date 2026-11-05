@@ -1,14 +1,15 @@
 //! The HTTP collections, their requests, and what is sent.
 
 use engine::http::{
-    self, BodyAnswer, VariablesRequest,
+    self, BodyAnswer, CodeRequestOf, VariablesRequest,
+    codegen::GeneratedCode,
     cookies::store::CookieDomain,
     environments::{EnvironmentPatch, HttpEnvironments, Variable, VariableFault},
     graphql::{GraphqlAnswer, GraphqlDocument},
     model::{
         ContainerSettings, HeaderFault, HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest,
-        HttpRequestDraft, HttpRequestPatch, HttpTree, KeyValue, RequestBody, RequestDocument,
-        RequestKind,
+        HttpRequestDraft, HttpRequestPatch, HttpTree, KeyValue, NewPlace, RequestBody,
+        RequestDocument, RequestKind,
     },
     query::{QuerySide, SyncedQuery},
     send::{ImpliedHeader, SendRequest, SentResponse},
@@ -219,6 +220,23 @@ pub fn save_settings(
     settings: ContainerSettings,
 ) -> Pending<()> {
     backend.db(move |engine| http::save_http_settings(engine, item, settings))
+}
+
+/// The request written for another tool.
+pub fn generate_code(backend: &Backend, request: CodeRequestOf) -> Pending<GeneratedCode> {
+    backend.db(move |engine| http::generate_http_code(engine, request))
+}
+
+/// A request's first write, with what its place lacks: refused, it leaves nothing behind.
+pub fn create_request_in(
+    backend: &Backend,
+    draft: HttpRequestDraft,
+    create: Option<NewPlace>,
+) -> Pending<HttpRequest> {
+    backend.db(move |engine| match create {
+        Some(create) => http::create_http_request_in(engine, draft, create),
+        None => http::create_http_request(engine, draft),
+    })
 }
 
 /// The globals and every environment.

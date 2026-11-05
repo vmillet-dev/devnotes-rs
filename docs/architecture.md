@@ -5032,6 +5032,18 @@ as « None ». `http::modal` is the frame of the area's dialogs. ⚠️ A dialog
 when its height changes: what clicks in a test settles first, a pointer aimed at the old place
 hits nothing.
 
+`http::code` is « Generate code »: Rust writes the request for a target (`generate_http_code`,
+asked again whenever the draft, the place, the environment, the target or a switch changes), the
+dialog names the targets, a `match` a new target will not compile without, and says what was
+left as a variable. « Include secrets » asks every time it is switched on, never when off. The
+target last chosen stays for the session. `response::body::TextLines` is the text read by lines
+it shares with the answer's body. `http::save_request` asks where a draft goes the first time it
+is saved, from `Ctrl+S`, « Save » or the close question, and creates what it lacks in one write
+(`create_http_request_in`): refused, it leaves no empty collection behind. The tab then takes the
+request's id for its key, and what is kept by key follows it (`Answered::rekeyed`). ⚠️
+`Ui::allocate_ui` keeps the parent's layout: in a `horizontal`, what is inside runs on a line
+until it is given a `vertical`.
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

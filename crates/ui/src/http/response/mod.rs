@@ -2,7 +2,7 @@
 //! headers, cookies and the exchange as it went. While the send is under way, the time goes by;
 //! a failure or a cancelled send stays on screen as an answer does, and goes the same way.
 
-mod body;
+pub(crate) mod body;
 
 use std::sync::Arc;
 

@@ -275,6 +275,7 @@ pub struct Checkbox<'a> {
     checked: &'a mut bool,
     label: &'a str,
     author_id: &'a str,
+    enabled: bool,
 }
 
 impl<'a> Checkbox<'a> {
@@ -283,17 +284,28 @@ impl<'a> Checkbox<'a> {
             checked,
             label,
             author_id,
+            enabled: true,
         }
     }
 
+    #[must_use]
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+
     pub fn show(self, ui: &mut Ui) -> Response {
-        let (label, checked) = (self.label, *self.checked);
+        let (label, checked, enabled) = (self.label, *self.checked, self.enabled);
         let mut response = interact(
             ui,
             Vec2::splat(super::MIN_TARGET),
-            Sense::click(),
+            if enabled {
+                Sense::click()
+            } else {
+                Sense::hover()
+            },
             self.author_id,
-            || WidgetInfo::selected(Role::CheckBox, true, checked, label),
+            || WidgetInfo::selected(Role::CheckBox, enabled, checked, label),
             CornerRadius::same(4),
         );
         if response.clicked() {
