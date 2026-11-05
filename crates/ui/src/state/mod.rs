@@ -266,6 +266,7 @@ impl AppState {
         self.follow_revisions(backend);
         if self.settings.area == Area::Http {
             self.http.update(backend, time, &mut self.errors);
+            self.remember_http(backend);
         }
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
@@ -614,21 +615,35 @@ impl AppState {
 
     fn apply_http(&mut self, action: crate::http::Action, backend: &Backend) {
         use crate::http::Action as Http;
-        let folds = self
-            .library_preferences
-            .get(http::COLLAPSED_KEY)
-            .map(str::to_owned);
-        let preferences = &mut self.library_preferences;
         match action {
-            Http::Toggle(id) => self.http.toggle(&id, preferences),
-            Http::Write(write) => self.http.write(backend, write, preferences),
-            Http::KeyMove { item, name, key } => {
-                self.http.key_move(backend, (item, name), key, preferences);
-            }
+            Http::Toggle(id) => self.http.toggle(&id),
+            Http::Write(write) => self.http.write(backend, write),
+            Http::KeyMove { item, name, key } => self.http.key_move(backend, (item, name), key),
             Http::AskDelete(item) => self.http.ask_delete(backend, item),
             Http::CancelDelete => self.http.cancel_delete(),
+            Http::OpenRequest(id) => self.http.tabs_mut().open(backend, id),
+            Http::NewRequest(kind) => {
+                let name = i18n::translate(self.language, i18n::keys::http::tabs::UNTITLED, &[]);
+                self.http.tabs_mut().new_request(kind, name);
+            }
+            Http::Activate(key) => self.http.tabs_mut().activate(&key),
+            Http::AskClose(key) => self.http.tabs_mut().ask_close(&key),
+            Http::Close(key) => self.http.tabs_mut().close(&key),
+            Http::CancelClose => self.http.tabs_mut().cancel_close(),
+            Http::Save(key) => self.http.tabs_mut().save(backend, &key),
+            Http::SaveAndClose(key) => self.http.tabs_mut().save_and_close(backend, &key),
+            Http::SaveActive => {
+                let dirty = self.http.tabs().active().filter(|tab| tab.is_dirty());
+                if let Some(key) = dirty.map(|tab| tab.key.clone()) {
+                    self.http.tabs_mut().save(backend, &key);
+                }
+            }
         }
-        if self.library_preferences.get(http::COLLAPSED_KEY) != folds.as_deref() {
+        self.remember_http(backend);
+    }
+
+    fn remember_http(&mut self, backend: &Backend) {
+        if self.http.remember(&mut self.library_preferences) {
             drop(api::preferences::write_library(
                 backend,
                 self.library_preferences.clone(),

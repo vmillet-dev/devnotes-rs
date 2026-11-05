@@ -3,6 +3,7 @@
 //! guesses the result.
 
 pub mod moves;
+pub mod tabs;
 pub mod tree;
 
 use std::collections::BTreeSet;
@@ -95,12 +96,15 @@ pub struct HttpState {
     /// The last sentence the rail's live region says, and how many were said before it.
     said: Option<(u32, Message)>,
     deleting: Option<Deleting>,
-    /// A request just created, for its tab to open.
-    created: Vec<String>,
+    tabs: tabs::Tabs,
+    /// The folds or the tabs changed: the library's preferences are written.
+    unremembered: bool,
 }
 
 impl HttpState {
+    /// The folds and the tabs, read again when a library opens.
     pub fn restore(&mut self, preferences: &Preferences) {
+        self.tabs.restore(preferences);
         let stored = preferences.get(COLLAPSED_KEY).unwrap_or("[]");
         self.collapsed = serde_json::from_str::<Vec<serde_json::Value>>(stored)
             .unwrap_or_default()
@@ -112,7 +116,14 @@ impl HttpState {
 
     /// Once a frame, with the library open: the tree is read the first time the area asks.
     pub fn update(&mut self, backend: &Backend, now: f64, errors: &mut ErrorNotifier) {
-        self.adopt_writes(errors);
+        for id in self.adopt_writes(errors) {
+            self.tabs.open(backend, id);
+        }
+        let answered = self.tabs.update(backend, errors);
+        if answered.saved {
+            self.revision.bump();
+        }
+        self.unremembered |= answered.changed_preferences;
         if let Some(deleting) = &mut self.deleting
             && let Some(answer) = deleting.pending.as_mut().and_then(Pending::poll)
         {
@@ -132,6 +143,11 @@ impl HttpState {
             }
             self.lay_out();
             self.land(now);
+            if self.tree.value().is_some() {
+                self.tabs
+                    .follow(self.tree.value().unwrap_or(&HttpTree::default()));
+                self.unremembered = true;
+            }
         }
         if self
             .mark
@@ -142,10 +158,11 @@ impl HttpState {
         }
     }
 
-    fn adopt_writes(&mut self, errors: &mut ErrorNotifier) {
+    /// The requests the writes created, for their tabs.
+    fn adopt_writes(&mut self, errors: &mut ErrorNotifier) -> Vec<String> {
         let mut landed = None;
         let mut wrote = false;
-        let created = &mut self.created;
+        let mut created = Vec::new();
         self.writes.retain_mut(|writing| {
             let Some(answer) = writing.pending.poll() else {
                 return true;
@@ -168,6 +185,7 @@ impl HttpState {
         if let Some(landing) = landed {
             self.landing = Some((self.revision, landing));
         }
+        created
     }
 
     /// A move made with the keys, read from the tree the core answered — never the move asked.
@@ -237,36 +255,48 @@ impl HttpState {
         self.deleting.as_ref()
     }
 
-    /// The requests created since the last call, for their tabs.
-    pub fn take_created(&mut self) -> Vec<String> {
-        std::mem::take(&mut self.created)
+    pub fn tabs(&self) -> &tabs::Tabs {
+        &self.tabs
+    }
+
+    /// What the tabs are asked; each one is remembered.
+    pub fn tabs_mut(&mut self) -> &mut tabs::Tabs {
+        self.unremembered = true;
+        &mut self.tabs
     }
 
     /// Folded or unfolded, and remembered in the library's preferences.
-    pub fn toggle(&mut self, id: &str, preferences: &mut Preferences) {
+    pub fn toggle(&mut self, id: &str) {
         if !self.collapsed.remove(id) {
             self.collapsed.insert(id.to_owned());
         }
-        self.remember(preferences);
+        self.unremembered = true;
         self.lay_out();
     }
 
     /// Unfolds what would hide a row just made or moved there.
-    fn unfold(&mut self, id: &str, preferences: &mut Preferences) {
+    fn unfold(&mut self, id: &str) {
         if self.collapsed.contains(id) {
-            self.toggle(id, preferences);
+            self.toggle(id);
         }
     }
 
-    fn remember(&self, preferences: &mut Preferences) {
+    /// The folds and the tabs into the library's preferences, when they changed since: `true`
+    /// when the file is to be written.
+    pub fn remember(&mut self, preferences: &mut Preferences) -> bool {
+        if !std::mem::take(&mut self.unremembered) {
+            return false;
+        }
         let ids: Vec<&String> = self.collapsed.iter().collect();
         preferences.set(
             COLLAPSED_KEY,
             &serde_json::to_string(&ids).unwrap_or_default(),
         );
+        self.tabs.remember(preferences);
+        true
     }
 
-    pub fn write(&mut self, backend: &Backend, write: Write, preferences: &mut Preferences) {
+    pub fn write(&mut self, backend: &Backend, write: Write) {
         let pending = match write {
             Write::CreateCollection(name) => api::http::create_collection(backend, name),
             Write::CreateFolder {
@@ -274,7 +304,7 @@ impl HttpState {
                 folder_id,
                 name,
             } => {
-                self.unfold(folder_id.as_deref().unwrap_or(&collection_id), preferences);
+                self.unfold(folder_id.as_deref().unwrap_or(&collection_id));
                 api::http::create_folder(backend, collection_id, folder_id, name)
             }
             Write::CreateRequest {
@@ -283,7 +313,7 @@ impl HttpState {
                 name,
                 kind,
             } => {
-                self.unfold(folder_id.as_deref().unwrap_or(&collection_id), preferences);
+                self.unfold(folder_id.as_deref().unwrap_or(&collection_id));
                 api::http::create_request(backend, (collection_id, folder_id), name, kind)
             }
             Write::Rename { item, name } => api::http::rename(backend, item, name),
@@ -292,7 +322,7 @@ impl HttpState {
                 self.deleting = None;
                 api::http::delete(backend, item)
             }
-            Write::Move(railmove) => self.apply_move(backend, railmove, preferences),
+            Write::Move(railmove) => self.apply_move(backend, railmove),
         };
         self.writes.push(Writing {
             pending,
@@ -300,17 +330,12 @@ impl HttpState {
         });
     }
 
-    fn apply_move(
-        &mut self,
-        backend: &Backend,
-        railmove: RailMove,
-        preferences: &mut Preferences,
-    ) -> Pending<Written> {
+    fn apply_move(&mut self, backend: &Backend, railmove: RailMove) -> Pending<Written> {
         match railmove {
             RailMove::Reorder { id, index } => api::http::reorder_collection(backend, id, index),
             RailMove::Move { item, place } => {
                 if let Some(folder) = &place.folder_id {
-                    self.unfold(folder, preferences);
+                    self.unfold(folder);
                 }
                 api::http::move_item(backend, item, place)
             }
@@ -319,13 +344,7 @@ impl HttpState {
 
     /// `Alt` and an arrow: moved, then shown and said once the tree is read again; or said why
     /// not.
-    pub fn key_move(
-        &mut self,
-        backend: &Backend,
-        (item, name): (HttpItem, String),
-        key: KeyMove,
-        preferences: &mut Preferences,
-    ) {
+    pub fn key_move(&mut self, backend: &Backend, (item, name): (HttpItem, String), key: KeyMove) {
         let Some(railmove) = moves::key_move(self.tree(), &item, key) else {
             use keys::http::rail::moved::refused;
             let key = match moves::refusal(&item, key) {
@@ -338,7 +357,7 @@ impl HttpState {
             self.say(Message::new(key).with("name", name.as_str()));
             return;
         };
-        let pending = self.apply_move(backend, railmove, preferences);
+        let pending = self.apply_move(backend, railmove);
         self.writes.push(Writing {
             pending,
             landing: Some(Landing { item, key, name }),
@@ -373,9 +392,11 @@ mod tests {
         let mut preferences = Preferences::default();
         let mut state = HttpState::default();
 
-        state.toggle("a", &mut preferences);
-        state.toggle("b", &mut preferences);
-        state.toggle("a", &mut preferences);
+        state.toggle("a");
+        state.toggle("b");
+        state.toggle("a");
+        assert!(state.remember(&mut preferences));
+        assert!(!state.remember(&mut preferences));
         let mut read = HttpState::default();
         read.restore(&preferences);
 

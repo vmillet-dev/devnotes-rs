@@ -3,8 +3,8 @@
 use engine::http::{
     self,
     model::{
-        HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequestDraft, HttpTree, RequestDocument,
-        RequestKind,
+        HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest, HttpRequestDraft,
+        HttpRequestPatch, HttpTree, RequestDocument, RequestKind,
     },
 };
 
@@ -12,6 +12,30 @@ use crate::backend::{Backend, Pending};
 
 pub fn tree(backend: &Backend) -> Pending<HttpTree> {
     backend.db(http::http_tree)
+}
+
+/// Read by id when its tab opens: the tree lists no document.
+pub fn request(backend: &Backend, id: String) -> Pending<HttpRequest> {
+    backend.db(move |engine| http::get_http_request(engine, id))
+}
+
+/// The tabs left open last time, those still in the library, in their order.
+pub fn requests(backend: &Backend, ids: Vec<String>) -> Pending<Vec<HttpRequest>> {
+    backend.db(move |engine| {
+        Ok(ids
+            .into_iter()
+            .filter_map(|id| http::get_http_request(engine, id).ok())
+            .collect())
+    })
+}
+
+/// The draft written whole: what Rust kept comes back.
+pub fn save_request(
+    backend: &Backend,
+    id: String,
+    patch: HttpRequestPatch,
+) -> Pending<HttpRequest> {
+    backend.db(move |engine| http::save_http_request(engine, id, patch))
 }
 
 /// What a write answers: the request it created, for its tab to open.

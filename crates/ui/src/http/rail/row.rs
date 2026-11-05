@@ -6,11 +6,12 @@
 use egui::{
     Color32, CornerRadius, FontFamily, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
 };
-use engine::http::model::{HttpItemKind, HttpMethod};
+use engine::http::model::HttpItemKind;
 use i18n::keys;
 
+use super::super::badge_hue;
 use crate::state::http::moves::DropZone;
-use crate::state::http::tree::{Badge, RailRow};
+use crate::state::http::tree::RailRow;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, MIN_TARGET, interact};
@@ -279,20 +280,5 @@ fn moved_mark(ui: &Ui, rect: Rect, moved: Option<(Moved, f32)>) {
                 StrokeKind::Inside,
             );
         }
-    }
-}
-
-/// The method in its colour, as the mockup draws it: a word, not a badge with a fill.
-pub(crate) fn badge_hue(ui: &Ui, badge: Badge) -> Color32 {
-    let p = palette(ui.ctx());
-    match badge {
-        Badge::Method(HttpMethod::Get) => p.green,
-        Badge::Method(HttpMethod::Post) => p.amber_text,
-        Badge::Method(HttpMethod::Put) => p.blue,
-        Badge::Method(HttpMethod::Patch) => p.purple,
-        Badge::Method(HttpMethod::Delete) => p.red,
-        Badge::Method(HttpMethod::Head | HttpMethod::Options) => p.text_2,
-        Badge::Graphql => p.pink,
-        Badge::Websocket => p.teal,
     }
 }

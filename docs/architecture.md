@@ -4944,6 +4944,22 @@ back from the tree Rust answers (`landing`), marked on the row and what now hold
 said there too. A drag lands before or after a row, or inside a folder or a collection when let go
 mid-row. Every write bumps the area's revision; one into a folded parent unfolds it.
 
+`state::http::tabs::Tabs` holds the open requests, one tab each: a `Draft` (name, kind, method,
+document) beside what Rust holds, modified while the two differ (`PartialEq`, where the reference
+compared JSON). A request begun from « New request » — one click for HTTP, the chevron for GraphQL
+or a WebSocket, or the empty workspace's three buttons — is a draft alone (`draft-n`), written
+nowhere until saved. `Ctrl+S` (`keys::HTTP`) writes the draft in front whole
+(`save_http_request`); typing during the write keeps what was typed. Closing a modified tab asks
+first (`http::close`: cancel, close without saving, save — save waits for the first save's
+dialog on a draft); the middle button closes a tab as in a browser. ⚠️ A tab follows every tree
+that is read: a request deleted closes its tab, one moved takes its new place, one renamed takes
+the name in what is saved and in what is edited, so the next save does not write the old one
+back. The rail lights the request in front, and its deletion question names the open tabs it
+would close with changes (`tree::requests_under`, `Tabs::unsaved_among`): Rust counts what is
+deleted, only the interface what is typed. Which requests were open and which was in front is the
+library's (`devnotes.notes.http.tabs`), read once the area is shown and written, with the folds,
+whenever either changes (`HttpState::remember`).
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in
