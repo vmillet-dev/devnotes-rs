@@ -6970,7 +6970,7 @@ real SQLite file — on a blank profile, and knows of it only what it shows. The
 `inspection` feature, the software adapter whatever the machine offers (WARP, lavapipe, as on
 the runners), a window painted only on the frames a capture asks for (`app::unpainted`: the
 driver reads the AccessKit tree, which every pass builds, and a painted frame cost up to 300 ms
-on WARP), and two doors the protocol has no way through — `--action <name>` from a second
+on WARP; `DEVNOTES_E2E_PAINT_ALL` paints every frame, to watch a scenario run), and two doors the protocol has no way through — `--action <name>` from a second
 launch for a global action, and `platform::dialog::from_scenario`, a file dialog answering the
 path in `DEVNOTES_E2E_DIALOG`. ⚠️ **Its inspection port has no authentication**: a release
 build of the flavour does not compile (`compile_error!`), and `lint-rust` checks that the

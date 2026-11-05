@@ -105,9 +105,11 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
     eframe::run_native(
         METADATA.name,
         options(restored),
+        #[cfg(not(feature = "e2e"))]
+        Box::new(move |cc| Ok(Box::new(ui::DevNotesApp::new(cc, startup)?))),
+        #[cfg(feature = "e2e")]
         Box::new(move |cc| {
-            #[cfg(feature = "e2e")]
-            cc.egui_ctx.add_plugin(unpainted::Unpainted::default());
+            unpainted::attach(&cc.egui_ctx);
             Ok(Box::new(ui::DevNotesApp::new(cc, startup)?))
         }),
     )

@@ -1,11 +1,19 @@
 //! The `e2e` flavour paints a frame only when it is captured: the driver reads the AccessKit
 //! tree, which the pass builds whether or not it is painted, and a painted frame costs up to
-//! 300 ms on WARP.
+//! 300 ms on WARP. `DEVNOTES_E2E_PAINT_ALL` paints every frame, to watch a scenario run.
 
 use egui::{Context, FullOutput, ViewportCommand, ViewportId};
 
+const PAINT_ALL: &str = "DEVNOTES_E2E_PAINT_ALL";
+
+pub(crate) fn attach(ctx: &Context) {
+    if std::env::var_os(PAINT_ALL).is_none() {
+        ctx.add_plugin(Unpainted::default());
+    }
+}
+
 #[derive(Default)]
-pub(crate) struct Unpainted {
+struct Unpainted {
     captured: bool,
 }
 

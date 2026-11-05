@@ -1781,7 +1781,8 @@ l'écran (`GetScreenshot`), redimensionner (`Resize`).
 - **Écrans** : Linux sous `xvfb-run` avec Mesa (lavapipe pour Vulkan, llvmpipe pour GL), Windows
   avec WARP (DX12 logiciel). La capture d'écran exige une fenêtre rendue : xvfb la fournit. Le
   flavour `e2e` ne peint que les frames capturées : le pilote lit l'arbre AccessKit, que chaque
-  passe construit, et une frame peinte coûtait jusqu'à 300 ms sous WARP.
+  passe construit, et une frame peinte coûtait jusqu'à 300 ms sous WARP. `DEVNOTES_E2E_PAINT_ALL`
+  les peint toutes, pour regarder un scénario tourner.
 
 Validé au spike S10 sous Linux (ADR S10) : arbre, clic par `author_id`, saisie, touche, `Settle`,
 capture, redimensionnement, vraie relance sur le même profil, en Vulkan (lavapipe) comme en GL
