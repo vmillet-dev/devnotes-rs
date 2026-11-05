@@ -13,6 +13,7 @@ pub mod notes;
 pub mod notes_query;
 pub mod palette;
 pub mod placeholder_fill;
+pub mod presentation;
 mod query;
 pub mod selection;
 pub mod spaces;
@@ -117,6 +118,7 @@ pub struct AppState {
     pub calc: calc_sheets::CalcSheets,
     pub explored: explored::ExploredState,
     pub formatting: formatting::FormattingState,
+    pub presentation: presentation::PresentationState,
     /// The open library's, read with its preferences.
     pub prettier: crate::notes::prettier::PrettierSettings,
     pub errors: ErrorNotifier,
@@ -161,6 +163,7 @@ impl AppState {
             calc: calc_sheets::CalcSheets::default(),
             explored: explored::ExploredState::default(),
             formatting: formatting::FormattingState::default(),
+            presentation: presentation::PresentationState::default(),
             prettier: crate::notes::prettier::PrettierSettings::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
@@ -237,6 +240,7 @@ impl AppState {
             self.editor
                 .save_body(backend, saved.session, saved.id, saved.body);
         }
+        self.presentation.update(ctx, &mut self.errors);
         for (note, sheet) in self.calc.update(&mut self.errors) {
             let text = crate::notes::calc::copy_text(&note.content, &sheet, self.language);
             self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
@@ -644,6 +648,10 @@ impl AppState {
                 }
             }
             Editing::Close => self.editor.close(),
+            Editing::Present { title, markdown } => {
+                self.presentation.ask(backend, title, markdown);
+            }
+            Editing::StopPresenting => self.presentation.close(ctx),
             Editing::Fullscreen(on) => {
                 self.settings.editor_fullscreen = on;
                 self.save_settings(backend);
@@ -1033,6 +1041,7 @@ impl AppState {
         self.prettier = crate::notes::prettier::PrettierSettings::default();
         self.library_preferences_read = Some(api::preferences::library(backend));
         self.seeding = None;
+        self.presentation.close(ctx);
         self.caches = LibraryCaches::default();
         self.notes_query = NotesQueryState::default();
         self.spaces = spaces::SpacesState::default();

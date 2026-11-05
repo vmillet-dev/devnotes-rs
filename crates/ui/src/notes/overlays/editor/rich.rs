@@ -478,7 +478,7 @@ fn to_code(view: &mut RichEditor, code: Vec<usize>, surface: &egui::Response) {
 }
 
 /// What stands where the Note embeds drawing `id`: its large picture, read by id once shown.
-fn embedded(state: &AppState, id: &str) -> Option<Embedded> {
+pub(in crate::notes) fn embedded(state: &AppState, id: &str) -> Option<Embedded> {
     use crate::state::drawing_pictures::{Thumbnail, Thumbnails};
     match state.caches.pictures.get(&Thumbnails::embedded(id)) {
         Thumbnail::Unknown => None,
