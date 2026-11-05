@@ -127,14 +127,23 @@ fn first_box(tree: &Tree) -> Option<egui::accesskit::Toggled> {
         .and_then(|task| task.toggled())
 }
 
+/// The one card `words` finds. ⚠️ The previous search showed one card too: the count is
+/// true of it until the debounce ends, so the card itself has to change.
+fn search_alone(app: &mut App, words: &str) {
+    let before = app.tree().texts("note-card");
+    app.click("search-input");
+    app.press(Key::A, Modifiers::COMMAND);
+    app.type_text(words);
+    app.eventually("the note searched, alone", |tree| {
+        tree.count("note-card") == 1 && tree.texts("note-card") != before
+    });
+}
+
 fn notes(app: &mut App) {
     step(
         "the sample Note opens formatted, and a box ticked or unticked is kept",
         || {
-            app.click("search-input");
-            app.press(Key::A, Modifiers::COMMAND);
-            app.type_text("timeout=120s");
-            app.eventually("the sample Note alone", |tree| tree.count("note-card") == 1);
+            search_alone(app, "timeout=120s");
             app.click("note-card-open");
             app.eventually("its tasks drawn", |tree| tree.count("rich-task") == 3);
             assert!(!app.tree().has("editor-body"), "no code field for a Note");
@@ -163,21 +172,12 @@ fn notes(app: &mut App) {
             app.press(Key::Enter, Modifiers::NONE);
             app.click("rich-bold");
             app.type_text("fort");
-            app.eventually("both lines typed", |tree| {
-                rich(tree)
-                    == "2 * 3 * 4
-fort"
-            });
+            app.eventually("both lines typed", |tree| rich(tree) == "2 * 3 * 4\nfort");
             close(app);
-            app.click("search-input");
-            app.press(Key::A, Modifiers::COMMAND);
-            app.type_text("fort");
-            app.eventually("the new Note alone", |tree| tree.count("note-card") == 1);
+            search_alone(app, "fort");
             app.click("note-card-open");
             app.eventually("written back as typed", |tree| {
-                rich(tree)
-                    == "2 * 3 * 4
-fort"
+                rich(tree) == "2 * 3 * 4\nfort"
             });
             close(app);
         },
