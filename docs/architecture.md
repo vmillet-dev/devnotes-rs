@@ -4977,6 +4977,24 @@ sent unasked are listed above the table with where each comes from
 (`implied_http_headers`): Rust composes the request, so Rust says. ⚠️ The header names a key
 field proposed came from the HTTP-headers tool's data: they return with the tools (phase 7).
 
+A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
+queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
+(`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's
+time, so the count under way survives leaving the tab. « Send » turns into « Cancel » while it
+runs (`cancel_http_send`), `Ctrl+Enter` sends the tab in front, and a closed tab or « Clear »
+lets Rust forget the body it kept (`forget_http_response`). `http::response` draws the answer:
+the status on a tint of its family (`2xx` green, `3xx` blue, `4xx` amber, the rest red), time
+and size, then the body, headers, cookies and the exchange as it went (redirects, request,
+response). The body is cut into lines once per send and view and drawn by rows, a line-number
+gutter beside it, coloured window by window by `services::highlight::Colouring` (a 785 KB answer
+is laid out in under 150 ms, a frame of scrolling stays under a millisecond); a JSON answer is
+also explored as a graph or a tree — the explorer of the notes, without its « show in the
+code » (`ExplorerView::with_code(false)`), asked through `HttpState::explore` — and an image is
+decoded once from its `data:` URL into a texture. The line between the request and its answer is
+the application's `devnotes.httpRequestShare` (tenths of a percent here, a percent in the file):
+left automatic, the request takes what it holds up to 60 %; dragged, the share is written once
+let go; a double click or Enter makes it automatic again.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

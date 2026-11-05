@@ -3,6 +3,7 @@
 //! guesses the result.
 
 pub mod moves;
+pub mod send;
 pub mod tabs;
 pub mod tree;
 
@@ -27,7 +28,7 @@ use tree::RailRow;
 pub const COLLAPSED_KEY: &str = "devnotes.notes.http.collapsed";
 
 /// How long a move made with the keys stays marked, in seconds: as long as its fade.
-pub const MARK_SECONDS: f64 = 2.0;
+pub const MARK_SECONDS: f64 = crate::theme::motion::MARK as f64;
 
 /// A write the rail asked for.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,6 +87,35 @@ struct Question {
     revision: Revision,
 }
 
+/// An image answer: its `data:` URL on its way, then its texture; `None` when it is none.
+enum Image {
+    Asked(Pending<Option<String>>),
+    Shown(Option<egui::TextureHandle>),
+}
+
+/// The session an answer is explored under: its send's name, as a number.
+fn session_of(send_id: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    send_id.hash(&mut hasher);
+    hasher.finish()
+}
+
+/// A `data:` URL's picture, or `None` when it holds none that decodes.
+fn decoded(url: &str) -> Option<egui::ColorImage> {
+    use base64::Engine as _;
+    let (_, data) = url.split_once(";base64,")?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data)
+        .ok()?;
+    let picture = image::load_from_memory(&bytes).ok()?.into_rgba8();
+    let size = [picture.width() as usize, picture.height() as usize];
+    Some(egui::ColorImage::from_rgba_unmultiplied(
+        size,
+        picture.as_raw(),
+    ))
+}
+
 /// A deletion asked: what it takes with it, read before the question is shown.
 pub struct Deleting {
     pub item: HttpItem,
@@ -109,6 +139,11 @@ pub struct HttpState {
     said: Option<(u32, Message)>,
     deleting: Option<Deleting>,
     tabs: tabs::Tabs,
+    sends: send::Sends,
+    /// An answer's JSON explored, by its send.
+    explored: super::explored::ExploredState,
+    /// An image answer's texture, by its send: decoded once asked.
+    images: std::collections::HashMap<String, Image>,
     /// What the request in front sends unasked, and where its `{{variables}}` resolve from:
     /// Rust composes the request, so Rust says; the last answer stays while the next is read.
     implied: QueryCell<Question, Vec<ImpliedHeader>>,
@@ -131,11 +166,20 @@ impl HttpState {
     }
 
     /// Once a frame, with the library open: the tree is read the first time the area asks.
-    pub fn update(&mut self, backend: &Backend, now: f64, errors: &mut ErrorNotifier) {
+    pub fn update(
+        &mut self,
+        (ctx, backend): (&egui::Context, &Backend),
+        now: f64,
+        errors: &mut ErrorNotifier,
+    ) {
+        self.explored.update(backend);
+        self.adopt_images(ctx);
         for id in self.adopt_writes(errors) {
             self.tabs.open(backend, id);
         }
         let answered = self.tabs.update(backend, errors);
+        self.sends.update();
+        self.forget_closed(backend);
         if answered.saved {
             self.revision.bump();
         }
@@ -314,6 +358,91 @@ impl HttpState {
 
     pub fn tabs(&self) -> &tabs::Tabs {
         &self.tabs
+    }
+
+    pub fn sends(&self) -> &send::Sends {
+        &self.sends
+    }
+
+    /// An answer's graph or tree, asked again whenever the explorer asks something else.
+    pub fn explore(&mut self, send_id: &str, query: engine::json::model::JsonQuery) {
+        self.explored.want(session_of(send_id), query);
+    }
+
+    pub fn explored(&self, send_id: &str) -> Option<(&engine::json::model::JsonView, &str)> {
+        self.explored.of(session_of(send_id))
+    }
+
+    /// The image an answer is, read once.
+    pub fn ask_image(&mut self, backend: &Backend, send_id: &str) {
+        if !self.images.contains_key(send_id) {
+            let pending = api::http::response_image(backend, send_id.to_owned());
+            self.images
+                .insert(send_id.to_owned(), Image::Asked(pending));
+        }
+    }
+
+    pub fn response_image(&self, send_id: &str) -> Option<&egui::TextureHandle> {
+        match self.images.get(send_id)? {
+            Image::Shown(texture) => texture.as_ref(),
+            Image::Asked(_) => None,
+        }
+    }
+
+    fn adopt_images(&mut self, ctx: &egui::Context) {
+        for (id, image) in &mut self.images {
+            let Image::Asked(pending) = image else {
+                continue;
+            };
+            let Some(answer) = pending.poll() else {
+                continue;
+            };
+            let texture = answer
+                .ok()
+                .flatten()
+                .and_then(|url| decoded(&url))
+                .map(|picture| {
+                    ctx.load_texture(
+                        format!("http-image-{id}"),
+                        picture,
+                        egui::TextureOptions::LINEAR,
+                    )
+                });
+            *image = Image::Shown(texture);
+        }
+        let held: Vec<String> = self.sends.ids().map(str::to_owned).collect();
+        self.images.retain(|id, _| held.contains(id));
+    }
+
+    /// The tab `key`'s draft, sent as it is now; `None` for the tab in front.
+    pub fn send(&mut self, backend: &Backend, key: Option<&str>, now: f64) {
+        let key = key.or(self.tabs.active_key()).map(str::to_owned);
+        let Some(tab) = key.as_deref().and_then(|key| self.tabs.tab(key)) else {
+            return;
+        };
+        self.sends.send(backend, tab, (now, None));
+    }
+
+    pub fn cancel_send(&self, backend: &Backend, key: &str) {
+        self.sends.cancel(backend, key);
+    }
+
+    /// The answer shown goes, and what Rust kept of it.
+    pub fn clear_response(&mut self, backend: &Backend, key: &str) {
+        self.sends.forget(backend, key);
+    }
+
+    /// A tab closed takes its send with it.
+    fn forget_closed(&mut self, backend: &Backend) {
+        let closed: Vec<String> = self
+            .sends
+            .keys()
+            .filter(|key| self.tabs.tab(key).is_none())
+            .map(str::to_owned)
+            .collect();
+        for key in closed {
+            self.sends.forget(backend, &key);
+        }
     }
 
     /// What the tabs are asked; each one is remembered.

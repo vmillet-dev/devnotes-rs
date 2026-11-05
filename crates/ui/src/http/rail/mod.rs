@@ -12,9 +12,9 @@ use i18n::keys;
 use super::Action;
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
+use crate::state::http::Write;
 use crate::state::http::moves::{self, DropZone, KeyMove};
 use crate::state::http::tree::RailRow;
-use crate::state::http::{MARK_SECONDS, Write};
 use crate::theme::icons::Icon;
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, Button, IconButton, MenuItem};
@@ -206,7 +206,6 @@ fn tree(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: &mut Action
     } else {
         0.0
     };
-    let now = ui.input(|input| input.time);
     let scroll_to = state
         .http
         .said()
@@ -245,7 +244,7 @@ fn tree(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: &mut Action
                 // rank, and a row moved with the keys would lose its focus.
                 let id = ui.scope_id().with(("http-row", &row.id));
                 let mut row_ui = ui.new_child(UiBuilder::new().scope_id(id).max_rect(rect));
-                draw_row(&mut row_ui, state, view, actions, (row, now));
+                draw_row(&mut row_ui, state, view, actions, row);
                 view.drawn.push((rect, at));
                 if under {
                     let below =
@@ -285,7 +284,7 @@ fn draw_row(
     state: &AppState,
     view: &mut RailView,
     actions: &mut Actions,
-    (row, now): (&RailRow, f64),
+    row: &RailRow,
 ) {
     let language = state.language;
     let look = Look {
@@ -295,7 +294,7 @@ fn draw_row(
             .as_ref()
             .filter(|(id, _)| *id == row.id)
             .map(|(_, zone)| *zone),
-        moved: moved(state, row, now),
+        moved: moved(ui.ctx(), state, row),
         dragged: view
             .dragging
             .as_ref()
@@ -338,7 +337,7 @@ fn draw_row(
 }
 
 /// How lit the mark of a move made with the keys still is on this row, if it is on it.
-fn moved(state: &AppState, row: &RailRow, now: f64) -> Option<(Moved, f32)> {
+fn moved(ctx: &egui::Context, state: &AppState, row: &RailRow) -> Option<(Moved, f32)> {
     let mark = state.http.mark()?;
     let which = if mark.id == row.id {
         Moved::Row
@@ -351,9 +350,7 @@ fn moved(state: &AppState, row: &RailRow, now: f64) -> Option<(Moved, f32)> {
     let strength = if state.reduced_motion {
         1.0
     } else {
-        #[expect(clippy::cast_possible_truncation, reason = "a ratio")]
-        let left = (1.0 - (now - mark.since) / MARK_SECONDS).clamp(0.0, 1.0) as f32;
-        left
+        crate::theme::motion::fading(ctx, mark.since)
     };
     Some((which, strength))
 }

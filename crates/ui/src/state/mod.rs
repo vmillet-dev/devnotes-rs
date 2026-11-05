@@ -265,7 +265,7 @@ impl AppState {
         }
         self.follow_revisions(backend);
         if self.settings.area == Area::Http {
-            self.http.update(backend, time, &mut self.errors);
+            self.http.update((ctx, backend), time, &mut self.errors);
             self.remember_http(backend);
         }
         for id in self.editor.take_redrawn() {
@@ -596,7 +596,7 @@ impl AppState {
             }
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
             Action::Notes(action) => self.apply_notes(action, ctx, backend),
-            Action::Http(action) => self.apply_http(action, backend),
+            Action::Http(action) => self.apply_http(action, ctx, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
@@ -613,7 +613,7 @@ impl AppState {
         }
     }
 
-    fn apply_http(&mut self, action: crate::http::Action, backend: &Backend) {
+    fn apply_http(&mut self, action: crate::http::Action, ctx: &egui::Context, backend: &Backend) {
         use crate::http::Action as Http;
         match action {
             Http::Toggle(id) => self.http.toggle(&id),
@@ -633,6 +633,23 @@ impl AppState {
             Http::Save(key) => self.http.tabs_mut().save(backend, &key),
             Http::SaveAndClose(key) => self.http.tabs_mut().save_and_close(backend, &key),
             Http::Edit { key, edit } => self.http.tabs_mut().edit(&key, |draft| draft.apply(edit)),
+            Http::Send(key) => {
+                let now = ctx.input(|input| input.time);
+                self.http.send(backend, key.as_deref(), now);
+            }
+            Http::CancelSend(key) => self.http.cancel_send(backend, &key),
+            Http::Explore { send_id, query } => self.http.explore(&send_id, query),
+            Http::ResponseImage(send_id) => self.http.ask_image(backend, &send_id),
+            Http::Copy(text) => {
+                ctx.copy_text(text);
+                self.status
+                    .report(i18n::Message::new(i18n::keys::settings::COPIED));
+            }
+            Http::ClearResponse(key) => self.http.clear_response(backend, &key),
+            Http::SetShare(share) => {
+                self.settings.http_request_share = share;
+                self.save_settings(backend);
+            }
             Http::SaveActive => {
                 let dirty = self.http.tabs().active().filter(|tab| tab.is_dirty());
                 if let Some(key) = dirty.map(|tab| tab.key.clone()) {

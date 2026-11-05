@@ -77,14 +77,15 @@ fn edit(actions: &mut Actions, tab: &Tab, edit: DraftEdit) {
     }));
 }
 
+/// Answers how tall what it holds is: the line under it follows that while left automatic.
 pub(crate) fn show(
     ui: &mut Ui,
     state: &AppState,
     (tab, view): (&Tab, &mut EditorView),
     actions: &mut Actions,
-) {
+) -> f32 {
     let language = state.language;
-    egui::ScrollArea::vertical()
+    let shown = egui::ScrollArea::vertical()
         .id_salt(("http-editor", &tab.key))
         .auto_shrink([false, false])
         .show(ui, |ui| {
@@ -105,6 +106,7 @@ pub(crate) fn show(
                     }
                 });
         });
+    shown.content_size.y
 }
 
 fn name(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n::Language) {
@@ -151,7 +153,19 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
             kind_badge(ui, tab.draft.kind, language);
         }
         let save = tr(keys::http::editor::SAVE);
-        let room = ui.available_width() - Button::width(ui, &save) - 10.0;
+        let sending = state.http.sends().is_sending(&tab.key);
+        let send = if sending {
+            tr(keys::http::send::CANCEL)
+        } else {
+            tr(keys::http::send::SEND)
+        };
+        let sends = tab.draft.kind != RequestKind::Websocket;
+        let send_width = if sends {
+            Button::width(ui, &send) + 10.0
+        } else {
+            0.0
+        };
+        let room = ui.available_width() - Button::width(ui, &save) - send_width - 10.0;
         let scopes = url::scopes(state.http.used());
         let (label, hint) = (
             tr(keys::http::editor::URL),
@@ -169,6 +183,24 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
         let mut typed = tab.draft.document.url.clone();
         if url::show(ui, &mut typed, &field, room).changed() {
             edit(actions, tab, DraftEdit::Url(typed));
+        }
+        if sends {
+            let kind = if sending {
+                widgets::Kind::Outline
+            } else {
+                widgets::Kind::Filled
+            };
+            let pressed = Button::new(&send, "http-send").kind(kind).show(ui);
+            let pressed = if sending {
+                pressed
+            } else {
+                widgets::tooltip(pressed, &tr(keys::http::send::SEND_HINT))
+            };
+            if pressed.clicked() && sending {
+                actions.push(Asked::Http(Action::CancelSend(tab.key.clone())));
+            } else if pressed.clicked() {
+                actions.push(Asked::Http(Action::Send(Some(tab.key.clone()))));
+            }
         }
         if Button::new(&save, "http-save")
             .enabled(tab.is_dirty())

@@ -211,6 +211,46 @@ fn the_http_request_editor() {
 }
 
 #[test]
+fn the_http_response() {
+    let port = crate::testing::serve();
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = harness.state().backend();
+    let local = crate::http::tests::collection(backend, "Local");
+    let ping = crate::http::tests::request(
+        backend,
+        (&local, None),
+        "Ping",
+        (RequestKind::Http, HttpMethod::Get),
+    );
+    click(&mut harness, "area-option-http");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Ping"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    app.state.http.tabs_mut().edit(&ping.id, |draft| {
+        draft.apply(crate::state::http::tabs::DraftEdit::Url(format!(
+            "http://127.0.0.1:{port}/json"
+        )));
+    });
+    settle(&mut harness);
+    click(&mut harness, "http-send");
+    capture(&mut harness, "http-response-body");
+    click(&mut harness, "http-response-view-3");
+    capture(&mut harness, "http-response-tree");
+    click(&mut harness, "http-response-section-timeline");
+    capture(&mut harness, "http-response-timeline");
+}
+
+#[test]
 fn the_http_area() {
     let profile = tempfile::tempdir().unwrap();
     let mut harness = http_area(profile.path());

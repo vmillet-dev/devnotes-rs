@@ -152,6 +152,55 @@ pub(crate) fn close_library(backend: &crate::backend::Backend) {
     closed.poll().unwrap().unwrap();
 }
 
+/// A server on this machine for the sends of a test: `/json` answers a small JSON, `/slow` the
+/// same after two seconds, anything else a 404. Each connection is answered once, then closed.
+pub(crate) fn serve() -> u16 {
+    use std::io::{Read, Write};
+    let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("a local port is free");
+    let port = listener.local_addr().expect("the port is known").port();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            std::thread::spawn(move || {
+                let mut head = Vec::new();
+                let mut byte = [0_u8; 1];
+                while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                    head.push(byte[0]);
+                }
+                let head = String::from_utf8_lossy(&head);
+                let path = head.split_whitespace().nth(1).unwrap_or("/").to_owned();
+                if path.starts_with("/slow") {
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                }
+                let (status, body) = if path.starts_with("/big") {
+                    // A megabyte of JSON, laid out on one line: the budget's answer.
+                    let rows: Vec<String> = (0..14_000)
+                        .map(|at| {
+                            format!(r#"{{"id":{at},"name":"row {at}","tags":["a","b"],"on":true}}"#)
+                        })
+                        .collect();
+                    ("200 OK", format!("[{}]", rows.join(",")))
+                } else if path.starts_with("/json") || path.starts_with("/slow") {
+                    (
+                        "200 OK",
+                        r#"{"name":"Ada","languages":["fr","en"],"admin":true}"#.to_owned(),
+                    )
+                } else {
+                    ("404 Not Found", "missing".to_owned())
+                };
+                let answer = format!(
+                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\n\
+                     Set-Cookie: session=abc; Path=/\r\nContent-Length: {}\r\n\
+                     Connection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = stream.write_all(answer.as_bytes());
+            });
+        }
+    });
+    port
+}
+
 mod tests {
     #[test]
     #[should_panic(expected = "lack accessible name")]

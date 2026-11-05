@@ -56,7 +56,7 @@ pub static NOTES: [Binding; 1] = [Binding {
 }];
 
 /// The HTTP area's, read while it is on screen: the rail is the library's, and so is its key.
-pub static HTTP: [Binding; 2] = [
+pub static HTTP: [Binding; 3] = [
     Binding {
         key: Key::B,
         modifiers: Modifiers::COMMAND,
@@ -70,6 +70,13 @@ pub static HTTP: [Binding; 2] = [
         read: Read::Character,
         while_typing: true,
         action: Action::Http(crate::http::Action::SaveActive),
+    },
+    Binding {
+        key: Key::Enter,
+        modifiers: Modifiers::COMMAND,
+        read: Read::Character,
+        while_typing: true,
+        action: Action::Http(crate::http::Action::Send(None)),
     },
 ];
 

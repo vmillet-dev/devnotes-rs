@@ -44,6 +44,9 @@ pub struct Settings {
     pub editor_fullscreen: bool,
     pub editor_header_folded: bool,
     pub editor_fields_open: bool,
+    /// The request's share of the height it has with its answer, in tenths of a percent; `0`
+    /// leaves it to what the request holds.
+    pub http_request_share: u16,
 }
 
 /// The reference's `RAIL_WIDTH`.
@@ -61,6 +64,7 @@ impl Default for Settings {
             editor_fullscreen: false,
             editor_header_folded: false,
             editor_fields_open: true,
+            http_request_share: 0,
         }
     }
 }
@@ -74,6 +78,10 @@ const RAIL_SHOWN: &str = "devnotes.showLibraryRail";
 const EDITOR_FULLSCREEN: &str = "devnotes.editorFullscreen";
 const EDITOR_HEADER_FOLDED: &str = "devnotes.editorHeaderFolded";
 const EDITOR_FIELDS_OPEN: &str = "devnotes.editorFieldsPanel";
+const HTTP_REQUEST_SHARE: &str = "devnotes.httpRequestShare";
+
+/// The share's bounds, in tenths of a percent: neither pane goes out of reach.
+pub const HTTP_SHARE: (u16, u16) = (50, 950);
 
 impl Settings {
     /// A value this version does not know is the default, never an error.
@@ -93,6 +101,7 @@ impl Settings {
             editor_fullscreen: preferences.get(EDITOR_FULLSCREEN) == Some("true"),
             editor_header_folded: preferences.get(EDITOR_HEADER_FOLDED) == Some("true"),
             editor_fields_open: preferences.get(EDITOR_FIELDS_OPEN) != Some("false"),
+            http_request_share: read_share(preferences.get(HTTP_REQUEST_SHARE)),
         }
     }
 
@@ -107,7 +116,28 @@ impl Settings {
         preferences.set(EDITOR_FULLSCREEN, flag(self.editor_fullscreen));
         preferences.set(EDITOR_HEADER_FOLDED, flag(self.editor_header_folded));
         preferences.set(EDITOR_FIELDS_OPEN, flag(self.editor_fields_open));
+        let share = f64::from(self.http_request_share) / 10.0;
+        preferences.set(HTTP_REQUEST_SHARE, &share.to_string());
     }
+}
+
+/// A percent written by the reference (`42.3`), in tenths; out of bounds, or not a number, is
+/// automatic.
+fn read_share(stored: Option<&str>) -> u16 {
+    let Some(percent) = stored.and_then(|stored| stored.parse::<f64>().ok()) else {
+        return 0;
+    };
+    let tenths = (percent * 10.0).round();
+    if tenths < f64::from(HTTP_SHARE.0) || tenths > f64::from(HTTP_SHARE.1) {
+        return 0;
+    }
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "within HTTP_SHARE"
+    )]
+    let tenths = tenths as u16;
+    tenths
 }
 
 fn flag(on: bool) -> &'static str {
@@ -206,11 +236,13 @@ mod tests {
             editor_fullscreen: true,
             editor_header_folded: true,
             editor_fields_open: false,
+            http_request_share: 423,
         };
 
         chosen.write(&mut preferences);
 
         assert_eq!(preferences.get("devnotes.theme"), Some("light"));
+        assert_eq!(preferences.get("devnotes.httpRequestShare"), Some("42.3"));
         assert_eq!(preferences.get("devnotes.area"), Some("http"));
         assert_eq!(Settings::read(&preferences), chosen);
     }
