@@ -163,6 +163,14 @@ fn part_of(draft: &tabs::Draft, part: Rewritten) -> &str {
     }
 }
 
+/// What the workspace shows: the open requests, or a page from the rail's foot.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Page {
+    #[default]
+    Requests,
+    Environments,
+}
+
 /// A deletion asked: what it takes with it, read before the question is shown.
 pub struct Deleting {
     pub item: HttpItem,
@@ -206,6 +214,7 @@ pub struct HttpState {
     /// What the request in front inherits: its auth and transport, said beside its own.
     inherited: QueryCell<(tabs::Place, Revision), Inherited>,
     environments: environments::Environments,
+    page: Page,
     /// The folds or the tabs changed: the library's preferences are written.
     unremembered: bool,
 }
@@ -239,7 +248,10 @@ impl HttpState {
             self.tabs.open(backend, id);
         }
         let answered = self.tabs.update(backend, errors);
-        self.sends.update();
+        // An extraction or a script may have written a variable.
+        if self.sends.update() {
+            self.revision.bump();
+        }
         self.forget_closed(backend);
         if answered.saved {
             self.revision.bump();
@@ -257,7 +269,8 @@ impl HttpState {
                 }
             }
         }
-        self.environments.update(backend, self.revision);
+        self.environments
+            .update((ctx, backend), (self.revision, now), errors);
         self.tree.want(self.revision);
         if self.tree.update(|_| api::http::tree(backend)) {
             if let Some(error) = self.tree.error() {
@@ -369,6 +382,55 @@ impl HttpState {
     pub fn choose_environment(&mut self, id: Option<String>) {
         self.environments.choose(id);
         self.unremembered = true;
+    }
+
+    pub fn ask_environments(&mut self, backend: &Backend, asked: environments::Asked, now: f64) {
+        let remembered = matches!(
+            asked,
+            environments::Asked::Use(_) | environments::Asked::Delete(_)
+        );
+        self.environments.ask(backend, asked, now);
+        self.unremembered |= remembered;
+    }
+
+    pub fn define(&mut self, backend: &Backend, name: String, now: f64) {
+        self.environments.define(backend, name, now);
+        self.page = Page::Environments;
+    }
+
+    pub fn page(&self) -> Page {
+        self.page
+    }
+
+    /// Leaving the environments writes what waits to be.
+    pub fn show_page(&mut self, backend: &Backend, page: Page) {
+        if self.page == Page::Environments && page != Page::Environments {
+            self.environments.flush(backend);
+        }
+        self.page = page;
+    }
+
+    pub fn toggle_page(&mut self, backend: &Backend, page: Page) {
+        let next = if self.page == page {
+            Page::Requests
+        } else {
+            page
+        };
+        self.show_page(backend, next);
+    }
+
+    pub fn stop_asking(&mut self) {
+        self.environments.stop_asking();
+    }
+
+    /// The yes a protected environment asked for.
+    pub fn send_anyway(&mut self, backend: &Backend, key: &str, now: f64) {
+        self.environments.stop_asking();
+        let Some(tab) = self.tabs.tab(key) else {
+            return;
+        };
+        let environment = self.environments.active_id().map(str::to_owned);
+        self.sends.send(backend, tab, (now, environment), true);
     }
 
     /// A rule of the tab's draft: saved with the request, as any other part of it.
@@ -636,8 +698,18 @@ impl HttpState {
         let Some(tab) = key.as_deref().and_then(|key| self.tabs.tab(key)) else {
             return;
         };
+        let protected = self
+            .environments
+            .active()
+            .is_some_and(|active| active.protected);
+        if protected && api::http::asks_before_sending(tab.draft.kind, tab.draft.method) {
+            let key = tab.key.clone();
+            self.environments.ask_before(&key);
+            return;
+        }
+        self.environments.stop_asking();
         let environment = self.environments.active_id().map(str::to_owned);
-        self.sends.send(backend, tab, (now, environment));
+        self.sends.send(backend, tab, (now, environment), false);
     }
 
     pub fn cancel_send(&self, backend: &Backend, key: &str) {

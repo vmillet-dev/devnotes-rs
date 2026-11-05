@@ -2,7 +2,7 @@
 
 use engine::http::{
     self, BodyAnswer, VariablesRequest,
-    environments::{HttpEnvironments, Variable, VariableFault},
+    environments::{EnvironmentPatch, HttpEnvironments, Variable, VariableFault},
     graphql::{GraphqlAnswer, GraphqlDocument},
     model::{
         HeaderFault, HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest, HttpRequestDraft,
@@ -141,6 +141,49 @@ pub fn inherited(
     folder_id: Option<String>,
 ) -> Pending<Inherited> {
     backend.db(move |engine| http::inherited_http_settings(engine, collection_id, folder_id))
+}
+
+/// Each write of the environments' page answers the set to show once written, if another.
+pub fn create_environment(backend: &Backend, name: String) -> Pending<Option<String>> {
+    backend.db(move |engine| Ok(Some(http::create_http_environment(engine, name)?.id)))
+}
+
+pub fn save_environment(
+    backend: &Backend,
+    id: String,
+    patch: EnvironmentPatch,
+) -> Pending<Option<String>> {
+    backend.db(move |engine| {
+        http::save_http_environment(engine, id, patch)?;
+        Ok(None)
+    })
+}
+
+pub fn save_globals(backend: &Backend, rows: Vec<Variable>) -> Pending<Option<String>> {
+    backend.db(move |engine| {
+        http::save_http_globals(engine, rows)?;
+        Ok(None)
+    })
+}
+
+pub fn duplicate_environment(
+    backend: &Backend,
+    id: String,
+    name: String,
+) -> Pending<Option<String>> {
+    backend.db(move |engine| Ok(Some(http::duplicate_http_environment(engine, id, name)?.id)))
+}
+
+pub fn delete_environment(backend: &Backend, id: String) -> Pending<Option<String>> {
+    backend.db(move |engine| {
+        http::delete_http_environment(engine, id)?;
+        Ok(None)
+    })
+}
+
+/// Whether a protected environment asks before this request leaves. Pure (D12).
+pub fn asks_before_sending(kind: RequestKind, method: HttpMethod) -> bool {
+    http::environments::asks_before_sending(kind, method)
 }
 
 /// The globals and every environment.

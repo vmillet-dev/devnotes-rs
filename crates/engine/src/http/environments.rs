@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::closed_enum::closed_enum;
 use crate::error::ValidationError;
 use crate::folders::model::FolderColour;
+use crate::http::model::{HttpMethod, RequestKind};
 
 closed_enum! {
     /// A number is checked to be one; a secret is masked wherever it shows.
@@ -92,6 +93,34 @@ pub struct Environment {
 pub struct HttpEnvironments {
     pub globals: Vec<Variable>,
     pub environments: Vec<Environment>,
+}
+
+/// How many variables a set names, and how many of them are secrets.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct VariableCounts {
+    pub count: u32,
+    pub secrets: u32,
+}
+
+#[must_use]
+pub fn variable_counts(variables: &[Variable]) -> VariableCounts {
+    let mut counts = VariableCounts::default();
+    for variable in variables.iter().filter(|it| !it.name.trim().is_empty()) {
+        counts.count += 1;
+        counts.secrets += u32::from(variable.kind == VariableKind::Secret);
+    }
+    counts
+}
+
+/// A protected environment lets through, unasked, what reads without changing anything; a socket
+/// asks before it opens, whatever it then says.
+#[must_use]
+pub fn asks_before_sending(kind: RequestKind, method: HttpMethod) -> bool {
+    kind == RequestKind::Websocket
+        || !matches!(
+            method,
+            HttpMethod::Get | HttpMethod::Head | HttpMethod::Options
+        )
 }
 
 /// A field left out is untouched.

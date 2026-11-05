@@ -621,7 +621,10 @@ impl AppState {
             Http::KeyMove { item, name, key } => self.http.key_move(backend, (item, name), key),
             Http::AskDelete(item) => self.http.ask_delete(backend, item),
             Http::CancelDelete => self.http.cancel_delete(),
-            Http::OpenRequest(id) => self.http.tabs_mut().open(backend, id),
+            Http::OpenRequest(id) => {
+                self.http.show_page(backend, http::Page::Requests);
+                self.http.tabs_mut().open(backend, id);
+            }
             Http::NewRequest(kind) => {
                 let name = i18n::translate(self.language, i18n::keys::http::tabs::UNTITLED, &[]);
                 self.http.tabs_mut().new_request(kind, name);
@@ -646,6 +649,21 @@ impl AppState {
                 );
             }
             Http::ChooseEnvironment(id) => self.http.choose_environment(id),
+            Http::Environments(asked) => {
+                let now = ctx.input(|input| input.time);
+                self.http.ask_environments(backend, asked, now);
+            }
+            Http::Define(name) => {
+                let now = ctx.input(|input| input.time);
+                self.http.define(backend, name, now);
+            }
+            Http::SendAnyway(key) => {
+                let now = ctx.input(|input| input.time);
+                self.http.send_anyway(backend, &key, now);
+            }
+            Http::StopAsking => self.http.stop_asking(),
+            Http::ShowPage(page) => self.http.show_page(backend, page),
+            Http::TogglePage(page) => self.http.toggle_page(backend, page),
             Http::Send(key) => {
                 let now = ctx.input(|input| input.time);
                 self.http.send(backend, key.as_deref(), now);

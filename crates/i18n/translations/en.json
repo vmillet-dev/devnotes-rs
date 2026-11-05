@@ -3387,7 +3387,7 @@
       "place": "In",
       "newCollection": "New collection…",
       "collectionName": "Name of the new collection",
-      "newFolder": "＋ New folder…",
+      "newFolder": "+ New folder…",
       "folderName": "Name of the new folder",
       "noFolder": "Do not create a folder",
       "missing": {
@@ -3654,7 +3654,7 @@
     "environments": {
       "title": "Environments",
       "order": "The nearest wins: request › folder › collection › environment › globals",
-      "new": "＋ New environment",
+      "new": "+ New environment",
       "newName": "Environment name",
       "create": "Create",
       "globals": "Globals",

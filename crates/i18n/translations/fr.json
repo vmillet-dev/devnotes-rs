@@ -3387,7 +3387,7 @@
       "place": "Dans",
       "newCollection": "Nouvelle collection…",
       "collectionName": "Nom de la nouvelle collection",
-      "newFolder": "＋ Nouveau dossier…",
+      "newFolder": "+ Nouveau dossier…",
       "folderName": "Nom du nouveau dossier",
       "noFolder": "Ne pas créer de dossier",
       "missing": {
@@ -3654,7 +3654,7 @@
     "environments": {
       "title": "Environnements",
       "order": "La plus proche gagne : requête › dossier › collection › environnement › globales",
-      "new": "＋ Nouvel environnement",
+      "new": "+ Nouvel environnement",
       "newName": "Nom de l’environnement",
       "create": "Créer",
       "globals": "Globales",

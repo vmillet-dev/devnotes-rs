@@ -5,19 +5,22 @@
 mod forms;
 mod row;
 
-use egui::{FontFamily, Key, Margin, Modifiers, Pos2, Rect, Ui, UiBuilder, Vec2};
+use egui::{
+    CornerRadius, FontFamily, Key, Margin, Modifiers, Pos2, Rect, Role, Sense, Ui, UiBuilder, Vec2,
+    WidgetInfo, pos2,
+};
 use engine::http::model::{HttpItem, HttpItemKind, RequestKind};
 use i18n::keys;
 
 use super::Action;
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
-use crate::state::http::Write;
 use crate::state::http::moves::{self, DropZone, KeyMove};
 use crate::state::http::tree::RailRow;
+use crate::state::http::{Page, Write};
 use crate::theme::icons::Icon;
 use crate::theme::{palette, spacing};
-use crate::widgets::{self, Button, IconButton, MenuItem};
+use crate::widgets::{self, Button, IconButton, MenuItem, interact};
 use forms::{Draft, Typed};
 use row::{Look, Moved};
 
@@ -97,10 +100,46 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: 
             empty(ui, view, actions, language);
         }
         ui.spacing_mut().item_spacing.y = 0.0;
-        tree(ui, state, view, actions);
-        said(ui, state);
+        let room = Vec2::new(ui.available_width(), ui.available_height() - FOOT);
+        ui.allocate_ui(room, |ui| {
+            ui.set_min_height(room.y);
+            tree(ui, state, view, actions);
+            said(ui, state);
+        });
+        foot(ui, state, actions);
     });
     drop_dragged(ui, state, view, actions);
+}
+
+/// What the rail's foot takes, one line a page.
+const FOOT: f32 = 44.0;
+
+/// The pages that take the place of the requests.
+fn foot(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+    let p = palette(ui.ctx());
+    let on = state.http.page() == Page::Environments;
+    let words = i18n::translate(state.language, keys::http::environments::TITLE, &[]);
+    let size = Vec2::new(ui.available_width(), 34.0);
+    let response = interact(
+        ui,
+        size,
+        Sense::click(),
+        "http-environments-open",
+        || WidgetInfo::selected(Role::Button, true, on, &words),
+        CornerRadius::same(8),
+    );
+    let rect = response.rect;
+    if on || response.hovered() {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(8), p.bg_2);
+    }
+    let ink = if on { p.amber_text } else { p.text_1 };
+    let galley = widgets::text(ui, &words, 13.0, 400.0, FontFamily::Proportional, ink);
+    let at = pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0);
+    ui.painter().galley(at, galley, ink);
+    if response.clicked() {
+        push(actions, Action::TogglePage(Page::Environments));
+    }
 }
 
 fn to_margin(points: f32) -> i8 {
