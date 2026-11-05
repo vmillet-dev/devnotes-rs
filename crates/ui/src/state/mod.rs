@@ -638,6 +638,14 @@ impl AppState {
             Http::PickFile { key, target } => {
                 self.http.pick_file(backend, &self.dialog, key, target);
             }
+            Http::AddExtraction { key, rule } => {
+                let variable = rule.variable.clone();
+                self.http.add_extraction(&key, rule);
+                self.status.report(
+                    i18n::Message::new(i18n::keys::http::extract::ADDED).with("variable", variable),
+                );
+            }
+            Http::ChooseEnvironment(id) => self.http.choose_environment(id),
             Http::Send(key) => {
                 let now = ctx.input(|input| input.time);
                 self.http.send(backend, key.as_deref(), now);

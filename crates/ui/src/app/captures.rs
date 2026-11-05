@@ -208,6 +208,37 @@ fn the_http_request_editor() {
     capture(&mut harness, "http-request-params");
     click(&mut harness, "http-section-headers");
     capture(&mut harness, "http-request-headers");
+    click(&mut harness, "http-section-auth");
+    capture(&mut harness, "http-request-auth");
+    click(&mut harness, "http-section-settings");
+    capture(&mut harness, "http-request-settings");
+    let app = harness.state_mut();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        use engine::http::environments::{FilledBy, Variable, VariableKind};
+        draft.apply(crate::state::http::tabs::DraftEdit::Variables(vec![
+            Variable {
+                name: "user".to_owned(),
+                value: "ada".to_owned(),
+                ..Variable::default()
+            },
+            Variable {
+                name: "token".to_owned(),
+                value: "eyJ.a.b".to_owned(),
+                kind: VariableKind::Secret,
+                filled_by: Some(FilledBy {
+                    request_id: None,
+                    name: "Login".to_owned(),
+                }),
+                ..Variable::default()
+            },
+        ]));
+    });
+    click(&mut harness, "http-section-variables");
+    capture(&mut harness, "http-request-variables");
+    click(&mut harness, "http-environment-picker");
+    capture(&mut harness, "http-environment-picker");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
     click(&mut harness, "http-section-body");
     let app = harness.state_mut();
     app.state.http.tabs_mut().edit(&key, |draft| {

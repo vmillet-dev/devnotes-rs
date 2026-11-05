@@ -3,6 +3,7 @@
 //! guesses the result.
 
 pub mod bodies;
+pub mod environments;
 pub mod moves;
 pub mod send;
 pub mod tabs;
@@ -14,9 +15,11 @@ use engine::http::BodyAnswer;
 use engine::http::VariablesRequest;
 use engine::http::graphql::{GraphqlAnswer, GraphqlDocument};
 use engine::http::model::{
-    HttpContents, HttpItem, HttpMethod, HttpTree, RequestBody, RequestDocument, RequestKind,
+    Extraction, HttpContents, HttpItem, HttpMethod, HttpTree, RequestBody, RequestDocument,
+    RequestKind,
 };
 use engine::http::send::ImpliedHeader;
+use engine::http::settings::Inherited;
 use engine::http::variables::UsedVariable;
 use i18n::{Message, keys};
 
@@ -89,6 +92,7 @@ struct Question {
     kind: RequestKind,
     document: RequestDocument,
     place: Option<tabs::Place>,
+    environment: Option<String>,
     revision: Revision,
 }
 
@@ -199,6 +203,9 @@ pub struct HttpState {
     /// unless typed on meanwhile.
     rewriting: Vec<Rewriting>,
     picking: Vec<Picking>,
+    /// What the request in front inherits: its auth and transport, said beside its own.
+    inherited: QueryCell<(tabs::Place, Revision), Inherited>,
+    environments: environments::Environments,
     /// The folds or the tabs changed: the library's preferences are written.
     unremembered: bool,
 }
@@ -207,6 +214,7 @@ impl HttpState {
     /// The folds and the tabs, read again when a library opens.
     pub fn restore(&mut self, preferences: &Preferences) {
         self.tabs.restore(preferences);
+        self.environments.restore(preferences);
         let stored = preferences.get(COLLAPSED_KEY).unwrap_or("[]");
         self.collapsed = serde_json::from_str::<Vec<serde_json::Value>>(stored)
             .unwrap_or_default()
@@ -249,6 +257,7 @@ impl HttpState {
                 }
             }
         }
+        self.environments.update(backend, self.revision);
         self.tree.want(self.revision);
         if self.tree.update(|_| api::http::tree(backend)) {
             if let Some(error) = self.tree.error() {
@@ -307,6 +316,12 @@ impl HttpState {
         let Some(tab) = self.tabs.active() else {
             return;
         };
+        if let Some(place) = &tab.place {
+            self.inherited.want((place.clone(), self.revision));
+            self.inherited.update(|(place, _)| {
+                api::http::inherited(backend, place.collection_id, place.folder_id)
+            });
+        }
         self.body
             .want((tab.draft.document.body.clone(), tab.draft.method));
         self.body
@@ -318,6 +333,7 @@ impl HttpState {
             kind: tab.draft.kind,
             document: tab.draft.document.clone(),
             place: tab.place.clone(),
+            environment: self.environments.active_id().map(str::to_owned),
             revision: self.revision,
         };
         self.implied.want(question.clone());
@@ -335,9 +351,36 @@ impl HttpState {
                 document: question.document,
                 collection_id: place.as_ref().map(|place| place.collection_id.clone()),
                 folder_id: place.and_then(|place| place.folder_id),
-                environment_id: None,
+                environment_id: question.environment,
             };
             api::http::used_variables(backend, request)
+        });
+    }
+
+    pub fn inherited(&self) -> Option<&Inherited> {
+        self.inherited.value()
+    }
+
+    pub fn environments(&self) -> &environments::Environments {
+        &self.environments
+    }
+
+    /// Remembered with the library's preferences.
+    pub fn choose_environment(&mut self, id: Option<String>) {
+        self.environments.choose(id);
+        self.unremembered = true;
+    }
+
+    /// A rule of the tab's draft: saved with the request, as any other part of it.
+    pub fn add_extraction(&mut self, key: &str, rule: Extraction) {
+        let Some(tab) = self.tabs.tab(key) else {
+            return;
+        };
+        let mut rules = tab.draft.document.extractions.clone();
+        rules.retain(|known| known.variable != rule.variable);
+        rules.push(rule);
+        self.tabs.edit(key, |draft| {
+            draft.apply(tabs::DraftEdit::Extractions(rules));
         });
     }
 
@@ -593,7 +636,8 @@ impl HttpState {
         let Some(tab) = key.as_deref().and_then(|key| self.tabs.tab(key)) else {
             return;
         };
-        self.sends.send(backend, tab, (now, None));
+        let environment = self.environments.active_id().map(str::to_owned);
+        self.sends.send(backend, tab, (now, environment));
     }
 
     pub fn cancel_send(&self, backend: &Backend, key: &str) {
@@ -652,6 +696,7 @@ impl HttpState {
             &serde_json::to_string(&ids).unwrap_or_default(),
         );
         self.tabs.remember(preferences);
+        self.environments.remember(preferences);
         true
     }
 

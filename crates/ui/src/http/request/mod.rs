@@ -1,25 +1,32 @@
 //! The open request: its name, its method and URL on one line, the variables it uses, and its
 //! parts a tab each.
 
+mod auth;
 mod body;
+mod extractions;
 mod graphql;
 mod parts;
 pub(crate) mod table;
+mod transport;
 mod url;
 
 #[cfg(test)]
+mod settings_tests;
+#[cfg(test)]
 mod tests;
 
+use std::sync::Arc;
+
 use egui::{
-    CornerRadius, FontFamily, FontId, Margin, Rect, Role, Sense, Stroke, StrokeKind, TextEdit, Ui,
-    Vec2, WidgetInfo, pos2,
+    CornerRadius, FontFamily, FontId, Galley, Margin, Rect, Role, Sense, Stroke, StrokeKind,
+    TextEdit, Ui, Vec2, WidgetInfo, pos2,
 };
-use engine::http::model::{HttpMethod, RequestKind};
+use engine::http::model::{HttpMethod, RequestAuth, RequestKind};
 use engine::http::send::{ImpliedHeader, ImpliedSource};
 use engine::http::variables::UsedVariable;
 use i18n::keys;
 
-use super::Action;
+use super::{Action, variables_table};
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
 use crate::state::http::tabs::{DraftEdit, Tab};
@@ -33,8 +40,12 @@ pub(crate) enum Section {
     #[default]
     Params,
     Headers,
+    Auth,
     Body,
     Query,
+    Variables,
+    Scripts,
+    Settings,
 }
 
 impl Section {
@@ -42,8 +53,12 @@ impl Section {
         match self {
             Self::Params => "params",
             Self::Headers => "headers",
+            Self::Auth => "auth",
             Self::Body => "body",
             Self::Query => "query",
+            Self::Variables => "variables",
+            Self::Scripts => "scripts",
+            Self::Settings => "settings",
         }
     }
 
@@ -51,8 +66,12 @@ impl Section {
         match self {
             Self::Params => keys::http::editor::sections::PARAMS,
             Self::Headers => keys::http::editor::sections::HEADERS,
+            Self::Auth => keys::http::editor::sections::AUTH,
             Self::Body => keys::http::editor::sections::BODY,
             Self::Query => keys::http::editor::sections::QUERY,
+            Self::Variables => keys::http::editor::sections::VARIABLES,
+            Self::Scripts => keys::http::editor::sections::SCRIPTS,
+            Self::Settings => keys::http::editor::sections::SETTINGS,
         }
     }
 }
@@ -60,9 +79,24 @@ impl Section {
 /// The parts each kind is edited by, in their order.
 fn sections(kind: RequestKind) -> &'static [Section] {
     match kind {
-        RequestKind::Http => &[Section::Params, Section::Headers, Section::Body],
-        RequestKind::Graphql => &[Section::Query, Section::Headers],
-        RequestKind::Websocket => &[Section::Headers],
+        RequestKind::Http => &[
+            Section::Params,
+            Section::Headers,
+            Section::Auth,
+            Section::Body,
+            Section::Variables,
+            Section::Scripts,
+            Section::Settings,
+        ],
+        RequestKind::Graphql => &[
+            Section::Query,
+            Section::Headers,
+            Section::Auth,
+            Section::Variables,
+            Section::Scripts,
+            Section::Settings,
+        ],
+        RequestKind::Websocket => &[Section::Headers, Section::Auth, Section::Variables],
     }
 }
 
@@ -73,6 +107,10 @@ pub(crate) struct TextBoxes {
     body: Editor,
     query: Editor,
     variables: Editor,
+    /// The auth's secret is shown.
+    revealed: bool,
+    numbers: transport::Typed,
+    secrets_shown: variables_table::Revealed,
 }
 
 impl TextBoxes {
@@ -143,6 +181,12 @@ pub(crate) fn show(
                         Section::Headers => headers(ui, state, tab, actions),
                         Section::Body => body::show(ui, state, tab, &mut boxes.body, actions),
                         Section::Query => graphql::show(ui, state, tab, boxes, actions),
+                        Section::Auth => auth::show(ui, state, tab, &mut boxes.revealed, actions),
+                        Section::Variables => variables(ui, tab, boxes, actions, language),
+                        Section::Scripts => extractions::show(ui, tab, actions, language),
+                        Section::Settings => {
+                            transport::show(ui, state, tab, &mut boxes.numbers, actions);
+                        }
                     }
                 });
         });
@@ -330,7 +374,6 @@ fn chips(ui: &mut Ui, used: &[UsedVariable], language: i18n::Language) {
 fn section_tabs(ui: &mut Ui, state: &AppState, tab: &Tab, view: &mut EditorView) {
     let p = palette(ui.ctx());
     let language = state.language;
-    let unusual = state.http.body_answer().is_some_and(|said| said.unusual);
     let current = view.section(tab.draft.kind);
     let label = i18n::translate(language, keys::http::editor::PARTS, &[]);
     let row = ui.horizontal(|ui| {
@@ -338,41 +381,12 @@ fn section_tabs(ui: &mut Ui, state: &AppState, tab: &Tab, view: &mut EditorView)
         for section in sections(tab.draft.kind) {
             let on = *section == current;
             let words = i18n::translate(language, section.name(), &[]);
-            let count = counted(tab, *section);
             let ink = if on { p.text_0 } else { p.text_1 };
             let galley = widgets::text(ui, &words, 13.0, 500.0, FontFamily::Proportional, ink);
-            let badge = (count > 0).then(|| {
-                widgets::text(
-                    ui,
-                    &count.to_string(),
-                    11.0,
-                    600.0,
-                    FontFamily::Proportional,
-                    p.text_2,
-                )
-            });
-            let warning = (*section == Section::Body && unusual).then(|| {
-                let method = tab.draft.method.as_str();
-                let words = i18n::translate(
-                    language,
-                    keys::http::body::UNUSUAL_SHORT,
-                    &[("method", method.into())],
-                );
-                egui::RichText::new(words).size(11.0).color(p.amber_text)
-            });
-            let warned = warning.as_ref().map_or(0.0, |words| {
-                widgets::text(
-                    ui,
-                    words.text(),
-                    11.0,
-                    400.0,
-                    FontFamily::Proportional,
-                    p.amber_text,
-                )
-                .size()
-                .x + 12.0
-            });
-            let extra = badge.as_ref().map_or(warned, |badge| badge.size().x + 12.0);
+            let mark = mark(ui, state, tab, *section);
+            let extra = mark
+                .as_ref()
+                .map_or(0.0, |(galley, _)| galley.size().x + 12.0);
             let size = Vec2::new(galley.size().x + 24.0 + extra, 34.0);
             let response = interact(
                 ui,
@@ -388,21 +402,14 @@ fn section_tabs(ui: &mut Ui, state: &AppState, tab: &Tab, view: &mut EditorView)
                 galley,
                 ink,
             );
-            if let Some(badge) = badge {
-                let at = pos2(
-                    rect.right() - 12.0 - badge.size().x,
-                    rect.center().y - badge.size().y / 2.0,
-                );
-                ui.painter().galley(at, badge, p.text_2);
-            }
-            if let Some(words) = warning {
-                let right = rect.right() - 12.0;
-                let at = Rect::from_min_max(
-                    pos2(right - warned + 12.0, rect.top()),
-                    pos2(right, rect.bottom()),
-                );
-                let said = ui.put(at, egui::Label::new(words).selectable(false));
-                widgets::address(ui, &said, "http-body-unusual-mark");
+            if let Some((galley, author_id)) = mark {
+                let size = galley.size();
+                let at = pos2(rect.right() - 12.0 - size.x, rect.center().y - size.y / 2.0);
+                let at = Rect::from_min_size(at, size);
+                // A child: `put` would move the cursor, and the next tab with it.
+                let mut over = ui.new_child(egui::UiBuilder::new().max_rect(at));
+                let said = over.add(egui::Label::new(galley).selectable(false));
+                widgets::address(ui, &said, author_id);
             }
             if on {
                 let edge = Rect::from_min_max(pos2(rect.left(), rect.bottom() - 2.0), rect.max);
@@ -424,17 +431,84 @@ fn section_tabs(ui: &mut Ui, state: &AppState, tab: &Tab, view: &mut EditorView)
         .widget_info(|| WidgetInfo::labeled(Role::TabList, true, &label));
 }
 
+/// What a part's tab says beside its name, seen from the others: how many rows it sends, that
+/// its auth is inherited, that its body is unusual.
+fn mark(
+    ui: &Ui,
+    state: &AppState,
+    tab: &Tab,
+    section: Section,
+) -> Option<(Arc<Galley>, &'static str)> {
+    let p = palette(ui.ctx());
+    let language = state.language;
+    let count = counted(tab, section);
+    let (words, ink, author_id) = if count > 0 {
+        (count.to_string(), p.text_2, "http-section-count")
+    } else if section == Section::Auth && tab.draft.document.auth == RequestAuth::Inherit {
+        let words = i18n::translate(language, keys::http::auth::INHERITS_SHORT, &[]);
+        (words, p.text_2, "http-auth-inherits")
+    } else if section == Section::Body && state.http.body_answer().is_some_and(|said| said.unusual)
+    {
+        let method = tab.draft.method.as_str();
+        let words = i18n::translate(
+            language,
+            keys::http::body::UNUSUAL_SHORT,
+            &[("method", method.into())],
+        );
+        (words, p.amber_text, "http-body-unusual-mark")
+    } else {
+        return None;
+    };
+    let galley = widgets::text(ui, &words, 11.0, 600.0, FontFamily::Proportional, ink);
+    Some((galley, author_id))
+}
+
 /// How many rows of a part are sent: the number its tab wears.
 fn counted(tab: &Tab, section: Section) -> usize {
     let document = &tab.draft.document;
-    let rows = match section {
-        Section::Params => &document.params,
-        Section::Headers => &document.headers,
-        Section::Body | Section::Query => return 0,
+    let sent = |rows: &[engine::http::model::KeyValue]| {
+        rows.iter()
+            .filter(|row| row.enabled && !row.key.is_empty())
+            .count()
     };
-    rows.iter()
-        .filter(|row| row.enabled && !row.key.is_empty())
-        .count()
+    match section {
+        Section::Params => sent(&document.params),
+        Section::Headers => sent(&document.headers),
+        Section::Variables => document
+            .variables
+            .iter()
+            .filter(|row| row.enabled && !row.name.is_empty())
+            .count(),
+        Section::Scripts => document.extractions.len(),
+        Section::Settings => transport::set_fields(&document.transport),
+        Section::Auth | Section::Body | Section::Query => 0,
+    }
+}
+
+fn variables(
+    ui: &mut Ui,
+    tab: &Tab,
+    boxes: &mut TextBoxes,
+    actions: &mut Actions,
+    language: i18n::Language,
+) {
+    let label = i18n::translate(language, keys::http::editor::sections::VARIABLES, &[]);
+    let table = variables_table::Table {
+        kind: "request",
+        label: &label,
+    };
+    let rows = &tab.draft.document.variables;
+    match variables_table::show(ui, &table, rows, &mut boxes.secrets_shown, language) {
+        Some(variables_table::Changed::Rows(rows)) => {
+            edit(actions, tab, DraftEdit::Variables(rows));
+        }
+        Some(variables_table::Changed::Filler(filler)) => {
+            if let Some(id) = filler.request_id {
+                actions.push(Asked::Http(Action::OpenRequest(id)));
+            }
+        }
+        None => {}
+    }
 }
 
 fn params(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n::Language) {

@@ -6,15 +6,16 @@
 //! and a tab follows each tree that is read. A tab that kept the name it was opened with showed
 //! the old one after a rename from the rail — and its next save wrote it back over the new one.
 
+use engine::http::environments::Variable;
 use engine::http::graphql::GraphqlDocument;
 use engine::http::model::{
-    HttpMethod, HttpRequest, HttpRequestPatch, HttpTree, KeyValue, RequestBody, RequestDocument,
-    RequestKind,
+    Extraction, HttpMethod, HttpRequest, HttpRequestPatch, HttpTree, KeyValue, RequestAuth,
+    RequestBody, RequestDocument, RequestKind,
 };
+use engine::http::query::QuerySide;
+use engine::http::transport::TransportSettings;
 
 use super::bodies::{self, BodiesLeft, BodyKind};
-use engine::http::query::QuerySide;
-
 use super::tree;
 use crate::api;
 use crate::backend::{Backend, Pending};
@@ -56,6 +57,10 @@ pub enum DraftEdit {
     Headers(Vec<KeyValue>),
     Body(RequestBody),
     Graphql(GraphqlDocument),
+    Auth(RequestAuth),
+    Transport(TransportSettings),
+    Variables(Vec<Variable>),
+    Extractions(Vec<Extraction>),
 }
 
 impl Draft {
@@ -78,6 +83,10 @@ impl Draft {
             DraftEdit::Headers(headers) => document.headers = headers,
             DraftEdit::Body(body) => document.body = body,
             DraftEdit::Graphql(graphql) => document.graphql = graphql,
+            DraftEdit::Auth(auth) => document.auth = auth,
+            DraftEdit::Transport(transport) => document.transport = transport,
+            DraftEdit::Variables(variables) => document.variables = variables,
+            DraftEdit::Extractions(rules) => document.extractions = rules,
         }
     }
 }

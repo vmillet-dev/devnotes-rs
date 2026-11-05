@@ -42,6 +42,7 @@ pub(super) struct BodyView {
     colouring: Option<Colouring>,
     view: View,
     explorer: Explorer,
+    pub(super) extracting: Option<crate::http::extract::Extracting>,
 }
 
 impl Default for BodyView {
@@ -54,6 +55,7 @@ impl Default for BodyView {
             colouring: None,
             view: View::Pretty,
             explorer: Explorer::default(),
+            extracting: None,
         }
     }
 }
@@ -301,9 +303,13 @@ fn explore(
         .format(StructureFormat::Json)
         .language(state.language)
         .with_code(false)
+        .extractable(true)
         .show(&mut inside);
     if output.tree_proposed {
         view.view = View::Tree;
+    }
+    if let Some(path) = output.extract {
+        view.extracting = Some(crate::http::extract::Extracting::of(&path));
     }
 }
 

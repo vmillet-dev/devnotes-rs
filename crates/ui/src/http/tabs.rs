@@ -41,7 +41,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         bar.bottom() - 0.5,
         Stroke::new(1.0, p.line_soft),
     );
-    let end_width = new_request_width(ui, language);
+    let end_width = end_width(ui, state);
     let toggle_rect = Rect::from_center_size(
         pos2(bar.left() + 8.0 + 16.0, bar.center().y),
         Vec2::splat(32.0),
@@ -91,6 +91,8 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
     new_request(&mut end_ui, actions, language);
+    end_ui.add_space(8.0);
+    super::environment_picker::show(&mut end_ui, state, actions);
 }
 
 fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language: i18n::Language) {
@@ -214,6 +216,11 @@ fn close_glyph(ui: &Ui, close: &Response) {
     };
     let glyph = Rect::from_center_size(close.rect.center(), Vec2::splat(14.0));
     icons::paint(ui, glyph, Icon::X, ink);
+}
+
+/// What the end of the strip takes: « New request » and the environment beside it.
+fn end_width(ui: &Ui, state: &AppState) -> f32 {
+    new_request_width(ui, state.language) + super::environment_picker::width(ui, state) + 8.0
 }
 
 fn new_request_width(ui: &Ui, language: i18n::Language) -> f32 {

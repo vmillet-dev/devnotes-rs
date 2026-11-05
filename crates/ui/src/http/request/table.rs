@@ -16,9 +16,9 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, Checkbox, MIN_TARGET, interact};
 
-pub(super) const ROW: f32 = 32.0;
-pub(super) const CHECK: f32 = 36.0;
-pub(super) const REMOVE: f32 = 32.0;
+pub(crate) const ROW: f32 = 32.0;
+pub(crate) const CHECK: f32 = 36.0;
+pub(crate) const REMOVE: f32 = 32.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Field {
@@ -102,7 +102,7 @@ pub(crate) fn show(
 }
 
 /// The table's frame: a line of heads, the rows, and the blank row after them.
-pub(super) fn frame(ui: &mut Ui, rows: usize, label: &str, author_id: &str) -> Rect {
+pub(crate) fn frame(ui: &mut Ui, rows: usize, label: &str, author_id: &str) -> Rect {
     let p = palette(ui.ctx());
     #[expect(clippy::cast_precision_loss, reason = "rows of a table")]
     let height = (rows + 2) as f32 * ROW;
@@ -165,7 +165,7 @@ fn head(ui: &Ui, columns: &Columns, top: f32, language: i18n::Language) {
 }
 
 /// A column's head, in the cell at the top of it.
-pub(super) fn heading(ui: &Ui, rect: Rect, key: i18n::Key, language: i18n::Language) {
+pub(crate) fn heading(ui: &Ui, rect: Rect, key: i18n::Key, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, key, &[]);
     let galley = widgets::text(ui, &words, 11.5, 600.0, FontFamily::Proportional, p.text_2);
@@ -177,7 +177,7 @@ pub(super) fn heading(ui: &Ui, rect: Rect, key: i18n::Key, language: i18n::Langu
 }
 
 /// The box that says a row is sent; `true` when it changed.
-pub(super) fn tick(
+pub(crate) fn tick(
     ui: &mut Ui,
     rect: Rect,
     enabled: &mut bool,
@@ -251,7 +251,7 @@ fn row_of(
             cell.id.with(Field::Key as u8),
         ),
         (&mut row.key, &tr(keys::http::table::KEY), "http-kv-key"),
-        (&hint, key_ink, true),
+        (&hint, key_ink, true, false),
     );
     changed |= key.changed();
     let was_empty = row.value.is_empty();
@@ -271,7 +271,7 @@ fn row_of(
             &tr(keys::http::table::VALUE),
             "http-kv-value",
         ),
-        ("", value_ink, true),
+        ("", value_ink, true, false),
     );
     // The space typed after `Name:` lands here once the split has moved the caret: a header's
     // value starts at its first character, as a pasted one does.
@@ -290,7 +290,7 @@ fn row_of(
             &tr(keys::http::table::DESCRIPTION),
             "http-kv-description",
         ),
-        ("", ink, false),
+        ("", ink, false, false),
     );
     changed |= description.changed();
     let at = Columns::at(columns.remove, cell.top);
@@ -300,11 +300,11 @@ fn row_of(
     changed.then_some(Changed::Row(row))
 }
 
-pub(super) fn text_cell(
+pub(crate) fn text_cell(
     ui: &mut Ui,
     (rect, id): (Rect, Id),
     (text, name, author_id): (&mut String, &str, &str),
-    (hint, ink, mono): (&str, Color32, bool),
+    (hint, ink, mono, masked): (&str, Color32, bool, bool),
 ) -> egui::Response {
     let family = if mono {
         FontFamily::Monospace
@@ -321,6 +321,7 @@ pub(super) fn text_cell(
             .margin(Margin::symmetric(8, 0))
             .align(egui::Align2::LEFT_CENTER)
             .hint_text(hint)
+            .password(masked)
             .text_color(ink)
             .font(FontId::new(12.5, family)),
     );
@@ -354,7 +355,7 @@ fn pasted_lines(ui: &Ui, id: Id) -> Option<Vec<KeyValue>> {
     Some(read)
 }
 
-pub(super) fn remove(
+pub(crate) fn remove(
     ui: &mut Ui,
     rect: Rect,
     (key, author_id): (&str, &str),
