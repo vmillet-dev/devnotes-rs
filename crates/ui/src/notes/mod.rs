@@ -39,6 +39,8 @@ pub enum Action {
     Thumbnail(Stamp),
     /// A drawing a Note embeds: its large picture, by id.
     Picture(String),
+    /// A Note's `mermaid` block, by its source.
+    Diagram(String),
     /// `None`: every space.
     ChooseSpace(Option<String>),
     /// In its own space, which is then the one shown.

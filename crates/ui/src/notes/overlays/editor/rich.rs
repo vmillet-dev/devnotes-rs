@@ -13,7 +13,7 @@ use richtext::{Document, History, ListKind, Marks, Position, Selection, tree};
 use crate::state::AppState;
 use crate::theme::palette;
 use crate::widgets;
-use crate::widgets::rich::{Embedded, Laid, RichView};
+use crate::widgets::rich::{Embedded, Laid, RichView, Sketch};
 
 const TOOLBAR_HEIGHT: f32 = 40.0;
 const PADDING: egui::Vec2 = egui::vec2(32.0, 20.0);
@@ -51,7 +51,12 @@ pub(super) struct RichEditor {
     /// The text takes the keys back after a tool: the caret stays where it was.
     refocus: bool,
     search: super::search_bar::SearchBar,
+    /// When the text last changed, in the input's seconds: a diagram redraws once typing pauses.
+    changed_at: f64,
 }
+
+/// Typing redraws a diagram once the keys pause; the drawing before stays meanwhile.
+const REDRAW_AFTER_SECS: f64 = 0.3;
 
 impl RichEditor {
     pub(super) fn of(markdown: &str) -> Self {
@@ -81,6 +86,7 @@ impl RichEditor {
             reveal: false,
             refocus: false,
             search: super::search_bar::SearchBar::default(),
+            changed_at: 0.0,
         }
     }
 
@@ -328,6 +334,7 @@ fn distance(laid: &Laid, point: Pos2) -> f32 {
 }
 
 /// What a frame of the Note did.
+#[derive(Default)]
 pub(super) struct Shown {
     pub(super) changed: bool,
     pub(super) left: bool,
@@ -337,18 +344,14 @@ pub(super) struct Shown {
     pub(super) code_paste: Option<String>,
     /// The embedded drawings whose picture is to be read.
     pub(super) wanted: Vec<String>,
+    /// The diagrams to draw, by their source.
+    pub(super) diagrams: Vec<String>,
 }
 
 pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Shown {
     let language = state.language;
     let whole = ui.max_rect();
-    let mut shown = Shown {
-        changed: false,
-        left: false,
-        link: None,
-        code_paste: None,
-        wanted: Vec::new(),
-    };
+    let mut shown = Shown::default();
     let before = view.changes;
     let bar = Rect::from_min_max(whole.min, pos2(whole.right(), whole.top() + TOOLBAR_HEIGHT));
     let mut bar_ui = ui.new_child(UiBuilder::new().id_salt("rich-toolbar").max_rect(bar));
@@ -383,6 +386,8 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
     let found = search::lit(view, &view.search);
     let pictures = |id: &str| embedded(state, id);
     let missing = i18n::translate(language, keys::drawing::MISSING, &[]);
+    let ctx = ui.ctx().clone();
+    let diagrams = |source: &str| state.caches.diagrams.get(&ctx, source);
     let scrolled = egui::ScrollArea::vertical()
         .id_salt("rich-scroll")
         .auto_shrink([false, false])
@@ -395,6 +400,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
                         .editing(&view.selection)
                         .found(&found)
                         .pictures(&pictures, &missing)
+                        .diagrams(&diagrams, language)
                         .show(ui);
                     if reveal && let Some(caret) = caret {
                         ui.scroll_to_rect(caret.expand(PADDING.y), None);
@@ -406,6 +412,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
     let painted = scrolled.inner;
     view.laid = painted.leaves;
     shown.wanted = painted.wanted;
+    shown.diagrams = to_draw(ui, view, painted.sketches);
     if let Some(link) = painted.link {
         shown.link = Some(link);
     }
@@ -423,6 +430,9 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
         edit::toggle_task(&mut view.document, &list, item);
         surface.request_focus();
     }
+    if let Some(code) = painted.diagram {
+        to_code(view, code, &surface);
+    }
     pointer(ui, view, &surface);
     if focused {
         lock_keys(ui, surface.id);
@@ -431,8 +441,40 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
     }
     shown.left = surface.lost_focus();
     shown.changed = view.changes != before;
+    if shown.changed {
+        view.changed_at = ui.input(|input| input.time);
+    }
     ui.advance_cursor_after_rect(whole);
     shown
+}
+
+/// The diagrams to ask for: at once when nothing stands in their place, once typing pauses
+/// otherwise.
+fn to_draw(ui: &Ui, view: &RichEditor, sketches: Vec<Sketch>) -> Vec<String> {
+    let quiet = ui.input(|input| input.time) - view.changed_at;
+    let mut asked = Vec::new();
+    for sketch in sketches {
+        if !sketch.stale || quiet >= REDRAW_AFTER_SECS {
+            asked.push(sketch.source);
+        } else {
+            let left = std::time::Duration::from_secs_f64(REDRAW_AFTER_SECS - quiet);
+            ui.ctx().request_repaint_after(left);
+        }
+    }
+    asked
+}
+
+/// A diagram clicked: the caret at the end of its code, which unfolds.
+fn to_code(view: &mut RichEditor, code: Vec<usize>, surface: &egui::Response) {
+    let end = tree::leaf(&view.document, &code).map_or(0, |leaf| leaf.len());
+    view.move_head(
+        Position {
+            path: code,
+            offset: end,
+        },
+        false,
+    );
+    surface.request_focus();
 }
 
 /// What stands where the Note embeds drawing `id`: its large picture, read by id once shown.

@@ -187,7 +187,13 @@ impl Reader {
                 }
             }
             Open::Heading { level, content } => self.block(Block::Heading { level, content }),
-            Open::Code { language, text } => self.block(Block::CodeBlock { language, text }),
+            Open::Code { language, mut text } => {
+                // The fence's own line end: the editor's code ends on its last character.
+                if text.ends_with('\n') {
+                    text.pop();
+                }
+                self.block(Block::CodeBlock { language, text });
+            }
             Open::Table(rows) => self.block(Block::Table(rows)),
             Open::Row(cells) => {
                 if let Some(Open::Table(rows)) = self.open.last_mut() {

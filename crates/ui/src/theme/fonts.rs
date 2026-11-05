@@ -53,6 +53,20 @@ pub fn for_drawings() -> Arc<drawing::Fonts> {
     Arc::clone(&FONTS)
 }
 
+/// What a diagram's labels are measured and painted with: the interface's sans; `None` should
+/// the files not read as fonts.
+pub fn for_diagrams() -> Option<&'static diagram::Fonts> {
+    static FONTS: LazyLock<Option<diagram::Fonts>> = LazyLock::new(|| {
+        let files: Vec<&'static [u8]> = SANS
+            .iter()
+            .filter_map(|name| FACES.iter().find(|(face, _)| face == name))
+            .map(|(_, bytes)| *bytes)
+            .collect();
+        diagram::Fonts::new(&files)
+    });
+    FONTS.as_ref()
+}
+
 pub fn definitions() -> FontDefinitions {
     let mut definitions = FontDefinitions::empty();
     for (name, bytes) in FACES {

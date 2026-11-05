@@ -1747,20 +1747,20 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   nothing loaded twice, a block drawn plain until its grammar has arrived. Tab indents as the code field does (`indentUnit`), and `withTabs`
   leaves a fence alone: nothing is escaped in one, so its `&#9;` is text. A card and a search
   read its lines as they are (`notes::markdown::plain`).
-- **A `mermaid` block is drawn under its code** (`rich-text-diagrams.ts`), offered first in the
-  block's language menu; a snippet has no Mermaid language. The drawing is a widget decoration
-  after the block, keyed by its rank, the theme and its source, so the caret and typing elsewhere
-  reuse it; typing in the block redraws once the keys pause (`REDRAW_AFTER_MS`), the last drawing
-  kept on screen meanwhile. Away from the caret — the editor blurred, or the selection elsewhere,
-  read from TipTap's `focus`/`blur` transaction metas — the code folds to its first line; a press
-  on the drawing puts the caret back in it. A parse error names its line (`lineOf` reads both of
-  Mermaid's parsers) and shows Mermaid's message. `MermaidRenderer` loads Mermaid as a chunk of
-  its own on the first diagram, at its `strict` level with error rendering suppressed, coloured
-  from the theme's tokens (Mermaid derives shades, so it is handed concrete colours, and a theme
-  change draws again); one drawing at a time, since its configuration and its measuring element
-  are global, and the last 64 kept. Its ESM build evaluates no code, so the CSP stays as it is;
-  the SVG it returns is read by an inert HTML parser, not `innerHTML`. The fence is stored as it
-  was typed, and a card shows the block's lines.
+- **A `mermaid` block is drawn under its code** (`widgets::rich`, D2), offered first in the
+  block's language menu; a snippet has no Mermaid language. The `diagram` crate draws it:
+  `merman` writes the SVG through its `resvg_safe` pipeline (labels as `<text>`, which `resvg`
+  paints), measuring them with the embedded Inter (`native-fonts`; without it labels are cut),
+  in Mermaid's `base` theme with its variables from the tokens; `resvg` paints it at twice its
+  size. Built without ELK. A parse error names its line, from the byte span `merman` gives, and
+  shows its message; a source that draws nothing else is « type not supported » and stays code.
+  `LibraryCaches.diagrams` keeps the last 64 drawings, by theme and source, uploaded once, and
+  draws one at a time on `compute`. The view asks for a source it has no drawing of; the editor
+  asks at once when nothing stands in its place and once typing pauses (`REDRAW_AFTER_SECS`)
+  otherwise, the last drawing in that place (egui's memory, by the block's rank) shown
+  meanwhile. Away from the caret the code folds to its first line; a click on the drawing puts
+  the caret at the end of its code. The fence is stored as it was typed, and a card shows the
+  block's lines.
 - **« Présenter » shows the Note full screen, a slide at a time.** Rust cuts the draft on
   screen, not the stored body (`present_note`, `notes::markdown::present`): a slide starts at
   each `#` or `##` heading and after each `---` rule outside any list, quote or fence, each slide

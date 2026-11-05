@@ -334,7 +334,8 @@
       "diagram": {
         "edit": "Cliquer pour modifier le code du diagramme",
         "failed": "Le diagramme ne se lit pas.",
-        "failedAt": "Le diagramme ne se lit pas, ligne {{line}}."
+        "failedAt": "Le diagramme ne se lit pas, ligne {{line}}.",
+        "unsupported": "Type de diagramme non pris en charge"
       }
     },
     "languageLabel": "Format du contenu",

@@ -37,11 +37,7 @@ fn block(block: &Block) -> String {
             .collect::<Vec<_>>()
             .join("\n"),
         Block::CodeBlock { language, text } => {
-            let newline = if text.ends_with('\n') || text.is_empty() {
-                ""
-            } else {
-                "\n"
-            };
+            let newline = if text.is_empty() { "" } else { "\n" };
             format!("```{language}\n{text}{newline}```")
         }
         Block::Table(rows) => format!("\n{}\n", table(rows)),

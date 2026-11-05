@@ -334,7 +334,8 @@
       "diagram": {
         "edit": "Click to edit the diagram’s code",
         "failed": "The diagram cannot be read.",
-        "failedAt": "The diagram cannot be read, line {{line}}."
+        "failedAt": "The diagram cannot be read, line {{line}}.",
+        "unsupported": "Diagram type not supported"
       }
     },
     "languageLabel": "Content format",

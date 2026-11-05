@@ -47,6 +47,21 @@ pub fn picture_drawing(
     })
 }
 
+/// A `mermaid` block drawn, off the frame.
+pub fn draw_diagram(
+    backend: &Backend,
+    source: String,
+    theme: diagram::Theme,
+) -> Pending<diagram::Drawn> {
+    backend.compute(move |_| {
+        let drawn = crate::theme::fonts::for_diagrams()
+            .map_or(diagram::Drawn::Unsupported, |fonts| {
+                diagram::draw(&source, &theme, fonts)
+            });
+        Ok(drawn)
+    })
+}
+
 /// What became of an export.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Exported {
