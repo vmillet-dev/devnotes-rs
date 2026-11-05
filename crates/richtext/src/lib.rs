@@ -12,6 +12,7 @@ pub mod inlines;
 mod model;
 mod read;
 pub mod rules;
+pub mod table;
 pub mod tree;
 mod write;
 

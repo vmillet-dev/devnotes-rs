@@ -61,6 +61,16 @@ pub fn insert_text(
     marks: &Marks,
 ) -> Selection {
     let mut selection = delete_selection(document, selection);
+    // A code block holds its lines: they go in whole, never as blocks.
+    if let Some(LeafMut::Code(code)) = tree::leaf_mut(document, &selection.head.path) {
+        let Position { path, offset } = selection.head.clone();
+        let byte = code
+            .char_indices()
+            .nth(offset)
+            .map_or(code.len(), |(at, _)| at);
+        code.insert_str(byte, text);
+        return caret(path, offset + text.chars().count());
+    }
     for (line, piece) in text.split('\n').enumerate() {
         if line > 0 {
             selection = split(document, &selection);
@@ -696,6 +706,47 @@ pub fn toggle_code_block(document: &mut Document, selection: &Selection) -> Sele
         }
         _ => set_code_block(document, selection, String::new()),
     }
+}
+
+/// The fence of the code block the caret is in.
+pub fn set_language(document: &mut Document, selection: &Selection, language: String) {
+    if let Some((blocks, index)) = tree::siblings_mut(document, &selection.head.path)
+        && let Block::CodeBlock {
+            language: fence, ..
+        } = &mut blocks[index]
+    {
+        *fence = language;
+    }
+}
+
+/// Shift+Tab in a code block: one level of `unit` off the caret's line.
+pub fn outdent_code(document: &mut Document, selection: &Selection, unit: &str) -> Selection {
+    let Position { path, offset } = selection.head.clone();
+    let Some(LeafMut::Code(text)) = tree::leaf_mut(document, &path) else {
+        return selection.clone();
+    };
+    let chars: Vec<char> = text.chars().collect();
+    let start = chars[..offset.min(chars.len())]
+        .iter()
+        .rposition(|glyph| *glyph == '\n')
+        .map_or(0, |at| at + 1);
+    let line: String = chars[start..].iter().collect();
+    let taken = if line.starts_with(unit) {
+        unit.chars().count()
+    } else {
+        line.chars()
+            .take_while(|glyph| *glyph == ' ')
+            .count()
+            .min(unit.chars().count())
+    };
+    if taken == 0 {
+        return selection.clone();
+    }
+    *text = chars[..start]
+        .iter()
+        .chain(&chars[start + taken..])
+        .collect();
+    caret(path, offset.saturating_sub(taken).max(start))
 }
 
 /// The caret's paragraph becomes a rule, what followed the caret a paragraph under it.
