@@ -28,6 +28,8 @@ pub enum CanvasKey {
     Undo,
     /// Down the ladder: what is armed, then the search, then up a folder.
     StepBack,
+    /// The board's loose cards flowed back under the zones; nothing on the list.
+    Align,
 }
 
 const fn bound(key: Key, modifiers: Modifiers, canvas: CanvasKey) -> Binding {
@@ -48,7 +50,7 @@ const CREATE: Modifiers = Modifiers::COMMAND;
 const CREATE_SHIFT: Modifiers = Modifiers::COMMAND.plus(Modifiers::SHIFT);
 
 /// In reading order, which is the order the keyboard sheet lists them in.
-pub static CANVAS: [Binding; 21] = [
+pub static CANVAS: [Binding; 22] = [
     bound(Key::N, CREATE, CanvasKey::New(NoteKind::Snippet)),
     bound(Key::N, CREATE_SHIFT, CanvasKey::New(NoteKind::Note)),
     bound(Key::L, CREATE_SHIFT, CanvasKey::New(NoteKind::Checklist)),
@@ -71,6 +73,7 @@ pub static CANVAS: [Binding; 21] = [
     bare(Key::Backspace, CanvasKey::Trash),
     bound(Key::Z, Modifiers::COMMAND, CanvasKey::Undo),
     bare(Key::Escape, CanvasKey::StepBack),
+    bare(Key::A, CanvasKey::Align),
 ];
 
 #[cfg(test)]

@@ -42,6 +42,11 @@ impl UndoState {
         self.banner_until.map(|until| until - now)
     }
 
+    /// What `Ctrl+Z` would put back.
+    pub fn last(&self) -> Option<&Reversible> {
+        self.last.as_ref()
+    }
+
     /// `false` when there was nothing to put back.
     pub fn revert(&mut self, backend: &Backend) -> bool {
         let Some(action) = self.last.take() else {

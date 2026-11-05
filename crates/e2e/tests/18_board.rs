@@ -156,6 +156,52 @@ fn on_the_board(app: &mut App) {
     );
 }
 
+/// Whether the card titled `title` is drawn lit: a dimmed one keeps its seat, disabled.
+fn lit(tree: &Tree, title: &str) -> Option<bool> {
+    tree.all("board-loose-card")
+        .into_iter()
+        .chain(tree.all("board-zone-card"))
+        .find(|node| node.label() == Some(title))
+        .map(|node| !node.is_disabled())
+}
+
+/// A search dims on the board, and the tidy names what it would touch.
+fn dimmed(app: &mut App) {
+    step(
+        "a search dims what it does not match, and drops nothing",
+        || {
+            app.click("search-input");
+            app.type_text("EXPLAIN");
+            app.eventually("the loose card is dimmed", |tree| {
+                lit(tree, LOOSE) == Some(false)
+            });
+            let tree = app.tree();
+            assert_eq!(lit(&tree, FILED), Some(true));
+            assert_eq!(titles_in(&tree, "Perf"), [FILED]);
+            app.capture("board-dimmed");
+            app.click("search-clear");
+            app.eventually("the card is lit again", |tree| {
+                lit(tree, LOOSE) == Some(true)
+            });
+        },
+    );
+
+    step(
+        "reorganising says how many folders and cards it moves",
+        || {
+            app.click("board-tidy-more");
+            app.eventually("the entry counts two of each", |tree| {
+                tree.text("board-tidy-everything")
+                    .is_some_and(|said| said.matches('2').count() == 2)
+            });
+            app.press(Key::Escape, Modifiers::NONE);
+            app.eventually("the menu is closed", |tree| {
+                !tree.has("board-tidy-everything")
+            });
+        },
+    );
+}
+
 #[test]
 fn board() {
     let profile = tempfile::tempdir().unwrap();
@@ -205,6 +251,7 @@ fn board() {
     );
 
     on_the_board(&mut app);
+    dimmed(&mut app);
 
     let before = frames(&app.tree());
     let mut app = app.relaunch();

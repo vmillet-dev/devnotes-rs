@@ -79,6 +79,7 @@ fn said(action: &Reversible) -> Key {
         Reversible::Pin { pinned: false, .. } => keys::undo::UNPINNED,
         Reversible::Priority(_) => keys::undo::PRIORITISED,
         Reversible::File(_) => keys::undo::FILED,
+        Reversible::Arrangement { .. } => keys::undo::ARRANGED,
         Reversible::Convert { into, .. } => match into {
             NoteKind::Snippet => keys::undo::converted_into::SNIPPET,
             NoteKind::Note => keys::undo::converted_into::NOTE,

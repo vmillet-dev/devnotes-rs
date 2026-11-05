@@ -77,6 +77,8 @@ pub enum Action {
     DeleteFolder(String),
     /// List or board, for the space shown.
     SetView(crate::state::board::Mode),
+    /// The board on screen put back in order, as far as the scope allows.
+    Tidy(engine::folders::board::BoardScope),
     /// What the field shows; asked of the core once the keys rest.
     Search(String),
     ClearSearch,

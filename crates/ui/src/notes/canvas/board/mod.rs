@@ -2,6 +2,7 @@
 //! flowing inside them, the loose ones sitting freely on a dotted ground that pans and never
 //! zooms. Only what crosses the viewport is drawn (plan § 3.6).
 
+mod tidy;
 mod zone;
 
 use egui::{
@@ -18,6 +19,7 @@ use super::{CanvasView, card, padded, state_text};
 use crate::action::{Action, Actions};
 use crate::notes::panel::FolderEdit;
 use crate::state::AppState;
+use crate::state::board::BoardState;
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, Button, address};
 
@@ -27,11 +29,20 @@ pub(super) const GRID_PX: f32 = 20.0;
 /// Where a card the view never placed is drawn: `folders::board` places every one it reads.
 const UNPLACED: BoardPoint = BoardPoint { x: 16, y: 16 };
 
+/// A card that matches nothing asked stays in its seat and stops asking for attention.
+const DIMMED: f32 = 0.32;
+
 /// What only the board's drawing sees.
 #[derive(Default)]
 pub(super) struct BoardScreen {
     /// The zone whose ⋯ is open, and what its panel holds.
     menu: Option<FolderEdit>,
+    /// Where the ground is panned to, as last drawn.
+    offset: Vec2,
+    /// The arrangements and restorations already panned for.
+    pans: (u64, u64),
+    /// Where the pan was before an arrangement sent it home: its undo puts it back.
+    panned_from: Option<Vec2>,
 }
 
 pub(super) fn show(
@@ -67,7 +78,13 @@ pub(super) fn show(
     // Said again by whichever card has it this frame, as on the list.
     canvas_view.anchor = canvas_view.focused.take();
     let mut screen = std::mem::take(&mut canvas_view.board);
-    ground(ui, view, &context, &mut screen, (canvas_view, actions));
+    ground(
+        ui,
+        (board, view),
+        &context,
+        &mut screen,
+        (canvas_view, actions),
+    );
     canvas_view.board = screen;
     let shown: Vec<_> = board
         .cards()
@@ -83,7 +100,7 @@ pub(super) fn show(
 /// The dotted ground, in its frame: the only thing that scrolls, both ways.
 fn ground(
     ui: &mut Ui,
-    view: &BoardView,
+    (board, view): (&BoardState, &BoardView),
     context: &card::Context<'_>,
     screen: &mut BoardScreen,
     (canvas_view, actions): (&mut CanvasView, &mut Actions),
@@ -104,44 +121,87 @@ fn ground(
     address(ui, &ground, "board");
     let mut ground_ui = ui.new_child(UiBuilder::new().max_rect(inner).id_salt("board"));
     ground_ui.set_clip_rect(inner);
-    egui::ScrollArea::both()
-        .id_salt("board")
-        .auto_shrink([false, false])
-        .show_viewport(&mut ground_ui, |ui, viewport| {
-            // At least the visible ground, whatever the core sized it: past the content's edge
-            // the dotted ground still takes the pointer.
-            let size = vec2(px(view.width), px(view.height)).max(viewport.size());
-            let surface = Rect::from_min_size(ui.min_rect().min, size);
-            let drawn = ui.allocate_rect(surface, Sense::hover());
-            drawn.widget_info(|| WidgetInfo::labeled(Role::Canvas, true, ""));
-            address(ui, &drawn, "board-surface");
-            dots(ui, surface.min);
-            let origin = surface.min;
-            reveal(ui, view, origin, canvas_view.request.as_deref());
-            let clip = ui.clip_rect();
-            for shown in &view.zones {
-                let rect = frame_rect(origin, shown.frame);
-                if rect.intersects(clip) {
-                    zone::show(ui, rect, shown, context, screen, (canvas_view, actions));
-                }
+    let scroll = pan(
+        egui::ScrollArea::both()
+            .id_salt("board")
+            .auto_shrink([false, false]),
+        screen,
+        board.pans(),
+    );
+    let output = scroll.show_viewport(&mut ground_ui, |ui, viewport| {
+        // At least the visible ground, whatever the core sized it: past the content's edge
+        // the dotted ground still takes the pointer.
+        let size = vec2(px(view.width), px(view.height)).max(viewport.size());
+        let surface = Rect::from_min_size(ui.min_rect().min, size);
+        let drawn = ui.allocate_rect(surface, Sense::hover());
+        drawn.widget_info(|| WidgetInfo::labeled(Role::Canvas, true, ""));
+        address(ui, &drawn, "board-surface");
+        dots(ui, surface.min);
+        let origin = surface.min;
+        reveal(ui, (board, view), origin, canvas_view.request.as_deref());
+        let clip = ui.clip_rect();
+        for shown in &view.zones {
+            let frame = board.frame(shown);
+            let rect = frame_rect(origin, frame);
+            if rect.intersects(clip) {
+                let at = (rect, frame);
+                zone::show(ui, at, shown, context, screen, (canvas_view, actions));
             }
-            for entry in &view.loose {
-                let rect = card_rect(origin, entry.position.unwrap_or(UNPLACED));
-                if rect.intersects(clip) {
-                    loose(ui, rect, entry, context, (canvas_view, actions));
-                }
+        }
+        for entry in &view.loose {
+            let rect = card_rect(origin, board.place(entry).unwrap_or(UNPLACED));
+            if rect.intersects(clip) {
+                seated(
+                    ui,
+                    rect,
+                    entry,
+                    "board-loose-card",
+                    context,
+                    (canvas_view, actions),
+                );
             }
-            if view.zones.is_empty() && view.loose.is_empty() {
-                empty(ui, ui.clip_rect(), context.language);
-            }
-        });
+        }
+        if view.zones.is_empty() && view.loose.is_empty() {
+            empty(ui, ui.clip_rect(), context.language);
+        }
+    });
+    screen.offset = output.state.clamped_offset();
+    // Over the ground and not in the header: it acts on this board's geometry alone. Bottom
+    // right, where it covers no zone's ⋯.
+    let counts = (view.zones.len(), view.loose.len());
+    tidy::show(
+        ui,
+        frame.max - vec2(16.0, 18.0),
+        counts,
+        context.language,
+        actions,
+    );
 }
 
-/// A loose card: it sits where it was left.
-fn loose(
+/// Home after an arrangement, back after its undo: the pan is the ground's alone, and a result
+/// written off screen reads as an erasure.
+fn pan(scroll: egui::ScrollArea, screen: &mut BoardScreen, pans: (u64, u64)) -> egui::ScrollArea {
+    let (arranged, restored) = std::mem::replace(&mut screen.pans, pans);
+    if pans.0 != arranged {
+        screen.panned_from = Some(screen.offset);
+        return scroll.scroll_offset(Vec2::ZERO);
+    }
+    if pans.1 != restored
+        && let Some(back) = screen.panned_from.take()
+    {
+        return scroll.scroll_offset(back);
+    }
+    scroll
+}
+
+/// A card in its seat — a zone's, or the ground's — under an id its note keeps, dimmed in place
+/// when it matches nothing asked. The seat says so: disabled is what a screen reader hears of a
+/// card faded out.
+pub(super) fn seated(
     ui: &mut Ui,
     rect: Rect,
     entry: &BoardNote,
+    author_id: &str,
     context: &card::Context<'_>,
     (canvas_view, actions): (&mut CanvasView, &mut Actions),
 ) {
@@ -150,10 +210,13 @@ fn loose(
             .max_rect(rect)
             .id_salt(("board-card", &entry.note.id)),
     );
+    if !entry.matches {
+        card_ui.multiply_opacity(DIMMED);
+    }
     let seat = card_ui.allocate_rect(rect, Sense::hover());
     let title = entry.note.title.clone();
-    seat.widget_info(|| WidgetInfo::labeled(Role::Group, true, &title));
-    address(&card_ui, &seat, "board-loose-card");
+    seat.widget_info(|| WidgetInfo::labeled(Role::Group, entry.matches, &title));
+    address(&card_ui, &seat, author_id);
     card::show(
         &mut card_ui,
         rect,
@@ -165,18 +228,18 @@ fn loose(
 
 /// A card asked to take the focus may sit out of view, so not be drawn: the ground scrolls to
 /// it, a zone's own body then to the card.
-fn reveal(ui: &Ui, view: &BoardView, origin: Pos2, request: Option<&str>) {
+fn reveal(ui: &Ui, (board, view): (&BoardState, &BoardView), origin: Pos2, request: Option<&str>) {
     let Some(id) = request else { return };
     let zone = view
         .zones
         .iter()
         .find(|zone| zone.notes.iter().any(|entry| entry.note.id == id))
-        .map(|zone| frame_rect(origin, zone.frame));
+        .map(|zone| frame_rect(origin, board.frame(zone)));
     let card = view
         .loose
         .iter()
         .find(|entry| entry.note.id == id)
-        .map(|entry| card_rect(origin, entry.position.unwrap_or(UNPLACED)));
+        .map(|entry| card_rect(origin, board.place(entry).unwrap_or(UNPLACED)));
     if let Some(rect) = zone.or(card) {
         ui.scroll_to_rect(rect, None);
     }
