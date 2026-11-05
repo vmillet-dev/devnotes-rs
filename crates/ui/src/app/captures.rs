@@ -425,6 +425,32 @@ fn the_http_response() {
     capture(&mut harness, "http-response-tree");
     click(&mut harness, "http-response-section-timeline");
     capture(&mut harness, "http-response-timeline");
+    click(&mut harness, "http-response-section-body");
+    click(&mut harness, "http-response-save-note");
+    settle(&mut harness);
+    capture(&mut harness, "http-save-as-note");
+    click(&mut harness, "save-as-note-cancel");
+    settle(&mut harness);
+    let http = &mut harness.state_mut().state.http;
+    let id = http.sends().of(&ping.id).unwrap().id.clone();
+    for text in ["token read", "Bearer {{token}} kept"] {
+        http.receive_console(engine::http::console::ConsoleEvent {
+            id: id.clone(),
+            at: chrono::Utc::now(),
+            request: "Ping".to_owned(),
+            iteration: None,
+            line: engine::http::console::ConsoleLine::Log {
+                level: engine::http::scripts::model::LogLevel::default(),
+                text: text.to_owned(),
+                by: None,
+            },
+        });
+    }
+    settle(&mut harness);
+    capture(&mut harness, "http-console-folded");
+    click(&mut harness, "http-console-unfold");
+    capture(&mut harness, "http-console");
+    click(&mut harness, "http-console-fold");
     click(&mut harness, "http-history-open");
     settle(&mut harness);
     click(&mut harness, "http-history-item");

@@ -4,10 +4,12 @@
 
 pub mod bodies;
 pub mod code;
+pub mod console;
 pub mod containers;
 pub mod cookies;
 pub mod environments;
 pub mod history;
+pub mod kept;
 pub mod moves;
 pub mod send;
 pub mod sockets;
@@ -231,6 +233,9 @@ pub struct HttpState {
     environments: environments::Environments,
     page: Page,
     cookies: cookies::CookieJar,
+    console: console::Console,
+    kept: kept::Kept,
+    kept_answer: kept::KeptAnswer,
     script_focus: Option<ScriptFocus>,
     sockets: sockets::Sockets,
     history: history::History,
@@ -281,9 +286,11 @@ impl HttpState {
         }
         self.forget_closed(backend);
         self.sockets.update();
+        self.kept_answer = self.kept.update(backend, errors);
         for (old, tab) in &answered.rekeyed {
             self.sends.rekey(old, &tab.key);
             self.sockets.rekey(old, &tab.key);
+            self.console.rekey(old, &tab.key);
             if let Some(place) = &tab.place {
                 let id = place.folder_id.clone();
                 self.unfold(id.as_deref().unwrap_or(&place.collection_id));
@@ -532,6 +539,37 @@ impl HttpState {
             return;
         }
         self.history.reopen_onto(backend, request_id, &entry);
+    }
+
+    pub fn console(&self) -> &console::Console {
+        &self.console
+    }
+
+    pub fn toggle_console(&mut self) {
+        self.console.toggle();
+    }
+
+    pub fn clear_console(&mut self, key: &str) {
+        self.console.clear(key);
+    }
+
+    /// A line of a send still known: of a tab closed since, there is nowhere to say it.
+    pub fn receive_console(&mut self, event: engine::http::console::ConsoleEvent) {
+        if let Some(key) = self.sends.key_of(&event.id).map(str::to_owned) {
+            self.console.take(&key, event);
+        }
+    }
+
+    pub fn kept(&self) -> &kept::Kept {
+        &self.kept
+    }
+
+    pub fn kept_mut(&mut self) -> &mut kept::Kept {
+        &mut self.kept
+    }
+
+    pub fn take_kept_answer(&mut self) -> kept::KeptAnswer {
+        std::mem::take(&mut self.kept_answer)
     }
 
     pub fn sockets(&self) -> &sockets::Sockets {
@@ -989,6 +1027,7 @@ impl HttpState {
             .collect();
         for key in closed {
             self.sends.forget(backend, &key);
+            self.console.clear(&key);
         }
         let closed: Vec<String> = self
             .sockets

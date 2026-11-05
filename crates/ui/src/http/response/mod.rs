@@ -4,9 +4,10 @@
 
 pub(crate) mod body;
 mod stop;
+mod tests_view;
 
 use engine::error::ErrorCode;
-use engine::http::scripts::model::ScriptStop;
+use engine::http::scripts::model::{FailureKind, ScriptKind, ScriptStop, TestResult};
 use std::sync::Arc;
 
 use egui::{CornerRadius, FontFamily, Margin, Rect, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
@@ -16,6 +17,7 @@ use i18n::keys;
 use super::Action;
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
+use crate::state::http::kept::ResponseNote;
 use crate::state::http::send::{Phase, Sent};
 use crate::state::http::tabs::Tab;
 use crate::theme::palette;
@@ -25,19 +27,27 @@ use crate::widgets::{self, Button, interact};
 enum Section {
     #[default]
     Body,
+    Tests,
     Headers,
     Cookies,
     Timeline,
 }
 
 impl Section {
-    const ALL: [Self; 4] = [Self::Body, Self::Headers, Self::Cookies, Self::Timeline];
+    const ALL: [Self; 5] = [
+        Self::Body,
+        Self::Tests,
+        Self::Headers,
+        Self::Cookies,
+        Self::Timeline,
+    ];
 
     fn id(self) -> &'static str {
         match self {
             Self::Body => "body",
             Self::Headers => "headers",
             Self::Cookies => "cookies",
+            Self::Tests => "tests",
             Self::Timeline => "timeline",
         }
     }
@@ -46,6 +56,7 @@ impl Section {
         use keys::http::response::sections;
         match self {
             Self::Body => sections::BODY,
+            Self::Tests => sections::TESTS,
             Self::Headers => sections::HEADERS,
             Self::Cookies => sections::COOKIES,
             Self::Timeline => sections::TIMELINE,
@@ -191,9 +202,14 @@ pub(crate) fn recorded(
     view: &mut ResponseView,
     actions: &mut Actions,
 ) {
-    bar(ui, state, (None, response), view, actions);
+    bar(ui, state, (None, None, response), view, actions);
     if let Some(stopped) = &response.scripts.failure {
         stop::show(ui, stopped, false, state.language);
+    }
+    if view.section == Section::Tests {
+        let tests = &response.scripts.tests;
+        tests_view::show(ui, tests, ("", false), state.language);
+        return;
     }
     section_of(ui, state, (id, response), view, actions);
 }
@@ -205,13 +221,34 @@ fn answered(
     view: &mut ResponseView,
     actions: &mut Actions,
 ) {
-    bar(ui, state, (Some(tab), response), view, actions);
+    bar(ui, state, (Some(tab), Some(id), response), view, actions);
     if let Some(stopped) = &response.scripts.failure
         && stop::show(ui, stopped, true, state.language)
     {
         open_script(actions, tab, stopped.clone());
     }
+    if view.section == Section::Tests {
+        let name = tab.draft.name.as_str();
+        let tests = &response.scripts.tests;
+        if let Some(test) = tests_view::show(ui, tests, (name, true), state.language) {
+            open_script(actions, tab, stop_of(test));
+        }
+        return;
+    }
     section_of(ui, state, (id, response), view, actions);
+}
+
+/// « Line 8 » of a test: where it failed, as a stop leads to its line.
+fn stop_of(test: &TestResult) -> ScriptStop {
+    ScriptStop {
+        kind: FailureKind::Error,
+        level: test.level,
+        script: Some(test.kind.unwrap_or(ScriptKind::Tests)),
+        name: test.holder.clone(),
+        owner: test.owner.clone(),
+        line: test.line,
+        message: test.message.clone().unwrap_or_default(),
+    }
 }
 
 fn open_script(actions: &mut Actions, tab: &Tab, stop: ScriptStop) {
@@ -229,6 +266,8 @@ fn section_of(
     actions: &mut Actions,
 ) {
     match view.section {
+        // Drawn by its caller, which knows whether its lines can be opened.
+        Section::Tests => {}
         Section::Body => body::show(ui, state, (id, response), &mut view.body, actions),
         Section::Headers => rows(
             ui,
@@ -247,94 +286,181 @@ fn section_of(
 fn bar(
     ui: &mut Ui,
     state: &AppState,
-    (tab, response): (Option<&Tab>, &SentResponse),
+    (tab, send_id, response): (Option<&Tab>, Option<&str>, &SentResponse),
     view: &mut ResponseView,
     actions: &mut Actions,
 ) {
-    let p = palette(ui.ctx());
     let language = state.language;
-    let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing.x = 12.0;
-        status(ui, response);
-        let millis = i18n::translate(
+        figures(ui, response, language);
+        section_tabs(ui, response, view, language);
+        ends(ui, (tab, send_id, response), actions, language);
+    });
+}
+
+fn figures(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
+    let p = palette(ui.ctx());
+    status(ui, response);
+    let millis = i18n::translate(
+        language,
+        keys::http::response::MILLIS,
+        &[(
+            "value",
+            i18n::format::at_most(f64::from(response.millis), 0, language).into(),
+        )],
+    );
+    let time = ui.add(egui::Label::new(
+        egui::RichText::new(millis).size(12.5).color(p.text_1),
+    ));
+    widgets::address(ui, &time, "http-response-time");
+    let size = ui.add(egui::Label::new(
+        egui::RichText::new(size_of(response.size, language))
+            .size(12.5)
+            .color(p.text_1),
+    ));
+    widgets::address(ui, &size, "http-response-size");
+}
+
+fn section_words(section: Section, response: &SentResponse, language: i18n::Language) -> String {
+    let name = i18n::translate(language, section.name(), &[]);
+    let count = match section {
+        Section::Headers => response.headers.len(),
+        Section::Cookies => response.cookies.len(),
+        Section::Tests => response.scripts.tests.len(),
+        Section::Body | Section::Timeline => 0,
+    };
+    if count > 0 {
+        return format!("{name} {count}");
+    }
+    if section == Section::Timeline && !response.redirects.is_empty() {
+        let redirects = i18n::translate(
             language,
-            keys::http::response::MILLIS,
+            keys::http::response::REDIRECTS,
             &[(
-                "value",
-                i18n::format::at_most(f64::from(response.millis), 0, language).into(),
+                "count",
+                u32::try_from(response.redirects.len())
+                    .unwrap_or(u32::MAX)
+                    .into(),
             )],
         );
-        let time = ui.add(egui::Label::new(
-            egui::RichText::new(millis).size(12.5).color(p.text_1),
-        ));
-        widgets::address(ui, &time, "http-response-time");
-        let size = ui.add(egui::Label::new(
-            egui::RichText::new(size_of(response.size, language))
-                .size(12.5)
-                .color(p.text_1),
-        ));
-        widgets::address(ui, &size, "http-response-size");
-        for section in Section::ALL {
-            let on = view.section == section;
-            let count = match section {
-                Section::Headers => response.headers.len(),
-                Section::Cookies => response.cookies.len(),
-                Section::Body | Section::Timeline => 0,
-            };
-            let words = if count > 0 {
-                format!("{} {count}", tr(section.name()))
-            } else if section == Section::Timeline && !response.redirects.is_empty() {
-                let redirects = i18n::translate(
-                    language,
-                    keys::http::response::REDIRECTS,
-                    &[(
-                        "count",
-                        u32::try_from(response.redirects.len())
-                            .unwrap_or(u32::MAX)
-                            .into(),
-                    )],
-                );
-                format!("{} · {redirects}", tr(section.name()))
-            } else {
-                tr(section.name())
-            };
-            let pressed = Button::new(&words, &format!("http-response-section-{}", section.id()))
-                .kind(widgets::Kind::Quiet)
-                .armed(on)
-                .show(ui);
-            ui.ctx()
-                .accesskit_node_builder(pressed.id, |node| node.set_selected(on));
-            if pressed.clicked() {
-                view.section = section;
-            }
+        return format!("{name} · {redirects}");
+    }
+    name
+}
+
+fn section_tabs(
+    ui: &mut Ui,
+    response: &SentResponse,
+    view: &mut ResponseView,
+    language: i18n::Language,
+) {
+    if response.scripts.tests.is_empty() && view.section == Section::Tests {
+        view.section = Section::Body;
+    }
+    for section in Section::ALL {
+        if section == Section::Tests && response.scripts.tests.is_empty() {
+            continue;
         }
-        // Pushed to the end while there is room; on the next line, not over the tabs, otherwise.
-        let (copy, clear_words) = (
-            tr(keys::http::response::COPY),
-            tr(keys::http::response::CLEAR),
-        );
-        let gap = ui.spacing().item_spacing.x;
-        let ends = Button::width(ui, &copy)
-            + tab.map_or(0.0, |_| Button::width(ui, &clear_words) + gap)
-            + gap
-            + 1.0;
-        let room = ui.available_size_before_wrap().x - ends;
-        if room > 0.0 {
-            ui.add_space(room);
+        let on = view.section == section;
+        let words = section_words(section, response, language);
+        let pressed = Button::new(&words, &format!("http-response-section-{}", section.id()))
+            .kind(widgets::Kind::Quiet)
+            .armed(on)
+            .show(ui);
+        ui.ctx()
+            .accesskit_node_builder(pressed.id, |node| node.set_selected(on));
+        if pressed.clicked() {
+            view.section = section;
         }
-        let has_text = !response.binary && !response.body.is_empty();
-        if Button::new(&copy, "http-response-copy")
-            .enabled(has_text)
-            .show(ui)
-            .clicked()
-        {
-            actions.push(Asked::Http(Action::Copy(response.body.clone())));
+    }
+}
+
+fn note_of(
+    tab: Option<&Tab>,
+    send_id: Option<&str>,
+    response: &SentResponse,
+    language: i18n::Language,
+) -> ResponseNote {
+    let name = tab.map_or("", |tab| tab.draft.name.as_str());
+    ResponseNote {
+        send_id: send_id.map(str::to_owned),
+        exchange: Box::new(response.exchange.clone()),
+        text: response
+            .pretty
+            .clone()
+            .unwrap_or_else(|| response.body.clone()),
+        title: i18n::translate(
+            language,
+            keys::http::response::NOTE_TITLE,
+            &[("name", name.into())],
+        ),
+        language: response.language,
+        source: format!(
+            "{} / {name}",
+            i18n::translate(language, keys::areas::HTTP, &[])
+        ),
+    }
+}
+
+/// Pushed to the end while there is room; on the next line, not over the tabs, otherwise.
+fn ends(
+    ui: &mut Ui,
+    (tab, send_id, response): (Option<&Tab>, Option<&str>, &SentResponse),
+    actions: &mut Actions,
+    language: i18n::Language,
+) {
+    let tr = |key| i18n::translate(language, key, &[]);
+    let (copy, clear_words) = (
+        tr(keys::http::response::COPY),
+        tr(keys::http::response::CLEAR),
+    );
+    let note = tr(keys::tools::save_as_note::OPEN);
+    let file = tr(keys::http::response::SAVE_FILE);
+    let cut = response.cut && send_id.is_some();
+    let gap = ui.spacing().item_spacing.x;
+    let ends = Button::width(ui, &copy)
+        + Button::width(ui, &note)
+        + gap
+        + tab.map_or(0.0, |_| Button::width(ui, &clear_words) + gap)
+        + if cut {
+            Button::width(ui, &file) + gap
+        } else {
+            0.0
         }
-        if let Some(tab) = tab {
-            clear(ui, tab, actions, language);
-        }
-    });
+        + gap
+        + 1.0;
+    let room = ui.available_size_before_wrap().x - ends;
+    if room > 0.0 {
+        ui.add_space(room);
+    }
+    let has_text = !response.binary && !response.body.is_empty();
+    if let Some(id) = send_id.filter(|_| cut)
+        && Button::new(&file, "http-response-save").show(ui).clicked()
+    {
+        actions.push(Asked::Http(Action::SaveResponseFile {
+            send_id: id.to_owned(),
+            name: "response.txt".to_owned(),
+        }));
+    }
+    if Button::new(&copy, "http-response-copy")
+        .enabled(has_text)
+        .show(ui)
+        .clicked()
+    {
+        actions.push(Asked::Http(Action::Copy(response.body.clone())));
+    }
+    if Button::new(&note, "http-response-save-note")
+        .enabled(has_text)
+        .show(ui)
+        .clicked()
+    {
+        let asked = note_of(tab, send_id, response, language);
+        actions.push(Asked::Http(Action::AskResponseNote(Box::new(asked))));
+    }
+    if let Some(tab) = tab {
+        clear(ui, tab, actions, language);
+    }
 }
 
 /// `2xx` green, `3xx` blue, `4xx` amber, anything else red: what the badge's hue says.

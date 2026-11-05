@@ -105,6 +105,34 @@ pub struct ConsoleEvent {
     pub line: ConsoleLine,
 }
 
+/// A text cut where a secret is written as its `{{name}}`: `true` for those, shown apart.
+#[must_use]
+pub fn secret_segments(text: &str) -> Vec<(String, bool)> {
+    let mut parts = Vec::new();
+    let mut rest = text;
+    while let Some(open) = rest.find("{{") {
+        let name_at = open + 2;
+        let Some(close) = rest[name_at..].find("}}").map(|at| name_at + at) else {
+            break;
+        };
+        let name = &rest[name_at..close];
+        if name.is_empty() || name.contains(['{', '}']) {
+            parts.push((rest[..name_at].to_owned(), false));
+            rest = &rest[name_at..];
+            continue;
+        }
+        if open > 0 {
+            parts.push((rest[..open].to_owned(), false));
+        }
+        parts.push((rest[open..close + 2].to_owned(), true));
+        rest = &rest[close + 2..];
+    }
+    if !rest.is_empty() {
+        parts.push((rest.to_owned(), false));
+    }
+    parts
+}
+
 /// A request as the console shows it: each secret in force written as its name, an auth or a
 /// cookie header masked as the history masks it.
 #[must_use]

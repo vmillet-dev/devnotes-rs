@@ -44,6 +44,12 @@ impl Sends {
         self.by_tab.values().map(|sent| sent.id.as_str())
     }
 
+    /// The tab a send belongs to.
+    pub fn key_of(&self, id: &str) -> Option<&str> {
+        let held = self.by_tab.iter().find(|(_, sent)| sent.id == id)?;
+        Some(held.0.as_str())
+    }
+
     pub fn keys(&self) -> impl Iterator<Item = &str> {
         self.by_tab.keys().map(String::as_str)
     }

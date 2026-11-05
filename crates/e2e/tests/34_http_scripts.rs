@@ -1,5 +1,6 @@
 //! Scripts run for real: the application relaunches itself as their host. One keeps a value of the
-//! answer in a variable, a throw before the send stops it and leads back to its line.
+//! answer in a variable, a test reads the answer, the console hears them, the answer is kept as a
+//! note, and a throw before the send stops it and leads back to its line.
 
 use e2e::{App, Tree, step};
 use egui::accesskit::Node;
@@ -63,10 +64,46 @@ fn kept_value(app: &mut App) {
     );
 }
 
+fn tests_and_console(app: &mut App) {
+    step("the tests of an answer, and what the console heard", || {
+        app.click("http-section-tests");
+        app.fill(
+            "http-script-code",
+            "test('the status is 200', () => { expect(res.status).toBe(200); });",
+        );
+        app.eventually("the test is typed", |tree| {
+            tree.find("http-script-code")
+                .and_then(Node::value)
+                .is_some_and(|text| text.contains("toBe(200)"))
+        });
+        app.press(Key::Enter, Modifiers::COMMAND);
+        app.wait_for("http-response-section-tests");
+        app.click("http-response-section-tests");
+        app.wait_for("http-tests-passed");
+        app.click("http-console-unfold");
+        app.wait_for("http-console-line");
+        app.click("http-console-fold");
+        app.wait_for("http-console-unfold");
+        app.click("http-response-section-body");
+    });
+    step("the answer kept as a note", || {
+        app.click("http-response-save-note");
+        app.wait_for("save-as-note-submit");
+        app.eventually("the dialog is filled", |tree| {
+            tree.find("save-as-note-title")
+                .and_then(Node::value)
+                .is_some_and(|title| title.contains("Commander"))
+        });
+        app.click("save-as-note-submit");
+        app.eventually("the dialog closes", |tree| !tree.has("save-as-note"));
+    });
+}
+
 fn stopped(app: &mut App) {
     step(
         "a throw before the send stops it, and leads to its line",
         || {
+            app.click("http-section-scripts");
             app.click("http-script-phase-0");
             app.fill("http-script-code", "\nthrow new Error('refused');");
             // A key overtakes what is still being typed.
@@ -96,6 +133,7 @@ fn http_scripts() {
 
     request(&mut app);
     kept_value(&mut app);
+    tests_and_console(&mut app);
     stopped(&mut app);
     app.quit();
 }

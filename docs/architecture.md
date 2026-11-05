@@ -5073,6 +5073,15 @@ of the answer, read back from its error's params (`ScriptStop::of_params`); afte
 answer that came. « Open the script » goes to the request's own, or to the settings of what
 holds it, on the phase, the line marked until the next edit (`HttpState::script_focus`).
 
+`http::console` sits under the answer: `EngineEvent::Console` names a send, `Sends::key_of` its
+tab, and each tab keeps its last `LINES_KEPT` lines for the session, never written. Rust masks what
+it says; `console::secret_segments` cuts a text where a secret stands as its `{{name}}`, to set it
+apart. Folded it says how much it holds; unfolded it filters, by rows drawn in view alone. The
+Tests part of an answer groups them by whose they are, a line a click from the script. An answer
+goes to a file whole, from Rust and not from what is shown, or to a note: `http::save_as_note` asks
+where, `state::http::kept` holds what is on its way, and the core masks what the request sent
+before the dialog even opens (`http_response_note`). Generated code takes the same dialog.
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

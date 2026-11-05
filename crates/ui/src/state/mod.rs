@@ -618,6 +618,7 @@ impl AppState {
 
     fn apply_http(&mut self, action: crate::http::Action, ctx: &egui::Context, backend: &Backend) {
         use crate::http::Action as Http;
+        let now = ctx.input(|input| input.time);
         match action {
             Http::Toggle(id) => self.http.toggle(&id),
             Http::Write(write) => self.http.write(backend, write),
@@ -652,20 +653,24 @@ impl AppState {
                 );
             }
             Http::ChooseEnvironment(id) => self.http.choose_environment(id),
-            Http::Environments(asked) => {
-                let now = ctx.input(|input| input.time);
-                self.http.ask_environments(backend, asked, now);
-            }
-            Http::Define(name) => {
-                let now = ctx.input(|input| input.time);
-                self.http.define(backend, name, now);
-            }
-            Http::SendAnyway(key) => {
-                let now = ctx.input(|input| input.time);
-                self.http.send_anyway(backend, &key, now);
-            }
+            Http::Environments(asked) => self.http.ask_environments(backend, asked, now),
+            Http::Define(name) => self.http.define(backend, name, now),
+            Http::SendAnyway(key) => self.http.send_anyway(backend, &key, now),
             Http::StopAsking => self.http.stop_asking(),
             Http::Cookies(asked) => self.http.ask_cookies(backend, asked),
+            Http::ToggleConsole => self.http.toggle_console(),
+            Http::ClearConsole(key) => self.http.clear_console(&key),
+            Http::SaveResponseFile { send_id, name } => {
+                self.http
+                    .kept_mut()
+                    .save_file(backend, &self.dialog, send_id, name);
+            }
+            Http::AskResponseNote(asked) => {
+                self.http.kept_mut().ask_response_note(backend, *asked);
+            }
+            Http::AskNote(asked) => self.http.kept_mut().ask_note(*asked),
+            Http::SaveNote(placement) => self.http.kept_mut().save_note(backend, placement),
+            Http::CancelNote => self.http.kept_mut().cancel_note(),
             Http::OpenScript { key, stop } => self.http.open_script(backend, key, &stop),
             Http::OpenLevel { origin, phase } => {
                 self.http
@@ -689,10 +694,7 @@ impl AppState {
             Http::CloseSettings => self.http.close_settings(),
             Http::ShowPage(page) => self.http.show_page(backend, page),
             Http::TogglePage(page) => self.http.toggle_page(backend, page),
-            Http::Send(key) => {
-                let now = ctx.input(|input| input.time);
-                self.http.send(backend, key.as_deref(), now);
-            }
+            Http::Send(key) => self.http.send(backend, key.as_deref(), now),
             Http::CancelSend(key) => self.http.cancel_send(backend, &key),
             Http::Explore { send_id, query } => self.http.explore(&send_id, query),
             Http::ResponseImage(send_id) => self.http.ask_image(backend, &send_id),
@@ -721,6 +723,13 @@ impl AppState {
         let tz_offset = notes_query::tz_offset_minutes(self.clock.now());
         self.http
             .update_history((ctx, backend), (time, tz_offset), &mut self.errors);
+        let kept = self.http.take_kept_answer();
+        if kept.note_made {
+            self.revision.bump();
+        }
+        if let Some(said) = kept.said {
+            self.status.report(said);
+        }
         if let Some(count) = self.http.take_history_cleared() {
             let cleared = i18n::Message::new(i18n::keys::http::history::CLEARED);
             self.status.report(cleared.with("count", count));

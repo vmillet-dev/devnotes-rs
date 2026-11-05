@@ -148,6 +148,9 @@ impl eframe::App for DevNotesApp {
                 }
                 Input::Engine(EngineEvent::IndexReady) => self.state.gate.index_ready(),
                 Input::Engine(EngineEvent::Socket(event)) => self.state.http.receive_socket(event),
+                Input::Engine(EngineEvent::Console(event)) => {
+                    self.state.http.receive_console(event);
+                }
                 // Read by the screens they concern, as they are ported.
                 Input::Engine(_) => {}
             }
