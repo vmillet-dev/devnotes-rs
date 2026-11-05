@@ -75,6 +75,18 @@ pub enum Action {
         colour: FolderColour,
     },
     DeleteFolder(String),
+    /// Under `parent`, or at the top of `space` for `None`, with everything it holds; refused
+    /// and said when it cannot go there.
+    MoveFolder {
+        id: String,
+        parent: Option<String>,
+        space: String,
+    },
+    /// Up a level (`outwards`), or into the folder above it among its siblings.
+    NudgeFolder {
+        id: String,
+        outwards: bool,
+    },
     /// List or board, for the space shown.
     SetView(crate::state::board::Mode),
     /// The board on screen put back in order, as far as the scope allows.
@@ -306,6 +318,12 @@ pub enum BoardGesture {
     Band(Vec<String>),
     /// Every card a zone draws, dimmed ones included, ticked.
     SelectFolder(String),
+    /// Let go of over a row of the rail: filed there at any depth, `None` the top of the space.
+    /// Offered back: it may land out of sight.
+    FileOnRail {
+        note_id: String,
+        folder: Option<String>,
+    },
 }
 
 /// What the selection bar does to every ticked note at once.
@@ -383,7 +401,14 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         rest.max,
     );
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
+    // A card dragged on the board can be let go of over a row of the rail, which lights.
+    view.canvas.rail = if state.settings.rail_shown {
+        view.sidebar.rows().to_vec()
+    } else {
+        Vec::new()
+    };
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
+    view.sidebar.card_over = view.canvas.over_rail.take();
     overlays::editor::show(
         ui,
         state,

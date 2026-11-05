@@ -121,7 +121,7 @@ pub(super) fn show(
 
 /// The switchers stand in for the rail while it is put away, and give way to a breadcrumb.
 fn switchers_shown(state: &AppState) -> bool {
-    !state.settings.rail_shown && state.spaces.active_folder().is_none()
+    !state.settings.rail_shown && state.active_folder().is_none()
 }
 
 /// A group of controls side by side; answers the width of what in it does not narrow.
@@ -271,10 +271,7 @@ fn where_one_is(
             crate::notes::Trash::Open,
         )));
     }
-    let spaces = &state.spaces;
-    let open = spaces
-        .active_folder()
-        .and_then(|id| spaces.folders().iter().find(|folder| folder.id == id));
+    let open = state.active_folder().and_then(|id| state.folders.find(id));
     if let Some(folder) = open {
         switchers::breadcrumb(ui, state, folder, &mut view.crumb, actions);
         return 0.0;

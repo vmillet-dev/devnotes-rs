@@ -275,8 +275,8 @@ fn level_key(level: Priority) -> i18n::Key {
 fn filing(ui: &mut Ui, note: &DisplayNote, context: &Context<'_>, actions: &mut Actions) {
     let language = context.language;
     let inside: Vec<_> = context
-        .library
-        .folders()
+        .folders
+        .list()
         .iter()
         .filter(|folder| folder.space_id == note.space_id)
         .collect();

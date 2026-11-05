@@ -124,7 +124,7 @@ fn a_zone_title_and_a_sub_folder_chip_open_their_folder() {
 
     click(&mut harness, "board-zone-child", "Perf");
     assert_eq!(
-        harness.state().state.spaces.active_folder(),
+        harness.state().state.active_folder(),
         Some(perf.id.as_str())
     );
     assert!(
@@ -552,4 +552,52 @@ fn a_zone_menu_ticks_every_card_it_holds() {
     let ticked = harness.state().state.on_screen();
     let ticked: Vec<&str> = ticked.iter().map(String::as_str).collect();
     assert_eq!(harness.state().state.selection.checked_in(&ticked).len(), 1);
+}
+
+#[test]
+fn a_card_let_go_of_over_a_rail_row_is_filed_there_and_offered_back() {
+    let (mut harness, tableau) = tableau();
+    click_id(&mut harness, "view-board");
+    let perf = folder_named(&harness, &tableau, "Perf");
+    let card = rect_of(&harness, "board-loose-card", "Dump nocturne");
+    let row = harness
+        .get_by(|node| {
+            node.author_id() == Some("folder-option") && node.label().as_deref() == Some("Perf")
+        })
+        .rect();
+
+    drag(
+        &mut harness,
+        card.center(),
+        row.center(),
+        egui::PointerButton::Primary,
+    );
+    until(&mut harness, "the card is filed from the rail", |harness| {
+        filed_in(harness, "Dump nocturne").as_deref() == Some(perf.id.as_str())
+    });
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("undo-restore"))
+            .is_some()
+    );
+}
+
+#[test]
+fn an_open_folder_s_list_is_named_after_it_until_something_is_searched() {
+    let (mut harness, _) = tableau();
+    click(&mut harness, "folder-option", "Perf");
+    let heading = |harness: &Harness<'_, Bench>| names(harness, "note-section").join(" ");
+    assert!(
+        heading(&harness).starts_with("PERF"),
+        "{}",
+        heading(&harness)
+    );
+
+    click_id(&mut harness, "search-input");
+    harness
+        .get_by(|node| node.author_id() == Some("search-input"))
+        .type_text("EXPLAIN");
+    until(&mut harness, "the search is asked", |harness| {
+        !heading(harness).starts_with("PERF")
+    });
 }

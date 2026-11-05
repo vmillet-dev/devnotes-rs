@@ -174,8 +174,9 @@ pub(super) fn folder_switcher(
     let spaces = &state.spaces;
     let space = spaces.active_space();
     // « Every space »: every folder, the choice the space switcher already made.
-    let folders: Vec<&Folder> = spaces
-        .folders()
+    let folders: Vec<&Folder> = state
+        .folders
+        .list()
         .iter()
         .filter(|folder| space.is_none_or(|space| folder.space_id == space))
         .collect();
@@ -323,8 +324,9 @@ pub(super) fn breadcrumb(
         );
     }
     separator(ui, "/");
-    let inside: Vec<&Folder> = spaces
-        .folders()
+    let inside: Vec<&Folder> = state
+        .folders
+        .list()
         .iter()
         .filter(|other| other.space_id == folder.space_id)
         .collect();

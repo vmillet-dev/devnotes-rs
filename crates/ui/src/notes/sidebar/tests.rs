@@ -212,3 +212,129 @@ fn a_folder_is_made_recoloured_nested_and_deleted_from_the_rail() {
     assert_eq!(left.len(), 1);
     assert_eq!(left[0].parent_id, None);
 }
+
+/// A press on `from`, the pointer moved in steps, a release on `to`.
+fn drag(harness: &mut Harness<'_, Bench>, from: egui::Pos2, to: egui::Pos2) {
+    let press = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    harness.event(egui::Event::PointerMoved(from));
+    harness.step();
+    harness.event(press(from, true));
+    harness.step();
+    for step in [0.25, 0.5, 0.75, 1.0] {
+        harness.event(egui::Event::PointerMoved(from + (to - from) * step));
+        harness.step();
+    }
+    harness.event(press(to, false));
+    settle(harness);
+    harness.event(egui::Event::PointerGone);
+    settle(harness);
+}
+
+fn row(harness: &Harness<'_, Bench>, author_id: &str, name: &str) -> egui::Rect {
+    harness
+        .get_by(|node| node.author_id() == Some(author_id) && node.label().as_deref() == Some(name))
+        .rect()
+}
+
+fn parent_of(harness: &Harness<'_, Bench>, name: &str) -> Option<String> {
+    let parent = harness
+        .state()
+        .state
+        .folders
+        .list()
+        .iter()
+        .find(|folder| folder.name == name)
+        .and_then(|folder| folder.parent_id.clone())?;
+    harness
+        .state()
+        .state
+        .folders
+        .find(&parent)
+        .map(|folder| folder.name.clone())
+}
+
+#[test]
+fn a_folder_dragged_onto_another_goes_inside_it_and_the_undo_bar_puts_it_back() {
+    let (backend, profile) = testing::unlocked();
+    let home = space(&backend, "Home");
+    folder(&backend, &home, None, "Bases");
+    folder(&backend, &home, None, "Index");
+    let mut harness = area(backend, profile);
+    click(&mut harness, "space-option", "Home");
+
+    let from = row(&harness, "folder-option", "Index").center();
+    let to = row(&harness, "folder-option", "Bases").center();
+    drag(&mut harness, from, to);
+    assert_eq!(parent_of(&harness, "Index").as_deref(), Some("Bases"));
+    let said = harness
+        .get_by(|node| node.author_id() == Some("undo-text"))
+        .accesskit_node()
+        .value()
+        .unwrap_or_default();
+    assert!(said.contains("Index") && said.contains("Bases"), "{said}");
+
+    // Onto what it holds is refused, and said.
+    let from = row(&harness, "folder-option", "Bases").center();
+    let to = row(&harness, "folder-option", "Index").center();
+    drag(&mut harness, from, to);
+    assert_eq!(parent_of(&harness, "Bases"), None);
+    let said = harness
+        .state()
+        .state
+        .status
+        .latest()
+        .map(|(_, message)| message.key);
+    assert_eq!(said, Some(i18n::keys::sidebar::moved::refused::THERE));
+
+    click_id(&mut harness, "undo-restore");
+    assert_eq!(parent_of(&harness, "Index"), None);
+}
+
+#[test]
+fn alt_and_the_arrows_move_a_folder_in_and_out_saying_what_they_refuse() {
+    let (backend, profile) = testing::unlocked();
+    let home = space(&backend, "Home");
+    folder(&backend, &home, None, "Bases");
+    folder(&backend, &home, None, "Index");
+    let mut harness = area(backend, profile);
+    click(&mut harness, "space-option", "Home");
+    let press = |harness: &mut Harness<'_, Bench>, name: &str, key| {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some("folder-option") && node.label().as_deref() == Some(name)
+            })
+            .focus();
+        harness.step();
+        harness.key_press_modifiers(egui::Modifiers::ALT, key);
+        settle(harness);
+    };
+
+    press(&mut harness, "Index", egui::Key::ArrowRight);
+    assert_eq!(parent_of(&harness, "Index").as_deref(), Some("Bases"));
+    press(&mut harness, "Index", egui::Key::ArrowLeft);
+    assert_eq!(parent_of(&harness, "Index"), None);
+
+    press(&mut harness, "Bases", egui::Key::ArrowLeft);
+    let said = |harness: &Harness<'_, Bench>| {
+        harness
+            .state()
+            .state
+            .status
+            .latest()
+            .map(|(_, message)| message.key)
+    };
+    assert_eq!(
+        said(&harness),
+        Some(i18n::keys::sidebar::moved::refused::AT_TOP)
+    );
+    press(&mut harness, "Bases", egui::Key::ArrowRight);
+    assert_eq!(
+        said(&harness),
+        Some(i18n::keys::sidebar::moved::refused::NO_FOLDER_ABOVE)
+    );
+}

@@ -38,6 +38,10 @@ pub struct CanvasView {
     pub tag_draft: String,
     pub confirm_delete: bool,
     board: board::BoardScreen,
+    /// The rail's rows, handed over by the area each frame.
+    pub(crate) rail: Vec<crate::notes::sidebar::RailRow>,
+    /// The row a card dragged on the board is over, handed back for the rail to light.
+    pub(crate) over_rail: Option<String>,
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions: &mut Actions) {
@@ -80,7 +84,13 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         return;
     }
     let context = card::Context::of(state, &on_screen(view));
-    sections(ui, view, &context, canvas_view, actions);
+    // Nothing searched inside an open folder: its one list is named after it, not « Results ».
+    let opened = state
+        .active_folder()
+        .filter(|_| !query.has_user_filters())
+        .and_then(|id| state.folders.find(id))
+        .map(|folder| folder.name.as_str());
+    sections(ui, (view, opened), &context, canvas_view, actions);
     hint(ui, language);
     let shown: Vec<_> = view
         .cards()
@@ -133,7 +143,7 @@ pub(super) fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
 
 fn sections(
     ui: &mut Ui,
-    view: &NotesView,
+    (view, opened): (&NotesView, Option<&str>),
     context: &card::Context<'_>,
     canvas_view: &mut CanvasView,
     actions: &mut Actions,
@@ -164,7 +174,8 @@ fn sections(
                 match row {
                     Row::Heading { section } => {
                         let rect = Rect::from_min_size(min, vec2(width, HEADING_HEIGHT));
-                        heading(ui, rect, &view.sections[section], context.language);
+                        let shown = (&view.sections[section], opened);
+                        heading(ui, rect, shown, context.language);
                     }
                     Row::Cards { section, first } => {
                         let at = (&rows, view, section, first);
@@ -209,7 +220,12 @@ fn cards(
 }
 
 /// « Today · 3 », in small capitals, a priority section's dot before it.
-fn heading(ui: &mut Ui, rect: Rect, section: &NoteSection, language: i18n::Language) {
+fn heading(
+    ui: &mut Ui,
+    rect: Rect,
+    (section, opened): (&NoteSection, Option<&str>),
+    language: i18n::Language,
+) {
     let p = palette(ui.ctx());
     let mut left = rect.left();
     if let Some(SectionGroup::Priority { priority }) = section.group {
@@ -220,7 +236,11 @@ fn heading(ui: &mut Ui, rect: Rect, section: &NoteSection, language: i18n::Langu
         priority_dot(&mut dot_ui, priority);
         left += 8.0 + 8.0;
     }
-    let title = title(section, language).to_uppercase();
+    let title = match opened {
+        Some(folder) if section.key == NoteSectionKey::Results => folder.to_owned(),
+        _ => title(section, language),
+    }
+    .to_uppercase();
     let mut count = format!("· {}", section.cards.len());
     if section.has_expiring_notes {
         count.push_str(" · ");

@@ -1619,7 +1619,9 @@ zone puis la nommer) au pointeur avec leurs jumeaux clavier, aimantation `GRID_P
 différée (`save_board_layout`), rangement (`board-tidy`), atténuation des non-correspondances,
 descente dans un dossier et Échap en cascade (sélection → recherche → niveau du dessus).
 
-**Fin de phase** : scénarios 17, 18, 19, 20, 21 verts ; budget de défilement à 3 000 cartes.
+**Fin de phase** : scénarios 17, 18, 19, 20 verts ; budget de défilement à 3 000 cartes. Le
+scénario 21 passe en P8 avec le 10 : il exporte et réimporte une bibliothèque, ce que seul le
+menu Fichier de P8 sait faire au pointeur.
 
 ### Phase 6 — Zone HTTP (6 S)
 
@@ -2115,7 +2117,7 @@ lancé seul contre le binaire `--features e2e` sur un profil vierge (§ 8.3).
 | 18  | board                | P5    |                                                                                                                                                       |
 | 19  | board-gesture        | P5    | glissers injectés ; hauteur d'en-tête de zone mesurée contre `ZONE_HEADER`                                                                            |
 | 20  | folder-descent       | P5    |                                                                                                                                                       |
-| 21  | folders-travel       | P5    |                                                                                                                                                       |
+| 21  | folders-travel       | P8    |                                                                                                                                                       |
 | 22  | note-history         | P4    |                                                                                                                                                       |
 | 23  | backups              | P8    | relance réelle (la copie se prend au déverrouillage)                                                                                                  |
 | 24  | forgotten-passphrase | P8    |                                                                                                                                                       |

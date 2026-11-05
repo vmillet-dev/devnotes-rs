@@ -18,7 +18,7 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, name: &mut String, actio
     let Some(space) = state
         .spaces
         .active_space()
-        .filter(|_| state.spaces.naming() || zone)
+        .filter(|_| state.folders.naming() || zone)
     else {
         name.clear();
         return;

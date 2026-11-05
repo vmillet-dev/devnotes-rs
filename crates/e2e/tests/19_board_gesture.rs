@@ -171,13 +171,15 @@ fn cards(app: &mut App) {
             app.eventually("the note is in the other zone", |tree| {
                 titles_in(tree, "Migrations") == [FILED]
             });
-            app.press(Key::Escape, Modifiers::NONE);
+            // While the bar offers the filing back, Escape would take it back.
+            app.click("undo-dismiss");
             app.press(Key::Escape, Modifiers::NONE);
             app.hover("board-zone-card");
             app.click("note-card-check");
             file_into(app, "Perf");
             app.eventually("and back", |tree| titles_in(tree, "Perf") == [FILED]);
-            app.press(Key::Escape, Modifiers::NONE);
+            // While the bar offers the filing back, Escape would take it back.
+            app.click("undo-dismiss");
             app.press(Key::Escape, Modifiers::NONE);
             app.eventually("the selection is let go", |tree| {
                 !tree.has("selection-count")

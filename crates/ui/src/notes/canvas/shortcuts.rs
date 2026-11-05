@@ -194,12 +194,12 @@ mod tests {
 
         assert_eq!(harness.state().state.notes_query.typed(), "");
         assert_eq!(
-            harness.state().state.spaces.active_folder(),
+            harness.state().state.active_folder(),
             Some(folder.id.as_str())
         );
 
         press(&mut harness, Key::Escape);
-        assert_eq!(harness.state().state.spaces.active_folder(), None);
+        assert_eq!(harness.state().state.active_folder(), None);
     }
 
     #[test]

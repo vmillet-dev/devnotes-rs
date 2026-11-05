@@ -25,6 +25,7 @@ use super::{CanvasView, card, padded, state_text};
 use crate::action::{Action, Actions};
 use crate::notes::BoardGesture;
 use crate::notes::panel::FolderEdit;
+use crate::notes::sidebar::RailRow;
 use crate::state::AppState;
 use crate::state::board::BoardState;
 use crate::theme::{palette, spacing};
@@ -69,6 +70,8 @@ struct Hand<'a> {
     seats: Vec<(String, BoardFrame)>,
     /// The surface's corner on screen.
     origin: Pos2,
+    /// The rail's rows a card of this board may be let go of over.
+    rail: &'a [RailRow],
 }
 
 impl Hand<'_> {
@@ -113,6 +116,17 @@ impl Hand<'_> {
         } else {
             None
         };
+    }
+
+    /// The rail row under a card being dragged, if the pointer is over one.
+    fn over_rail(&self, ui: &Ui) -> Option<&RailRow> {
+        let dragging = self
+            .moving()
+            .is_some_and(|gesture| matches!(gesture.kind, Kind::Card { .. }));
+        let at = ui.input(|input| input.pointer.latest_pos())?;
+        dragging
+            .then(|| self.rail.iter().find(|row| row.rect.contains(at)))
+            .flatten()
     }
 
     /// The gesture under way, once it has travelled.
@@ -211,6 +225,7 @@ fn ground(
     );
     let BoardScreen { menu, gesture, .. } = screen;
     let mut committed = None;
+    let rail = rail_rows(&canvas_view.rail, context.library.active_space());
     let output = scroll.show_viewport(&mut ground_ui, |ui, viewport| {
         // At least the visible ground, whatever the core sized it: past the content's edge
         // the dotted ground still takes the pointer.
@@ -224,6 +239,7 @@ fn ground(
             gesture,
             seats: Vec::new(),
             origin: surface.min,
+            rail: &rail,
         };
         track(ui, &mut hand);
         hand.grab(ui, &drawn, Some(Kind::DrawZone), NOWHERE);
@@ -245,6 +261,11 @@ fn ground(
             empty(ui, ui.clip_rect(), context.language);
         }
         committed = follow(ui, (board, view), &mut hand);
+        canvas_view.over_rail = hand.over_rail(ui).map(|row| {
+            row.folder_id
+                .clone()
+                .unwrap_or_else(|| row.space_id.clone())
+        });
     });
     if let Some(done) = committed {
         actions.push(Action::Notes(crate::notes::Action::Board(done)));
@@ -341,9 +362,14 @@ fn follow(
         return None;
     }
     gesture.follow(at);
+    let rail = hand.over_rail(ui).map(|row| row.folder_id.clone());
     let gesture = hand.gesture.take()?;
     if !gesture.moved {
         return None;
+    }
+    if let (Some(folder), Kind::Card { note_id, .. }) = (rail, &gesture.kind) {
+        let note_id = note_id.clone();
+        return Some(BoardGesture::FileOnRail { note_id, folder });
     }
     let to = gesture.to;
     match gesture.kind {
@@ -383,6 +409,14 @@ fn follow(
             (!swept.is_empty()).then_some(BoardGesture::Band(swept))
         }
     }
+}
+
+/// The rows of the rail a card of this board may land in: the space's own row, and its folders.
+fn rail_rows(rows: &[RailRow], space: Option<&str>) -> Vec<RailRow> {
+    rows.iter()
+        .filter(|row| Some(row.space_id.as_str()) == space)
+        .cloned()
+        .collect()
 }
 
 /// The zone a card being dragged would land in, lit before the pointer lifts.
