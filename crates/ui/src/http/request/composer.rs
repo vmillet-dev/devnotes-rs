@@ -61,7 +61,10 @@ pub(super) fn show(
     let text = boxes.message.text();
     let blank = text.trim().is_empty();
     // ⚠️ Taken here: the area answers the same key by connecting, which is not what was meant.
-    if typing.has_focus() && ui.input_mut(|input| input.consume_key(Modifiers::COMMAND, Key::Enter))
+    // The memory, as the editor reads it: `Response::has_focus` also asks the window to have the
+    // system's focus, which it never gets under a display with no window manager.
+    if ui.memory(|memory| memory.has_focus(typing.id))
+        && ui.input_mut(|input| input.consume_key(Modifiers::COMMAND, Key::Enter))
     {
         boxes.refused = !open;
         if open && !blank {
