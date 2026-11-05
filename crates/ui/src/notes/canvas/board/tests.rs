@@ -5,7 +5,9 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use engine::folders::model::Folder;
 use engine::spaces::model::Space;
 
-use crate::notes::bench::{Bench, area, cards, click, click_id, folder, names, remembered, space};
+use crate::notes::bench::{
+    Bench, area, cards, click, click_id, folder, names, remembered, space, until,
+};
 use crate::state::board::Mode;
 use crate::testing;
 
@@ -257,14 +259,19 @@ fn aligning_leaves_the_zones_and_reorganising_brings_them_back_undoably() {
     crate::notes::bench::settle(&mut harness);
     let zone_x =
         |harness: &Harness<'_, Bench>| harness.state().state.board.view().unwrap().zones[0].frame.x;
-    assert_eq!(zone_x(&harness), 1_600);
+    // Waited for, not settled: under load the view is read again a frame or two later.
+    until(&mut harness, "the zone is read far off", |harness| {
+        zone_x(harness) == 1_600
+    });
 
     click_id(&mut harness, "board-tidy");
     assert_eq!(zone_x(&harness), 1_600, "aligning moves no zone");
 
     click_id(&mut harness, "board-tidy-more");
     click_id(&mut harness, "board-tidy-everything");
-    assert_ne!(zone_x(&harness), 1_600);
+    until(&mut harness, "the zone is back at its seat", |harness| {
+        zone_x(harness) != 1_600
+    });
     assert_eq!(
         rect_of(&harness, "board-zone", "Perf"),
         seat,
@@ -277,5 +284,7 @@ fn aligning_leaves_the_zones_and_reorganising_brings_them_back_undoably() {
     );
 
     click_id(&mut harness, "undo-restore");
-    assert_eq!(zone_x(&harness), 1_600);
+    until(&mut harness, "the hand's layout is back", |harness| {
+        zone_x(harness) == 1_600
+    });
 }
