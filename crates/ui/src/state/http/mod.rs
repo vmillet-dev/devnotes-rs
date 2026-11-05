@@ -3,6 +3,8 @@
 //! guesses the result.
 
 pub mod bodies;
+pub mod containers;
+pub mod cookies;
 pub mod environments;
 pub mod moves;
 pub mod send;
@@ -215,6 +217,10 @@ pub struct HttpState {
     inherited: QueryCell<(tabs::Place, Revision), Inherited>,
     environments: environments::Environments,
     page: Page,
+    cookies: cookies::CookieJar,
+    container: Option<containers::Form>,
+    /// How many cookies the jar just threw away: for the status line.
+    cookies_removed: Option<u32>,
     /// The folds or the tabs changed: the library's preferences are written.
     unremembered: bool,
 }
@@ -243,6 +249,8 @@ impl HttpState {
         self.explored.update(backend);
         self.adopt_images(ctx);
         self.adopt_rewrites(errors);
+        self.cookies_removed = self.cookies.update(backend, errors);
+        self.adopt_container(errors);
         self.adopt_files(errors);
         for id in self.adopt_writes(errors) {
             self.tabs.open(backend, id);
@@ -396,6 +404,52 @@ impl HttpState {
     pub fn define(&mut self, backend: &Backend, name: String, now: f64) {
         self.environments.define(backend, name, now);
         self.page = Page::Environments;
+    }
+
+    fn adopt_container(&mut self, errors: &mut ErrorNotifier) {
+        let Some(done) = self.container.as_mut().and_then(|form| form.update(errors)) else {
+            return;
+        };
+        self.container = None;
+        if done {
+            self.revision.bump();
+        }
+    }
+
+    pub fn cookies(&self) -> &cookies::CookieJar {
+        &self.cookies
+    }
+
+    pub fn ask_cookies(&mut self, backend: &Backend, asked: cookies::Asked) {
+        self.cookies.ask(backend, asked);
+    }
+
+    pub fn take_cookies_removed(&mut self) -> Option<u32> {
+        self.cookies_removed.take()
+    }
+
+    pub fn container(&self) -> Option<&containers::Form> {
+        self.container.as_ref()
+    }
+
+    pub fn open_settings(&mut self, backend: &Backend, container: containers::Container) {
+        self.container = Some(containers::Form::open(backend, container));
+    }
+
+    pub fn edit_settings(&mut self, settings: engine::http::model::ContainerSettings) {
+        if let Some(form) = &mut self.container {
+            form.settings = Some(settings);
+        }
+    }
+
+    pub fn save_settings(&mut self, backend: &Backend) {
+        if let Some(form) = &mut self.container {
+            form.save(backend);
+        }
+    }
+
+    pub fn close_settings(&mut self) {
+        self.container = None;
     }
 
     pub fn page(&self) -> Page {

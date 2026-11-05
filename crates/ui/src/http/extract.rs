@@ -1,7 +1,7 @@
 //! « Extract to a variable »: the value at a path of the answer becomes a rule of the request,
 //! written after each of its sends into the active environment.
 
-use egui::{CornerRadius, FontFamily, Id, Margin, Sense, Stroke, Ui};
+use egui::{FontFamily, Sense, Ui};
 use engine::http::model::Extraction;
 use i18n::keys;
 
@@ -9,7 +9,7 @@ use super::Action;
 use crate::action::{Action as Asked, Actions};
 use crate::api;
 use crate::state::AppState;
-use crate::theme::{palette, spacing};
+use crate::theme::palette;
 use crate::widgets::{self, Button, Checkbox, Kind, TextField};
 
 const WIDTH: f32 = 440.0;
@@ -45,19 +45,9 @@ pub(super) fn show(
     let Some(open) = form else {
         return;
     };
-    let p = palette(ui.ctx());
-    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
-    let padding = spacing(ui.ctx()).canvas.round() as i8;
-    let frame = egui::Frame::new()
-        .fill(p.bg_1)
-        .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
-        .shadow(p.shadow_overlay)
-        .inner_margin(Margin::same(padding));
-    let shown = egui::Modal::new(Id::unique("http-extract-dialog"))
-        .backdrop_color(p.backdrop.gamma_multiply(0.7))
-        .frame(frame)
-        .show(ui.ctx(), |ui| body(ui, open, (&tab.draft.name, state)));
+    let shown = super::modal(ui, "http-extract-dialog", |ui| {
+        body(ui, open, (&tab.draft.name, state))
+    });
     match shown.inner {
         Some(true) => {
             let rule = Extraction {

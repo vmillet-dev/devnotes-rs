@@ -2,11 +2,13 @@
 
 use engine::http::{
     self, BodyAnswer, VariablesRequest,
+    cookies::store::CookieDomain,
     environments::{EnvironmentPatch, HttpEnvironments, Variable, VariableFault},
     graphql::{GraphqlAnswer, GraphqlDocument},
     model::{
-        HeaderFault, HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest, HttpRequestDraft,
-        HttpRequestPatch, HttpTree, KeyValue, RequestBody, RequestDocument, RequestKind,
+        ContainerSettings, HeaderFault, HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest,
+        HttpRequestDraft, HttpRequestPatch, HttpTree, KeyValue, RequestBody, RequestDocument,
+        RequestKind,
     },
     query::{QuerySide, SyncedQuery},
     send::{ImpliedHeader, SendRequest, SentResponse},
@@ -184,6 +186,39 @@ pub fn delete_environment(backend: &Backend, id: String) -> Pending<Option<Strin
 /// Whether a protected environment asks before this request leaves. Pure (D12).
 pub fn asks_before_sending(kind: RequestKind, method: HttpMethod) -> bool {
     http::environments::asks_before_sending(kind, method)
+}
+
+pub fn cookies(backend: &Backend) -> Pending<Vec<CookieDomain>> {
+    backend.db(http::http_cookies)
+}
+
+pub fn count_cookies(backend: &Backend) -> Pending<u32> {
+    backend.db(http::count_http_cookies)
+}
+
+pub fn clear_cookies(backend: &Backend) -> Pending<u32> {
+    backend.db(http::clear_http_cookies)
+}
+
+pub fn delete_cookie(backend: &Backend, id: String) -> Pending<u32> {
+    backend.db(move |engine| http::delete_http_cookie(engine, id))
+}
+
+pub fn delete_cookie_domain(backend: &Backend, domain: String) -> Pending<u32> {
+    backend.db(move |engine| http::delete_http_cookie_domain(engine, domain))
+}
+
+/// A collection's or a folder's own settings.
+pub fn settings(backend: &Backend, item: HttpItem) -> Pending<ContainerSettings> {
+    backend.db(move |engine| http::http_settings(engine, item))
+}
+
+pub fn save_settings(
+    backend: &Backend,
+    item: HttpItem,
+    settings: ContainerSettings,
+) -> Pending<()> {
+    backend.db(move |engine| http::save_http_settings(engine, item, settings))
 }
 
 /// The globals and every environment.

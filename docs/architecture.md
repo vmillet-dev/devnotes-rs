@@ -5022,6 +5022,16 @@ yes goes to the core with the send (`confirmed`), a script then being free to ch
 environment. A chip nothing sets is a click from a row of its own on the page, in the active
 environment or the globals.
 
+`http::cookie_jar` lists what answers set, by domain, and throws it away: a cookie, a domain, or
+the whole jar once Rust has counted it (`state::http::cookies`). `http::container_settings` is a
+collection's or a folder's variables, auth, headers and transport, opened from its row's menu.
+The draft is the state's and is written whole on « Save »; a folder's « Inherited » reads from its
+parent, what it sets itself not being what it inherits. It shares the request's editors, which
+take a value and answer the value edited: `Inherit` on a collection is no auth at all, and reads
+as « None ». `http::modal` is the frame of the area's dialogs. ⚠️ A dialog centres itself again
+when its height changes: what clicks in a test settles first, a pointer aimed at the old place
+hits nothing.
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

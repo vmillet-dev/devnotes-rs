@@ -112,20 +112,35 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: 
 }
 
 /// What the rail's foot takes, one line a page.
-const FOOT: f32 = 44.0;
+const FOOT: f32 = 80.0;
 
-/// The pages that take the place of the requests.
+/// The pages that take the place of the requests, and the jar.
 fn foot(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
-    let p = palette(ui.ctx());
+    let tr = |key| i18n::translate(state.language, key, &[]);
+    ui.spacing_mut().item_spacing.y = 2.0;
     let on = state.http.page() == Page::Environments;
-    let words = i18n::translate(state.language, keys::http::environments::TITLE, &[]);
+    let words = tr(keys::http::environments::TITLE);
+    if foot_item(ui, &words, "http-environments-open", on).clicked() {
+        push(actions, Action::TogglePage(Page::Environments));
+    }
+    let words = tr(keys::http::cookies::OPEN);
+    if foot_item(ui, &words, "http-cookies-open", false).clicked() {
+        push(
+            actions,
+            Action::Cookies(crate::state::http::cookies::Asked::Open),
+        );
+    }
+}
+
+fn foot_item(ui: &mut Ui, words: &str, author_id: &str, on: bool) -> egui::Response {
+    let p = palette(ui.ctx());
     let size = Vec2::new(ui.available_width(), 34.0);
     let response = interact(
         ui,
         size,
         Sense::click(),
-        "http-environments-open",
-        || WidgetInfo::selected(Role::Button, true, on, &words),
+        author_id,
+        || WidgetInfo::selected(Role::Button, true, on, words),
         CornerRadius::same(8),
     );
     let rect = response.rect;
@@ -134,12 +149,10 @@ fn foot(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             .rect_filled(rect, CornerRadius::same(8), p.bg_2);
     }
     let ink = if on { p.amber_text } else { p.text_1 };
-    let galley = widgets::text(ui, &words, 13.0, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, words, 13.0, 400.0, FontFamily::Proportional, ink);
     let at = pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, ink);
-    if response.clicked() {
-        push(actions, Action::TogglePage(Page::Environments));
-    }
+    response
 }
 
 fn to_margin(points: f32) -> i8 {
@@ -445,6 +458,7 @@ const NEW_FOLDER: &str = "http-node-new-folder";
 const RENAME: &str = "http-node-rename";
 const DUPLICATE: &str = "http-node-duplicate";
 const DELETE: &str = "http-node-delete";
+const SETTINGS: &str = "http-node-settings";
 
 /// A request holds nothing: it is renamed, copied or deleted. The three kinds of request sit
 /// behind one entry, as a card's priorities do.
@@ -464,6 +478,7 @@ fn node_menu(
         tr(actions::RENAME),
         tr(actions::DUPLICATE),
         tr(actions::DELETE),
+        tr(actions::SETTINGS),
     ];
     let kinds = [
         MenuItem::new(&words[0], NEW_HTTP),
@@ -479,6 +494,7 @@ fn node_menu(
         let items = [
             MenuItem::new(&words[3], "http-node-new").children(&kinds),
             MenuItem::new(&words[4], NEW_FOLDER),
+            MenuItem::new(&words[8], SETTINGS),
             rename,
             duplicate,
             delete,
@@ -493,6 +509,7 @@ fn node_menu(
         RENAME,
         DUPLICATE,
         DELETE,
+        SETTINGS,
     ]
     .into_iter()
     .find(|known| *known == chosen)
@@ -511,6 +528,10 @@ fn on_menu(
         NEW_WEBSOCKET => Made::Request(RequestKind::Websocket),
         NEW_FOLDER => Made::Folder,
         RENAME => return start_rename(view, actions, row),
+        SETTINGS => {
+            let container = crate::state::http::containers::Container::of(row);
+            return push(actions, Action::OpenSettings(container));
+        }
         DUPLICATE => {
             let name = i18n::translate(
                 language,

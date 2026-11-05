@@ -1,13 +1,13 @@
 //! A tab is closed after one question when closing it costs something: what was typed and not
 //! saved. Escape and « Cancel » keep it open.
 
-use egui::{CornerRadius, FontFamily, Id, Margin, Sense, Stroke, Ui};
+use egui::{FontFamily, Sense, Ui};
 use i18n::keys;
 
 use super::Action;
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
-use crate::theme::{palette, spacing};
+use crate::theme::palette;
 use crate::widgets::{self, Button, Kind};
 
 const WIDTH: f32 = 420.0;
@@ -16,23 +16,11 @@ pub(super) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
     let Some(tab) = state.http.tabs().closing() else {
         return;
     };
-    let p = palette(ui.ctx());
-    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
-    let padding = spacing(ui.ctx()).canvas.round() as i8;
-    let frame = egui::Frame::new()
-        .fill(p.bg_1)
-        .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
-        .shadow(p.shadow_overlay)
-        .inner_margin(Margin::same(padding));
     let key = tab.key.clone();
     let saved = tab.request_id.is_some();
-    let shown = egui::Modal::new(Id::unique("http-close-dialog"))
-        .backdrop_color(p.backdrop.gamma_multiply(0.7))
-        .frame(frame)
-        .show(ui.ctx(), |ui| {
-            body(ui, &tab.draft.name, saved, state.language)
-        });
+    let shown = super::modal(ui, "http-close-dialog", |ui| {
+        body(ui, &tab.draft.name, saved, state.language)
+    });
     let mut close = |action| actions.push(Asked::Http(action));
     match shown.inner {
         Some(Choice::Discard) => close(Action::Close(key)),

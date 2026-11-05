@@ -1,13 +1,13 @@
 //! The open request: its name, its method and URL on one line, the variables it uses, and its
 //! parts a tab each.
 
-mod auth;
+pub(crate) mod auth;
 mod body;
 mod extractions;
 mod graphql;
 mod parts;
 pub(crate) mod table;
-mod transport;
+pub(crate) mod transport;
 mod url;
 
 #[cfg(test)]
@@ -184,12 +184,21 @@ pub(crate) fn show(
                         Section::Headers => headers(ui, state, tab, actions),
                         Section::Body => body::show(ui, state, tab, &mut boxes.body, actions),
                         Section::Query => graphql::show(ui, state, tab, boxes, actions),
-                        Section::Auth => auth::show(ui, state, tab, &mut boxes.revealed, actions),
+                        Section::Auth => {
+                            let field = auth::AuthField {
+                                auth: &tab.draft.document.auth,
+                                above: tab.place.as_ref().and(state.http.inherited()),
+                                allow_inherit: true,
+                            };
+                            if let Some(auth) =
+                                auth::show(ui, &field, &mut boxes.revealed, language)
+                            {
+                                edit(actions, tab, DraftEdit::Auth(auth));
+                            }
+                        }
                         Section::Variables => variables(ui, tab, boxes, actions, language),
                         Section::Scripts => extractions::show(ui, tab, actions, language),
-                        Section::Settings => {
-                            transport::show(ui, state, tab, &mut boxes.numbers, actions);
-                        }
+                        Section::Settings => settings(ui, state, tab, boxes, actions),
                     }
                 });
         });
@@ -566,6 +575,27 @@ fn counted(tab: &Tab, section: Section) -> usize {
         Section::Scripts => document.extractions.len(),
         Section::Settings => transport::set_fields(&document.transport),
         Section::Auth | Section::Body | Section::Query => 0,
+    }
+}
+
+fn settings(
+    ui: &mut Ui,
+    state: &AppState,
+    tab: &Tab,
+    boxes: &mut TextBoxes,
+    actions: &mut Actions,
+) {
+    let field = transport::TransportField {
+        settings: tab.draft.document.transport,
+        base: tab
+            .place
+            .as_ref()
+            .and(state.http.inherited())
+            .map_or_else(Default::default, |above| above.transport),
+        above_is_default: tab.place.is_none(),
+    };
+    if let Some(settings) = transport::show(ui, &field, &mut boxes.numbers, state.language) {
+        edit(actions, tab, DraftEdit::Transport(settings));
     }
 }
 
