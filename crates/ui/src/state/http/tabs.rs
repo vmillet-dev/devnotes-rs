@@ -266,6 +266,10 @@ impl Tabs {
         self.find(self.closing.as_deref()?)
     }
 
+    pub fn tab(&self, key: &str) -> Option<&Tab> {
+        self.find(key)
+    }
+
     fn find(&self, key: &str) -> Option<&Tab> {
         self.open.iter().find(|tab| tab.key == key)
     }

@@ -5,6 +5,10 @@
 //! The flavour is built apart, so that no other build overwrites it:
 //! `cargo build -p app --features e2e --target-dir target/e2e`.
 
+mod server;
+
+pub use server::serve;
+
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};

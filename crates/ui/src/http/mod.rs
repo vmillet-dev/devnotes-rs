@@ -4,6 +4,7 @@
 mod close;
 mod rail;
 mod request;
+mod response;
 mod tabs;
 
 use egui::{Color32, Rect, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo, pos2};
@@ -49,6 +50,21 @@ pub enum Action {
         key: String,
         edit: crate::state::http::tabs::DraftEdit,
     },
+    /// The tab's draft, sent; `None` for the tab in front (`Ctrl+Enter`).
+    Send(Option<String>),
+    CancelSend(String),
+    ClearResponse(String),
+    /// The request's share of the height, in tenths of a percent; `0` for automatic.
+    SetShare(u16),
+    /// An answer's JSON, as the explorer asks it.
+    Explore {
+        send_id: String,
+        query: engine::json::model::JsonQuery,
+    },
+    /// The image an answer is, read once.
+    ResponseImage(String),
+    /// An answer's text, to the clipboard.
+    Copy(String),
 }
 
 /// What only the area's drawing sees (D13).
@@ -57,6 +73,11 @@ pub struct View {
     rail_width: widgets::RailWidth,
     rail: rail::RailView,
     editor: request::EditorView,
+    response: response::ResponseView,
+    /// How tall the request's content was last drawn: what an automatic share follows.
+    editor_height: f32,
+    /// The share while the line is dragged, written once let go.
+    dragged_share: Option<u16>,
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
@@ -80,13 +101,85 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     let below = Rect::from_min_max(rest.min + Vec2::new(0.0, tabs::HEIGHT), rest.max);
     let mut workspace = ui.new_child(UiBuilder::new().max_rect(below));
     match state.http.tabs().active() {
-        Some(tab) => request::show(&mut workspace, state, (tab, &mut view.editor), actions),
+        Some(tab) => split(&mut workspace, below, state, (tab, view), actions),
         None => empty_workspace(&mut workspace, below, state.language, actions),
     }
     close::show(ui, state, actions);
     if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }
+}
+
+/// What the line between a request and its answer leaves each, in points: the request line and
+/// its tabs above, the status line and a few lines of body below.
+const FLOORS: (f32, f32) = (148.0, 160.0);
+const HANDLE: f32 = 8.0;
+
+/// The request above, its answer below, the line between them dragged to share the height.
+/// Left to itself the request takes what it holds, up to 60 %.
+fn split(
+    ui: &mut Ui,
+    region: Rect,
+    state: &AppState,
+    (tab, view): (&crate::state::http::tabs::Tab, &mut View),
+    actions: &mut Actions,
+) {
+    let total = region.height();
+    let share = view
+        .dragged_share
+        .unwrap_or(state.settings.http_request_share);
+    let wanted = if share > 0 {
+        total * f32::from(share) / 1000.0
+    } else {
+        view.editor_height.min(total * 0.6)
+    };
+    let upper = wanted
+        .max(FLOORS.0)
+        .min((total - FLOORS.1 - HANDLE).max(FLOORS.0));
+    let top = Rect::from_min_size(region.min, Vec2::new(region.width(), upper));
+    let line = Rect::from_min_size(top.left_bottom(), Vec2::new(region.width(), HANDLE));
+    let bottom = Rect::from_min_max(line.left_bottom(), region.max);
+    let mut editor = ui.new_child(UiBuilder::new().max_rect(top));
+    editor.set_clip_rect(top);
+    view.editor_height = request::show(&mut editor, state, (tab, &mut view.editor), actions);
+    let handle = response::split_handle(ui, line, state.language);
+    if let Some(at) = handle.interact_pointer_pos().filter(|_| handle.dragged()) {
+        view.dragged_share = Some(share_at(at.y - region.top(), total));
+    }
+    if handle.drag_stopped()
+        && let Some(share) = view.dragged_share.take()
+    {
+        actions.push(Asked::Http(Action::SetShare(share)));
+    }
+    if handle.double_clicked()
+        || (widgets::takes_keys(ui, &handle)
+            && ui.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Enter)))
+    {
+        actions.push(Asked::Http(Action::SetShare(0)));
+    }
+    if widgets::takes_keys(ui, &handle) {
+        for (key, step) in [(egui::Key::ArrowUp, -16.0), (egui::Key::ArrowDown, 16.0)] {
+            if ui.input_mut(|input| input.consume_key(egui::Modifiers::NONE, key)) {
+                actions.push(Asked::Http(Action::SetShare(share_at(upper + step, total))));
+            }
+        }
+    }
+    let mut answer = ui.new_child(UiBuilder::new().max_rect(bottom));
+    answer.set_clip_rect(bottom);
+    response::show(&mut answer, state, (tab, &mut view.response), actions);
+}
+
+/// `upper` points of `total`, as tenths of a percent within the share's bounds.
+fn share_at(upper: f32, total: f32) -> u16 {
+    let (min, max) = crate::services::settings::HTTP_SHARE;
+    let tenths = (upper / total.max(1.0) * 1000.0).round();
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "clamped"
+    )]
+    let tenths = tenths.clamp(f32::from(min), f32::from(max)) as u16;
+    tenths
 }
 
 /// The first screen of the area says what it can do: the three kinds, as buttons.

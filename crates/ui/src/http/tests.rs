@@ -822,3 +822,327 @@ fn a_variable_is_listed_with_where_it_resolves_from() {
             == ["{{token}}"]
     });
 }
+
+/// A request to the local server at `path`, open in its tab.
+fn sending_to(path: &str) -> Harness<'static, Bench> {
+    let port = testing::serve();
+    let (backend, profile) = testing::unlocked();
+    let api = collection(&backend, "Local");
+    let draft = HttpRequestDraft {
+        collection_id: api.id.clone(),
+        folder_id: None,
+        name: "Ping".to_owned(),
+        kind: RequestKind::Http,
+        method: HttpMethod::Get,
+        document: RequestDocument {
+            url: format!("http://127.0.0.1:{port}{path}"),
+            ..RequestDocument::default()
+        },
+    };
+    engine::db::run_here(backend.engine(), move |engine| {
+        engine::http::create_http_request(engine, draft)
+    })
+    .unwrap();
+    let mut harness = area_of(Area::Http, backend, profile);
+    harness.set_size(egui::vec2(1_100.0, 900.0));
+    click_named(&mut harness, "http-node-name", "GET Ping");
+    crate::notes::bench::until(&mut harness, "the editor is open", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("http-send"))
+            .is_some()
+    });
+    harness
+}
+
+fn said_by(harness: &Harness<'_, Bench>, author_id: &str) -> Option<String> {
+    let node = harness.query_by(|node| node.author_id() == Some(author_id))?;
+    let node = node.accesskit_node();
+    node.label().or(node.value())
+}
+
+fn answered(harness: &mut Harness<'_, Bench>) {
+    crate::notes::bench::until(harness, "the answer is shown", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-status"))
+            .is_some()
+    });
+}
+
+#[test]
+fn a_request_is_sent_and_its_answer_read_part_by_part() {
+    let mut harness = sending_to("/json");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-idle"))
+            .is_some()
+    );
+
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+
+    assert_eq!(
+        said_by(&harness, "http-response-status").as_deref(),
+        Some("200 OK")
+    );
+    assert!(said_by(&harness, "http-response-time").is_some_and(|time| time.ends_with("ms")));
+    assert!(said_by(&harness, "http-response-pretty").is_some_and(|body| body.contains("\"Ada\"")));
+    click_id(&mut harness, "http-response-view-1");
+    assert!(
+        said_by(&harness, "http-response-body").is_some_and(|body| body.starts_with("{\"name\""))
+    );
+
+    click_id(&mut harness, "http-response-section-cookies");
+    assert_eq!(
+        said_by(&harness, "http-response-cookie").as_deref(),
+        Some("session")
+    );
+    click_id(&mut harness, "http-response-section-timeline");
+    assert!(
+        said_by(&harness, "http-response-sent")
+            .is_some_and(|sent| sent.starts_with("GET http://127.0.0.1"))
+    );
+    assert!(
+        said_by(&harness, "http-response-received").is_some_and(|got| got.starts_with("200 OK"))
+    );
+
+    click_id(&mut harness, "http-response-clear");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-idle"))
+            .is_some()
+    );
+}
+
+#[test]
+fn a_json_answer_is_explored_as_a_tree() {
+    let mut harness = sending_to("/json");
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::Enter);
+    answered(&mut harness);
+
+    click_id(&mut harness, "http-response-view-3");
+
+    crate::notes::bench::until(&mut harness, "the tree is drawn", |harness| {
+        harness
+            .query_all_by(|node| {
+                node.label()
+                    .is_some_and(|label| label.contains("languages"))
+            })
+            .count()
+            > 0
+    });
+}
+
+#[test]
+fn a_send_under_way_counts_its_time_and_can_be_cancelled() {
+    let mut harness = sending_to("/slow");
+
+    // Not settled: settling waits for the core, and the send with it.
+    harness
+        .get_by(|node| node.author_id() == Some("http-send"))
+        .click();
+    harness.step();
+    harness.step();
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-sending"))
+            .is_some()
+    );
+    assert!(said_by(&harness, "http-response-elapsed").is_some_and(|time| time.ends_with(" s")));
+    let http = &harness.state().state.http;
+    assert!(http.sends().is_sending(http.tabs().active_key().unwrap()));
+    // A cancel that arrives before the send has left cancels nothing: it reaches the server first.
+    let url = active(&harness).document.url;
+    let port: u16 = url["http://127.0.0.1:".len()..url.rfind('/').unwrap()]
+        .parse()
+        .unwrap();
+    for _ in 0..10_000 {
+        if testing::slow_arrived(port) {
+            break;
+        }
+        harness.step();
+    }
+    assert!(testing::slow_arrived(port), "the send reached the server");
+
+    harness
+        .get_by(|node| node.author_id() == Some("http-send"))
+        .click();
+    harness.step();
+    harness.step();
+    crate::notes::bench::until(&mut harness, "the send is cancelled", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-cancelled"))
+            .is_some()
+    });
+}
+
+#[test]
+fn a_status_says_its_family_and_a_failure_says_why() {
+    let mut harness = sending_to("/missing");
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+    assert_eq!(
+        said_by(&harness, "http-response-status").as_deref(),
+        Some("404 Not Found")
+    );
+
+    let key = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active_key()
+        .unwrap()
+        .to_owned();
+    harness
+        .state_mut()
+        .state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| {
+            draft.apply(crate::state::http::tabs::DraftEdit::Url(
+                "http://127.0.0.1:1/".to_owned(),
+            ));
+        });
+    settle(&mut harness);
+    click_id(&mut harness, "http-send");
+    crate::notes::bench::until(&mut harness, "the failure is said", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-failure"))
+            .is_some()
+    });
+}
+
+#[test]
+fn the_line_between_request_and_answer_is_left_automatic_on_a_double_click() {
+    let mut harness = sending_to("/json");
+    harness.state_mut().state.settings.http_request_share = 500;
+    settle(&mut harness);
+
+    harness
+        .get_by(|node| node.author_id() == Some("http-split-handle"))
+        .focus();
+    settle(&mut harness);
+    harness.key_press(egui::Key::Enter);
+    settle(&mut harness);
+
+    assert_eq!(harness.state().state.settings.http_request_share, 0);
+}
+
+/// The budget of § 6.2, measured by hand: `cargo test -p ui --release http_body_budget --
+/// --ignored --nocapture`. A frame is egui's pass, without painting.
+#[test]
+#[ignore = "a measure, not a check"]
+fn http_body_budget() {
+    let mut harness = sending_to("/big");
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+    let size = said_by(&harness, "http-response-size").unwrap_or_default();
+    let started = std::time::Instant::now();
+    click_id(&mut harness, "http-response-view-1");
+    click_id(&mut harness, "http-response-view-0");
+    println!("{size}: laid out again in {:?}", started.elapsed());
+    let centre = harness
+        .get_by(|node| node.author_id() == Some("http-response-pretty"))
+        .rect()
+        .center();
+    harness.event(egui::Event::PointerMoved(centre));
+    let mut frames = Vec::new();
+    for _ in 0..200 {
+        harness.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, -400.0),
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Unknown,
+            modifiers: egui::Modifiers::NONE,
+        });
+        let started = std::time::Instant::now();
+        harness.step();
+        frames.push(started.elapsed());
+    }
+    frames.sort();
+    println!(
+        "scrolling p50 {:?}, p95 {:?}, p99 {:?}",
+        frames[100], frames[190], frames[198]
+    );
+}
+
+#[test]
+fn the_headers_and_a_redirect_followed_are_read_from_the_answer() {
+    let mut harness = sending_to("/redirect");
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+    assert_eq!(
+        said_by(&harness, "http-response-status").as_deref(),
+        Some("200 OK")
+    );
+
+    click_id(&mut harness, "http-response-section-headers");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-headers"))
+            .is_some()
+    );
+    click_id(&mut harness, "http-response-section-timeline");
+    assert!(
+        said_by(&harness, "http-response-redirect").is_some_and(|line| line.starts_with("302"))
+    );
+}
+
+#[test]
+fn a_body_sent_is_shown_in_the_timeline() {
+    let mut harness = sending_to("/json");
+    let key = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active_key()
+        .unwrap()
+        .to_owned();
+    harness
+        .state_mut()
+        .state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| {
+            draft.method = HttpMethod::Post;
+            draft.document.body = engine::http::model::RequestBody::Json {
+                text: r#"{"login":"ada"}"#.to_owned(),
+            };
+        });
+    settle(&mut harness);
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+
+    click_id(&mut harness, "http-response-section-timeline");
+    assert!(said_by(&harness, "http-response-sent").is_some_and(|sent| sent.starts_with("POST")));
+    assert!(said_by(&harness, "http-response-sent-body").is_some_and(|body| body.contains("ada")));
+}
+
+#[test]
+fn an_image_answer_is_shown_as_its_picture() {
+    let mut harness = sending_to("/image");
+    click_id(&mut harness, "http-send");
+    answered(&mut harness);
+
+    crate::notes::bench::until(&mut harness, "the picture is shown", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("http-response-image"))
+            .is_some()
+    });
+}
+
+#[test]
+fn a_wide_rail_names_what_its_head_makes() {
+    let mut harness = paiements();
+    harness.state_mut().state.settings.rail_width = 300;
+    settle(&mut harness);
+
+    click_id(&mut harness, "http-collection-create-open");
+
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-create-input"))
+            .is_some()
+    );
+}

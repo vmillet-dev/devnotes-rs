@@ -7,7 +7,7 @@ use engine::http::{
         HttpRequestPatch, HttpTree, KeyValue, RequestDocument, RequestKind,
     },
     query::{QuerySide, SyncedQuery},
-    send::ImpliedHeader,
+    send::{ImpliedHeader, SendRequest, SentResponse},
     variables::UsedVariable,
 };
 
@@ -141,4 +141,24 @@ pub fn implied_headers(
 /// Each `{{name}}` a request holds, with what it resolves to and from where.
 pub fn used_variables(backend: &Backend, request: VariablesRequest) -> Pending<Vec<UsedVariable>> {
     backend.db(move |engine| http::http_variables(engine, request))
+}
+
+/// On the network queue: it never holds the db queue while the answer is awaited.
+pub fn send(backend: &Backend, request: SendRequest) -> Pending<SentResponse> {
+    backend.spawn(move |engine| http::send_http_request(engine, request))
+}
+
+/// `false` came back when that send had already ended: nothing to say either way.
+pub fn cancel(backend: &Backend, id: String) {
+    drop(backend.compute(move |engine| http::cancel_http_send(engine, id)));
+}
+
+/// A closed tab lets its last body go.
+pub fn forget_response(backend: &Backend, id: String) {
+    drop(backend.compute(move |engine| http::forget_http_response(engine, id)));
+}
+
+/// The last answer to `id` as an image, a `data:` URL, when it is one.
+pub fn response_image(backend: &Backend, id: String) -> Pending<Option<String>> {
+    backend.spawn(move |engine| http::http_response_image(engine, id))
 }

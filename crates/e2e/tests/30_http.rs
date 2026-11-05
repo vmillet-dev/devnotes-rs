@@ -181,6 +181,34 @@ fn compose(app: &mut App) {
     );
 }
 
+fn send(app: &mut App) {
+    step(
+        "sent from Rust on Ctrl+Enter: its status, time, size and body, then cleared",
+        || {
+            let port = e2e::serve();
+            app.click("http-url");
+            app.press(Key::A, Modifiers::COMMAND);
+            app.type_text(&format!("http://127.0.0.1:{port}/json"));
+            app.press(Key::Enter, Modifiers::COMMAND);
+            app.eventually("the answer is shown", |tree| {
+                tree.text("http-response-status").as_deref() == Some("200 OK")
+                    && tree.has("http-response-time")
+                    && tree.has("http-response-size")
+                    && tree
+                        .text("http-response-pretty")
+                        .is_some_and(|body| body.contains("Ada"))
+            });
+            app.click("http-response-section-timeline");
+            app.eventually("the exchange is shown", |tree| {
+                tree.text("http-response-sent")
+                    .is_some_and(|sent| sent.starts_with("GET http://127.0.0.1"))
+            });
+            app.click("http-response-clear");
+            app.wait_for("http-response-idle");
+        },
+    );
+}
+
 fn fold_kept(app: App) -> App {
     let mut app = app;
     step("a folder folded, still folded after a relaunch", || {
@@ -231,6 +259,7 @@ fn http() {
     organise(&mut app);
     in_tabs(&mut app);
     compose(&mut app);
+    send(&mut app);
     let mut app = fold_kept(app);
     delete(&mut app);
     app.quit();

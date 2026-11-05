@@ -325,6 +325,8 @@ pub struct ExplorerView<'a> {
     mode: Mode,
     format: StructureFormat,
     language: Language,
+    /// A code beside it to show a node in: not under an answer, which is read, not edited.
+    with_code: bool,
 }
 
 impl<'a> ExplorerView<'a> {
@@ -336,7 +338,14 @@ impl<'a> ExplorerView<'a> {
             mode: Mode::Graph,
             format: StructureFormat::Json,
             language: Language::Fr,
+            with_code: true,
         }
+    }
+
+    #[must_use]
+    pub fn with_code(mut self, with_code: bool) -> Self {
+        self.with_code = with_code;
+        self
     }
 
     #[must_use]
@@ -459,9 +468,10 @@ impl<'a> ExplorerView<'a> {
         label.widget_info(|| WidgetInfo::labeled(Role::Status, true, &said));
         address(&inner, &label, "json-invalid");
         inner.add_space(12.0);
-        if Button::new(&self.tr(keys::json::SHOW_IN_CODE), "json-error-show")
-            .show(&mut inner)
-            .clicked()
+        if self.with_code
+            && Button::new(&self.tr(keys::json::SHOW_IN_CODE), "json-error-show")
+                .show(&mut inner)
+                .clicked()
         {
             output.show_in_code = Some(Span {
                 start: error.offset,
@@ -762,7 +772,7 @@ impl<'a> ExplorerView<'a> {
                     .unwrap_or_else(|| utf16_slice(self.text, selected.span).to_owned());
                 ui.ctx().copy_text(value);
             }
-            if Button::new(&show, "json-show-in-code").show(ui).clicked() {
+            if self.with_code && Button::new(&show, "json-show-in-code").show(ui).clicked() {
                 output.show_in_code = Some(selected.span);
             }
         });
