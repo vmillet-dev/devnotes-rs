@@ -16,6 +16,16 @@ use crate::widgets::{self, address};
 pub enum Action {
     /// A collection or a folder folded or unfolded.
     Toggle(String),
+    Write(crate::state::http::Write),
+    /// `Alt` and an arrow on a row: moved, then shown and said.
+    KeyMove {
+        item: engine::http::model::HttpItem,
+        name: String,
+        key: crate::state::http::moves::KeyMove,
+    },
+    /// The question, once Rust has counted what goes with it.
+    AskDelete(engine::http::model::HttpItem),
+    CancelDelete,
 }
 
 /// What only the area's drawing sees (D13).

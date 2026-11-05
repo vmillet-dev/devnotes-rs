@@ -4925,6 +4925,25 @@ twisty on a collection or a folder only, a request after its method in its colou
 accessible name is the method then the name. What is folded is the library's
 (`devnotes.notes.http.collapsed`), a list of ids; anything else folds nothing.
 
+A row's `⋯` (`http-node-menu`) sits over the end of its name, inked only on hover or focus,
+and opens `widgets::menu`: « Nouvelle requête › » keeps the three kinds behind one entry, then a
+folder, rename, duplicate and delete; a request is only renamed, duplicated or deleted. ⚠️ The
+menu closes on a click outside or on the entry picked, never on any click: an entry that opens a
+sub-menu would close the menu it opens from. Creating and renaming are a field in place
+(`http::rail::forms`): the field left for anything else keeps what was typed, left empty it
+closes, Escape cancels. A deletion asks once Rust has counted what goes with it
+(`count_http_contents`, `HttpState::ask_delete`), the question opened under the row. What
+opens under a row is measured as it is drawn and the rows below it move down by that much: the
+rows are placed by hand (`ScrollArea::show_viewport`), the ones in view alone. ⚠️ Each row's
+`Ui` takes an explicit id (`UiBuilder::scope_id`), not a salt: a salted child's widgets take
+their ids from its rank, and a row moved with the keys lost its focus. A click focuses the name,
+as a button in a browser is: `F2` renames, `Delete` asks, `Alt` and an arrow move
+(`state::http::moves`: `key_move`, `drop_move`, `refusal`). A move made with the keys is read
+back from the tree Rust answers (`landing`), marked on the row and what now holds it for
+`MARK_SECONDS`, scrolled into view and said in a live region (`http-rail-moved`); a refusal is
+said there too. A drag lands before or after a row, or inside a folder or a collection when let go
+mid-row. Every write bumps the area's revision; one into a folded parent unfolds it.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

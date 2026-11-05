@@ -42,10 +42,12 @@ impl<'a> MenuItem<'a> {
 }
 
 /// The menu `anchor` opens when clicked: the `author_id` of the entry picked, the frame it is.
+/// ⚠️ Closed by a click outside, or by the entry picked: a click on an entry that opens a
+/// sub-menu would otherwise close the menu it opens from.
 pub fn menu<'a>(anchor: &Response, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
     Popup::menu(anchor)
         .frame(frame(&anchor.ctx))
-        .close_behavior(PopupCloseBehavior::CloseOnClick)
+        .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| entries(ui, items))
         .and_then(|shown| shown.inner)
 }
@@ -62,7 +64,7 @@ pub fn frame(ctx: &egui::Context) -> egui::Frame {
 }
 
 fn entries<'a>(ui: &mut Ui, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
-    ui.set_min_width(180.0);
+    ui.set_width(180.0);
     ui.spacing_mut().item_spacing.y = 0.0;
     let mut picked = None;
     let mut ids = Vec::with_capacity(items.len());
@@ -79,10 +81,12 @@ fn entries<'a>(ui: &mut Ui, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
         if item.children.is_empty() {
             if response.clicked() {
                 picked = Some(item.author_id);
+                ui.close();
             }
             continue;
         }
         let opens = response.clicked()
+            || response.hovered()
             || (super::takes_keys(ui, &response)
                 && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowRight)));
         // Its own open state: egui keeps one popup in its memory, and the parent is that one.
