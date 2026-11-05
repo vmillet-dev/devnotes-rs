@@ -658,3 +658,167 @@ fn a_deletion_names_the_open_tabs_it_would_lose() {
     assert_eq!(names(&harness, "http-delete-unsaved-name").len(), 1);
     assert!(text(&harness, "http-delete-unsaved-name").contains("Login v2"));
 }
+
+/// `Login` open in its tab.
+fn editing() -> Harness<'static, Bench> {
+    let mut harness = paiements();
+    click_named(&mut harness, "http-node-name", "POST Login");
+    crate::notes::bench::until(&mut harness, "the editor is open", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("http-url"))
+            .is_some()
+    });
+    harness
+}
+
+/// What the fields wearing `author_id` hold, top to bottom.
+fn values(harness: &Harness<'_, Bench>, author_id: &str) -> Vec<String> {
+    harness
+        .query_all_by(|node| node.author_id() == Some(author_id))
+        .map(|node| node.accesskit_node().value().unwrap_or_default())
+        .collect()
+}
+
+fn active(harness: &Harness<'_, Bench>) -> crate::state::http::tabs::Draft {
+    harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active()
+        .unwrap()
+        .draft
+        .clone()
+}
+
+fn type_into(harness: &mut Harness<'_, Bench>, author_id: &str, nth: usize, words: &str) {
+    let node = harness
+        .query_all_by(|node| node.author_id() == Some(author_id))
+        .nth(nth)
+        .unwrap();
+    node.focus();
+    settle(harness);
+    harness
+        .query_all_by(|node| node.author_id() == Some(author_id))
+        .nth(nth)
+        .unwrap()
+        .type_text(words);
+    settle(harness);
+}
+
+#[test]
+fn the_url_and_the_parameters_follow_each_other() {
+    let mut harness = editing();
+
+    type_into(&mut harness, "http-url", 0, "?page=2&q=x");
+    let draft = active(&harness);
+    assert_eq!(
+        draft.document.url,
+        "https://api.example.com/Login?page=2&q=x"
+    );
+    assert_eq!(values(&harness, "http-kv-key"), ["page", "q", ""]);
+
+    harness
+        .query_all_by(|node| node.author_id() == Some("http-kv-enabled"))
+        .next()
+        .unwrap()
+        .click();
+    settle(&mut harness);
+    assert_eq!(
+        active(&harness).document.url,
+        "https://api.example.com/Login?q=x"
+    );
+    assert!(names(&harness, "http-tab-open")[0].ends_with("modified"));
+}
+
+#[test]
+fn a_header_typed_with_its_value_is_split_and_a_bad_name_is_said() {
+    let mut harness = editing();
+    click_id(&mut harness, "http-section-headers");
+    assert!(
+        values(&harness, "http-implied-value")
+            .iter()
+            .chain(&names(&harness, "http-implied-value"))
+            .any(|value| value.starts_with("DevNotes/"))
+    );
+
+    type_into(&mut harness, "http-kv-key", 0, "Accept: application/json");
+    let headers = active(&harness).document.headers;
+    assert_eq!(headers[0].key, "Accept");
+    assert_eq!(headers[0].value, "application/json");
+
+    type_into(&mut harness, "http-kv-key", 1, "X Trace");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-kv-fault"))
+            .is_some()
+    );
+}
+
+#[test]
+fn lines_pasted_in_a_name_fill_a_row_each() {
+    let mut harness = editing();
+    click_id(&mut harness, "http-section-headers");
+    let key = harness
+        .query_all_by(|node| node.author_id() == Some("http-kv-key"))
+        .next()
+        .unwrap();
+    key.focus();
+    settle(&mut harness);
+
+    harness.event(egui::Event::Paste("Accept: */*\nX-Trace: on\n".to_owned()));
+    settle(&mut harness);
+
+    let keys: Vec<String> = active(&harness)
+        .document
+        .headers
+        .iter()
+        .map(|row| row.key.clone())
+        .collect();
+    assert_eq!(keys, ["Accept", "X-Trace"]);
+}
+
+#[test]
+fn a_kind_is_said_where_a_method_would_be_chosen() {
+    let mut harness = paiements();
+    click_named(&mut harness, "http-node-name", "WS Socket");
+    crate::notes::bench::until(&mut harness, "the editor is open", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("http-kind-badge"))
+            .is_some()
+    });
+
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-method"))
+            .is_none()
+    );
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-section-params"))
+            .is_none()
+    );
+}
+
+#[test]
+fn a_variable_is_listed_with_where_it_resolves_from() {
+    let mut harness = editing();
+
+    type_into(&mut harness, "http-url", 0, "/{{token}}");
+    eprintln!(
+        "URL {:?} USED {:?}",
+        active(&harness).document.url,
+        harness.state().state.http.used().len()
+    );
+
+    crate::notes::bench::until(&mut harness, "the variable is listed", |harness| {
+        harness
+            .query_all_by(|node| node.author_id() == Some("http-used-variable"))
+            .map(|node| {
+                let node = node.accesskit_node();
+                node.label().or(node.value()).unwrap_or_default()
+            })
+            .collect::<Vec<_>>()
+            == ["{{token}}"]
+    });
+}

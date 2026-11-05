@@ -7,8 +7,9 @@
 //! the old one after a rename from the rail — and its next save wrote it back over the new one.
 
 use engine::http::model::{
-    HttpMethod, HttpRequest, HttpRequestPatch, HttpTree, RequestDocument, RequestKind,
+    HttpMethod, HttpRequest, HttpRequestPatch, HttpTree, KeyValue, RequestDocument, RequestKind,
 };
+use engine::http::query::QuerySide;
 
 use super::tree;
 use crate::api;
@@ -35,6 +36,40 @@ impl Draft {
             kind: request.kind,
             method: request.method,
             document: request.document.clone(),
+        }
+    }
+}
+
+/// A change the editor makes to a tab's draft.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DraftEdit {
+    Name(String),
+    Method(HttpMethod),
+    /// The URL as typed: the parameters' table is rewritten from its query.
+    Url(String),
+    /// The table as edited: the URL's query is rewritten from it.
+    Params(Vec<KeyValue>),
+    Headers(Vec<KeyValue>),
+}
+
+impl Draft {
+    /// The edited side wins: the URL and its table are kept in step (`query::sync`).
+    pub fn apply(&mut self, edit: DraftEdit) {
+        let document = &mut self.document;
+        match edit {
+            DraftEdit::Name(name) => self.name = name,
+            DraftEdit::Method(method) => self.method = method,
+            DraftEdit::Url(url) => {
+                let synced = api::http::sync_query(&url, &document.params, QuerySide::Url);
+                document.url = synced.url;
+                document.params = synced.params;
+            }
+            DraftEdit::Params(params) => {
+                let synced = api::http::sync_query(&document.url, &params, QuerySide::Params);
+                document.url = synced.url;
+                document.params = synced.params;
+            }
+            DraftEdit::Headers(headers) => document.headers = headers,
         }
     }
 }
@@ -483,6 +518,34 @@ mod tests {
         assert_eq!(tab.draft.name, "Connexion");
         assert_eq!(tab.saved.as_ref().unwrap().name, "Connexion");
         assert_eq!(tab.draft.method, HttpMethod::Put);
+    }
+
+    #[test]
+    fn the_url_and_its_table_are_kept_in_step() {
+        let mut tabs = opened(&["login"]);
+
+        tabs.edit("login", |draft| {
+            draft.apply(DraftEdit::Url(
+                "https://api.test/users?page=2&q=a".to_owned(),
+            ));
+        });
+        let params = &tabs.tabs()[0].draft.document.params;
+        assert_eq!(
+            params
+                .iter()
+                .map(|row| row.key.as_str())
+                .collect::<Vec<_>>(),
+            ["page", "q"]
+        );
+
+        let mut kept = params.clone();
+        kept[0].enabled = false;
+        tabs.edit("login", |draft| draft.apply(DraftEdit::Params(kept)));
+        assert_eq!(
+            tabs.tabs()[0].draft.document.url,
+            "https://api.test/users?q=a"
+        );
+        assert_eq!(tabs.tabs()[0].draft.document.params.len(), 2);
     }
 
     #[test]

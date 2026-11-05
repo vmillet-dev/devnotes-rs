@@ -8,7 +8,10 @@ pub mod tree;
 
 use std::collections::BTreeSet;
 
-use engine::http::model::{HttpContents, HttpItem, HttpTree, RequestKind};
+use engine::http::VariablesRequest;
+use engine::http::model::{HttpContents, HttpItem, HttpTree, RequestDocument, RequestKind};
+use engine::http::send::ImpliedHeader;
+use engine::http::variables::UsedVariable;
 use i18n::{Message, keys};
 
 use super::{QueryCell, Revision};
@@ -74,6 +77,15 @@ pub struct Mark {
     pub since: f64,
 }
 
+/// What the editor's answers depend on: the draft in front, where it sits, what it inherits.
+#[derive(Debug, Clone, PartialEq)]
+struct Question {
+    kind: RequestKind,
+    document: RequestDocument,
+    place: Option<tabs::Place>,
+    revision: Revision,
+}
+
 /// A deletion asked: what it takes with it, read before the question is shown.
 pub struct Deleting {
     pub item: HttpItem,
@@ -97,6 +109,10 @@ pub struct HttpState {
     said: Option<(u32, Message)>,
     deleting: Option<Deleting>,
     tabs: tabs::Tabs,
+    /// What the request in front sends unasked, and where its `{{variables}}` resolve from:
+    /// Rust composes the request, so Rust says; the last answer stays while the next is read.
+    implied: QueryCell<Question, Vec<ImpliedHeader>>,
+    used: QueryCell<Question, Vec<UsedVariable>>,
     /// The folds or the tabs changed: the library's preferences are written.
     unremembered: bool,
 }
@@ -149,6 +165,7 @@ impl HttpState {
                 self.unremembered = true;
             }
         }
+        self.ask_editor(backend);
         if self
             .mark
             .as_ref()
@@ -186,6 +203,46 @@ impl HttpState {
             self.landing = Some((self.revision, landing));
         }
         created
+    }
+
+    /// The headers sent unasked and the variables used, for the draft in front.
+    fn ask_editor(&mut self, backend: &Backend) {
+        let Some(tab) = self.tabs.active() else {
+            return;
+        };
+        let question = Question {
+            kind: tab.draft.kind,
+            document: tab.draft.document.clone(),
+            place: tab.place.clone(),
+            revision: self.revision,
+        };
+        self.implied.want(question.clone());
+        self.implied.update(|question| {
+            let place = question.place.map_or((None, None), |place| {
+                (Some(place.collection_id), place.folder_id)
+            });
+            api::http::implied_headers(backend, (question.kind, question.document), place)
+        });
+        self.used.want(question);
+        self.used.update(|question| {
+            let place = question.place;
+            let request = VariablesRequest {
+                kind: question.kind,
+                document: question.document,
+                collection_id: place.as_ref().map(|place| place.collection_id.clone()),
+                folder_id: place.and_then(|place| place.folder_id),
+                environment_id: None,
+            };
+            api::http::used_variables(backend, request)
+        });
+    }
+
+    pub fn implied(&self) -> &[ImpliedHeader] {
+        self.implied.value().map_or(&[], Vec::as_slice)
+    }
+
+    pub fn used(&self) -> &[UsedVariable] {
+        self.used.value().map_or(&[], Vec::as_slice)
     }
 
     /// A move made with the keys, read from the tree the core answered — never the move asked.

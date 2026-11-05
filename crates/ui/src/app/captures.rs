@@ -135,10 +135,9 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     capture(&mut harness, "banners-http");
 }
 
-#[test]
-fn the_http_area() {
-    let profile = tempfile::tempdir().unwrap();
-    let mut harness = launch(profile.path());
+/// A library holding `API Paiements`, the HTTP area shown.
+fn http_area(profile: &Path) -> Harness<'static, DevNotesApp> {
+    let mut harness = launch(profile);
     type_into(&mut harness, "vault-passphrase", PASSPHRASE);
     type_into(&mut harness, "vault-confirmation", PASSPHRASE);
     click(&mut harness, "vault-submit");
@@ -173,6 +172,48 @@ fn the_http_area() {
     );
     // The tree is read when the area is first shown.
     click(&mut harness, "area-option-http");
+    harness
+}
+
+#[test]
+fn the_http_request_editor() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        use crate::state::http::tabs::DraftEdit;
+        draft.apply(DraftEdit::Url(
+            "{{base}}/sessions?user={{user}}&remember=true".to_owned(),
+        ));
+        let header = |key: &str, value: &str| engine::http::model::KeyValue {
+            enabled: true,
+            key: key.to_owned(),
+            value: value.to_owned(),
+            description: String::new(),
+        };
+        draft.apply(DraftEdit::Headers(vec![
+            header("Accept", "application/json"),
+            header("X Trace", "on"),
+        ]));
+    });
+    settle(&mut harness);
+    capture(&mut harness, "http-request-params");
+    click(&mut harness, "http-section-headers");
+    capture(&mut harness, "http-request-headers");
+}
+
+#[test]
+fn the_http_area() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
     capture(&mut harness, "http-rail");
 
     harness
