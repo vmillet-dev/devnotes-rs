@@ -168,6 +168,19 @@ fn what_went_each_way_is_logged_and_filtered() {
 }
 
 #[test]
+fn the_shortcut_connects_and_never_cuts_a_live_socket() {
+    let mut harness = socket();
+    connected(&mut harness);
+    let key = active_key(&harness);
+
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::Enter);
+    settle(&mut harness);
+
+    let sockets = harness.state().state.http.sockets();
+    assert_eq!(sockets.of(&key).unwrap().phase, Phase::Open);
+}
+
+#[test]
 fn closing_a_live_socket_s_tab_asks_first() {
     let mut harness = socket();
     connected(&mut harness);

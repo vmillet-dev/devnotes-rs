@@ -881,13 +881,17 @@ impl HttpState {
 
     /// The tab `key`'s draft, sent as it is now; `None` for the tab in front.
     pub fn send(&mut self, backend: &Backend, key: Option<&str>, now: f64) {
+        let from_the_button = key.is_some();
         let key = key.or(self.tabs.active_key()).map(str::to_owned);
         let Some(tab) = key.as_deref().and_then(|key| self.tabs.tab(key)) else {
             return;
         };
+        // The shortcut connects and never cuts: only the button disconnects.
         if tab.draft.kind == RequestKind::Websocket && self.sockets.is_live(&tab.key) {
-            let key = tab.key.clone();
-            self.sockets.close(backend, &key);
+            if from_the_button {
+                let key = tab.key.clone();
+                self.sockets.close(backend, &key);
+            }
             return;
         }
         let protected = self

@@ -295,6 +295,13 @@ fn socket(app: &mut App) {
                 tree.count("http-socket-entry") == 1
             });
             app.fill("http-socket-message", "ping");
+            // A key overtakes what is still being typed: it would reach the area, not the message.
+            app.eventually("the message is typed", |tree| {
+                values(tree, "http-socket-message")
+                    .first()
+                    .map(String::as_str)
+                    == Some("ping")
+            });
             app.press(Key::Enter, Modifiers::COMMAND);
             app.eventually("the message came back", |tree| {
                 tree.count("http-socket-entry") == 3
