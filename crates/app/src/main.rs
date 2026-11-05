@@ -6,6 +6,8 @@
 
 mod arguments;
 mod logging;
+#[cfg(feature = "e2e")]
+mod unpainted;
 
 // The inspection port answers anyone on the machine, without a password.
 #[cfg(all(feature = "e2e", not(debug_assertions)))]
@@ -103,7 +105,13 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
     eframe::run_native(
         METADATA.name,
         options(restored),
+        #[cfg(not(feature = "e2e"))]
         Box::new(move |cc| Ok(Box::new(ui::DevNotesApp::new(cc, startup)?))),
+        #[cfg(feature = "e2e")]
+        Box::new(move |cc| {
+            unpainted::attach(&cc.egui_ctx);
+            Ok(Box::new(ui::DevNotesApp::new(cc, startup)?))
+        }),
     )
 }
 
