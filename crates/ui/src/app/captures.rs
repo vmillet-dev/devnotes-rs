@@ -388,6 +388,84 @@ fn the_http_code() {
 }
 
 #[test]
+fn the_http_runner() {
+    use engine::http::runner::{RunEvent, RunResult, RunStep};
+    use engine::http::scripts::model::TestResult;
+
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = harness.state().backend();
+    let local = crate::http::tests::collection(backend, "Local");
+    for name in ["Login", "Commandes"] {
+        crate::http::tests::request(
+            backend,
+            (&local, None),
+            name,
+            (RequestKind::Http, HttpMethod::Get),
+        );
+    }
+    click(&mut harness, "area-option-http");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-menu")
+                && node.label().is_some_and(|label| label.ends_with("Local"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-node-run");
+    settle(&mut harness);
+    capture(&mut harness, "http-runner-ready");
+    click(&mut harness, "http-runner-start-empty");
+    settle(&mut harness);
+    let result = |name: &str, status, passed| RunResult {
+        iteration: 0,
+        request_id: name.to_owned(),
+        name: name.to_owned(),
+        path: Vec::new(),
+        kind: RequestKind::Http,
+        method: HttpMethod::Get,
+        status: Some(status),
+        reason: String::new(),
+        millis: 12,
+        tests: vec![TestResult {
+            name: "found".to_owned(),
+            passed,
+            expected: (!passed).then(|| "200".to_owned()),
+            actual: (!passed).then(|| status.to_string()),
+            code: (!passed).then(|| "expect(res.status).toBe(200);".to_owned()),
+            ..TestResult::default()
+        }],
+        error: None,
+        stop: None,
+        skipped: false,
+        response: None,
+    };
+    let steps = [
+        RunStep::Ended {
+            result: Box::new(result("Login", 200, true)),
+        },
+        RunStep::Ended {
+            result: Box::new(result("Commandes", 404, false)),
+        },
+        RunStep::Finished {
+            cancelled: false,
+            millis: 1_200,
+        },
+    ];
+    for step in steps {
+        let id = "1".to_owned();
+        let http = &mut harness.state_mut().state.http;
+        http.receive_run(RunEvent { id, step });
+    }
+    settle(&mut harness);
+    capture(&mut harness, "http-runner-report");
+}
+
+#[test]
 fn the_http_response() {
     let port = crate::testing::serve();
     let profile = tempfile::tempdir().unwrap();

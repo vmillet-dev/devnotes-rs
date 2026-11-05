@@ -151,8 +151,7 @@ impl eframe::App for DevNotesApp {
                 Input::Engine(EngineEvent::Console(event)) => {
                     self.state.http.receive_console(event);
                 }
-                // Read by the screens they concern, as they are ported.
-                Input::Engine(_) => {}
+                Input::Engine(EngineEvent::Run(event)) => self.state.http.receive_run(event),
             }
         }
         self.state.update(ctx, &self.backend);

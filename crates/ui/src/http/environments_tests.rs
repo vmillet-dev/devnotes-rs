@@ -53,7 +53,7 @@ fn type_in(harness: &mut Harness<'_, Bench>, author_id: &str, words: &str) {
     settle(harness);
 }
 
-fn create(harness: &mut Harness<'_, Bench>, name: &str) {
+pub(super) fn create(harness: &mut Harness<'_, Bench>, name: &str) {
     click_id(harness, "http-environment-create-open");
     type_in(harness, "http-environment-create-input", name);
     click_id(harness, "http-environment-create-submit");

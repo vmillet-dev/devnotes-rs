@@ -24,6 +24,40 @@ pub fn tree(backend: &Backend) -> Pending<HttpTree> {
     backend.db(http::http_tree)
 }
 
+/// The requests under a collection or a folder, in the tree's order. Pure (D12).
+pub fn placed_under(tree: &HttpTree, item: &HttpItem) -> Vec<http::runner::Placed> {
+    http::runner::placed_under(tree, item)
+}
+
+/// The run a send belongs to, and so the console it says its lines in. Pure (D12).
+pub fn run_of(send_id: &str) -> Option<&str> {
+    http::runner::run_of(send_id)
+}
+
+pub fn run_order(backend: &Backend, item: HttpItem) -> Pending<Vec<http::model::RunEntry>> {
+    backend.db(move |engine| http::http_run_order(engine, item))
+}
+
+pub fn save_run_order(
+    backend: &Backend,
+    item: HttpItem,
+    order: Vec<http::model::RunEntry>,
+) -> Pending<()> {
+    backend.db(move |engine| http::save_http_run_order(engine, item, order))
+}
+
+pub fn run_collection(backend: &Backend, run: http::runner::RunRequest) -> Pending<()> {
+    backend.spawn(move |engine| http::run_http_collection(engine, run))
+}
+
+pub fn cancel_run(backend: &Backend, id: String) -> Pending<bool> {
+    backend.db(move |engine| http::cancel_http_run(engine, id))
+}
+
+pub fn read_run_data(backend: &Backend, path: String) -> Pending<http::runner::RunData> {
+    backend.spawn(move |_| http::read_http_run_data(path))
+}
+
 /// Read by id when its tab opens: the tree lists no document.
 pub fn request(backend: &Backend, id: String) -> Pending<HttpRequest> {
     backend.db(move |engine| http::get_http_request(engine, id))

@@ -679,6 +679,7 @@ impl AppState {
             Http::ScriptFocusTaken => self.http.script_focus_taken(),
             Http::SendMessage { key, text } => self.http.send_message(backend, &key, text),
             Http::ClearSocketLog(key) => self.http.clear_socket_log(&key),
+            Http::Runner(asked) => self.http.ask_runner(backend, &self.dialog, asked),
             Http::History(asked) => self.http.ask_history(backend, asked),
             Http::Code(asked) => self.http.ask_code(asked),
             Http::CopyCode(text) => {
