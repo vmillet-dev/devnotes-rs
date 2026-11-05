@@ -4910,6 +4910,21 @@ twins: a focused grip or corner moves or resizes the zone a dot per arrow; a car
 the selection bar; a folder is made from the rail. A zone's ⋯ ticks its every card, dimmed ones
 included.
 
+### The HTTP area, drawn
+
+`ui::http` draws the area (`area-http`); `state::http::HttpState` holds the tree, a `QueryCell`
+over `http_tree` asked again under the area's own `Revision` — a request renamed does not ask
+the notes again — and read the first time the area is shown. The library rail is one for the
+two areas: shown or hidden and its width are the application's settings, drawn by
+`widgets::RailWidth`, which takes a setting changed in the other area since its edge last
+moved; `Ctrl+B` is the area's key (`keys::HTTP`). `state::http::tree::rail_rows` lays the
+tree flat once per answer or fold, not per frame (2,000 rows), and the rail draws the rows in
+view alone (`widgets::virtual_list`): 8 px a level with a line a level in the indent, a
+twisty on a collection or a folder only, a request after its method in its colour
+(`http::rail::row::badge_hue`, `Badge::short` for `DEL` and `OPT`, `GQL`, `WS`), whose
+accessible name is the method then the name. What is folded is the library's
+(`devnotes.notes.http.collapsed`), a list of ids; anything else folds nothing.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

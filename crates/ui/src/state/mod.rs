@@ -10,6 +10,7 @@ pub mod editor;
 pub mod explored;
 pub mod folders;
 pub mod formatting;
+pub mod http;
 pub mod note_revisions;
 pub mod notes;
 pub mod notes_query;
@@ -113,6 +114,9 @@ pub struct AppState {
     pub palette: palette::PaletteState,
     pub palette_view: crate::palette::PaletteView,
     pub caches: LibraryCaches,
+    pub http: http::HttpState,
+    /// The HTTP area's view: only its drawing reads it (D13).
+    pub http_view: crate::http::View,
     pub status: StatusNotifier,
     pub dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
     pub opener: std::sync::Arc<dyn platform::desktop::Opener + Send + Sync>,
@@ -160,6 +164,8 @@ impl AppState {
             palette: palette::PaletteState::default(),
             palette_view: crate::palette::PaletteView::default(),
             caches: LibraryCaches::default(),
+            http: http::HttpState::default(),
+            http_view: crate::http::View::default(),
             status: StatusNotifier::default(),
             dialog: platform::dialog::system(),
             opener: platform::desktop::system(),
@@ -258,6 +264,9 @@ impl AppState {
             self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
         }
         self.follow_revisions(backend);
+        if self.settings.area == Area::Http {
+            self.http.update(backend, &mut self.errors);
+        }
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
             self.caches.pictures.redrawn(&id);
@@ -527,6 +536,7 @@ impl AppState {
                 self.spaces.restore(&preferences);
                 self.folders.restore(&preferences);
                 self.notes_query.restore(&preferences);
+                self.http.restore(&preferences);
                 self.prettier = crate::notes::prettier::PrettierSettings::read(
                     preferences.get(crate::notes::prettier::KEY),
                 );
@@ -585,6 +595,7 @@ impl AppState {
             }
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
             Action::Notes(action) => self.apply_notes(action, ctx, backend),
+            Action::Http(action) => self.apply_http(action, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
@@ -598,6 +609,19 @@ impl AppState {
             Action::Palette(asked) => self.apply_palette(asked, ctx, backend),
             // The capture arrives with its own phase.
             Action::Global(GlobalAction::Capture) => {}
+        }
+    }
+
+    fn apply_http(&mut self, action: crate::http::Action, backend: &Backend) {
+        use crate::http::Action as Http;
+        match action {
+            Http::Toggle(id) => {
+                self.http.toggle(&id, &mut self.library_preferences);
+                drop(api::preferences::write_library(
+                    backend,
+                    self.library_preferences.clone(),
+                ));
+            }
         }
     }
 
@@ -1292,6 +1316,8 @@ impl AppState {
         self.fill = placeholder_fill::FillState::default();
         self.palette = palette::PaletteState::default();
         self.notes_view = crate::notes::View::default();
+        self.http = http::HttpState::default();
+        self.http_view = crate::http::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());
         self.apply_look(ctx);

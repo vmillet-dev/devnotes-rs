@@ -7,6 +7,7 @@ mod app;
 pub mod backend;
 mod banners;
 pub mod gate;
+pub mod http;
 pub mod inputs;
 pub mod keys;
 pub mod notes;

@@ -22,7 +22,7 @@ pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
 pub use dialog::{DialogStack, Layer, dialog};
 pub use field::{Checkbox, SearchField, Searched, TextField};
-pub use layout::{rail_frame, split_handle, tooltip};
+pub use layout::{RailWidth, split_handle, tooltip};
 pub use list::{code_viewer, virtual_list};
 pub use menu::{
     ChoiceMenu, FILTER_FROM, MenuItem, Naming, entry as menu_entry, frame as menu_frame, menu,
@@ -105,6 +105,46 @@ pub(crate) fn text(
         f32::INFINITY,
         egui::TextStyle::Body,
     )
+}
+
+/// One line of `words` at a CSS weight, an ellipsis where `width` cuts it: a wrapped row
+/// breaks a list.
+pub(crate) fn one_line(
+    ui: &Ui,
+    words: &str,
+    (size, weight): (f32, f32),
+    ink: Color32,
+    width: f32,
+) -> Arc<Galley> {
+    let words = RichText::new(words)
+        .font(FontId::new(size, FontFamily::Proportional))
+        .variation(*b"wght", weight)
+        .color(ink);
+    egui::WidgetText::from(words).into_galley(
+        ui,
+        Some(egui::TextWrapMode::Truncate),
+        width.max(1.0),
+        egui::TextStyle::Body,
+    )
+}
+
+/// ▾ or ▸, drawn: the glyphs are in none of the embedded faces.
+pub(crate) fn triangle(ui: &Ui, centre: egui::Pos2, open: bool, ink: Color32) {
+    let points = if open {
+        vec![
+            centre + egui::vec2(-4.0, -2.0),
+            centre + egui::vec2(4.0, -2.0),
+            centre + egui::vec2(0.0, 3.0),
+        ]
+    } else {
+        vec![
+            centre + egui::vec2(-2.0, -4.0),
+            centre + egui::vec2(3.0, 0.0),
+            centre + egui::vec2(-2.0, 4.0),
+        ]
+    };
+    ui.painter()
+        .add(egui::Shape::convex_polygon(points, ink, egui::Stroke::NONE));
 }
 
 /// Words whose arrows (← ↑ → ↓, ↵ ⌫) are painted as icons: none of the embedded faces has them, and

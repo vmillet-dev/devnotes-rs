@@ -12,6 +12,7 @@ pub enum Action {
     App(AppAction),
     Gate(crate::gate::Action),
     Notes(crate::notes::Action),
+    Http(crate::http::Action),
     Palette(crate::palette::Asked),
     Global(GlobalAction),
 }

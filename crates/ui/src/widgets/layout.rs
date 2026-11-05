@@ -1,28 +1,61 @@
-//! The frame of a rail that can be widened, the handle between two panes, and the tooltip.
+//! The width of the library rail, the handle between two panes, and the tooltip.
 
-use egui::{CursorIcon, Key, Modifiers, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
+use egui::{
+    CursorIcon, Key, Modifiers, Rect, Response, Role, Sense, Stroke, Ui, UiBuilder, Vec2,
+    WidgetInfo,
+};
 
 use super::{address, hovered, towards};
 use crate::theme::palette;
 
-/// A rail on the left, as wide as `width` within `min..=max`; a drag on its edge, or the arrows
-/// when the edge has the focus, change it. The new width is the caller's to keep.
-pub fn rail_frame(
-    ui: &mut Ui,
-    author_id: &str,
-    width: &mut f32,
-    (min, max): (f32, f32),
-    content: impl FnOnce(&mut Ui),
-) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.vertical(|ui| {
-            ui.set_width(width.clamp(min, max));
-            content(ui);
-        });
-        let moved = split_handle(ui, author_id);
-        *width = (*width + moved).clamp(min, max);
-    });
+/// The library rail's width: the setting's, or where its edge is while it moves, with the
+/// setting it moved from. Both areas draw the rail, and the setting is written once the pointer
+/// rests: a setting that changed since, in the other area, is taken again.
+#[derive(Debug, Default)]
+pub struct RailWidth(Option<(u16, f32)>);
+
+/// The edge between the rail and what is beside it.
+const EDGE: f32 = 8.0;
+
+impl RailWidth {
+    /// The rail at the left of `region`, `content` drawn in it, its edge after it: the region
+    /// left beside them.
+    pub fn show(
+        &mut self,
+        ui: &mut Ui,
+        region: Rect,
+        (setting, (min, max)): (u16, (u16, u16)),
+        edge_id: &str,
+        content: impl FnOnce(&mut Ui),
+    ) -> Rect {
+        let (min, max) = (f32::from(min), f32::from(max));
+        let width = self
+            .0
+            .filter(|(from, _)| *from == setting)
+            .map_or(f32::from(setting), |(_, width)| width)
+            .clamp(min, max)
+            .round();
+        let rail = Rect::from_min_size(region.min, Vec2::new(width, region.height()));
+        let edge = Rect::from_min_size(rail.right_top(), Vec2::new(EDGE, region.height()));
+        let mut rail_ui = ui.new_child(UiBuilder::new().max_rect(rail));
+        rail_ui.set_clip_rect(rail);
+        content(&mut rail_ui);
+        let mut edge_ui = ui.new_child(UiBuilder::new().max_rect(edge));
+        let moved = split_handle(&mut edge_ui, edge_id);
+        self.0 = Some((setting, (width + moved).clamp(min, max)));
+        Rect::from_min_max(edge.right_top(), region.max)
+    }
+
+    /// The width to write, once the edge rests somewhere else than `setting`.
+    pub fn rested(&self, ui: &Ui, setting: u16) -> Option<u16> {
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "within RAIL_WIDTH"
+        )]
+        let rested = self.0?.1.round() as u16;
+        (rested != setting && !ui.input(|input| input.pointer.any_down())).then_some(rested)
+    }
 }
 
 /// A hairline that moves what is on either side of it: the distance it was moved this frame.
@@ -77,12 +110,13 @@ mod tests {
         let mut harness = crate::testing::harness()
             .with_size(egui::vec2(800.0, 400.0))
             .build_ui_state(
-                |ui, width: &mut f32| {
-                    rail_frame(ui, "rail-edge", width, (160.0, 520.0), |ui| {
+                |ui, width: &mut RailWidth| {
+                    let region = ui.max_rect();
+                    width.show(ui, region, (160, (160, 520)), "rail-edge", |ui| {
                         ui.label("Bibliothèque");
                     });
                 },
-                160.0,
+                RailWidth::default(),
             );
         harness.run();
 
@@ -92,12 +126,12 @@ mod tests {
         harness.run();
         harness.key_press(Key::ArrowRight);
         harness.run();
-        assert!((*harness.state() - 176.0).abs() < f32::EPSILON);
+        assert_eq!(harness.state().0, Some((160, 176.0)));
 
         for _ in 0..40 {
             harness.key_press(Key::ArrowRight);
         }
         harness.run();
-        assert!((*harness.state() - 520.0).abs() < f32::EPSILON);
+        assert_eq!(harness.state().0, Some((160, 520.0)));
     }
 }

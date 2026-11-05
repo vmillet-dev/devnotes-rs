@@ -11,6 +11,7 @@ use super::DevNotesApp;
 use super::tests::startup;
 use crate::services::time::fake::FakeClock;
 use crate::testing::PASSPHRASE;
+use engine::http::model::{HttpMethod, RequestKind};
 
 const SIZE: egui::Vec2 = egui::vec2(1100.0, 720.0);
 
@@ -132,6 +133,47 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
         .report(i18n::Message::new(i18n::keys::settings::COPIED));
     settle(&mut harness);
     capture(&mut harness, "banners-http");
+}
+
+#[test]
+fn the_http_area() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = harness.state().backend();
+    let api = crate::http::tests::collection(backend, "API Paiements");
+    let auth = crate::http::tests::folder(backend, &api, "Auth");
+    let methods = [
+        ("Login", HttpMethod::Post),
+        ("Session", HttpMethod::Get),
+        ("Logout", HttpMethod::Delete),
+    ];
+    for (name, method) in methods {
+        crate::http::tests::request(
+            backend,
+            (&api, Some(&auth)),
+            name,
+            (RequestKind::Http, method),
+        );
+    }
+    crate::http::tests::request(
+        backend,
+        (&api, None),
+        "Factures",
+        (RequestKind::Graphql, HttpMethod::Post),
+    );
+    crate::http::tests::request(
+        backend,
+        (&api, None),
+        "Flux",
+        (RequestKind::Websocket, HttpMethod::Get),
+    );
+    // The tree is read when the area is first shown.
+    click(&mut harness, "area-option-http");
+    capture(&mut harness, "http-rail");
 }
 
 #[test]
