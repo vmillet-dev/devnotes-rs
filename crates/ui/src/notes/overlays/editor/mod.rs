@@ -115,6 +115,7 @@ impl EditorView {
 }
 
 pub(crate) use json_view::Layout as ExplorerLayout;
+pub(in crate::notes) use rich::embedded;
 
 pub(crate) fn show(
     ui: &Ui,
@@ -408,6 +409,9 @@ fn toolbar(
                 }
                 actions.push(editor(Editing::FoldHeader(!folded)));
             }
+            if note.kind == NoteKind::Note {
+                present(ui, state, editing, labelled, actions);
+            }
             delete(ui, state, editing, labelled, actions);
             if note.kind != NoteKind::Drawing {
                 copy(ui, state, (session, note), editing, labelled, actions);
@@ -454,6 +458,32 @@ fn title(
     }
     if response.lost_focus() {
         save(session, note, editing, actions);
+    }
+}
+
+/// The Note full screen, a section a slide: what is on screen, not what is stored.
+fn present(
+    ui: &mut Ui,
+    state: &AppState,
+    editing: &EditorView,
+    labelled: bool,
+    actions: &mut Actions,
+) {
+    let words = i18n::translate(state.language, keys::editor::PRESENT, &[]);
+    let hint = i18n::translate(state.language, keys::editor::PRESENT_LABEL, &[]);
+    let clicked = if labelled {
+        Button::new(&words, "editor-present")
+            .kind(Kind::Outline)
+            .icon(Icon::Play)
+            .show(ui)
+    } else {
+        IconButton::new(Icon::Play, &words, "editor-present").show(ui)
+    };
+    if widgets::tooltip(clicked, &hint).clicked() {
+        actions.push(editor(Editing::Present {
+            title: editing.title.clone(),
+            markdown: editing.body.clone(),
+        }));
     }
 }
 

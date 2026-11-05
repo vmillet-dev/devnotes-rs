@@ -1765,15 +1765,15 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   screen, not the stored body (`present_note`, `notes::markdown::present`): a slide starts at
   each `#` or `##` heading and after each `---` rule outside any list, quote or fence, each slide
   a slice of the body so it is drawn as written, empty ones dropped; the headings come back as a
-  tree, each with the slide it is on. `PresentationComponent` puts the Note's title first as a
-  cover and draws each slide with `createRichViewer` — the editor's own blocks, colours and
-  diagrams, read only, a diagram without its code. ← → (and the keys a clicker sends), Home/End,
-  `M` for the map, Escape out through the modal frame (the `presentation` rung, over the
-  titlebar). The window goes full screen through `AppWindowService.enterFullscreen`
-  (`core:window:allow-set-fullscreen`), which answers whether it changed it: only that is given
-  back, so a window already full screen stays so. The map (`mind-map.layout.ts`) rings the
-  headings around the title, a share of the sector by leaves, stretched to the screen; its nodes
-  are buttons over an SVG of links, and one pressed opens its slide.
+  tree, each with the slide it is on. `overlays::presentation` puts the Note's title first as a
+  cover and draws each slide with `widgets::rich` read only and larger — the editor's own blocks,
+  colours and diagrams, a diagram without its code — centred by the height it took last frame.
+  ← → (and the keys a clicker sends), Home/End, `M` for the map, Escape out: a modal over
+  everything, the editor kept under it. `PresentationState` sends `ViewportCommand::Fullscreen`
+  only when the window was not full screen already, and gives back only what it took — on
+  leaving, and when another library opens. The map (`presentation::mind_map`, checked against
+  the `mind-map` corpus) rings the headings around the title, a share of the sector by leaves,
+  stretched to the screen; its headings are buttons over the links, one pressed opens its slide.
 - **The editor says what it holds.** A "Note" badge sits where a snippet has its format menu,
   and the footer counts the draft's words (`countWords`) where a snippet counts lines and bytes:
   presenting the draft is the front's job, as the line count is. The toolbar runs headings, what

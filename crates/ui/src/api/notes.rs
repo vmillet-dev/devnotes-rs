@@ -47,6 +47,14 @@ pub fn picture_drawing(
     })
 }
 
+/// The draft on screen cut into slides, with the map of its headings.
+pub fn present_note(
+    backend: &Backend,
+    markdown: String,
+) -> Pending<engine::notes::model::Presentation> {
+    backend.spawn(move |_| engine::notes::present_note(markdown))
+}
+
 /// A `mermaid` block drawn, off the frame.
 pub fn draw_diagram(
     backend: &Backend,

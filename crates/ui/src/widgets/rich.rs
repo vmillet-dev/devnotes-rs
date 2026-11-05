@@ -4,7 +4,7 @@
 //! answers a link clicked, `http` and `https` alone (the reference's `createRichViewer`). Edited,
 //! it paints the selection under the text and says where each leaf was laid out, for the editor
 //! to place the caret and read a click. A `mermaid` block is drawn under its code, which folds
-//! to its first line away from the caret.
+//! to its first line away from the caret; read, the drawing stands alone, at the text's scale.
 
 use std::sync::Arc;
 
@@ -562,10 +562,12 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
     } else {
         None
     };
-    let folded = is_diagram
-        && frame.diagrams.is_some()
-        && !matches!(shown, Some(Diagram::Unsupported))
-        && !caret_in(frame.selection, path);
+    let drawn =
+        is_diagram && frame.diagrams.is_some() && !matches!(shown, Some(Diagram::Unsupported));
+    if drawn && frame.selection.is_none() {
+        return diagram_under(ui, shown, path, frame);
+    }
+    let folded = drawn && !caret_in(frame.selection, path);
     let p = palette(ui.ctx());
     let font = FontId::monospace(CODE_SIZE * frame.size / BODY);
     let syntax = syntax_of(language);
@@ -647,6 +649,15 @@ fn diagram_under(ui: &mut Ui, shown: Option<Diagram>, path: &[usize], frame: &mu
     let tr = |key, params: &[(&str, i18n::Value)]| i18n::translate(language, key, params);
     ui.add_space(6.0);
     match shown {
+        Diagram::Drawn(texture) if frame.selection.is_none() => {
+            let natural = texture.size_vec2() / diagram::SCALE * (frame.size / BODY);
+            let size = natural * (ui.available_width() / natural.x).min(1.0);
+            let (rect, response) =
+                ui.allocate_exact_size(vec2(ui.available_width(), size.y), Sense::hover());
+            response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Image, true, "mermaid"));
+            crate::widgets::address(ui, &response, "rich-diagram");
+            picture(ui, &texture, Rect::from_center_size(rect.center(), size));
+        }
         Diagram::Drawn(texture) => {
             let padding = 12.0;
             let natural = texture.size_vec2() / diagram::SCALE;
@@ -668,10 +679,7 @@ fn diagram_under(ui: &mut Ui, shown: Option<Diagram>, path: &[usize], frame: &mu
                 Stroke::new(1.0, p.line_soft),
                 StrokeKind::Inside,
             );
-            let picture = Rect::from_center_size(rect.center(), size);
-            let whole = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-            ui.painter()
-                .image(texture.id(), picture, whole, Color32::WHITE);
+            picture(ui, &texture, Rect::from_center_size(rect.center(), size));
             if response.clicked() {
                 frame.painted.diagram = Some(path.to_vec());
             }
@@ -711,6 +719,12 @@ fn diagram_under(ui: &mut Ui, shown: Option<Diagram>, path: &[usize], frame: &mu
             );
         }
     }
+}
+
+fn picture(ui: &Ui, texture: &egui::TextureHandle, rect: Rect) {
+    let whole = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+    ui.painter()
+        .image(texture.id(), rect, whole, Color32::WHITE);
 }
 
 /// A line of words under a diagram's code, wrapped to the text's width.
@@ -1009,18 +1023,17 @@ mod tests {
         harness
     }
 
-    fn code_height(harness: &egui_kittest::Harness<'_, Asked>) -> f32 {
+    fn has_code(harness: &egui_kittest::Harness<'_, Asked>) -> bool {
         harness
-            .get_by(|node| {
+            .query_by(|node| {
                 node.label()
                     .is_some_and(|code| code.starts_with("graph TD"))
             })
-            .rect()
-            .height()
+            .is_some()
     }
 
     #[test]
-    fn a_diagram_that_cannot_be_read_names_its_line_under_its_folded_code() {
+    fn read_a_diagram_that_cannot_be_read_names_its_line_without_its_code() {
         let failed = Diagram::Failed {
             line: Some(2),
             detail: "unexpected end of input".to_owned(),
@@ -1029,11 +1042,7 @@ mod tests {
 
         assert!(says(&harness, "The diagram cannot be read, line 2."));
         assert!(says(&harness, "unexpected end of input"));
-        let unsupported = diagrams(FLOW, Some(Diagram::Unsupported));
-        assert!(
-            code_height(&harness) + 30.0 < code_height(&unsupported),
-            "folded to its first line"
-        );
+        assert!(!has_code(&harness), "a slide shows the diagram alone");
     }
 
     #[test]
@@ -1041,6 +1050,7 @@ mod tests {
         let harness = diagrams(FLOW, Some(Diagram::Unsupported));
 
         assert!(says(&harness, "Diagram type not supported"));
+        assert!(has_code(&harness));
         assert!(harness.state().sketches.is_empty(), "nothing more to draw");
     }
 

@@ -221,6 +221,12 @@ pub enum Editing {
     Close,
     Fullscreen(bool),
     FoldHeader(bool),
+    /// « Présenter »: the draft on screen, cut into slides.
+    Present {
+        title: String,
+        markdown: String,
+    },
+    StopPresenting,
     Revisions(Revisions),
 }
 
@@ -299,6 +305,7 @@ pub struct View {
     pub(crate) focus_search: bool,
     header: header::HeaderView,
     editor: Option<overlays::editor::EditorView>,
+    presentation: overlays::presentation::PresentationView,
     explorer_layout: overlays::editor::ExplorerLayout,
     trash: overlays::trash_panel::TrashView,
     tag_manager: overlays::tag_manager::TagManagerView,
@@ -358,6 +365,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
     overlays::folder_prompt::show(ui, state, &mut view.folder_name, actions);
     overlays::image_lightbox::show(ui, state, actions);
+    overlays::presentation::show(ui, state, &mut view.presentation, actions);
     overlays::undo_bar::show(ui, state, actions);
     view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
     let width = view.rail_width.unwrap_or(width);
