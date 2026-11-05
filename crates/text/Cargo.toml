@@ -14,7 +14,11 @@ regex = "1.13.1"
 ropey = "1.6.1"
 syntect = { version = "5.3.0", default-features = false, features = ["parsing", "regex-onig", "yaml-load"] }
 two-face = { version = "0.5.2", default-features = false, features = ["syntect-onig"] }
+rquickjs = "0.14.0"
 unicode-segmentation = "1.13.3"
+
+[dev-dependencies]
+serde_json = "1.0.151"
 
 [lints]
 workspace = true

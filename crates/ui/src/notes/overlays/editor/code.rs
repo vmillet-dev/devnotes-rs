@@ -23,6 +23,8 @@ pub(super) struct CodeView {
     pub(super) search: SearchBar,
     /// Lit from beside: what the explorer has selected.
     pub(super) lit: std::ops::Range<usize>,
+    /// Marked in the gutter: what a format changed, until the next keystroke.
+    pub(super) marked: Vec<usize>,
 }
 
 impl CodeView {
@@ -34,6 +36,7 @@ impl CodeView {
             fields: fields(text),
             search: SearchBar::default(),
             lit: 0..0,
+            marked: Vec::new(),
         }
     }
 
@@ -42,7 +45,8 @@ impl CodeView {
     }
 
     /// The text changed from `line` on.
-    fn edited(&mut self, line: usize) {
+    pub(super) fn edited(&mut self, line: usize) {
+        self.marked.clear();
         if let Some(colouring) = &mut self.colouring {
             colouring.edited(line);
         }
@@ -128,6 +132,7 @@ pub(super) fn show(ui: &mut Ui, code: &mut CodeView, language: Language, locale:
         .comment(language::line_comment(language))
         .decorations(&decorations)
         .lit_lines(code.lit.clone())
+        .marked_lines(&code.marked)
         .colours(&colours)
         .show(ui);
     if let Some(line) = output.changed {

@@ -7,6 +7,7 @@ pub(crate) mod header;
 pub mod language;
 mod overlays;
 mod panel;
+pub mod prettier;
 pub mod sidebar;
 pub mod ui;
 
@@ -184,6 +185,13 @@ pub enum Editing {
         session: u64,
         query: engine::json::model::JsonQuery,
     },
+    /// The snippet's code formatted, as the editor holds it.
+    Format {
+        session: u64,
+        request: text::format::Request,
+    },
+    /// The library's formatting settings, applied as they are chosen.
+    Prettier(prettier::PrettierSettings),
     /// A sheet, once the hand paused.
     Evaluate {
         session: u64,

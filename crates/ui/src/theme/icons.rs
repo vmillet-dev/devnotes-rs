@@ -31,6 +31,8 @@ pub enum Icon {
     X,
     Plus,
     Minus,
+    /// The Format button's three lines of text.
+    Format,
     /// A row's ⋯: what else it can be told.
     Ellipsis,
     Pin,
@@ -118,6 +120,7 @@ impl Icon {
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
             Self::Plus => &["M5 12h14", "M12 5v14"],
             Self::Minus => &["M5 12h14"],
+            Self::Format => &["M4 6h16", "M4 12h10", "M4 18h13"],
             Self::Ellipsis => &["M12 12h.01", "M19 12h.01", "M5 12h.01"],
             Self::Pin => &[
                 "M12 17v5",
@@ -375,7 +378,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 63] = [
+    const ALL: [Icon; 64] = [
         Icon::ArrowLeftRight,
         Icon::Sidebar,
         Icon::Trash,
@@ -392,6 +395,7 @@ mod tests {
         Icon::X,
         Icon::Plus,
         Icon::Minus,
+        Icon::Format,
         Icon::Ellipsis,
         Icon::Pin,
         Icon::Star,

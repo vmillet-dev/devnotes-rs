@@ -87,6 +87,11 @@ impl Exploring {
         })
     }
 
+    /// The code is on screen, alone or beside the explorer.
+    pub(super) fn shows_code(&self) -> bool {
+        self.tab == Tab::Code
+    }
+
     fn mode(&self) -> Option<Mode> {
         match self.tab {
             Tab::Code => None,

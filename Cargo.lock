@@ -5197,6 +5197,8 @@ version = "0.20.0"
 dependencies = [
  "regex",
  "ropey",
+ "rquickjs",
+ "serde_json",
  "syntect",
  "two-face",
  "unicode-segmentation",

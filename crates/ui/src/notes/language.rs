@@ -455,6 +455,28 @@ pub fn line_comment(language: Language) -> Option<&'static str> {
     Some(token)
 }
 
+/// The grammar Prettier reads the language with (the reference's `PRETTIER_PARSERS`); `None`
+/// where it does not format it.
+pub fn formatter(language: Language) -> Option<text::format::Parser> {
+    use Language as L;
+    use text::format::Parser;
+    match language {
+        L::Js | L::Jsx => Some(Parser::Babel),
+        L::Ts | L::Tsx => Some(Parser::Typescript),
+        L::Json | L::Jsonld => Some(Parser::Json),
+        L::Css => Some(Parser::Css),
+        L::Scss => Some(Parser::Scss),
+        L::Less => Some(Parser::Less),
+        L::Html => Some(Parser::Html),
+        L::Vue => Some(Parser::Vue),
+        L::Angular => Some(Parser::Angular),
+        L::Md => Some(Parser::Markdown),
+        L::Yml => Some(Parser::Yaml),
+        L::Graphql => Some(Parser::Graphql),
+        _ => None,
+    }
+}
+
 /// One level of indentation by the language's habit (the reference's `indentUnit` with the
 /// setting at « language »): four spaces by their style guides, Go's tab, two spaces otherwise.
 pub fn indent_unit(language: Language) -> &'static str {

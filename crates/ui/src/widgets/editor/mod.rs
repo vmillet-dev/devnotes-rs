@@ -84,6 +84,14 @@ impl Editor {
         self.lines.forget_from(edited.first_line);
     }
 
+    /// One step back, as Ctrl+Z takes it: the line the text changed from.
+    pub fn undo(&mut self) -> Option<usize> {
+        let edited = self.buffer.undo()?;
+        self.lines.forget_from(edited.first_line);
+        self.reveal = true;
+        Some(edited.first_line)
+    }
+
     /// The lines the last frame drew; a first screenful before any.
     pub fn visible_lines(&self) -> Range<usize> {
         if self.visible.is_empty() {
