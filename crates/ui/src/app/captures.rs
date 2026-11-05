@@ -174,6 +174,32 @@ fn the_http_area() {
     // The tree is read when the area is first shown.
     click(&mut harness, "area-option-http");
     capture(&mut harness, "http-rail");
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-menu")
+                && node.label().is_some_and(|label| label.ends_with("Auth"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-node-new");
+    capture(&mut harness, "http-node-menu");
+    click(&mut harness, "http-node-new-http");
+    capture(&mut harness, "http-create-request");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-menu")
+                && node
+                    .label()
+                    .is_some_and(|label| label.ends_with("API Paiements"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-node-delete");
+    capture(&mut harness, "http-delete-confirm");
 }
 
 #[test]

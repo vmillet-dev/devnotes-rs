@@ -2,22 +2,83 @@
 //! the tree read again: the core renumbers what a move or a copy touched, and the interface never
 //! guesses the result.
 
+pub mod moves;
 pub mod tree;
 
 use std::collections::BTreeSet;
 
-use engine::http::model::HttpTree;
-use i18n::keys;
+use engine::http::model::{HttpContents, HttpItem, HttpTree, RequestKind};
+use i18n::{Message, keys};
 
 use super::{QueryCell, Revision};
 use crate::api;
-use crate::backend::Backend;
+use crate::api::http::Written;
+use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
+use moves::{KeyMove, RailMove, Refusal, Where};
 use tree::RailRow;
 
 /// In the library's preferences: which folds were left closed belongs to its collections.
 pub const COLLAPSED_KEY: &str = "devnotes.notes.http.collapsed";
+
+/// How long a move made with the keys stays marked, in seconds: as long as its fade.
+pub const MARK_SECONDS: f64 = 2.0;
+
+/// A write the rail asked for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Write {
+    CreateCollection(String),
+    /// At the collection's root when `folder_id` is `None`.
+    CreateFolder {
+        collection_id: String,
+        folder_id: Option<String>,
+        name: String,
+    },
+    CreateRequest {
+        collection_id: String,
+        folder_id: Option<String>,
+        name: String,
+        kind: RequestKind,
+    },
+    Rename {
+        item: HttpItem,
+        name: String,
+    },
+    Duplicate {
+        item: HttpItem,
+        name: String,
+    },
+    Delete(HttpItem),
+    Move(RailMove),
+}
+
+/// A move made with the keys, waiting for the tree that says where it landed.
+struct Landing {
+    item: HttpItem,
+    key: KeyMove,
+    name: String,
+}
+
+struct Writing {
+    pending: Pending<Written>,
+    landing: Option<Landing>,
+}
+
+/// A move on screen: the row, what now holds it, and since when (egui's time).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Mark {
+    pub id: String,
+    pub parent_id: Option<String>,
+    pub since: f64,
+}
+
+/// A deletion asked: what it takes with it, read before the question is shown.
+pub struct Deleting {
+    pub item: HttpItem,
+    pending: Option<Pending<HttpContents>>,
+    pub contents: Option<HttpContents>,
+}
 
 #[derive(Default)]
 pub struct HttpState {
@@ -27,6 +88,15 @@ pub struct HttpState {
     collapsed: BTreeSet<String>,
     /// Laid out again when the tree or a fold changes, not every frame: 2,000 rows.
     rows: Vec<RailRow>,
+    writes: Vec<Writing>,
+    /// Said once the tree after the write is read.
+    landing: Option<(Revision, Landing)>,
+    mark: Option<Mark>,
+    /// The last sentence the rail's live region says, and how many were said before it.
+    said: Option<(u32, Message)>,
+    deleting: Option<Deleting>,
+    /// A request just created, for its tab to open.
+    created: Vec<String>,
 }
 
 impl HttpState {
@@ -41,14 +111,109 @@ impl HttpState {
     }
 
     /// Once a frame, with the library open: the tree is read the first time the area asks.
-    pub fn update(&mut self, backend: &Backend, errors: &mut ErrorNotifier) {
+    pub fn update(&mut self, backend: &Backend, now: f64, errors: &mut ErrorNotifier) {
+        self.adopt_writes(errors);
+        if let Some(deleting) = &mut self.deleting
+            && let Some(answer) = deleting.pending.as_mut().and_then(Pending::poll)
+        {
+            deleting.pending = None;
+            match answer {
+                Ok(contents) => deleting.contents = Some(contents),
+                Err(error) => {
+                    errors.report(keys::http::FAILED, &error);
+                    self.deleting = None;
+                }
+            }
+        }
         self.tree.want(self.revision);
         if self.tree.update(|_| api::http::tree(backend)) {
             if let Some(error) = self.tree.error() {
                 errors.report(keys::http::FAILED, error);
             }
             self.lay_out();
+            self.land(now);
         }
+        if self
+            .mark
+            .as_ref()
+            .is_some_and(|mark| now - mark.since > MARK_SECONDS)
+        {
+            self.mark = None;
+        }
+    }
+
+    fn adopt_writes(&mut self, errors: &mut ErrorNotifier) {
+        let mut landed = None;
+        let mut wrote = false;
+        let created = &mut self.created;
+        self.writes.retain_mut(|writing| {
+            let Some(answer) = writing.pending.poll() else {
+                return true;
+            };
+            match answer {
+                Ok(made) => {
+                    wrote = true;
+                    created.extend(made);
+                    if let Some(landing) = writing.landing.take() {
+                        landed = Some(landing);
+                    }
+                }
+                Err(error) => errors.report(keys::http::FAILED, &error),
+            }
+            false
+        });
+        if wrote {
+            self.revision.bump();
+        }
+        if let Some(landing) = landed {
+            self.landing = Some((self.revision, landing));
+        }
+    }
+
+    /// A move made with the keys, read from the tree the core answered — never the move asked.
+    fn land(&mut self, now: f64) {
+        use keys::http::rail::moved;
+
+        if self
+            .landing
+            .as_ref()
+            .is_none_or(|(revision, _)| self.tree.answered() != Some(revision))
+        {
+            return;
+        }
+        let Some((_, landing)) = self.landing.take() else {
+            return;
+        };
+        let Some(landed) = moves::landing(self.tree(), &landing.item, landing.key) else {
+            return;
+        };
+        self.mark = Some(Mark {
+            id: landing.item.id.clone(),
+            parent_id: landed.parent_id,
+            since: now,
+        });
+        let key = match landed.at {
+            Where::Into => moved::INTO,
+            Where::Root => moved::ROOT,
+            Where::Before => moved::BEFORE,
+            Where::After => moved::AFTER,
+        };
+        let message = Message::new(key)
+            .with("name", landing.name.as_str())
+            .with("other", landed.other.as_str());
+        self.say(message);
+    }
+
+    fn say(&mut self, message: Message) {
+        let beat = self.said.as_ref().map_or(0, |(beat, _)| beat + 1);
+        self.said = Some((beat, message));
+    }
+
+    pub fn tree(&self) -> &HttpTree {
+        static EMPTY: HttpTree = HttpTree {
+            collections: Vec::new(),
+        };
+        self.tree.value().unwrap_or(&EMPTY)
     }
 
     pub fn rows(&self) -> &[RailRow] {
@@ -60,23 +225,142 @@ impl HttpState {
         self.tree.value().is_some()
     }
 
+    pub fn mark(&self) -> Option<&Mark> {
+        self.mark.as_ref()
+    }
+
+    pub fn said(&self) -> Option<&(u32, Message)> {
+        self.said.as_ref()
+    }
+
+    pub fn deleting(&self) -> Option<&Deleting> {
+        self.deleting.as_ref()
+    }
+
+    /// The requests created since the last call, for their tabs.
+    pub fn take_created(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.created)
+    }
+
     /// Folded or unfolded, and remembered in the library's preferences.
     pub fn toggle(&mut self, id: &str, preferences: &mut Preferences) {
         if !self.collapsed.remove(id) {
             self.collapsed.insert(id.to_owned());
         }
+        self.remember(preferences);
+        self.lay_out();
+    }
+
+    /// Unfolds what would hide a row just made or moved there.
+    fn unfold(&mut self, id: &str, preferences: &mut Preferences) {
+        if self.collapsed.contains(id) {
+            self.toggle(id, preferences);
+        }
+    }
+
+    fn remember(&self, preferences: &mut Preferences) {
         let ids: Vec<&String> = self.collapsed.iter().collect();
         preferences.set(
             COLLAPSED_KEY,
             &serde_json::to_string(&ids).unwrap_or_default(),
         );
-        self.lay_out();
+    }
+
+    pub fn write(&mut self, backend: &Backend, write: Write, preferences: &mut Preferences) {
+        let pending = match write {
+            Write::CreateCollection(name) => api::http::create_collection(backend, name),
+            Write::CreateFolder {
+                collection_id,
+                folder_id,
+                name,
+            } => {
+                self.unfold(folder_id.as_deref().unwrap_or(&collection_id), preferences);
+                api::http::create_folder(backend, collection_id, folder_id, name)
+            }
+            Write::CreateRequest {
+                collection_id,
+                folder_id,
+                name,
+                kind,
+            } => {
+                self.unfold(folder_id.as_deref().unwrap_or(&collection_id), preferences);
+                api::http::create_request(backend, (collection_id, folder_id), name, kind)
+            }
+            Write::Rename { item, name } => api::http::rename(backend, item, name),
+            Write::Duplicate { item, name } => api::http::duplicate(backend, item, name),
+            Write::Delete(item) => {
+                self.deleting = None;
+                api::http::delete(backend, item)
+            }
+            Write::Move(railmove) => self.apply_move(backend, railmove, preferences),
+        };
+        self.writes.push(Writing {
+            pending,
+            landing: None,
+        });
+    }
+
+    fn apply_move(
+        &mut self,
+        backend: &Backend,
+        railmove: RailMove,
+        preferences: &mut Preferences,
+    ) -> Pending<Written> {
+        match railmove {
+            RailMove::Reorder { id, index } => api::http::reorder_collection(backend, id, index),
+            RailMove::Move { item, place } => {
+                if let Some(folder) = &place.folder_id {
+                    self.unfold(folder, preferences);
+                }
+                api::http::move_item(backend, item, place)
+            }
+        }
+    }
+
+    /// `Alt` and an arrow: moved, then shown and said once the tree is read again; or said why
+    /// not.
+    pub fn key_move(
+        &mut self,
+        backend: &Backend,
+        (item, name): (HttpItem, String),
+        key: KeyMove,
+        preferences: &mut Preferences,
+    ) {
+        let Some(railmove) = moves::key_move(self.tree(), &item, key) else {
+            use keys::http::rail::moved::refused;
+            let key = match moves::refusal(&item, key) {
+                Refusal::First => refused::FIRST,
+                Refusal::Last => refused::LAST,
+                Refusal::NoFolderAbove => refused::NO_FOLDER_ABOVE,
+                Refusal::AtRoot => refused::AT_ROOT,
+                Refusal::Collection => refused::COLLECTION,
+            };
+            self.say(Message::new(key).with("name", name.as_str()));
+            return;
+        };
+        let pending = self.apply_move(backend, railmove, preferences);
+        self.writes.push(Writing {
+            pending,
+            landing: Some(Landing { item, key, name }),
+        });
+    }
+
+    /// The question comes once Rust has counted what goes with it.
+    pub fn ask_delete(&mut self, backend: &Backend, item: HttpItem) {
+        let pending = api::http::contents(backend, item.clone());
+        self.deleting = Some(Deleting {
+            item,
+            pending: Some(pending),
+            contents: None,
+        });
+    }
+
+    pub fn cancel_delete(&mut self) {
+        self.deleting = None;
     }
 
     fn lay_out(&mut self) {
-        let empty = HttpTree::default();
-        let tree = self.tree.value().unwrap_or(&empty);
-        self.rows = tree::rail_rows(tree, &self.collapsed);
+        self.rows = tree::rail_rows(self.tree(), &self.collapsed);
     }
 }
 

@@ -231,3 +231,229 @@ fn http_rail_budget() {
         frames[100], frames[190], frames[198]
     );
 }
+
+fn click_id(harness: &mut Harness<'_, Bench>, author_id: &str) {
+    crate::notes::bench::click_id(harness, author_id);
+}
+
+/// A row's `⋯`, then an entry of its menu, a sub-menu's through its parent.
+fn choose(harness: &mut Harness<'_, Bench>, row: &str, entries: &[&str]) {
+    click_named(harness, "http-node-menu", &format!("Options for {row}"));
+    for entry in entries {
+        click_id(harness, entry);
+    }
+}
+
+/// What a label says: egui puts a label's words in its value.
+fn text(harness: &Harness<'_, Bench>, author_id: &str) -> String {
+    let node = harness.get_by(|node| node.author_id() == Some(author_id));
+    let node = node.accesskit_node();
+    node.label().or(node.value()).unwrap_or_default()
+}
+
+fn said(harness: &Harness<'_, Bench>) -> String {
+    text(harness, "http-rail-moved")
+}
+
+fn focus_row(harness: &mut Harness<'_, Bench>, name: &str) {
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name") && node.label().as_deref() == Some(name)
+        })
+        .focus();
+    settle(harness);
+}
+
+#[test]
+fn the_first_collection_is_offered_from_the_empty_rail() {
+    let (backend, profile) = testing::unlocked();
+    let mut harness = area_of(Area::Http, backend, profile);
+
+    click_id(&mut harness, "http-rail-empty-create");
+    crate::notes::bench::type_and_enter(&mut harness, "http-create-input", "API");
+
+    assert_eq!(names(&harness, "http-node-name"), ["API"]);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-rail-empty"))
+            .is_none()
+    );
+}
+
+#[test]
+fn a_folder_and_a_request_are_made_from_a_row_s_menu() {
+    let mut harness = paiements();
+
+    choose(&mut harness, "Paiements", &["http-node-new-folder"]);
+    crate::notes::bench::type_and_enter(&mut harness, "http-create-input", "Factures");
+    choose(
+        &mut harness,
+        "Factures",
+        &["http-node-new", "http-node-new-graphql"],
+    );
+    crate::notes::bench::type_and_enter(&mut harness, "http-create-input", "Lister");
+
+    assert_eq!(
+        names(&harness, "http-node-name"),
+        [
+            "Paiements",
+            "Auth",
+            "POST Login",
+            "WS Socket",
+            "Factures",
+            "GQL Lister"
+        ]
+    );
+    assert_eq!(harness.state_mut().state.http.take_created().len(), 1);
+}
+
+#[test]
+fn a_name_left_is_kept_and_escape_writes_nothing() {
+    let mut harness = paiements();
+
+    focus_row(&mut harness, "WS Socket");
+    harness.key_press(egui::Key::F2);
+    settle(&mut harness);
+    harness
+        .get_by(|node| node.author_id() == Some("http-rename-input"))
+        .type_text(" live");
+    settle(&mut harness);
+    click_id(&mut harness, "http-workspace-empty");
+    crate::notes::bench::until(&mut harness, "the rename is read back", |harness| {
+        names(harness, "http-node-name").contains(&"WS Socket live".to_owned())
+    });
+
+    choose(&mut harness, "Auth", &["http-node-rename"]);
+    harness
+        .get_by(|node| node.author_id() == Some("http-rename-input"))
+        .type_text("ignored");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    assert!(names(&harness, "http-node-name").contains(&"Auth".to_owned()));
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-rename-input"))
+            .is_none()
+    );
+}
+
+#[test]
+fn a_deletion_says_what_goes_with_it_and_cancel_keeps_it() {
+    let mut harness = paiements();
+
+    choose(&mut harness, "Paiements", &["http-node-delete"]);
+    assert_eq!(
+        text(&harness, "http-delete-count"),
+        "1 folder and 2 requests go with it."
+    );
+    click_id(&mut harness, "http-delete-cancel");
+    assert_eq!(names(&harness, "http-node-name").len(), 4);
+
+    focus_row(&mut harness, "POST Login");
+    harness.key_press(egui::Key::Delete);
+    settle(&mut harness);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-delete-count"))
+            .is_none()
+    );
+    click_id(&mut harness, "http-delete-submit");
+    assert_eq!(
+        names(&harness, "http-node-name"),
+        ["Paiements", "Auth", "WS Socket"]
+    );
+}
+
+#[test]
+fn a_duplicate_is_named_a_copy() {
+    let mut harness = paiements();
+
+    choose(&mut harness, "Socket", &["http-node-duplicate"]);
+
+    assert!(names(&harness, "http-node-name").contains(&"WS Socket (copy)".to_owned()));
+}
+
+#[test]
+fn a_move_with_the_keys_is_made_shown_and_said() {
+    let mut harness = paiements();
+
+    focus_row(&mut harness, "WS Socket");
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowRight);
+    settle(&mut harness);
+    crate::notes::bench::until(&mut harness, "the move is said", |harness| {
+        said(harness) == "Socket is now in Auth."
+    });
+    assert_eq!(
+        names(&harness, "http-node-name"),
+        ["Paiements", "Auth", "POST Login", "WS Socket"]
+    );
+    assert!(
+        harness
+            .get_by(|node| node.author_id() == Some("http-node-name")
+                && node.label().as_deref() == Some("WS Socket"))
+            .accesskit_node()
+            .is_focused()
+    );
+
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowDown);
+    settle(&mut harness);
+    assert_eq!(said(&harness), "Socket is already last.");
+}
+
+#[test]
+fn a_row_dragged_mid_folder_lands_inside_it() {
+    let mut harness = paiements();
+    let rect = |harness: &Harness<'_, Bench>, name: &str| {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some("http-node-name") && node.label().as_deref() == Some(name)
+            })
+            .rect()
+    };
+    let from = rect(&harness, "WS Socket").center();
+    let to = rect(&harness, "Auth").center();
+
+    harness.event(egui::Event::PointerMoved(from));
+    harness.event(egui::Event::PointerButton {
+        pos: from,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    harness.step();
+    for step in 1..=10_u8 {
+        let at = from + (to - from) * (f32::from(step) / 10.0);
+        harness.event(egui::Event::PointerMoved(at));
+        harness.step();
+    }
+    harness.event(egui::Event::PointerButton {
+        pos: to,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::NONE,
+    });
+    settle(&mut harness);
+
+    crate::notes::bench::until(&mut harness, "the row lands in the folder", |harness| {
+        names(harness, "http-node-name") == ["Paiements", "Auth", "POST Login", "WS Socket"]
+    });
+}
+
+#[test]
+fn a_row_clicked_keeps_the_keys_through_two_moves() {
+    let mut harness = paiements();
+
+    click_named(&mut harness, "http-node-name", "WS Socket");
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowUp);
+    crate::notes::bench::until(&mut harness, "the socket is first", |harness| {
+        names(harness, "http-node-name") == ["Paiements", "WS Socket", "Auth", "POST Login"]
+    });
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowDown);
+    crate::notes::bench::until(&mut harness, "the socket is back last", |harness| {
+        names(harness, "http-node-name") == ["Paiements", "Auth", "POST Login", "WS Socket"]
+    });
+    let focused = harness
+        .query_by(|node| node.is_focused() && node.author_id() == Some("http-node-name"))
+        .map(|node| node.accesskit_node().label());
+    assert_eq!(focused, Some(Some("WS Socket".to_owned())));
+}

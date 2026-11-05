@@ -265,7 +265,7 @@ impl AppState {
         }
         self.follow_revisions(backend);
         if self.settings.area == Area::Http {
-            self.http.update(backend, &mut self.errors);
+            self.http.update(backend, time, &mut self.errors);
         }
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
@@ -614,14 +614,25 @@ impl AppState {
 
     fn apply_http(&mut self, action: crate::http::Action, backend: &Backend) {
         use crate::http::Action as Http;
+        let folds = self
+            .library_preferences
+            .get(http::COLLAPSED_KEY)
+            .map(str::to_owned);
+        let preferences = &mut self.library_preferences;
         match action {
-            Http::Toggle(id) => {
-                self.http.toggle(&id, &mut self.library_preferences);
-                drop(api::preferences::write_library(
-                    backend,
-                    self.library_preferences.clone(),
-                ));
+            Http::Toggle(id) => self.http.toggle(&id, preferences),
+            Http::Write(write) => self.http.write(backend, write, preferences),
+            Http::KeyMove { item, name, key } => {
+                self.http.key_move(backend, (item, name), key, preferences);
             }
+            Http::AskDelete(item) => self.http.ask_delete(backend, item),
+            Http::CancelDelete => self.http.cancel_delete(),
+        }
+        if self.library_preferences.get(http::COLLAPSED_KEY) != folds.as_deref() {
+            drop(api::preferences::write_library(
+                backend,
+                self.library_preferences.clone(),
+            ));
         }
     }
 
