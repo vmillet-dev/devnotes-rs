@@ -950,8 +950,18 @@ fn a_send_under_way_counts_its_time_and_can_be_cancelled() {
     assert!(said_by(&harness, "http-response-elapsed").is_some_and(|time| time.ends_with(" s")));
     let http = &harness.state().state.http;
     assert!(http.sends().is_sending(http.tabs().active_key().unwrap()));
-    // A cancel that arrives before the send has left cancels nothing: let it leave first.
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    // A cancel that arrives before the send has left cancels nothing: it reaches the server first.
+    let url = active(&harness).document.url;
+    let port: u16 = url["http://127.0.0.1:".len()..url.rfind('/').unwrap()]
+        .parse()
+        .unwrap();
+    for _ in 0..10_000 {
+        if testing::slow_arrived(port) {
+            break;
+        }
+        harness.step();
+    }
+    assert!(testing::slow_arrived(port), "the send reached the server");
 
     harness
         .get_by(|node| node.author_id() == Some("http-send"))

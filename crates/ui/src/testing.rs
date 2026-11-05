@@ -152,6 +152,15 @@ pub(crate) fn close_library(backend: &crate::backend::Backend) {
     closed.poll().unwrap().unwrap();
 }
 
+/// The ports whose server a `/slow` send has reached.
+static SLOW_ARRIVED: std::sync::Mutex<Vec<u16>> = std::sync::Mutex::new(Vec::new());
+
+/// Whether a `/slow` send has reached the server on `port`: until then, a cancel has nothing to
+/// cancel.
+pub(crate) fn slow_arrived(port: u16) -> bool {
+    SLOW_ARRIVED.lock().unwrap().contains(&port)
+}
+
 /// A server on this machine for the sends of a test: `/json` answers a small JSON, `/slow` the
 /// same after five seconds, anything else a 404. Each connection is answered once, then closed.
 pub(crate) fn serve() -> u16 {
@@ -170,6 +179,7 @@ pub(crate) fn serve() -> u16 {
                 let head = String::from_utf8_lossy(&head);
                 let path = head.split_whitespace().nth(1).unwrap_or("/").to_owned();
                 if path.starts_with("/slow") {
+                    SLOW_ARRIVED.lock().unwrap().push(port);
                     std::thread::sleep(std::time::Duration::from_secs(5));
                 }
                 let (status, body) = if path.starts_with("/big") {
