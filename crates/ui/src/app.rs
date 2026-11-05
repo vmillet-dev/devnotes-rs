@@ -16,7 +16,7 @@ use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::state::Area;
 use crate::theme;
-use crate::{banners, gate, keys, notes, titlebar};
+use crate::{banners, gate, http, keys, notes, titlebar};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -203,7 +203,12 @@ impl eframe::App for DevNotesApp {
                             notes::show(ui, &self.state, &mut view, &mut actions);
                             self.state.notes_view = view;
                         }
-                        area => area_shell(ui, area),
+                        Area::Http => {
+                            let mut view = std::mem::take(&mut self.state.http_view);
+                            http::show(ui, &self.state, &mut view, &mut actions);
+                            self.state.http_view = view;
+                        }
+                        Area::Tools => area_shell(ui, Area::Tools),
                     }
                 } else {
                     let mut asked = Vec::new();
@@ -240,6 +245,8 @@ impl eframe::App for DevNotesApp {
             ]
         } else if notes_shown {
             &[&keys::NOTES, &keys::APPLICATION]
+        } else if self.state.gate.is_open() && self.state.settings.area == Area::Http {
+            &[&keys::HTTP, &keys::APPLICATION]
         } else {
             &[&keys::APPLICATION]
         };

@@ -55,6 +55,15 @@ pub static NOTES: [Binding; 1] = [Binding {
     action: Action::Notes(crate::notes::Action::FocusSearch),
 }];
 
+/// The HTTP area's, read while it is on screen: the rail is the library's, and so is its key.
+pub static HTTP: [Binding; 1] = [Binding {
+    key: Key::B,
+    modifiers: Modifiers::COMMAND,
+    read: Read::Character,
+    while_typing: true,
+    action: Action::App(AppAction::ToggleRail),
+}];
+
 const fn area(key: Key, area: Area) -> Binding {
     Binding {
         key,
