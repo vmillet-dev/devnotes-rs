@@ -153,7 +153,7 @@ pub(crate) fn close_library(backend: &crate::backend::Backend) {
 }
 
 /// A server on this machine for the sends of a test: `/json` answers a small JSON, `/slow` the
-/// same after two seconds, anything else a 404. Each connection is answered once, then closed.
+/// same after five seconds, anything else a 404. Each connection is answered once, then closed.
 pub(crate) fn serve() -> u16 {
     use std::io::{Read, Write};
     let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("a local port is free");
@@ -170,7 +170,7 @@ pub(crate) fn serve() -> u16 {
                 let head = String::from_utf8_lossy(&head);
                 let path = head.split_whitespace().nth(1).unwrap_or("/").to_owned();
                 if path.starts_with("/slow") {
-                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    std::thread::sleep(std::time::Duration::from_secs(5));
                 }
                 let (status, body) = if path.starts_with("/big") {
                     // A megabyte of JSON, laid out on one line: the budget's answer.
