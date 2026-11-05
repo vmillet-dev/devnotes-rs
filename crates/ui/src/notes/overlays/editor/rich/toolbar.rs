@@ -222,21 +222,28 @@ fn code_language(view: &RichEditor) -> Option<String> {
     }
 }
 
-/// The code block's language, among the snippets' own; plain text writes a bare fence.
+/// The code block's language: first the diagram a Note draws (`None`), then the snippets' own;
+/// plain text writes a bare fence.
 fn language_menu(ui: &mut Ui, view: &mut RichEditor, fence: &str, label: &str) {
-    let options: Vec<(Code, &str)> = Code::ALL
-        .into_iter()
-        .map(|code| (code, crate::notes::language::label(code)))
-        .collect();
-    let mut chosen = fence.parse::<Code>().unwrap_or(Code::Txt);
+    let mut options: Vec<(Option<Code>, &str)> = vec![(None, "MERMAID")];
+    options.extend(
+        Code::ALL
+            .into_iter()
+            .map(|code| (Some(code), crate::notes::language::label(code))),
+    );
+    let mut chosen = if fence == diagram::MERMAID {
+        None
+    } else {
+        Some(fence.parse::<Code>().unwrap_or(Code::Txt))
+    };
     if ChoiceMenu::new(label, "rich-code-language", &options)
         .show(ui, &mut chosen)
         .changed()
     {
-        let fence = if chosen == Code::Txt {
-            String::new()
-        } else {
-            chosen.as_str().to_owned()
+        let fence = match chosen {
+            None => diagram::MERMAID.to_owned(),
+            Some(Code::Txt) => String::new(),
+            Some(code) => code.as_str().to_owned(),
         };
         view.record(Step::Other);
         edit::set_language(&mut view.document, &view.selection, fence);

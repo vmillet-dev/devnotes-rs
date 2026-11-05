@@ -3,7 +3,8 @@
 //! stacked in its rhythm; egui's galley cache keeps each block's layout between frames. Read, it
 //! answers a link clicked, `http` and `https` alone (the reference's `createRichViewer`). Edited,
 //! it paints the selection under the text and says where each leaf was laid out, for the editor
-//! to place the caret and read a click.
+//! to place the caret and read a click. A `mermaid` block is drawn under its code, which folds
+//! to its first line away from the caret.
 
 use std::sync::Arc;
 
@@ -13,6 +14,8 @@ use egui::{
     StrokeKind, TextFormat, Ui, Vec2, pos2, vec2,
 };
 use richtext::{Block, Document, Inline, Item, ListKind, Marks, Selection};
+
+use i18n::keys;
 
 use crate::theme::palette;
 use crate::theme::tokens::Palette;
@@ -54,6 +57,10 @@ pub struct Painted {
     pub link: Option<String>,
     /// The drawings whose picture was never asked for.
     pub wanted: Vec<String>,
+    /// The diagrams not drawn yet.
+    pub sketches: Vec<Sketch>,
+    /// A diagram clicked: the path of its code.
+    pub diagram: Option<Vec<usize>>,
 }
 
 /// How a Note names a drawing it embeds: an image whose source is the drawing's id.
@@ -70,6 +77,23 @@ pub enum Embedded {
 /// A drawing's picture by its id; `None` when it was never asked for.
 pub type Pictures<'a> = &'a dyn Fn(&str) -> Option<Embedded>;
 
+/// A `mermaid` block's drawing, or why there is none.
+#[derive(Clone)]
+pub enum Diagram {
+    Drawn(egui::TextureHandle),
+    Failed { line: Option<usize>, detail: String },
+    Unsupported,
+}
+
+/// A diagram by its source; `None` while it is not drawn.
+pub type Diagrams<'a> = &'a dyn Fn(&str) -> Option<Diagram>;
+
+/// A diagram to draw: its source, and whether an earlier drawing stands in its place meanwhile.
+pub struct Sketch {
+    pub source: String,
+    pub stale: bool,
+}
+
 /// A match the find bar lights: the leaf it is in and its `char` range there.
 pub type Found = (Vec<usize>, std::ops::Range<usize>);
 
@@ -79,6 +103,7 @@ pub struct RichView<'a> {
     found: &'a [Found],
     /// The embedded drawings' pictures, and what a missing one says.
     pictures: Option<(Pictures<'a>, &'a str)>,
+    diagrams: Option<(Diagrams<'a>, i18n::Language)>,
     /// Edited: the selection painted, links followed with Ctrl alone.
     selection: Option<&'a Selection>,
 }
@@ -87,6 +112,10 @@ pub struct RichView<'a> {
 struct Frame<'a> {
     size: f32,
     pictures: Option<(Pictures<'a>, &'a str)>,
+    diagrams: Option<(Diagrams<'a>, i18n::Language)>,
+    /// Where each diagram's last drawing is kept, by its rank in the Note.
+    places: egui::Id,
+    rank: usize,
     selection: Option<&'a Selection>,
     found: &'a [Found],
     painted: Painted,
@@ -99,8 +128,16 @@ impl<'a> RichView<'a> {
             scale: 1.0,
             found: &[],
             pictures: None,
+            diagrams: None,
             selection: None,
         }
+    }
+
+    /// `mermaid` blocks drawn; without it, they are code.
+    #[must_use]
+    pub fn diagrams(mut self, diagrams: Diagrams<'a>, language: i18n::Language) -> Self {
+        self.diagrams = Some((diagrams, language));
+        self
     }
 
     /// The pictures of the drawings the Note embeds; without them, each one's name.
@@ -133,6 +170,9 @@ impl<'a> RichView<'a> {
         let mut frame = Frame {
             size: BODY * self.scale,
             pictures: self.pictures,
+            diagrams: self.diagrams,
+            places: ui.unique_id().with("rich-diagrams"),
+            rank: 0,
             selection: self.selection,
             found: self.found,
             painted: Painted::default(),
@@ -516,6 +556,16 @@ fn quote(ui: &mut Ui, inner: &[Block], path: &mut Vec<usize>, frame: &mut Frame<
 }
 
 fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &mut Frame<'_>) {
+    let is_diagram = language == diagram::MERMAID && !text.trim().is_empty();
+    let shown = if is_diagram {
+        diagram_of(ui, text, frame)
+    } else {
+        None
+    };
+    let folded = is_diagram
+        && frame.diagrams.is_some()
+        && !matches!(shown, Some(Diagram::Unsupported))
+        && !caret_in(frame.selection, path);
     let p = palette(ui.ctx());
     let font = FontId::monospace(CODE_SIZE * frame.size / BODY);
     let syntax = syntax_of(language);
@@ -532,10 +582,13 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
     let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
     let padding = vec2(14.0, 12.0);
     let width = ui.available_width();
-    let (rect, response) = ui.allocate_exact_size(
-        vec2(width, galley.size().y + 2.0 * padding.y),
-        Sense::hover(),
-    );
+    let height = if folded {
+        galley.rows.first().map_or(0.0, |row| row.rect().height())
+    } else {
+        galley.size().y
+    };
+    let (rect, response) =
+        ui.allocate_exact_size(vec2(width, height + 2.0 * padding.y), Sense::hover());
     if frame.selection.is_none() {
         response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Code, true, text));
     }
@@ -555,7 +608,121 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
             p.text_2,
         );
     }
-    paint_leaf(ui, path, rect.min + padding, galley, p.text_0, frame);
+    let mut clipped = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+    clipped.set_clip_rect(rect.shrink2(vec2(0.0, padding.y - 2.0)));
+    paint_leaf(&clipped, path, rect.min + padding, galley, p.text_0, frame);
+    if is_diagram {
+        diagram_under(ui, shown, path, frame);
+    }
+}
+
+/// Its drawing: the one of its source, or else the last one drawn in its place, while the new
+/// one is asked.
+fn diagram_of(ui: &Ui, text: &str, frame: &mut Frame<'_>) -> Option<Diagram> {
+    let (diagrams, _) = frame.diagrams?;
+    let place = frame.places.with(frame.rank);
+    frame.rank += 1;
+    if let Some(drawn) = diagrams(text) {
+        ui.data_mut(|data| data.insert_temp(place, drawn.clone()));
+        return Some(drawn);
+    }
+    let last = ui.data(|data| data.get_temp::<Diagram>(place));
+    frame.painted.sketches.push(Sketch {
+        source: text.to_owned(),
+        stale: last.is_some(),
+    });
+    last
+}
+
+fn caret_in(selection: Option<&Selection>, path: &[usize]) -> bool {
+    selection.is_some_and(|selection| selection.anchor.path == path && selection.head.path == path)
+}
+
+/// The drawing, or why there is none; nothing before its first drawing.
+fn diagram_under(ui: &mut Ui, shown: Option<Diagram>, path: &[usize], frame: &mut Frame<'_>) {
+    let (Some((_, language)), Some(shown)) = (frame.diagrams, shown) else {
+        return;
+    };
+    let p = palette(ui.ctx());
+    let tr = |key, params: &[(&str, i18n::Value)]| i18n::translate(language, key, params);
+    ui.add_space(6.0);
+    match shown {
+        Diagram::Drawn(texture) => {
+            let padding = 12.0;
+            let natural = texture.size_vec2() / diagram::SCALE;
+            let room = ui.available_width() - 2.0 * padding;
+            let size = natural * (room / natural.x).min(1.0);
+            let (rect, _) = ui.allocate_exact_size(
+                vec2(ui.available_width(), size.y + 2.0 * padding),
+                Sense::hover(),
+            );
+            let response = crate::widgets::region(ui, rect, ("rich-diagram", path), Sense::click());
+            let edit = tr(keys::editor::rich::diagram::EDIT, &[]);
+            response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Image, true, &edit));
+            crate::widgets::address(ui, &response, "rich-diagram");
+            let response = response.on_hover_text(edit);
+            ui.painter().rect(
+                rect,
+                CornerRadius::same(8),
+                p.bg_1,
+                Stroke::new(1.0, p.line_soft),
+                StrokeKind::Inside,
+            );
+            let picture = Rect::from_center_size(rect.center(), size);
+            let whole = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+            ui.painter()
+                .image(texture.id(), picture, whole, Color32::WHITE);
+            if response.clicked() {
+                frame.painted.diagram = Some(path.to_vec());
+            }
+        }
+        Diagram::Failed { line, detail } => {
+            let sentence = match line {
+                Some(line) => tr(
+                    keys::editor::rich::diagram::FAILED_AT,
+                    &[("line", i18n::Value::from(line.to_string()))],
+                ),
+                None => tr(keys::editor::rich::diagram::FAILED, &[]),
+            };
+            said(
+                ui,
+                &sentence,
+                p.red,
+                FontFamily::Proportional,
+                "rich-diagram-error",
+            );
+            ui.add_space(6.0);
+            said(
+                ui,
+                &detail,
+                p.text_1,
+                FontFamily::Monospace,
+                "rich-diagram-detail",
+            );
+        }
+        Diagram::Unsupported => {
+            let words = tr(keys::editor::rich::diagram::UNSUPPORTED, &[]);
+            said(
+                ui,
+                &words,
+                p.text_2,
+                FontFamily::Proportional,
+                "rich-diagram-unsupported",
+            );
+        }
+    }
+}
+
+/// A line of words under a diagram's code, wrapped to the text's width.
+fn said(ui: &mut Ui, words: &str, colour: Color32, family: FontFamily, author_id: &str) {
+    let font = FontId::new(12.0, family);
+    let galley = ui
+        .painter()
+        .layout(words.to_owned(), font, colour, ui.available_width());
+    let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, words));
+    crate::widgets::address(ui, &response, author_id);
+    ui.painter().galley(rect.min, galley, colour);
 }
 
 /// A fence's word: a language's tag as the editor writes it, or a shell's usual name.
@@ -734,7 +901,7 @@ mod tests {
         harness
     }
 
-    fn says(harness: &egui_kittest::Harness<'_, Option<String>>, words: &str) -> bool {
+    fn says<T>(harness: &egui_kittest::Harness<'_, T>, words: &str) -> bool {
         harness
             .query_all_by(|node| {
                 node.label()
@@ -796,5 +963,142 @@ mod tests {
         harness.get_by_label("un fichier").click();
         harness.run();
         assert!(harness.state().is_none(), "never a file");
+    }
+
+    const FLOW: &str = "```mermaid\ngraph TD\n  A -->\n  B\n```";
+
+    /// What the diagrams of a frame asked and answered.
+    #[derive(Default)]
+    struct Asked {
+        answer: Option<Diagram>,
+        sketches: Vec<(String, bool)>,
+        clicked: Option<Vec<usize>>,
+    }
+
+    fn diagrams(markdown: &str, answer: Option<Diagram>) -> egui_kittest::Harness<'static, Asked> {
+        let mut document = richtext::read(markdown);
+        let mut harness = crate::testing::harness()
+            .with_size(vec2(700.0, 900.0))
+            .build_ui_state(
+                move |ui, asked: &mut Asked| {
+                    if let Some(Block::CodeBlock { text, .. }) = document.blocks.first_mut()
+                        && asked.answer.is_none()
+                        && !asked.sketches.is_empty()
+                    {
+                        text.push_str("\n  C");
+                    }
+                    let answer = asked.answer.clone();
+                    let lookup = move |_: &str| answer.clone();
+                    let painted = RichView::new(&document)
+                        .diagrams(&lookup, i18n::Language::En)
+                        .show(ui);
+                    asked.sketches.extend(
+                        painted
+                            .sketches
+                            .into_iter()
+                            .map(|sketch| (sketch.source, sketch.stale)),
+                    );
+                    asked.clicked = asked.clicked.take().or(painted.diagram);
+                },
+                Asked {
+                    answer,
+                    ..Asked::default()
+                },
+            );
+        harness.run();
+        harness
+    }
+
+    fn code_height(harness: &egui_kittest::Harness<'_, Asked>) -> f32 {
+        harness
+            .get_by(|node| {
+                node.label()
+                    .is_some_and(|code| code.starts_with("graph TD"))
+            })
+            .rect()
+            .height()
+    }
+
+    #[test]
+    fn a_diagram_that_cannot_be_read_names_its_line_under_its_folded_code() {
+        let failed = Diagram::Failed {
+            line: Some(2),
+            detail: "unexpected end of input".to_owned(),
+        };
+        let harness = diagrams(FLOW, Some(failed));
+
+        assert!(says(&harness, "The diagram cannot be read, line 2."));
+        assert!(says(&harness, "unexpected end of input"));
+        let unsupported = diagrams(FLOW, Some(Diagram::Unsupported));
+        assert!(
+            code_height(&harness) + 30.0 < code_height(&unsupported),
+            "folded to its first line"
+        );
+    }
+
+    #[test]
+    fn a_type_not_supported_stays_code_and_says_so() {
+        let harness = diagrams(FLOW, Some(Diagram::Unsupported));
+
+        assert!(says(&harness, "Diagram type not supported"));
+        assert!(harness.state().sketches.is_empty(), "nothing more to draw");
+    }
+
+    #[test]
+    fn a_diagram_not_drawn_is_asked_then_its_last_drawing_stands_in_while_retyped() {
+        let mut harness = diagrams(FLOW, None);
+        assert_eq!(
+            harness.state().sketches.first(),
+            Some(&("graph TD\n  A -->\n  B".to_owned(), false)),
+            "asked with nothing in its place"
+        );
+
+        harness.state_mut().answer = Some(Diagram::Unsupported);
+        harness.run();
+        harness.state_mut().answer = None;
+        harness.state_mut().sketches.clear();
+        harness.run();
+
+        let stale = harness
+            .state()
+            .sketches
+            .iter()
+            .find(|(source, _)| source.ends_with('C'));
+        assert_eq!(stale.map(|(_, stale)| *stale), Some(true));
+        assert!(
+            says(&harness, "Diagram type not supported"),
+            "the last answer stays"
+        );
+    }
+
+    #[test]
+    fn a_drawing_clicked_goes_to_its_code() {
+        let mut harness = crate::testing::harness()
+            .with_size(vec2(700.0, 900.0))
+            .build_ui_state(
+                |ui, clicked: &mut Option<Vec<usize>>| {
+                    let image = egui::ColorImage::filled([200, 100], Color32::RED);
+                    let texture =
+                        ui.ctx()
+                            .load_texture("drawn", image, egui::TextureOptions::default());
+                    let lookup = move |_: &str| Some(Diagram::Drawn(texture.clone()));
+                    let document = richtext::read(FLOW);
+                    let selection = Selection::default();
+                    let painted = RichView::new(&document)
+                        .editing(&selection)
+                        .diagrams(&lookup, i18n::Language::En)
+                        .show(ui);
+                    *clicked = clicked.take().or(painted.diagram);
+                },
+                None,
+            );
+        harness.run();
+
+        harness
+            .get_by_label("Click to edit the diagram’s code")
+            .click();
+        harness.run();
+
+        assert_eq!(harness.state().as_deref(), Some(&[0][..]));
     }
 }

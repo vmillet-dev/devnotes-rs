@@ -458,3 +458,38 @@ fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
         said == ["le schéma", "Drawing not found"]
     });
 }
+
+#[test]
+fn a_mermaid_block_is_drawn_and_a_click_on_its_drawing_goes_to_its_code() {
+    let (mut harness, id) = note("Avant\n\n```mermaid\ngraph TD\n  A-->B\n```\n");
+    crate::notes::bench::until(&mut harness, "drawn", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("rich-diagram"))
+            .is_some()
+    });
+
+    click_id(&mut harness, "rich-diagram");
+    type_in(&mut harness, "\n  B-->C");
+
+    assert!(surface_text(&harness).contains("A-->B\n  B-->C"));
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("rich-diagram"))
+            .is_some(),
+        "the drawing stays while it is redrawn"
+    );
+    click_id(&mut harness, "editor-close");
+    assert!(stored(&harness, &id).contains("  B-->C\n```"));
+}
+
+#[test]
+fn a_mermaid_block_that_cannot_be_read_names_its_line() {
+    let (mut harness, _) = note("```mermaid\ngraph TD\n  A -->\n```\n");
+
+    crate::notes::bench::until(&mut harness, "the error said", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("rich-diagram-error"))
+            .and_then(|node| node.accesskit_node().value())
+            .is_some_and(|said| said.contains("line 2"))
+    });
+}
