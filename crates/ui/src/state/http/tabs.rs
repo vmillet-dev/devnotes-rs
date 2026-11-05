@@ -190,6 +190,8 @@ pub struct Tabs {
     opening: Vec<Pending<HttpRequest>>,
     saving: Vec<Saving>,
     creating: Vec<Creating>,
+    /// What a request takes as its changes once it is open: a send reopened onto it.
+    replacing: std::collections::HashMap<String, (HttpMethod, RequestDocument)>,
     /// A draft asked to save, and whether the tab closes after: the question is open.
     asking_place: Option<(String, bool)>,
     /// A tab asked to close with changes in it: the question is open.
@@ -253,6 +255,9 @@ impl Tabs {
         for request in opened {
             if self.find(&request.id).is_none() {
                 self.adopt(&request);
+            }
+            if let Some(replaced) = self.replacing.remove(&request.id) {
+                self.replace_draft(&request.id, replaced);
             }
             self.active = Some(request.id.clone());
             answered.changed_preferences = true;
@@ -368,6 +373,44 @@ impl Tabs {
             draft,
         });
         self.active = Some(key);
+    }
+
+    /// A send put back onto its request: its values, as changes to save or not.
+    pub fn open_with(
+        &mut self,
+        backend: &Backend,
+        id: String,
+        method: HttpMethod,
+        document: RequestDocument,
+    ) {
+        if self.find(&id).is_some() {
+            self.replace_draft(&id, (method, document));
+            self.active = Some(id);
+            return;
+        }
+        self.replacing.insert(id.clone(), (method, document));
+        self.open(backend, id);
+    }
+
+    fn replace_draft(&mut self, key: &str, (method, document): (HttpMethod, RequestDocument)) {
+        if let Some(tab) = self.find_mut(key) {
+            tab.draft.method = method;
+            tab.draft.document = document;
+        }
+    }
+
+    /// A draft rebuilt from a send, written nowhere until saved.
+    pub fn open_draft(
+        &mut self,
+        name: String,
+        kind: RequestKind,
+        method: HttpMethod,
+        document: RequestDocument,
+    ) {
+        self.new_request(kind, name);
+        if let Some(key) = self.active.clone() {
+            self.replace_draft(&key, (method, document));
+        }
     }
 
     pub fn activate(&mut self, key: &str) {

@@ -379,6 +379,11 @@ fn the_http_response() {
     capture(&mut harness, "http-response-tree");
     click(&mut harness, "http-response-section-timeline");
     capture(&mut harness, "http-response-timeline");
+    click(&mut harness, "http-history-open");
+    settle(&mut harness);
+    click(&mut harness, "http-history-item");
+    settle(&mut harness);
+    capture(&mut harness, "http-history");
 }
 
 #[test]

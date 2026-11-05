@@ -5044,6 +5044,16 @@ request's id for its key, and what is kept by key follows it (`Answered::rekeyed
 `Ui::allocate_ui` keeps the parent's layout: in a `horizontal`, what is inside runs on a line
 until it is given a `vertical`.
 
+`http::history` is the page of what was sent, a `Page` as the environments are: the sends by
+local day, in rows drawn only in view, beside the entry chosen, read through
+`response::recorded`, the answer's parts without a tab to clear it from. It is read again when a
+send ends. A send is deleted unasked and comes back from the bar under the list for
+`UNDO_WINDOW`; emptying it says how many go first. « Reopen » puts a send back onto the request
+it came from, as changes to save or not (`http_history_onto_request`, `Tabs::open_with`), asking
+before it writes over a tab's own; the request gone, or the send made from a draft, it is a
+draft named after the send and its time. The core keeps `KEPT_AT_MOST` sends, so the list holds
+500 rows at most, whatever the plan's budget of 20,000 assumed.
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

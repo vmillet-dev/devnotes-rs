@@ -8,6 +8,7 @@ mod cookie_jar;
 mod environment_picker;
 mod environments;
 mod extract;
+mod history;
 mod rail;
 mod request;
 mod response;
@@ -85,6 +86,7 @@ pub enum Action {
     /// A name nothing sets: a row for it, on the page.
     Define(String),
     Cookies(crate::state::http::cookies::Asked),
+    History(crate::state::http::history::Asked),
     Code(crate::state::http::code::Asked),
     /// The code, to the clipboard.
     CopyCode(String),
@@ -129,6 +131,7 @@ pub struct View {
     rail: rail::RailView,
     editor: request::EditorView,
     environments: environments::PageView,
+    history: history::PageView,
     container: container_settings::DialogView,
     code: code::CodeView,
     save_form: Option<save_request::SaveForm>,
@@ -159,6 +162,10 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         Page::Environments => {
             let mut page = ui.new_child(UiBuilder::new().max_rect(rest));
             environments::show(&mut page, rest, state, &mut view.environments, actions);
+        }
+        Page::History => {
+            let mut page = ui.new_child(UiBuilder::new().max_rect(rest));
+            history::show(&mut page, rest, state, &mut view.history, actions);
         }
         Page::Requests => requests(ui, rest, state, view, actions),
     }
@@ -328,6 +335,8 @@ mod code_tests;
 mod dialogs_tests;
 #[cfg(test)]
 mod environments_tests;
+#[cfg(test)]
+mod history_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 

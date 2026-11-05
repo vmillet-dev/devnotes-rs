@@ -112,12 +112,17 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: 
 }
 
 /// What the rail's foot takes, one line a page.
-const FOOT: f32 = 80.0;
+const FOOT: f32 = 116.0;
 
 /// The pages that take the place of the requests, and the jar.
 fn foot(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let tr = |key| i18n::translate(state.language, key, &[]);
     ui.spacing_mut().item_spacing.y = 2.0;
+    let on = state.http.page() == Page::History;
+    let words = tr(keys::http::history::TITLE);
+    if foot_item(ui, &words, "http-history-open", on).clicked() {
+        push(actions, Action::TogglePage(Page::History));
+    }
     let on = state.http.page() == Page::Environments;
     let words = tr(keys::http::environments::TITLE);
     if foot_item(ui, &words, "http-environments-open", on).clicked() {
