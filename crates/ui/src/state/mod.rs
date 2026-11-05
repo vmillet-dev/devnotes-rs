@@ -265,8 +265,7 @@ impl AppState {
         }
         self.follow_revisions(backend);
         if self.settings.area == Area::Http {
-            self.http.update((ctx, backend), time, &mut self.errors);
-            self.remember_http(backend);
+            self.update_http(ctx, backend, time);
         }
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
@@ -662,6 +661,11 @@ impl AppState {
                 self.http.send_anyway(backend, &key, now);
             }
             Http::StopAsking => self.http.stop_asking(),
+            Http::Cookies(asked) => self.http.ask_cookies(backend, asked),
+            Http::OpenSettings(container) => self.http.open_settings(backend, container),
+            Http::EditSettings(settings) => self.http.edit_settings(*settings),
+            Http::SaveSettings => self.http.save_settings(backend),
+            Http::CloseSettings => self.http.close_settings(),
             Http::ShowPage(page) => self.http.show_page(backend, page),
             Http::TogglePage(page) => self.http.toggle_page(backend, page),
             Http::Send(key) => {
@@ -687,6 +691,15 @@ impl AppState {
                     self.http.tabs_mut().save(backend, &key);
                 }
             }
+        }
+        self.remember_http(backend);
+    }
+
+    fn update_http(&mut self, ctx: &egui::Context, backend: &Backend, time: f64) {
+        self.http.update((ctx, backend), time, &mut self.errors);
+        if let Some(count) = self.http.take_cookies_removed() {
+            let removed = i18n::Message::new(i18n::keys::http::cookies::REMOVED);
+            self.status.report(removed.with("count", count));
         }
         self.remember_http(backend);
     }

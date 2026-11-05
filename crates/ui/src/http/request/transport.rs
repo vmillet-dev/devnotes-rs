@@ -6,10 +6,6 @@ use egui::{Grid, Ui, Vec2};
 use engine::http::transport::{Transport, TransportSettings};
 use i18n::keys;
 
-use super::edit;
-use crate::action::Actions;
-use crate::state::AppState;
-use crate::state::http::tabs::{DraftEdit, Tab};
 use crate::theme::palette;
 use crate::widgets::{self, ChoiceMenu, TextField};
 
@@ -44,7 +40,15 @@ impl Switch {
 
 /// What is being typed in the numbers: a value is settled once its field is left, a timeout
 /// typed digit by digit passing through values it would refuse.
-pub(super) type Typed = HashMap<&'static str, String>;
+pub(crate) type Typed = HashMap<&'static str, String>;
+
+/// What the editor draws.
+pub(crate) struct TransportField {
+    pub(crate) settings: TransportSettings,
+    /// What an unset field takes: the folders and the collection above, or the defaults.
+    pub(crate) base: Transport,
+    pub(crate) above_is_default: bool,
+}
 
 /// A row of the grid: what it is called, and what an unset field takes.
 struct Row<'a> {
@@ -53,23 +57,19 @@ struct Row<'a> {
     above: &'a str,
 }
 
-pub(super) fn show(
+/// The settings as edited this frame.
+pub(crate) fn show(
     ui: &mut Ui,
-    state: &AppState,
-    tab: &Tab,
+    field: &TransportField,
     typed: &mut Typed,
-    actions: &mut Actions,
-) {
-    let language = state.language;
+    language: i18n::Language,
+) -> Option<TransportSettings> {
     let tr = |key| i18n::translate(language, key, &[]);
-    let base = match (tab.place.as_ref(), state.http.inherited()) {
-        (Some(_), Some(above)) => above.transport,
-        _ => Transport::default(),
-    };
-    let inherit = tr(if tab.place.is_some() {
-        keys::http::transport::INHERITED
-    } else {
+    let base = field.base;
+    let inherit = tr(if field.above_is_default {
         keys::http::transport::BY_DEFAULT
+    } else {
+        keys::http::transport::INHERITED
     });
     let yes_no = |value: bool| {
         tr(if value {
@@ -84,7 +84,7 @@ pub(super) fn show(
         (Switch::On, on.as_str()),
         (Switch::Off, off.as_str()),
     ];
-    let mut settings = tab.draft.document.transport;
+    let mut settings = field.settings;
     let mut changed = false;
     Grid::new("http-transport")
         .num_columns(3)
@@ -144,9 +144,7 @@ pub(super) fn show(
     if !settings.verify_tls.unwrap_or(base.verify_tls) {
         insecure(ui, language);
     }
-    if changed {
-        edit(actions, tab, DraftEdit::Transport(settings));
-    }
+    changed.then_some(settings)
 }
 
 fn label(ui: &mut Ui, row: &Row<'_>, language: i18n::Language) {

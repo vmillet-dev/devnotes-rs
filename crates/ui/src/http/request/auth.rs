@@ -6,11 +6,7 @@ use engine::http::model::{KeyPlace, RequestAuth};
 use engine::http::settings::Inherited;
 use i18n::keys;
 
-use super::edit;
-use crate::action::Actions;
 use crate::api;
-use crate::state::AppState;
-use crate::state::http::tabs::{DraftEdit, Tab};
 use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, ChoiceMenu, IconButton, TextField};
@@ -77,21 +73,28 @@ impl Kind {
     }
 }
 
-pub(super) fn show(
+/// What the editor draws.
+pub(crate) struct AuthField<'a> {
+    pub(crate) auth: &'a RequestAuth,
+    /// What « Inherited » takes; `None` when there is nowhere yet to inherit from.
+    pub(crate) above: Option<&'a Inherited>,
+    /// A collection has nothing above it to inherit from.
+    pub(crate) allow_inherit: bool,
+}
+
+/// The auth as edited this frame.
+pub(crate) fn show(
     ui: &mut Ui,
-    state: &AppState,
-    tab: &Tab,
+    editor: &AuthField<'_>,
     revealed: &mut bool,
-    actions: &mut Actions,
-) {
-    let language = state.language;
+    language: i18n::Language,
+) -> Option<RequestAuth> {
     ui.set_max_width(WIDTH.min(ui.available_width()));
-    let auth = &tab.draft.document.auth;
-    kind_line(ui, tab, language, actions);
+    let auth = shown_auth(editor);
+    let mut changed = kind_line(ui, editor, language);
     let tr = |key| i18n::translate(language, key, &[]);
-    let mut changed = None;
     match auth.clone() {
-        RequestAuth::Inherit => inherited(ui, state, tab),
+        RequestAuth::Inherit => inherited(ui, editor.above, language),
         RequestAuth::None => hint(ui, &tr(keys::http::auth::NONE_HINT)),
         RequestAuth::Basic {
             mut username,
@@ -135,8 +138,15 @@ pub(super) fn show(
             }
         }
     }
-    if let Some(auth) = changed {
-        edit(actions, tab, DraftEdit::Auth(auth));
+    changed
+}
+
+/// `Inherit` on a collection is no auth at all: nothing is above it.
+fn shown_auth<'a>(editor: &AuthField<'a>) -> &'a RequestAuth {
+    if !editor.allow_inherit && *editor.auth == RequestAuth::Inherit {
+        &RequestAuth::None
+    } else {
+        editor.auth
     }
 }
 
@@ -146,7 +156,9 @@ fn field<T>(ui: &mut Ui, label: &str, content: impl FnOnce(&mut Ui) -> T) -> T {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 12.0;
         let words = egui::RichText::new(label).size(12.5).color(p.text_1);
-        ui.allocate_ui(Vec2::new(LABEL, 0.0), |ui| {
+        let size = Vec2::new(LABEL, ui.spacing().interact_size.y);
+        let layout = egui::Layout::left_to_right(egui::Align::Center);
+        ui.allocate_ui_with_layout(size, layout, |ui| {
             ui.set_width(LABEL);
             ui.add(egui::Label::new(words));
         });
@@ -155,22 +167,21 @@ fn field<T>(ui: &mut Ui, label: &str, content: impl FnOnce(&mut Ui) -> T) -> T {
     .inner
 }
 
-fn kind_line(ui: &mut Ui, tab: &Tab, language: i18n::Language, actions: &mut Actions) {
+fn kind_line(ui: &mut Ui, editor: &AuthField<'_>, language: i18n::Language) -> Option<RequestAuth> {
     let names = Kind::ALL.map(|kind| i18n::translate(language, kind.name(), &[]));
     let options: Vec<(Kind, &str)> = Kind::ALL
         .iter()
         .zip(&names)
+        .filter(|(kind, _)| editor.allow_inherit || **kind != Kind::Inherit)
         .map(|(kind, name)| (*kind, name.as_str()))
         .collect();
     let label = i18n::translate(language, keys::http::auth::KIND, &[]);
-    let current = Kind::of(&tab.draft.document.auth);
+    let current = Kind::of(shown_auth(editor));
     let mut kind = current;
     field(ui, &label, |ui| {
         ChoiceMenu::new(&label, "http-auth-kind", &options).show(ui, &mut kind);
     });
-    if kind != current {
-        edit(actions, tab, DraftEdit::Auth(kind.fresh()));
-    }
+    (kind != current).then(|| kind.fresh())
 }
 
 fn place_line(ui: &mut Ui, place: &mut KeyPlace, language: i18n::Language) -> bool {
@@ -246,12 +257,11 @@ fn summary(auth: &RequestAuth) -> String {
 }
 
 /// What « Inherited » takes, once the request has a place to inherit from.
-fn inherited(ui: &mut Ui, state: &AppState, tab: &Tab) {
-    let language = state.language;
-    let words = match (tab.place.as_ref(), state.http.inherited()) {
-        (Some(_), Some(above)) => inherited_words(above, language),
-        _ => i18n::translate(language, keys::http::auth::PLACE_FIRST, &[]),
-    };
+fn inherited(ui: &mut Ui, above: Option<&Inherited>, language: i18n::Language) {
+    let words = above.map_or_else(
+        || i18n::translate(language, keys::http::auth::PLACE_FIRST, &[]),
+        |above| inherited_words(above, language),
+    );
     let p = palette(ui.ctx());
     let shown = egui::RichText::new(words).size(12.5).color(p.text_1);
     let shown = ui.add(egui::Label::new(shown).wrap());

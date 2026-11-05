@@ -2,6 +2,8 @@
 //! rail is the library's, and so is its width.
 
 mod close;
+mod container_settings;
+mod cookie_jar;
 mod environment_picker;
 mod environments;
 mod extract;
@@ -19,7 +21,7 @@ use crate::action::{Action as Asked, Actions, AppAction};
 use crate::state::AppState;
 use crate::state::http::Page;
 use crate::state::http::tree::Badge;
-use crate::theme::palette;
+use crate::theme::{palette, spacing};
 use crate::widgets::{self, address};
 
 /// What the area's controls ask, applied at the end of the frame.
@@ -80,6 +82,12 @@ pub enum Action {
     Environments(crate::state::http::environments::Asked),
     /// A name nothing sets: a row for it, on the page.
     Define(String),
+    Cookies(crate::state::http::cookies::Asked),
+    /// A collection's or a folder's settings, in their dialog.
+    OpenSettings(crate::state::http::containers::Container),
+    EditSettings(Box<engine::http::model::ContainerSettings>),
+    SaveSettings,
+    CloseSettings,
     /// Sent all the same, under a protected environment.
     SendAnyway(String),
     StopAsking,
@@ -110,6 +118,7 @@ pub struct View {
     rail: rail::RailView,
     editor: request::EditorView,
     environments: environments::PageView,
+    container: container_settings::DialogView,
     response: response::ResponseView,
     /// How tall the request's content was last drawn: what an automatic share follows.
     editor_height: f32,
@@ -141,10 +150,29 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         Page::Requests => requests(ui, rest, state, view, actions),
     }
     close::show(ui, state, actions);
+    cookie_jar::show(ui, state, actions);
+    container_settings::show(ui, state, &mut view.container, actions);
     extract::show(ui, state, view.response.extracting(), actions);
     if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }
+}
+
+/// The area's dialogs: one frame, Escape and a click outside asking to close.
+fn modal<T>(ui: &Ui, id: &str, content: impl FnOnce(&mut Ui) -> T) -> egui::ModalResponse<T> {
+    let p = palette(ui.ctx());
+    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
+    let padding = spacing(ui.ctx()).canvas.round() as i8;
+    let frame = egui::Frame::new()
+        .fill(p.bg_1)
+        .stroke(egui::Stroke::new(1.0, p.line))
+        .corner_radius(egui::CornerRadius::same(14))
+        .shadow(p.shadow_overlay)
+        .inner_margin(egui::Margin::same(padding));
+    egui::Modal::new(egui::Id::unique(id))
+        .backdrop_color(p.backdrop.gamma_multiply(0.7))
+        .frame(frame)
+        .show(ui.ctx(), content)
 }
 
 /// The open requests under their tabs.
@@ -279,6 +307,8 @@ fn empty_workspace(ui: &mut Ui, region: Rect, language: i18n::Language, actions:
     }
 }
 
+#[cfg(test)]
+mod dialogs_tests;
 #[cfg(test)]
 mod environments_tests;
 #[cfg(test)]

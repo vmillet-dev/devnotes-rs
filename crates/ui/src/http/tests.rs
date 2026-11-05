@@ -237,7 +237,7 @@ pub(crate) fn click_id(harness: &mut Harness<'_, Bench>, author_id: &str) {
 }
 
 /// A row's `⋯`, then an entry of its menu, a sub-menu's through its parent.
-fn choose(harness: &mut Harness<'_, Bench>, row: &str, entries: &[&str]) {
+pub(crate) fn choose(harness: &mut Harness<'_, Bench>, row: &str, entries: &[&str]) {
     click_named(harness, "http-node-menu", &format!("Options for {row}"));
     for entry in entries {
         click_id(harness, entry);

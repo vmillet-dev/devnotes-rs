@@ -293,6 +293,29 @@ fn the_http_environments() {
 }
 
 #[test]
+fn the_http_dialogs() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-menu")
+                && node
+                    .label()
+                    .is_some_and(|label| label.ends_with("API Paiements"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-node-settings");
+    settle(&mut harness);
+    capture(&mut harness, "http-settings-dialog");
+    click(&mut harness, "http-settings-cancel");
+    settle(&mut harness);
+    click(&mut harness, "http-cookies-open");
+    settle(&mut harness);
+    capture(&mut harness, "http-cookies-empty");
+}
+
+#[test]
 fn the_http_response() {
     let port = crate::testing::serve();
     let profile = tempfile::tempdir().unwrap();

@@ -208,6 +208,19 @@ fn send(app: &mut App) {
             app.wait_for("http-response-idle");
         },
     );
+    step(
+        "the cookie the answer set, in the jar, then thrown away",
+        || {
+            app.click("http-cookies-open");
+            app.eventually("the cookie is listed", |tree| {
+                tree.text("http-cookie").as_deref() == Some("session")
+            });
+            app.click("http-cookie-remove");
+            app.wait_for("http-cookies-empty");
+            app.click("http-cookies-close");
+            app.eventually("the jar is closed", |tree| !tree.has("http-cookies-dialog"));
+        },
+    );
 }
 
 fn bodies(app: &mut App) {
