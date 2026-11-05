@@ -58,6 +58,13 @@ fn surface_text(harness: &Harness<'_>) -> String {
         .unwrap_or_default()
 }
 
+/// A `char` an event, as a keyboard types: the input rules read each one.
+fn key_by_key(harness: &mut Harness<'_>, text: &str) {
+    for glyph in text.chars() {
+        type_in(harness, &glyph.to_string());
+    }
+}
+
 fn press(harness: &mut Harness<'_>, modifiers: Modifiers, key: Key) {
     harness.key_press_modifiers(modifiers, key);
     settle(harness);
@@ -218,4 +225,22 @@ fn a_link_is_written_from_its_form_and_undo_and_redo_step_through_it() {
     press(&mut harness, Modifiers::COMMAND, Key::Y);
     click_id(&mut harness, "editor-close");
     assert_eq!(stored(&harness, &id), "Voir [le site](https://devnotes.fr)");
+}
+
+#[test]
+fn markdown_typed_becomes_formatting_and_the_shortcuts_format() {
+    let (mut harness, id) = note("");
+    click_id(&mut harness, "editor-rich");
+    key_by_key(&mut harness, "## Plan");
+    press(&mut harness, Modifiers::NONE, Key::Enter);
+    key_by_key(&mut harness, "- du **gras** ici");
+    press(&mut harness, Modifiers::NONE, Key::Enter);
+    press(&mut harness, Modifiers::NONE, Key::Enter);
+    type_in(&mut harness, "fin");
+    press(&mut harness, Modifiers::COMMAND | Modifiers::ALT, Key::Num3);
+    click_id(&mut harness, "editor-close");
+    assert_eq!(
+        stored(&harness, &id),
+        "## Plan\n\n- du **gras** ici\n\n### fin"
+    );
 }

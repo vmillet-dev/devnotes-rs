@@ -108,11 +108,26 @@ impl RichEditor {
         }
     }
 
+    /// Text typed, then the input rule it closes, undone on its own.
     fn type_text(&mut self, text: &str) {
         let marks = self.stored.take().unwrap_or_else(|| self.marks_here());
         self.change(Step::Typing, |document, selection| {
             edit::insert_text(document, selection, text, &marks)
         });
+        let before = self.document.clone();
+        let Some(applied) = richtext::rules::after_typing(&mut self.document, &self.selection)
+        else {
+            return;
+        };
+        let typed = std::mem::replace(&mut self.document, before);
+        self.record(Step::Other);
+        self.document = typed;
+        self.selection = applied.selection;
+        if let Some(mark) = applied.mark {
+            let mut next = marks;
+            inlines::put(&mut next, &mark, false);
+            self.stored = Some(next);
+        }
     }
 
     /// The marks of the `char` before the caret.
@@ -454,10 +469,11 @@ fn keys(ui: &Ui, view: &mut RichEditor) {
             }
             Event::Key {
                 key,
+                physical_key,
                 pressed: true,
                 modifiers,
                 ..
-            } => key_pressed(view, key, modifiers),
+            } => key_pressed(view, key, physical_key, modifiers),
             _ => {}
         }
     }
@@ -470,10 +486,12 @@ fn copy(ui: &Ui, view: &RichEditor) {
     }
 }
 
-fn key_pressed(view: &mut RichEditor, key: Key, modifiers: Modifiers) {
-    let command = modifiers.command;
+fn key_pressed(view: &mut RichEditor, key: Key, physical: Option<Key>, modifiers: Modifiers) {
+    if let Some(command) = shortcuts::find(key, physical, modifiers) {
+        run_command(view, command);
+        return;
+    }
     match key {
-        Key::Enter if modifiers.shift => view.change(Step::Other, edit::hard_break),
         Key::Enter => view.change(Step::Other, edit::split),
         Key::Backspace => view.change(Step::Other, edit::delete_backward),
         Key::Delete => view.change(Step::Other, edit::delete_forward),
@@ -483,13 +501,34 @@ fn key_pressed(view: &mut RichEditor, key: Key, modifiers: Modifiers) {
         Key::ArrowDown => view.vertical(true, modifiers.shift),
         Key::Home | Key::End => line_edge(view, key == Key::End, modifiers),
         Key::Tab => tab(view, modifiers.shift),
-        Key::A if command => view.select_all(),
-        Key::Z if command && modifiers.shift => view.undo(true),
-        Key::Z if command => view.undo(false),
-        Key::Y if command => view.undo(true),
-        Key::B if command => view.toggle(&Mark::Bold),
-        Key::I if command => view.toggle(&Mark::Italic),
         _ => {}
+    }
+}
+
+fn run_command(view: &mut RichEditor, command: shortcuts::Command) {
+    use shortcuts::Command;
+    match command {
+        Command::Bold => view.toggle(&Mark::Bold),
+        Command::Italic => view.toggle(&Mark::Italic),
+        Command::Strike => view.toggle(&Mark::Strike),
+        Command::Code => view.toggle(&Mark::Code),
+        Command::Paragraph => {
+            view.record(Step::Other);
+            edit::set_heading(&mut view.document, &view.selection, None);
+        }
+        Command::Heading(level) => {
+            view.record(Step::Other);
+            edit::set_heading(&mut view.document, &view.selection, Some(level));
+        }
+        Command::Bullet => run(view, Tool::List(ListKind::Bullet)),
+        Command::Ordered => run(view, Tool::List(ListKind::Ordered { start: 1 })),
+        Command::Tasks => run(view, Tool::List(ListKind::Task)),
+        Command::Quote => run(view, Tool::Quote),
+        Command::CodeBlock => view.change(Step::Other, edit::toggle_code_block),
+        Command::HardBreak => view.change(Step::Other, edit::hard_break),
+        Command::Undo => view.undo(false),
+        Command::Redo => view.undo(true),
+        Command::SelectAll => view.select_all(),
     }
 }
 
@@ -544,8 +583,33 @@ fn tab(view: &mut RichEditor, back: bool) {
             });
         }
         (None, false) => view.type_text("\t"),
-        (None, true) => {}
+        (None, true) => untab(view),
     }
+}
+
+/// Shift+Tab outside a list: the tab a line starts with goes.
+fn untab(view: &mut RichEditor) {
+    let path = view.selection.head.path.clone();
+    let starts = matches!(
+        tree::leaf(&view.document, &path),
+        Some(tree::Leaf::Inlines(content)) if inlines::plain(content).starts_with('\t')
+    );
+    if !starts {
+        return;
+    }
+    let tab = Selection {
+        anchor: Position {
+            path: path.clone(),
+            offset: 0,
+        },
+        head: Position { path, offset: 1 },
+    };
+    let offset = view.selection.head.offset.saturating_sub(1);
+    view.change(Step::Other, |document, _| {
+        edit::delete_selection(document, &tab)
+    });
+    view.selection.head.offset = offset;
+    view.selection.anchor = view.selection.head.clone();
 }
 
 fn paint_caret(ui: &Ui, view: &RichEditor, body: Rect) {
@@ -797,6 +861,8 @@ fn link_form(ui: &mut Ui, view: &mut RichEditor, language: Language) {
         );
     }
 }
+
+mod shortcuts;
 
 #[cfg(test)]
 mod tests;

@@ -11,6 +11,7 @@ mod history;
 pub mod inlines;
 mod model;
 mod read;
+pub mod rules;
 pub mod tree;
 mod write;
 
