@@ -3,6 +3,7 @@
 
 pub(crate) mod auth;
 mod body;
+mod composer;
 mod extractions;
 mod graphql;
 mod parts;
@@ -46,6 +47,8 @@ pub(crate) enum Section {
     Variables,
     Scripts,
     Settings,
+    Message,
+    Protocols,
 }
 
 impl Section {
@@ -59,6 +62,8 @@ impl Section {
             Self::Variables => "variables",
             Self::Scripts => "scripts",
             Self::Settings => "settings",
+            Self::Message => "message",
+            Self::Protocols => "protocols",
         }
     }
 
@@ -72,6 +77,8 @@ impl Section {
             Self::Variables => keys::http::editor::sections::VARIABLES,
             Self::Scripts => keys::http::editor::sections::SCRIPTS,
             Self::Settings => keys::http::editor::sections::SETTINGS,
+            Self::Message => keys::http::editor::sections::MESSAGE,
+            Self::Protocols => keys::http::editor::sections::PROTOCOLS,
         }
     }
 }
@@ -96,7 +103,13 @@ fn sections(kind: RequestKind) -> &'static [Section] {
             Section::Scripts,
             Section::Settings,
         ],
-        RequestKind::Websocket => &[Section::Headers, Section::Auth, Section::Variables],
+        RequestKind::Websocket => &[
+            Section::Message,
+            Section::Headers,
+            Section::Auth,
+            Section::Variables,
+            Section::Protocols,
+        ],
     }
 }
 
@@ -107,6 +120,11 @@ pub(crate) struct TextBoxes {
     body: Editor,
     query: Editor,
     variables: Editor,
+    /// The message being written: the socket's, sent and not saved.
+    message: Editor,
+    /// `Ctrl+Enter` on a socket that is not open: said, never connected unasked.
+    refused: bool,
+    protocols: Option<String>,
     /// The auth's secret is shown.
     revealed: bool,
     numbers: transport::Typed,
@@ -199,6 +217,11 @@ pub(crate) fn show(
                         Section::Variables => variables(ui, tab, boxes, actions, language),
                         Section::Scripts => extractions::show(ui, tab, actions, language),
                         Section::Settings => settings(ui, state, tab, boxes, actions),
+                        Section::Message => composer::show(ui, state, tab, boxes, actions),
+                        Section::Protocols => {
+                            let typed = &mut boxes.protocols;
+                            composer::protocols(ui, tab, typed, language, actions);
+                        }
                     }
                 });
         });
@@ -256,10 +279,11 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
             tr(keys::http::send::SEND)
         };
         let sends = tab.draft.kind != RequestKind::Websocket;
+        let connect = tr(keys::http::socket::DISCONNECT);
         let send_width = if sends {
             Button::width(ui, &send) + 10.0
         } else {
-            0.0
+            Button::width(ui, &connect) + 10.0
         };
         let code = tr(keys::http::code::OPEN);
         let code_width = if sends {
@@ -287,30 +311,9 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
             edit(actions, tab, DraftEdit::Url(typed));
         }
         if sends {
-            let kind = if sending {
-                widgets::Kind::Outline
-            } else {
-                widgets::Kind::Filled
-            };
-            let pressed = Button::new(&send, "http-send").kind(kind).show(ui);
-            let pressed = if sending {
-                pressed
-            } else {
-                widgets::tooltip(pressed, &tr(keys::http::send::SEND_HINT))
-            };
-            if pressed.clicked() && sending {
-                actions.push(Asked::Http(Action::CancelSend(tab.key.clone())));
-            } else if pressed.clicked() {
-                actions.push(Asked::Http(Action::Send(Some(tab.key.clone()))));
-            }
-        }
-        if sends {
-            let pressed = Button::new(&code, "http-code-open").show(ui);
-            let pressed = widgets::tooltip(pressed, &tr(keys::http::code::OPEN_LABEL));
-            if pressed.clicked() {
-                let asked = crate::state::http::code::Asked::Open(tab.key.clone());
-                actions.push(Asked::Http(Action::Code(asked)));
-            }
+            send_buttons(ui, state, tab, actions);
+        } else {
+            connect_button(ui, state, tab, actions);
         }
         if Button::new(&save, "http-save")
             .enabled(tab.is_dirty())
@@ -320,6 +323,52 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
             actions.push(Asked::Http(Action::Save(tab.key.clone())));
         }
     });
+}
+
+fn connect_button(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
+    let live = state.http.sockets().is_live(&tab.key);
+    let (key, kind) = if live {
+        (keys::http::socket::DISCONNECT, widgets::Kind::Outline)
+    } else {
+        (keys::http::socket::CONNECT, widgets::Kind::Filled)
+    };
+    let words = i18n::translate(state.language, key, &[]);
+    if Button::new(&words, "http-socket-connect")
+        .kind(kind)
+        .show(ui)
+        .clicked()
+    {
+        actions.push(Asked::Http(Action::Send(Some(tab.key.clone()))));
+    }
+}
+
+/// « Send », or « Cancel » while it runs, and « Code ».
+fn send_buttons(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
+    let tr = |key| i18n::translate(state.language, key, &[]);
+    let sending = state.http.sends().is_sending(&tab.key);
+    let (send, kind) = if sending {
+        (tr(keys::http::send::CANCEL), widgets::Kind::Outline)
+    } else {
+        (tr(keys::http::send::SEND), widgets::Kind::Filled)
+    };
+    let pressed = Button::new(&send, "http-send").kind(kind).show(ui);
+    let pressed = if sending {
+        pressed
+    } else {
+        widgets::tooltip(pressed, &tr(keys::http::send::SEND_HINT))
+    };
+    if pressed.clicked() && sending {
+        actions.push(Asked::Http(Action::CancelSend(tab.key.clone())));
+    } else if pressed.clicked() {
+        actions.push(Asked::Http(Action::Send(Some(tab.key.clone()))));
+    }
+    let code = tr(keys::http::code::OPEN);
+    let pressed = Button::new(&code, "http-code-open").show(ui);
+    let pressed = widgets::tooltip(pressed, &tr(keys::http::code::OPEN_LABEL));
+    if pressed.clicked() {
+        let asked = crate::state::http::code::Asked::Open(tab.key.clone());
+        actions.push(Asked::Http(Action::Code(asked)));
+    }
 }
 
 /// Where a method would be chosen on an HTTP request, at its height: a label, not a control.
@@ -587,6 +636,8 @@ fn counted(tab: &Tab, section: Section) -> usize {
             .filter(|row| row.enabled && !row.name.is_empty())
             .count(),
         Section::Scripts => document.extractions.len(),
+        Section::Message => document.websocket.messages.len(),
+        Section::Protocols => document.websocket.protocols.len(),
         Section::Settings => transport::set_fields(&document.transport),
         Section::Auth | Section::Body | Section::Query => 0,
     }

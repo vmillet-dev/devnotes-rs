@@ -293,6 +293,49 @@ fn the_http_environments() {
 }
 
 #[test]
+fn the_http_socket() {
+    use engine::http::websocket::{SocketEvent, WebsocketEvent};
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Flux"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-socket-connect");
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    let at = chrono::Utc::now();
+    for event in [
+        SocketEvent::Opened {
+            url: "wss://api.example.com/Flux".to_owned(),
+            protocol: Some("chat".to_owned()),
+        },
+        SocketEvent::Sent {
+            text: "{\"subscribe\":\"prix\"}".to_owned(),
+            size: 21,
+        },
+        SocketEvent::Received {
+            text: "{\"prix\":42}".to_owned(),
+            size: 10,
+            binary: false,
+            cut: false,
+        },
+    ] {
+        app.state.http.receive_socket(WebsocketEvent {
+            id: format!("{key}#1"),
+            at,
+            event,
+        });
+    }
+    settle(&mut harness);
+    capture(&mut harness, "http-socket");
+}
+
+#[test]
 fn the_http_dialogs() {
     let profile = tempfile::tempdir().unwrap();
     let mut harness = http_area(profile.path());

@@ -6,7 +6,7 @@ use egui::{Align, Layout, Ui, Vec2};
 use engine::http::graphql::{GraphqlAnswer, GraphqlDocument, QueryFault, QueryProblem};
 use i18n::keys;
 
-use super::body::{TextBox, invalid, text_box};
+use super::body::{BOX_HEIGHT, TextBox, invalid, text_box};
 use super::{Asked, TextBoxes, edit};
 use crate::action::Actions;
 use crate::http::Action;
@@ -102,6 +102,7 @@ fn typed(
                 label: &label,
                 author_id: "http-graphql-query",
                 hint: &hint,
+                height: BOX_HEIGHT,
             };
             if let Some(query) = text_box(ui, &mut boxes.query, &document.query, &field, language) {
                 *typed = Some(GraphqlDocument {
@@ -119,6 +120,7 @@ fn typed(
                 label: &label,
                 author_id: "http-graphql-variables",
                 hint: &hint,
+                height: BOX_HEIGHT,
             };
             let text = &document.variables;
             if let Some(variables) = text_box(ui, &mut boxes.variables, text, &field, language) {

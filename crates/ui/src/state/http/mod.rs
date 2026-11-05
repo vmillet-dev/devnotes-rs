@@ -10,6 +10,7 @@ pub mod environments;
 pub mod history;
 pub mod moves;
 pub mod send;
+pub mod sockets;
 pub mod tabs;
 pub mod tree;
 
@@ -221,6 +222,7 @@ pub struct HttpState {
     environments: environments::Environments,
     page: Page,
     cookies: cookies::CookieJar,
+    sockets: sockets::Sockets,
     history: history::History,
     /// How many sends « Clear » just removed: for the status line.
     history_cleared: Option<u32>,
@@ -268,8 +270,10 @@ impl HttpState {
             self.revision.bump();
         }
         self.forget_closed(backend);
+        self.sockets.update();
         for (old, tab) in &answered.rekeyed {
             self.sends.rekey(old, &tab.key);
+            self.sockets.rekey(old, &tab.key);
             if let Some(place) = &tab.place {
                 let id = place.folder_id.clone();
                 self.unfold(id.as_deref().unwrap_or(&place.collection_id));
@@ -520,6 +524,27 @@ impl HttpState {
         self.history.reopen_onto(backend, request_id, &entry);
     }
 
+    pub fn sockets(&self) -> &sockets::Sockets {
+        &self.sockets
+    }
+
+    pub fn receive_socket(&mut self, event: engine::http::websocket::WebsocketEvent) {
+        self.sockets.receive(event);
+    }
+
+    pub fn send_message(&mut self, backend: &Backend, key: &str, text: String) {
+        self.sockets.send(backend, key, text);
+    }
+
+    pub fn clear_socket_log(&mut self, key: &str) {
+        self.sockets.clear_log(key);
+    }
+
+    pub fn ask_close(&mut self, key: &str) {
+        let live = self.sockets.is_live(key);
+        self.tabs.ask_close(key, live);
+    }
+
     pub fn cookies(&self) -> &cookies::CookieJar {
         &self.cookies
     }
@@ -588,7 +613,11 @@ impl HttpState {
             return;
         };
         let environment = self.environments.active_id().map(str::to_owned);
-        self.sends.send(backend, tab, (now, environment), true);
+        if tab.draft.kind == RequestKind::Websocket {
+            self.sockets.connect(backend, tab, environment);
+        } else {
+            self.sends.send(backend, tab, (now, environment), true);
+        }
     }
 
     /// A rule of the tab's draft: saved with the request, as any other part of it.
@@ -852,10 +881,19 @@ impl HttpState {
 
     /// The tab `key`'s draft, sent as it is now; `None` for the tab in front.
     pub fn send(&mut self, backend: &Backend, key: Option<&str>, now: f64) {
+        let from_the_button = key.is_some();
         let key = key.or(self.tabs.active_key()).map(str::to_owned);
         let Some(tab) = key.as_deref().and_then(|key| self.tabs.tab(key)) else {
             return;
         };
+        // The shortcut connects and never cuts: only the button disconnects.
+        if tab.draft.kind == RequestKind::Websocket && self.sockets.is_live(&tab.key) {
+            if from_the_button {
+                let key = tab.key.clone();
+                self.sockets.close(backend, &key);
+            }
+            return;
+        }
         let protected = self
             .environments
             .active()
@@ -867,7 +905,11 @@ impl HttpState {
         }
         self.environments.stop_asking();
         let environment = self.environments.active_id().map(str::to_owned);
-        self.sends.send(backend, tab, (now, environment), false);
+        if tab.draft.kind == RequestKind::Websocket {
+            self.sockets.connect(backend, tab, environment);
+        } else {
+            self.sends.send(backend, tab, (now, environment), false);
+        }
     }
 
     pub fn cancel_send(&self, backend: &Backend, key: &str) {
@@ -889,6 +931,15 @@ impl HttpState {
             .collect();
         for key in closed {
             self.sends.forget(backend, &key);
+        }
+        let closed: Vec<String> = self
+            .sockets
+            .keys()
+            .filter(|key| self.tabs.tab(key).is_none())
+            .map(str::to_owned)
+            .collect();
+        for key in closed {
+            self.sockets.forget(backend, &key);
         }
     }
 

@@ -14,6 +14,7 @@ use engine::http::model::{
 };
 use engine::http::query::QuerySide;
 use engine::http::transport::TransportSettings;
+use engine::http::websocket::WebsocketDocument;
 
 use super::bodies::{self, BodiesLeft, BodyKind};
 use super::tree;
@@ -61,6 +62,7 @@ pub enum DraftEdit {
     Transport(TransportSettings),
     Variables(Vec<Variable>),
     Extractions(Vec<Extraction>),
+    Websocket(WebsocketDocument),
 }
 
 impl Draft {
@@ -87,6 +89,7 @@ impl Draft {
             DraftEdit::Transport(transport) => document.transport = transport,
             DraftEdit::Variables(variables) => document.variables = variables,
             DraftEdit::Extractions(rules) => document.extractions = rules,
+            DraftEdit::Websocket(websocket) => document.websocket = websocket,
         }
     }
 }
@@ -553,10 +556,11 @@ impl Tabs {
         });
     }
 
-    /// Closed at once when closing costs nothing; asked first otherwise.
-    pub fn ask_close(&mut self, key: &str) {
+    /// Closed at once when closing costs nothing; asked first otherwise: what was typed, or the
+    /// connection a live socket would lose.
+    pub fn ask_close(&mut self, key: &str, live: bool) {
         match self.find(key) {
-            Some(tab) if tab.is_dirty() => self.closing = Some(key.to_owned()),
+            Some(tab) if tab.is_dirty() || live => self.closing = Some(key.to_owned()),
             Some(_) => self.close(key),
             None => {}
         }
@@ -678,13 +682,13 @@ mod tests {
         tabs.activate("b");
 
         tabs.edit("b", |draft| draft.name = "B".to_owned());
-        tabs.ask_close("b");
+        tabs.ask_close("b", false);
         assert_eq!(tabs.closing().map(|tab| tab.key.as_str()), Some("b"));
         tabs.close("b");
 
         assert_eq!(tabs.active_key(), Some("c"));
         assert!(tabs.closing().is_none());
-        tabs.ask_close("c");
+        tabs.ask_close("c", false);
         assert_eq!(tabs.active_key(), Some("a"));
     }
 

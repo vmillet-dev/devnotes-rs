@@ -147,6 +147,7 @@ impl eframe::App for DevNotesApp {
                     self.state.gate.index_progress(done, total);
                 }
                 Input::Engine(EngineEvent::IndexReady) => self.state.gate.index_ready(),
+                Input::Engine(EngineEvent::Socket(event)) => self.state.http.receive_socket(event),
                 // Read by the screens they concern, as they are ported.
                 Input::Engine(_) => {}
             }

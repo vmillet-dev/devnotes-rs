@@ -280,6 +280,41 @@ fn bodies(app: &mut App) {
     });
 }
 
+fn socket(app: &mut App) {
+    step(
+        "a socket connected, a message echoed, then disconnected",
+        || {
+            let port = e2e::serve_socket();
+            app.click_where("http-tab-open", named("WS Flux live"));
+            app.wait_for("http-socket-message");
+            app.click("http-url");
+            app.press(Key::A, Modifiers::COMMAND);
+            app.type_text(&format!("ws://127.0.0.1:{port}/"));
+            app.click("http-socket-connect");
+            app.eventually("the socket is open", |tree| {
+                tree.count("http-socket-entry") == 1
+            });
+            app.fill("http-socket-message", "ping");
+            // A key overtakes what is still being typed: it would reach the area, not the message.
+            app.eventually("the message is typed", |tree| {
+                values(tree, "http-socket-message")
+                    .first()
+                    .map(String::as_str)
+                    == Some("ping")
+            });
+            app.press(Key::Enter, Modifiers::COMMAND);
+            app.eventually("the message came back", |tree| {
+                tree.count("http-socket-entry") == 3
+            });
+            app.click("http-socket-connect");
+            app.eventually("the socket is closed", |tree| {
+                tree.count("http-socket-entry") == 4
+            });
+            app.press(Key::S, Modifiers::COMMAND);
+        },
+    );
+}
+
 fn fold_kept(app: App) -> App {
     let mut app = app;
     step("a folder folded, still folded after a relaunch", || {
@@ -332,6 +367,7 @@ fn http() {
     compose(&mut app);
     send(&mut app);
     bodies(&mut app);
+    socket(&mut app);
     let mut app = fold_kept(app);
     delete(&mut app);
     app.quit();
