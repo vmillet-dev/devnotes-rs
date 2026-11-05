@@ -208,6 +208,41 @@ fn the_http_request_editor() {
     capture(&mut harness, "http-request-params");
     click(&mut harness, "http-section-headers");
     capture(&mut harness, "http-request-headers");
+    click(&mut harness, "http-section-body");
+    let app = harness.state_mut();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        draft.apply(crate::state::http::tabs::DraftEdit::Body(
+            engine::http::model::RequestBody::Json {
+                text: "{\n  \"login\": \"ada\",\n  \"remember\": true\n}".to_owned(),
+            },
+        ));
+    });
+    settle(&mut harness);
+    capture(&mut harness, "http-request-body");
+    click(&mut harness, "http-body-kind-4");
+    type_into(&mut harness, "http-part-key", "justificatif");
+    capture(&mut harness, "http-request-multipart");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node
+                    .label()
+                    .is_some_and(|label| label.ends_with("Factures"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        draft.apply(crate::state::http::tabs::DraftEdit::Graphql(
+            engine::http::graphql::GraphqlDocument {
+                query: "query Facture($id: ID!) {\n  facture(id: $id) {\n    total\n".to_owned(),
+                ..Default::default()
+            },
+        ));
+    });
+    settle(&mut harness);
+    capture(&mut harness, "http-request-graphql");
 }
 
 #[test]

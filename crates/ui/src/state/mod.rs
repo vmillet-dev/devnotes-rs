@@ -633,6 +633,11 @@ impl AppState {
             Http::Save(key) => self.http.tabs_mut().save(backend, &key),
             Http::SaveAndClose(key) => self.http.tabs_mut().save_and_close(backend, &key),
             Http::Edit { key, edit } => self.http.tabs_mut().edit(&key, |draft| draft.apply(edit)),
+            Http::ChooseBody { key, kind } => self.http.tabs_mut().choose_body_kind(&key, kind),
+            Http::Rewrite { key, part } => self.http.rewrite(backend, &key, part),
+            Http::PickFile { key, target } => {
+                self.http.pick_file(backend, &self.dialog, key, target);
+            }
             Http::Send(key) => {
                 let now = ctx.input(|input| input.time);
                 self.http.send(backend, key.as_deref(), now);

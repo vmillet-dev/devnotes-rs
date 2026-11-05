@@ -4962,7 +4962,7 @@ whenever either changes (`HttpState::remember`).
 
 `http::request` draws the tab in front: its name, the method — or the kind, said where a method
 would be chosen and no control — the URL and « Save », the `{{variables}}` it uses as chips, and
-its parts a tab each (params and headers so far). A field edits the draft directly: its text is
+its parts a tab each. A field edits the draft directly: its text is
 the draft's each frame, and a change is a `DraftEdit` applied at the end of the frame — no
 buffer of the view's to keep in step. The URL and the parameters' table follow each other
 through the core's `query::sync` (the side edited wins), called directly (D12). The URL's
@@ -4976,6 +4976,21 @@ to the value (`headers_from_text`), and lines pasted in a name fill a row each. 
 sent unasked are listed above the table with where each comes from
 (`implied_http_headers`): Rust composes the request, so Rust says. ⚠️ The header names a key
 field proposed came from the HTTP-headers tool's data: they return with the tools (phase 7).
+
+`http::request::body` draws the body by its kind. Another kind sets the one left aside, by tab
+(`state::http::bodies`), and it comes back as it was: « Switch to None » on a `GET` would
+otherwise cost the text it warns about; JSON and plain text share theirs. Never written: a
+request saves the body it shows. What the body implies, whether a JSON one reads and whether its
+method seldom carries one are one answer (`describe_http_body`), also read from the other tabs
+for the mark on « Body ». A multipart row (`http::request::parts`) is a text or a file by its
+path; the system's dialog opens off the frame (`HttpState::pick_file`), and its answer is
+dropped if the body changed kind meanwhile. `http::request::graphql` lays its two boxes out in
+rows of two cells, so that they start on one line whatever is said above each. These boxes are
+the text core's `Editor`, the only fields here with a buffer of their own: the view holds those
+of the tab in front (`TextBoxes`), the draft's text wins when the two differ, and what the core
+rewrites — Prettier's format, the `null`s of « Add » — reaches them through the draft, unless
+typing moved on since it was asked (`HttpState::rewrite`). ⚠️ `Ctrl+Enter` in a box sends: the
+editor leaves it to `keys::dispatch` instead of writing a line.
 
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send

@@ -1,7 +1,8 @@
 //! The HTTP area: a collection begun from the empty rail, a folder and requests made from a row's
 //! menu, a request moved with the keys, renamed in place, a fold kept across a relaunch, and the
 //! collection deleted once the rail has said what goes with it. A request opens in its tab,
-//! reopened at the next launch; a draft asks before it is closed.
+//! reopened at the next launch; a draft asks before it is closed. A body is read as it is typed,
+//! and a GraphQL draft names the variables it lacks.
 //!
 //! Rows are read by their names, which the scenario types: the window speaks the system's
 //! language.
@@ -209,6 +210,49 @@ fn send(app: &mut App) {
     );
 }
 
+fn bodies(app: &mut App) {
+    step(
+        "a JSON body read as it is typed, said on a GET, taken back to none",
+        || {
+            app.click("http-section-body");
+            app.click("http-body-kind-1");
+            app.fill("http-body-text", "{\"amount\":4900}");
+            app.eventually("the body reads and its type is said", |tree| {
+                tree.has("http-body-valid")
+                    && tree
+                        .text("http-body-type")
+                        .is_some_and(|said| said.contains("application/json"))
+            });
+            app.wait_for("http-body-unusual");
+            app.wait_for("http-body-unusual-mark");
+            app.click("http-body-to-none");
+            app.eventually("no body, no warning", |tree| {
+                !tree.has("http-body-unusual") && !tree.has("http-body-text")
+            });
+        },
+    );
+    step("a GraphQL draft: its variable named, then added", || {
+        app.click("http-tab-new-kind");
+        app.click("http-new-kind-graphql");
+        app.fill(
+            "http-graphql-query",
+            "query One($code: ID!) { product(code: $code) { id } }",
+        );
+        app.wait_for("http-graphql-missing");
+        app.click("http-graphql-add");
+        app.eventually("the variable has its null", |tree| {
+            !tree.has("http-graphql-missing")
+                && values(tree, "http-graphql-variables")
+                    .first()
+                    .is_some_and(|text| text.contains("\"code\": null"))
+        });
+        app.click_nth("http-tab-close", 2);
+        app.wait_for("http-close-dialog");
+        app.click("http-close-discard");
+        app.eventually("the draft is gone", |tree| tabs(tree).len() == 2);
+    });
+}
+
 fn fold_kept(app: App) -> App {
     let mut app = app;
     step("a folder folded, still folded after a relaunch", || {
@@ -260,6 +304,7 @@ fn http() {
     in_tabs(&mut app);
     compose(&mut app);
     send(&mut app);
+    bodies(&mut app);
     let mut app = fold_kept(app);
     delete(&mut app);
     app.quit();

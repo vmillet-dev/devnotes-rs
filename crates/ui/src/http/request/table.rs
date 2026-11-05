@@ -16,9 +16,9 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, Checkbox, MIN_TARGET, interact};
 
-const ROW: f32 = 32.0;
-const CHECK: f32 = 36.0;
-const REMOVE: f32 = 32.0;
+pub(super) const ROW: f32 = 32.0;
+pub(super) const CHECK: f32 = 36.0;
+pub(super) const REMOVE: f32 = 32.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Field {
@@ -51,20 +51,8 @@ pub(crate) fn show(
         Vec::new()
     };
     let mut edited: Option<Vec<KeyValue>> = None;
-    let width = ui.available_width();
-    #[expect(clippy::cast_precision_loss, reason = "rows of a table")]
-    let height = (rows.len() + 2) as f32 * ROW;
-    let (frame, region) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
-    region.widget_info(|| WidgetInfo::labeled(Role::Table, true, table.label));
-    widgets::address(ui, &region, &format!("http-{}-table", table.kind));
-    let corner = CornerRadius::same(10);
-    ui.painter().rect(
-        frame,
-        corner,
-        p.bg_1,
-        Stroke::new(1.0, p.line),
-        StrokeKind::Inside,
-    );
+    let address = format!("http-{}-table", table.kind);
+    let frame = self::frame(ui, rows.len(), table.label, &address);
     let columns = Columns::of(frame);
     head(ui, &columns, frame.top(), language);
     for at in 0..=rows.len() {
@@ -113,6 +101,25 @@ pub(crate) fn show(
     edited
 }
 
+/// The table's frame: a line of heads, the rows, and the blank row after them.
+pub(super) fn frame(ui: &mut Ui, rows: usize, label: &str, author_id: &str) -> Rect {
+    let p = palette(ui.ctx());
+    #[expect(clippy::cast_precision_loss, reason = "rows of a table")]
+    let height = (rows + 2) as f32 * ROW;
+    let size = Vec2::new(ui.available_width(), height);
+    let (frame, region) = ui.allocate_exact_size(size, Sense::hover());
+    region.widget_info(|| WidgetInfo::labeled(Role::Table, true, label));
+    widgets::address(ui, &region, author_id);
+    ui.painter().rect(
+        frame,
+        CornerRadius::same(10),
+        p.bg_1,
+        Stroke::new(1.0, p.line),
+        StrokeKind::Inside,
+    );
+    frame
+}
+
 /// Where each column stands in the table's frame.
 struct Columns {
     check: Rect,
@@ -148,21 +155,41 @@ impl Columns {
 }
 
 fn head(ui: &Ui, columns: &Columns, top: f32, language: i18n::Language) {
-    let p = palette(ui.ctx());
     for (column, key) in [
         (columns.key, keys::http::table::KEY),
         (columns.value, keys::http::table::VALUE),
         (columns.description, keys::http::table::DESCRIPTION),
     ] {
-        let words = i18n::translate(language, key, &[]);
-        let galley = widgets::text(ui, &words, 11.5, 600.0, FontFamily::Proportional, p.text_2);
-        let rect = Columns::at(column, top);
-        ui.painter().galley(
-            pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0),
-            galley,
-            p.text_2,
-        );
+        heading(ui, Columns::at(column, top), key, language);
     }
+}
+
+/// A column's head, in the cell at the top of it.
+pub(super) fn heading(ui: &Ui, rect: Rect, key: i18n::Key, language: i18n::Language) {
+    let p = palette(ui.ctx());
+    let words = i18n::translate(language, key, &[]);
+    let galley = widgets::text(ui, &words, 11.5, 600.0, FontFamily::Proportional, p.text_2);
+    ui.painter().galley(
+        pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0),
+        galley,
+        p.text_2,
+    );
+}
+
+/// The box that says a row is sent; `true` when it changed.
+pub(super) fn tick(
+    ui: &mut Ui,
+    rect: Rect,
+    enabled: &mut bool,
+    label: &str,
+    author_id: &str,
+) -> bool {
+    let mut check_ui = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(
+        egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+    ));
+    Checkbox::new(enabled, label, author_id)
+        .show(&mut check_ui)
+        .changed()
 }
 
 struct Cell {
@@ -192,17 +219,12 @@ fn row_of(
     let mut changed = false;
     if !cell.blank {
         let rect = Columns::at(columns.check, cell.top);
-        let mut check_ui = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(
-            egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
-        ));
         let label = i18n::translate(
             language,
             keys::http::table::ENABLE,
             &[("key", row.key.as_str().into())],
         );
-        changed |= Checkbox::new(&mut row.enabled, &label, "http-kv-enabled")
-            .show(&mut check_ui)
-            .changed();
+        changed |= tick(ui, rect, &mut row.enabled, &label, "http-kv-enabled");
     }
     let ink = if row.enabled || cell.blank {
         p.text_0
@@ -271,13 +293,14 @@ fn row_of(
         ("", ink, false),
     );
     changed |= description.changed();
-    if !cell.blank && remove(ui, Columns::at(columns.remove, cell.top), &row, language) {
+    let at = Columns::at(columns.remove, cell.top);
+    if !cell.blank && remove(ui, at, (&row.key, "http-kv-remove"), language) {
         return Some(Changed::Removed);
     }
     changed.then_some(Changed::Row(row))
 }
 
-fn text_cell(
+pub(super) fn text_cell(
     ui: &mut Ui,
     (rect, id): (Rect, Id),
     (text, name, author_id): (&mut String, &str, &str),
@@ -331,12 +354,17 @@ fn pasted_lines(ui: &Ui, id: Id) -> Option<Vec<KeyValue>> {
     Some(read)
 }
 
-fn remove(ui: &mut Ui, rect: Rect, row: &KeyValue, language: i18n::Language) -> bool {
+pub(super) fn remove(
+    ui: &mut Ui,
+    rect: Rect,
+    (key, author_id): (&str, &str),
+    language: i18n::Language,
+) -> bool {
     let p = palette(ui.ctx());
     let label = i18n::translate(
         language,
         keys::http::table::REMOVE_ROW,
-        &[("key", row.key.as_str().into())],
+        &[("key", key.into())],
     );
     let square = Rect::from_center_size(rect.center(), Vec2::splat(MIN_TARGET));
     let mut over = ui.new_child(egui::UiBuilder::new().max_rect(square));
@@ -344,7 +372,7 @@ fn remove(ui: &mut Ui, rect: Rect, row: &KeyValue, language: i18n::Language) -> 
         &mut over,
         square.size(),
         Sense::click(),
-        "http-kv-remove",
+        author_id,
         || WidgetInfo::labeled(Role::Button, true, &label),
         CornerRadius::same(5),
     );

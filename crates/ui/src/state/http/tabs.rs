@@ -6,9 +6,13 @@
 //! and a tab follows each tree that is read. A tab that kept the name it was opened with showed
 //! the old one after a rename from the rail — and its next save wrote it back over the new one.
 
+use engine::http::graphql::GraphqlDocument;
 use engine::http::model::{
-    HttpMethod, HttpRequest, HttpRequestPatch, HttpTree, KeyValue, RequestDocument, RequestKind,
+    HttpMethod, HttpRequest, HttpRequestPatch, HttpTree, KeyValue, RequestBody, RequestDocument,
+    RequestKind,
 };
+
+use super::bodies::{self, BodiesLeft, BodyKind};
 use engine::http::query::QuerySide;
 
 use super::tree;
@@ -50,6 +54,8 @@ pub enum DraftEdit {
     /// The table as edited: the URL's query is rewritten from it.
     Params(Vec<KeyValue>),
     Headers(Vec<KeyValue>),
+    Body(RequestBody),
+    Graphql(GraphqlDocument),
 }
 
 impl Draft {
@@ -70,6 +76,8 @@ impl Draft {
                 document.params = synced.params;
             }
             DraftEdit::Headers(headers) => document.headers = headers,
+            DraftEdit::Body(body) => document.body = body,
+            DraftEdit::Graphql(graphql) => document.graphql = graphql,
         }
     }
 }
@@ -148,6 +156,8 @@ pub struct Tabs {
     saving: Vec<Saving>,
     /// A tab asked to close with changes in it: the question is open.
     closing: Option<String>,
+    /// By tab, for as long as it is open.
+    bodies_left: std::collections::HashMap<String, BodiesLeft>,
 }
 
 pub struct Answered {
@@ -331,6 +341,20 @@ impl Tabs {
         }
     }
 
+    /// Another kind of body; the one left is set aside, and comes back when chosen again.
+    pub fn choose_body_kind(&mut self, key: &str, kind: BodyKind) {
+        let Some(tab) = self.open.iter_mut().find(|tab| tab.key == key) else {
+            return;
+        };
+        let current = &tab.draft.document.body;
+        if BodyKind::of(current) == kind {
+            return;
+        }
+        let left = self.bodies_left.entry(key.to_owned()).or_default();
+        bodies::set_aside(left, current.clone());
+        tab.draft.document.body = bodies::body_of_kind(kind, left);
+    }
+
     /// A saved request's draft written whole; a request never saved needs a place first.
     pub fn save(&mut self, backend: &Backend, key: &str) {
         self.write(backend, key, false);
@@ -385,6 +409,7 @@ impl Tabs {
             return;
         };
         self.open.remove(at);
+        self.bodies_left.remove(key);
         if self.active.as_deref() == Some(key) {
             let next = at.min(self.open.len().saturating_sub(1));
             self.active = self.open.get(next).map(|tab| tab.key.clone());

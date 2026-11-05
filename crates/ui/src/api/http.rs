@@ -1,10 +1,11 @@
 //! The HTTP collections, their requests, and what is sent.
 
 use engine::http::{
-    self, VariablesRequest,
+    self, BodyAnswer, VariablesRequest,
+    graphql::{GraphqlAnswer, GraphqlDocument},
     model::{
         HeaderFault, HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest, HttpRequestDraft,
-        HttpRequestPatch, HttpTree, KeyValue, RequestDocument, RequestKind,
+        HttpRequestPatch, HttpTree, KeyValue, RequestBody, RequestDocument, RequestKind,
     },
     query::{QuerySide, SyncedQuery},
     send::{ImpliedHeader, SendRequest, SentResponse},
@@ -161,4 +162,51 @@ pub fn forget_response(backend: &Backend, id: String) {
 /// The last answer to `id` as an image, a `data:` URL, when it is one.
 pub fn response_image(backend: &Backend, id: String) -> Pending<Option<String>> {
     backend.spawn(move |engine| http::http_response_image(engine, id))
+}
+
+/// What a body implies, whether a JSON one reads, whether its method seldom carries one.
+pub fn describe_body(
+    backend: &Backend,
+    body: RequestBody,
+    method: HttpMethod,
+) -> Pending<BodyAnswer> {
+    backend.spawn(move |_| http::describe_http_body(body, method))
+}
+
+/// The operations a GraphQL document names, and what its variables lack.
+pub fn describe_graphql(backend: &Backend, document: GraphqlDocument) -> Pending<GraphqlAnswer> {
+    backend.spawn(move |_| http::describe_graphql(document))
+}
+
+/// The variables with a `null` for each one the operation declares and they lack.
+pub fn add_graphql_variables(
+    backend: &Backend,
+    document: GraphqlDocument,
+) -> Pending<Option<String>> {
+    backend.spawn(move |_| async move { http::add_graphql_variables(document).await.map(Some) })
+}
+
+/// Prettier's, as for a snippet: JSON, or a GraphQL query. `None` when it changed nothing or
+/// could not read it.
+pub fn prettier(backend: &Backend, text: String, json: bool) -> Pending<Option<String>> {
+    use text::format::{Answer, Options, Parser, Request};
+    backend.compute(move |_| {
+        let request = Request {
+            text,
+            cursor: 0,
+            parser: if json { Parser::Json } else { Parser::Graphql },
+            options: Options {
+                print_width: 80,
+                tab_width: 2,
+                use_tabs: false,
+                single_quote: false,
+                semi: true,
+                trailing_comma: false,
+            },
+        };
+        Ok(match text::format::format(&request) {
+            Answer::Formatted { text, .. } => Some(text),
+            _ => None,
+        })
+    })
 }

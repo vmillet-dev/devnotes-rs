@@ -64,7 +64,7 @@ pub(crate) fn paiements() -> Harness<'static, Bench> {
     area_of(Area::Http, backend, profile)
 }
 
-fn click_named(harness: &mut Harness<'_, Bench>, author_id: &str, name: &str) {
+pub(crate) fn click_named(harness: &mut Harness<'_, Bench>, author_id: &str, name: &str) {
     harness
         .get_by(|node| node.author_id() == Some(author_id) && node.label().as_deref() == Some(name))
         .click();
@@ -232,7 +232,7 @@ fn http_rail_budget() {
     );
 }
 
-fn click_id(harness: &mut Harness<'_, Bench>, author_id: &str) {
+pub(crate) fn click_id(harness: &mut Harness<'_, Bench>, author_id: &str) {
     crate::notes::bench::click_id(harness, author_id);
 }
 
@@ -660,7 +660,7 @@ fn a_deletion_names_the_open_tabs_it_would_lose() {
 }
 
 /// `Login` open in its tab.
-fn editing() -> Harness<'static, Bench> {
+pub(crate) fn editing() -> Harness<'static, Bench> {
     let mut harness = paiements();
     click_named(&mut harness, "http-node-name", "POST Login");
     crate::notes::bench::until(&mut harness, "the editor is open", |harness| {
@@ -672,14 +672,14 @@ fn editing() -> Harness<'static, Bench> {
 }
 
 /// What the fields wearing `author_id` hold, top to bottom.
-fn values(harness: &Harness<'_, Bench>, author_id: &str) -> Vec<String> {
+pub(crate) fn values(harness: &Harness<'_, Bench>, author_id: &str) -> Vec<String> {
     harness
         .query_all_by(|node| node.author_id() == Some(author_id))
         .map(|node| node.accesskit_node().value().unwrap_or_default())
         .collect()
 }
 
-fn active(harness: &Harness<'_, Bench>) -> crate::state::http::tabs::Draft {
+pub(crate) fn active(harness: &Harness<'_, Bench>) -> crate::state::http::tabs::Draft {
     harness
         .state()
         .state
@@ -824,7 +824,7 @@ fn a_variable_is_listed_with_where_it_resolves_from() {
 }
 
 /// A request to the local server at `path`, open in its tab.
-fn sending_to(path: &str) -> Harness<'static, Bench> {
+pub(crate) fn sending_to(path: &str) -> Harness<'static, Bench> {
     let port = testing::serve();
     let (backend, profile) = testing::unlocked();
     let api = collection(&backend, "Local");
@@ -854,13 +854,13 @@ fn sending_to(path: &str) -> Harness<'static, Bench> {
     harness
 }
 
-fn said_by(harness: &Harness<'_, Bench>, author_id: &str) -> Option<String> {
+pub(crate) fn said_by(harness: &Harness<'_, Bench>, author_id: &str) -> Option<String> {
     let node = harness.query_by(|node| node.author_id() == Some(author_id))?;
     let node = node.accesskit_node();
     node.label().or(node.value())
 }
 
-fn answered(harness: &mut Harness<'_, Bench>) {
+pub(crate) fn answered(harness: &mut Harness<'_, Bench>) {
     crate::notes::bench::until(harness, "the answer is shown", |harness| {
         harness
             .query_by(|node| node.author_id() == Some("http-response-status"))

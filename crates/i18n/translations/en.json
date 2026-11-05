@@ -3596,6 +3596,7 @@
       "at": "line:column {{location}}",
       "format": "Format",
       "variablesHint": "A JSON object: a value for each $variable of the query.",
+      "variablesPlaceholder": "{ \"code\": \"FR\" }",
       "problemAt": "Line {{line}}, column {{column}}:",
       "problems": {
         "unclosedBrace": "this brace is not closed.",
