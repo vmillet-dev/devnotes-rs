@@ -1,6 +1,7 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
 pub mod attachments;
+pub mod board;
 pub mod calc_sheets;
 pub mod diagrams;
 pub mod drawing_exports;
@@ -95,6 +96,7 @@ pub struct AppState {
     seeding: Option<Pending<bool>>,
     pub revision: Revision,
     pub notes_query: NotesQueryState,
+    pub board: board::BoardState,
     pub spaces: spaces::SpacesState,
     /// The area's view: only its drawing reads it (D13).
     pub notes_view: crate::notes::View,
@@ -141,6 +143,7 @@ impl AppState {
             seeding: None,
             revision: Revision::default(),
             notes_query: NotesQueryState::default(),
+            board: board::BoardState::default(),
             spaces: spaces::SpacesState::default(),
             notes_view: crate::notes::View::default(),
             notes: notes::NotesState::default(),
@@ -263,6 +266,46 @@ impl AppState {
         let place = (self.spaces.active_space(), self.spaces.active_folder());
         self.notes_query
             .update(ctx, backend, now, place, (self.revision, index));
+        if let Some(place) = self.board_place() {
+            let criteria = self.notes_query.criteria();
+            self.board
+                .update(backend, now, (place, criteria), (self.revision, index));
+        }
+    }
+
+    /// The board, when it is what the canvas shows: the space's, or the open folder's when it
+    /// holds folders. One that holds none is a flat grid whatever the switch says.
+    pub fn board_place(&self) -> Option<board::Place> {
+        let space_id = self.spaces.active_space()?;
+        if board::Mode::read(&self.library_preferences, space_id) != board::Mode::Board {
+            return None;
+        }
+        let root_id = self.spaces.active_folder();
+        if let Some(root) = root_id
+            && !self
+                .spaces
+                .folders()
+                .iter()
+                .any(|folder| folder.parent_id.as_deref() == Some(root))
+        {
+            return None;
+        }
+        Some(board::Place {
+            space_id: space_id.to_owned(),
+            root_id: root_id.map(str::to_owned),
+        })
+    }
+
+    /// The switch, remembered for the space shown: there is no board across every space.
+    fn set_view(&mut self, mode: board::Mode, backend: &Backend) {
+        let Some(space_id) = self.spaces.active_space() else {
+            return;
+        };
+        mode.write(&mut self.library_preferences, space_id);
+        drop(api::preferences::write_library(
+            backend,
+            self.library_preferences.clone(),
+        ));
     }
 
     /// The bodies kept beside the note open — none for a draft or a todo list — and a body put
@@ -499,6 +542,7 @@ impl AppState {
             | Notes::RenameFolder { .. }
             | Notes::RecolourFolder { .. }
             | Notes::DeleteFolder(_)) => self.apply_place(place, backend),
+            Notes::SetView(mode) => self.set_view(mode, backend),
             Notes::Search(typed) => self.notes_query.type_search(ctx, typed),
             Notes::ClearSearch => self.notes_query.clear_search(),
             Notes::SetFilter(filter) => self.notes_query.set_filter(filter),
@@ -703,11 +747,33 @@ impl AppState {
         }
     }
 
-    /// The notes on screen, in the order they are drawn.
+    /// The notes on screen, in the order they are drawn: the board's, dimmed ones included,
+    /// while it shows — a card the search dims there is still on screen and still selectable.
     pub fn on_screen(&self) -> Vec<String> {
+        if self.board_place().is_some() {
+            return self
+                .board
+                .cards()
+                .map(|entry| entry.note.id.clone())
+                .collect();
+        }
         self.notes_query.view().map_or_else(Vec::new, |view| {
             view.cards().map(|card| card.id.clone()).collect()
         })
+    }
+
+    fn pinned_on_screen(&self, id: &str) -> Option<bool> {
+        if self.board_place().is_some() {
+            return self
+                .board
+                .cards()
+                .find(|entry| entry.note.id == id)
+                .map(|entry| entry.note.pinned);
+        }
+        let view = self.notes_query.view()?;
+        view.cards()
+            .find(|card| card.id == id)
+            .map(|card| card.pinned)
     }
 
     /// The ticked notes still on screen; nothing is asked of the core for none.
@@ -742,24 +808,28 @@ impl AppState {
     ) {
         use crate::notes::canvas::shortcuts::CanvasKey;
         let focused = self.notes_view.canvas.focused.clone();
-        let note = focused.as_deref().and_then(|id| {
-            self.notes_query
-                .view()
-                .and_then(|view| view.cards().find(|card| card.id == id))
-        });
-        let pinned = note.map(|card| card.pinned);
+        let pinned = focused.as_deref().and_then(|id| self.pinned_on_screen(id));
         match key {
             CanvasKey::New(kind) => self.new_note(Some(kind)),
             CanvasKey::Move(direction) => {
-                let Some(view) = self.notes_query.view() else {
+                let board = self.board_place().is_some();
+                let on_board = self.on_screen();
+                let sections: Vec<Vec<&str>> = if board {
+                    // The board is walked card by card, zone by zone, as it is laid out.
+                    vec![on_board.iter().map(String::as_str).collect()]
+                } else if let Some(view) = self.notes_query.view() {
+                    view.sections
+                        .iter()
+                        .map(|section| section.cards.iter().map(|card| card.id.as_str()).collect())
+                        .collect()
+                } else {
                     return;
                 };
-                let sections: Vec<Vec<&str>> = view
-                    .sections
-                    .iter()
-                    .map(|section| section.cards.iter().map(|card| card.id.as_str()).collect())
-                    .collect();
-                let columns = self.notes_view.canvas.columns;
+                let columns = if board {
+                    1
+                } else {
+                    self.notes_view.canvas.columns
+                };
                 let to = crate::notes::canvas::grid::neighbour(
                     &sections,
                     columns,

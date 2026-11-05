@@ -241,6 +241,31 @@ fn the_canvas_of_an_open_library() {
     harness.set_size(SIZE);
 }
 
+#[test]
+fn the_board_of_the_samples() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    harness
+        .get_all_by(|node| node.author_id() == Some("space-option"))
+        .next()
+        .expect("the samples have a space")
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "view-board");
+    capture(&mut harness, "board");
+    harness
+        .get_all_by(|node| node.author_id() == Some("board-zone-menu"))
+        .next()
+        .expect("the samples are filed")
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "board-zone-menu");
+}
+
 /// The Dessin of `kinds`, as it opens and with a shape selected.
 fn drawing_editor(harness: &mut Harness<'_, DevNotesApp>) {
     harness

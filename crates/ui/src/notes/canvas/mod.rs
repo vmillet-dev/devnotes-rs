@@ -2,6 +2,7 @@
 //! the viewport is (plan § 3.6), or the state that owns the region instead — loading, an error,
 //! nothing found.
 
+mod board;
 mod card;
 pub mod grid;
 pub mod rows;
@@ -36,6 +37,7 @@ pub struct CanvasView {
     /// The selection bar's: a tag being typed, and a deletion waiting for its confirmation.
     pub tag_draft: String,
     pub confirm_delete: bool,
+    board: board::BoardScreen,
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions: &mut Actions) {
@@ -48,6 +50,10 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
     let mut ui = ui.new_child(UiBuilder::new().max_rect(region));
     let ui = &mut ui;
     let tr = |key: Key| i18n::translate(language, key, &[]);
+    if state.board_place().is_some() {
+        board::show(ui, state, canvas_view, actions);
+        return;
+    }
     if query.error().is_some() {
         // Loading is the one failure that empties the whole screen: it has its own retry.
         padded(ui, canvas, |ui| {
@@ -73,18 +79,18 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         });
         return;
     }
-    let context = card::Context {
-        language,
-        clock: state.clock.as_ref(),
-        thumbnails: &state.caches.thumbnails,
-        library: &state.spaces,
-        armed: state.selection.armed(),
-        selection: &state.selection,
-        selecting: !state.selection.checked_in(&on_screen(view)).is_empty(),
-    };
+    let context = card::Context::of(state, &on_screen(view));
     sections(ui, view, &context, canvas_view, actions);
     hint(ui, language);
-    selection_bar::show(ui, state, view, canvas_view, actions);
+    let shown: Vec<_> = view
+        .cards()
+        .map(|card| selection_bar::Shown {
+            id: &card.id,
+            pinned: card.pinned,
+            tags: &card.tags,
+        })
+        .collect();
+    selection_bar::show(ui, state, &shown, canvas_view, actions);
 }
 
 /// The keys that matter, on the bottom edge whatever is above it.
@@ -109,14 +115,14 @@ fn on_screen(view: &NotesView) -> Vec<&str> {
     view.cards().map(|card| card.id.as_str()).collect()
 }
 
-fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
+pub(super) fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
     egui::Frame::new().inner_margin(padding).show(ui, |ui| {
         ui.spacing_mut().item_spacing.y = 8.0;
         draw(ui);
     });
 }
 
-fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
+pub(super) fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
     let p = palette(ui.ctx());
     let galley = widgets::text(ui, words, 13.0, 400.0, FontFamily::Proportional, p.text_2);
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());

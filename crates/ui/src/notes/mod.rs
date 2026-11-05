@@ -75,6 +75,8 @@ pub enum Action {
         colour: FolderColour,
     },
     DeleteFolder(String),
+    /// List or board, for the space shown.
+    SetView(crate::state::board::Mode),
     /// What the field shows; asked of the core once the keys rest.
     Search(String),
     ClearSearch,

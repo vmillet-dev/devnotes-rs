@@ -170,6 +170,25 @@ pub enum Facet {
     Clear,
 }
 
+/// What both views go by: the search once it rested, the quick filter, the rails. The list
+/// narrows on them, the board dims.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Criteria {
+    pub search: String,
+    pub filter: NoteFilter,
+    pub facets: Facets,
+}
+
+impl Default for Criteria {
+    fn default() -> Self {
+        Self {
+            search: String::new(),
+            filter: NoteFilter::All,
+            facets: Facets::default(),
+        }
+    }
+}
+
 /// What the view depends on, compared by value: the instant is not among them, only the local
 /// day, so the sections move at midnight and not on every frame.
 #[derive(Debug, Clone, PartialEq)]
@@ -307,6 +326,14 @@ impl NotesQueryState {
 
     pub fn filter(&self) -> NoteFilter {
         self.filter
+    }
+
+    pub fn criteria(&self) -> Criteria {
+        Criteria {
+            search: self.search.clone(),
+            filter: self.filter,
+            facets: self.facets.clone(),
+        }
     }
 
     pub fn set_filter(&mut self, filter: NoteFilter) {
