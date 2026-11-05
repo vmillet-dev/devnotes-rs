@@ -133,6 +133,54 @@ fn in_tabs(app: &mut App) {
     );
 }
 
+/// What the fields wearing `author_id` hold, top to bottom.
+fn values(tree: &Tree, author_id: &str) -> Vec<String> {
+    tree.all(author_id)
+        .into_iter()
+        .map(|node| node.value().unwrap_or_default().to_owned())
+        .collect()
+}
+
+/// Typed at the end of what a field holds.
+fn append(app: &mut App, author_id: &str, words: &str) {
+    app.click(author_id);
+    app.press(Key::End, Modifiers::NONE);
+    app.type_text(words);
+}
+
+fn compose(app: &mut App) {
+    step(
+        "the query and its table kept in step, a header split, Ctrl+S",
+        || {
+            app.click_where("http-tab-open", named("GET Login"));
+            app.wait_for("http-url");
+            append(app, "http-url", "?page=2&q=x");
+            app.eventually("the table follows the URL", |tree| {
+                values(tree, "http-kv-key") == ["page", "q", ""]
+            });
+            app.click_nth("http-kv-enabled", 0);
+            app.eventually("the URL follows the table", |tree| {
+                tree.find("http-url")
+                    .and_then(Node::value)
+                    .is_some_and(|url| url == "?q=x")
+            });
+            app.click("http-section-headers");
+            app.wait_for("http-implied-headers");
+            app.click_nth("http-kv-key", 0);
+            app.type_text("Accept: application/json");
+            app.eventually("the header is split into its two cells", |tree| {
+                values(tree, "http-kv-key").first().map(String::as_str) == Some("Accept")
+                    && values(tree, "http-kv-value").first().map(String::as_str)
+                        == Some("application/json")
+            });
+            app.press(Key::S, Modifiers::COMMAND);
+            app.eventually("the tab is saved", |tree| {
+                tabs(tree).contains(&"GET Login".to_owned())
+            });
+        },
+    );
+}
+
 fn fold_kept(app: App) -> App {
     let mut app = app;
     step("a folder folded, still folded after a relaunch", || {
@@ -182,6 +230,7 @@ fn http() {
 
     organise(&mut app);
     in_tabs(&mut app);
+    compose(&mut app);
     let mut app = fold_kept(app);
     delete(&mut app);
     app.quit();

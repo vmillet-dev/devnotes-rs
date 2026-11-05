@@ -1,0 +1,414 @@
+//! The open request: its name, its method and URL on one line, the variables it uses, and its
+//! parts a tab each.
+
+pub(crate) mod table;
+mod url;
+
+use egui::{
+    CornerRadius, FontFamily, FontId, Margin, Rect, Role, Sense, Stroke, StrokeKind, TextEdit, Ui,
+    Vec2, WidgetInfo, pos2,
+};
+use engine::http::model::{HttpMethod, RequestKind};
+use engine::http::send::{ImpliedHeader, ImpliedSource};
+use engine::http::variables::UsedVariable;
+use i18n::keys;
+
+use super::Action;
+use crate::action::{Action as Asked, Actions};
+use crate::state::AppState;
+use crate::state::http::tabs::{DraftEdit, Tab};
+use crate::theme::palette;
+use crate::widgets::{self, Button, ChoiceMenu, interact};
+
+/// A part of the request, a tab of the editor.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum Section {
+    #[default]
+    Params,
+    Headers,
+}
+
+impl Section {
+    fn id(self) -> &'static str {
+        match self {
+            Self::Params => "params",
+            Self::Headers => "headers",
+        }
+    }
+
+    fn name(self) -> i18n::Key {
+        match self {
+            Self::Params => keys::http::editor::sections::PARAMS,
+            Self::Headers => keys::http::editor::sections::HEADERS,
+        }
+    }
+}
+
+/// The parts each kind is edited by, in their order.
+fn sections(kind: RequestKind) -> &'static [Section] {
+    match kind {
+        RequestKind::Http => &[Section::Params, Section::Headers],
+        RequestKind::Graphql | RequestKind::Websocket => &[Section::Headers],
+    }
+}
+
+/// What only the editor's drawing sees: the part chosen, kept from one request to the next.
+#[derive(Default)]
+pub(crate) struct EditorView {
+    chosen: Section,
+}
+
+impl EditorView {
+    /// The part chosen, or the first when the kind leaves it behind.
+    fn section(&self, kind: RequestKind) -> Section {
+        let offered = sections(kind);
+        if offered.contains(&self.chosen) {
+            self.chosen
+        } else {
+            offered[0]
+        }
+    }
+}
+
+fn edit(actions: &mut Actions, tab: &Tab, edit: DraftEdit) {
+    actions.push(Asked::Http(Action::Edit {
+        key: tab.key.clone(),
+        edit,
+    }));
+}
+
+pub(crate) fn show(
+    ui: &mut Ui,
+    state: &AppState,
+    (tab, view): (&Tab, &mut EditorView),
+    actions: &mut Actions,
+) {
+    let language = state.language;
+    egui::ScrollArea::vertical()
+        .id_salt(("http-editor", &tab.key))
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            egui::Frame::new()
+                .inner_margin(Margin::symmetric(20, 14))
+                .show(ui, |ui| {
+                    ui.spacing_mut().item_spacing.y = 12.0;
+                    name(ui, tab, actions, language);
+                    line(ui, state, tab, actions);
+                    let used = state.http.used();
+                    if !used.is_empty() {
+                        chips(ui, used, language);
+                    }
+                    section_tabs(ui, tab, view, language);
+                    match view.section(tab.draft.kind) {
+                        Section::Params => params(ui, tab, actions, language),
+                        Section::Headers => headers(ui, state, tab, actions),
+                    }
+                });
+        });
+}
+
+fn name(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n::Language) {
+    let p = palette(ui.ctx());
+    let mut name = tab.draft.name.clone();
+    let response = ui.add(
+        TextEdit::singleline(&mut name)
+            .id(ui.scope_id().with(("http-request-name", &tab.key)))
+            .frame(egui::Frame::new())
+            .margin(Margin::symmetric(4, 2))
+            .font(FontId::new(16.0, FontFamily::Proportional))
+            .text_color(p.text_0)
+            .desired_width(f32::INFINITY),
+    );
+    let label = i18n::translate(language, keys::http::editor::NAME, &[]);
+    ui.ctx()
+        .accesskit_node_builder(response.id, |node| node.set_label(label));
+    widgets::address(ui, &response, "http-request-name");
+    if response.changed() {
+        edit(actions, tab, DraftEdit::Name(name));
+    }
+}
+
+/// The method — or the kind, which is no control — the URL and « Save ».
+fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
+    let language = state.language;
+    let tr = |key| i18n::translate(language, key, &[]);
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 10.0;
+        if tab.draft.kind == RequestKind::Http {
+            let options: Vec<(HttpMethod, &str)> = HttpMethod::ALL
+                .iter()
+                .map(|method| (*method, method.as_str()))
+                .collect();
+            let mut method = tab.draft.method;
+            let label = tr(keys::http::editor::METHOD);
+            if ChoiceMenu::new(&label, "http-method", &options)
+                .show(ui, &mut method)
+                .changed()
+            {
+                edit(actions, tab, DraftEdit::Method(method));
+            }
+        } else {
+            kind_badge(ui, tab.draft.kind, language);
+        }
+        let save = tr(keys::http::editor::SAVE);
+        let room = ui.available_width() - Button::width(ui, &save) - 10.0;
+        let scopes = url::scopes(state.http.used());
+        let (label, hint) = (
+            tr(keys::http::editor::URL),
+            tr(if tab.draft.kind == RequestKind::Websocket {
+                keys::http::editor::SOCKET_PLACEHOLDER
+            } else {
+                keys::http::editor::URL_PLACEHOLDER
+            }),
+        );
+        let field = url::UrlField {
+            label: &label,
+            hint: &hint,
+            scopes: &scopes,
+        };
+        let mut typed = tab.draft.document.url.clone();
+        if url::show(ui, &mut typed, &field, room).changed() {
+            edit(actions, tab, DraftEdit::Url(typed));
+        }
+        if Button::new(&save, "http-save")
+            .enabled(tab.is_dirty())
+            .show(ui)
+            .clicked()
+        {
+            actions.push(Asked::Http(Action::Save(tab.key.clone())));
+        }
+    });
+}
+
+/// Where a method would be chosen on an HTTP request, at its height: a label, not a control.
+fn kind_badge(ui: &mut Ui, kind: RequestKind, language: i18n::Language) {
+    let p = palette(ui.ctx());
+    let key = match kind {
+        RequestKind::Graphql => keys::http::kinds::badge::GRAPHQL,
+        RequestKind::Http | RequestKind::Websocket => keys::http::kinds::badge::WEBSOCKET,
+    };
+    let words = i18n::translate(language, key, &[]);
+    let galley = widgets::text(ui, &words, 12.0, 700.0, FontFamily::Monospace, p.text_1);
+    let size = Vec2::new(galley.size().x + 24.0, url::HEIGHT);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::hover());
+    ui.painter().rect(
+        rect,
+        CornerRadius::same(8),
+        p.bg_2,
+        Stroke::new(1.0, p.line),
+        StrokeKind::Inside,
+    );
+    ui.painter()
+        .galley(rect.center() - galley.size() / 2.0, galley, p.text_1);
+    response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
+    widgets::address(ui, &response, "http-kind-badge");
+}
+
+/// Each `{{name}}` the request holds, in the colour of where it resolves from; the tooltip says
+/// from where, or that nothing sets it.
+fn chips(ui: &mut Ui, used: &[UsedVariable], language: i18n::Language) {
+    let p = palette(ui.ctx());
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        for known in used {
+            let scope = known.resolved.as_ref().map(|found| found.scope);
+            let hue = url::hue(p, scope);
+            let written = format!("{{{{{}}}}}", known.name);
+            let galley = widgets::text(ui, &written, 12.0, 400.0, FontFamily::Monospace, hue);
+            let size = galley.size() + Vec2::new(16.0, 8.0);
+            let response = interact(
+                ui,
+                size,
+                Sense::hover(),
+                "http-used-variable",
+                || WidgetInfo::labeled(Role::Label, true, &written),
+                CornerRadius::same(6),
+            );
+            let rect = response.rect;
+            ui.painter()
+                .rect_filled(rect, CornerRadius::same(6), hue.gamma_multiply(0.16));
+            ui.painter()
+                .galley(rect.center() - galley.size() / 2.0, galley, hue);
+            let tip = match &known.resolved {
+                Some(found) => {
+                    let key = i18n::Key::find(&format!(
+                        "http.variables.used.from.{}",
+                        found.scope.as_str()
+                    ));
+                    let from = key.map_or_else(String::new, |key| {
+                        i18n::translate(
+                            language,
+                            key,
+                            &[("name", found.from.clone().unwrap_or_default().into())],
+                        )
+                    });
+                    format!("{} · {from}", known.name)
+                }
+                None => format!(
+                    "{} · {}",
+                    known.name,
+                    i18n::translate(language, keys::http::variables::used::NONE, &[])
+                ),
+            };
+            widgets::tooltip(response, &tip);
+        }
+    });
+}
+
+fn section_tabs(ui: &mut Ui, tab: &Tab, view: &mut EditorView, language: i18n::Language) {
+    let p = palette(ui.ctx());
+    let current = view.section(tab.draft.kind);
+    let label = i18n::translate(language, keys::http::editor::PARTS, &[]);
+    let row = ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        for section in sections(tab.draft.kind) {
+            let on = *section == current;
+            let words = i18n::translate(language, section.name(), &[]);
+            let count = counted(tab, *section);
+            let ink = if on { p.text_0 } else { p.text_1 };
+            let galley = widgets::text(ui, &words, 13.0, 500.0, FontFamily::Proportional, ink);
+            let badge = (count > 0).then(|| {
+                widgets::text(
+                    ui,
+                    &count.to_string(),
+                    11.0,
+                    600.0,
+                    FontFamily::Proportional,
+                    p.text_2,
+                )
+            });
+            let extra = badge.as_ref().map_or(0.0, |badge| badge.size().x + 12.0);
+            let size = Vec2::new(galley.size().x + 24.0 + extra, 34.0);
+            let response = interact(
+                ui,
+                size,
+                Sense::click(),
+                &format!("http-section-{}", section.id()),
+                || WidgetInfo::selected(Role::Tab, true, on, &words),
+                CornerRadius::ZERO,
+            );
+            let rect = response.rect;
+            ui.painter().galley(
+                pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0),
+                galley,
+                ink,
+            );
+            if let Some(badge) = badge {
+                let at = pos2(
+                    rect.right() - 12.0 - badge.size().x,
+                    rect.center().y - badge.size().y / 2.0,
+                );
+                ui.painter().galley(at, badge, p.text_2);
+            }
+            if on {
+                let edge = Rect::from_min_max(pos2(rect.left(), rect.bottom() - 2.0), rect.max);
+                ui.painter()
+                    .rect_filled(edge, CornerRadius::ZERO, p.amber_fill);
+            }
+            if response.clicked() {
+                view.chosen = *section;
+            }
+        }
+    });
+    let rect = row.response.rect;
+    ui.painter().hline(
+        rect.x_range(),
+        rect.bottom() - 0.5,
+        Stroke::new(1.0, p.line_soft),
+    );
+    row.response
+        .widget_info(|| WidgetInfo::labeled(Role::TabList, true, &label));
+}
+
+/// How many rows of a part are sent: the number its tab wears.
+fn counted(tab: &Tab, section: Section) -> usize {
+    let document = &tab.draft.document;
+    let rows = match section {
+        Section::Params => &document.params,
+        Section::Headers => &document.headers,
+    };
+    rows.iter()
+        .filter(|row| row.enabled && !row.key.is_empty())
+        .count()
+}
+
+fn params(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n::Language) {
+    let label = i18n::translate(language, keys::http::editor::sections::PARAMS, &[]);
+    let table = table::Table {
+        kind: "params",
+        label: &label,
+        headers: false,
+    };
+    if let Some(rows) = table::show(ui, &table, &tab.draft.document.params, language) {
+        edit(actions, tab, DraftEdit::Params(rows));
+    }
+}
+
+fn headers(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
+    let language = state.language;
+    let implied = state.http.implied();
+    if !implied.is_empty() {
+        implied_list(ui, implied, language);
+    }
+    let label = i18n::translate(language, keys::http::editor::sections::HEADERS, &[]);
+    let table = table::Table {
+        kind: "headers",
+        label: &label,
+        headers: true,
+    };
+    if let Some(rows) = table::show(ui, &table, &tab.draft.document.headers, language) {
+        edit(actions, tab, DraftEdit::Headers(rows));
+    }
+}
+
+/// What leaves with the request without a row of its own, and why: Rust composes the request,
+/// so Rust says.
+fn implied_list(ui: &mut Ui, implied: &[ImpliedHeader], language: i18n::Language) {
+    let p = palette(ui.ctx());
+    let title = i18n::translate(language, keys::http::headers::IMPLIED, &[]);
+    let words = egui::RichText::new(&title).size(11.5).color(p.text_2);
+    ui.add(egui::Label::new(words));
+    let list = ui.vertical(|ui| {
+        ui.spacing_mut().item_spacing.y = 4.0;
+        for header in implied {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 10.0;
+                let name = egui::RichText::new(&header.name)
+                    .monospace()
+                    .size(12.0)
+                    .color(p.text_1);
+                ui.add(egui::Label::new(name));
+                let value = egui::RichText::new(&header.value)
+                    .monospace()
+                    .size(12.0)
+                    .color(p.text_0);
+                let said = ui.add(egui::Label::new(value).truncate());
+                widgets::address(ui, &said, "http-implied-value");
+                let from = egui::RichText::new(origin(header, language))
+                    .size(11.5)
+                    .color(p.text_2);
+                ui.add(egui::Label::new(from));
+            });
+        }
+    });
+    list.response
+        .widget_info(|| WidgetInfo::labeled(Role::List, true, &title));
+    widgets::address(ui, &list.response, "http-implied-headers");
+}
+
+/// « by default », « from the body », or the folder or collection that hands it down.
+fn origin(header: &ImpliedHeader, language: i18n::Language) -> String {
+    if let Some(from) = &header.from {
+        let key = match from.kind {
+            engine::http::model::HttpItemKind::Folder => keys::http::auth::from::FOLDER,
+            _ => keys::http::auth::from::COLLECTION,
+        };
+        return i18n::translate(language, key, &[("name", from.name.as_str().into())]);
+    }
+    let key = match header.source {
+        ImpliedSource::Body => keys::http::headers::from::BODY,
+        ImpliedSource::Url => keys::http::headers::from::URL,
+        ImpliedSource::Default | ImpliedSource::Above => keys::http::headers::from::DEFAULT,
+    };
+    i18n::translate(language, key, &[])
+}

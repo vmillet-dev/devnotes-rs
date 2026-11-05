@@ -3,6 +3,7 @@
 
 mod close;
 mod rail;
+mod request;
 mod tabs;
 
 use egui::{Color32, Rect, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo, pos2};
@@ -44,6 +45,10 @@ pub enum Action {
     SaveAndClose(String),
     /// `Ctrl+S`: the tab in front, when it holds changes.
     SaveActive,
+    Edit {
+        key: String,
+        edit: crate::state::http::tabs::DraftEdit,
+    },
 }
 
 /// What only the area's drawing sees (D13).
@@ -51,6 +56,7 @@ pub enum Action {
 pub struct View {
     rail_width: widgets::RailWidth,
     rail: rail::RailView,
+    editor: request::EditorView,
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
@@ -73,8 +79,9 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     tabs::show(&mut strip, state, actions);
     let below = Rect::from_min_max(rest.min + Vec2::new(0.0, tabs::HEIGHT), rest.max);
     let mut workspace = ui.new_child(UiBuilder::new().max_rect(below));
-    if state.http.tabs().active().is_none() {
-        empty_workspace(&mut workspace, below, state.language, actions);
+    match state.http.tabs().active() {
+        Some(tab) => request::show(&mut workspace, state, (tab, &mut view.editor), actions),
+        None => empty_workspace(&mut workspace, below, state.language, actions),
     }
     close::show(ui, state, actions);
     if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {

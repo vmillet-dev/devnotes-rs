@@ -632,6 +632,7 @@ impl AppState {
             Http::CancelClose => self.http.tabs_mut().cancel_close(),
             Http::Save(key) => self.http.tabs_mut().save(backend, &key),
             Http::SaveAndClose(key) => self.http.tabs_mut().save_and_close(backend, &key),
+            Http::Edit { key, edit } => self.http.tabs_mut().edit(&key, |draft| draft.apply(edit)),
             Http::SaveActive => {
                 let dirty = self.http.tabs().active().filter(|tab| tab.is_dirty());
                 if let Some(key) = dirty.map(|tab| tab.key.clone()) {

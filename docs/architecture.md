@@ -4960,6 +4960,23 @@ deleted, only the interface what is typed. Which requests were open and which wa
 library's (`devnotes.notes.http.tabs`), read once the area is shown and written, with the folds,
 whenever either changes (`HttpState::remember`).
 
+`http::request` draws the tab in front: its name, the method — or the kind, said where a method
+would be chosen and no control — the URL and « Save », the `{{variables}}` it uses as chips, and
+its parts a tab each (params and headers so far). A field edits the draft directly: its text is
+the draft's each frame, and a change is a `DraftEdit` applied at the end of the frame — no
+buffer of the view's to keep in step. The URL and the parameters' table follow each other
+through the core's `query::sync` (the side edited wins), called directly (D12). The URL's
+variables are lit by a `TextEdit` layouter from `variables::spans` — what a variable is and
+where it stands is the core's — in the colour of where each resolves from
+(`http_variables`, asked with the draft, its place and the area's revision), red when nothing
+sets it, amber until Rust has said. `http::request::table` is the key/value table: a blank row
+at the end becomes a row once typed in; as headers, a row that cannot be sent is marked with why
+(`header_faults`), `Name: value` typed in a name is split into its two cells, the caret moving
+to the value (`headers_from_text`), and lines pasted in a name fill a row each. The headers
+sent unasked are listed above the table with where each comes from
+(`implied_http_headers`): Rust composes the request, so Rust says. ⚠️ The header names a key
+field proposed came from the HTTP-headers tool's data: they return with the tools (phase 7).
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

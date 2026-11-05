@@ -1,11 +1,14 @@
 //! The HTTP collections, their requests, and what is sent.
 
 use engine::http::{
-    self,
+    self, VariablesRequest,
     model::{
-        HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest, HttpRequestDraft,
-        HttpRequestPatch, HttpTree, RequestDocument, RequestKind,
+        HeaderFault, HttpContents, HttpItem, HttpMethod, HttpPlace, HttpRequest, HttpRequestDraft,
+        HttpRequestPatch, HttpTree, KeyValue, RequestDocument, RequestKind,
     },
+    query::{QuerySide, SyncedQuery},
+    send::ImpliedHeader,
+    variables::UsedVariable,
 };
 
 use crate::backend::{Backend, Pending};
@@ -100,4 +103,42 @@ pub fn move_item(backend: &Backend, item: HttpItem, place: HttpPlace) -> Pending
 
 pub fn reorder_collection(backend: &Backend, id: String, index: u32) -> Pending<Written> {
     backend.db(move |engine| http::reorder_http_collection(engine, id, index).map(|()| None))
+}
+
+/// Each `{{name}}` of a text, by byte range: what the editor colours. Pure, bounded by a field
+/// (D12).
+pub fn spans(text: &str) -> Vec<(std::ops::Range<usize>, String)> {
+    http::variables::spans(text)
+}
+
+/// Why each header row cannot be sent, if it cannot. Pure (D12).
+pub fn header_faults(rows: &[KeyValue]) -> Vec<Option<HeaderFault>> {
+    http::model::header_faults(rows)
+}
+
+/// `Name: value` lines read as header rows. Pure (D12).
+pub fn read_headers(text: &str) -> Vec<KeyValue> {
+    http::model::headers_from_text(text)
+}
+
+/// The edited side wins: the query string rewritten from the table, or the table from the URL.
+/// Pure (D12).
+pub fn sync_query(url: &str, params: &[KeyValue], edited: QuerySide) -> SyncedQuery {
+    http::query::sync(url, params, edited)
+}
+
+/// What leaves with a request without a row of its own, read as a send reads it.
+pub fn implied_headers(
+    backend: &Backend,
+    (kind, document): (RequestKind, RequestDocument),
+    (collection_id, folder_id): (Option<String>, Option<String>),
+) -> Pending<Vec<ImpliedHeader>> {
+    backend.db(move |engine| {
+        http::implied_http_headers(engine, kind, document, collection_id, folder_id)
+    })
+}
+
+/// Each `{{name}}` a request holds, with what it resolves to and from where.
+pub fn used_variables(backend: &Backend, request: VariablesRequest) -> Pending<Vec<UsedVariable>> {
+    backend.db(move |engine| http::http_variables(engine, request))
 }
