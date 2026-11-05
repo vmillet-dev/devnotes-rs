@@ -10,10 +10,9 @@ use richtext::edit::{self, ordered};
 use richtext::inlines::{self, Mark};
 use richtext::{Document, History, ListKind, Marks, Position, Selection, tree};
 
-use crate::theme::icons::Icon;
 use crate::theme::palette;
+use crate::widgets;
 use crate::widgets::rich::{Laid, RichView};
-use crate::widgets::{self, Button, IconButton, Kind, TextField};
 
 const TOOLBAR_HEIGHT: f32 = 40.0;
 const PADDING: egui::Vec2 = egui::vec2(32.0, 20.0);
@@ -338,12 +337,12 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, language: Language) -> Sh
     let before = view.changes;
     let bar = Rect::from_min_max(whole.min, pos2(whole.right(), whole.top() + TOOLBAR_HEIGHT));
     let mut bar_ui = ui.new_child(UiBuilder::new().id_salt("rich-toolbar").max_rect(bar));
-    toolbar(&mut bar_ui, view, language);
+    toolbar::show(&mut bar_ui, view, language);
     let mut top = bar.bottom();
     if view.link.is_some() {
         let form = Rect::from_min_max(pos2(whole.left(), top), pos2(whole.right(), top + 40.0));
         let mut form_ui = ui.new_child(UiBuilder::new().id_salt("rich-link").max_rect(form));
-        link_form(&mut form_ui, view, language);
+        toolbar::link_form(&mut form_ui, view, language);
         top = form.bottom();
     }
     let p = palette(ui.ctx());
@@ -507,6 +506,7 @@ fn key_pressed(view: &mut RichEditor, key: Key, physical: Option<Key>, modifiers
 
 fn run_command(view: &mut RichEditor, command: shortcuts::Command) {
     use shortcuts::Command;
+    use toolbar::Tool;
     match command {
         Command::Bold => view.toggle(&Mark::Bold),
         Command::Italic => view.toggle(&Mark::Italic),
@@ -520,10 +520,10 @@ fn run_command(view: &mut RichEditor, command: shortcuts::Command) {
             view.record(Step::Other);
             edit::set_heading(&mut view.document, &view.selection, Some(level));
         }
-        Command::Bullet => run(view, Tool::List(ListKind::Bullet)),
-        Command::Ordered => run(view, Tool::List(ListKind::Ordered { start: 1 })),
-        Command::Tasks => run(view, Tool::List(ListKind::Task)),
-        Command::Quote => run(view, Tool::Quote),
+        Command::Bullet => toolbar::run(view, Tool::List(ListKind::Bullet)),
+        Command::Ordered => toolbar::run(view, Tool::List(ListKind::Ordered { start: 1 })),
+        Command::Tasks => toolbar::run(view, Tool::List(ListKind::Task)),
+        Command::Quote => toolbar::run(view, Tool::Quote),
         Command::CodeBlock => view.change(Step::Other, edit::toggle_code_block),
         Command::HardBreak => view.change(Step::Other, edit::hard_break),
         Command::Undo => view.undo(false),
@@ -571,9 +571,26 @@ fn line_edge(view: &mut RichEditor, end: bool, modifiers: Modifiers) {
     view.move_head(Position { offset, ..head }, modifiers.shift);
 }
 
-/// Tab nests an item under the one above, Shift+Tab takes it back up; elsewhere a tab is text.
+/// Tab walks a table's cells, indents code, nests an item under the one above; Shift+Tab goes
+/// back. Elsewhere a tab is text.
 fn tab(view: &mut RichEditor, back: bool) {
     let path = view.selection.head.path.clone();
+    if richtext::table::cell_of(&view.document, &path).is_some() {
+        view.selection = richtext::table::step(&mut view.document, &view.selection, back);
+        view.reveal = true;
+        return;
+    }
+    if let Some(tree::Leaf::Code(_)) = tree::leaf(&view.document, &path) {
+        let unit = code_indent(view);
+        if back {
+            view.change(Step::Other, |document, selection| {
+                edit::outdent_code(document, selection, &unit)
+            });
+        } else {
+            view.type_text(&unit);
+        }
+        return;
+    }
     let item = tree::innermost_item(&view.document, &path);
     match (item, back) {
         (Some(_), false) => view.change(Step::Other, edit::sink_item),
@@ -585,6 +602,17 @@ fn tab(view: &mut RichEditor, back: bool) {
         (None, false) => view.type_text("\t"),
         (None, true) => untab(view),
     }
+}
+
+/// One level of indentation in the code block the caret is in, by its language's habit.
+fn code_indent(view: &RichEditor) -> String {
+    let language = match tree::block(&view.document, &view.selection.head.path) {
+        Some(richtext::Block::CodeBlock { language, .. }) => language.parse().ok(),
+        _ => None,
+    };
+    language
+        .map_or("  ", crate::notes::language::indent_unit)
+        .to_owned()
 }
 
 /// Shift+Tab outside a list: the tab a line starts with goes.
@@ -639,230 +667,8 @@ fn paint_caret(ui: &Ui, view: &RichEditor, body: Rect) {
     });
 }
 
-/// The toolbar's tools: what each does, as the reference's `TOOLS`.
-#[derive(Clone, Copy)]
-enum Tool {
-    Heading(u8),
-    Mark(fn() -> Mark),
-    Link,
-    List(ListKind),
-    Quote,
-}
-
-/// A tool, its address, its icon or none for its text, and its name.
-type Entry = (Tool, &'static str, Option<Icon>, i18n::Key);
-
-fn toolbar(ui: &mut Ui, view: &mut RichEditor, language: Language) {
-    use keys::editor::rich as words;
-    let tr = |key| i18n::translate(language, key, &[]);
-    let groups: [&[Entry]; 3] = [
-        &[
-            (Tool::Heading(1), "rich-h1", None, words::HEADING1),
-            (Tool::Heading(2), "rich-h2", None, words::HEADING2),
-            (Tool::Heading(3), "rich-h3", None, words::HEADING3),
-        ],
-        &[
-            (
-                Tool::Mark(|| Mark::Bold),
-                "rich-bold",
-                Some(Icon::Bold),
-                words::BOLD,
-            ),
-            (
-                Tool::Mark(|| Mark::Italic),
-                "rich-italic",
-                Some(Icon::Italic),
-                words::ITALIC,
-            ),
-            (
-                Tool::Mark(|| Mark::Strike),
-                "rich-strike",
-                Some(Icon::Strike),
-                words::STRIKE,
-            ),
-            (
-                Tool::Mark(|| Mark::Code),
-                "rich-code",
-                Some(Icon::Code),
-                words::CODE,
-            ),
-            (Tool::Link, "rich-link", Some(Icon::Link), words::LINK),
-        ],
-        &[
-            (
-                Tool::List(ListKind::Bullet),
-                "rich-bullet",
-                Some(Icon::ListBullet),
-                words::BULLET_LIST,
-            ),
-            (
-                Tool::List(ListKind::Ordered { start: 1 }),
-                "rich-ordered",
-                Some(Icon::ListOrdered),
-                words::ORDERED_LIST,
-            ),
-            (
-                Tool::List(ListKind::Task),
-                "rich-tasks",
-                Some(Icon::ListTasks),
-                words::TASK_LIST,
-            ),
-            (Tool::Quote, "rich-quote", Some(Icon::Quote), words::QUOTE),
-        ],
-    ];
-    let mut inner = ui.new_child(
-        UiBuilder::new()
-            .max_rect(ui.max_rect().shrink2(vec2(24.0, 6.0)))
-            .layout(egui::Layout::left_to_right(egui::Align::Center)),
-    );
-    inner.spacing_mut().item_spacing.x = 2.0;
-    let group = widgets::region(&mut inner, ui.max_rect(), "rich-toolbar", Sense::hover());
-    let label = tr(words::TOOLBAR);
-    group.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Toolbar, true, &label));
-    for (at, tools) in groups.iter().enumerate() {
-        if at > 0 {
-            inner.add_space(10.0);
-        }
-        for (tool, author_id, icon, key) in *tools {
-            let name = tr(*key);
-            let on = active(view, *tool);
-            let clicked = if let Some(icon) = icon {
-                IconButton::new(*icon, &name, author_id)
-                    .pressed(on)
-                    .show(&mut inner)
-                    .clicked()
-            } else {
-                let text = &author_id["rich-".len()..].to_uppercase();
-                let response = Button::new(text, author_id)
-                    .kind(Kind::Quiet)
-                    .armed(on)
-                    .show(&mut inner);
-                ui.ctx()
-                    .accesskit_node_builder(response.id, |node| node.set_label(name.clone()));
-                response.clicked()
-            };
-            if clicked {
-                run(view, *tool);
-                view.refocus = view.link.is_none();
-            }
-        }
-    }
-}
-
-/// Whether the tool's mark or block is where the caret is.
-fn active(view: &RichEditor, tool: Tool) -> bool {
-    let head = &view.selection.head;
-    match tool {
-        Tool::Heading(level) => matches!(
-            tree::block(&view.document, &head.path),
-            Some(richtext::Block::Heading { level: at, .. }) if *at == level
-        ),
-        Tool::Mark(mark) => {
-            let marks = view.stored.clone().unwrap_or_else(|| view.marks_here());
-            match mark() {
-                Mark::Bold => marks.bold,
-                Mark::Italic => marks.italic,
-                Mark::Strike => marks.strike,
-                Mark::Code => marks.code,
-                Mark::Link(_) => false,
-            }
-        }
-        Tool::Link => view.marks_here().link.is_some(),
-        Tool::List(kind) => tree::innermost_item(&view.document, &head.path)
-            .and_then(|(list, _, _)| tree::block(&view.document, &list).cloned())
-            .is_some_and(|block| {
-                matches!(block, richtext::Block::List { kind: at, .. }
-                    if std::mem::discriminant(&at) == std::mem::discriminant(&kind))
-            }),
-        Tool::Quote => matches!(
-            head.path
-                .first()
-                .and_then(|top| view.document.blocks.get(*top)),
-            Some(richtext::Block::Quote(_))
-        ),
-    }
-}
-
-fn run(view: &mut RichEditor, tool: Tool) {
-    match tool {
-        Tool::Heading(level) => {
-            let on = active(view, tool);
-            view.record(Step::Other);
-            edit::set_heading(&mut view.document, &view.selection, (!on).then_some(level));
-        }
-        Tool::Mark(mark) => view.toggle(&mark()),
-        Tool::Link => {
-            let text = edit::selected_text(&view.document, &view.selection);
-            view.link = Some(LinkForm {
-                text,
-                address: view.marks_here().link.unwrap_or_default(),
-            });
-        }
-        Tool::List(kind) => view.change(Step::Other, |document, selection| {
-            edit::toggle_list(document, selection, kind)
-        }),
-        Tool::Quote => view.change(Step::Other, edit::toggle_quote),
-    }
-}
-
-/// The text and the address of a link; applied over the selection, or written at the caret.
-fn link_form(ui: &mut Ui, view: &mut RichEditor, language: Language) {
-    use keys::editor::rich as words;
-    let tr = |key| i18n::translate(language, key, &[]);
-    let Some(form) = &mut view.link else {
-        return;
-    };
-    let mut inner = ui.new_child(
-        UiBuilder::new()
-            .max_rect(ui.max_rect().shrink2(vec2(24.0, 4.0)))
-            .layout(egui::Layout::left_to_right(egui::Align::Center)),
-    );
-    inner.spacing_mut().item_spacing.x = 8.0;
-    let text_name = tr(words::LINK_TEXT);
-    let address_name = tr(words::LINK_ADDRESS);
-    inner.scope(|ui| {
-        ui.set_width(200.0);
-        TextField::new(&mut form.text, &text_name, "rich-link-text")
-            .compact()
-            .show(ui);
-    });
-    let address = TextField::new(&mut form.address, &address_name, "rich-link-address")
-        .compact()
-        .hint("https://")
-        .show(&mut inner);
-    let entered = address.lost_focus() && inner.input(|input| input.key_pressed(Key::Enter));
-    let applied = Button::new(&tr(words::LINK_APPLY), "rich-link-apply")
-        .kind(Kind::Filled)
-        .show(&mut inner)
-        .clicked();
-    if !(applied || entered) {
-        return;
-    }
-    let Some(LinkForm { text, address }) = view.link.take() else {
-        return;
-    };
-    view.refocus = true;
-    let href = Some(address.trim().to_owned()).filter(|href| !href.is_empty());
-    if view.selection.is_empty() && !text.is_empty() {
-        let marks = Marks {
-            link: href,
-            ..Marks::default()
-        };
-        view.change(Step::Other, |document, selection| {
-            edit::insert_text(document, selection, &text, &marks)
-        });
-    } else {
-        view.record(Step::Other);
-        edit::set_mark(
-            &mut view.document,
-            &view.selection,
-            &Mark::Link(href.clone()),
-            href.is_some(),
-        );
-    }
-}
-
 mod shortcuts;
+mod toolbar;
 
 #[cfg(test)]
 mod tests;

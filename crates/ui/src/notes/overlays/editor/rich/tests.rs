@@ -244,3 +244,47 @@ fn markdown_typed_becomes_formatting_and_the_shortcuts_format() {
         "## Plan\n\n- du **gras** ici\n\n### fin"
     );
 }
+
+#[test]
+fn a_code_block_takes_its_language_and_tab_indents_in_it() {
+    let (mut harness, id) = note("");
+    click_id(&mut harness, "editor-rich");
+    click_id(&mut harness, "rich-codeBlock");
+    click_id(&mut harness, "rich-code-language");
+    harness.get_by_label("PY").click();
+    settle(&mut harness);
+    key_by_key(&mut harness, "if a:");
+    press(&mut harness, Modifiers::NONE, Key::Enter);
+    press(&mut harness, Modifiers::NONE, Key::Tab);
+    key_by_key(&mut harness, "b");
+    click_id(&mut harness, "editor-close");
+    assert_eq!(stored(&harness, &id), "```py\nif a:\n    b\n```");
+}
+
+#[test]
+fn a_table_is_inserted_walked_with_tab_and_edited_from_its_tools() {
+    let (mut harness, id) = note("");
+    click_id(&mut harness, "editor-rich");
+    click_id(&mut harness, "rich-table");
+    for word in ["a", "b", "c"] {
+        type_in(&mut harness, word);
+        press(&mut harness, Modifiers::NONE, Key::Tab);
+    }
+    type_in(&mut harness, "1");
+    click_id(&mut harness, "rich-columnAfter");
+    click_id(&mut harness, "rich-deleteColumn");
+    click_id(&mut harness, "rich-rowAfter");
+    click_id(&mut harness, "rich-deleteRow");
+    click_id(&mut harness, "editor-close");
+    assert_eq!(
+        stored(&harness, &id),
+        "| a   | b   | c   |\n| --- | --- | --- |\n| 1   |     |     |\n|     |     |     |"
+    );
+
+    let (mut harness, id) = note("| a |\n| --- |\n| 1 |\n\nfin");
+    click_id(&mut harness, "editor-rich");
+    press(&mut harness, Modifiers::COMMAND, Key::Home);
+    click_id(&mut harness, "rich-deleteTable");
+    click_id(&mut harness, "editor-close");
+    assert_eq!(stored(&harness, &id), "fin");
+}
