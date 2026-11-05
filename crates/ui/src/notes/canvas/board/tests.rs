@@ -40,6 +40,9 @@ fn tableau() -> (Harness<'static, Bench>, Space) {
     note_in(&backend, &tableau, "EXPLAIN lent sur join", Some(&perf));
     note_in(&backend, &tableau, "Dump nocturne", None);
     let mut harness = area(backend, profile);
+    // Wide enough for both zones whole: two folders made in one millisecond come in either
+    // order, and the second's ⋯ and corner must be on screen whichever it is.
+    harness.set_size(egui::vec2(1_600.0, 900.0));
     click(&mut harness, "space-option", "Tableau");
     (harness, tableau)
 }
@@ -213,7 +216,7 @@ fn a_search_dims_what_it_does_not_match_and_moves_nothing() {
     harness
         .get_by(|node| node.author_id() == Some("search-input"))
         .type_text("EXPLAIN");
-    crate::notes::bench::until(&mut harness, "the board dims", |harness| {
+    until(&mut harness, "the board dims", |harness| {
         !lit(harness, "Dump nocturne")
     });
 
@@ -221,7 +224,7 @@ fn a_search_dims_what_it_does_not_match_and_moves_nothing() {
     assert_eq!(titles_in(&harness, "Perf"), ["EXPLAIN lent sur join"]);
     assert_eq!(offset(&harness), before, "dimmed in its seat");
     click_id(&mut harness, "search-clear");
-    crate::notes::bench::until(&mut harness, "the board lights again", |harness| {
+    until(&mut harness, "the board lights again", |harness| {
         lit(harness, "Dump nocturne")
     });
 }
@@ -257,8 +260,7 @@ fn aligning_leaves_the_zones_and_reorganising_brings_them_back_undoably() {
     far_off(&harness, &tableau, "Perf");
     harness.state_mut().state.revision.bump();
     crate::notes::bench::settle(&mut harness);
-    let zone_x =
-        |harness: &Harness<'_, Bench>| harness.state().state.board.view().unwrap().zones[0].frame.x;
+    let zone_x = |harness: &Harness<'_, Bench>| frame_of(harness, "Perf").x;
     // Waited for, not settled: under load the view is read again a frame or two later.
     until(&mut harness, "the zone is read far off", |harness| {
         zone_x(harness) == 1_600
@@ -287,4 +289,267 @@ fn aligning_leaves_the_zones_and_reorganising_brings_them_back_undoably() {
     until(&mut harness, "the hand's layout is back", |harness| {
         zone_x(harness) == 1_600
     });
+}
+
+/// A press at `from`, the pointer moved in steps, a release at `to`: as a hand drags.
+fn drag(
+    harness: &mut Harness<'_, Bench>,
+    from: egui::Pos2,
+    to: egui::Pos2,
+    button: egui::PointerButton,
+) {
+    let press = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    harness.event(egui::Event::PointerMoved(from));
+    harness.step();
+    harness.event(press(from, true));
+    harness.step();
+    for step in 1..=6 {
+        #[expect(clippy::cast_precision_loss, reason = "six steps")]
+        let at = from + (to - from) * (step as f32 / 6.0);
+        harness.event(egui::Event::PointerMoved(at));
+        harness.step();
+    }
+    harness.event(press(to, false));
+    crate::notes::bench::settle(harness);
+    harness.event(egui::Event::PointerGone);
+}
+
+/// The folder the core says the note is in, as the board last read it.
+fn filed_in(harness: &Harness<'_, Bench>, title: &str) -> Option<String> {
+    harness
+        .state()
+        .state
+        .board
+        .cards()
+        .find(|entry| entry.note.title == title)
+        .and_then(|entry| entry.note.folder_id.clone())
+}
+
+fn folder_named(harness: &Harness<'_, Bench>, space: &Space, name: &str) -> Folder {
+    let space_id = space.id.clone();
+    engine::db::run_here(harness.state().backend.engine(), move |engine| {
+        engine::folders::list_folders(engine, Some(space_id))
+    })
+    .unwrap()
+    .into_iter()
+    .find(|folder| folder.name == name)
+    .unwrap()
+}
+
+/// The frame of the zone named `name`, as the board last read it. By name: two folders made in
+/// the same millisecond come back in either order.
+fn frame_of(harness: &Harness<'_, Bench>, name: &str) -> engine::folders::board::BoardFrame {
+    harness
+        .state()
+        .state
+        .board
+        .view()
+        .unwrap()
+        .zones
+        .iter()
+        .find(|zone| zone.folder.name == name)
+        .unwrap()
+        .frame
+}
+
+/// A zone's own control, by the folder its label names.
+fn control_in(harness: &Harness<'_, Bench>, author_id: &str, zone: &str) -> egui::Rect {
+    harness
+        .get_by(|node| {
+            node.author_id() == Some(author_id)
+                && node.label().is_some_and(|label| label.contains(zone))
+        })
+        .rect()
+}
+
+#[test]
+fn a_card_dragged_into_a_zone_is_filed_there_and_back_out_on_the_ground() {
+    let (mut harness, tableau) = tableau();
+    click_id(&mut harness, "view-board");
+    let card = rect_of(&harness, "board-loose-card", "Dump nocturne");
+    let zone = rect_of(&harness, "board-zone", "Migrations");
+    let migrations = folder_named(&harness, &tableau, "Migrations");
+
+    drag(
+        &mut harness,
+        card.center(),
+        zone.center(),
+        egui::PointerButton::Primary,
+    );
+    assert_eq!(
+        titles_in(&harness, "Migrations"),
+        ["Dump nocturne"],
+        "drawn there at once"
+    );
+    until(&mut harness, "the drop is written", |harness| {
+        filed_in(harness, "Dump nocturne").as_deref() == Some(migrations.id.as_str())
+    });
+
+    let seat = harness
+        .get_by(|node| {
+            node.author_id() == Some("board-zone-card")
+                && node.label().as_deref() == Some("Dump nocturne")
+        })
+        .rect();
+    let ground = seat.center() + egui::vec2(0.0, 360.0);
+    drag(
+        &mut harness,
+        seat.center(),
+        ground,
+        egui::PointerButton::Primary,
+    );
+    until(&mut harness, "the card is loose again", |harness| {
+        filed_in(harness, "Dump nocturne").is_none()
+            && names(harness, "board-loose-card") == ["Dump nocturne"]
+    });
+}
+
+#[test]
+fn a_zone_moves_by_its_grip_and_resizes_by_its_corner_on_the_grid_filing_nothing() {
+    let (mut harness, tableau) = tableau();
+    click_id(&mut harness, "view-board");
+    let before = frame_of(&harness, "Perf");
+    let grip = control_in(&harness, "board-zone-grip", "Perf");
+
+    drag(
+        &mut harness,
+        grip.center(),
+        grip.center() + egui::vec2(93.0, 141.0),
+        egui::PointerButton::Primary,
+    );
+    until(&mut harness, "the move is written", |harness| {
+        frame_of(harness, "Perf").x != before.x
+    });
+    let moved = frame_of(&harness, "Perf");
+    assert_eq!((moved.width, moved.height), (before.width, before.height));
+    assert_eq!((moved.x % 20, moved.y % 20), (0, 0), "on the grid");
+
+    let corner = control_in(&harness, "board-zone-resize", "Perf");
+    drag(
+        &mut harness,
+        corner.center(),
+        corner.center() + egui::vec2(260.0, 200.0),
+        egui::PointerButton::Primary,
+    );
+    until(&mut harness, "the resize is written", |harness| {
+        frame_of(harness, "Perf").width > moved.width
+    });
+    let resized = frame_of(&harness, "Perf");
+    assert_eq!((resized.x, resized.y), (moved.x, moved.y));
+    let perf = folder_named(&harness, &tableau, "Perf");
+    assert_eq!(filed_in(&harness, "EXPLAIN lent sur join"), Some(perf.id));
+    assert_eq!(
+        filed_in(&harness, "Dump nocturne"),
+        None,
+        "a stretched zone captures nothing"
+    );
+}
+
+#[test]
+fn the_grip_and_the_corner_answer_the_arrows_a_dot_at_a_time() {
+    let (mut harness, _) = tableau();
+    click_id(&mut harness, "view-board");
+    let before = frame_of(&harness, "Perf");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("board-zone-grip")
+                && node.label().is_some_and(|label| label.contains("Perf"))
+        })
+        .focus();
+    // egui locks the arrows to a widget from the frame after it took the focus.
+    harness.step();
+    harness.step();
+    for key in [egui::Key::ArrowRight, egui::Key::ArrowDown] {
+        harness.key_press(key);
+        harness.step();
+    }
+    // A dot further each way, snapped onto the lattice.
+    let wanted = (
+        super::gesture::snap(before.x + 20),
+        super::gesture::snap(before.y + 20),
+    );
+    until(&mut harness, "both nudges are written", |harness| {
+        let after = frame_of(harness, "Perf");
+        (after.x, after.y) == wanted
+    });
+    assert!(harness.state().state.board_place().is_some());
+}
+
+#[test]
+fn a_band_drawn_on_the_ground_becomes_the_folder_named_there() {
+    let (mut harness, tableau) = tableau();
+    click_id(&mut harness, "view-board");
+    let ground = rect_of(&harness, "board", "board");
+    let from = egui::pos2(ground.left() + 520.0, ground.top() + 420.0);
+
+    drag(
+        &mut harness,
+        from,
+        from + egui::vec2(300.0, 230.0),
+        egui::PointerButton::Primary,
+    );
+    assert!(harness.state().state.board.drawn_zone().is_some());
+    crate::notes::bench::type_and_enter(&mut harness, "folder-name-input", "Reporting");
+    until(&mut harness, "the zone is drawn", |harness| {
+        names(harness, "board-zone-open").contains(&"Reporting".to_owned())
+    });
+
+    let made = folder_named(&harness, &tableau, "Reporting");
+    let view = harness.state().state.board.view().unwrap();
+    let zone = view
+        .zones
+        .iter()
+        .find(|zone| zone.folder.id == made.id)
+        .unwrap();
+    assert_eq!((zone.frame.x % 20, zone.frame.y % 20), (0, 0));
+    assert!(zone.frame.width >= 300 - 20);
+}
+
+#[test]
+fn a_right_button_sweep_ticks_the_cards_it_crosses_zones_included() {
+    let (mut harness, _) = tableau();
+    click_id(&mut harness, "view-board");
+    let ground = rect_of(&harness, "board", "board");
+
+    drag(
+        &mut harness,
+        ground.min + egui::vec2(4.0, 4.0),
+        ground.max - egui::vec2(4.0, 4.0),
+        egui::PointerButton::Secondary,
+    );
+
+    let ticked = harness.state().state.on_screen();
+    let ticked: Vec<&str> = ticked.iter().map(String::as_str).collect();
+    assert_eq!(harness.state().state.selection.checked_in(&ticked).len(), 2);
+    assert!(
+        harness.state().state.board.drawn_zone().is_none(),
+        "the right button draws no folder"
+    );
+}
+
+#[test]
+fn a_zone_menu_ticks_every_card_it_holds() {
+    let (mut harness, _) = tableau();
+    click_id(&mut harness, "view-board");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("board-zone-menu")
+                && node.label().is_some_and(|label| label.contains("Perf"))
+        })
+        .click();
+    until(&mut harness, "the menu is open", |harness| {
+        harness
+            .query_by(|node| node.author_id() == Some("folder-select-notes"))
+            .is_some()
+    });
+    click_id(&mut harness, "folder-select-notes");
+
+    let ticked = harness.state().state.on_screen();
+    let ticked: Vec<&str> = ticked.iter().map(String::as_str).collect();
+    assert_eq!(harness.state().state.selection.checked_in(&ticked).len(), 1);
 }

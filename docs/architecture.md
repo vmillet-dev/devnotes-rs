@@ -4882,6 +4882,24 @@ the undo bar and put back through `save_board_layout`. The ground pans home afte
 arrangement and back after its undo: `BoardState::pans` counts both, and the drawing forces the
 `ScrollArea`'s offset once per new count.
 
+The four gestures are pointer drags read by `board::Hand`, never egui's drag and drop: a card is
+its own handle (its seat senses the drag, the card under it the click, and egui gives each to
+its own, so a card dragged is never also opened), a zone moves by its header's grip and resizes
+by its corner, the left button on the empty ground draws a folder, and the right button anywhere
+sweeps a selection over the cards drawn this frame. The arithmetic is `board::gesture`, egui-free:
+nothing moves before the pointer travels 4 px, everything lands on `GRID_PX` (20 px, the
+dotted lattice), a drawn band snaps both corners and a resize snaps before it clamps to
+`folders::board`'s minimum. ⚠️ The pointer is read before anything is drawn (`track`) and the
+gesture commits on release alone (`follow`), as one `notes::BoardGesture`: a drop files through
+`file_notes` — the zone under the card's corner, or the board's root on the ground — and is staged
+in `BoardState` so the card is drawn in its new home at once; a membership refused is let go of
+where a refused place is kept. A filed card dragged out leaves its seat faded and travels as a
+ghost on a layer above the board; the zone it would land in says so. A drawn band opens the
+folder-name prompt, and the folder made gets its frame written straight through. The keyboard
+twins: a focused grip or corner moves or resizes the zone a dot per arrow; a card is filed from
+the selection bar; a folder is made from the rail. A zone's ⋯ ticks its every card, dimmed ones
+included.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

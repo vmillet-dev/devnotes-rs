@@ -1,5 +1,6 @@
-//! The name the palette's « New folder » asks for: a folder at the top of the space shown. Its
-//! uniqueness is the core's to check, which alone sees the database.
+//! The name the palette's « New folder » asks for — a folder at the top of the space shown — or
+//! a band drawn on the board, which becomes a folder where it was drawn. Its uniqueness is the
+//! core's to check, which alone sees the database.
 
 use egui::{CornerRadius, FontFamily, Id, Margin, Sense, Stroke, Ui};
 use i18n::keys;
@@ -13,10 +14,11 @@ use crate::widgets::{self, Button, Kind, TextField};
 const WIDTH: f32 = 380.0;
 
 pub(in crate::notes) fn show(ui: &Ui, state: &AppState, name: &mut String, actions: &mut Actions) {
+    let zone = state.board.drawn_zone().is_some();
     let Some(space) = state
         .spaces
         .active_space()
-        .filter(|_| state.spaces.naming())
+        .filter(|_| state.spaces.naming() || zone)
     else {
         name.clear();
         return;
@@ -36,10 +38,15 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, name: &mut String, actio
         .show(ui.ctx(), |ui| prompt(ui, state, name));
     let named = shown.inner.filter(|()| !name.trim().is_empty());
     if let Some(()) = named {
-        actions.push(Action::Notes(Asked::CreateFolder {
-            space_id: space.to_owned(),
-            parent_id: None,
-            name: name.trim().to_owned(),
+        let name = name.trim().to_owned();
+        actions.push(Action::Notes(if zone {
+            Asked::NameZone(name)
+        } else {
+            Asked::CreateFolder {
+                space_id: space.to_owned(),
+                parent_id: None,
+                name,
+            }
         }));
     }
     if named.is_some() || shown.should_close() || shown.inner.is_some() {

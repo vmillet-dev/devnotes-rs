@@ -79,6 +79,10 @@ pub enum Action {
     SetView(crate::state::board::Mode),
     /// The board on screen put back in order, as far as the scope allows.
     Tidy(engine::folders::board::BoardScope),
+    /// What a gesture on the board commits on release, or its keyboard twin.
+    Board(BoardGesture),
+    /// The band drawn last, named: a folder where it was drawn.
+    NameZone(String),
     /// What the field shows; asked of the core once the keys rest.
     Search(String),
     ClearSearch,
@@ -280,6 +284,28 @@ pub enum Trash {
     /// What the search found, or all of it.
     RestoreAll,
     Empty,
+}
+
+/// What a board gesture commits. Membership comes from the drop, and from nothing else.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BoardGesture {
+    /// `folder`: the zone under the card, `None` the ground, which files it in the board's root.
+    DropCard {
+        note_id: String,
+        folder: Option<String>,
+        at: engine::folders::board::BoardPoint,
+    },
+    /// Moved or resized: a frame, either way.
+    MoveZone {
+        folder_id: String,
+        frame: engine::folders::board::BoardFrame,
+    },
+    /// A band on the empty ground, which asks for a name.
+    DrawZone(engine::folders::board::BoardFrame),
+    /// The cards a right-button sweep went over, ticked.
+    Band(Vec<String>),
+    /// Every card a zone draws, dimmed ones included, ticked.
+    SelectFolder(String),
 }
 
 /// What the selection bar does to every ticked note at once.

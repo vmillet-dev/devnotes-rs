@@ -302,6 +302,45 @@ impl AppState {
         })
     }
 
+    /// On the board on screen: a gesture's result is staged and written behind the debounce.
+    fn board_gesture(
+        &mut self,
+        gesture: crate::notes::BoardGesture,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::BoardGesture;
+        let Some(place) = self.board_place() else {
+            return;
+        };
+        let now = ctx.input(|input| input.time);
+        match gesture {
+            BoardGesture::DropCard {
+                note_id,
+                folder,
+                at,
+            } => self
+                .board
+                .drop_card(backend, &place, (note_id, folder), (at, now)),
+            BoardGesture::MoveZone { folder_id, frame } => {
+                self.board.move_zone(&place, folder_id, frame, now);
+            }
+            BoardGesture::DrawZone(frame) => self.board.propose_zone(frame),
+            BoardGesture::Band(ids) => self.selection.check_all(ids),
+            BoardGesture::SelectFolder(id) => {
+                let held: Vec<String> = self
+                    .board
+                    .view()
+                    .into_iter()
+                    .flat_map(|view| &view.zones)
+                    .filter(|zone| zone.folder.id == id)
+                    .flat_map(|zone| zone.notes.iter().map(|entry| entry.note.id.clone()))
+                    .collect();
+                self.selection.check_all(held);
+            }
+        }
+    }
+
     /// The board on screen put back in order; nothing while the list shows.
     fn tidy(&mut self, backend: &Backend, scope: engine::folders::board::BoardScope) {
         if let Some(place) = self.board_place() {
@@ -517,7 +556,10 @@ impl AppState {
         match action {
             Notes::Undo => self.revert_last(backend),
             Notes::DismissUndo => self.undo.dismiss(),
-            Notes::DismissFolderName => self.spaces.dismiss_naming(),
+            Notes::DismissFolderName => {
+                self.spaces.dismiss_naming();
+                self.board.dismiss_zone();
+            }
             Notes::Tags(asked) => self.tags.apply(asked, backend),
             Notes::Fill(asked) => {
                 if asked == crate::notes::Fill::Cancel {
@@ -566,6 +608,12 @@ impl AppState {
             | Notes::DeleteFolder(_)) => self.apply_place(place, backend),
             Notes::SetView(mode) => self.set_view(mode, backend),
             Notes::Tidy(scope) => self.tidy(backend, scope),
+            Notes::Board(gesture) => self.board_gesture(gesture, ctx, backend),
+            Notes::NameZone(name) => {
+                if let Some(place) = self.board_place() {
+                    self.board.name_zone(backend, &place, &name);
+                }
+            }
             Notes::Search(typed) => self.notes_query.type_search(ctx, typed),
             Notes::ClearSearch => self.notes_query.clear_search(),
             Notes::SetFilter(filter) => self.notes_query.set_filter(filter),
@@ -1029,6 +1077,7 @@ impl AppState {
             || self.fill.is_open()
             || self.palette.is_open()
             || self.spaces.naming()
+            || self.board.drawn_zone().is_some()
     }
 
     /// In the space shown, or the first one for « all spaces », and the folder shown.

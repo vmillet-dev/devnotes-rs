@@ -12,7 +12,8 @@ use engine::folders::board::{
     BoardArrangement, BoardFrame, BoardNote, BoardPoint, BoardQuery, BoardScope, BoardView,
     BoardZone, CardPlacement, ZonePlacement,
 };
-use i18n::keys;
+use engine::folders::model::Folder;
+use i18n::{Message, keys};
 
 use super::notes_query::Criteria;
 use super::{QueryCell, Revision};
@@ -89,10 +90,26 @@ struct Staged {
     due: Option<f64>,
 }
 
+/// A zone being made: drawn, then named, then placed where it was drawn.
+struct Making {
+    root_id: Option<String>,
+    frame: BoardFrame,
+    name: String,
+    pending: Pending<Folder>,
+}
+
 #[derive(Default)]
 pub struct BoardState {
     cell: QueryCell<Params, BoardView>,
     staged: Staged,
+    /// Which zone a drop put a card in, `None` the ground, before any view says so: without it
+    /// a card snaps back into or out of its zone for a round trip. ⚠️ Dropped when the filing is
+    /// refused, where a refused place is kept: it would be a lie about which folder a note is in.
+    filing: HashMap<String, Option<String>>,
+    filings: Vec<(String, Pending<Reversible>)>,
+    /// A band drawn and waiting for its name.
+    drawn: Option<BoardFrame>,
+    making: Option<Making>,
     saving: Vec<Pending<()>>,
     arranging: Option<(Option<String>, Pending<BoardArrangement>)>,
     /// ⚠️ Counted, not flagged: the ground pans home after each arrangement and back after each
@@ -123,8 +140,72 @@ impl BoardState {
             .update(|params| api::board::view(backend, query(params, now)));
         if changed && let Some(view) = self.cell.value() {
             release(&mut self.staged, view);
+            let held = membership(view);
+            self.filing
+                .retain(|id, folder| held.get(id.as_str()) != Some(&folder.as_deref()));
         }
         changed
+    }
+
+    /// A card let go of: in the zone under it, or on the ground, which files it in the board's
+    /// root. Through the batch command the selection bar uses too, and offered back by nothing:
+    /// a drop is undone by the opposite drop.
+    pub fn drop_card(
+        &mut self,
+        backend: &Backend,
+        place: &Place,
+        (note_id, folder): (String, Option<String>),
+        (at, now): (BoardPoint, f64),
+    ) {
+        if folder.is_none() {
+            self.move_card(place, note_id.clone(), at, now);
+        }
+        let into = folder.clone().or_else(|| place.root_id.clone());
+        self.filing.insert(note_id.clone(), folder);
+        let pending = api::folders::file(backend, vec![note_id.clone()], into);
+        self.filings.push((note_id, pending));
+    }
+
+    /// Where the card sits once the drops have had their say: a zone, or `None` for the ground.
+    pub fn sitting_in<'a>(&'a self, note_id: &str, in_view: Option<&'a str>) -> Option<&'a str> {
+        self.filing
+            .get(note_id)
+            .map_or(in_view, |folder| folder.as_deref())
+    }
+
+    /// A band drawn on the ground, held until it is named.
+    pub fn propose_zone(&mut self, frame: BoardFrame) {
+        self.drawn = Some(frame);
+    }
+
+    pub fn drawn_zone(&self) -> Option<BoardFrame> {
+        self.drawn
+    }
+
+    pub fn dismiss_zone(&mut self) {
+        self.drawn = None;
+    }
+
+    /// The band drawn last becomes a folder in the board's root, placed where it was drawn.
+    pub fn name_zone(&mut self, backend: &Backend, place: &Place, name: &str) {
+        let (Some(frame), name) = (self.drawn.take(), name.trim()) else {
+            return;
+        };
+        if name.is_empty() {
+            return;
+        }
+        let pending = api::folders::create(
+            backend,
+            place.space_id.clone(),
+            place.root_id.clone(),
+            name.to_owned(),
+        );
+        self.making = Some(Making {
+            root_id: place.root_id.clone(),
+            frame,
+            name: name.to_owned(),
+            pending,
+        });
     }
 
     /// Once a frame, shown or not: the staged layout written once its time comes, the answers
@@ -145,6 +226,8 @@ impl BoardState {
                 ctx.request_repaint_after(Duration::from_secs_f64(due - time));
             }
         }
+        self.adopt_drops(revision, errors);
+        self.adopt_made(backend, revision, errors);
         self.saving.retain_mut(|pending| match pending.poll() {
             None => true,
             Some(Ok(())) => {
@@ -176,6 +259,65 @@ impl BoardState {
             Err(error) => {
                 errors.report(keys::errors::BOARD_ARRANGE_FAILED, &error);
                 None
+            }
+        }
+    }
+
+    fn adopt_drops(&mut self, revision: &mut Revision, errors: &mut ErrorNotifier) {
+        let filing = &mut self.filing;
+        self.filings
+            .retain_mut(|(note_id, pending)| match pending.poll() {
+                None => true,
+                Some(Ok(_)) => {
+                    revision.bump();
+                    false
+                }
+                Some(Err(error)) => {
+                    filing.remove(note_id.as_str());
+                    errors.report(keys::errors::FILE_FAILED, &error);
+                    false
+                }
+            });
+    }
+
+    /// The folder made, its frame written straight through: a frame staged for a folder the
+    /// next view has only just heard of would be let go of.
+    fn adopt_made(
+        &mut self,
+        backend: &Backend,
+        revision: &mut Revision,
+        errors: &mut ErrorNotifier,
+    ) {
+        let Some(making) = &mut self.making else {
+            return;
+        };
+        let Some(answer) = making.pending.poll() else {
+            return;
+        };
+        let Making {
+            root_id,
+            frame,
+            name,
+            ..
+        } = self.making.take().expect("polled just above");
+        match answer {
+            Ok(folder) => {
+                let zone = ZonePlacement {
+                    folder_id: folder.id,
+                    frame,
+                };
+                self.saving.push(api::board::save_layout(
+                    backend,
+                    root_id,
+                    vec![zone],
+                    Vec::new(),
+                ));
+                revision.bump();
+            }
+            Err(error) => {
+                let failed =
+                    Message::new(keys::errors::FOLDER_CREATE_FAILED).with("name", name.as_str());
+                errors.report_message(failed, &error);
             }
         }
     }
@@ -287,6 +429,23 @@ fn release(staged: &mut Staged, view: &BoardView) {
     staged
         .places
         .retain(|id, at| places.get(id.as_str()) != Some(at));
+}
+
+/// Every card of the view, by the zone it is drawn in, `None` for the ground.
+fn membership(view: &BoardView) -> HashMap<&str, Option<&str>> {
+    view.zones
+        .iter()
+        .flat_map(|zone| {
+            zone.notes
+                .iter()
+                .map(|entry| (entry.note.id.as_str(), Some(zone.folder.id.as_str())))
+        })
+        .chain(
+            view.loose
+                .iter()
+                .map(|entry| (entry.note.id.as_str(), None)),
+        )
+        .collect()
 }
 
 fn save(backend: &Backend, staged: &Staged) -> Pending<()> {
