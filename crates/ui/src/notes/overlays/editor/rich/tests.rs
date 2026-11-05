@@ -161,3 +161,61 @@ fn an_empty_note_is_typed_into_from_its_first_line() {
     click_id(&mut harness, "editor-close");
     assert_eq!(stored(&harness, &id), "> 2 * 3 * 4");
 }
+
+#[test]
+fn the_arrows_select_across_blocks_and_cut_then_paste_moves_the_text() {
+    let (mut harness, id) = note("ab\n\ncd\n\nef");
+    click_id(&mut harness, "editor-rich");
+    press(&mut harness, Modifiers::COMMAND, Key::Home);
+    press(&mut harness, Modifiers::NONE, Key::ArrowRight);
+    press(&mut harness, Modifiers::SHIFT, Key::ArrowDown);
+    press(&mut harness, Modifiers::SHIFT, Key::ArrowRight);
+    harness.event(egui::Event::Cut);
+    settle(&mut harness);
+    assert_eq!(surface_text(&harness), "a\nef");
+    press(&mut harness, Modifiers::NONE, Key::ArrowDown);
+    press(&mut harness, Modifiers::NONE, Key::End);
+    press(&mut harness, Modifiers::SHIFT, Key::ArrowLeft);
+    press(&mut harness, Modifiers::NONE, Key::ArrowLeft);
+    press(&mut harness, Modifiers::NONE, Key::ArrowUp);
+    press(&mut harness, Modifiers::NONE, Key::Delete);
+    harness.event(egui::Event::Paste("b\ncd".to_owned()));
+    settle(&mut harness);
+    click_id(&mut harness, "editor-close");
+    assert_eq!(
+        stored(&harness, &id),
+        "ab\n\ncdef",
+        "joined by Delete, then pasted"
+    );
+}
+
+#[test]
+fn a_link_is_written_from_its_form_and_undo_and_redo_step_through_it() {
+    let (mut harness, id) = note("Voir");
+    at_end(&mut harness);
+    type_in(&mut harness, " ");
+    click_id(&mut harness, "rich-link");
+    harness
+        .get_by(|node| node.author_id() == Some("rich-link-text"))
+        .focus();
+    harness.step();
+    harness
+        .get_by(|node| node.author_id() == Some("rich-link-text"))
+        .type_text("le site");
+    harness
+        .get_by(|node| node.author_id() == Some("rich-link-address"))
+        .focus();
+    harness.step();
+    harness
+        .get_by(|node| node.author_id() == Some("rich-link-address"))
+        .type_text("https://devnotes.fr");
+    settle(&mut harness);
+    click_id(&mut harness, "rich-link-apply");
+    assert_eq!(surface_text(&harness), "Voir le site");
+    click_id(&mut harness, "editor-rich");
+    press(&mut harness, Modifiers::COMMAND, Key::Z);
+    assert_eq!(surface_text(&harness), "Voir ");
+    press(&mut harness, Modifiers::COMMAND, Key::Y);
+    click_id(&mut harness, "editor-close");
+    assert_eq!(stored(&harness, &id), "Voir [le site](https://devnotes.fr)");
+}

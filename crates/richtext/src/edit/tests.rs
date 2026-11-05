@@ -121,3 +121,62 @@ fn a_task_is_ticked_and_the_selection_read_as_text() {
     let text = selected_text(&document, &range((&[0, 0, 0], 2), (&[1], 2)));
     assert_eq!(text, "it\nfi");
 }
+
+#[test]
+fn delete_joins_the_next_block_and_backspace_takes_a_rule_out() {
+    let mut document = read("ab\n\ncd");
+    let after = delete_forward(&mut document, &caret_at(&[0], 2));
+    assert_eq!(write(&document), "abcd");
+    assert_eq!(after, caret_at(&[0], 2));
+    let after = delete_forward(&mut document, &caret_at(&[0], 1));
+    assert_eq!(write(&document), "acd");
+    assert_eq!(after, caret_at(&[0], 1));
+
+    let mut document = read("un\n\n---\n\ndeux");
+    let after = delete_backward(&mut document, &caret_at(&[2], 0));
+    assert_eq!(write(&document), "un\n\ndeux");
+    assert_eq!(after, caret_at(&[1], 0));
+}
+
+#[test]
+fn a_heading_at_its_start_becomes_a_paragraph_and_a_break_is_typed() {
+    let mut document = read("## Titre");
+    delete_backward(&mut document, &caret_at(&[0], 0));
+    assert_eq!(write(&document), "Titre");
+    let after = hard_break(&mut document, &caret_at(&[0], 2));
+    assert_eq!(write(&document), "Ti  \ntre");
+    assert_eq!(after, caret_at(&[0], 3));
+}
+
+#[test]
+fn a_nested_item_lifted_takes_the_ones_after_it_along() {
+    let mut document = read("- un\n  - a\n  - b\n- deux");
+    let after = lift_item(&mut document, &[0, 0, 1], 0);
+    assert_eq!(write(&document), "- un\n- a\n  - b\n- deux");
+    assert_eq!(after, caret_at(&[0, 1, 0], 0));
+}
+
+#[test]
+fn an_empty_line_at_a_quote_s_end_leaves_it_and_a_rule_is_inserted() {
+    let mut document = read("> cité");
+    let after = split(&mut document, &caret_at(&[0, 0], 4));
+    let after = split(&mut document, &after);
+    assert_eq!(after, caret_at(&[1], 0));
+    assert_eq!(write(&document), "> cité");
+    let after = insert_rule(&mut document, &after);
+    assert_eq!(after, caret_at(&[3], 0));
+    assert!(matches!(document.blocks[2], Block::Rule));
+}
+
+#[test]
+fn a_selection_inside_one_block_and_text_typed_over_it() {
+    let mut document = read("abcdef");
+    let after = insert_text(
+        &mut document,
+        &range((&[0], 1), (&[0], 4)),
+        "X",
+        &Marks::default(),
+    );
+    assert_eq!(write(&document), "aXef");
+    assert_eq!(after, caret_at(&[0], 2));
+}
