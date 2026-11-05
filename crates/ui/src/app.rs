@@ -245,7 +245,10 @@ impl eframe::App for DevNotesApp {
             ]
         } else if notes_shown {
             &[&keys::NOTES, &keys::APPLICATION]
-        } else if self.state.gate.is_open() && self.state.settings.area == Area::Http {
+        } else if self.state.gate.is_open()
+            && self.state.settings.area == Area::Http
+            && self.state.http.tabs().closing().is_none()
+        {
             &[&keys::HTTP, &keys::APPLICATION]
         } else {
             &[&keys::APPLICATION]

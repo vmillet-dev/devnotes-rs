@@ -102,8 +102,7 @@ fn settle(ui: &Ui, draft: &Draft, field: &egui::Response, clicked: bool) -> Type
 /// « Delete “Auth”? », what goes with it counted by Rust, and its two buttons — red at rest.
 pub(super) fn confirm_delete(
     ui: &mut Ui,
-    row: &RailRow,
-    contents: HttpContents,
+    (row, contents, unsaved): (&RailRow, HttpContents, &[String]),
     actions: &mut Actions,
     language: i18n::Language,
 ) {
@@ -135,6 +134,9 @@ pub(super) fn confirm_delete(
                     .color(p.text_2);
                 let response = ui.add(egui::Label::new(count).wrap());
                 crate::widgets::address(ui, &response, "http-delete-count");
+            }
+            if !unsaved.is_empty() {
+                lost(ui, row, unsaved, language);
             }
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing.x = 6.0;
@@ -170,6 +172,46 @@ pub(super) fn confirm_delete(
     );
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::AlertDialog, true, &question));
     crate::widgets::address(ui, &response, "http-delete-confirm");
+}
+
+/// What Rust cannot count: a tab the deletion closes takes what was typed in it. A note in the
+/// same question, not a second one; red stays the button's.
+fn lost(ui: &mut Ui, row: &RailRow, unsaved: &[String], language: i18n::Language) {
+    let p = palette(ui.ctx());
+    let frame = egui::Frame::new()
+        .fill(p.amber_text.gamma_multiply(0.08))
+        .corner_radius(CornerRadius::same(6))
+        .inner_margin(Margin::symmetric(8, 6));
+    let response = frame
+        .show(ui, |ui| {
+            ui.spacing_mut().item_spacing.y = 2.0;
+            let caption = if row.kind == engine::http::model::HttpItemKind::Request {
+                keys::http::rail::unsaved::SELF
+            } else {
+                keys::http::rail::unsaved::INSIDE
+            };
+            let words = egui::RichText::new(i18n::translate(language, caption, &[]))
+                .size(11.5)
+                .color(p.text_1);
+            ui.add(egui::Label::new(words).wrap());
+            if row.kind == engine::http::model::HttpItemKind::Request {
+                return;
+            }
+            for name in unsaved {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 5.0;
+                    // The dot a modified tab wears, drawn: no embedded face has it.
+                    let (dot, _) =
+                        ui.allocate_exact_size(egui::vec2(6.0, 12.0), egui::Sense::hover());
+                    ui.painter().circle_filled(dot.center(), 3.0, p.amber_text);
+                    let line = egui::RichText::new(name).size(11.5).color(p.text_0);
+                    let said = ui.add(egui::Label::new(line).truncate());
+                    crate::widgets::address(ui, &said, "http-delete-unsaved-name");
+                });
+            }
+        })
+        .response;
+    crate::widgets::address(ui, &response, "http-delete-unsaved");
 }
 
 /// Says only what is there: « no folder » is noise in a sentence about loss.

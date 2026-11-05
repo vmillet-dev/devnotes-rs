@@ -200,6 +200,35 @@ fn the_http_area() {
     settle(&mut harness);
     click(&mut harness, "http-node-delete");
     capture(&mut harness, "http-delete-confirm");
+    click(&mut harness, "http-delete-cancel");
+
+    for name in ["Login", "Flux"] {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some("http-node-name")
+                    && node.label().is_some_and(|label| label.ends_with(name))
+            })
+            .click();
+        settle(&mut harness);
+    }
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| draft.name = "Flux live".to_owned());
+    settle(&mut harness);
+    capture(&mut harness, "http-tabs");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-tab-close")
+                && node
+                    .label()
+                    .is_some_and(|label| label.ends_with("Flux live"))
+        })
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "http-close-dialog");
 }
 
 #[test]

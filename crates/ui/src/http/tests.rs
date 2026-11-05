@@ -304,7 +304,7 @@ fn a_folder_and_a_request_are_made_from_a_row_s_menu() {
             "GQL Lister"
         ]
     );
-    assert_eq!(harness.state_mut().state.http.take_created().len(), 1);
+    assert_eq!(harness.state().state.http.tabs().tabs().len(), 1);
 }
 
 #[test]
@@ -456,4 +456,205 @@ fn a_row_clicked_keeps_the_keys_through_two_moves() {
         .query_by(|node| node.is_focused() && node.author_id() == Some("http-node-name"))
         .map(|node| node.accesskit_node().label());
     assert_eq!(focused, Some(Some("WS Socket".to_owned())));
+}
+
+fn tab_names(harness: &Harness<'_, Bench>) -> Vec<String> {
+    names(harness, "http-tab-open")
+}
+
+#[test]
+fn a_request_opens_in_its_tab_and_its_row_is_lit() {
+    let mut harness = paiements();
+
+    click_named(&mut harness, "http-node-name", "POST Login");
+    crate::notes::bench::until(&mut harness, "the tab opens", |harness| {
+        tab_names(harness) == ["POST Login"]
+    });
+    let lit = harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().as_deref() == Some("POST Login")
+        })
+        .accesskit_node()
+        .toggled();
+    assert_eq!(lit, Some(egui::accesskit::Toggled::True));
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-workspace-empty"))
+            .is_none()
+    );
+
+    click_named(&mut harness, "http-node-name", "WS Socket");
+    click_named(&mut harness, "http-node-name", "POST Login");
+    assert_eq!(tab_names(&harness), ["POST Login", "WS Socket"]);
+    assert_eq!(
+        harness
+            .state()
+            .state
+            .http
+            .tabs()
+            .active()
+            .map(|tab| tab.draft.name.as_str()),
+        Some("Login")
+    );
+}
+
+#[test]
+fn a_new_request_is_begun_from_the_empty_workspace_and_the_tabs() {
+    let mut harness = paiements();
+
+    click_id(&mut harness, "http-workspace-new-graphql");
+    click_id(&mut harness, "http-tab-new");
+
+    assert_eq!(
+        tab_names(&harness),
+        ["GQL New request, modified", "GET New request, modified"]
+    );
+    click_id(&mut harness, "http-tab-new-kind");
+    click_id(&mut harness, "http-new-kind-websocket");
+    assert_eq!(tab_names(&harness).len(), 3);
+    assert!(tab_names(&harness)[2].starts_with("WS"));
+}
+
+#[test]
+fn a_modified_tab_asks_before_closing_and_a_clean_one_does_not() {
+    let mut harness = paiements();
+    click_named(&mut harness, "http-node-name", "POST Login");
+    click_named(&mut harness, "http-node-name", "WS Socket");
+    crate::notes::bench::until(&mut harness, "two tabs", |harness| {
+        tab_names(harness).len() == 2
+    });
+
+    click_named(&mut harness, "http-tab-close", "Close Socket");
+    assert_eq!(tab_names(&harness), ["POST Login"]);
+
+    let key = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active_key()
+        .unwrap()
+        .to_owned();
+    harness
+        .state_mut()
+        .state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| draft.method = HttpMethod::Put);
+    settle(&mut harness);
+    click_named(&mut harness, "http-tab-close", "Close Login");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-close-modified"))
+            .is_some()
+    );
+    click_id(&mut harness, "http-close-cancel");
+    assert_eq!(tab_names(&harness), ["PUT Login, modified"]);
+
+    click_named(&mut harness, "http-tab-close", "Close Login");
+    click_id(&mut harness, "http-close-discard");
+    assert!(tab_names(&harness).is_empty());
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-workspace-empty"))
+            .is_some()
+    );
+}
+
+#[test]
+fn ctrl_s_saves_the_tab_in_front_and_the_rail_reads_it_back() {
+    let mut harness = paiements();
+    click_named(&mut harness, "http-node-name", "POST Login");
+    crate::notes::bench::until(&mut harness, "the tab opens", |harness| {
+        tab_names(harness).len() == 1
+    });
+    let key = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active_key()
+        .unwrap()
+        .to_owned();
+    harness
+        .state_mut()
+        .state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| draft.method = HttpMethod::Delete);
+    settle(&mut harness);
+
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::S);
+    crate::notes::bench::until(&mut harness, "the save is read back", |harness| {
+        tab_names(harness) == ["DEL Login"]
+            && names(harness, "http-node-name").contains(&"DEL Login".to_owned())
+    });
+}
+
+#[test]
+fn the_tabs_left_open_are_reopened_and_a_deleted_request_closes_its_tab() {
+    let mut harness = paiements();
+    click_named(&mut harness, "http-node-name", "POST Login");
+    click_named(&mut harness, "http-node-name", "WS Socket");
+    crate::notes::bench::until(&mut harness, "two tabs", |harness| {
+        tab_names(harness).len() == 2
+    });
+    click_named(&mut harness, "http-tab-open", "POST Login");
+    let stored = remembered(&harness, crate::state::http::tabs::TABS_KEY).unwrap();
+
+    let mut state =
+        crate::state::AppState::new(crate::services::preferences::Preferences::default(), true);
+    let mut preferences = crate::services::preferences::Preferences::default();
+    preferences.set(crate::state::http::tabs::TABS_KEY, &stored);
+    state.http.restore(&preferences);
+    harness.state_mut().state.http = state.http;
+    crate::notes::bench::until(&mut harness, "the tabs are reopened", |harness| {
+        tab_names(harness) == ["POST Login", "WS Socket"]
+    });
+    assert_eq!(
+        harness
+            .state()
+            .state
+            .http
+            .tabs()
+            .active()
+            .map(|tab| tab.draft.name.as_str()),
+        Some("Login")
+    );
+
+    choose(&mut harness, "Socket", &["http-node-delete"]);
+    click_id(&mut harness, "http-delete-submit");
+    crate::notes::bench::until(&mut harness, "its tab closes", |harness| {
+        tab_names(harness) == ["POST Login"]
+    });
+}
+
+#[test]
+fn a_deletion_names_the_open_tabs_it_would_lose() {
+    let mut harness = paiements();
+    click_named(&mut harness, "http-node-name", "POST Login");
+    crate::notes::bench::until(&mut harness, "the tab opens", |harness| {
+        tab_names(harness).len() == 1
+    });
+    let key = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active_key()
+        .unwrap()
+        .to_owned();
+    harness
+        .state_mut()
+        .state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| draft.name = "Login v2".to_owned());
+    settle(&mut harness);
+
+    choose(&mut harness, "Auth", &["http-node-delete"]);
+
+    assert_eq!(names(&harness, "http-delete-unsaved-name").len(), 1);
+    assert!(text(&harness, "http-delete-unsaved-name").contains("Login v2"));
 }

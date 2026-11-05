@@ -4,7 +4,7 @@
 use std::collections::BTreeSet;
 
 use engine::http::model::{
-    HttpItemKind, HttpMethod, HttpNode, HttpRequestSummary, HttpTree, RequestKind,
+    HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpRequestSummary, HttpTree, RequestKind,
 };
 
 /// What the rail writes before a request's name: its method, or the kind's own word.
@@ -123,6 +123,64 @@ fn walk(rows: &mut Vec<RailRow>, nodes: &[HttpNode], at: &Level<'_>, collapsed: 
     }
 }
 
+/// A request as the tree holds it — its name and where it sits — or `None` once it is gone.
+pub fn find_request<'a>(tree: &'a HttpTree, id: &str) -> Option<&'a HttpRequestSummary> {
+    fn walk<'a>(nodes: &'a [HttpNode], id: &str) -> Option<&'a HttpRequestSummary> {
+        nodes.iter().find_map(|node| match node {
+            HttpNode::Request { request } => (request.id == id).then_some(request),
+            HttpNode::Folder { children, .. } => walk(children, id),
+        })
+    }
+    tree.collections
+        .iter()
+        .find_map(|node| walk(&node.children, id))
+}
+
+/// Every request a deletion takes: the request itself, or all a folder or a collection holds.
+pub fn requests_under(tree: &HttpTree, item: &HttpItem) -> Vec<String> {
+    fn all(nodes: &[HttpNode], found: &mut Vec<String>) {
+        for node in nodes {
+            match node {
+                HttpNode::Request { request } => found.push(request.id.clone()),
+                HttpNode::Folder { children, .. } => all(children, found),
+            }
+        }
+    }
+    fn folder<'a>(nodes: &'a [HttpNode], id: &str) -> Option<&'a [HttpNode]> {
+        nodes.iter().find_map(|node| match node {
+            HttpNode::Folder {
+                folder: held,
+                children,
+            } if held.id == id => Some(children.as_slice()),
+            HttpNode::Folder { children, .. } => folder(children, id),
+            HttpNode::Request { .. } => None,
+        })
+    }
+    let mut found = Vec::new();
+    match item.kind {
+        HttpItemKind::Request => found.push(item.id.clone()),
+        HttpItemKind::Folder => {
+            if let Some(children) = tree
+                .collections
+                .iter()
+                .find_map(|node| folder(&node.children, &item.id))
+            {
+                all(children, &mut found);
+            }
+        }
+        HttpItemKind::Collection => {
+            if let Some(node) = tree
+                .collections
+                .iter()
+                .find(|node| node.collection.id == item.id)
+            {
+                all(&node.children, &mut found);
+            }
+        }
+    }
+    found
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use chrono::Utc;
@@ -227,6 +285,29 @@ pub(crate) mod tests {
         let collapsed = BTreeSet::from(["API".to_owned()]);
 
         assert_eq!(rail_rows(&sample(), &collapsed).len(), 1);
+    }
+
+    #[test]
+    fn a_deletion_takes_what_its_item_holds() {
+        let tree = sample();
+        let item = |kind, id: &str| HttpItem {
+            kind,
+            id: id.to_owned(),
+        };
+
+        assert_eq!(
+            requests_under(&tree, &item(HttpItemKind::Folder, "Auth")),
+            ["Login"]
+        );
+        assert_eq!(
+            requests_under(&tree, &item(HttpItemKind::Collection, "API")),
+            ["Login", "Socket"]
+        );
+        assert_eq!(
+            find_request(&tree, "Login").map(|request| request.name.as_str()),
+            Some("Login")
+        );
+        assert!(find_request(&tree, "Auth").is_none());
     }
 
     #[test]

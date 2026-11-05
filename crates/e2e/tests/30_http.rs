@@ -1,6 +1,7 @@
 //! The HTTP area: a collection begun from the empty rail, a folder and requests made from a row's
 //! menu, a request moved with the keys, renamed in place, a fold kept across a relaunch, and the
-//! collection deleted once the rail has said what goes with it.
+//! collection deleted once the rail has said what goes with it. A request opens in its tab,
+//! reopened at the next launch; a draft asks before it is closed.
 //!
 //! Rows are read by their names, which the scenario types: the window speaks the system's
 //! language.
@@ -101,6 +102,37 @@ fn organise(app: &mut App) {
     });
 }
 
+fn tabs(tree: &Tree) -> Vec<String> {
+    tree.texts("http-tab-open")
+}
+
+/// The open tabs, in no order: a request clicked in the rail opens, the rows moved above too.
+fn open(tree: &Tree) -> Vec<String> {
+    let mut open = tabs(tree);
+    open.sort();
+    open
+}
+
+fn in_tabs(app: &mut App) {
+    step(
+        "a request opens in its tab, and a draft asks before it closes",
+        || {
+            app.click_where("http-node-name", named("GET Login"));
+            app.eventually("the requests clicked have their tabs", |tree| {
+                open(tree) == ["GET Login", "WS Flux live"]
+            });
+            app.click("http-tab-new");
+            app.eventually("a draft opens beside them", |tree| tabs(tree).len() == 3);
+            app.click_nth("http-tab-close", 2);
+            app.wait_for("http-close-dialog");
+            app.click("http-close-discard");
+            app.eventually("the draft is gone", |tree| {
+                open(tree) == ["GET Login", "WS Flux live"] && !tree.has("http-close-dialog")
+            });
+        },
+    );
+}
+
 fn fold_kept(app: App) -> App {
     let mut app = app;
     step("a folder folded, still folded after a relaunch", || {
@@ -114,8 +146,9 @@ fn fold_kept(app: App) -> App {
         app.fill("vault-passphrase", e2e::PASSPHRASE);
         app.click("vault-submit");
         app.wait_for("area-http");
-        app.eventually("the fold is kept", |tree| {
+        app.eventually("the fold and the tab are kept", |tree| {
             rows(tree) == [API, "Auth", "WS Flux live"]
+                && open(tree) == ["GET Login", "WS Flux live"]
         });
     });
     app
@@ -134,7 +167,7 @@ fn delete(app: &mut App) {
             choose(app, API, &["http-node-delete"]);
             app.click("http-delete-submit");
             app.eventually("the rail is empty again", |tree| {
-                rows(tree).is_empty() && tree.has("http-rail-empty")
+                rows(tree).is_empty() && tree.has("http-rail-empty") && tabs(tree).is_empty()
             });
         },
     );
@@ -148,6 +181,7 @@ fn http() {
     app.wait_for("note-card");
 
     organise(&mut app);
+    in_tabs(&mut app);
     let mut app = fold_kept(app);
     delete(&mut app);
     app.quit();

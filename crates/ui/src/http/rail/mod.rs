@@ -289,7 +289,7 @@ fn draw_row(
 ) {
     let language = state.language;
     let look = Look {
-        active: false,
+        active: state.http.tabs().active_request() == Some(row.id.as_str()),
         drop: view
             .drop
             .as_ref()
@@ -320,8 +320,13 @@ fn draw_row(
     if name.clicked() {
         name.request_focus();
     }
-    if name.clicked() && row.kind != HttpItemKind::Request {
-        push(actions, Action::Toggle(row.id.clone()));
+    if name.clicked() {
+        let opened = if row.kind == HttpItemKind::Request {
+            Action::OpenRequest(row.id.clone())
+        } else {
+            Action::Toggle(row.id.clone())
+        };
+        push(actions, opened);
     }
     if name.drag_started() {
         view.dragging = Some(row.clone());
@@ -511,7 +516,9 @@ fn attached_under(
         && deleting.item.id == row.id
         && let Some(contents) = deleting.contents
     {
-        forms::confirm_delete(ui, row, contents, actions, language);
+        let under = crate::state::http::tree::requests_under(state.http.tree(), &item(row));
+        let unsaved = state.http.tabs().unsaved_among(&under);
+        forms::confirm_delete(ui, (row, contents, &unsaved), actions, language);
         return;
     }
     if view.creating_under(Some(&row.id)).is_some() {
