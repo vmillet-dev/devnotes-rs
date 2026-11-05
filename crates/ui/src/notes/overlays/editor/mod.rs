@@ -315,7 +315,10 @@ fn rich_body(
     body: &mut String,
     actions: &mut Actions,
 ) -> bool {
-    let shown = rich::show(ui, view, state.language, state.clipboard.as_ref());
+    let shown = rich::show(ui, view, state);
+    for id in shown.wanted {
+        actions.push(Action::Notes(Asked::Picture(id)));
+    }
     if let Some(code) = shown.code_paste {
         actions.push(editor(Editing::Convert {
             session,

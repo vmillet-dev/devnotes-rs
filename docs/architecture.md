@@ -1703,6 +1703,12 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   blocks (`richtext::from_html`, on `html5ever`'s tokenizer; `golden/html-paste` passes
   whole); code pasted into an empty Note makes it a snippet, the conversion detecting its
   language; anything else is text. A pasted image becomes an attachment, as in every editor.
+- **An embedded drawing is read where it is shown**: `devnotes:drawing/<id>` asks
+  `LibraryCaches.pictures` (the large picture, by id, decoded off the frame and kept with the
+  thumbnails' limit); a drawing saved again drops it. Any other image stays as written: a Note
+  never fetches an address. **Ctrl+F and Ctrl+H** open the code's find bar over the text the reader
+  sees (`search_bar::Searchable`): no match crosses from one block into the next, and a
+  replacement wears what the match it replaces wore.
 
 - **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
   `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as

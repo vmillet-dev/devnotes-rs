@@ -1,6 +1,7 @@
-//! A Dessin's small picture, for its card: asked for once the card is drawn (a list carries
-//! none), decoded off the UI thread, uploaded once, and kept for the last cards that showed one
-//! (plan § 3.6 « Images »). It is library content: it lives in `LibraryCaches`.
+//! A Dessin's pictures: the small one for its card, asked for once the card is drawn (a list
+//! carries none), and the large one for a Note that embeds it, asked by its id where it is shown.
+//! Decoded off the UI thread, uploaded once, and kept for the last ones shown (plan § 3.6
+//! « Images »). It is library content: it lives in `LibraryCaches`.
 
 use std::collections::{HashMap, VecDeque};
 
@@ -40,14 +41,43 @@ enum Entry {
     Done(Option<TextureHandle>),
 }
 
-#[derive(Default)]
+/// Which of a drawing's pictures a cache reads.
+type Reader = fn(&Backend, String) -> Pending<Option<String>>;
+
 pub struct Thumbnails {
     entries: HashMap<Stamp, Entry>,
     /// Oldest first: what goes when more than `KEPT` are done.
     done: VecDeque<Stamp>,
+    reader: Reader,
+}
+
+impl Default for Thumbnails {
+    fn default() -> Self {
+        Self {
+            entries: HashMap::new(),
+            done: VecDeque::new(),
+            reader: api::notes::drawing_thumbnail,
+        }
+    }
 }
 
 impl Thumbnails {
+    /// The large pictures, which a Note embeds by id: its stamp is the id alone.
+    pub fn large() -> Self {
+        Self {
+            reader: api::notes::drawing_picture,
+            ..Self::default()
+        }
+    }
+
+    /// An embed's stamp: the id is all a Note holds; a drawing saved again drops it.
+    pub fn embedded(id: &str) -> Stamp {
+        Stamp {
+            id: id.to_owned(),
+            updated_at: DateTime::UNIX_EPOCH,
+        }
+    }
+
     pub fn get(&self, stamp: &Stamp) -> Thumbnail<'_> {
         match self.entries.get(stamp) {
             None => Thumbnail::Unknown,
@@ -61,7 +91,7 @@ impl Thumbnails {
         if self.entries.contains_key(&stamp) {
             return;
         }
-        let reading = api::notes::drawing_thumbnail(backend, stamp.id.clone());
+        let reading = (self.reader)(backend, stamp.id.clone());
         self.entries.insert(stamp, Entry::Reading(reading));
     }
 

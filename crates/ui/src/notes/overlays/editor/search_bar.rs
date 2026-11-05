@@ -1,7 +1,8 @@
 //! The find-and-replace bar over the code (the reference's `search-bar`): the field, how many
 //! matches and which one, case, whole word and regular expression, then — once asked for — the
 //! replacement, one or all. Ctrl+F opens it on the selection, Ctrl+H with the replace row,
-//! Enter and Shift+Enter move between matches, Escape closes it.
+//! Enter and Shift+Enter move between matches, Escape closes it. The code and a Note are searched
+//! alike: each says what it holds through `Searchable`.
 
 use egui::{FontFamily, Key, Margin, Modifiers, Stroke, TextEdit, Ui, Vec2};
 use i18n::{Language, keys};
@@ -21,10 +22,71 @@ pub(super) struct SearchBar {
     focus: bool,
 }
 
+/// What the bar looks in.
+pub(super) trait Searchable {
+    fn selected_text(&self) -> String;
+    fn count(&self, query: &Query) -> Count;
+    /// The selection onto the next match from `from`, wrapping round.
+    fn seek(&mut self, query: &Query, from: SeekFrom, direction: Direction);
+    /// The match selected replaced and the next one selected, or one selected first; the first
+    /// line the text changed from.
+    fn replace_one(&mut self, query: &Query) -> Option<usize>;
+    /// Every match, as one step of undo.
+    fn replace_all(&mut self, query: &Query) -> Option<usize>;
+    fn focus(&mut self);
+}
+
+/// Where a seek starts: the selection's start (the query just changed) or past it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum SeekFrom {
+    Start,
+    Past,
+}
+
+impl Searchable for Editor {
+    fn selected_text(&self) -> String {
+        self.buffer.selected_text()
+    }
+
+    fn count(&self, query: &Query) -> Count {
+        self.buffer.count(query)
+    }
+
+    fn seek(&mut self, query: &Query, from: SeekFrom, direction: Direction) {
+        let range = self.buffer.selection().range();
+        let at = match (from, direction) {
+            (SeekFrom::Past, Direction::Forward) => range.end,
+            _ => range.start,
+        };
+        self.buffer.seek(query, at, direction);
+        self.reveal_selection();
+    }
+
+    fn replace_one(&mut self, query: &Query) -> Option<usize> {
+        let edited = self
+            .buffer
+            .replace_one(query)
+            .map(|edited| edited.first_line);
+        self.reveal_selection();
+        edited
+    }
+
+    fn replace_all(&mut self, query: &Query) -> Option<usize> {
+        self.buffer
+            .replace_all(query)
+            .1
+            .map(|edited| edited.first_line)
+    }
+
+    fn focus(&mut self) {
+        Editor::focus(self);
+    }
+}
+
 impl SearchBar {
     /// Ctrl+F, or Ctrl+H with the replace row: the selection, a word or so, is what is looked for.
-    pub(super) fn open(&mut self, editor: &Editor, replacing: bool) {
-        let selected = editor.buffer.selected_text();
+    pub(super) fn open(&mut self, target: &impl Searchable, replacing: bool) {
+        let selected = target.selected_text();
         if !selected.is_empty() && !selected.contains('\n') {
             self.query.search = selected;
         }
@@ -56,12 +118,12 @@ pub(super) fn shortcut(ui: &Ui) -> Option<bool> {
 pub(super) fn show(
     ui: &mut Ui,
     bar: &mut SearchBar,
-    editor: &mut Editor,
+    editor: &mut impl Searchable,
     language: Language,
 ) -> Option<usize> {
     let p = palette(ui.ctx());
     let mut edited = None;
-    let count = editor.buffer.count(&bar.query);
+    let count = editor.count(&bar.query);
     egui::Frame::new()
         .inner_margin(Margin::symmetric(8, 6))
         .show(ui, |ui| {
@@ -85,7 +147,7 @@ pub(super) fn show(
 fn find_row(
     ui: &mut Ui,
     bar: &mut SearchBar,
-    editor: &mut Editor,
+    editor: &mut impl Searchable,
     (count, language): (Count, Language),
 ) {
     let tr = |key| i18n::translate(language, key, &[]);
@@ -108,9 +170,7 @@ fn find_row(
         searched.request_focus();
     }
     if searched.changed() {
-        let from = editor.buffer.selection().range().start;
-        editor.buffer.seek(&bar.query, from, Direction::Forward);
-        editor.reveal_selection();
+        editor.seek(&bar.query, SeekFrom::Start, Direction::Forward);
     }
     if widgets::takes_keys(ui, &searched) || searched.lost_focus() {
         seek_on_enter(ui, bar, editor);
@@ -172,7 +232,7 @@ fn find_row(
 fn replace_row(
     ui: &mut Ui,
     bar: &mut SearchBar,
-    editor: &mut Editor,
+    editor: &mut impl Searchable,
     language: Language,
     edited: &mut Option<usize>,
 ) {
@@ -191,26 +251,18 @@ fn replace_row(
         .show(ui)
         .clicked();
     if one || enter {
-        *edited = editor
-            .buffer
-            .replace_one(&bar.query)
-            .map(|edited| edited.first_line);
-        editor.reveal_selection();
+        *edited = editor.replace_one(&bar.query);
     }
     if widgets::Button::new(&tr(keys::editor::search::REPLACE_ALL), "search-replace-all")
         .show(ui)
         .clicked()
     {
-        *edited = editor
-            .buffer
-            .replace_all(&bar.query)
-            .1
-            .map(|edited| edited.first_line);
+        *edited = editor.replace_all(&bar.query);
     }
 }
 
 /// Enter: the next match; Shift+Enter: the previous one.
-fn seek_on_enter(ui: &Ui, bar: &SearchBar, editor: &mut Editor) {
+fn seek_on_enter(ui: &Ui, bar: &SearchBar, editor: &mut impl Searchable) {
     let (next, previous) = ui.input_mut(|input| {
         (
             input.consume_key(Modifiers::NONE, Key::Enter),
@@ -224,14 +276,8 @@ fn seek_on_enter(ui: &Ui, bar: &SearchBar, editor: &mut Editor) {
     }
 }
 
-fn step(bar: &SearchBar, editor: &mut Editor, direction: Direction) {
-    let range = editor.buffer.selection().range();
-    let from = match direction {
-        Direction::Forward => range.end,
-        Direction::Backward => range.start,
-    };
-    editor.buffer.seek(&bar.query, from, direction);
-    editor.reveal_selection();
+fn step(bar: &SearchBar, editor: &mut impl Searchable, direction: Direction) {
+    editor.seek(&bar.query, SeekFrom::Past, direction);
 }
 
 fn field(

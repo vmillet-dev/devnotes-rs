@@ -10,9 +10,10 @@ use richtext::edit::{self, ordered};
 use richtext::inlines::{self, Mark};
 use richtext::{Document, History, ListKind, Marks, Position, Selection, tree};
 
+use crate::state::AppState;
 use crate::theme::palette;
 use crate::widgets;
-use crate::widgets::rich::{Laid, RichView};
+use crate::widgets::rich::{Embedded, Laid, RichView};
 
 const TOOLBAR_HEIGHT: f32 = 40.0;
 const PADDING: egui::Vec2 = egui::vec2(32.0, 20.0);
@@ -49,6 +50,7 @@ pub(super) struct RichEditor {
     reveal: bool,
     /// The text takes the keys back after a tool: the caret stays where it was.
     refocus: bool,
+    search: super::search_bar::SearchBar,
 }
 
 impl RichEditor {
@@ -78,6 +80,7 @@ impl RichEditor {
             link: None,
             reveal: false,
             refocus: false,
+            search: super::search_bar::SearchBar::default(),
         }
     }
 
@@ -332,20 +335,19 @@ pub(super) struct Shown {
     pub(super) link: Option<String>,
     /// Code pasted into the empty Note: it becomes a snippet in the language detected.
     pub(super) code_paste: Option<String>,
+    /// The embedded drawings whose picture is to be read.
+    pub(super) wanted: Vec<String>,
 }
 
-pub(super) fn show(
-    ui: &mut Ui,
-    view: &mut RichEditor,
-    language: Language,
-    clipboard: &dyn platform::clipboard::Clipboard,
-) -> Shown {
+pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Shown {
+    let language = state.language;
     let whole = ui.max_rect();
     let mut shown = Shown {
         changed: false,
         left: false,
         link: None,
         code_paste: None,
+        wanted: Vec::new(),
     };
     let before = view.changes;
     let bar = Rect::from_min_max(whole.min, pos2(whole.right(), whole.top() + TOOLBAR_HEIGHT));
@@ -358,6 +360,16 @@ pub(super) fn show(
         toolbar::link_form(&mut form_ui, view, language);
         top = form.bottom();
     }
+    if view.search.open {
+        let room = Rect::from_min_max(pos2(whole.left(), top), whole.max);
+        let mut bar_ui = ui.new_child(UiBuilder::new().id_salt("rich-search").max_rect(room));
+        let mut bar = std::mem::take(&mut view.search);
+        if super::search_bar::show(&mut bar_ui, &mut bar, view, language).is_some() {
+            view.changes += 1;
+        }
+        view.search = bar;
+        top = bar_ui.min_rect().bottom();
+    }
     let p = palette(ui.ctx());
     ui.painter()
         .hline(whole.x_range(), top, Stroke::new(1.0, p.line_soft));
@@ -368,6 +380,9 @@ pub(super) fn show(
     describe(ui, &surface, view, language);
     let reveal = std::mem::take(&mut view.reveal);
     let caret = view.caret_rect();
+    let found = search::lit(view, &view.search);
+    let pictures = |id: &str| embedded(state, id);
+    let missing = i18n::translate(language, keys::drawing::MISSING, &[]);
     let scrolled = egui::ScrollArea::vertical()
         .id_salt("rich-scroll")
         .auto_shrink([false, false])
@@ -378,6 +393,8 @@ pub(super) fn show(
                     ui.set_width(ui.available_width());
                     let painted = RichView::new(&view.document)
                         .editing(&view.selection)
+                        .found(&found)
+                        .pictures(&pictures, &missing)
                         .show(ui);
                     if reveal && let Some(caret) = caret {
                         ui.scroll_to_rect(caret.expand(PADDING.y), None);
@@ -388,6 +405,7 @@ pub(super) fn show(
         });
     let painted = scrolled.inner;
     view.laid = painted.leaves;
+    shown.wanted = painted.wanted;
     if let Some(link) = painted.link {
         shown.link = Some(link);
     }
@@ -395,6 +413,11 @@ pub(super) fn show(
         surface.request_focus();
     }
     let focused = widgets::takes_keys(ui, &surface);
+    if focused && let Some(replacing) = super::search_bar::shortcut(ui) {
+        let mut bar = std::mem::take(&mut view.search);
+        bar.open(view, replacing);
+        view.search = bar;
+    }
     if let Some((list, item)) = painted.ticked {
         view.record(Step::Other);
         edit::toggle_task(&mut view.document, &list, item);
@@ -403,13 +426,24 @@ pub(super) fn show(
     pointer(ui, view, &surface);
     if focused {
         lock_keys(ui, surface.id);
-        shown.code_paste = keys(ui, view, clipboard);
+        shown.code_paste = keys(ui, view, state.clipboard.as_ref());
         paint_caret(ui, view, body);
     }
     shown.left = surface.lost_focus();
     shown.changed = view.changes != before;
     ui.advance_cursor_after_rect(whole);
     shown
+}
+
+/// What stands where the Note embeds drawing `id`: its large picture, read by id once shown.
+fn embedded(state: &AppState, id: &str) -> Option<Embedded> {
+    use crate::state::drawing_pictures::{Thumbnail, Thumbnails};
+    match state.caches.pictures.get(&Thumbnails::embedded(id)) {
+        Thumbnail::Unknown => None,
+        Thumbnail::Waiting => Some(Embedded::Waiting),
+        Thumbnail::Missing => Some(Embedded::Missing),
+        Thumbnail::Shown(texture) => Some(Embedded::Shown(texture.clone())),
+    }
 }
 
 /// Tab and the arrows are the text's while it has the keys; Escape is not, it closes.
@@ -708,6 +742,7 @@ fn paint_caret(ui: &Ui, view: &RichEditor, body: Rect) {
     });
 }
 
+mod search;
 mod shortcuts;
 mod toolbar;
 

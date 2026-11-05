@@ -52,11 +52,33 @@ pub struct Painted {
     pub ticked: Option<(Vec<usize>, usize)>,
     /// Read: clicked; edited: clicked with Ctrl.
     pub link: Option<String>,
+    /// The drawings whose picture was never asked for.
+    pub wanted: Vec<String>,
 }
+
+/// How a Note names a drawing it embeds: an image whose source is the drawing's id.
+pub const DRAWING_SOURCE: &str = "devnotes:drawing/";
+
+/// What stands where a Note embeds a drawing.
+pub enum Embedded {
+    Waiting,
+    /// The drawing is gone, or has no picture yet: said in words.
+    Missing,
+    Shown(egui::TextureHandle),
+}
+
+/// A drawing's picture by its id; `None` when it was never asked for.
+pub type Pictures<'a> = &'a dyn Fn(&str) -> Option<Embedded>;
+
+/// A match the find bar lights: the leaf it is in and its `char` range there.
+pub type Found = (Vec<usize>, std::ops::Range<usize>);
 
 pub struct RichView<'a> {
     document: &'a Document,
     scale: f32,
+    found: &'a [Found],
+    /// The embedded drawings' pictures, and what a missing one says.
+    pictures: Option<(Pictures<'a>, &'a str)>,
     /// Edited: the selection painted, links followed with Ctrl alone.
     selection: Option<&'a Selection>,
 }
@@ -64,7 +86,9 @@ pub struct RichView<'a> {
 /// What every block of a frame is drawn with.
 struct Frame<'a> {
     size: f32,
+    pictures: Option<(Pictures<'a>, &'a str)>,
     selection: Option<&'a Selection>,
+    found: &'a [Found],
     painted: Painted,
 }
 
@@ -73,8 +97,24 @@ impl<'a> RichView<'a> {
         Self {
             document,
             scale: 1.0,
+            found: &[],
+            pictures: None,
             selection: None,
         }
+    }
+
+    /// The pictures of the drawings the Note embeds; without them, each one's name.
+    #[must_use]
+    pub fn pictures(mut self, pictures: Pictures<'a>, missing: &'a str) -> Self {
+        self.pictures = Some((pictures, missing));
+        self
+    }
+
+    /// The find bar's matches, lit under the text.
+    #[must_use]
+    pub fn found(mut self, found: &'a [Found]) -> Self {
+        self.found = found;
+        self
     }
 
     #[must_use]
@@ -92,7 +132,9 @@ impl<'a> RichView<'a> {
     pub fn show(self, ui: &mut Ui) -> Painted {
         let mut frame = Frame {
             size: BODY * self.scale,
+            pictures: self.pictures,
             selection: self.selection,
+            found: self.found,
             painted: Painted::default(),
         };
         ui.vertical(|ui| {
@@ -148,7 +190,7 @@ fn draw_block(ui: &mut Ui, block: &Block, path: &mut Vec<usize>, frame: &mut Fra
         Block::Quote(inner) => quote(ui, inner, path, frame),
         Block::CodeBlock { language, text } => code_block(ui, language, text, path, frame),
         Block::Table(rows) => table(ui, rows, path, frame),
-        Block::Image { alt, src } => image(ui, alt, src, size),
+        Block::Image { alt, src } => image(ui, alt, src, frame),
         Block::Rule => {
             let (rect, _) =
                 ui.allocate_exact_size(vec2(ui.available_width(), size), Sense::hover());
@@ -288,6 +330,13 @@ fn paint_leaf(
     colour: Color32,
     frame: &mut Frame<'_>,
 ) {
+    let p = palette(ui.ctx());
+    for (_, range) in frame.found.iter().filter(|(at, _)| at.as_slice() == path) {
+        for rect in crate::widgets::editor::selection_rects(&galley, range.clone(), false, 4.0) {
+            ui.painter()
+                .rect_filled(rect.translate(origin.to_vec2()), 2.0, p.bg_3);
+        }
+    }
     if let Some(selection) = frame.selection {
         let (start, end) = richtext::edit::ordered(selection);
         let path = path.to_vec();
@@ -299,7 +348,7 @@ fn paint_leaf(
                 galley.text().chars().count()
             };
             let past_end = path != end.path;
-            let fill = palette(ui.ctx()).amber_fill.gamma_multiply(0.3);
+            let fill = p.amber_fill.gamma_multiply(0.3);
             for rect in crate::widgets::editor::selection_rects(&galley, from..to, past_end, 4.0) {
                 ui.painter()
                     .rect_filled(rect.translate(origin.to_vec2()), 2.0, fill);
@@ -603,13 +652,30 @@ fn table(ui: &mut Ui, rows: &[Vec<richtext::Cell>], path: &[usize], frame: &mut 
     }
 }
 
-/// A drawing embedded by `devnotes:drawing/<id>` is drawn with the editor (#1215); here its name.
-fn image(ui: &mut Ui, alt: &str, src: &str, size: f32) {
+/// A drawing embedded by `devnotes:drawing/<id>`, its picture read by id where it is shown; any
+/// other image as it was written: a Note never fetches an address.
+/// The drawing at its own size, never wider than the text.
+fn picture_of(ui: &mut Ui, texture: &egui::TextureHandle, alt: &str) {
+    let natural = texture.size_vec2();
+    let scale = (ui.available_width() / natural.x).min(1.0);
+    let (rect, response) = ui.allocate_exact_size(natural * scale, Sense::hover());
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Image, true, alt));
+    crate::widgets::address(ui, &response, "rich-embed");
+    ui.painter().image(
+        texture.id(),
+        rect,
+        Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+        Color32::WHITE,
+    );
+}
+
+/// Where a picture is coming, or says it will not.
+fn placeholder(ui: &mut Ui, words: &str, size: f32) {
     let p = palette(ui.ctx());
-    let words = if alt.is_empty() { src } else { alt };
     let (rect, response) =
         ui.allocate_exact_size(vec2(ui.available_width(), 3.0 * size), Sense::hover());
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Image, true, words));
+    crate::widgets::address(ui, &response, "rich-embed");
     ui.painter().rect(
         rect,
         CornerRadius::same(8),
@@ -624,6 +690,26 @@ fn image(ui: &mut Ui, alt: &str, src: &str, size: f32) {
         FontId::proportional(12.0),
         p.text_2,
     );
+}
+
+fn image(ui: &mut Ui, alt: &str, src: &str, frame: &mut Frame<'_>) {
+    let size = frame.size;
+    let id = src.strip_prefix(DRAWING_SOURCE);
+    let embedded = id
+        .zip(frame.pictures)
+        .map(|(id, (pictures, missing))| (id, pictures(id), missing));
+    if let Some((id, picture, missing)) = embedded {
+        match picture {
+            Some(Embedded::Shown(texture)) => return picture_of(ui, &texture, alt),
+            Some(Embedded::Missing) => return placeholder(ui, missing, size),
+            Some(Embedded::Waiting) => {}
+            None => frame.painted.wanted.push(id.to_owned()),
+        }
+        return placeholder(ui, "", size);
+    }
+    let written = format!("![{alt}]({src})");
+    let words = if id.is_some() { alt } else { written.as_str() };
+    placeholder(ui, words, size);
 }
 
 #[cfg(test)]
