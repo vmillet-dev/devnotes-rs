@@ -180,3 +180,20 @@ fn a_selection_inside_one_block_and_text_typed_over_it() {
     assert_eq!(write(&document), "aXef");
     assert_eq!(after, caret_at(&[0], 2));
 }
+
+#[test]
+fn a_page_pasted_keeps_its_marks_in_a_line_and_its_blocks_between_two_halves() {
+    let mut document = read("ab");
+    let after = insert_document(
+        &mut document,
+        &caret_at(&[0], 1),
+        crate::from_html("<b>gras</b>"),
+    );
+    assert_eq!(write(&document), "a**gras**b");
+    assert_eq!(after, caret_at(&[0], 5));
+
+    let mut document = read("ab");
+    let pasted = crate::from_html("<h2>Titre</h2><ul><li>un</li></ul>");
+    insert_document(&mut document, &caret_at(&[0], 1), pasted);
+    assert_eq!(write(&document), "a\n\n## Titre\n\n- un\n\nb");
+}
