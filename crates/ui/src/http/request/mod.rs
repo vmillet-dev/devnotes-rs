@@ -1,8 +1,14 @@
 //! The open request: its name, its method and URL on one line, the variables it uses, and its
 //! parts a tab each.
 
+mod body;
+mod graphql;
+mod parts;
 pub(crate) mod table;
 mod url;
+
+#[cfg(test)]
+mod tests;
 
 use egui::{
     CornerRadius, FontFamily, FontId, Margin, Rect, Role, Sense, Stroke, StrokeKind, TextEdit, Ui,
@@ -18,6 +24,7 @@ use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
 use crate::state::http::tabs::{DraftEdit, Tab};
 use crate::theme::palette;
+use crate::widgets::editor::Editor;
 use crate::widgets::{self, Button, ChoiceMenu, interact};
 
 /// A part of the request, a tab of the editor.
@@ -26,6 +33,8 @@ pub(crate) enum Section {
     #[default]
     Params,
     Headers,
+    Body,
+    Query,
 }
 
 impl Section {
@@ -33,6 +42,8 @@ impl Section {
         match self {
             Self::Params => "params",
             Self::Headers => "headers",
+            Self::Body => "body",
+            Self::Query => "query",
         }
     }
 
@@ -40,6 +51,8 @@ impl Section {
         match self {
             Self::Params => keys::http::editor::sections::PARAMS,
             Self::Headers => keys::http::editor::sections::HEADERS,
+            Self::Body => keys::http::editor::sections::BODY,
+            Self::Query => keys::http::editor::sections::QUERY,
         }
     }
 }
@@ -47,8 +60,30 @@ impl Section {
 /// The parts each kind is edited by, in their order.
 fn sections(kind: RequestKind) -> &'static [Section] {
     match kind {
-        RequestKind::Http => &[Section::Params, Section::Headers],
-        RequestKind::Graphql | RequestKind::Websocket => &[Section::Headers],
+        RequestKind::Http => &[Section::Params, Section::Headers, Section::Body],
+        RequestKind::Graphql => &[Section::Query, Section::Headers],
+        RequestKind::Websocket => &[Section::Headers],
+    }
+}
+
+/// The boxes of the tab in front, which take its text and its history with it when it is left.
+#[derive(Default)]
+pub(crate) struct TextBoxes {
+    key: String,
+    body: Editor,
+    query: Editor,
+    variables: Editor,
+}
+
+impl TextBoxes {
+    fn of(&mut self, key: &str) -> &mut Self {
+        if self.key != key {
+            *self = Self {
+                key: key.to_owned(),
+                ..Self::default()
+            };
+        }
+        self
     }
 }
 
@@ -56,6 +91,7 @@ fn sections(kind: RequestKind) -> &'static [Section] {
 #[derive(Default)]
 pub(crate) struct EditorView {
     chosen: Section,
+    boxes: TextBoxes,
 }
 
 impl EditorView {
@@ -99,10 +135,14 @@ pub(crate) fn show(
                     if !used.is_empty() {
                         chips(ui, used, language);
                     }
-                    section_tabs(ui, tab, view, language);
-                    match view.section(tab.draft.kind) {
+                    section_tabs(ui, state, tab, view);
+                    let section = view.section(tab.draft.kind);
+                    let boxes = view.boxes.of(&tab.key);
+                    match section {
                         Section::Params => params(ui, tab, actions, language),
                         Section::Headers => headers(ui, state, tab, actions),
+                        Section::Body => body::show(ui, state, tab, &mut boxes.body, actions),
+                        Section::Query => graphql::show(ui, state, tab, boxes, actions),
                     }
                 });
         });
@@ -287,8 +327,10 @@ fn chips(ui: &mut Ui, used: &[UsedVariable], language: i18n::Language) {
     });
 }
 
-fn section_tabs(ui: &mut Ui, tab: &Tab, view: &mut EditorView, language: i18n::Language) {
+fn section_tabs(ui: &mut Ui, state: &AppState, tab: &Tab, view: &mut EditorView) {
     let p = palette(ui.ctx());
+    let language = state.language;
+    let unusual = state.http.body_answer().is_some_and(|said| said.unusual);
     let current = view.section(tab.draft.kind);
     let label = i18n::translate(language, keys::http::editor::PARTS, &[]);
     let row = ui.horizontal(|ui| {
@@ -309,7 +351,28 @@ fn section_tabs(ui: &mut Ui, tab: &Tab, view: &mut EditorView, language: i18n::L
                     p.text_2,
                 )
             });
-            let extra = badge.as_ref().map_or(0.0, |badge| badge.size().x + 12.0);
+            let warning = (*section == Section::Body && unusual).then(|| {
+                let method = tab.draft.method.as_str();
+                let words = i18n::translate(
+                    language,
+                    keys::http::body::UNUSUAL_SHORT,
+                    &[("method", method.into())],
+                );
+                egui::RichText::new(words).size(11.0).color(p.amber_text)
+            });
+            let warned = warning.as_ref().map_or(0.0, |words| {
+                widgets::text(
+                    ui,
+                    words.text(),
+                    11.0,
+                    400.0,
+                    FontFamily::Proportional,
+                    p.amber_text,
+                )
+                .size()
+                .x + 12.0
+            });
+            let extra = badge.as_ref().map_or(warned, |badge| badge.size().x + 12.0);
             let size = Vec2::new(galley.size().x + 24.0 + extra, 34.0);
             let response = interact(
                 ui,
@@ -331,6 +394,15 @@ fn section_tabs(ui: &mut Ui, tab: &Tab, view: &mut EditorView, language: i18n::L
                     rect.center().y - badge.size().y / 2.0,
                 );
                 ui.painter().galley(at, badge, p.text_2);
+            }
+            if let Some(words) = warning {
+                let right = rect.right() - 12.0;
+                let at = Rect::from_min_max(
+                    pos2(right - warned + 12.0, rect.top()),
+                    pos2(right, rect.bottom()),
+                );
+                let said = ui.put(at, egui::Label::new(words).selectable(false));
+                widgets::address(ui, &said, "http-body-unusual-mark");
             }
             if on {
                 let edge = Rect::from_min_max(pos2(rect.left(), rect.bottom() - 2.0), rect.max);
@@ -358,6 +430,7 @@ fn counted(tab: &Tab, section: Section) -> usize {
     let rows = match section {
         Section::Params => &document.params,
         Section::Headers => &document.headers,
+        Section::Body | Section::Query => return 0,
     };
     rows.iter()
         .filter(|row| row.enabled && !row.key.is_empty())

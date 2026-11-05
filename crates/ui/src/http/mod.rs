@@ -50,6 +50,21 @@ pub enum Action {
         key: String,
         edit: crate::state::http::tabs::DraftEdit,
     },
+    /// Another kind of body; the one left is set aside.
+    ChooseBody {
+        key: String,
+        kind: crate::state::http::bodies::BodyKind,
+    },
+    /// A part of the draft formatted, or its variables completed, by the core.
+    Rewrite {
+        key: String,
+        part: crate::state::http::Rewritten,
+    },
+    /// The system's dialog, for the file a body sends.
+    PickFile {
+        key: String,
+        target: crate::state::http::bodies::FileFor,
+    },
     /// The tab's draft, sent; `None` for the tab in front (`Ctrl+Enter`).
     Send(Option<String>),
     CancelSend(String),

@@ -231,7 +231,7 @@ pub fn format_name(format: StructureFormat) -> &'static str {
     }
 }
 
-fn reason(reason: JsonErrorReason) -> Words {
+pub fn reason(reason: JsonErrorReason) -> Words {
     use keys::json::reasons;
     match reason {
         JsonErrorReason::UnexpectedEnd => reasons::UNEXPECTED_END,

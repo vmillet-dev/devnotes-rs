@@ -3596,6 +3596,7 @@
       "at": "ligne:colonne {{location}}",
       "format": "Formater",
       "variablesHint": "Un objet JSON : une valeur pour chaque $variable de la requête.",
+      "variablesPlaceholder": "{ \"code\": \"FR\" }",
       "problemAt": "Ligne {{line}}, colonne {{column}} :",
       "problems": {
         "unclosedBrace": "cette accolade n’est pas refermée.",

@@ -2,6 +2,7 @@
 //! the tree read again: the core renumbers what a move or a copy touched, and the interface never
 //! guesses the result.
 
+pub mod bodies;
 pub mod moves;
 pub mod send;
 pub mod tabs;
@@ -9,8 +10,12 @@ pub mod tree;
 
 use std::collections::BTreeSet;
 
+use engine::http::BodyAnswer;
 use engine::http::VariablesRequest;
-use engine::http::model::{HttpContents, HttpItem, HttpTree, RequestDocument, RequestKind};
+use engine::http::graphql::{GraphqlAnswer, GraphqlDocument};
+use engine::http::model::{
+    HttpContents, HttpItem, HttpMethod, HttpTree, RequestBody, RequestDocument, RequestKind,
+};
 use engine::http::send::ImpliedHeader;
 use engine::http::variables::UsedVariable;
 use i18n::{Message, keys};
@@ -116,6 +121,44 @@ fn decoded(url: &str) -> Option<egui::ColorImage> {
     ))
 }
 
+/// A part of a draft the core rewrites: what it held when asked, so that typing meanwhile wins.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rewritten {
+    /// A JSON body, by Prettier.
+    Body,
+    Query,
+    Variables,
+    /// The variables with a `null` for each one the operation lacks.
+    Missing,
+}
+
+/// The system's dialog open for a file of that tab's body.
+struct Picking {
+    key: String,
+    target: bodies::FileFor,
+    pending: Pending<Option<std::path::PathBuf>>,
+}
+
+struct Rewriting {
+    key: String,
+    part: Rewritten,
+    before: String,
+    pending: Pending<Option<String>>,
+}
+
+/// The text of `part` in `draft`.
+fn part_of(draft: &tabs::Draft, part: Rewritten) -> &str {
+    let document = &draft.document;
+    match part {
+        Rewritten::Body => match &document.body {
+            RequestBody::Json { text } => text,
+            _ => "",
+        },
+        Rewritten::Query => &document.graphql.query,
+        Rewritten::Variables | Rewritten::Missing => &document.graphql.variables,
+    }
+}
+
 /// A deletion asked: what it takes with it, read before the question is shown.
 pub struct Deleting {
     pub item: HttpItem,
@@ -148,6 +191,14 @@ pub struct HttpState {
     /// Rust composes the request, so Rust says; the last answer stays while the next is read.
     implied: QueryCell<Question, Vec<ImpliedHeader>>,
     used: QueryCell<Question, Vec<UsedVariable>>,
+    /// What the body in front implies, whether it reads, whether its method seldom carries one.
+    body: QueryCell<(RequestBody, HttpMethod), BodyAnswer>,
+    /// The operations of the GraphQL document in front, and what its variables lack.
+    graphql: QueryCell<GraphqlDocument, GraphqlAnswer>,
+    /// A body, a query or variables formatted, or variables completed: written once back,
+    /// unless typed on meanwhile.
+    rewriting: Vec<Rewriting>,
+    picking: Vec<Picking>,
     /// The folds or the tabs changed: the library's preferences are written.
     unremembered: bool,
 }
@@ -174,6 +225,8 @@ impl HttpState {
     ) {
         self.explored.update(backend);
         self.adopt_images(ctx);
+        self.adopt_rewrites(errors);
+        self.adopt_files(errors);
         for id in self.adopt_writes(errors) {
             self.tabs.open(backend, id);
         }
@@ -254,6 +307,13 @@ impl HttpState {
         let Some(tab) = self.tabs.active() else {
             return;
         };
+        self.body
+            .want((tab.draft.document.body.clone(), tab.draft.method));
+        self.body
+            .update(|(body, method)| api::http::describe_body(backend, body, method));
+        self.graphql.want(tab.draft.document.graphql.clone());
+        self.graphql
+            .update(|document| api::http::describe_graphql(backend, document));
         let question = Question {
             kind: tab.draft.kind,
             document: tab.draft.document.clone(),
@@ -279,6 +339,119 @@ impl HttpState {
             };
             api::http::used_variables(backend, request)
         });
+    }
+
+    pub fn body_answer(&self) -> Option<&BodyAnswer> {
+        self.body.value()
+    }
+
+    pub fn graphql_answer(&self) -> Option<&GraphqlAnswer> {
+        self.graphql.value()
+    }
+
+    /// A part of the tab's draft rewritten by the core: formatted, or its variables completed.
+    pub fn rewrite(&mut self, backend: &Backend, key: &str, part: Rewritten) {
+        let Some(tab) = self.tabs.tab(key) else {
+            return;
+        };
+        let before = part_of(&tab.draft, part).to_owned();
+        let pending = match part {
+            Rewritten::Body | Rewritten::Variables => {
+                api::http::prettier(backend, before.clone(), true)
+            }
+            Rewritten::Query => api::http::prettier(backend, before.clone(), false),
+            Rewritten::Missing => {
+                api::http::add_graphql_variables(backend, tab.draft.document.graphql.clone())
+            }
+        };
+        self.rewriting.push(Rewriting {
+            key: key.to_owned(),
+            part,
+            before,
+            pending,
+        });
+    }
+
+    /// Off the frame: the dialog blocks until answered.
+    pub fn pick_file(
+        &mut self,
+        backend: &Backend,
+        dialog: &std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
+        key: String,
+        target: bodies::FileFor,
+    ) {
+        let dialog = std::sync::Arc::clone(dialog);
+        self.picking.push(Picking {
+            key,
+            target,
+            pending: backend.compute(move |_| Ok(dialog.open())),
+        });
+    }
+
+    fn adopt_files(&mut self, errors: &mut ErrorNotifier) {
+        let mut chosen = Vec::new();
+        self.picking.retain_mut(|picking| {
+            let Some(answer) = picking.pending.poll() else {
+                return true;
+            };
+            match answer {
+                Ok(Some(path)) => chosen.push((picking.key.clone(), picking.target, path)),
+                Ok(None) => {}
+                Err(error) => errors.report(keys::http::FAILED, &error),
+            }
+            false
+        });
+        for (key, target, path) in chosen {
+            let Some(tab) = self.tabs.tab(&key) else {
+                continue;
+            };
+            let path = path.to_string_lossy().into_owned();
+            if let Some(body) = bodies::with_file(&tab.draft.document.body, target, path) {
+                self.tabs
+                    .edit(&key, |draft| draft.apply(tabs::DraftEdit::Body(body)));
+            }
+        }
+    }
+
+    fn adopt_rewrites(&mut self, errors: &mut ErrorNotifier) {
+        let mut done = Vec::new();
+        self.rewriting.retain_mut(|rewriting| {
+            let Some(answer) = rewriting.pending.poll() else {
+                return true;
+            };
+            match answer {
+                Ok(Some(text)) => done.push((
+                    rewriting.key.clone(),
+                    rewriting.part,
+                    rewriting.before.clone(),
+                    text,
+                )),
+                Ok(None) => {}
+                Err(error) => errors.report(keys::http::FAILED, &error),
+            }
+            false
+        });
+        for (key, part, before, text) in done {
+            let Some(tab) = self.tabs.tab(&key) else {
+                continue;
+            };
+            if part_of(&tab.draft, part) != before {
+                continue;
+            }
+            let mut graphql = tab.draft.document.graphql.clone();
+            let edit = match part {
+                Rewritten::Body => tabs::DraftEdit::Body(RequestBody::Json { text }),
+                Rewritten::Query => {
+                    graphql.query = text;
+                    tabs::DraftEdit::Graphql(graphql)
+                }
+                Rewritten::Variables | Rewritten::Missing => {
+                    graphql.variables = text;
+                    tabs::DraftEdit::Graphql(graphql)
+                }
+            };
+            self.tabs.edit(&key, |draft| draft.apply(edit));
+        }
     }
 
     pub fn implied(&self) -> &[ImpliedHeader] {
