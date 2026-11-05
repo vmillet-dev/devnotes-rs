@@ -659,6 +659,61 @@ pub fn toggle_task(document: &mut Document, list: &[usize], item: usize) {
     }
 }
 
+/// The caret's paragraph becomes a code block in `language`, its text kept.
+pub fn set_code_block(
+    document: &mut Document,
+    selection: &Selection,
+    language: String,
+) -> Selection {
+    let path = selection.head.path.clone();
+    if let Some((blocks, index)) = tree::siblings_mut(document, &path)
+        && let Block::Paragraph(content) = &blocks[index]
+    {
+        let text = inlines::plain(content);
+        blocks[index] = Block::CodeBlock { language, text };
+    }
+    selection.clone()
+}
+
+/// Ctrl+Alt+C: a paragraph becomes a code block, a code block a paragraph, its lines kept.
+pub fn toggle_code_block(document: &mut Document, selection: &Selection) -> Selection {
+    let path = selection.head.path.clone();
+    let Some((blocks, index)) = tree::siblings_mut(document, &path) else {
+        return selection.clone();
+    };
+    match &blocks[index] {
+        Block::CodeBlock { text, .. } => {
+            let mut content = Vec::new();
+            for (at, line) in text.split('\n').enumerate() {
+                if at > 0 {
+                    content.push(Inline::HardBreak);
+                }
+                content.push(Inline::text(line));
+            }
+            inlines::normalize(&mut content);
+            blocks[index] = Block::Paragraph(content);
+            selection.clone()
+        }
+        _ => set_code_block(document, selection, String::new()),
+    }
+}
+
+/// The caret's paragraph becomes a rule, what followed the caret a paragraph under it.
+pub fn replace_with_rule(document: &mut Document, selection: &Selection) -> Selection {
+    let path = selection.head.path.clone();
+    let rest = take_from(document, &path, selection.head.offset);
+    let Some((blocks, index)) = tree::siblings_mut(document, &path) else {
+        return selection.clone();
+    };
+    blocks[index] = Block::Rule;
+    blocks.insert(index + 1, Block::Paragraph(rest));
+    let mut next = path;
+    if let Some(last) = next.last_mut() {
+        *last += 1;
+    }
+    caret(next, 0)
+}
+
 /// A rule after the caret's top block, the caret in a paragraph after it.
 pub fn insert_rule(document: &mut Document, selection: &Selection) -> Selection {
     let top = selection.head.path.first().copied().unwrap_or(0);
