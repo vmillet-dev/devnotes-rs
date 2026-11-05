@@ -22,6 +22,9 @@ fn notice(tree: &Tree) -> Option<String> {
 fn open(app: &mut App, found_by: &str) {
     app.click("search-input");
     app.press(Key::A, Modifiers::COMMAND);
+    app.press(Key::Backspace, Modifiers::NONE);
+    // Until the search's debounce, the previous search's one card passes for this one.
+    app.eventually("every note listed", |tree| tree.count("note-card") > 1);
     app.type_text(found_by);
     app.eventually("the sample alone", |tree| tree.count("note-card") == 1);
     app.click("note-card-open");
