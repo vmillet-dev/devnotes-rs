@@ -205,6 +205,12 @@ impl AppState {
             self.undo.record(done, time);
         }
         self.undo.update(&mut self.revision, &mut self.errors);
+        if let Some(arranged) = self
+            .board
+            .write(ctx, backend, &mut self.revision, &mut self.errors)
+        {
+            self.undo.record(arranged, time);
+        }
         self.trash
             .update(ctx, backend, &mut self.revision, &mut self.errors);
         self.tags
@@ -294,6 +300,24 @@ impl AppState {
             space_id: space_id.to_owned(),
             root_id: root_id.map(str::to_owned),
         })
+    }
+
+    /// The board on screen put back in order; nothing while the list shows.
+    fn tidy(&mut self, backend: &Backend, scope: engine::folders::board::BoardScope) {
+        if let Some(place) = self.board_place() {
+            self.board.arrange(backend, &place, scope);
+        }
+    }
+
+    /// The last write put back; an arrangement taken back pans the ground back to where it was.
+    fn revert_last(&mut self, backend: &Backend) {
+        if matches!(
+            self.undo.last(),
+            Some(api::undo::Reversible::Arrangement { .. })
+        ) {
+            self.board.restored();
+        }
+        self.undo.revert(backend);
     }
 
     /// The switch, remembered for the space shown: there is no board across every space.
@@ -491,9 +515,7 @@ impl AppState {
     ) {
         use crate::notes::Action as Notes;
         match action {
-            Notes::Undo => {
-                self.undo.revert(backend);
-            }
+            Notes::Undo => self.revert_last(backend),
             Notes::DismissUndo => self.undo.dismiss(),
             Notes::DismissFolderName => self.spaces.dismiss_naming(),
             Notes::Tags(asked) => self.tags.apply(asked, backend),
@@ -543,6 +565,7 @@ impl AppState {
             | Notes::RecolourFolder { .. }
             | Notes::DeleteFolder(_)) => self.apply_place(place, backend),
             Notes::SetView(mode) => self.set_view(mode, backend),
+            Notes::Tidy(scope) => self.tidy(backend, scope),
             Notes::Search(typed) => self.notes_query.type_search(ctx, typed),
             Notes::ClearSearch => self.notes_query.clear_search(),
             Notes::SetFilter(filter) => self.notes_query.set_filter(filter),
@@ -868,9 +891,8 @@ impl AppState {
                     self.notes.delete(backend, vec![id]);
                 }
             }
-            CanvasKey::Undo => {
-                self.undo.revert(backend);
-            }
+            CanvasKey::Undo => self.revert_last(backend),
+            CanvasKey::Align => self.tidy(backend, engine::folders::board::BoardScope::LooseCards),
             CanvasKey::StepBack => self.step_back(ctx, backend),
         }
     }
@@ -884,7 +906,7 @@ impl AppState {
             return;
         }
         if self.undo.banner(ctx.input(|input| input.time)).is_some() {
-            self.undo.revert(backend);
+            self.revert_last(backend);
             return;
         }
         if self.selection.clear() {

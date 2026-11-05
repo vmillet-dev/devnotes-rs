@@ -183,3 +183,99 @@ fn board_budget() {
         frames[100], frames[190], frames[198]
     );
 }
+
+/// Whether the seat of the card titled `title` is lit.
+fn lit(harness: &Harness<'_, Bench>, title: &str) -> bool {
+    !harness
+        .get_by(|node| {
+            matches!(
+                node.author_id(),
+                Some("board-loose-card" | "board-zone-card")
+            ) && node.label().as_deref() == Some(title)
+        })
+        .accesskit_node()
+        .is_disabled()
+}
+
+#[test]
+fn a_search_dims_what_it_does_not_match_and_moves_nothing() {
+    let (mut harness, _) = tableau();
+    click_id(&mut harness, "view-board");
+    let offset = |harness: &Harness<'_, Bench>| {
+        rect_of(harness, "board-loose-card", "Dump nocturne").min
+            - rect_of(harness, "board-zone", "Perf").min
+    };
+    let before = offset(&harness);
+
+    click_id(&mut harness, "search-input");
+    harness
+        .get_by(|node| node.author_id() == Some("search-input"))
+        .type_text("EXPLAIN");
+    crate::notes::bench::until(&mut harness, "the board dims", |harness| {
+        !lit(harness, "Dump nocturne")
+    });
+
+    assert!(lit(&harness, "EXPLAIN lent sur join"));
+    assert_eq!(titles_in(&harness, "Perf"), ["EXPLAIN lent sur join"]);
+    assert_eq!(offset(&harness), before, "dimmed in its seat");
+    click_id(&mut harness, "search-clear");
+    crate::notes::bench::until(&mut harness, "the board lights again", |harness| {
+        lit(harness, "Dump nocturne")
+    });
+}
+
+/// The zone of `name`, far off to the right, as a hand would have left it.
+fn far_off(harness: &Harness<'_, Bench>, space: &Space, name: &str) {
+    let space_id = space.id.clone();
+    let name = name.to_owned();
+    engine::db::run_here(harness.state().backend.engine(), move |engine| {
+        let folder = engine::folders::list_folders(engine, Some(space_id))?
+            .into_iter()
+            .find(|folder| folder.name == name)
+            .unwrap();
+        let zone = engine::folders::board::ZonePlacement {
+            folder_id: folder.id,
+            frame: engine::folders::board::BoardFrame {
+                x: 1_600,
+                y: 40,
+                width: 300,
+                height: 220,
+            },
+        };
+        engine::folders::save_board_layout(engine, None, vec![zone], Vec::new())
+    })
+    .unwrap();
+}
+
+#[test]
+fn aligning_leaves_the_zones_and_reorganising_brings_them_back_undoably() {
+    let (mut harness, tableau) = tableau();
+    click_id(&mut harness, "view-board");
+    let seat = rect_of(&harness, "board-zone", "Perf");
+    far_off(&harness, &tableau, "Perf");
+    harness.state_mut().state.revision.bump();
+    crate::notes::bench::settle(&mut harness);
+    let zone_x =
+        |harness: &Harness<'_, Bench>| harness.state().state.board.view().unwrap().zones[0].frame.x;
+    assert_eq!(zone_x(&harness), 1_600);
+
+    click_id(&mut harness, "board-tidy");
+    assert_eq!(zone_x(&harness), 1_600, "aligning moves no zone");
+
+    click_id(&mut harness, "board-tidy-more");
+    click_id(&mut harness, "board-tidy-everything");
+    assert_ne!(zone_x(&harness), 1_600);
+    assert_eq!(
+        rect_of(&harness, "board-zone", "Perf"),
+        seat,
+        "and the ground pans home"
+    );
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("undo-text"))
+            .is_some()
+    );
+
+    click_id(&mut harness, "undo-restore");
+    assert_eq!(zone_x(&harness), 1_600);
+}

@@ -7,12 +7,12 @@ use egui::{
     UiBuilder, Vec2, WidgetInfo, pos2, vec2,
 };
 use engine::folders::board::{
-    BoardChild, BoardZone, CARD_HEIGHT, CARD_WIDTH, GAP, ZONE_BORDER, ZONE_HEADER, ZONE_PADDING,
-    ZONE_SUBFOLDERS, columns_in,
+    BoardChild, BoardFrame, BoardZone, CARD_HEIGHT, CARD_WIDTH, GAP, ZONE_BORDER, ZONE_HEADER,
+    ZONE_PADDING, ZONE_SUBFOLDERS, columns_in,
 };
 use i18n::keys;
 
-use super::{BoardScreen, px};
+use super::{BoardScreen, px, seated};
 use crate::action::{Action, Actions};
 use crate::notes::canvas::{CanvasView, card};
 use crate::notes::panel::{self, FolderEdit};
@@ -21,9 +21,10 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, address, interact};
 
+/// `at`: where it is drawn and the frame it is drawn from, a move staged included.
 pub(super) fn show(
     ui: &mut Ui,
-    rect: Rect,
+    (rect, frame): (Rect, BoardFrame),
     zone: &BoardZone,
     context: &card::Context<'_>,
     screen: &mut BoardScreen,
@@ -62,7 +63,7 @@ pub(super) fn show(
         top = row.bottom();
     }
     let body = Rect::from_min_max(pos2(inside.left(), top), inside.max);
-    flow(ui, body, zone, context, (canvas_view, actions));
+    flow(ui, (body, frame), zone, context, (canvas_view, actions));
 }
 
 /// The swatch, the title that opens the folder, the count, and the ⋯ that edits it.
@@ -285,7 +286,7 @@ fn chip(ui: &mut Ui, child: &BoardChild) -> egui::Response {
 /// The cards, `columns_in` across, a row at a time, only the rows the ground shows.
 fn flow(
     ui: &mut Ui,
-    body: Rect,
+    (body, frame): (Rect, BoardFrame),
     zone: &BoardZone,
     context: &card::Context<'_>,
     (canvas_view, actions): (&mut CanvasView, &mut Actions),
@@ -302,9 +303,7 @@ fn flow(
         ui.painter().galley(rect.min, galley, p.text_2);
         return;
     }
-    let columns = usize::try_from(columns_in(zone.frame.width))
-        .unwrap_or(1)
-        .max(1);
+    let columns = usize::try_from(columns_in(frame.width)).unwrap_or(1).max(1);
     let rows = zone.notes.len().div_ceil(columns);
     let (width, height, gap) = (px(CARD_WIDTH), px(CARD_HEIGHT), px(GAP));
     #[expect(
@@ -350,19 +349,8 @@ fn flow(
             let first = row_at(clip.top()) * columns;
             let last = ((row_at(clip.bottom()) + 1) * columns).min(zone.notes.len());
             for (at, entry) in zone.notes.iter().enumerate().take(last).skip(first) {
-                let rect = seat(at);
-                let mut card_ui = ui.new_child(
-                    UiBuilder::new()
-                        .max_rect(rect)
-                        .id_salt(("board-card", &entry.note.id)),
-                );
-                card::show(
-                    &mut card_ui,
-                    rect,
-                    &entry.note,
-                    context,
-                    (canvas_view, actions),
-                );
+                let shown = (&mut *canvas_view, &mut *actions);
+                seated(ui, seat(at), entry, "board-zone-card", context, shown);
             }
         });
 }

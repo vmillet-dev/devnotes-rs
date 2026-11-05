@@ -4869,6 +4869,19 @@ out, and egui's scroll bars float over the body rather than taking a slice of th
 reference's one-pixel wrap cannot happen. A zone's title and its sub-folders' chips open their
 folder; its ⋯ opens the folder's panel, the rail's.
 
+What the criteria leave out is drawn at a third of its opacity in its seat
+(`board::seated`), never reflowed, and the seat node says it disabled, which is what the e2e
+reads. A gesture's result is staged in `BoardState` and laid over the view — a zone's frame, a
+loose card's place — then written behind `LAYOUT_SAVE_DEBOUNCE` (400 ms, a deadline in egui's
+time) as one `save_board_layout`. ⚠️ The overlay is let go of when a view carries the same
+value, never when the write returns (the view still drawn then is the one read before the
+gesture); a failed write keeps it. The tidy control floats in the ground's corner
+(`board::tidy`): « Aligner » (and `A`) flows the loose cards, its chevron offers « Réorganiser
+N dossiers et M cartes », and the arrangement answered is `Reversible::Arrangement`, offered by
+the undo bar and put back through `save_board_layout`. The ground pans home after an
+arrangement and back after its undo: `BoardState::pans` counts both, and the drawing forces the
+`ScrollArea`'s offset once per new count.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in
