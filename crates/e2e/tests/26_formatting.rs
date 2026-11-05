@@ -46,7 +46,6 @@ fn formatting() {
         app.eventually("the code on several lines", |tree| {
             code(tree).lines().count() > 5 && notice(tree).as_deref() == Some("formatted")
         });
-        app.capture("formatted");
     });
 
     step("its notice takes the format back", || {
@@ -60,6 +59,8 @@ fn formatting() {
         app.click("editor-title");
         app.press(Key::F, Modifiers::SHIFT | Modifiers::ALT);
         app.eventually("formatted", |tree| code(tree).lines().count() > 5);
+        // Here and not before the undo: a slow capture outlasts the notice it would click.
+        app.capture("formatted");
         close(&mut app);
         open(&mut app, "withRetry");
         assert!(
