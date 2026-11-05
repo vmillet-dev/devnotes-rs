@@ -1,14 +1,18 @@
-//! A formatted Note read, not edited (the reference's `createRichViewer`): each block laid out as
-//! one `LayoutJob` — headings, emphasis, lists and tasks, quotes, tables, coloured code blocks,
-//! links, rules — stacked in the reference's `.rich-text` rhythm. egui's galley cache keeps each
-//! block's layout between frames. A link is answered to the caller, `http` and `https` alone.
+//! A formatted Note drawn (the reference's `.rich-text`): each block laid out as one `LayoutJob` —
+//! headings, emphasis, lists and tasks, quotes, tables, coloured code blocks, links, rules —
+//! stacked in its rhythm; egui's galley cache keeps each block's layout between frames. Read, it
+//! answers a link clicked, `http` and `https` alone (the reference's `createRichViewer`). Edited,
+//! it paints the selection under the text and says where each leaf was laid out, for the editor
+//! to place the caret and read a click.
+
+use std::sync::Arc;
 
 use egui::text::LayoutJob;
 use egui::{
-    Align2, Color32, CornerRadius, FontFamily, FontId, Rect, Sense, Stroke, StrokeKind, TextFormat,
-    Ui, Vec2, pos2, vec2,
+    Align2, Color32, CornerRadius, FontFamily, FontId, Galley, Pos2, Rect, Sense, Stroke,
+    StrokeKind, TextFormat, Ui, Vec2, pos2, vec2,
 };
-use richtext::{Block, Document, Inline, Item, ListKind, Marks};
+use richtext::{Block, Document, Inline, Item, ListKind, Marks, Selection};
 
 use crate::theme::palette;
 use crate::theme::tokens::Palette;
@@ -27,20 +31,87 @@ pub struct Read {
     pub link: Option<String>,
 }
 
-/// The document at `scale` (1 in a Note; Present's slides read larger).
+/// The document read at `scale` (1 in a Note; Present's slides read larger).
 pub fn rich_reader(ui: &mut Ui, document: &Document, scale: f32) -> Read {
-    let mut read = Read::default();
-    let size = BODY * scale;
-    ui.vertical(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::ZERO;
-        for (at, block) in document.blocks.iter().enumerate() {
-            if at > 0 {
-                ui.add_space(gap_before(block, size));
-            }
-            draw_block(ui, block, size, &mut read);
+    let painted = RichView::new(document).scale(scale).show(ui);
+    Read { link: painted.link }
+}
+
+/// A leaf as this frame laid it out.
+pub struct Laid {
+    pub path: Vec<usize>,
+    pub origin: Pos2,
+    pub galley: Arc<Galley>,
+}
+
+/// What a frame drew: each leaf, each task's box, and a link clicked.
+#[derive(Default)]
+pub struct Painted {
+    pub leaves: Vec<Laid>,
+    /// A task's box clicked: the path of its list and the item's index.
+    pub ticked: Option<(Vec<usize>, usize)>,
+    /// Read: clicked; edited: clicked with Ctrl.
+    pub link: Option<String>,
+}
+
+pub struct RichView<'a> {
+    document: &'a Document,
+    scale: f32,
+    /// Edited: the selection painted, links followed with Ctrl alone.
+    selection: Option<&'a Selection>,
+}
+
+/// What every block of a frame is drawn with.
+struct Frame<'a> {
+    size: f32,
+    selection: Option<&'a Selection>,
+    painted: Painted,
+}
+
+impl<'a> RichView<'a> {
+    pub fn new(document: &'a Document) -> Self {
+        Self {
+            document,
+            scale: 1.0,
+            selection: None,
         }
-    });
-    read
+    }
+
+    #[must_use]
+    pub fn scale(mut self, scale: f32) -> Self {
+        self.scale = scale;
+        self
+    }
+
+    #[must_use]
+    pub fn editing(mut self, selection: &'a Selection) -> Self {
+        self.selection = Some(selection);
+        self
+    }
+
+    pub fn show(self, ui: &mut Ui) -> Painted {
+        let mut frame = Frame {
+            size: BODY * self.scale,
+            selection: self.selection,
+            painted: Painted::default(),
+        };
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing = Vec2::ZERO;
+            blocks(ui, &self.document.blocks, &mut Vec::new(), &mut frame);
+        });
+        frame.painted
+    }
+}
+
+fn blocks(ui: &mut Ui, blocks: &[Block], path: &mut Vec<usize>, frame: &mut Frame<'_>) {
+    for (at, block) in blocks.iter().enumerate() {
+        if at > 0 {
+            ui.add_space(gap_before(block, frame.size));
+        }
+        path.push(at);
+        draw_block(ui, block, path, frame);
+        path.pop();
+    }
 }
 
 fn gap_before(block: &Block, size: f32) -> f32 {
@@ -59,10 +130,11 @@ fn heading_size(level: u8, size: f32) -> f32 {
     }
 }
 
-fn draw_block(ui: &mut Ui, block: &Block, size: f32, read: &mut Read) {
+fn draw_block(ui: &mut Ui, block: &Block, path: &mut Vec<usize>, frame: &mut Frame<'_>) {
     let p = palette(ui.ctx());
+    let size = frame.size;
     match block {
-        Block::Paragraph(content) => paragraph(ui, content, Style::body(p, size), read),
+        Block::Paragraph(content) => paragraph(ui, content, Style::body(p, size), path, frame),
         Block::Heading { level, content } => {
             let style = Style {
                 size: heading_size(*level, size),
@@ -70,12 +142,12 @@ fn draw_block(ui: &mut Ui, block: &Block, size: f32, read: &mut Read) {
                 line_height: 1.3,
                 ..Style::body(p, size)
             };
-            paragraph(ui, content, style, read);
+            paragraph(ui, content, style, path, frame);
         }
-        Block::List { kind, items } => list(ui, *kind, items, size, read),
-        Block::Quote(blocks) => quote(ui, blocks, size, read),
-        Block::CodeBlock { language, text } => code_block(ui, language, text, size),
-        Block::Table(rows) => table(ui, rows, size),
+        Block::List { kind, items } => list(ui, *kind, items, path, frame),
+        Block::Quote(inner) => quote(ui, inner, path, frame),
+        Block::CodeBlock { language, text } => code_block(ui, language, text, path, frame),
+        Block::Table(rows) => table(ui, rows, path, frame),
         Block::Image { alt, src } => image(ui, alt, src, size),
         Block::Rule => {
             let (rect, _) =
@@ -109,13 +181,10 @@ impl Style {
     }
 }
 
+type Links = Vec<(std::ops::Range<usize>, String)>;
+
 /// The block's text as one job, and the link each `char` range points to.
-fn job(
-    p: &Palette,
-    content: &[Inline],
-    style: Style,
-    width: f32,
-) -> (LayoutJob, Vec<(std::ops::Range<usize>, String)>) {
+fn job(p: &Palette, content: &[Inline], style: Style, width: f32) -> (LayoutJob, Links) {
     let mut job = LayoutJob::default();
     let mut links = Vec::new();
     let mut chars = 0;
@@ -124,13 +193,16 @@ fn job(
             Inline::Text { text, marks } => (text.as_str(), marks),
             Inline::HardBreak => ("\n", &Marks::default()),
         };
-        let format = format(p, marks, style);
-        job.append(text, 0.0, format);
+        job.append(text, 0.0, format(p, marks, style));
         let count = text.chars().count();
         if let Some(href) = &marks.link {
             links.push((chars..chars + count, href.clone()));
         }
         chars += count;
+    }
+    if content.is_empty() {
+        // An empty block keeps a line's height, for the caret to stand in.
+        job.append("", 0.0, format(p, &Marks::default(), style));
     }
     job.wrap.max_width = width;
     (job, links)
@@ -172,36 +244,76 @@ fn format(p: &Palette, marks: &Marks, style: Style) -> TextFormat {
     format
 }
 
-fn paragraph(ui: &mut Ui, content: &[Inline], style: Style, read: &mut Read) {
+fn paragraph(ui: &mut Ui, content: &[Inline], style: Style, path: &[usize], frame: &mut Frame<'_>) {
     let p = palette(ui.ctx());
     let (job, links) = job(p, content, style, ui.available_width());
     let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
-    let sense = if links.is_empty() {
-        Sense::hover()
-    } else {
+    let reading = frame.selection.is_none();
+    let sense = if reading && !links.is_empty() {
         Sense::click()
+    } else {
+        Sense::hover()
     };
     let (rect, response) = ui.allocate_exact_size(galley.size(), sense);
-    let plain: String = content
-        .iter()
-        .map(|inline| match inline {
-            Inline::Text { text, .. } => text.as_str(),
-            Inline::HardBreak => "\n",
-        })
-        .collect();
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &plain));
-    if !links.is_empty()
-        && let Some(pointer) = response.hover_pos()
-    {
+    if reading {
+        let plain = richtext::inlines::plain(content);
+        response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &plain));
+    }
+    if let Some(pointer) = ui.ctx().pointer_hover_pos().filter(|at| rect.contains(*at)) {
         let at = galley.cursor_from_pos(pointer - rect.min).index.0;
         if let Some((_, href)) = links.iter().find(|(range, _)| range.contains(&at)) {
-            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
-            if response.clicked() && is_web(href) {
-                read.link = Some(href.clone());
+            let ctrl = ui.input(|input| input.modifiers.command);
+            if reading || ctrl {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+            }
+            let clicked = if reading {
+                response.clicked()
+            } else {
+                ctrl && ui.input(|input| input.pointer.primary_clicked())
+            };
+            if clicked && is_web(href) {
+                frame.painted.link = Some(href.clone());
             }
         }
     }
-    ui.painter().galley(rect.min, galley, style.colour);
+    paint_leaf(ui, path, rect.min, galley, style.colour, frame);
+}
+
+/// The selection under the text, then the text; the leaf kept for the editor.
+fn paint_leaf(
+    ui: &Ui,
+    path: &[usize],
+    origin: Pos2,
+    galley: Arc<Galley>,
+    colour: Color32,
+    frame: &mut Frame<'_>,
+) {
+    if let Some(selection) = frame.selection {
+        let (start, end) = richtext::edit::ordered(selection);
+        let path = path.to_vec();
+        if start.path <= path && path <= end.path && start != end {
+            let from = if path == start.path { start.offset } else { 0 };
+            let to = if path == end.path {
+                end.offset
+            } else {
+                galley.text().chars().count()
+            };
+            let past_end = path != end.path;
+            let fill = palette(ui.ctx()).amber_fill.gamma_multiply(0.3);
+            for rect in crate::widgets::editor::selection_rects(&galley, from..to, past_end, 4.0) {
+                ui.painter()
+                    .rect_filled(rect.translate(origin.to_vec2()), 2.0, fill);
+            }
+        }
+    }
+    ui.painter().galley(origin, Arc::clone(&galley), colour);
+    if frame.selection.is_some() {
+        frame.painted.leaves.push(Laid {
+            path: path.to_vec(),
+            origin,
+            galley,
+        });
+    }
 }
 
 /// `http` and `https` alone: a Note's link never opens a file or runs a scheme.
@@ -210,10 +322,11 @@ fn is_web(href: &str) -> bool {
     lower.starts_with("http://") || lower.starts_with("https://")
 }
 
-fn list(ui: &mut Ui, kind: ListKind, items: &[Item], size: f32, read: &mut Read) {
+fn list(ui: &mut Ui, kind: ListKind, items: &[Item], path: &mut Vec<usize>, frame: &mut Frame<'_>) {
     let p = palette(ui.ctx());
+    let size = frame.size;
     let indent = if kind == ListKind::Task {
-        0.0
+        14.0 * size / BODY + 8.0
     } else {
         INDENT * size
     };
@@ -221,13 +334,10 @@ fn list(ui: &mut Ui, kind: ListKind, items: &[Item], size: f32, read: &mut Read)
         if at > 0 {
             ui.add_space(0.2 * size);
         }
+        path.push(at);
         ui.horizontal_top(|ui| {
-            let marker_width = match kind {
-                ListKind::Task => 14.0 + 8.0,
-                _ => indent,
-            };
             let line = size * LINE_HEIGHT;
-            let (marker, _) = ui.allocate_exact_size(vec2(marker_width, line), Sense::hover());
+            let (marker, _) = ui.allocate_exact_size(vec2(indent, line), Sense::hover());
             match kind {
                 ListKind::Bullet => {
                     let centre = pos2(marker.right() - 0.6 * size, marker.center().y);
@@ -244,32 +354,59 @@ fn list(ui: &mut Ui, kind: ListKind, items: &[Item], size: f32, read: &mut Read)
                         p.text_1,
                     );
                 }
-                ListKind::Task => checkbox(ui, marker, item.checked, size),
+                ListKind::Task => {
+                    let rect = checkbox(ui, marker, item.checked, size);
+                    let sense = if frame.selection.is_some() {
+                        Sense::click()
+                    } else {
+                        Sense::hover()
+                    };
+                    let response =
+                        crate::widgets::region(ui, rect.expand(3.0), path.clone(), sense);
+                    let checked = item.checked;
+                    let name = match item.blocks.first() {
+                        Some(Block::Paragraph(content)) if !content.is_empty() => {
+                            richtext::inlines::plain(content)
+                        }
+                        // Named still when empty: by its place in the list.
+                        _ => (at + 1).to_string(),
+                    };
+                    response.widget_info(|| {
+                        egui::WidgetInfo::selected(egui::Role::CheckBox, true, checked, &name)
+                    });
+                    crate::widgets::address(ui, &response, "rich-task");
+                    if response.clicked() {
+                        frame.painted.ticked = Some((path[..path.len() - 1].to_vec(), at));
+                    }
+                }
             }
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing = Vec2::ZERO;
-                for (at, block) in item.blocks.iter().enumerate() {
-                    if at > 0 {
+                for (index, block) in item.blocks.iter().enumerate() {
+                    if index > 0 {
                         ui.add_space(0.5 * size);
                     }
+                    path.push(index);
                     match block {
                         Block::Paragraph(content) if kind == ListKind::Task => {
                             let style = Style {
                                 struck: item.checked,
                                 ..Style::body(p, size)
                             };
-                            paragraph(ui, content, style, read);
+                            paragraph(ui, content, style, path, frame);
                         }
-                        _ => draw_block(ui, block, size, read),
+                        _ => draw_block(ui, block, path, frame),
                     }
+                    path.pop();
                 }
             });
         });
+        path.pop();
     }
 }
 
-/// A read-only task box: amber when done, as the reference's checkbox.
-fn checkbox(ui: &Ui, marker: Rect, checked: bool, size: f32) {
+/// A task's box: amber when done, as the reference's checkbox.
+fn checkbox(ui: &Ui, marker: Rect, checked: bool, size: f32) -> Rect {
     let p = palette(ui.ctx());
     let edge = 14.0 * size / BODY;
     let rect = Rect::from_min_size(
@@ -290,50 +427,52 @@ fn checkbox(ui: &Ui, marker: Rect, checked: bool, size: f32) {
         ui.painter()
             .rect_stroke(rect, corner, Stroke::new(1.0, p.line), StrokeKind::Inside);
     }
+    rect
 }
 
-fn quote(ui: &mut Ui, blocks: &[Block], size: f32, read: &mut Read) {
+fn quote(ui: &mut Ui, inner: &[Block], path: &mut Vec<usize>, frame: &mut Frame<'_>) {
     let p = palette(ui.ctx());
+    let size = frame.size;
     let top = ui.cursor().top();
     ui.horizontal_top(|ui| {
         ui.add_space(14.0 + 3.0);
         ui.vertical(|ui| {
             ui.spacing_mut().item_spacing = Vec2::ZERO;
             ui.add_space(2.0);
-            for (at, block) in blocks.iter().enumerate() {
+            for (at, block) in inner.iter().enumerate() {
                 if at > 0 {
                     ui.add_space(GAP * size);
                 }
+                path.push(at);
                 match block {
                     Block::Paragraph(content) => {
                         let style = Style {
                             colour: p.text_1,
                             ..Style::body(p, size)
                         };
-                        paragraph(ui, content, style, read);
+                        paragraph(ui, content, style, path, frame);
                     }
-                    _ => draw_block(ui, block, size, read),
+                    _ => draw_block(ui, block, path, frame),
                 }
+                path.pop();
             }
             ui.add_space(2.0);
         });
     });
     let bottom = ui.cursor().top();
-    let bar = Rect::from_min_max(
-        pos2(ui.max_rect().left(), top),
-        pos2(ui.max_rect().left() + 3.0, bottom),
-    );
+    let left = ui.max_rect().left();
+    let bar = Rect::from_min_max(pos2(left, top), pos2(left + 3.0, bottom));
     ui.painter()
         .rect_filled(bar, CornerRadius::ZERO, p.amber_dim);
 }
 
-fn code_block(ui: &mut Ui, language: &str, text: &str, size: f32) {
+fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &mut Frame<'_>) {
     let p = palette(ui.ctx());
-    let font = FontId::monospace(CODE_SIZE * size / BODY);
+    let font = FontId::monospace(CODE_SIZE * frame.size / BODY);
     let syntax = syntax_of(language);
     let lines = syntax.map(|syntax| crate::services::highlight::short(ui.ctx(), syntax, text));
     let mut job = LayoutJob::default();
-    for (at, line) in text.trim_end_matches('\n').split('\n').enumerate() {
+    for (at, line) in text.split('\n').enumerate() {
         if at > 0 {
             job.append("\n", 0.0, TextFormat::simple(font.clone(), p.text_0));
         }
@@ -348,7 +487,9 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, size: f32) {
         vec2(width, galley.size().y + 2.0 * padding.y),
         Sense::hover(),
     );
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Code, true, text));
+    if frame.selection.is_none() {
+        response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Code, true, text));
+    }
     ui.painter().rect(
         rect,
         CornerRadius::same(8),
@@ -356,9 +497,6 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, size: f32) {
         Stroke::new(1.0, p.line_soft),
         StrokeKind::Inside,
     );
-    ui.painter()
-        .with_clip_rect(rect.shrink(1.0))
-        .galley(rect.min + padding, galley, p.text_0);
     if !language.is_empty() {
         ui.painter().text(
             pos2(rect.right() - 10.0, rect.top() + 6.0),
@@ -368,6 +506,7 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, size: f32) {
             p.text_2,
         );
     }
+    paint_leaf(ui, path, rect.min + padding, galley, p.text_0, frame);
 }
 
 /// A fence's word: a language's tag as the editor writes it, or a shell's usual name.
@@ -388,8 +527,9 @@ fn append_coloured(
     tokens: Option<&text::highlight::Line>,
     font: &FontId,
 ) {
+    let plain = |colour| TextFormat::simple(font.clone(), colour);
     let Some(tokens) = tokens else {
-        job.append(line, 0.0, TextFormat::simple(font.clone(), p.text_0));
+        job.append(line, 0.0, plain(p.text_0));
         return;
     };
     let byte = |chars: usize| {
@@ -401,36 +541,28 @@ fn append_coloured(
     for (range, token) in tokens {
         let (start, end) = (byte(range.start), byte(range.end));
         if start > from {
-            job.append(
-                &line[from..start],
-                0.0,
-                TextFormat::simple(font.clone(), p.text_0),
-            );
+            job.append(&line[from..start], 0.0, plain(p.text_0));
         }
         let (colour, leans) = crate::services::highlight::colour(p, *token);
         let format = TextFormat {
             italics: leans,
-            ..TextFormat::simple(font.clone(), colour)
+            ..plain(colour)
         };
         job.append(&line[start..end.max(start)], 0.0, format);
         from = end.max(start);
     }
     if from < line.len() {
-        job.append(
-            &line[from..],
-            0.0,
-            TextFormat::simple(font.clone(), p.text_0),
-        );
+        job.append(&line[from..], 0.0, plain(p.text_0));
     }
 }
 
-fn table(ui: &mut Ui, rows: &[Vec<richtext::Cell>], size: f32) {
+fn table(ui: &mut Ui, rows: &[Vec<richtext::Cell>], path: &[usize], frame: &mut Frame<'_>) {
     let p = palette(ui.ctx());
+    let size = frame.size;
     let columns = rows.iter().map(Vec::len).max().unwrap_or(0);
     if columns == 0 {
         return;
     }
-    ui.add_space(0.1 * size);
     let width = ui.available_width();
     let column = width / f32::from(u16::try_from(columns).unwrap_or(u16::MAX));
     let padding = vec2(10.0, 6.0);
@@ -440,20 +572,20 @@ fn table(ui: &mut Ui, rows: &[Vec<richtext::Cell>], size: f32) {
             weight: if header { 600.0 } else { 400.0 },
             ..Style::body(p, size)
         };
-        let jobs: Vec<_> = (0..columns)
+        let galleys: Vec<_> = (0..columns)
             .map(|index| {
                 let cell = row.get(index).map_or(&[][..], Vec::as_slice);
                 let (job, _) = job(p, cell, style, column - 2.0 * padding.x);
                 ui.fonts_mut(|fonts| fonts.layout_job(job))
             })
             .collect();
-        let height = jobs
+        let height = galleys
             .iter()
             .map(|galley| galley.size().y)
             .fold(size * LINE_HEIGHT, f32::max)
             + 2.0 * padding.y;
         let (rect, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
-        for (index, galley) in jobs.into_iter().enumerate() {
+        for (index, galley) in galleys.into_iter().enumerate() {
             let left = rect.left() + column * f32::from(u16::try_from(index).unwrap_or(0));
             let cell = Rect::from_min_size(pos2(left, rect.top()), vec2(column, height));
             if header {
@@ -465,7 +597,8 @@ fn table(ui: &mut Ui, rows: &[Vec<richtext::Cell>], size: f32) {
                 Stroke::new(1.0, p.line),
                 StrokeKind::Middle,
             );
-            ui.painter().galley(cell.min + padding, galley, p.text_0);
+            let cell_path = [path, &[at, index]].concat();
+            paint_leaf(ui, &cell_path, cell.min + padding, galley, p.text_0, frame);
         }
     }
 }

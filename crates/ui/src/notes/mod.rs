@@ -192,6 +192,8 @@ pub enum Editing {
     },
     /// The library's formatting settings, applied as they are chosen.
     Prettier(prettier::PrettierSettings),
+    /// A Note's link, followed with Ctrl+click: `http` and `https` alone.
+    OpenLink(String),
     /// A sheet, once the hand paused.
     Evaluate {
         session: u64,

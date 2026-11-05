@@ -90,7 +90,7 @@ pub(super) fn stats(
         NoteKind::Note => i18n::translate(
             language,
             keys::editor::NOTE_STATS,
-            &[("count", count(typed.split_whitespace().count()).into())],
+            &[("count", count(text::count_words(typed)).into())],
         ),
         NoteKind::Drawing => i18n::translate(
             language,

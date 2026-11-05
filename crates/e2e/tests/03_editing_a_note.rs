@@ -1,8 +1,9 @@
 //! Editing a snippet: title, code and context written on the way out, the footer counting what
 //! the code holds, full screen and the folded header keeping the draft, Tab staying in the code
 //! and the find bar finding in it. Then a drawing: drawn on its stage, shown on its card from the
-//! picture kept beside it, written as a PNG, and Escape stepping back through it. The Note part
-//! comes with the rich editor.
+//! picture kept beside it, written as a PNG, and Escape stepping back through it. Then Notes:
+//! the sample opens formatted and a box ticked there is kept, and one typed from the toolbar
+//! keeps « 2 * 3 * 4 » as typed.
 
 use e2e::{App, Tree, step};
 use egui::{Key, Modifiers};
@@ -111,6 +112,78 @@ fn drawings(app: &mut App, exported: &std::path::Path) {
     );
 }
 
+/// The rich text a Note's surface holds.
+fn rich(tree: &Tree) -> String {
+    tree.find("editor-rich")
+        .and_then(|surface| surface.value())
+        .unwrap_or_default()
+        .to_owned()
+}
+
+/// The first task's box: ticked or not.
+fn first_box(tree: &Tree) -> Option<egui::accesskit::Toggled> {
+    tree.all("rich-task")
+        .first()
+        .and_then(|task| task.toggled())
+}
+
+/// The one card `words` finds. ⚠️ The previous search showed one card too: the count is
+/// true of it until the debounce ends, so the card itself has to change.
+fn search_alone(app: &mut App, words: &str) {
+    let before = app.tree().texts("note-card");
+    app.click("search-input");
+    app.press(Key::A, Modifiers::COMMAND);
+    app.type_text(words);
+    app.eventually("the note searched, alone", |tree| {
+        tree.count("note-card") == 1 && tree.texts("note-card") != before
+    });
+}
+
+fn notes(app: &mut App) {
+    step(
+        "the sample Note opens formatted, and a box ticked or unticked is kept",
+        || {
+            search_alone(app, "timeout=120s");
+            app.click("note-card-open");
+            app.eventually("its tasks drawn", |tree| tree.count("rich-task") == 3);
+            assert!(!app.tree().has("editor-body"), "no code field for a Note");
+            // The sample's first task is done in one language and not in the other.
+            let before = first_box(&app.tree());
+            app.click_nth("rich-task", 0);
+            app.eventually("the box changed", |tree| first_box(tree) != before);
+            let after = first_box(&app.tree());
+            app.capture("note");
+            close(app);
+            app.click("note-card-open");
+            app.eventually("kept once opened again", |tree| first_box(tree) == after);
+            close(app);
+        },
+    );
+
+    step(
+        "a Note typed with the toolbar keeps its stars as typed",
+        || {
+            app.click("new-note-kind");
+            app.click("new-note-note");
+            app.click("editor-rich");
+            for glyph in ["2", " ", "*", " ", "3", " ", "*", " ", "4"] {
+                app.type_text(glyph);
+            }
+            app.press(Key::Enter, Modifiers::NONE);
+            app.click("rich-bold");
+            app.type_text("fort");
+            app.eventually("both lines typed", |tree| rich(tree) == "2 * 3 * 4\nfort");
+            close(app);
+            search_alone(app, "fort");
+            app.click("note-card-open");
+            app.eventually("written back as typed", |tree| {
+                rich(tree) == "2 * 3 * 4\nfort"
+            });
+            close(app);
+        },
+    );
+}
+
 #[test]
 fn editing_a_note() {
     let profile = tempfile::tempdir().unwrap();
@@ -198,6 +271,7 @@ fn editing_a_note() {
     );
 
     drawings(&mut app, &exported);
+    notes(&mut app);
 
     app.quit();
 }

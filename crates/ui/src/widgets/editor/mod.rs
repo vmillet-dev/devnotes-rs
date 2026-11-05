@@ -599,7 +599,7 @@ fn gutter_cell(
 
 /// The selection's rectangles over a line's rows, local to the galley; past its end, the
 /// line ending's width as well.
-fn selection_rects(
+pub(crate) fn selection_rects(
     galley: &Galley,
     range: Range<usize>,
     past_end: bool,

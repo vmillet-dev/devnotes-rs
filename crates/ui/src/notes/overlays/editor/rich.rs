@@ -1,0 +1,802 @@
+//! A Note edited formatted (the reference's `rich-text-editor`): the toolbar, then the document
+//! drawn by `widgets::rich` with the caret and the selection crossing its blocks. Every change
+//! goes through `richtext::edit` and its undo; the Markdown is written back only once the user
+//! changed something, so a Note opened and left keeps its stored body byte for byte.
+
+use egui::text::CCursor;
+use egui::{Event, Key, Modifiers, Pos2, Rect, Sense, Stroke, Ui, UiBuilder, pos2, vec2};
+use i18n::{Language, keys};
+use richtext::edit::{self, ordered};
+use richtext::inlines::{self, Mark};
+use richtext::{Document, History, ListKind, Marks, Position, Selection, tree};
+
+use crate::theme::icons::Icon;
+use crate::theme::palette;
+use crate::widgets::rich::{Laid, RichView};
+use crate::widgets::{self, Button, IconButton, Kind, TextField};
+
+const TOOLBAR_HEIGHT: f32 = 40.0;
+const PADDING: egui::Vec2 = egui::vec2(32.0, 20.0);
+
+/// What the last change was: typing in a row is undone as one step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Step {
+    Typing,
+    Other,
+}
+
+/// The link being written, from the toolbar.
+#[derive(Default)]
+struct LinkForm {
+    text: String,
+    address: String,
+}
+
+pub(super) struct RichEditor {
+    document: Document,
+    selection: Selection,
+    history: History,
+    last: Option<Step>,
+    edited: bool,
+    /// Counts the changes: a frame that moved it changed the text.
+    changes: u64,
+    /// What the next typed text wears, chosen on a caret.
+    stored: Option<Marks>,
+    /// Where each leaf was laid out last frame.
+    laid: Vec<Laid>,
+    /// The caret's x, kept through ↑ and ↓.
+    goal_x: Option<f32>,
+    link: Option<LinkForm>,
+    reveal: bool,
+    /// The text takes the keys back after a tool: the caret stays where it was.
+    refocus: bool,
+}
+
+impl RichEditor {
+    pub(super) fn of(markdown: &str) -> Self {
+        let mut document = richtext::read(markdown);
+        // A new Note is empty: it still has a line to type on.
+        if document.blocks.is_empty() {
+            document.blocks.push(richtext::Block::Paragraph(Vec::new()));
+        }
+        let first = tree::leaves(&document)
+            .into_iter()
+            .next()
+            .unwrap_or_default();
+        Self {
+            document,
+            selection: Selection::caret(Position {
+                path: first,
+                offset: 0,
+            }),
+            history: History::default(),
+            last: None,
+            edited: false,
+            changes: 0,
+            stored: None,
+            laid: Vec::new(),
+            goal_x: None,
+            link: None,
+            reveal: false,
+            refocus: false,
+        }
+    }
+
+    /// The Markdown to write, once the user changed the Note; `None` before.
+    pub(super) fn markdown(&self) -> Option<String> {
+        self.edited.then(|| richtext::write(&self.document))
+    }
+
+    /// Before a change: undo comes back here.
+    fn record(&mut self, step: Step) {
+        if !(step == Step::Typing && self.last == Some(Step::Typing)) {
+            self.history.record(&self.document, &self.selection);
+        }
+        self.last = Some(step);
+        self.edited = true;
+        self.changes += 1;
+        self.goal_x = None;
+        self.reveal = true;
+    }
+
+    fn change(&mut self, step: Step, change: impl FnOnce(&mut Document, &Selection) -> Selection) {
+        self.record(step);
+        let selection = change(&mut self.document, &self.selection);
+        self.selection = Selection::caret(tree::clamp(&self.document, &selection.head));
+        if selection.anchor != selection.head {
+            self.selection = selection;
+        }
+    }
+
+    fn type_text(&mut self, text: &str) {
+        let marks = self.stored.take().unwrap_or_else(|| self.marks_here());
+        self.change(Step::Typing, |document, selection| {
+            edit::insert_text(document, selection, text, &marks)
+        });
+    }
+
+    /// The marks of the `char` before the caret.
+    fn marks_here(&self) -> Marks {
+        let head = &self.selection.head;
+        match tree::leaf(&self.document, &head.path) {
+            Some(tree::Leaf::Inlines(content)) => inlines::marks_at(content, head.offset),
+            _ => Marks::default(),
+        }
+    }
+
+    fn toggle(&mut self, mark: &Mark) {
+        if self.selection.is_empty() {
+            let mut marks = self.stored.take().unwrap_or_else(|| self.marks_here());
+            let on = match mark {
+                Mark::Bold => !marks.bold,
+                Mark::Italic => !marks.italic,
+                Mark::Strike => !marks.strike,
+                Mark::Code => !marks.code,
+                Mark::Link(_) => true,
+            };
+            inlines::put(&mut marks, mark, on);
+            self.stored = Some(marks);
+            return;
+        }
+        self.record(Step::Other);
+        edit::toggle_mark(&mut self.document, &self.selection, mark);
+    }
+
+    fn undo(&mut self, redo: bool) {
+        let now = (&self.document, &self.selection);
+        let back = if redo {
+            self.history.redo(now)
+        } else {
+            self.history.undo(now)
+        };
+        if let Some((document, selection)) = back {
+            self.document = document;
+            self.selection = selection;
+            self.last = None;
+            self.edited = true;
+            self.changes += 1;
+            self.reveal = true;
+        }
+    }
+
+    fn select_all(&mut self) {
+        let leaves = tree::leaves(&self.document);
+        let (Some(first), Some(last)) = (leaves.first(), leaves.last()) else {
+            return;
+        };
+        let end = tree::leaf(&self.document, last).map_or(0, |leaf| leaf.len());
+        self.selection = Selection {
+            anchor: Position {
+                path: first.clone(),
+                offset: 0,
+            },
+            head: Position {
+                path: last.clone(),
+                offset: end,
+            },
+        };
+    }
+
+    /// The caret one `char` along, across leaves; `extend` keeps the anchor.
+    fn step(&mut self, forward: bool, extend: bool) {
+        let head = self.selection.head.clone();
+        if !extend && !self.selection.is_empty() {
+            let (start, end) = ordered(&self.selection);
+            self.selection = Selection::caret(if forward { end } else { start });
+            return;
+        }
+        let length = tree::leaf(&self.document, &head.path).map_or(0, |leaf| leaf.len());
+        let leaves = tree::leaves(&self.document);
+        let index = leaves.iter().position(|path| *path == head.path);
+        let next = match (forward, index) {
+            (true, _) if head.offset < length => Some(Position {
+                offset: head.offset + 1,
+                ..head
+            }),
+            (false, _) if head.offset > 0 => Some(Position {
+                offset: head.offset - 1,
+                ..head
+            }),
+            (true, Some(at)) => leaves.get(at + 1).map(|path| Position {
+                path: path.clone(),
+                offset: 0,
+            }),
+            (false, Some(at)) => at.checked_sub(1).map(|at| Position {
+                path: leaves[at].clone(),
+                offset: tree::leaf(&self.document, &leaves[at]).map_or(0, |leaf| leaf.len()),
+            }),
+            _ => None,
+        };
+        if let Some(next) = next {
+            self.move_head(next, extend);
+        }
+        self.goal_x = None;
+    }
+
+    fn move_head(&mut self, head: Position, extend: bool) {
+        if extend {
+            self.selection.head = head;
+        } else {
+            self.selection = Selection::caret(head);
+        }
+        self.reveal = true;
+    }
+
+    /// Where a leaf laid out last frame puts the caret, on screen.
+    fn caret_rect(&self) -> Option<Rect> {
+        let head = &self.selection.head;
+        let laid = self.laid.iter().find(|laid| laid.path == head.path)?;
+        let local = laid.galley.pos_from_cursor(CCursor::new(head.offset));
+        Some(local.translate(laid.origin.to_vec2()))
+    }
+
+    /// The place under a point: the leaf whose lines it is on, or the nearest one.
+    fn position_at(&self, point: Pos2) -> Option<Position> {
+        let laid = self
+            .laid
+            .iter()
+            .min_by(|a, b| distance(a, point).total_cmp(&distance(b, point)))?;
+        let local = point - laid.origin;
+        let offset = laid.galley.cursor_from_pos(local).index.0;
+        Some(Position {
+            path: laid.path.clone(),
+            offset,
+        })
+    }
+
+    /// ↑ and ↓: a line up or down at the same x, into the leaf above or below.
+    fn vertical(&mut self, down: bool, extend: bool) {
+        let Some(caret) = self.caret_rect() else {
+            return;
+        };
+        let x = *self.goal_x.get_or_insert(caret.left());
+        let y = if down {
+            caret.bottom() + 2.0
+        } else {
+            caret.top() - 2.0
+        };
+        let inside = self
+            .laid
+            .iter()
+            .find(|laid| laid_rect(laid).y_range().contains(y));
+        let target = inside.or_else(|| {
+            if down {
+                self.laid
+                    .iter()
+                    .filter(|laid| laid_rect(laid).top() > caret.bottom())
+                    .min_by(|a, b| laid_rect(a).top().total_cmp(&laid_rect(b).top()))
+            } else {
+                self.laid
+                    .iter()
+                    .filter(|laid| laid_rect(laid).bottom() < caret.top())
+                    .max_by(|a, b| laid_rect(a).bottom().total_cmp(&laid_rect(b).bottom()))
+            }
+        });
+        let Some(target) = target else {
+            return;
+        };
+        let rect = laid_rect(target);
+        let y = y.clamp(rect.top() + 1.0, rect.bottom() - 1.0);
+        let offset = target
+            .galley
+            .cursor_from_pos(pos2(x, y) - target.origin)
+            .index
+            .0;
+        let head = Position {
+            path: target.path.clone(),
+            offset,
+        };
+        let goal = self.goal_x;
+        self.move_head(head, extend);
+        self.goal_x = goal;
+    }
+}
+
+fn laid_rect(laid: &Laid) -> Rect {
+    laid.galley.rect.translate(laid.origin.to_vec2())
+}
+
+fn distance(laid: &Laid, point: Pos2) -> f32 {
+    let rect = laid_rect(laid).expand2(vec2(0.0, 2.0));
+    if rect.y_range().contains(point.y) {
+        (point.x - rect.x_range().clamp(point.x)).abs() * 0.001
+    } else {
+        (point.y - rect.center().y).abs()
+    }
+}
+
+/// What a frame of the Note did.
+pub(super) struct Shown {
+    pub(super) changed: bool,
+    pub(super) left: bool,
+    /// A link followed with Ctrl+click: `http` and `https` alone.
+    pub(super) link: Option<String>,
+}
+
+pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, language: Language) -> Shown {
+    let whole = ui.max_rect();
+    let mut shown = Shown {
+        changed: false,
+        left: false,
+        link: None,
+    };
+    let before = view.changes;
+    let bar = Rect::from_min_max(whole.min, pos2(whole.right(), whole.top() + TOOLBAR_HEIGHT));
+    let mut bar_ui = ui.new_child(UiBuilder::new().id_salt("rich-toolbar").max_rect(bar));
+    toolbar(&mut bar_ui, view, language);
+    let mut top = bar.bottom();
+    if view.link.is_some() {
+        let form = Rect::from_min_max(pos2(whole.left(), top), pos2(whole.right(), top + 40.0));
+        let mut form_ui = ui.new_child(UiBuilder::new().id_salt("rich-link").max_rect(form));
+        link_form(&mut form_ui, view, language);
+        top = form.bottom();
+    }
+    let p = palette(ui.ctx());
+    ui.painter()
+        .hline(whole.x_range(), top, Stroke::new(1.0, p.line_soft));
+    let body = Rect::from_min_max(pos2(whole.left(), top + 1.0), whole.max);
+    let mut body_ui = ui.new_child(UiBuilder::new().id_salt("rich-body").max_rect(body));
+    let surface = widgets::region(&mut body_ui, body, "editor-rich", Sense::click_and_drag());
+    widgets::address(ui, &surface, "editor-rich");
+    describe(ui, &surface, view, language);
+    let reveal = std::mem::take(&mut view.reveal);
+    let caret = view.caret_rect();
+    let scrolled = egui::ScrollArea::vertical()
+        .id_salt("rich-scroll")
+        .auto_shrink([false, false])
+        .show(&mut body_ui, |ui| {
+            egui::Frame::new()
+                .inner_margin(egui::Margin::symmetric(32, 20))
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    let painted = RichView::new(&view.document)
+                        .editing(&view.selection)
+                        .show(ui);
+                    if reveal && let Some(caret) = caret {
+                        ui.scroll_to_rect(caret.expand(PADDING.y), None);
+                    }
+                    painted
+                })
+                .inner
+        });
+    let painted = scrolled.inner;
+    view.laid = painted.leaves;
+    if let Some(link) = painted.link {
+        shown.link = Some(link);
+    }
+    if std::mem::take(&mut view.refocus) {
+        surface.request_focus();
+    }
+    let focused = widgets::takes_keys(ui, &surface);
+    if let Some((list, item)) = painted.ticked {
+        view.record(Step::Other);
+        edit::toggle_task(&mut view.document, &list, item);
+        surface.request_focus();
+    }
+    pointer(ui, view, &surface);
+    if focused {
+        lock_keys(ui, surface.id);
+        keys(ui, view);
+        paint_caret(ui, view, body);
+    }
+    shown.left = surface.lost_focus();
+    shown.changed = view.changes != before;
+    ui.advance_cursor_after_rect(whole);
+    shown
+}
+
+/// Tab and the arrows are the text's while it has the keys; Escape is not, it closes.
+fn lock_keys(ui: &Ui, id: egui::Id) {
+    let filter = egui::EventFilter {
+        tab: true,
+        horizontal_arrows: true,
+        vertical_arrows: true,
+        escape: false,
+    };
+    ui.memory_mut(|memory| memory.set_focus_lock_filter(id, filter));
+}
+
+/// The surface's node: a text field holding the Note's words, for kittest and a reader.
+fn describe(ui: &Ui, surface: &egui::Response, view: &RichEditor, language: Language) {
+    let label = i18n::translate(language, keys::editor::CONTENT_LABEL, &[]);
+    let value: String = tree::leaves(&view.document)
+        .iter()
+        .filter_map(|path| match tree::leaf(&view.document, path) {
+            Some(tree::Leaf::Inlines(content)) => Some(inlines::plain(content)),
+            Some(tree::Leaf::Code(text)) => Some(text.clone()),
+            None => None,
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    surface.widget_info(|| egui::WidgetInfo::labeled(egui::Role::MultilineTextInput, true, &label));
+    ui.ctx().accesskit_node_builder(surface.id, |node| {
+        node.set_role(egui::accesskit::Role::MultilineTextInput);
+        node.set_label(label.clone());
+        node.set_value(value);
+    });
+}
+
+/// A press places the caret, a drag extends it, Shift extends from where it is.
+/// The keys stay on the surface.
+fn pointer(ui: &Ui, view: &mut RichEditor, surface: &egui::Response) {
+    let Some(at) = surface.interact_pointer_pos() else {
+        return;
+    };
+    let shift = ui.input(|input| input.modifiers.shift);
+    if (surface.drag_started() || surface.clicked())
+        && let Some(position) = view.position_at(at)
+    {
+        view.move_head(position, shift);
+        view.goal_x = None;
+        surface.request_focus();
+    } else if surface.dragged()
+        && let Some(position) = view.position_at(at)
+    {
+        view.move_head(position, true);
+    }
+}
+
+fn keys(ui: &Ui, view: &mut RichEditor) {
+    let events = ui.input(|input| input.events.clone());
+    for event in events {
+        match event {
+            Event::Text(text) | Event::Ime(egui::ImeEvent::Commit(text)) => view.type_text(&text),
+            Event::Paste(text) => {
+                let text = text.replace("\r\n", "\n");
+                view.change(Step::Other, |document, selection| {
+                    edit::insert_text(document, selection, &text, &Marks::default())
+                });
+            }
+            Event::Copy => copy(ui, view),
+            Event::Cut => {
+                copy(ui, view);
+                view.change(Step::Other, edit::delete_selection);
+            }
+            Event::Key {
+                key,
+                pressed: true,
+                modifiers,
+                ..
+            } => key_pressed(view, key, modifiers),
+            _ => {}
+        }
+    }
+}
+
+fn copy(ui: &Ui, view: &RichEditor) {
+    if !view.selection.is_empty() {
+        ui.ctx()
+            .copy_text(edit::selected_text(&view.document, &view.selection));
+    }
+}
+
+fn key_pressed(view: &mut RichEditor, key: Key, modifiers: Modifiers) {
+    let command = modifiers.command;
+    match key {
+        Key::Enter if modifiers.shift => view.change(Step::Other, edit::hard_break),
+        Key::Enter => view.change(Step::Other, edit::split),
+        Key::Backspace => view.change(Step::Other, edit::delete_backward),
+        Key::Delete => view.change(Step::Other, edit::delete_forward),
+        Key::ArrowLeft => view.step(false, modifiers.shift),
+        Key::ArrowRight => view.step(true, modifiers.shift),
+        Key::ArrowUp => view.vertical(false, modifiers.shift),
+        Key::ArrowDown => view.vertical(true, modifiers.shift),
+        Key::Home | Key::End => line_edge(view, key == Key::End, modifiers),
+        Key::Tab => tab(view, modifiers.shift),
+        Key::A if command => view.select_all(),
+        Key::Z if command && modifiers.shift => view.undo(true),
+        Key::Z if command => view.undo(false),
+        Key::Y if command => view.undo(true),
+        Key::B if command => view.toggle(&Mark::Bold),
+        Key::I if command => view.toggle(&Mark::Italic),
+        _ => {}
+    }
+}
+
+/// Home and End: the line's edges; with Ctrl, the document's.
+fn line_edge(view: &mut RichEditor, end: bool, modifiers: Modifiers) {
+    if modifiers.command {
+        let leaves = tree::leaves(&view.document);
+        let target = if end { leaves.last() } else { leaves.first() };
+        if let Some(path) = target {
+            let offset = if end {
+                tree::leaf(&view.document, path).map_or(0, |leaf| leaf.len())
+            } else {
+                0
+            };
+            view.move_head(
+                Position {
+                    path: path.clone(),
+                    offset,
+                },
+                modifiers.shift,
+            );
+        }
+        return;
+    }
+    let head = view.selection.head.clone();
+    let Some(laid) = view.laid.iter().find(|laid| laid.path == head.path) else {
+        return;
+    };
+    let caret = laid.galley.pos_from_cursor(CCursor::new(head.offset));
+    let x = if end {
+        f32::INFINITY
+    } else {
+        f32::NEG_INFINITY
+    };
+    let offset = laid
+        .galley
+        .cursor_from_pos(egui::vec2(x, caret.center().y))
+        .index
+        .0;
+    view.move_head(Position { offset, ..head }, modifiers.shift);
+}
+
+/// Tab nests an item under the one above, Shift+Tab takes it back up; elsewhere a tab is text.
+fn tab(view: &mut RichEditor, back: bool) {
+    let path = view.selection.head.path.clone();
+    let item = tree::innermost_item(&view.document, &path);
+    match (item, back) {
+        (Some(_), false) => view.change(Step::Other, edit::sink_item),
+        (Some((list, item, _)), true) => {
+            view.change(Step::Other, |document, _| {
+                edit::lift_item(document, &list, item)
+            });
+        }
+        (None, false) => view.type_text("\t"),
+        (None, true) => {}
+    }
+}
+
+fn paint_caret(ui: &Ui, view: &RichEditor, body: Rect) {
+    let Some(caret) = view.caret_rect() else {
+        return;
+    };
+    if !body.intersects(caret) {
+        return;
+    }
+    let p = palette(ui.ctx());
+    ui.painter().with_clip_rect(body).vline(
+        caret.left(),
+        caret.y_range(),
+        Stroke::new(1.5, p.text_0),
+    );
+    let to_global = ui
+        .ctx()
+        .layer_transform_to_global(ui.layer_id())
+        .unwrap_or_default();
+    ui.ctx().output_mut(|output| {
+        output.ime = Some(egui::output::IMEOutput {
+            purpose: egui::IMEPurpose::Normal,
+            rect: to_global * body,
+            cursor_rect: to_global * caret,
+            should_interrupt_composition: false,
+        });
+    });
+}
+
+/// The toolbar's tools: what each does, as the reference's `TOOLS`.
+#[derive(Clone, Copy)]
+enum Tool {
+    Heading(u8),
+    Mark(fn() -> Mark),
+    Link,
+    List(ListKind),
+    Quote,
+}
+
+/// A tool, its address, its icon or none for its text, and its name.
+type Entry = (Tool, &'static str, Option<Icon>, i18n::Key);
+
+fn toolbar(ui: &mut Ui, view: &mut RichEditor, language: Language) {
+    use keys::editor::rich as words;
+    let tr = |key| i18n::translate(language, key, &[]);
+    let groups: [&[Entry]; 3] = [
+        &[
+            (Tool::Heading(1), "rich-h1", None, words::HEADING1),
+            (Tool::Heading(2), "rich-h2", None, words::HEADING2),
+            (Tool::Heading(3), "rich-h3", None, words::HEADING3),
+        ],
+        &[
+            (
+                Tool::Mark(|| Mark::Bold),
+                "rich-bold",
+                Some(Icon::Bold),
+                words::BOLD,
+            ),
+            (
+                Tool::Mark(|| Mark::Italic),
+                "rich-italic",
+                Some(Icon::Italic),
+                words::ITALIC,
+            ),
+            (
+                Tool::Mark(|| Mark::Strike),
+                "rich-strike",
+                Some(Icon::Strike),
+                words::STRIKE,
+            ),
+            (
+                Tool::Mark(|| Mark::Code),
+                "rich-code",
+                Some(Icon::Code),
+                words::CODE,
+            ),
+            (Tool::Link, "rich-link", Some(Icon::Link), words::LINK),
+        ],
+        &[
+            (
+                Tool::List(ListKind::Bullet),
+                "rich-bullet",
+                Some(Icon::ListBullet),
+                words::BULLET_LIST,
+            ),
+            (
+                Tool::List(ListKind::Ordered { start: 1 }),
+                "rich-ordered",
+                Some(Icon::ListOrdered),
+                words::ORDERED_LIST,
+            ),
+            (
+                Tool::List(ListKind::Task),
+                "rich-tasks",
+                Some(Icon::ListTasks),
+                words::TASK_LIST,
+            ),
+            (Tool::Quote, "rich-quote", Some(Icon::Quote), words::QUOTE),
+        ],
+    ];
+    let mut inner = ui.new_child(
+        UiBuilder::new()
+            .max_rect(ui.max_rect().shrink2(vec2(24.0, 6.0)))
+            .layout(egui::Layout::left_to_right(egui::Align::Center)),
+    );
+    inner.spacing_mut().item_spacing.x = 2.0;
+    let group = widgets::region(&mut inner, ui.max_rect(), "rich-toolbar", Sense::hover());
+    let label = tr(words::TOOLBAR);
+    group.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Toolbar, true, &label));
+    for (at, tools) in groups.iter().enumerate() {
+        if at > 0 {
+            inner.add_space(10.0);
+        }
+        for (tool, author_id, icon, key) in *tools {
+            let name = tr(*key);
+            let on = active(view, *tool);
+            let clicked = if let Some(icon) = icon {
+                IconButton::new(*icon, &name, author_id)
+                    .pressed(on)
+                    .show(&mut inner)
+                    .clicked()
+            } else {
+                let text = &author_id["rich-".len()..].to_uppercase();
+                let response = Button::new(text, author_id)
+                    .kind(Kind::Quiet)
+                    .armed(on)
+                    .show(&mut inner);
+                ui.ctx()
+                    .accesskit_node_builder(response.id, |node| node.set_label(name.clone()));
+                response.clicked()
+            };
+            if clicked {
+                run(view, *tool);
+                view.refocus = view.link.is_none();
+            }
+        }
+    }
+}
+
+/// Whether the tool's mark or block is where the caret is.
+fn active(view: &RichEditor, tool: Tool) -> bool {
+    let head = &view.selection.head;
+    match tool {
+        Tool::Heading(level) => matches!(
+            tree::block(&view.document, &head.path),
+            Some(richtext::Block::Heading { level: at, .. }) if *at == level
+        ),
+        Tool::Mark(mark) => {
+            let marks = view.stored.clone().unwrap_or_else(|| view.marks_here());
+            match mark() {
+                Mark::Bold => marks.bold,
+                Mark::Italic => marks.italic,
+                Mark::Strike => marks.strike,
+                Mark::Code => marks.code,
+                Mark::Link(_) => false,
+            }
+        }
+        Tool::Link => view.marks_here().link.is_some(),
+        Tool::List(kind) => tree::innermost_item(&view.document, &head.path)
+            .and_then(|(list, _, _)| tree::block(&view.document, &list).cloned())
+            .is_some_and(|block| {
+                matches!(block, richtext::Block::List { kind: at, .. }
+                    if std::mem::discriminant(&at) == std::mem::discriminant(&kind))
+            }),
+        Tool::Quote => matches!(
+            head.path
+                .first()
+                .and_then(|top| view.document.blocks.get(*top)),
+            Some(richtext::Block::Quote(_))
+        ),
+    }
+}
+
+fn run(view: &mut RichEditor, tool: Tool) {
+    match tool {
+        Tool::Heading(level) => {
+            let on = active(view, tool);
+            view.record(Step::Other);
+            edit::set_heading(&mut view.document, &view.selection, (!on).then_some(level));
+        }
+        Tool::Mark(mark) => view.toggle(&mark()),
+        Tool::Link => {
+            let text = edit::selected_text(&view.document, &view.selection);
+            view.link = Some(LinkForm {
+                text,
+                address: view.marks_here().link.unwrap_or_default(),
+            });
+        }
+        Tool::List(kind) => view.change(Step::Other, |document, selection| {
+            edit::toggle_list(document, selection, kind)
+        }),
+        Tool::Quote => view.change(Step::Other, edit::toggle_quote),
+    }
+}
+
+/// The text and the address of a link; applied over the selection, or written at the caret.
+fn link_form(ui: &mut Ui, view: &mut RichEditor, language: Language) {
+    use keys::editor::rich as words;
+    let tr = |key| i18n::translate(language, key, &[]);
+    let Some(form) = &mut view.link else {
+        return;
+    };
+    let mut inner = ui.new_child(
+        UiBuilder::new()
+            .max_rect(ui.max_rect().shrink2(vec2(24.0, 4.0)))
+            .layout(egui::Layout::left_to_right(egui::Align::Center)),
+    );
+    inner.spacing_mut().item_spacing.x = 8.0;
+    let text_name = tr(words::LINK_TEXT);
+    let address_name = tr(words::LINK_ADDRESS);
+    inner.scope(|ui| {
+        ui.set_width(200.0);
+        TextField::new(&mut form.text, &text_name, "rich-link-text")
+            .compact()
+            .show(ui);
+    });
+    let address = TextField::new(&mut form.address, &address_name, "rich-link-address")
+        .compact()
+        .hint("https://")
+        .show(&mut inner);
+    let entered = address.lost_focus() && inner.input(|input| input.key_pressed(Key::Enter));
+    let applied = Button::new(&tr(words::LINK_APPLY), "rich-link-apply")
+        .kind(Kind::Filled)
+        .show(&mut inner)
+        .clicked();
+    if !(applied || entered) {
+        return;
+    }
+    let Some(LinkForm { text, address }) = view.link.take() else {
+        return;
+    };
+    view.refocus = true;
+    let href = Some(address.trim().to_owned()).filter(|href| !href.is_empty());
+    if view.selection.is_empty() && !text.is_empty() {
+        let marks = Marks {
+            link: href,
+            ..Marks::default()
+        };
+        view.change(Step::Other, |document, selection| {
+            edit::insert_text(document, selection, &text, &marks)
+        });
+    } else {
+        view.record(Step::Other);
+        edit::set_mark(
+            &mut view.document,
+            &view.selection,
+            &Mark::Link(href.clone()),
+            href.is_some(),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests;
