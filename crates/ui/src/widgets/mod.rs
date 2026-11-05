@@ -16,6 +16,7 @@ mod segmented;
 pub mod date;
 pub mod editor;
 pub mod json_explorer;
+mod rich_reader;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
@@ -27,6 +28,7 @@ pub use menu::{
     ChoiceMenu, FILTER_FROM, MenuItem, Naming, entry as menu_entry, frame as menu_frame, menu,
 };
 pub use release_notes::release_notes;
+pub use rich_reader::{Read, rich_reader};
 pub use segmented::Segmented;
 
 use std::sync::Arc;
