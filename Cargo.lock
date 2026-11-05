@@ -1700,6 +1700,7 @@ dependencies = [
  "quick-xml 0.42.0",
  "rayon",
  "reqwest",
+ "richtext",
  "rquickjs",
  "rust_decimal",
  "rustls",
@@ -4392,6 +4393,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47b34b781b31e5d73e9fbc8689c70551fd1ade9a19e3e28cfec8580a79290cc4"
 dependencies = [
  "bytemuck",
+]
+
+[[package]]
+name = "richtext"
+version = "0.20.0"
+dependencies = [
+ "pulldown-cmark",
+ "serde_json",
 ]
 
 [[package]]
