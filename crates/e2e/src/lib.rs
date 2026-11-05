@@ -7,7 +7,7 @@
 
 mod server;
 
-pub use server::serve;
+pub use server::{serve, serve_socket};
 
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};

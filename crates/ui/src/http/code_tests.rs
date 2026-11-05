@@ -205,7 +205,7 @@ fn closing_a_draft_can_save_it_first_and_the_tab_goes_once_it_is_written() {
     draft(&mut harness);
     let key = active_key(&harness);
 
-    harness.state_mut().state.http.tabs_mut().ask_close(&key);
+    harness.state_mut().state.http.ask_close(&key);
     settle(&mut harness);
     click_id(&mut harness, "http-close-save");
     assert!(has(&harness, "http-save-dialog"));

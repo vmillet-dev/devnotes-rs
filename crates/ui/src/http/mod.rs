@@ -13,11 +13,12 @@ mod rail;
 mod request;
 mod response;
 mod save_request;
+mod socket_log;
 mod tabs;
 mod variables_table;
 
 use egui::{Color32, Rect, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo, pos2};
-use engine::http::model::HttpMethod;
+use engine::http::model::{HttpMethod, RequestKind};
 use i18n::keys;
 
 use crate::action::{Action as Asked, Actions, AppAction};
@@ -101,6 +102,12 @@ pub enum Action {
     EditSettings(Box<engine::http::model::ContainerSettings>),
     SaveSettings,
     CloseSettings,
+    /// A text on the tab's open socket.
+    SendMessage {
+        key: String,
+        text: String,
+    },
+    ClearSocketLog(String),
     /// Sent all the same, under a protected environment.
     SendAnyway(String),
     StopAsking,
@@ -136,6 +143,7 @@ pub struct View {
     code: code::CodeView,
     save_form: Option<save_request::SaveForm>,
     response: response::ResponseView,
+    socket_log: socket_log::LogView,
     /// How tall the request's content was last drawn: what an automatic share follows.
     editor_height: f32,
     /// The share while the line is dragged, written once let go.
@@ -265,7 +273,11 @@ fn split(
     }
     let mut answer = ui.new_child(UiBuilder::new().max_rect(bottom));
     answer.set_clip_rect(bottom);
-    response::show(&mut answer, state, (tab, &mut view.response), actions);
+    if tab.draft.kind == RequestKind::Websocket {
+        socket_log::show(&mut answer, state, (tab, &mut view.socket_log), actions);
+    } else {
+        response::show(&mut answer, state, (tab, &mut view.response), actions);
+    }
 }
 
 /// `upper` points of `total`, as tenths of a percent within the share's bounds.
@@ -337,6 +349,8 @@ mod dialogs_tests;
 mod environments_tests;
 #[cfg(test)]
 mod history_tests;
+#[cfg(test)]
+mod socket_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 

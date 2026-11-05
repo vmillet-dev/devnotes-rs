@@ -18,6 +18,29 @@ pub fn serve() -> u16 {
     port
 }
 
+/// A socket server echoing each text, for the scenarios' connections; its port.
+pub fn serve_socket() -> u16 {
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("a local port is free");
+    let port = listener.local_addr().expect("the port is known").port();
+    std::thread::spawn(move || {
+        for stream in listener.incoming().flatten() {
+            std::thread::spawn(move || echo(stream));
+        }
+    });
+    port
+}
+
+fn echo(stream: TcpStream) {
+    let Ok(mut socket) = tungstenite::accept(stream) else {
+        return;
+    };
+    while let Ok(message) = socket.read() {
+        if message.is_text() && socket.send(message).is_err() {
+            return;
+        }
+    }
+}
+
 fn answer(mut stream: TcpStream) {
     let mut head = Vec::new();
     let mut byte = [0_u8; 1];

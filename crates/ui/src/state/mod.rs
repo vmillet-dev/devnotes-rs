@@ -633,7 +633,7 @@ impl AppState {
                 self.http.tabs_mut().new_request(kind, name);
             }
             Http::Activate(key) => self.http.tabs_mut().activate(&key),
-            Http::AskClose(key) => self.http.tabs_mut().ask_close(&key),
+            Http::AskClose(key) => self.http.ask_close(&key),
             Http::Close(key) => self.http.tabs_mut().close(&key),
             Http::CancelClose => self.http.tabs_mut().cancel_close(),
             Http::Save(key) => self.http.tabs_mut().save(backend, &key),
@@ -666,6 +666,8 @@ impl AppState {
             }
             Http::StopAsking => self.http.stop_asking(),
             Http::Cookies(asked) => self.http.ask_cookies(backend, asked),
+            Http::SendMessage { key, text } => self.http.send_message(backend, &key, text),
+            Http::ClearSocketLog(key) => self.http.clear_socket_log(&key),
             Http::History(asked) => self.http.ask_history(backend, asked),
             Http::Code(asked) => self.http.ask_code(asked),
             Http::CopyCode(text) => {

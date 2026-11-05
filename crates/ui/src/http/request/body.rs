@@ -22,13 +22,14 @@ use crate::widgets::json_explorer;
 use crate::widgets::{self, Button, Segmented};
 
 /// Twelve lines, as the reference's boxes.
-const BOX_HEIGHT: f32 = 240.0;
+pub(super) const BOX_HEIGHT: f32 = 240.0;
 
 /// A text of the draft in a box of its own.
 pub(super) struct TextBox<'a> {
     pub(super) label: &'a str,
     pub(super) author_id: &'a str,
     pub(super) hint: &'a str,
+    pub(super) height: f32,
 }
 
 /// The text as edited this frame. What the core rewrites reaches the box through the draft.
@@ -39,11 +40,22 @@ pub(super) fn text_box(
     field: &TextBox<'_>,
     language: i18n::Language,
 ) -> Option<String> {
+    text_box_of(ui, editor, text, field, language).0
+}
+
+/// The same, and the box's response for what reads its focus.
+pub(super) fn text_box_of(
+    ui: &mut Ui,
+    editor: &mut Editor,
+    text: &str,
+    field: &TextBox<'_>,
+    language: i18n::Language,
+) -> (Option<String>, egui::Response) {
     if editor.text() != text {
         editor.replace_all(text);
     }
     let p = palette(ui.ctx());
-    let size = Vec2::new(ui.available_width(), BOX_HEIGHT);
+    let size = Vec2::new(ui.available_width(), field.height);
     let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
     ui.painter().rect(
         rect,
@@ -65,7 +77,7 @@ pub(super) fn text_box(
         .wrap(true)
         .font(FontId::new(12.5, FontFamily::Monospace))
         .show(&mut inside);
-    output.changed.map(|_| editor.text())
+    (output.changed.map(|_| editor.text()), output.response)
 }
 
 pub(super) fn show(
@@ -212,6 +224,7 @@ fn typed(
         label: &label,
         author_id: "http-body-text",
         hint: "",
+        height: BOX_HEIGHT,
     };
     let Some(text) = text_box(ui, editor, text, &field, language) else {
         return;

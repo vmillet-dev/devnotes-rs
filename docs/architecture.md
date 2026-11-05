@@ -5054,6 +5054,15 @@ before it writes over a tab's own; the request gone, or the send made from a dra
 draft named after the send and its time. The core keeps `KEPT_AT_MOST` sends, so the list holds
 500 rows at most, whatever the plan's budget of 20,000 assumed.
 
+A WebSocket's tab holds a composer above and a log below. `state::http::sockets` keeps where each
+socket stands and its last `LOG_KEPT` events, under the id it was connected with: the core's
+`EngineEvent::Socket` names that id, so a draft saved meanwhile is rekeyed and an event from a
+socket replaced since is dropped. Connecting asks as a send does under a protected environment.
+`Ctrl+Enter` in the message sends it and is taken there, the area answering the same key by
+connecting; on a closed socket it says so and connects nothing. The log draws its rows in view
+alone, so a message reads on one line, whole in its tooltip. Closing a live socket's tab asks
+first, and a closed tab closes its socket.
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

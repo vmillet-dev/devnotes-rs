@@ -1,7 +1,7 @@
 //! The HTTP collections, their requests, and what is sent.
 
 use engine::http::{
-    self, BodyAnswer, CodeRequestOf, VariablesRequest,
+    self, BodyAnswer, CodeRequestOf, VariablesRequest, WebsocketRequest,
     codegen::GeneratedCode,
     cookies::store::CookieDomain,
     environments::{EnvironmentPatch, HttpEnvironments, Variable, VariableFault},
@@ -272,6 +272,19 @@ pub fn history_onto(backend: &Backend, id: String) -> Pending<Option<HistoryDraf
 
 pub fn history_draft(backend: &Backend, id: String) -> Pending<HistoryDraft> {
     backend.db(move |engine| http::http_history_draft(engine, id))
+}
+
+/// Answers once the socket is open; its traffic arrives as events.
+pub fn connect_socket(backend: &Backend, request: WebsocketRequest) -> Pending<()> {
+    backend.spawn(move |engine| http::connect_websocket(engine, request))
+}
+
+pub fn send_socket(backend: &Backend, id: String, text: String) -> Pending<bool> {
+    backend.compute(move |engine| http::send_websocket(engine, id, text))
+}
+
+pub fn close_socket(backend: &Backend, id: String) -> Pending<bool> {
+    backend.compute(move |engine| http::close_websocket(engine, id))
 }
 
 /// The globals and every environment.
