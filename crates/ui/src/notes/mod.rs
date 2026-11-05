@@ -75,6 +75,26 @@ pub enum Action {
         colour: FolderColour,
     },
     DeleteFolder(String),
+    /// Under `parent`, or at the top of `space` for `None`, with everything it holds; refused
+    /// and said when it cannot go there.
+    MoveFolder {
+        id: String,
+        parent: Option<String>,
+        space: String,
+    },
+    /// Up a level (`outwards`), or into the folder above it among its siblings.
+    NudgeFolder {
+        id: String,
+        outwards: bool,
+    },
+    /// List or board, for the space shown.
+    SetView(crate::state::board::Mode),
+    /// The board on screen put back in order, as far as the scope allows.
+    Tidy(engine::folders::board::BoardScope),
+    /// What a gesture on the board commits on release, or its keyboard twin.
+    Board(BoardGesture),
+    /// The band drawn last, named: a folder where it was drawn.
+    NameZone(String),
     /// What the field shows; asked of the core once the keys rest.
     Search(String),
     ClearSearch,
@@ -278,6 +298,34 @@ pub enum Trash {
     Empty,
 }
 
+/// What a board gesture commits. Membership comes from the drop, and from nothing else.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BoardGesture {
+    /// `folder`: the zone under the card, `None` the ground, which files it in the board's root.
+    DropCard {
+        note_id: String,
+        folder: Option<String>,
+        at: engine::folders::board::BoardPoint,
+    },
+    /// Moved or resized: a frame, either way.
+    MoveZone {
+        folder_id: String,
+        frame: engine::folders::board::BoardFrame,
+    },
+    /// A band on the empty ground, which asks for a name.
+    DrawZone(engine::folders::board::BoardFrame),
+    /// The cards a right-button sweep went over, ticked.
+    Band(Vec<String>),
+    /// Every card a zone draws, dimmed ones included, ticked.
+    SelectFolder(String),
+    /// Let go of over a row of the rail: filed there at any depth, `None` the top of the space.
+    /// Offered back: it may land out of sight.
+    FileOnRail {
+        note_id: String,
+        folder: Option<String>,
+    },
+}
+
 /// What the selection bar does to every ticked note at once.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Batch {
@@ -353,7 +401,14 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         rest.max,
     );
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
+    // A card dragged on the board can be let go of over a row of the rail, which lights.
+    view.canvas.rail = if state.settings.rail_shown {
+        view.sidebar.rows().to_vec()
+    } else {
+        Vec::new()
+    };
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
+    view.sidebar.card_over = view.canvas.over_rail.take();
     overlays::editor::show(
         ui,
         state,

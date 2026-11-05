@@ -900,8 +900,8 @@ mod tests {
             harness
                 .state()
                 .state
-                .spaces
-                .folders()
+                .folders
+                .list()
                 .iter()
                 .any(|folder| folder.name == "Runbooks" && folder.space_id == space)
         });

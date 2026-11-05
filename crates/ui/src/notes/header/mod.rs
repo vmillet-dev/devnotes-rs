@@ -20,6 +20,7 @@ use i18n::keys;
 
 use crate::action::{Action, Actions};
 use crate::state::AppState;
+use crate::state::board::Mode;
 use crate::theme::icons::Icon;
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, SearchField, Segmented, interact};
@@ -120,7 +121,7 @@ pub(super) fn show(
 
 /// The switchers stand in for the rail while it is put away, and give way to a breadcrumb.
 fn switchers_shown(state: &AppState) -> bool {
-    !state.settings.rail_shown && state.spaces.active_folder().is_none()
+    !state.settings.rail_shown && state.active_folder().is_none()
 }
 
 /// A group of controls side by side; answers the width of what in it does not narrow.
@@ -270,10 +271,7 @@ fn where_one_is(
             crate::notes::Trash::Open,
         )));
     }
-    let spaces = &state.spaces;
-    let open = spaces
-        .active_folder()
-        .and_then(|id| spaces.folders().iter().find(|folder| folder.id == id));
+    let open = state.active_folder().and_then(|id| state.folders.find(id));
     if let Some(folder) = open {
         switchers::breadcrumb(ui, state, folder, &mut view.crumb, actions);
         return 0.0;
@@ -282,7 +280,7 @@ fn where_one_is(
     if !shown {
         narrowed += switchers::space_switcher(ui, state, &mut view.space_menu, widest, actions);
     }
-    view_switch(ui, state);
+    view_switch(ui, state, actions);
     if !shown {
         narrowed += switchers::folder_switcher(ui, state, &mut view.folder_menu, widest, actions);
     }
@@ -304,8 +302,14 @@ fn search(
     let tr = |key| i18n::translate(language, key, &[]);
     let query = &state.notes_query;
     let mut typed = query.typed().to_owned();
-    // Zero results is the answer that matters most: said, never left quiet.
-    let matched = query.matched().map(|count| {
+    // Zero results is the answer that matters most: said, never left quiet. The board's own
+    // count while it shows: it dims what the list would drop.
+    let matched = if state.board_place().is_some() {
+        state.board.matched()
+    } else {
+        query.matched()
+    };
+    let matched = matched.map(|count| {
         i18n::translate(
             language,
             keys::notes::SEARCH_MATCHED,
@@ -352,7 +356,7 @@ fn search(
 
 /// List or board. The board is disabled rather than hidden: a control that vanishes on « all
 /// spaces » reads as a bug, a disabled one with its reason as an explanation.
-fn view_switch(ui: &mut Ui, state: &AppState) {
+fn view_switch(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let p = palette(ui.ctx());
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
@@ -364,12 +368,33 @@ fn view_switch(ui: &mut Ui, state: &AppState) {
     frame.show(ui, |ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
         ui.horizontal(|ui| {
-            option(ui, &tr(keys::board::LIST_VIEW), "view-list", true, true);
-            // The board arrives with its own phase; until then it is never on.
-            let board = option(ui, &tr(keys::board::BOARD_VIEW), "view-board", false, false);
-            if state.spaces.active_space().is_none() {
-                widgets::tooltip(board, &tr(keys::board::NEEDS_ASPACE));
+            let space = state.spaces.active_space();
+            let on_board = state.board_place().is_some();
+            let list = option(
+                ui,
+                &tr(keys::board::LIST_VIEW),
+                "view-list",
+                !on_board,
+                true,
+            );
+            let board = option(
+                ui,
+                &tr(keys::board::BOARD_VIEW),
+                "view-board",
+                on_board,
+                space.is_some(),
+            );
+            if space.is_none() {
+                widgets::tooltip(board.clone(), &tr(keys::board::NEEDS_ASPACE));
             }
+            let mode = if list.clicked() {
+                Mode::List
+            } else if board.clicked() {
+                Mode::Board
+            } else {
+                return;
+            };
+            actions.push(Action::Notes(crate::notes::Action::SetView(mode)));
         });
     });
 }

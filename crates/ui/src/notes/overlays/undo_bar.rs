@@ -60,7 +60,14 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
 fn message(ui: &mut Ui, action: &Reversible, language: i18n::Language) {
     let p = palette(ui.ctx());
     let count = u32::try_from(action.count()).unwrap_or(u32::MAX);
-    let words = i18n::translate(language, said(action), &[("count", count.into())]);
+    let words = match action {
+        Reversible::FolderMove { name, into, .. } => {
+            let mut params = vec![("name", name.as_str().into())];
+            params.extend(into.as_deref().map(|into| ("into", into.into())));
+            i18n::translate(language, said(action), &params)
+        }
+        _ => i18n::translate(language, said(action), &[("count", count.into())]),
+    };
     let galley = widgets::text(ui, &words, 12.5, 400.0, FontFamily::Proportional, p.text_1);
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
@@ -79,6 +86,9 @@ fn said(action: &Reversible) -> Key {
         Reversible::Pin { pinned: false, .. } => keys::undo::UNPINNED,
         Reversible::Priority(_) => keys::undo::PRIORITISED,
         Reversible::File(_) => keys::undo::FILED,
+        Reversible::Arrangement { .. } => keys::undo::ARRANGED,
+        Reversible::FolderMove { into: Some(_), .. } => keys::undo::FOLDER_MOVED,
+        Reversible::FolderMove { into: None, .. } => keys::undo::FOLDER_MOVED_TOP,
         Reversible::Convert { into, .. } => match into {
             NoteKind::Snippet => keys::undo::converted_into::SNIPPET,
             NoteKind::Note => keys::undo::converted_into::NOTE,

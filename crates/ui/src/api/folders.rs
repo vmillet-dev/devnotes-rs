@@ -2,7 +2,7 @@
 
 use engine::folders::{
     self,
-    model::{Folder, FolderColour, FolderDraft},
+    model::{Folder, FolderColour, FolderDraft, FolderMove},
 };
 
 use super::undo::Reversible;
@@ -38,6 +38,11 @@ pub fn recolour(backend: &Backend, id: String, colour: FolderColour) -> Pending<
 /// What it holds goes up a level.
 pub fn delete(backend: &Backend, id: String) -> Pending<()> {
     backend.db(move |engine| folders::delete_folder(engine, id))
+}
+
+/// Under `parent_id`, or at the top of its space, with what it holds: answers where it was.
+pub fn move_to(backend: &Backend, id: String, parent_id: Option<String>) -> Pending<FolderMove> {
+    backend.db(move |engine| folders::move_folder(engine, id, parent_id))
 }
 
 /// What siblings are ordered by: their name, case and accents aside. Pure, under a

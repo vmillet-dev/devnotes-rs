@@ -300,16 +300,23 @@ impl App {
         #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
         let corner = Pos2::new(bounds.x0 as f32, bounds.y0 as f32);
         let (from, to) = (corner + from.into(), corner + to.into());
-        let button = |pos, pressed| Event::PointerButton {
+        self.drag(from, to, PointerButton::Primary);
+    }
+
+    /// A press at `from` and a release at `to`, in points on the window, the pointer moved
+    /// half way between: what a gesture needs to tell a drag from a click.
+    pub fn drag(&mut self, from: Pos2, to: Pos2, button: PointerButton) {
+        let press = |pos, pressed| Event::PointerButton {
             pos,
-            button: PointerButton::Primary,
+            button,
             pressed,
             modifiers: Modifiers::NONE,
         };
         self.apply(vec![Event::PointerMoved(from)]);
-        self.apply(vec![button(from, true)]);
+        self.apply(vec![press(from, true)]);
+        self.apply(vec![Event::PointerMoved(from + (to - from) / 2.0)]);
         self.apply(vec![Event::PointerMoved(to)]);
-        self.apply(vec![button(to, false)]);
+        self.apply(vec![press(to, false)]);
     }
 
     /// The pointer over the first `author_id` in reading order, once it is shown: what a card

@@ -2,6 +2,7 @@
 //! the viewport is (plan § 3.6), or the state that owns the region instead — loading, an error,
 //! nothing found.
 
+mod board;
 mod card;
 pub mod grid;
 pub mod rows;
@@ -36,6 +37,11 @@ pub struct CanvasView {
     /// The selection bar's: a tag being typed, and a deletion waiting for its confirmation.
     pub tag_draft: String,
     pub confirm_delete: bool,
+    board: board::BoardScreen,
+    /// The rail's rows, handed over by the area each frame.
+    pub(crate) rail: Vec<crate::notes::sidebar::RailRow>,
+    /// The row a card dragged on the board is over, handed back for the rail to light.
+    pub(crate) over_rail: Option<String>,
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions: &mut Actions) {
@@ -48,6 +54,10 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
     let mut ui = ui.new_child(UiBuilder::new().max_rect(region));
     let ui = &mut ui;
     let tr = |key: Key| i18n::translate(language, key, &[]);
+    if state.board_place().is_some() {
+        board::show(ui, state, canvas_view, actions);
+        return;
+    }
     if query.error().is_some() {
         // Loading is the one failure that empties the whole screen: it has its own retry.
         padded(ui, canvas, |ui| {
@@ -73,18 +83,24 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         });
         return;
     }
-    let context = card::Context {
-        language,
-        clock: state.clock.as_ref(),
-        thumbnails: &state.caches.thumbnails,
-        library: &state.spaces,
-        armed: state.selection.armed(),
-        selection: &state.selection,
-        selecting: !state.selection.checked_in(&on_screen(view)).is_empty(),
-    };
-    sections(ui, view, &context, canvas_view, actions);
+    let context = card::Context::of(state, &on_screen(view));
+    // Nothing searched inside an open folder: its one list is named after it, not « Results ».
+    let opened = state
+        .active_folder()
+        .filter(|_| !query.has_user_filters())
+        .and_then(|id| state.folders.find(id))
+        .map(|folder| folder.name.as_str());
+    sections(ui, (view, opened), &context, canvas_view, actions);
     hint(ui, language);
-    selection_bar::show(ui, state, view, canvas_view, actions);
+    let shown: Vec<_> = view
+        .cards()
+        .map(|card| selection_bar::Shown {
+            id: &card.id,
+            pinned: card.pinned,
+            tags: &card.tags,
+        })
+        .collect();
+    selection_bar::show(ui, state, &shown, canvas_view, actions);
 }
 
 /// The keys that matter, on the bottom edge whatever is above it.
@@ -109,14 +125,14 @@ fn on_screen(view: &NotesView) -> Vec<&str> {
     view.cards().map(|card| card.id.as_str()).collect()
 }
 
-fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
+pub(super) fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
     egui::Frame::new().inner_margin(padding).show(ui, |ui| {
         ui.spacing_mut().item_spacing.y = 8.0;
         draw(ui);
     });
 }
 
-fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
+pub(super) fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
     let p = palette(ui.ctx());
     let galley = widgets::text(ui, words, 13.0, 400.0, FontFamily::Proportional, p.text_2);
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
@@ -127,7 +143,7 @@ fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
 
 fn sections(
     ui: &mut Ui,
-    view: &NotesView,
+    (view, opened): (&NotesView, Option<&str>),
     context: &card::Context<'_>,
     canvas_view: &mut CanvasView,
     actions: &mut Actions,
@@ -158,7 +174,8 @@ fn sections(
                 match row {
                     Row::Heading { section } => {
                         let rect = Rect::from_min_size(min, vec2(width, HEADING_HEIGHT));
-                        heading(ui, rect, &view.sections[section], context.language);
+                        let shown = (&view.sections[section], opened);
+                        heading(ui, rect, shown, context.language);
                     }
                     Row::Cards { section, first } => {
                         let at = (&rows, view, section, first);
@@ -203,7 +220,12 @@ fn cards(
 }
 
 /// « Today · 3 », in small capitals, a priority section's dot before it.
-fn heading(ui: &mut Ui, rect: Rect, section: &NoteSection, language: i18n::Language) {
+fn heading(
+    ui: &mut Ui,
+    rect: Rect,
+    (section, opened): (&NoteSection, Option<&str>),
+    language: i18n::Language,
+) {
     let p = palette(ui.ctx());
     let mut left = rect.left();
     if let Some(SectionGroup::Priority { priority }) = section.group {
@@ -214,7 +236,11 @@ fn heading(ui: &mut Ui, rect: Rect, section: &NoteSection, language: i18n::Langu
         priority_dot(&mut dot_ui, priority);
         left += 8.0 + 8.0;
     }
-    let title = title(section, language).to_uppercase();
+    let title = match opened {
+        Some(folder) if section.key == NoteSectionKey::Results => folder.to_owned(),
+        _ => title(section, language),
+    }
+    .to_uppercase();
     let mut count = format!("· {}", section.cards.len());
     if section.has_expiring_notes {
         count.push_str(" · ");

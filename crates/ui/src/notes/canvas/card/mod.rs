@@ -27,13 +27,30 @@ pub(super) struct Context<'a> {
     pub(super) language: i18n::Language,
     pub(super) clock: &'a dyn Clock,
     pub(super) thumbnails: &'a Thumbnails,
-    /// The spaces and folders a note can be filed into or moved to.
+    /// The spaces and folders a note can be moved to or filed into.
     pub(super) library: &'a crate::state::spaces::SpacesState,
+    pub(super) folders: &'a crate::state::folders::FoldersState,
     /// The card a first `Delete` armed: a second one sends it to the trash.
     pub(super) armed: Option<&'a str>,
     /// The ticked cards: while any is, every card shows its box.
     pub(super) selection: &'a crate::state::selection::SelectionState,
     pub(super) selecting: bool,
+}
+
+impl<'a> Context<'a> {
+    /// `on_screen`: the cards the view draws, which decide whether every box shows.
+    pub(super) fn of(state: &'a crate::state::AppState, on_screen: &[&str]) -> Self {
+        Self {
+            language: state.language,
+            clock: state.clock.as_ref(),
+            thumbnails: &state.caches.thumbnails,
+            library: &state.spaces,
+            folders: &state.folders,
+            armed: state.selection.armed(),
+            selection: &state.selection,
+            selecting: !state.selection.checked_in(on_screen).is_empty(),
+        }
+    }
 }
 
 const FOOTER_HEIGHT: f32 = 18.0;

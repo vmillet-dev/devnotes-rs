@@ -7,7 +7,6 @@ use egui::{
     vec2,
 };
 use engine::notes::priority::Priority;
-use engine::notes::view::NotesView;
 use i18n::keys;
 
 use super::CanvasView;
@@ -29,6 +28,13 @@ const LEVELS: [Priority; 5] = [
 /// No entry chosen: the menus name what they do.
 const NONE: usize = usize::MAX;
 
+/// A card on screen, as the bar reads it: the list's or the board's.
+pub(super) struct Shown<'a> {
+    pub(super) id: &'a str,
+    pub(super) pinned: bool,
+    pub(super) tags: &'a [String],
+}
+
 fn batch(actions: &mut Actions, batch: Batch) {
     actions.push(Action::Notes(crate::notes::Action::Batch(batch)));
 }
@@ -36,11 +42,11 @@ fn batch(actions: &mut Actions, batch: Batch) {
 pub(super) fn show(
     ui: &mut Ui,
     state: &AppState,
-    view: &NotesView,
+    shown: &[Shown<'_>],
     canvas_view: &mut CanvasView,
     actions: &mut Actions,
 ) {
-    let order: Vec<&str> = view.cards().map(|card| card.id.as_str()).collect();
+    let order: Vec<&str> = shown.iter().map(|card| card.id).collect();
     let checked = state.selection.checked_in(&order);
     if checked.is_empty() {
         canvas_view.confirm_delete = false;
@@ -63,7 +69,7 @@ pub(super) fn show(
         // Two lines rather than a control cut off when one does not hold.
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = vec2(8.0, 6.0);
-            controls(ui, state, view, &checked, canvas_view, actions);
+            controls(ui, state, shown, &checked, canvas_view, actions);
         });
     });
 }
@@ -71,7 +77,7 @@ pub(super) fn show(
 fn controls(
     ui: &mut Ui,
     state: &AppState,
-    view: &NotesView,
+    shown: &[Shown<'_>],
     checked: &[String],
     canvas_view: &mut CanvasView,
     actions: &mut Actions,
@@ -99,10 +105,10 @@ fn controls(
     {
         batch(actions, Batch::Prioritise(*level));
     }
-    tagging(ui, view, checked, canvas_view, language, actions);
-    let notes: Vec<_> = view
-        .cards()
-        .filter(|card| checked.contains(&card.id))
+    tagging(ui, shown, checked, canvas_view, language, actions);
+    let notes: Vec<_> = shown
+        .iter()
+        .filter(|card| checked.iter().any(|id| id == card.id))
         .collect();
     let all_pinned = notes.iter().all(|card| card.pinned);
     let pin = tr(if all_pinned {
@@ -162,8 +168,8 @@ fn placing(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     }
     let shown_space = state.spaces.active_space();
     let folders: Vec<_> = state
-        .spaces
-        .folders()
+        .folders
+        .list()
         .iter()
         .filter(|folder| shown_space.is_none_or(|space| folder.space_id == space))
         .collect();
@@ -214,7 +220,7 @@ fn count(ui: &mut Ui, count: usize, language: i18n::Language) {
 /// A tag typed then Enter, onto every ticked note; and the menu of those they carry.
 fn tagging(
     ui: &mut Ui,
-    view: &NotesView,
+    shown: &[Shown<'_>],
     checked: &[String],
     canvas_view: &mut CanvasView,
     language: i18n::Language,
@@ -239,9 +245,9 @@ fn tagging(
         batch(actions, Batch::Tag(tag));
         canvas_view.tag_draft.clear();
     }
-    let mut carried: Vec<&str> = view
-        .cards()
-        .filter(|card| checked.contains(&card.id))
+    let mut carried: Vec<&str> = shown
+        .iter()
+        .filter(|card| checked.iter().any(|id| id == card.id))
         .flat_map(|card| card.tags.iter().map(String::as_str))
         .collect();
     carried.sort_unstable();

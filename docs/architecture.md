@@ -4716,8 +4716,7 @@ order, grouping, pinned first — which is the library's (`devnotes.notes.arrang
 reference's JSON). All of them are parameters of the one `QueryCell`, so a search typed faster
 than the core answers asks once, and a stale answer is dropped. The search shows the count once
 something is filtered, zero included, and its cross empties the field alone; `Ctrl+K` is the
-notes area's key (`keys::NOTES`). The List/Board switch keeps the board disabled until the board
-is ported. Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
+notes area's key (`keys::NOTES`). The List/Board switch is the board's (below). Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
 embedded face has them.
 
 The facets (`notes::header::facets`) are the kind, priority, tag and format rails under the
@@ -4830,22 +4829,86 @@ panels as the rail (`notes::panel`, shared). While a folder is open, its breadcr
 them — back to its space, the folders above it, its name, its panel.
 
 The library rail (`notes::sidebar`) is drawn left of the canvas, as wide as the application setting
-`libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds both
-lists — every space's folders, since the rail draws the whole library — asked again with the
-revision, and the space and folder chosen, remembered in the library's preferences
-(`activeSpace`, `activeFolder`). An id no space or folder answers to any more reads as « every
+`libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds the
+spaces and the one chosen, `state::folders::FoldersState` every space's folders — the rail draws
+the whole library — and the one open; both are asked again with the revision and remembered in
+the library's preferences (`activeSpace`, `activeFolder`). `AppState` joins them: choosing a
+space leaves the folder, opening a folder shows its space, and `AppState::active_folder` is the
+open folder within the space shown. An id no space or folder answers to any more reads as « every
 space » or « every folder »: a space deleted elsewhere hides no note. `sidebar::tree` flattens
 the library into rows; what nests in what is `folders::model::Lineage`'s, siblings ordered by
 `view::fold` of their name. A row's ⋯ opens its panel under it, one at a time: a space is
 pinned, renamed (written when the field is left, or on Enter), and deleted in two steps with a
 refuge chosen and what moves counted by the core first; a folder is recoloured, renamed, given a
-sub-folder, and deleted, what it held going up a level. The rail's folder moves (drag and
-`Alt`+arrows) come with the board.
+sub-folder, and deleted, what it held going up a level. A folder's row is dragged onto another
+row — into that folder, or to the top of that space — or moved by `Alt+←` (up a level) and
+`Alt+→` (into the sibling above it); there is no order of siblings, so no `Alt+↑/↓`. The rail
+records its rows each frame and reports the gesture; whether the folder may go there is
+`AppState`'s, by `Lineage::check_move` and the space, and a refusal is said, never written. A
+move answers where the folder was, `Reversible::FolderMove`, which the undo bar names and puts
+back through `move_folder_back`. A card dragged on the board and let go of over a row of its
+space is filed there at any depth (`BoardGesture::FileOnRail`), the row lit while it is over
+it, and offered back like any filing. Inside an open folder, the list's one section is named
+after the folder until something is searched.
 
 A drawing's picture is never in the list: the card asks for it by `Stamp` (id and `updated_at`, so
 a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
 reads it on the db queue, decodes the PNG on the compute queue, uploads it once and keeps the last
 256; it is library content, so it lives in `LibraryCaches` and goes with the library scope.
+
+### The board, drawn
+
+The List/Board switch is remembered per space in the library's preferences
+(`devnotes.notes.view.<spaceId>`, `state::board::Mode`), and disabled on « all spaces », which
+has no zones. `AppState::board_place` is the one place that says whether the board is on screen:
+the space's, or the open folder's when it holds folders — one that holds none is the flat grid,
+whatever the switch says. `state::board::BoardState` is a `QueryCell` over `board_view`, with
+the list's criteria (`notes_query::Criteria`) among its parameters: the board reads the whole
+space and dims, it never narrows. While it shows, the selection, the arrows (zone by zone, then
+the ground, one step at a time) and the search's count read the board's cards, dimmed ones
+included, and the selection bar takes them as `selection_bar::Shown`.
+
+`notes::canvas::board` draws it: a dotted ground (`GRID_PX`) that pans both ways and never
+zooms, at least as large as what is seen, so past the content's edge it still takes the pointer;
+zones from their stored frames (`board::zone`), the same card as the list's, full size, and the
+loose cards where they were left. Only what crosses the viewport is drawn — zones and loose cards
+by their rectangle, a zone's cards by the rows its body shows — and every card's `Ui` is salted
+with its note's id, so what scrolls in and out moves no other id. ⚠️ A zone's cards flow in the
+columns `folders::board::columns_in` counts: the Rust that sizes a zone is the Rust that lays it
+out, and egui's scroll bars float over the body rather than taking a slice of the row, so the
+reference's one-pixel wrap cannot happen. A zone's title and its sub-folders' chips open their
+folder; its ⋯ opens the folder's panel, the rail's.
+
+What the criteria leave out is drawn at a third of its opacity in its seat
+(`board::seated`), never reflowed, and the seat node says it disabled, which is what the e2e
+reads. A gesture's result is staged in `BoardState` and laid over the view — a zone's frame, a
+loose card's place — then written behind `LAYOUT_SAVE_DEBOUNCE` (400 ms, a deadline in egui's
+time) as one `save_board_layout`. ⚠️ The overlay is let go of when a view carries the same
+value, never when the write returns (the view still drawn then is the one read before the
+gesture); a failed write keeps it. The tidy control floats in the ground's corner
+(`board::tidy`): « Aligner » (and `A`) flows the loose cards, its chevron offers « Réorganiser
+N dossiers et M cartes », and the arrangement answered is `Reversible::Arrangement`, offered by
+the undo bar and put back through `save_board_layout`. The ground pans home after an
+arrangement and back after its undo: `BoardState::pans` counts both, and the drawing forces the
+`ScrollArea`'s offset once per new count.
+
+The four gestures are pointer drags read by `board::Hand`, never egui's drag and drop: a card is
+its own handle (its seat senses the drag, the card under it the click, and egui gives each to
+its own, so a card dragged is never also opened), a zone moves by its header's grip and resizes
+by its corner, the left button on the empty ground draws a folder, and the right button anywhere
+sweeps a selection over the cards drawn this frame. The arithmetic is `board::gesture`, egui-free:
+nothing moves before the pointer travels 4 px, everything lands on `GRID_PX` (20 px, the
+dotted lattice), a drawn band snaps both corners and a resize snaps before it clamps to
+`folders::board`'s minimum. ⚠️ The pointer is read before anything is drawn (`track`) and the
+gesture commits on release alone (`follow`), as one `notes::BoardGesture`: a drop files through
+`file_notes` — the zone under the card's corner, or the board's root on the ground — and is staged
+in `BoardState` so the card is drawn in its new home at once; a membership refused is let go of
+where a refused place is kept. A filed card dragged out leaves its seat faded and travels as a
+ghost on a layer above the board; the zone it would land in says so. A drawn band opens the
+folder-name prompt, and the folder made gets its frame written straight through. The keyboard
+twins: a focused grip or corner moves or resizes the zone a dot per arrow; a card is filed from
+the selection bar; a folder is made from the rail. A zone's ⋯ ticks its every card, dimmed ones
+included.
 
 ## IPC boundary (Angular ↔ Rust)
 

@@ -52,6 +52,11 @@ impl SelectionState {
             .extend(order[low..=high].iter().map(|each| (*each).to_owned()));
     }
 
+    /// Every one of `ids` ticked, none untoggled: a sweep or a whole zone.
+    pub fn check_all(&mut self, ids: impl IntoIterator<Item = String>) {
+        self.checked.extend(ids);
+    }
+
     /// `true` when something was ticked: Escape's next rung.
     pub fn clear(&mut self) -> bool {
         let had = !self.checked.is_empty();

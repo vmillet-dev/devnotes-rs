@@ -127,7 +127,7 @@ fn ctrl_k_puts_the_caret_in_the_search() {
 }
 
 #[test]
-fn the_board_is_not_offered_yet() {
+fn the_board_is_not_offered_across_every_space() {
     let (backend, profile) = testing::unlocked();
     let harness = area(backend, profile);
 
@@ -210,11 +210,11 @@ fn a_folder_open_is_a_breadcrumb_back_to_its_space() {
     assert_eq!(here, "api");
     click(&mut harness, "folder-breadcrumb-step", "Runbooks");
     assert_eq!(
-        harness.state().state.spaces.active_folder(),
+        harness.state().state.active_folder(),
         Some(runbooks.id.as_str())
     );
     click_id(&mut harness, "folder-breadcrumb-back");
-    assert_eq!(harness.state().state.spaces.active_folder(), None);
+    assert_eq!(harness.state().state.active_folder(), None);
     harness.get_by(|node| node.author_id() == Some("folder-switcher"));
 }
 

@@ -1,6 +1,10 @@
 //! What a write answered that can put it back, and the call that does.
 
-use engine::folders::{self, model::NoteFiling};
+use engine::folders::{
+    self,
+    board::BoardLayout,
+    model::{FolderMove, NoteFiling},
+};
 use engine::notes::{
     self,
     model::{NotePlacement, NotePriority, NoteTag},
@@ -25,6 +29,18 @@ pub enum Reversible {
     },
     Priority(Vec<NotePriority>),
     File(Vec<NoteFiling>),
+    /// A board tidied up, and the layout it replaced, on the board it was made on.
+    Arrangement {
+        root_id: Option<String>,
+        previous: BoardLayout,
+        moved: u32,
+    },
+    /// A folder put under another or at the top, and where it was; named for the bar.
+    FolderMove {
+        was: FolderMove,
+        name: String,
+        into: Option<String>,
+    },
     /// A change of kind, and the body the note had before it.
     Convert {
         id: String,
@@ -43,7 +59,8 @@ impl Reversible {
             Self::Pin { ids, .. } => ids.len(),
             Self::Priority(previous) => previous.len(),
             Self::File(previous) => previous.len(),
-            Self::Convert { .. } => 1,
+            Self::Arrangement { moved, .. } => *moved as usize,
+            Self::FolderMove { .. } | Self::Convert { .. } => 1,
         }
     }
 }
@@ -59,6 +76,14 @@ pub fn revert(backend: &Backend, action: Reversible) -> Pending<u32> {
         }
         Reversible::Priority(previous) => notes::restore_priorities(engine, previous),
         Reversible::File(previous) => folders::file_notes_back(engine, previous),
+        Reversible::Arrangement {
+            root_id, previous, ..
+        } => {
+            let count = previous.zones.len() + previous.cards.len();
+            folders::save_board_layout(engine, root_id, previous.zones, previous.cards)
+                .map(|()| self::count(count))
+        }
+        Reversible::FolderMove { was, .. } => folders::move_folder_back(engine, was).map(u32::from),
         Reversible::Convert { id, previous, .. } => {
             let patch = notes::model::NotePatch {
                 kind: Some(previous.kind),

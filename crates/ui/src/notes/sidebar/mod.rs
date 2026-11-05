@@ -7,7 +7,7 @@ mod tree;
 
 use std::collections::HashSet;
 
-use egui::{FontFamily, Margin, Pos2, Ui};
+use egui::{FontFamily, Key, Margin, Modifiers, Pos2, Rect, Ui};
 use i18n::keys;
 
 use crate::action::{Action, Actions};
@@ -19,11 +19,34 @@ use crate::widgets::{self, IconButton};
 use row::{Lead, Mark, Name};
 use tree::Row;
 
-/// What only the rail's drawing sees: what is closed, which panel is open.
+/// What only the rail's drawing sees: what is closed, which panel is open, what is dragged.
 #[derive(Default)]
 pub struct SidebarView {
     collapsed: HashSet<String>,
     panel: Panel,
+    /// The space and folder rows as last drawn: where a dragged folder or card would land.
+    rows: Vec<RailRow>,
+    /// The folder whose row is being dragged.
+    dragging: Option<String>,
+    /// The row a dragged folder is over.
+    lit: Option<String>,
+    /// The row a card dragged on the board is over, said by the board.
+    pub card_over: Option<String>,
+}
+
+/// A row something can be let go of over: a space's, which is its top, or a folder's.
+#[derive(Debug, Clone)]
+pub struct RailRow {
+    pub rect: Rect,
+    pub space_id: String,
+    /// `None` for the space's own row.
+    pub folder_id: Option<String>,
+}
+
+impl RailRow {
+    fn id(&self) -> &str {
+        self.folder_id.as_deref().unwrap_or(&self.space_id)
+    }
 }
 
 /// One at a time: two open forms in a rail this narrow read as one.
@@ -48,6 +71,14 @@ impl SidebarView {
     /// tree.
     fn reveal(&mut self, id: &str) {
         self.collapsed.remove(id);
+    }
+
+    pub fn rows(&self) -> &[RailRow] {
+        &self.rows
+    }
+
+    fn lit(&self, id: &str) -> bool {
+        self.lit.as_deref() == Some(id) || self.card_over.as_deref() == Some(id)
     }
 }
 
@@ -130,10 +161,11 @@ fn tree_rows(ui: &mut Ui, state: &AppState, view: &mut SidebarView, actions: &mu
     let active_space = spaces.active_space();
     let rows = tree::rows(
         spaces.spaces(),
-        spaces.folders(),
+        state.folders.list(),
         active_space,
         &view.collapsed,
     );
+    view.rows.clear();
     for row in rows {
         match row {
             Row::All => {
@@ -142,6 +174,7 @@ fn tree_rows(ui: &mut Ui, state: &AppState, view: &mut SidebarView, actions: &mu
                     author_id: "space-option-all",
                     mark: Mark::Nothing,
                     active: active_space.is_none(),
+                    lit: false,
                 };
                 let drawn = row::show(ui, 0, &Lead::Sparkle, &name, None);
                 if drawn.name.clicked() {
@@ -183,6 +216,7 @@ fn tree_rows(ui: &mut Ui, state: &AppState, view: &mut SidebarView, actions: &mu
             }
         }
     }
+    drop_folder(ui, view, actions);
 }
 
 /// Where a folder's row sits in the tree.
@@ -205,7 +239,7 @@ fn folder_row(
     }: Place,
 ) {
     let language = state.language;
-    let active_folder = state.spaces.active_folder();
+    let active_folder = state.active_folder();
     let twisty = row::Twisty {
         open,
         label: i18n::translate(
@@ -229,6 +263,7 @@ fn folder_row(
         author_id: "folder-option",
         mark: Mark::Swatch(folder.colour),
         active: active_folder == Some(folder.id.as_str()),
+        lit: view.lit(&folder.id),
     };
     let menu = i18n::translate(
         language,
@@ -236,6 +271,15 @@ fn folder_row(
         &[("name", folder.name.as_str().into())],
     );
     let drawn = row::show(ui, depth + 1, &lead, &name, Some((&menu, "folder-edit")));
+    view.rows.push(RailRow {
+        rect: drawn.name.rect,
+        space_id: folder.space_id.clone(),
+        folder_id: Some(folder.id.clone()),
+    });
+    if drawn.name.drag_started() {
+        view.dragging = Some(folder.id.clone());
+    }
+    nudge(ui, &drawn.name, &folder.id, actions);
     if drawn.twisty.is_some_and(|twisty| twisty.clicked()) {
         view.toggle(&folder.id);
     }
@@ -298,7 +342,8 @@ fn space_row(
             Mark::Nothing
         },
         active: state.spaces.active_space() == Some(space.id.as_str())
-            && state.spaces.active_folder().is_none(),
+            && state.active_folder().is_none(),
+        lit: view.lit(&space.id),
     };
     let menu = i18n::translate(language, keys::notes::SPACE_OPTIONS_LABEL, &named);
     let drawn = row::show(
@@ -308,6 +353,11 @@ fn space_row(
         &name,
         Some((&menu, "space-edit")),
     );
+    view.rows.push(RailRow {
+        rect: drawn.name.rect,
+        space_id: space.id.clone(),
+        folder_id: None,
+    });
     if drawn.twisty.is_some_and(|twisty| twisty.clicked()) {
         view.toggle(&space.id);
     }
@@ -338,6 +388,49 @@ fn space_row(
         if panel::space(ui, edit, space, &targets, contents, language, actions) {
             view.panel = Panel::None;
         }
+    }
+}
+
+/// `Alt+←` up a level, `Alt+→` into the folder above it among its siblings: the drag's twin.
+/// There is no order of siblings to change, so no `Alt+↑/↓`.
+fn nudge(ui: &Ui, name: &egui::Response, id: &str, actions: &mut Actions) {
+    if !widgets::takes_keys(ui, name) {
+        return;
+    }
+    for (key, outwards) in [(Key::ArrowLeft, true), (Key::ArrowRight, false)] {
+        if ui.input_mut(|input| input.consume_key(Modifiers::ALT, key)) {
+            let id = id.to_owned();
+            push(actions, crate::notes::Action::NudgeFolder { id, outwards });
+        }
+    }
+}
+
+/// A folder's row let go of over another row: under that folder, or at the top of that space.
+/// Whether it may go there is the state's to say.
+fn drop_folder(ui: &Ui, view: &mut SidebarView, actions: &mut Actions) {
+    let Some(id) = view.dragging.clone() else {
+        return;
+    };
+    let (down, at) = ui.input(|input| (input.pointer.any_down(), input.pointer.latest_pos()));
+    let over = at
+        .and_then(|at| view.rows.iter().find(|row| row.rect.contains(at)))
+        .filter(|row| row.folder_id.as_deref() != Some(id.as_str()))
+        .cloned();
+    view.lit = over.as_ref().map(|row| row.id().to_owned());
+    if down {
+        return;
+    }
+    view.dragging = None;
+    view.lit = None;
+    if let Some(row) = over {
+        push(
+            actions,
+            crate::notes::Action::MoveFolder {
+                id,
+                parent: row.folder_id,
+                space: row.space_id,
+            },
+        );
     }
 }
 
@@ -386,6 +479,7 @@ fn new_folder(
         author_id: "folder-create-open",
         mark: Mark::Plus,
         active: false,
+        lit: false,
     };
     if row::show(ui, 1, &Lead::None, &name, None).name.clicked() {
         view.panel = Panel::NewFolder(Draft::default());

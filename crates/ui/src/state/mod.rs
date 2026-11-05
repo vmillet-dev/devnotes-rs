@@ -1,12 +1,14 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
 pub mod attachments;
+pub mod board;
 pub mod calc_sheets;
 pub mod diagrams;
 pub mod drawing_exports;
 pub mod drawing_pictures;
 pub mod editor;
 pub mod explored;
+pub mod folders;
 pub mod formatting;
 pub mod note_revisions;
 pub mod notes;
@@ -95,7 +97,9 @@ pub struct AppState {
     seeding: Option<Pending<bool>>,
     pub revision: Revision,
     pub notes_query: NotesQueryState,
+    pub board: board::BoardState,
     pub spaces: spaces::SpacesState,
+    pub folders: folders::FoldersState,
     /// The area's view: only its drawing reads it (D13).
     pub notes_view: crate::notes::View,
     pub notes: notes::NotesState,
@@ -141,7 +145,9 @@ impl AppState {
             seeding: None,
             revision: Revision::default(),
             notes_query: NotesQueryState::default(),
+            board: board::BoardState::default(),
             spaces: spaces::SpacesState::default(),
+            folders: folders::FoldersState::default(),
             notes_view: crate::notes::View::default(),
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
@@ -202,6 +208,12 @@ impl AppState {
             self.undo.record(done, time);
         }
         self.undo.update(&mut self.revision, &mut self.errors);
+        if let Some(arranged) = self
+            .board
+            .write(ctx, backend, &mut self.revision, &mut self.errors)
+        {
+            self.undo.record(arranged, time);
+        }
         self.trash
             .update(ctx, backend, &mut self.revision, &mut self.errors);
         self.tags
@@ -253,16 +265,205 @@ impl AppState {
         self.caches.thumbnails.update(ctx, backend);
         self.caches.pictures.update(ctx, backend);
         self.caches.diagrams.update(ctx, backend);
-        if self
+        let mut moved = self
             .spaces
-            .update(backend, &mut self.revision, &mut self.errors)
-        {
+            .update(backend, &mut self.revision, &mut self.errors);
+        if moved {
+            self.folders.leave();
+        }
+        let answered = self
+            .folders
+            .update(backend, &mut self.revision, &mut self.errors);
+        for done in answered.done {
+            self.undo.record(done, time);
+        }
+        moved |= answered.moved;
+        if moved {
             self.remember_place(backend);
         }
         let now = self.clock.now();
-        let place = (self.spaces.active_space(), self.spaces.active_folder());
+        let folder = self.active_folder().map(str::to_owned);
+        let place = (self.spaces.active_space(), folder.as_deref());
         self.notes_query
             .update(ctx, backend, now, place, (self.revision, index));
+        if let Some(place) = self.board_place() {
+            let criteria = self.notes_query.criteria();
+            self.board
+                .update(backend, now, (place, criteria), (self.revision, index));
+        }
+    }
+
+    /// The board, when it is what the canvas shows: the space's, or the open folder's when it
+    /// holds folders. One that holds none is a flat grid whatever the switch says.
+    pub fn board_place(&self) -> Option<board::Place> {
+        let space_id = self.spaces.active_space()?;
+        if board::Mode::read(&self.library_preferences, space_id) != board::Mode::Board {
+            return None;
+        }
+        let root_id = self.active_folder();
+        if root_id.is_some_and(|root| !self.folders.has_children(root)) {
+            return None;
+        }
+        Some(board::Place {
+            space_id: space_id.to_owned(),
+            root_id: root_id.map(str::to_owned),
+        })
+    }
+
+    /// On the board on screen: a gesture's result is staged and written behind the debounce.
+    fn board_gesture(
+        &mut self,
+        gesture: crate::notes::BoardGesture,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::notes::BoardGesture;
+        let Some(place) = self.board_place() else {
+            return;
+        };
+        let now = ctx.input(|input| input.time);
+        match gesture {
+            BoardGesture::DropCard {
+                note_id,
+                folder,
+                at,
+            } => self
+                .board
+                .drop_card(backend, &place, (note_id, folder), (at, now)),
+            BoardGesture::MoveZone { folder_id, frame } => {
+                self.board.move_zone(&place, folder_id, frame, now);
+            }
+            BoardGesture::DrawZone(frame) => self.board.propose_zone(frame),
+            BoardGesture::Band(ids) => self.selection.check_all(ids),
+            BoardGesture::FileOnRail { note_id, folder } => {
+                self.notes.file(backend, vec![note_id], folder);
+            }
+            BoardGesture::SelectFolder(id) => {
+                let held: Vec<String> = self
+                    .board
+                    .view()
+                    .into_iter()
+                    .flat_map(|view| &view.zones)
+                    .filter(|zone| zone.folder.id == id)
+                    .flat_map(|zone| zone.notes.iter().map(|entry| entry.note.id.clone()))
+                    .collect();
+                self.selection.check_all(held);
+            }
+        }
+    }
+
+    /// The board on screen put back in order; nothing while the list shows.
+    fn tidy(&mut self, backend: &Backend, scope: engine::folders::board::BoardScope) {
+        if let Some(place) = self.board_place() {
+            self.board.arrange(backend, &place, scope);
+        }
+    }
+
+    /// The last write put back; an arrangement taken back pans the ground back to where it was.
+    fn revert_last(&mut self, backend: &Backend) {
+        if matches!(
+            self.undo.last(),
+            Some(api::undo::Reversible::Arrangement { .. })
+        ) {
+            self.board.restored();
+        }
+        self.undo.revert(backend);
+    }
+
+    /// The folder open, `None` for every one: a folder of another space than the one shown is
+    /// « every folder ».
+    pub fn active_folder(&self) -> Option<&str> {
+        self.folders.active(self.spaces.active_space())
+    }
+
+    /// Under `parent` or at the top of `space`. Refused and said when it cannot go there — into
+    /// itself or what it holds, out of its space — by the rules of `Lineage`, the core's.
+    fn move_folder(
+        &mut self,
+        backend: &Backend,
+        id: String,
+        (parent, space): (Option<String>, String),
+    ) {
+        use engine::folders::model::Lineage;
+        let Some(folder) = self.folders.find(&id) else {
+            return;
+        };
+        if folder.parent_id == parent {
+            return;
+        }
+        let name = folder.name.clone();
+        let lineage = Lineage::of(self.folders.list());
+        let allowed =
+            folder.space_id == space && lineage.check_move(&id, parent.as_deref()).is_ok();
+        if !allowed {
+            let refused = i18n::Message::new(i18n::keys::sidebar::moved::refused::THERE);
+            self.status.report(refused.with("name", name.as_str()));
+            return;
+        }
+        self.folders.move_folder(backend, id, parent);
+    }
+
+    /// The rail's keyboard twin of a drag: up a level, or into the sibling above it.
+    fn nudge_folder(&mut self, backend: &Backend, id: &str, outwards: bool) {
+        use i18n::keys::sidebar::moved::refused;
+        let Some(folder) = self.folders.find(id).cloned() else {
+            return;
+        };
+        let refused = |key| i18n::Message::new(key).with("name", folder.name.as_str());
+        let target = if outwards {
+            let Some(parent) = &folder.parent_id else {
+                self.status.report(refused(refused::AT_TOP));
+                return;
+            };
+            self.folders
+                .find(parent)
+                .and_then(|parent| parent.parent_id.clone())
+        } else {
+            let mut siblings: Vec<_> = self
+                .folders
+                .list()
+                .iter()
+                .filter(|other| {
+                    other.space_id == folder.space_id && other.parent_id == folder.parent_id
+                })
+                .collect();
+            siblings.sort_by_key(|other| api::folders::sort_key(&other.name));
+            let at = siblings.iter().position(|other| other.id == folder.id);
+            let Some(above) = at
+                .and_then(|at| at.checked_sub(1))
+                .map(|above| siblings[above])
+            else {
+                self.status.report(refused(refused::NO_FOLDER_ABOVE));
+                return;
+            };
+            Some(above.id.clone())
+        };
+        self.folders.move_folder(backend, folder.id, target);
+    }
+
+    /// Opened, in its own space, which is then the one shown.
+    fn choose_folder(&mut self, id: &str) {
+        if let Some(space) = self.folders.choose(id) {
+            self.spaces.choose_space(Some(space));
+        }
+    }
+
+    /// The space alone: its row means the space itself, out of every folder.
+    fn choose_space(&mut self, id: Option<String>) {
+        self.spaces.choose_space(id);
+        self.folders.leave();
+    }
+
+    /// The switch, remembered for the space shown: there is no board across every space.
+    fn set_view(&mut self, mode: board::Mode, backend: &Backend) {
+        let Some(space_id) = self.spaces.active_space() else {
+            return;
+        };
+        mode.write(&mut self.library_preferences, space_id);
+        drop(api::preferences::write_library(
+            backend,
+            self.library_preferences.clone(),
+        ));
     }
 
     /// The bodies kept beside the note open — none for a draft or a todo list — and a body put
@@ -300,6 +501,7 @@ impl AppState {
     /// on them.
     fn remember_place(&mut self, backend: &Backend) {
         self.spaces.remember(&mut self.library_preferences);
+        self.folders.remember(&mut self.library_preferences);
         drop(api::preferences::write_library(
             backend,
             self.library_preferences.clone(),
@@ -323,6 +525,7 @@ impl AppState {
                     self.seeding = Some(api::notes::seed_samples(backend, samples));
                 }
                 self.spaces.restore(&preferences);
+                self.folders.restore(&preferences);
                 self.notes_query.restore(&preferences);
                 self.prettier = crate::notes::prettier::PrettierSettings::read(
                     preferences.get(crate::notes::prettier::KEY),
@@ -403,11 +606,11 @@ impl AppState {
         use crate::notes::Action as Notes;
         match action {
             Notes::ChooseSpace(id) => {
-                self.spaces.choose_space(id);
+                self.choose_space(id);
                 self.remember_place(backend);
             }
             Notes::ChooseFolder(id) => {
-                self.spaces.choose_folder(&id);
+                self.choose_folder(&id);
                 self.remember_place(backend);
             }
             Notes::CountSpace(id) => self.spaces.count(id),
@@ -425,16 +628,14 @@ impl AppState {
                 space_id,
                 parent_id,
                 name,
-            } => self
-                .spaces
-                .create_folder(backend, space_id, parent_id, &name),
-            Notes::RenameFolder { id, name } => {
-                self.spaces.rename_folder(backend, id, &name);
+            } => self.folders.create(backend, space_id, parent_id, &name),
+            Notes::RenameFolder { id, name } => self.folders.rename(backend, id, &name),
+            Notes::RecolourFolder { id, colour } => self.folders.recolour(backend, id, colour),
+            Notes::DeleteFolder(id) => self.folders.delete(backend, id),
+            Notes::MoveFolder { id, parent, space } => {
+                self.move_folder(backend, id, (parent, space));
             }
-            Notes::RecolourFolder { id, colour } => {
-                self.spaces.recolour_folder(backend, id, colour);
-            }
-            Notes::DeleteFolder(id) => self.spaces.delete_folder(backend, id),
+            Notes::NudgeFolder { id, outwards } => self.nudge_folder(backend, &id, outwards),
             _ => {}
         }
     }
@@ -448,11 +649,12 @@ impl AppState {
     ) {
         use crate::notes::Action as Notes;
         match action {
-            Notes::Undo => {
-                self.undo.revert(backend);
-            }
+            Notes::Undo => self.revert_last(backend),
             Notes::DismissUndo => self.undo.dismiss(),
-            Notes::DismissFolderName => self.spaces.dismiss_naming(),
+            Notes::DismissFolderName => {
+                self.folders.dismiss_naming();
+                self.board.dismiss_zone();
+            }
             Notes::Tags(asked) => self.tags.apply(asked, backend),
             Notes::Fill(asked) => {
                 if asked == crate::notes::Fill::Cancel {
@@ -498,7 +700,17 @@ impl AppState {
             | Notes::CreateFolder { .. }
             | Notes::RenameFolder { .. }
             | Notes::RecolourFolder { .. }
-            | Notes::DeleteFolder(_)) => self.apply_place(place, backend),
+            | Notes::DeleteFolder(_)
+            | Notes::MoveFolder { .. }
+            | Notes::NudgeFolder { .. }) => self.apply_place(place, backend),
+            Notes::SetView(mode) => self.set_view(mode, backend),
+            Notes::Tidy(scope) => self.tidy(backend, scope),
+            Notes::Board(gesture) => self.board_gesture(gesture, ctx, backend),
+            Notes::NameZone(name) => {
+                if let Some(place) = self.board_place() {
+                    self.board.name_zone(backend, &place, &name);
+                }
+            }
             Notes::Search(typed) => self.notes_query.type_search(ctx, typed),
             Notes::ClearSearch => self.notes_query.clear_search(),
             Notes::SetFilter(filter) => self.notes_query.set_filter(filter),
@@ -703,11 +915,33 @@ impl AppState {
         }
     }
 
-    /// The notes on screen, in the order they are drawn.
+    /// The notes on screen, in the order they are drawn: the board's, dimmed ones included,
+    /// while it shows — a card the search dims there is still on screen and still selectable.
     pub fn on_screen(&self) -> Vec<String> {
+        if self.board_place().is_some() {
+            return self
+                .board
+                .cards()
+                .map(|entry| entry.note.id.clone())
+                .collect();
+        }
         self.notes_query.view().map_or_else(Vec::new, |view| {
             view.cards().map(|card| card.id.clone()).collect()
         })
+    }
+
+    fn pinned_on_screen(&self, id: &str) -> Option<bool> {
+        if self.board_place().is_some() {
+            return self
+                .board
+                .cards()
+                .find(|entry| entry.note.id == id)
+                .map(|entry| entry.note.pinned);
+        }
+        let view = self.notes_query.view()?;
+        view.cards()
+            .find(|card| card.id == id)
+            .map(|card| card.pinned)
     }
 
     /// The ticked notes still on screen; nothing is asked of the core for none.
@@ -742,24 +976,28 @@ impl AppState {
     ) {
         use crate::notes::canvas::shortcuts::CanvasKey;
         let focused = self.notes_view.canvas.focused.clone();
-        let note = focused.as_deref().and_then(|id| {
-            self.notes_query
-                .view()
-                .and_then(|view| view.cards().find(|card| card.id == id))
-        });
-        let pinned = note.map(|card| card.pinned);
+        let pinned = focused.as_deref().and_then(|id| self.pinned_on_screen(id));
         match key {
             CanvasKey::New(kind) => self.new_note(Some(kind)),
             CanvasKey::Move(direction) => {
-                let Some(view) = self.notes_query.view() else {
+                let board = self.board_place().is_some();
+                let on_board = self.on_screen();
+                let sections: Vec<Vec<&str>> = if board {
+                    // The board is walked card by card, zone by zone, as it is laid out.
+                    vec![on_board.iter().map(String::as_str).collect()]
+                } else if let Some(view) = self.notes_query.view() {
+                    view.sections
+                        .iter()
+                        .map(|section| section.cards.iter().map(|card| card.id.as_str()).collect())
+                        .collect()
+                } else {
                     return;
                 };
-                let sections: Vec<Vec<&str>> = view
-                    .sections
-                    .iter()
-                    .map(|section| section.cards.iter().map(|card| card.id.as_str()).collect())
-                    .collect();
-                let columns = self.notes_view.canvas.columns;
+                let columns = if board {
+                    1
+                } else {
+                    self.notes_view.canvas.columns
+                };
                 let to = crate::notes::canvas::grid::neighbour(
                     &sections,
                     columns,
@@ -798,9 +1036,8 @@ impl AppState {
                     self.notes.delete(backend, vec![id]);
                 }
             }
-            CanvasKey::Undo => {
-                self.undo.revert(backend);
-            }
+            CanvasKey::Undo => self.revert_last(backend),
+            CanvasKey::Align => self.tidy(backend, engine::folders::board::BoardScope::LooseCards),
             CanvasKey::StepBack => self.step_back(ctx, backend),
         }
     }
@@ -814,7 +1051,7 @@ impl AppState {
             return;
         }
         if self.undo.banner(ctx.input(|input| input.time)).is_some() {
-            self.undo.revert(backend);
+            self.revert_last(backend);
             return;
         }
         if self.selection.clear() {
@@ -824,18 +1061,16 @@ impl AppState {
             self.notes_query.clear_filters();
             return;
         }
-        let Some(open) = self.spaces.active_folder() else {
+        let Some(open) = self.active_folder() else {
             return;
         };
         let parent = self
-            .spaces
-            .folders()
-            .iter()
-            .find(|folder| folder.id == open)
+            .folders
+            .find(open)
             .map(|folder| (folder.space_id.clone(), folder.parent_id.clone()));
         match parent {
-            Some((_, Some(parent))) => self.spaces.choose_folder(&parent),
-            Some((space, None)) => self.spaces.choose_space(Some(space)),
+            Some((_, Some(parent))) => self.choose_folder(&parent),
+            Some((space, None)) => self.choose_space(Some(space)),
             None => {}
         }
     }
@@ -913,11 +1148,11 @@ impl AppState {
         match chosen {
             Chosen::Note(id) => self.editor.open(id),
             Chosen::Space(id) => {
-                self.spaces.choose_space(Some(id));
+                self.choose_space(Some(id));
                 self.remember_place(backend);
             }
             Chosen::Command(Command::Create(kind)) => self.new_note(Some(kind)),
-            Chosen::Command(Command::Folder) => self.spaces.ask_name(),
+            Chosen::Command(Command::Folder) => self.folders.ask_name(self.spaces.active_space()),
             Chosen::Command(Command::Area(_)) => {}
             Chosen::Create(title) => {
                 if let Some(place) = self.new_place() {
@@ -936,7 +1171,8 @@ impl AppState {
             || self.tags.is_open()
             || self.fill.is_open()
             || self.palette.is_open()
-            || self.spaces.naming()
+            || self.folders.naming()
+            || self.board.drawn_zone().is_some()
     }
 
     /// In the space shown, or the first one for « all spaces », and the folder shown.
@@ -961,7 +1197,7 @@ impl AppState {
                 .notify(i18n::Message::new(i18n::keys::errors::SPACE_REQUIRED));
             return None;
         };
-        Some((space, self.spaces.active_folder().map(str::to_owned)))
+        Some((space, self.active_folder().map(str::to_owned)))
     }
 
     /// The settings into the application's file, through the db queue, the other keys kept.
@@ -1045,6 +1281,8 @@ impl AppState {
         self.caches = LibraryCaches::default();
         self.notes_query = NotesQueryState::default();
         self.spaces = spaces::SpacesState::default();
+        self.folders = folders::FoldersState::default();
+        self.board = board::BoardState::default();
         self.editor = editor::EditorState::default();
         self.revisions = note_revisions::RevisionsState::default();
         self.selection = selection::SelectionState::default();
