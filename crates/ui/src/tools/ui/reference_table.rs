@@ -9,12 +9,14 @@ use i18n::{Language, Message, keys};
 
 use super::CopyValue;
 use crate::api;
+use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, SearchField, address};
 
 const SEARCH_MAX: f32 = 480.0;
 const COPY_COLUMN: f32 = 44.0;
 const CARD_GAP: f32 = 16.0;
+const CHECK: f32 = 14.0;
 
 pub struct Group {
     pub id: String,
@@ -34,6 +36,8 @@ pub struct Cell {
     pub mono: bool,
     pub ink: Option<Color32>,
     pub below: Option<String>,
+    /// « Supported », as a mark in the place of the text.
+    pub checked: bool,
 }
 
 impl Cell {
@@ -48,6 +52,13 @@ impl Cell {
         Self {
             mono: true,
             ..Self::text(text)
+        }
+    }
+
+    pub fn checked() -> Self {
+        Self {
+            checked: true,
+            ..Self::default()
         }
     }
 
@@ -73,6 +84,8 @@ pub struct ReferenceRow {
     pub searchable: Vec<String>,
     /// What the row's button copies instead of the key, and its name aloud.
     pub copy: Option<(String, String)>,
+    /// What the home's search lists it as: a title and a line.
+    pub found_as: (String, String),
 }
 
 impl ReferenceRow {
@@ -83,12 +96,19 @@ impl ReferenceRow {
             cells,
             searchable: Vec::new(),
             copy: None,
+            found_as: (String::new(), String::new()),
         }
     }
 
     #[must_use]
     pub fn searched_by<'a>(mut self, texts: impl IntoIterator<Item = &'a str>) -> Self {
         self.searchable = texts.into_iter().map(api::tools::fold).collect();
+        self
+    }
+
+    #[must_use]
+    pub fn found_as(mut self, title: impl Into<String>, line: impl Into<String>) -> Self {
+        self.found_as = (title.into(), line.into());
         self
     }
 
@@ -336,15 +356,25 @@ struct LaidCell {
     ink: Color32,
     below: Option<widgets::Wrapped>,
     below_ink: Color32,
+    check: Option<Color32>,
 }
 
 impl LaidCell {
+    fn text_height(&self) -> f32 {
+        let mark = self.check.map_or(0.0, |_| CHECK);
+        self.text.size().y.max(mark)
+    }
+
     fn height(&self) -> f32 {
-        self.text.size().y + self.below.as_ref().map_or(0.0, |it| it.size().y + 2.0)
+        self.text_height() + self.below.as_ref().map_or(0.0, |it| it.size().y + 2.0)
     }
 
     fn paint(self, ui: &Ui, at: Pos2) {
-        let height = self.text.size().y;
+        let height = self.text_height();
+        if let Some(ink) = self.check {
+            let mark = Rect::from_min_size(at, Vec2::splat(CHECK));
+            icons::paint(ui, mark, Icon::Check, ink);
+        }
         ui.painter().galley(at, self.text, self.ink);
         if let Some(below) = self.below {
             below.paint(ui, at + Vec2::new(0.0, height + 2.0), self.below_ink);
@@ -378,5 +408,6 @@ fn laid_cell(ui: &Ui, cell: &Cell, width: f32) -> LaidCell {
         ink,
         below,
         below_ink: p.text_2,
+        check: cell.checked.then_some(p.green),
     }
 }

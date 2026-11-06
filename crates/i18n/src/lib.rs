@@ -170,6 +170,15 @@ impl Message {
 /// The application's name, which no translation spells out: a string carries `{{app}}`.
 const APP: &str = env!("DEVNOTES_DISPLAY_NAME");
 
+/// The text of `key` in `language` as it is written, for a sentence that speaks of `{{ }}`
+/// itself.
+pub fn as_written(language: Language, key: Key) -> String {
+    language
+        .catalogue()
+        .get(key.path())
+        .map_or_else(|| key.path().to_string(), String::clone)
+}
+
 /// The text of `key` in `language`: its plurals chosen, then its `{{name}}`s filled. A
 /// parameter not given is left empty, as the reference's Transloco did; `{{app}}` is the
 /// application's name unless a caller says otherwise.

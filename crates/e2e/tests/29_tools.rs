@@ -2,6 +2,7 @@
 //! the tool opened from the keyboard, its star and its place among the recent ones over a relaunch.
 
 use e2e::{App, Tree, step};
+use egui::accesskit::Node;
 use egui::{Key, Modifiers};
 
 fn search_is_focused(tree: &Tree) -> bool {
@@ -130,6 +131,30 @@ fn data_tools(app: &mut App) {
     });
 }
 
+fn references(app: &mut App) {
+    step("a code no tool answers is found in the references", || {
+        app.fill("tools-search", "418");
+        app.wait_for("tools-references");
+        app.wait_for("tools-first-result");
+        assert!(!app.has("tools-no-match"));
+        app.press(Key::Enter, Modifiers::NONE);
+        app.wait_for("reference-search");
+        app.eventually("the table is whole, its own search empty", |tree| {
+            tree.count("reference-row") > 3
+                && tree.find("reference-search").and_then(Node::value) != Some("418")
+        });
+        back_to_the_home(app);
+    });
+    step("the rest of a reference opens it searched", || {
+        app.fill("tools-search", "cors");
+        app.click("tools-reference-more");
+        app.eventually("the reference is searched for it", |tree| {
+            tree.find("reference-search").and_then(Node::value) == Some("cors")
+        });
+        back_to_the_home(app);
+    });
+}
+
 fn remembered(mut app: App) -> App {
     step("the star and the recent tools come back", || {
         app.click("tools-entry-case");
@@ -161,5 +186,6 @@ fn tools_home() {
     a_tool(&mut app);
     text_tools(&mut app);
     data_tools(&mut app);
+    references(&mut app);
     remembered(app).quit();
 }

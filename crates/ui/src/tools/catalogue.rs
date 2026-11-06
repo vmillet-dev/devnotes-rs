@@ -12,17 +12,24 @@ mod cron;
 mod dates;
 mod diff;
 mod hash;
+mod http_headers;
+mod http_status;
 mod identifiers;
 mod identity;
 mod json_generator;
 mod jwt;
 mod line_breaks;
 mod lorem;
+mod markdown_sheet;
+mod mime_types;
+mod mustache_sheet;
 mod password;
 mod permissions;
 mod ports;
 mod qr;
-mod reference;
+pub(crate) mod reference;
+mod regex_sheet;
+mod signals;
 mod sizes;
 mod text_stats;
 mod url_codec;
@@ -179,19 +186,6 @@ pub fn in_category(category: Category) -> impl Iterator<Item = &'static ToolEntr
     TOOLS.iter().filter(move |tool| tool.category == category)
 }
 
-/// A tool whose folder has not come over yet: its place in the catalogue, an empty body.
-struct Coming;
-
-impl Tool for Coming {
-    fn ui(&mut self, _: &mut egui::Ui, _: &mut super::Drawn<'_>) {}
-
-    fn clear(&mut self) {}
-}
-
-fn coming() -> Box<dyn Tool> {
-    Box::new(Coming)
-}
-
 /// A table to search: nothing is computed, and no note fills it.
 const fn reference(
     id: &'static str,
@@ -206,6 +200,21 @@ const fn reference(
         make,
     }
 }
+
+type BuildTable = fn(Language) -> reference::Table;
+
+/// What the home's search reads inside: each reference's rows, found by its own matcher.
+pub(crate) const REFERENCES: [(&str, BuildTable); 9] = [
+    ("http-status", http_status::table),
+    ("http-headers", http_headers::table),
+    ("mime-types", mime_types::table),
+    ("ports", ports::table),
+    ("ascii", ascii::table),
+    ("signals", signals::table),
+    ("regex-sheet", regex_sheet::table),
+    ("markdown-sheet", markdown_sheet::table),
+    ("mustache-sheet", mustache_sheet::table),
+];
 
 pub static TOOLS: [ToolEntry; 32] = [
     ToolEntry {
@@ -511,7 +520,7 @@ pub static TOOLS: [ToolEntry; 32] = [
         &[
             "http", "status", "statut", "code", "rfc 9110", "404", "500", "redirect", "nginx",
         ],
-        coming,
+        http_status::make,
     ),
     reference(
         "http-headers",
@@ -525,7 +534,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "cache-control",
             "content-type",
         ],
-        coming,
+        http_headers::make,
     ),
     reference(
         "mime-types",
@@ -538,7 +547,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "png",
             "pdf",
         ],
-        coming,
+        mime_types::make,
     ),
     reference(
         "ports",
@@ -560,7 +569,7 @@ pub static TOOLS: [ToolEntry; 32] = [
         &[
             "signal", "kill", "sigterm", "sigkill", "sighup", "sigint", "posix", "trap",
         ],
-        coming,
+        signals::make,
     ),
     reference(
         "ascii",
@@ -587,7 +596,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "lookahead",
             "cheat sheet",
         ],
-        coming,
+        regex_sheet::make,
     ),
     reference(
         "markdown-sheet",
@@ -599,7 +608,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "readme",
             "cheat sheet",
         ],
-        coming,
+        markdown_sheet::make,
     ),
     reference(
         "mustache-sheet",
@@ -612,7 +621,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "partial",
             "cheat sheet",
         ],
-        coming,
+        mustache_sheet::make,
     ),
 ];
 
@@ -622,6 +631,8 @@ mod calc_tests;
 mod data_tests;
 #[cfg(test)]
 mod encoding_tests;
+#[cfg(test)]
+mod reference_tests;
 #[cfg(test)]
 mod text_tests;
 #[cfg(test)]

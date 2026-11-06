@@ -619,6 +619,12 @@ fn the_tools_area() {
     capture(&mut harness, "tool-frame");
     click(&mut harness, "tool-back");
     capture(&mut harness, "tools-recents");
+    type_into(&mut harness, "tools-search", "cors");
+    for _ in 0..10 {
+        harness.step();
+    }
+    settle(&mut harness);
+    capture(&mut harness, "tools-references");
 }
 
 /// The bench's resources are its profile.

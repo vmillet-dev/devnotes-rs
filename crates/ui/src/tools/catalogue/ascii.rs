@@ -146,13 +146,31 @@ fn row(code: u32, language: Language) -> ReferenceRow {
         searched.extend([control.0, control.1, control.2]);
         searched.extend(control.3);
     }
-    let what = if code == SPACE { said.clone() } else { shown };
-    let mut row = ReferenceRow::new(code.to_string(), group, cells).searched_by(searched);
+    let what = if code == SPACE {
+        said.clone()
+    } else {
+        shown.clone()
+    };
+    let title = format!("{shown} ({code})");
+    let said_as = if said.is_empty() {
+        control.map_or("", |it| it.1)
+    } else {
+        said.as_str()
+    };
+    let hexadecimal = format!("0x{code:02X}");
+    let line = if said_as.is_empty() {
+        hexadecimal
+    } else {
+        format!("{said_as} · {hexadecimal}")
+    };
+    let mut row = ReferenceRow::new(code.to_string(), group, cells)
+        .searched_by(searched)
+        .found_as(title, line);
     row.copy = Some((character, what));
     row
 }
 
-fn table(language: Language) -> Table {
+pub(crate) fn table(language: Language) -> Table {
     let tr = |id: &str| word(language, &format!("tools.ascii.columns.{id}"));
     let column = |id: &str, share| Column {
         label: tr(id),
