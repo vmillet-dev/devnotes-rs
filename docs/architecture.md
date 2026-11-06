@@ -7029,6 +7029,58 @@ what is left is sorting and sectioning 30 000 shared entries. Two measures are o
 (the 60 000 checklist items and the side tables, read per slice) and `list_tags`, which walks
 every note's tags at each call.
 
+#### The window on the reference corpora
+
+Three tools, none in CI. `benches/reference_profile.rs` writes a reference library into a real
+profile; `app::perf` (`DEVNOTES_PERF=<profile> cargo test --release -p ui --lib app::perf --
+--nocapture`) replays the journeys of § 6.3 through the real application without a window;
+`crates/e2e/examples/footprint.rs` reads memory and idle CPU of the running process from outside,
+on the machine's GPU (`DEVNOTES_E2E_GPU`) and painting every frame (`DEVNOTES_E2E_PAINT_ALL`). The
+`e2e` flavour cannot be a release build, so that one runs at `CARGO_PROFILE_DEV_OPT_LEVEL=3`.
+`app --features profiling` serves egui's frames to `puffin_viewer`: `puffin_egui` stops at egui
+0.33. A debug build logs every `Backend` database call past 16 ms.
+
+⚠️ This machine is not the plan's reference: Windows 11, Ryzen 7 9800X3D, RTX 5070 Ti, against a
+four-core laptop on integrated graphics. A frame here is a CPU frame (pass and tessellation, the
+AccessKit tree included, no GPU). Release without LTO, 6 November 2026.
+
+| Measure                                 | Realistic         | Stress            | Budget (plan § 6.2)      |
+| --------------------------------------- | ----------------- | ----------------- | ------------------------ |
+| Launch → window shown (release)         | ~500 ms           | ~500 ms           | ≤ 400 ms                 |
+| Unlock → past the gate                  | 130 ms            | 210 ms            | —                        |
+| Unlock → first cards                    | **1.78 s**        | **1.97 s**        | ≤ 600 / 800 ms           |
+| Unlock → index whole                    | 1.78 s            | 1.97 s            | ≤ 1.5 s / ≤ 4 s          |
+| Canvas scrolled, frame p50 / p99        | 5.9 / 8.5 ms      | 5.0 / 6.2 ms      | p99 ≤ 12 ms              |
+| Search, asked → drawn, p95              | 34 ms             | 30 ms             | ≤ 50 / 120 ms            |
+| A note opened, window at rest, p95      | 56 ms             | 48 ms             | ≤ 50 ms                  |
+| 1 MB snippet: coloured, window at rest  | 35 ms             | 31 ms             | ≤ 300 ms                 |
+| A key typed, 100 kB / 1 MB, p99         | 3.2 / 8.8 ms      | 2.7 / 9.0 ms      | ≤ 16 / 33 ms             |
+| Board of ~5 000 cards: first opening    | **9.5 s**         | **9.3 s**         | —                        |
+| Board: opened again                     | 330 ms            | 150 ms            | —                        |
+| Board scrolled, frame p99               | 4.9 ms            | 4.7 ms            | 60 frames a second       |
+| HTTP rail: loaded / unfolded / scrolled | 21 / 1.3 / 0.8 ms | 16 / 1.7 / 0.8 ms | ≤ 50 ms, 1 frame, 60 f/s |
+| Requests searched                       | 8.6 ms            | 8.6 ms            | ≤ 30 ms                  |
+| HTTP history, first page                | 1.3 ms            | 1.3 ms            | ≤ 50 ms                  |
+
+Not measured: a 1 MB response body. The first cards wait for the whole index because each slice
+changes the parameters of the view, so the answer in flight is dropped as stale.
+
+| Process, MiB                  | Working set | Private | Dedicated GPU | Idle CPU |
+| ----------------------------- | ----------- | ------- | ------------- | -------- |
+| At the gate                   | 248         | 443     | 254           | < 0.2 %  |
+| Few notes (samples), unlocked | 259         | 449     | 254           | < 0.2 %  |
+| Few notes, every area visited | 268         | 453     | 254           | < 0.4 %  |
+| 30 000 realistic, unlocked    | 578         | 628     | 254           | < 0.2 %  |
+| Realistic, canvas scrolled    | 675         | 720     | 254           | < 0.2 %  |
+| 30 000 stress, unlocked       | 1 691       | 1 347   | 254           | < 0.2 %  |
+| Stress, canvas scrolled       | 1 775       | 1 426   | 254           | < 0.2 %  |
+
+The budgets are ≤ 350 and ≤ 900 MB resident, read without the GPU driver, which DevNotes does not
+ship (plan § 6.2): `app::perf` prints that figure. The same process without a window holds 31 MiB at the
+gate and 360 unlocked on the realistic corpus (198 private): the ~220 MiB of the gate are the GPU
+driver's, and the rest grows with the text, as the index keeps each note and its folded copy in
+clear, and SQLite's mapped pages count in the working set.
+
 Unit tests run with Vitest through the `@angular/build:unit-test` builder in a jsdom
 environment (configured in `angular.json`'s `test` target and `vitest-base.config.ts`), so
 no browser is needed. Specs sit next to the file they cover. Coverage thresholds are set at

@@ -10,11 +10,29 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::mpsc::{self, Receiver, SyncSender, TryRecvError};
 use std::sync::{Arc, Condvar, Mutex};
+use std::time::Instant;
 
 use engine::Engine;
 use engine::error::{AppError, StorageError};
 
 use crate::inputs::Waker;
+
+/// A frame: a call past it is named in the log of a debug build.
+const SLOW_CALL_MS: u128 = 16;
+
+fn timed<T>(
+    job: impl FnOnce(&Engine) -> Result<T, AppError> + Send + 'static,
+) -> impl FnOnce(&Engine) -> Result<T, AppError> + Send + 'static {
+    let name = std::any::type_name_of_val(&job);
+    move |engine| {
+        let started = Instant::now();
+        let answer = job(engine);
+        if cfg!(debug_assertions) && started.elapsed().as_millis() > SLOW_CALL_MS {
+            log::info!("{name} took {:?}", started.elapsed());
+        }
+        answer
+    }
+}
 
 pub struct Backend {
     engine: Arc<Engine>,
@@ -56,7 +74,7 @@ impl Backend {
     ) -> Pending<T> {
         let (pending, answer) = self.pending();
         // Queued here, on the caller's thread: a task would reach the queue in its own time.
-        let answered = engine::db::submit(&self.engine, job);
+        let answered = engine::db::submit(&self.engine, timed(job));
         self.runtime
             .spawn(async move { answer.send(answered.await) });
         pending

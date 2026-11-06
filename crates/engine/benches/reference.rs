@@ -204,17 +204,7 @@ pub(crate) fn build(size: Size) -> Reference {
     std::fs::create_dir_all(&directory).unwrap();
     let vault = engine::vault::file::create(&directory, "a passphrase", Cost::FOR_TESTS).unwrap();
     let mut library = db::open(&directory.join("devnotes.sqlite3"), vault).unwrap();
-
-    let space_ids: Vec<String> = (0..SPACES)
-        .map(|n| {
-            engine::spaces::store::create(&mut library, &format!("Espace {n}"))
-                .unwrap()
-                .id
-        })
-        .collect();
-    let folder_ids = folders(&mut library, &space_ids);
-    let note_ids = notes(&mut library, size, &space_ids, &folder_ids);
-    http(&mut library);
+    let (space_ids, note_ids) = seed(&mut library, size);
     std::fs::create_dir_all(directory.join("attachments")).unwrap();
 
     Reference {
@@ -223,6 +213,21 @@ pub(crate) fn build(size: Size) -> Reference {
         space_ids,
         _directory: Directory(directory),
     }
+}
+
+/// Everything but the attachments, into a library already open: the spaces, then the notes.
+pub(crate) fn seed(library: &mut Library, size: Size) -> (Vec<String>, Vec<String>) {
+    let space_ids: Vec<String> = (0..SPACES)
+        .map(|n| {
+            engine::spaces::store::create(library, &format!("Espace {n}"))
+                .unwrap()
+                .id
+        })
+        .collect();
+    let folder_ids = folders(library, &space_ids);
+    let note_ids = notes(library, size, &space_ids, &folder_ids);
+    http(library);
+    (space_ids, note_ids)
 }
 
 /// Three levels: 60 at the top of the spaces, two under each of them, then one under those.
@@ -354,7 +359,8 @@ fn http(library: &mut Library) {
             "response": null,
         }))
         .unwrap();
-        let at = now() - TimeDelta::minutes(i64::try_from(n).unwrap());
+        // Today's: past its retention, the sweep of the next launch would empty it.
+        let at = Utc::now() - TimeDelta::minutes(i64::try_from(n).unwrap());
         engine::http::history::store::record(
             library,
             Some(&request_ids[n % REQUESTS]),

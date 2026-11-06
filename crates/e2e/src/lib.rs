@@ -175,6 +175,11 @@ impl App {
         }
     }
 
+    /// The process, for what is read from outside it.
+    pub fn id(&self) -> u32 {
+        self.child.id()
+    }
+
     /// A second launch on the same profile asking for `action`: it hands it to this one and
     /// exits, as the global shortcut's will.
     pub fn act(&mut self, action: &str) {
@@ -401,26 +406,34 @@ impl App {
             if self.has(author_id) {
                 return;
             }
-            let Some(bounds) = self.tree().find(within).and_then(Node::bounds) else {
+            if !self.wheel(within) {
                 break;
-            };
-            #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
-            let pos = Pos2::new(
-                f64::midpoint(bounds.x0, bounds.x1) as f32,
-                f64::midpoint(bounds.y0, bounds.y1) as f32,
-            );
-            self.apply(vec![
-                Event::PointerMoved(pos),
-                Event::MouseWheel {
-                    unit: egui::MouseWheelUnit::Point,
-                    delta: egui::vec2(0.0, -240.0),
-                    phase: egui::TouchPhase::Move,
-                    source: egui::MouseWheelSource::Wheel,
-                    modifiers: Modifiers::NONE,
-                },
-            ]);
+            }
         }
         self.wait_for(author_id);
+    }
+
+    /// One notch down over `within`; `false` when nothing of that name is drawn.
+    pub fn wheel(&mut self, within: &str) -> bool {
+        let Some(bounds) = self.tree().find(within).and_then(Node::bounds) else {
+            return false;
+        };
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let pos = Pos2::new(
+            f64::midpoint(bounds.x0, bounds.x1) as f32,
+            f64::midpoint(bounds.y0, bounds.y1) as f32,
+        );
+        self.apply(vec![
+            Event::PointerMoved(pos),
+            Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta: egui::vec2(0.0, -240.0),
+                phase: egui::TouchPhase::Move,
+                source: egui::MouseWheelSource::Wheel,
+                modifiers: Modifiers::NONE,
+            },
+        ]);
+        true
     }
 
     /// Scrolls `within` down until `author_id` stands above `under`: a panel draws what lies past

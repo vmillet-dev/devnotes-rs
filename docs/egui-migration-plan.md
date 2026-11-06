@@ -1422,6 +1422,11 @@ Windows 11 et Ubuntu.
 | Mémoire résidente                                               | ≤ 350 Mo                      | ≤ 900 Mo |                                              |
 | CPU au repos (fenêtre visible, rien ne bouge)                   | ~0 %                          | ~0 %     |                                              |
 
+La mémoire résidente se compte **hors pilote GPU** (décision du 6 novembre 2026) : il vient avec la
+carte ou le système, DevNotes ne l'embarque pas, et son poids change d'une machine à l'autre. Elle
+se lit sur le banc d'interface, sans fenêtre ; `wgpu` et ce qu'il alloue dans la fenêtre réelle
+restent à part, dans le tableau du processus.
+
 ### 6.3 Outils de mesure
 
 - `criterion` (existant) pour le cœur et l'index : nouveaux groupes `index_build`, `index_query`
@@ -1431,7 +1436,8 @@ Windows 11 et Ubuntu.
   dix notes, déplier le rail HTTP) et rapporte p50/p95/p99 du temps CPU par frame. Hors CI, comme
   les benchs actuels ; les tableaux de résultats vont dans `docs/architecture.md` (→ « The
   baseline »).
-- `puffin` en développement ; journal de durée des appels `Backend` au-dessus de 16 ms en debug.
+- `puffin` en développement, lu par `puffin_viewer` (feature `profiling` de `app`) : `puffin_egui`
+  s'arrête à egui 0.33 ; journal de durée des appels `Backend` au-dessus de 16 ms en debug.
 
 ---
 
@@ -2182,7 +2188,7 @@ RxJS, GraphQL) et de test (Vitest, jsdom, WebdriverIO, angular-eslint…) ; côt
 | Index               | `rayon`, `memchr`, `lz4_flex`                                                                                                                                                                                                                            |
 | Plateforme          | `tray-icon`, `muda`, `global-hotkey`, `auto-launch`, `interprocess` (instance unique, D16), `notify-rust`, `rfd` (`xdg-portal`, D29), `arboard`, `open`, `cargo-packager-updater` (D26), `flexi_logger`, `dirs`, `winreg` (Windows), `gtk` (Linux, tray) |
 | Asynchrone          | `tokio` (+ `rt-multi-thread`), `crossbeam-channel`                                                                                                                                                                                                       |
-| Profilage (feature) | `puffin`, `puffin_egui`                                                                                                                                                                                                                                  |
+| Profilage (feature) | `puffin`, `puffin_http`                                                                                                                                                                                                                                  |
 | Paquets (outils)    | `cargo-packager`, `cargo-generate-rpm`                                                                                                                                                                                                                   |
 
 Polices et icônes embarquées : Inter et JetBrains Mono (OFL, fichiers variables : S2), Noto Emoji
