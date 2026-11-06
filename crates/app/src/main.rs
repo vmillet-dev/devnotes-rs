@@ -5,6 +5,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod arguments;
+mod desktop;
 mod logging;
 #[cfg(feature = "e2e")]
 mod unpainted;
@@ -20,6 +21,7 @@ use engine::app_info::METADATA;
 use platform::instance::{self, Claim, Instance, Message};
 use platform::paths::{self, Locations};
 use platform::window::Geometry;
+use ui::services::preferences::Preferences;
 
 /// The identity tool's lists in the source tree, for a binary run from `target/`.
 const DEVELOPMENT_RESOURCES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/resources");
@@ -78,9 +80,7 @@ fn hand_over(profile: &Path, action: Option<String>) -> ExitCode {
 
 fn run(locations: Locations, instance: Instance) -> eframe::Result {
     let restored = platform::window::read(&locations.window);
-    let preferences = ui::services::preferences::Preferences::read(
-        &locations.profile.join(engine::layout::PREFERENCES),
-    );
+    let preferences = Preferences::read(&locations.profile.join(engine::layout::PREFERENCES));
     let (inbox, waker, inputs) = ui::inputs::channel();
     let heard = inbox.clone();
     if let Err(error) =
@@ -88,6 +88,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
     {
         log::warn!("Second launches will not be heard: {error}");
     }
+    let tray = desktop::start_tray(&preferences, inbox.clone());
     let startup = ui::Startup {
         paths: engine::Paths {
             profile: locations.profile,
@@ -100,6 +101,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
         inbox,
         waker,
         inputs,
+        tray,
     };
 
     eframe::run_native(

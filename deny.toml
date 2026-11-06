@@ -9,7 +9,9 @@ all-features = true
 [advisories]
 unmaintained = "workspace"
 unsound = "all"
-ignore = []
+ignore = [
+    { id = "RUSTSEC-2024-0429", reason = "glib 0.18, held by tray-icon's GTK 3 on Linux; VariantStrIter is never called" },
+]
 
 # What the application may ship under GPL-3.0-only: the licences the tree holds today. A new one
 # is a decision, not a line to add.

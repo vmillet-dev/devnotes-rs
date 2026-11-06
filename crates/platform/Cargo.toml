@@ -23,9 +23,14 @@ serde_json = "1.0.151"
 open = "5.4.5"
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 sha2 = "0.11.0"
+tray-icon = "0.26.1"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56.0"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# The tray's thread, the only GTK one of the process (D29); the version `tray-icon` draws with.
+gtk = "0.18.2"
 
 [dev-dependencies]
 tempfile = "3.27.0"
