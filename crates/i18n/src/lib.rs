@@ -10,6 +10,16 @@ mod plural;
 mod regions;
 pub mod time;
 
+macro_rules! reference {
+    ($id:literal) => {
+        (
+            $id,
+            include_str!(concat!("../translations/references/", $id, ".fr.json")),
+            include_str!(concat!("../translations/references/", $id, ".en.json")),
+        )
+    };
+}
+
 /// One constant per key, checked at build time: `keys::vault::UNLOCK_TITLE`.
 pub mod keys {
     include!(concat!(env!("OUT_DIR"), "/keys.rs"));
@@ -190,13 +200,45 @@ fn interpolate(text: &str, params: &[(&str, Value)]) -> String {
     out
 }
 
-static FRENCH: LazyLock<HashMap<String, String>> =
-    LazyLock::new(|| flatten(include_str!("../translations/fr.json")));
-static ENGLISH: LazyLock<HashMap<String, String>> =
-    LazyLock::new(|| flatten(include_str!("../translations/en.json")));
+/// What the references say, a file a reference: read as `tools.<id>.words.…`, with no constant.
+const REFERENCES: [(&str, &str, &str); 9] = [
+    reference!("ascii"),
+    reference!("http-status"),
+    reference!("http-headers"),
+    reference!("mime-types"),
+    reference!("ports"),
+    reference!("signals"),
+    reference!("regex-sheet"),
+    reference!("markdown-sheet"),
+    reference!("mustache-sheet"),
+];
+
+static FRENCH: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+    let words = REFERENCES.map(|(id, french, _)| (id, french));
+    with_references(flatten(include_str!("../translations/fr.json")), &words)
+});
+static ENGLISH: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+    let words = REFERENCES.map(|(id, _, english)| (id, english));
+    with_references(flatten(include_str!("../translations/en.json")), &words)
+});
 
 /// `{"vault": {"unlockTitle": "…"}}` as `vault.unlockTitle`. Both files are checked by the
 /// build and the tests: a file that does not read is a broken build, not an answer.
+fn with_references(
+    mut catalogue: HashMap<String, String>,
+    words: &[(&str, &str)],
+) -> HashMap<String, String> {
+    for (id, json) in words {
+        let prefix = format!("tools.{id}.words");
+        catalogue.extend(
+            flatten(json)
+                .into_iter()
+                .map(|(path, text)| (format!("{prefix}.{path}"), text)),
+        );
+    }
+    catalogue
+}
+
 fn flatten(json: &str) -> HashMap<String, String> {
     let root: serde_json::Value = serde_json::from_str(json).expect("a translation file is JSON");
     let mut flat = HashMap::new();

@@ -117,6 +117,12 @@ pub fn paragraph(ui: &mut Ui, words: &str, style: (f32, f32), ink: Color32) -> R
     response
 }
 
+/// The text of `value`, an enum of the core read as it is written, under `prefix`.
+pub fn named(language: i18n::Language, prefix: &str, value: &serde_json::Value) -> String {
+    let path = format!("{prefix}.{}", value.as_str().unwrap_or_default());
+    i18n::Key::find(&path).map_or_else(String::new, |key| i18n::translate(language, key, &[]))
+}
+
 /// A checkbox and its label, in the accent.
 pub fn check(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Response {
     let p = palette(ui.ctx());

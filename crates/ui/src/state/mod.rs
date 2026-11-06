@@ -632,7 +632,15 @@ impl AppState {
         }
     }
 
+    /// What a tool holds of a secret goes with it.
+    fn leave_tool(&mut self) {
+        if let Some(entry) = self.tools.open_tool() {
+            self.tools_view.left(entry);
+        }
+    }
+
     fn ask_tool_search(&mut self) {
+        self.leave_tool();
         self.tools.home(None);
         self.tools_view.want_search();
     }
@@ -640,9 +648,15 @@ impl AppState {
     fn apply_tools(&mut self, action: crate::tools::Action, backend: &Backend) {
         use crate::tools::Action as Tools;
         match action {
-            Tools::Home(filter) => self.tools.home(filter),
+            Tools::Home(filter) => {
+                self.leave_tool();
+                self.tools.home(filter);
+            }
             Tools::Open(id) => {
                 if let Some(entry) = crate::tools::catalogue::find(id) {
+                    if self.tools.open_tool().is_some_and(|open| open.id != id) {
+                        self.leave_tool();
+                    }
                     self.tools.open(entry, self.clock.now());
                     self.save_settings(backend);
                 }
@@ -789,6 +803,7 @@ impl AppState {
                 errors: &mut self.errors,
                 status: &mut self.status,
                 clipboard: &self.clipboard,
+                dialog: &self.dialog,
             };
             self.tools_view.update(entry, &mut turn);
         }

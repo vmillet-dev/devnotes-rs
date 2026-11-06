@@ -75,6 +75,9 @@ pub trait Tool {
     fn sample(&mut self, _language: Language) {}
 
     fn clear(&mut self);
+
+    /// Off the screen: what it holds of a key, a token or a password goes.
+    fn left(&mut self) {}
 }
 
 /// What « Save as note » keeps: the tool decides, so the dialog asks nothing it could infer.
@@ -100,6 +103,7 @@ pub struct ToolAction {
 pub struct Drawn<'a> {
     pub entry: &'static ToolEntry,
     pub language: Language,
+    pub now: chrono::DateTime<chrono::Utc>,
     pub actions: &'a mut Actions,
     /// The input « Import from a note » was pressed for: its `from_note` name, and its slot.
     pub importing: Option<(&'static str, &'static str)>,
@@ -139,6 +143,12 @@ impl View {
             self.picker = None;
             turn.status.report(said_imported(&picked));
             self.session(entry).imported(slot, &picked);
+        }
+    }
+
+    pub fn left(&mut self, entry: &'static ToolEntry) {
+        if let Some(session) = self.sessions.get_mut(entry.id) {
+            session.left();
         }
     }
 

@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use i18n::keys;
 use platform::clipboard::Clipboard;
+use platform::dialog::FileDialog;
 
 use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
@@ -23,6 +24,7 @@ pub struct Turn<'a> {
     pub errors: &'a mut ErrorNotifier,
     pub status: &'a mut StatusNotifier,
     pub clipboard: &'a Arc<dyn Clipboard + Send + Sync>,
+    pub dialog: &'a Arc<dyn FileDialog + Send + Sync>,
 }
 
 pub struct Live<P, T> {
@@ -118,6 +120,7 @@ mod tests {
         errors: ErrorNotifier,
         status: StatusNotifier,
         clipboard: Arc<dyn Clipboard + Send + Sync>,
+        dialog: Arc<dyn FileDialog + Send + Sync>,
         ctx: egui::Context,
         live: Live<u32, u32>,
         launched: Vec<u32>,
@@ -131,6 +134,7 @@ mod tests {
                 errors: ErrorNotifier::default(),
                 status: StatusNotifier::default(),
                 clipboard: platform::clipboard::system(),
+                dialog: platform::dialog::system(),
                 ctx: egui::Context::default(),
                 live: Live::default(),
                 launched: Vec::new(),
@@ -147,6 +151,7 @@ mod tests {
                 errors: &mut self.errors,
                 status: &mut self.status,
                 clipboard: &self.clipboard,
+                dialog: &self.dialog,
             };
             let launched = &mut self.launched;
             self.live.update(&mut turn, request, |backend, params| {

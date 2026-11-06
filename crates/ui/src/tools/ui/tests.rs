@@ -126,6 +126,7 @@ fn table(query: &'static str) -> Harness<'static, String> {
                     placeholder: "A code",
                     card_width: 560.0,
                     lit: None,
+                    matches: None,
                 };
                 table.show(ui, query, Language::En);
             },

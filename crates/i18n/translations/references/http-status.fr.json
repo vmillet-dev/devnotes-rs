@@ -1,0 +1,172 @@
+{
+  "codes": {
+    "100": {
+      "meaning": "Le serveur a reçu les en-têtes ; le client peut envoyer le corps.",
+      "use": "Réponse à Expect: 100-continue, avant un gros envoi."
+    },
+    "101": {
+      "meaning": "Le serveur passe au protocole demandé dans Upgrade.",
+      "use": "La poignée de main qui ouvre un WebSocket."
+    },
+    "102": {
+      "meaning": "La requête est encore en cours de traitement (WebDAV) ; les serveurs ne l’envoient presque plus."
+    },
+    "103": {
+      "meaning": "Des indications, comme Link: rel=preload, envoyées avant la réponse finale.",
+      "use": "Laisser le navigateur précharger des ressources pendant que la page se calcule."
+    },
+    "200": {
+      "meaning": "La requête a réussi ; le corps porte le résultat.",
+      "use": "Un GET réussi, ou un POST qui répond avec un contenu."
+    },
+    "201": {
+      "meaning": "Une ressource a été créée ; Location dit où.",
+      "use": "Un POST qui crée quelque chose."
+    },
+    "202": {
+      "meaning": "Acceptée pour un traitement qui n’est pas terminé.",
+      "use": "Une tâche mise en file pour plus tard."
+    },
+    "203": { "meaning": "Succès, mais un proxy de transformation a modifié le contenu." },
+    "204": {
+      "meaning": "Succès, sans corps à renvoyer.",
+      "use": "Un DELETE ou un PUT qui n’a rien à rendre."
+    },
+    "205": {
+      "meaning": "Succès ; le client doit réinitialiser le formulaire ou la vue d’où vient la requête."
+    },
+    "206": {
+      "meaning": "Seule la plage demandée de la ressource (Range).",
+      "use": "Reprendre un téléchargement, lire une vidéo en flux."
+    },
+    "207": { "meaning": "Plusieurs statuts pour plusieurs ressources, dans un corps XML (WebDAV)." },
+    "208": {
+      "meaning": "Des membres déjà listés plus haut dans la même réponse ne sont pas répétés (WebDAV)."
+    },
+    "226": { "meaning": "La réponse résulte de manipulations appliquées à la ressource (encodage delta)." },
+    "300": { "meaning": "Plusieurs représentations sont disponibles ; le client peut choisir." },
+    "301": {
+      "meaning": "La ressource a déménagé pour de bon ; clients et moteurs de recherche suivent la nouvelle URL.",
+      "use": "Un déménagement définitif, quand un POST peut redevenir un GET."
+    },
+    "302": {
+      "meaning": "La ressource est provisoirement ailleurs ; les clients passent souvent en GET.",
+      "use": "Redirection temporaire historique : préférer 303 ou 307."
+    },
+    "303": {
+      "meaning": "La réponse est à une autre URL, à demander en GET.",
+      "use": "Après le POST d’un formulaire, rediriger vers la page du résultat (Post/Redirect/Get)."
+    },
+    "304": {
+      "meaning": "La copie en cache est toujours valable ; aucun corps n’est envoyé.",
+      "use": "Réponse à If-None-Match ou If-Modified-Since."
+    },
+    "305": { "meaning": "Doit passer par le proxy indiqué ; abandonné pour des raisons de sécurité." },
+    "307": {
+      "meaning": "Provisoirement ailleurs ; refaire la requête avec la même méthode et le même corps.",
+      "use": "Une redirection temporaire qui doit garder un POST en POST."
+    },
+    "308": {
+      "meaning": "Déménagée pour de bon ; refaire la requête avec la même méthode et le même corps.",
+      "use": "Le déménagement définitif d’un point d’API qui reçoit des POST."
+    },
+    "400": {
+      "meaning": "La requête est mal formée et le serveur ne la traitera pas.",
+      "use": "Une syntaxe invalide, un corps illisible, un paramètre manquant."
+    },
+    "401": {
+      "meaning": "L’authentification manque ou n’est pas valide ; WWW-Authenticate dit comment la fournir.",
+      "use": "Pas de jeton, ou un jeton expiré."
+    },
+    "402": { "meaning": "Réservé pour plus tard ; certaines API s’en servent pour un paiement ou un quota." },
+    "403": {
+      "meaning": "Le serveur sait qui vous êtes, et refuse.",
+      "use": "Authentifié, mais pas autorisé."
+    },
+    "404": {
+      "meaning": "Rien à cette URL.",
+      "use": "Une ressource inconnue, ou à cacher à qui n’a pas le droit de la voir."
+    },
+    "405": {
+      "meaning": "La méthode n’est pas acceptée sur cette ressource ; Allow liste celles qui le sont."
+    },
+    "406": { "meaning": "Aucune représentation ne correspond aux en-têtes Accept envoyés." },
+    "407": { "meaning": "Comme 401, pour s’authentifier auprès d’un proxy." },
+    "408": { "meaning": "Le serveur a cessé d’attendre la requête." },
+    "409": {
+      "meaning": "La requête entre en conflit avec l’état actuel de la ressource.",
+      "use": "Un conflit d’édition, un doublon sur une valeur unique."
+    },
+    "410": { "meaning": "La ressource a disparu pour de bon, sans adresse où la suivre." },
+    "411": { "meaning": "La requête doit porter un Content-Length." },
+    "412": {
+      "meaning": "Une précondition des en-têtes (If-Match…) a échoué.",
+      "use": "La concurrence optimiste : l’ETag ne correspond plus."
+    },
+    "413": { "meaning": "Le corps dépasse ce que le serveur accepte." },
+    "414": { "meaning": "L’URI dépasse ce que le serveur accepte." },
+    "415": { "meaning": "Le format du corps (Content-Type) n’est pas pris en charge." },
+    "416": { "meaning": "La plage demandée sort de la ressource." },
+    "417": { "meaning": "L’en-tête Expect ne peut pas être satisfait." },
+    "418": {
+      "meaning": "Le serveur est une théière et refuse de faire du café : un poisson d’avril de 1998."
+    },
+    "421": { "meaning": "La requête est arrivée à un serveur qui ne peut pas répondre pour cette origine." },
+    "422": {
+      "meaning": "Bien formée, mais invalide sur le fond.",
+      "use": "Des erreurs de validation sur un corps JSON bien formé."
+    },
+    "423": { "meaning": "La ressource est verrouillée (WebDAV)." },
+    "424": { "meaning": "Échec, parce qu’une requête dont elle dépendait a échoué (WebDAV)." },
+    "425": { "meaning": "Le serveur refuse une requête qui pourrait être rejouée (données précoces TLS)." },
+    "426": { "meaning": "Le client doit passer au protocole nommé dans Upgrade." },
+    "428": { "meaning": "Le serveur exige une requête conditionnelle (If-Match)." },
+    "429": {
+      "meaning": "Trop de requêtes en trop peu de temps ; Retry-After dit quand réessayer.",
+      "use": "La limitation de débit."
+    },
+    "431": { "meaning": "Les en-têtes, ou l’un d’eux, sont trop volumineux." },
+    "440": { "meaning": "La session du client a expiré." },
+    "444": { "meaning": "nginx a fermé la connexion sans rien envoyer." },
+    "449": { "meaning": "Réessayer après avoir effectué l’action demandée." },
+    "451": { "meaning": "Indisponible pour des raisons légales : une décision de justice, une censure." },
+    "494": { "meaning": "Les en-têtes de la requête sont trop volumineux." },
+    "495": { "meaning": "Le certificat client n’est pas valide." },
+    "496": { "meaning": "Un certificat client est exigé, et aucun n’a été envoyé." },
+    "497": { "meaning": "Une requête HTTP en clair est arrivée sur un port HTTPS." },
+    "499": {
+      "meaning": "Le client a fermé la connexion avant la réponse ; ne se lit que dans les journaux de nginx."
+    },
+    "500": {
+      "meaning": "Une erreur inattendue côté serveur.",
+      "use": "Une exception non rattrapée ; jamais pour une erreur du client."
+    },
+    "501": { "meaning": "Le serveur ne prend pas en charge ce qui est demandé, la méthode par exemple." },
+    "502": {
+      "meaning": "Une passerelle ou un proxy a reçu une réponse invalide du serveur derrière lui.",
+      "use": "L’application en amont est arrêtée ou a planté."
+    },
+    "503": {
+      "meaning": "Le serveur ne peut pas traiter la requête pour l’instant ; Retry-After peut dire jusqu’à quand.",
+      "use": "Une maintenance prévue, une surcharge, une dépendance tombée."
+    },
+    "504": {
+      "meaning": "Une passerelle ou un proxy n’a pas eu de réponse à temps du serveur derrière lui.",
+      "use": "L’application en amont est trop lente."
+    },
+    "505": { "meaning": "La version HTTP de la requête n’est pas prise en charge." },
+    "506": { "meaning": "La négociation de contenu du serveur est mal configurée." },
+    "507": { "meaning": "Le serveur ne peut pas stocker ce qu’il faut pour terminer la requête (WebDAV)." },
+    "508": { "meaning": "Une boucle infinie a été détectée pendant le traitement (WebDAV)." },
+    "509": { "meaning": "Le site a dépassé son quota de bande passante (cPanel)." },
+    "510": { "meaning": "La requête doit porter d’autres extensions." },
+    "511": { "meaning": "Le client doit s’authentifier pour accéder au réseau : un portail captif." },
+    "520": { "meaning": "L’origine a renvoyé une réponse inconnue ou vide." },
+    "521": { "meaning": "L’origine a refusé la connexion." },
+    "522": { "meaning": "La connexion à l’origine a expiré." },
+    "523": { "meaning": "L’origine est injoignable." },
+    "524": { "meaning": "L’origine n’a pas répondu à temps une fois connectée." },
+    "525": { "meaning": "La poignée de main TLS avec l’origine a échoué." },
+    "526": { "meaning": "Le certificat de l’origine n’est pas valide." }
+  }
+}
