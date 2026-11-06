@@ -121,6 +121,7 @@ fn tag_manager() {
         app.click("tag-delete");
         app.click("tag-confirm-apply");
         app.eventually("urgent is gone", |tree| !listed(tree, "urgent"));
+        app.wait_still("tag-manager-close");
         app.click("tag-manager-close");
         app.eventually("every note stays", |tree| {
             tree.count("note-card") == CARDS && !tree.has("tag-manager-close")

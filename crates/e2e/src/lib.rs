@@ -316,6 +316,23 @@ impl App {
         self.apply(vec![button(false)]);
     }
 
+    /// Until `author_id` has stopped moving: a dialog whose list shrinks is centred again a frame
+    /// later, and a click on the place just read would land beside its button.
+    pub fn wait_still(&mut self, author_id: &str) {
+        self.wait_for(author_id);
+        let place = |tree: &Tree| tree.find(author_id).and_then(Node::bounds);
+        let mut last = place(&self.tree());
+        let until = Instant::now() + PATIENCE;
+        loop {
+            let now = place(&self.tree());
+            if now == last {
+                return;
+            }
+            assert!(Instant::now() < until, "{author_id} never stops moving");
+            last = now;
+        }
+    }
+
     /// A press at `from` and a release at `to`, in points from the control's corner.
     pub fn drag_in(&mut self, author_id: &str, from: (f32, f32), to: (f32, f32)) {
         self.wait_for(author_id);
