@@ -16,7 +16,7 @@ use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::state::Area;
 use crate::theme;
-use crate::{banners, gate, http, keys, notes, titlebar, tools};
+use crate::{api, banners, gate, http, keys, notes, titlebar, tools};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -64,6 +64,8 @@ impl DevNotesApp {
             ctx.request_repaint();
         });
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
+        // A crash reaches no exit: what it left goes before anyone unlocks anything.
+        drop(api::attachments::sweep_copies(&backend));
         state.gate.ask(&backend);
         state.updates.check(&backend, true);
         Ok(Self {
@@ -302,6 +304,7 @@ impl eframe::App for DevNotesApp {
 
     fn on_exit(&mut self) {
         self.state.http.leaving(&self.backend);
+        drop(api::attachments::sweep_copies(&self.backend));
         if !self.backend.drain(EXIT_LIMIT) {
             log::warn!("The exit did not wait any longer for the database to finish");
         }
@@ -407,6 +410,28 @@ mod tests {
             .collect();
         assert!(commands.contains(&&egui::ViewportCommand::Visible(true)));
         assert!(commands.contains(&&egui::ViewportCommand::Focus));
+    }
+
+    fn left_in_the_plain_copies(directory: &std::path::Path) -> std::path::PathBuf {
+        let copies = directory.join("open");
+        std::fs::create_dir_all(&copies).unwrap();
+        std::fs::write(copies.join("left.txt"), "step one").unwrap();
+        copies
+    }
+
+    #[test]
+    fn plain_copies_are_gone_after_the_launch_and_after_the_exit() {
+        let directory = tempfile::tempdir().unwrap();
+        let copies = left_in_the_plain_copies(directory.path());
+
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        settle(&mut harness);
+        assert!(!copies.exists(), "before anything is unlocked");
+
+        left_in_the_plain_copies(directory.path());
+        eframe::App::on_exit(harness.state_mut());
+        assert!(!copies.exists());
     }
 
     #[test]

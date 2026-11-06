@@ -36,6 +36,10 @@ pub fn attach_image(
     backend.db(move |engine| attachments::attach_image(engine, note, name, size, &rgba))
 }
 
+pub fn sweep_copies(backend: &Backend) -> Pending<()> {
+    backend.db(attachments::sweep_copies)
+}
+
 /// The file as a `data:` URI.
 pub fn read(backend: &Backend, id: String) -> Pending<String> {
     backend.db(move |engine| attachments::read_attachment(engine, id))
