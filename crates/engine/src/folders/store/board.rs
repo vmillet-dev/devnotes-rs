@@ -276,9 +276,11 @@ pub fn geometry(
             // The first seat nothing stands on, never the one of its index: a new note arrives
             // at index 0 and would land on whichever card sits there.
             let mut standing: Vec<BoardPoint> = stored_positions.values().copied().collect();
+            let mut seat = 0;
 
             for id in unplaced {
-                let point = board::free_slot(top, &standing, &zones);
+                let (reached, point) = board::free_slot_from(seat, top, &standing, &zones);
+                seat = reached;
                 set_position(connection, id, point)?;
                 stored_positions.insert(id.clone(), point);
                 standing.push(point);

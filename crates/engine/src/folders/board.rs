@@ -412,16 +412,28 @@ fn under_everything(taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
 /// by hand half covers the seats it straddles.
 #[must_use]
 pub fn free_slot(top: i32, taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
+    free_slot_from(0, top, taken, zones).1
+}
+
+/// As [`free_slot`], with the seat it stopped on: a run of cards seated one after the other
+/// starts each from there, as a seat given stays taken. From zero, 5,000 cards take nine seconds.
+#[must_use]
+pub fn free_slot_from(
+    first: usize,
+    top: i32,
+    taken: &[BoardPoint],
+    zones: &[BoardFrame],
+) -> (usize, BoardPoint) {
     // Each occupant blocks at most the four seats its box straddles; past that, under it all.
     let limit = (taken.len() + zones.len()) * 4;
 
-    (0..=limit)
-        .map(|index| slot(index, top))
-        .find(|at| {
+    (first..=limit)
+        .map(|index| (index, slot(index, top)))
+        .find(|(_, at)| {
             !taken.iter().any(|other| overlaps(*at, card_frame(*other)))
                 && !zones.iter().any(|frame| overlaps(*at, *frame))
         })
-        .unwrap_or_else(|| under_everything(taken, zones))
+        .unwrap_or_else(|| (first, under_everything(taken, zones)))
 }
 
 /// The surface to pan over: the furthest zone or card plus a margin, and never smaller than
@@ -578,9 +590,11 @@ pub fn build<S: std::hash::BuildHasher>(
     // A loose note with no stored place has not been through the geometry pass yet: it goes
     // on free ground, by the same rule `store::board::geometry` writes down.
     let mut standing: Vec<BoardPoint> = loose.iter().filter_map(|entry| entry.position).collect();
+    let mut seat = 0;
     for entry in &mut loose {
         if entry.position.is_none() {
-            let at = free_slot(fallback_top, &standing, &placed);
+            let (reached, at) = free_slot_from(seat, fallback_top, &standing, &placed);
+            seat = reached;
             entry.position = Some(at);
             standing.push(at);
         }
@@ -980,6 +994,30 @@ mod tests {
             free_slot(top, &[], std::slice::from_ref(&over)),
             slot(1, top)
         );
+    }
+
+    #[test]
+    fn seats_given_in_a_run_are_the_ones_given_one_by_one() {
+        let top = 100;
+        let wall = BoardFrame {
+            x: slot(2, top).x,
+            y: slot(2, top).y,
+            width: CARD_WIDTH,
+            height: CARD_HEIGHT,
+        };
+        let zones = [wall];
+        let mut one_by_one = vec![slot(5, top)];
+        let mut run = one_by_one.clone();
+        let mut seat = 0;
+
+        for _ in 0..40 {
+            one_by_one.push(free_slot(top, &one_by_one, &zones));
+            let (reached, at) = free_slot_from(seat, top, &run, &zones);
+            seat = reached;
+            run.push(at);
+        }
+
+        assert_eq!(run, one_by_one);
     }
 
     #[test]
