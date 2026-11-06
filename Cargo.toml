@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/engine", "crates/text", "crates/richtext", "crates/drawing", "crates/diagram", "crates/i18n", "crates/platform", "crates/ui", "crates/app", "crates/e2e"]
 
 [workspace.package]
-version = "0.24.0"
+version = "0.25.0"
 edition = "2024"
 # The pinned toolchain's (`rust-toolchain.toml`): below it, Cargo's MSRV-aware resolver quietly
 # holds crates back.
