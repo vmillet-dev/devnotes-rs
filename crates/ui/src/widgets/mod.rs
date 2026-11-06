@@ -20,7 +20,7 @@ pub mod rich;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
-pub use dialog::{DialogStack, Layer, dialog};
+pub use dialog::{DialogStack, Layer, dialog, framed_dialog};
 pub use field::{Checkbox, SearchField, Searched, TextField};
 pub use layout::{RailWidth, area_room, split_handle, tooltip};
 pub use list::{code_viewer, virtual_list};

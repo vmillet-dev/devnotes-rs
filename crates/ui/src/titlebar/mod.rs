@@ -4,6 +4,7 @@
 
 mod file_menu;
 pub(crate) mod libraries;
+pub(crate) mod preferences;
 
 use egui::{
     CornerRadius, FontFamily, Margin, Rect, Role, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo,
@@ -13,6 +14,7 @@ use i18n::{Key, Language, Message, keys};
 
 use crate::action::{Action as Asked, Actions, AppAction};
 use crate::gate::prompt::{self, Answer, PromptView};
+use crate::services::settings::Settings;
 use crate::state::{AppState, Area};
 use crate::theme::icons::{self, Icon};
 use crate::theme::tokens::TITLEBAR_HEIGHT;
@@ -39,6 +41,8 @@ pub enum Action {
     Quit,
     OpenLibraries,
     Libraries(libraries::Ask),
+    OpenPreferences,
+    Preferences(preferences::Ask),
 }
 
 /// What only the bar's drawing sees.
@@ -48,9 +52,29 @@ pub struct View {
     /// The menu's control, which gets the focus back from what it opened.
     pub file_anchor: Option<egui::Id>,
     libraries: libraries::View,
+    preferences: preferences::View,
     prompt: PromptView,
     /// ⚠️ Holds a phrase until `AppState::apply` takes it, the same frame.
     pub answer: Option<Answer>,
+}
+
+impl View {
+    pub fn open_preferences(&mut self, settings: &Settings) {
+        self.preferences.open(settings);
+    }
+
+    pub fn close_preferences(&mut self) {
+        self.preferences = preferences::View::default();
+    }
+
+    /// What the window shows while the panel is open.
+    pub fn previewed(&self) -> Option<Settings> {
+        self.preferences.previewed()
+    }
+
+    pub fn adopt(&mut self) -> Option<Settings> {
+        self.preferences.adopt()
+    }
 }
 
 pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
@@ -101,6 +125,7 @@ pub(crate) fn dialogs(
     actions: &mut Actions,
 ) {
     libraries::show(ctx, state, &mut view.libraries, actions);
+    preferences::show(ctx, state, &mut view.preferences, actions);
     if let Some(request) = state.transfer.prompt() {
         let asked = prompt::show(
             ctx,

@@ -67,7 +67,7 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
             Action::CopyMarkdown,
         ),
     ];
-    let mut ids = Vec::with_capacity(rows.len() + 2);
+    let mut ids = Vec::with_capacity(rows.len() + 3);
     for (key, entry, enabled, action) in rows {
         let id = format!("file-option-{entry}");
         let tone = if enabled { Tone::Plain } else { Tone::Idle };
@@ -88,6 +88,17 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
     ids.push(row.id);
     if row.clicked() {
         actions.push(Asked::Menu(Action::OpenLibraries));
+        ui.close();
+    }
+    let row = super::menu_option(
+        ui,
+        &tr(keys::file::PREFERENCES),
+        "file-preferences",
+        Tone::Plain,
+    );
+    ids.push(row.id);
+    if row.clicked() {
+        actions.push(Asked::Menu(Action::OpenPreferences));
         ui.close();
     }
     let quit = if view.confirming_quit {

@@ -1583,6 +1583,7 @@ dependencies = [
  "egui",
  "egui_inspection",
  "platform",
+ "serde_json",
  "tempfile",
  "tungstenite",
 ]

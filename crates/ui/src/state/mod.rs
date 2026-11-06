@@ -252,7 +252,7 @@ impl AppState {
         for (text, said) in filled.copied {
             self.copy_out(ctx, text, said);
         }
-        let pinned_first = self.notes_query.arrangement().pinned_first;
+        let pinned_first = self.settings.show_pinned_first;
         self.palette.update(
             ctx,
             backend,
@@ -284,7 +284,7 @@ impl AppState {
         }
         self.presentation.update(ctx, &mut self.errors);
         for (note, sheet) in self.calc.update(&mut self.errors) {
-            let text = crate::notes::calc::copy_text(&note.content, &sheet, self.language);
+            let text = crate::notes::calc::copy_text(&note.content, &sheet, self.calc_format());
             self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
         }
         self.follow_revisions(backend);
@@ -712,7 +712,55 @@ impl AppState {
                     .open(Layer::Settings, crate::titlebar::libraries::id(), opener);
             }
             Menu::Libraries(asked) => self.apply_libraries(asked, ctx, backend),
+            Menu::OpenPreferences => {
+                self.titlebar_view.open_preferences(&self.settings);
+                let opener = self.titlebar_view.file_anchor;
+                self.dialogs
+                    .open(Layer::Settings, crate::titlebar::preferences::id(), opener);
+            }
+            Menu::Preferences(asked) => self.apply_preferences(asked, ctx, backend),
         }
+    }
+
+    /// Only the theme and the density show before a button: the rest of the application reads
+    /// the applied settings, never the draft.
+    fn apply_preferences(
+        &mut self,
+        asked: crate::titlebar::preferences::Ask,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::titlebar::preferences::Ask;
+        match asked {
+            Ask::Preview => {
+                if let Some(look) = self.titlebar_view.previewed() {
+                    theme::apply(ctx, look.theme, look.density);
+                }
+            }
+            Ask::Apply => self.adopt_draft(ctx, backend),
+            Ask::ApplyAndClose => {
+                self.adopt_draft(ctx, backend);
+                self.close_preferences(ctx);
+            }
+            Ask::Discard => {
+                self.apply_look(ctx);
+                self.close_preferences(ctx);
+            }
+        }
+    }
+
+    fn adopt_draft(&mut self, ctx: &egui::Context, backend: &Backend) {
+        if let Some(settings) = self.titlebar_view.adopt() {
+            self.settings = settings;
+            self.language = self.settings.locale.language();
+            self.apply_look(ctx);
+            self.save_settings(backend);
+        }
+    }
+
+    fn close_preferences(&mut self, ctx: &egui::Context) {
+        self.titlebar_view.close_preferences();
+        self.dialogs.close(ctx, crate::titlebar::preferences::id());
     }
 
     fn apply_libraries(
@@ -1499,12 +1547,14 @@ impl AppState {
     }
 
     /// Onto the clipboard, and said; a copy asked from the palette closes it.
-    fn copy_out(&mut self, ctx: &egui::Context, text: String, said: i18n::Message) {
+    pub(crate) fn copy_out(&mut self, ctx: &egui::Context, text: String, said: i18n::Message) {
         ctx.copy_text(text);
         if self.palette.copied() {
             self.palette.close();
         }
-        self.status.report(said);
+        if self.settings.copy_confirmation {
+            self.status.report(said);
+        }
     }
 
     fn apply_palette(
@@ -1558,6 +1608,11 @@ impl AppState {
         }
     }
 
+    /// How the sheets on screen write their results.
+    pub fn calc_format(&self) -> crate::notes::calc::Format {
+        crate::notes::calc::Format::of(&self.settings, self.language)
+    }
+
     /// A modal over the canvas takes its keys: the canvas's stand aside.
     pub fn modal_open(&self) -> bool {
         self.editor.is_open()
@@ -1576,7 +1631,7 @@ impl AppState {
         let Some((space, folder)) = self.new_place() else {
             return;
         };
-        let kind = kind.unwrap_or(engine::notes::kind::NoteKind::Snippet);
+        let kind = kind.unwrap_or(self.settings.default_note_kind);
         self.editor.draft(kind, space, folder);
     }
 
@@ -1639,7 +1694,7 @@ impl AppState {
                 };
                 let changed = *text != note.content && !note.id.is_empty();
                 changed.then(|| {
-                    let indent = crate::notes::language::indent_unit(note.language);
+                    let indent = self.settings.code_indent.unit(note.language);
                     let request = text::format::Request {
                         text: text.clone(),
                         cursor: 0,

@@ -37,7 +37,7 @@ pub(super) fn show(
         NoteKind::Checklist => checklist(ui, rect, note, context.language, actions),
         NoteKind::Drawing if hit.is_none() => drawing(ui, rect, note, context, actions),
         NoteKind::Calc if hit.is_none() && !note.calc.is_empty() => {
-            calc_lines(ui, rect, note, context.language);
+            calc_lines(ui, rect, note, context.calc);
         }
         NoteKind::Note if hit.is_none() => outline(ui, rect, &note.outline),
         NoteKind::Snippet if hit.is_none_or(|hit| hit.field == SearchField::Body) => {
@@ -216,7 +216,7 @@ fn plain(line: &OutlineLine) -> String {
 }
 
 /// A sheet's last results, each on the right of its line; a rule above a total.
-fn calc_lines(ui: &mut Ui, rect: Rect, note: &DisplayNote, language: i18n::Language) {
+fn calc_lines(ui: &mut Ui, rect: Rect, note: &DisplayNote, format: calc::Format) {
     let p = palette(ui.ctx());
     let font = Font::mono(11.0, 1.3);
     let mut top = rect.top();
@@ -231,7 +231,7 @@ fn calc_lines(ui: &mut Ui, rect: Rect, note: &DisplayNote, language: i18n::Langu
                 .hline(rect.x_range(), top + 0.5, Stroke::new(1.0, p.line));
             top += 2.0;
         }
-        let written = calc::value(&line.value, line.places, language);
+        let written = calc::value(&line.value, line.places, format);
         let result = if written.approx {
             format!("≈ {}", written.text)
         } else {

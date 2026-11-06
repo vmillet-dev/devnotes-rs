@@ -122,6 +122,35 @@ pub fn dialog<R>(
     Some(shown)
 }
 
+/// A framed modal: the same surface, its content edge to edge, for a panel with parts of its own.
+pub fn framed_dialog<R>(
+    ctx: &Context,
+    stack: &DialogStack,
+    id: Id,
+    size: egui::Vec2,
+    content: impl FnOnce(&mut egui::Ui) -> R,
+) -> Option<ModalResponse<R>> {
+    if !stack.is_open(id) {
+        return None;
+    }
+    let p = palette(ctx);
+    let frame = egui::Frame::new()
+        .fill(p.bg_1)
+        .stroke(Stroke::new(1.0, p.line))
+        .corner_radius(CornerRadius::same(14))
+        .shadow(p.shadow_overlay);
+    let room = ctx.content_rect().size() * 0.9;
+    let shown = egui::Modal::new(id)
+        .backdrop_color(p.backdrop.gamma_multiply(0.7))
+        .frame(frame)
+        .show(ctx, |ui| {
+            ui.set_width(size.x.min(room.x));
+            ui.set_height(size.y.min(room.y));
+            content(ui)
+        });
+    Some(shown)
+}
+
 #[cfg(test)]
 mod tests {
     use egui::{Key, Modifiers};
