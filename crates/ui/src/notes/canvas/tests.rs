@@ -3,7 +3,6 @@ use egui_kittest::kittest::{NodeT, Queryable};
 
 use super::*;
 use crate::backend::Backend;
-use crate::gate::IndexFill;
 use crate::testing;
 
 pub(super) struct Bench {
@@ -32,7 +31,7 @@ pub(super) fn canvas(backend: Backend, profile: tempfile::TempDir) -> Harness<'s
                     &bench.backend,
                     now,
                     (None, None),
-                    (state.revision, IndexFill::Ready),
+                    state.revision,
                 );
                 show(ui, &bench.state, &mut bench.canvas, &mut bench.actions);
                 let ctx = ui.ctx().clone();

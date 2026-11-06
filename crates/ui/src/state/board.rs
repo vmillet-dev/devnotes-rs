@@ -20,7 +20,6 @@ use super::{QueryCell, Revision};
 use crate::api;
 use crate::api::undo::Reversible;
 use crate::backend::{Backend, Pending};
-use crate::gate::IndexFill;
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 
@@ -73,7 +72,6 @@ struct Params {
     /// The local day, not the instant: what dims by date moves at midnight, not every frame.
     day: NaiveDate,
     revision: Revision,
-    index: IndexFill,
 }
 
 /// What a gesture moved and no view has come back with yet, laid over the view so that nothing
@@ -126,14 +124,13 @@ impl BoardState {
         backend: &Backend,
         now: DateTime<Utc>,
         (place, criteria): (Place, Criteria),
-        (revision, index): (Revision, IndexFill),
+        revision: Revision,
     ) -> bool {
         self.cell.want(Params {
             place,
             criteria,
             day: now.with_timezone(&Local).date_naive(),
             revision,
-            index,
         });
         let changed = self
             .cell
@@ -499,7 +496,7 @@ mod tests {
                 backend,
                 Utc::now(),
                 (place.clone(), Criteria::default()),
-                (revision, IndexFill::Ready),
+                revision,
             );
             backend.settle();
         }
@@ -555,7 +552,7 @@ mod tests {
                 &backend,
                 Utc::now(),
                 (place.clone(), criteria.clone()),
-                (Revision::default(), IndexFill::Ready),
+                Revision::default(),
             );
             backend.settle();
         }

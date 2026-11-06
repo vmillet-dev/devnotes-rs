@@ -330,7 +330,11 @@ impl eframe::App for DevNotesApp {
                 Input::Engine(EngineEvent::IndexProgress { done, total }) => {
                     self.state.gate.index_progress(done, total);
                 }
-                Input::Engine(EngineEvent::IndexReady) => self.state.gate.index_ready(),
+                Input::Engine(EngineEvent::IndexReady) => {
+                    self.state.gate.index_ready();
+                    // What was listed from the first slice is asked again, whole.
+                    self.state.revision.bump();
+                }
                 Input::Engine(EngineEvent::Socket(event)) => self.state.http.receive_socket(event),
                 Input::Engine(EngineEvent::Console(event)) => {
                     self.state.http.receive_console(event);

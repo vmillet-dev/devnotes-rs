@@ -35,7 +35,7 @@ pub use query::QueryCell;
 use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
-use crate::gate::{Gate, GateView, IndexFill};
+use crate::gate::{Gate, GateView};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 use crate::services::samples;
@@ -264,12 +264,12 @@ impl AppState {
         self.adopt_seeding(backend);
         if self.gate.is_open() && self.library_preferences_read.is_none() && self.seeding.is_none()
         {
-            self.update_library(ctx, backend, self.gate.index);
+            self.update_library(ctx, backend);
         }
     }
 
     /// What reads the open library, once its preferences are in and its samples seeded.
-    pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
+    pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend) {
         let answered = self.notes.update(&mut self.revision, &mut self.errors);
         if let Some(id) = answered.open {
             self.editor.open(id);
@@ -363,11 +363,11 @@ impl AppState {
         let folder = self.active_folder().map(str::to_owned);
         let place = (self.spaces.active_space(), folder.as_deref());
         self.notes_query
-            .update(ctx, backend, now, place, (self.revision, index));
+            .update(ctx, backend, now, place, self.revision);
         if let Some(place) = self.board_place() {
             let criteria = self.notes_query.criteria();
             self.board
-                .update(backend, now, (place, criteria), (self.revision, index));
+                .update(backend, now, (place, criteria), self.revision);
         }
     }
 

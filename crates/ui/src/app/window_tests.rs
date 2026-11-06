@@ -153,3 +153,15 @@ fn a_window_that_names_no_place_keeps_its_size() {
 
     assert!((app.geometry.unwrap().width - 800.0).abs() < f32::EPSILON);
 }
+
+#[test]
+fn a_whole_index_asks_the_lists_again() {
+    let directory = tempfile::tempdir().unwrap();
+    let (mut harness, _tray, inbox) = super::tests::with_a_tray(directory.path());
+    let before = harness.state().state.revision;
+
+    engine::EventSink::emit(&inbox, engine::EngineEvent::IndexReady);
+    harness.step();
+
+    assert_ne!(harness.state().state.revision, before);
+}

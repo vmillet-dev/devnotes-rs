@@ -46,7 +46,7 @@ pub fn query_notes(engine: &Engine, query: NotesQuery) -> Result<NotesView, AppE
     }
     .map(|ids| ids.into_iter().collect::<HashSet<_>>());
     let mut index = engine.index()?;
-    index.ready(&mut connection)?;
+    index.enough_to_list(&mut connection)?;
     drop(connection);
 
     let (entries, facets) = index.select(&query, folders.as_ref());
