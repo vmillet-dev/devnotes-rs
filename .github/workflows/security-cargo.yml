@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   cargo-deny:
-    name: Cargo advisories
+    name: Cargo deny
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
@@ -39,8 +39,9 @@ jobs:
       #
       # ⚠️ The repository's only advisory net — Dependabot alerts are off. `licenses` came
       # back with the egui tree, whose dozens of new crates arrive by pull request: one under a
-      # licence GPL-3.0 cannot ship is refused while it can still be replaced.
+      # licence GPL-3.0 cannot ship is refused while it can still be replaced, and `sources`
+      # refuses one from anywhere but crates.io.
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           manifest-path: Cargo.toml
-          command: check advisories licenses
+          command: check

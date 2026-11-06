@@ -24,7 +24,6 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "BSL-1.0",
-    "CDLA-Permissive-2.0",
     "GPL-3.0-only",
     "ISC",
     "MIT",
@@ -33,3 +32,13 @@ allow = [
     "Unlicense",
     "Zlib",
 ]
+
+# Two versions of a crate are the normal state of this tree: wgpu and the platform crates hold
+# their own. Nothing here is refused by name.
+[bans]
+multiple-versions = "allow"
+
+# crates.io alone: a git or foreign dependency is a decision, not a line in a manifest.
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
