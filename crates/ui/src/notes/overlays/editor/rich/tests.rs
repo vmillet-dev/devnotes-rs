@@ -293,6 +293,10 @@ fn a_table_is_inserted_walked_with_tab_and_edited_from_its_tools() {
 struct Clipboard(Option<String>);
 
 impl platform::clipboard::Clipboard for Clipboard {
+    fn text(&self) -> Option<String> {
+        None
+    }
+
     fn html(&self) -> Option<String> {
         self.0.clone()
     }

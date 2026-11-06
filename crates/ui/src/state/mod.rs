@@ -788,6 +788,7 @@ impl AppState {
                 now: self.clock.now(),
                 errors: &mut self.errors,
                 status: &mut self.status,
+                clipboard: &self.clipboard,
             };
             self.tools_view.update(entry, &mut turn);
         }

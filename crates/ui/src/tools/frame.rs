@@ -44,10 +44,10 @@ pub(super) fn show(
         importing: None,
     };
     view.session(entry).ui(&mut content, &mut drawn);
-    if let Some(field) = drawn.importing
+    if let Some((field, slot)) = drawn.importing
         && let Some((_, accepts)) = entry.from_note.iter().find(|(name, _)| *name == field)
     {
-        view.picker = Some(Picker::new(field, *accepts));
+        view.picker = Some(Picker::new(slot, *accepts));
     }
 }
 
@@ -91,8 +91,18 @@ fn head(
                 .show(ui)
                 .clicked()
         {
-            tool.sample();
+            tool.sample(language);
             actions.push(Asked::Tools(Action::SampleLoaded));
+        }
+        for action in tool.actions().into_iter().rev() {
+            let id = format!("tool-action-{}", action.id);
+            if Button::new(&tr(action.label), &id)
+                .enabled(action.enabled)
+                .show(ui)
+                .clicked()
+            {
+                tool.run_action(action.id, ui.ctx());
+            }
         }
     });
 }

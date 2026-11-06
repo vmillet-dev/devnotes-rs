@@ -8,7 +8,7 @@ mod reference_table;
 mod result_row;
 
 pub use copy_value::CopyValue;
-pub use note_import::note_import;
+pub use note_import::{note_import, note_import_into};
 pub use output_row::OutputRow;
 pub use reference_table::{Cell, Column, Group, ReferenceRow, ReferenceTable};
 pub use result_row::{ResultRow, result_rows};
@@ -115,6 +115,57 @@ pub fn paragraph(ui: &mut Ui, words: &str, style: (f32, f32), ink: Color32) -> R
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, words));
     shown.paint(ui, rect.min, ink);
     response
+}
+
+/// A checkbox and its label, in the accent.
+pub fn check(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Response {
+    let p = palette(ui.ctx());
+    let label = widgets::text(ui, words, 12.0, 400.0, FontFamily::Proportional, p.text_1);
+    let on = *value;
+    let response = widgets::interact(
+        ui,
+        Vec2::new(14.0 + 7.0 + label.size().x, 24.0),
+        Sense::click(),
+        author_id,
+        || WidgetInfo::selected(Role::CheckBox, true, on, words),
+        CornerRadius::same(4),
+    );
+    if response.clicked() {
+        *value = !*value;
+    }
+    let rect = response.rect;
+    let tick = egui::Rect::from_min_size(
+        egui::pos2(rect.left(), rect.center().y - 7.0),
+        Vec2::splat(14.0),
+    );
+    let corner = CornerRadius::same(3);
+    if *value {
+        ui.painter().rect_filled(tick, corner, p.amber_fill);
+        crate::theme::icons::paint(
+            ui,
+            tick.shrink(1.5),
+            crate::theme::icons::Icon::Check,
+            p.amber_ink,
+        );
+    } else {
+        let edge = Stroke::new(1.0, p.line);
+        ui.painter()
+            .rect(tick, corner, p.bg_1, edge, egui::StrokeKind::Inside);
+    }
+    let at = egui::pos2(tick.right() + 7.0, rect.center().y - label.size().y / 2.0);
+    ui.painter().galley(at, label, p.text_1);
+    response
+}
+
+/// A count typed by hand: the tool reads it when it parses.
+pub fn number_field(ui: &mut Ui, value: &mut String, name: &str, author_id: &str) -> Response {
+    ui.scope(|ui| {
+        ui.set_max_width(72.0);
+        widgets::TextField::new(value, name, author_id)
+            .compact()
+            .show(ui)
+    })
+    .inner
 }
 
 /// What is typed or pasted into a tool. `rows` is how many lines it opens on.

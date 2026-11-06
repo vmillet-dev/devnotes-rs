@@ -1,7 +1,10 @@
 //! Every tool's round trip to the core as its inputs change: compared by value, debounced as a
 //! deadline, the previous answer kept until the next lands (the reference's `liveResult`).
 
+use std::sync::Arc;
+
 use i18n::keys;
+use platform::clipboard::Clipboard;
 
 use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
@@ -19,12 +22,14 @@ pub struct Turn<'a> {
     pub now: chrono::DateTime<chrono::Utc>,
     pub errors: &'a mut ErrorNotifier,
     pub status: &'a mut StatusNotifier,
+    pub clipboard: &'a Arc<dyn Clipboard + Send + Sync>,
 }
 
 pub struct Live<P, T> {
     cell: QueryCell<P, T>,
     typed: Option<P>,
     due: Option<f64>,
+    delay: f64,
 }
 
 impl<P: PartialEq + Clone, T> Default for Live<P, T> {
@@ -33,11 +38,20 @@ impl<P: PartialEq + Clone, T> Default for Live<P, T> {
             cell: QueryCell::default(),
             typed: None,
             due: None,
+            delay: DEBOUNCE,
         }
     }
 }
 
 impl<P: PartialEq + Clone, T> Live<P, T> {
+    /// For what costs more to compute: two whole texts compared.
+    pub fn slower(delay: f64) -> Self {
+        Self {
+            delay,
+            ..Self::default()
+        }
+    }
+
     /// What the inputs ask now, `None` for nothing, and the answer that came. The first request
     /// goes at once: a tool opened on a text shows its answer without a wait.
     pub fn update(
@@ -50,7 +64,7 @@ impl<P: PartialEq + Clone, T> Live<P, T> {
             self.due = match (&request, &self.typed) {
                 (None, _) => None,
                 (Some(_), None) => Some(turn.time),
-                (Some(_), Some(_)) => Some(turn.time + DEBOUNCE),
+                (Some(_), Some(_)) => Some(turn.time + self.delay),
             };
             if request.is_none() {
                 self.cell = QueryCell::default();
@@ -103,6 +117,7 @@ mod tests {
         backend: Backend,
         errors: ErrorNotifier,
         status: StatusNotifier,
+        clipboard: Arc<dyn Clipboard + Send + Sync>,
         ctx: egui::Context,
         live: Live<u32, u32>,
         launched: Vec<u32>,
@@ -115,6 +130,7 @@ mod tests {
                 backend,
                 errors: ErrorNotifier::default(),
                 status: StatusNotifier::default(),
+                clipboard: platform::clipboard::system(),
                 ctx: egui::Context::default(),
                 live: Live::default(),
                 launched: Vec::new(),
@@ -130,6 +146,7 @@ mod tests {
                 now: chrono::Utc::now(),
                 errors: &mut self.errors,
                 status: &mut self.status,
+                clipboard: &self.clipboard,
             };
             let launched = &mut self.launched;
             self.live.update(&mut turn, request, |backend, params| {

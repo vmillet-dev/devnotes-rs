@@ -1,6 +1,12 @@
 //! Every tool, in its panel's order, a file each beside this one. Adding one is an entry here:
 //! its name and its line are read from its id.
 
+mod case;
+mod diff;
+mod line_breaks;
+mod lorem;
+mod text_stats;
+
 use egui::Color32;
 use engine::notes::kind::NoteKind;
 use engine::notes::language::Language as NoteLanguage;
@@ -197,14 +203,14 @@ pub static TOOLS: [ToolEntry; 32] = [
             "ascii",
         ],
         from_note: &[("text", ANY_NOTE)],
-        make: coming,
+        make: case::make,
     },
     ToolEntry {
         id: "line-breaks",
         category: Category::Text,
         keywords: &["crlf", "lf", "eol", "newline", "whitespace"],
         from_note: &[("text", ANY_NOTE)],
-        make: coming,
+        make: line_breaks::make,
     },
     ToolEntry {
         id: "text-stats",
@@ -221,7 +227,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "mots",
         ],
         from_note: &[("text", ANY_NOTE)],
-        make: coming,
+        make: text_stats::make,
     },
     ToolEntry {
         id: "diff",
@@ -230,7 +236,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "diff", "compare", "patch", "diff -u", "unified", "json", "rfc 6902",
         ],
         from_note: &[("text", ANY_NOTE), ("structured", STRUCTURED_SNIPPET)],
-        make: coming,
+        make: diff::make,
     },
     ToolEntry {
         id: "hash",
@@ -361,7 +367,7 @@ pub static TOOLS: [ToolEntry; 32] = [
         category: Category::Generate,
         keywords: &["lorem", "ipsum", "placeholder", "text"],
         from_note: &[],
-        make: coming,
+        make: lorem::make,
     },
     ToolEntry {
         id: "qr",
@@ -575,3 +581,6 @@ pub static TOOLS: [ToolEntry; 32] = [
         ],
     ),
 ];
+
+#[cfg(test)]
+mod text_tests;

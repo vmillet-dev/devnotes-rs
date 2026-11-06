@@ -33,7 +33,8 @@ pub struct PickedNote {
 
 /// The dialog, while it is open.
 pub struct Picker {
-    pub field: &'static str,
+    /// Which input of the tool it fills.
+    pub slot: &'static str,
     accepts: NoteInput,
     search: String,
     /// The field takes the focus when the dialog opens.
@@ -46,9 +47,9 @@ pub struct Picker {
 }
 
 impl Picker {
-    pub fn new(field: &'static str, accepts: NoteInput) -> Self {
+    pub fn new(slot: &'static str, accepts: NoteInput) -> Self {
         Self {
-            field,
+            slot,
             accepts,
             search: String::new(),
             fresh: true,
