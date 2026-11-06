@@ -17,7 +17,6 @@ use serde_json::{Value, json};
 use super::{QueryCell, Revision};
 use crate::api;
 use crate::backend::Backend;
-use crate::gate::IndexFill;
 use crate::services::preferences::Preferences;
 
 /// The library's, like the space each was left on.
@@ -201,8 +200,6 @@ struct Params {
     arrangement: Arrangement,
     day: NaiveDate,
     revision: Revision,
-    /// The index answers what it holds so far: each slice it adds is asked again.
-    index: IndexFill,
 }
 
 pub struct NotesQueryState {
@@ -246,7 +243,7 @@ impl NotesQueryState {
         backend: &Backend,
         now: DateTime<Utc>,
         place: (Option<&str>, Option<&str>),
-        (revision, index): (Revision, IndexFill),
+        revision: Revision,
     ) -> bool {
         if let Some(due) = self.due {
             let time = ctx.input(|input| input.time);
@@ -268,7 +265,6 @@ impl NotesQueryState {
             arrangement: self.arrangement,
             day: local.date_naive(),
             revision,
-            index,
         });
         self.cell
             .update(|params| api::notes::query(backend, query(&params, now)))
@@ -422,15 +418,8 @@ mod tests {
     fn settled(state: &mut NotesQueryState, backend: &Backend, revision: Revision) {
         let ctx = egui::Context::default();
         let now = Utc::now();
-        let update = |state: &mut NotesQueryState| {
-            state.update(
-                &ctx,
-                backend,
-                now,
-                (None, None),
-                (revision, IndexFill::Ready),
-            )
-        };
+        let update =
+            |state: &mut NotesQueryState| state.update(&ctx, backend, now, (None, None), revision);
         update(state);
         backend.settle();
         update(state);
@@ -462,21 +451,9 @@ mod tests {
         let revision = Revision::default();
         let frame = |state: &mut NotesQueryState, time: f64| {
             testing::frame(&ctx, time, |_| {});
-            state.update(
-                &ctx,
-                &backend,
-                Utc::now(),
-                (None, None),
-                (revision, IndexFill::Ready),
-            );
+            state.update(&ctx, &backend, Utc::now(), (None, None), revision);
             backend.settle();
-            state.update(
-                &ctx,
-                &backend,
-                Utc::now(),
-                (None, None),
-                (revision, IndexFill::Ready),
-            );
+            state.update(&ctx, &backend, Utc::now(), (None, None), revision);
         };
         frame(&mut state, 0.0);
 

@@ -238,6 +238,16 @@ pub fn open_in_memory() -> Result<Library, StorageError> {
     })
 }
 
+impl Library {
+    /// Once the index holds every body, nothing reads the file end to end again, and what stays
+    /// mapped stays in the process. Before that, the mapping is what makes the fill fast.
+    pub(crate) fn map_less(&mut self) -> Result<(), StorageError> {
+        self.connection
+            .batch_execute("PRAGMA mmap_size = 67108864;")?;
+        Ok(())
+    }
+}
+
 /// A key derived at a cost nobody would ship: the sealing path is the real one, which is
 /// what the tests and the benchmarks need.
 #[doc(hidden)]
@@ -461,6 +471,26 @@ mod tests {
             .mmap_size;
 
         assert_eq!(size, 1 << 30);
+    }
+
+    #[test]
+    fn the_mapping_shrinks_once_the_index_is_read() {
+        #[derive(QueryableByName)]
+        struct MmapSize {
+            #[diesel(sql_type = BigInt)]
+            mmap_size: i64,
+        }
+
+        let scratch = tempfile::tempdir().unwrap();
+        let mut library = open(&scratch.path().join("notes.db"), test_vault().unwrap()).unwrap();
+
+        library.map_less().unwrap();
+
+        let size = diesel::sql_query("PRAGMA mmap_size")
+            .get_result::<MmapSize>(library.db())
+            .unwrap()
+            .mmap_size;
+        assert_eq!(size, 1 << 26);
     }
 
     #[test]

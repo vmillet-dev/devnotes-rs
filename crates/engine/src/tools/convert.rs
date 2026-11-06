@@ -217,7 +217,8 @@ fn yaml_key(key: Yaml) -> String {
 
 fn to_yaml(value: &Value) -> Yaml {
     match value {
-        Value::Null => Yaml::Null,
+        // The emitter writes `Yaml::Null` as `~`, and a `Real` as it is given.
+        Value::Null => Yaml::Real("null".to_owned()),
         Value::Bool(flag) => Yaml::Boolean(*flag),
         Value::Number(number) => number
             .as_i64()
@@ -385,6 +386,21 @@ mod tests {
         let back: Value =
             serde_json::from_str(&converted(&toml, DataFormat::Toml, DataFormat::Json)).unwrap();
         assert_eq!(back, serde_json::from_str::<Value>(SERVICE).unwrap());
+    }
+
+    #[test]
+    fn yaml_writes_a_null_as_a_null_and_reads_it_back() {
+        let text = converted(
+            r#"{"debug":null,"list":[null,"~"]}"#,
+            DataFormat::Json,
+            DataFormat::Yaml,
+        );
+        assert!(text.contains("debug: null"), "{text}");
+        assert!(text.contains("- null"), "{text}");
+        let back = read_value(&text, DataFormat::Yaml).unwrap();
+        assert_eq!(back["debug"], Value::Null);
+        assert_eq!(back["list"][0], Value::Null);
+        assert_eq!(back["list"][1], Value::String("~".to_owned()));
     }
 
     #[test]

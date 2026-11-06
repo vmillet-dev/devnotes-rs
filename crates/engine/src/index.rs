@@ -5,6 +5,7 @@
 //! Built after the unlock, newest first, a slice at a time on the db queue ([`fill`]), so a
 //! command sent meanwhile runs between two slices.
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
@@ -12,7 +13,7 @@ use rayon::prelude::*;
 use zeroize::Zeroize;
 
 use crate::db::{self, Library, iso8601, lock};
-use crate::error::StorageError;
+use crate::error::{AppError, StorageError};
 use crate::folders::model::NoteFolder;
 use crate::notes::kind::NoteKind;
 use crate::notes::model::Note;
@@ -122,11 +123,16 @@ pub struct NoteIndex {
     /// every note is in.
     next: Option<(String, String)>,
     complete: bool,
+    /// A [`fill`] is bringing the rest: a list answers with what is in.
+    filling: bool,
     attachment_counts: HashMap<String, u32>,
     /// Every folder of the library, by id, as a card's chip names it.
     folders: HashMap<String, NoteFolder>,
     /// The global `{{field}}` values, sealed on disk.
     globals: BTreeMap<String, String>,
+    /// What [`Self::facets`] counted, by space, until a note changes: a count walks every note,
+    /// and every list asks for one.
+    counted: RefCell<HashMap<Option<String>, Facets>>,
 }
 
 impl Drop for NoteIndex {
@@ -177,7 +183,9 @@ impl NoteIndex {
         for entry in entries {
             self.notes.insert(entry.note.id.clone(), Arc::new(entry));
         }
+        self.counted.get_mut().clear();
         self.complete = i64::try_from(read).unwrap_or(i64::MAX) < SLICE;
+        self.filling &= !self.complete;
         Ok(!self.complete)
     }
 
@@ -215,6 +223,7 @@ impl NoteIndex {
                 self.notes
                     .insert(note.id.clone(), Arc::new(IndexedNote::of(note)));
             }
+            self.counted.get_mut().clear();
         }
         Ok(())
     }
@@ -265,6 +274,18 @@ impl NoteIndex {
         Ok(())
     }
 
+    /// What a list needs before it answers: the first slice while a [`fill`] brings the rest,
+    /// everything otherwise. Reading the rest here would keep the first cards for the last note.
+    pub(crate) fn enough_to_list(&mut self, library: &mut Library) -> Result<(), StorageError> {
+        if !self.filling {
+            return self.ready(library);
+        }
+        if self.notes.is_empty() {
+            self.next_slice(library)?;
+        }
+        Ok(())
+    }
+
     /// What `notes::store::fetch` answers, from memory: the notes the space, the folders, the
     /// quick filter and the rails keep, edited last first, and the facets of the space.
     pub(crate) fn select(
@@ -300,6 +321,16 @@ impl NoteIndex {
     /// Counted as the SQL counted them, a space or every one. ⚠️ Tags that differ only in case
     /// are one, as under `COLLATE NOCASE`, named by their smallest spelling.
     pub(crate) fn facets(&self, space_id: Option<&str>) -> Facets {
+        let space = space_id.map(str::to_owned);
+        if let Some(counted) = self.counted.borrow().get(&space) {
+            return counted.clone();
+        }
+        let counted = self.count_facets(space_id);
+        self.counted.borrow_mut().insert(space, counted.clone());
+        counted
+    }
+
+    fn count_facets(&self, space_id: Option<&str>) -> Facets {
         let mut tags: BTreeMap<String, (String, i64)> = BTreeMap::new();
         let mut languages: BTreeMap<&str, i64> = BTreeMap::new();
         let mut kinds: HashMap<&str, i64> = HashMap::new();
@@ -390,6 +421,21 @@ pub(crate) fn search(entries: &[&Arc<IndexedNote>], needle: &str) -> Vec<Card> {
 
 /// Fills the index of the library just unlocked, a slice a job, saying how far it got. Stops
 /// when the index is complete, or another library was opened meanwhile.
+/// In the job that opens the library, before anything can ask for a list: a [`fill`] follows.
+pub fn announce(engine: &Engine) -> Result<(), AppError> {
+    let mut library = lock(&engine.db)?;
+    let mut index = engine.index()?;
+    index.start(&mut library)?;
+    index.filling = true;
+    Ok(())
+}
+
+fn give_up(engine: &Engine) {
+    if let Ok(mut index) = engine.index() {
+        index.filling = false;
+    }
+}
+
 pub async fn fill(engine: Arc<Engine>) {
     let total = db::run(Arc::clone(&engine), |engine| {
         let mut library = lock(&engine.db)?;
@@ -399,6 +445,7 @@ pub async fn fill(engine: Arc<Engine>) {
     })
     .await;
     let Ok(total) = total else {
+        give_up(&engine);
         return;
     };
     let total = u32::try_from(total).unwrap_or(u32::MAX);
@@ -407,6 +454,9 @@ pub async fn fill(engine: Arc<Engine>) {
             let mut library = lock(&engine.db)?;
             let mut index = engine.index()?;
             let more = index.next_slice(&mut library)?;
+            if !more {
+                library.map_less()?;
+            }
             let done = u32::try_from(index.len()).unwrap_or(u32::MAX);
             Ok((more, done, index.is_complete()))
         })
@@ -421,6 +471,7 @@ pub async fn fill(engine: Arc<Engine>) {
             }
             Err(error) => {
                 log::warn!("The notes index stopped filling: {}", error.detail);
+                give_up(&engine);
                 return;
             }
         }
@@ -525,6 +576,57 @@ mod tests {
         index.start(&mut library).unwrap();
 
         assert_eq!(index.len(), 3);
+    }
+
+    #[test]
+    fn a_list_takes_the_first_slice_while_a_fill_brings_the_rest() {
+        let mut library = library(5);
+        let mut index = NoteIndex::default();
+        index.start(&mut library).unwrap();
+        index.filling = true;
+
+        index.enough_to_list(&mut library).unwrap();
+        assert_eq!(index.len(), 3);
+
+        index.enough_to_list(&mut library).unwrap();
+        assert_eq!(index.len(), 3);
+    }
+
+    #[test]
+    fn a_list_reads_everything_when_no_fill_is_coming() {
+        let mut library = library(5);
+        let mut index = NoteIndex::default();
+
+        index.enough_to_list(&mut library).unwrap();
+
+        assert_eq!(index.len(), 5);
+    }
+
+    #[test]
+    fn the_last_slice_ends_the_fill() {
+        let mut library = library(2);
+        let mut index = NoteIndex::default();
+        index.start(&mut library).unwrap();
+        index.filling = true;
+
+        index.next_slice(&mut library).unwrap();
+
+        assert!(!index.filling);
+    }
+
+    #[test]
+    fn a_count_follows_a_note_that_changes() {
+        let mut library = library(2);
+        let mut index = NoteIndex::default();
+        index.ready(&mut library).unwrap();
+        assert_eq!(index.facets(None).tags[0].count, 2);
+
+        store::trash::trash(&mut library, "n-00", at(NOW)).unwrap();
+        index
+            .refresh(&mut library, &Changed::notes(["n-00".to_string()]))
+            .unwrap();
+
+        assert_eq!(index.facets(None).tags[0].count, 1);
     }
 
     #[test]

@@ -76,7 +76,17 @@ pub(super) fn show(
     address(ui, &response, "note-card");
     // ⚠️ The click surface is a layer under the card's controls, not the card: what is drawn
     // after it, a task's box, takes the click first.
-    let open = ui.allocate_rect(rect, Sense::click());
+    // ⚠️ Named after the note, not its place: the focus follows a card the list moves. Its layer
+    // too: the silhouette of a drag is the same card, drawn above.
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "named and addressed just below, as the card"
+    )]
+    let open = ui.interact(
+        rect,
+        egui::Id::unique(("note-card-open", &note.id)).with(ui.layer_id()),
+        Sense::click(),
+    );
     open.widget_info(|| WidgetInfo::labeled(Role::Button, true, &title));
     address(ui, &open, "note-card-open");
     crate::theme::focus::ring(ui, &open, CornerRadius::same(10));
@@ -133,7 +143,8 @@ pub(super) fn show(
     let inner = rect.shrink(padding);
     let checklist = note.kind == engine::notes::kind::NoteKind::Checklist;
     let mut title_room = inner;
-    let ticking = checked || context.selecting || ui.rect_contains_pointer(rect);
+    // Not under the pointer alone: the title would jump as the pointer crosses the card.
+    let ticking = checked || context.selecting;
     if tick(ui, inner, &title, (checked, ticking), context.language) {
         actions.push(crate::action::Action::Notes(crate::notes::Action::Check(
             note.id.clone(),
@@ -159,7 +170,7 @@ pub(super) fn show(
     } else {
         footer::show(ui, footer, note, context);
     }
-    actions::show(ui, rect, note, context, actions);
+    actions::show(ui, rect, note, (context, ticking), actions);
 }
 
 /// In the footer's place, real words and both keys: what finishes the deletion, and the way out.
@@ -178,7 +189,7 @@ fn arming(ui: &mut Ui, footer: Rect, language: i18n::Language) {
     text_at(ui, at, shown, &words, "note-card-arming");
 }
 
-/// The card's box, before its title: ticked, the card joins the selection.
+/// The card's box, before its title, while cards are ticked: ticked, the card joins them.
 /// ⚠️ Allocated on every frame, shown or not: a widget that comes and goes moves the ids of
 /// every one after it, and the ⋯'s menu lost its own.
 fn tick(

@@ -127,7 +127,7 @@ fn panels(state: &AppState, view: &HomeView) -> Vec<Panel> {
 }
 
 /// « generateur » finds the tools filed under « Générateurs ».
-fn matches(tool: &ToolEntry, query: &str, language: Language) -> bool {
+pub(crate) fn matches(tool: &ToolEntry, query: &str, language: Language) -> bool {
     if query.is_empty() {
         return true;
     }
@@ -159,7 +159,7 @@ fn head(ui: &mut Ui, state: &AppState, view: &mut HomeView, actions: &mut Action
         None => subtitle(ui, language, room),
     }
     ui.add_space((ui.available_width() - width).max(0.0));
-    let field = ui
+    let searched = ui
         .scope(|ui| {
             let (hint, keys_said) = (
                 tr(keys::tools::SEARCH_PLACEHOLDER),
@@ -172,11 +172,15 @@ fn head(ui: &mut Ui, state: &AppState, view: &mut HomeView, actions: &mut Action
             )
             .hint(&hint)
             .key(&keys_said)
+            .clear(&tr(keys::notes::CLEAR_SEARCH), "tools-search-clear")
             .width(width)
             .show(ui)
-            .field
         })
         .inner;
+    if searched.cleared {
+        view.search.clear();
+    }
+    let field = searched.field;
     if std::mem::take(&mut view.focus_search) {
         field.request_focus();
     }

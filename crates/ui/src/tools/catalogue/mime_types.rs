@@ -130,15 +130,15 @@ fn row((mime, extensions): (&str, &[&str]), language: Language) -> ReferenceRow 
     let description = word(language, &format!("tools.mime-types.words.types.{mime}"));
     let group = mime.split('/').next().unwrap_or_default();
     let shown = if extensions.is_empty() {
-        i18n::translate(language, keys::tools::mime_types::NO_EXTENSION, &[])
+        Cell::mono(i18n::translate(
+            language,
+            keys::tools::mime_types::NO_EXTENSION,
+            &[],
+        ))
     } else {
-        extensions.join("  ")
+        Cell::chips(extensions.iter().map(|it| (*it).to_owned()).collect())
     };
-    let cells = vec![
-        Cell::mono(mime),
-        Cell::mono(shown),
-        Cell::text(description.clone()),
-    ];
+    let cells = vec![Cell::mono(mime), shown, Cell::text(description.clone())];
     let bare = extensions.iter().map(|it| it.trim_start_matches('.'));
     let searched = [mime, description.as_str()]
         .into_iter()

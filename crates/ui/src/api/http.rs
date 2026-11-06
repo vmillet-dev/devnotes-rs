@@ -20,6 +20,11 @@ use engine::http::{
 
 use crate::backend::{Backend, Pending};
 
+/// The palette's requests, ranked by the core; an empty term gives the last edited.
+pub fn search_requests(backend: &Backend, term: String) -> Pending<Vec<http::search::RequestHit>> {
+    backend.db(move |engine| http::search_http_requests(engine, term))
+}
+
 pub fn tree(backend: &Backend) -> Pending<HttpTree> {
     backend.db(http::http_tree)
 }

@@ -19,6 +19,8 @@ use crate::widgets::{self, interact};
 /// Past this window width the button says the order in words, as the reference's media query.
 const WORDS_FROM: f32 = 1_280.0;
 
+const MENU_WIDTH: f32 = 214.0;
+
 pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
@@ -92,7 +94,7 @@ fn trigger(ui: &mut Ui, label: &str, now: &str, words: bool) -> Response {
 /// The arrangement chosen, if one was.
 fn menu(ui: &mut Ui, now: Arrangement, language: i18n::Language) -> Option<Arrangement> {
     let tr = |key| i18n::translate(language, key, &[]);
-    ui.set_min_width(210.0);
+    ui.set_width(MENU_WIDTH);
     ui.spacing_mut().item_spacing.y = 0.0;
     let mut chosen = None;
     title(ui, &tr(keys::sort::SORT_BY));
@@ -180,14 +182,14 @@ fn item(ui: &mut Ui, label: &str, hint: Option<&str>, author_id: &str, on: bool)
         corner,
     );
     let rect = response.rect;
-    if response.hovered() {
+    if response.hovered() || on {
         ui.painter().rect_filled(rect, corner, p.bg_3);
     }
-    let ink = if on { p.amber_text } else { p.text_1 };
+    let ink = if on { p.text_0 } else { p.text_1 };
     if on {
         let glyph =
             Rect::from_center_size(pos2(rect.left() + 14.0, rect.center().y), Vec2::splat(12.0));
-        icons::paint(ui, glyph, Icon::Check, ink);
+        icons::paint(ui, glyph, Icon::Check, p.amber_text);
     }
     widgets::arrowed(
         ui,

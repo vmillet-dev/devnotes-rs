@@ -28,6 +28,7 @@ pub struct ResultRow<'a> {
     copyable: bool,
     meta: &'a str,
     matched: bool,
+    tag: Option<&'a str>,
 }
 
 impl<'a> ResultRow<'a> {
@@ -39,6 +40,7 @@ impl<'a> ResultRow<'a> {
             copyable: true,
             meta: "",
             matched: false,
+            tag: None,
         }
     }
 
@@ -60,6 +62,13 @@ impl<'a> ResultRow<'a> {
     #[must_use]
     pub fn meta(mut self, meta: &'a str) -> Self {
         self.meta = meta;
+        self
+    }
+
+    /// A state beside the name: « obsolete ».
+    #[must_use]
+    pub fn tag(mut self, tag: Option<&'a str>) -> Self {
+        self.tag = tag;
         self
     }
 
@@ -122,7 +131,17 @@ impl<'a> ResultRow<'a> {
             rect.center().y - label_height / 2.0
         };
         let name_height = name.size().y;
+        let name_right = left + name.size().x;
         name.paint(ui, Pos2::new(left, head), ink);
+        if let Some(tag) = self.tag {
+            let words = widgets::text(ui, tag, 10.5, 500.0, FontFamily::Proportional, p.text_2);
+            let size = words.size() + Vec2::new(10.0, 2.0);
+            let chip = Rect::from_min_size(Pos2::new(name_right + 8.0, head + 1.0), size);
+            ui.painter()
+                .rect_filled(chip, egui::CornerRadius::same(4), p.bg_3);
+            ui.painter()
+                .galley(chip.center() - words.size() / 2.0, words, p.text_2);
+        }
         if let Some(meta) = meta {
             meta.paint(ui, Pos2::new(left, head + name_height + 2.0), p.text_2);
         }

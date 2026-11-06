@@ -1,11 +1,12 @@
 //! The palette: one field over whichever area is on screen. It asks the core for the notes of
-//! every space, ranked by how their titles answer, and ignores the canvas's filters: its search
-//! would otherwise change what the canvas shows behind it. The spaces and the commands are read
-//! here, which knows their words.
+//! every space, ranked by how their titles answer, and for the requests, and ignores the canvas's
+//! filters: its search would otherwise change what the canvas shows behind it. The tools, the
+//! spaces and the commands are read here, which knows their words.
 
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
+use engine::http::search::RequestHit;
 use engine::notes::model::TagUsage;
 use engine::notes::view::{NoteFilter, NoteOrder, NotesQuery, NotesView};
 
@@ -17,15 +18,16 @@ use crate::backend::{Backend, Pending};
 /// Beyond this, notes no longer fit beside the other kinds.
 pub const MAX_NOTES: usize = 8;
 
-/// What `@` narrows the search to, in the order the groups are drawn. Requests and tools join
-/// with their areas.
+/// What `@` narrows the search to, in the order the groups are drawn.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Scope {
     Notes,
+    Requests,
+    Tools,
     Spaces,
 }
 
-pub const SCOPES: [Scope; 2] = [Scope::Notes, Scope::Spaces];
+pub const SCOPES: [Scope; 4] = [Scope::Notes, Scope::Requests, Scope::Tools, Scope::Spaces];
 
 /// A chip in the field: a kind, one space's notes, or a tag's.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,6 +81,7 @@ pub struct PaletteState {
     term: String,
     due: Option<f64>,
     cell: QueryCell<Params, NotesView>,
+    requests: QueryCell<(String, Revision), Vec<RequestHit>>,
     reading_tags: Option<Pending<Vec<TagUsage>>>,
     tags: Vec<TagUsage>,
     /// A copy asked from here: once it is on the clipboard, the palette closes.
@@ -141,6 +144,15 @@ impl PaletteState {
         self.cell.value().filter(|_| wanted)
     }
 
+    /// The requests found, ranked; none while a list of chips is offered.
+    pub fn requests(&self) -> &[RequestHit] {
+        let wanted = matches!(self.mode(), Mode::Search(_)) && self.searched(Scope::Requests);
+        self.requests
+            .value()
+            .filter(|_| wanted)
+            .map_or(&[], Vec::as_slice)
+    }
+
     /// Opens on the recent notes: reopening without typing has a meaning.
     pub fn open(&mut self, backend: &Backend, from_elsewhere: bool) {
         self.open = true;
@@ -150,6 +162,8 @@ impl PaletteState {
         self.chips.clear();
         self.due = None;
         self.copying = false;
+        // Edits of the HTTP area bump no revision: a palette opened anew reads them.
+        self.requests = QueryCell::default();
         self.reading_tags = Some(api::notes::list_tags(backend));
     }
 
@@ -240,6 +254,11 @@ impl PaletteState {
         });
         self.cell
             .update(|params| api::notes::query(backend, query(&params, now)));
+        if matches!(self.mode(), Mode::Search(_)) && self.searched(Scope::Requests) {
+            self.requests.want((self.term.clone(), revision));
+        }
+        self.requests
+            .update(|(term, _)| api::http::search_requests(backend, term));
     }
 }
 

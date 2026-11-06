@@ -1354,6 +1354,31 @@ pour gagner du temps ; seules les limites techniques du § 5.3 s'écartent.
 | E14 | Retours à la ligne du texte d'un Dessin, au mot près                                                                           | mesure par la police, pas le navigateur                 | même algorithme que Fabric, mêmes polices (D23)                            |
 | E15 | Collage HTML dans une Note réduit au texte, session Wayland sans XWayland seulement                                            | `arboard` n'y lit qu'avec `wlr-data-control` (S6)       | texte collé intact                                                         |
 
+Choix de design, arbitrés à la revue de la phase 10 (6 novembre 2026) : là où egui s'écarte de la
+référence par décision et non par limite technique, egui fait foi.
+
+| #   | Écart                                                                                    | Pourquoi                                    |
+| --- | ---------------------------------------------------------------------------------------- | ------------------------------------------- |
+| C1  | La case d'une carte est dans le menu de survol, à gauche du titre seulement en sélection | le titre ne bouge pas au survol             |
+| C2  | L'aperçu d'un snippet coupe ses lignes au bord au lieu de les replier                    | on lit les vraies lignes                    |
+| C3  | Titres de l'éditeur et des requêtes en graisse normale                                   | préférence                                  |
+| C4  | Tags de l'éditeur en pastilles ambre, Source et « + tag » encadrés                       | préférence                                  |
+| C5  | Éditeur plus haut, modales 50 px plus larges, champs plus grands                         | plus lisible                                |
+| C6  | Voile plus clair derrière les modales (avec E7)                                          | préférence                                  |
+| C7  | Interligne plus serré dans les dialogues, le code et Lorem                               | plus de contenu à l'écran                   |
+| C8  | Onglets soulignés en blanc, filet limité aux onglets                                     | préférence                                  |
+| C9  | États vides en haut à gauche, non centrés                                                | préférence                                  |
+| C10 | Icônes redessinées : flèche ↓, roue, horloge                                             | préférence                                  |
+| C11 | Permissions Unix en lignes de cases, sans la grille                                      | plus dense                                  |
+| C12 | Corbeille du dessin neutre au repos                                                      | elle agit sur la sélection, pas sur la note |
+| C13 | Tâches : poignée de trois points, croix sur chaque ligne                                 | préférence                                  |
+| C14 | Éclair (remplir) sur la carte d'un snippet à champs, à la place de copier                | dit ce que le clic fera                     |
+| C15 | Champ de recherche à hauteur fixe                                                        | la barre ne bouge pas                       |
+| C16 | Menus d'espace et de dossier plus larges et sans pastille                                | noms entiers                                |
+| C17 | Indices de Mots de passe : abc, ABC, 123, !#$                                            | plus lisibles                               |
+| C18 | Barre de sélection sur une ligne tant qu'elle tient                                      | ne couvre pas les cartes                    |
+| C19 | Tables de référence plus denses, Menus et préférences : boutons à la place des liens     | cohérence avec le reste                     |
+
 ---
 
 ## 6. Performances : corpus, budgets, mesure
@@ -1397,6 +1422,11 @@ Windows 11 et Ubuntu.
 | Mémoire résidente                                               | ≤ 350 Mo                      | ≤ 900 Mo |                                              |
 | CPU au repos (fenêtre visible, rien ne bouge)                   | ~0 %                          | ~0 %     |                                              |
 
+La mémoire résidente se compte **hors pilote GPU** (décision du 6 novembre 2026) : il vient avec la
+carte ou le système, DevNotes ne l'embarque pas, et son poids change d'une machine à l'autre. Elle
+se lit sur le banc d'interface, sans fenêtre ; `wgpu` et ce qu'il alloue dans la fenêtre réelle
+restent à part, dans le tableau du processus.
+
 ### 6.3 Outils de mesure
 
 - `criterion` (existant) pour le cœur et l'index : nouveaux groupes `index_build`, `index_query`
@@ -1406,7 +1436,8 @@ Windows 11 et Ubuntu.
   dix notes, déplier le rail HTTP) et rapporte p50/p95/p99 du temps CPU par frame. Hors CI, comme
   les benchs actuels ; les tableaux de résultats vont dans `docs/architecture.md` (→ « The
   baseline »).
-- `puffin` en développement ; journal de durée des appels `Backend` au-dessus de 16 ms en debug.
+- `puffin` en développement, lu par `puffin_viewer` (feature `profiling` de `app`) : `puffin_egui`
+  s'arrête à egui 0.33 ; journal de durée des appels `Backend` au-dessus de 16 ms en debug.
 
 ---
 
@@ -2157,7 +2188,7 @@ RxJS, GraphQL) et de test (Vitest, jsdom, WebdriverIO, angular-eslint…) ; côt
 | Index               | `rayon`, `memchr`, `lz4_flex`                                                                                                                                                                                                                            |
 | Plateforme          | `tray-icon`, `muda`, `global-hotkey`, `auto-launch`, `interprocess` (instance unique, D16), `notify-rust`, `rfd` (`xdg-portal`, D29), `arboard`, `open`, `cargo-packager-updater` (D26), `flexi_logger`, `dirs`, `winreg` (Windows), `gtk` (Linux, tray) |
 | Asynchrone          | `tokio` (+ `rt-multi-thread`), `crossbeam-channel`                                                                                                                                                                                                       |
-| Profilage (feature) | `puffin`, `puffin_egui`                                                                                                                                                                                                                                  |
+| Profilage (feature) | `puffin`, `puffin_http`                                                                                                                                                                                                                                  |
 | Paquets (outils)    | `cargo-packager`, `cargo-generate-rpm`                                                                                                                                                                                                                   |
 
 Polices et icônes embarquées : Inter et JetBrains Mono (OFL, fichiers variables : S2), Noto Emoji

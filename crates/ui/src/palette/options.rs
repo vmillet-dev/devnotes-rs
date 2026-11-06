@@ -1,6 +1,7 @@
 //! What the list shows for what is typed: groups of options in a fixed order, a heading and a
 //! count only when the list holds more than one kind.
 
+use engine::http::search::RequestHit;
 use engine::notes::model::DisplayNote;
 use i18n::{Key, keys};
 
@@ -8,18 +9,24 @@ use super::commands::{COMMANDS, Command};
 use crate::api;
 use crate::state::AppState;
 use crate::state::palette::{Chip, MAX_NOTES, Mode, SCOPES, Scope};
+use crate::tools::catalogue::TOOLS;
+use crate::tools::matches;
 
 /// Several kinds share the screen and each gives way; one alone has all of it.
-const SHARED: (usize, usize) = (5, 3);
+const SHARED_NOTES: usize = 5;
+const SHARED: usize = 3;
 const ALONE: usize = MAX_NOTES;
-/// The empty field's recent notes.
-const RECENT: usize = 4;
+/// The empty field's recent things, a few of each kind.
+const RECENT_NOTES: usize = 4;
+const RECENT: usize = 2;
 const MAX_TAGS: usize = 8;
 
 /// The words `@` is read by, in either language whatever the one on screen, accents aside.
 fn scope_words(scope: Scope) -> &'static [&'static str] {
     match scope {
         Scope::Notes => &["notes", "snippets"],
+        Scope::Requests => &["requetes", "requests", "http"],
+        Scope::Tools => &["outils", "tools"],
         Scope::Spaces => &["espaces", "spaces"],
     }
 }
@@ -27,6 +34,9 @@ fn scope_words(scope: Scope) -> &'static [&'static str] {
 #[derive(Debug, Clone)]
 pub enum Item {
     Note(Box<DisplayNote>),
+    Request(Box<RequestHit>),
+    /// A tool of the catalogue, by its id.
+    Tool(&'static str),
     Space {
         id: String,
         name: String,
@@ -45,6 +55,8 @@ pub enum Item {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Chosen {
     Note(String),
+    Request(String),
+    Tool(&'static str),
     Space(String),
     Command(Command),
     Create(String),
@@ -55,6 +67,8 @@ impl Item {
     pub fn chosen(&self) -> Option<Chosen> {
         match self {
             Self::Note(note) => Some(Chosen::Note(note.id.clone())),
+            Self::Request(request) => Some(Chosen::Request(request.id.clone())),
+            Self::Tool(id) => Some(Chosen::Tool(id)),
             Self::Space { id, .. } => Some(Chosen::Space(id.clone())),
             Self::Command(command) => Some(Chosen::Command(*command)),
             Self::Create(title) => Some(Chosen::Create(title.clone())),
@@ -66,6 +80,8 @@ impl Item {
     pub fn key(&self) -> String {
         match self {
             Self::Note(note) => format!("note-{}", note.id),
+            Self::Request(request) => format!("request-{}", request.id),
+            Self::Tool(id) => format!("tool-{id}"),
             Self::Space { id, .. } => format!("space-{id}"),
             Self::Command(command) => format!("command-{}", command.id()),
             Self::Chip { chip, .. } => format!("chip-{chip:?}"),
@@ -88,8 +104,15 @@ pub fn groups(state: &AppState) -> Vec<Group> {
         Mode::Commands(term) => command_groups(state, &api::notes::fold(&term)),
         Mode::Search(term) => {
             let notes = found_notes(state);
+            let requests = found_requests(state);
+            let tools = found_tools(state, &term);
             if palette.recent() {
-                let items: Vec<Item> = notes.into_iter().take(RECENT).collect();
+                let items: Vec<Item> = notes
+                    .into_iter()
+                    .take(RECENT_NOTES)
+                    .chain(requests.into_iter().take(RECENT))
+                    .chain(tools.into_iter().take(RECENT))
+                    .collect();
                 return if items.is_empty() {
                     Vec::new()
                 } else {
@@ -100,7 +123,7 @@ pub fn groups(state: &AppState) -> Vec<Group> {
                     }]
                 };
             }
-            search_groups(state, notes, &term)
+            search_groups(state, (notes, requests, tools), &term)
         }
     }
 }
@@ -115,7 +138,44 @@ fn found_notes(state: &AppState) -> Vec<Item> {
         .collect()
 }
 
-fn search_groups(state: &AppState, notes: Vec<Item>, term: &str) -> Vec<Group> {
+fn found_requests(state: &AppState) -> Vec<Item> {
+    state
+        .palette
+        .requests()
+        .iter()
+        .map(|hit| Item::Request(Box::new(hit.clone())))
+        .collect()
+}
+
+/// The last opened in the empty field; otherwise those a search finds, by their name first:
+/// « json » had put « Diff » and « JWT » before the tool named JSON.
+fn found_tools(state: &AppState, term: &str) -> Vec<Item> {
+    let palette = &state.palette;
+    if palette.recent() {
+        return state
+            .tools
+            .recents()
+            .map(|(tool, _)| Item::Tool(tool.id))
+            .collect();
+    }
+    if !palette.searched(Scope::Tools) {
+        return Vec::new();
+    }
+    let wanted = api::tools::fold(term);
+    let language = state.language;
+    let mut found: Vec<_> = TOOLS
+        .iter()
+        .filter(|tool| matches(tool, &wanted, language))
+        .collect();
+    found.sort_by_key(|tool| !api::tools::fold(&tool.name(language)).contains(&wanted));
+    found.into_iter().map(|tool| Item::Tool(tool.id)).collect()
+}
+
+fn search_groups(
+    state: &AppState,
+    (notes, requests, tools): (Vec<Item>, Vec<Item>, Vec<Item>),
+    term: &str,
+) -> Vec<Group> {
     let palette = &state.palette;
     let wanted = api::notes::fold(term);
     let spaces: Vec<Item> = if palette.searched(Scope::Spaces) {
@@ -138,8 +198,10 @@ fn search_groups(state: &AppState, notes: Vec<Item>, term: &str) -> Vec<Group> {
         .count()
         == 1;
     let found = [
-        (keys::palette::groups::NOTES, notes, SHARED.0),
-        (keys::palette::groups::SPACES, spaces, SHARED.1),
+        (keys::palette::groups::NOTES, notes, SHARED_NOTES),
+        (keys::palette::groups::REQUESTS, requests, SHARED),
+        (keys::palette::groups::TOOLS, tools, SHARED),
+        (keys::palette::groups::SPACES, spaces, SHARED),
     ];
     let several = found
         .iter()
@@ -287,6 +349,10 @@ pub fn empty(state: &AppState, groups: &[Group]) -> Option<i18n::Message> {
         }
         Mode::Search(_) => match state.palette.chips() {
             [Chip::Scope(Scope::Notes)] => i18n::Message::new(keys::palette::empty::none::NOTES),
+            [Chip::Scope(Scope::Requests)] => {
+                i18n::Message::new(keys::palette::empty::none::REQUESTS)
+            }
+            [Chip::Scope(Scope::Tools)] => i18n::Message::new(keys::palette::empty::none::TOOLS),
             [Chip::Scope(Scope::Spaces)] => i18n::Message::new(keys::palette::empty::none::SPACES),
             _ => i18n::Message::new(keys::palette::empty::NOTHING),
         },

@@ -234,6 +234,26 @@ mod tests {
     }
 
     #[test]
+    fn the_focus_follows_a_card_that_moves_and_a_second_p_gives_it_back() {
+        let (backend, profile) = notes(4);
+        let mut harness = area(backend, profile);
+        press(&mut harness, Key::ArrowDown);
+        press(&mut harness, Key::ArrowRight);
+        press(&mut harness, Key::ArrowRight);
+        let id = focused(&harness).unwrap();
+
+        press(&mut harness, Key::P);
+        assert_eq!(focused(&harness).as_deref(), Some(id.as_str()));
+        press(&mut harness, Key::P);
+
+        let view = harness.state().state.notes_query.view().unwrap();
+        assert!(
+            view.cards().all(|card| !card.pinned),
+            "the same note, twice"
+        );
+    }
+
+    #[test]
     fn delete_arms_the_card_escape_disarms_it_twice_trashes_it() {
         let (backend, profile) = notes(1);
         let mut harness = area(backend, profile);

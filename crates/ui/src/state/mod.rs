@@ -35,7 +35,7 @@ pub use query::QueryCell;
 use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
-use crate::gate::{Gate, GateView, IndexFill};
+use crate::gate::{Gate, GateView};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 use crate::services::samples;
@@ -117,6 +117,8 @@ pub struct AppState {
     /// « Quit », and not the close button: the window goes whatever the tray preference says.
     pub quitting: bool,
     pub revisions: note_revisions::RevisionsState,
+    /// What a Note open can embed, read again at each revision: a drawing may be new.
+    pub drawing_choices: QueryCell<Revision, Vec<engine::notes::drawing::DrawingRef>>,
     pub selection: selection::SelectionState,
     pub undo: undo::UndoState,
     pub trash: trash::TrashState,
@@ -197,6 +199,7 @@ impl AppState {
             closing_editor: false,
             quitting: false,
             revisions: note_revisions::RevisionsState::default(),
+            drawing_choices: QueryCell::default(),
             selection: selection::SelectionState::default(),
             undo: undo::UndoState::default(),
             trash: trash::TrashState::default(),
@@ -261,12 +264,12 @@ impl AppState {
         self.adopt_seeding(backend);
         if self.gate.is_open() && self.library_preferences_read.is_none() && self.seeding.is_none()
         {
-            self.update_library(ctx, backend, self.gate.index);
+            self.update_library(ctx, backend);
         }
     }
 
     /// What reads the open library, once its preferences are in and its samples seeded.
-    pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend, index: IndexFill) {
+    pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend) {
         let answered = self.notes.update(&mut self.revision, &mut self.errors);
         if let Some(id) = answered.open {
             self.editor.open(id);
@@ -330,6 +333,7 @@ impl AppState {
             self.copy_out(ctx, backend, text, placeholder_fill::copied_note(&note));
         }
         self.follow_revisions(backend);
+        self.follow_drawings(backend);
         self.update_area_or_exit(ctx, backend, time);
         self.update_menus(ctx, backend);
         for id in self.editor.take_redrawn() {
@@ -359,11 +363,11 @@ impl AppState {
         let folder = self.active_folder().map(str::to_owned);
         let place = (self.spaces.active_space(), folder.as_deref());
         self.notes_query
-            .update(ctx, backend, now, place, (self.revision, index));
+            .update(ctx, backend, now, place, self.revision);
         if let Some(place) = self.board_place() {
             let criteria = self.notes_query.criteria();
             self.board
-                .update(backend, now, (place, criteria), (self.revision, index));
+                .update(backend, now, (place, criteria), self.revision);
         }
     }
 
@@ -582,6 +586,25 @@ impl AppState {
             .update(backend, &mut self.revision, &mut self.errors)
         {
             self.editor.reseed_when_read(&id);
+        }
+    }
+
+    /// While a Note is open: its toolbar offers the library's drawings.
+    fn follow_drawings(&mut self, backend: &Backend) {
+        let note_open = self
+            .editor
+            .opened()
+            .and_then(|open| open.note())
+            .is_some_and(|note| note.kind == engine::notes::kind::NoteKind::Note);
+        if !note_open {
+            return;
+        }
+        self.drawing_choices.want(self.revision);
+        let answered = self
+            .drawing_choices
+            .update(|_| api::notes::list_drawings(backend));
+        if answered && let Some(error) = self.drawing_choices.error() {
+            log::warn!("The drawings were not listed: {error:?}");
         }
     }
 
@@ -1297,6 +1320,7 @@ impl AppState {
             Notes::Search(typed) => self.notes_query.type_search(ctx, typed),
             Notes::ClearSearch => self.notes_query.clear_search(),
             Notes::SetFilter(filter) => self.notes_query.set_filter(filter),
+            Notes::ClearFilters => self.notes_query.clear_filters(),
             Notes::Arrange(arrangement) => {
                 self.notes_query.arrange(arrangement);
                 arrangement.write(&mut self.library_preferences);
@@ -1307,7 +1331,7 @@ impl AppState {
             }
             Notes::OpenNote(id) => self.editor.open(id),
             Notes::Editor(editing) => self.apply_editing(editing, ctx, backend),
-            Notes::NewNote(kind) => self.new_note(kind),
+            Notes::NewNote(kind) => self.new_note_asked(kind, backend),
             Notes::Pin { id, pinned } => {
                 self.notes.pin(backend, vec![id], pinned);
             }
@@ -1452,6 +1476,7 @@ impl AppState {
                 self.save_settings(backend);
             }
             Editing::Revisions(asked) => self.apply_revisions(asked, backend),
+            Editing::Decimals(places) => self.set_decimals(places, backend),
             Editing::FoldHeader(folded) => {
                 self.settings.editor_header_folded = folded;
                 self.save_settings(backend);
@@ -1733,6 +1758,7 @@ impl AppState {
         backend: &Backend,
     ) {
         use crate::palette::Asked;
+        use crate::palette::commands::Command;
         use crate::palette::options::Chosen;
         match asked {
             Asked::Type(text) => self.palette.type_text(text, ctx.input(|input| input.time)),
@@ -1746,20 +1772,52 @@ impl AppState {
             Asked::Choose(chosen) => {
                 self.palette.close();
                 let area = match chosen {
-                    Chosen::Command(crate::palette::commands::Command::Area(area)) => area,
-                    _ => Area::Notes,
+                    Chosen::Command(Command::Area(area)) => Some(area),
+                    Chosen::Command(Command::Request) | Chosen::Request(_) => Some(Area::Http),
+                    Chosen::Tool(_) => Some(Area::Tools),
+                    // Over whichever area is on screen.
+                    Chosen::Command(Command::Preferences | Command::Shortcuts) => None,
+                    _ => Some(Area::Notes),
                 };
-                self.apply(Action::App(AppAction::ShowArea(area)), ctx, backend);
-                self.run_chosen(chosen, backend);
+                if let Some(area) = area {
+                    self.apply(Action::App(AppAction::ShowArea(area)), ctx, backend);
+                }
+                self.run_chosen(chosen, ctx, backend);
             }
         }
     }
 
-    fn run_chosen(&mut self, chosen: crate::palette::options::Chosen, backend: &Backend) {
+    fn run_chosen(
+        &mut self,
+        chosen: crate::palette::options::Chosen,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
         use crate::palette::commands::Command;
         use crate::palette::options::Chosen;
         match chosen {
             Chosen::Note(id) => self.editor.open(id),
+            Chosen::Request(id) => {
+                let open = crate::http::Action::OpenRequest(id);
+                self.apply(Action::Http(open), ctx, backend);
+            }
+            Chosen::Tool(id) => {
+                let open = crate::tools::Action::Open(id);
+                self.apply(Action::Tools(open), ctx, backend);
+            }
+            Chosen::Command(Command::Request) => {
+                let draft = crate::http::Action::NewRequest(engine::http::model::RequestKind::Http);
+                self.apply(Action::Http(draft), ctx, backend);
+            }
+            Chosen::Command(Command::Preferences) => {
+                let open = crate::titlebar::Action::OpenPreferences;
+                self.apply(Action::Menu(open), ctx, backend);
+            }
+            Chosen::Command(Command::Shortcuts) => {
+                let panel = crate::titlebar::about_menu::Panel::Sheet;
+                let open = crate::titlebar::Action::OpenHelp(panel);
+                self.apply(Action::Menu(open), ctx, backend);
+            }
             Chosen::Space(id) => {
                 self.choose_space(Some(id));
                 self.remember_place(backend);
@@ -1796,6 +1854,20 @@ impl AppState {
     }
 
     /// In the space shown, or the first one for « all spaces », and the folder shown.
+    fn set_decimals(&mut self, places: Option<u8>, backend: &Backend) {
+        self.settings.calc_decimals = places;
+        self.save_settings(backend);
+    }
+
+    /// From the menu: a Note made once, its entry stops saying « New ».
+    fn new_note_asked(&mut self, kind: Option<engine::notes::kind::NoteKind>, backend: &Backend) {
+        self.new_note(kind);
+        if kind == Some(engine::notes::kind::NoteKind::Note) && !self.settings.note_kind_tried {
+            self.settings.note_kind_tried = true;
+            self.save_settings(backend);
+        }
+    }
+
     fn new_note(&mut self, kind: Option<engine::notes::kind::NoteKind>) {
         let Some((space, folder)) = self.new_place() else {
             return;
@@ -1934,6 +2006,7 @@ impl AppState {
         self.board = board::BoardState::default();
         self.editor = editor::EditorState::default();
         self.revisions = note_revisions::RevisionsState::default();
+        self.drawing_choices = QueryCell::default();
         self.selection = selection::SelectionState::default();
         self.undo = undo::UndoState::default();
         self.trash = trash::TrashState::default();

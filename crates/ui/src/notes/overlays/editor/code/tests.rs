@@ -97,6 +97,13 @@ fn ctrl_f_finds_counts_and_moves_between_matches() {
             .query_by(|node| node.author_id() == Some("search-field"))
             .is_none()
     );
+    press(&mut harness, Modifiers::NONE, Key::End);
+    press(&mut harness, Modifiers::NONE, Key::Enter);
+    assert_eq!(
+        code(&harness).lines().count(),
+        4,
+        "the code has the keys back"
+    );
 }
 
 #[test]
@@ -135,6 +142,10 @@ fn a_snippet_s_fields_are_marked_where_the_core_finds_them() {
 fn the_language_chosen_colours_the_code_and_the_footer_names_it() {
     let (mut harness, _) = snippet("SELECT 1;", Language::Txt);
     click_id(&mut harness, "editor-language");
+    harness
+        .get_by(|node| node.author_id() == Some("editor-language-filter"))
+        .type_text("sql");
+    harness.run();
     harness.get_by_label("SQL").click();
     settle(&mut harness);
     let stats = harness
@@ -142,4 +153,57 @@ fn the_language_chosen_colours_the_code_and_the_footer_names_it() {
         .value()
         .unwrap_or_default();
     assert!(stats.starts_with("SQL"), "{stats}");
+}
+
+fn go_to(harness: &mut Harness, line: &str) {
+    press(harness, Modifiers::COMMAND | Modifiers::ALT, Key::G);
+    harness
+        .get_by(|node| node.author_id() == Some("go-to-line-input"))
+        .type_text(line);
+    settle(harness);
+    press(harness, Modifiers::NONE, Key::Enter);
+    settle(harness);
+}
+
+/// A line broken where the caret stands, by a code that has the keys back.
+fn breaks_the_line(harness: &mut Harness) {
+    press(harness, Modifiers::NONE, Key::Enter);
+}
+
+#[test]
+fn ctrl_alt_g_puts_the_caret_on_the_line_and_gives_the_keys_back() {
+    let (mut harness, _) = snippet("un\ndeux\ntrois", Language::Txt);
+    click_id(&mut harness, "editor-body");
+    go_to(&mut harness, "2");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("go-to-line-input"))
+            .is_none(),
+        "the bar went"
+    );
+    breaks_the_line(&mut harness);
+    assert_eq!(code(&harness), "un\n\ndeux\ntrois");
+}
+
+#[test]
+fn a_line_past_the_end_is_the_last_and_escape_leaves_the_bar() {
+    let (mut harness, _) = snippet("un\ndeux", Language::Txt);
+    click_id(&mut harness, "editor-body");
+    go_to(&mut harness, "99");
+    breaks_the_line(&mut harness);
+    assert_eq!(code(&harness), "un\n\ndeux");
+
+    press(&mut harness, Modifiers::COMMAND | Modifiers::ALT, Key::G);
+    press(&mut harness, Modifiers::NONE, Key::Escape);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("go-to-line-input"))
+            .is_none()
+    );
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-title"))
+            .is_some(),
+        "the editor stays"
+    );
 }

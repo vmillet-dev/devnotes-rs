@@ -12,6 +12,7 @@ pub use server::{serve, serve_socket};
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use egui::accesskit::{Node, NodeId, TreeUpdate};
@@ -20,6 +21,10 @@ use egui_inspection::protocol::{self, Request, Response};
 
 /// How long a condition may take to come true.
 const PATIENCE: Duration = Duration::from_secs(30);
+
+/// One window at a time: the tests of a file run side by side, and a window another covers stops
+/// painting under xvfb.
+static ONE_WINDOW: Mutex<()> = Mutex::new(());
 
 /// A test value, never anyone's phrase.
 pub const PASSPHRASE: &str = "correct horse battery staple";
@@ -118,6 +123,17 @@ impl Tree {
             .collect()
     }
 
+    /// Whether any node says `words`, read with plain spaces: a tool's answer is one of many.
+    pub fn mentions(&self, words: &str) -> bool {
+        let plain = |text: &str| text.replace([' ', ' '], " ");
+        self.nodes.iter().any(|(_, node)| {
+            [node.label(), node.value()]
+                .into_iter()
+                .flatten()
+                .any(|text| plain(text).contains(words))
+        })
+    }
+
     /// What a node says: its name, or its value for a node that has no name.
     pub fn text(&self, author_id: &str) -> Option<String> {
         let node = self.find(author_id)?;
@@ -139,6 +155,7 @@ pub struct App {
     profile: PathBuf,
     child: Child,
     stream: TcpStream,
+    _alone: MutexGuard<'static, ()>,
 }
 
 impl App {
@@ -155,6 +172,9 @@ impl App {
     }
 
     fn start(scenario: &'static str, profile: &Path, mut command: Command) -> Self {
+        let alone = ONE_WINDOW
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let port = free_port();
         let mut child = command
             .arg("--profile")
@@ -172,7 +192,13 @@ impl App {
             profile: profile.to_path_buf(),
             child,
             stream,
+            _alone: alone,
         }
+    }
+
+    /// The process, for what is read from outside it.
+    pub fn id(&self) -> u32 {
+        self.child.id()
     }
 
     /// A second launch on the same profile asking for `action`: it hands it to this one and
@@ -401,26 +427,34 @@ impl App {
             if self.has(author_id) {
                 return;
             }
-            let Some(bounds) = self.tree().find(within).and_then(Node::bounds) else {
+            if !self.wheel(within) {
                 break;
-            };
-            #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
-            let pos = Pos2::new(
-                f64::midpoint(bounds.x0, bounds.x1) as f32,
-                f64::midpoint(bounds.y0, bounds.y1) as f32,
-            );
-            self.apply(vec![
-                Event::PointerMoved(pos),
-                Event::MouseWheel {
-                    unit: egui::MouseWheelUnit::Point,
-                    delta: egui::vec2(0.0, -240.0),
-                    phase: egui::TouchPhase::Move,
-                    source: egui::MouseWheelSource::Wheel,
-                    modifiers: Modifiers::NONE,
-                },
-            ]);
+            }
         }
         self.wait_for(author_id);
+    }
+
+    /// One notch down over `within`; `false` when nothing of that name is drawn.
+    pub fn wheel(&mut self, within: &str) -> bool {
+        let Some(bounds) = self.tree().find(within).and_then(Node::bounds) else {
+            return false;
+        };
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let pos = Pos2::new(
+            f64::midpoint(bounds.x0, bounds.x1) as f32,
+            f64::midpoint(bounds.y0, bounds.y1) as f32,
+        );
+        self.apply(vec![
+            Event::PointerMoved(pos),
+            Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta: egui::vec2(0.0, -240.0),
+                phase: egui::TouchPhase::Move,
+                source: egui::MouseWheelSource::Wheel,
+                modifiers: Modifiers::NONE,
+            },
+        ]);
+        true
     }
 
     /// Scrolls `within` down until `author_id` stands above `under`: a panel draws what lies past
@@ -457,6 +491,28 @@ impl App {
             self.ask(&Request::Settle { max_steps: 10 });
         }
         panic!("{author_id} never came above {under}");
+    }
+
+    /// Until `author_id` stands in the same place on two frames: a wheel's scroll glides, and a
+    /// click aimed at where it was lands on something else.
+    pub fn at_rest(&mut self, author_id: &str) {
+        let place = |app: &mut Self| {
+            let tree = app.tree();
+            tree.find(author_id)
+                .and_then(Node::bounds)
+                .map(|bounds| (bounds.x0, bounds.y0))
+        };
+        let until = Instant::now() + PATIENCE;
+        let mut last = place(self);
+        loop {
+            self.ask(&Request::Settle { max_steps: 10 });
+            let now = place(self);
+            if now.is_some() && now == last {
+                return;
+            }
+            assert!(Instant::now() < until, "{author_id} never came to rest");
+            last = now;
+        }
     }
 
     /// Back to the top of `within`: rows out of view are not drawn, so not counted.

@@ -15,19 +15,28 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, Button, Kind, address};
 
-/// How tall the panel stands once unfolded; the body gives up the room.
+/// The tallest the panel stands unfolded; the body gives up the room.
 pub(super) const OPEN_HEIGHT: f32 = 240.0;
+/// A row of the list, and the note under it.
+const ROW_HEIGHT: f32 = 28.0;
+const NOTE_HEIGHT: f32 = 44.0;
 /// Folded: the toggle alone.
 pub(super) const FOLDED_HEIGHT: f32 = 34.0;
 
-/// The room the panel takes at the editor's foot: none for a note with no body kept.
-pub(super) fn height(state: &AppState) -> f32 {
-    if state.revisions.kept().is_empty() {
+/// The room the panel takes at the editor's foot: none for a note with no body kept, what its
+/// rows ask once open, within `room` so that the body keeps its own.
+pub(super) fn height(state: &AppState, room: f32) -> f32 {
+    let kept = state.revisions.kept().len();
+    if kept == 0 {
         0.0
-    } else if state.revisions.is_open() {
-        OPEN_HEIGHT
-    } else {
+    } else if !state.revisions.is_open() {
         FOLDED_HEIGHT
+    } else if state.revisions.preview().is_some() {
+        OPEN_HEIGHT.min(room).max(FOLDED_HEIGHT)
+    } else {
+        #[expect(clippy::cast_precision_loss, reason = "twenty rows at most")]
+        let rows = FOLDED_HEIGHT + kept as f32 * ROW_HEIGHT + NOTE_HEIGHT;
+        rows.min(OPEN_HEIGHT).min(room).max(FOLDED_HEIGHT)
     }
 }
 
@@ -125,17 +134,10 @@ fn list(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         });
     }
     let note = i18n::translate(language, keys::revisions::NOTE, &[]);
-    ui.add(
-        egui::Label::new(widgets::text(
-            ui,
-            &note,
-            11.0,
-            400.0,
-            FontFamily::Proportional,
-            p.text_2,
-        ))
-        .wrap(),
-    );
+    let font = egui::FontId::new(11.0, FontFamily::Proportional);
+    let width = ui.available_width();
+    let note = ui.fonts_mut(|fonts| fonts.layout(note, font, p.text_2, width));
+    ui.label(note);
 }
 
 /// What going back would change, what it would erase, and the two ways out.

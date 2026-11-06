@@ -3534,8 +3534,8 @@ knowing:
   (`devnotes.editorSearchOptions`, `search/search-options.ts`), handed to `search()` when a
   snippet's state is made. Past 200 000 characters, finding and counting wait for
   a 120 ms pause — a word found nowhere costs a whole read of 2 MB, some 150 ms a key — and the
-  count reads « … » meanwhile. Go to line (Ctrl+Alt+G) stays CodeMirror's dialog, given the bar's
-  field and button by `theme.ts`.
+  count reads « … » meanwhile. Go to line (Ctrl+Alt+G) is a bar of its own over the code
+  (`notes/overlays/editor/go_to_line.rs`).
 - CodeMirror's words still on screen or spoken (go to line, the screen reader's announcements)
   are `EditorState.phrases`, read from `editor.code` in the translations.
 - The specs run the real editor on jsdom, which has no rectangles for text ranges
@@ -4629,9 +4629,11 @@ how far it got: the views say they are partial until it is whole.
 ### The title bar, and the two bands under it
 
 The window keeps the system's decorations, so `ui::titlebar` is a bar inside it, 38 px on
-`bg-0`: the area switch on the left, the application's name centred on the window, the theme
-toggle on the right. The switch is drawn only once the library is open — every area acts on it.
-Its options are icons named for the screen reader and the tooltip (`area-option-notes`, `-tools`,
+`bg-0`: the menus on the left, the application's name centred on the window, the theme toggle on
+the right. The area switch (`titlebar::area_switch`) heads each area's rail, three columns of an
+icon over its name, and comes to the bar, icons alone, only while the rail is put away: nothing
+else then leads to the other areas. It is drawn only once the library is open — every area acts
+on it. Its options are named for the screen reader and the tooltip (`area-option-notes`, `-tools`,
 `-http`), in the order of `Ctrl+1/2/3`, which `keys::APPLICATION` reads by position. The toggle
 names what it switches **to**, its icon and its label alike, and writes the appearance like the
 preferences panel does. Until the screens arrive, an area is an empty room addressed
@@ -4707,12 +4709,12 @@ shown, the fields form after it: `Ctrl+Alt+P` in the window (`keys::APPLICATION`
 `devnotes --action palette` from a second launch, which hands the action over the profile's
 socket — the path the global shortcut takes in P9, with the hidden window and the desktop
 notification after a copy. It asks the core for the notes of every space, ranked
-(`ranked: true`), through a `QueryCell` of its own: the canvas's search must not change behind
-it. What is typed is read as a mode — `@` a scope or a space, `#` a tag, `>` a command — and a
+(`ranked: true`), and for the requests, through `QueryCell`s of its own: the canvas's search must
+not change behind it. The tools are read here, by their names first, and the empty field recalls
+a few of each kind. What is typed is read as a mode — `@` a scope or a space, `#` a tag, `>` a command — and a
 chosen chip narrows the search. The focus never leaves the field: the arrows, Tab, Enter and
-Backspace are taken from the input before the field reads them, and move a highlight. Requests and
-tools join with their areas; `> New folder` asks for the name in a prompt of its own
-(`notes::overlays::folder_prompt`).
+Backspace are taken from the input before the field reads them, and move a highlight.
+`> New folder` asks for the name in a prompt of its own (`notes::overlays::folder_prompt`).
 
 The header is one row while every control holds in it and two on purpose past that
 (`notes::header::layout`): the reference's floors decide, not the widths drawn, which differ
@@ -6344,8 +6346,8 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   antivirus, a second instance — into a storage error on the first write; and
   ⚠️ `synchronous = NORMAL`, WAL's default, written down because it is a durability choice:
   a power cut can cost the last committed transaction and cannot corrupt the file. `FULL`
-  would fsync every commit to protect a note the user can retype. `mmap_size = 1 GiB` reads
-  pages in place rather than copying each one through SQLite's 2 MB cache: against the same
+  would fsync every commit to protect a note the user can retype. `mmap_size = 1 GiB`, 64 MiB once the
+  index is whole, reads pages in place rather than copying each one through SQLite's 2 MB cache: against the same
   build without it, `list_tags` and a pinned-only query halve and the whole-corpus queries
   gain 7–13 % at 8000 notes. ⚠️ An I/O error or a truncation under the mapping is a `SIGBUS`,
   not an error code: a library's files live in the profile, and nothing moves them while its
@@ -7027,6 +7029,61 @@ what is left is sorting and sectioning 30 000 shared entries. Two measures are o
 (the 60 000 checklist items and the side tables, read per slice) and `list_tags`, which walks
 every note's tags at each call.
 
+#### The window on the reference corpora
+
+Three tools, none in CI. `benches/reference_profile.rs` writes a reference library into a real
+profile; `app::perf` (`DEVNOTES_PERF=<profile> cargo test --release -p ui --lib app::perf --
+--nocapture`) replays the journeys of § 6.3 through the real application without a window;
+`crates/e2e/examples/footprint.rs` reads memory and idle CPU of the running process from outside,
+on the machine's GPU (`DEVNOTES_E2E_GPU`) and painting every frame (`DEVNOTES_E2E_PAINT_ALL`). The
+`e2e` flavour cannot be a release build, so that one runs at `CARGO_PROFILE_DEV_OPT_LEVEL=3`.
+`app --features profiling` serves egui's frames to `puffin_viewer`: `puffin_egui` stops at egui
+0.33. A debug build logs every `Backend` database call past 16 ms.
+
+⚠️ This machine is not the plan's reference: Windows 11, Ryzen 7 9800X3D, RTX 5070 Ti, against a
+four-core laptop on integrated graphics. A frame here is a CPU frame (pass and tessellation, the
+AccessKit tree included, no GPU). Release without LTO, 6 November 2026.
+
+| Measure                                     | Realistic         | Stress            | Budget (plan § 6.2)      |
+| ------------------------------------------- | ----------------- | ----------------- | ------------------------ |
+| Launch → window shown (release)             | **~500 ms**       | **~500 ms**       | ≤ 400 ms                 |
+| Unlock → past the gate                      | 140 ms            | 220 ms            | —                        |
+| Unlock → first cards                        | 290 ms            | 335 ms            | ≤ 600 / 800 ms           |
+| Unlock → first cards, the real window       | 390 ms            | 480 ms            | ≤ 600 / 800 ms           |
+| Unlock → index whole                        | **1.67 s**        | 1.96 s            | ≤ 1.5 s / ≤ 4 s          |
+| Canvas scrolled, frame p50 / p99            | 5.9 / 8.4 ms      | 5.0 / 6.5 ms      | p99 ≤ 12 ms              |
+| Search, asked → drawn, p95                  | 21 ms             | 16 ms             | ≤ 50 / 120 ms            |
+| A note opened, window at rest, p50 / p95    | 48 / **87 ms**    | 41 / 45 ms        | ≤ 50 ms                  |
+| 1 MB snippet: coloured, window at rest      | 33 ms             | 31 ms             | ≤ 300 ms                 |
+| A key typed, 100 kB / 1 MB, p99             | 2.8 / 7.4 ms      | 3.4 / 7.7 ms      | ≤ 16 / 33 ms             |
+| Board of ~5 000 cards: first opening        | 316 ms            | 149 ms            | —                        |
+| Board scrolled, frame p99                   | 4.9 ms            | 4.8 ms            | 60 frames a second       |
+| HTTP rail: loaded / unfolded / scrolled p99 | 19 / 1.3 / 0.9 ms | 16 / 1.3 / 0.7 ms | ≤ 50 ms, 1 frame, 60 f/s |
+| Requests searched                           | 9 ms              | 9 ms              | ≤ 30 ms                  |
+| HTTP history, first page                    | 1.3 ms            | 1.4 ms            | ≤ 50 ms                  |
+| `list_tags` (`cargo bench`)                 | 14 µs             | —                 | ≤ 5 / 10 ms              |
+
+Not measured: a 1 MB response body. A list answers from the first slice of the index and is asked
+again when it is whole; a board waits for it. The file stays mapped at 1 GiB until then, as the
+fill reads every page, and at 64 MiB after: from the start, the fill took 30 to 50 % longer.
+That is what the p95 of a note opened pays, the note read through SQLite's own cache.
+
+| Process, MiB                  | Working set | Private | Dedicated GPU | Idle CPU |
+| ----------------------------- | ----------- | ------- | ------------- | -------- |
+| At the gate                   | 248         | 445     | 254           | < 0.3 %  |
+| Few notes (samples), unlocked | 258         | 450     | 254           | < 0.3 %  |
+| Few notes, every area visited | 266         | 453     | 254           | < 0.3 %  |
+| 30 000 realistic, unlocked    | 439         | 632     | 254           | < 0.3 %  |
+| Realistic, canvas scrolled    | 533         | 721     | 254           | < 0.3 %  |
+| 30 000 stress, unlocked       | 1 141       | 1 348   | 254           | < 0.3 %  |
+| Stress, canvas scrolled       | 1 221       | 1 423   | 254           | < 0.3 %  |
+
+The budgets are ≤ 350 and ≤ 900 MB resident, read without the GPU driver, which DevNotes does not
+ship (plan § 6.2): `app::perf` prints that figure, 235 MiB on the realistic corpus and **945 MiB on
+the stress one**, canvas scrolled. The ~220 MiB between the two tables at the gate are the driver's.
+What grows with the text is the index, which keeps each note and its folded copy in clear: the
+stress budget holds only if it stops keeping the bodies.
+
 Unit tests run with Vitest through the `@angular/build:unit-test` builder in a jsdom
 environment (configured in `angular.json`'s `test` target and `vitest-base.config.ts`), so
 no browser is needed. Specs sit next to the file they cover. Coverage thresholds are set at
@@ -7160,6 +7217,11 @@ bar and the banners, and renders each in both themes on a software adapter — W
 lavapipe on Linux — into `DEVNOTES_CAPTURES` when it is set. `test-rust` sets it and uploads
 the PNGs as `captures-<os>`, to be looked at beside the reference's captures. Nothing compares
 pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
+
+`app::screens` replays the reference's own screens, its data, gestures, file names and window
+sizes: `DEVNOTES_SCREENS=<dir> cargo test -p ui --lib app::screens` writes the PNGs to set beside
+the `angular-reference` zip, one profile copy a screen since a board shown or a rail put away is
+remembered. Without the variable it does nothing, and CI does not set it.
 
 ### The scenarios, on the assembled window
 

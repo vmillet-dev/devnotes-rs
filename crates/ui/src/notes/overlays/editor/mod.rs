@@ -11,6 +11,7 @@ mod code;
 mod drawing;
 mod fields;
 mod format;
+mod go_to_line;
 mod header;
 mod json_view;
 mod revisions;
@@ -115,6 +116,9 @@ impl EditorView {
 }
 
 pub(crate) use json_view::Layout as ExplorerLayout;
+
+/// What the history leaves the body, unfolded.
+const BODY_FLOOR: f32 = 96.0;
 pub(in crate::notes) use rich::embedded;
 
 pub(crate) fn show(
@@ -212,13 +216,16 @@ fn panel(
         json_view::band(ui, state, session, exploring, layout, whole.width() - 40.0);
     }
     let footer_height = 34.0;
-    let history = revisions::height(state);
+    let room = whole.bottom() - footer_height - ui.cursor().top() - BODY_FLOOR;
+    let history = revisions::height(state, room);
     let body_rect = Rect::from_min_max(
         egui::pos2(whole.left(), ui.cursor().top()),
         egui::pos2(whole.right(), whole.bottom() - footer_height - history),
     );
     let mut body_ui =
         ui.new_child(UiBuilder::new().max_rect(body_rect.shrink2(Vec2::new(20.0, 14.0))));
+    // In a small window the bands leave it little: what does not fit stops at its edge.
+    body_ui.set_clip_rect(body_ui.clip_rect().intersect(body_rect));
     let filled = state
         .fill
         .preview(session)
@@ -556,9 +563,15 @@ fn language_menu(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mu
         .into_iter()
         .map(|language| (language, crate::notes::language::label(language)))
         .collect();
+    let hints: Vec<&str> = Language::ALL
+        .into_iter()
+        .map(crate::notes::language::hint)
+        .collect();
     let mut chosen = note.language;
     let label = i18n::translate(state.language, keys::editor::LANGUAGE_LABEL, &[]);
     if ChoiceMenu::new(&label, "editor-language", &options)
+        .hints(&hints)
+        .language(state.language)
         .show(ui, &mut chosen)
         .changed()
     {

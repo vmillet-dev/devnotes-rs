@@ -1,7 +1,7 @@
 //! What is left once the keys and the library's protection have pages of their own: how the
 //! application looks, how it behaves, and what it says. Everything here edits the draft.
 
-use egui::{Align, CornerRadius, FontFamily, Layout, RichText, Role, Sense, Stroke, Ui, Vec2};
+use egui::{Align, FontFamily, Layout, RichText, Sense, Stroke, Ui, Vec2};
 use engine::app_info::METADATA;
 use engine::notes::kind::NoteKind;
 use i18n::{Key, Language, Message, keys};
@@ -332,43 +332,9 @@ pub(super) fn switch_row(
     on: &mut bool,
 ) {
     let label = i18n::translate(language, label, &[]);
-    row(ui, &label, |ui| switch(ui, &label, author_id, on));
-}
-
-/// The reference's `setting-switch`: a track and its knob, amber when on.
-fn switch(ui: &mut Ui, label: &str, author_id: &str, on: &mut bool) {
-    let p = palette(ui.ctx());
-    let response = widgets::interact(
-        ui,
-        Vec2::new(34.0, 24.0),
-        Sense::click(),
-        author_id,
-        || egui::WidgetInfo::selected(Role::CheckBox, true, *on, label),
-        CornerRadius::same(9),
-    );
-    if response.clicked() {
-        *on = !*on;
-    }
-    let track = egui::Rect::from_center_size(response.rect.center(), Vec2::new(34.0, 18.0));
-    let (fill, knob) = if *on {
-        (p.amber_fill.gamma_multiply(0.35), p.amber_text)
-    } else {
-        (p.bg_3, p.text_2)
-    };
-    ui.painter().rect(
-        track,
-        CornerRadius::same(9),
-        fill,
-        Stroke::new(1.0, p.line_soft),
-        egui::StrokeKind::Inside,
-    );
-    let x = if *on {
-        track.right() - 9.0
-    } else {
-        track.left() + 9.0
-    };
-    ui.painter()
-        .circle_filled(egui::pos2(x, track.center().y), 6.0, knob);
+    row(ui, &label, |ui| {
+        widgets::switch(ui, &label, author_id, on, true);
+    });
 }
 
 pub(super) fn note(ui: &mut Ui, said: &str) {

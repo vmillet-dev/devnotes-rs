@@ -119,6 +119,10 @@ fn controls(
     if Button::new(&pin, "selection-pin").show(ui).clicked() {
         batch(actions, Batch::Pin(!all_pinned));
     }
+    let copy = tr(keys::file::COPY_MARKDOWN);
+    if Button::new(&copy, "selection-copy").show(ui).clicked() {
+        actions.push(Action::Menu(crate::titlebar::Action::CopyMarkdown));
+    }
     let delete = tr(if canvas_view.confirm_delete {
         keys::selection::DELETE_CONFIRM
     } else {

@@ -26,6 +26,9 @@ use crate::theme::{palette, spacing};
 use crate::widgets::{self, SearchField, Segmented, interact};
 use layout::GAP;
 
+/// The controls of a row, all of them.
+const ROW_HEIGHT: f32 = 32.0;
+
 /// What only the header's drawing sees: what its menus show, what it measured, the facets.
 #[derive(Default)]
 pub(super) struct HeaderView {
@@ -64,13 +67,13 @@ pub(super) fn show(
             ui.spacing_mut().item_spacing = Vec2::new(GAP, 8.0);
             let facets = (open, pressed);
             if plan.two_rows {
-                ui.horizontal(|ui| {
+                row(ui, |ui| {
                     fixed.place = group(ui, |ui| {
                         where_one_is(ui, state, view, plan.switcher, actions)
                     });
                     new_note_at_end(ui, state, new_note, actions);
                 });
-                ui.horizontal(|ui| {
+                row(ui, |ui| {
                     fixed.look = group(ui, |ui| {
                         how_one_looks(
                             ui,
@@ -83,7 +86,7 @@ pub(super) fn show(
                     });
                 });
             } else {
-                ui.horizontal(|ui| {
+                row(ui, |ui| {
                     fixed.place = group(ui, |ui| {
                         where_one_is(ui, state, view, plan.switcher, actions)
                     });
@@ -124,9 +127,19 @@ fn switchers_shown(state: &AppState) -> bool {
     !state.settings.rail_shown && state.active_folder().is_none()
 }
 
+/// ⚠️ A row of the header's own height: `Ui::horizontal` centres on egui's small default height,
+/// and what is taller than that lands lower the deeper it is nested.
+fn row<R>(ui: &mut Ui, draw: impl FnOnce(&mut Ui) -> R) -> R {
+    let size = Vec2::new(ui.available_width(), ROW_HEIGHT);
+    let layout = egui::Layout::left_to_right(egui::Align::Center);
+    ui.allocate_ui_with_layout(size, layout, draw).inner
+}
+
 /// A group of controls side by side; answers the width of what in it does not narrow.
 fn group(ui: &mut Ui, draw: impl FnOnce(&mut Ui) -> f32) -> f32 {
-    let shown = ui.horizontal(draw);
+    let size = Vec2::new(ui.available_width(), ROW_HEIGHT);
+    let layout = egui::Layout::left_to_right(egui::Align::Center);
+    let shown = ui.allocate_ui_with_layout(size, layout, draw);
     shown.response.rect.width() - shown.inner
 }
 

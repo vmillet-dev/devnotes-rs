@@ -185,7 +185,7 @@ impl Base64Tool {
             Direction::Encode => self.encode_facts(ui, language),
             Direction::Decode => self.reading_line(ui, language),
         }
-        hint(ui, &tr(keys::tools::base64::EXPLAIN));
+        crate::tools::ui::notice(ui, &tr(keys::tools::base64::EXPLAIN), "base64-explain");
     }
 
     fn file(&mut self, ui: &mut Ui, language: Language) {

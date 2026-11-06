@@ -3,8 +3,7 @@
 //! Escape stops the listening without closing the panel, which the next one does.
 
 use egui::{
-    CornerRadius, Event, EventFilter, FontFamily, Key, Margin, RichText, Role, Sense, Stroke, Ui,
-    Vec2,
+    CornerRadius, Event, EventFilter, FontFamily, Key, RichText, Role, Sense, Stroke, Ui, Vec2,
 };
 use i18n::{Key as Text, Language, Message, keys};
 
@@ -166,10 +165,9 @@ fn field(ui: &mut Ui, label: &str, action: Rebindable, bindings: &mut Bindings, 
         egui::StrokeKind::Inside,
     );
     let text = bindings.of(action);
-    let words = widgets::text(ui, text, 11.5, 400.0, FontFamily::Monospace, p.text_1);
-    let inner = response.rect - Margin::symmetric(8, 0);
-    let at = egui::pos2(inner.left(), inner.center().y - words.size().y / 2.0);
-    ui.painter().galley(at, words, p.text_1);
+    let words = widgets::text(ui, text, 11.5, 600.0, FontFamily::Monospace, p.amber_text);
+    let at = response.rect.center() - words.size() / 2.0;
+    ui.painter().galley(at, words, p.amber_text);
 }
 
 /// The keys of the frame are the field's, Tab excepted.

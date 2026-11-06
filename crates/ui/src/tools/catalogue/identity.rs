@@ -505,7 +505,9 @@ impl IdentityTool {
         let countries = countries.each_ref().map(|(id, name)| (*id, name.as_str()));
         let name = tr(words::COUNTRY);
         label(ui, &name);
-        ChoiceMenu::new(&name, "identity-country", &countries).show(ui, &mut self.country);
+        ChoiceMenu::new(&name, "identity-country", &countries)
+            .language(language)
+            .show(ui, &mut self.country);
         label(ui, &tr(words::SEX));
         let sexes = [
             (None, tr(words::sexes::ANY)),

@@ -22,6 +22,8 @@ pub enum Kind {
     /// Red at rest, not only under the pointer: a warning that arrives on hover comes after
     /// the choice. Never a solid fill, which would read as a second accent.
     Destructive,
+    /// What draws again: an amber hairline on a tint of it.
+    Accent,
 }
 
 pub struct Button<'a> {
@@ -32,8 +34,27 @@ pub struct Button<'a> {
     enabled: bool,
     /// A destructive action waiting for its confirmation, or a quiet toggle that is on.
     armed: bool,
-    large: bool,
+    size: Size,
+    keys: Option<&'a str>,
+    capped: bool,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Size {
+    Regular,
+    /// The gate's submit: as wide as its panel.
+    Large,
+    /// As high as a request's address.
+    Tall,
+}
+
+/// A request's actions, beside its 38 px address.
+const TALL_HEIGHT: f32 = 38.0;
+const TALL_PADDING: f32 = 16.0;
+const TALL_SIZE: f32 = 13.0;
+const TALL_WEIGHT: f32 = 600.0;
+/// Between a tall button's label and its keys.
+const KEYS_GAP: f32 = 8.0;
 
 impl<'a> Button<'a> {
     pub fn new(label: &'a str, author_id: &'a str) -> Self {
@@ -44,8 +65,42 @@ impl<'a> Button<'a> {
             icon: None,
             enabled: true,
             armed: false,
-            large: false,
+            size: Size::Regular,
+            keys: None,
+            capped: false,
         }
+    }
+
+    /// The key that does the same, on its cap after the label.
+    #[must_use]
+    pub fn key_cap(mut self, key: &'a str) -> Self {
+        self.keys = Some(key);
+        self.capped = true;
+        self
+    }
+
+    /// As high as a request's address, 13 px at 600.
+    #[must_use]
+    pub fn tall(mut self) -> Self {
+        self.size = Size::Tall;
+        self
+    }
+
+    /// The keys that do the same, small after the label.
+    #[must_use]
+    pub fn keys(mut self, keys: &'a str) -> Self {
+        self.keys = Some(keys);
+        self
+    }
+
+    /// How wide a tall button is drawn, for a row that lays out what comes before it.
+    pub fn tall_width(ui: &Ui, label: &str, keys: Option<&str>) -> f32 {
+        let family = FontFamily::Proportional;
+        let probe = text(ui, label, TALL_SIZE, TALL_WEIGHT, family, Color32::WHITE);
+        let keys = keys.map_or(0.0, |keys| {
+            KEYS_GAP + super::arrowed(ui, None, keys, 10.5, Color32::WHITE)
+        });
+        probe.size().x + keys + 2.0 * TALL_PADDING
     }
 
     #[must_use]
@@ -75,7 +130,7 @@ impl<'a> Button<'a> {
     /// The gate's submit: as wide as its panel, 10 px of padding, 8 px corners, 14 px at 600.
     #[must_use]
     pub fn large(mut self) -> Self {
-        self.large = true;
+        self.size = Size::Large;
         self
     }
 
@@ -93,10 +148,11 @@ impl<'a> Button<'a> {
     }
 
     pub fn show(self, ui: &mut Ui) -> Response {
-        let (size, weight, padding, corner) = match (self.large, self.kind) {
-            (true, _) => (14.0, 600.0, Vec2::splat(10.0), 8),
-            (false, Kind::Quiet) => (12.0, 400.0, Vec2::new(6.0, 0.0), 6),
-            (false, _) => (12.0, 400.0, Vec2::new(12.0, 6.0), 6),
+        let (size, weight, padding, corner) = match (self.size, self.kind) {
+            (Size::Tall, _) => (TALL_SIZE, TALL_WEIGHT, Vec2::new(TALL_PADDING, 0.0), 8),
+            (Size::Large, _) => (14.0, 600.0, Vec2::splat(10.0), 8),
+            (Size::Regular, Kind::Quiet) => (12.0, 400.0, Vec2::new(6.0, 0.0), 6),
+            (Size::Regular, _) => (12.0, 400.0, Vec2::new(12.0, 6.0), 6),
         };
         let probe = text(
             ui,
@@ -107,9 +163,15 @@ impl<'a> Button<'a> {
             Color32::WHITE,
         );
         let icon_room = if self.icon.is_some() { 16.0 + 6.0 } else { 0.0 };
-        let mut wanted = probe.size() + 2.0 * padding + Vec2::new(icon_room, 0.0);
-        if self.large {
-            wanted.x = ui.available_width();
+        let cap_room = if self.capped { 12.0 } else { 0.0 };
+        let keys_room = self.keys.map_or(0.0, |keys| {
+            KEYS_GAP + cap_room + super::arrowed(ui, None, keys, 10.5, Color32::WHITE)
+        });
+        let mut wanted = probe.size() + 2.0 * padding + Vec2::new(icon_room + keys_room, 0.0);
+        match self.size {
+            Size::Large => wanted.x = ui.available_width(),
+            Size::Tall => wanted.y = TALL_HEIGHT,
+            Size::Regular => {}
         }
         let sense = if self.enabled {
             Sense::click()
@@ -142,7 +204,7 @@ impl<'a> Button<'a> {
             StrokeKind::Inside,
         );
         let galley = text(ui, self.label, size, weight, FontFamily::Proportional, ink);
-        let width = galley.size().x + icon_room;
+        let width = galley.size().x + icon_room + keys_room;
         let mut left = rect.center().x - width / 2.0;
         if let Some(icon) = self.icon {
             let place =
@@ -150,11 +212,31 @@ impl<'a> Button<'a> {
             icons::paint(ui, place, icon, ink);
             left += icon_room;
         }
+        let after = left + galley.size().x + KEYS_GAP;
         painter.galley(
             Pos2::new(left, rect.center().y - galley.size().y / 2.0),
             galley,
             ink,
         );
+        if let Some(keys) = self.keys {
+            let at = Pos2::new(after + cap_room / 2.0, rect.center().y);
+            if self.capped {
+                let p = palette(ui.ctx());
+                let width = super::arrowed(ui, None, keys, 10.5, ink) + cap_room;
+                let cap = Rect::from_center_size(
+                    Pos2::new(after + width / 2.0, rect.center().y),
+                    Vec2::new(width, 16.0),
+                );
+                painter.rect(
+                    cap,
+                    CornerRadius::same(4),
+                    p.bg_3,
+                    Stroke::new(1.0, p.line),
+                    StrokeKind::Inside,
+                );
+            }
+            super::arrowed(ui, Some(at), keys, 10.5, ink.gamma_multiply(0.7));
+        }
         response
     }
 
@@ -162,12 +244,20 @@ impl<'a> Button<'a> {
     fn colours(&self, ui: &Ui, hover: f32) -> (Color32, Color32, Color32) {
         let p = palette(ui.ctx());
         let (fill, edge, ink) = match self.kind {
+            Kind::Outline if self.armed => {
+                (p.amber_fill.gamma_multiply(0.1), p.amber_dim, p.amber_text)
+            }
             Kind::Outline => (
                 p.bg_2,
                 towards(p.line_soft, p.amber_dim, hover),
                 towards(p.text_1, p.amber_text, hover),
             ),
             Kind::Filled => (p.amber_fill, p.amber_edge, p.amber_ink),
+            Kind::Accent => (
+                p.amber_fill.gamma_multiply(0.08),
+                towards(p.amber_dim, p.amber_edge, hover),
+                p.amber_text,
+            ),
             Kind::Quiet if self.armed => (p.bg_3, Color32::TRANSPARENT, p.amber_text),
             Kind::Quiet => (
                 Color32::TRANSPARENT,

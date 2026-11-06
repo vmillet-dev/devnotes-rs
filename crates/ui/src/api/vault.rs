@@ -18,7 +18,8 @@ pub fn create(backend: &Backend, passphrase: Zeroizing<String>) -> Pending<()> {
     let filling = backend.background();
     backend.spawn(move |engine| async move {
         db::run(Arc::clone(&engine), move |engine| {
-            vault::create_vault(engine, passphrase)
+            vault::create_vault(engine, passphrase)?;
+            index::announce(engine)
         })
         .await?;
         filling.run(index::fill(engine));
@@ -30,7 +31,8 @@ pub fn unlock(backend: &Backend, passphrase: Zeroizing<String>) -> Pending<()> {
     let filling = backend.background();
     backend.spawn(move |engine| async move {
         db::run(Arc::clone(&engine), move |engine| {
-            vault::unlock_vault(engine, passphrase)
+            vault::unlock_vault(engine, passphrase)?;
+            index::announce(engine)
         })
         .await?;
         filling.run(index::fill(engine));

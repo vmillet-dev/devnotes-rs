@@ -21,11 +21,9 @@ fn row(entry: &Value, language: Language) -> ReferenceRow {
     );
     let heading = word(language, &format!("tools.mustache-sheet.groups.{group}"));
     let with = i18n::translate(language, keys::tools::mustache_sheet::WITH, &[]);
-    let example = Cell::mono(text(entry, "template")).below(format!(
-        "{with} {} → {}",
-        text(entry, "view"),
-        text(entry, "output")
-    ));
+    let example = Cell::mono(text(entry, "template"))
+        .below(format!("{with} {} →", text(entry, "view")))
+        .result(text(entry, "output"));
     let cells = vec![Cell::mono(syntax), Cell::text(what.clone()), example];
     ReferenceRow::new(syntax, group, cells)
         .searched_by([syntax, &what, &heading])
