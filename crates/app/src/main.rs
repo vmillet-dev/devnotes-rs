@@ -88,8 +88,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
     {
         log::warn!("Second launches will not be heard: {error}");
     }
-    let tray = desktop::start_tray(&preferences, inbox.clone());
-    let shortcuts = desktop::take_shortcuts(inbox.clone());
+    let desktop = desktop::start(&preferences, &inbox);
     let startup = ui::Startup {
         paths: engine::Paths {
             profile: locations.profile,
@@ -102,8 +101,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
         inbox,
         waker,
         inputs,
-        tray,
-        shortcuts,
+        desktop,
     };
 
     eframe::run_native(

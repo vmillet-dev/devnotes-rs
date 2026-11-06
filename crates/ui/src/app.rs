@@ -5,8 +5,10 @@ use std::sync::Arc;
 
 use crossbeam_channel::Receiver;
 use engine::{EngineEvent, Paths};
+use platform::autostart::{Autostart, NoAutostart};
 use platform::instance::Message;
-use platform::shortcuts::{Global, Shortcuts};
+use platform::notify::{NoNotifier, Notifier};
+use platform::shortcuts::{Global, NoShortcuts, Shortcuts};
 use platform::tray::{self, Tray};
 use platform::window::Geometry;
 
@@ -14,10 +16,11 @@ use crate::action::AppAction;
 use crate::action::{Action, Actions, GlobalAction};
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
+use crate::services::autostart::AutostartState;
 use crate::services::global_keys::GlobalKeys;
 use crate::services::preferences::Preferences;
-use crate::state::AppState;
 use crate::state::Area;
+use crate::state::{AppState, put_away};
 use crate::theme;
 use crate::{api, banners, gate, http, keys, notes, titlebar, tools};
 
@@ -37,8 +40,26 @@ pub struct Startup {
     pub inbox: Inbox,
     pub waker: Waker,
     pub inputs: Receiver<Input>,
+    pub desktop: Desktop,
+}
+
+/// What the operating system answers. `Default` is a desktop that answers nothing.
+pub struct Desktop {
     pub tray: Box<dyn Tray>,
     pub shortcuts: Box<dyn Shortcuts>,
+    pub autostart: Arc<dyn Autostart + Send + Sync>,
+    pub notifier: Arc<dyn Notifier + Send + Sync>,
+}
+
+impl Default for Desktop {
+    fn default() -> Self {
+        Self {
+            tray: Box::new(tray::NoTray),
+            shortcuts: Box::new(NoShortcuts),
+            autostart: Arc::new(NoAutostart),
+            notifier: Arc::new(NoNotifier),
+        }
+    }
 }
 
 pub struct DevNotesApp {
@@ -64,7 +85,9 @@ impl DevNotesApp {
         cc.egui_ctx
             .options_mut(|options| options.zoom_with_keyboard = false);
         let mut state = AppState::new(startup.preferences, startup.reduced_motion);
-        state.global_keys = GlobalKeys::with(startup.shortcuts);
+        state.global_keys = GlobalKeys::with(startup.desktop.shortcuts);
+        state.autostart = AutostartState::with(startup.desktop.autostart);
+        state.notifier = startup.desktop.notifier;
         state.apply_look(&cc.egui_ctx);
         // The grammars take a few hundred milliseconds to load: never on the frame, which is
         // drawn again once they are in.
@@ -78,6 +101,7 @@ impl DevNotesApp {
         drop(api::attachments::sweep_copies(&backend));
         state.gate.ask(&backend);
         state.updates.check(&backend, true);
+        state.autostart.read(&backend);
         let tray_language = state.language;
         Ok(Self {
             backend,
@@ -86,7 +110,7 @@ impl DevNotesApp {
             window_file: startup.window_file,
             geometry: startup.geometry,
             shown: false,
-            tray: startup.tray,
+            tray: startup.desktop.tray,
             tray_language,
             was_minimized: false,
         })
@@ -133,16 +157,6 @@ fn reveal(ctx: &egui::Context) {
     ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
     ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
-}
-
-/// Out of sight, for the tray to call back. Nothing hides a window under native Wayland: it
-/// minimises there (E12).
-fn put_away(ctx: &egui::Context) {
-    ctx.send_viewport_cmd(if platform::window::is_native_wayland() {
-        egui::ViewportCommand::Minimized(true)
-    } else {
-        egui::ViewportCommand::Visible(false)
-    });
 }
 
 /// Whether a person is already looking at the window: the palette then only opens.
@@ -454,6 +468,9 @@ mod window_tests;
 mod global_key_tests;
 
 #[cfg(test)]
+mod palette_copy_tests;
+
+#[cfg(test)]
 mod tests {
     use egui_kittest::Harness;
 
@@ -484,8 +501,7 @@ mod tests {
             inbox,
             waker,
             inputs: receiver,
-            tray: Box::new(tray::NoTray),
-            shortcuts: Box::new(platform::shortcuts::NoShortcuts),
+            desktop: Desktop::default(),
         }
     }
 
@@ -518,7 +534,7 @@ mod tests {
         let (inbox, waker, receiver) = inputs::channel();
         let posted = inbox.clone();
         let mut startup = startup_with(directory, (inbox, waker, receiver));
-        startup.tray = Box::new(fake.clone());
+        startup.desktop.tray = Box::new(fake.clone());
         let harness = Harness::new_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
         (harness, fake, posted)
     }
@@ -881,11 +897,12 @@ mod tests {
 
         app.state.settings.copy_confirmation = false;
         app.state
-            .copy_out(&ctx, "echo quiet".to_owned(), said.clone());
+            .copy_out(&ctx, &app.backend, "echo quiet".to_owned(), said.clone());
         assert!(app.state.status.latest().is_none());
 
         app.state.settings.copy_confirmation = true;
-        app.state.copy_out(&ctx, "echo said".to_owned(), said);
+        app.state
+            .copy_out(&ctx, &app.backend, "echo said".to_owned(), said);
         assert!(app.state.status.latest().is_some());
     }
 
