@@ -114,6 +114,8 @@ pub struct AppState {
     pub editor: editor::EditorState,
     /// The window waits for the note open to close.
     pub closing_editor: bool,
+    /// « Quit », and not the close button: the window goes whatever the tray preference says.
+    pub quitting: bool,
     pub revisions: note_revisions::RevisionsState,
     pub selection: selection::SelectionState,
     pub undo: undo::UndoState,
@@ -180,6 +182,7 @@ impl AppState {
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
             closing_editor: false,
+            quitting: false,
             revisions: note_revisions::RevisionsState::default(),
             selection: selection::SelectionState::default(),
             undo: undo::UndoState::default(),
@@ -678,6 +681,7 @@ impl AppState {
             Action::Tools(action) => self.apply_tools(action, backend),
             Action::Menu(action) => self.apply_menu(action, ctx, backend),
             Action::Global(GlobalAction::Quit) => {
+                self.quitting = true;
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
             // A note opens over the canvas: what the native side asks comes back to the notes.
@@ -1032,7 +1036,10 @@ impl AppState {
             Http::SendMessage { key, text } => self.http.send_message(backend, &key, text),
             Http::ClearSocketLog(key) => self.http.clear_socket_log(&key),
             Http::Runner(asked) => self.http.ask_runner(backend, &self.dialog, asked),
-            Http::Leave(asked) => self.http.answer_leave(asked),
+            Http::Leave(asked) => {
+                self.quitting &= asked != http::leave::Asked::Cancel;
+                self.http.answer_leave(asked);
+            }
             Http::History(asked) => self.http.ask_history(backend, asked),
             Http::Code(asked) => self.http.ask_code(asked),
             Http::CopyCode(text) => self.say_copied(ctx, text, i18n::keys::http::code::COPIED),
