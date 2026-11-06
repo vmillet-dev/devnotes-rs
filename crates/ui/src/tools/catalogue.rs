@@ -159,6 +159,17 @@ fn coming() -> Box<dyn Tool> {
     Box::new(Coming)
 }
 
+/// A table to search: nothing is computed, and no note fills it.
+const fn reference(id: &'static str, keywords: &'static [&'static str]) -> ToolEntry {
+    ToolEntry {
+        id,
+        category: Category::Reference,
+        keywords,
+        from_note: &[],
+        make: coming,
+    }
+}
+
 pub static TOOLS: [ToolEntry; 32] = [
     ToolEntry {
         id: "case",
@@ -458,19 +469,15 @@ pub static TOOLS: [ToolEntry; 32] = [
         from_note: &[],
         make: coming,
     },
-    ToolEntry {
-        id: "http-status",
-        category: Category::Reference,
-        keywords: &[
+    reference(
+        "http-status",
+        &[
             "http", "status", "statut", "code", "rfc 9110", "404", "500", "redirect", "nginx",
         ],
-        from_note: &[],
-        make: coming,
-    },
-    ToolEntry {
-        id: "http-headers",
-        category: Category::Reference,
-        keywords: &[
+    ),
+    reference(
+        "http-headers",
+        &[
             "header",
             "en-tête",
             "cors",
@@ -480,13 +487,10 @@ pub static TOOLS: [ToolEntry; 32] = [
             "cache-control",
             "content-type",
         ],
-        from_note: &[],
-        make: coming,
-    },
-    ToolEntry {
-        id: "mime-types",
-        category: Category::Reference,
-        keywords: &[
+    ),
+    reference(
+        "mime-types",
+        &[
             "mime",
             "media type",
             "content-type",
@@ -495,13 +499,10 @@ pub static TOOLS: [ToolEntry; 32] = [
             "png",
             "pdf",
         ],
-        from_note: &[],
-        make: coming,
-    },
-    ToolEntry {
-        id: "ports",
-        category: Category::Reference,
-        keywords: &[
+    ),
+    reference(
+        "ports",
+        &[
             "port",
             "tcp",
             "udp",
@@ -512,22 +513,16 @@ pub static TOOLS: [ToolEntry; 32] = [
             "firewall",
             "pare-feu",
         ],
-        from_note: &[],
-        make: coming,
-    },
-    ToolEntry {
-        id: "signals",
-        category: Category::Reference,
-        keywords: &[
+    ),
+    reference(
+        "signals",
+        &[
             "signal", "kill", "sigterm", "sigkill", "sighup", "sigint", "posix", "trap",
         ],
-        from_note: &[],
-        make: coming,
-    },
-    ToolEntry {
-        id: "ascii",
-        category: Category::Reference,
-        keywords: &[
+    ),
+    reference(
+        "ascii",
+        &[
             "ascii",
             "character",
             "caractère",
@@ -537,13 +532,10 @@ pub static TOOLS: [ToolEntry; 32] = [
             "newline",
             "escape",
         ],
-        from_note: &[],
-        make: coming,
-    },
-    ToolEntry {
-        id: "regex-sheet",
-        category: Category::Reference,
-        keywords: &[
+    ),
+    reference(
+        "regex-sheet",
+        &[
             "regex",
             "regexp",
             "expression régulière",
@@ -552,13 +544,10 @@ pub static TOOLS: [ToolEntry; 32] = [
             "lookahead",
             "cheat sheet",
         ],
-        from_note: &[],
-        make: coming,
-    },
-    ToolEntry {
-        id: "markdown-sheet",
-        category: Category::Reference,
-        keywords: &[
+    ),
+    reference(
+        "markdown-sheet",
+        &[
             "markdown",
             "md",
             "gfm",
@@ -566,13 +555,10 @@ pub static TOOLS: [ToolEntry; 32] = [
             "readme",
             "cheat sheet",
         ],
-        from_note: &[],
-        make: coming,
-    },
-    ToolEntry {
-        id: "mustache-sheet",
-        category: Category::Reference,
-        keywords: &[
+    ),
+    reference(
+        "mustache-sheet",
+        &[
             "mustache",
             "handlebars",
             "template",
@@ -581,7 +567,5 @@ pub static TOOLS: [ToolEntry; 32] = [
             "partial",
             "cheat sheet",
         ],
-        from_note: &[],
-        make: coming,
-    },
+    ),
 ];

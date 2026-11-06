@@ -364,21 +364,13 @@ pub fn fill_form(ui: &Ui, state: &AppState, view: &mut View, actions: &mut Actio
 
 /// The rail on the left, as wide as the setting says, and the canvas beside it.
 pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
-    let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Main, true, "area-notes"));
-    address(ui, &response, "area-notes");
-    let mut rest = region;
-    if state.settings.rail_shown {
-        let setting = (
-            state.settings.rail_width,
-            crate::services::settings::RAIL_WIDTH,
-        );
-        rest = view
-            .rail_width
-            .show(ui, region, setting, "library-rail-edge", |ui| {
-                sidebar::show(ui, state, &mut view.sidebar, actions);
-            });
-    }
+    let region = crate::widgets::area_room(ui, "area-notes");
+    let rail = (state.settings.rail_shown, state.settings.rail_width);
+    let rest = view
+        .rail_width
+        .beside(ui, region, rail, "library-rail-edge", |ui| {
+            sidebar::show(ui, state, &mut view.sidebar, actions);
+        });
     let mut header_ui = ui.new_child(UiBuilder::new().max_rect(rest));
     header::show(
         &mut header_ui,

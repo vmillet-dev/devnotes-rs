@@ -18,7 +18,7 @@ use crate::state::AppState;
 use crate::state::tools::Filter;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
-use crate::widgets::{self, address, hovered, interact, towards};
+use crate::widgets::{self, hovered, interact, towards};
 use catalogue::ToolEntry;
 use live::Turn;
 
@@ -87,21 +87,13 @@ impl View {
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
-    let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Main, true, "area-tools"));
-    address(ui, &response, "area-tools");
-    let mut rest = region;
-    if state.settings.rail_shown {
-        let setting = (
-            state.settings.rail_width,
-            crate::services::settings::RAIL_WIDTH,
-        );
-        rest = view
-            .rail_width
-            .show(ui, region, setting, "tools-rail-edge", |ui| {
-                rail::show(ui, state, actions);
-            });
-    }
+    let region = widgets::area_room(ui, "area-tools");
+    let rail = (state.settings.rail_shown, state.settings.rail_width);
+    let rest = view
+        .rail_width
+        .beside(ui, region, rail, "tools-rail-edge", |ui| {
+            rail::show(ui, state, actions);
+        });
     let mut page = ui.new_child(UiBuilder::new().max_rect(rest));
     page.set_clip_rect(rest);
     match state.tools.open_tool() {

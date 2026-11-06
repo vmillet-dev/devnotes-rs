@@ -185,21 +185,13 @@ pub struct View {
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
-    let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Main, true, "area-http"));
-    address(ui, &response, "area-http");
-    let mut rest = region;
-    if state.settings.rail_shown {
-        let setting = (
-            state.settings.rail_width,
-            crate::services::settings::RAIL_WIDTH,
-        );
-        rest = view
-            .rail_width
-            .show(ui, region, setting, "http-rail-edge", |ui| {
-                rail::show(ui, state, &mut view.rail, actions);
-            });
-    }
+    let region = widgets::area_room(ui, "area-http");
+    let rail = (state.settings.rail_shown, state.settings.rail_width);
+    let rest = view
+        .rail_width
+        .beside(ui, region, rail, "http-rail-edge", |ui| {
+            rail::show(ui, state, &mut view.rail, actions);
+        });
     match state.http.page() {
         Page::Environments => {
             let mut page = ui.new_child(UiBuilder::new().max_rect(rest));
