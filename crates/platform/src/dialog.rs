@@ -1,7 +1,9 @@
 //! Choosing a file to read, or where to write one. An end-to-end scenario cannot reach the
 //! system's dialog, so the `e2e` flavour answers the path the scenario fixed instead.
 
-use std::path::{Path, PathBuf};
+mod system;
+
+use std::path::PathBuf;
 use std::sync::Arc;
 
 pub trait FileDialog {
@@ -15,37 +17,27 @@ pub trait FileDialog {
     fn save(&self, name: &str) -> Option<PathBuf>;
 }
 
-/// The system's dialog. ⚠️ It blocks until answered: never called on the window's thread.
-pub struct System;
-
-impl FileDialog for System {
-    fn open(&self) -> Option<PathBuf> {
-        rfd::FileDialog::new().pick_file()
-    }
-
-    fn open_of(&self, extensions: &[&str]) -> Option<PathBuf> {
-        rfd::FileDialog::new()
-            .add_filter(extensions[0], extensions)
-            .pick_file()
-    }
-
-    fn save(&self, name: &str) -> Option<PathBuf> {
-        let dialog = rfd::FileDialog::new().set_file_name(name);
-        let extension = Path::new(name).extension().and_then(|it| it.to_str());
-        match extension {
-            Some(extension) => dialog.add_filter(extension, &[extension]).save_file(),
-            None => dialog.save_file(),
-        }
-    }
-}
-
 /// What the screens ask: the system's dialog, or in the `e2e` flavour the scenario's.
-pub fn system() -> Arc<dyn FileDialog + Send + Sync> {
+/// `on_missing` hears a desktop with no dialog to show, which otherwise reads as a cancel.
+pub fn system(on_missing: impl Fn() + Send + Sync + 'static) -> Arc<dyn FileDialog + Send + Sync> {
     #[cfg(feature = "e2e")]
     if let Some(fixed) = from_scenario() {
         return Arc::new(fixed);
     }
-    Arc::new(System)
+    system::system(on_missing)
+}
+
+/// Answers every question like a cancel: tests that ask none.
+pub struct NoDialog;
+
+impl FileDialog for NoDialog {
+    fn open(&self) -> Option<PathBuf> {
+        None
+    }
+
+    fn save(&self, _name: &str) -> Option<PathBuf> {
+        None
+    }
 }
 
 /// Answers one path to whatever is asked: a scenario's file, or a test's.

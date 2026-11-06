@@ -5,9 +5,10 @@ use std::sync::Arc;
 
 use engine::app_info::METADATA;
 use platform::autostart::Autostart;
+use platform::dialog::FileDialog;
 use platform::shortcuts::Shortcuts;
 use platform::tray::{NoTray, Picture, Tray};
-use ui::inputs::Inbox;
+use ui::inputs::{Inbox, Input};
 use ui::services::preferences::Preferences;
 use ui::services::settings::Settings;
 
@@ -22,7 +23,12 @@ pub(crate) fn start(preferences: &Preferences, inbox: &Inbox) -> ui::Desktop {
         shortcuts: take_shortcuts(inbox.clone()),
         autostart: autostart(),
         notifier: platform::notify::system(METADATA.name, IDENTIFIER),
+        dialog: dialog(inbox.clone()),
     }
+}
+
+fn dialog(inbox: Inbox) -> Arc<dyn FileDialog + Send + Sync> {
+    platform::dialog::system(move || inbox.post(Input::NoFileDialog))
 }
 
 fn start_tray(preferences: &Preferences, inbox: Inbox) -> Box<dyn Tray> {

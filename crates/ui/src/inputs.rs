@@ -12,6 +12,8 @@ pub enum Input {
     Instance(platform::instance::Message),
     Tray(platform::tray::Asked),
     Shortcut(platform::shortcuts::Global),
+    /// A dialog was asked of a desktop that has none.
+    NoFileDialog,
 }
 
 /// Wakes the interface from any thread, once its context exists.

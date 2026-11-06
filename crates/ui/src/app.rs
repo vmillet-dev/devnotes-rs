@@ -6,6 +6,7 @@ use std::sync::Arc;
 use crossbeam_channel::Receiver;
 use engine::{EngineEvent, Paths};
 use platform::autostart::{Autostart, NoAutostart};
+use platform::dialog::{FileDialog, NoDialog};
 use platform::instance::Message;
 use platform::notify::{NoNotifier, Notifier};
 use platform::shortcuts::{Global, NoShortcuts, Shortcuts};
@@ -49,6 +50,7 @@ pub struct Desktop {
     pub shortcuts: Box<dyn Shortcuts>,
     pub autostart: Arc<dyn Autostart + Send + Sync>,
     pub notifier: Arc<dyn Notifier + Send + Sync>,
+    pub dialog: Arc<dyn FileDialog + Send + Sync>,
 }
 
 impl Default for Desktop {
@@ -58,6 +60,7 @@ impl Default for Desktop {
             shortcuts: Box::new(NoShortcuts),
             autostart: Arc::new(NoAutostart),
             notifier: Arc::new(NoNotifier),
+            dialog: Arc::new(NoDialog),
         }
     }
 }
@@ -88,6 +91,7 @@ impl DevNotesApp {
         state.global_keys = GlobalKeys::with(startup.desktop.shortcuts);
         state.autostart = AutostartState::with(startup.desktop.autostart);
         state.notifier = startup.desktop.notifier;
+        state.dialog = startup.desktop.dialog;
         state.apply_look(&cc.egui_ctx);
         // The grammars take a few hundred milliseconds to load: never on the frame, which is
         // drawn again once they are in.
@@ -314,6 +318,10 @@ impl eframe::App for DevNotesApp {
                 },
                 Input::Tray(asked) => self.asked_by_tray(asked, ctx),
                 Input::Shortcut(key) => self.asked_by_a_key(key, ctx),
+                Input::NoFileDialog => {
+                    let said = i18n::Message::new(i18n::keys::errors::NO_FILE_DIALOG);
+                    self.state.errors.notify(said);
+                }
                 Input::Engine(EngineEvent::IndexProgress { done, total }) => {
                     self.state.gate.index_progress(done, total);
                 }
@@ -679,6 +687,17 @@ mod tests {
         left_in_the_plain_copies(directory.path());
         eframe::App::on_exit(harness.state_mut());
         assert!(!copies.exists());
+    }
+
+    #[test]
+    fn a_desktop_with_no_file_dialog_says_so() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut harness, _, posted) = with_a_tray(directory.path());
+
+        posted.post(Input::NoFileDialog);
+        settle(&mut harness);
+
+        assert!(present(&harness, "error-banner"));
     }
 
     #[test]

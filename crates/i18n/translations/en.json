@@ -602,6 +602,7 @@
       "unreadable": "This file reads neither as a CSV with its header nor as a JSON array of objects.",
       "empty": "This file holds no row of data."
     },
+    "noFileDialog": "This desktop has no file dialog to show: xdg-desktop-portal is missing.",
     "calcFailed": "The sheet could not be computed.",
     "folderMoveFailed": "The folder could not be moved."
   },
