@@ -14,7 +14,6 @@ use super::Action;
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
 use crate::state::http::console::Filter;
-use crate::state::http::tabs::Tab;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::theme::tokens::Palette;
@@ -47,10 +46,17 @@ fn counted(state: &AppState, key: &str, filter: Filter) -> u32 {
     u32::try_from(held).unwrap_or(u32::MAX)
 }
 
+/// Whose console it is: a tab's, or a run's under a key of its own.
+#[derive(Clone, Copy)]
+pub(super) struct Of<'a> {
+    pub(super) key: &'a str,
+    pub(super) name: &'a str,
+}
+
 pub(super) fn show(
     ui: &mut Ui,
     state: &AppState,
-    (tab, view): (&Tab, &mut ConsoleView),
+    (of, view): (Of<'_>, &mut ConsoleView),
     actions: &mut Actions,
 ) {
     let p = palette(ui.ctx());
@@ -59,13 +65,13 @@ pub(super) fn show(
     ui.painter()
         .hline(pane.x_range(), pane.top(), Stroke::new(1.0, p.line_soft));
     if state.http.console().is_open() {
-        unfolded(ui, state, (tab, view), actions);
+        unfolded(ui, state, (of, view), actions);
     } else {
-        folded(ui, state, tab, actions);
+        folded(ui, state, of, actions);
     }
 }
 
-fn folded(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
+fn folded(ui: &mut Ui, state: &AppState, of: Of<'_>, actions: &mut Actions) {
     let p = palette(ui.ctx());
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
@@ -82,14 +88,14 @@ fn folded(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
     let traffic = i18n::translate(
         language,
         keys::http::console::TRAFFIC,
-        &[("count", counted(state, &tab.key, Filter::Traffic).into())],
+        &[("count", counted(state, of.key, Filter::Traffic).into())],
     );
     let logs = i18n::translate(
         language,
         keys::http::console::LOGS,
-        &[("count", counted(state, &tab.key, Filter::Logs).into())],
+        &[("count", counted(state, of.key, Filter::Logs).into())],
     );
-    let errors = counted(state, &tab.key, Filter::Errors);
+    let errors = counted(state, of.key, Filter::Errors);
     let mut job = LayoutJob::default();
     let font = FontId::new(SIZE, FontFamily::Proportional);
     let title = tr(keys::http::console::TITLE);
@@ -118,7 +124,7 @@ fn folded(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
 fn unfolded(
     ui: &mut Ui,
     state: &AppState,
-    (tab, view): (&Tab, &mut ConsoleView),
+    (of, view): (Of<'_>, &mut ConsoleView),
     actions: &mut Actions,
 ) {
     let p = palette(ui.ctx());
@@ -128,8 +134,8 @@ fn unfolded(
         .show(ui, |ui| {
             ui.set_min_size(ui.available_size());
             ui.spacing_mut().item_spacing.y = 6.0;
-            head(ui, state, (tab, view), actions);
-            let rows = rows_of(state, tab, view.filter);
+            head(ui, state, (of, view), actions);
+            let rows = rows_of(state, of.key, view.filter);
             if rows.is_empty() {
                 let words = i18n::translate(language, keys::http::console::EMPTY, &[]);
                 let words = egui::RichText::new(words).size(12.5).color(p.text_2);
@@ -138,15 +144,15 @@ fn unfolded(
             }
             ui.spacing_mut().item_spacing.y = 0.0;
             virtual_list(ui, "http-console-lines", ROW, rows.len(), |ui, at| {
-                row(ui, rows[at], tab, language);
+                row(ui, rows[at], of, language);
             });
         });
 }
 
 /// Each event, and under a request the row of its headers.
-fn rows_of<'a>(state: &'a AppState, tab: &Tab, filter: Filter) -> Vec<(&'a ConsoleEvent, bool)> {
+fn rows_of<'a>(state: &'a AppState, key: &str, filter: Filter) -> Vec<(&'a ConsoleEvent, bool)> {
     let mut rows = Vec::new();
-    for event in state.http.console().lines_of(&tab.key) {
+    for event in state.http.console().lines_of(key) {
         if !filter.holds(&event.line) {
             continue;
         }
@@ -161,7 +167,7 @@ fn rows_of<'a>(state: &'a AppState, tab: &Tab, filter: Filter) -> Vec<(&'a Conso
 fn head(
     ui: &mut Ui,
     state: &AppState,
-    (tab, view): (&Tab, &mut ConsoleView),
+    (of, view): (Of<'_>, &mut ConsoleView),
     actions: &mut Actions,
 ) {
     let p = palette(ui.ctx());
@@ -179,7 +185,7 @@ fn head(
             let words = format!(
                 "{} {}",
                 tr(filter_name(filter)),
-                counted(state, &tab.key, filter)
+                counted(state, of.key, filter)
             );
             let id = format!("http-console-filter-{filter:?}").to_lowercase();
             if Button::new(&words, &id)
@@ -204,7 +210,7 @@ fn head(
                 .show(ui)
                 .clicked()
             {
-                actions.push(Asked::Http(Action::ClearConsole(tab.key.clone())));
+                actions.push(Asked::Http(Action::ClearConsole(of.key.to_owned())));
             }
             let masked = egui::RichText::new(tr(keys::http::console::MASKED))
                 .size(11.5)
@@ -308,7 +314,7 @@ fn by_of(line: &ConsoleLine) -> Option<&ConsoleOrigin> {
 }
 
 /// Who said a line: the request, or a script's kind and holder.
-fn origin(event: &ConsoleEvent, tab: &Tab, language: i18n::Language) -> String {
+fn origin(event: &ConsoleEvent, of: Of<'_>, language: i18n::Language) -> String {
     use engine::http::scripts::model::ScriptKind;
     use keys::http::console::origins;
     let line = &event.line;
@@ -326,7 +332,7 @@ fn origin(event: &ConsoleEvent, tab: &Tab, language: i18n::Language) -> String {
         return i18n::translate(language, key, &[("name", by.name.as_str().into())]);
     }
     let name = if event.request.is_empty() {
-        tab.draft.name.as_str()
+        of.name
     } else {
         event.request.as_str()
     };
@@ -357,7 +363,7 @@ fn mark(ui: &Ui, rect: Rect, line: &ConsoleLine, ink: Color32) {
     }
 }
 
-fn row(ui: &mut Ui, (event, headers): (&ConsoleEvent, bool), tab: &Tab, language: i18n::Language) {
+fn row(ui: &mut Ui, (event, headers): (&ConsoleEvent, bool), of: Of<'_>, language: i18n::Language) {
     let p = palette(ui.ctx());
     let size = Vec2::new(ui.available_width(), ROW);
     let (rect, response) = ui.allocate_exact_size(size, Sense::hover());
@@ -405,7 +411,7 @@ fn row(ui: &mut Ui, (event, headers): (&ConsoleEvent, bool), tab: &Tab, language
     left += 20.0;
     let mut right = rect.right();
     if !headers {
-        let from = origin(event, tab, language);
+        let from = origin(event, of, language);
         let galley = widgets::text(ui, &from, 11.0, 400.0, FontFamily::Proportional, p.text_2);
         right -= galley.size().x + 12.0;
         let at = pos2(

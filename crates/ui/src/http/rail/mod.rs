@@ -464,6 +464,7 @@ const RENAME: &str = "http-node-rename";
 const DUPLICATE: &str = "http-node-duplicate";
 const DELETE: &str = "http-node-delete";
 const SETTINGS: &str = "http-node-settings";
+const RUN: &str = "http-node-run";
 
 /// A request holds nothing: it is renamed, copied or deleted. The three kinds of request sit
 /// behind one entry, as a card's priorities do.
@@ -484,6 +485,7 @@ fn node_menu(
         tr(actions::DUPLICATE),
         tr(actions::DELETE),
         tr(actions::SETTINGS),
+        tr(actions::RUN),
     ];
     let kinds = [
         MenuItem::new(&words[0], NEW_HTTP),
@@ -499,6 +501,7 @@ fn node_menu(
         let items = [
             MenuItem::new(&words[3], "http-node-new").children(&kinds),
             MenuItem::new(&words[4], NEW_FOLDER),
+            MenuItem::new(&words[9], RUN),
             MenuItem::new(&words[8], SETTINGS),
             rename,
             duplicate,
@@ -515,6 +518,7 @@ fn node_menu(
         DUPLICATE,
         DELETE,
         SETTINGS,
+        RUN,
     ]
     .into_iter()
     .find(|known| *known == chosen)
@@ -536,6 +540,17 @@ fn on_menu(
         SETTINGS => {
             let container = crate::state::http::containers::Container::of(row);
             return push(actions, Action::OpenSettings(container));
+        }
+        RUN => {
+            let target = crate::state::http::runner::Target {
+                item: HttpItem {
+                    kind: row.kind,
+                    id: row.id.clone(),
+                },
+                name: row.name.clone(),
+            };
+            let asked = crate::state::http::runner::Asked::Open(target);
+            return push(actions, Action::Runner(asked));
         }
         DUPLICATE => {
             let name = i18n::translate(

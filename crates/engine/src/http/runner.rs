@@ -210,6 +210,41 @@ impl RunResult {
     }
 }
 
+/// What a report sums up: the requests that failed of those that ended, the tests that passed
+/// of those that ran.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RunSummary {
+    pub failures: u32,
+    pub requests: u32,
+    pub passed: u32,
+    pub tests: u32,
+}
+
+impl RunSummary {
+    #[must_use]
+    pub fn of(results: &[RunResult]) -> Self {
+        let count = |held: usize| u32::try_from(held).unwrap_or(u32::MAX);
+        let ran = || {
+            results
+                .iter()
+                .flat_map(|result| &result.tests)
+                .filter(|test| !test.skipped)
+        };
+        Self {
+            failures: count(results.iter().filter(|result| result.failed()).count()),
+            requests: count(results.len()),
+            passed: count(ran().filter(|test| test.passed).count()),
+            tests: count(ran().count()),
+        }
+    }
+}
+
+/// The run a send belongs to: its sends are named `run:<id>#<iteration>.<step>`.
+#[must_use]
+pub fn run_of(send_id: &str) -> Option<&str> {
+    send_id.strip_prefix("run:")?.split('#').next()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
@@ -629,5 +664,11 @@ mod tests {
             }
             .failed()
         );
+    }
+
+    #[test]
+    fn a_send_names_the_run_it_belongs_to() {
+        assert_eq!(run_of("run:7#0.3"), Some("7"));
+        assert_eq!(run_of("send-7"), None);
     }
 }

@@ -5082,6 +5082,14 @@ goes to a file whole, from Rust and not from what is shown, or to a note: `http:
 where, `state::http::kept` holds what is on its way, and the core masks what the request sent
 before the dialog even opens (`http_response_note`). Generated code takes the same dialog.
 
+`http::runner` is the area's fourth page: a collection or a folder run, over iterations or the rows
+of a data file. `state::http::runner` holds how, in which order and the report of the last run,
+for the session; Rust runs and says its steps as `EngineEvent::Run`, and the order follows the
+tree, kept with the collection (`http_run_order`). Its report is a list of lines of one height,
+drawn in view alone, summed up by `RunSummary`; the kept answer last unfolded reads beneath it. A
+run's sends are named `run:<id>#…` (`runner::run_of`), and so its console has a key of its own,
+forgotten when the next run starts.
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

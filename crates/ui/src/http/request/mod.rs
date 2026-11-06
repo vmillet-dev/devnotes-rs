@@ -485,7 +485,6 @@ fn define_words(state: &AppState) -> String {
 
 /// Under a protected environment, what could change something waits for this yes.
 fn protected(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
-    let p = palette(ui.ctx());
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let name = state
@@ -515,32 +514,51 @@ fn protected(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
             tr(keys::http::environments::SEND_ANYWAY),
         )
     };
+    let cancel = tr(keys::http::rail::CANCEL);
+    let ids = (
+        "http-protected-confirm",
+        "http-protected-send",
+        "http-protected-cancel",
+    );
+    match protected_question(ui, (&question, &go, &cancel), ids) {
+        Some(true) => actions.push(Asked::Http(Action::SendAnyway(tab.key.clone()))),
+        Some(false) => actions.push(Asked::Http(Action::StopAsking)),
+        None => {}
+    }
+}
+
+/// `true` on the go, `false` on the way back. A send's question and a run's read alike.
+pub(super) fn protected_question(
+    ui: &mut Ui,
+    (question, go, cancel): (&str, &str, &str),
+    (said_id, go_id, cancel_id): (&str, &str, &str),
+) -> Option<bool> {
+    let p = palette(ui.ctx());
+    let mut chosen = None;
     egui::Frame::new()
         .fill(p.red.gamma_multiply(0.12))
         .stroke(Stroke::new(1.0, p.red.gamma_multiply(0.5)))
         .corner_radius(CornerRadius::same(8))
         .inner_margin(Margin::symmetric(12, 8))
         .show(ui, |ui| {
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing.x = 10.0;
                 let words = egui::RichText::new(question).size(12.5).color(p.text_0);
                 let said = ui.add(egui::Label::new(words));
-                widgets::address(ui, &said, "http-protected-confirm");
-                if Button::new(&go, "http-protected-send")
+                widgets::address(ui, &said, said_id);
+                if Button::new(go, go_id)
                     .kind(widgets::Kind::Destructive)
                     .show(ui)
                     .clicked()
                 {
-                    actions.push(Asked::Http(Action::SendAnyway(tab.key.clone())));
+                    chosen = Some(true);
                 }
-                if Button::new(&tr(keys::http::rail::CANCEL), "http-protected-cancel")
-                    .show(ui)
-                    .clicked()
-                {
-                    actions.push(Asked::Http(Action::StopAsking));
+                if Button::new(cancel, cancel_id).show(ui).clicked() {
+                    chosen = Some(false);
                 }
             });
         });
+    chosen
 }
 
 fn section_tabs(ui: &mut Ui, state: &AppState, tab: &Tab, view: &mut EditorView) {

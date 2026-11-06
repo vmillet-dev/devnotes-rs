@@ -13,6 +13,7 @@ mod history;
 mod rail;
 mod request;
 mod response;
+mod runner;
 mod save_as_note;
 mod save_request;
 mod scripts;
@@ -135,6 +136,7 @@ pub enum Action {
         text: String,
     },
     ClearSocketLog(String),
+    Runner(crate::state::http::runner::Asked),
     /// Sent all the same, under a protected environment.
     SendAnyway(String),
     StopAsking,
@@ -172,6 +174,7 @@ pub struct View {
     response: response::ResponseView,
     socket_log: socket_log::LogView,
     console: console::ConsoleView,
+    runner: runner::RunnerView,
     note_form: Option<save_as_note::NoteForm>,
     /// How tall the request's content was last drawn: what an automatic share follows.
     editor_height: f32,
@@ -203,6 +206,10 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         Page::History => {
             let mut page = ui.new_child(UiBuilder::new().max_rect(rest));
             history::show(&mut page, rest, state, &mut view.history, actions);
+        }
+        Page::Runner => {
+            let mut page = ui.new_child(UiBuilder::new().max_rect(rest));
+            runner::show(&mut page, rest, state, &mut view.runner, actions);
         }
         Page::Requests => requests(ui, rest, state, view, actions),
     }
@@ -321,7 +328,11 @@ fn split(
     response::show(&mut answer, state, (tab, &mut view.response), actions);
     let mut lines = ui.new_child(UiBuilder::new().max_rect(below));
     lines.set_clip_rect(below);
-    console::show(&mut lines, state, (tab, &mut view.console), actions);
+    let of = console::Of {
+        key: &tab.key,
+        name: &tab.draft.name,
+    };
+    console::show(&mut lines, state, (of, &mut view.console), actions);
 }
 
 /// `upper` points of `total`, as tenths of a percent within the share's bounds.
@@ -395,6 +406,8 @@ mod environments_tests;
 mod history_tests;
 #[cfg(test)]
 mod kept_tests;
+#[cfg(test)]
+mod runner_tests;
 #[cfg(test)]
 mod scripts_tests;
 #[cfg(test)]

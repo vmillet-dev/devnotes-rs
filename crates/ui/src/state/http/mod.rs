@@ -11,6 +11,7 @@ pub mod environments;
 pub mod history;
 pub mod kept;
 pub mod moves;
+pub mod runner;
 pub mod send;
 pub mod sockets;
 pub mod tabs;
@@ -186,6 +187,7 @@ pub enum Page {
     Requests,
     Environments,
     History,
+    Runner,
 }
 
 /// A deletion asked: what it takes with it, read before the question is shown.
@@ -234,6 +236,7 @@ pub struct HttpState {
     page: Page,
     cookies: cookies::CookieJar,
     console: console::Console,
+    runner: runner::Runner,
     kept: kept::Kept,
     kept_answer: kept::KeptAnswer,
     script_focus: Option<ScriptFocus>,
@@ -287,6 +290,14 @@ impl HttpState {
         self.forget_closed(backend);
         self.sockets.update();
         self.kept_answer = self.kept.update(backend, errors);
+        let empty = HttpTree::default();
+        let read = (
+            self.tree.value().unwrap_or(&empty),
+            self.tree.answered().copied(),
+        );
+        if self.runner.update(backend, read, errors) {
+            self.revision.bump();
+        }
         for (old, tab) in &answered.rekeyed {
             self.sends.rekey(old, &tab.key);
             self.sockets.rekey(old, &tab.key);
@@ -555,8 +566,40 @@ impl HttpState {
 
     /// A line of a send still known: of a tab closed since, there is nowhere to say it.
     pub fn receive_console(&mut self, event: engine::http::console::ConsoleEvent) {
-        if let Some(key) = self.sends.key_of(&event.id).map(str::to_owned) {
+        let run = api::http::run_of(&event.id).map(|id| format!("run:{id}"));
+        let key = run.or_else(|| self.sends.key_of(&event.id).map(str::to_owned));
+        if let Some(key) = key {
             self.console.take(&key, event);
+        }
+    }
+
+    pub fn runner(&self) -> &runner::Runner {
+        &self.runner
+    }
+
+    pub fn receive_run(&mut self, event: engine::http::runner::RunEvent) {
+        self.runner.receive(event);
+    }
+
+    /// A run started forgets the console of the one before.
+    pub fn ask_runner(
+        &mut self,
+        backend: &Backend,
+        dialog: &std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
+        asked: runner::Asked,
+    ) {
+        if matches!(asked, runner::Asked::Open(_)) {
+            self.show_page(backend, Page::Runner);
+        }
+        let before = self.runner.console_key();
+        let empty = HttpTree::default();
+        let around = runner::Around {
+            tree: self.tree.value().unwrap_or(&empty),
+            environment: self.environments.active(),
+        };
+        self.runner.ask((backend, dialog), asked, around);
+        if let Some(key) = before.filter(|key| Some(key) != self.runner.console_key().as_ref()) {
+            self.console.clear(&key);
         }
     }
 
