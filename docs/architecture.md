@@ -7075,7 +7075,8 @@ changes the parameters of the view, so the answer in flight is dropped as stale.
 | 30 000 stress, unlocked       | 1 691       | 1 347   | 254           | < 0.2 %  |
 | Stress, canvas scrolled       | 1 775       | 1 426   | 254           | < 0.2 %  |
 
-The budgets are ≤ 350 and ≤ 900 MB resident. The same process without a window holds 31 MiB at the
+The budgets are ≤ 350 and ≤ 900 MB resident, read without the GPU driver, which DevNotes does not
+ship (plan § 6.2): `app::perf` prints that figure. The same process without a window holds 31 MiB at the
 gate and 360 unlocked on the realistic corpus (198 private): the ~220 MiB of the gate are the GPU
 driver's, and the rest grows with the text, as the index keeps each note and its folded copy in
 clear, and SQLite's mapped pages count in the working set.

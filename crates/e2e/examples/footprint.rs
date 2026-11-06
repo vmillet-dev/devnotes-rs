@@ -11,6 +11,7 @@
 //! `new` creates the library on a blank profile; otherwise the profile is unlocked.
 
 use std::path::PathBuf;
+#[cfg(windows)]
 use std::process::Command;
 use std::time::{Duration, Instant};
 

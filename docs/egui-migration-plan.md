@@ -1422,6 +1422,11 @@ Windows 11 et Ubuntu.
 | Mémoire résidente                                               | ≤ 350 Mo                      | ≤ 900 Mo |                                              |
 | CPU au repos (fenêtre visible, rien ne bouge)                   | ~0 %                          | ~0 %     |                                              |
 
+La mémoire résidente se compte **hors pilote GPU** (décision du 6 novembre 2026) : il vient avec la
+carte ou le système, DevNotes ne l'embarque pas, et son poids change d'une machine à l'autre. Elle
+se lit sur le banc d'interface, sans fenêtre ; `wgpu` et ce qu'il alloue dans la fenêtre réelle
+restent à part, dans le tableau du processus.
+
 ### 6.3 Outils de mesure
 
 - `criterion` (existant) pour le cœur et l'index : nouveaux groupes `index_build`, `index_query`

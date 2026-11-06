@@ -91,6 +91,37 @@ fn once(name: &str, spent: Duration) {
     println!("| {name} | 1 | {:.0} | | | |", spent.as_secs_f64() * 1000.0);
 }
 
+/// The process's resident memory, in MiB: without a window, no GPU driver in it.
+#[cfg(windows)]
+fn resident() -> f64 {
+    let script = format!("(Get-Process -Id {}).WorkingSet64", std::process::id());
+    let output = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-Command", &script])
+        .output()
+        .unwrap();
+    let bytes: f64 = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .parse()
+        .unwrap();
+    bytes / 1_048_576.0
+}
+
+#[cfg(not(windows))]
+fn resident() -> f64 {
+    let status = std::fs::read_to_string("/proc/self/status").unwrap();
+    let kilobytes: f64 = status
+        .lines()
+        .find_map(|line| line.strip_prefix("VmRSS:"))
+        .and_then(|rest| rest.split_whitespace().next())
+        .and_then(|number| number.parse().ok())
+        .unwrap();
+    kilobytes / 1024.0
+}
+
+fn memory(stage: &str) {
+    println!("| resident, {stage} | 1 | {:.0} MiB | | | |", resident());
+}
+
 fn launch(profile: &Path) -> Window {
     text::highlight::warm();
     let startup = startup(profile);
@@ -451,13 +482,16 @@ fn journeys() {
     let mut window = launch(&profile);
     println!("| Journey | Samples | p50 ms | p95 ms | p99 ms | max ms |");
     println!("| --- | --- | --- | --- | --- | --- |");
+    memory("at the gate");
     unlock(&mut window);
+    memory("unlocked");
     let mut idle = Samples::default();
     for _ in 0..120 {
         idle.0.push(frame(&mut window));
     }
     idle.report("nothing moves");
     scroll_canvas(&mut window);
+    memory("canvas scrolled");
     typing_in_search(&mut window);
     search(&mut window);
     open_ten_notes(&mut window);
