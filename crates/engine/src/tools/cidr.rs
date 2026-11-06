@@ -2,10 +2,10 @@
 //! with it, a plan placing needs in the block and a list brought to its fewest blocks.
 //! Both families are computed on `u128`, an IPv4 address in its low 32 bits.
 
-mod forms;
-mod masks;
-mod plan;
-mod summary;
+pub mod forms;
+pub mod masks;
+pub mod plan;
+pub mod summary;
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;

@@ -122,9 +122,12 @@ fn tag_manager() {
         app.click("tag-confirm-apply");
         app.eventually("urgent is gone", |tree| !listed(tree, "urgent"));
         app.click("tag-manager-close");
-        app.eventually("every note stays", |tree| {
-            tree.count("note-card") == CARDS && !tree.has("tag-manager-close")
+        app.eventually("the manager is closed", |tree| {
+            !tree.has("tag-manager-close")
         });
+        // The rail takes room from the cards: how many are drawn beside it depends on the window.
+        app.click("facets-toggle");
+        app.eventually("every note stays", |tree| tree.count("note-card") == CARDS);
     });
 
     app.quit();

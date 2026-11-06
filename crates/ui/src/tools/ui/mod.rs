@@ -6,12 +6,14 @@ pub mod note_picker;
 mod output_row;
 mod reference_table;
 mod result_row;
+mod text_table;
 
 pub use copy_value::CopyValue;
 pub use note_import::{note_import, note_import_into};
 pub use output_row::OutputRow;
 pub use reference_table::{Cell, Column, Group, ReferenceRow, ReferenceTable};
 pub use result_row::{ResultRow, result_rows};
+pub use text_table::{TextColumn, text_table};
 
 use egui::{
     Color32, CornerRadius, FontFamily, FontId, Id, Key, Margin, Modifiers, Response, Role, Sense,

@@ -38,6 +38,7 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
     /// `selected` is changed by a click on another segment; the response says so.
     pub fn show(self, ui: &mut Ui, selected: &mut T) -> Response {
         let p = palette(ui.ctx());
+        let width = self.width(ui);
         egui::Frame::new()
             .fill(p.bg_2)
             .stroke(Stroke::new(1.0, p.line_soft))
@@ -45,7 +46,9 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
             .inner_margin(Margin::ZERO)
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing.x = 0.0;
-                ui.horizontal(|ui| {
+                // In its order at the end of a row too: `horizontal` follows the parent's way.
+                let reading = egui::Layout::left_to_right(egui::Align::Center);
+                ui.allocate_ui_with_layout(Vec2::new(width, 0.0), reading, |ui| {
                     let mut changed = None;
                     for (index, (value, label)) in self.options.iter().enumerate() {
                         let id = format!("{}-{index}", self.author_id);

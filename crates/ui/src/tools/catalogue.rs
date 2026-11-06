@@ -4,6 +4,8 @@
 mod ascii;
 mod base64;
 mod case;
+mod checks;
+mod cidr;
 mod cron;
 mod dates;
 mod diff;
@@ -12,7 +14,10 @@ mod jwt;
 mod line_breaks;
 mod lorem;
 mod password;
+mod permissions;
+mod ports;
 mod reference;
+mod sizes;
 mod text_stats;
 mod url_codec;
 mod zones;
@@ -438,7 +443,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "byte", "octet", "kb", "mb", "gb", "kib", "mib", "gib", "bit", "mbit", "size",
         ],
         from_note: &[],
-        make: coming,
+        make: sizes::make,
     },
     ToolEntry {
         id: "permissions",
@@ -447,7 +452,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "chmod", "umask", "rwx", "octal", "setuid", "setgid", "sticky", "ls -l",
         ],
         from_note: &[],
-        make: coming,
+        make: permissions::make,
     },
     ToolEntry {
         id: "checks",
@@ -467,7 +472,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "mastercard",
         ],
         from_note: &[],
-        make: coming,
+        make: checks::make,
     },
     ToolEntry {
         id: "cidr",
@@ -493,7 +498,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "reverse dns",
         ],
         from_note: &[],
-        make: coming,
+        make: cidr::make,
     },
     reference(
         "http-status",
@@ -542,7 +547,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "firewall",
             "pare-feu",
         ],
-        coming,
+        ports::make,
     ),
     reference(
         "signals",
@@ -605,6 +610,8 @@ pub static TOOLS: [ToolEntry; 32] = [
     ),
 ];
 
+#[cfg(test)]
+mod calc_tests;
 #[cfg(test)]
 mod encoding_tests;
 #[cfg(test)]
