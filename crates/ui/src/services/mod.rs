@@ -9,3 +9,4 @@ pub mod settings;
 pub mod shortcuts;
 pub mod status;
 pub mod time;
+pub mod updates;

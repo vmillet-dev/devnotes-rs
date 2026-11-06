@@ -49,6 +49,7 @@ pub enum Action {
     OpenHelp(about_menu::Panel),
     CloseHelp,
     OpenLink(String),
+    Update(crate::banners::update_prompt::Ask),
 }
 
 /// What only the bar's drawing sees.
@@ -60,6 +61,7 @@ pub struct View {
     libraries: libraries::View,
     preferences: preferences::View,
     about: about_menu::View,
+    update: crate::banners::update_prompt::UpdateView,
     prompt: PromptView,
     /// ⚠️ Holds a phrase until `AppState::apply` takes it, the same frame.
     pub answer: Option<Answer>,
@@ -156,6 +158,7 @@ pub(crate) fn dialogs(
     view: &mut View,
     actions: &mut Actions,
 ) {
+    crate::banners::update_prompt::show(ctx, state, &mut view.update, actions);
     about_menu::panels(ctx, state, &mut view.about, actions);
     libraries::show(ctx, state, &mut view.libraries, actions);
     preferences::show(ctx, state, &mut view.preferences, actions);

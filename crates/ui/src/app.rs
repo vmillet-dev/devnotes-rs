@@ -65,6 +65,7 @@ impl DevNotesApp {
         });
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
         state.gate.ask(&backend);
+        state.updates.check(&backend, true);
         Ok(Self {
             backend,
             state,
@@ -318,6 +319,12 @@ mod captures;
 
 #[cfg(test)]
 mod library_panel_tests;
+
+#[cfg(test)]
+mod update_prompt_tests;
+
+#[cfg(test)]
+mod about_link_tests;
 
 #[cfg(test)]
 mod tests {

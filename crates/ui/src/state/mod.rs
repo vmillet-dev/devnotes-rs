@@ -135,6 +135,7 @@ pub struct AppState {
     pub backups: backups::BackupsState,
     /// Not the library's: it outlives a switch, and is read at the gate too.
     pub help: help::HelpState,
+    pub updates: crate::services::updates::UpdateState,
     /// The bar's menus and what they open: only their drawing reads it (D13).
     pub titlebar_view: crate::titlebar::View,
     /// The modals the bar's menus open, in the order they are drawn.
@@ -197,6 +198,7 @@ impl AppState {
             security: security::SecurityState::default(),
             backups: backups::BackupsState::default(),
             help: help::HelpState::default(),
+            updates: crate::services::updates::UpdateState::default(),
             titlebar_view: crate::titlebar::View::default(),
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
@@ -220,6 +222,10 @@ impl AppState {
     pub fn update(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.dialogs.begin_frame(ctx);
         self.help.update();
+        self.updates.update(&self.settings, &mut self.errors);
+        let offered = self.updates.offered().is_some();
+        let prompt = crate::banners::update_prompt::id();
+        self.dialogs.follow(ctx, Layer::Update, prompt, offered);
         if self
             .gate
             .update(backend, &mut self.status, &mut self.errors)
@@ -756,6 +762,26 @@ impl AppState {
                 self.dialogs.close(ctx, crate::titlebar::about_menu::id());
             }
             Menu::OpenLink(url) => self.open_link(&url),
+            Menu::Update(asked) => self.apply_update(asked, backend),
+        }
+    }
+
+    fn apply_update(&mut self, asked: crate::banners::update_prompt::Ask, backend: &Backend) {
+        use crate::banners::update_prompt::Ask;
+        match asked {
+            Ask::Check => self.updates.check(backend, false),
+            Ask::Install => {
+                self.ask_switch(
+                    libraries::Goal::Install,
+                    http::leave::Reason::Update,
+                    backend,
+                );
+            }
+            Ask::Later { skip } => {
+                if self.updates.dismiss(skip, &mut self.settings) {
+                    self.save_settings(backend);
+                }
+            }
         }
     }
 
@@ -883,6 +909,7 @@ impl AppState {
             libraries::Goal::Restore(id) => {
                 self.gate.leave_for_copy(api::backups::restore(backend, id));
             }
+            libraries::Goal::Install => self.updates.install(backend),
         }
     }
 

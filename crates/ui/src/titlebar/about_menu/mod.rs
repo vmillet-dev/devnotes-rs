@@ -14,6 +14,7 @@ use i18n::{Message, keys};
 
 use super::{Action, Tone};
 use crate::action::{Action as Asked, Actions};
+use crate::banners::update_prompt::Ask;
 use crate::state::AppState;
 use crate::theme::palette;
 use crate::widgets;
@@ -55,6 +56,9 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
     let label = i18n::translate(state.language, keys::about::MENU_LABEL, &[]);
     let anchor = super::menu_trigger(ui, &label, "about-open");
     view.anchor = Some(anchor.id);
+    if state.updates.has_pending() {
+        dot(ui, &anchor, state, "update-dot");
+    }
     Popup::menu(&anchor)
         .frame(widgets::menu_frame(ui.ctx()))
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
@@ -68,7 +72,11 @@ fn entries(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let about = Message::new(keys::about::OPEN_ABOUT)
         .with("app", METADATA.name)
         .text(state.language);
-    let mut ids = Vec::with_capacity(4);
+    let mut ids = Vec::with_capacity(5);
+    if state.updates.can_check() {
+        ids.push(check_entry(ui, state, actions));
+        super::separator(ui);
+    }
     let mut entry = |ui: &mut Ui, label: &str, id: &str, panel| {
         let row = super::menu_option(ui, label, id, Tone::Plain);
         ids.push(row.id);
@@ -98,6 +106,52 @@ fn entries(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     super::separator(ui);
     entry(ui, &about, "about-about", Panel::About);
     widgets::menu_arrows(ui, &ids);
+}
+
+/// The trigger's says something is waiting; the entry's says what for.
+fn dot(ui: &mut Ui, under: &egui::Response, state: &AppState, author_id: &str) {
+    let p = palette(ui.ctx());
+    let centre = under.rect.right_top() + Vec2::new(-5.0, 6.0);
+    ui.painter().circle_filled(centre, 3.0, p.amber_fill);
+    let waiting = i18n::translate(state.language, keys::about::UPDATE_WAITING, &[]);
+    let rect = Rect::from_center_size(centre, Vec2::splat(6.0));
+    let marked = ui.allocate_rect(rect, Sense::hover());
+    marked.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &waiting));
+    widgets::address(ui, &marked, author_id);
+}
+
+/// « Check for updates », and under it what the check answered: it comes after the click, and
+/// is said without moving the focus.
+fn check_entry(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> Id {
+    use crate::services::updates::CheckState;
+    let language = state.language;
+    let p = palette(ui.ctx());
+    let label = i18n::translate(language, keys::about::CHECK_UPDATES, &[]);
+    let row = super::menu_option(ui, &label, "about-check-updates", Tone::Plain);
+    if state.updates.has_pending() {
+        dot(ui, &row, state, "update-dot-option");
+    }
+    let checking = state.updates.check_state() == CheckState::Checking;
+    if row.clicked() && !checking {
+        actions.push(Asked::Menu(Action::Update(Ask::Check)));
+    }
+    let said = match state.updates.check_state() {
+        CheckState::Idle => None,
+        CheckState::Checking => Some(Message::new(keys::about::CHECKING)),
+        CheckState::UpToDate => {
+            Some(Message::new(keys::about::UP_TO_DATE).with("app", METADATA.name))
+        }
+        CheckState::Failed => Some(Message::new(keys::about::CHECK_FAILED)),
+    };
+    if let Some(said) = said {
+        let words = egui::RichText::new(said.text(language))
+            .size(11.0)
+            .monospace()
+            .color(p.text_2);
+        let status = ui.label(words);
+        widgets::address(ui, &status, "about-check-status");
+    }
+    row.id
 }
 
 pub(super) fn panels(

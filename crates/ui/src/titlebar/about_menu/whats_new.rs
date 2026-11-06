@@ -9,6 +9,7 @@ use i18n::{Key, Language, keys};
 use super::framed;
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
+use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::titlebar::Action;
 use crate::widgets::{self, Button};
@@ -79,7 +80,11 @@ fn release(ui: &mut Ui, release: &ChangelogRelease, language: Language) {
 fn footer(ui: &mut Ui, language: Language, actions: &mut Actions, close: &mut bool) {
     let url = format!("{}/releases", METADATA.repository);
     let label = url.trim_start_matches("https://");
-    if Button::new(label, "news-releases").show(ui).clicked() {
+    if Button::new(label, "news-releases")
+        .icon(Icon::Link)
+        .show(ui)
+        .clicked()
+    {
         actions.push(Asked::Menu(Action::OpenLink(url.clone())));
     }
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

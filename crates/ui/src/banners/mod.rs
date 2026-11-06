@@ -1,6 +1,8 @@
 //! The two bands under the title bar: what failed (red, announced at once) and what was done
 //! (green, announced politely). One of each at a time; each stays until it is dismissed.
 
+pub(crate) mod update_prompt;
+
 use egui::accesskit::Live;
 use egui::{CornerRadius, Margin, Rect, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use i18n::{Language, Message, keys};

@@ -6,6 +6,7 @@ use i18n::{Key, Message, keys};
 
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
+use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::titlebar::Action;
 use crate::widgets::{self, Button};
@@ -60,7 +61,11 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> bool {
     });
     fact(ui, &tr(keys::about::REPOSITORY), |ui| {
         let label = METADATA.repository.trim_start_matches("https://");
-        if Button::new(label, "about-repository").show(ui).clicked() {
+        if Button::new(label, "about-repository")
+            .icon(Icon::Link)
+            .show(ui)
+            .clicked()
+        {
             actions.push(Asked::Menu(Action::OpenLink(
                 METADATA.repository.to_owned(),
             )));
