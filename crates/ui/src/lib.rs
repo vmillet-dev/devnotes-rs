@@ -21,4 +21,4 @@ mod titlebar;
 pub mod tools;
 pub mod widgets;
 
-pub use app::{DevNotesApp, Startup};
+pub use app::{Desktop, DevNotesApp, Startup};

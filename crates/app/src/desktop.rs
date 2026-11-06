@@ -1,13 +1,31 @@
 //! What the binary starts on the desktop before the window: only a desktop answers for it, the
 //! OS checklist's (plan § 8.5).
 
+use std::sync::Arc;
+
+use engine::app_info::METADATA;
+use platform::autostart::Autostart;
 use platform::shortcuts::Shortcuts;
 use platform::tray::{NoTray, Picture, Tray};
+use ui::inputs::Inbox;
 use ui::services::preferences::Preferences;
 use ui::services::settings::Settings;
 
-/// Here, on the thread the window's loop will run on: on Windows that loop serves the icon.
-pub(crate) fn start_tray(preferences: &Preferences, inbox: ui::inputs::Inbox) -> Box<dyn Tray> {
+/// Who sends a toast on Windows.
+const IDENTIFIER: &str = "com.devnotes.app";
+
+/// ⚠️ Here, on the thread the window's loop will run on: on Windows that loop serves the icon
+/// and the keys.
+pub(crate) fn start(preferences: &Preferences, inbox: &Inbox) -> ui::Desktop {
+    ui::Desktop {
+        tray: start_tray(preferences, inbox.clone()),
+        shortcuts: take_shortcuts(inbox.clone()),
+        autostart: autostart(),
+        notifier: platform::notify::system(METADATA.name, IDENTIFIER),
+    }
+}
+
+fn start_tray(preferences: &Preferences, inbox: Inbox) -> Box<dyn Tray> {
     let Ok(icon) = eframe::icon_data::from_png_bytes(include_bytes!("../icons/32x32.png")) else {
         return Box::new(NoTray);
     };
@@ -27,13 +45,24 @@ pub(crate) fn start_tray(preferences: &Preferences, inbox: ui::inputs::Inbox) ->
 }
 
 #[cfg(not(feature = "e2e"))]
-pub(crate) fn take_shortcuts(inbox: ui::inputs::Inbox) -> Box<dyn Shortcuts> {
+fn take_shortcuts(inbox: Inbox) -> Box<dyn Shortcuts> {
     platform::shortcuts::system(move |key| inbox.post(ui::inputs::Input::Shortcut(key)))
 }
 
 /// A scenario presses no key of the machine (`--action` stands for it), and one held by a
 /// person's own copy would open every run on a banner.
 #[cfg(feature = "e2e")]
-pub(crate) fn take_shortcuts(_inbox: ui::inputs::Inbox) -> Box<dyn Shortcuts> {
+fn take_shortcuts(_inbox: Inbox) -> Box<dyn Shortcuts> {
     Box::new(platform::shortcuts::NoShortcuts)
+}
+
+#[cfg(not(feature = "e2e"))]
+fn autostart() -> Arc<dyn Autostart + Send + Sync> {
+    platform::autostart::system()
+}
+
+/// A scenario flips the switch: it must not leave an entry in the session of whoever runs it.
+#[cfg(feature = "e2e")]
+fn autostart() -> Arc<dyn Autostart + Send + Sync> {
+    Arc::new(platform::autostart::NoAutostart)
 }
