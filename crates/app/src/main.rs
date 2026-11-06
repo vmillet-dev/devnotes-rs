@@ -19,7 +19,10 @@ use std::process::ExitCode;
 use engine::app_info::METADATA;
 use platform::instance::{self, Claim, Instance, Message};
 use platform::paths::{self, Locations};
+use platform::tray::{NoTray, Picture, Tray};
 use platform::window::Geometry;
+use ui::services::preferences::Preferences;
+use ui::services::settings::Settings;
 
 /// The identity tool's lists in the source tree, for a binary run from `target/`.
 const DEVELOPMENT_RESOURCES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/resources");
@@ -78,9 +81,7 @@ fn hand_over(profile: &Path, action: Option<String>) -> ExitCode {
 
 fn run(locations: Locations, instance: Instance) -> eframe::Result {
     let restored = platform::window::read(&locations.window);
-    let preferences = ui::services::preferences::Preferences::read(
-        &locations.profile.join(engine::layout::PREFERENCES),
-    );
+    let preferences = Preferences::read(&locations.profile.join(engine::layout::PREFERENCES));
     let (inbox, waker, inputs) = ui::inputs::channel();
     let heard = inbox.clone();
     if let Err(error) =
@@ -88,6 +89,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
     {
         log::warn!("Second launches will not be heard: {error}");
     }
+    let tray = start_tray(&preferences, inbox.clone());
     let startup = ui::Startup {
         paths: engine::Paths {
             profile: locations.profile,
@@ -100,6 +102,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
         inbox,
         waker,
         inputs,
+        tray,
     };
 
     eframe::run_native(
@@ -112,6 +115,26 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
             unpainted::attach(&cc.egui_ctx);
             Ok(Box::new(ui::DevNotesApp::new(cc, startup)?))
         }),
+    )
+}
+
+/// Here, on the thread the window's loop will run on: on Windows that loop serves the icon.
+fn start_tray(preferences: &Preferences, inbox: ui::inputs::Inbox) -> Box<dyn Tray> {
+    let Ok(icon) = eframe::icon_data::from_png_bytes(include_bytes!("../icons/32x32.png")) else {
+        return Box::new(NoTray);
+    };
+    let picture = Picture {
+        rgba: icon.rgba,
+        width: icon.width,
+        height: icon.height,
+    };
+    let language = Settings::read(preferences).locale.language();
+    platform::tray::system(
+        picture,
+        &ui::services::tray::labels(language),
+        move |asked| {
+            inbox.post(ui::inputs::Input::Tray(asked));
+        },
     )
 }
 

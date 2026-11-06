@@ -10,6 +10,7 @@ pub enum Input {
     Engine(EngineEvent),
     /// What a second launch on the same profile asked.
     Instance(platform::instance::Message),
+    Tray(platform::tray::Asked),
 }
 
 /// Wakes the interface from any thread, once its context exists.

@@ -6,6 +6,7 @@ use std::sync::Arc;
 use crossbeam_channel::Receiver;
 use engine::{EngineEvent, Paths};
 use platform::instance::Message;
+use platform::tray::{self, Tray};
 use platform::window::Geometry;
 
 use crate::action::AppAction;
@@ -34,6 +35,7 @@ pub struct Startup {
     pub inbox: Inbox,
     pub waker: Waker,
     pub inputs: Receiver<Input>,
+    pub tray: Box<dyn Tray>,
 }
 
 pub struct DevNotesApp {
@@ -43,6 +45,9 @@ pub struct DevNotesApp {
     window_file: PathBuf,
     geometry: Option<Geometry>,
     shown: bool,
+    tray: Box<dyn Tray>,
+    /// The language of the tray's menu.
+    tray_language: i18n::Language,
 }
 
 impl DevNotesApp {
@@ -68,6 +73,7 @@ impl DevNotesApp {
         drop(api::attachments::sweep_copies(&backend));
         state.gate.ask(&backend);
         state.updates.check(&backend, true);
+        let tray_language = state.language;
         Ok(Self {
             backend,
             state,
@@ -75,6 +81,8 @@ impl DevNotesApp {
             window_file: startup.window_file,
             geometry: startup.geometry,
             shown: false,
+            tray: startup.tray,
+            tray_language,
         })
     }
 
@@ -117,7 +125,49 @@ fn reveal(ctx: &egui::Context) {
     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
 }
 
+/// Whether a person is already looking at the window: the palette then only opens.
+fn in_front(ctx: &egui::Context) -> bool {
+    ctx.input(|input| {
+        let viewport = input.viewport();
+        viewport.focused == Some(true) && viewport.minimized != Some(true)
+    })
+}
+
 impl DevNotesApp {
+    /// Read before the window is brought back: afterwards it is always in front.
+    fn asked_from_outside(&mut self, action: GlobalAction, ctx: &egui::Context) {
+        let action = if action == GlobalAction::Palette && in_front(ctx) {
+            GlobalAction::PaletteHere
+        } else {
+            action
+        };
+        reveal(ctx);
+        self.state.apply(Action::Global(action), ctx, &self.backend);
+    }
+
+    fn asked_by_tray(&mut self, asked: tray::Asked, ctx: &egui::Context) {
+        match asked {
+            tray::Asked::Reveal => reveal(ctx),
+            tray::Asked::NewNote => self.asked_from_outside(GlobalAction::NewNote, ctx),
+            tray::Asked::Capture => self.asked_from_outside(GlobalAction::Capture, ctx),
+            tray::Asked::Palette => self.asked_from_outside(GlobalAction::Palette, ctx),
+            tray::Asked::Quit => {
+                self.state
+                    .apply(Action::Global(GlobalAction::Quit), ctx, &self.backend);
+            }
+        }
+    }
+
+    /// Replaced only when the language moved: a menu rebuilt every frame would close under the
+    /// mouse.
+    fn keep_the_tray_in_the_language(&mut self) {
+        if self.tray_language != self.state.language {
+            self.tray_language = self.state.language;
+            self.tray
+                .set_labels(&crate::services::tray::labels(self.tray_language));
+        }
+    }
+
     fn over_the_area(&mut self, ui: &egui::Ui, actions: &mut Actions) {
         let mut palette = std::mem::take(&mut self.state.palette_view);
         crate::palette::show(ui.ctx(), &self.state, &mut palette, actions);
@@ -188,13 +238,15 @@ impl eframe::App for DevNotesApp {
             self.shown = true;
         }
         theme::focus::track(ctx);
-        for input in self.inputs.try_iter() {
+        let inputs = self.inputs.clone();
+        for input in inputs.try_iter() {
             match input {
                 Input::Instance(Message::Reveal) => reveal(ctx),
                 Input::Instance(Message::Action(name)) => match GlobalAction::named(&name) {
                     Some(action) => self.state.apply(Action::Global(action), ctx, &self.backend),
                     None => log::warn!("A second launch asked for an unknown action"),
                 },
+                Input::Tray(asked) => self.asked_by_tray(asked, ctx),
                 Input::Engine(EngineEvent::IndexProgress { done, total }) => {
                     self.state.gate.index_progress(done, total);
                 }
@@ -207,6 +259,7 @@ impl eframe::App for DevNotesApp {
             }
         }
         self.state.update(ctx, &self.backend);
+        self.keep_the_tray_in_the_language();
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
         if viewport.close_requested() {
@@ -308,6 +361,7 @@ impl eframe::App for DevNotesApp {
         if !self.backend.drain(EXIT_LIMIT) {
             log::warn!("The exit did not wait any longer for the database to finish");
         }
+        self.tray.remove();
         let Some(geometry) = self.geometry else {
             return;
         };
@@ -363,7 +417,116 @@ mod tests {
             inbox,
             waker,
             inputs: receiver,
+            tray: Box::new(tray::NoTray),
         }
+    }
+
+    /// Remembers what the application asked of it.
+    #[derive(Clone, Default)]
+    struct FakeTray {
+        labels: std::sync::Arc<std::sync::Mutex<Vec<tray::Labels>>>,
+        removed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    }
+
+    impl Tray for FakeTray {
+        fn exists(&self) -> bool {
+            !self.removed.load(std::sync::atomic::Ordering::Relaxed)
+        }
+
+        fn set_labels(&self, labels: &tray::Labels) {
+            self.labels.lock().unwrap().push(labels.clone());
+        }
+
+        fn remove(&self) {
+            self.removed
+                .store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    fn with_a_tray(
+        directory: &std::path::Path,
+    ) -> (Harness<'static, DevNotesApp>, FakeTray, Inbox) {
+        let fake = FakeTray::default();
+        let (inbox, waker, receiver) = inputs::channel();
+        let posted = inbox.clone();
+        let mut startup = startup_with(directory, (inbox, waker, receiver));
+        startup.tray = Box::new(fake.clone());
+        let harness = Harness::new_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
+        (harness, fake, posted)
+    }
+
+    fn commands(harness: &Harness<'_, DevNotesApp>) -> Vec<egui::ViewportCommand> {
+        harness
+            .output()
+            .viewport_output
+            .values()
+            .flat_map(|viewport| viewport.commands.clone())
+            .collect()
+    }
+
+    #[test]
+    fn the_tray_brings_the_window_back() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut harness, _, posted) = with_a_tray(directory.path());
+
+        posted.post(Input::Tray(tray::Asked::Reveal));
+        harness.step();
+
+        let commands = commands(&harness);
+        assert!(commands.contains(&egui::ViewportCommand::Visible(true)));
+        assert!(commands.contains(&egui::ViewportCommand::Focus));
+    }
+
+    #[test]
+    fn the_trays_quit_closes_the_window() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut harness, _, posted) = with_a_tray(directory.path());
+
+        posted.post(Input::Tray(tray::Asked::Quit));
+        harness.step();
+
+        assert!(commands(&harness).contains(&egui::ViewportCommand::Close));
+    }
+
+    #[test]
+    fn the_trays_palette_opens_over_the_library() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let ctx = harness.ctx.clone();
+
+        harness
+            .state_mut()
+            .asked_by_tray(tray::Asked::Palette, &ctx);
+        settle(&mut harness);
+
+        assert!(harness.state().state().palette.is_open());
+    }
+
+    #[test]
+    fn the_trays_menu_follows_the_language_on_screen_and_goes_at_the_exit() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut harness, fake, _) = with_a_tray(directory.path());
+        let other = match harness.state().state().language {
+            i18n::Language::Fr => i18n::Language::En,
+            i18n::Language::En => i18n::Language::Fr,
+        };
+
+        harness.step();
+        assert!(
+            fake.labels.lock().unwrap().is_empty(),
+            "built with its menu"
+        );
+
+        harness.state_mut().state.language = other;
+        harness.step();
+        harness.step();
+        assert_eq!(
+            *fake.labels.lock().unwrap(),
+            [crate::services::tray::labels(other)]
+        );
+
+        eframe::App::on_exit(harness.state_mut());
+        assert!(!fake.exists());
     }
 
     fn visible_requests(harness: &Harness<'_, DevNotesApp>) -> usize {
