@@ -266,9 +266,21 @@ impl SizesTool {
                     .with("binary", symbol(gap.binary, language))
                     .with("ratio", digits(&gap.rounded, language))
                     .text(language);
-                let said = hint(ui, &words);
-                address(ui, &said, "sizes-gap");
-                hint(ui, &tr(keys::tools::sizes::CONVENTIONS));
+                let p = palette(ui.ctx());
+                egui::Frame::new()
+                    .fill(p.bg_1)
+                    .stroke(egui::Stroke::new(1.0, p.line_soft))
+                    .corner_radius(egui::CornerRadius::same(10))
+                    .inner_margin(egui::Margin::symmetric(16, 14))
+                    .show(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        ui.spacing_mut().item_spacing.y = 8.0;
+                        let family = egui::FontFamily::Monospace;
+                        let shown = crate::widgets::text(ui, &words, 18.0, 400.0, family, p.text_0);
+                        let said = ui.label(shown);
+                        address(ui, &said, "sizes-gap");
+                        hint(ui, &tr(keys::tools::sizes::CONVENTIONS));
+                    });
             }
             Some(SizesAnswer::Unreadable { at }) => {
                 let words = Message::new(keys::tools::sizes::UNREADABLE)

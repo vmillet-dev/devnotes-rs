@@ -36,6 +36,9 @@ use crate::theme::palette;
 use crate::widgets::editor::Editor;
 use crate::widgets::{self, Button, ChoiceMenu, interact};
 
+/// What sends, said in the button.
+const SEND_KEYS: &str = "Ctrl ↵";
+
 /// A part of the request, a tab of the editor.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) enum Section {
@@ -297,17 +300,19 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
         let sends = tab.draft.kind != RequestKind::Websocket;
         let connect = tr(keys::http::socket::DISCONNECT);
         let send_width = if sends {
-            Button::width(ui, &send) + 10.0
+            let keys = (!sending).then_some(SEND_KEYS);
+            Button::tall_width(ui, &send, keys) + 10.0
         } else {
-            Button::width(ui, &connect) + 10.0
+            Button::tall_width(ui, &connect, None) + 10.0
         };
         let code = tr(keys::http::code::OPEN);
         let code_width = if sends {
-            Button::width(ui, &code) + 10.0
+            Button::tall_width(ui, &code, None) + 10.0
         } else {
             0.0
         };
-        let room = ui.available_width() - Button::width(ui, &save) - send_width - code_width - 10.0;
+        let save_width = Button::tall_width(ui, &save, None);
+        let room = ui.available_width() - save_width - send_width - code_width - 10.0;
         let scopes = url::scopes(state.http.used());
         let (label, hint) = (
             tr(keys::http::editor::URL),
@@ -332,6 +337,7 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
             connect_button(ui, state, tab, actions);
         }
         if Button::new(&save, "http-save")
+            .tall()
             .enabled(tab.is_dirty())
             .show(ui)
             .clicked()
@@ -351,6 +357,7 @@ fn connect_button(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Action
     let words = i18n::translate(state.language, key, &[]);
     if Button::new(&words, "http-socket-connect")
         .kind(kind)
+        .tall()
         .show(ui)
         .clicked()
     {
@@ -367,7 +374,11 @@ fn send_buttons(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions)
     } else {
         (tr(keys::http::send::SEND), widgets::Kind::Filled)
     };
-    let pressed = Button::new(&send, "http-send").kind(kind).show(ui);
+    let mut button = Button::new(&send, "http-send").kind(kind).tall();
+    if !sending {
+        button = button.keys(SEND_KEYS);
+    }
+    let pressed = button.show(ui);
     let pressed = if sending {
         pressed
     } else {
@@ -379,7 +390,7 @@ fn send_buttons(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions)
         actions.push(Asked::Http(Action::Send(Some(tab.key.clone()))));
     }
     let code = tr(keys::http::code::OPEN);
-    let pressed = Button::new(&code, "http-code-open").show(ui);
+    let pressed = Button::new(&code, "http-code-open").tall().show(ui);
     let pressed = widgets::tooltip(pressed, &tr(keys::http::code::OPEN_LABEL));
     if pressed.clicked() {
         let asked = crate::state::http::code::Asked::Open(tab.key.clone());

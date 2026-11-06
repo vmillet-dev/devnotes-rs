@@ -1,6 +1,6 @@
 //! The message to send on an open socket, and those kept to send again.
 
-use egui::{Key, Modifiers, Ui};
+use egui::{Key, Modifiers, Ui, Vec2};
 use engine::http::websocket::{SavedMessage, WebsocketDocument};
 use i18n::keys;
 
@@ -16,6 +16,8 @@ use crate::widgets::{self, Button, IconButton, Kind, TextField};
 
 /// Eight lines, as the reference's.
 const MESSAGE_HEIGHT: f32 = 160.0;
+
+const COLUMN_GAP: f32 = 16.0;
 
 /// A kept message is named after its first line, cut: the name is a label, not a field.
 const NAME_LENGTH: usize = 40;
@@ -35,6 +37,7 @@ fn keep(actions: &mut Actions, tab: &Tab, messages: Vec<SavedMessage>) {
     edit(actions, tab, DraftEdit::Websocket(websocket));
 }
 
+/// The message on the left, those kept on the right: three fifths and two.
 pub(super) fn show(
     ui: &mut Ui,
     state: &AppState,
@@ -42,6 +45,23 @@ pub(super) fn show(
     boxes: &mut TextBoxes,
     actions: &mut Actions,
 ) {
+    let whole = ui.available_width() - COLUMN_GAP;
+    let (left, right) = (whole * 0.6, whole * 0.4);
+    let open = state.http.sockets().is_open(&tab.key);
+    ui.horizontal_top(|ui| {
+        ui.spacing_mut().item_spacing.x = COLUMN_GAP;
+        ui.allocate_ui(Vec2::new(left, 0.0), |ui| {
+            ui.set_width(left);
+            ui.vertical(|ui| compose(ui, state, tab, boxes, actions));
+        });
+        ui.allocate_ui(Vec2::new(right, 0.0), |ui| {
+            ui.set_width(right);
+            ui.vertical(|ui| saved(ui, tab, boxes, (open, state.language), actions));
+        });
+    });
+}
+
+fn compose(ui: &mut Ui, state: &AppState, tab: &Tab, boxes: &mut TextBoxes, actions: &mut Actions) {
     let p = palette(ui.ctx());
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
@@ -103,7 +123,6 @@ pub(super) fn show(
             keep(actions, tab, messages);
         }
     });
-    saved(ui, tab, boxes, (open, language), actions);
 }
 
 fn saved(
@@ -115,8 +134,8 @@ fn saved(
 ) {
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
-    let words = egui::RichText::new(tr(keys::http::socket::SAVED))
-        .size(12.0)
+    let words = egui::RichText::new(tr(keys::http::socket::SAVED).to_uppercase())
+        .size(11.0)
         .strong()
         .color(p.text_2);
     ui.add(egui::Label::new(words));

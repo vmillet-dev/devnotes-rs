@@ -3,15 +3,17 @@
 //! in a table, its tools. After a tool the text takes the keys back.
 
 use egui::{Key, Sense, Ui, UiBuilder, vec2};
+use engine::notes::drawing::DrawingRef;
 use engine::notes::language::Language as Code;
 use i18n::{Language, keys};
 use richtext::edit;
 use richtext::inlines::Mark;
-use richtext::{Block, ListKind, Marks, table, tree};
+use richtext::{Block, Document, ListKind, Marks, table, tree};
 
 use super::{LinkForm, RichEditor, Step};
 use crate::theme::icons::Icon;
-use crate::widgets::{self, Button, ChoiceMenu, IconButton, Kind, TextField};
+use crate::widgets::rich::DRAWING_SOURCE;
+use crate::widgets::{self, Button, ChoiceMenu, IconButton, Kind, Naming, TextField};
 
 #[derive(Clone, Copy)]
 pub(super) enum Tool {
@@ -148,7 +150,12 @@ const TABLE_TOOLS: [(Tool, &str, i18n::Key); 5] = {
     ]
 };
 
-pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, language: Language) {
+pub(super) fn show(
+    ui: &mut Ui,
+    view: &mut RichEditor,
+    drawings: &[DrawingRef],
+    language: Language,
+) {
     let tr = |key| i18n::translate(language, key, &[]);
     let mut inner = ui.new_child(
         UiBuilder::new()
@@ -171,6 +178,8 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, language: Language) {
             }
         }
     }
+    inner.add_space(10.0);
+    drawing_menu(&mut inner, view, drawings, language);
     if let Some(fence) = code_language(view) {
         inner.add_space(10.0);
         language_menu(
@@ -224,6 +233,40 @@ fn code_language(view: &RichEditor) -> Option<String> {
 
 /// The code block's language: first the diagram a Note draws (`None`), then the snippets' own;
 /// plain text writes a bare fence.
+/// By its id, under its title: the Note holds no picture, only where to ask for one.
+fn drawing_menu(ui: &mut Ui, view: &mut RichEditor, drawings: &[DrawingRef], language: Language) {
+    let tr = |key| i18n::translate(language, key, &[]);
+    let none = tr(keys::drawing::EMBED_NONE);
+    let mut options: Vec<(usize, &str)> = drawings
+        .iter()
+        .enumerate()
+        .map(|(at, drawing)| (at, drawing.title.as_str()))
+        .collect();
+    if options.is_empty() {
+        options.push((usize::MAX - 1, none.as_str()));
+    }
+    let mut picked = usize::MAX;
+    let label = tr(keys::drawing::EMBED);
+    let changed = ChoiceMenu::new(&label, "rich-embed-drawing", &options)
+        .naming(Naming::Label)
+        .show(ui, &mut picked)
+        .changed();
+    let Some(drawing) = drawings.get(picked).filter(|_| changed) else {
+        return;
+    };
+    let image = Block::Image {
+        alt: drawing.title.clone(),
+        src: format!("{DRAWING_SOURCE}{}", drawing.id),
+    };
+    let pasted = Document {
+        blocks: vec![image],
+    };
+    view.change(Step::Other, |document, selection| {
+        edit::insert_document(document, selection, pasted)
+    });
+    view.refocus = true;
+}
+
 fn language_menu(ui: &mut Ui, view: &mut RichEditor, fence: &str, label: &str) {
     let mut options: Vec<(Option<Code>, &str)> = vec![(None, "MERMAID")];
     options.extend(

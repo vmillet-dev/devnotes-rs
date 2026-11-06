@@ -110,7 +110,14 @@ fn marks(ui: &mut Ui, rect: Rect, left: f32, note: &DisplayNote, language: i18n:
         };
     if note.pinned {
         let words = i18n::translate(language, keys::notes::PINNED_STATE, &[]);
-        icon(ui, Icon::Pin, p.text_2, &words, "note-card-pin", &mut left);
+        icon(
+            ui,
+            Icon::PinFilled,
+            p.red,
+            &words,
+            "note-card-pin",
+            &mut left,
+        );
     }
     if !note.placeholders.is_empty() {
         let count = u32::try_from(note.placeholders.len()).unwrap_or(u32::MAX);

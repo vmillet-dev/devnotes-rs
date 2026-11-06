@@ -45,7 +45,7 @@ fn head(ui: &mut Ui, title: &str, valid: bool, reason: Option<String>, language:
         ui.spacing_mut().item_spacing.x = 10.0;
         let said = paragraph(ui, title, (14.0, 600.0), p.text_0);
         address(ui, &said, "checks-reading");
-        let said = paragraph(ui, &verdict, (12.0, 600.0), ink);
+        let said = crate::tools::ui::pill(ui, &verdict, ink);
         address(ui, &said, "checks-verdict");
     });
     if let Some(reason) = reason {
@@ -276,8 +276,7 @@ impl ChecksTool {
         TextField::new(&mut self.text, &name, "checks-input")
             .hint(&tr(words::PLACEHOLDER))
             .show(ui);
-        let said = hint(ui, &tr(words::PRIVATE));
-        address(ui, &said, "checks-private");
+        crate::tools::ui::notice(ui, &tr(words::PRIVATE), "checks-private");
     }
 
     fn answer_of(&self, ui: &mut Ui, language: Language) {

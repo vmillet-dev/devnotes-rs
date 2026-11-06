@@ -5,6 +5,7 @@
 pub mod catalogue;
 mod frame;
 mod home;
+pub(crate) use home::matches;
 pub mod live;
 mod rail;
 pub mod ui;

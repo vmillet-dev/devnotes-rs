@@ -12,7 +12,7 @@ use i18n::keys;
 
 use crate::action::{Action, Actions};
 use crate::notes::panel::{self, Draft, FolderEdit, SpaceEdit};
-use crate::state::AppState;
+use crate::state::{AppState, Area};
 use crate::theme::icons::Icon;
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, IconButton};
@@ -93,6 +93,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut SidebarView, actions: &mut
     egui::Frame::new().inner_margin(margin).show(ui, |ui| {
         ui.set_min_height(ui.available_height());
         ui.spacing_mut().item_spacing.y = 6.0;
+        crate::titlebar::area_switch::rail(ui, Area::Notes, state.language, actions);
         head(ui, view, state.language);
         let language = state.language;
         if let Panel::NewSpace(draft) = &mut view.panel {

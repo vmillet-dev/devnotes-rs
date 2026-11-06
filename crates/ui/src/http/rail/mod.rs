@@ -14,10 +14,10 @@ use i18n::keys;
 
 use super::Action;
 use crate::action::{Action as Asked, Actions};
-use crate::state::AppState;
 use crate::state::http::moves::{self, DropZone, KeyMove};
 use crate::state::http::tree::RailRow;
 use crate::state::http::{Page, Write};
+use crate::state::{AppState, Area};
 use crate::theme::icons::Icon;
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, Button, IconButton, MenuItem, interact};
@@ -93,6 +93,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: 
     egui::Frame::new().inner_margin(margin).show(ui, |ui| {
         ui.set_min_height(ui.available_height());
         ui.spacing_mut().item_spacing.y = 6.0;
+        crate::titlebar::area_switch::rail(ui, Area::Http, language, actions);
         head(ui, view, actions, language);
         if view.creating_under(None).is_some() {
             create_form(ui, view, actions, language);

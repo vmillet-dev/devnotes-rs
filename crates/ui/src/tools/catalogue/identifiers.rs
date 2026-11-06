@@ -14,7 +14,7 @@ use crate::api;
 use crate::theme::palette;
 use crate::tools::live::{Live, Turn};
 use crate::tools::ui::{
-    CopyValue, ResultRow, card, check, hint, label, named, number_field, problem, result_rows,
+    CopyValue, ResultRow, card, hint, label, named, number_field, problem, result_rows,
     section_title,
 };
 use crate::tools::{Drawn, Tool, ToolResult};
@@ -259,20 +259,20 @@ impl IdentifiersTool {
             }
             if is_caseless(self.kind) {
                 let words = tr(words::UPPERCASE);
-                check(ui, &mut self.uppercase, &words, "identifiers-uppercase");
+                crate::tools::ui::switch(ui, &mut self.uppercase, &words, "identifiers-uppercase");
             }
             if is_uuid(self.kind) {
                 let words = tr(words::WITHOUT_HYPHENS);
-                check(
+                crate::tools::ui::switch(
                     ui,
                     &mut self.without_hyphens,
                     &words,
                     "identifiers-without-hyphens",
                 );
             }
-            let again = format!("{} (R)", tr(words::AGAIN));
-            if Button::new(&again, "identifiers-generate")
-                .kind(Kind::Outline)
+            if Button::new(&tr(words::AGAIN), "identifiers-generate")
+                .kind(Kind::Accent)
+                .key_cap("R")
                 .show(ui)
                 .clicked()
             {

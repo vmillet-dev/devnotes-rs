@@ -53,7 +53,8 @@ pub fn columns<T>(
             });
         return;
     }
-    let area = ui.max_rect();
+    // Not `max_rect`: a tool's bar may stand above its columns.
+    let area = ui.available_rect_before_wrap();
     let unit = (area.width() - COLUMN_GAP) / (1.0 + RESULTS_SHARE);
     let (first, rest) = area.split_left_right_at_x(area.left() + unit);
     let second = rest.with_min_x(first.right() + COLUMN_GAP);
@@ -210,6 +211,35 @@ pub fn check(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Res
     }
     let at = egui::pos2(tick.right() + 7.0, rect.center().y - label.size().y / 2.0);
     ui.painter().galley(at, label, p.text_1);
+    response
+}
+
+/// A switch and what it says.
+pub fn switch(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Response {
+    let p = palette(ui.ctx());
+    let response = widgets::switch(ui, words, author_id, value, true);
+    ui.label(widgets::text(
+        ui,
+        words,
+        12.0,
+        400.0,
+        FontFamily::Proportional,
+        p.text_1,
+    ));
+    response
+}
+
+/// A state, at a glance: its words on a tint of its hue.
+pub fn pill(ui: &mut Ui, words: &str, hue: Color32) -> Response {
+    let p = palette(ui.ctx());
+    let shown = widgets::text(ui, words, 11.5, 600.0, FontFamily::Proportional, p.text_1);
+    let (rect, response) =
+        ui.allocate_exact_size(shown.size() + Vec2::new(16.0, 6.0), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(Role::Label, true, words));
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(9), hue.gamma_multiply(0.18));
+    ui.painter()
+        .galley(rect.center() - shown.size() / 2.0, shown, p.text_1);
     response
 }
 

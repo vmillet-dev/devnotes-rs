@@ -1,8 +1,9 @@
 //! The application's bar: the window keeps the system's decorations, so this is a menu bar
-//! inside it — the menus and the areas on the left, the name in the middle, the theme on the
-//! right. 38 px on `bg-0`, a `line-soft` underline.
+//! inside it — the menus on the left, the areas beside them while the rail is put away, the name
+//! in the middle, the theme on the right. 38 px on `bg-0`, a `line-soft` underline.
 
 pub(crate) mod about_menu;
+pub(crate) mod area_switch;
 mod file_menu;
 pub(crate) mod libraries;
 pub(crate) mod preferences;
@@ -11,25 +12,18 @@ use egui::{
     CornerRadius, FontFamily, Margin, Rect, Role, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo,
 };
 use engine::app_info::METADATA;
-use i18n::{Key, Language, Message, keys};
+use i18n::{Language, keys};
 use zeroize::Zeroizing;
 
 use crate::action::{Action as Asked, Actions, AppAction};
 use crate::gate::prompt::{self, Answer, PromptView};
 use crate::services::settings::Settings;
+use crate::state::AppState;
 use crate::state::security::Variable;
-use crate::state::{AppState, Area};
 use crate::theme::icons::{self, Icon};
 use crate::theme::tokens::TITLEBAR_HEIGHT;
 use crate::theme::{Appearance, palette};
 use crate::widgets::{self, tooltip};
-
-/// In the switch's order, which is also the order of `Ctrl+1/2/3`.
-const AREAS: [(Area, Icon, Key, &str); 3] = [
-    (Area::Notes, Icon::FileText, keys::areas::NOTES, "notes"),
-    (Area::Tools, Icon::Wrench, keys::areas::TOOLS, "tools"),
-    (Area::Http, Icon::ArrowLeftRight, keys::areas::HTTP, "http"),
-];
 
 /// What the bar's menus ask.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -146,8 +140,8 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
                 view.file_anchor = Some(anchor);
             }
             about_menu::show(ui, state, &mut view.about, actions);
-            if unlocked {
-                area_switch(ui, state.settings.area, language, actions);
+            if unlocked && !state.settings.rail_shown {
+                area_switch::bar(ui, state.settings.area, language, actions);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 theme_toggle(ui, language, actions);
@@ -263,55 +257,6 @@ fn separator(ui: &mut Ui) {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 7.0), Sense::hover());
     ui.painter()
         .hline(rect.x_range(), rect.center().y, Stroke::new(1.0, line));
-}
-
-/// The areas in the bar: icons alone, their names for the screen reader and the tooltip.
-fn area_switch(ui: &mut Ui, current: Area, language: Language, actions: &mut Actions) {
-    let p = palette(ui.ctx());
-    let group = egui::Frame::new()
-        .fill(p.bg_2)
-        .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(7))
-        .inner_margin(Margin::same(2))
-        .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.x = 4.0;
-            ui.horizontal(|ui| {
-                for (rank, (area, icon, name, id)) in AREAS.into_iter().enumerate() {
-                    let name = i18n::translate(language, name, &[]);
-                    let on = area == current;
-                    let response = widgets::interact(
-                        ui,
-                        Vec2::new(26.0, 24.0),
-                        Sense::click(),
-                        &format!("area-option-{id}"),
-                        || WidgetInfo::selected(Role::Tab, true, on, &name),
-                        CornerRadius::same(6),
-                    );
-                    let hint = Message::new(keys::areas::HINT)
-                        .with("area", name.as_str())
-                        .with("key", format!("Ctrl+{}", rank + 1))
-                        .text(language);
-                    let response = tooltip(response, &hint);
-                    if on {
-                        ui.painter()
-                            .rect_filled(response.rect, CornerRadius::same(6), p.bg_3);
-                    }
-                    let ink = if on {
-                        p.amber_text
-                    } else if response.hovered() {
-                        p.text_0
-                    } else {
-                        p.text_2
-                    };
-                    let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(14.0));
-                    icons::paint(ui, glyph, icon, ink);
-                    if response.clicked() && !on {
-                        actions.push(Asked::App(AppAction::ShowArea(area)));
-                    }
-                }
-            });
-        });
-    widgets::address(ui, &group.response, "area-switch");
 }
 
 /// One gesture, two themes: the icon and the label both name what it switches **to**.

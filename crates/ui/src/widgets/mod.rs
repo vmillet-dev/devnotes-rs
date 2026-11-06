@@ -21,12 +21,12 @@ pub mod rich;
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
 pub use dialog::{DialogStack, Layer, dialog, framed_dialog};
-pub use field::{Checkbox, SearchField, Searched, TextField};
+pub use field::{Checkbox, SearchField, Searched, TextField, switch};
 pub use layout::{RailWidth, area_room, split_handle, tooltip};
 pub use list::{code_viewer, virtual_list};
 pub use menu::{
     ChoiceMenu, FILTER_FROM, MenuItem, Naming, arrows as menu_arrows, entry as menu_entry,
-    frame as menu_frame, menu,
+    frame as menu_frame, icon_entry, line as menu_line, menu,
 };
 pub use release_notes::release_notes;
 pub use rich::{Read, rich_reader};

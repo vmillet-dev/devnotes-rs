@@ -262,7 +262,7 @@ impl HashTool {
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    check(ui, &mut self.hmac, "HMAC", "hash-hmac");
+                    crate::tools::ui::switch(ui, &mut self.hmac, "HMAC", "hash-hmac");
                     hint(ui, &tr(keys::tools::hash::KEY_NEVER_KEPT));
                 });
                 if self.hmac {
@@ -282,7 +282,7 @@ impl HashTool {
         let name = tr(keys::tools::hash::VERIFY);
         label(ui, &name);
         let placeholder = tr(keys::tools::hash::EXPECTED_PLACEHOLDER);
-        text_area(
+        let field = text_area(
             ui,
             &mut self.expected,
             (&name, "hash-expected"),
@@ -307,7 +307,14 @@ impl HashTool {
                     .with("name", self.name_of(*algorithm))
                     .with("encoding", encoding)
                     .text(language);
-                let said = crate::tools::ui::paragraph(ui, &words, (12.5, 500.0), p.green);
+                // Over the field's own frame: what was pasted is what answered.
+                ui.painter().rect_stroke(
+                    field.rect.expand2(Vec2::new(14.0, 12.0)),
+                    CornerRadius::same(10),
+                    Stroke::new(1.0, p.green),
+                    egui::StrokeKind::Inside,
+                );
+                let said = crate::tools::ui::pill(ui, &words, p.green);
                 address(ui, &said, "hash-verdict");
             }
             Some(HashAnswer::Hashed {
@@ -377,14 +384,9 @@ impl HashTool {
         let metas: Vec<String> = digests
             .iter()
             .map(|digest| {
-                let bits = Message::new(keys::tools::hash::BITS)
+                Message::new(keys::tools::hash::BITS)
                     .with("count", digest.bits)
-                    .text(language);
-                if is_obsolete(digest.algorithm) {
-                    format!("{bits} · {obsolete}")
-                } else {
-                    bits
-                }
+                    .text(language)
             })
             .collect();
         card(ui, "hash-results", |ui| {
@@ -393,6 +395,7 @@ impl HashTool {
                 .zip(&metas)
                 .map(|(digest, meta)| {
                     ResultRow::new(self.name_of(digest.algorithm), &digest.value)
+                        .tag(is_obsolete(digest.algorithm).then_some(obsolete.as_str()))
                         .meta(meta)
                         .matched(matched == Some(digest.algorithm))
                 })

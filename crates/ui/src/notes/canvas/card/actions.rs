@@ -1,4 +1,4 @@
-//! What a card offers under the pointer: copy, and the ⋯ of its menu — open, pin, priority ›,
+//! What a card offers under the pointer: its box, copy, and the ⋯ of its menu — open, pin, priority ›,
 //! copy, duplicate, file into a folder of its space, move to another space, delete in two
 //! steps. A pill over the card's bottom edge, clear of its footer and costing it no room.
 
@@ -18,6 +18,9 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, IconButton, MIN_TARGET};
 
+/// As wide as the reference's, a French entry included.
+const MENU_WIDTH: f32 = 176.0;
+
 const LEVELS: [Priority; 5] = [
     Priority::None,
     Priority::Low,
@@ -35,13 +38,16 @@ pub(super) fn show(
     ui: &mut Ui,
     card: Rect,
     note: &DisplayNote,
-    context: &Context<'_>,
+    (context, ticking): (&Context<'_>, bool),
     actions: &mut Actions,
 ) {
     let ctx = ui.ctx().clone();
     let here = Id::unique("note-card-actions").with(&note.id);
     let (drawn, open) = ctx.data(|data| data.get_temp::<(Rect, bool)>(here)).unzip();
-    let width = 2.0 * MIN_TARGET + 6.0 + 10.0;
+    // Its box, unless the card already shows it; copy, but for a drawing; the ⋯.
+    let copies = note.kind != NoteKind::Drawing;
+    let buttons = 1.0 + f32::from(u8::from(!ticking)) + f32::from(u8::from(copies));
+    let width = buttons * MIN_TARGET + (buttons - 1.0) * 6.0 + 10.0;
     // Over the bottom edge, ending short of the next row.
     let pill = Rect::from_min_size(
         pos2(card.right() - 12.0 - width, card.bottom() - MIN_TARGET),
@@ -71,13 +77,16 @@ pub(super) fn show(
         .show(&mut ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 6.0;
+                if !ticking && tick(ui, &title, language) {
+                    push(actions, Asked::Check(note.id.clone()));
+                }
                 // A note with fields asks for them before it is copied.
                 let (icon, key, author_id) = if note.placeholders.is_empty() {
                     (Icon::Copy, keys::notes::COPY_CONTENT, "note-card-copy")
                 } else {
                     (Icon::Zap, keys::placeholders::TITLE, "note-card-fill")
                 };
-                if note.kind != NoteKind::Drawing
+                if copies
                     && IconButton::new(icon, &tr(key), author_id)
                         .show(ui)
                         .clicked()
@@ -100,6 +109,27 @@ pub(super) fn show(
     ctx.data_mut(|data| data.insert_temp(here, (drawn, open)));
 }
 
+/// The card's box in the pill: nothing on the card moves for it.
+fn tick(ui: &mut Ui, title: &str, language: i18n::Language) -> bool {
+    let p = palette(ui.ctx());
+    let label = i18n::translate(
+        language,
+        keys::notes::SELECT_NOTE,
+        &[("title", title.into())],
+    );
+    let response = widgets::interact(
+        ui,
+        Vec2::splat(MIN_TARGET),
+        egui::Sense::click(),
+        "note-card-check",
+        || egui::WidgetInfo::selected(egui::Role::CheckBox, true, false, &label),
+        CornerRadius::same(4),
+    );
+    let square = Rect::from_center_size(response.rect.center(), Vec2::splat(14.0));
+    crate::notes::ui::tick_box(ui, square, false, p.text_1);
+    response.clicked()
+}
+
 fn menu(
     ui: &Ui,
     trigger: &Response,
@@ -118,18 +148,21 @@ fn menu(
         .align(RectAlign::BOTTOM_END)
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
-            ui.set_width(240.0);
+            ui.set_width(MENU_WIDTH);
             ui.spacing_mut().item_spacing.y = 0.0;
             let id = note.id.clone();
             first_entries(ui, note, language, actions);
             filing(ui, note, context, actions);
             moving(ui, note, context, actions);
+            widgets::menu_line(ui);
             let delete = tr(if armed {
                 keys::editor::DELETE_CONFIRM
             } else {
                 keys::editor::DELETE
             });
-            let deleted = widgets::menu_entry(ui, &delete, "note-card-delete", true, armed, false);
+            let about = (Icon::Trash, None);
+            let deleted =
+                widgets::icon_entry(ui, about, &delete, "note-card-delete", (true, false));
             if deleted.clicked() {
                 if armed {
                     push(actions, Asked::Delete(id));
@@ -149,13 +182,14 @@ fn menu(
 fn first_entries(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, actions: &mut Actions) {
     let tr = |key| i18n::translate(language, key, &[]);
     let id = note.id.clone();
-    if widgets::menu_entry(
+    let plain = (false, false);
+    let open = (Icon::ArrowUpRight, None);
+    if widgets::icon_entry(
         ui,
+        open,
         &tr(keys::notes::OPEN_NOTE),
         "note-card-open-menu",
-        false,
-        false,
-        false,
+        plain,
     )
     .clicked()
     {
@@ -167,7 +201,13 @@ fn first_entries(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, acti
     } else {
         keys::editor::PIN
     });
-    if widgets::menu_entry(ui, &pin, "note-card-pin-toggle", false, note.pinned, false).clicked() {
+    let p = palette(ui.ctx());
+    let mark = if note.pinned {
+        (Icon::PinFilled, Some(p.red))
+    } else {
+        (Icon::Pin, None)
+    };
+    if widgets::icon_entry(ui, mark, &pin, "note-card-pin-toggle", plain).clicked() {
         push(
             actions,
             Asked::Pin {
@@ -179,26 +219,24 @@ fn first_entries(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, acti
     }
     priority(ui, note, language, actions);
     if note.kind != NoteKind::Drawing
-        && widgets::menu_entry(
+        && widgets::icon_entry(
             ui,
+            (Icon::Copy, None),
             &tr(keys::notes::COPY),
             "note-card-copy-menu",
-            false,
-            false,
-            false,
+            plain,
         )
         .clicked()
     {
         push(actions, Asked::Copy(id.clone()));
         ui.close();
     }
-    if widgets::menu_entry(
+    if widgets::icon_entry(
         ui,
+        (Icon::CopyPlus, None),
         &tr(keys::notes::DUPLICATE),
         "note-card-duplicate",
-        false,
-        false,
-        false,
+        plain,
     )
     .clicked()
     {
@@ -225,7 +263,8 @@ fn first_entries(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, acti
 /// « Priority › », its five levels to the side, the note's ticked.
 fn priority(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, actions: &mut Actions) {
     let label = i18n::translate(language, keys::notes::PRIORITY_LABEL, &[]);
-    let parent = widgets::menu_entry(ui, &label, "note-card-priority", false, false, true);
+    let about = (Icon::Flag, None);
+    let parent = widgets::icon_entry(ui, about, &label, "note-card-priority", (false, true));
     let open_id = parent.id.with("levels");
     let mut open = parent.clicked()
         || parent.hovered()

@@ -11,6 +11,10 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 
 /// The reference's `.input`: 9 × 11, an 8 px corner on `bg-1`, red when the value is refused.
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each is its own display choice"
+)]
 pub struct TextField<'a> {
     value: &'a mut String,
     name: &'a str,
@@ -19,6 +23,7 @@ pub struct TextField<'a> {
     invalid: bool,
     password: bool,
     compact: bool,
+    mono: bool,
 }
 
 impl<'a> TextField<'a> {
@@ -32,7 +37,15 @@ impl<'a> TextField<'a> {
             invalid: false,
             password: false,
             compact: false,
+            mono: false,
         }
+    }
+
+    /// What is typed is code: an expression, a name a program reads.
+    #[must_use]
+    pub fn mono(mut self) -> Self {
+        self.mono = true;
+        self
     }
 
     /// A rail's: 12.5 px on 5 × 7, a 6 px corner.
@@ -70,6 +83,11 @@ impl<'a> TextField<'a> {
         } else {
             (14.0, 8, Margin::symmetric(11, 9))
         };
+        let family = if self.mono {
+            FontFamily::Monospace
+        } else {
+            FontFamily::Proportional
+        };
         let frame = egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, edge))
@@ -82,9 +100,11 @@ impl<'a> TextField<'a> {
                         .frame(egui::Frame::new())
                         .margin(Margin::ZERO)
                         .password(self.password)
-                        .hint_text(self.hint)
+                        .hint_text(
+                            egui::RichText::new(self.hint).font(FontId::new(size, family.clone())),
+                        )
                         .text_color(p.text_0)
-                        .font(FontId::new(size, FontFamily::Proportional))
+                        .font(FontId::new(size, family))
                         .desired_width(f32::INFINITY),
                 );
                 name(ui, &response, self.name);
@@ -93,6 +113,51 @@ impl<'a> TextField<'a> {
             })
             .inner
     }
+}
+
+/// The reference's `setting-switch`: a track and its knob, amber when on. `on` is changed by a
+/// click.
+pub fn switch(ui: &mut Ui, label: &str, author_id: &str, on: &mut bool, enabled: bool) -> Response {
+    let p = palette(ui.ctx());
+    let sense = if enabled {
+        Sense::click()
+    } else {
+        Sense::hover()
+    };
+    let mut response = interact(
+        ui,
+        Vec2::new(34.0, 24.0),
+        sense,
+        author_id,
+        || WidgetInfo::selected(Role::CheckBox, enabled, *on, label),
+        CornerRadius::same(9),
+    );
+    if response.clicked() {
+        *on = !*on;
+        response.mark_changed();
+    }
+    let track = Rect::from_center_size(response.rect.center(), Vec2::new(34.0, 18.0));
+    let (fill, knob) = if *on {
+        (p.amber_fill.gamma_multiply(0.35), p.amber_text)
+    } else {
+        (p.bg_3, p.text_2)
+    };
+    let (fill, knob) = (super::dimmed(fill, enabled), super::dimmed(knob, enabled));
+    ui.painter().rect(
+        track,
+        CornerRadius::same(9),
+        fill,
+        Stroke::new(1.0, p.line_soft),
+        StrokeKind::Inside,
+    );
+    let x = if *on {
+        track.right() - 9.0
+    } else {
+        track.left() + 9.0
+    };
+    ui.painter()
+        .circle_filled(egui::pos2(x, track.center().y), 6.0, knob);
+    response
 }
 
 /// The search of an area: the magnifier, the field, the cross that empties it, and the key that
@@ -245,19 +310,18 @@ impl<'a> SearchField<'a> {
             0.0
         };
         let words = self.matched.or(self.key).unwrap_or_default();
+        let family = if self.matched.is_some() {
+            FontFamily::Proportional
+        } else {
+            FontFamily::Monospace
+        };
         let after = if words.is_empty() {
             0.0
         } else {
-            super::text(
-                ui,
-                words,
-                11.0,
-                400.0,
-                FontFamily::Monospace,
-                Color32::WHITE,
-            )
-            .size()
-            .x + 12.0
+            super::text(ui, words, 11.0, 400.0, family, Color32::WHITE)
+                .size()
+                .x
+                + gap
                 + gap
         };
         cross + after

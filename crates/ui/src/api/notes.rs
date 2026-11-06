@@ -193,6 +193,10 @@ pub fn field_ranges(content: &str) -> Vec<std::ops::Range<usize>> {
 }
 
 /// The bodies kept beside a note, newest first: instants and sizes, never the bodies.
+pub fn list_drawings(backend: &Backend) -> Pending<Vec<engine::notes::drawing::DrawingRef>> {
+    backend.db(notes::list_drawings)
+}
+
 pub fn list_revisions(
     backend: &Backend,
     id: String,

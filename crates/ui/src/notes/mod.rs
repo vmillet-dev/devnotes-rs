@@ -98,6 +98,8 @@ pub enum Action {
     Search(String),
     ClearSearch,
     SetFilter(NoteFilter),
+    /// The search and every facet, from a list they left empty.
+    ClearFilters,
     Arrange(crate::state::notes_query::Arrangement),
     /// `Ctrl+K`: the caret into the search.
     FocusSearch,
@@ -188,6 +190,8 @@ pub enum Fields {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Editing {
+    /// A sheet's results shown to so many decimals; `None` reads the value.
+    Decimals(Option<u8>),
     /// The fields left in an opening; `None` leaves a field as it is.
     Save {
         session: u64,
@@ -454,3 +458,6 @@ mod tests {
 
 #[cfg(test)]
 pub(crate) mod bench;
+
+#[cfg(test)]
+mod parity_tests;

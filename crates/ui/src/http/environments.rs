@@ -19,7 +19,9 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, Button, Checkbox, Kind, TextField, interact};
 
-const LIST: f32 = 260.0;
+/// The list's share of the page, within its bounds.
+const LIST_SHARE: f32 = 0.22;
+const LIST: (f32, f32) = (180.0, 240.0);
 const HEAD: f32 = 56.0;
 const ENTRY: f32 = 52.0;
 
@@ -58,7 +60,8 @@ pub(super) fn show(
         Stroke::new(1.0, p.line_soft),
     );
     let body = Rect::from_min_max(pos2(region.left(), head_rect.bottom()), region.max);
-    let list_rect = Rect::from_min_size(body.min, Vec2::new(LIST, body.height()));
+    let list_width = (region.width() * LIST_SHARE).clamp(LIST.0, LIST.1);
+    let list_rect = Rect::from_min_size(body.min, Vec2::new(list_width, body.height()));
     let mut list_ui = ui.new_child(UiBuilder::new().max_rect(list_rect.shrink(10.0)));
     list(&mut list_ui, state, view, actions);
     ui.painter().vline(
@@ -202,7 +205,7 @@ fn list(ui: &mut Ui, state: &AppState, view: &mut PageView, actions: &mut Action
                 name: &tr(keys::http::environments::GLOBALS),
                 meta: &meta,
                 badge: None,
-                hue: p.text_2,
+                hue: p.pink,
                 on: *environments.target() == Target::Globals,
             };
             if entry(ui, &globals).clicked() {
@@ -265,9 +268,12 @@ fn entry(ui: &mut Ui, shown: &Entry<'_>) -> Response {
     let p = palette(ui.ctx());
     let width = ui.available_width();
     let corner = CornerRadius::same(8);
+    let font = egui::FontId::new(11.0, FontFamily::Proportional);
+    let meta = shown.meta.to_owned();
+    let meta = ui.fonts_mut(|fonts| fonts.layout(meta, font, p.text_2, width - 36.0));
     let response = interact(
         ui,
-        Vec2::new(width, ENTRY),
+        Vec2::new(width, ENTRY.max(36.0 + meta.size().y)),
         Sense::click(),
         "http-environment-entry",
         || WidgetInfo::selected(Role::Button, true, shown.on, shown.name),
@@ -275,9 +281,11 @@ fn entry(ui: &mut Ui, shown: &Entry<'_>) -> Response {
     );
     let rect = response.rect;
     if shown.on {
-        ui.painter().rect_filled(rect, corner, p.bg_2);
+        let edge = Stroke::new(1.0, p.amber_dim);
+        ui.painter()
+            .rect(rect, corner, p.bg_2, edge, egui::StrokeKind::Inside);
     } else if response.hovered() {
-        ui.painter().rect_filled(rect, corner, p.bg_1);
+        ui.painter().rect_filled(rect, corner, p.bg_2);
     }
     let first = rect.top() + 18.0;
     ui.painter()
@@ -305,14 +313,6 @@ fn entry(ui: &mut Ui, shown: &Entry<'_>) -> Response {
         let at = pos2(at.x + width + 8.0, first - badge.size().y / 2.0);
         ui.painter().galley(at, badge, p.amber_text);
     }
-    let meta = widgets::text(
-        ui,
-        shown.meta,
-        11.0,
-        400.0,
-        FontFamily::Proportional,
-        p.text_2,
-    );
     ui.painter()
         .galley(pos2(rect.left() + 26.0, rect.top() + 28.0), meta, p.text_2);
     response
@@ -371,11 +371,11 @@ fn globals_head(ui: &mut Ui, language: i18n::Language) {
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 10.0;
-        let title = egui::RichText::new(tr(keys::http::environments::GLOBALS))
-            .size(15.0)
-            .strong()
-            .color(p.text_0);
-        ui.add(egui::Label::new(title));
+        let (dot, _) = ui.allocate_exact_size(Vec2::splat(10.0), Sense::hover());
+        ui.painter().circle_filled(dot.center(), 5.0, p.pink);
+        let words = tr(keys::http::environments::GLOBALS);
+        let family = FontFamily::Proportional;
+        ui.label(widgets::text(ui, &words, 15.0, 600.0, family, p.text_0));
         let hint = egui::RichText::new(tr(keys::http::environments::GLOBALS_HINT))
             .size(12.0)
             .color(p.text_2);

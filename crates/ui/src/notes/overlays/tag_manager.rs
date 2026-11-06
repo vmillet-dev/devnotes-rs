@@ -225,6 +225,7 @@ fn form(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut 
             .allocate_ui(vec2(ui.available_width() - buttons, 32.0), |ui| {
                 TextField::new(&mut view.target, &label, "tag-target")
                     .hint(&hint)
+                    .mono()
                     .compact()
                     .show(ui)
             })

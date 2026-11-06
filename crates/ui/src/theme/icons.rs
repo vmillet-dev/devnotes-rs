@@ -29,6 +29,7 @@ pub enum Icon {
     /// Backspace's ⌫.
     Delete,
     ChevronDown,
+    ChevronUp,
     ChevronRight,
     X,
     Plus,
@@ -38,6 +39,13 @@ pub enum Icon {
     /// A row's ⋯: what else it can be told.
     Ellipsis,
     Pin,
+    /// A note that is pinned: the same drawing, full.
+    PinFilled,
+    /// What leaves for somewhere else: a note opened from its card.
+    ArrowUpRight,
+    Flag,
+    /// A second one of the same: a note duplicated.
+    CopyPlus,
     Star,
     /// A star that is on: the same drawing, full.
     StarFilled,
@@ -120,13 +128,25 @@ impl Icon {
                 "m18 9-6 6",
             ],
             Self::ChevronDown => &["m6 9 6 6 6-6"],
+            Self::ChevronUp => &["m18 15-6-6-6 6"],
             Self::ChevronRight => &["m9 18 6-6-6-6"],
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
             Self::Plus => &["M5 12h14", "M12 5v14"],
             Self::Minus => &["M5 12h14"],
             Self::Format => &["M4 6h16", "M4 12h10", "M4 18h13"],
             Self::Ellipsis => &["M12 12h.01", "M19 12h.01", "M5 12h.01"],
-            Self::Pin => &[
+            Self::ArrowUpRight => &["M7 7h10v10", "M7 17 17 7"],
+            Self::Flag => &[
+                "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z",
+                "M4 22v-7",
+            ],
+            Self::CopyPlus => &[
+                "M15 12v6",
+                "M12 15h6",
+                "M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z",
+                "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2",
+            ],
+            Self::Pin | Self::PinFilled => &[
                 "M12 17v5",
                 "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z",
             ],
@@ -306,7 +326,7 @@ impl Icon {
     }
 
     fn svg(self) -> String {
-        let fill = if self == Self::StarFilled {
+        let fill = if matches!(self, Self::StarFilled | Self::PinFilled) {
             "white"
         } else {
             "none"
@@ -383,7 +403,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 66] = [
+    const ALL: [Icon; 71] = [
         Icon::ArrowLeftRight,
         Icon::MoveHorizontal,
         Icon::Sidebar,
@@ -397,6 +417,7 @@ mod tests {
         Icon::CornerDownLeft,
         Icon::Delete,
         Icon::ChevronDown,
+        Icon::ChevronUp,
         Icon::ChevronRight,
         Icon::X,
         Icon::Plus,
@@ -404,6 +425,10 @@ mod tests {
         Icon::Format,
         Icon::Ellipsis,
         Icon::Pin,
+        Icon::PinFilled,
+        Icon::ArrowUpRight,
+        Icon::Flag,
+        Icon::CopyPlus,
         Icon::Star,
         Icon::StarFilled,
         Icon::Sun,

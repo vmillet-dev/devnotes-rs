@@ -9,8 +9,8 @@ use i18n::keys;
 use super::catalogue::{self, Category, TOOLS, ToolEntry};
 use super::{Action, Asked};
 use crate::action::Actions;
-use crate::state::AppState;
 use crate::state::tools::{Filter, SHOWN_RECENTS};
+use crate::state::{AppState, Area};
 use crate::theme::icons::{self, Icon};
 use crate::theme::{palette, spacing};
 use crate::widgets::{self, hovered, interact, towards};
@@ -29,6 +29,8 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         .auto_shrink(false)
         .show(ui, |ui| {
             egui::Frame::new().inner_margin(margin).show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 6.0;
+                crate::titlebar::area_switch::rail(ui, Area::Tools, state.language, actions);
                 ui.spacing_mut().item_spacing.y = 2.0;
                 links(ui, state, actions);
             });

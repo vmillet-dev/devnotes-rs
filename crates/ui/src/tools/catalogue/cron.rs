@@ -220,6 +220,7 @@ impl CronTool {
         section_title(ui, &tr(keys::tools::INPUT));
         let name = tr(keys::tools::cron::INPUT_LABEL);
         TextField::new(&mut self.expression, &name, "cron-input")
+            .mono()
             .hint(&tr(keys::tools::cron::PLACEHOLDER))
             .show(ui);
         self.reading(ui, language);
@@ -384,6 +385,7 @@ impl CronTool {
         section_title(ui, &tr(keys::tools::cron::CHECK));
         let name = tr(keys::tools::cron::CHECK);
         TextField::new(&mut self.check, &name, "cron-check")
+            .mono()
             .hint(&tr(keys::tools::cron::CHECK_PLACEHOLDER))
             .show(ui);
         self.verdict(ui, language);

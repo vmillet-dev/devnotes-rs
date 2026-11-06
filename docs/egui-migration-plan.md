@@ -1354,6 +1354,31 @@ pour gagner du temps ; seules les limites techniques du § 5.3 s'écartent.
 | E14 | Retours à la ligne du texte d'un Dessin, au mot près                                                                           | mesure par la police, pas le navigateur                 | même algorithme que Fabric, mêmes polices (D23)                            |
 | E15 | Collage HTML dans une Note réduit au texte, session Wayland sans XWayland seulement                                            | `arboard` n'y lit qu'avec `wlr-data-control` (S6)       | texte collé intact                                                         |
 
+Choix de design, arbitrés à la revue de la phase 10 (6 novembre 2026) : là où egui s'écarte de la
+référence par décision et non par limite technique, egui fait foi.
+
+| #   | Écart                                                                                    | Pourquoi                                    |
+| --- | ---------------------------------------------------------------------------------------- | ------------------------------------------- |
+| C1  | La case d'une carte est dans le menu de survol, à gauche du titre seulement en sélection | le titre ne bouge pas au survol             |
+| C2  | L'aperçu d'un snippet coupe ses lignes au bord au lieu de les replier                    | on lit les vraies lignes                    |
+| C3  | Titres de l'éditeur et des requêtes en graisse normale                                   | préférence                                  |
+| C4  | Tags de l'éditeur en pastilles ambre, Source et « + tag » encadrés                       | préférence                                  |
+| C5  | Éditeur plus haut, modales 50 px plus larges, champs plus grands                         | plus lisible                                |
+| C6  | Voile plus clair derrière les modales (avec E7)                                          | préférence                                  |
+| C7  | Interligne plus serré dans les dialogues, le code et Lorem                               | plus de contenu à l'écran                   |
+| C8  | Onglets soulignés en blanc, filet limité aux onglets                                     | préférence                                  |
+| C9  | États vides en haut à gauche, non centrés                                                | préférence                                  |
+| C10 | Icônes redessinées : flèche ↓, roue, horloge                                             | préférence                                  |
+| C11 | Permissions Unix en lignes de cases, sans la grille                                      | plus dense                                  |
+| C12 | Corbeille du dessin neutre au repos                                                      | elle agit sur la sélection, pas sur la note |
+| C13 | Tâches : poignée de trois points, croix sur chaque ligne                                 | préférence                                  |
+| C14 | Éclair (remplir) sur la carte d'un snippet à champs, à la place de copier                | dit ce que le clic fera                     |
+| C15 | Champ de recherche à hauteur fixe                                                        | la barre ne bouge pas                       |
+| C16 | Menus d'espace et de dossier plus larges et sans pastille                                | noms entiers                                |
+| C17 | Indices de Mots de passe : abc, ABC, 123, !#$                                            | plus lisibles                               |
+| C18 | Barre de sélection sur une ligne tant qu'elle tient                                      | ne couvre pas les cartes                    |
+| C19 | Tables de référence plus denses, Menus et préférences : boutons à la place des liens     | cohérence avec le reste                     |
+
 ---
 
 ## 6. Performances : corpus, budgets, mesure

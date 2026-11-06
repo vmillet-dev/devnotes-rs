@@ -7,6 +7,7 @@ use egui::{
 };
 
 use super::{TextField, hovered, interact, text, towards};
+use crate::theme::icons::Icon;
 use crate::theme::palette;
 
 /// One entry; one with `children` opens them to its side.
@@ -133,7 +134,7 @@ pub fn arrows(ui: &Ui, ids: &[Id]) {
     }
 }
 
-/// An entry: 5 × 8, 6 px, 12 px; `bg-3` under the pointer; amber when it is the value.
+/// An entry: 5 × 8, 6 px, 12 px; `bg-3` under the pointer and when it is the value.
 pub fn entry(
     ui: &mut Ui,
     label: &str,
@@ -141,6 +142,28 @@ pub fn entry(
     destructive: bool,
     on: bool,
     opens: bool,
+) -> Response {
+    drawn(ui, None, label, author_id, (destructive, on, opens))
+}
+
+/// An entry after its icon, drawn in `colour`, or in the entry's own ink without one.
+pub fn icon_entry(
+    ui: &mut Ui,
+    (icon, colour): (Icon, Option<Color32>),
+    label: &str,
+    author_id: &str,
+    (destructive, opens): (bool, bool),
+) -> Response {
+    let lead = Some((icon, colour));
+    drawn(ui, lead, label, author_id, (destructive, false, opens))
+}
+
+fn drawn(
+    ui: &mut Ui,
+    lead: Option<(Icon, Option<Color32>)>,
+    label: &str,
+    author_id: &str,
+    (destructive, on, opens): (bool, bool, bool),
 ) -> Response {
     let p = palette(ui.ctx());
     let width = ui.available_width().max(172.0);
@@ -154,15 +177,11 @@ pub fn entry(
         || WidgetInfo::labeled(Role::MenuItem, true, label),
         corner,
     );
-    let hover = hovered(ui, &response).max(if response.has_focus() { 1.0 } else { 0.0 });
-    let rest = if destructive {
-        p.red
-    } else if on {
-        p.amber_text
-    } else {
-        p.text_1
-    };
-    let ink = if destructive || on {
+    let hover = hovered(ui, &response)
+        .max(if response.has_focus() { 1.0 } else { 0.0 })
+        .max(if on { 1.0 } else { 0.0 });
+    let rest = if destructive { p.red } else { p.text_1 };
+    let ink = if destructive {
         rest
     } else {
         towards(rest, p.text_0, hover)
@@ -171,20 +190,34 @@ pub fn entry(
         ui.painter()
             .rect_filled(response.rect, corner, p.bg_3.gamma_multiply(hover));
     }
+    let mut left = response.rect.left() + 8.0;
+    if let Some((icon, colour)) = lead {
+        let glyph = egui::Rect::from_center_size(
+            egui::pos2(left + 7.0, response.rect.center().y),
+            Vec2::splat(14.0),
+        );
+        crate::theme::icons::paint(ui, glyph, icon, colour.unwrap_or(ink));
+        left += 22.0;
+    }
     let galley = text(ui, label, 12.0, 400.0, FontFamily::Proportional, ink);
-    let at = egui::pos2(
-        response.rect.left() + 8.0,
-        response.rect.center().y - galley.size().y / 2.0,
-    );
+    let at = egui::pos2(left, response.rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, Color32::TRANSPARENT);
     if opens {
         let glyph = egui::Rect::from_center_size(
             egui::pos2(response.rect.right() - 12.0, response.rect.center().y),
             Vec2::splat(12.0),
         );
-        crate::theme::icons::paint(ui, glyph, crate::theme::icons::Icon::ChevronRight, p.text_2);
+        crate::theme::icons::paint(ui, glyph, Icon::ChevronRight, p.text_2);
     }
     response
+}
+
+/// The line between two groups of entries.
+pub fn line(ui: &mut Ui) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 9.0), Sense::hover());
+    let colour = palette(ui.ctx()).line_soft;
+    ui.painter()
+        .hline(rect.x_range(), rect.center().y, Stroke::new(1.0, colour));
 }
 
 /// The menus that name their value: `Value` shows the current choice on the control, `Label`
@@ -263,6 +296,11 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             response.rect.center().y - galley.size().y / 2.0,
         );
         ui.painter().galley(at, galley, Color32::TRANSPARENT);
+        let glyph = egui::Rect::from_center_size(
+            egui::pos2(response.rect.right() - 12.0, response.rect.center().y),
+            Vec2::splat(11.0),
+        );
+        crate::theme::icons::paint(ui, glyph, Icon::ChevronDown, ink);
 
         let query_id = response.id.with("query");
         let filtering = self.options.len() >= FILTER_FROM;

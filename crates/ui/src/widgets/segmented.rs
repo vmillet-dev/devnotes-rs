@@ -3,7 +3,7 @@
 //! refuse, and this one is read at 11.5 px.
 
 use egui::{
-    Color32, CornerRadius, FontFamily, Margin, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo,
+    Color32, CornerRadius, FontFamily, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo,
 };
 
 use super::{hovered, interact, text, towards};
@@ -51,38 +51,44 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
     pub fn show(self, ui: &mut Ui, selected: &mut T) -> Response {
         let p = palette(ui.ctx());
         let width = self.width(ui);
-        egui::Frame::new()
-            .fill(p.bg_2)
-            .stroke(Stroke::new(1.0, p.line_soft))
-            .corner_radius(CornerRadius::same(7))
-            .inner_margin(Margin::ZERO)
-            .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.x = 0.0;
-                // In its order at the end of a row too: `horizontal` follows the parent's way.
-                let reading = egui::Layout::left_to_right(egui::Align::Center);
-                ui.allocate_ui_with_layout(Vec2::new(width, 0.0), reading, |ui| {
-                    let mut changed = None;
-                    for (index, (value, label)) in self.options.iter().enumerate() {
-                        let id = format!("{}-{index}", self.author_id);
-                        let open = self.taken != Some(*value);
-                        let response = segment(ui, label, &id, (*value == *selected, open));
-                        if response.clicked() && *value != *selected {
-                            *selected = *value;
-                            changed = Some(response.clone());
-                        }
-                    }
-                    changed
-                })
-                .inner
-            })
-            .inner
-            .map_or_else(
-                || ui.allocate_response(Vec2::ZERO, Sense::hover()),
-                |mut response| {
-                    response.mark_changed();
-                    response
-                },
-            )
+        // ⚠️ Its place taken at once: a frame sits at the top of its row and a child centred on
+        // a height of nothing runs below it, so the control landed lower than its neighbours.
+        let (rect, _) =
+            ui.allocate_exact_size(Vec2::new(width, super::MIN_TARGET + 2.0), Sense::hover());
+        ui.painter().rect(
+            rect,
+            CornerRadius::same(7),
+            p.bg_2,
+            Stroke::new(1.0, p.line_soft),
+            egui::StrokeKind::Inside,
+        );
+        // In its order at the end of a row too: `horizontal` follows the parent's way.
+        let reading = egui::Layout::left_to_right(egui::Align::Center);
+        let inside = egui::UiBuilder::new()
+            .max_rect(rect.shrink(1.0))
+            .layout(reading);
+        ui.scope_builder(inside, |ui| {
+            ui.spacing_mut().item_spacing.x = 0.0;
+            let mut changed = None;
+            for (index, (value, label)) in self.options.iter().enumerate() {
+                let id = format!("{}-{index}", self.author_id);
+                let open = self.taken != Some(*value);
+                let response = segment(ui, label, &id, (*value == *selected, open));
+                if response.clicked() && *value != *selected {
+                    *selected = *value;
+                    changed = Some(response.clone());
+                }
+            }
+            changed
+        })
+        .inner
+        .map_or_else(
+            || ui.allocate_response(Vec2::ZERO, Sense::hover()),
+            |mut response| {
+                response.mark_changed();
+                response
+            },
+        )
     }
 }
 

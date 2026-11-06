@@ -151,6 +151,7 @@ fn stage(
         format.coords.push(*b"wght", 700.0);
         let mut job = LayoutJob::single_section(presenting.title.clone(), format);
         job.wrap.max_width = width;
+        job.halign = egui::Align::Center;
         let galley = ui.painter().layout_job(job);
         let rect = Rect::from_center_size(column.center(), galley.size());
         let response = widgets::region(ui, rect, "presentation-cover", Sense::hover());
@@ -158,7 +159,8 @@ fn stage(
             egui::WidgetInfo::labeled(egui::Role::Heading, true, &presenting.title)
         });
         widgets::address(ui, &response, "presentation-cover");
-        ui.painter().galley(rect.min, galley, p.text_0);
+        // Centred lines are laid out around the position they are drawn at.
+        ui.painter().galley(rect.center_top(), galley, p.text_0);
         return;
     };
     let scale = (2.2 * vw).clamp(20.0, 30.0) / crate::theme::fonts::BASE;

@@ -56,13 +56,21 @@ fn row(signal: &Value, language: Language) -> ReferenceRow {
     } else {
         words::YES
     };
+    let macos = signal["macos"].as_str().unwrap_or(NONE);
+    let on_macos = Cell::mono(macos);
+    // A number macOS gives otherwise is what the column is read for.
+    let on_macos = if linux.is_none_or(|number| number != macos) {
+        on_macos.hue(|p| p.amber_text)
+    } else {
+        on_macos
+    };
     let cells = vec![
         Cell::mono(linux.unwrap_or(NONE)),
         Cell::mono(name),
         Cell::text(action.clone()),
         Cell::text(i18n::translate(language, catchable, &[])),
         Cell::text(usage.clone()),
-        Cell::mono(signal["macos"].as_str().unwrap_or(NONE)),
+        on_macos,
     ];
     let title = linux.map_or_else(|| name.to_owned(), |number| format!("{name} ({number})"));
     ReferenceRow::new(name, group, cells)

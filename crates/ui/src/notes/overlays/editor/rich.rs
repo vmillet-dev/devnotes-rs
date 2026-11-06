@@ -355,7 +355,8 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
     let before = view.changes;
     let bar = Rect::from_min_max(whole.min, pos2(whole.right(), whole.top() + TOOLBAR_HEIGHT));
     let mut bar_ui = ui.new_child(UiBuilder::new().id_salt("rich-toolbar").max_rect(bar));
-    toolbar::show(&mut bar_ui, view, language);
+    let drawings = state.drawing_choices.value().map_or(&[][..], Vec::as_slice);
+    toolbar::show(&mut bar_ui, view, drawings, language);
     let mut top = bar.bottom();
     if view.link.is_some() {
         let form = Rect::from_min_max(pos2(whole.left(), top), pos2(whole.right(), top + 40.0));

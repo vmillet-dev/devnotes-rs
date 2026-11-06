@@ -130,6 +130,18 @@ const STATUSES: [Status; 78] = [
     ),
 ];
 
+/// The code in the hue of its class.
+fn class_cell(key: &str, code: u32) -> Cell {
+    let cell = Cell::mono(key);
+    match code / 100 {
+        2 => cell.hue(|p| p.green),
+        3 => cell.hue(|p| p.blue),
+        4 => cell.hue(|p| p.amber_text),
+        5 => cell.hue(|p| p.red),
+        _ => cell,
+    }
+}
+
 fn row((code, name, by, standing): Status, language: Language) -> ReferenceRow {
     let group = format!("{}xx", code / 100);
     let key = code.to_string();
@@ -144,7 +156,7 @@ fn row((code, name, by, standing): Status, language: Language) -> ReferenceRow {
     let heading = word(language, &format!("tools.http-status.groups.{group}"));
     let mut named = Cell::text(name);
     if let Some(standing) = standing {
-        named = named.below(word(
+        named = named.tag(word(
             language,
             &format!("tools.http-status.standing.{standing}"),
         ));
@@ -154,7 +166,7 @@ fn row((code, name, by, standing): Status, language: Language) -> ReferenceRow {
         let lead = i18n::translate(language, keys::tools::http_status::USE, &[]);
         said = said.below(format!("{lead} {usage}"));
     }
-    let cells = vec![Cell::mono(key.clone()), named, said, Cell::text(by)];
+    let cells = vec![class_cell(&key, code), named, said, Cell::text(by)];
     let title = format!("{key} {name}");
     ReferenceRow::new(key.clone(), group, cells)
         .searched_by([key.as_str(), name, &meaning, &usage, by, &heading])
