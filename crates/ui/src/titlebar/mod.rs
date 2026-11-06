@@ -171,6 +171,8 @@ pub(crate) fn dialogs(
             state.language,
         );
         if let Some(answer) = asked {
+            // Whatever the answer: nothing typed outlives the question.
+            view.prompt = PromptView::default();
             view.answer = Some(answer);
             actions.push(Asked::Menu(Action::Prompted));
         }

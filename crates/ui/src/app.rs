@@ -327,6 +327,9 @@ mod update_prompt_tests;
 mod about_link_tests;
 
 #[cfg(test)]
+mod prompt_tests;
+
+#[cfg(test)]
 mod tests {
     use egui_kittest::Harness;
 
