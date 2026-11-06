@@ -9,7 +9,6 @@ use engine::spaces::model::{Space, SpaceDraft};
 
 use crate::action::Actions;
 use crate::backend::Backend;
-use crate::gate::IndexFill;
 use crate::services::preferences::Preferences;
 use crate::state::{AppState, Area};
 use crate::testing;
@@ -44,9 +43,7 @@ pub(crate) fn area_of(
                 state
                     .gate
                     .update(&bench.backend, &mut state.status, &mut state.errors);
-                bench
-                    .state
-                    .update_library(&ctx, &bench.backend, IndexFill::Ready);
+                bench.state.update_library(&ctx, &bench.backend);
                 let mut actions = Actions::default();
                 if bench.state.settings.area == Area::Http {
                     let mut view = std::mem::take(&mut bench.state.http_view);
