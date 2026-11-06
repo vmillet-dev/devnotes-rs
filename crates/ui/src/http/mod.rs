@@ -10,6 +10,7 @@ mod environment_picker;
 mod environments;
 mod extract;
 mod history;
+pub(crate) mod leave;
 mod rail;
 mod request;
 mod response;
@@ -137,6 +138,7 @@ pub enum Action {
     },
     ClearSocketLog(String),
     Runner(crate::state::http::runner::Asked),
+    Leave(crate::state::http::leave::Asked),
     /// Sent all the same, under a protected environment.
     SendAnyway(String),
     StopAsking,
@@ -406,6 +408,8 @@ mod environments_tests;
 mod history_tests;
 #[cfg(test)]
 mod kept_tests;
+#[cfg(test)]
+mod leave_tests;
 #[cfg(test)]
 mod runner_tests;
 #[cfg(test)]

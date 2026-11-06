@@ -203,6 +203,28 @@ impl App {
         App::launch(scenario, &profile)
     }
 
+    /// `Quit` with requests left with changes, the question answered without saving them.
+    pub fn quit_discarding(mut self) {
+        self.act("quit");
+        self.click("http-leave-discard");
+        self.ended();
+    }
+
+    /// As `relaunch`, for a scenario that leaves requests with changes.
+    #[must_use]
+    pub fn relaunch_discarding(self) -> Self {
+        let scenario = self.scenario;
+        let profile = self.profile.clone();
+        self.quit_discarding();
+        App::launch(scenario, &profile)
+    }
+
+    /// Waits for the process to end by itself, its queue drained: a quit answered in the window.
+    pub fn ended(mut self) {
+        let ended = self.child.wait().expect("the application ends");
+        assert!(ended.success(), "the application ended with {ended}");
+    }
+
     /// Asks for `Quit` from a second launch, the way a global shortcut would, and waits for the
     /// process to end, its queue drained.
     pub fn quit(mut self) {

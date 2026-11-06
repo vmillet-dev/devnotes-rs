@@ -119,6 +119,11 @@ impl Engine {
         if let Ok(mut index) = self.index.lock() {
             index.clear();
         }
+        self.stop_network();
+    }
+
+    /// The sockets, the runs and the sends, as the window goes.
+    pub fn stop_network(&self) {
         self.sockets.close_all();
         self.runs.cancel_all();
         self.sending.cancel_all();

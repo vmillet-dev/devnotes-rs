@@ -34,6 +34,14 @@ pub fn run_of(send_id: &str) -> Option<&str> {
     http::runner::run_of(send_id)
 }
 
+/// Queued behind the writes under way: the exit drains the queue with it.
+pub fn stop_network(backend: &Backend) -> Pending<()> {
+    backend.db(|engine| {
+        engine.stop_network();
+        Ok(())
+    })
+}
+
 pub fn run_order(backend: &Backend, item: HttpItem) -> Pending<Vec<http::model::RunEntry>> {
     backend.db(move |engine| http::http_run_order(engine, item))
 }

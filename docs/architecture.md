@@ -5090,6 +5090,12 @@ drawn in view alone, summed up by `RunSummary`; the kept answer last unfolded re
 run's sends are named `run:<id>#…` (`runner::run_of`), and so its console has a key of its own,
 forgotten when the next run starts.
 
+Closing the window, or Quit, goes through `AppState::may_close`: with a tab modified, `http::leave`
+asks first, over any area, and « Save all » walks the tabs, a request never saved asked its place.
+A write that fails or a place refused leaves the question out. A note open closes by its own path,
+which writes its drafts, and the window follows it. Then the window hides, `on_exit` queues what
+waits, stops the network behind it and drains the queue (30 s at most).
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

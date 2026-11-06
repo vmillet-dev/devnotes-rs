@@ -456,6 +456,10 @@ impl Tabs {
         self.write(backend, key, true);
     }
 
+    pub fn is_saving(&self) -> bool {
+        !self.saving.is_empty()
+    }
+
     /// The draft the place is being asked for.
     pub fn asking_place(&self) -> Option<&Tab> {
         let (key, _) = self.asking_place.as_ref()?;

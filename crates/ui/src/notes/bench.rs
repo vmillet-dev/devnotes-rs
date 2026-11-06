@@ -51,6 +51,7 @@ pub(crate) fn area_of(
                 if bench.state.settings.area == Area::Http {
                     let mut view = std::mem::take(&mut bench.state.http_view);
                     crate::http::show(ui, &bench.state, &mut view, &mut actions);
+                    crate::http::leave::show(ui, &bench.state, &mut view, &mut actions);
                     bench.state.http_view = view;
                     if let Some(action) = crate::keys::dispatch(
                         &ctx,

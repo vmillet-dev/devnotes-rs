@@ -323,7 +323,7 @@ fn fold_kept(app: App) -> App {
             rows(tree) == [API, "Auth", "WS Flux live"]
         });
     });
-    let mut app = app.relaunch();
+    let mut app = app.relaunch_discarding();
     step("unlocked again, the HTTP area shows the fold", || {
         app.fill("vault-passphrase", e2e::PASSPHRASE);
         app.click("vault-submit");

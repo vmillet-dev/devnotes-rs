@@ -10,6 +10,7 @@ pub mod cookies;
 pub mod environments;
 pub mod history;
 pub mod kept;
+pub mod leave;
 pub mod moves;
 pub mod runner;
 pub mod send;
@@ -237,6 +238,7 @@ pub struct HttpState {
     cookies: cookies::CookieJar,
     console: console::Console,
     runner: runner::Runner,
+    leave: leave::Leave,
     kept: kept::Kept,
     kept_answer: kept::KeptAnswer,
     script_focus: Option<ScriptFocus>,
@@ -290,6 +292,10 @@ impl HttpState {
         self.forget_closed(backend);
         self.sockets.update();
         self.kept_answer = self.kept.update(backend, errors);
+        self.save_next(backend);
+        if self.leave.take_close() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
         let empty = HttpTree::default();
         let read = (
             self.tree.value().unwrap_or(&empty),
@@ -571,6 +577,59 @@ impl HttpState {
         if let Some(key) = key {
             self.console.take(&key, event);
         }
+    }
+
+    pub fn leave(&self) -> &leave::Leave {
+        &self.leave
+    }
+
+    /// Read live: a tab saved while the question is out leaves the list.
+    pub fn modified(&self) -> impl Iterator<Item = &tabs::Tab> {
+        self.tabs.tabs().iter().filter(|tab| tab.is_dirty())
+    }
+
+    /// The sockets leaving cuts: said in the same question, never one of their own.
+    pub fn connected(&self) -> u32 {
+        let live = self.tabs.tabs().iter();
+        let live = live.filter(|tab| self.sockets.is_live(&tab.key));
+        u32::try_from(live.count()).unwrap_or(u32::MAX)
+    }
+
+    /// `true` when the window may go at once; otherwise the question is out.
+    pub fn ask_leave(&mut self) -> bool {
+        if self.leave.is_released() || self.modified().next().is_none() {
+            return true;
+        }
+        self.leave.ask();
+        false
+    }
+
+    pub fn answer_leave(&mut self, asked: leave::Asked) {
+        match asked {
+            leave::Asked::Cancel => self.leave.cancel(),
+            leave::Asked::Discard => self.leave.release(),
+            leave::Asked::SaveAll => self.leave.save_all(),
+        }
+    }
+
+    /// « Save all », a tab at a time: a request never saved is asked its place on the way.
+    fn save_next(&mut self, backend: &Backend) {
+        if !self.leave.is_saving() || self.tabs.is_saving() || self.tabs.asking_place().is_some() {
+            return;
+        }
+        let Some(key) = self.modified().next().map(|tab| tab.key.clone()) else {
+            self.leave.release();
+            return;
+        };
+        if self.leave.written(&key) {
+            self.tabs.save(backend, &key);
+        }
+    }
+
+    /// The window is going: what waits to be written is queued, and the network stops behind it.
+    pub fn leaving(&mut self, backend: &Backend) {
+        self.environments.flush(backend);
+        drop(api::http::stop_network(backend));
     }
 
     pub fn runner(&self) -> &runner::Runner {

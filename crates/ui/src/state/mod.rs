@@ -105,6 +105,8 @@ pub struct AppState {
     pub notes_view: crate::notes::View,
     pub notes: notes::NotesState,
     pub editor: editor::EditorState,
+    /// The window waits for the note open to close.
+    pub closing_editor: bool,
     pub revisions: note_revisions::RevisionsState,
     pub selection: selection::SelectionState,
     pub undo: undo::UndoState,
@@ -155,6 +157,7 @@ impl AppState {
             notes_view: crate::notes::View::default(),
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
+            closing_editor: false,
             revisions: note_revisions::RevisionsState::default(),
             selection: selection::SelectionState::default(),
             undo: undo::UndoState::default(),
@@ -264,9 +267,7 @@ impl AppState {
             self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
         }
         self.follow_revisions(backend);
-        if self.settings.area == Area::Http {
-            self.update_http(ctx, backend, time);
-        }
+        self.update_area_or_exit(ctx, backend, time);
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
             self.caches.pictures.redrawn(&id);
@@ -680,13 +681,10 @@ impl AppState {
             Http::SendMessage { key, text } => self.http.send_message(backend, &key, text),
             Http::ClearSocketLog(key) => self.http.clear_socket_log(&key),
             Http::Runner(asked) => self.http.ask_runner(backend, &self.dialog, asked),
+            Http::Leave(asked) => self.http.answer_leave(asked),
             Http::History(asked) => self.http.ask_history(backend, asked),
             Http::Code(asked) => self.http.ask_code(asked),
-            Http::CopyCode(text) => {
-                ctx.copy_text(text);
-                self.status
-                    .report(i18n::Message::new(i18n::keys::http::code::COPIED));
-            }
+            Http::CopyCode(text) => self.say_copied(ctx, text, i18n::keys::http::code::COPIED),
             Http::SaveTo { key, target } => self.http.tabs_mut().save_to(backend, &key, target),
             Http::CancelSaveTo => self.http.tabs_mut().cancel_save_to(),
             Http::OpenSettings(container) => self.http.open_settings(backend, container),
@@ -699,11 +697,7 @@ impl AppState {
             Http::CancelSend(key) => self.http.cancel_send(backend, &key),
             Http::Explore { send_id, query } => self.http.explore(&send_id, query),
             Http::ResponseImage(send_id) => self.http.ask_image(backend, &send_id),
-            Http::Copy(text) => {
-                ctx.copy_text(text);
-                self.status
-                    .report(i18n::Message::new(i18n::keys::settings::COPIED));
-            }
+            Http::Copy(text) => self.say_copied(ctx, text, i18n::keys::settings::COPIED),
             Http::ClearResponse(key) => self.http.clear_response(backend, &key),
             Http::SetShare(share) => {
                 self.settings.http_request_share = share;
@@ -717,6 +711,35 @@ impl AppState {
             }
         }
         self.remember_http(backend);
+    }
+
+    fn say_copied(&mut self, ctx: &egui::Context, text: String, said: i18n::Key) {
+        ctx.copy_text(text);
+        self.status.report(i18n::Message::new(said));
+    }
+
+    /// The window asks to close: `true` once nothing holds it. The requests are asked about; a
+    /// note open closes by its own path, which writes its drafts, and the window follows.
+    pub fn may_close(&mut self) -> bool {
+        if !self.gate.is_open() {
+            return true;
+        }
+        if !self.http.ask_leave() {
+            return false;
+        }
+        self.closing_editor = self.editor.is_open();
+        !self.closing_editor
+    }
+
+    /// The question before leaving is asked over any area, and goes on whichever is shown.
+    fn update_area_or_exit(&mut self, ctx: &egui::Context, backend: &Backend, time: f64) {
+        if self.settings.area == Area::Http || self.http.leave().is_under_way() {
+            self.update_http(ctx, backend, time);
+        }
+        if self.closing_editor && !self.editor.is_open() {
+            self.closing_editor = false;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
     }
 
     fn update_http(&mut self, ctx: &egui::Context, backend: &Backend, time: f64) {
@@ -1323,6 +1346,7 @@ impl AppState {
             || self.palette.is_open()
             || self.folders.naming()
             || self.board.drawn_zone().is_some()
+            || self.http.leave().is_asking()
     }
 
     /// In the space shown, or the first one for « all spaces », and the folder shown.
