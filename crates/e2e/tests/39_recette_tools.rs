@@ -80,7 +80,7 @@ const CASES: &[Case] = &[
         "convert",
         "convert-input",
         r#"{"service":"billing","replicas":2,"tags":["api","web"],"debug":null}"#,
-        &["service: billing", "replicas: 2", "debug:"],
+        &["service: billing", "replicas: 2", "debug: null"],
     ),
     (
         "ENC-19",
@@ -437,7 +437,10 @@ fn recette_the_rest() {
 
     step("GEN-16 lorem ipsum, opening on its words", || {
         open_tool(&mut app, "lorem");
-        reads(&mut app, &["Lorem ipsum dolor sit amet"]);
+        reads(
+            &mut app,
+            &["Lorem ipsum dolor sit amet, consectetur adipiscing elit"],
+        );
         let first = app.tree().text("lorem-output");
         app.click("lorem-again");
         app.eventually("another text", |tree| tree.text("lorem-output") != first);
