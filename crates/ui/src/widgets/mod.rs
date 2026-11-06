@@ -38,6 +38,7 @@ use egui::{
     WidgetInfo,
 };
 
+use crate::theme::icons::Icon;
 use crate::theme::{focus, motion};
 
 /// WCAG 2.2 AA (2.5.8): a control is never smaller than this, whatever its glyph.
@@ -128,24 +129,82 @@ pub(crate) fn one_line(
     )
 }
 
-/// `words` at a CSS weight, wrapped at `width`.
+/// What an arrow takes in a wrapped text: it keeps its room, and no line breaks inside it.
+const ARROW_ROOM: &str = "\u{a0}\u{a0}\u{a0}";
+const ARROW_CHARS: usize = 4;
+
+/// A text laid out, its arrows waiting to be painted over the room kept for them.
+pub(crate) struct Wrapped {
+    galley: Arc<Galley>,
+    /// By the rank of the character their room starts at.
+    arrows: Vec<(usize, Icon)>,
+}
+
+impl Wrapped {
+    pub(crate) fn size(&self) -> Vec2 {
+        self.galley.size()
+    }
+
+    pub(crate) fn paint(self, ui: &Ui, at: egui::Pos2, ink: Color32) {
+        for (rank, icon) in self.arrows {
+            let cursor = |rank: usize| egui::text::CCursor::new(rank);
+            let from = self.galley.pos_from_cursor(cursor(rank));
+            let to = self.galley.pos_from_cursor(cursor(rank + ARROW_CHARS));
+            let centre = at + (from.center().to_vec2() + to.center().to_vec2()) / 2.0;
+            let side = to.left() - from.left();
+            let glyph = egui::Rect::from_center_size(centre, Vec2::splat(side));
+            crate::theme::icons::paint(ui, glyph, icon, ink);
+        }
+        ui.painter().galley(at, self.galley, ink);
+    }
+}
+
+/// `words` at a CSS weight, wrapped at `width`, their arrows painted as `arrowed` paints them.
 pub(crate) fn wrapped(
     ui: &Ui,
     words: &str,
     (size, weight): (f32, f32),
     ink: Color32,
     width: f32,
-) -> Arc<Galley> {
-    let words = RichText::new(words)
+) -> Wrapped {
+    let mut laid = String::with_capacity(words.len());
+    let mut rank = 0;
+    let mut arrows = Vec::new();
+    for glyph in words.chars() {
+        if let Some(icon) = arrow_of(glyph) {
+            arrows.push((rank, icon));
+            laid.push_str(ARROW_ROOM);
+            rank += ARROW_CHARS;
+        } else {
+            laid.push(glyph);
+            rank += 1;
+        }
+    }
+    let text = RichText::new(laid)
         .font(FontId::new(size, FontFamily::Proportional))
         .variation(*b"wght", weight)
         .color(ink);
-    egui::WidgetText::from(words).into_galley(
+    let galley = egui::WidgetText::from(text).into_galley(
         ui,
         Some(egui::TextWrapMode::Wrap),
         width.max(1.0),
         egui::TextStyle::Body,
-    )
+    );
+    Wrapped { galley, arrows }
+}
+
+/// The icon an arrow is painted as.
+fn arrow_of(glyph: char) -> Option<Icon> {
+    Some(match glyph {
+        '←' => Icon::ArrowLeft,
+        '↑' => Icon::ArrowUp,
+        '→' => Icon::ArrowRight,
+        '↓' => Icon::ArrowDown,
+        '↔' => Icon::MoveHorizontal,
+        '↵' => Icon::CornerDownLeft,
+        '⌫' => Icon::Delete,
+        _ => return None,
+    })
 }
 
 /// ▾ or ▸, drawn: the glyphs are in none of the embedded faces.
@@ -167,8 +226,8 @@ pub(crate) fn triangle(ui: &Ui, centre: egui::Pos2, open: bool, ink: Color32) {
         .add(egui::Shape::convex_polygon(points, ink, egui::Stroke::NONE));
 }
 
-/// Words whose arrows (← ↑ → ↓, ↵ ⌫) are painted as icons: none of the embedded faces has them, and
-/// the system's are a different hand. Laid out from `left` on the line through `middle`;
+/// Words whose arrows (← ↑ → ↓ ↔, ↵ ⌫) are painted as icons: none of the embedded faces has them,
+/// the emoji face boxes ↔, and the system's are a different hand. Laid out from `left` on the line through `middle`;
 /// answers the width taken, which `at = None` measures without painting.
 pub(crate) fn arrowed(
     ui: &Ui,
@@ -180,18 +239,9 @@ pub(crate) fn arrowed(
     let mut width = 0.0;
     let mut rest = words;
     loop {
-        let found = rest.char_indices().find_map(|(index, glyph)| {
-            let icon = match glyph {
-                '←' => crate::theme::icons::Icon::ArrowLeft,
-                '↑' => crate::theme::icons::Icon::ArrowUp,
-                '→' => crate::theme::icons::Icon::ArrowRight,
-                '↓' => crate::theme::icons::Icon::ArrowDown,
-                '↵' => crate::theme::icons::Icon::CornerDownLeft,
-                '⌫' => crate::theme::icons::Icon::Delete,
-                _ => return None,
-            };
-            Some((index, glyph.len_utf8(), icon))
-        });
+        let found = rest
+            .char_indices()
+            .find_map(|(index, glyph)| Some((index, glyph.len_utf8(), arrow_of(glyph)?)));
         let piece = found.map_or(rest, |(index, _, _)| &rest[..index]);
         if !piece.is_empty() {
             let galley = text(ui, piece, size, 400.0, FontFamily::Proportional, ink);

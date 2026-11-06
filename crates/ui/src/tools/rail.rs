@@ -230,7 +230,7 @@ impl<'a> Link<'a> {
             }
         }
         let top = middle - label.size().y / 2.0;
-        ui.painter().galley(Pos2::new(left + lead, top), label, ink);
+        label.paint(ui, Pos2::new(left + lead, top), ink);
         if let Some(count) = count {
             let at = Pos2::new(
                 rect.right() - 10.0 - count.size().x,

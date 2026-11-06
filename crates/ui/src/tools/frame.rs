@@ -54,18 +54,11 @@ fn head(
     }
     let p = palette(ui.ctx());
     let name = entry.name(language);
-    let galley = widgets::text(
-        ui,
-        &name,
-        16.0,
-        700.0,
-        egui::FontFamily::Proportional,
-        p.text_0,
-    );
+    let galley = widgets::wrapped(ui, &name, (16.0, 700.0), p.text_0, f32::INFINITY);
     let (rect, title) = ui.allocate_exact_size(galley.size(), Sense::hover());
     title.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &name));
     address(ui, &title, "tool-title");
-    ui.painter().galley(rect.min, galley, p.text_0);
+    galley.paint(ui, rect.min, p.text_0);
     let on = state.tools.is_favourite(entry.id);
     let label = tr(keys::tools::favourites::TOGGLE);
     if star(ui, on, &label, "tool-favourite", &star_hint(language, on)).clicked() {

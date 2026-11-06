@@ -11,7 +11,7 @@ use crate::testing;
 pub(crate) fn tools() -> Harness<'static, Bench> {
     let (backend, profile) = testing::unlocked();
     let mut harness = area_of(Area::Tools, backend, profile);
-    // The window finds →, ≈ and − in the system's fonts, which a bench has not.
+    // The window finds ≈ and − in the system's fonts, which a bench has not.
     harness
         .ctx
         .set_missing_glyph_policy(egui::epaint::text::MissingGlyphPolicy::Tofu);

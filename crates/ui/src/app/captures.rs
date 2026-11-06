@@ -615,7 +615,7 @@ fn the_tools_area() {
     click(&mut harness, "area-option-tools");
     capture(&mut harness, "tools-home");
     click(&mut harness, "tools-entry-star-hash");
-    click(&mut harness, "tools-entry-case");
+    click(&mut harness, "tools-entry-convert");
     capture(&mut harness, "tool-frame");
     click(&mut harness, "tool-back");
     capture(&mut harness, "tools-recents");

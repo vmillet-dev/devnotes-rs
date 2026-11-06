@@ -312,7 +312,7 @@ fn chip(
 ) -> Response {
     let p = palette(ui.ctx());
     let name = tool.name(language);
-    let galley = widgets::text(ui, &name, 12.5, 400.0, FontFamily::Proportional, p.text_0);
+    let galley = widgets::wrapped(ui, &name, (12.5, 400.0), p.text_0, f32::INFINITY);
     let when =
         when.map(|when| widgets::text(ui, when, 11.0, 400.0, FontFamily::Proportional, p.text_2));
     let room = when.as_ref().map_or(0.0, |when| when.size().x + 8.0);
@@ -344,7 +344,7 @@ fn chip(
     let left = rect.left() + 26.0;
     let width = galley.size().x;
     let at = Pos2::new(left, middle - galley.size().y / 2.0);
-    ui.painter().galley(at, galley, p.text_0);
+    galley.paint(ui, at, p.text_0);
     if let Some(when) = when {
         let at = Pos2::new(left + width + 8.0, middle - when.size().y / 2.0);
         ui.painter().galley(at, when, p.text_2);
@@ -527,10 +527,9 @@ fn tool_row(
     }
     let left = rect.left() + 14.0;
     let title_size = title.size();
-    ui.painter()
-        .galley(Pos2::new(left, rect.top() + 10.0), title, p.text_0);
+    title.paint(ui, Pos2::new(left, rect.top() + 10.0), p.text_0);
     let below = rect.top() + 10.0 + title_size.y + 3.0;
-    ui.painter().galley(Pos2::new(left, below), line, p.text_2);
+    line.paint(ui, Pos2::new(left, below), p.text_2);
     if place.first {
         enter_mark(
             ui,
@@ -615,8 +614,7 @@ fn no_match(ui: &mut Ui, language: Language, query: &str) {
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     address(ui, &response, "tools-no-match");
-    ui.painter()
-        .galley(rect.min + Vec2::new(16.0, 0.0), galley, p.text_1);
+    galley.paint(ui, rect.min + Vec2::new(16.0, 0.0), p.text_1);
 }
 
 /// egui has dropped the focus by the time the frame starts: the field empties and takes it back.
