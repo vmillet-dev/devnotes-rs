@@ -45,6 +45,27 @@ fn a_tool(app: &mut App) {
     });
 }
 
+fn text_tools(app: &mut App) {
+    step("the case converter answers what is typed", || {
+        app.click("tools-entry-case");
+        app.wait_for("tool-title");
+        app.fill("case-input", "parse URL");
+        app.eventually("the cases are shown", |tree| {
+            tree.texts("output-value")
+                .iter()
+                .any(|it| it == "parse_url")
+        });
+    });
+    step("the diff compares two texts", || {
+        app.click("tools-rail-tool-diff");
+        app.fill("text-diff-a", "one");
+        app.fill("text-diff-b", "two");
+        app.wait_for("text-diff-rows");
+        app.click("tool-clear");
+        app.click("tool-back");
+    });
+}
+
 fn remembered(mut app: App) -> App {
     step("the star and the recent tools come back", || {
         app.click("tools-entry-case");
@@ -74,5 +95,6 @@ fn tools_home() {
 
     home(&mut app);
     a_tool(&mut app);
+    text_tools(&mut app);
     remembered(app).quit();
 }

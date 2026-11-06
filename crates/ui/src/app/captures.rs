@@ -621,6 +621,40 @@ fn the_tools_area() {
     capture(&mut harness, "tools-recents");
 }
 
+/// Each tool on its example, once it has answered.
+#[test]
+fn the_tools() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    harness
+        .ctx
+        .set_missing_glyph_policy(egui::epaint::text::MissingGlyphPolicy::Tofu);
+    click(&mut harness, "area-option-tools");
+    for tool in &crate::tools::catalogue::TOOLS {
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        let open = crate::action::Action::Tools(crate::tools::Action::Open(tool.id));
+        app.state.apply(open, &ctx, &app.backend);
+        settle(&mut harness);
+        if harness
+            .query_by(|node| node.author_id() == Some("tool-sample"))
+            .is_some()
+        {
+            click(&mut harness, "tool-sample");
+        }
+        // Past the debounce: the bench's clock moves as frames do.
+        for _ in 0..30 {
+            harness.step();
+            settle(&mut harness);
+        }
+        capture(&mut harness, &format!("tool-{}", tool.id));
+    }
+}
+
 #[test]
 fn the_canvas_of_an_open_library() {
     let profile = tempfile::tempdir().unwrap();

@@ -11,6 +11,17 @@ use crate::tools::Drawn;
 use crate::widgets::{self, hovered, interact, towards};
 
 pub fn note_import(ui: &mut Ui, drawn: &mut Drawn<'_>, field: &'static str) {
+    let id = format!("note-import-{field}");
+    note_import_into(ui, drawn, (field, field), &id);
+}
+
+/// For a tool with two inputs alike: `(field, slot)`, the name in `from_note` and which of the two.
+pub fn note_import_into(
+    ui: &mut Ui,
+    drawn: &mut Drawn<'_>,
+    (field, slot): (&'static str, &'static str),
+    author_id: &str,
+) {
     if !drawn.entry.from_note.iter().any(|(name, _)| *name == field) {
         return;
     }
@@ -22,7 +33,7 @@ pub fn note_import(ui: &mut Ui, drawn: &mut Drawn<'_>, field: &'static str) {
         ui,
         Vec2::new(galley.size().x + 10.0 + 13.0 + 6.0 + 10.0, 26.0),
         Sense::click(),
-        &format!("note-import-{field}"),
+        author_id,
         || WidgetInfo::labeled(Role::Button, true, &words),
         corner,
     );
@@ -43,6 +54,6 @@ pub fn note_import(ui: &mut Ui, drawn: &mut Drawn<'_>, field: &'static str) {
     let at = Pos2::new(rect.left() + 29.0, rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, ink);
     if response.clicked() {
-        drawn.importing = Some(field);
+        drawn.importing = Some((field, slot));
     }
 }

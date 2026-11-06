@@ -56,8 +56,15 @@ pub trait Tool {
         None
     }
 
-    /// What a note gave the input `field`, copied in once.
-    fn imported(&mut self, _field: &str, _note: &PickedNote) {}
+    /// What a note gave the input `slot`, copied in once.
+    fn imported(&mut self, _slot: &str, _note: &PickedNote) {}
+
+    /// Its own buttons in the frame's header: « Swap A and B ».
+    fn actions(&self) -> Vec<ToolAction> {
+        Vec::new()
+    }
+
+    fn run_action(&mut self, _id: &str, _ctx: &egui::Context) {}
 
     /// Whether the frame offers « Example ».
     fn has_sample(&self) -> bool {
@@ -65,7 +72,7 @@ pub trait Tool {
     }
 
     /// Fills the inputs with test data, as typing would. Never a real secret.
-    fn sample(&mut self) {}
+    fn sample(&mut self, _language: Language) {}
 
     fn clear(&mut self);
 }
@@ -81,13 +88,21 @@ pub struct ToolResult {
     pub warning: Option<i18n::Key>,
 }
 
+/// A button of the tool's own in the frame's header.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ToolAction {
+    pub id: &'static str,
+    pub label: i18n::Key,
+    pub enabled: bool,
+}
+
 /// What a tool has at hand while it is drawn.
 pub struct Drawn<'a> {
     pub entry: &'static ToolEntry,
     pub language: Language,
     pub actions: &'a mut Actions,
-    /// The input « Import from a note » was pressed for.
-    pub importing: Option<&'static str>,
+    /// The input « Import from a note » was pressed for: its `from_note` name, and its slot.
+    pub importing: Option<(&'static str, &'static str)>,
 }
 
 /// What only the area's drawing sees (D13), the tools' sessions among it.
@@ -120,10 +135,10 @@ impl View {
             return;
         };
         if let Some(picked) = picker.update(turn) {
-            let field = picker.field;
+            let slot = picker.slot;
             self.picker = None;
             turn.status.report(said_imported(&picked));
-            self.session(entry).imported(field, &picked);
+            self.session(entry).imported(slot, &picked);
         }
     }
 
