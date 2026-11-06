@@ -14,6 +14,8 @@ use crate::services::status::StatusNotifier;
 pub enum Goal {
     Open(String),
     Create(String),
+    /// A copy of the open library, in its place.
+    Restore(String),
 }
 
 enum Work {

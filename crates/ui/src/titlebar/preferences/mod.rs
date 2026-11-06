@@ -28,7 +28,7 @@ const FOOTER: f32 = 56.0;
 const BUTTONS: f32 = 270.0;
 
 /// What the panel asks.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ask {
     /// The theme or the density changed in the draft.
     Preview,
@@ -41,6 +41,10 @@ pub enum Ask {
     TypedCurrent,
     SubmitPassphrase,
     KeepPassphrase,
+    /// Proposes a copy: only `ConfirmRestore` replaces anything.
+    Restore(String),
+    KeepLibrary,
+    ConfirmRestore,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -74,6 +78,8 @@ pub(super) struct View {
     confirming_close: bool,
     variables: Option<Vec<Variable>>,
     change: security::ChangeView,
+    /// The restore strip just asked for, to bring into view.
+    reveal_strip: bool,
 }
 
 impl View {
@@ -269,7 +275,7 @@ fn current_page(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Ac
         Page::General => general::show(ui, state, draft, actions),
         Page::Security => {
             let mut settings = draft.draft().clone();
-            security::page(ui, state, &mut settings, actions);
+            security::page(ui, state, (&mut settings, &mut view.reveal_strip), actions);
             draft.edit(|edited| *edited = settings);
         }
         Page::Variables => variables::page(ui, state, &mut view.variables),

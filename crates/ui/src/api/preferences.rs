@@ -2,6 +2,7 @@
 //! in that order, and none waits on the UI thread.
 
 use engine::error::{AppError, StorageError};
+use engine::libraries::registry;
 use engine::{layout, libraries};
 
 use crate::backend::{Backend, Pending};
@@ -19,6 +20,18 @@ pub fn write_library(backend: &Backend, preferences: Preferences) -> Pending<()>
     backend.db(move |engine| {
         let directory = libraries::open_library_directory(engine)?;
         written(&preferences, &directory.join(layout::PREFERENCES))
+    })
+}
+
+/// A key gone from the file of the library the gate stands before: none is open to answer for
+/// its directory.
+pub fn forget_in_closed_library(backend: &Backend, key: &'static str) -> Pending<()> {
+    let profile = backend.engine().paths().profile.clone();
+    backend.db(move |_| {
+        let file = registry::open_directory_in(&profile)?.join(layout::PREFERENCES);
+        let mut preferences = Preferences::read(&file);
+        preferences.remove(key);
+        written(&preferences, &file)
     })
 }
 

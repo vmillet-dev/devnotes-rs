@@ -1,6 +1,7 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
 pub mod attachments;
+pub mod backups;
 pub mod board;
 pub mod calc_sheets;
 pub mod diagrams;
@@ -130,6 +131,7 @@ pub struct AppState {
     pub transfer: transfer::TransferState,
     pub libraries: libraries::LibrariesState,
     pub security: security::SecurityState,
+    pub backups: backups::BackupsState,
     /// The bar's menus and what they open: only their drawing reads it (D13).
     pub titlebar_view: crate::titlebar::View,
     /// The modals the bar's menus open, in the order they are drawn.
@@ -190,6 +192,7 @@ impl AppState {
             transfer: transfer::TransferState::default(),
             libraries: libraries::LibrariesState::default(),
             security: security::SecurityState::default(),
+            backups: backups::BackupsState::default(),
             titlebar_view: crate::titlebar::View::default(),
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
@@ -333,6 +336,7 @@ impl AppState {
         self.libraries
             .update(backend, &mut self.status, &mut self.errors);
         self.security.update(&mut self.status, &mut self.errors);
+        self.backups.update(&mut self.errors);
         if self.security.take_changed() {
             let change = crate::titlebar::preferences::change_id();
             self.dialogs.close(ctx, change);
@@ -723,6 +727,7 @@ impl AppState {
             Menu::OpenPreferences => {
                 self.titlebar_view.open_preferences(&self.settings);
                 self.security.load_variables(backend);
+                self.backups.load(backend);
                 let opener = self.titlebar_view.file_anchor;
                 self.dialogs
                     .open(Layer::Settings, crate::titlebar::preferences::id(), opener);
@@ -760,6 +765,14 @@ impl AppState {
                 self.dialogs.open(Layer::Passphrase, change, None);
             }
             Ask::TypedCurrent => self.security.clear_refusal(),
+            Ask::Restore(id) => self.backups.ask(id),
+            Ask::KeepLibrary => self.backups.dismiss(),
+            Ask::ConfirmRestore => {
+                if let Some(id) = self.backups.pending().map(str::to_owned) {
+                    let goal = libraries::Goal::Restore(id);
+                    self.ask_switch(goal, http::leave::Reason::Restore, backend);
+                }
+            }
             Ask::SubmitPassphrase => {
                 let (current, next) = self.titlebar_view.take_phrases();
                 self.security.change(backend, current, next);
@@ -807,8 +820,12 @@ impl AppState {
                 self.libraries.dismiss_deletion();
                 self.dialogs.close(ctx, crate::titlebar::libraries::id());
             }
-            Ask::Create(name) => self.ask_switch(Goal::Create(name), backend),
-            Ask::Open(id) => self.ask_switch(Goal::Open(id), backend),
+            Ask::Create(name) => {
+                self.ask_switch(Goal::Create(name), http::leave::Reason::Switch, backend);
+            }
+            Ask::Open(id) => {
+                self.ask_switch(Goal::Open(id), http::leave::Reason::Switch, backend);
+            }
             Ask::Rename { id, name } => self.libraries.rename(backend, id, name),
             Ask::Delete(id) => self.libraries.ask_to_delete(id),
             Ask::KeepIt => self.libraries.dismiss_deletion(),
@@ -817,8 +834,13 @@ impl AppState {
     }
 
     /// A switch takes what the HTTP tabs hold: asked before the library changes, not after.
-    fn ask_switch(&mut self, goal: libraries::Goal, backend: &Backend) {
-        if self.http.ask_leave(http::leave::Reason::Switch) {
+    fn ask_switch(
+        &mut self,
+        goal: libraries::Goal,
+        reason: http::leave::Reason,
+        backend: &Backend,
+    ) {
+        if self.http.ask_leave(reason) {
             self.switch_library(goal, backend);
         } else {
             self.libraries.hold(goal);
@@ -829,11 +851,16 @@ impl AppState {
     /// that library goes with `reset_library_scope`.
     fn switch_library(&mut self, goal: libraries::Goal, backend: &Backend) {
         self.http.leaving(backend);
-        let pending = match goal {
-            libraries::Goal::Open(id) => api::libraries::open(backend, id),
-            libraries::Goal::Create(name) => api::libraries::create_and_open(backend, name),
-        };
-        self.gate.leave_for(pending);
+        match goal {
+            libraries::Goal::Open(id) => self.gate.leave_for(api::libraries::open(backend, id)),
+            libraries::Goal::Create(name) => {
+                self.gate
+                    .leave_for(api::libraries::create_and_open(backend, name));
+            }
+            libraries::Goal::Restore(id) => {
+                self.gate.leave_for_copy(api::backups::restore(backend, id));
+            }
+        }
     }
 
     fn checked_on_screen(&self) -> Vec<String> {
@@ -1786,6 +1813,7 @@ impl AppState {
         self.transfer = transfer::TransferState::default();
         self.libraries = libraries::LibrariesState::default();
         self.security = security::SecurityState::default();
+        self.backups = backups::BackupsState::default();
         self.titlebar_view = crate::titlebar::View::default();
         self.dialogs = crate::widgets::DialogStack::default();
         self.revision.bump();

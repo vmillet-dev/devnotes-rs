@@ -50,6 +50,8 @@ enum Work {
     /// Setting a library aside, with the status that says where it went.
     Moving(Pending<String>, Key),
     Switching(Pending<()>),
+    /// A copy put back: the folder the replaced library went to.
+    Restoring(Pending<String>),
 }
 
 /// The gate's state: what the library is, what is under way, what the last attempt said.
@@ -169,6 +171,12 @@ impl Gate {
                     match answer {
                         Ok(path) => {
                             status.report(Message::new(report).with("path", path));
+                            // ⚠️ The mark goes with the library, or the fresh one opens with no
+                            // space, where no note can be created.
+                            drop(api::preferences::forget_in_closed_library(
+                                backend,
+                                crate::services::samples::SEEDED_KEY,
+                            ));
                             self.damaged = false;
                             self.refused = false;
                             self.confirming_archive = false;
@@ -188,6 +196,26 @@ impl Gate {
                             switched = true;
                         }
                         Err(error) => errors.report(keys::errors::LIBRARY_ACTION_FAILED, &error),
+                    }
+                }
+            }
+            Work::Restoring(pending) => {
+                if let Some(answer) = pending.poll() {
+                    self.work = None;
+                    match answer {
+                        Ok(path) => {
+                            status.report(Message::new(keys::backups::RESTORED).with("path", path));
+                            // A copy from before the samples holds no space: asked again at the
+                            // next open, which seeds nothing where there is one.
+                            drop(api::preferences::forget_in_closed_library(
+                                backend,
+                                crate::services::samples::SEEDED_KEY,
+                            ));
+                            *self = Self::default();
+                            self.ask(backend);
+                            switched = true;
+                        }
+                        Err(error) => errors.report(keys::errors::BACKUP_RESTORE_FAILED, &error),
                     }
                 }
             }
@@ -212,6 +240,11 @@ impl Gate {
     /// Out of the open library, from its File menu: the gate comes back when this is answered.
     pub fn leave_for(&mut self, pending: Pending<()>) {
         self.work = Some(Work::Switching(pending));
+    }
+
+    /// As `leave_for`, with a copy of the library put back in its place.
+    pub fn leave_for_copy(&mut self, pending: Pending<String>) {
+        self.work = Some(Work::Restoring(pending));
     }
 
     /// What the index says while it fills behind the gate.
