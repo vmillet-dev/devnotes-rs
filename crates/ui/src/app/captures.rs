@@ -24,6 +24,10 @@ fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
         .with_size(SIZE)
         .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
     harness.state_mut().state.clock = Box::new(FakeClock::at("2026-11-03T09:30:00Z"));
+    // The window finds the arrows in the system's fonts, which a bench has not.
+    harness
+        .ctx
+        .set_missing_glyph_policy(egui::epaint::text::MissingGlyphPolicy::Tofu);
     settle(&mut harness);
     harness
 }
@@ -122,6 +126,67 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "titlebar-notes");
 
+    click(&mut harness, "about-open");
+    capture(&mut harness, "about-menu");
+    click(&mut harness, "about-about");
+    settle(&mut harness);
+    capture(&mut harness, "about-card");
+    click(&mut harness, "about-close");
+    click(&mut harness, "about-open");
+    click(&mut harness, "about-getting-started");
+    settle(&mut harness);
+    capture(&mut harness, "getting-started");
+    click(&mut harness, "guide-close");
+    click(&mut harness, "about-open");
+    click(&mut harness, "about-shortcuts");
+    settle(&mut harness);
+    capture(&mut harness, "shortcut-sheet");
+    click(&mut harness, "sheet-close");
+    click(&mut harness, "about-open");
+    click(&mut harness, "about-whats-new");
+    settle(&mut harness);
+    capture(&mut harness, "whats-new");
+    click(&mut harness, "news-close");
+    settle(&mut harness);
+
+    click(&mut harness, "file-menu");
+    capture(&mut harness, "file-menu");
+    harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(
+        profile.path().join("library.devnotes"),
+    ));
+    click(&mut harness, "file-option-exportAll");
+    settle(&mut harness);
+    capture(&mut harness, "passphrase-prompt");
+    click(&mut harness, "passphrase-prompt-cancel");
+    settle(&mut harness);
+    click(&mut harness, "file-menu");
+    click(&mut harness, "file-libraries");
+    settle(&mut harness);
+    capture(&mut harness, "libraries");
+    click(&mut harness, "libraries-close");
+    settle(&mut harness);
+    click(&mut harness, "file-menu");
+    click(&mut harness, "file-preferences");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-general");
+    click(&mut harness, "settings-page-shortcuts");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-shortcuts");
+    click(&mut harness, "settings-page-security");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-security");
+    click(&mut harness, "setting-change-passphrase");
+    settle(&mut harness);
+    capture(&mut harness, "change-passphrase");
+    click(&mut harness, "change-passphrase-cancel");
+    settle(&mut harness);
+    click(&mut harness, "settings-page-variables");
+    click(&mut harness, "variable-add");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-variables");
+    click(&mut harness, "settings-cancel");
+    settle(&mut harness);
+
     click(&mut harness, "area-option-http");
     let state = &mut harness.state_mut().state;
     state.errors.report(
@@ -133,6 +198,29 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
         .report(i18n::Message::new(i18n::keys::settings::COPIED));
     settle(&mut harness);
     capture(&mut harness, "banners-http");
+}
+
+#[test]
+fn the_update_prompt() {
+    use crate::services::updates::UpdateState;
+    use crate::services::updates::fake::FakeUpdater;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    harness.state_mut().state.updates = UpdateState::with(FakeUpdater::offering("0.26.0"));
+
+    click(&mut harness, "about-open");
+    capture(&mut harness, "about-menu-check");
+    click(&mut harness, "about-check-updates");
+    settle(&mut harness);
+    capture(&mut harness, "update-prompt");
+
+    click(&mut harness, "update-later");
+    settle(&mut harness);
+    capture(&mut harness, "update-dot");
 }
 
 /// A library holding `API Paiements`, the HTTP area shown.
@@ -534,7 +622,13 @@ fn the_http_response() {
     click(&mut harness, "http-history-item");
     settle(&mut harness);
     capture(&mut harness, "http-history");
-    assert!(!harness.state_mut().state.http.ask_leave());
+    assert!(
+        !harness
+            .state_mut()
+            .state
+            .http
+            .ask_leave(crate::state::http::leave::Reason::Quit)
+    );
     settle(&mut harness);
     capture(&mut harness, "http-leave");
 }

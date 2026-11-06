@@ -1,6 +1,7 @@
 //! What the interface remembers between frames, apart from the drawing (plan § 3.4).
 
 pub mod attachments;
+pub mod backups;
 pub mod board;
 pub mod calc_sheets;
 pub mod diagrams;
@@ -10,7 +11,9 @@ pub mod editor;
 pub mod explored;
 pub mod folders;
 pub mod formatting;
+pub mod help;
 pub mod http;
+pub mod libraries;
 pub mod note_revisions;
 pub mod notes;
 pub mod notes_query;
@@ -18,10 +21,12 @@ pub mod palette;
 pub mod placeholder_fill;
 pub mod presentation;
 pub(crate) mod query;
+pub mod security;
 pub mod selection;
 pub mod spaces;
 pub mod tags;
 pub mod tools;
+pub mod transfer;
 pub mod trash;
 pub mod undo;
 
@@ -38,6 +43,7 @@ use crate::services::settings::Settings;
 use crate::services::status::StatusNotifier;
 use crate::services::time::{Clock, SystemClock};
 use crate::theme;
+use crate::widgets::Layer;
 use notes_query::NotesQueryState;
 
 /// Bumped after every write the interface adopts: the queries that read notes carry it among
@@ -123,6 +129,17 @@ pub struct AppState {
     pub tools: tools::ToolsState,
     /// The Tools area's view, each tool's session among it: only its drawing reads it (D13).
     pub tools_view: crate::tools::View,
+    pub transfer: transfer::TransferState,
+    pub libraries: libraries::LibrariesState,
+    pub security: security::SecurityState,
+    pub backups: backups::BackupsState,
+    /// Not the library's: it outlives a switch, and is read at the gate too.
+    pub help: help::HelpState,
+    pub updates: crate::services::updates::UpdateState,
+    /// The bar's menus and what they open: only their drawing reads it (D13).
+    pub titlebar_view: crate::titlebar::View,
+    /// The modals the bar's menus open, in the order they are drawn.
+    pub dialogs: crate::widgets::DialogStack,
     pub status: StatusNotifier,
     pub dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
     pub opener: std::sync::Arc<dyn platform::desktop::Opener + Send + Sync>,
@@ -176,6 +193,14 @@ impl AppState {
             http_view: crate::http::View::default(),
             tools,
             tools_view: crate::tools::View::default(),
+            transfer: transfer::TransferState::default(),
+            libraries: libraries::LibrariesState::default(),
+            security: security::SecurityState::default(),
+            backups: backups::BackupsState::default(),
+            help: help::HelpState::default(),
+            updates: crate::services::updates::UpdateState::default(),
+            titlebar_view: crate::titlebar::View::default(),
+            dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
             dialog: platform::dialog::system(),
             opener: platform::desktop::system(),
@@ -195,6 +220,12 @@ impl AppState {
 
     /// Once a frame, before drawing: the answers that arrived are adopted.
     pub fn update(&mut self, ctx: &egui::Context, backend: &Backend) {
+        self.dialogs.begin_frame(ctx);
+        self.help.update();
+        self.updates.update(&self.settings, &mut self.errors);
+        let offered = self.updates.offered().is_some();
+        let prompt = crate::banners::update_prompt::id();
+        self.dialogs.follow(ctx, Layer::Update, prompt, offered);
         if self
             .gate
             .update(backend, &mut self.status, &mut self.errors)
@@ -238,7 +269,7 @@ impl AppState {
         for (text, said) in filled.copied {
             self.copy_out(ctx, text, said);
         }
-        let pinned_first = self.notes_query.arrangement().pinned_first;
+        let pinned_first = self.settings.show_pinned_first;
         self.palette.update(
             ctx,
             backend,
@@ -270,11 +301,12 @@ impl AppState {
         }
         self.presentation.update(ctx, &mut self.errors);
         for (note, sheet) in self.calc.update(&mut self.errors) {
-            let text = crate::notes::calc::copy_text(&note.content, &sheet, self.language);
+            let text = crate::notes::calc::copy_text(&note.content, &sheet, self.calc_format());
             self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
         }
         self.follow_revisions(backend);
         self.update_area_or_exit(ctx, backend, time);
+        self.update_menus(ctx, backend);
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
             self.caches.pictures.redrawn(&id);
@@ -308,6 +340,34 @@ impl AppState {
             self.board
                 .update(backend, now, (place, criteria), (self.revision, index));
         }
+    }
+
+    /// What the bar's menus set going.
+    fn update_menus(&mut self, ctx: &egui::Context, backend: &Backend) {
+        self.libraries
+            .update(backend, &mut self.status, &mut self.errors);
+        self.security.update(&mut self.status, &mut self.errors);
+        self.backups.update(&mut self.errors);
+        if self.security.take_changed() {
+            let change = crate::titlebar::preferences::change_id();
+            self.dialogs.close(ctx, change);
+        }
+        if self.http.take_switch()
+            && let Some(goal) = self.libraries.take_goal()
+        {
+            self.switch_library(goal, backend);
+        }
+        let mut reports = attachments::Reports {
+            status: &mut self.status,
+            errors: &mut self.errors,
+            revision: &mut self.revision,
+        };
+        let now = self.clock.now();
+        self.transfer
+            .update(ctx, backend, &self.dialog, now, &mut reports);
+        let asking = self.transfer.prompt().is_some();
+        let prompt = crate::gate::prompt::id();
+        self.dialogs.follow(ctx, Layer::Passphrase, prompt, asking);
     }
 
     /// The board, when it is what the canvas shows: the space's, or the open folder's when it
@@ -616,10 +676,15 @@ impl AppState {
             Action::Notes(action) => self.apply_notes(action, ctx, backend),
             Action::Http(action) => self.apply_http(action, ctx, backend),
             Action::Tools(action) => self.apply_tools(action, backend),
+            Action::Menu(action) => self.apply_menu(action, ctx, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
-            Action::Global(GlobalAction::NewNote) => self.new_note(None),
+            // A note opens over the canvas: what the native side asks comes back to the notes.
+            Action::Global(GlobalAction::NewNote) => {
+                self.apply(Action::App(AppAction::ShowArea(Area::Notes)), ctx, backend);
+                self.new_note(None);
+            }
             // Not before a library is open: there is nothing to search.
             Action::Global(global @ (GlobalAction::Palette | GlobalAction::PaletteHere)) => {
                 if self.gate.is_open() {
@@ -630,6 +695,228 @@ impl AppState {
             // The capture arrives with its own phase.
             Action::Global(GlobalAction::Capture) => {}
         }
+    }
+
+    fn apply_menu(
+        &mut self,
+        action: crate::titlebar::Action,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::titlebar::Action as Menu;
+        use engine::transfer::model::ExportScope;
+        match action {
+            Menu::Import => self.transfer.import(backend, &self.dialog),
+            Menu::ExportAll => self.transfer.export(backend, ExportScope::Library),
+            Menu::ExportSpace => {
+                if let Some(space_id) = self.spaces.active_space().map(str::to_owned) {
+                    self.transfer
+                        .export(backend, ExportScope::Space { space_id });
+                }
+            }
+            Menu::ExportSelection => {
+                let ids = self.checked_on_screen();
+                if !ids.is_empty() {
+                    self.transfer.export(backend, ExportScope::Notes { ids });
+                }
+            }
+            Menu::CopyMarkdown => {
+                let ids = self.checked_on_screen();
+                if !ids.is_empty() {
+                    self.transfer.share(backend, ids);
+                }
+            }
+            Menu::Prompted => {
+                if let Some(answer) = self.titlebar_view.answer.take() {
+                    self.transfer.answer(answer, backend);
+                }
+            }
+            Menu::Quit => self.apply(Action::Global(GlobalAction::Quit), ctx, backend),
+            Menu::OpenLibraries => {
+                self.libraries.load(backend);
+                let opener = self.titlebar_view.file_anchor;
+                self.dialogs
+                    .open(Layer::Settings, crate::titlebar::libraries::id(), opener);
+            }
+            Menu::Libraries(asked) => self.apply_libraries(asked, ctx, backend),
+            Menu::OpenPreferences => {
+                self.titlebar_view.open_preferences(&self.settings);
+                self.security.load_variables(backend);
+                self.backups.load(backend);
+                let opener = self.titlebar_view.file_anchor;
+                self.dialogs
+                    .open(Layer::Settings, crate::titlebar::preferences::id(), opener);
+            }
+            Menu::Preferences(asked) => self.apply_preferences(asked, ctx, backend),
+            Menu::OpenHelp(panel) => {
+                if panel == crate::titlebar::about_menu::Panel::WhatsNew {
+                    self.help.load(backend);
+                }
+                self.titlebar_view.show_help(panel);
+                let opener = self.titlebar_view.about_anchor();
+                self.dialogs
+                    .open(Layer::App, crate::titlebar::about_menu::id(), opener);
+            }
+            Menu::CloseHelp => {
+                self.titlebar_view.close_help();
+                self.dialogs.close(ctx, crate::titlebar::about_menu::id());
+            }
+            Menu::OpenLink(url) => self.open_link(&url),
+            Menu::Update(asked) => self.apply_update(asked, backend),
+        }
+    }
+
+    fn apply_update(&mut self, asked: crate::banners::update_prompt::Ask, backend: &Backend) {
+        use crate::banners::update_prompt::Ask;
+        match asked {
+            Ask::Check => self.updates.check(backend, false),
+            Ask::Install => {
+                self.ask_switch(
+                    libraries::Goal::Install,
+                    http::leave::Reason::Update,
+                    backend,
+                );
+            }
+            Ask::Later { skip } => {
+                if self.updates.dismiss(skip, &mut self.settings) {
+                    self.save_settings(backend);
+                }
+            }
+        }
+    }
+
+    /// Only the theme and the density show before a button: the rest of the application reads
+    /// the applied settings, never the draft.
+    fn apply_preferences(
+        &mut self,
+        asked: crate::titlebar::preferences::Ask,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::titlebar::preferences::Ask;
+        match asked {
+            Ask::Preview => {
+                if let Some(look) = self.titlebar_view.previewed() {
+                    theme::apply(ctx, look.theme, look.density);
+                }
+            }
+            Ask::Apply => self.adopt_draft(ctx, backend),
+            Ask::ApplyAndClose => {
+                self.adopt_draft(ctx, backend);
+                self.close_preferences(ctx);
+            }
+            Ask::Discard => {
+                self.apply_look(ctx);
+                self.close_preferences(ctx);
+            }
+            Ask::ChangePassphrase => {
+                let change = crate::titlebar::preferences::change_id();
+                self.dialogs.open(Layer::Passphrase, change, None);
+            }
+            Ask::TypedCurrent => self.security.clear_refusal(),
+            Ask::Restore(id) => self.backups.ask(id),
+            Ask::KeepLibrary => self.backups.dismiss(),
+            Ask::ConfirmRestore => {
+                if let Some(id) = self.backups.pending().map(str::to_owned) {
+                    let goal = libraries::Goal::Restore(id);
+                    self.ask_switch(goal, http::leave::Reason::Restore, backend);
+                }
+            }
+            Ask::SubmitPassphrase => {
+                let (current, next) = self.titlebar_view.take_phrases();
+                self.security.change(backend, current, next);
+            }
+            Ask::KeepPassphrase => {
+                self.titlebar_view.take_phrases();
+                self.security.clear_refusal();
+                self.dialogs
+                    .close(ctx, crate::titlebar::preferences::change_id());
+            }
+        }
+    }
+
+    fn adopt_draft(&mut self, ctx: &egui::Context, backend: &Backend) {
+        if let Some(settings) = self.titlebar_view.adopt() {
+            self.settings = settings;
+            self.language = self.settings.locale.language();
+            self.apply_look(ctx);
+            self.save_settings(backend);
+        }
+        if let Some(rows) = self
+            .titlebar_view
+            .adopt_variables(self.security.variables())
+        {
+            self.security.save_variables(backend, rows);
+            self.revision.bump();
+        }
+    }
+
+    fn close_preferences(&mut self, ctx: &egui::Context) {
+        self.titlebar_view.close_preferences();
+        self.dialogs.close(ctx, crate::titlebar::preferences::id());
+    }
+
+    fn apply_libraries(
+        &mut self,
+        asked: crate::titlebar::libraries::Ask,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::titlebar::libraries::Ask;
+        use libraries::Goal;
+        match asked {
+            Ask::Close => {
+                self.libraries.dismiss_deletion();
+                self.dialogs.close(ctx, crate::titlebar::libraries::id());
+            }
+            Ask::Create(name) => {
+                self.ask_switch(Goal::Create(name), http::leave::Reason::Switch, backend);
+            }
+            Ask::Open(id) => {
+                self.ask_switch(Goal::Open(id), http::leave::Reason::Switch, backend);
+            }
+            Ask::Rename { id, name } => self.libraries.rename(backend, id, name),
+            Ask::Delete(id) => self.libraries.ask_to_delete(id),
+            Ask::KeepIt => self.libraries.dismiss_deletion(),
+            Ask::ConfirmDelete => self.libraries.confirm_deletion(backend),
+        }
+    }
+
+    /// A switch takes what the HTTP tabs hold: asked before the library changes, not after.
+    fn ask_switch(
+        &mut self,
+        goal: libraries::Goal,
+        reason: http::leave::Reason,
+        backend: &Backend,
+    ) {
+        if self.http.ask_leave(reason) {
+            self.switch_library(goal, backend);
+        } else {
+            self.libraries.hold(goal);
+        }
+    }
+
+    /// Closes the open library: the gate comes back once it is answered, and what belonged to
+    /// that library goes with `reset_library_scope`.
+    fn switch_library(&mut self, goal: libraries::Goal, backend: &Backend) {
+        self.http.leaving(backend);
+        match goal {
+            libraries::Goal::Open(id) => self.gate.leave_for(api::libraries::open(backend, id)),
+            libraries::Goal::Create(name) => {
+                self.gate
+                    .leave_for(api::libraries::create_and_open(backend, name));
+            }
+            libraries::Goal::Restore(id) => {
+                self.gate.leave_for_copy(api::backups::restore(backend, id));
+            }
+            libraries::Goal::Install => self.updates.install(backend),
+        }
+    }
+
+    fn checked_on_screen(&self) -> Vec<String> {
+        let order = self.on_screen();
+        let order: Vec<&str> = order.iter().map(String::as_str).collect();
+        self.selection.checked_in(&order)
     }
 
     /// What a tool holds of a secret goes with it.
@@ -788,7 +1075,7 @@ impl AppState {
         if !self.gate.is_open() {
             return true;
         }
-        if !self.http.ask_leave() {
+        if !self.http.ask_leave(http::leave::Reason::Quit) {
             return false;
         }
         self.closing_editor = self.editor.is_open();
@@ -1368,12 +1655,14 @@ impl AppState {
     }
 
     /// Onto the clipboard, and said; a copy asked from the palette closes it.
-    fn copy_out(&mut self, ctx: &egui::Context, text: String, said: i18n::Message) {
+    pub(crate) fn copy_out(&mut self, ctx: &egui::Context, text: String, said: i18n::Message) {
         ctx.copy_text(text);
         if self.palette.copied() {
             self.palette.close();
         }
-        self.status.report(said);
+        if self.settings.copy_confirmation {
+            self.status.report(said);
+        }
     }
 
     fn apply_palette(
@@ -1427,6 +1716,11 @@ impl AppState {
         }
     }
 
+    /// How the sheets on screen write their results.
+    pub fn calc_format(&self) -> crate::notes::calc::Format {
+        crate::notes::calc::Format::of(&self.settings, self.language)
+    }
+
     /// A modal over the canvas takes its keys: the canvas's stand aside.
     pub fn modal_open(&self) -> bool {
         self.editor.is_open()
@@ -1437,6 +1731,7 @@ impl AppState {
             || self.folders.naming()
             || self.board.drawn_zone().is_some()
             || self.http.leave().is_asking()
+            || self.dialogs.top().is_some()
     }
 
     /// In the space shown, or the first one for « all spaces », and the folder shown.
@@ -1444,7 +1739,7 @@ impl AppState {
         let Some((space, folder)) = self.new_place() else {
             return;
         };
-        let kind = kind.unwrap_or(engine::notes::kind::NoteKind::Snippet);
+        let kind = kind.unwrap_or(self.settings.default_note_kind);
         self.editor.draft(kind, space, folder);
     }
 
@@ -1507,7 +1802,7 @@ impl AppState {
                 };
                 let changed = *text != note.content && !note.id.is_empty();
                 changed.then(|| {
-                    let indent = crate::notes::language::indent_unit(note.language);
+                    let indent = self.settings.code_indent.unit(note.language);
                     let request = text::format::Request {
                         text: text.clone(),
                         cursor: 0,
@@ -1540,7 +1835,11 @@ impl AppState {
     pub fn reset_library_scope(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.library_preferences = Preferences::default();
         self.prettier = crate::notes::prettier::PrettierSettings::default();
-        self.library_preferences_read = Some(api::preferences::library(backend));
+        // A library left for the gate has nothing to read until it is unlocked.
+        self.library_preferences_read = self
+            .gate
+            .is_open()
+            .then(|| api::preferences::library(backend));
         self.seeding = None;
         self.presentation.close(ctx);
         self.caches = LibraryCaches::default();
@@ -1561,6 +1860,12 @@ impl AppState {
         self.http_view = crate::http::View::default();
         self.tools = tools::ToolsState::read(&self.preferences);
         self.tools_view = crate::tools::View::default();
+        self.transfer = transfer::TransferState::default();
+        self.libraries = libraries::LibrariesState::default();
+        self.security = security::SecurityState::default();
+        self.backups = backups::BackupsState::default();
+        self.titlebar_view = crate::titlebar::View::default();
+        self.dialogs = crate::widgets::DialogStack::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());
         self.apply_look(ctx);
@@ -1600,6 +1905,9 @@ mod tests {
         let ctx = egui::Context::default();
         let mut state = AppState::new(compact(), true);
         state.apply_look(&ctx);
+        state.gate.ask(&backend);
+        backend.settle();
+        state.update(&ctx, &backend);
         let typed = egui::Id::unique("typed");
         ctx.data_mut(|data| data.insert_temp(typed, "psql -h prod".to_string()));
         let before = state.revision;

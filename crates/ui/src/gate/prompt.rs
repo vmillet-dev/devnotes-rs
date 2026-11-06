@@ -1,6 +1,6 @@
 //! The passphrase a file asks for: when an export is sealed with one of its own (« protect »,
 //! the floor applies), or when a sealed file is imported (« unlock », any length). A modal on the
-//! highest rung. Its caller — the transfer — arrives with the File menu.
+//! highest rung, up while the key is derived.
 
 use egui::{Id, RichText, Ui};
 use i18n::{Key, Language, Message, keys};
@@ -9,6 +9,8 @@ use zeroize::Zeroizing;
 use super::passphrase::{self, PassphraseField};
 use crate::theme::palette;
 use crate::widgets::{self, Button, DialogStack, Kind};
+
+const WIDTH: f32 = 480.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Purpose {
@@ -23,6 +25,8 @@ pub struct Request {
     pub file_name: String,
     /// The phrase given last did not open the file.
     pub refused: bool,
+    /// Answered, and the file is being read or written: nothing more can be asked of it.
+    pub working: bool,
 }
 
 #[derive(Default)]
@@ -60,8 +64,11 @@ pub fn show(
     view: &mut PromptView,
     language: Language,
 ) -> Option<Answer> {
-    widgets::dialog(ctx, stack, id(), |ui| body(ui, request, view, language))
-        .and_then(|(answer, _)| answer)
+    let shown = widgets::dialog(ctx, stack, id(), WIDTH, |ui| {
+        body(ui, request, view, language)
+    })?;
+    let dismissed = shown.should_close() && !request.working;
+    shown.inner.or(dismissed.then_some(Answer::Cancel))
 }
 
 fn body(
@@ -99,12 +106,15 @@ fn body(
     }
     let name = tr(keys::vault::PASSPHRASE);
     ui.label(RichText::new(&name).size(11.2).color(p.text_2));
-    let mut submitted =
+    let (field, typed) =
         PassphraseField::new(&mut view.passphrase, &name, "passphrase-prompt-field")
             .invalid(request.refused)
-            .show(ui)
-            .1
-            .submitted;
+            .enabled(!request.working)
+            .show(ui);
+    if !request.working && ui.memory(|memory| memory.focused().is_none()) {
+        field.request_focus();
+    }
+    let mut submitted = typed.submitted;
     if protecting {
         let confirmation = tr(keys::vault::CONFIRMATION);
         ui.label(RichText::new(&confirmation).size(11.2).color(p.text_2));
@@ -113,6 +123,7 @@ fn body(
             &confirmation,
             "passphrase-prompt-confirmation",
         )
+        .enabled(!request.working)
         .show(ui)
         .1
         .submitted;
@@ -131,6 +142,7 @@ fn body(
     let mut answer = None;
     ui.horizontal(|ui| {
         if Button::new(&tr(keys::file::CANCEL), "passphrase-prompt-cancel")
+            .enabled(!request.working)
             .show(ui)
             .clicked()
         {
@@ -138,17 +150,20 @@ fn body(
         }
         if protecting
             && Button::new(&tr(keys::file::PROTECT_PLAIN), "passphrase-prompt-plain")
+                .enabled(!request.working)
                 .show(ui)
                 .clicked()
         {
             answer = Some(Answer::Plain);
         }
-        let action = if protecting {
+        let action = if request.working {
+            keys::file::WORKING
+        } else if protecting {
             keys::file::PROTECT_ACTION
         } else {
             keys::file::UNLOCK_ACTION
         };
-        let ready = can_submit(request, view);
+        let ready = !request.working && can_submit(request, view);
         let submit = Button::new(&tr(action), "passphrase-prompt-submit")
             .kind(Kind::Filled)
             .enabled(ready)
@@ -170,6 +185,7 @@ mod tests {
             purpose,
             file_name: "notes.devnotes".to_string(),
             refused: false,
+            working: false,
         }
     }
 

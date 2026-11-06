@@ -22,6 +22,7 @@ use super::language as languages;
 use crate::action::{Action, Actions, GlobalAction};
 use crate::state::AppState;
 use crate::theme::{palette, spacing};
+use crate::titlebar::about_menu::Panel;
 use crate::widgets::{self, Button, address, interact, priority_dot};
 use rows::{CARD_HEIGHT, HEADING_HEIGHT, Row, Rows};
 
@@ -80,6 +81,15 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
     if view.matched == 0 {
         padded(ui, canvas, |ui| {
             state_text(ui, &tr(keys::notes::NO_RESULTS), "canvas-no-results");
+            // The chapter that explains this screen, not the top of the guide.
+            if !query.has_user_filters()
+                && Button::new(&tr(keys::getting_started::OPEN_CHAPTER), "canvas-guide")
+                    .show(ui)
+                    .clicked()
+            {
+                let guide = Panel::Guide(crate::services::guide::NOTES);
+                actions.push(Action::Menu(crate::titlebar::Action::OpenHelp(guide)));
+            }
         });
         return;
     }

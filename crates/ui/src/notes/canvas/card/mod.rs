@@ -25,6 +25,7 @@ use crate::widgets::address;
 /// What a card reads besides its note.
 pub(super) struct Context<'a> {
     pub(super) language: i18n::Language,
+    pub(super) calc: crate::notes::calc::Format,
     pub(super) clock: &'a dyn Clock,
     pub(super) thumbnails: &'a Thumbnails,
     /// The spaces and folders a note can be moved to or filed into.
@@ -42,6 +43,7 @@ impl<'a> Context<'a> {
     pub(super) fn of(state: &'a crate::state::AppState, on_screen: &[&str]) -> Self {
         Self {
             language: state.language,
+            calc: state.calc_format(),
             clock: state.clock.as_ref(),
             thumbnails: &state.caches.thumbnails,
             library: &state.spaces,

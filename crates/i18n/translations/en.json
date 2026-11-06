@@ -1117,6 +1117,7 @@
       "needsModifier": "A global shortcut needs at least Ctrl, Alt, Shift or Super.",
       "heldElsewhere": "Global shortcut unavailable: {{accelerator}}. Another application already holds it.",
       "reserved": "That key is reserved for navigation.",
+      "unknownKey": "That key has no name here: it could not be read back.",
       "conflict": "{{accelerator}} answers several actions: {{actions}}. Only one will act."
     },
     "cancel": "Cancel",

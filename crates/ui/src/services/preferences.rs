@@ -44,6 +44,19 @@ impl Preferences {
         self.0.get(key).and_then(Value::as_str)
     }
 
+    /// How many keys of `other` say something else here.
+    pub fn differences(&self, other: &Self) -> u32 {
+        let differing = other
+            .0
+            .iter()
+            .filter(|(key, value)| self.0.get(*key) != Some(*value));
+        u32::try_from(differing.count()).unwrap_or(u32::MAX)
+    }
+
+    pub fn remove(&mut self, key: &str) {
+        self.0.remove(key);
+    }
+
     pub fn set(&mut self, key: &str, value: &str) {
         self.0
             .insert(key.to_string(), Value::String(value.to_string()));

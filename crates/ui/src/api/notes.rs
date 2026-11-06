@@ -345,3 +345,20 @@ pub fn tag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<Reversib
 pub fn untag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<Reversible> {
     backend.db(move |engine| notes::remove_tag(engine, ids, tag).map(Reversible::Untag))
 }
+
+pub fn global_variables(backend: &Backend) -> Pending<std::collections::BTreeMap<String, String>> {
+    backend.db(engine::notes::list_global_placeholders)
+}
+
+pub fn set_global_variables(
+    backend: &Backend,
+    values: std::collections::BTreeMap<String, String>,
+) -> Pending<std::collections::BTreeMap<String, String>> {
+    backend.db(move |engine| engine::notes::set_global_placeholders(engine, values))
+}
+
+/// What a `{{field}}` may be called, by the core's own rule: under a millisecond, on the frame.
+pub fn is_field_name(name: &str) -> bool {
+    let probe = std::collections::BTreeMap::from([(name.to_owned(), "x".to_owned())]);
+    !engine::notes::placeholder::normalize_values(probe).is_empty()
+}

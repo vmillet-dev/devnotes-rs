@@ -596,12 +596,17 @@ impl HttpState {
     }
 
     /// `true` when the window may go at once; otherwise the question is out.
-    pub fn ask_leave(&mut self) -> bool {
+    pub fn ask_leave(&mut self, reason: leave::Reason) -> bool {
         if self.leave.is_released() || self.modified().next().is_none() {
             return true;
         }
-        self.leave.ask();
+        self.leave.ask(reason);
         false
+    }
+
+    /// See [`leave::Leave::take_switch`].
+    pub fn take_switch(&mut self) -> bool {
+        self.leave.take_switch()
     }
 
     pub fn answer_leave(&mut self, asked: leave::Asked) {

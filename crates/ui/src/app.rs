@@ -65,6 +65,7 @@ impl DevNotesApp {
         });
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
         state.gate.ask(&backend);
+        state.updates.check(&backend, true);
         Ok(Self {
             backend,
             state,
@@ -145,29 +146,30 @@ impl DevNotesApp {
     /// Who reads what the widgets left of the keys, on what is on screen.
     fn dispatch_keys(&self, ctx: &egui::Context) -> Option<Action> {
         let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
+        let bindings = &self.state.settings.bindings;
+        let canvas = notes::canvas::shortcuts::bound_to(bindings);
+        let rail = [keys::rail(bindings)];
         // A modal over the canvas takes its keys: the canvas's stand aside.
-        let levels: &[&[keys::Binding]] = if self.state.palette.is_open() {
+        let levels: &[&[keys::Binding]] = if self.state.dialogs.top().is_some() {
+            &[]
+        } else if self.state.palette.is_open() {
             &[&keys::APPLICATION]
         } else if notes_shown && !self.state.modal_open() {
-            &[
-                &keys::NOTES,
-                &notes::canvas::shortcuts::CANVAS,
-                &keys::APPLICATION,
-            ]
+            &[&keys::NOTES, &rail, &canvas, &keys::APPLICATION]
         } else if notes_shown {
-            &[&keys::NOTES, &keys::APPLICATION]
+            &[&keys::NOTES, &rail, &keys::APPLICATION]
         } else if self.state.gate.is_open()
             && self.state.settings.area == Area::Http
             && self.state.http.tabs().closing().is_none()
             && !self.state.http.leave().is_asking()
         {
-            &[&keys::HTTP, &keys::APPLICATION]
+            &[&keys::HTTP, &rail, &keys::APPLICATION]
         } else if self.state.gate.is_open()
             && self.state.settings.area == Area::Tools
             && !self.state.tools_view.is_picking()
             && self.state.http.kept().asked().is_none()
         {
-            &[&keys::TOOLS, &keys::APPLICATION]
+            &[&keys::TOOLS, &rail, &keys::APPLICATION]
         } else {
             &[&keys::APPLICATION]
         };
@@ -218,13 +220,9 @@ impl eframe::App for DevNotesApp {
             .exact_size(titlebar::HEIGHT)
             .frame(egui::Frame::NONE)
             .show(ui, |ui| {
-                titlebar::show(
-                    ui,
-                    self.state.settings.area,
-                    self.state.gate.is_open(),
-                    language,
-                    &mut actions,
-                );
+                let mut view = std::mem::take(&mut self.state.titlebar_view);
+                titlebar::show(ui, &self.state, &mut view, &mut actions);
+                self.state.titlebar_view = view;
             });
         if let Some(notice) = self.state.errors.notice() {
             let notice = notice.clone();
@@ -285,6 +283,10 @@ impl eframe::App for DevNotesApp {
         if self.state.gate.is_open() {
             self.over_the_area(ui, &mut actions);
         }
+        // The About menu stays at the gate, and what it opens with it.
+        let mut view = std::mem::take(&mut self.state.titlebar_view);
+        titlebar::dialogs(ui.ctx(), &self.state, &mut view, &mut actions);
+        self.state.titlebar_view = view;
         if let Some(action) = self.dispatch_keys(ui.ctx()) {
             actions.push(action);
         }
@@ -314,6 +316,18 @@ impl eframe::App for DevNotesApp {
 
 #[cfg(test)]
 mod captures;
+
+#[cfg(test)]
+mod library_panel_tests;
+
+#[cfg(test)]
+mod update_prompt_tests;
+
+#[cfg(test)]
+mod about_link_tests;
+
+#[cfg(test)]
+mod prompt_tests;
 
 #[cfg(test)]
 mod tests {
@@ -440,14 +454,14 @@ mod tests {
         assert!((geometry.x - 10.0).abs() < f32::EPSILON);
     }
 
-    fn present(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> bool {
+    pub(super) fn present(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> bool {
         use egui_kittest::kittest::Queryable;
         harness
             .query_by(|node| node.author_id() == Some(author_id))
             .is_some()
     }
 
-    fn click(harness: &mut Harness<'_, DevNotesApp>, author_id: &str) {
+    pub(super) fn click(harness: &mut Harness<'_, DevNotesApp>, author_id: &str) {
         use egui_kittest::kittest::Queryable;
         harness
             .get_by(|node| node.author_id() == Some(author_id))
@@ -455,7 +469,7 @@ mod tests {
         settle(harness);
     }
 
-    fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &str) {
+    pub(super) fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &str) {
         use egui_kittest::kittest::Queryable;
         click(harness, author_id);
         harness
@@ -465,11 +479,15 @@ mod tests {
     }
 
     /// Through the gate, as a first launch does it.
-    fn open_library(directory: &std::path::Path) -> Harness<'static, DevNotesApp> {
+    pub(super) fn open_library(directory: &std::path::Path) -> Harness<'static, DevNotesApp> {
         let startup = startup(directory);
         let mut harness = Harness::builder()
             .with_size(egui::vec2(1100.0, 720.0))
             .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
+        // The window finds the arrows in the system's fonts, which a bench has not.
+        harness
+            .ctx
+            .set_missing_glyph_policy(egui::epaint::text::MissingGlyphPolicy::Tofu);
         settle(&mut harness);
         type_into(&mut harness, "vault-passphrase", crate::testing::PASSPHRASE);
         type_into(
@@ -494,7 +512,7 @@ mod tests {
         assert!(!present(&harness, "area-switch"));
     }
 
-    fn count(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> usize {
+    pub(super) fn count(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> usize {
         use egui_kittest::kittest::Queryable;
         harness
             .query_all_by(|node| node.author_id() == Some(author_id))
@@ -565,6 +583,123 @@ mod tests {
         settle(&mut harness);
         assert!(present(&harness, "area-http"));
         assert_eq!(harness.state().state().settings.area, Area::Http);
+    }
+
+    #[test]
+    fn the_file_menu_is_offered_with_the_library_and_quits_on_the_second_click() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        settle(&mut harness);
+        assert!(!present(&harness, "file-menu"));
+
+        let mut harness = open_library(tempfile::tempdir().unwrap().path());
+        click(&mut harness, "file-menu");
+        click(&mut harness, "file-quit");
+        assert!(present(&harness, "file-option-exportAll"), "still open");
+        assert!(!present(&harness, "passphrase-prompt"));
+    }
+
+    #[test]
+    fn an_entry_with_nothing_to_act_on_does_nothing() {
+        use egui_kittest::kittest::{NodeT, Queryable};
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        click(&mut harness, "file-menu");
+
+        let idle = harness.get_by(|node| node.author_id() == Some("file-option-exportSelection"));
+        assert!(idle.accesskit_node().is_disabled());
+        click(&mut harness, "file-option-exportSelection");
+
+        assert!(present(&harness, "file-option-exportAll"), "the menu stays");
+        assert!(!harness.state().state().transfer.is_busy());
+    }
+
+    #[test]
+    fn a_copy_is_said_only_while_the_preference_asks_for_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        let said = i18n::Message::new(i18n::keys::settings::COPIED);
+
+        app.state.settings.copy_confirmation = false;
+        app.state
+            .copy_out(&ctx, "echo quiet".to_owned(), said.clone());
+        assert!(app.state.status.latest().is_none());
+
+        app.state.settings.copy_confirmation = true;
+        app.state.copy_out(&ctx, "echo said".to_owned(), said);
+        assert!(app.state.status.latest().is_some());
+    }
+
+    #[test]
+    fn the_about_menu_stays_at_the_gate() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        settle(&mut harness);
+        assert!(!present(&harness, "file-menu"));
+
+        click(&mut harness, "about-open");
+        click(&mut harness, "about-about");
+
+        assert!(present(&harness, "about-dialog"));
+        click(&mut harness, "about-close");
+        assert!(!present(&harness, "about-dialog"));
+    }
+
+    #[test]
+    fn whats_new_shows_the_changelog_and_marks_what_is_installed() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+
+        click(&mut harness, "about-open");
+        click(&mut harness, "about-whats-new");
+        settle(&mut harness);
+
+        assert!(count(&harness, "news-version") > 0);
+        click(&mut harness, "news-close");
+        assert!(!present(&harness, "news-close"));
+    }
+
+    #[test]
+    fn the_guide_walks_jumps_and_closes_from_any_chapter() {
+        use egui_kittest::kittest::{NodeT, Queryable};
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let chapter = |harness: &Harness<'_, DevNotesApp>| {
+            let node = harness.get_by(|node| node.author_id() == Some("guide-chapter"));
+            node.accesskit_node().value().unwrap_or_default()
+        };
+
+        click(&mut harness, "about-open");
+        click(&mut harness, "about-getting-started");
+        let first = chapter(&harness);
+        click(&mut harness, "guide-next");
+        let second = chapter(&harness);
+        assert_ne!(first, second);
+
+        click(&mut harness, "guide-dot-http");
+        assert!(!present(&harness, "guide-next"), "the last has no next");
+        assert_ne!(chapter(&harness), second);
+
+        click(&mut harness, "guide-close");
+        assert!(!present(&harness, "guide-chapter"));
+    }
+
+    #[test]
+    fn the_sheet_lists_its_groups_and_escape_closes_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+
+        click(&mut harness, "about-open");
+        click(&mut harness, "about-shortcuts");
+        assert!(count(&harness, "shortcut-group") > 2);
+
+        harness.key_press(egui::Key::Escape);
+        settle(&mut harness);
+        assert!(!present(&harness, "sheet-close"));
     }
 
     #[test]

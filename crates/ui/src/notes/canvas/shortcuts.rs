@@ -10,6 +10,7 @@ use engine::notes::priority::Priority;
 use super::grid::Direction;
 use crate::action::Action;
 use crate::keys::{Binding, Read};
+use crate::services::shortcuts::Bindings;
 
 /// What a key asks of the canvas; the card it acts on is the one with the focus.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,6 +77,53 @@ pub static CANVAS: [Binding; 22] = [
     bare(Key::A, CanvasKey::Align),
 ];
 
+/// The rebindable entries, by the `CanvasKey` each answers for: the table is the defaults.
+fn rebindable(canvas: CanvasKey) -> Option<&'static str> {
+    Some(match canvas {
+        CanvasKey::New(NoteKind::Snippet) => "canvas.newSnippet",
+        CanvasKey::New(NoteKind::Note) => "canvas.newNote",
+        CanvasKey::New(NoteKind::Checklist) => "canvas.newChecklist",
+        CanvasKey::New(NoteKind::Calc) => "canvas.newCalc",
+        CanvasKey::New(NoteKind::Drawing) => "canvas.newDrawing",
+        CanvasKey::Copy => "canvas.copy",
+        CanvasKey::Pin => "canvas.pin",
+        CanvasKey::Check => "canvas.check",
+        CanvasKey::Align => "canvas.align",
+        CanvasKey::Trash => "canvas.trash",
+        CanvasKey::Undo => "canvas.undo",
+        _ => return None,
+    })
+}
+
+/// The table with the keys the person moved. Backspace stays on the trash whatever Delete
+/// became: it has always trashed a note, and making the key movable took nothing away.
+pub fn bound_to(bindings: &Bindings) -> Vec<Binding> {
+    CANVAS
+        .iter()
+        .map(|binding| {
+            let Action::Notes(crate::notes::Action::Canvas(canvas)) = binding.action else {
+                return binding.clone();
+            };
+            let moved = rebindable(canvas)
+                .filter(|_| binding.key != Key::Backspace)
+                .and_then(|id| {
+                    crate::services::shortcuts::ACTIONS
+                        .iter()
+                        .find(|it| it.id == id)
+                })
+                .and_then(|action| bindings.keystroke(*action));
+            match moved {
+                Some((key, modifiers)) => Binding {
+                    key,
+                    modifiers,
+                    ..binding.clone()
+                },
+                None => binding.clone(),
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use egui::{Key, Modifiers};
@@ -109,6 +157,40 @@ mod tests {
             testing::note(&backend, &format!("note {at}"));
         }
         (backend, profile)
+    }
+
+    #[test]
+    fn a_moved_key_answers_and_the_old_one_no_longer_does() {
+        use crate::services::shortcuts::{ACTIONS, Bindings};
+        let mut bindings = Bindings::default();
+        bindings.set(ACTIONS[9], "J".to_owned());
+
+        let table = super::bound_to(&bindings);
+
+        let pin = |key| {
+            table.iter().any(|binding| {
+                binding.key == key
+                    && binding.action
+                        == crate::action::Action::Notes(crate::notes::Action::Canvas(
+                            super::CanvasKey::Pin,
+                        ))
+            })
+        };
+        assert!(pin(Key::J));
+        assert!(!pin(Key::P));
+    }
+
+    #[test]
+    fn backspace_stays_on_the_trash_when_delete_moves() {
+        use crate::services::shortcuts::{ACTIONS, Bindings};
+        let mut bindings = Bindings::default();
+        bindings.set(ACTIONS[12], "D".to_owned());
+
+        let table = super::bound_to(&bindings);
+
+        assert!(table.iter().any(|binding| binding.key == Key::Backspace));
+        assert!(table.iter().any(|binding| binding.key == Key::D));
+        assert!(!table.iter().any(|binding| binding.key == Key::Delete));
     }
 
     #[test]

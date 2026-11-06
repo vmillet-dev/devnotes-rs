@@ -5,8 +5,10 @@
 //! A feature's file arrives with the first screen that calls it.
 
 pub mod attachments;
+pub mod backups;
 pub mod board;
 pub mod folders;
+pub mod help;
 pub mod http;
 pub mod json;
 pub mod libraries;
@@ -14,5 +16,6 @@ pub mod notes;
 pub mod preferences;
 pub mod spaces;
 pub mod tools;
+pub mod transfer;
 pub mod undo;
 pub mod vault;

@@ -1,0 +1,114 @@
+[
+  {
+    "title": "shortcuts.groups.global",
+    "rows": [
+      { "keys": [], "label": "shortcuts.global.palette", "action": "palette" },
+      { "keys": [], "label": "shortcuts.global.capture", "action": "capture" },
+      { "keys": [], "label": "shortcuts.global.newNote", "action": "newNote" }
+    ]
+  },
+  {
+    "title": "shortcuts.groups.areas",
+    "rows": [
+      { "keys": ["Ctrl", "1"], "label": "areas.go.notes" },
+      { "keys": ["Ctrl", "2"], "label": "areas.go.tools" },
+      { "keys": ["Ctrl", "3"], "label": "areas.go.http" },
+      { "keys": ["Ctrl", "K"], "label": "shortcuts.canvas.search" },
+      { "keys": ["Ctrl", "Shift", "T"], "label": "tools.searchShortcut" },
+      { "keys": [], "label": "areas.rail", "action": "areas.rail" }
+    ]
+  },
+  {
+    "title": "shortcuts.groups.canvas",
+    "rows": [
+      { "keys": [], "label": "shortcuts.canvas.newSnippet", "action": "canvas.newSnippet" },
+      { "keys": [], "label": "shortcuts.canvas.newNote", "action": "canvas.newNote" },
+      { "keys": [], "label": "shortcuts.canvas.newChecklist", "action": "canvas.newChecklist" },
+      { "keys": [], "label": "shortcuts.canvas.newCalc", "action": "canvas.newCalc" },
+      { "keys": [], "label": "shortcuts.canvas.newDrawing", "action": "canvas.newDrawing" },
+      { "keys": ["↑ ↓ ← →"], "label": "shortcuts.canvas.move" },
+      { "keys": ["Enter"], "label": "shortcuts.canvas.open" },
+      { "keys": [], "label": "shortcuts.canvas.copy", "action": "canvas.copy" },
+      { "keys": [], "label": "shortcuts.canvas.pin", "action": "canvas.pin" },
+      { "keys": ["0 … 4"], "label": "shortcuts.canvas.priority" },
+      { "keys": [], "label": "shortcuts.canvas.check", "action": "canvas.check" },
+      { "keys": [], "label": "shortcuts.canvas.align", "action": "canvas.align" },
+      { "keys": ["Ctrl"], "label": "shortcuts.canvas.checkWithClick" },
+      { "keys": ["Shift"], "label": "shortcuts.canvas.extendWithClick" },
+      { "keys": [], "label": "shortcuts.canvas.trash", "action": "canvas.trash" },
+      { "keys": [], "label": "shortcuts.canvas.undo", "action": "canvas.undo" },
+      { "keys": ["Escape"], "label": "shortcuts.canvas.stepBack" }
+    ]
+  },
+  {
+    "title": "shortcuts.groups.editor",
+    "rows": [
+      { "keys": ["Escape"], "label": "shortcuts.editor.close" },
+      { "keys": ["Enter"], "label": "shortcuts.editor.newItem" },
+      { "keys": ["Backspace"], "label": "shortcuts.editor.removeItem" },
+      { "keys": ["Alt", "↑ ↓"], "label": "shortcuts.editor.moveItem" },
+      { "keys": ["Shift", "Alt", "F"], "label": "shortcuts.editor.format" },
+      { "keys": ["Ctrl", "F"], "label": "shortcuts.editor.find" },
+      { "keys": ["Ctrl", "H"], "label": "shortcuts.editor.replace" },
+      { "keys": ["Ctrl", "Alt", "G"], "label": "shortcuts.editor.goToLine" },
+      { "keys": ["Tab"], "label": "shortcuts.editor.indent" },
+      { "keys": ["Shift", "Tab"], "label": "shortcuts.editor.outdent" }
+    ]
+  },
+  {
+    "title": "shortcuts.groups.note",
+    "rows": [
+      { "keys": ["Ctrl", "B"], "label": "shortcuts.note.bold" },
+      { "keys": ["Ctrl", "I"], "label": "shortcuts.note.italic" },
+      { "keys": ["Ctrl", "Shift", "S"], "label": "shortcuts.note.strike" },
+      { "keys": ["Ctrl", "E"], "label": "shortcuts.note.code" },
+      { "keys": ["Ctrl", "K"], "label": "shortcuts.note.link" },
+      { "keys": ["Ctrl"], "label": "shortcuts.note.openLink" },
+      { "keys": ["Ctrl", "Alt", "1 … 3"], "label": "shortcuts.note.heading" },
+      { "keys": ["Ctrl", "Shift", "8"], "label": "shortcuts.note.bulletList" },
+      { "keys": ["Ctrl", "Shift", "7"], "label": "shortcuts.note.orderedList" },
+      { "keys": ["Ctrl", "Shift", "9"], "label": "shortcuts.note.taskList" },
+      { "keys": ["Ctrl", "Shift", "B"], "label": "shortcuts.note.quote" },
+      { "keys": ["Ctrl", "Alt", "C"], "label": "shortcuts.note.codeBlock" },
+      { "keys": ["#", "-", "1.", "[ ]", ">", "```"], "label": "shortcuts.note.markdown" }
+    ]
+  },
+  {
+    "title": "shortcuts.groups.palette",
+    "rows": [
+      { "keys": ["@"], "label": "shortcuts.palette.scope" },
+      { "keys": ["#"], "label": "shortcuts.palette.tag" },
+      { "keys": [">"], "label": "shortcuts.palette.command" },
+      { "keys": ["Tab"], "label": "shortcuts.palette.chip" },
+      { "keys": ["Backspace"], "label": "shortcuts.palette.unchip" },
+      { "keys": ["↑ ↓"], "label": "shortcuts.palette.navigate" },
+      { "keys": ["Enter"], "label": "shortcuts.palette.open" },
+      { "keys": ["Ctrl", "C"], "label": "shortcuts.palette.paste" },
+      { "keys": ["Escape"], "label": "shortcuts.palette.close" }
+    ]
+  },
+  {
+    "title": "shortcuts.groups.http",
+    "rows": [
+      { "keys": ["Ctrl", "Enter"], "label": "shortcuts.http.send" },
+      { "keys": ["Ctrl", "S"], "label": "shortcuts.http.save" },
+      { "keys": ["Alt", "↑ ↓"], "label": "shortcuts.http.moveRow" },
+      { "keys": ["Alt", "→"], "label": "shortcuts.http.moveIn" },
+      { "keys": ["Alt", "←"], "label": "shortcuts.http.moveOut" },
+      { "keys": ["F2"], "label": "shortcuts.http.rename" },
+      { "keys": ["Delete"], "label": "shortcuts.http.delete" }
+    ]
+  },
+  {
+    "title": "shortcuts.groups.json",
+    "rows": [
+      { "keys": ["↑ ↓ ← →"], "label": "shortcuts.json.navigate" },
+      { "keys": ["Enter"], "label": "shortcuts.json.toggle" },
+      { "keys": ["Shift", "→"], "label": "shortcuts.json.openAll" },
+      { "keys": ["Shift", "←"], "label": "shortcuts.json.collapseAll" },
+      { "keys": ["Alt", "↑ ↓ ← →"], "label": "shortcuts.json.moveNode" },
+      { "keys": ["Enter"], "label": "shortcuts.json.nextMatch" },
+      { "keys": ["Shift", "Enter"], "label": "shortcuts.json.previousMatch" }
+    ]
+  }
+]

@@ -113,11 +113,11 @@ fn data_tools(app: &mut App) {
             tree.text("identity-surname") != drawn
         });
         let surname = app.tree().text("identity-surname");
-        app.fill("identity-seed", "another");
+        retype(app, "identity-seed", "another");
         app.eventually("another person is drawn", |tree| {
             tree.text("identity-surname") != surname
         });
-        app.fill("identity-seed", "devnotes");
+        retype(app, "identity-seed", "devnotes");
         app.eventually("the first person is back", |tree| {
             tree.text("identity-surname") == surname
         });
@@ -173,6 +173,14 @@ fn remembered(mut app: App) -> App {
         );
     });
     app
+}
+
+/// Over what the field holds: `fill` types at the caret, and a second click only selects the
+/// word when it comes within the double click's delay, which is the machine's speed.
+fn retype(app: &mut App, author_id: &str, text: &str) {
+    app.click(author_id);
+    app.press(Key::A, Modifiers::COMMAND);
+    app.type_text(text);
 }
 
 #[test]
