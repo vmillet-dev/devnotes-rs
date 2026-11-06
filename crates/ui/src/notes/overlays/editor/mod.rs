@@ -11,6 +11,7 @@ mod code;
 mod drawing;
 mod fields;
 mod format;
+mod go_to_line;
 mod header;
 mod json_view;
 mod revisions;

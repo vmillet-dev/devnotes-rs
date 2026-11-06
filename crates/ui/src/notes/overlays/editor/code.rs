@@ -8,6 +8,7 @@ use engine::notes::language::Language;
 use i18n::{Language as Locale, keys};
 use text::highlight::Token;
 
+use super::go_to_line::{self, GoToLine};
 use super::search_bar::{self, SearchBar};
 use crate::api;
 use crate::notes::language;
@@ -22,6 +23,7 @@ pub(super) struct CodeView {
     colouring: Option<Colouring>,
     fields: Vec<Decoration>,
     pub(super) search: SearchBar,
+    go_to_line: GoToLine,
     /// Lit from beside: what the explorer has selected.
     pub(super) lit: std::ops::Range<usize>,
     /// Marked in the gutter: what a format changed, until the next keystroke.
@@ -36,6 +38,7 @@ impl CodeView {
             colouring: None,
             fields: fields(text),
             search: SearchBar::default(),
+            go_to_line: GoToLine::default(),
             lit: 0..0,
             marked: Vec::new(),
         }
@@ -92,6 +95,12 @@ pub(super) fn show(
     {
         code.edited(line);
         changed = true;
+    }
+    if go_to_line::shortcut(ui) {
+        code.go_to_line.open();
+    }
+    if code.go_to_line.open {
+        go_to_line::show(ui, &mut code.go_to_line, &mut code.editor, locale);
     }
     let mut decorations = code.fields.clone();
     if code.search.open {
