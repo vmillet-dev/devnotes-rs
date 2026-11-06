@@ -22,7 +22,7 @@ mod socket_log;
 mod tabs;
 mod variables_table;
 
-use egui::{Color32, Rect, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo, pos2};
+use egui::{Color32, Rect, Sense, Ui, UiBuilder, Vec2, pos2};
 use engine::http::model::{HttpMethod, RequestKind};
 use i18n::keys;
 

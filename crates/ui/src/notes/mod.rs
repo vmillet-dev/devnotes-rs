@@ -11,7 +11,7 @@ pub mod prettier;
 pub mod sidebar;
 pub mod ui;
 
-use egui::{Rect, Role, Sense, Ui, UiBuilder, WidgetInfo};
+use egui::{Rect, Ui, UiBuilder};
 use engine::notes::kind::NoteKind;
 use engine::notes::priority::Priority;
 use i18n::{Key, keys};
@@ -23,7 +23,6 @@ use engine::notes::view::NoteFilter;
 use crate::action::{Action as Asked, Actions, AppAction};
 use crate::state::AppState;
 use crate::state::drawing_pictures::Stamp;
-use crate::widgets::address;
 
 /// What the area's controls ask, applied at the end of the frame.
 #[derive(Debug, Clone, PartialEq, Eq)]
