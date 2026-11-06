@@ -98,7 +98,16 @@ fn body(
     let skip = Message::new(keys::update::SKIP_VERSION)
         .with("version", update.version.as_str())
         .text(language);
-    Checkbox::new(&mut view.skip, &skip, "update-skip").show(ui);
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        Checkbox::new(&mut view.skip, &skip, "update-skip").show(ui);
+        let words = RichText::new(&skip).size(12.0).color(p.text_1);
+        let label = ui.add(egui::Label::new(words).sense(egui::Sense::click()));
+        widgets::address(ui, &label, "update-skip-label");
+        if label.clicked() {
+            view.skip = !view.skip;
+        }
+    });
     let skip = view.skip;
     let mut ask = |ask| actions.push(Asked::Menu(Action::Update(ask)));
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

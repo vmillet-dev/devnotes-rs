@@ -200,6 +200,29 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     capture(&mut harness, "banners-http");
 }
 
+#[test]
+fn the_update_prompt() {
+    use crate::services::updates::UpdateState;
+    use crate::services::updates::fake::FakeUpdater;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    harness.state_mut().state.updates = UpdateState::with(FakeUpdater::offering("0.26.0"));
+
+    click(&mut harness, "about-open");
+    capture(&mut harness, "about-menu-check");
+    click(&mut harness, "about-check-updates");
+    settle(&mut harness);
+    capture(&mut harness, "update-prompt");
+
+    click(&mut harness, "update-later");
+    settle(&mut harness);
+    capture(&mut harness, "update-dot");
+}
+
 /// A library holding `API Paiements`, the HTTP area shown.
 fn http_area(profile: &Path) -> Harness<'static, DevNotesApp> {
     let mut harness = launch(profile);

@@ -52,6 +52,7 @@ fn a_new_version_shows_its_notes_and_later_leaves_the_dot() {
 
     assert!(present(&harness, "update-prompt"));
     assert!(harness.query_by_label_contains("Faster").is_some());
+    assert!(!present(&harness, "about-whats-new"), "the menu went");
 
     click(&mut harness, "update-later");
 
@@ -65,7 +66,7 @@ fn a_ticked_box_writes_the_version_down_whichever_way_out() {
     let directory = tempfile::tempdir().unwrap();
     let mut harness = offered(directory.path(), FakeUpdater::offering("0.26.0"));
 
-    click(&mut harness, "update-skip");
+    click(&mut harness, "update-skip-label");
     harness.key_press(egui::Key::Escape);
     settle(&mut harness);
 
