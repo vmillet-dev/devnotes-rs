@@ -317,6 +317,9 @@ impl eframe::App for DevNotesApp {
 mod captures;
 
 #[cfg(test)]
+mod library_panel_tests;
+
+#[cfg(test)]
 mod tests {
     use egui_kittest::Harness;
 
@@ -441,14 +444,14 @@ mod tests {
         assert!((geometry.x - 10.0).abs() < f32::EPSILON);
     }
 
-    fn present(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> bool {
+    pub(super) fn present(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> bool {
         use egui_kittest::kittest::Queryable;
         harness
             .query_by(|node| node.author_id() == Some(author_id))
             .is_some()
     }
 
-    fn click(harness: &mut Harness<'_, DevNotesApp>, author_id: &str) {
+    pub(super) fn click(harness: &mut Harness<'_, DevNotesApp>, author_id: &str) {
         use egui_kittest::kittest::Queryable;
         harness
             .get_by(|node| node.author_id() == Some(author_id))
@@ -456,7 +459,7 @@ mod tests {
         settle(harness);
     }
 
-    fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &str) {
+    pub(super) fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &str) {
         use egui_kittest::kittest::Queryable;
         click(harness, author_id);
         harness
@@ -466,7 +469,7 @@ mod tests {
     }
 
     /// Through the gate, as a first launch does it.
-    fn open_library(directory: &std::path::Path) -> Harness<'static, DevNotesApp> {
+    pub(super) fn open_library(directory: &std::path::Path) -> Harness<'static, DevNotesApp> {
         let startup = startup(directory);
         let mut harness = Harness::builder()
             .with_size(egui::vec2(1100.0, 720.0))
@@ -495,7 +498,7 @@ mod tests {
         assert!(!present(&harness, "area-switch"));
     }
 
-    fn count(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> usize {
+    pub(super) fn count(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> usize {
         use egui_kittest::kittest::Queryable;
         harness
             .query_all_by(|node| node.author_id() == Some(author_id))
