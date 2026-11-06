@@ -1,6 +1,6 @@
 //! A collection run: two requests over two iterations, each with its test, summed up, what failed
 //! open on its assertion, nothing in the history; the rows of a data file; the order arranged kept
-//! over a relaunch.
+//! over a relaunch; and the quit that asks about a request left with changes.
 
 use e2e::{App, Tree, step};
 use egui::accesskit::Node;
@@ -121,11 +121,7 @@ fn over_a_file(app: &mut App) {
 fn order_kept(app: &mut App) {
     step("the order moved by the keys", || {
         app.click_nth("http-runner-row", 0);
-        // The arrows are the row's from the frame after it took the focus.
         app.eventually("the row has the focus", |tree| {
-            tree.focused().contains("http-runner-row")
-        });
-        app.eventually("the row keeps it", |tree| {
             tree.focused().contains("http-runner-row")
         });
         app.press(Key::ArrowDown, Modifiers::ALT);
@@ -165,5 +161,23 @@ fn http_runner() {
                 .is_some_and(|row| row.label() == Some("Client"))
         });
     });
-    app.quit();
+    step("a quit asks about a request with changes", || {
+        app.click_where("http-node-name", ends("Login"));
+        app.wait_for("http-url");
+        app.fill("http-url", "/changed");
+        app.eventually("the request has changes", |tree| {
+            tree.find("http-save")
+                .is_some_and(|save| !save.is_disabled())
+        });
+        app.act("quit");
+        app.wait_for("http-leave-dialog");
+        app.click("http-leave-cancel");
+        app.eventually("the question is gone", |tree| {
+            !tree.has("http-leave-dialog")
+        });
+        app.act("quit");
+        app.wait_for("http-leave-dialog");
+        app.click("http-leave-save");
+    });
+    app.ended();
 }

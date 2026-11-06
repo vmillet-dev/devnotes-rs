@@ -15,7 +15,7 @@ use engine::http::send::SentResponse;
 use super::tests::{choose, click_id, collection, said_by, sending_to};
 use crate::notes::bench::{Bench, area_of, settle, until};
 use crate::state::Area;
-use crate::state::http::runner::Phase;
+use crate::state::http::runner::{Asked, Phase};
 use crate::state::http::send::Phase as SendPhase;
 use crate::testing;
 
@@ -178,6 +178,25 @@ fn a_row_moves_by_the_keys_and_the_order_is_kept_with_the_collection() {
 }
 
 #[test]
+fn an_order_read_before_a_move_does_not_undo_it() {
+    let mut harness = runner("/json");
+    let bench = harness.state_mut();
+    let dialog = Arc::clone(&bench.state.dialog);
+    let target = bench.state.http.runner().target().unwrap().clone();
+    bench
+        .state
+        .http
+        .ask_runner(&bench.backend, &dialog, Asked::Open(target));
+    // Not settled: the order is being read again as the row moves.
+    harness.step();
+    let bench = harness.state_mut();
+    let moved = Asked::Move { from: 0, to: 1 };
+    bench.state.http.ask_runner(&bench.backend, &dialog, moved);
+    settle(&mut harness);
+    assert_eq!(labels(&harness, "http-runner-row"), ["Orders", "Login"]);
+}
+
+#[test]
 fn a_request_left_out_is_not_counted_and_none_left_cannot_start() {
     let mut harness = runner("/json");
     let boxes = |harness: &Harness<'_, Bench>, at: usize| {
@@ -303,7 +322,7 @@ fn the_iterations_of_a_report_stand_apart() {
     let mut harness = runner("/json");
     let bench = harness.state_mut();
     let dialog = Arc::clone(&bench.state.dialog);
-    let asked = crate::state::http::runner::Asked::Iterations(2);
+    let asked = Asked::Iterations(2);
     bench.state.http.ask_runner(&bench.backend, &dialog, asked);
     settle(&mut harness);
     run(&mut harness);

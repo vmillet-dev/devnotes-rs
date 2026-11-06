@@ -135,5 +135,5 @@ fn http_scripts() {
     kept_value(&mut app);
     tests_and_console(&mut app);
     stopped(&mut app);
-    app.quit();
+    app.quit_discarding();
 }

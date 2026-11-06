@@ -534,6 +534,9 @@ fn the_http_response() {
     click(&mut harness, "http-history-item");
     settle(&mut harness);
     capture(&mut harness, "http-history");
+    assert!(!harness.state_mut().state.http.ask_leave());
+    settle(&mut harness);
+    capture(&mut harness, "http-leave");
 }
 
 #[test]

@@ -172,7 +172,7 @@ pub(crate) fn show(
     // A field being typed in asks for the input method; a focused button asks for nothing.
     let focused = ctx.output(|output| output.ime.is_some());
     ctx.data_mut(|data| data.insert_temp(typing_id, focused));
-    if shown.inner || dismissed {
+    if shown.inner || dismissed || state.closing_editor {
         pictures(ui, open.session, editing, actions);
         missing_pictures(ui, open.session, note, editing, actions);
         close(open.session, note, editing, actions);

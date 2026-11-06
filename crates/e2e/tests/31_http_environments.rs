@@ -158,5 +158,5 @@ fn http_environments() {
     let mut app = read_back(app);
     an_environment(&mut app);
     protected(&mut app);
-    app.quit();
+    app.quit_discarding();
 }
