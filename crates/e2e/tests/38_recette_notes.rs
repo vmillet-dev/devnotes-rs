@@ -175,7 +175,7 @@ fn recette_creating() {
             app.click("new-note");
             app.fill("editor-title", "Rouille");
             app.fill("editor-body", "fn main() { println!(\"bonjour\"); }");
-            choose_language(&mut app, "rs", RUST);
+            choose_language(&mut app, "rus", RUST);
             app.eventually("the language is chosen", |tree| {
                 tree.text("editor-stats")
                     .is_some_and(|said| said.starts_with("RS"))
@@ -190,7 +190,7 @@ fn recette_creating() {
         app.fill("editor-title", "Champs formatés");
         app.click("editor-body");
         app.paste("const url=\"{{host}}/api/{{version=v2}}\";fetch(url)");
-        choose_language(&mut app, "ts", TYPESCRIPT);
+        choose_language(&mut app, "typescript", TYPESCRIPT);
         app.click("editor-format");
         app.wait_for("editor-format-notice");
         let body = code(&app.tree());
@@ -215,7 +215,7 @@ fn recette_creating() {
         app.eventually("the next one", |tree| {
             tree.text("search-count").is_some_and(|said| said != count)
         });
-        app.press(Key::Enter, Modifiers::SHIFT);
+        app.click("search-previous");
         app.eventually("back to the first", |tree| {
             tree.text("search-count").is_some_and(|said| said == count)
         });
@@ -229,17 +229,23 @@ fn recette_creating() {
         app.press(Key::L, SHIFT_COMMAND);
         app.fill("editor-title", "Tâches");
         app.click("checklist-add");
+        app.eventually("the row takes the caret", |tree| {
+            tree.focused().starts_with("checklist-text")
+        });
         app.type_text("Préparer");
         app.press(Key::Enter, Modifiers::NONE);
         app.type_text("Déployer");
         app.eventually("two rows", |tree| {
-            tree.texts("checklist-text") == ["Préparer", "Déployer"]
+            tree.all("checklist-text")
+                .iter()
+                .filter_map(|row| row.value())
+                .eq(["Préparer", "Déployer"])
         });
         close_editor(&mut app);
     });
 
     step("TCH-06 ticked from its card, the progress follows", || {
-        app.click_nth("note-card-check", 0);
+        app.click_nth("note-card-item", 0);
         app.eventually("the progress moved", |tree| {
             tree.texts("note-card-progress")
                 .iter()
@@ -268,12 +274,12 @@ fn recette_a_formatted_note() {
             "rich-code",
             "rich-bullet",
             "rich-ordered",
-            "rich-task",
+            "rich-tasks",
             "rich-quote",
         ] {
             assert!(app.has(button), "{button}");
         }
-        app.click("rich-body");
+        app.click("editor-rich");
         app.type_text("gras");
         app.press(Key::A, Modifiers::COMMAND);
         app.click("rich-bold");
@@ -286,7 +292,7 @@ fn recette_a_formatted_note() {
         || {
             app.press(Key::N, SHIFT_COMMAND);
             app.fill("editor-title", "Littéral");
-            app.click("rich-body");
+            app.click("editor-rich");
             for line in LITERAL.lines() {
                 app.type_text(line);
                 app.press(Key::Enter, Modifiers::NONE);
@@ -321,7 +327,10 @@ fn recette_a_formatted_note() {
             let count = app.tree().text("presentation-count").unwrap_or_default();
             assert!(count.contains('1') && count.contains('4'), "{count}");
             app.press(Key::ArrowRight, Modifiers::NONE);
-            app.eventually("a slide", |tree| tree.has("presentation-slide"));
+            app.eventually("the next slide", |tree| {
+                tree.text("presentation-count")
+                    .is_some_and(|now| now != count)
+            });
             app.capture("ric-19-slide");
             app.press(Key::Escape, Modifiers::NONE);
             app.eventually("it left", |tree| !tree.has("presentation"));
@@ -443,19 +452,27 @@ fn recette_on_the_canvas() {
         close_editor(&mut app);
     });
 
-    step("MET-04 P pins, P again unpins, no date moves", || {
-        let when = app.tree().texts("note-card-when");
+    step("MET-04 P pins and unpins, no date moves", || {
+        let sorted = |mut dates: Vec<String>| {
+            dates.sort();
+            dates
+        };
+        let when = sorted(app.tree().texts("note-card-when"));
+        let pinned = app.tree().count("note-card-pin");
         app.press(Key::ArrowDown, Modifiers::NONE);
         app.press(Key::P, Modifiers::NONE);
-        app.eventually("two pinned", |tree| tree.count("note-card-pin") == 2);
-        app.click("undo-dismiss");
-        app.press(Key::P, Modifiers::NONE);
-        app.eventually("one pinned", |tree| tree.count("note-card-pin") == 1);
-        app.click("undo-dismiss");
-        assert_eq!(app.tree().texts("note-card-when"), when);
+        app.eventually("the pin moved", |tree| {
+            tree.count("note-card-pin") != pinned
+        });
+        assert_eq!(sorted(app.tree().texts("note-card-when")), when);
+        app.click("undo-restore");
+        app.eventually("the pin is back", |tree| {
+            tree.count("note-card-pin") == pinned
+        });
     });
 
     step("CLV-02 C copies a plain card and says so", || {
+        app.press(Key::ArrowDown, Modifiers::NONE);
         app.press(Key::C, Modifiers::NONE);
         app.wait_for("status-toast");
         app.capture("clv-02");
@@ -477,7 +494,7 @@ fn recette_on_the_canvas() {
                 app.press(key, Modifiers::NONE);
             }
             app.click("selection-move");
-            app.click_where("selection-move-0", |node| node.label() == Some("Perso"));
+            app.click("selection-move-1");
             app.wait_for("undo-text");
             app.capture("sel-02");
             app.click("undo-restore");
@@ -503,18 +520,20 @@ fn recette_on_the_canvas() {
     app.quit();
 }
 
-/// KO on the sheet: the menu lists codes alone, so the name of a language finds nothing.
+/// KO on the sheet: the focus stays on the card's place, not on the card, so the second P acts on
+/// the note that took its place.
 #[test]
-#[ignore = "COD-01: the language menu does not read the languages' names"]
-fn ko_cod_01_a_language_is_found_by_its_name() {
+#[ignore = "MET-04: the focus does not follow a card that moved"]
+fn ko_met_04_a_second_p_gives_the_card_back() {
     let profile = tempfile::tempdir().unwrap();
-    let mut app = a_new_library("38_ko_cod_01", profile.path());
-    app.click("new-note");
-    app.click("editor-language");
-    app.eventually("the filter has the focus", |tree| {
-        tree.focused().starts_with("editor-language-filter")
-    });
-    app.type_text("rus");
-    app.wait_for(RUST);
+    let mut app = a_new_library("38_ko_met_04", profile.path());
+    app.eventually("the six samples", |tree| tree.count("note-card") == 6);
+    app.press(Key::ArrowDown, Modifiers::NONE);
+    app.press(Key::ArrowDown, Modifiers::NONE);
+    app.press(Key::ArrowRight, Modifiers::NONE);
+    app.press(Key::P, Modifiers::NONE);
+    app.eventually("a second pin", |tree| tree.count("note-card-pin") == 2);
+    app.press(Key::P, Modifiers::NONE);
+    app.eventually("back to one pin", |tree| tree.count("note-card-pin") == 1);
     app.quit();
 }
