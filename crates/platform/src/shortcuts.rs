@@ -2,11 +2,14 @@
 //! the system, so what could not be taken is answered and said. They do not work under Wayland,
 //! where nothing lets an application listen outside its windows.
 
+mod system;
+
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use global_hotkey::hotkey::HotKey;
-use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
+
+pub use system::system;
 
 /// What a key can be bound to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,32 +41,6 @@ impl Shortcuts for NoShortcuts {
 /// A list and not three constants: the keys change with the preferences.
 type Active = Arc<Mutex<Vec<(HotKey, Global)>>>;
 
-struct System {
-    manager: GlobalHotKeyManager,
-    active: Active,
-}
-
-impl Shortcuts for System {
-    fn set(&self, wanted: &[(Global, String)]) -> Vec<String> {
-        self.release();
-        let (taken, unavailable) = take_each(wanted, |key| self.manager.register(key));
-        if let Ok(mut active) = self.active.lock() {
-            *active = taken;
-        }
-        unavailable
-    }
-
-    fn release(&self) {
-        let Ok(mut active) = self.active.lock() else {
-            return;
-        };
-        let keys: Vec<HotKey> = active.drain(..).map(|(key, _)| key).collect();
-        if let Err(error) = self.manager.unregister_all(&keys) {
-            log::warn!("Global shortcuts not released: {error}");
-        }
-    }
-}
-
 /// What was taken, and what was not: unreadable, or held by another application.
 fn take_each<E: std::fmt::Display>(
     wanted: &[(Global, String)],
@@ -86,28 +63,6 @@ fn take_each<E: std::fmt::Display>(
         }
     }
     (taken, unavailable)
-}
-
-/// ⚠️ Called on the window's thread: on Windows its message loop serves the keys.
-pub fn system(on_pressed: impl Fn(Global) + Send + Sync + 'static) -> Box<dyn Shortcuts> {
-    let manager = match GlobalHotKeyManager::new() {
-        Ok(manager) => manager,
-        Err(error) => {
-            log::warn!("No global shortcuts: {error}");
-            return Box::new(NoShortcuts);
-        }
-    };
-    let active = Active::default();
-    let heard = Arc::clone(&active);
-    GlobalHotKeyEvent::set_event_handler(Some(move |event: GlobalHotKeyEvent| {
-        // Without this filter the release would replay the action.
-        if event.state() == HotKeyState::Pressed
-            && let Some(action) = action_of(&heard, event.id())
-        {
-            on_pressed(action);
-        }
-    }));
-    Box::new(System { manager, active })
 }
 
 fn action_of(active: &Active, id: u32) -> Option<Global> {
