@@ -241,7 +241,11 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             Vec2::new((probe.size().x + 30.0).min(190.0), probe.size().y + 8.0),
             Sense::click(),
             self.author_id,
-            || WidgetInfo::labeled(Role::ComboBox, true, label),
+            || {
+                let mut info = WidgetInfo::labeled(Role::ComboBox, true, label);
+                info.current_text_value = Some(shown.to_owned());
+                info
+            },
             corner,
         );
         let hover = hovered(ui, &response);

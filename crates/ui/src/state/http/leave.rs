@@ -11,8 +11,17 @@ pub enum Asked {
     SaveAll,
 }
 
+/// What the question stands in front of: its words, and what follows the answer.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Reason {
+    #[default]
+    Quit,
+    Switch,
+}
+
 #[derive(Default)]
 pub struct Leave {
+    reason: Reason,
     asking: bool,
     /// « Save all » under way, and the tabs it has written: one still modified after its write
     /// failed or was refused a place, and the question stays out.
@@ -28,6 +37,10 @@ impl Leave {
         self.asking
     }
 
+    pub fn reason(&self) -> Reason {
+        self.reason
+    }
+
     /// Whether the area's state is to go on while another area is shown.
     pub fn is_under_way(&self) -> bool {
         self.asking || self.closes
@@ -41,7 +54,8 @@ impl Leave {
         self.released
     }
 
-    pub fn ask(&mut self) {
+    pub fn ask(&mut self, reason: Reason) {
+        self.reason = reason;
         self.asking = true;
         self.saving = None;
     }
@@ -75,6 +89,13 @@ impl Leave {
     }
 
     pub fn take_close(&mut self) -> bool {
-        std::mem::take(&mut self.closes)
+        self.reason == Reason::Quit && std::mem::take(&mut self.closes)
+    }
+
+    /// The answer let a switch through. Asked again next time: the window stays.
+    pub fn take_switch(&mut self) -> bool {
+        let passed = self.reason == Reason::Switch && std::mem::take(&mut self.closes);
+        self.released &= !passed;
+        passed
     }
 }

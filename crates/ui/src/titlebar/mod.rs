@@ -3,6 +3,7 @@
 //! right. 38 px on `bg-0`, a `line-soft` underline.
 
 mod file_menu;
+pub(crate) mod libraries;
 
 use egui::{
     CornerRadius, FontFamily, Margin, Rect, Role, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo,
@@ -26,7 +27,7 @@ const AREAS: [(Area, Icon, Key, &str); 3] = [
 ];
 
 /// What the bar's menus ask.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     Import,
     ExportAll,
@@ -36,12 +37,17 @@ pub enum Action {
     /// The passphrase prompt answered: the answer waits in the view, out of the actions.
     Prompted,
     Quit,
+    OpenLibraries,
+    Libraries(libraries::Ask),
 }
 
 /// What only the bar's drawing sees.
 #[derive(Default)]
 pub struct View {
     file_menu: file_menu::View,
+    /// The menu's control, which gets the focus back from what it opened.
+    pub file_anchor: Option<egui::Id>,
+    libraries: libraries::View,
     prompt: PromptView,
     /// ⚠️ Holds a phrase until `AppState::apply` takes it, the same frame.
     pub answer: Option<Answer>,
@@ -76,7 +82,8 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
         ui.horizontal_centered(|ui| {
             // Every entry of the menus acts on the library: none while it is locked.
             if unlocked {
-                file_menu::show(ui, state, &mut view.file_menu, actions);
+                let anchor = file_menu::show(ui, state, &mut view.file_menu, actions);
+                view.file_anchor = Some(anchor);
                 area_switch(ui, state.settings.area, language, actions);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -93,6 +100,7 @@ pub(crate) fn dialogs(
     view: &mut View,
     actions: &mut Actions,
 ) {
+    libraries::show(ctx, state, &mut view.libraries, actions);
     if let Some(request) = state.transfer.prompt() {
         let asked = prompt::show(
             ctx,

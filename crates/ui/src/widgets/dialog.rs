@@ -91,12 +91,12 @@ impl DialogStack {
     }
 }
 
-/// A fitted modal: `bg-1`, 14 px corners, a `line` border, the overlay's shadow, 480 px wide.
-/// Its scrim is solid, where the reference blurred (E7). `None` when `id` is not open.
+/// A fitted modal: `bg-1`, 14 px corners, a `line` border, the overlay's shadow. Its scrim is solid, where the reference blurred (E7). `None` when `id` is not open.
 pub fn dialog<R>(
     ctx: &Context,
     stack: &DialogStack,
     id: Id,
+    width: f32,
     content: impl FnOnce(&mut egui::Ui) -> R,
 ) -> Option<ModalResponse<R>> {
     if !stack.is_open(id) {
@@ -116,7 +116,7 @@ pub fn dialog<R>(
         .backdrop_color(p.backdrop.gamma_multiply(0.7))
         .frame(frame)
         .show(ctx, |ui| {
-            ui.set_width(480.0_f32.min(ctx.content_rect().width() * 0.9));
+            ui.set_width(width.min(ctx.content_rect().width() * 0.9));
             content(ui)
         });
     Some(shown)
@@ -167,10 +167,16 @@ mod tests {
                     if Button::new("Dessous", "under").show(ui).clicked() {
                         screen.under_clicked = true;
                     }
-                    dialog(ui.ctx(), &screen.stack, Id::unique("settings"), |ui| {
-                        Button::new("Un", "first").show(ui);
-                        Button::new("Deux", "second").show(ui);
-                    });
+                    dialog(
+                        ui.ctx(),
+                        &screen.stack,
+                        Id::unique("settings"),
+                        480.0,
+                        |ui| {
+                            Button::new("Un", "first").show(ui);
+                            Button::new("Deux", "second").show(ui);
+                        },
+                    );
                     let close = [Binding {
                         key: Key::Escape,
                         modifiers: Modifiers::NONE,

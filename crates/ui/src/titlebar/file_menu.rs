@@ -18,7 +18,13 @@ pub(super) struct View {
     confirming_quit: bool,
 }
 
-pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
+/// The menu's control, for what it opens to give the focus back to.
+pub(super) fn show(
+    ui: &mut Ui,
+    state: &AppState,
+    view: &mut View,
+    actions: &mut Actions,
+) -> egui::Id {
     let label = i18n::translate(state.language, keys::file::MENU_LABEL, &[]);
     let anchor = super::menu_trigger(ui, &label, "file-menu");
     let shown = Popup::menu(&anchor)
@@ -28,6 +34,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
     if shown.is_none() {
         view.confirming_quit = false;
     }
+    anchor.id
 }
 
 fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
@@ -60,7 +67,7 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
             Action::CopyMarkdown,
         ),
     ];
-    let mut ids = Vec::with_capacity(rows.len() + 1);
+    let mut ids = Vec::with_capacity(rows.len() + 2);
     for (key, entry, enabled, action) in rows {
         let id = format!("file-option-{entry}");
         let tone = if enabled { Tone::Plain } else { Tone::Idle };
@@ -72,6 +79,17 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
         }
     }
     super::separator(ui);
+    let row = super::menu_option(
+        ui,
+        &tr(keys::libraries::MENU_ENTRY),
+        "file-libraries",
+        Tone::Plain,
+    );
+    ids.push(row.id);
+    if row.clicked() {
+        actions.push(Asked::Menu(Action::OpenLibraries));
+        ui.close();
+    }
     let quit = if view.confirming_quit {
         tr(keys::file::QUIT_CONFIRM)
     } else {

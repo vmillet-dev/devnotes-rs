@@ -209,6 +209,11 @@ impl Gate {
         false
     }
 
+    /// Out of the open library, from its File menu: the gate comes back when this is answered.
+    pub fn leave_for(&mut self, pending: Pending<()>) {
+        self.work = Some(Work::Switching(pending));
+    }
+
     /// What the index says while it fills behind the gate.
     pub fn index_progress(&mut self, done: u32, total: u32) {
         self.index = IndexFill::Filling { done, total };

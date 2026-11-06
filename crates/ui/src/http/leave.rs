@@ -6,7 +6,7 @@ use i18n::keys;
 
 use super::{Action, View, modal, save_request};
 use crate::action::{Action as Asked, Actions};
-use crate::state::http::leave::Asked as Ask;
+use crate::state::http::leave::{Asked as Ask, Reason};
 use crate::state::{AppState, Area};
 use crate::theme::palette;
 use crate::widgets::{self, Button, Kind};
@@ -56,9 +56,17 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
     ui.painter().galley(rect.min, words, p.text_0);
     heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
     widgets::address(ui, &heading, "http-leave-dialog");
-    let hint = egui::RichText::new(tr(keys::http::leave::hint::QUIT))
-        .size(12.5)
-        .color(p.text_2);
+    let (hint, discard) = match state.http.leave().reason() {
+        Reason::Quit => (
+            keys::http::leave::hint::QUIT,
+            keys::http::leave::discard::QUIT,
+        ),
+        Reason::Switch => (
+            keys::http::leave::hint::SWITCH,
+            keys::http::leave::discard::SWITCH,
+        ),
+    };
+    let hint = egui::RichText::new(tr(hint)).size(12.5).color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
     for name in names {
         let words = egui::RichText::new(name).size(12.5).color(p.text_0);
@@ -87,7 +95,7 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
         {
             chosen = Some(Ask::SaveAll);
         }
-        if Button::new(&tr(keys::http::leave::discard::QUIT), "http-leave-discard")
+        if Button::new(&tr(discard), "http-leave-discard")
             .kind(Kind::Destructive)
             .show(ui)
             .clicked()
