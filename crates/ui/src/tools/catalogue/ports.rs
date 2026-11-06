@@ -3,9 +3,9 @@
 use i18n::{Language, keys};
 use serde_json::json;
 
-use super::reference::{Reference, Table, word};
+use super::reference::{Reference, Table, columns_of, groups_of, word};
 use crate::tools::Tool;
-use crate::tools::ui::{Cell, Column, Group, ReferenceRow};
+use crate::tools::ui::{Cell, ReferenceRow};
 
 const RANGES: [&str; 3] = ["well-known", "registered", "dynamic"];
 
@@ -113,34 +113,26 @@ fn row((port, transport, service): (u32, &str, &str), language: Language) -> Ref
         Cell::text(note.clone()),
     ];
     let key = port.to_string();
-    ReferenceRow::new(key.clone(), range, cells).searched_by([
-        key.as_str(),
-        service,
-        &note,
-        &heading,
-    ])
+    let title = format!("{key} {service}");
+    ReferenceRow::new(key.clone(), range, cells)
+        .searched_by([key.as_str(), service, &note, &heading])
+        .found_as(title, note)
 }
 
-fn table(language: Language) -> Table {
-    let column = |id: &str, share| Column {
-        label: word(language, &format!("tools.ports.columns.{id}")),
-        share,
-    };
+pub(crate) fn table(language: Language) -> Table {
     Table {
         rows: PORTS.iter().map(|it| row(*it, language)).collect(),
-        groups: RANGES
-            .iter()
-            .map(|id| Group {
-                id: (*id).to_owned(),
-                label: word(language, &format!("tools.ports.ranges.{id}")),
-            })
-            .collect(),
-        columns: vec![
-            column("port", Some(0.11)),
-            column("transport", Some(0.16)),
-            column("service", Some(0.3)),
-            column("note", None),
-        ],
+        groups: groups_of(language, "tools.ports.ranges", &RANGES),
+        columns: columns_of(
+            language,
+            "tools.ports.columns",
+            &[
+                ("port", Some(0.11)),
+                ("transport", Some(0.16)),
+                ("service", Some(0.3)),
+                ("note", None),
+            ],
+        ),
         caption: keys::tools::ports::NAME,
         placeholder: keys::tools::ports::PLACEHOLDER,
         card_width: 520.0,

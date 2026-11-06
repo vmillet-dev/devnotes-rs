@@ -1,5 +1,7 @@
 //! The catalogue in its panels, the starred and the recent tools above it, and a search over the
-//! tools: their names, lines, keywords and category.
+//! tools — their names, lines, keywords and category — and inside the references.
+
+mod hits;
 
 use egui::{
     Color32, CornerRadius, FontFamily, Id, Key, Modifiers, Pos2, Rect, Response, Role, Sense,
@@ -8,7 +10,7 @@ use egui::{
 use i18n::{Language, Message, keys};
 
 use super::catalogue::{Category, TOOLS, ToolEntry};
-use super::{Action, Asked, bar, star, star_hint};
+use super::{Action, Asked, Opening, bar, star, star_hint};
 use crate::action::Actions;
 use crate::api;
 use crate::services::time;
@@ -31,6 +33,9 @@ pub(super) struct HomeView {
     typing: bool,
     /// In the order they are read.
     results: Vec<Id>,
+    references: hits::References,
+    /// Where the next frame opens the reference a hit asked for.
+    opening: Option<(&'static ToolEntry, Opening)>,
 }
 
 impl HomeView {
@@ -40,6 +45,10 @@ impl HomeView {
 
     fn searching(&self) -> bool {
         !self.search.trim().is_empty()
+    }
+
+    pub(super) fn take_opening(&mut self) -> Option<(&'static ToolEntry, Opening)> {
+        self.opening.take()
     }
 }
 
@@ -67,6 +76,7 @@ pub(super) fn show(
         .flatten();
     let mut content = ui.new_child(UiBuilder::new().max_rect(body));
     view.results.clear();
+    view.references.search(view.search.trim(), state.language);
     egui::ScrollArea::vertical()
         .id_salt("tools-home")
         .auto_shrink(false)
@@ -237,7 +247,8 @@ fn sections(
         recents(ui, state, actions);
     }
     columns(ui, state, view, (found, first), actions);
-    if view.searching() && found.is_empty() {
+    hits::show(ui, state.language, view, first.is_none(), actions);
+    if view.searching() && found.is_empty() && view.references.is_empty() {
         no_match(ui, state.language, view.search.trim());
     }
 }
@@ -634,11 +645,11 @@ fn keys_of_the_search(
 ) {
     let pressed = |ui: &Ui, key| ui.input_mut(|input| input.consume_key(Modifiers::NONE, key));
     // The field gives the focus up on Enter by itself.
-    if field.lost_focus()
-        && pressed(ui, Key::Enter)
-        && let Some(tool) = first
-    {
-        actions.push(Asked::Tools(Action::Open(tool.id)));
+    if field.lost_focus() && pressed(ui, Key::Enter) {
+        match first {
+            Some(tool) => actions.push(Asked::Tools(Action::Open(tool.id))),
+            None => hits::open_first(view, actions),
+        }
     }
     super::ui::walk(ui, &view.results, field);
     let focused = ui.memory(egui::Memory::focused);

@@ -672,27 +672,24 @@ reads. A tool is found by its name, its line, its keywords and **the name of its
 (« Dans les références »): a row an entry, what it is called, what it means and where it lives
 (« 418 I'm a teapot — Codes de statut HTTP »), four a reference then « n autres ».
 
-- **A reference is data apart from its component** (`ReferenceSource`, a
-  `<id>.reference.ts` beside its facts): its words in each language, the rows built from them,
-  what a row is called away from its table, and its own matcher when it reads a query its own
-  way. The reference's table draws those rows (`referenceRows`) and the home searches them
-  (`referenceSearch`): one function builds, one matcher finds, so « too many » finds the same
-  rows from either field.
-- ⚠️ **Loaded by the first thing typed, not by the home opening** (`ToolDefinition.reference`,
-  a chunk of its own): the nine sources and their words in the language on screen, once a
-  language. The tools answer at once and the second group arrives when it can; « nothing
-  matches » waits for it. A single character searches no reference — it is nearly every row of
-  each.
-- **Choosing a row opens the reference on it** (`ToolsStore.open(id, entry)`): its own search
-  emptied, the row brought into view once and lit (`ReferenceTableComponent` reads
-  `ToolsStore.entry`), until the reference is searched by hand. « n autres » opens it searched
-  for what was typed on the home — a reference's search is the session slot
-  `referenceQueryKey(id)`, which the home writes.
+- **A reference is data apart from its drawing** (`catalogue/<id>.rs`): the facts in a table of
+  its own, or in `catalogue/facts/<id>.json` when a row has more to say than a line holds (a long
+  table of same-shaped Rust literals reads as duplication), its words in each language, the rows built from them, what a row is called away from
+  its table (`ReferenceRow::found_as`), and its own matcher when it reads a query its own way. The
+  reference's table draws those rows and the home searches them (`Table::found`, the list
+  `catalogue::REFERENCES`): one function builds, one matcher finds, so « too many » finds the
+  same rows from either field.
+- **Built by the first thing typed, not by the home opening** (`home/hits.rs`): the nine tables
+  in the language on screen, once a language. A single character searches no reference — it is
+  nearly every row of each.
+- **Choosing a row opens the reference on it** (`Tool::opened`, `Opening::OnRow`): its own search
+  emptied, the row brought into view once and lit, until the reference is searched by hand.
+  « n autres » opens it searched for what was typed on the home (`Opening::Searched`).
 
 **The keyboard reaches the results**: Enter in the field opens the first — a tool before a
 reference's row, marked `↵` — the down arrow goes into them and the arrows walk them in the
 order they are read, back up to the field; Escape empties the search, a second one leaves the
-field. One listener on the home's host, no handler a row.
+field.
 
 **The recent tools are an application preference** (`devnotes.recentTools`): which and when,
 nothing typed into them. Sixteen are kept (`KEPT_RECENT_TOOLS`) and five shown
@@ -700,61 +697,52 @@ nothing typed into them. Sixteen are kept (`KEPT_RECENT_TOOLS`) and five shown
 first five that its section above does not already list — no tool twice in one rail, and five
 all the same. A favourite is left out of the home's recents: it has its chip above them.
 
-**A tool is starred, and that is kept with the application too** (`devnotes.favouriteTools`,
-`ToolsStore.toggleFavourite`): ids in the order they were starred, read like any input — an id
-the catalogue no longer has is dropped by whoever lists them (`favouritesAmong`), never
+**A tool is starred, and that is kept with the application too** (`devnotes.favouriteTools`):
+ids in the order they were starred, read like any input — an id
+the catalogue no longer has is dropped by whoever lists them, never
 written out of the file for it. The same exception to « the tools keep nothing on disk » that
 the recents and the zones are: an id, never what a tool holds.
 
-- **The star is a toggle** (`aria-pressed`) in the frame's header, and on each row of the home:
-  shown on the row's hover and on its own focus, always once on — full, in amber, so that on
-  is not said by a colour alone. ⚠️ A row of the home is a `<button>`: the star is its
-  **sibling**, laid over its end (`.tool-row`), as a note's card is two layers.
+- **The star is a toggle** in the frame's header, and on each row of the home: shown on the row's
+  hover and on its own focus, always once on — full, in amber, so that on is not said by a colour
+  alone. It is a control of its own laid over the row's end, as a note's card is two layers.
 - **« Favoris » is a section of the home above « Récents »**, the same chips, and an entry of
   the rail above « Tous les outils » with its count; both are absent while there is none.
-- **The entry narrows the home as a category does** (`ToolFilter`: a category, or
-  `favourites`): the starred tools in their own panels. Unstarring the last one widens the
-  home again. A search still answers over the whole catalogue, in its order — a favourite
-  does not outrank a better match. `catalogue.spec.ts` holds the first figure to the largest category. Ctrl+Shift+T
-  opens the home on its search from any area — the home takes `ToolsStore.searchWanted` whether
-  it already existed or not.
+- **The entry narrows the home as a category does** (`Filter`: a category, or the favourites):
+  the starred tools in their own panels. Unstarring the last one widens the home again. A search
+  still answers over the whole catalogue, in its order — a favourite does not outrank a better
+  match. Ctrl+Shift+T opens the home on its search from any area.
 
 **"Enregistrer comme note" belongs to the frame**: one dialog for every tool and for an HTTP
-response, at their common ancestor (`save-as-note/`, reached as `@app/…`). It asks for a title (the tool proposes one, as a
-`TranslationRef`), a space and a folder (those open in the notes by default) and tags; the kind
-and the language are the tool's own. It takes the result as it stood on the click. `ToolNotes`
-creates the note through `NotesRepository` like any other, with the source its caller names —
-"Outils / <tool>", "HTTP / <request>" — bumps `NotesRevision` for the canvas behind, and
-`StatusNotifier` says where it went.
+response (`http/save_as_note.rs`). It asks for a title (the tool proposes one), a space and a
+folder (those open in the notes by default) and tags; the kind and the language are the tool's
+own. It takes the result as it stood on the click, and creates the note like any other, with the
+source its caller names — "Outils / <tool>", "HTTP / <request>".
 
-**An input can be filled from a note** (`ToolDefinition.fromNote`, in the catalogue): the tool
-names its inputs a note may fill and which notes may — kinds, and for a snippet its languages
-(`NoteInput`: `ANY_NOTE`, `JSON_SNIPPET`, `STRUCTURED_SNIPPET`). The tool places
-`<app-note-import field="…">` beside such an input (`tools/ui/note-import/`), and the button
-reads the open tool's declaration through `ToolsStore.openId`: an input declared nowhere has no
-button, so a key, a password, a token or a card number never takes a note.
+**An input can be filled from a note** (`ToolEntry::from_note`, in the catalogue): the tool names
+its inputs a note may fill and which notes may — kinds, and for a snippet its languages
+(`NoteInput`). The tool places `note_import` beside such an input: an input declared nowhere has
+no button, so a key, a password, a token or a card number never takes a note.
 
 - **The picker asks Rust** for the kinds and languages declared (`query_notes`, every space) and
   says what it lists (« Snippets JSON, YAML, TOML ou XML »). The note chosen is read whole by id,
-  and a todo list gives the Markdown copying it gives (`noteCopyText`).
+  and a todo list gives the Markdown copying it gives.
 - **A copy, taken once**: the tool's input is set as typing would set it, and nothing ties the
   tool to the note afterwards — editing or deleting the note leaves the tool as it was. The
   converter reads a snippet in its own format; the diffs show the note's title over the side.
 
-**In Rust, a tool is a module of `tools/`** (`text`, `url_parts`, …): pure functions and
-their types, tested in place, no Tauri. `tools.rs` holds the commands, three lines each
-through `off_thread` — no lock, but never on the window's thread. One command per tool rather
-than one `run_tool` over an enum: a registration line is the price of precise generated types.
+**In Rust, a tool is a module of `engine/src/tools/`** (`text`, `url_parts`, …): pure functions
+and their types, tested in place, called from `ui/src/api/tools.rs` on the `compute` queue — no
+lock, and never on the window's thread.
 
 **A tool reading a file takes its path** (`tools/files.rs`): Rust reads the bytes where they
-lie and they never cross the bridge. What a tool sends back of a file is refused past 10 MB
+lie. What a tool shows of a file is refused past 10 MB
 (`MAX_SENT_BYTES`), and a missing or unreadable file is part of the answer (`FileProblem`),
 not an `AppError`. Bytes that are no text — a Base64 decoding — are written to a file the user
 chooses, never to a note.
 
-⚠️ **The HMAC key never outlives the tool**: it is a plain `signal` of the component, never a
-`toolState`, and Rust zeroes its copy once the digests are computed. The switch alone is
-remembered. A file is hashed a block at a time, so its size has no limit, and a pasted
+⚠️ **The HMAC key never outlives the tool**: `Tool::left` zeroes it when the tool leaves the
+screen, and Rust zeroes its copy once the digests are computed. The switch alone is remembered. A file is hashed a block at a time, so its size has no limit, and a pasted
 signature is compared with every algorithm in both encodings, whichever are shown. With nothing
 to hash it is still read, by its length alone (`DigestShape`): 64 hex characters are SHA-256 or
 SHA3-256, and an HMAC has the shape of the hash it uses.
@@ -762,7 +750,7 @@ SHA3-256, and an HMAC has the shape of the hash it uses.
 **Randomness is the system's** (`getrandom`), never a seeded generator: a character is drawn by
 rejection, so none comes up more often than another, and a system that gives no randomness is
 an `AppError` rather than a weaker fallback. Generated passwords are the answer of a
-`liveResult` and die with the tool. They may be kept as a note — the choice made for v0.9.0 —
+`Live` and die with the tool. They may be kept as a note — the choice made for v0.9.0 —
 but the tool's `ToolResult.warning` makes the dialog say why they had better not be, and its
 button read "Enregistrer quand même".
 
@@ -796,25 +784,22 @@ the other readings its shape allows are named, any of them forced on request. A 
 two Base64 alone.
 
 **A decoding that is a picture is shown** (`tools/image.rs`, read by `bases::decode`): PNG,
-JPEG, GIF, WebP and SVG are known by their first bytes and sized by their header — no decoder,
-nothing draws a pixel in Rust — and the answer carries the picture as a `data:` URL
-(`DecodedImage`). ⚠️ The CSP is unchanged: `img-src 'self' data:` already lets a picture be a
-`data:` URL, which is how a response's image is drawn too. ⚠️ An SVG goes into an `<img>` like
-the others, **never inlined**: nothing in it runs there. Past 2 MB (`PREVIEW_LIMIT`) the picture
-is still named and sized, and the page says it is not drawn rather than drawing nothing.
+JPEG, GIF, WebP and SVG are known by their first bytes and sized by their header, and the answer
+carries the picture. ⚠️ An SVG is drawn as a picture, nothing in it runs. Past 2 MB
+(`PREVIEW_LIMIT`) the picture is still named and sized, and the page says it is not drawn rather
+than drawing nothing.
 « Enregistrer comme fichier » proposes the extension of what was recognised. A
 `data:image/png;base64,…` URI pasted whole is read by its header — its payload is Base64
 whatever reading was asked — and a refusal inside it still counts characters from the text as
 given.
 
-**A QR code is Rust's, the front draws a path** (`tools/qr.rs`, the `qrcode` crate): the form
-becomes a payload there (Wi-Fi in the ZXing format, `mailto:`, a vCard 3.0 folded at 75 octets),
-always in byte mode, so the capacity reads in the bytes typed. The answer carries the dark
-modules as one SVG path, drawn inline (no data URL, CSP-safe); the SVG file is written around the
-same path and the PNG from the same modules, so a download is the preview. ⚠️ The plate is white
-and the modules black in both themes: an inverted code is not read by every scanner. A copy puts
-the image on the clipboard natively, its pixels never crossing the bridge. The Wi-Fi password is
-a plain `signal`, and a note keeping it is warned against, as a password is.
+**A QR code is Rust's, the window draws its pixels** (`tools/qr.rs`, the `qrcode` crate): the
+form becomes a payload there (Wi-Fi in the ZXing format, `mailto:`, a vCard 3.0 folded at 75
+octets), always in byte mode, so the capacity reads in the bytes typed. `qr::rgba` gives the
+preview's texture, drawn `NEAREST` so that a module stays a square; the SVG and PNG files are
+written from the same modules, so a download is the preview. ⚠️ The plate is white and the modules
+black in both themes: an inverted code is not read by every scanner. The Wi-Fi password dies with
+the tool (`Tool::left`), and a note keeping it is warned against, as a password is.
 
 **A CIDR block is computed on a `u128`** (`tools/cidr.rs`, `ipnet` for the reading): an IPv4
 address sits in its low 32 bits, so one set of arithmetic serves both families. A block is read
@@ -947,7 +932,7 @@ does not know leaves it. An abbreviation several zones use lists them all rather
 **A cron expression is read twice** (`tools/cron.rs`): by hand, field by field, so that a
 refusal names its field and its token and the page can light the field under the caret; then by
 `croner`, which counts the next runs in a zone and checks a date. Rust answers what each field
-holds (`Piece`), never a sentence: `cron-sentence.ts` builds it from translation keys — times
+holds (`Piece`), never a sentence: `catalogue/cron/sentence.rs` builds it from translation keys — times
 written as times when the minute and the hour are plain values, one clause per field otherwise.
 When both day fields are set, either one matching is enough, as in cron, and the tool says so.
 `@midnight` is expanded here, since `croner` does not know it.
@@ -978,13 +963,13 @@ its prefix and length as a hint, and an IBAN's mod 97 with its country's BBAN fo
 `iban_validate`. That crate keeps its formats to itself, so the length each country expects is
 a table summed from its registry, held to it by a test. A French or Monégasque IBAN is read in its
 parts — bank, branch, account — and its RIB key checked apart from the IBAN's own. ⚠️ A card
-number or an IBAN is a secret: a plain `signal`, and the tool has nothing to save as a note.
+number or an IBAN is a secret: it dies with the tool, which has nothing to save as a note.
 
 **A JWT is taken apart in Rust** (`tools/jwt.rs`), without a JWT crate — `jsonwebtoken` brings
 `ring`: its header and payload decoded, `exp`, `nbf`, `iat` and `auth_time` read against now,
 and its signature verified for HS256, HS384 and HS512 alone, in constant time
 (`Mac::verify_slice`); the other families are named and left unverified, `alg: none` is flagged.
-⚠️ The token and the secret are plain `signal`s, zeroed in Rust once the answer is made; a note
+⚠️ The token and the secret die with the tool, and are zeroed in Rust once the answer is made; a note
 keeps the decoded header and payload as one JSON document, after a warning, never the token.
 
 **The diff's « Données » tab compares documents, and says when a text is none**
@@ -997,26 +982,17 @@ The detection answers the narrowest format that fits (`convert::detect`): every 
 is YAML too, and one that parses as JSON is said to be JSON. « Exemple » belongs to the tab on
 screen and fills both sides, each read by its shape again.
 
-**A reference is a tool that is read, never typed into** (the « Références » category): no
-`result` — the frame then offers no "Enregistrer comme note" — no `sample()`, and no Rust. Its
-facts are typed constants beside the component; its words are a JSON per language beside them,
-imported with the tool's chunk by `referenceWords` rather than merged into the main translations,
-so sixty descriptions weigh nothing until the tool opens. `app-reference-table` (`tools/ui/`) is
-the rest: the search, folded like the catalogue's — a front-end exception of the same kind,
-translated text — the groups, the count, each row's key to copy. A row is searched by its group's
-heading too (« redirection » finds every 3xx), so headings are translated in code
-(`referenceHeadings` for the table, the source's `label` for a row), not in the template. The
-rows themselves are built by the reference's `ReferenceSource`, which the home's search reads
-as well (above). The reference draws its own
-`<td>`s through `appReferenceCells`, and so styles them itself (`reference-cell`): the table's
-stylesheet cannot reach them. A spec holds both files of words to the same keys. Each group is a
-table of its own, a card, and the cards flow into as many columns as the width holds, each never
-narrower than the reference's `--reference-column`; a card is never cut between two columns.
+**A reference is a table to search, and its words are a file of its own**
+(`crates/i18n/translations/references/<id>.{fr,en}.json`, read as `tools.<id>.words.…`), the
+facts beside its `catalogue/<id>.rs`: nothing is computed and nothing is kept as a note. `Reference` holds
+the query and builds the rows once a language; `ReferenceTable` (`tools/ui/`) is the rest: the
+search, folded like the catalogue's, the groups, the count, each row's key to copy. A row is
+searched by its group's heading too (« redirection » finds every 3xx). Each group is a card, and
+the cards flow into as many columns as the width holds, each never narrower than the reference's
+`card_width`.
 
-A cheat sheet's claims are checked where an engine is at hand: every JavaScript example of the
-regex sheet runs through `RegExp` in its spec. ⚠️ The Mustache sheet's `{{…}}` are constants and
-chunk words, never main translation strings: Transloco would replace an unknown `{{name}}` with
-nothing.
+⚠️ A reference's words are read with `i18n::as_written`, never `translate`: the Mustache sheet speaks
+of `{{ }}`, which an interpolation would replace with nothing.
 
 **A fictitious identity is drawn from one list of names and a profile a country** — decided by
 a spike before any list was written, because the obvious way was refused: a few thousand names
@@ -1074,7 +1050,7 @@ a country, hard-coded, is a megabyte of test data in the binary.
   more than half of itself for the ones that follow.
 
 **The identity tool is that design, for thirteen countries** (`tools/identity.rs`;
-`tools/catalogue/identity/`). A pure function of the options and a seed behind one command.
+`ui/src/tools/catalogue/identity.rs`). A pure function of the options and a seed.
 Four files under `tools/identity/`, each one thing:
 
 | File         | What it holds                                                                                              |
@@ -1090,12 +1066,10 @@ sums the files.
 ⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
 is corrected or a list completed without building the application again.
 
-- **A Tauri resource**: `crates/engine/resources/identity/` (`names.txt`, `places/*.txt`) is
-  declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
-  on Windows and in a development or e2e build (`tauri-build` copies it into the target
-  directory), under the package's own folder on Linux. The two commands read
-  `Paths::resources`, which the shell resolves from `resource_dir()`, joined with `identity`. No Tauri permission
-  is involved — Rust reads the files, the page never does.
+- **A resource**: `crates/engine/resources/identity/` (`names.txt`, `places/*.txt`) lands in
+  `<resources>/identity/` — beside the executable on Windows, under the package's own folder on
+  Linux, and read from the crate in a development or e2e build. `Paths::resources` says where
+  (`platform::paths::resources`), joined with `identity`.
 - **Read once, kept for the session** (`data::library`): every file is read at the first card
   and its text given away for as long as the application runs, every name drawn afterwards
   pointing into it. ⚠️ Only a reading that was whole is kept: a file put back is found at the
@@ -1185,35 +1159,26 @@ is corrected or a list completed without building the application again.
 **Adding a tool**, the whole of it:
 
 1. `crates/engine/src/tools/<module>.rs`: the function, its request and answer types, its tests.
-2. `tools.rs`: a command through `off_thread`; `lib.rs`: a line in `collect_commands!`; then
-   `npm run bindings`.
-3. `core/data/tools.repository.ts`: a method, and its twin in `FakeToolsRepository`; the types
-   re-exported by `core/model/tool-answers.model.ts`.
-4. `tools/catalogue/catalogue.ts`: an entry; `tools/catalogue/<id>/`: the component
-   implementing `Tool`, its `sample()` included (`catalogue.spec.ts` holds every tool to one),
-   and its spec through `renderTool`. A reference has no `sample()` and a
-   `<id>.reference.ts`, named by the entry's `reference`.
-5. `tools.<id>.*` in both locales, and a scenario in `29-tools.e2e.ts`.
+2. `ui/src/api/tools.rs`: one function through `backend.compute`.
+3. `ui/src/tools/catalogue/<id>.rs`: a struct implementing `Tool`, its `make()`; `catalogue.rs`: an
+   entry and a `mod`. A reference is `Reference::of(table)` and a line of `REFERENCES`.
+4. `tools.<id>.*` in both locales, its kittest over a real core, a step in scenario 29, and its
+   state in `app::captures` by itself: `the_tools` walks the catalogue.
 
-What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-result-row`,
-`app-copy-value`) and the `tool-*` mixins. ⚠️ A row of a results card gives its value two
-thirds of the card beside its name, which a long one turned into a strip running down the
-page with its copy icon at mid-height: past `LONG_RESULT` characters a value takes the card's
-width **under** its name, held to eight lines it scrolls in — focusable, so the keyboard
-scrolls it — and its icon stays at its top; `app-output-row` holds its value to a height the
-same way. A tool whose results are long takes the width it is given (`tool-columns`) rather
-than a width of its own, and a results card (`tool-result-card($row-min)`) puts its rows two
-abreast once it holds two of `$row-min` — the hash tool asks for more, a digest reading on one line.
+What every tool draws alike is the kit, `tools/ui/`: `columns`, `line`, `section_head`, `text_area`,
+`card`, `ResultRow`, `OutputRow`, `CopyValue`, `notice`, `code_output`. ⚠️ A row of a results card
+gives its value two thirds of the card beside its name, which a long one turned into a strip
+running down the page: past `LONG_RESULT` characters a value takes the card's width **under** its
+name, held to eight lines it scrolls in, and its icon stays at its top. A results card
+(`result_rows`) puts its rows two abreast once it holds two of `ROW_MIN`.
 
-The home's panels are stacks in columns: as many as `columnCount` fits at 260 px, the panels
-cut into consecutive stacks by `stackInColumns` (`core/utils/columns.util.ts`), the tallest as
-short as it can be. CSS `columns` found that height and filled from the left, so one tall panel
-(the references) left the last columns of a large screen empty; a grid left holes under short
-panels. A panel's height is counted in rows, near enough to share the columns out.
+The home's panels are stacks in columns: as many as `column_count` fits at 260 px, the panels cut
+into consecutive stacks by `stack_in_columns`, the tallest as short as it can be: one tall panel
+(the references) would leave the last columns of a large screen empty otherwise. A panel's height
+is counted in rows, near enough to share the columns out.
 
-⚠️ **The line breaks tool has no `<textarea>`**: a textarea's value turns every CRLF and CR
-into LF, the very thing it is asked about. A paste is read raw from its `clipboardData`, Coller
-reads the native clipboard, and the text is drawn with its endings.
+⚠️ **The line breaks tool never reads its text through a field**: a paste keeps its CRLF and CR
+only from the native clipboard, so Coller reads it there, and the text is drawn with its endings.
 
 ### State
 

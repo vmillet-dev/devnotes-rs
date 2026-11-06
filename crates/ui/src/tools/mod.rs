@@ -63,6 +63,9 @@ pub trait Tool {
     /// What a note gave the input `slot`, copied in once.
     fn imported(&mut self, _slot: &str, _note: &PickedNote) {}
 
+    /// How the home's search opens a reference.
+    fn opened(&mut self, _opening: Opening) {}
+
     /// Its own buttons in the frame's header: « Swap A and B ».
     fn actions(&self) -> Vec<ToolAction> {
         Vec::new()
@@ -82,6 +85,15 @@ pub trait Tool {
 
     /// Off the screen: what it holds of a key, a token or a password goes.
     fn left(&mut self) {}
+}
+
+/// Where the home's search opens a reference.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Opening {
+    /// Its table whole, this row in view and lit.
+    OnRow(String),
+    /// Searched for what was typed on the home: the same rows, all of them.
+    Searched(String),
 }
 
 /// What « Save as note » keeps: the tool decides, so the dialog asks nothing it could infer.
@@ -184,9 +196,13 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         });
     let mut page = ui.new_child(UiBuilder::new().max_rect(rest));
     page.set_clip_rect(rest);
-    match state.tools.open_tool() {
-        Some(entry) => frame::show(&mut page, rest, state, (entry, view), actions),
-        None => home::show(&mut page, rest, state, &mut view.home, actions),
+    if let Some(entry) = state.tools.open_tool() {
+        frame::show(&mut page, rest, state, (entry, view), actions);
+    } else {
+        home::show(&mut page, rest, state, &mut view.home, actions);
+        if let Some((entry, opening)) = view.home.take_opening() {
+            view.session(entry).opened(opening);
+        }
     }
     if let Some(picker) = &mut view.picker {
         note_picker::show(ui, state, picker);
@@ -274,4 +290,4 @@ fn star_hint(language: Language, on: bool) -> String {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
