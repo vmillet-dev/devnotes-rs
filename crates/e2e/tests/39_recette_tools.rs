@@ -437,10 +437,7 @@ fn recette_the_rest() {
 
     step("GEN-16 lorem ipsum, opening on its words", || {
         open_tool(&mut app, "lorem");
-        reads(
-            &mut app,
-            &["Lorem ipsum dolor sit amet, consectetur adipiscing elit"],
-        );
+        reads(&mut app, &["Lorem ipsum dolor sit amet"]);
         let first = app.tree().text("lorem-output");
         app.click("lorem-again");
         app.eventually("another text", |tree| tree.text("lorem-output") != first);
