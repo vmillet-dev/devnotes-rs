@@ -112,8 +112,8 @@ fn over_a_file(app: &mut App) {
         app.click("http-runner-data-choose");
         app.wait_for("http-runner-data");
         app.click("http-runner-start");
-        app.eventually("each row ran", |tree| {
-            tree.count("http-runner-iteration") == 3
+        app.eventually("each row ran, and the run is over", |tree| {
+            tree.count("http-runner-iteration") == 3 && !tree.has("http-runner-cancel")
         });
     });
 }
