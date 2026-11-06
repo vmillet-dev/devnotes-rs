@@ -132,8 +132,10 @@ fn options(restored: Option<Geometry>) -> eframe::NativeOptions {
     if let Some(geometry) = restored {
         viewport = viewport
             .with_inner_size([geometry.width, geometry.height])
-            .with_position([geometry.x, geometry.y])
             .with_maximized(geometry.maximized);
+        if !platform::window::is_native_wayland() {
+            viewport = viewport.with_position([geometry.x, geometry.y]);
+        }
     }
 
     eframe::NativeOptions {

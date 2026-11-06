@@ -48,6 +48,7 @@ pub struct DevNotesApp {
     tray: Box<dyn Tray>,
     /// The language of the tray's menu.
     tray_language: i18n::Language,
+    was_minimized: bool,
 }
 
 impl DevNotesApp {
@@ -83,6 +84,7 @@ impl DevNotesApp {
             shown: false,
             tray: startup.tray,
             tray_language,
+            was_minimized: false,
         })
     }
 
@@ -97,7 +99,7 @@ impl DevNotesApp {
     /// The size and place to reopen at: the last ones the window had unmaximised, so that a
     /// window closed maximised comes back maximised over the size it had before.
     fn remember(&mut self, viewport: &egui::ViewportInfo) {
-        if viewport.minimized == Some(true) {
+        if viewport.minimized == Some(true) || viewport.fullscreen == Some(true) {
             return;
         }
         if viewport.maximized == Some(true) {
@@ -106,10 +108,14 @@ impl DevNotesApp {
             }
             return;
         }
-        if let (Some(outer), Some(inner)) = (viewport.outer_rect, viewport.inner_rect) {
+        if let Some(inner) = viewport.inner_rect {
+            // Native Wayland names no place: nothing reads it back there either.
+            let place = viewport
+                .outer_rect
+                .map_or(egui::Pos2::ZERO, |outer| outer.min);
             self.geometry = Some(Geometry {
-                x: outer.min.x,
-                y: outer.min.y,
+                x: place.x,
+                y: place.y,
                 width: inner.width(),
                 height: inner.height(),
                 maximized: false,
@@ -123,6 +129,16 @@ fn reveal(ctx: &egui::Context) {
     ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
     ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+}
+
+/// Out of sight, for the tray to call back. Nothing hides a window under native Wayland: it
+/// minimises there (E12).
+fn put_away(ctx: &egui::Context) {
+    ctx.send_viewport_cmd(if platform::window::is_native_wayland() {
+        egui::ViewportCommand::Minimized(true)
+    } else {
+        egui::ViewportCommand::Visible(false)
+    });
 }
 
 /// Whether a person is already looking at the window: the palette then only opens.
@@ -181,16 +197,39 @@ impl DevNotesApp {
         self.state.http_view = view;
     }
 
-    /// The window goes hidden, its queue drained behind it (`on_exit`), or stays for an answer.
+    /// Both need a tray: hidden without one, nothing could call the window back.
+    fn hides_on_close(&self) -> bool {
+        !self.state.quitting && self.state.settings.close_to_tray && self.tray.exists()
+    }
+
+    /// To the tray; or hidden, its queue drained behind it (`on_exit`); or kept for an answer.
+    /// ⚠️ Kept, it comes up: a hidden window draws nothing, neither the question nor the editor
+    /// that has to close.
     fn close_asked(&mut self, ctx: &egui::Context) {
+        if self.hides_on_close() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            put_away(ctx);
+            return;
+        }
         if self.state.may_close() {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
             return;
         }
         ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-        if self.state.http.leave().is_asking() {
-            reveal(ctx);
+        reveal(ctx);
+    }
+
+    /// On the way down only: a window still minimised while it comes back stays.
+    fn follow_the_minimize(&mut self, viewport: &egui::ViewportInfo, ctx: &egui::Context) {
+        let minimized = viewport.minimized == Some(true);
+        if minimized
+            && !self.was_minimized
+            && self.state.settings.minimize_to_tray
+            && self.tray.exists()
+        {
+            put_away(ctx);
         }
+        self.was_minimized = minimized;
     }
 }
 
@@ -262,6 +301,7 @@ impl eframe::App for DevNotesApp {
         self.keep_the_tray_in_the_language();
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
+        self.follow_the_minimize(&viewport, ctx);
         if viewport.close_requested() {
             self.close_asked(ctx);
         }
@@ -387,6 +427,9 @@ mod about_link_tests;
 mod prompt_tests;
 
 #[cfg(test)]
+mod window_tests;
+
+#[cfg(test)]
 mod tests {
     use egui_kittest::Harness;
 
@@ -423,7 +466,7 @@ mod tests {
 
     /// Remembers what the application asked of it.
     #[derive(Clone, Default)]
-    struct FakeTray {
+    pub(super) struct FakeTray {
         labels: std::sync::Arc<std::sync::Mutex<Vec<tray::Labels>>>,
         removed: std::sync::Arc<std::sync::atomic::AtomicBool>,
     }
@@ -443,7 +486,7 @@ mod tests {
         }
     }
 
-    fn with_a_tray(
+    pub(super) fn with_a_tray(
         directory: &std::path::Path,
     ) -> (Harness<'static, DevNotesApp>, FakeTray, Inbox) {
         let fake = FakeTray::default();
@@ -455,7 +498,7 @@ mod tests {
         (harness, fake, posted)
     }
 
-    fn commands(harness: &Harness<'_, DevNotesApp>) -> Vec<egui::ViewportCommand> {
+    pub(super) fn commands(harness: &Harness<'_, DevNotesApp>) -> Vec<egui::ViewportCommand> {
         harness
             .output()
             .viewport_output

@@ -1,6 +1,7 @@
 //! The window's size and place, remembered between two launches. Never whether it was
 //! visible: the window starts hidden and shows itself when its first frame is ready.
 
+use std::ffi::OsStr;
 use std::io;
 use std::path::Path;
 
@@ -15,6 +16,20 @@ pub struct Geometry {
     pub width: f32,
     pub height: f32,
     pub maximized: bool,
+}
+
+/// A session with no X server left (D15): winit 0.30 can neither place nor hide a window there
+/// (E12).
+pub fn is_native_wayland() -> bool {
+    cfg!(target_os = "linux")
+        && only_wayland(
+            std::env::var_os("DISPLAY").as_deref(),
+            std::env::var_os("WAYLAND_DISPLAY").as_deref(),
+        )
+}
+
+fn only_wayland(x11: Option<&OsStr>, wayland: Option<&OsStr>) -> bool {
+    x11.is_none() && wayland.is_some()
 }
 
 /// `None` for a first launch, and for a file that does not read: the default size is a fine
@@ -47,6 +62,15 @@ mod tests {
         height: 800.0,
         maximized: false,
     };
+
+    #[test]
+    fn a_display_of_x11_wins_over_wayland() {
+        let named = Some(OsStr::new(":0"));
+
+        assert!(only_wayland(None, named));
+        assert!(!only_wayland(named, named));
+        assert!(!only_wayland(None, None));
+    }
 
     #[test]
     fn a_geometry_written_reads_back_the_same() {
