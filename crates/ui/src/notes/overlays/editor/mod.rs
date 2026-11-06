@@ -562,9 +562,15 @@ fn language_menu(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mu
         .into_iter()
         .map(|language| (language, crate::notes::language::label(language)))
         .collect();
+    let hints: Vec<&str> = Language::ALL
+        .into_iter()
+        .map(crate::notes::language::hint)
+        .collect();
     let mut chosen = note.language;
     let label = i18n::translate(state.language, keys::editor::LANGUAGE_LABEL, &[]);
     if ChoiceMenu::new(&label, "editor-language", &options)
+        .hints(&hints)
+        .language(state.language)
         .show(ui, &mut chosen)
         .changed()
     {
