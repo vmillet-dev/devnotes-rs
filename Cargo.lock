@@ -1584,6 +1584,7 @@ dependencies = [
  "egui_inspection",
  "platform",
  "tempfile",
+ "tungstenite",
 ]
 
 [[package]]

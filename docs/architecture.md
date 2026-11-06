@@ -4910,6 +4910,210 @@ twins: a focused grip or corner moves or resizes the zone a dot per arrow; a car
 the selection bar; a folder is made from the rail. A zone's ⋯ ticks its every card, dimmed ones
 included.
 
+### The HTTP area, drawn
+
+`ui::http` draws the area (`area-http`); `state::http::HttpState` holds the tree, a `QueryCell`
+over `http_tree` asked again under the area's own `Revision` — a request renamed does not ask
+the notes again — and read the first time the area is shown. The library rail is one for the
+two areas: shown or hidden and its width are the application's settings, drawn by
+`widgets::RailWidth`, which takes a setting changed in the other area since its edge last
+moved; `Ctrl+B` is the area's key (`keys::HTTP`). `state::http::tree::rail_rows` lays the
+tree flat once per answer or fold, not per frame (2,000 rows), and the rail draws the rows in
+view alone (`widgets::virtual_list`): 8 px a level with a line a level in the indent, a
+twisty on a collection or a folder only, a request after its method in its colour
+(`http::rail::row::badge_hue`, `Badge::short` for `DEL` and `OPT`, `GQL`, `WS`), whose
+accessible name is the method then the name. What is folded is the library's
+(`devnotes.notes.http.collapsed`), a list of ids; anything else folds nothing.
+
+A row's `⋯` (`http-node-menu`) sits over the end of its name, inked only on hover or focus,
+and opens `widgets::menu`: « Nouvelle requête › » keeps the three kinds behind one entry, then a
+folder, rename, duplicate and delete; a request is only renamed, duplicated or deleted. ⚠️ The
+menu closes on a click outside or on the entry picked, never on any click: an entry that opens a
+sub-menu would close the menu it opens from. Creating and renaming are a field in place
+(`http::rail::forms`): the field left for anything else keeps what was typed, left empty it
+closes, Escape cancels. A deletion asks once Rust has counted what goes with it
+(`count_http_contents`, `HttpState::ask_delete`), the question opened under the row. What
+opens under a row is measured as it is drawn and the rows below it move down by that much: the
+rows are placed by hand (`ScrollArea::show_viewport`), the ones in view alone. ⚠️ Each row's
+`Ui` takes an explicit id (`UiBuilder::scope_id`), not a salt: a salted child's widgets take
+their ids from its rank, and a row moved with the keys lost its focus. A click focuses the name,
+as a button in a browser is: `F2` renames, `Delete` asks, `Alt` and an arrow move
+(`state::http::moves`: `key_move`, `drop_move`, `refusal`). A move made with the keys is read
+back from the tree Rust answers (`landing`), marked on the row and what now holds it for
+`MARK_SECONDS`, scrolled into view and said in a live region (`http-rail-moved`); a refusal is
+said there too. A drag lands before or after a row, or inside a folder or a collection when let go
+mid-row. Every write bumps the area's revision; one into a folded parent unfolds it.
+
+`state::http::tabs::Tabs` holds the open requests, one tab each: a `Draft` (name, kind, method,
+document) beside what Rust holds, modified while the two differ (`PartialEq`, where the reference
+compared JSON). A request begun from « New request » — one click for HTTP, the chevron for GraphQL
+or a WebSocket, or the empty workspace's three buttons — is a draft alone (`draft-n`), written
+nowhere until saved. `Ctrl+S` (`keys::HTTP`) writes the draft in front whole
+(`save_http_request`); typing during the write keeps what was typed. Closing a modified tab asks
+first (`http::close`: cancel, close without saving, save — save waits for the first save's
+dialog on a draft); the middle button closes a tab as in a browser. ⚠️ A tab follows every tree
+that is read: a request deleted closes its tab, one moved takes its new place, one renamed takes
+the name in what is saved and in what is edited, so the next save does not write the old one
+back. The rail lights the request in front, and its deletion question names the open tabs it
+would close with changes (`tree::requests_under`, `Tabs::unsaved_among`): Rust counts what is
+deleted, only the interface what is typed. Which requests were open and which was in front is the
+library's (`devnotes.notes.http.tabs`), read once the area is shown and written, with the folds,
+whenever either changes (`HttpState::remember`).
+
+`http::request` draws the tab in front: its name, the method — or the kind, said where a method
+would be chosen and no control — the URL and « Save », the `{{variables}}` it uses as chips, and
+its parts a tab each. A field edits the draft directly: its text is
+the draft's each frame, and a change is a `DraftEdit` applied at the end of the frame — no
+buffer of the view's to keep in step. The URL and the parameters' table follow each other
+through the core's `query::sync` (the side edited wins), called directly (D12). The URL's
+variables are lit by a `TextEdit` layouter from `variables::spans` — what a variable is and
+where it stands is the core's — in the colour of where each resolves from
+(`http_variables`, asked with the draft, its place and the area's revision), red when nothing
+sets it, amber until Rust has said. `http::request::table` is the key/value table: a blank row
+at the end becomes a row once typed in; as headers, a row that cannot be sent is marked with why
+(`header_faults`), `Name: value` typed in a name is split into its two cells, the caret moving
+to the value (`headers_from_text`), and lines pasted in a name fill a row each. The headers
+sent unasked are listed above the table with where each comes from
+(`implied_http_headers`): Rust composes the request, so Rust says. ⚠️ The header names a key
+field proposed came from the HTTP-headers tool's data: they return with the tools (phase 7).
+
+`http::request::body` draws the body by its kind. Another kind sets the one left aside, by tab
+(`state::http::bodies`), and it comes back as it was: « Switch to None » on a `GET` would
+otherwise cost the text it warns about; JSON and plain text share theirs. Never written: a
+request saves the body it shows. What the body implies, whether a JSON one reads and whether its
+method seldom carries one are one answer (`describe_http_body`), also read from the other tabs
+for the mark on « Body ». A multipart row (`http::request::parts`) is a text or a file by its
+path; the system's dialog opens off the frame (`HttpState::pick_file`), and its answer is
+dropped if the body changed kind meanwhile. `http::request::graphql` lays its two boxes out in
+rows of two cells, so that they start on one line whatever is said above each. These boxes are
+the text core's `Editor`, the only fields here with a buffer of their own: the view holds those
+of the tab in front (`TextBoxes`), the draft's text wins when the two differ, and what the core
+rewrites — Prettier's format, the `null`s of « Add » — reaches them through the draft, unless
+typing moved on since it was asked (`HttpState::rewrite`). ⚠️ `Ctrl+Enter` in a box sends: the
+editor leaves it to `keys::dispatch` instead of writing a line.
+
+`http::request::auth` holds a request's auth: the secret half masked until asked for, and
+« Inherited » saying what it takes and from where (`inherited_http_settings`, a `QueryCell` on the
+place of the tab in front), the secret masked unless it is a `{{variable}}`. A draft has no place
+yet, so it says so. `http::request::transport` lays the settings out with what each unset field
+takes beside it; a number is settled once its field is left, since a timeout typed digit by
+digit passes through values the floor would raise. `http::variables_table` is the table of a
+request's variables, and of the environments' to come. `http::extract` is « Extract to a
+variable », opened from the explorer under an answer: the path, the name proposed and whether it
+reads as a secret are the core's (`extract::{body_path, variable_name_of, looks_secret}`, called
+directly, D12). A rule is a part of the draft, saved with the request; `http::request::extractions`
+reads and removes them, under « Scripts », where the scripts join them. `http::environment_picker`
+is at the end of the tabs' strip: the active environment is the library's
+(`devnotes.notes.http.environment`), one deleted since it was chosen is none, and a send and the
+variables' chips both resolve from it (`state::http::environments`). ⚠️ JetBrains Mono and Inter
+have no `→` and no fullwidth `＋`: egui panics on a missing glyph in a test, so an arrow is an
+`Icon` and a plus is a plain `+`.
+
+`state::http::Page` is what the workspace shows: the open requests, or a page from the rail's
+foot, one at a time; a request opened from the rail leaves it. `http::environments` is the page
+of the globals and the environments. Its table keeps the rows as typed and writes them once the
+keys rest (`SAVE_AFTER`), on another set chosen and on leaving the page, then drops them once
+what is read back holds them; typing during a write keeps what was typed. Every write of this
+page bumps a revision of its own, so that a key typed does not read the tree again; a send that
+ends bumps the area's, since an extraction or a script may have written a variable. A secret
+shown in one set is masked in the next. Under a protected environment, what could change
+something waits for a yes under the request line (`environments::asks_before_sending`), and the
+yes goes to the core with the send (`confirmed`), a script then being free to change the
+environment. A chip nothing sets is a click from a row of its own on the page, in the active
+environment or the globals.
+
+`http::cookie_jar` lists what answers set, by domain, and throws it away: a cookie, a domain, or
+the whole jar once Rust has counted it (`state::http::cookies`). `http::container_settings` is a
+collection's or a folder's variables, auth, headers and transport, opened from its row's menu.
+The draft is the state's and is written whole on « Save »; a folder's « Inherited » reads from its
+parent, what it sets itself not being what it inherits. It shares the request's editors, which
+take a value and answer the value edited: `Inherit` on a collection is no auth at all, and reads
+as « None ». `http::modal` is the frame of the area's dialogs. ⚠️ A dialog centres itself again
+when its height changes: what clicks in a test settles first, a pointer aimed at the old place
+hits nothing.
+
+`http::code` is « Generate code »: Rust writes the request for a target (`generate_http_code`,
+asked again whenever the draft, the place, the environment, the target or a switch changes), the
+dialog names the targets, a `match` a new target will not compile without, and says what was
+left as a variable. « Include secrets » asks every time it is switched on, never when off. The
+target last chosen stays for the session. `response::body::TextLines` is the text read by lines
+it shares with the answer's body. `http::save_request` asks where a draft goes the first time it
+is saved, from `Ctrl+S`, « Save » or the close question, and creates what it lacks in one write
+(`create_http_request_in`): refused, it leaves no empty collection behind. The tab then takes the
+request's id for its key, and what is kept by key follows it (`Answered::rekeyed`). ⚠️
+`Ui::allocate_ui` keeps the parent's layout: in a `horizontal`, what is inside runs on a line
+until it is given a `vertical`.
+
+`http::history` is the page of what was sent, a `Page` as the environments are: the sends by
+local day, in rows drawn only in view, beside the entry chosen, read through
+`response::recorded`, the answer's parts without a tab to clear it from. It is read again when a
+send ends. A send is deleted unasked and comes back from the bar under the list for
+`UNDO_WINDOW`; emptying it says how many go first. « Reopen » puts a send back onto the request
+it came from, as changes to save or not (`http_history_onto_request`, `Tabs::open_with`), asking
+before it writes over a tab's own; the request gone, or the send made from a draft, it is a
+draft named after the send and its time. The core keeps `KEPT_AT_MOST` sends, so the list holds
+500 rows at most, whatever the plan's budget of 20,000 assumed.
+
+A WebSocket's tab holds a composer above and a log below. `state::http::sockets` keeps where each
+socket stands and its last `LOG_KEPT` events, under the id it was connected with: the core's
+`EngineEvent::Socket` names that id, so a draft saved meanwhile is rekeyed and an event from a
+socket replaced since is dropped. Connecting asks as a send does under a protected environment.
+`Ctrl+Enter` in the message sends it and is taken there, the area answering the same key by
+connecting; on a closed socket it says so and connects nothing. The log draws its rows in view
+alone, so a message reads on one line, whole in its tooltip. Closing a live socket's tab asks
+first, and a closed tab closes its socket.
+
+`http::scripts` is the script editor of a request, a folder or a collection: the text core's
+`Editor` by phase, each with its history, JavaScript coloured as a snippet is, a menu of examples
+written at the end of the script, and for a request the order the scripts run in, a level above
+a click from its settings on the same script. The extractions stand among the scripts after the
+answer. What runs them is the application relaunched as their host: a kittest bench is not that
+binary, so running them is scenario 34's. A script that stopped before the send stands in place
+of the answer, read back from its error's params (`ScriptStop::of_params`); after it, above the
+answer that came. « Open the script » goes to the request's own, or to the settings of what
+holds it, on the phase, the line marked until the next edit (`HttpState::script_focus`).
+
+`http::console` sits under the answer: `EngineEvent::Console` names a send, `Sends::key_of` its
+tab, and each tab keeps its last `LINES_KEPT` lines for the session, never written. Rust masks what
+it says; `console::secret_segments` cuts a text where a secret stands as its `{{name}}`, to set it
+apart. Folded it says how much it holds; unfolded it filters, by rows drawn in view alone. The
+Tests part of an answer groups them by whose they are, a line a click from the script. An answer
+goes to a file whole, from Rust and not from what is shown, or to a note: `http::save_as_note` asks
+where, `state::http::kept` holds what is on its way, and the core masks what the request sent
+before the dialog even opens (`http_response_note`). Generated code takes the same dialog.
+
+`http::runner` is the area's fourth page: a collection or a folder run, over iterations or the rows
+of a data file. `state::http::runner` holds how, in which order and the report of the last run,
+for the session; Rust runs and says its steps as `EngineEvent::Run`, and the order follows the
+tree, kept with the collection (`http_run_order`). Its report is a list of lines of one height,
+drawn in view alone, summed up by `RunSummary`; the kept answer last unfolded reads beneath it. A
+run's sends are named `run:<id>#…` (`runner::run_of`), and so its console has a key of its own,
+forgotten when the next run starts.
+
+Closing the window, or Quit, goes through `AppState::may_close`: with a tab modified, `http::leave`
+asks first, over any area, and « Save all » walks the tabs, a request never saved asked its place.
+A write that fails or a place refused leaves the question out. A note open closes by its own path,
+which writes its drafts, and the window follows it. Then the window hides, `on_exit` queues what
+waits, stops the network behind it and drains the queue (30 s at most).
+
+A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
+queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
+(`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's
+time, so the count under way survives leaving the tab. « Send » turns into « Cancel » while it
+runs (`cancel_http_send`), `Ctrl+Enter` sends the tab in front, and a closed tab or « Clear »
+lets Rust forget the body it kept (`forget_http_response`). `http::response` draws the answer:
+the status on a tint of its family (`2xx` green, `3xx` blue, `4xx` amber, the rest red), time
+and size, then the body, headers, cookies and the exchange as it went (redirects, request,
+response). The body is cut into lines once per send and view and drawn by rows, a line-number
+gutter beside it, coloured window by window by `services::highlight::Colouring` (a 785 KB answer
+is laid out in under 150 ms, a frame of scrolling stays under a millisecond); a JSON answer is
+also explored as a graph or a tree — the explorer of the notes, without its « show in the
+code » (`ExplorerView::with_code(false)`), asked through `HttpState::explore` — and an image is
+decoded once from its `data:` URL into a texture. The line between the request and its answer is
+the application's `devnotes.httpRequestShare` (tenths of a percent here, a percent in the file):
+left automatic, the request takes what it holds up to 60 %; dragged, the share is written once
+let go; a double click or Enter makes it automatic again.
+
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in

@@ -113,6 +113,15 @@ fn occurrences(text: &str) -> Vec<(std::ops::Range<usize>, &str)> {
     found
 }
 
+/// Where each `{{name}}` of a text stands, braces included, by byte range: what the editor
+/// colours. Braces around anything but a name are text.
+pub fn spans(text: &str) -> Vec<(std::ops::Range<usize>, String)> {
+    occurrences(text)
+        .into_iter()
+        .map(|(range, name)| (range, name.to_string()))
+        .collect()
+}
+
 /// The names a text holds, in order, each once.
 pub fn names_in(text: &str) -> Vec<String> {
     let mut names: Vec<String> = Vec::new();
@@ -421,6 +430,16 @@ mod tests {
             from: from.to_string(),
             variables,
         }
+    }
+
+    #[test]
+    fn a_span_is_a_name_in_braces_and_nothing_else() {
+        let spans = spans("{{base}}/users/{{ id }}/{{$guid}}?q={{}}");
+
+        assert_eq!(
+            spans,
+            [(0..8, "base".to_string()), (24..33, "$guid".to_string())]
+        );
     }
 
     #[test]

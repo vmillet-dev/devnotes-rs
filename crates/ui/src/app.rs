@@ -16,7 +16,7 @@ use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::state::Area;
 use crate::theme;
-use crate::{banners, gate, keys, notes, titlebar};
+use crate::{banners, gate, http, keys, notes, titlebar};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -127,6 +127,33 @@ fn reveal(ctx: &egui::Context) {
     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
 }
 
+impl DevNotesApp {
+    fn over_the_area(&mut self, ui: &egui::Ui, actions: &mut Actions) {
+        let mut palette = std::mem::take(&mut self.state.palette_view);
+        crate::palette::show(ui.ctx(), &self.state, &mut palette, actions);
+        self.state.palette_view = palette;
+        // Over the palette as over the canvas: drawn after both.
+        let mut view = std::mem::take(&mut self.state.notes_view);
+        notes::fill_form(ui, &self.state, &mut view, actions);
+        self.state.notes_view = view;
+        let mut view = std::mem::take(&mut self.state.http_view);
+        http::leave::show(ui, &self.state, &mut view, actions);
+        self.state.http_view = view;
+    }
+
+    /// The window goes hidden, its queue drained behind it (`on_exit`), or stays for an answer.
+    fn close_asked(&mut self, ctx: &egui::Context) {
+        if self.state.may_close() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+            return;
+        }
+        ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        if self.state.http.leave().is_asking() {
+            reveal(ctx);
+        }
+    }
+}
+
 impl eframe::App for DevNotesApp {
     /// Runs while the window is hidden too: eframe draws nothing then, so the window is shown
     /// from here, once it exists at its restored geometry.
@@ -147,13 +174,19 @@ impl eframe::App for DevNotesApp {
                     self.state.gate.index_progress(done, total);
                 }
                 Input::Engine(EngineEvent::IndexReady) => self.state.gate.index_ready(),
-                // Read by the screens they concern, as they are ported.
-                Input::Engine(_) => {}
+                Input::Engine(EngineEvent::Socket(event)) => self.state.http.receive_socket(event),
+                Input::Engine(EngineEvent::Console(event)) => {
+                    self.state.http.receive_console(event);
+                }
+                Input::Engine(EngineEvent::Run(event)) => self.state.http.receive_run(event),
             }
         }
         self.state.update(ctx, &self.backend);
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
+        if viewport.close_requested() {
+            self.close_asked(ctx);
+        }
     }
 
     /// Draw, then the keys the widgets left, then the actions: always in this order (§ 3.3.7).
@@ -203,7 +236,12 @@ impl eframe::App for DevNotesApp {
                             notes::show(ui, &self.state, &mut view, &mut actions);
                             self.state.notes_view = view;
                         }
-                        area => area_shell(ui, area),
+                        Area::Http => {
+                            let mut view = std::mem::take(&mut self.state.http_view);
+                            http::show(ui, &self.state, &mut view, &mut actions);
+                            self.state.http_view = view;
+                        }
+                        Area::Tools => area_shell(ui, Area::Tools),
                     }
                 } else {
                     let mut asked = Vec::new();
@@ -220,13 +258,7 @@ impl eframe::App for DevNotesApp {
                 }
             });
         if self.state.gate.is_open() {
-            let mut palette = std::mem::take(&mut self.state.palette_view);
-            crate::palette::show(ui.ctx(), &self.state, &mut palette, &mut actions);
-            self.state.palette_view = palette;
-            // Over the palette as over the canvas: drawn after both.
-            let mut view = std::mem::take(&mut self.state.notes_view);
-            notes::fill_form(ui, &self.state, &mut view, &mut actions);
-            self.state.notes_view = view;
+            self.over_the_area(ui, &mut actions);
         }
         let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
         // A modal over the canvas takes its keys: the canvas's stand aside.
@@ -240,6 +272,12 @@ impl eframe::App for DevNotesApp {
             ]
         } else if notes_shown {
             &[&keys::NOTES, &keys::APPLICATION]
+        } else if self.state.gate.is_open()
+            && self.state.settings.area == Area::Http
+            && self.state.http.tabs().closing().is_none()
+            && !self.state.http.leave().is_asking()
+        {
+            &[&keys::HTTP, &keys::APPLICATION]
         } else {
             &[&keys::APPLICATION]
         };
@@ -257,6 +295,7 @@ impl eframe::App for DevNotesApp {
     }
 
     fn on_exit(&mut self) {
+        self.state.http.leaving(&self.backend);
         if !self.backend.drain(EXIT_LIMIT) {
             log::warn!("The exit did not wait any longer for the database to finish");
         }

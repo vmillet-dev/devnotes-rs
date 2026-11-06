@@ -3387,7 +3387,7 @@
       "place": "In",
       "newCollection": "New collection…",
       "collectionName": "Name of the new collection",
-      "newFolder": "＋ New folder…",
+      "newFolder": "+ New folder…",
       "folderName": "Name of the new folder",
       "noFolder": "Do not create a folder",
       "missing": {
@@ -3596,6 +3596,7 @@
       "at": "line:column {{location}}",
       "format": "Format",
       "variablesHint": "A JSON object: a value for each $variable of the query.",
+      "variablesPlaceholder": "{ \"code\": \"FR\" }",
       "problemAt": "Line {{line}}, column {{column}}:",
       "problems": {
         "unclosedBrace": "this brace is not closed.",
@@ -3653,7 +3654,7 @@
     "environments": {
       "title": "Environments",
       "order": "The nearest wins: request › folder › collection › environment › globals",
-      "new": "＋ New environment",
+      "new": "+ New environment",
       "newName": "Environment name",
       "create": "Create",
       "globals": "Globals",

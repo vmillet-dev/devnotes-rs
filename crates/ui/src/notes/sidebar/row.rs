@@ -2,8 +2,7 @@
 //! than the rail is cut, never wrapped: a wrapped row breaks the levels.
 
 use egui::{
-    Color32, CornerRadius, FontFamily, Pos2, Rect, Response, Role, Sense, Shape, Stroke, Ui, Vec2,
-    WidgetInfo, pos2, vec2,
+    Color32, CornerRadius, Rect, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo, pos2, vec2,
 };
 use engine::folders::model::FolderColour;
 
@@ -115,29 +114,10 @@ fn lead_column(ui: &mut Ui, lead: &Lead) -> Option<Response> {
             } else {
                 p.text_2
             };
-            triangle(ui, response.rect.center(), twisty.open, ink);
+            widgets::triangle(ui, response.rect.center(), twisty.open, ink);
             Some(response)
         }
     }
-}
-
-/// ▾ or ▸, drawn: the glyphs are in none of the embedded faces.
-fn triangle(ui: &Ui, centre: Pos2, open: bool, ink: Color32) {
-    let points = if open {
-        vec![
-            centre + vec2(-4.0, -2.0),
-            centre + vec2(4.0, -2.0),
-            centre + vec2(0.0, 3.0),
-        ]
-    } else {
-        vec![
-            centre + vec2(-2.0, -4.0),
-            centre + vec2(3.0, 0.0),
-            centre + vec2(-2.0, 4.0),
-        ]
-    };
-    ui.painter()
-        .add(Shape::convex_polygon(points, ink, Stroke::NONE));
 }
 
 fn name_button(ui: &mut Ui, width: f32, name: &Name) -> Response {
@@ -196,7 +176,13 @@ fn name_button(ui: &mut Ui, width: f32, name: &Name) -> Response {
     } else {
         (12.5, ink)
     };
-    let galley = cut(ui, &name.label, size, ink, rect.right() - 8.0 - left);
+    let galley = widgets::one_line(
+        ui,
+        &name.label,
+        (size, 400.0),
+        ink,
+        rect.right() - 8.0 - left,
+    );
     ui.painter().galley(
         pos2(left, middle - galley.size().y / 2.0),
         galley,
@@ -227,23 +213,4 @@ fn menu_button(ui: &mut Ui, label: &str, author_id: &str, lit: bool) -> Response
     let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(16.0));
     icons::paint(ui, glyph, Icon::Ellipsis, ink);
     response
-}
-
-/// One line, an ellipsis where it is cut.
-fn cut(ui: &Ui, words: &str, size: f32, ink: Color32, width: f32) -> std::sync::Arc<egui::Galley> {
-    let full = widgets::text(ui, words, size, 400.0, FontFamily::Proportional, ink);
-    if full.size().x <= width {
-        return full;
-    }
-    let mut job = egui::text::LayoutJob::single_section(
-        words.to_owned(),
-        egui::TextFormat::simple(egui::FontId::new(size, FontFamily::Proportional), ink),
-    );
-    job.wrap = egui::text::TextWrapping {
-        max_width: width.max(1.0),
-        max_rows: 1,
-        break_anywhere: true,
-        overflow_character: Some('…'),
-    };
-    ui.fonts_mut(|fonts| fonts.layout_job(job))
 }

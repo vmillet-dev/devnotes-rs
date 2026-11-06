@@ -1,5 +1,5 @@
-//! The notes area over a real core, drawn as the window draws it: the rail, the header and
-//! the canvas, the actions applied at the end of each frame.
+//! An area over a real core, drawn as the window draws it — the notes' rail, header and
+//! canvas, or the HTTP area — the actions applied at the end of each frame.
 
 use egui::vec2;
 use egui_kittest::Harness;
@@ -11,7 +11,7 @@ use crate::action::Actions;
 use crate::backend::Backend;
 use crate::gate::IndexFill;
 use crate::services::preferences::Preferences;
-use crate::state::AppState;
+use crate::state::{AppState, Area};
 use crate::testing;
 
 pub(crate) struct Bench {
@@ -21,8 +21,17 @@ pub(crate) struct Bench {
 }
 
 pub(crate) fn area(backend: Backend, profile: tempfile::TempDir) -> Harness<'static, Bench> {
+    area_of(Area::Notes, backend, profile)
+}
+
+pub(crate) fn area_of(
+    shown: Area,
+    backend: Backend,
+    profile: tempfile::TempDir,
+) -> Harness<'static, Bench> {
     let mut state = AppState::new(Preferences::default(), true);
     state.language = i18n::Language::En;
+    state.settings.area = shown;
     // Unlocked already: the gate learns it as the window's does, and stays open.
     state.gate.ask(&backend);
     let mut harness = testing::harness()
@@ -39,6 +48,22 @@ pub(crate) fn area(backend: Backend, profile: tempfile::TempDir) -> Harness<'sta
                     .state
                     .update_library(&ctx, &bench.backend, IndexFill::Ready);
                 let mut actions = Actions::default();
+                if bench.state.settings.area == Area::Http {
+                    let mut view = std::mem::take(&mut bench.state.http_view);
+                    crate::http::show(ui, &bench.state, &mut view, &mut actions);
+                    crate::http::leave::show(ui, &bench.state, &mut view, &mut actions);
+                    bench.state.http_view = view;
+                    if let Some(action) = crate::keys::dispatch(
+                        &ctx,
+                        &[&crate::keys::HTTP, &crate::keys::APPLICATION],
+                    ) {
+                        actions.push(action);
+                    }
+                    for action in actions.drain().collect::<Vec<_>>() {
+                        bench.state.apply(action, &ctx, &bench.backend);
+                    }
+                    return;
+                }
                 let mut view = std::mem::take(&mut bench.state.notes_view);
                 crate::notes::show(ui, &bench.state, &mut view, &mut actions);
                 let mut palette = std::mem::take(&mut bench.state.palette_view);

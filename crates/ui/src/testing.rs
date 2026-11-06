@@ -152,6 +152,100 @@ pub(crate) fn close_library(backend: &crate::backend::Backend) {
     closed.poll().unwrap().unwrap();
 }
 
+/// The ports whose server a `/slow` send has reached.
+static SLOW_ARRIVED: std::sync::Mutex<Vec<u16>> = std::sync::Mutex::new(Vec::new());
+
+/// Whether a `/slow` send has reached the server on `port`: until then, a cancel has nothing to
+/// cancel.
+pub(crate) fn slow_arrived(port: u16) -> bool {
+    SLOW_ARRIVED.lock().unwrap().contains(&port)
+}
+
+/// A server on this machine for the sends of a test: `/json` answers a small JSON, `/slow` the
+/// same after five seconds, anything else a 404. Each connection is answered once, then closed.
+pub(crate) fn serve() -> u16 {
+    use std::io::{Read, Write};
+    let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("a local port is free");
+    let port = listener.local_addr().expect("the port is known").port();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            std::thread::spawn(move || {
+                let mut head = Vec::new();
+                let mut byte = [0_u8; 1];
+                while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                    head.push(byte[0]);
+                }
+                let head = String::from_utf8_lossy(&head);
+                let path = head.split_whitespace().nth(1).unwrap_or("/").to_owned();
+                // A body sent is read whole: closing over it unread resets the connection.
+                let length = head
+                    .lines()
+                    .find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        name.eq_ignore_ascii_case("content-length")
+                            .then(|| value.trim().parse::<usize>().ok())?
+                    })
+                    .unwrap_or(0);
+                let mut sent = vec![0_u8; length];
+                let _ = stream.read_exact(&mut sent);
+                if path.starts_with("/slow") {
+                    SLOW_ARRIVED.lock().unwrap().push(port);
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                }
+                let (status, body) = if path.starts_with("/big") {
+                    // A megabyte of JSON, laid out on one line: the budget's answer.
+                    let rows: Vec<String> = (0..14_000)
+                        .map(|at| {
+                            format!(r#"{{"id":{at},"name":"row {at}","tags":["a","b"],"on":true}}"#)
+                        })
+                        .collect();
+                    ("200 OK", format!("[{}]", rows.join(",")))
+                } else if path.starts_with("/json")
+                    || path.starts_with("/slow")
+                    || path.starts_with("/image")
+                {
+                    (
+                        "200 OK",
+                        r#"{"name":"Ada","languages":["fr","en"],"admin":true}"#.to_owned(),
+                    )
+                } else {
+                    ("404 Not Found", "missing".to_owned())
+                };
+                if path.starts_with("/redirect") {
+                    let answer = "HTTP/1.1 302 Found\r\nLocation: /json\r\n\
+                                  Content-Length: 0\r\nConnection: close\r\n\r\n";
+                    let _ = stream.write_all(answer.as_bytes());
+                    return;
+                }
+                let (kind, body) = if path.starts_with("/image") {
+                    ("image/png", picture())
+                } else {
+                    ("application/json", body.into_bytes())
+                };
+                let head = format!(
+                    "HTTP/1.1 {status}\r\nContent-Type: {kind}\r\n\
+                     Set-Cookie: session=abc; Path=/\r\nContent-Length: {}\r\n\
+                     Connection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = stream.write_all(head.as_bytes());
+                let _ = stream.write_all(&body);
+            });
+        }
+    });
+    port
+}
+
+/// A 4 × 4 PNG: what `/image` answers.
+fn picture() -> Vec<u8> {
+    let mut bytes = std::io::Cursor::new(Vec::new());
+    image::RgbaImage::from_pixel(4, 4, image::Rgba([240, 160, 40, 255]))
+        .write_to(&mut bytes, image::ImageFormat::Png)
+        .expect("a PNG is written");
+    bytes.into_inner()
+}
+
 mod tests {
     #[test]
     #[should_panic(expected = "lack accessible name")]

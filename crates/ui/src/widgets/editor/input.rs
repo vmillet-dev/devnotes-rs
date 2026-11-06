@@ -208,7 +208,7 @@ fn key_event(
         Key::K if modifiers.command && modifiers.shift && writable => {
             edit(buffer.delete(Direction::Forward, Unit::Line))
         }
-        Key::Enter if writable => {
+        Key::Enter if writable && !modifiers.command => {
             let line = buffer.line_of(head);
             let before: String = buffer
                 .line(line)

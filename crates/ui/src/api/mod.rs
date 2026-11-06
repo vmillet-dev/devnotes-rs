@@ -7,6 +7,7 @@
 pub mod attachments;
 pub mod board;
 pub mod folders;
+pub mod http;
 pub mod json;
 pub mod libraries;
 pub mod notes;

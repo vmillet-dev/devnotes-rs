@@ -5,6 +5,10 @@
 //! The flavour is built apart, so that no other build overwrites it:
 //! `cargo build -p app --features e2e --target-dir target/e2e`.
 
+mod server;
+
+pub use server::{serve, serve_socket};
+
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -197,6 +201,28 @@ impl App {
         let profile = self.profile.clone();
         self.quit();
         App::launch(scenario, &profile)
+    }
+
+    /// `Quit` with requests left with changes, the question answered without saving them.
+    pub fn quit_discarding(mut self) {
+        self.act("quit");
+        self.click("http-leave-discard");
+        self.ended();
+    }
+
+    /// As `relaunch`, for a scenario that leaves requests with changes.
+    #[must_use]
+    pub fn relaunch_discarding(self) -> Self {
+        let scenario = self.scenario;
+        let profile = self.profile.clone();
+        self.quit_discarding();
+        App::launch(scenario, &profile)
+    }
+
+    /// Waits for the process to end by itself, its queue drained: a quit answered in the window.
+    pub fn ended(mut self) {
+        let ended = self.child.wait().expect("the application ends");
+        assert!(ended.success(), "the application ended with {ended}");
     }
 
     /// Asks for `Quit` from a second launch, the way a global shortcut would, and waits for the

@@ -11,7 +11,7 @@ pub mod prettier;
 pub mod sidebar;
 pub mod ui;
 
-use egui::{Rect, Role, Sense, Ui, UiBuilder, WidgetInfo, vec2};
+use egui::{Rect, Role, Sense, Ui, UiBuilder, WidgetInfo};
 use engine::notes::kind::NoteKind;
 use engine::notes::priority::Priority;
 use i18n::{Key, keys};
@@ -339,16 +339,12 @@ pub enum Batch {
     Delete,
 }
 
-/// The rail's edge, which widens it.
-const EDGE: f32 = 8.0;
-
 /// What only the area's drawing sees (D13).
 #[derive(Default)]
 pub struct View {
     pub sidebar: sidebar::SidebarView,
     pub canvas: canvas::CanvasView,
-    /// While its edge moves; the setting is written once the pointer rests.
-    rail_width: Option<f32>,
+    rail_width: crate::widgets::RailWidth,
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
     pub(crate) focus_search: bool,
     header: header::HeaderView,
@@ -371,23 +367,17 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Main, true, "area-notes"));
     address(ui, &response, "area-notes");
-    let (min, max) = crate::services::settings::RAIL_WIDTH;
-    let mut width = view
-        .rail_width
-        .unwrap_or_else(|| f32::from(state.settings.rail_width))
-        .clamp(f32::from(min), f32::from(max))
-        .round();
-    // Cut by hand: a horizontal layout hands its children the height of one line.
     let mut rest = region;
     if state.settings.rail_shown {
-        let rail = Rect::from_min_size(region.min, vec2(width, region.height()));
-        let edge = Rect::from_min_size(rail.right_top(), vec2(EDGE, region.height()));
-        rest = Rect::from_min_max(edge.right_top(), region.max);
-        let mut rail_ui = ui.new_child(UiBuilder::new().max_rect(rail));
-        rail_ui.set_clip_rect(rail);
-        sidebar::show(&mut rail_ui, state, &mut view.sidebar, actions);
-        let mut edge_ui = ui.new_child(UiBuilder::new().max_rect(edge));
-        width += crate::widgets::split_handle(&mut edge_ui, "library-rail-edge");
+        let setting = (
+            state.settings.rail_width,
+            crate::services::settings::RAIL_WIDTH,
+        );
+        rest = view
+            .rail_width
+            .show(ui, region, setting, "library-rail-edge", |ui| {
+                sidebar::show(ui, state, &mut view.sidebar, actions);
+            });
     }
     let mut header_ui = ui.new_child(UiBuilder::new().max_rect(rest));
     header::show(
@@ -422,16 +412,8 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     overlays::image_lightbox::show(ui, state, actions);
     overlays::presentation::show(ui, state, &mut view.presentation, actions);
     overlays::undo_bar::show(ui, state, actions);
-    view.rail_width = Some(width.clamp(f32::from(min), f32::from(max)));
-    let width = view.rail_width.unwrap_or(width);
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "within RAIL_WIDTH"
-    )]
-    let rested = width.round() as u16;
-    if rested != state.settings.rail_width && !ui.input(|input| input.pointer.any_down()) {
-        actions.push(Asked::App(AppAction::SetRailWidth(rested)));
+    if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
+        actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }
 }
 

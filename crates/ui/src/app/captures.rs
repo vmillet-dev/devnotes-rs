@@ -11,6 +11,7 @@ use super::DevNotesApp;
 use super::tests::startup;
 use crate::services::time::fake::FakeClock;
 use crate::testing::PASSPHRASE;
+use engine::http::model::{HttpMethod, RequestKind};
 
 const SIZE: egui::Vec2 = egui::vec2(1100.0, 720.0);
 
@@ -132,6 +133,472 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
         .report(i18n::Message::new(i18n::keys::settings::COPIED));
     settle(&mut harness);
     capture(&mut harness, "banners-http");
+}
+
+/// A library holding `API Paiements`, the HTTP area shown.
+fn http_area(profile: &Path) -> Harness<'static, DevNotesApp> {
+    let mut harness = launch(profile);
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = harness.state().backend();
+    let api = crate::http::tests::collection(backend, "API Paiements");
+    let auth = crate::http::tests::folder(backend, &api, "Auth");
+    let methods = [
+        ("Login", HttpMethod::Post),
+        ("Session", HttpMethod::Get),
+        ("Logout", HttpMethod::Delete),
+    ];
+    for (name, method) in methods {
+        crate::http::tests::request(
+            backend,
+            (&api, Some(&auth)),
+            name,
+            (RequestKind::Http, method),
+        );
+    }
+    crate::http::tests::request(
+        backend,
+        (&api, None),
+        "Factures",
+        (RequestKind::Graphql, HttpMethod::Post),
+    );
+    crate::http::tests::request(
+        backend,
+        (&api, None),
+        "Flux",
+        (RequestKind::Websocket, HttpMethod::Get),
+    );
+    // The tree is read when the area is first shown.
+    click(&mut harness, "area-option-http");
+    harness
+}
+
+#[test]
+fn the_http_request_editor() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        use crate::state::http::tabs::DraftEdit;
+        draft.apply(DraftEdit::Url(
+            "{{base}}/sessions?user={{user}}&remember=true".to_owned(),
+        ));
+        let header = |key: &str, value: &str| engine::http::model::KeyValue {
+            enabled: true,
+            key: key.to_owned(),
+            value: value.to_owned(),
+            description: String::new(),
+        };
+        draft.apply(DraftEdit::Headers(vec![
+            header("Accept", "application/json"),
+            header("X Trace", "on"),
+        ]));
+    });
+    settle(&mut harness);
+    capture(&mut harness, "http-request-params");
+    click(&mut harness, "http-section-headers");
+    capture(&mut harness, "http-request-headers");
+    click(&mut harness, "http-section-auth");
+    capture(&mut harness, "http-request-auth");
+    click(&mut harness, "http-section-settings");
+    capture(&mut harness, "http-request-settings");
+    let app = harness.state_mut();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        use engine::http::environments::{FilledBy, Variable, VariableKind};
+        draft.apply(crate::state::http::tabs::DraftEdit::Variables(vec![
+            Variable {
+                name: "user".to_owned(),
+                value: "ada".to_owned(),
+                ..Variable::default()
+            },
+            Variable {
+                name: "token".to_owned(),
+                value: "eyJ.a.b".to_owned(),
+                kind: VariableKind::Secret,
+                filled_by: Some(FilledBy {
+                    request_id: None,
+                    name: "Login".to_owned(),
+                }),
+                ..Variable::default()
+            },
+        ]));
+    });
+    click(&mut harness, "http-section-variables");
+    capture(&mut harness, "http-request-variables");
+    click(&mut harness, "http-environment-picker");
+    capture(&mut harness, "http-environment-picker");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    click(&mut harness, "http-section-scripts");
+    settle(&mut harness);
+    capture(&mut harness, "http-request-scripts");
+    click(&mut harness, "http-section-body");
+    let app = harness.state_mut();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        draft.apply(crate::state::http::tabs::DraftEdit::Body(
+            engine::http::model::RequestBody::Json {
+                text: "{\n  \"login\": \"ada\",\n  \"remember\": true\n}".to_owned(),
+            },
+        ));
+    });
+    settle(&mut harness);
+    capture(&mut harness, "http-request-body");
+    click(&mut harness, "http-body-kind-4");
+    type_into(&mut harness, "http-part-key", "justificatif");
+    capture(&mut harness, "http-request-multipart");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node
+                    .label()
+                    .is_some_and(|label| label.ends_with("Factures"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        draft.apply(crate::state::http::tabs::DraftEdit::Graphql(
+            engine::http::graphql::GraphqlDocument {
+                query: "query Facture($id: ID!) {\n  facture(id: $id) {\n    total\n".to_owned(),
+                ..Default::default()
+            },
+        ));
+    });
+    settle(&mut harness);
+    capture(&mut harness, "http-request-graphql");
+}
+
+#[test]
+fn the_http_environments() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    click(&mut harness, "http-environments-open");
+    settle(&mut harness);
+    capture(&mut harness, "http-environments-globals");
+    click(&mut harness, "http-environment-create-open");
+    type_into(&mut harness, "http-environment-create-input", "Staging");
+    click(&mut harness, "http-environment-create-submit");
+    settle(&mut harness);
+    click(&mut harness, "http-environment-protected");
+    settle(&mut harness);
+    capture(&mut harness, "http-environments-set");
+}
+
+#[test]
+fn the_http_socket() {
+    use engine::http::websocket::{SocketEvent, WebsocketEvent};
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Flux"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-socket-connect");
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    let at = chrono::Utc::now();
+    for event in [
+        SocketEvent::Opened {
+            url: "wss://api.example.com/Flux".to_owned(),
+            protocol: Some("chat".to_owned()),
+        },
+        SocketEvent::Sent {
+            text: "{\"subscribe\":\"prix\"}".to_owned(),
+            size: 21,
+        },
+        SocketEvent::Received {
+            text: "{\"prix\":42}".to_owned(),
+            size: 10,
+            binary: false,
+            cut: false,
+        },
+    ] {
+        app.state.http.receive_socket(WebsocketEvent {
+            id: format!("{key}#1"),
+            at,
+            event,
+        });
+    }
+    settle(&mut harness);
+    capture(&mut harness, "http-socket");
+}
+
+#[test]
+fn the_http_dialogs() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-menu")
+                && node
+                    .label()
+                    .is_some_and(|label| label.ends_with("API Paiements"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-node-settings");
+    settle(&mut harness);
+    capture(&mut harness, "http-settings-dialog");
+    click(&mut harness, "http-settings-cancel");
+    settle(&mut harness);
+    click(&mut harness, "http-cookies-open");
+    settle(&mut harness);
+    capture(&mut harness, "http-cookies-empty");
+}
+
+#[test]
+fn the_http_code() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-code-open");
+    settle(&mut harness);
+    capture(&mut harness, "http-code-dialog");
+    click(&mut harness, "http-code-secrets");
+    settle(&mut harness);
+    capture(&mut harness, "http-code-secrets");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    click(&mut harness, "http-tab-new");
+    settle(&mut harness);
+    click(&mut harness, "http-save");
+    settle(&mut harness);
+    capture(&mut harness, "http-save-dialog");
+}
+
+#[test]
+fn the_http_runner() {
+    use engine::http::runner::{RunEvent, RunResult, RunStep};
+    use engine::http::scripts::model::TestResult;
+
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = harness.state().backend();
+    let local = crate::http::tests::collection(backend, "Local");
+    for name in ["Login", "Commandes"] {
+        crate::http::tests::request(
+            backend,
+            (&local, None),
+            name,
+            (RequestKind::Http, HttpMethod::Get),
+        );
+    }
+    click(&mut harness, "area-option-http");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-menu")
+                && node.label().is_some_and(|label| label.ends_with("Local"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-node-run");
+    settle(&mut harness);
+    capture(&mut harness, "http-runner-ready");
+    click(&mut harness, "http-runner-start-empty");
+    settle(&mut harness);
+    let result = |name: &str, status, passed| RunResult {
+        iteration: 0,
+        request_id: name.to_owned(),
+        name: name.to_owned(),
+        path: Vec::new(),
+        kind: RequestKind::Http,
+        method: HttpMethod::Get,
+        status: Some(status),
+        reason: String::new(),
+        millis: 12,
+        tests: vec![TestResult {
+            name: "found".to_owned(),
+            passed,
+            expected: (!passed).then(|| "200".to_owned()),
+            actual: (!passed).then(|| status.to_string()),
+            code: (!passed).then(|| "expect(res.status).toBe(200);".to_owned()),
+            ..TestResult::default()
+        }],
+        error: None,
+        stop: None,
+        skipped: false,
+        response: None,
+    };
+    let steps = [
+        RunStep::Ended {
+            result: Box::new(result("Login", 200, true)),
+        },
+        RunStep::Ended {
+            result: Box::new(result("Commandes", 404, false)),
+        },
+        RunStep::Finished {
+            cancelled: false,
+            millis: 1_200,
+        },
+    ];
+    for step in steps {
+        let id = "1".to_owned();
+        let http = &mut harness.state_mut().state.http;
+        http.receive_run(RunEvent { id, step });
+    }
+    settle(&mut harness);
+    capture(&mut harness, "http-runner-report");
+}
+
+#[test]
+fn the_http_response() {
+    let port = crate::testing::serve();
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = harness.state().backend();
+    let local = crate::http::tests::collection(backend, "Local");
+    let ping = crate::http::tests::request(
+        backend,
+        (&local, None),
+        "Ping",
+        (RequestKind::Http, HttpMethod::Get),
+    );
+    click(&mut harness, "area-option-http");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Ping"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    app.state.http.tabs_mut().edit(&ping.id, |draft| {
+        draft.apply(crate::state::http::tabs::DraftEdit::Url(format!(
+            "http://127.0.0.1:{port}/json"
+        )));
+    });
+    settle(&mut harness);
+    click(&mut harness, "http-send");
+    capture(&mut harness, "http-response-body");
+    click(&mut harness, "http-response-view-3");
+    capture(&mut harness, "http-response-tree");
+    click(&mut harness, "http-response-section-timeline");
+    capture(&mut harness, "http-response-timeline");
+    click(&mut harness, "http-response-section-body");
+    click(&mut harness, "http-response-save-note");
+    settle(&mut harness);
+    capture(&mut harness, "http-save-as-note");
+    click(&mut harness, "save-as-note-cancel");
+    settle(&mut harness);
+    let http = &mut harness.state_mut().state.http;
+    let id = http.sends().of(&ping.id).unwrap().id.clone();
+    for text in ["token read", "Bearer {{token}} kept"] {
+        http.receive_console(engine::http::console::ConsoleEvent {
+            id: id.clone(),
+            at: chrono::Utc::now(),
+            request: "Ping".to_owned(),
+            iteration: None,
+            line: engine::http::console::ConsoleLine::Log {
+                level: engine::http::scripts::model::LogLevel::default(),
+                text: text.to_owned(),
+                by: None,
+            },
+        });
+    }
+    settle(&mut harness);
+    capture(&mut harness, "http-console-folded");
+    click(&mut harness, "http-console-unfold");
+    capture(&mut harness, "http-console");
+    click(&mut harness, "http-console-fold");
+    click(&mut harness, "http-history-open");
+    settle(&mut harness);
+    click(&mut harness, "http-history-item");
+    settle(&mut harness);
+    capture(&mut harness, "http-history");
+    assert!(!harness.state_mut().state.http.ask_leave());
+    settle(&mut harness);
+    capture(&mut harness, "http-leave");
+}
+
+#[test]
+fn the_http_area() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    capture(&mut harness, "http-rail");
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-menu")
+                && node.label().is_some_and(|label| label.ends_with("Auth"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-node-new");
+    capture(&mut harness, "http-node-menu");
+    click(&mut harness, "http-node-new-http");
+    capture(&mut harness, "http-create-request");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-menu")
+                && node
+                    .label()
+                    .is_some_and(|label| label.ends_with("API Paiements"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-node-delete");
+    capture(&mut harness, "http-delete-confirm");
+    click(&mut harness, "http-delete-cancel");
+
+    for name in ["Login", "Flux"] {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some("http-node-name")
+                    && node.label().is_some_and(|label| label.ends_with(name))
+            })
+            .click();
+        settle(&mut harness);
+    }
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| draft.name = "Flux live".to_owned());
+    settle(&mut harness);
+    capture(&mut harness, "http-tabs");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-tab-close")
+                && node
+                    .label()
+                    .is_some_and(|label| label.ends_with("Flux live"))
+        })
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "http-close-dialog");
 }
 
 #[test]
