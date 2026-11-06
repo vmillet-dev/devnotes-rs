@@ -121,11 +121,7 @@ fn over_a_file(app: &mut App) {
 fn order_kept(app: &mut App) {
     step("the order moved by the keys", || {
         app.click_nth("http-runner-row", 0);
-        // The arrows are the row's from the frame after it took the focus.
         app.eventually("the row has the focus", |tree| {
-            tree.focused().contains("http-runner-row")
-        });
-        app.eventually("the row keeps it", |tree| {
             tree.focused().contains("http-runner-row")
         });
         app.press(Key::ArrowDown, Modifiers::ALT);

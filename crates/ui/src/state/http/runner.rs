@@ -368,6 +368,9 @@ impl Runner {
             .collect();
         let saved = api::http::save_run_order(backend, target.item.clone(), order);
         self.saving.push(saved);
+        // An order read before this write would undo it: read again behind it.
+        self.order = None;
+        self.followed = None;
     }
 
     fn start(&mut self, backend: &Backend, around: Around<'_>, confirmed: bool) {
