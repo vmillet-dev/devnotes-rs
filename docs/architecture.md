@@ -4037,9 +4037,9 @@ half-entered one was registered with the operating system for as long as it took
 finish; a theme flipped under the cursor; and there was no way back from a change other
 than remembering what it was.
 
-So the panel edits `SettingsDraftStore` (`core/services/settings/`), and Appliquer or OK
+So the panel edits `SettingsDraft` (`ui/src/services/settings.rs`), and Appliquer or OK
 writes it through. ⚠️ It stages **both paths a preference can take**, because the panel
-edits both: an `AppSettings` key, and a shortcut binding. A draft covering only the first
+edits both: a setting, and a shortcut binding. A draft covering only the first
 would make OK mean two different things on two pages.
 
 **A setting is one line.** `SettingsStore.setting(key, codec)` builds the signal, its restore
@@ -4164,11 +4164,10 @@ derived from that accelerator, so a key is spelled once. Two constants come out 
 table — `CANVAS_SHORTCUT_GROUP` for the sheet, `CANVAS_ACTIONS` for the panel — and a key
 cannot be documented, bound or made movable without the other two following.
 
-**`ShortcutBindingsStore` (`core/services/shortcuts/`) reads both paths as one table.** The
-global three live in `AppSettings`, because the native command takes them as a block; a canvas
-key is one preference of its own, `devnotes.shortcut.<id>`. ⚠️ The store holds **no list**: a
-`Rebindable` carries its own fallback, so nothing has to register and there is no third place
-to add a key to. Reading both halves together is also what makes a collision _between_ them
+**`Bindings` (`ui/src/services/shortcuts.rs`) reads both paths as one table.** The global
+three are stored as `devnotes.<id>Shortcut`, because the native side takes them as a block; a
+canvas key is one preference of its own, `devnotes.shortcut.<id>`. ⚠️ Only the keys moved are
+held: a `Rebindable` carries its own fallback, so there is no third place to add a key to. Reading both halves together is also what makes a collision _between_ them
 something the panel can say out loud.
 
 ⚠️ **The two halves read the keyboard differently, and it is a deliberate fork.**
@@ -4221,11 +4220,11 @@ cards are, a bar where the rail is: a screenshot would be a fourth thing to keep
 with the interface, and it is the _arrangement_ they have to show. They are `aria-hidden`,
 and every chapter says in words what its figure shows.
 
-⚠️ **It opens at a chapter**, and that is what `core/services/help/` exists for. An empty
-canvas offers the chapter about notes and an empty board the one about folders — reaching
-help from the thing it explains, neither of which is anywhere near the titlebar. `HelpStore`
-holds which chapter is open, the About menu reads it, and `GUIDE_CHAPTERS` is the one list
-of ids so a link cannot point at nothing.
+⚠️ **It opens at a chapter.** An empty canvas offers the chapter about notes and an empty board
+the one about folders — reaching help from the thing it explains, neither of which is anywhere
+near the titlebar. `Panel::Guide` carries the chapter, and `guide::CHAPTERS` is the one list of
+ids, so a link cannot point at nothing. The figures and the shortcut sheet are data beside the
+code (`services/guide_figures.json`, `services/shortcut_sheet.json`).
 
 ⚠️ "Fermer" is on **every** chapter, not only the last: a walk you can only leave by
 finishing it is a wall with extra steps. ⚠️ The figure band is a fixed height, or a chapter
@@ -5397,10 +5396,10 @@ page: `HttpTabsStore` keeps the ids of the saved requests that are open, nothing
 (`HttpLeaveStore`, `core/services/http/`, and `LeaveRequestsDialogComponent`, drawn by the
 shell because any area can be the one on screen).
 
-- **Everything that takes the page away goes through `HttpLeaveStore.confirm(reason)`** and goes
-  on only on `true`: « Quitter » in the File menu, a library opened or created
-  (`LibrariesStore`, which reloads), a backup restored (`BackupsStore`), an update installed
-  (`UpdateStore`). ⚠️ Nothing is asked when no tab is modified: leaving stays instant.
+- **Everything that takes the window away asks `HttpState::ask_leave(reason)`** and goes on only
+  once it is answered: « Quitter » in the File menu, a library opened or created, a backup
+  restored, an update installed. What waits for the answer is a `libraries::Goal`. ⚠️ Nothing is
+  asked when no tab is modified: leaving stays instant.
 - **One dialog**: how many requests, their names under the dot a modified tab wears, a sentence
   for the WebSockets that will be cut, then « Annuler », « … sans enregistrer » and « Tout
   enregistrer ». That last one writes the requests that have a place, then walks those never
@@ -5843,10 +5842,10 @@ into the profile, which holds no library. The one directory that lives there on 
 `open/`, the decrypted attachment copies: they are ephemeral and swept wholesale, and one
 directory means one sweep catches every library's leftovers.
 
-**Switching is a full teardown, and the front end is reloaded for it.** `open_library`
-empties the connection `Mutex` under the same lock every other command takes, then
-`LibrariesStore` reloads the page (`AppWindowService.reload()`). The vault state lives in
-Rust, so the front end comes back on the gate of the library just opened. ⚠️ The other
+**Switching is a full teardown.** `open_library` empties the connection `Mutex` under the same
+lock every other command takes, then `AppState::reset_library_scope` drops what belonged to the
+library, panels included. The vault state lives in the core, so the window comes back on the gate
+of the library just opened. ⚠️ The other
 library has its own passphrase, and asking for it is the only proof the right one is open.
 
 ⚠️ **A reload, not a gate over the same stores.** Destroying the notes page is not enough: every
@@ -5988,9 +5987,10 @@ place. Where the replaced files went is said across the reload: Rust keeps it
 (`backup::Restored`, handed once by `take_restored_aside`), since nothing in the page outlives
 the reload on WebKitGTK, and the startup says it once the vault's state is known.
 
-⚠️ `BackupsStore` follows the shape the tag manager and the trash already use: `ask()`
-only **proposes**, `pending()` names which copy and what it would cost, and `confirm()` is
-what writes. The trigger is replaced by that sentence and the confirm sits somewhere else
+⚠️ `BackupsState` follows the shape the tag manager and the trash already use: `ask()`
+only **proposes**, `pending()` names which copy, and the confirmation is what writes. A library
+archived, set aside or restored loses its samples mark: its successor holds no space, where no
+note can be created, and the next open seeds only where there is none. The trigger is replaced by that sentence and the confirm sits somewhere else
 — a second click on the button that fired it is the guard a double click defeats. The
 strip scrolls itself into view, because it replaces a trigger further down a panel that
 scrolls and would otherwise appear below the fold.
@@ -6665,7 +6665,7 @@ key; the matching public key is compiled into the binary, so a compromised relea
 cannot push a payload the app will accept — only the private key can produce an installable
 update.
 
-- **The user decides.** `check()` only produces an offer; `UpdateStore.accept()` is the only
+- **The user decides.** `check()` only produces an offer; `UpdateState::install` is the only
   path that downloads. A silent update would restart the app mid-keystroke, and the editor
   only commits its drafts on blur.
 - **`UpdaterService`** (`core/services/updates/`) is the seam, for the same reason the repositories are
