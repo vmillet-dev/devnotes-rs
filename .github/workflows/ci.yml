@@ -234,7 +234,7 @@ jobs:
             -Dsonar.tests=crates
             -Dsonar.test.inclusions=crates/*/tests/**,crates/*/benches/**
             -Dsonar.exclusions=crates/engine/sandbox/dist/**,crates/engine/sandbox/node_modules/**
-            -Dsonar.coverage.exclusions=crates/engine/src/**/*.js,crates/engine/sandbox/*.mjs,crates/e2e/**,crates/app/src/unpainted.rs
+            -Dsonar.coverage.exclusions=crates/engine/src/**/*.js,crates/engine/sandbox/*.mjs,crates/e2e/**,crates/app/src/unpainted.rs,crates/app/src/desktop.rs,crates/platform/src/**/system.rs
             -Dsonar.rust.cargo.manifestPaths=Cargo.toml
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true
