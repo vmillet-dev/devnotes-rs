@@ -26,6 +26,8 @@ use crate::widgets::{self, address};
 
 /// Under this window width, one column and the page scrolling.
 const NARROW: f32 = 960.0;
+/// A line of fields: as tall as they are.
+const LINE_HEIGHT: f32 = 34.0;
 const COLUMN_GAP: f32 = 18.0;
 /// The results' share against the input's.
 const RESULTS_SHARE: f32 = 1.15;
@@ -100,6 +102,52 @@ pub fn label(ui: &mut Ui, words: &str) -> Response {
 pub fn hint(ui: &mut Ui, words: &str) -> Response {
     let ink = palette(ui.ctx()).text_2;
     paragraph(ui, words, (11.0, 400.0), ink)
+}
+
+/// Fields and their names on one line, the names at mid-height.
+pub fn line<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> R {
+    let room = Vec2::new(ui.available_width(), LINE_HEIGHT);
+    let reading = egui::Layout::left_to_right(egui::Align::Center);
+    ui.allocate_ui_with_layout(room, reading, |ui| {
+        ui.set_min_height(LINE_HEIGHT);
+        ui.spacing_mut().item_spacing.x = 10.0;
+        add(ui)
+    })
+    .inner
+}
+
+/// What a reader should weigh before using the answer, in its box.
+pub fn notice(ui: &mut Ui, words: &str, author_id: &str) -> Response {
+    let p = palette(ui.ctx());
+    let shown = egui::Frame::new()
+        .fill(p.bg_1)
+        .stroke(Stroke::new(1.0, p.amber_edge.gamma_multiply(0.5)))
+        .corner_radius(CornerRadius::same(10))
+        .inner_margin(Margin::symmetric(14, 10))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            paragraph(ui, words, (12.5, 400.0), p.text_1)
+        });
+    address(ui, &shown.inner, author_id);
+    shown.inner
+}
+
+/// A generated text in its frame, selectable.
+pub fn code_output(ui: &mut Ui, text: &str, author_id: &str) {
+    let p = palette(ui.ctx());
+    egui::Frame::new()
+        .fill(p.bg_1)
+        .stroke(Stroke::new(1.0, p.line_soft))
+        .corner_radius(CornerRadius::same(10))
+        .inner_margin(Margin::same(14))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            let shown = egui::RichText::new(text)
+                .font(egui::FontId::monospace(12.5))
+                .color(p.text_0);
+            let output = ui.add(egui::Label::new(shown).selectable(true));
+            address(ui, &output, author_id);
+        });
 }
 
 /// What went wrong with an input, drawn where the answer would be.

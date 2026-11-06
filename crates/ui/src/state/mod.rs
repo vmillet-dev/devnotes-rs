@@ -670,6 +670,10 @@ impl AppState {
                 self.tools.set_zones(zones);
                 self.save_settings(backend);
             }
+            Tools::SetCsvSeparator(separator) => {
+                self.tools.set_csv_separator(separator);
+                self.save_settings(backend);
+            }
             Tools::SampleLoaded => {
                 let said = i18n::Message::new(i18n::keys::tools::SAMPLE_LOADED);
                 self.status.report(said);
@@ -809,6 +813,7 @@ impl AppState {
                 clipboard: &self.clipboard,
                 dialog: &self.dialog,
                 zones: self.tools.zones(),
+                csv_separator: self.tools.csv_separator(),
             };
             self.tools_view.update(entry, &mut turn);
         }

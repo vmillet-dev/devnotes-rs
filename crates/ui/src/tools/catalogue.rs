@@ -6,16 +6,22 @@ mod base64;
 mod case;
 mod checks;
 mod cidr;
+mod colour;
+mod convert;
 mod cron;
 mod dates;
 mod diff;
 mod hash;
+mod identifiers;
+mod identity;
+mod json_generator;
 mod jwt;
 mod line_breaks;
 mod lorem;
 mod password;
 mod permissions;
 mod ports;
+mod qr;
 mod reference;
 mod sizes;
 mod text_stats;
@@ -290,7 +296,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "identifier",
         ],
         from_note: &[],
-        make: coming,
+        make: identifiers::make,
     },
     ToolEntry {
         id: "jwt",
@@ -346,21 +352,21 @@ pub static TOOLS: [ToolEntry; 32] = [
         category: Category::Encode,
         keywords: &["json", "toml", "xml", "yaml", "yml", "convert"],
         from_note: &[("text", STRUCTURED_SNIPPET)],
-        make: coming,
+        make: convert::make,
     },
     ToolEntry {
         id: "colour",
         category: Category::Encode,
         keywords: &["color", "hex", "rgb", "hsl", "oklch", "contrast", "wcag"],
         from_note: &[],
-        make: coming,
+        make: colour::make,
     },
     ToolEntry {
         id: "json-generator",
         category: Category::Generate,
         keywords: &["json", "schema", "mock", "fixture", "fake", "faker"],
         from_note: &[("text", JSON_SNIPPET)],
-        make: coming,
+        make: json_generator::make,
     },
     ToolEntry {
         id: "identity",
@@ -379,7 +385,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "nir",
         ],
         from_note: &[],
-        make: coming,
+        make: identity::make,
     },
     ToolEntry {
         id: "lorem",
@@ -395,7 +401,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "qr", "qr code", "qrcode", "wifi", "vcard", "mailto", "svg", "png", "barcode",
         ],
         from_note: &[("text", ANY_NOTE)],
-        make: coming,
+        make: qr::make,
     },
     ToolEntry {
         id: "dates",
@@ -612,6 +618,8 @@ pub static TOOLS: [ToolEntry; 32] = [
 
 #[cfg(test)]
 mod calc_tests;
+#[cfg(test)]
+mod data_tests;
 #[cfg(test)]
 mod encoding_tests;
 #[cfg(test)]

@@ -27,6 +27,7 @@ pub struct Turn<'a> {
     pub dialog: &'a Arc<dyn FileDialog + Send + Sync>,
     /// The zones the clock tool lists.
     pub zones: &'a [String],
+    pub csv_separator: engine::tools::identity::CsvSeparator,
 }
 
 pub struct Live<P, T> {
@@ -155,6 +156,7 @@ mod tests {
                 clipboard: &self.clipboard,
                 dialog: &self.dialog,
                 zones: &[],
+                csv_separator: engine::tools::identity::CsvSeparator::Comma,
             };
             let launched = &mut self.launched;
             self.live.update(&mut turn, request, |backend, params| {
