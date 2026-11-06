@@ -66,6 +66,70 @@ fn text_tools(app: &mut App) {
     });
 }
 
+/// By the search: the catalogue is longer than the window.
+fn open_tool(app: &mut App, tool: &str) {
+    app.fill("tools-search", tool);
+    app.eventually("the catalogue is narrowed", |tree| {
+        !tree.has("tools-entry-hash")
+    });
+    app.click(&format!("tools-entry-{tool}"));
+    app.wait_for("tool-title");
+}
+
+/// With the search let go: what it holds stays on the home.
+fn back_to_the_home(app: &mut App) {
+    app.click("tool-back");
+    app.click("tools-search");
+    app.press(Key::Escape, Modifiers::NONE);
+    app.wait_for("tools-entry-hash");
+}
+
+fn data_tools(app: &mut App) {
+    step(
+        "a document is converted, and the swap brings it back",
+        || {
+            open_tool(app, "convert");
+            app.fill("convert-input", r#"{"service":"billing"}"#);
+            app.eventually("the YAML is shown", |tree| {
+                tree.text("convert-output")
+                    .is_some_and(|it| it.contains("service: billing"))
+            });
+            app.click("convert-swap");
+            app.eventually("the JSON is back", |tree| {
+                tree.text("convert-output")
+                    .is_some_and(|it| it.contains('{'))
+            });
+            back_to_the_home(app);
+        },
+    );
+    step("a seed brings the same person back", || {
+        open_tool(app, "identity");
+        app.wait_for("identity-card");
+        let drawn = app.tree().text("identity-surname");
+        app.fill("identity-seed", "devnotes");
+        app.wait_for("identity-seed-pinned");
+        app.eventually("the seed's person is on the card", |tree| {
+            tree.text("identity-surname") != drawn
+        });
+        let surname = app.tree().text("identity-surname");
+        app.fill("identity-seed", "another");
+        app.eventually("another person is drawn", |tree| {
+            tree.text("identity-surname") != surname
+        });
+        app.fill("identity-seed", "devnotes");
+        app.eventually("the first person is back", |tree| {
+            tree.text("identity-surname") == surname
+        });
+        back_to_the_home(app);
+    });
+    step("a code is drawn from a URL", || {
+        open_tool(app, "qr");
+        app.fill("qr-url", "https://exemple.fr/doc");
+        app.wait_for("qr-code");
+        back_to_the_home(app);
+    });
+}
+
 fn remembered(mut app: App) -> App {
     step("the star and the recent tools come back", || {
         app.click("tools-entry-case");
@@ -96,5 +160,6 @@ fn tools_home() {
     home(&mut app);
     a_tool(&mut app);
     text_tools(&mut app);
+    data_tools(&mut app);
     remembered(app).quit();
 }

@@ -12,11 +12,23 @@ use crate::theme::palette;
 pub struct Segmented<'a, T> {
     options: &'a [(T, &'a str)],
     author_id: &'a str,
+    taken: Option<T>,
 }
 
 impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
     pub fn new(options: &'a [(T, &'a str)], author_id: &'a str) -> Self {
-        Self { options, author_id }
+        Self {
+            options,
+            author_id,
+            taken: None,
+        }
+    }
+
+    /// The segment that cannot be chosen: dimmed, and a click on it does nothing.
+    #[must_use]
+    pub fn taken(mut self, value: T) -> Self {
+        self.taken = Some(value);
+        self
     }
 
     /// How wide it will be drawn: what a row lays out before it.
@@ -52,7 +64,8 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
                     let mut changed = None;
                     for (index, (value, label)) in self.options.iter().enumerate() {
                         let id = format!("{}-{index}", self.author_id);
-                        let response = segment(ui, label, &id, *value == *selected);
+                        let open = self.taken != Some(*value);
+                        let response = segment(ui, label, &id, (*value == *selected, open));
                         if response.clicked() && *value != *selected {
                             *selected = *value;
                             changed = Some(response.clone());
@@ -73,22 +86,24 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
     }
 }
 
-fn segment(ui: &mut Ui, label: &str, author_id: &str, on: bool) -> Response {
+fn segment(ui: &mut Ui, label: &str, author_id: &str, (on, open): (bool, bool)) -> Response {
     let p = palette(ui.ctx());
     let probe = text(ui, label, 11.5, 400.0, FontFamily::Proportional, p.text_2);
     let corner = CornerRadius::same(6);
     let response = interact(
         ui,
         probe.size() + Vec2::new(20.0, 8.0),
-        Sense::click(),
+        if open { Sense::click() } else { Sense::hover() },
         author_id,
-        || WidgetInfo::selected(Role::RadioButton, true, on, label),
+        || WidgetInfo::selected(Role::RadioButton, open, on, label),
         corner,
     );
     let ink = if on {
         p.text_0
-    } else {
+    } else if open {
         towards(p.text_2, p.text_0, hovered(ui, &response))
+    } else {
+        p.text_2.gamma_multiply(0.5)
     };
     if on {
         ui.painter().rect_filled(response.rect, corner, p.bg_3);

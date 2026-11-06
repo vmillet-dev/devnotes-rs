@@ -621,10 +621,27 @@ fn the_tools_area() {
     capture(&mut harness, "tools-recents");
 }
 
+/// The bench's resources are its profile.
+fn copy_identity_lists(profile: &Path) {
+    let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../engine/resources/identity");
+    let places = profile.join("identity/places");
+    std::fs::create_dir_all(&places).unwrap();
+    std::fs::copy(
+        shipped.join("names.txt"),
+        profile.join("identity/names.txt"),
+    )
+    .unwrap();
+    for list in std::fs::read_dir(shipped.join("places")).unwrap() {
+        let list = list.unwrap();
+        std::fs::copy(list.path(), places.join(list.file_name())).unwrap();
+    }
+}
+
 /// Each tool on its example, once it has answered.
 #[test]
 fn the_tools() {
     let profile = tempfile::tempdir().unwrap();
+    copy_identity_lists(profile.path());
     let mut harness = launch(profile.path());
     type_into(&mut harness, "vault-passphrase", PASSPHRASE);
     type_into(&mut harness, "vault-confirmation", PASSPHRASE);

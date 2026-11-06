@@ -37,6 +37,8 @@ pub enum Action {
     SampleLoaded,
     /// The zones the clock tool lists, kept with the application.
     SetZones(Vec<String>),
+    /// The separator of a CSV export, kept with the application.
+    SetCsvSeparator(engine::tools::identity::CsvSeparator),
 }
 
 /// All the frame knows of a tool, by its own session. ⚠️ What it keeps of a key or a password

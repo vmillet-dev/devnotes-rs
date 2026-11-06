@@ -1,19 +1,25 @@
 //! The tools' calls: pure functions, each on the `compute` queue.
 
+use engine::tools;
 use engine::tools::bases::{
     self, Base64FileAnswer, DecodeAnswer, DecodeRequest, EncodeRequest, Encodings, SavedBytes,
 };
 use engine::tools::checks::{self, CheckAnswer, CheckRequest};
 use engine::tools::cidr::{self, CidrAnswer, CidrRequest};
+use engine::tools::colour::{self, ColourAnswer, ColourRequest};
+use engine::tools::convert::{self, ConvertAnswer, ConvertRequest};
 use engine::tools::cron::{CronAnswer, CronRequest};
 use engine::tools::dates::{self, InstantAnswer, InstantRequest};
 use engine::tools::diff::{self, JsonDiffAnswer, JsonDiffRequest};
 use engine::tools::durations::{DurationsAnswer, DurationsRequest};
 use engine::tools::encoding::{self, UrlCodecAnswer, UrlCodecRequest};
-use engine::tools::generate::{self, LoremAnswer, LoremRequest};
+use engine::tools::generate::{self, GenerateAnswer, GenerateRequest, LoremAnswer, LoremRequest};
 use engine::tools::hash::{self, HashAnswer, HashRequest};
+use engine::tools::identifiers::{self, IdInspection, IdentifiersRequest};
+use engine::tools::identity::{IdentityOutcome, IdentityRequest, PeopleBatch, PeopleExport};
 use engine::tools::jwt::{JwtAnswer, JwtRequest};
 use engine::tools::permissions::{self, PermissionsAnswer, PermissionsRequest};
+use engine::tools::qr::{self, QrAnswer, QrFormat, QrRequest, SavedCode};
 use engine::tools::random::{PasswordAnswer, PasswordRequest};
 use engine::tools::sizes::{self, SizesAnswer, SizesRequest};
 use engine::tools::stats::{self, StatsRequest, TextStats};
@@ -141,4 +147,63 @@ pub fn check_digits(backend: &Backend, request: CheckRequest) -> Pending<CheckAn
 
 pub fn describe_cidr(backend: &Backend, request: CidrRequest) -> Pending<CidrAnswer> {
     backend.compute(move |_| Ok(cidr::describe(&request)))
+}
+
+pub fn convert_data(backend: &Backend, request: ConvertRequest) -> Pending<ConvertAnswer> {
+    backend.compute(move |_| Ok(convert::convert(&request)))
+}
+
+pub fn generate_json(backend: &Backend, request: GenerateRequest) -> Pending<GenerateAnswer> {
+    backend.compute(move |_| Ok(generate::generate(&request)))
+}
+
+pub fn generate_identifiers(
+    backend: &Backend,
+    request: IdentifiersRequest,
+) -> Pending<Vec<String>> {
+    backend.compute(move |_| tools::generate_identifiers(&request))
+}
+
+pub fn inspect_identifier(backend: &Backend, text: String) -> Pending<IdInspection> {
+    backend.compute(move |_| Ok(identifiers::inspect(&text)))
+}
+
+pub fn describe_colour(backend: &Backend, request: ColourRequest) -> Pending<ColourAnswer> {
+    backend.compute(move |_| Ok(colour::describe(&request)))
+}
+
+/// What the core answers of a code, with its pixels for the screen.
+pub type QrDrawing = (QrAnswer, Option<(u32, Vec<u8>)>);
+
+pub fn draw_qr_code(backend: &Backend, request: QrRequest) -> Pending<QrDrawing> {
+    backend.compute(move |_| Ok((qr::describe(&request), qr::rgba(&request))))
+}
+
+pub fn save_qr_code(
+    backend: &Backend,
+    request: QrRequest,
+    format: QrFormat,
+    path: String,
+) -> Pending<SavedCode> {
+    backend.compute(move |_| Ok(qr::save(&request, format, &path)))
+}
+
+pub fn generate_identity(backend: &Backend, request: IdentityRequest) -> Pending<IdentityOutcome> {
+    backend.compute(move |engine| Ok(tools::generate_identity(engine.paths(), &request)))
+}
+
+pub fn export_identities(
+    backend: &Backend,
+    request: IdentityRequest,
+    batch: PeopleBatch,
+    path: String,
+) -> Pending<PeopleExport> {
+    backend.compute(move |engine| {
+        Ok(tools::export_identities(
+            engine.paths(),
+            &request,
+            &batch,
+            &path,
+        ))
+    })
 }

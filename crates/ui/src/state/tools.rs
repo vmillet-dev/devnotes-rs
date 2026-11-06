@@ -6,10 +6,12 @@ use serde_json::{Value, json};
 
 use crate::services::preferences::Preferences;
 use crate::tools::catalogue::{self, Category, ToolEntry};
+use engine::tools::identity::CsvSeparator;
 
 const RECENTS: &str = "devnotes.recentTools";
 const FAVOURITES: &str = "devnotes.favouriteTools";
 const ZONES: &str = "devnotes.timeZones";
+const CSV_SEPARATOR: &str = "devnotes.csvSeparator";
 
 const DEFAULT_ZONES: [&str; 3] = ["UTC", "America/New_York", "Asia/Tokyo"];
 /// Read back from a file nobody checks.
@@ -44,6 +46,7 @@ pub struct ToolsState {
     favourites: Vec<String>,
     /// Which of them the database knows is Rust's to say, not the file's.
     zones: Vec<String>,
+    csv_separator: CsvSeparator,
 }
 
 impl Default for ToolsState {
@@ -54,6 +57,7 @@ impl Default for ToolsState {
             recents: Vec::new(),
             favourites: Vec::new(),
             zones: DEFAULT_ZONES.map(str::to_owned).to_vec(),
+            csv_separator: CsvSeparator::Comma,
         }
     }
 }
@@ -68,6 +72,9 @@ impl ToolsState {
             zones: preferences
                 .get(ZONES)
                 .map_or_else(|| DEFAULT_ZONES.map(str::to_owned).to_vec(), read_zones),
+            csv_separator: preferences
+                .get(CSV_SEPARATOR)
+                .map_or(CsvSeparator::Comma, read_separator),
             ..Self::default()
         }
     }
@@ -84,6 +91,7 @@ impl ToolsState {
         preferences.set(RECENTS, &Value::from(recents).to_string());
         preferences.set(FAVOURITES, &json!(self.favourites).to_string());
         preferences.set(ZONES, &json!(self.zones).to_string());
+        preferences.set(CSV_SEPARATOR, self.csv_separator.as_str());
     }
 
     pub fn zones(&self) -> &[String] {
@@ -92,6 +100,14 @@ impl ToolsState {
 
     pub fn set_zones(&mut self, zones: Vec<String>) {
         self.zones = zones;
+    }
+
+    pub fn csv_separator(&self) -> CsvSeparator {
+        self.csv_separator
+    }
+
+    pub fn set_csv_separator(&mut self, separator: CsvSeparator) {
+        self.csv_separator = separator;
     }
 
     pub fn open_tool(&self) -> Option<&'static ToolEntry> {
@@ -168,6 +184,13 @@ fn read_recents(stored: &str) -> Vec<RecentTool> {
 /// Ids alone, each once: which of them the catalogue still has is for whoever lists them to say.
 fn read_favourites(stored: &str) -> Vec<String> {
     read_names(stored, KEPT_FAVOURITES)
+}
+
+fn read_separator(stored: &str) -> CsvSeparator {
+    CsvSeparator::ALL
+        .into_iter()
+        .find(|it| it.as_str() == stored)
+        .unwrap_or_default()
 }
 
 fn read_zones(stored: &str) -> Vec<String> {
