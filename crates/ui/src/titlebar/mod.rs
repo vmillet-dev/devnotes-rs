@@ -2,6 +2,7 @@
 //! inside it — the menus and the areas on the left, the name in the middle, the theme on the
 //! right. 38 px on `bg-0`, a `line-soft` underline.
 
+pub(crate) mod about_menu;
 mod file_menu;
 pub(crate) mod libraries;
 pub(crate) mod preferences;
@@ -45,6 +46,9 @@ pub enum Action {
     Libraries(libraries::Ask),
     OpenPreferences,
     Preferences(preferences::Ask),
+    OpenHelp(about_menu::Panel),
+    CloseHelp,
+    OpenLink(String),
 }
 
 /// What only the bar's drawing sees.
@@ -55,6 +59,7 @@ pub struct View {
     pub file_anchor: Option<egui::Id>,
     libraries: libraries::View,
     preferences: preferences::View,
+    about: about_menu::View,
     prompt: PromptView,
     /// ⚠️ Holds a phrase until `AppState::apply` takes it, the same frame.
     pub answer: Option<Answer>,
@@ -67,6 +72,18 @@ impl View {
 
     pub fn close_preferences(&mut self) {
         self.preferences = preferences::View::default();
+    }
+
+    pub fn show_help(&mut self, panel: about_menu::Panel) {
+        self.about.show_panel(panel);
+    }
+
+    pub fn close_help(&mut self) {
+        self.about.close_panel();
+    }
+
+    pub fn about_anchor(&self) -> Option<egui::Id> {
+        self.about.anchor
     }
 
     /// What the window shows while the panel is open.
@@ -120,6 +137,9 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
             if unlocked {
                 let anchor = file_menu::show(ui, state, &mut view.file_menu, actions);
                 view.file_anchor = Some(anchor);
+            }
+            about_menu::show(ui, state, &mut view.about, actions);
+            if unlocked {
                 area_switch(ui, state.settings.area, language, actions);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -136,6 +156,7 @@ pub(crate) fn dialogs(
     view: &mut View,
     actions: &mut Actions,
 ) {
+    about_menu::panels(ctx, state, &mut view.about, actions);
     libraries::show(ctx, state, &mut view.libraries, actions);
     preferences::show(ctx, state, &mut view.preferences, actions);
     if let Some(request) = state.transfer.prompt() {

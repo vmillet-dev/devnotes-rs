@@ -29,6 +29,7 @@ use crate::notes::sidebar::RailRow;
 use crate::state::AppState;
 use crate::state::board::BoardState;
 use crate::theme::{palette, spacing};
+use crate::titlebar::about_menu::Panel;
 use crate::widgets::{self, Button, address};
 use gesture::{Gesture, Kind};
 
@@ -258,7 +259,7 @@ fn ground(
         ghost(ui, board, context, &hand);
         bands(ui, &hand);
         if view.zones.is_empty() && view.loose.is_empty() {
-            empty(ui, ui.clip_rect(), context.language);
+            empty(ui, ui.clip_rect(), context.language, actions);
         }
         committed = follow(ui, (board, view), &mut hand);
         canvas_view.over_rail = hand.over_rail(ui).map(|row| {
@@ -680,7 +681,7 @@ fn dots(ui: &Ui, origin: Pos2) {
     }
 }
 
-fn empty(ui: &mut Ui, seen: Rect, language: i18n::Language) {
+fn empty(ui: &mut Ui, seen: Rect, language: i18n::Language, actions: &mut Actions) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::board::EMPTY, &[]);
     let galley = widgets::text(ui, &words, 12.5, 400.0, FontFamily::Proportional, p.text_2);
@@ -690,6 +691,22 @@ fn empty(ui: &mut Ui, seen: Rect, language: i18n::Language) {
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     address(ui, &response, "board-empty");
     ui.painter().galley(rect.min, galley, p.text_2);
+    // The chapter about folders and the board, not the top of the guide.
+    let label = i18n::translate(language, keys::getting_started::OPEN_CHAPTER, &[]);
+    let under = Rect::from_center_size(
+        rect.center_bottom() + vec2(0.0, 24.0),
+        vec2(widgets::Button::width(ui, &label), 28.0),
+    );
+    let mut room = ui.new_child(egui::UiBuilder::new().max_rect(under));
+    if widgets::Button::new(&label, "board-guide")
+        .show(&mut room)
+        .clicked()
+    {
+        let guide = Panel::Guide(crate::services::guide::FOLDERS);
+        actions.push(crate::action::Action::Menu(
+            crate::titlebar::Action::OpenHelp(guide),
+        ));
+    }
 }
 
 /// The core's pixels as egui's points: a board is far smaller than where `f32` loses one.

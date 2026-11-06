@@ -6466,6 +6466,7 @@ dependencies = [
  "rayon",
  "resvg",
  "richtext",
+ "serde",
  "serde_json",
  "tempfile",
  "text",
