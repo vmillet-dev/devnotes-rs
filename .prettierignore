@@ -8,6 +8,8 @@ reference
 # Maquette statique de référence : conservée telle quelle, hors périmètre du formatage.
 docs/scratch-mockup-v2.html
 docs/scratch-folders.html
+# La feuille de recette : une page autonome, ses cas sur une ligne de données.
+docs/recette.html
 # Vendored skills (.claude/skills/PROVENANCE.md): kept byte-identical to their source.
 .claude/skills/frontend-design
 .claude/skills/webapp-testing
