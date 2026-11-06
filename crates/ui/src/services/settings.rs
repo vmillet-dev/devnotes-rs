@@ -2,6 +2,9 @@
 //! (`devnotes.<setting>`), and the draft the preferences panel edits. A setting joins this
 //! struct with the screen that reads it; the file keeps the others untouched.
 
+use engine::notes::kind::NoteKind;
+use engine::notes::language::Language;
+
 use crate::state::Area;
 use crate::theme::{Appearance, Density};
 
@@ -26,7 +29,37 @@ impl LocaleChoice {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// What Tab inserts in the code field: the language's habit, or one chosen.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum IndentChoice {
+    #[default]
+    Language,
+    TwoSpaces,
+    FourSpaces,
+    Tab,
+}
+
+impl IndentChoice {
+    pub fn unit(self, language: Language) -> &'static str {
+        match self {
+            Self::Language => crate::notes::language::indent_unit(language),
+            Self::TwoSpaces => "  ",
+            Self::FourSpaces => "    ",
+            Self::Tab => "\t",
+        }
+    }
+}
+
+/// How a sheet writes a date.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum CalcDate {
+    Numeric,
+    #[default]
+    Short,
+    Long,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[expect(
     clippy::struct_excessive_bools,
     reason = "each is its own display choice"
@@ -49,6 +82,27 @@ pub struct Settings {
     pub http_request_share: u16,
     /// The history's list, in points, within `HISTORY_LIST_WIDTH`.
     pub history_list_width: u16,
+    pub code_indent: IndentChoice,
+    /// Long lines scroll sideways unless asked to wrap.
+    pub code_wrap: bool,
+    /// What « Nouvelle note » and the global shortcut open; the menu still picks any.
+    pub default_note_kind: NoteKind,
+    pub start_with_system: bool,
+    pub minimize_to_tray: bool,
+    pub close_to_tray: bool,
+    pub show_pinned_first: bool,
+    /// Read by the core itself at launch.
+    pub automatic_backups: bool,
+    pub copy_confirmation: bool,
+    pub update_notifications: bool,
+    /// The version the person said « later » to, or empty: a version and not a boolean, since
+    /// remembering « no » would silence the release after it too.
+    pub skipped_update: String,
+    /// How a sheet shows its results, never how they are computed: `None` reads the value.
+    pub calc_decimals: Option<u8>,
+    /// The locale a sheet writes its numbers in; `language` follows the one on screen.
+    pub calc_number_format: String,
+    pub calc_date_format: CalcDate,
 }
 
 /// The reference's `RAIL_WIDTH`.
@@ -70,6 +124,20 @@ impl Default for Settings {
             editor_fields_open: true,
             http_request_share: 0,
             history_list_width: 380,
+            code_indent: IndentChoice::default(),
+            code_wrap: false,
+            default_note_kind: NoteKind::Snippet,
+            start_with_system: false,
+            minimize_to_tray: false,
+            close_to_tray: true,
+            show_pinned_first: true,
+            automatic_backups: true,
+            copy_confirmation: true,
+            update_notifications: true,
+            skipped_update: String::new(),
+            calc_decimals: None,
+            calc_number_format: CALC_LANGUAGE.to_owned(),
+            calc_date_format: CalcDate::default(),
         }
     }
 }
@@ -85,6 +153,23 @@ const EDITOR_HEADER_FOLDED: &str = "devnotes.editorHeaderFolded";
 const EDITOR_FIELDS_OPEN: &str = "devnotes.editorFieldsPanel";
 const HTTP_REQUEST_SHARE: &str = "devnotes.httpRequestShare";
 const HISTORY_LIST_WIDTH_KEY: &str = "devnotes.httpHistoryListWidth";
+const CODE_INDENT: &str = "devnotes.codeIndent";
+const CODE_WRAP: &str = "devnotes.codeWrap";
+const DEFAULT_NOTE_KIND: &str = "devnotes.defaultNoteKind";
+const START_WITH_SYSTEM: &str = "devnotes.startWithSystem";
+const MINIMIZE_TO_TRAY: &str = "devnotes.minimizeToTray";
+const CLOSE_TO_TRAY: &str = "devnotes.closeToTray";
+const SHOW_PINNED_FIRST: &str = "devnotes.showPinnedFirst";
+const AUTOMATIC_BACKUPS: &str = "devnotes.automaticBackups";
+const COPY_CONFIRMATION: &str = "devnotes.copyConfirmation";
+const UPDATE_NOTIFICATIONS: &str = "devnotes.updateNotifications";
+const SKIPPED_UPDATE: &str = "devnotes.skippedUpdate";
+const CALC_DECIMALS: &str = "devnotes.calcDecimals";
+const CALC_NUMBER_FORMAT: &str = "devnotes.calcNumberFormat";
+const CALC_DATE_FORMAT: &str = "devnotes.calcDateFormat";
+
+/// The number format that follows the language on screen.
+pub const CALC_LANGUAGE: &str = "language";
 
 /// The share's bounds, in tenths of a percent: neither pane goes out of reach.
 pub const HTTP_SHARE: (u16, u16) = (50, 950);
@@ -112,6 +197,30 @@ impl Settings {
                 .get(HISTORY_LIST_WIDTH_KEY)
                 .and_then(|width| width.parse().ok())
                 .unwrap_or(380),
+            code_indent: chosen(preferences, CODE_INDENT, &INDENTS).unwrap_or_default(),
+            code_wrap: preferences.get(CODE_WRAP) == Some("true"),
+            default_note_kind: chosen(preferences, DEFAULT_NOTE_KIND, &NOTE_KINDS)
+                .unwrap_or_default(),
+            start_with_system: preferences.get(START_WITH_SYSTEM) == Some("true"),
+            minimize_to_tray: preferences.get(MINIMIZE_TO_TRAY) == Some("true"),
+            close_to_tray: preferences.get(CLOSE_TO_TRAY) != Some("false"),
+            show_pinned_first: preferences.get(SHOW_PINNED_FIRST) != Some("false"),
+            automatic_backups: preferences.get(AUTOMATIC_BACKUPS) != Some("false"),
+            copy_confirmation: preferences.get(COPY_CONFIRMATION) != Some("false"),
+            update_notifications: preferences.get(UPDATE_NOTIFICATIONS) != Some("false"),
+            skipped_update: preferences
+                .get(SKIPPED_UPDATE)
+                .unwrap_or_default()
+                .to_owned(),
+            calc_decimals: preferences
+                .get(CALC_DECIMALS)
+                .and_then(|places| places.parse().ok()),
+            calc_number_format: preferences
+                .get(CALC_NUMBER_FORMAT)
+                .unwrap_or(CALC_LANGUAGE)
+                .to_owned(),
+            calc_date_format: chosen(preferences, CALC_DATE_FORMAT, &CALC_DATES)
+                .unwrap_or_default(),
         }
     }
 
@@ -129,6 +238,29 @@ impl Settings {
         preferences.set(HISTORY_LIST_WIDTH_KEY, &self.history_list_width.to_string());
         let share = f64::from(self.http_request_share) / 10.0;
         preferences.set(HTTP_REQUEST_SHARE, &share.to_string());
+        preferences.set(CODE_INDENT, name_of(&INDENTS, self.code_indent));
+        preferences.set(CODE_WRAP, flag(self.code_wrap));
+        preferences.set(
+            DEFAULT_NOTE_KIND,
+            name_of(&NOTE_KINDS, self.default_note_kind),
+        );
+        preferences.set(START_WITH_SYSTEM, flag(self.start_with_system));
+        preferences.set(MINIMIZE_TO_TRAY, flag(self.minimize_to_tray));
+        preferences.set(CLOSE_TO_TRAY, flag(self.close_to_tray));
+        preferences.set(SHOW_PINNED_FIRST, flag(self.show_pinned_first));
+        preferences.set(AUTOMATIC_BACKUPS, flag(self.automatic_backups));
+        preferences.set(COPY_CONFIRMATION, flag(self.copy_confirmation));
+        preferences.set(UPDATE_NOTIFICATIONS, flag(self.update_notifications));
+        preferences.set(SKIPPED_UPDATE, &self.skipped_update);
+        let places = self
+            .calc_decimals
+            .map_or_else(|| "auto".to_owned(), |places| places.to_string());
+        preferences.set(CALC_DECIMALS, &places);
+        preferences.set(CALC_NUMBER_FORMAT, &self.calc_number_format);
+        preferences.set(
+            CALC_DATE_FORMAT,
+            name_of(&CALC_DATES, self.calc_date_format),
+        );
     }
 }
 
@@ -189,11 +321,28 @@ const AREAS: [(&str, Area); 3] = [
     ("tools", Area::Tools),
     ("http", Area::Http),
 ];
+const INDENTS: [(&str, IndentChoice); 4] = [
+    ("language", IndentChoice::Language),
+    ("two-spaces", IndentChoice::TwoSpaces),
+    ("four-spaces", IndentChoice::FourSpaces),
+    ("tab", IndentChoice::Tab),
+];
+const NOTE_KINDS: [(&str, NoteKind); 4] = [
+    ("note", NoteKind::Note),
+    ("snippet", NoteKind::Snippet),
+    ("checklist", NoteKind::Checklist),
+    ("calc", NoteKind::Calc),
+];
+const CALC_DATES: [(&str, CalcDate); 3] = [
+    ("numeric", CalcDate::Numeric),
+    ("short", CalcDate::Short),
+    ("long", CalcDate::Long),
+];
 
 /// What the preferences panel edits before « Apply ». Only the theme and the density are seen
 /// at once, as a preview; the rest waits for the button, and the native side reads the
 /// applied settings, never the draft.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SettingsDraft {
     applied: Settings,
     draft: Settings,
@@ -202,8 +351,8 @@ pub struct SettingsDraft {
 impl SettingsDraft {
     pub fn open(applied: Settings) -> Self {
         Self {
+            draft: applied.clone(),
             applied,
-            draft: applied,
         }
     }
 
@@ -211,12 +360,24 @@ impl SettingsDraft {
         change(&mut self.draft);
     }
 
+    pub fn draft(&self) -> &Settings {
+        &self.draft
+    }
+
+    /// How many settings wait for « Apply », one key each in the file.
+    pub fn pending(&self) -> u32 {
+        let (mut applied, mut draft) = (Preferences::default(), Preferences::default());
+        self.applied.write(&mut applied);
+        self.draft.write(&mut draft);
+        applied.differences(&draft)
+    }
+
     /// What the window shows meanwhile: the draft's look over the applied rest.
     pub fn previewed(&self) -> Settings {
         Settings {
             theme: self.draft.theme,
             density: self.draft.density,
-            ..self.applied
+            ..self.applied.clone()
         }
     }
 
@@ -225,8 +386,9 @@ impl SettingsDraft {
     }
 
     /// The settings to adopt; closing without applying is dropping the draft.
-    pub fn apply(self) -> Settings {
-        self.draft
+    pub fn apply(&mut self) -> Settings {
+        self.applied = self.draft.clone();
+        self.draft.clone()
     }
 }
 
@@ -249,6 +411,20 @@ mod tests {
             editor_fields_open: false,
             http_request_share: 423,
             history_list_width: 500,
+            code_indent: IndentChoice::Tab,
+            code_wrap: true,
+            default_note_kind: NoteKind::Calc,
+            start_with_system: true,
+            minimize_to_tray: true,
+            close_to_tray: false,
+            show_pinned_first: false,
+            automatic_backups: false,
+            copy_confirmation: false,
+            update_notifications: false,
+            skipped_update: "0.25.1".to_owned(),
+            calc_decimals: Some(3),
+            calc_number_format: "de-DE".to_owned(),
+            calc_date_format: CalcDate::Long,
         };
 
         chosen.write(&mut preferences);
@@ -256,6 +432,8 @@ mod tests {
         assert_eq!(preferences.get("devnotes.theme"), Some("light"));
         assert_eq!(preferences.get("devnotes.httpRequestShare"), Some("42.3"));
         assert_eq!(preferences.get("devnotes.area"), Some("http"));
+        assert_eq!(preferences.get("devnotes.closeToTray"), Some("false"));
+        assert_eq!(preferences.get("devnotes.calcDecimals"), Some("3"));
         assert_eq!(Settings::read(&preferences), chosen);
     }
 
@@ -279,6 +457,16 @@ mod tests {
         assert_eq!(draft.previewed().theme, Appearance::Light);
         assert_eq!(draft.previewed().locale, LocaleChoice::System);
         assert!(draft.is_changed());
+        assert_eq!(draft.pending(), 2);
         assert_eq!(draft.apply().locale, LocaleChoice::En);
+        assert!(!draft.is_changed());
+    }
+
+    #[test]
+    fn the_defaults_of_the_reference_read_from_an_empty_file() {
+        let read = Settings::read(&Preferences::default());
+
+        assert_eq!(read, Settings::default());
+        assert!(read.close_to_tray && read.automatic_backups && read.copy_confirmation);
     }
 }

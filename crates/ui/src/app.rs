@@ -602,6 +602,24 @@ mod tests {
     }
 
     #[test]
+    fn a_copy_is_said_only_while_the_preference_asks_for_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        let said = i18n::Message::new(i18n::keys::settings::COPIED);
+
+        app.state.settings.copy_confirmation = false;
+        app.state
+            .copy_out(&ctx, "echo quiet".to_owned(), said.clone());
+        assert!(app.state.status.latest().is_none());
+
+        app.state.settings.copy_confirmation = true;
+        app.state.copy_out(&ctx, "echo said".to_owned(), said);
+        assert!(app.state.status.latest().is_some());
+    }
+
+    #[test]
     fn the_toggle_switches_to_the_other_theme() {
         let directory = tempfile::tempdir().unwrap();
         let mut harness =

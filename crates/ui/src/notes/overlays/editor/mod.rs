@@ -249,7 +249,12 @@ fn panel(
                 let at = (session, note);
                 json_view::body(&mut body_ui, state, at, exploring, code, layout, actions)
             }
-            None => code::show(&mut body_ui, code, note.language, state.language),
+            None => code::show(
+                &mut body_ui,
+                code,
+                note.language,
+                (state.language, &state.settings),
+            ),
         };
         if shown.changed {
             editing.format.typed();

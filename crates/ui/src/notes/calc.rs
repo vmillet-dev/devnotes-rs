@@ -6,6 +6,7 @@
 
 use std::sync::LazyLock;
 
+use crate::services::settings::{CalcDate, Settings};
 use engine::notes::calc::units::{Dimension, UnitEntry, UnitId};
 use engine::notes::calc::words::{CalcWord, WordClass, WordEntry};
 use engine::notes::calc::{CalcError, CalcLine, CalcSheet, CalcUnit, CalcValue, SpanPart};
@@ -37,13 +38,88 @@ pub struct Written {
 }
 
 const NBSP: char = '\u{a0}';
+const NARROW_NBSP: char = '\u{202f}';
+
+/// A locale a sheet can write its numbers in, beside the language on screen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NumberFormat {
+    pub id: &'static str,
+    decimal: char,
+    group: char,
+}
+
+const fn locale(id: &'static str, decimal: char, group: char) -> NumberFormat {
+    NumberFormat { id, decimal, group }
+}
+
+/// The reference's `CALC_NUMBER_FORMATS`, in its order.
+pub const NUMBER_FORMATS: [NumberFormat; 14] = [
+    locale("fr-FR", ',', NARROW_NBSP),
+    locale("fr-CH", ',', NARROW_NBSP),
+    locale("en-US", '.', ','),
+    locale("en-GB", '.', ','),
+    locale("de-DE", ',', '.'),
+    locale("es-ES", ',', '.'),
+    locale("it-IT", ',', '.'),
+    locale("pt-BR", ',', '.'),
+    locale("nl-NL", ',', '.'),
+    locale("pl-PL", ',', NBSP),
+    locale("sv-SE", ',', NBSP),
+    locale("ru-RU", ',', NBSP),
+    locale("ja-JP", '.', ','),
+    locale("zh-CN", '.', ','),
+];
+
+/// How a sheet is written, read from the settings: never how it is computed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Format {
+    pub language: Language,
+    /// Over the default, under what a line asks for itself.
+    pub decimals: Option<u8>,
+    pub numbers: Option<NumberFormat>,
+    pub dates: CalcDate,
+}
+
+impl Format {
+    pub fn of(settings: &Settings, language: Language) -> Self {
+        Self {
+            language,
+            decimals: settings.calc_decimals,
+            numbers: NUMBER_FORMATS
+                .into_iter()
+                .find(|format| format.id == settings.calc_number_format),
+            dates: settings.calc_date_format,
+        }
+    }
+
+    /// The language on screen and nothing of its own.
+    pub fn plain(language: Language) -> Self {
+        Self {
+            language,
+            decimals: None,
+            numbers: None,
+            dates: CalcDate::Numeric,
+        }
+    }
+}
+
+/// What `id` makes of `value`, shown beside its name in the preferences.
+pub fn sample(value: &str, id: &str, language: Language) -> String {
+    let format = Format {
+        numbers: NUMBER_FORMATS.into_iter().find(|format| format.id == id),
+        ..Format::plain(language)
+    };
+    number(value, (2, 2), false, format).text
+}
 
 /// `places`: what the line asked for (`à 5 chiffres`), over the default.
-pub fn value(value: &CalcValue, places: Option<u8>, language: Language) -> Written {
+pub fn value(value: &CalcValue, places: Option<u8>, format: Format) -> Written {
+    let language = format.language;
+    let places = places.or(format.decimals);
     match value {
         CalcValue::Number { value, unit } => {
             let money = unit.is_some_and(|unit| unit.per.is_none() && is_money(unit.unit));
-            let shown = number(value, digits(value, money, places), false, language);
+            let shown = number(value, digits(value, money, places), false, format);
             match unit {
                 None => shown,
                 Some(unit) => Written {
@@ -53,7 +129,7 @@ pub fn value(value: &CalcValue, places: Option<u8>, language: Language) -> Writt
             }
         }
         CalcValue::Percent { value, signed } => {
-            let shown = number(value, digits(value, false, places), *signed, language);
+            let shown = number(value, digits(value, false, places), *signed, format);
             let text = i18n::translate(
                 language,
                 i18n::keys::calc::PERCENT,
@@ -64,7 +140,11 @@ pub fn value(value: &CalcValue, places: Option<u8>, language: Language) -> Writt
                 approx: shown.approx,
             }
         }
-        CalcValue::Date { date } => exact_text(i18n::format::date_numeric(*date, language)),
+        CalcValue::Date { date } => exact_text(match format.dates {
+            CalcDate::Numeric => i18n::format::date_numeric(*date, language),
+            CalcDate::Short => i18n::format::date_short(*date, language),
+            CalcDate::Long => i18n::format::date_long(*date, language),
+        }),
         CalcValue::Span { parts } => exact_text(span(parts, true, language)),
         CalcValue::Base {
             digits,
@@ -81,7 +161,7 @@ pub fn value(value: &CalcValue, places: Option<u8>, language: Language) -> Writt
             exact_text(format!("{sign}{prefix}{digits}"))
         }
         CalcValue::Scientific { mantissa, exponent } => {
-            let shown = number(mantissa, digits(mantissa, false, None), false, language);
+            let shown = number(mantissa, digits(mantissa, false, None), false, format);
             let sign = if *exponent < 0 { '-' } else { '+' };
             Written {
                 text: format!("{}e{sign}{}", shown.text, exponent.unsigned_abs()),
@@ -102,7 +182,7 @@ pub fn value(value: &CalcValue, places: Option<u8>, language: Language) -> Writt
             exact_text(format!("{sign}{numerator}{below}"))
         }
         CalcValue::Multiplier { value } => {
-            let shown = number(value, digits(value, false, None), false, language);
+            let shown = number(value, digits(value, false, None), false, format);
             Written {
                 text: format!("×{}", shown.text),
                 approx: shown.approx,
@@ -144,21 +224,21 @@ pub fn exact(value: &CalcValue, language: Language) -> String {
                 self::unit(*unit, language)
             ),
         },
-        other => self::value(other, None, language).text,
+        other => self::value(other, None, Format::plain(language)).text,
     }
 }
 
 /// Said on its line in place of a result, a capital first.
 /// The text with each result after it as a comment: pasted into another sheet, the comments are
 /// read past and the same lines compute again.
-pub fn copy_text(text: &str, sheet: &CalcSheet, language: Language) -> String {
+pub fn copy_text(text: &str, sheet: &CalcSheet, format: Format) -> String {
     let lines = text.split('\n').enumerate().map(|(index, line)| {
         let Some(CalcLine::Value { value, places, .. }) =
             sheet.rows.get(index).map(|row| &row.line)
         else {
             return line.to_owned();
         };
-        let shown = self::value(value, *places, language);
+        let shown = self::value(value, *places, format);
         let approx = if shown.approx { "≈ " } else { "" };
         let written = line.split("//").next().unwrap_or(line).trim_end();
         format!("{written} // {approx}{}", shown.text)
@@ -354,9 +434,20 @@ fn span(parts: &[SpanPart], grouped: bool, language: Language) -> String {
         .join(" ")
 }
 
-fn number(value: &str, (min, max): (usize, usize), signed: bool, language: Language) -> Written {
+fn number(value: &str, (min, max): (usize, usize), signed: bool, format: Format) -> Written {
+    let text = match format.numbers {
+        None => i18n::format::exact(value, (min, max), signed, true, format.language),
+        Some(locale) => i18n::format::exact(value, (min, max), signed, true, Language::En)
+            .chars()
+            .map(|written| match written {
+                '.' => locale.decimal,
+                ',' => locale.group,
+                other => other,
+            })
+            .collect(),
+    };
     Written {
-        text: i18n::format::exact(value, (min, max), signed, true, language),
+        text,
         approx: fraction(value).len() > max,
     }
 }
@@ -398,6 +489,64 @@ fn is_money(unit: UnitId) -> bool {
 }
 
 #[cfg(test)]
+mod format_tests {
+    use super::*;
+
+    fn written(format: Format) -> String {
+        let value = CalcValue::Number {
+            value: "1578.13".to_owned(),
+            unit: None,
+        };
+        value_of(&value, format)
+    }
+
+    fn value_of(value: &CalcValue, format: Format) -> String {
+        self::value(value, None, format).text
+    }
+
+    #[test]
+    fn a_locale_writes_its_own_separators() {
+        let german = Format {
+            numbers: Some(NUMBER_FORMATS[4]),
+            ..Format::plain(Language::En)
+        };
+
+        assert_eq!(written(german), "1.578,13");
+    }
+
+    #[test]
+    fn the_decimals_chosen_stand_under_what_a_line_asks() {
+        let three = Format {
+            decimals: Some(3),
+            ..Format::plain(Language::En)
+        };
+        let value = CalcValue::Number {
+            value: "2.5".to_owned(),
+            unit: None,
+        };
+
+        assert_eq!(self::value(&value, None, three).text, "2.500");
+        assert_eq!(self::value(&value, Some(1), three).text, "2.5");
+    }
+
+    #[test]
+    fn a_date_follows_the_style_chosen() {
+        let date = CalcValue::Date {
+            date: chrono::NaiveDate::from_ymd_opt(2026, 11, 6).unwrap(),
+        };
+        let long = Format {
+            dates: CalcDate::Long,
+            ..Format::plain(Language::En)
+        };
+
+        assert_ne!(
+            value_of(&date, long),
+            value_of(&date, Format::plain(Language::En))
+        );
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -410,7 +559,7 @@ mod tests {
     fn a_copy_writes_each_result_as_a_comment_in_place_of_the_old_one() {
         let text = "# Budget\nttc = 100,521 € // ancien\nune phrase\n2 + 2";
 
-        let copied = copy_text(text, &computed(text), Language::Fr);
+        let copied = copy_text(text, &computed(text), Format::plain(Language::Fr));
 
         assert_eq!(
             copied.replace(NBSP, " "),
@@ -423,7 +572,7 @@ mod tests {
         let text = "a = 100,521 €\nb = 4,99 €\ntotal\na × 12";
         let sheet = computed(text);
 
-        let copied = copy_text(text, &sheet, Language::Fr);
+        let copied = copy_text(text, &sheet, Format::plain(Language::Fr));
 
         let lines = |sheet: CalcSheet| {
             let rows = sheet.rows.into_iter();
@@ -510,7 +659,7 @@ mod tests {
                 Language::En
             };
             let input: CalcValue = serde_json::from_value(case["input"].clone()).unwrap();
-            let written = value(&input, None, language);
+            let written = value(&input, None, Format::plain(language));
             assert_eq!(
                 written.text, case["output"]["text"],
                 "{input:?} in {language:?}"

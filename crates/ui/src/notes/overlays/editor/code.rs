@@ -2,6 +2,7 @@
 //! language's grammar, each `{{field}}` marked where the core finds it, the find-and-replace bar
 //! over it. Tab, the comment token and the indent unit follow the language.
 
+use crate::services::settings::Settings;
 use egui::{Color32, Ui};
 use engine::notes::language::Language;
 use i18n::{Language as Locale, keys};
@@ -71,7 +72,12 @@ pub(super) struct Shown {
     pub(super) left: bool,
 }
 
-pub(super) fn show(ui: &mut Ui, code: &mut CodeView, language: Language, locale: Locale) -> Shown {
+pub(super) fn show(
+    ui: &mut Ui,
+    code: &mut CodeView,
+    language: Language,
+    (locale, settings): (Locale, &Settings),
+) -> Shown {
     if code.language != language || (code.colouring.is_none() && text::highlight::is_ready()) {
         code.language = language;
         code.colouring =
@@ -128,7 +134,8 @@ pub(super) fn show(ui: &mut Ui, code: &mut CodeView, language: Language, locale:
     let output = EditorView::new(&mut code.editor, &label, "editor-body")
         .hint(&hint)
         .language(locale)
-        .indent_unit(language::indent_unit(language))
+        .indent_unit(settings.code_indent.unit(language))
+        .wrap(settings.code_wrap)
         .comment(language::line_comment(language))
         .decorations(&decorations)
         .lit_lines(code.lit.clone())

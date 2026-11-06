@@ -239,7 +239,8 @@ pub(super) fn body(
     };
     match mode {
         None => {
-            let drawn = super::code::show(ui, code, note.language, state.language);
+            let drawn =
+                super::code::show(ui, code, note.language, (state.language, &state.settings));
             (shown.changed, shown.left) = (drawn.changed, drawn.left);
         }
         Some(mode) if beside => {
@@ -260,7 +261,12 @@ pub(super) fn body(
             widgets::address(&code_ui, &pane, "side-by-side-code");
             let before = code.editor.buffer.selection().head;
             code.lit = lit_lines(code, explored, &exploring.explorer);
-            let drawn = super::code::show(&mut code_ui, code, note.language, state.language);
+            let drawn = super::code::show(
+                &mut code_ui,
+                code,
+                note.language,
+                (state.language, &state.settings),
+            );
             (shown.changed, shown.left) = (drawn.changed, drawn.left);
             if code.editor.buffer.selection().head != before && !drawn.changed {
                 caret_moved(exploring, code, explored);

@@ -138,6 +138,12 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     capture(&mut harness, "libraries");
     click(&mut harness, "libraries-close");
     settle(&mut harness);
+    click(&mut harness, "file-menu");
+    click(&mut harness, "file-preferences");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-general");
+    click(&mut harness, "settings-cancel");
+    settle(&mut harness);
 
     click(&mut harness, "area-option-http");
     let state = &mut harness.state_mut().state;

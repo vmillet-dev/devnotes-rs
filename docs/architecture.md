@@ -4025,8 +4025,10 @@ not operations on a file:
 
 ### Preferences
 
-"Préférences…" opens `SettingsDialogComponent` (`titlebar/file-menu/settings-dialog/`): a rail of pages on
-the left, the chosen page on the right, and Annuler / Appliquer / OK at the bottom.
+"Préférences…" opens `titlebar/preferences/`: a rail of pages on the left, the chosen page on the
+right, and Annuler / Appliquer / OK at the bottom. The draft is the bar's view: the controls edit
+it where they are drawn, and `AppState` adopts it on a button. Autostart and the tray's two
+switches are stored and read by nothing until the platform phase.
 
 **Appliquer, Annuler, OK — and a draft under them.** Every control used to write straight
 into `SettingsStore`, which was written down as a decision rather than an oversight. The

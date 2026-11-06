@@ -12,7 +12,7 @@ use i18n::{Language, keys};
 use crate::action::Actions;
 use crate::api;
 use crate::notes::Editing;
-use crate::notes::calc;
+use crate::notes::calc::{self, Format};
 use crate::state::AppState;
 use crate::theme::icons::Icon;
 use crate::theme::palette;
@@ -117,11 +117,11 @@ pub(super) fn show(
     let mut body_ui = ui.new_child(egui::UiBuilder::new().max_rect(body));
     let shown = sheet_field(&mut body_ui, view, sheet, language);
     if let Some(sheet) = sheet {
-        results(ui, view, sheet, &shown.rows, language);
+        results(ui, view, sheet, &shown.rows, state.calc_format());
     }
     let footer = Rect::from_min_max(egui::pos2(whole.left(), footer_top), whole.max);
     let mut footer_ui = ui.new_child(egui::UiBuilder::new().max_rect(footer));
-    self::footer(&mut footer_ui, view, sheet, language);
+    self::footer(&mut footer_ui, view, sheet, state.calc_format());
     ui.advance_cursor_after_rect(whole);
 
     let now = ui.input(|input| input.time);
@@ -328,7 +328,8 @@ fn used_on(uses: &[u32], language: Language) -> String {
 }
 
 /// The column on the right, on the rows on screen. The clicks here move no caret.
-fn results(ui: &mut Ui, view: &mut CalcView, sheet: &CalcSheet, rows: &[Row], language: Language) {
+fn results(ui: &mut Ui, view: &mut CalcView, sheet: &CalcSheet, rows: &[Row], format: Format) {
+    let language = format.language;
     for row in rows {
         let Ok(line) = u32::try_from(row.line) else {
             continue;
@@ -347,7 +348,7 @@ fn results(ui: &mut Ui, view: &mut CalcView, sheet: &CalcSheet, rows: &[Row], la
                     named: name.is_some(),
                     aggregate: *aggregate,
                 };
-                value_cell(ui, view, sheet, (row, line), &shown, language);
+                value_cell(ui, view, sheet, (row, line), &shown, format);
             }
             Some(CalcLine::Error { error }) => failure_cell(ui, row, error, language),
             _ => {}
@@ -370,11 +371,12 @@ fn value_cell(
     sheet: &CalcSheet,
     (row, line): (&Row, u32),
     shown: &Result<'_>,
-    language: Language,
+    format: Format,
 ) {
+    let language = format.language;
     let p = palette(ui.ctx());
     let right = row.rect.right() - 8.0;
-    let written = calc::value(shown.value, shown.places, language);
+    let written = calc::value(shown.value, shown.places, format);
     let approx = if written.approx { "≈ " } else { "" };
     let words = format!("{approx}{}", written.text);
     let selected = view.picked.contains(&line);
@@ -469,7 +471,8 @@ fn copy_button(
     }
 }
 
-fn footer(ui: &mut Ui, view: &mut CalcView, sheet: Option<&CalcSheet>, language: Language) {
+fn footer(ui: &mut Ui, view: &mut CalcView, sheet: Option<&CalcSheet>, format: Format) {
+    let language = format.language;
     let p = palette(ui.ctx());
     let lines = u32::try_from(view.editor.buffer.line_count()).unwrap_or(u32::MAX);
     let names = sheet.map_or(0, distinct_names);
@@ -486,7 +489,7 @@ fn footer(ui: &mut Ui, view: &mut CalcView, sheet: Option<&CalcSheet>, language:
             &[("count", names.into())]
         ),
     );
-    let summary = summary(ui, view, sheet, language);
+    let summary = summary(ui, view, sheet, format);
     ui.horizontal_centered(|ui| {
         ui.spacing_mut().item_spacing.x = 16.0;
         let family = FontFamily::Monospace;
@@ -515,8 +518,9 @@ fn summary(
     ui: &Ui,
     view: &mut CalcView,
     sheet: Option<&CalcSheet>,
-    language: Language,
+    format: Format,
 ) -> Option<String> {
+    let language = format.language;
     let now = ui.input(|input| input.time);
     match &view.said {
         Some((_, until)) if *until <= now => view.said = None,
@@ -544,7 +548,7 @@ fn summary(
         CalcSummary::Overflow => tr(keys::calc::errors::OVERFLOW),
         CalcSummary::Figures { sum, mean } => {
             let shown = |value| {
-                let written = calc::value(value, None, language);
+                let written = calc::value(value, None, format);
                 let approx = if written.approx { "≈ " } else { "" };
                 format!("{approx}{}", written.text)
             };
