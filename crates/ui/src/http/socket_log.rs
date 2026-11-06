@@ -75,15 +75,23 @@ fn bar(ui: &mut Ui, state: &AppState, (tab, view): (&Tab, &mut LogView), actions
         Phase::Connecting => (keys::http::socket::phases::CONNECTING, p.amber_text),
         Phase::Open => (keys::http::socket::phases::OPEN, p.green),
         Phase::Closing => (keys::http::socket::phases::CLOSING, p.amber_text),
-        Phase::Closed => (keys::http::socket::phases::CLOSED, p.text_2),
+        Phase::Closed => (keys::http::socket::phases::CLOSED, p.red),
     };
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 12.0;
         if phase == Phase::Connecting {
             widgets::spinner(ui, 14.0, &tr(key));
         }
-        let words = egui::RichText::new(tr(key)).size(12.5).strong().color(hue);
-        let said = ui.add(egui::Label::new(words));
+        let words = egui::RichText::new(tr(key))
+            .size(12.0)
+            .strong()
+            .color(p.text_1);
+        let said = egui::Frame::new()
+            .fill(hue.gamma_multiply(0.15))
+            .corner_radius(egui::CornerRadius::same(6))
+            .inner_margin(egui::Margin::symmetric(10, 3))
+            .show(ui, |ui| ui.add(egui::Label::new(words)))
+            .inner;
         widgets::address(ui, &said, "http-socket-phase");
         if let Some(protocol) = socket.and_then(|socket| socket.protocol.as_deref()) {
             let words = i18n::translate(

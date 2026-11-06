@@ -320,7 +320,7 @@ pub(crate) fn text_cell(
             .frame(egui::Frame::new())
             .margin(Margin::symmetric(8, 0))
             .align(egui::Align2::LEFT_CENTER)
-            .hint_text(hint)
+            .hint_text(egui::RichText::new(hint).font(FontId::new(12.5, family.clone())))
             .password(masked)
             .text_color(ink)
             .font(FontId::new(12.5, family)),

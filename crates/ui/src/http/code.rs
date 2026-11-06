@@ -3,6 +3,7 @@
 
 use egui::{Align, CornerRadius, FontFamily, Layout, Role, Sense, Ui, Vec2, WidgetInfo, pos2};
 use engine::http::codegen::{CodeNotice, CodeTarget, GeneratedCode};
+use engine::http::model::RequestKind;
 use i18n::keys;
 
 use super::response::body::TextLines;
@@ -13,14 +14,15 @@ use crate::state::AppState;
 use crate::state::http::code::{Asked as Ask, CodeDialog, Switch};
 use crate::state::http::kept::NoteAsked;
 use crate::state::http::tabs::Tab;
+use crate::state::http::tree::Badge;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
-use crate::widgets::{self, Button, Checkbox, Kind, TextField, interact};
+use crate::widgets::{self, Button, Kind, SearchField, interact};
 
-const WIDTH: f32 = 880.0;
-const LIST: f32 = 210.0;
+const WIDTH: f32 = 926.0;
+const LIST: f32 = 240.0;
 const GAP: f32 = 14.0;
-const HEIGHT: f32 = 380.0;
+const HEIGHT: f32 = 430.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Group {
@@ -128,18 +130,51 @@ fn head(ui: &mut Ui, state: &AppState, tab: &Tab) {
         ui.painter().galley(rect.min, words, p.text_0);
         heading.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &title));
         widgets::address(ui, &heading, "http-code-dialog");
-        let name = egui::RichText::new(&tab.draft.name)
-            .size(12.5)
-            .color(p.text_1);
-        ui.add(egui::Label::new(name));
-        let environment = state.http.environments().active().map_or_else(
+        pill(ui, |ui| {
+            let badge = match tab.draft.kind {
+                RequestKind::Http => Badge::Method(tab.draft.method),
+                RequestKind::Graphql => Badge::Graphql,
+                RequestKind::Websocket => Badge::Websocket,
+            };
+            let hue = super::badge_hue(ui, badge);
+            let method = widgets::text(ui, badge.short(), 11.0, 700.0, FontFamily::Monospace, hue);
+            ui.label(method);
+            let name = egui::RichText::new(&tab.draft.name)
+                .size(12.0)
+                .color(p.text_1);
+            ui.add(egui::Label::new(name));
+        });
+        let active = state.http.environments().active();
+        let environment = active.map_or_else(
             || i18n::translate(language, keys::http::environments::NONE, &[]),
             |active| active.name.clone(),
         );
-        let environment = egui::RichText::new(environment).size(12.5).color(p.text_2);
-        let said = ui.add(egui::Label::new(environment));
-        widgets::address(ui, &said, "http-code-environment");
+        let dot = active.map_or(p.text_2, |active| {
+            crate::notes::ui::folder_hue(ui, active.colour)
+        });
+        let shown = pill(ui, |ui| {
+            let (rect, _) = ui.allocate_exact_size(Vec2::splat(8.0), Sense::hover());
+            ui.painter()
+                .circle_stroke(rect.center(), 3.5, egui::Stroke::new(1.5, dot));
+            let words = egui::RichText::new(environment).size(12.0).color(p.text_1);
+            ui.add(egui::Label::new(words));
+        });
+        widgets::address(ui, &shown, "http-code-environment");
     });
+}
+
+/// What the head says about the request: a small framed row.
+fn pill(ui: &mut Ui, draw: impl FnOnce(&mut Ui)) -> egui::Response {
+    let p = palette(ui.ctx());
+    egui::Frame::new()
+        .stroke(egui::Stroke::new(1.0, p.line_soft))
+        .corner_radius(CornerRadius::same(8))
+        .inner_margin(egui::Margin::symmetric(10, 5))
+        .show(ui, |ui| {
+            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.horizontal(draw);
+        })
+        .response
 }
 
 fn targets(
@@ -155,9 +190,8 @@ fn targets(
         tr(keys::http::code::FILTER),
         tr(keys::http::code::FILTER_HINT),
     );
-    TextField::new(&mut view.filter, &label, "http-code-filter")
+    SearchField::new(&mut view.filter, &label, "http-code-filter")
         .hint(&hint)
-        .compact()
         .show(ui);
     let wanted = api::notes::fold(view.filter.trim());
     let matches = |target: CodeTarget| {
@@ -217,27 +251,33 @@ fn target_row(ui: &mut Ui, target: CodeTarget, on: bool) -> bool {
     );
     let rect = response.rect;
     if on {
-        ui.painter()
-            .rect_filled(rect, CornerRadius::same(6), p.bg_3);
+        let tint = p.amber_fill.gamma_multiply(0.15);
+        ui.painter().rect_filled(rect, CornerRadius::same(6), tint);
     } else if response.hovered() {
         ui.painter()
             .rect_filled(rect, CornerRadius::same(6), p.bg_2);
     }
-    let ink = if on { p.text_0 } else { p.text_1 };
-    let galley = widgets::text(ui, &words, 12.5, 400.0, FontFamily::Proportional, ink);
+    let (name, library, _) = entry(target);
+    let ink = if on { p.amber_text } else { p.text_0 };
+    let family = FontFamily::Proportional;
+    let galley = widgets::text(ui, name, 12.5, 600.0, family.clone(), ink);
     let at = pos2(rect.left() + 8.0, rect.center().y - galley.size().y / 2.0);
+    let after = at.x + galley.size().x;
     ui.painter_at(rect).galley(at, galley, ink);
+    if let Some(library) = library {
+        let library = format!(" · {library}");
+        let galley = widgets::text(ui, &library, 12.0, 400.0, family, p.text_2);
+        let at = pos2(after, rect.center().y - galley.size().y / 2.0);
+        ui.painter_at(rect).galley(at, galley, p.text_2);
+    }
     response.clicked()
 }
 
-/// A box and what it says; `true` on a click.
+/// A switch and what it says; `true` on a click.
 fn switch(ui: &mut Ui, (on, enabled): (bool, bool), label: &str, author_id: &str) -> bool {
     let p = palette(ui.ctx());
     let mut checked = on;
-    let changed = Checkbox::new(&mut checked, label, author_id)
-        .enabled(enabled)
-        .show(ui)
-        .changed();
+    let changed = widgets::switch(ui, label, author_id, &mut checked, enabled).changed();
     let ink = if enabled { p.text_1 } else { p.text_2 };
     ui.add(egui::Label::new(
         egui::RichText::new(label).size(12.5).color(ink),
@@ -390,8 +430,19 @@ fn foot(
     actions: &mut Actions,
 ) {
     let tr = |key| i18n::translate(language, key, &[]);
+    let p = palette(ui.ctx());
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
+        if Button::new(&tr(keys::http::code::COPY), "http-code-copy")
+            .kind(Kind::Filled)
+            .icon(Icon::Copy)
+            .enabled(dialog.code().is_some())
+            .show(ui)
+            .clicked()
+            && let Some(generated) = dialog.code()
+        {
+            actions.push(Asked::Http(Action::CopyCode(generated.code.clone())));
+        }
         if Button::new(&tr(keys::http::code::SAVE), "http-code-save")
             .enabled(dialog.code().is_some())
             .show(ui)
@@ -418,14 +469,11 @@ fn foot(
             };
             actions.push(Asked::Http(Action::AskNote(Box::new(asked))));
         }
-        if Button::new(&tr(keys::http::code::COPY), "http-code-copy")
-            .kind(Kind::Filled)
-            .enabled(dialog.code().is_some())
-            .show(ui)
-            .clicked()
-            && let Some(generated) = dialog.code()
-        {
-            actions.push(Asked::Http(Action::CopyCode(generated.code.clone())));
-        }
+        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+            let words = egui::RichText::new(tr(keys::http::code::WHERE))
+                .size(12.0)
+                .color(p.text_2);
+            ui.add(egui::Label::new(words));
+        });
     });
 }

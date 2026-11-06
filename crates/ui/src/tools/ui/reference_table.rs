@@ -11,12 +11,15 @@ use super::CopyValue;
 use crate::api;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
+use crate::theme::tokens::Palette;
 use crate::widgets::{self, SearchField, address};
 
 const SEARCH_MAX: f32 = 480.0;
 const COPY_COLUMN: f32 = 44.0;
 const CARD_GAP: f32 = 16.0;
 const CHECK: f32 = 14.0;
+const CHIP_HEIGHT: f32 = 17.0;
+const CHIP_PADDING: f32 = 10.0;
 
 pub struct Group {
     pub id: String,
@@ -38,6 +41,14 @@ pub struct Cell {
     pub below: Option<String>,
     /// « Supported », as a mark in the place of the text.
     pub checked: bool,
+    /// The hue the text says something in, by theme: a code's class.
+    pub hue: Option<fn(&Palette) -> Color32>,
+    /// A state after the text: « Obsolete ».
+    pub tag: Option<String>,
+    /// Values, each on its own chip, in the place of the text.
+    pub chips: Vec<String>,
+    /// What an example comes to, on its chip after what is said below.
+    pub result: Option<String>,
 }
 
 impl Cell {
@@ -52,6 +63,13 @@ impl Cell {
         Self {
             mono: true,
             ..Self::text(text)
+        }
+    }
+
+    pub fn chips(chips: Vec<String>) -> Self {
+        Self {
+            chips,
+            ..Self::default()
         }
     }
 
@@ -71,6 +89,24 @@ impl Cell {
     #[must_use]
     pub fn below(mut self, words: impl Into<String>) -> Self {
         self.below = Some(words.into());
+        self
+    }
+
+    #[must_use]
+    pub fn hue(mut self, hue: fn(&Palette) -> Color32) -> Self {
+        self.hue = Some(hue);
+        self
+    }
+
+    #[must_use]
+    pub fn tag(mut self, words: impl Into<String>) -> Self {
+        self.tag = Some(words.into());
+        self
+    }
+
+    #[must_use]
+    pub fn result(mut self, words: impl Into<String>) -> Self {
+        self.result = Some(words.into());
         self
     }
 }
@@ -357,12 +393,33 @@ struct LaidCell {
     below: Option<widgets::Wrapped>,
     below_ink: Color32,
     check: Option<Color32>,
+    tag: Option<String>,
+    chips: Vec<String>,
+    result: Option<String>,
+}
+
+/// A value on its chip; answers where it ends.
+fn chip(ui: &Ui, at: Pos2, words: &str, family: FontFamily) -> f32 {
+    let p = palette(ui.ctx());
+    let shown = widgets::text(ui, words, 11.0, 400.0, family, p.text_1);
+    let size = shown.size() + Vec2::new(CHIP_PADDING, 2.0);
+    let rect = Rect::from_min_size(at, size);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(4), p.bg_3);
+    ui.painter()
+        .galley(rect.center() - shown.size() / 2.0, shown, p.text_1);
+    rect.right()
 }
 
 impl LaidCell {
     fn text_height(&self) -> f32 {
         let mark = self.check.map_or(0.0, |_| CHECK);
-        self.text.size().y.max(mark)
+        let chips = if self.chips.is_empty() {
+            0.0
+        } else {
+            CHIP_HEIGHT
+        };
+        self.text.size().y.max(mark).max(chips)
     }
 
     fn height(&self) -> f32 {
@@ -375,16 +432,35 @@ impl LaidCell {
             let mark = Rect::from_min_size(at, Vec2::splat(CHECK));
             icons::paint(ui, mark, Icon::Check, ink);
         }
+        let mut right = at.x;
+        for word in &self.chips {
+            right = chip(ui, Pos2::new(right, at.y), word, FontFamily::Monospace) + 6.0;
+        }
+        let after_text = at.x + self.text.size().x + 8.0;
         ui.painter().galley(at, self.text, self.ink);
+        if let Some(tag) = &self.tag {
+            chip(
+                ui,
+                Pos2::new(after_text, at.y),
+                tag,
+                FontFamily::Proportional,
+            );
+        }
         if let Some(below) = self.below {
-            below.paint(ui, at + Vec2::new(0.0, height + 2.0), self.below_ink);
+            let top = at + Vec2::new(0.0, height + 2.0);
+            let size = below.size();
+            below.paint(ui, top, self.below_ink);
+            if let Some(result) = &self.result {
+                let at = Pos2::new(top.x + size.x + 6.0, top.y + size.y - CHIP_HEIGHT + 1.0);
+                chip(ui, at, result, FontFamily::Monospace);
+            }
         }
     }
 }
 
 fn laid_cell(ui: &Ui, cell: &Cell, width: f32) -> LaidCell {
     let p = palette(ui.ctx());
-    let ink = cell.ink.unwrap_or(p.text_0);
+    let ink = cell.hue.map_or(cell.ink.unwrap_or(p.text_0), |hue| hue(p));
     let family = if cell.mono {
         FontFamily::Monospace
     } else {
@@ -409,5 +485,8 @@ fn laid_cell(ui: &Ui, cell: &Cell, width: f32) -> LaidCell {
         below,
         below_ink: p.text_2,
         check: cell.checked.then_some(p.green),
+        tag: cell.tag.clone(),
+        chips: cell.chips.clone(),
+        result: cell.result.clone(),
     }
 }

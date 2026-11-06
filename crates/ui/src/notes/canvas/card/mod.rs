@@ -133,7 +133,8 @@ pub(super) fn show(
     let inner = rect.shrink(padding);
     let checklist = note.kind == engine::notes::kind::NoteKind::Checklist;
     let mut title_room = inner;
-    let ticking = checked || context.selecting || ui.rect_contains_pointer(rect);
+    // Not under the pointer alone: the title would jump as the pointer crosses the card.
+    let ticking = checked || context.selecting;
     if tick(ui, inner, &title, (checked, ticking), context.language) {
         actions.push(crate::action::Action::Notes(crate::notes::Action::Check(
             note.id.clone(),
@@ -159,7 +160,7 @@ pub(super) fn show(
     } else {
         footer::show(ui, footer, note, context);
     }
-    actions::show(ui, rect, note, context, actions);
+    actions::show(ui, rect, note, (context, ticking), actions);
 }
 
 /// In the footer's place, real words and both keys: what finishes the deletion, and the way out.
@@ -178,7 +179,7 @@ fn arming(ui: &mut Ui, footer: Rect, language: i18n::Language) {
     text_at(ui, at, shown, &words, "note-card-arming");
 }
 
-/// The card's box, before its title: ticked, the card joins the selection.
+/// The card's box, before its title, while cards are ticked: ticked, the card joins them.
 /// ⚠️ Allocated on every frame, shown or not: a widget that comes and goes moves the ids of
 /// every one after it, and the ⋯'s menu lost its own.
 fn tick(

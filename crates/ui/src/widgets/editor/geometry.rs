@@ -240,7 +240,7 @@ fn runs(
             .find(|(range, _)| inside(range))
             .map_or(p.text_0, |(_, colour)| *colour);
         let (colour, background) = match mark {
-            Some(Mark::Field) => (p.amber_text, p.amber_fill.gamma_multiply(0.35)),
+            Some(Mark::Field) => (p.amber_text, p.amber_fill.gamma_multiply(0.1)),
             Some(Mark::Match) => (colour, p.bg_3),
             Some(Mark::CurrentMatch) => (colour, p.amber_dim),
             None => (colour, Color32::TRANSPARENT),

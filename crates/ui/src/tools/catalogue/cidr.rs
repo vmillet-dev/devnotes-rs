@@ -22,6 +22,9 @@ use crate::tools::ui::{
 use crate::tools::{Drawn, Tool, ToolResult};
 use crate::widgets::{Button, Segmented, TextField, address};
 
+/// What the masks' columns need to show what they hold.
+const MASKS_WIDTH: f32 = 470.0;
+
 const SAMPLE_PLAN: &str = "Bureaux 500\nWi-Fi invités 120\nServeurs 60\nImprimantes 12\nLien WAN 2";
 const SAMPLE_LIST: &str =
     "10.24.8.0/24\n10.24.9.0/24\n10.24.10.0/23\n10.24.12.0/24\n10.24.13.5 - 10.24.13.20";
@@ -489,7 +492,14 @@ impl CidrTool {
             .masks
             .iter()
             .position(|row| row.prefix == block.prefix);
-        let picked = text_table(ui, "cidr-masks", &headers, &rows, lit);
+        // Four numbers and two counts do not hold in a column: the table scrolls in its own.
+        let picked = egui::ScrollArea::horizontal()
+            .id_salt("cidr-masks-scroll")
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width().max(MASKS_WIDTH));
+                text_table(ui, "cidr-masks", &headers, &rows, lit)
+            })
+            .inner;
         if let Some(prefix) = picked
             .and_then(|at| answer.masks.get(at))
             .map(|it| it.prefix)

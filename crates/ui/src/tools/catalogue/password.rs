@@ -16,6 +16,9 @@ use crate::tools::ui::{
 use crate::tools::{Drawn, Tool, ToolResult};
 use crate::widgets::{Button, Kind, address};
 
+/// What the slider leaves its count on its line.
+const FIELD_ROOM: f32 = 84.0;
+
 const SETS: [(CharacterSet, &str, &str); 4] = [
     (CharacterSet::Lowercase, "lowercase", "abc"),
     (CharacterSet::Uppercase, "uppercase", "ABC"),
@@ -89,7 +92,12 @@ impl PasswordTool {
             ui.spacing_mut().item_spacing.x = 12.0;
             let mut length: u32 = self.length.trim().parse().unwrap_or(LENGTH.0);
             let range = LENGTH.0..=LENGTH.1;
-            let slider = egui::Slider::new(&mut length, range).show_value(false);
+            let p = palette(ui.ctx());
+            ui.spacing_mut().slider_width = (ui.available_width() - FIELD_ROOM).max(80.0);
+            ui.visuals_mut().selection.bg_fill = p.amber_fill;
+            let slider = egui::Slider::new(&mut length, range)
+                .show_value(false)
+                .trailing_fill(true);
             let moved = ui.add(slider);
             ui.ctx()
                 .accesskit_node_builder(moved.id, |node| node.set_label(name.clone()));

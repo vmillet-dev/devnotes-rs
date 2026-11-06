@@ -175,8 +175,12 @@ fn list(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         if rows.is_empty() && history.is_loaded() {
             let words = i18n::translate(language, keys::http::history::EMPTY, &[]);
             let words = egui::RichText::new(words).size(12.5).color(p.text_2);
-            let said = ui.add(egui::Label::new(words).wrap());
-            widgets::address(ui, &said, "http-history-empty");
+            egui::Frame::new()
+                .inner_margin(egui::Margin::same(20))
+                .show(ui, |ui| {
+                    let said = ui.add(egui::Label::new(words).wrap());
+                    widgets::address(ui, &said, "http-history-empty");
+                });
             return;
         }
         virtual_list(

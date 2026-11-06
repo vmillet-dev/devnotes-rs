@@ -16,6 +16,9 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, ChoiceMenu, IconButton, Naming, date};
 
+/// The lifecycle's badge and the date, side by side.
+const DEADLINE_WIDTH: f32 = 240.0;
+
 pub(super) fn bands(
     ui: &mut Ui,
     state: &AppState,
@@ -28,6 +31,9 @@ pub(super) fn bands(
             ui.spacing_mut().item_spacing = Vec2::new(8.0, 6.0);
             context(ui, state, (session, note), editing, actions);
             tags(ui, state, (session, note), editing, actions);
+            if ui.available_width() < DEADLINE_WIDTH {
+                ui.end_row();
+            }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 deadline(ui, state, (session, note), actions);
                 lifecycle_badge(ui, state, note);

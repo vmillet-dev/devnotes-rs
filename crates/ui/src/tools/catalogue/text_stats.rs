@@ -157,6 +157,27 @@ fn count_card(ui: &mut Ui, stats: &TextStats, language: Language) {
         });
 }
 
+/// The columns of `frequency_row`, named.
+fn frequency_head(ui: &mut Ui, language: Language) {
+    use keys::tools::text_stats as words;
+    let p = palette(ui.ctx());
+    let tr = |key| i18n::translate(language, key, &[]);
+    let width = ui.available_width();
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, ROW), Sense::hover());
+    let middle = rect.center().y;
+    let column = |key, left: f32, right: bool| {
+        let family = FontFamily::Proportional;
+        let shown = widgets::text(ui, &tr(key), 11.0, 500.0, family, p.text_2);
+        let x = rect.left() + left - if right { shown.size().x } else { 0.0 };
+        let at = Pos2::new(x, middle - shown.size().y / 2.0);
+        ui.painter().galley(at, shown, p.text_2);
+    };
+    column(words::CHARACTER, 10.0, false);
+    column(words::CODE_POINT, width * 0.34, false);
+    column(words::COUNT, width * 0.68, true);
+    column(words::SHARE, width - 10.0, true);
+}
+
 fn frequency_row(ui: &mut Ui, frequency: &Frequency, most: u32, language: Language) {
     let p = palette(ui.ctx());
     let width = ui.available_width();
@@ -287,6 +308,7 @@ impl TextStatsTool {
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.spacing_mut().item_spacing = Vec2::ZERO;
+                frequency_head(ui, language);
                 for frequency in &stats.frequencies {
                     frequency_row(ui, frequency, most, language);
                 }

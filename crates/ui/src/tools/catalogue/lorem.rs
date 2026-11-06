@@ -127,7 +127,10 @@ impl LoremTool {
                     address(ui, &said, "lorem-counted");
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         CopyValue::new(&answer.text, "Lorem ipsum", language).show(ui);
-                        drawn_again = Button::new(&again, "lorem-again").show(ui).clicked();
+                        drawn_again = Button::new(&again, "lorem-again")
+                            .kind(crate::widgets::Kind::Accent)
+                            .show(ui)
+                            .clicked();
                     });
                 });
                 ui.add_space(4.0);

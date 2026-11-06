@@ -4629,9 +4629,11 @@ how far it got: the views say they are partial until it is whole.
 ### The title bar, and the two bands under it
 
 The window keeps the system's decorations, so `ui::titlebar` is a bar inside it, 38 px on
-`bg-0`: the area switch on the left, the application's name centred on the window, the theme
-toggle on the right. The switch is drawn only once the library is open — every area acts on it.
-Its options are icons named for the screen reader and the tooltip (`area-option-notes`, `-tools`,
+`bg-0`: the menus on the left, the application's name centred on the window, the theme toggle on
+the right. The area switch (`titlebar::area_switch`) heads each area's rail, three columns of an
+icon over its name, and comes to the bar, icons alone, only while the rail is put away: nothing
+else then leads to the other areas. It is drawn only once the library is open — every area acts
+on it. Its options are named for the screen reader and the tooltip (`area-option-notes`, `-tools`,
 `-http`), in the order of `Ctrl+1/2/3`, which `keys::APPLICATION` reads by position. The toggle
 names what it switches **to**, its icon and its label alike, and writes the appearance like the
 preferences panel does. Until the screens arrive, an area is an empty room addressed
@@ -4707,12 +4709,12 @@ shown, the fields form after it: `Ctrl+Alt+P` in the window (`keys::APPLICATION`
 `devnotes --action palette` from a second launch, which hands the action over the profile's
 socket — the path the global shortcut takes in P9, with the hidden window and the desktop
 notification after a copy. It asks the core for the notes of every space, ranked
-(`ranked: true`), through a `QueryCell` of its own: the canvas's search must not change behind
-it. What is typed is read as a mode — `@` a scope or a space, `#` a tag, `>` a command — and a
+(`ranked: true`), and for the requests, through `QueryCell`s of its own: the canvas's search must
+not change behind it. The tools are read here, by their names first, and the empty field recalls
+a few of each kind. What is typed is read as a mode — `@` a scope or a space, `#` a tag, `>` a command — and a
 chosen chip narrows the search. The focus never leaves the field: the arrows, Tab, Enter and
-Backspace are taken from the input before the field reads them, and move a highlight. Requests and
-tools join with their areas; `> New folder` asks for the name in a prompt of its own
-(`notes::overlays::folder_prompt`).
+Backspace are taken from the input before the field reads them, and move a highlight.
+`> New folder` asks for the name in a prompt of its own (`notes::overlays::folder_prompt`).
 
 The header is one row while every control holds in it and two on purpose past that
 (`notes::header::layout`): the reference's floors decide, not the widths drawn, which differ
@@ -7160,6 +7162,11 @@ bar and the banners, and renders each in both themes on a software adapter — W
 lavapipe on Linux — into `DEVNOTES_CAPTURES` when it is set. `test-rust` sets it and uploads
 the PNGs as `captures-<os>`, to be looked at beside the reference's captures. Nothing compares
 pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
+
+`app::screens` replays the reference's own screens, its data, gestures, file names and window
+sizes: `DEVNOTES_SCREENS=<dir> cargo test -p ui --lib app::screens` writes the PNGs to set beside
+the `angular-reference` zip, one profile copy a screen since a board shown or a rail put away is
+remembered. Without the variable it does nothing, and CI does not set it.
 
 ### The scenarios, on the assembled window
 

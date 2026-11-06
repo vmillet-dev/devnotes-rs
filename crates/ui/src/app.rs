@@ -463,6 +463,12 @@ impl eframe::App for DevNotesApp {
 mod captures;
 
 #[cfg(test)]
+mod screens;
+
+#[cfg(test)]
+mod area_switch_tests;
+
+#[cfg(test)]
 mod library_panel_tests;
 
 #[cfg(test)]

@@ -135,7 +135,11 @@ fn row(code: u32, language: Language) -> ReferenceRow {
         Cell::mono(format!("{code:02X}")),
         Cell::mono(format!("{code:03o}")),
         Cell::mono(format!("{code:08b}")),
-        Cell::mono(shown.clone()),
+        if control.is_some() {
+            Cell::chips(vec![shown.clone()])
+        } else {
+            Cell::mono(shown.clone())
+        },
         name,
         Cell::mono(control.map_or("", |it| it.2)),
         Cell::mono(ctrl.clone()),
@@ -233,7 +237,7 @@ mod tests {
     fn a_control_says_its_abbreviation_and_its_key() {
         let escape = row(27, Language::En);
 
-        assert_eq!(escape.cells[4].text, "ESC");
+        assert_eq!(escape.cells[4].chips, ["ESC"]);
         assert_eq!(escape.cells[7].text, "^[");
         assert!(matches_ascii(&escape, "escape"));
     }

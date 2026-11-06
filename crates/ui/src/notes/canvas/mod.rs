@@ -81,11 +81,22 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
     if view.matched == 0 {
         padded(ui, canvas, |ui| {
             state_text(ui, &tr(keys::notes::NO_RESULTS), "canvas-no-results");
-            // The chapter that explains this screen, not the top of the guide.
-            if !query.has_user_filters()
-                && Button::new(&tr(keys::getting_started::OPEN_CHAPTER), "canvas-guide")
+            if query.has_user_filters() {
+                let words = tr(if query.facets().count() > 0 {
+                    keys::notes::CLEAR_FILTERS
+                } else {
+                    keys::notes::CLEAR_SEARCH
+                });
+                if Button::new(&words, "canvas-clear-filters")
                     .show(ui)
                     .clicked()
+                {
+                    actions.push(Action::Notes(super::Action::ClearFilters));
+                }
+            // The chapter that explains this screen, not the top of the guide.
+            } else if Button::new(&tr(keys::getting_started::OPEN_CHAPTER), "canvas-guide")
+                .show(ui)
+                .clicked()
             {
                 let guide = Panel::Guide(crate::services::guide::NOTES);
                 actions.push(Action::Menu(crate::titlebar::Action::OpenHelp(guide)));
@@ -113,17 +124,27 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
     selection_bar::show(ui, state, &shown, canvas_view, actions);
 }
 
+const HINT_HEIGHT: f32 = 28.0;
+
 /// The keys that matter, on the bottom edge whatever is above it.
 fn hint(ui: &mut Ui, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::notes::KEYBOARD_HINT, &[]);
     let width = widgets::arrowed(ui, None, &words, 11.0, p.text_2);
     let region = ui.max_rect();
-    let band = Rect::from_min_max(pos2(region.left(), region.bottom() - 24.0), region.max);
+    let band = Rect::from_min_max(
+        pos2(region.left(), region.bottom() - HINT_HEIGHT),
+        region.max,
+    );
     let mut band_ui = ui.new_child(UiBuilder::new().max_rect(band));
     band_ui
         .painter()
-        .rect_filled(band, CornerRadius::ZERO, p.bg_0.gamma_multiply(0.92));
+        .rect_filled(band, CornerRadius::ZERO, p.bg_0);
+    band_ui.painter().hline(
+        band.x_range(),
+        band.top(),
+        egui::Stroke::new(1.0, p.line_soft),
+    );
     let rect = Rect::from_center_size(band.center(), vec2(width, 14.0));
     let response = band_ui.allocate_rect(rect, Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
@@ -166,7 +187,8 @@ fn sections(
             let width = ui.available_width() - 2.0 * s.canvas;
             let rows = Rows::of(view, width, s.grid, s.section);
             let origin = ui.min_rect().min + Vec2::splat(s.canvas);
-            ui.set_height(rows.height() + 2.0 * s.canvas);
+            // Past the keyboard hint, which lies over the bottom edge.
+            ui.set_height(rows.height() + 2.0 * s.canvas + HINT_HEIGHT);
             canvas_view.columns = rows.columns();
             // A card asked to take the focus may be scrolled out of view, so not drawn.
             if let Some(top) = canvas_view

@@ -10,15 +10,18 @@ use egui::{
     Align2, Color32, CornerRadius, FontFamily, FontId, Id, Key, Margin, Modifiers, Rect, Role,
     Sense, Stroke, Ui, UiBuilder, WidgetInfo, pos2, vec2,
 };
+use engine::http::model::RequestKind;
 use engine::notes::kind::NoteKind;
 use i18n::keys;
 
 use crate::action::{Action, Actions};
 use crate::api;
 use crate::state::AppState;
+use crate::state::http::tree::Badge;
 use crate::state::palette::{Chip, Mode, Scope};
 use crate::theme::icons::Icon;
 use crate::theme::palette;
+use crate::tools::catalogue;
 use crate::widgets::{self, IconButton};
 use options::{Chosen, Group, Item};
 
@@ -241,6 +244,7 @@ fn field(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
                     .hint_text(hint)
                     .font(FontId::new(13.5, FontFamily::Proportional))
                     .text_color(p.text_0)
+                    .align(egui::Align2::LEFT_CENTER)
                     .desired_width(f32::INFINITY)
                     .min_size(vec2(140.0, 32.0)),
             );
@@ -269,6 +273,8 @@ fn chip_label(chip: &Chip, language: i18n::Language) -> String {
 fn scope_key(scope: Scope) -> i18n::Key {
     match scope {
         Scope::Notes => keys::palette::scopes::NOTES,
+        Scope::Requests => keys::palette::scopes::REQUESTS,
+        Scope::Tools => keys::palette::scopes::TOOLS,
         Scope::Spaces => keys::palette::scopes::SPACES,
     }
 }
@@ -347,7 +353,10 @@ fn heading_row(ui: &mut Ui, heading: i18n::Key, count: Option<usize>, language: 
 fn row(ui: &mut Ui, state: &AppState, item: &Item, on: bool) -> (bool, bool, bool) {
     let p = palette(ui.ctx());
     let language = state.language;
-    let compact = !matches!(item, Item::Note(_) | Item::Space { .. });
+    let compact = !matches!(
+        item,
+        Item::Note(_) | Item::Request(_) | Item::Tool(_) | Item::Space { .. }
+    );
     let height = if compact { 34.0 } else { 44.0 };
     let title = title_of(item, language);
     let author_id = if matches!(item, Item::Create(_)) {
@@ -410,6 +419,8 @@ fn title_of(item: &Item, language: i18n::Language) -> String {
             i18n::translate(language, keys::notes::UNTITLED, &[])
         }
         Item::Note(note) => note.title.clone(),
+        Item::Request(request) => request.name.clone(),
+        Item::Tool(id) => catalogue::find(id).map_or_else(String::new, |tool| tool.name(language)),
         Item::Space { name, .. } => name.clone(),
         Item::Command(command) => i18n::translate(language, command.label(), &[]),
         Item::Chip { chip, .. } => match chip {
@@ -441,6 +452,29 @@ fn mark(ui: &mut Ui, item: &Item, inner: Rect, language: i18n::Language) -> f32 
             let badge =
                 crate::notes::ui::kind_badge(&mut child, note.kind, note.language, language);
             badge.rect.right().max(inner.left() + 26.0) + 10.0
+        }
+        Item::Request(request) => {
+            let badge = match request.kind {
+                RequestKind::Http => Badge::Method(request.method),
+                RequestKind::Graphql => Badge::Graphql,
+                RequestKind::Websocket => Badge::Websocket,
+            };
+            let hue = crate::http::badge_hue(ui, badge);
+            let word = widgets::text(ui, badge.short(), 11.0, 700.0, FontFamily::Monospace, hue);
+            let at = pos2(inner.left(), inner.center().y - word.size().y / 2.0);
+            let right = at.x + word.size().x;
+            ui.painter().galley(at, word, hue);
+            right.max(inner.left() + 26.0) + 10.0
+        }
+        Item::Tool(id) => {
+            if let Some(tool) = catalogue::find(id) {
+                let hue = tool.category.hue(p);
+                ui.painter()
+                    .rect_filled(tile, corner, hue.gamma_multiply(0.15));
+                let glyph = Rect::from_center_size(tile.center(), vec2(14.0, 14.0));
+                crate::theme::icons::paint(ui, glyph, tool.category.icon(), hue);
+            }
+            tile.right() + 10.0
         }
         Item::Create(_) => inner.left(),
         Item::Space { .. }
@@ -479,10 +513,28 @@ fn main_text(ui: &Ui, state: &AppState, item: &Item, title: &str, rect: Rect) {
     } else {
         term_of(state)
     };
-    let job = lit(title, &term, rect.width(), p.amber_text);
+    let mut job = lit(title, &term, rect.width(), p.amber_text);
+    if let Item::Note(note) = item
+        && !note.placeholders.is_empty()
+    {
+        let count = u32::try_from(note.placeholders.len()).unwrap_or(u32::MAX);
+        let fields = i18n::translate(
+            state.language,
+            keys::notes::PLACEHOLDERS_COUNT,
+            &[("count", count.into())],
+        );
+        let mut format =
+            TextFormat::simple(FontId::new(10.5, FontFamily::Proportional), p.amber_text);
+        format.coords.push(*b"wght", 500.0);
+        job.append(&fields, 8.0, format);
+    }
     let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
     let sub = match item {
         Item::Note(note) => first_line(note),
+        Item::Request(request) => request.url.clone(),
+        Item::Tool(id) => {
+            catalogue::find(id).map_or_else(String::new, |tool| tool.line(state.language))
+        }
         Item::Chip { chip, count } => chip_line(chip, *count, state.language),
         _ => String::new(),
     };
@@ -505,7 +557,8 @@ fn main_text(ui: &Ui, state: &AppState, item: &Item, title: &str, rect: Rect) {
         );
         return;
     }
-    let mono = matches!(item, Item::Note(note) if note.kind == NoteKind::Snippet);
+    let mono = matches!(item, Item::Request(_))
+        || matches!(item, Item::Note(note) if note.kind == NoteKind::Snippet);
     let (size, family) = if mono {
         (11.0, FontFamily::Monospace)
     } else {
@@ -583,6 +636,12 @@ fn chip_line(chip: &Chip, count: Option<u32>, language: i18n::Language) -> Strin
         Chip::Scope(Scope::Notes) => {
             i18n::translate(language, keys::palette::scope_lines::NOTES, &[])
         }
+        Chip::Scope(Scope::Requests) => {
+            i18n::translate(language, keys::palette::scope_lines::REQUESTS, &[])
+        }
+        Chip::Scope(Scope::Tools) => {
+            i18n::translate(language, keys::palette::scope_lines::TOOLS, &[])
+        }
         Chip::Scope(Scope::Spaces) => {
             i18n::translate(language, keys::palette::scope_lines::SPACES, &[])
         }
@@ -623,6 +682,8 @@ fn side(ui: &mut Ui, state: &AppState, item: &Item, inner: Rect, on: bool) -> f3
     let words = if on {
         let key = match item {
             Item::Note(_) => keys::palette::act::NOTE,
+            Item::Request(_) => keys::palette::act::REQUEST,
+            Item::Tool(_) => keys::palette::act::TOOL,
             Item::Space { .. } => keys::palette::act::SPACE,
             Item::Command(_) => keys::palette::act::COMMAND,
             Item::Chip { .. } => keys::palette::act::CHIP,
@@ -647,6 +708,10 @@ fn side(ui: &mut Ui, state: &AppState, item: &Item, inner: Rect, on: bool) -> f3
                     .collect();
                 [vec![space], tags].concat().join("  ")
             }
+            Item::Request(request) => request.place.join(" › "),
+            Item::Tool(id) => catalogue::find(id).map_or_else(String::new, |tool| {
+                i18n::translate(language, tool.category.name(), &[])
+            }),
             _ => String::new(),
         }
     };
@@ -729,7 +794,9 @@ fn hints(ui: &mut Ui, state: &AppState, current: Option<&Item>) {
         Some(Item::Chip { .. }) => hints.push((&["Tab", "↵"], keys::palette::keys::CHOOSE)),
         Some(Item::Command(_)) => hints.push((&["↵"], keys::palette::keys::RUN)),
         Some(Item::Create(_)) => hints.push((&["↵"], keys::palette::keys::CREATE)),
-        Some(Item::Space { .. }) => hints.push((&["↵"], keys::palette::keys::OPEN)),
+        Some(Item::Space { .. } | Item::Request(_) | Item::Tool(_)) => {
+            hints.push((&["↵"], keys::palette::keys::OPEN));
+        }
         None => {}
     }
     if !state.palette.chips().is_empty() && state.palette.text().is_empty() {

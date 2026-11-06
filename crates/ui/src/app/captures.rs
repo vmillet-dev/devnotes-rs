@@ -722,7 +722,7 @@ fn the_tools_area() {
 }
 
 /// The bench's resources are its profile.
-fn copy_identity_lists(profile: &Path) {
+pub(super) fn copy_identity_lists(profile: &Path) {
     let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../engine/resources/identity");
     let places = profile.join("identity/places");
     std::fs::create_dir_all(&places).unwrap();

@@ -247,14 +247,17 @@ impl LineBreaksTool {
             return;
         };
         let found = answer.found;
-        let mut words = format!("LF {}   CRLF {}   CR {}", found.lf, found.crlf, found.cr);
+        let words = format!("LF {}   CRLF {}   CR {}", found.lf, found.crlf, found.cr);
         let kinds = [found.lf, found.crlf, found.cr];
-        if kinds.iter().filter(|count| **count > 0).count() > 1 {
-            let mixed = i18n::translate(language, keys::tools::line_breaks::MIXED, &[]);
-            words = format!("{words}   {mixed}");
-        }
-        let said = hint(ui, &words);
-        address(ui, &said, "line-breaks-found");
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 10.0;
+            let said = hint(ui, &words);
+            address(ui, &said, "line-breaks-found");
+            if kinds.iter().filter(|count| **count > 0).count() > 1 {
+                let mixed = i18n::translate(language, keys::tools::line_breaks::MIXED, &[]);
+                crate::tools::ui::pill(ui, &mixed, palette(ui.ctx()).amber_fill);
+            }
+        });
     }
 
     fn options(&mut self, ui: &mut Ui, language: Language) {

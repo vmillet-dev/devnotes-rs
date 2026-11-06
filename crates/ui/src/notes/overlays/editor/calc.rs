@@ -121,7 +121,7 @@ pub(super) fn show(
     }
     let footer = Rect::from_min_max(egui::pos2(whole.left(), footer_top), whole.max);
     let mut footer_ui = ui.new_child(egui::UiBuilder::new().max_rect(footer));
-    self::footer(&mut footer_ui, view, sheet, state.calc_format());
+    self::footer(&mut footer_ui, view, sheet, state, actions);
     ui.advance_cursor_after_rect(whole);
 
     let now = ui.input(|input| input.time);
@@ -471,7 +471,14 @@ fn copy_button(
     }
 }
 
-fn footer(ui: &mut Ui, view: &mut CalcView, sheet: Option<&CalcSheet>, format: Format) {
+fn footer(
+    ui: &mut Ui,
+    view: &mut CalcView,
+    sheet: Option<&CalcSheet>,
+    state: &AppState,
+    actions: &mut Actions,
+) {
+    let format = state.calc_format();
     let language = format.language;
     let p = palette(ui.ctx());
     let lines = u32::try_from(view.editor.buffer.line_count()).unwrap_or(u32::MAX);
@@ -501,7 +508,37 @@ fn footer(ui: &mut Ui, view: &mut CalcView, sheet: Option<&CalcSheet>, format: F
             let response = ui.label(galley);
             widgets::address(ui, &response, "calc-summary");
         }
+        let right = egui::Layout::right_to_left(egui::Align::Center);
+        ui.with_layout(right, |ui| {
+            ui.spacing_mut().item_spacing.x = 6.0;
+            decimals(ui, state, actions);
+        });
     });
+}
+
+/// How many decimals a result shows: the preference, within reach of the sheet it changes.
+fn decimals(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+    let p = palette(ui.ctx());
+    let tr = |key| i18n::translate(state.language, key, &[]);
+    let auto = tr(keys::calc::editor::DECIMALS_AUTO);
+    let figures: Vec<String> = (0..=15_u8).map(|places| places.to_string()).collect();
+    let mut options: Vec<(Option<u8>, &str)> = vec![(None, auto.as_str())];
+    options.extend((0..=15_u8).zip(&figures).map(|(places, name)| {
+        let name: &str = name;
+        (Some(places), name)
+    }));
+    let label = tr(keys::calc::editor::DECIMALS);
+    let mut chosen = state.settings.calc_decimals;
+    if widgets::ChoiceMenu::new(&label, "calc-decimals", &options)
+        .show(ui, &mut chosen)
+        .changed()
+    {
+        actions.push(crate::notes::overlays::editor::editor(Editing::Decimals(
+            chosen,
+        )));
+    }
+    let family = FontFamily::Proportional;
+    ui.label(widgets::text(ui, &label, 11.5, 400.0, family, p.text_2));
 }
 
 fn distinct_names(sheet: &CalcSheet) -> u32 {

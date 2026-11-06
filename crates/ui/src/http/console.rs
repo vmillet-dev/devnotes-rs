@@ -99,7 +99,9 @@ fn folded(ui: &mut Ui, state: &AppState, of: Of<'_>, actions: &mut Actions) {
     let mut job = LayoutJob::default();
     let font = FontId::new(SIZE, FontFamily::Proportional);
     let title = tr(keys::http::console::TITLE);
-    job.append(&title, 0.0, TextFormat::simple(font.clone(), p.text_1));
+    let mut heading = TextFormat::simple(font.clone(), p.text_0);
+    heading.coords.push(*b"wght", 600.0);
+    job.append(&title, 0.0, heading);
     let summary = format!("   {traffic} · {logs}");
     job.append(&summary, 0.0, TextFormat::simple(font.clone(), p.text_2));
     if errors > 0 {
@@ -116,6 +118,11 @@ fn folded(ui: &mut Ui, state: &AppState, of: Of<'_>, actions: &mut Actions) {
         ui.new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(at, galley.size())));
     let said = over.add(egui::Label::new(galley).selectable(false));
     widgets::address(ui, &said, "http-console-summary");
+    let glyph = Rect::from_center_size(
+        pos2(pane.right() - 20.0, pane.center().y),
+        egui::Vec2::splat(12.0),
+    );
+    crate::theme::icons::paint(ui, glyph, Icon::ChevronUp, p.text_2);
     if response.clicked() {
         actions.push(Asked::Http(Action::ToggleConsole));
     }

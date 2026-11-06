@@ -54,7 +54,9 @@ fn example(entry: &Value, language: Language) -> Cell {
     } else {
         found.join("  ")
     };
-    Cell::mono(text(entry, "pattern")).below(format!("{on} {} → {matched}", text(entry, "text")))
+    Cell::mono(text(entry, "pattern"))
+        .below(format!("{on} {} →", text(entry, "text")))
+        .result(matched)
 }
 
 fn row(entry: &Value, language: Language) -> ReferenceRow {
