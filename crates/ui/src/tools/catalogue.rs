@@ -4,6 +4,8 @@
 mod ascii;
 mod base64;
 mod case;
+mod cron;
+mod dates;
 mod diff;
 mod hash;
 mod jwt;
@@ -13,6 +15,7 @@ mod password;
 mod reference;
 mod text_stats;
 mod url_codec;
+mod zones;
 
 use egui::Color32;
 use engine::notes::kind::NoteKind;
@@ -403,7 +406,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "now",
         ],
         from_note: &[],
-        make: coming,
+        make: dates::make,
     },
     ToolEntry {
         id: "zones",
@@ -419,14 +422,14 @@ pub static TOOLS: [ToolEntry; 32] = [
             "offset",
         ],
         from_note: &[],
-        make: coming,
+        make: zones::make,
     },
     ToolEntry {
         id: "cron",
         category: Category::Time,
         keywords: &["cron", "crontab", "schedule", "quartz", "@daily", "job"],
         from_note: &[],
-        make: coming,
+        make: cron::make,
     },
     ToolEntry {
         id: "sizes",
@@ -606,3 +609,5 @@ pub static TOOLS: [ToolEntry; 32] = [
 mod encoding_tests;
 #[cfg(test)]
 mod text_tests;
+#[cfg(test)]
+mod time_tests;

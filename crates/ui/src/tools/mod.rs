@@ -26,7 +26,7 @@ use live::Turn;
 use ui::note_picker::{self, PickedNote, Picker};
 
 /// What the area's controls ask, applied at the end of the frame.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     /// The whole catalogue, one category of it, or the favourites.
     Home(Option<Filter>),
@@ -35,6 +35,8 @@ pub enum Action {
     /// `Ctrl+K`: the home and its search, from an open tool too.
     SearchAsked,
     SampleLoaded,
+    /// The zones the clock tool lists, kept with the application.
+    SetZones(Vec<String>),
 }
 
 /// All the frame knows of a tool, by its own session. ⚠️ What it keeps of a key or a password
@@ -107,6 +109,12 @@ pub struct Drawn<'a> {
     pub actions: &'a mut Actions,
     /// The input « Import from a note » was pressed for: its `from_note` name, and its slot.
     pub importing: Option<(&'static str, &'static str)>,
+}
+
+impl Drawn<'_> {
+    pub fn push(&mut self, action: Action) {
+        self.actions.push(Asked::Tools(action));
+    }
 }
 
 /// What only the area's drawing sees (D13), the tools' sessions among it.

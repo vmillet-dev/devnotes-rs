@@ -25,6 +25,8 @@ pub struct Turn<'a> {
     pub status: &'a mut StatusNotifier,
     pub clipboard: &'a Arc<dyn Clipboard + Send + Sync>,
     pub dialog: &'a Arc<dyn FileDialog + Send + Sync>,
+    /// The zones the clock tool lists.
+    pub zones: &'a [String],
 }
 
 pub struct Live<P, T> {
@@ -152,6 +154,7 @@ mod tests {
                 status: &mut self.status,
                 clipboard: &self.clipboard,
                 dialog: &self.dialog,
+                zones: &[],
             };
             let launched = &mut self.launched;
             self.live.update(&mut turn, request, |backend, params| {

@@ -9,6 +9,11 @@ use crate::tools::catalogue::{self, Category, ToolEntry};
 
 const RECENTS: &str = "devnotes.recentTools";
 const FAVOURITES: &str = "devnotes.favouriteTools";
+const ZONES: &str = "devnotes.timeZones";
+
+const DEFAULT_ZONES: [&str; 3] = ["UTC", "America/New_York", "Asia/Tokyo"];
+/// Read back from a file nobody checks.
+const KEPT_ZONES: usize = 64;
 
 /// How many are shown, on the home and in the rail.
 pub const SHOWN_RECENTS: usize = 5;
@@ -31,13 +36,26 @@ struct RecentTool {
     at: DateTime<Utc>,
 }
 
-#[derive(Default)]
 pub struct ToolsState {
     open: Option<&'static ToolEntry>,
     filter: Option<Filter>,
     recents: Vec<RecentTool>,
     /// In the order they were starred; one the catalogue lost stays in the file.
     favourites: Vec<String>,
+    /// Which of them the database knows is Rust's to say, not the file's.
+    zones: Vec<String>,
+}
+
+impl Default for ToolsState {
+    fn default() -> Self {
+        Self {
+            open: None,
+            filter: None,
+            recents: Vec::new(),
+            favourites: Vec::new(),
+            zones: DEFAULT_ZONES.map(str::to_owned).to_vec(),
+        }
+    }
 }
 
 impl ToolsState {
@@ -47,6 +65,9 @@ impl ToolsState {
             favourites: preferences
                 .get(FAVOURITES)
                 .map_or_else(Vec::new, read_favourites),
+            zones: preferences
+                .get(ZONES)
+                .map_or_else(|| DEFAULT_ZONES.map(str::to_owned).to_vec(), read_zones),
             ..Self::default()
         }
     }
@@ -62,6 +83,15 @@ impl ToolsState {
             .collect();
         preferences.set(RECENTS, &Value::from(recents).to_string());
         preferences.set(FAVOURITES, &json!(self.favourites).to_string());
+        preferences.set(ZONES, &json!(self.zones).to_string());
+    }
+
+    pub fn zones(&self) -> &[String] {
+        &self.zones
+    }
+
+    pub fn set_zones(&mut self, zones: Vec<String>) {
+        self.zones = zones;
     }
 
     pub fn open_tool(&self) -> Option<&'static ToolEntry> {
@@ -137,17 +167,25 @@ fn read_recents(stored: &str) -> Vec<RecentTool> {
 
 /// Ids alone, each once: which of them the catalogue still has is for whoever lists them to say.
 fn read_favourites(stored: &str) -> Vec<String> {
+    read_names(stored, KEPT_FAVOURITES)
+}
+
+fn read_zones(stored: &str) -> Vec<String> {
+    read_names(stored, KEPT_ZONES)
+}
+
+fn read_names(stored: &str, kept: usize) -> Vec<String> {
     let Ok(Value::Array(values)) = serde_json::from_str(stored) else {
         return Vec::new();
     };
-    let mut ids: Vec<String> = Vec::new();
-    for id in values.iter().filter_map(Value::as_str) {
-        if !ids.iter().any(|kept| kept == id) {
-            ids.push(id.to_owned());
+    let mut names: Vec<String> = Vec::new();
+    for name in values.iter().filter_map(Value::as_str) {
+        if !names.iter().any(|it| it == name) {
+            names.push(name.to_owned());
         }
     }
-    ids.truncate(KEPT_FAVOURITES);
-    ids
+    names.truncate(kept);
+    names
 }
 
 #[cfg(test)]

@@ -666,6 +666,10 @@ impl AppState {
                 self.save_settings(backend);
             }
             Tools::SearchAsked => self.ask_tool_search(),
+            Tools::SetZones(zones) => {
+                self.tools.set_zones(zones);
+                self.save_settings(backend);
+            }
             Tools::SampleLoaded => {
                 let said = i18n::Message::new(i18n::keys::tools::SAMPLE_LOADED);
                 self.status.report(said);
@@ -804,6 +808,7 @@ impl AppState {
                 status: &mut self.status,
                 clipboard: &self.clipboard,
                 dialog: &self.dialog,
+                zones: self.tools.zones(),
             };
             self.tools_view.update(entry, &mut turn);
         }
