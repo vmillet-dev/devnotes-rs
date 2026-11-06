@@ -17,6 +17,7 @@ pub enum Reason {
     #[default]
     Quit,
     Switch,
+    Restore,
 }
 
 #[derive(Default)]
@@ -92,9 +93,9 @@ impl Leave {
         self.reason == Reason::Quit && std::mem::take(&mut self.closes)
     }
 
-    /// The answer let a switch through. Asked again next time: the window stays.
+    /// The answer let a switch or a restore through. Asked again next time: the window stays.
     pub fn take_switch(&mut self) -> bool {
-        let passed = self.reason == Reason::Switch && std::mem::take(&mut self.closes);
+        let passed = self.reason != Reason::Quit && std::mem::take(&mut self.closes);
         self.released &= !passed;
         passed
     }

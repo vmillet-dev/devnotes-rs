@@ -3,6 +3,7 @@
 //! typed in a `PassphraseField` and leaves the view for the core by `take`, never by an `Action`.
 
 use egui::{Id, Layout, RichText, Ui};
+use engine::backup::copies::Backup;
 use engine::vault::MINIMUM_LENGTH;
 use i18n::{Key, Language, Message, keys};
 use zeroize::Zeroizing;
@@ -60,7 +61,12 @@ pub(crate) fn change_id() -> Id {
     Id::unique("change-passphrase")
 }
 
-pub(super) fn page(ui: &mut Ui, state: &AppState, settings: &mut Settings, actions: &mut Actions) {
+pub(super) fn page(
+    ui: &mut Ui,
+    state: &AppState,
+    (settings, reveal): (&mut Settings, &mut bool),
+    actions: &mut Actions,
+) {
     use keys::settings::security;
     let language = state.language;
     let tr = |key: Key| i18n::translate(language, key, &[]);
@@ -85,6 +91,129 @@ pub(super) fn page(ui: &mut Ui, state: &AppState, settings: &mut Settings, actio
     );
     note(ui, &tr(security::BACKUPS_NOTE));
     note(ui, &tr(security::BACKUPS_LIMIT));
+    copies(ui, state, reveal, actions);
+}
+
+fn copies(ui: &mut Ui, state: &AppState, reveal: &mut bool, actions: &mut Actions) {
+    let language = state.language;
+    let tr = |key: Key| i18n::translate(language, key, &[]);
+    ui.add_space(6.0);
+    if state.backups.is_loading() {
+        note(ui, &tr(keys::backups::LOADING));
+        return;
+    }
+    if state.backups.copies().is_empty() {
+        let none = ui.label(
+            RichText::new(tr(keys::backups::NONE))
+                .size(11.5)
+                .color(palette(ui.ctx()).text_2),
+        );
+        widgets::address(ui, &none, "backup-empty");
+        return;
+    }
+    for copy in state.backups.copies() {
+        ui.push_id(&copy.id, |ui| {
+            copy_row(ui, state, copy, reveal, actions);
+            if state.backups.pending() == Some(copy.id.as_str()) {
+                confirm_restore(ui, state, copy, reveal, actions);
+            }
+        });
+    }
+}
+
+fn copy_row(
+    ui: &mut Ui,
+    state: &AppState,
+    copy: &Backup,
+    reveal: &mut bool,
+    actions: &mut Actions,
+) {
+    let language = state.language;
+    let p = palette(ui.ctx());
+    let when = i18n::time::relative(copy.taken_at, state.clock.now()).text(language);
+    let detail = format!("{} · {}", copy.id, human_size(copy.bytes, language));
+    let shown = ui.horizontal(|ui| {
+        ui.set_min_height(36.0);
+        ui.label(RichText::new(when).size(12.5).color(p.text_1));
+        let words = ui.label(RichText::new(detail).size(11.0).monospace().color(p.text_2));
+        widgets::address(ui, &words, "backup-detail");
+        ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+            if !copy.openable {
+                let said = i18n::translate(language, keys::backups::UNOPENABLE, &[]);
+                ui.label(RichText::new(said).size(11.5).color(p.red));
+            } else if state.backups.pending() != Some(copy.id.as_str()) {
+                let label = i18n::translate(language, keys::backups::RESTORE, &[]);
+                if Button::new(&label, "backup-restore").show(ui).clicked() {
+                    let asked = Ask::Restore(copy.id.clone());
+                    actions.push(Asked::Menu(Action::Preferences(asked)));
+                    *reveal = true;
+                }
+            }
+        });
+    });
+    widgets::address(ui, &shown.response, "backup-row");
+}
+
+/// The trigger gives way to a sentence naming what will happen, and the confirm sits elsewhere.
+fn confirm_restore(
+    ui: &mut Ui,
+    state: &AppState,
+    copy: &Backup,
+    reveal: &mut bool,
+    actions: &mut Actions,
+) {
+    let language = state.language;
+    let p = palette(ui.ctx());
+    let tr = |key: Key| i18n::translate(language, key, &[]);
+    let said = Message::new(keys::backups::CONFIRM)
+        .with("when", copy.id.as_str())
+        .text(language);
+    let words = ui.add(egui::Label::new(RichText::new(said).size(12.0).color(p.red)).wrap());
+    widgets::address(ui, &words, "backup-confirm");
+    let working = state.gate.is_working();
+    let answers = ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 8.0;
+        let mut ask = |ask| actions.push(Asked::Menu(Action::Preferences(ask)));
+        if Button::new(&tr(keys::backups::CANCEL), "backup-cancel")
+            .show(ui)
+            .clicked()
+        {
+            ask(Ask::KeepLibrary);
+        }
+        let action = if working {
+            keys::backups::RESTORING
+        } else {
+            keys::backups::CONFIRM_RESTORE
+        };
+        if Button::new(&tr(action), "backup-confirm-restore")
+            .kind(Kind::Destructive)
+            .enabled(!working)
+            .show(ui)
+            .clicked()
+        {
+            ask(Ask::ConfirmRestore);
+        }
+    });
+    // Until it is in view, and no further: the strip replaces the trigger further down a panel
+    // that scrolls, and the panel learns its new height a frame late.
+    if *reveal {
+        answers.response.scroll_to_me(None);
+        *reveal = !ui.clip_rect().contains_rect(answers.response.rect);
+    }
+}
+
+/// Rounded to the unit that reads: a copy is megabytes, not 4 233 981 bytes.
+fn human_size(bytes: u64, language: Language) -> String {
+    #[expect(clippy::cast_precision_loss, reason = "a size to read")]
+    let mega = bytes as f64 / (1024.0 * 1024.0);
+    if mega >= 1.0 {
+        return Message::new(keys::http::response::MEGABYTES)
+            .with("value", i18n::format::fixed(mega, 1, language))
+            .text(language);
+    }
+    Message::new(keys::http::response::KILOBYTES)
+        .with("value", (bytes / 1024).max(1).to_string())
+        .text(language)
 }
 
 pub(super) fn dialog(

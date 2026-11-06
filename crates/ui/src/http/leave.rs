@@ -65,6 +65,10 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
             keys::http::leave::hint::SWITCH,
             keys::http::leave::discard::SWITCH,
         ),
+        Reason::Restore => (
+            keys::http::leave::hint::RESTORE,
+            keys::http::leave::discard::RESTORE,
+        ),
     };
     let hint = egui::RichText::new(tr(hint)).size(12.5).color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
