@@ -9,7 +9,7 @@ use crate::testing;
 
 const WIDE: egui::Vec2 = egui::vec2(1_300.0, 900.0);
 
-fn opened(tool: &str) -> Harness<'static, Bench> {
+pub(super) fn opened(tool: &str) -> Harness<'static, Bench> {
     let (backend, profile) = testing::unlocked();
     let mut harness = area_of(Area::Tools, backend, profile);
     harness
@@ -27,12 +27,12 @@ fn opened(tool: &str) -> Harness<'static, Bench> {
     harness
 }
 
-fn click(harness: &mut Harness<'_, Bench>, id: &str) {
+pub(super) fn click(harness: &mut Harness<'_, Bench>, id: &str) {
     harness.get_by(|node| node.author_id() == Some(id)).click();
     settle(harness);
 }
 
-fn type_in(harness: &mut Harness<'_, Bench>, id: &str, text: &str) {
+pub(super) fn type_in(harness: &mut Harness<'_, Bench>, id: &str, text: &str) {
     harness.get_by(|node| node.author_id() == Some(id)).focus();
     harness.step();
     harness
@@ -41,20 +41,20 @@ fn type_in(harness: &mut Harness<'_, Bench>, id: &str, text: &str) {
     settle(harness);
 }
 
-fn has(harness: &Harness<'_, Bench>, id: &str) -> bool {
+pub(super) fn has(harness: &Harness<'_, Bench>, id: &str) -> bool {
     harness
         .query_all_by(|node| node.author_id() == Some(id))
         .next()
         .is_some()
 }
 
-fn value_of(harness: &Harness<'_, Bench>, id: &str) -> String {
+pub(super) fn value_of(harness: &Harness<'_, Bench>, id: &str) -> String {
     let node = harness.get_by(|node| node.author_id() == Some(id));
     let node = node.accesskit_node();
     node.value().or_else(|| node.label()).unwrap_or_default()
 }
 
-fn output_values(harness: &Harness<'_, Bench>) -> Vec<String> {
+pub(super) fn output_values(harness: &Harness<'_, Bench>) -> Vec<String> {
     harness
         .query_all_by(|node| node.author_id() == Some("output-value"))
         .map(|node| node.accesskit_node().value().unwrap_or_default())
@@ -62,7 +62,7 @@ fn output_values(harness: &Harness<'_, Bench>) -> Vec<String> {
 }
 
 /// Until the debounce has passed and the core answered.
-fn waits_for(
+pub(super) fn waits_for(
     harness: &mut Harness<'_, Bench>,
     what: &str,
     holds: impl Fn(&Harness<'_, Bench>) -> bool,

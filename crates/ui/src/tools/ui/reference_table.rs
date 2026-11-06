@@ -107,6 +107,8 @@ pub struct ReferenceTable<'a> {
     pub card_width: f32,
     /// The row the home's search opened this reference on.
     pub lit: Option<&'a str>,
+    /// For a reference that reads a query its own way: a code in any base.
+    pub matches: Option<fn(&ReferenceRow, &str) -> bool>,
 }
 
 impl ReferenceTable<'_> {
@@ -118,7 +120,11 @@ impl ReferenceTable<'_> {
         let shown: Vec<&ReferenceRow> = self
             .rows
             .iter()
-            .filter(|row| folded.is_empty() || row.matches(&folded))
+            .filter(|row| match self.matches {
+                _ if folded.is_empty() => true,
+                Some(matches) => matches(row, query),
+                None => row.matches(&folded),
+            })
             .collect();
         let cards: Vec<(&Group, Vec<&ReferenceRow>)> = self
             .groups

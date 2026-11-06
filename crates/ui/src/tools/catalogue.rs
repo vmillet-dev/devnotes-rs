@@ -1,11 +1,18 @@
 //! Every tool, in its panel's order, a file each beside this one. Adding one is an entry here:
 //! its name and its line are read from its id.
 
+mod ascii;
+mod base64;
 mod case;
 mod diff;
+mod hash;
+mod jwt;
 mod line_breaks;
 mod lorem;
+mod password;
+mod reference;
 mod text_stats;
+mod url_codec;
 
 use egui::Color32;
 use engine::notes::kind::NoteKind;
@@ -172,13 +179,17 @@ fn coming() -> Box<dyn Tool> {
 }
 
 /// A table to search: nothing is computed, and no note fills it.
-const fn reference(id: &'static str, keywords: &'static [&'static str]) -> ToolEntry {
+const fn reference(
+    id: &'static str,
+    keywords: &'static [&'static str],
+    make: fn() -> Box<dyn Tool>,
+) -> ToolEntry {
     ToolEntry {
         id,
         category: Category::Reference,
         keywords,
         from_note: &[],
-        make: coming,
+        make,
     }
 }
 
@@ -245,14 +256,14 @@ pub static TOOLS: [ToolEntry; 32] = [
             "md5", "sha1", "sha256", "sha512", "sha3", "hmac", "digest", "checksum", "webhook",
         ],
         from_note: &[("text", ANY_NOTE)],
-        make: coming,
+        make: hash::make,
     },
     ToolEntry {
         id: "password",
         category: Category::Crypto,
         keywords: &["password", "passphrase", "secret", "random", "entropy"],
         from_note: &[],
-        make: coming,
+        make: password::make,
     },
     ToolEntry {
         id: "identifiers",
@@ -286,7 +297,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "token",
         ],
         from_note: &[],
-        make: coming,
+        make: jwt::make,
     },
     ToolEntry {
         id: "url-codec",
@@ -302,7 +313,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "parse",
         ],
         from_note: &[("text", ANY_NOTE)],
-        make: coming,
+        make: url_codec::make,
     },
     ToolEntry {
         id: "base64",
@@ -320,7 +331,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "data uri",
         ],
         from_note: &[("text", ANY_NOTE)],
-        make: coming,
+        make: base64::make,
     },
     ToolEntry {
         id: "convert",
@@ -486,6 +497,7 @@ pub static TOOLS: [ToolEntry; 32] = [
         &[
             "http", "status", "statut", "code", "rfc 9110", "404", "500", "redirect", "nginx",
         ],
+        coming,
     ),
     reference(
         "http-headers",
@@ -499,6 +511,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "cache-control",
             "content-type",
         ],
+        coming,
     ),
     reference(
         "mime-types",
@@ -511,6 +524,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "png",
             "pdf",
         ],
+        coming,
     ),
     reference(
         "ports",
@@ -525,12 +539,14 @@ pub static TOOLS: [ToolEntry; 32] = [
             "firewall",
             "pare-feu",
         ],
+        coming,
     ),
     reference(
         "signals",
         &[
             "signal", "kill", "sigterm", "sigkill", "sighup", "sigint", "posix", "trap",
         ],
+        coming,
     ),
     reference(
         "ascii",
@@ -544,6 +560,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "newline",
             "escape",
         ],
+        ascii::make,
     ),
     reference(
         "regex-sheet",
@@ -556,6 +573,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "lookahead",
             "cheat sheet",
         ],
+        coming,
     ),
     reference(
         "markdown-sheet",
@@ -567,6 +585,7 @@ pub static TOOLS: [ToolEntry; 32] = [
             "readme",
             "cheat sheet",
         ],
+        coming,
     ),
     reference(
         "mustache-sheet",
@@ -579,8 +598,11 @@ pub static TOOLS: [ToolEntry; 32] = [
             "partial",
             "cheat sheet",
         ],
+        coming,
     ),
 ];
 
+#[cfg(test)]
+mod encoding_tests;
 #[cfg(test)]
 mod text_tests;

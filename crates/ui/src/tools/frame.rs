@@ -40,6 +40,7 @@ pub(super) fn show(
     let mut drawn = Drawn {
         entry,
         language: state.language,
+        now: state.clock.now(),
         actions,
         importing: None,
     };
