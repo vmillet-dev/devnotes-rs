@@ -221,7 +221,7 @@ impl AppState {
             titlebar_view: crate::titlebar::View::default(),
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
-            dialog: platform::dialog::system(),
+            dialog: std::sync::Arc::new(platform::dialog::NoDialog),
             opener: platform::desktop::system(),
             clipboard: platform::clipboard::system(),
             attachments: attachments::AttachmentsState::default(),

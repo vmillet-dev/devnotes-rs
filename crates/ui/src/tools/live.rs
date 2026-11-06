@@ -137,7 +137,7 @@ mod tests {
                 errors: ErrorNotifier::default(),
                 status: StatusNotifier::default(),
                 clipboard: platform::clipboard::system(),
-                dialog: platform::dialog::system(),
+                dialog: std::sync::Arc::new(platform::dialog::NoDialog),
                 ctx: egui::Context::default(),
                 live: Live::default(),
                 launched: Vec::new(),

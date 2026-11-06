@@ -602,6 +602,7 @@
       "unreadable": "Ce fichier ne se lit ni comme un CSV avec son en-tête, ni comme un tableau JSON d’objets.",
       "empty": "Ce fichier ne contient aucune ligne de données."
     },
+    "noFileDialog": "Ce bureau n’a pas de dialogue de fichiers à afficher : xdg-desktop-portal est absent.",
     "calcFailed": "La feuille n’a pas pu être calculée.",
     "folderMoveFailed": "Le dossier n’a pas pu être déplacé."
   },
