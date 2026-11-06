@@ -142,6 +142,18 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     click(&mut harness, "file-preferences");
     settle(&mut harness);
     capture(&mut harness, "preferences-general");
+    click(&mut harness, "settings-page-security");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-security");
+    click(&mut harness, "setting-change-passphrase");
+    settle(&mut harness);
+    capture(&mut harness, "change-passphrase");
+    click(&mut harness, "change-passphrase-cancel");
+    settle(&mut harness);
+    click(&mut harness, "settings-page-variables");
+    click(&mut harness, "variable-add");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-variables");
     click(&mut harness, "settings-cancel");
     settle(&mut harness);
 

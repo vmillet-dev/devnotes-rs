@@ -19,6 +19,7 @@ pub mod palette;
 pub mod placeholder_fill;
 pub mod presentation;
 pub(crate) mod query;
+pub mod security;
 pub mod selection;
 pub mod spaces;
 pub mod tags;
@@ -128,6 +129,7 @@ pub struct AppState {
     pub tools_view: crate::tools::View,
     pub transfer: transfer::TransferState,
     pub libraries: libraries::LibrariesState,
+    pub security: security::SecurityState,
     /// The bar's menus and what they open: only their drawing reads it (D13).
     pub titlebar_view: crate::titlebar::View,
     /// The modals the bar's menus open, in the order they are drawn.
@@ -187,6 +189,7 @@ impl AppState {
             tools_view: crate::tools::View::default(),
             transfer: transfer::TransferState::default(),
             libraries: libraries::LibrariesState::default(),
+            security: security::SecurityState::default(),
             titlebar_view: crate::titlebar::View::default(),
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
@@ -329,6 +332,11 @@ impl AppState {
     fn update_menus(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.libraries
             .update(backend, &mut self.status, &mut self.errors);
+        self.security.update(&mut self.status, &mut self.errors);
+        if self.security.take_changed() {
+            let change = crate::titlebar::preferences::change_id();
+            self.dialogs.close(ctx, change);
+        }
         if self.http.take_switch()
             && let Some(goal) = self.libraries.take_goal()
         {
@@ -714,6 +722,7 @@ impl AppState {
             Menu::Libraries(asked) => self.apply_libraries(asked, ctx, backend),
             Menu::OpenPreferences => {
                 self.titlebar_view.open_preferences(&self.settings);
+                self.security.load_variables(backend);
                 let opener = self.titlebar_view.file_anchor;
                 self.dialogs
                     .open(Layer::Settings, crate::titlebar::preferences::id(), opener);
@@ -746,6 +755,21 @@ impl AppState {
                 self.apply_look(ctx);
                 self.close_preferences(ctx);
             }
+            Ask::ChangePassphrase => {
+                let change = crate::titlebar::preferences::change_id();
+                self.dialogs.open(Layer::Passphrase, change, None);
+            }
+            Ask::TypedCurrent => self.security.clear_refusal(),
+            Ask::SubmitPassphrase => {
+                let (current, next) = self.titlebar_view.take_phrases();
+                self.security.change(backend, current, next);
+            }
+            Ask::KeepPassphrase => {
+                self.titlebar_view.take_phrases();
+                self.security.clear_refusal();
+                self.dialogs
+                    .close(ctx, crate::titlebar::preferences::change_id());
+            }
         }
     }
 
@@ -755,6 +779,13 @@ impl AppState {
             self.language = self.settings.locale.language();
             self.apply_look(ctx);
             self.save_settings(backend);
+        }
+        if let Some(rows) = self
+            .titlebar_view
+            .adopt_variables(self.security.variables())
+        {
+            self.security.save_variables(backend, rows);
+            self.revision.bump();
         }
     }
 
@@ -1754,6 +1785,7 @@ impl AppState {
         self.tools_view = crate::tools::View::default();
         self.transfer = transfer::TransferState::default();
         self.libraries = libraries::LibrariesState::default();
+        self.security = security::SecurityState::default();
         self.titlebar_view = crate::titlebar::View::default();
         self.dialogs = crate::widgets::DialogStack::default();
         self.revision.bump();

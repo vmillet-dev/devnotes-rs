@@ -38,6 +38,15 @@ pub fn unlock(backend: &Backend, passphrase: Zeroizing<String>) -> Pending<()> {
     })
 }
 
+/// A new phrase over the library open: the key is rewrapped, the notes are not touched.
+pub fn change_passphrase(
+    backend: &Backend,
+    current: Zeroizing<String>,
+    next: Zeroizing<String>,
+) -> Pending<vault::PassphraseChange> {
+    backend.db(move |engine| vault::change_passphrase(engine, current, next))
+}
+
 /// A library SQLite refuses to read, moved aside: the folder it went to.
 pub fn set_aside(backend: &Backend) -> Pending<String> {
     backend.db(engine::recovery::set_aside_damaged_library)
