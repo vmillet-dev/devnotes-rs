@@ -285,7 +285,7 @@ fn notifications(ui: &mut Ui, language: Language, settings: &mut Settings) {
     });
 }
 
-fn group(ui: &mut Ui, language: Language, title: Key) {
+pub(super) fn group(ui: &mut Ui, language: Language, title: Key) {
     let p = palette(ui.ctx());
     ui.add_space(10.0);
     let title = i18n::translate(language, title, &[]).to_uppercase();
@@ -298,7 +298,7 @@ fn group(ui: &mut Ui, language: Language, title: Key) {
 }
 
 /// A label on the left, its control on the right, `line-soft` under them.
-fn row(ui: &mut Ui, label: &str, control: impl FnOnce(&mut Ui)) {
+pub(super) fn row(ui: &mut Ui, label: &str, control: impl FnOnce(&mut Ui)) {
     let p = palette(ui.ctx());
     let shown = ui.allocate_ui_with_layout(
         Vec2::new(ui.available_width(), ROW),
@@ -324,7 +324,13 @@ fn row(ui: &mut Ui, label: &str, control: impl FnOnce(&mut Ui)) {
     );
 }
 
-fn switch_row(ui: &mut Ui, language: Language, label: Key, author_id: &str, on: &mut bool) {
+pub(super) fn switch_row(
+    ui: &mut Ui,
+    language: Language,
+    label: Key,
+    author_id: &str,
+    on: &mut bool,
+) {
     let label = i18n::translate(language, label, &[]);
     row(ui, &label, |ui| switch(ui, &label, author_id, on));
 }
@@ -365,7 +371,7 @@ fn switch(ui: &mut Ui, label: &str, author_id: &str, on: &mut bool) {
         .circle_filled(egui::pos2(x, track.center().y), 6.0, knob);
 }
 
-fn note(ui: &mut Ui, said: &str) {
+pub(super) fn note(ui: &mut Ui, said: &str) {
     ui.add_space(6.0);
     ui.add(
         egui::Label::new(

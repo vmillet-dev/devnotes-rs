@@ -11,10 +11,12 @@ use egui::{
 };
 use engine::app_info::METADATA;
 use i18n::{Key, Language, Message, keys};
+use zeroize::Zeroizing;
 
 use crate::action::{Action as Asked, Actions, AppAction};
 use crate::gate::prompt::{self, Answer, PromptView};
 use crate::services::settings::Settings;
+use crate::state::security::Variable;
 use crate::state::{AppState, Area};
 use crate::theme::icons::{self, Icon};
 use crate::theme::tokens::TITLEBAR_HEIGHT;
@@ -74,6 +76,16 @@ impl View {
 
     pub fn adopt(&mut self) -> Option<Settings> {
         self.preferences.adopt()
+    }
+
+    /// The rows to send, when they differ from `stored`.
+    pub fn adopt_variables(&self, stored: Option<&[Variable]>) -> Option<Vec<Variable>> {
+        self.preferences.changed_variables(stored)
+    }
+
+    /// The phrases typed in the change dialog, its fields left empty.
+    pub fn take_phrases(&mut self) -> (Zeroizing<String>, Zeroizing<String>) {
+        self.preferences.take_phrases()
     }
 }
 

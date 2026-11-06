@@ -3,14 +3,20 @@
 //! chosen, which is why the draft lives here and nothing else reads it.
 
 mod general;
+mod security;
+mod variables;
+
+pub(crate) use security::change_id;
 
 use egui::{Align, CornerRadius, FontFamily, Id, Layout, Rect, Role, Sense, Stroke, Ui, Vec2};
 use i18n::{Key, Message, keys};
+use zeroize::Zeroizing;
 
 use super::Action;
 use crate::action::{Action as Asked, Actions};
 use crate::services::settings::{Settings, SettingsDraft};
 use crate::state::AppState;
+use crate::state::security::Variable;
 use crate::theme::palette;
 use crate::widgets::{self, Button, Kind};
 
@@ -30,19 +36,33 @@ pub enum Ask {
     ApplyAndClose,
     /// Every way out that drops the draft.
     Discard,
+    ChangePassphrase,
+    /// Typing again withdraws the refusal.
+    TypedCurrent,
+    SubmitPassphrase,
+    KeepPassphrase,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 enum Page {
     #[default]
     General,
+    Security,
+    Variables,
 }
 
 impl Page {
     /// The order on screen: what the application looks like, then the keys that reach it, then
     /// what protects the library, then the corpus's own variables.
-    const ALL: [(Self, Key, &'static str); 1] =
-        [(Self::General, keys::settings::pages::GENERAL, "general")];
+    const ALL: [(Self, Key, &'static str); 3] = [
+        (Self::General, keys::settings::pages::GENERAL, "general"),
+        (Self::Security, keys::settings::pages::SECURITY, "security"),
+        (
+            Self::Variables,
+            keys::settings::pages::VARIABLES,
+            "variables",
+        ),
+    ];
 }
 
 #[derive(Default)]
@@ -52,6 +72,8 @@ pub(super) struct View {
     /// Shown in place of the buttons once a close was attempted with work in hand: Escape and
     /// the backdrop produce no click, so either would be a silent Cancel.
     confirming_close: bool,
+    variables: Option<Vec<Variable>>,
+    change: security::ChangeView,
 }
 
 impl View {
@@ -71,8 +93,20 @@ impl View {
         self.draft.as_mut().map(SettingsDraft::apply)
     }
 
-    fn pending(&self) -> u32 {
-        self.draft.as_ref().map_or(0, SettingsDraft::pending)
+    pub(super) fn changed_variables(&self, stored: Option<&[Variable]>) -> Option<Vec<Variable>> {
+        self.variables
+            .as_ref()
+            .filter(|rows| Some(rows.as_slice()) != stored)
+            .cloned()
+    }
+
+    pub(super) fn take_phrases(&mut self) -> (Zeroizing<String>, Zeroizing<String>) {
+        self.change.take()
+    }
+
+    fn pending(&self, stored: Option<&[Variable]>) -> u32 {
+        let settings = self.draft.as_ref().map_or(0, SettingsDraft::pending);
+        settings + u32::from(self.changed_variables(stored).is_some())
     }
 }
 
@@ -84,10 +118,11 @@ pub(super) fn show(ctx: &egui::Context, state: &AppState, view: &mut View, actio
     let shown = widgets::framed_dialog(ctx, &state.dialogs, id(), SIZE, |ui| {
         body(ui, state, view, actions);
     });
+    security::dialog(ctx, state, view, actions);
     if !shown.is_some_and(|shown| shown.should_close()) {
         return;
     }
-    if view.pending() > 0 {
+    if view.pending(state.security.variables()) > 0 {
         view.confirming_close = true;
     } else {
         actions.push(Asked::Menu(Action::Preferences(Ask::Discard)));
@@ -232,6 +267,12 @@ fn current_page(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Ac
     };
     match view.page {
         Page::General => general::show(ui, state, draft, actions),
+        Page::Security => {
+            let mut settings = draft.draft().clone();
+            security::page(ui, state, &mut settings, actions);
+            draft.edit(|edited| *edited = settings);
+        }
+        Page::Variables => variables::page(ui, state, &mut view.variables),
     }
 }
 
@@ -259,7 +300,7 @@ fn buttons(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions) {
             ask(Ask::ApplyAndClose);
         }
         if Button::new(&tr(keys::settings::APPLY), "settings-apply")
-            .enabled(view.pending() > 0)
+            .enabled(view.pending(state.security.variables()) > 0)
             .show(ui)
             .clicked()
         {
@@ -279,7 +320,7 @@ fn confirming(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions)
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let said = Message::new(keys::settings::UNAPPLIED)
-        .with("count", view.pending())
+        .with("count", view.pending(state.security.variables()))
         .text(language);
     let warning = ui.label(egui::RichText::new(said).size(12.0).color(p.red));
     widgets::address(ui, &warning, "settings-unapplied");
