@@ -243,6 +243,23 @@ impl EditorState {
         self.save(backend, self.sessions, edit);
     }
 
+    /// Holding its content, so worth keeping: written at once, the editor open on it.
+    pub fn draft_filled(
+        &mut self,
+        backend: &Backend,
+        (kind, space, folder): (NoteKind, String, Option<String>),
+        content: String,
+        language: Language,
+    ) {
+        self.draft(kind, space, folder);
+        let edit = Edit {
+            body: Some(Body::Content(content)),
+            language: Some(language),
+            ..Edit::default()
+        };
+        self.save(backend, self.sessions, edit);
+    }
+
     pub fn close(&mut self) {
         self.open = None;
     }

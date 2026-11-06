@@ -43,7 +43,7 @@ pub static APPLICATION: [Binding; 5] = [
         while_typing: true,
         action: Action::App(AppAction::SearchTools),
     },
-    // The window's own: the global shortcut, from another application, joins in P9.
+    // The window's own: it answers when the global key could not be taken.
     Binding {
         key: Key::P,
         modifiers: Modifiers::COMMAND.plus(Modifiers::ALT),

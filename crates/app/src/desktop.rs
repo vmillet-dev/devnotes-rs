@@ -1,6 +1,7 @@
 //! What the binary starts on the desktop before the window: only a desktop answers for it, the
 //! OS checklist's (plan § 8.5).
 
+use platform::shortcuts::Shortcuts;
 use platform::tray::{NoTray, Picture, Tray};
 use ui::services::preferences::Preferences;
 use ui::services::settings::Settings;
@@ -23,4 +24,16 @@ pub(crate) fn start_tray(preferences: &Preferences, inbox: ui::inputs::Inbox) ->
             inbox.post(ui::inputs::Input::Tray(asked));
         },
     )
+}
+
+#[cfg(not(feature = "e2e"))]
+pub(crate) fn take_shortcuts(inbox: ui::inputs::Inbox) -> Box<dyn Shortcuts> {
+    platform::shortcuts::system(move |key| inbox.post(ui::inputs::Input::Shortcut(key)))
+}
+
+/// A scenario presses no key of the machine (`--action` stands for it), and one held by a
+/// person's own copy would open every run on a banner.
+#[cfg(feature = "e2e")]
+pub(crate) fn take_shortcuts(_inbox: ui::inputs::Inbox) -> Box<dyn Shortcuts> {
+    Box::new(platform::shortcuts::NoShortcuts)
 }

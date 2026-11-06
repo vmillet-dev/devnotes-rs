@@ -6,6 +6,7 @@ use std::sync::Arc;
 use crossbeam_channel::Receiver;
 use engine::{EngineEvent, Paths};
 use platform::instance::Message;
+use platform::shortcuts::{Global, Shortcuts};
 use platform::tray::{self, Tray};
 use platform::window::Geometry;
 
@@ -13,6 +14,7 @@ use crate::action::AppAction;
 use crate::action::{Action, Actions, GlobalAction};
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
+use crate::services::global_keys::GlobalKeys;
 use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::state::Area;
@@ -36,6 +38,7 @@ pub struct Startup {
     pub waker: Waker,
     pub inputs: Receiver<Input>,
     pub tray: Box<dyn Tray>,
+    pub shortcuts: Box<dyn Shortcuts>,
 }
 
 pub struct DevNotesApp {
@@ -61,6 +64,7 @@ impl DevNotesApp {
         cc.egui_ctx
             .options_mut(|options| options.zoom_with_keyboard = false);
         let mut state = AppState::new(startup.preferences, startup.reduced_motion);
+        state.global_keys = GlobalKeys::with(startup.shortcuts);
         state.apply_look(&cc.egui_ctx);
         // The grammars take a few hundred milliseconds to load: never on the frame, which is
         // drawn again once they are in.
@@ -172,6 +176,15 @@ impl DevNotesApp {
                     .apply(Action::Global(GlobalAction::Quit), ctx, &self.backend);
             }
         }
+    }
+
+    fn asked_by_a_key(&mut self, key: Global, ctx: &egui::Context) {
+        let action = match key {
+            Global::Palette => GlobalAction::Palette,
+            Global::Capture => GlobalAction::Capture,
+            Global::NewNote => GlobalAction::NewNote,
+        };
+        self.asked_from_outside(action, ctx);
     }
 
     /// Replaced only when the language moved: a menu rebuilt every frame would close under the
@@ -286,6 +299,7 @@ impl eframe::App for DevNotesApp {
                     None => log::warn!("A second launch asked for an unknown action"),
                 },
                 Input::Tray(asked) => self.asked_by_tray(asked, ctx),
+                Input::Shortcut(key) => self.asked_by_a_key(key, ctx),
                 Input::Engine(EngineEvent::IndexProgress { done, total }) => {
                     self.state.gate.index_progress(done, total);
                 }
@@ -299,6 +313,12 @@ impl eframe::App for DevNotesApp {
         }
         self.state.update(ctx, &self.backend);
         self.keep_the_tray_in_the_language();
+        let listening = self.state.titlebar_view.listens_for_a_global_key();
+        self.state.global_keys.update(
+            &self.state.settings.bindings,
+            listening,
+            &mut self.state.errors,
+        );
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
         self.follow_the_minimize(&viewport, ctx);
@@ -401,6 +421,7 @@ impl eframe::App for DevNotesApp {
         if !self.backend.drain(EXIT_LIMIT) {
             log::warn!("The exit did not wait any longer for the database to finish");
         }
+        self.state.global_keys.release();
         self.tray.remove();
         let Some(geometry) = self.geometry else {
             return;
@@ -428,6 +449,9 @@ mod prompt_tests;
 
 #[cfg(test)]
 mod window_tests;
+
+#[cfg(test)]
+mod global_key_tests;
 
 #[cfg(test)]
 mod tests {
@@ -461,6 +485,7 @@ mod tests {
             waker,
             inputs: receiver,
             tray: Box::new(tray::NoTray),
+            shortcuts: Box::new(platform::shortcuts::NoShortcuts),
         }
     }
 

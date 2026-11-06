@@ -24,6 +24,8 @@ pub(super) struct View {
     refusal: Option<(&'static str, Refused)>,
     /// The field Escape stopped: the next Escape is the panel's, until it is clicked again.
     stopped: Option<&'static str>,
+    /// Set by the drawing, frame after frame: a page left or a panel closed lets go by itself.
+    pub(super) listens_for_a_global_key: bool,
 }
 
 pub(super) fn page(ui: &mut Ui, state: &AppState, settings: &mut Settings, view: &mut View) {
@@ -53,11 +55,29 @@ pub(super) fn page(ui: &mut Ui, state: &AppState, settings: &mut Settings, view:
     for (scope, title, said) in sections {
         group(ui, language, title);
         for action in shortcuts::every().filter(|action| action.scope == scope) {
-            ui.push_id(action.id, |ui| line(ui, language, action, settings, view));
+            ui.push_id(action.id, |ui| {
+                line(ui, language, action, settings, view);
+                held_elsewhere(ui, state, action, settings);
+            });
         }
         note(ui, &tr(said));
     }
     note(ui, &tr(words::FIXED_NOTE));
+}
+
+/// A global key another application took first: pressing it would do nothing, and say nothing.
+fn held_elsewhere(ui: &mut Ui, state: &AppState, action: Rebindable, settings: &Settings) {
+    let accelerator = settings.bindings.of(action);
+    let held = state.global_keys.held();
+    if action.scope != Scope::Global || !held.iter().any(|key| key == accelerator) {
+        return;
+    }
+    let said = Message::new(keys::settings::shortcuts::HELD_ELSEWHERE)
+        .with("accelerator", accelerator)
+        .text(state.language);
+    let words = RichText::new(said).size(11.5).color(palette(ui.ctx()).red);
+    let shown = ui.add(egui::Label::new(words).wrap());
+    widgets::address(ui, &shown, &format!("shortcut-held-{}", action.id));
 }
 
 fn conflict(ui: &mut Ui, language: Language, accelerator: &str, actions: &[Rebindable]) {
@@ -134,6 +154,7 @@ fn field(ui: &mut Ui, label: &str, action: Rebindable, bindings: &mut Bindings, 
             escape: true,
         };
         ui.memory_mut(|memory| memory.set_focus_lock_filter(response.id, keeps));
+        view.listens_for_a_global_key |= action.scope == Scope::Global;
         listen(ui, action, bindings, view);
     }
     let edge = if listening { p.amber_edge } else { p.line };

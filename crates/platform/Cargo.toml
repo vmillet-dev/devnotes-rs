@@ -24,6 +24,7 @@ open = "5.4.5"
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 sha2 = "0.11.0"
 tray-icon = "0.26.1"
+global-hotkey = "0.9.0"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56.0"
