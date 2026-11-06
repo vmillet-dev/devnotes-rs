@@ -26,6 +26,16 @@ pub fn name(language: Language) -> &'static str {
     info(language).1
 }
 
+/// What a menu adds beside the label: nothing when the label is the name already.
+pub fn hint(language: Language) -> &'static str {
+    let name = name(language);
+    if name.eq_ignore_ascii_case(label(language)) {
+        ""
+    } else {
+        name
+    }
+}
+
 pub fn hue(language: Language) -> Hue {
     info(language).2
 }

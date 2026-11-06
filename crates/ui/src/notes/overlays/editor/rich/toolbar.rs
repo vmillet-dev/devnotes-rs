@@ -186,7 +186,7 @@ pub(super) fn show(
             &mut inner,
             view,
             &fence,
-            &tr(keys::editor::rich::CODE_LANGUAGE),
+            (&tr(keys::editor::rich::CODE_LANGUAGE), language),
         );
     }
     if table::cell_of(&view.document, &view.selection.head.path).is_some() {
@@ -267,19 +267,24 @@ fn drawing_menu(ui: &mut Ui, view: &mut RichEditor, drawings: &[DrawingRef], lan
     view.refocus = true;
 }
 
-fn language_menu(ui: &mut Ui, view: &mut RichEditor, fence: &str, label: &str) {
+fn language_menu(ui: &mut Ui, view: &mut RichEditor, fence: &str, words: (&str, Language)) {
+    let (label, language) = words;
     let mut options: Vec<(Option<Code>, &str)> = vec![(None, "MERMAID")];
     options.extend(
         Code::ALL
             .into_iter()
             .map(|code| (Some(code), crate::notes::language::label(code))),
     );
+    let mut hints = vec![""];
+    hints.extend(Code::ALL.into_iter().map(crate::notes::language::hint));
     let mut chosen = if fence == diagram::MERMAID {
         None
     } else {
         Some(fence.parse::<Code>().unwrap_or(Code::Txt))
     };
     if ChoiceMenu::new(label, "rich-code-language", &options)
+        .hints(&hints)
+        .language(language)
         .show(ui, &mut chosen)
         .changed()
     {

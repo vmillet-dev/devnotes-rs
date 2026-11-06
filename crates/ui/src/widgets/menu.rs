@@ -6,6 +6,9 @@ use egui::{
     RectAlign, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo,
 };
 
+use engine::notes::view::fold;
+use i18n::{Language, keys};
+
 use super::{TextField, hovered, interact, text, towards};
 use crate::theme::icons::Icon;
 use crate::theme::palette;
@@ -230,12 +233,17 @@ pub enum Naming {
 
 /// From this many entries, a filter sits at the top and takes the focus.
 pub const FILTER_FROM: usize = 9;
+/// A filtered menu keeps its size whatever it holds: the entries scroll under the field.
+const FILTERED_WIDTH: f32 = 240.0;
+const FILTERED_HEIGHT: f32 = 240.0;
 
 pub struct ChoiceMenu<'a, T> {
     label: &'a str,
     author_id: &'a str,
     options: &'a [(T, &'a str)],
     naming: Naming,
+    hints: &'a [&'a str],
+    language: Option<Language>,
 }
 
 impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
@@ -245,6 +253,8 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             author_id,
             options,
             naming: Naming::Value,
+            hints: &[],
+            language: None,
         }
     }
 
@@ -252,6 +262,25 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
     pub fn naming(mut self, naming: Naming) -> Self {
         self.naming = naming;
         self
+    }
+
+    /// What each entry is also called, in step with the options: shown at its right, and found
+    /// by the filter. An empty one shows nothing.
+    #[must_use]
+    pub fn hints(mut self, hints: &'a [&'a str]) -> Self {
+        self.hints = hints;
+        self
+    }
+
+    /// The language of the filter's own words, for a menu that may reach `FILTER_FROM`.
+    #[must_use]
+    pub fn language(mut self, language: Language) -> Self {
+        self.language = Some(language);
+        self
+    }
+
+    fn hint(&self, index: usize) -> &'a str {
+        self.hints.get(index).copied().unwrap_or_default()
     }
 
     /// The control and its menu; the response is changed when another value was picked.
@@ -308,34 +337,11 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             .frame(frame(ui.ctx()))
             .close_behavior(PopupCloseBehavior::CloseOnClick)
             .show(|ui| {
-                ui.set_min_width(180.0);
-                let mut query: String = ui.data(|data| data.get_temp(query_id)).unwrap_or_default();
                 if filtering {
-                    let filter_id = format!("{}-filter", self.author_id);
-                    let field = TextField::new(&mut query, self.label, &filter_id).show(ui);
-                    if !field.has_focus() && ui.memory(|memory| memory.focused().is_none()) {
-                        field.request_focus();
-                    }
+                    self.filtered(ui, query_id, current)
+                } else {
+                    self.plain(ui, current)
                 }
-                let wanted = query.to_lowercase();
-                ui.data_mut(|data| data.insert_temp(query_id, query));
-                let mut picked = None;
-                let mut ids = Vec::new();
-                for (index, (value, name)) in self.options.iter().enumerate() {
-                    if !wanted.is_empty() && !name.to_lowercase().contains(&wanted) {
-                        continue;
-                    }
-                    let id = format!("{}-{index}", self.author_id);
-                    let entry = entry(ui, name, &id, false, Some(*name) == current, false);
-                    ids.push(entry.id);
-                    if entry.clicked() {
-                        picked = Some(*value);
-                    }
-                }
-                if !filtering {
-                    arrows(ui, &ids);
-                }
-                picked
             })
             .and_then(|shown| shown.inner);
         if let Some(value) = picked {
@@ -347,6 +353,174 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
         }
         response
     }
+
+    fn plain(&self, ui: &mut Ui, current: Option<&str>) -> Option<T> {
+        ui.set_min_width(180.0);
+        let mut picked = None;
+        let mut ids = Vec::new();
+        for (index, (value, name)) in self.options.iter().enumerate() {
+            let id = format!("{}-{index}", self.author_id);
+            let entry = entry(ui, name, &id, false, Some(*name) == current, false);
+            ids.push(entry.id);
+            if entry.clicked() {
+                picked = Some(*value);
+            }
+        }
+        arrows(ui, &ids);
+        picked
+    }
+
+    /// The field stays put and keeps the focus: the arrows walk the entries from it, Enter picks
+    /// the one walked to, Escape empties the field before it closes the menu.
+    fn filtered(&self, ui: &mut Ui, query_id: Id, current: Option<&str>) -> Option<T> {
+        ui.set_width(FILTERED_WIDTH);
+        ui.spacing_mut().item_spacing.y = 4.0;
+        let walked_id = query_id.with("walked");
+        let mut query: String = ui.data(|data| data.get_temp(query_id)).unwrap_or_default();
+        let emptied = !query.is_empty()
+            && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::Escape));
+        if emptied {
+            query.clear();
+        }
+        // Read before the field: it would lose the focus to Enter, and walk its caret.
+        let (step, entered) = ui.input_mut(|input| {
+            let down = input.consume_key(Modifiers::NONE, Key::ArrowDown);
+            let up = input.consume_key(Modifiers::NONE, Key::ArrowUp);
+            let enter = input.consume_key(Modifiers::NONE, Key::Enter);
+            (isize::from(down) - isize::from(up), enter)
+        });
+        let filter_id = format!("{}-filter", self.author_id);
+        let placeholder = self.words(keys::choice_menu::FILTER_PLACEHOLDER);
+        let field = TextField::new(&mut query, self.label, &filter_id)
+            .hint(&placeholder)
+            .compact()
+            .show(ui);
+        if !field.has_focus() && ui.memory(|memory| memory.focused().is_none()) {
+            field.request_focus();
+        }
+        let shown = self.matching(&query);
+        let walked = self.walk(ui, walked_id, &shown, step, current);
+        ui.data_mut(|data| data.insert_temp(query_id, query));
+        if shown.is_empty() {
+            let none = self.words(keys::choice_menu::NO_RESULTS);
+            let ink = palette(ui.ctx()).text_2;
+            ui.label(egui::RichText::new(none).size(12.0).color(ink));
+        }
+        let picked = egui::ScrollArea::vertical()
+            .max_height(FILTERED_HEIGHT - field.rect.height() - 4.0)
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                self.rows(ui, &shown, (walked, step != 0), current)
+            })
+            .inner;
+        if picked.is_some() {
+            return picked;
+        }
+        if entered {
+            ui.close();
+            return walked.map(|index| self.options[index].0);
+        }
+        None
+    }
+
+    /// The indices of the entries `query` finds, in the name or in the hint.
+    fn matching(&self, query: &str) -> Vec<usize> {
+        let wanted = fold(query.trim());
+        (0..self.options.len())
+            .filter(|index| {
+                wanted.is_empty()
+                    || fold(self.options[*index].1).contains(&wanted)
+                    || fold(self.hint(*index)).contains(&wanted)
+            })
+            .collect()
+    }
+
+    /// The entry the arrows stand on: the one they left, or the current value, or the first.
+    fn walk(
+        &self,
+        ui: &mut Ui,
+        walked_id: Id,
+        shown: &[usize],
+        step: isize,
+        current: Option<&str>,
+    ) -> Option<usize> {
+        let held: Option<usize> = ui.data(|data| data.get_temp(walked_id));
+        let start = held
+            .and_then(|walked| shown.iter().position(|index| *index == walked))
+            .or_else(|| {
+                shown
+                    .iter()
+                    .position(|index| Some(self.options[*index].1) == current)
+            })
+            .unwrap_or(0);
+        let last = shown.len().saturating_sub(1);
+        let walked = shown
+            .get(start.saturating_add_signed(step).min(last))
+            .copied();
+        ui.data_mut(|data| {
+            if let Some(walked) = walked {
+                data.insert_temp(walked_id, walked);
+            }
+        });
+        walked
+    }
+
+    fn rows(
+        &self,
+        ui: &mut Ui,
+        shown: &[usize],
+        (walked, moved): (Option<usize>, bool),
+        current: Option<&str>,
+    ) -> Option<T> {
+        let mut picked = None;
+        for index in shown {
+            let (value, name) = self.options[*index];
+            let id = format!("{}-{index}", self.author_id);
+            let here = Some(*index) == walked;
+            let row = entry(ui, name, &id, false, here || Some(name) == current, false);
+            self.paint_hint(ui, row.rect, *index);
+            if here {
+                walked_ring(ui, row.rect);
+                if moved {
+                    row.scroll_to_me(None);
+                }
+            }
+            if row.clicked() {
+                picked = Some(value);
+            }
+        }
+        picked
+    }
+
+    fn words(&self, key: i18n::Key) -> String {
+        self.language
+            .map_or_else(String::new, |language| i18n::translate(language, key, &[]))
+    }
+
+    fn paint_hint(&self, ui: &Ui, row: egui::Rect, index: usize) {
+        let hint = self.hint(index);
+        if hint.is_empty() {
+            return;
+        }
+        let ink = palette(ui.ctx()).text_2;
+        let galley = text(ui, hint, 11.0, 400.0, FontFamily::Proportional, ink);
+        let at = egui::pos2(
+            row.right() - 8.0 - galley.size().x,
+            row.center().y - galley.size().y / 2.0,
+        );
+        ui.painter().galley(at, galley, Color32::TRANSPARENT);
+    }
+}
+
+/// The entry walked to: the focus stays in the field, so its ring is drawn by hand.
+fn walked_ring(ui: &Ui, row: egui::Rect) {
+    ui.painter().rect_stroke(
+        row,
+        CornerRadius::same(6),
+        Stroke::new(1.0, palette(ui.ctx()).amber_edge),
+        egui::StrokeKind::Inside,
+    );
 }
 
 #[cfg(test)]
@@ -479,5 +653,130 @@ mod tests {
             .click();
         harness.run();
         assert_eq!(*harness.state(), 5);
+    }
+
+    const LANGUAGES: [(usize, &str); 12] = [
+        (0, "JSON"),
+        (1, "JS"),
+        (2, "TS"),
+        (3, "PY"),
+        (4, "RS"),
+        (5, "GO"),
+        (6, "SQL"),
+        (7, "XML"),
+        (8, "CSS"),
+        (9, "SH"),
+        (10, "MD"),
+        (11, "TXT"),
+    ];
+    const NAMES: [&str; 12] = [
+        "",
+        "JavaScript",
+        "TypeScript",
+        "Python",
+        "Rust",
+        "Go",
+        "",
+        "",
+        "",
+        "Shell",
+        "Markdown",
+        "",
+    ];
+
+    fn opened() -> egui_kittest::Harness<'static, usize> {
+        let mut harness = crate::testing::harness()
+            .with_size(egui::vec2(900.0, 900.0))
+            .build_ui_state(
+                |ui, selected: &mut usize| {
+                    ChoiceMenu::new("Format", "format", &LANGUAGES)
+                        .hints(&NAMES)
+                        .show(ui, selected);
+                },
+                0,
+            );
+        harness.run();
+        harness
+            .get_by(|node| node.author_id() == Some("format"))
+            .click();
+        harness.run();
+        harness.run();
+        harness
+    }
+
+    #[test]
+    fn a_filter_finds_an_entry_by_its_hint() {
+        let mut harness = opened();
+        harness
+            .get_by(|node| node.author_id() == Some("format-filter"))
+            .type_text("rus");
+        harness.run();
+        assert!(
+            harness
+                .query_by(|node| node.author_id() == Some("format-4"))
+                .is_some()
+        );
+        assert!(
+            harness
+                .query_by(|node| node.author_id() == Some("format-3"))
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_filtered_menu_keeps_its_size_and_scrolls() {
+        let harness = opened();
+        let filter = harness.get_by(|node| node.author_id() == Some("format-filter"));
+        assert!(
+            filter.rect().width() <= FILTERED_WIDTH,
+            "{:?}",
+            filter.rect()
+        );
+        let last = harness.get_by(|node| node.author_id() == Some("format-11"));
+        let bottom = filter.rect().top() + FILTERED_HEIGHT;
+        assert!(
+            last.rect().bottom() > bottom,
+            "the last entry lies under the fold"
+        );
+    }
+
+    #[test]
+    fn the_arrows_walk_from_the_filter_and_enter_picks() {
+        let mut harness = opened();
+        harness.key_press(Key::ArrowDown);
+        harness.key_press(Key::ArrowDown);
+        harness.key_press(Key::Enter);
+        harness.run();
+        assert_eq!(*harness.state(), 2);
+        assert!(
+            harness
+                .query_by(|node| node.author_id() == Some("format-filter"))
+                .is_none(),
+            "the menu closed"
+        );
+    }
+
+    #[test]
+    fn escape_empties_the_filter_before_it_closes_the_menu() {
+        let mut harness = opened();
+        harness
+            .get_by(|node| node.author_id() == Some("format-filter"))
+            .type_text("rus");
+        harness.run();
+        harness.key_press(Key::Escape);
+        harness.run();
+        assert!(
+            harness
+                .query_by(|node| node.author_id() == Some("format-3"))
+                .is_some(),
+            "every entry is back"
+        );
+        harness.key_press(Key::Escape);
+        harness.run();
+        assert!(
+            harness
+                .query_by(|node| node.author_id() == Some("format-filter"))
+                .is_none()
+        );
     }
 }

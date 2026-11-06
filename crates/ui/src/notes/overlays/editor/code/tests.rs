@@ -135,6 +135,10 @@ fn a_snippet_s_fields_are_marked_where_the_core_finds_them() {
 fn the_language_chosen_colours_the_code_and_the_footer_names_it() {
     let (mut harness, _) = snippet("SELECT 1;", Language::Txt);
     click_id(&mut harness, "editor-language");
+    harness
+        .get_by(|node| node.author_id() == Some("editor-language-filter"))
+        .type_text("sql");
+    harness.run();
     harness.get_by_label("SQL").click();
     settle(&mut harness);
     let stats = harness
