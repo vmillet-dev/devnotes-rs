@@ -142,6 +142,9 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     click(&mut harness, "file-preferences");
     settle(&mut harness);
     capture(&mut harness, "preferences-general");
+    click(&mut harness, "settings-page-shortcuts");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-shortcuts");
     click(&mut harness, "settings-page-security");
     settle(&mut harness);
     capture(&mut harness, "preferences-security");

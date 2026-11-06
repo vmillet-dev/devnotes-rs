@@ -4,6 +4,7 @@
 
 mod general;
 mod security;
+mod shortcuts;
 mod variables;
 
 pub(crate) use security::change_id;
@@ -51,6 +52,7 @@ pub enum Ask {
 enum Page {
     #[default]
     General,
+    Shortcuts,
     Security,
     Variables,
 }
@@ -58,8 +60,13 @@ enum Page {
 impl Page {
     /// The order on screen: what the application looks like, then the keys that reach it, then
     /// what protects the library, then the corpus's own variables.
-    const ALL: [(Self, Key, &'static str); 3] = [
+    const ALL: [(Self, Key, &'static str); 4] = [
         (Self::General, keys::settings::pages::GENERAL, "general"),
+        (
+            Self::Shortcuts,
+            keys::settings::pages::SHORTCUTS,
+            "shortcuts",
+        ),
         (Self::Security, keys::settings::pages::SECURITY, "security"),
         (
             Self::Variables,
@@ -80,6 +87,7 @@ pub(super) struct View {
     change: security::ChangeView,
     /// The restore strip just asked for, to bring into view.
     reveal_strip: bool,
+    shortcuts: shortcuts::View,
 }
 
 impl View {
@@ -199,6 +207,8 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
         "settings-content-region",
         Sense::hover(),
     );
+    // A place on screen for the scenarios to scroll over: a node with no role has none.
+    region.widget_info(|| egui::WidgetInfo::labeled(Role::ScrollView, true, &title));
     widgets::address(ui, &region, "settings-content");
 
     let footer = Rect::from_min_max(
@@ -276,6 +286,11 @@ fn current_page(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Ac
         Page::Security => {
             let mut settings = draft.draft().clone();
             security::page(ui, state, (&mut settings, &mut view.reveal_strip), actions);
+            draft.edit(|edited| *edited = settings);
+        }
+        Page::Shortcuts => {
+            let mut settings = draft.draft().clone();
+            shortcuts::page(ui, state, &mut settings, &mut view.shortcuts);
             draft.edit(|edited| *edited = settings);
         }
         Page::Variables => variables::page(ui, state, &mut view.variables),

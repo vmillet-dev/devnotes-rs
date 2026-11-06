@@ -9,6 +9,7 @@ use crate::state::Area;
 use crate::theme::{Appearance, Density};
 
 use super::preferences::Preferences;
+use super::shortcuts::{self, Bindings};
 
 /// The language: the system's, or one chosen.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -103,6 +104,8 @@ pub struct Settings {
     /// The locale a sheet writes its numbers in; `language` follows the one on screen.
     pub calc_number_format: String,
     pub calc_date_format: CalcDate,
+    /// The keys moved from where they shipped.
+    pub bindings: Bindings,
 }
 
 /// The reference's `RAIL_WIDTH`.
@@ -138,6 +141,7 @@ impl Default for Settings {
             calc_decimals: None,
             calc_number_format: CALC_LANGUAGE.to_owned(),
             calc_date_format: CalcDate::default(),
+            bindings: Bindings::default(),
         }
     }
 }
@@ -221,6 +225,7 @@ impl Settings {
                 .to_owned(),
             calc_date_format: chosen(preferences, CALC_DATE_FORMAT, &CALC_DATES)
                 .unwrap_or_default(),
+            bindings: read_bindings(preferences),
         }
     }
 
@@ -261,7 +266,25 @@ impl Settings {
             CALC_DATE_FORMAT,
             name_of(&CALC_DATES, self.calc_date_format),
         );
+        for action in shortcuts::every() {
+            let key = shortcuts::preference_key(action);
+            if self.bindings.is_default(action) {
+                preferences.remove(&key);
+            } else {
+                preferences.set(&key, self.bindings.of(action));
+            }
+        }
     }
+}
+
+fn read_bindings(preferences: &Preferences) -> Bindings {
+    let mut bindings = Bindings::default();
+    for action in shortcuts::every() {
+        if let Some(stored) = preferences.get(&shortcuts::preference_key(action)) {
+            bindings.set(action, stored.to_owned());
+        }
+    }
+    bindings
 }
 
 /// A percent written by the reference (`42.3`), in tenths; out of bounds, or not a number, is
@@ -396,6 +419,12 @@ impl SettingsDraft {
 mod tests {
     use super::*;
 
+    fn moved_key() -> Bindings {
+        let mut bindings = Bindings::default();
+        bindings.set(shortcuts::ACTIONS[9], "J".to_owned());
+        bindings
+    }
+
     #[test]
     fn settings_round_trip_under_the_reference_keys() {
         let mut preferences = Preferences::default();
@@ -425,6 +454,7 @@ mod tests {
             calc_decimals: Some(3),
             calc_number_format: "de-DE".to_owned(),
             calc_date_format: CalcDate::Long,
+            bindings: moved_key(),
         };
 
         chosen.write(&mut preferences);
@@ -434,6 +464,8 @@ mod tests {
         assert_eq!(preferences.get("devnotes.area"), Some("http"));
         assert_eq!(preferences.get("devnotes.closeToTray"), Some("false"));
         assert_eq!(preferences.get("devnotes.calcDecimals"), Some("3"));
+        assert_eq!(preferences.get("devnotes.shortcut.canvas.pin"), Some("J"));
+        assert_eq!(preferences.get("devnotes.shortcut.canvas.copy"), None);
         assert_eq!(Settings::read(&preferences), chosen);
     }
 

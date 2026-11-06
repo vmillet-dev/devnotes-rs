@@ -55,7 +55,13 @@ pub(crate) fn area_of(
                     bench.state.http_view = view;
                     if let Some(action) = crate::keys::dispatch(
                         &ctx,
-                        &[&crate::keys::HTTP, &crate::keys::APPLICATION],
+                        &[
+                            &crate::keys::HTTP,
+                            &[crate::keys::rail(
+                                &crate::services::shortcuts::Bindings::default(),
+                            )],
+                            &crate::keys::APPLICATION,
+                        ],
                     ) {
                         actions.push(action);
                     }
@@ -70,7 +76,13 @@ pub(crate) fn area_of(
                     bench.state.tools_view = view;
                     if let Some(action) = crate::keys::dispatch(
                         &ctx,
-                        &[&crate::keys::TOOLS, &crate::keys::APPLICATION],
+                        &[
+                            &crate::keys::TOOLS,
+                            &[crate::keys::rail(
+                                &crate::services::shortcuts::Bindings::default(),
+                            )],
+                            &crate::keys::APPLICATION,
+                        ],
                     ) {
                         actions.push(action);
                     }

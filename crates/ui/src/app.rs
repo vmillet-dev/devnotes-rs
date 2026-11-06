@@ -148,31 +148,30 @@ impl DevNotesApp {
     /// Who reads what the widgets left of the keys, on what is on screen.
     fn dispatch_keys(&self, ctx: &egui::Context) -> Option<Action> {
         let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
+        let bindings = &self.state.settings.bindings;
+        let canvas = notes::canvas::shortcuts::bound_to(bindings);
+        let rail = [keys::rail(bindings)];
         // A modal over the canvas takes its keys: the canvas's stand aside.
         let levels: &[&[keys::Binding]] = if self.state.dialogs.top().is_some() {
             &[]
         } else if self.state.palette.is_open() {
             &[&keys::APPLICATION]
         } else if notes_shown && !self.state.modal_open() {
-            &[
-                &keys::NOTES,
-                &notes::canvas::shortcuts::CANVAS,
-                &keys::APPLICATION,
-            ]
+            &[&keys::NOTES, &rail, &canvas, &keys::APPLICATION]
         } else if notes_shown {
-            &[&keys::NOTES, &keys::APPLICATION]
+            &[&keys::NOTES, &rail, &keys::APPLICATION]
         } else if self.state.gate.is_open()
             && self.state.settings.area == Area::Http
             && self.state.http.tabs().closing().is_none()
             && !self.state.http.leave().is_asking()
         {
-            &[&keys::HTTP, &keys::APPLICATION]
+            &[&keys::HTTP, &rail, &keys::APPLICATION]
         } else if self.state.gate.is_open()
             && self.state.settings.area == Area::Tools
             && !self.state.tools_view.is_picking()
             && self.state.http.kept().asked().is_none()
         {
-            &[&keys::TOOLS, &keys::APPLICATION]
+            &[&keys::TOOLS, &rail, &keys::APPLICATION]
         } else {
             &[&keys::APPLICATION]
         };

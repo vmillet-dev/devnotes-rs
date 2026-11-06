@@ -62,15 +62,22 @@ pub static NOTES: [Binding; 1] = [Binding {
     action: Action::Notes(crate::notes::Action::FocusSearch),
 }];
 
-/// The HTTP area's, read while it is on screen: the rail is the library's, and so is its key.
-pub static HTTP: [Binding; 3] = [
+/// The rail's, in the three areas, wherever the person moved it.
+pub fn rail(bindings: &crate::services::shortcuts::Bindings) -> Binding {
+    let (key, modifiers) = bindings
+        .keystroke(crate::services::shortcuts::RAIL_ACTION)
+        .unwrap_or((Key::B, Modifiers::COMMAND));
     Binding {
-        key: Key::B,
-        modifiers: Modifiers::COMMAND,
+        key,
+        modifiers,
         read: Read::Character,
         while_typing: true,
         action: Action::App(AppAction::ToggleRail),
-    },
+    }
+}
+
+/// The HTTP area's, read while it is on screen.
+pub static HTTP: [Binding; 2] = [
     Binding {
         key: Key::S,
         modifiers: Modifiers::COMMAND,
@@ -88,22 +95,13 @@ pub static HTTP: [Binding; 3] = [
 ];
 
 /// The Tools area's, read while it is on screen.
-pub static TOOLS: [Binding; 2] = [
-    Binding {
-        key: Key::K,
-        modifiers: Modifiers::COMMAND,
-        read: Read::Character,
-        while_typing: true,
-        action: Action::Tools(crate::tools::Action::SearchAsked),
-    },
-    Binding {
-        key: Key::B,
-        modifiers: Modifiers::COMMAND,
-        read: Read::Character,
-        while_typing: true,
-        action: Action::App(AppAction::ToggleRail),
-    },
-];
+pub static TOOLS: [Binding; 1] = [Binding {
+    key: Key::K,
+    modifiers: Modifiers::COMMAND,
+    read: Read::Character,
+    while_typing: true,
+    action: Action::Tools(crate::tools::Action::SearchAsked),
+}];
 
 const fn area(key: Key, area: Area) -> Binding {
     Binding {

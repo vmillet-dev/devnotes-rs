@@ -1117,6 +1117,7 @@
       "needsModifier": "Un raccourci global demande au moins Ctrl, Alt, Maj ou Super.",
       "heldElsewhere": "Raccourci global indisponible : {{accelerator}}. Une autre application l’utilise déjà.",
       "reserved": "Cette touche est réservée à la navigation.",
+      "unknownKey": "Cette touche n'a pas de nom ici : elle ne pourrait pas être relue.",
       "conflict": "{{accelerator}} répond à plusieurs actions : {{actions}}. Une seule agira."
     },
     "cancel": "Annuler",
