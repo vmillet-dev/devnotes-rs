@@ -3,7 +3,10 @@
 use engine::tools::bases::{
     self, Base64FileAnswer, DecodeAnswer, DecodeRequest, EncodeRequest, Encodings, SavedBytes,
 };
+use engine::tools::cron::{CronAnswer, CronRequest};
+use engine::tools::dates::{self, InstantAnswer, InstantRequest};
 use engine::tools::diff::{self, JsonDiffAnswer, JsonDiffRequest};
+use engine::tools::durations::{DurationsAnswer, DurationsRequest};
 use engine::tools::encoding::{self, UrlCodecAnswer, UrlCodecRequest};
 use engine::tools::generate::{self, LoremAnswer, LoremRequest};
 use engine::tools::hash::{self, HashAnswer, HashRequest};
@@ -15,6 +18,7 @@ use engine::tools::text::{self, CaseAnswer, CaseRequest, LineBreaksAnswer, LineB
 use engine::tools::text_diff::{self, TextDiffAnswer, TextDiffRequest};
 
 use engine::tools::url_parts::{self, UrlAnswer};
+use engine::tools::zones::{ZoneEntry, ZonesAnswer, ZonesRequest};
 
 use crate::backend::{Backend, Pending};
 
@@ -81,4 +85,32 @@ pub fn decode_bytes(backend: &Backend, request: DecodeRequest) -> Pending<Decode
 
 pub fn save_bytes(backend: &Backend, request: DecodeRequest, path: String) -> Pending<SavedBytes> {
     backend.compute(move |_| Ok(bases::save(&request, &path)))
+}
+
+pub fn describe_instant(backend: &Backend, request: InstantRequest) -> Pending<InstantAnswer> {
+    backend.compute(move |_| Ok(engine::tools::describe_instant(&request)))
+}
+
+pub fn measure_durations(backend: &Backend, request: DurationsRequest) -> Pending<DurationsAnswer> {
+    backend.compute(move |_| Ok(engine::tools::measure_durations(&request)))
+}
+
+pub fn current_instant(backend: &Backend) -> Pending<String> {
+    backend.compute(|_| Ok(dates::now()))
+}
+
+pub fn search_time_zones(backend: &Backend, query: String) -> Pending<Vec<ZoneEntry>> {
+    backend.compute(move |_| Ok(engine::tools::search_time_zones(&query)))
+}
+
+pub fn place_in_zones(backend: &Backend, request: ZonesRequest) -> Pending<ZonesAnswer> {
+    backend.compute(move |_| Ok(engine::tools::place_in_zones(&request)))
+}
+
+pub fn time_in_zone(backend: &Backend, zone: Option<String>) -> Pending<String> {
+    backend.compute(move |_| Ok(engine::tools::time_in_zone(zone.as_deref())))
+}
+
+pub fn describe_cron(backend: &Backend, request: CronRequest) -> Pending<CronAnswer> {
+    backend.compute(move |_| Ok(engine::tools::describe_cron(&request)))
 }
