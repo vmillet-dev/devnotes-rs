@@ -632,7 +632,13 @@ panels, the search, the recent and starred tools, the breadcrumb, Vider — is w
 knows a tool only through the `Tool` trait (`tools/mod.rs`):
 
 - `update()`, once a frame on screen: what its inputs ask now, and the answers that came.
-- `ui()`, its body in the frame.
+- `ui()`, its body in the frame, built from `tools/ui/`: two columns, fields, result and output
+  rows, a copy button, the reference table.
+- `result()`, what "Enregistrer comme note" keeps, through the dialog an HTTP answer uses. ⚠️ An
+  output, never an input: an HMAC key or a password typed into a tool cannot reach a note, because
+  nothing in the contract carries one.
+- `imported()`, what a note gave an input the catalogue lists in `from_note`, copied in once. A
+  key, a password, a token or a card number is never one: its field offers no import.
 - `sample()`, which « Exemple » calls: the tool fills its inputs with test data, and replaces
   what was there. Never a real secret (a token signed with « secret », the published example
   IBAN). Optional: a tool with nothing to fill offers no button.

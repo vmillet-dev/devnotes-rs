@@ -3,6 +3,7 @@
 
 use egui::Color32;
 use engine::notes::kind::NoteKind;
+use engine::notes::language::Language as NoteLanguage;
 use i18n::{Key, Language, keys};
 
 use super::Tool;
@@ -87,7 +88,7 @@ impl Category {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NoteInput {
     pub kinds: &'static [NoteKind],
-    pub languages: &'static [&'static str],
+    pub languages: &'static [NoteLanguage],
 }
 
 /// A todo list gives its Markdown, as copying it does.
@@ -97,11 +98,16 @@ const ANY_NOTE: NoteInput = NoteInput {
 };
 const JSON_SNIPPET: NoteInput = NoteInput {
     kinds: &[NoteKind::Snippet],
-    languages: &["json"],
+    languages: &[NoteLanguage::Json],
 };
 const STRUCTURED_SNIPPET: NoteInput = NoteInput {
     kinds: &[NoteKind::Snippet],
-    languages: &["json", "yml", "toml", "xml"],
+    languages: &[
+        NoteLanguage::Json,
+        NoteLanguage::Yml,
+        NoteLanguage::Toml,
+        NoteLanguage::Xml,
+    ],
 };
 
 /// Its name and its line are the keys `tools.<id>.name` and `tools.<id>.description`.

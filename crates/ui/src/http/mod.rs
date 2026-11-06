@@ -15,7 +15,7 @@ mod rail;
 mod request;
 mod response;
 mod runner;
-mod save_as_note;
+pub(crate) mod save_as_note;
 mod save_request;
 mod scripts;
 mod socket_log;
@@ -220,7 +220,11 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
 }
 
 /// The area's dialogs: one frame, Escape and a click outside asking to close.
-fn modal<T>(ui: &Ui, id: &str, content: impl FnOnce(&mut Ui) -> T) -> egui::ModalResponse<T> {
+pub(crate) fn modal<T>(
+    ui: &Ui,
+    id: &str,
+    content: impl FnOnce(&mut Ui) -> T,
+) -> egui::ModalResponse<T> {
     let p = palette(ui.ctx());
     #[expect(clippy::cast_possible_truncation, reason = "a few points")]
     let padding = spacing(ui.ctx()).canvas.round() as i8;

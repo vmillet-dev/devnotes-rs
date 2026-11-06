@@ -408,6 +408,7 @@ fn foot(
                 ],
             );
             let asked = NoteAsked {
+                warning: None,
                 title,
                 language: generated.language,
                 content: generated.code.clone(),

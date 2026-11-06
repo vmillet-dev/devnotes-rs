@@ -27,6 +27,8 @@ pub struct NoteAsked {
     /// Proposed in the tags' field: generated code is filed under `http`.
     pub tags: String,
     pub source: String,
+    /// Said in the dialog, whose button then reads « Save anyway »: a password.
+    pub warning: Option<i18n::Key>,
 }
 
 /// An answer's text on its way to a note: Rust masks what the request sent.
@@ -181,6 +183,7 @@ impl Kept {
                     },
                     tags: String::new(),
                     source: asked.source,
+                    warning: None,
                 });
             }
             Err(error) => errors.report(keys::http::FAILED, &error),

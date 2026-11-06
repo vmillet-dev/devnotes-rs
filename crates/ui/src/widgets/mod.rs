@@ -134,7 +134,7 @@ pub(crate) fn one_line(
 const ARROW_CHARS: usize = 4;
 
 /// A text laid out, its arrows waiting to be painted over the room kept for them.
-pub(crate) struct Wrapped {
+pub struct Wrapped {
     galley: Arc<Galley>,
     /// By the rank of the character their room starts at.
     arrows: Vec<(usize, Icon)>,

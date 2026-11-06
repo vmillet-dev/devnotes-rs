@@ -7,6 +7,7 @@ mod frame;
 mod home;
 pub mod live;
 mod rail;
+pub mod ui;
 
 use std::collections::HashMap;
 
@@ -14,6 +15,7 @@ use egui::{CornerRadius, Rect, Response, Role, Sense, Ui, UiBuilder, Vec2, Widge
 use i18n::{Language, keys};
 
 use crate::action::{Action as Asked, Actions, AppAction};
+use crate::http::save_as_note;
 use crate::state::AppState;
 use crate::state::tools::Filter;
 use crate::theme::icons::{self, Icon};
@@ -21,6 +23,7 @@ use crate::theme::palette;
 use crate::widgets::{self, hovered, interact, towards};
 use catalogue::ToolEntry;
 use live::Turn;
+use ui::note_picker::{self, PickedNote, Picker};
 
 /// What the area's controls ask, applied at the end of the frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,6 +45,20 @@ pub trait Tool {
 
     fn ui(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>);
 
+    /// Whether the frame offers « Save as note »: a reference has nothing to keep.
+    fn keeps_result(&self) -> bool {
+        false
+    }
+
+    /// ⚠️ An output, never an input: an HMAC key or a password typed into a tool cannot reach a
+    /// note, because nothing here carries one.
+    fn result(&self, _language: Language) -> Option<ToolResult> {
+        None
+    }
+
+    /// What a note gave the input `field`, copied in once.
+    fn imported(&mut self, _field: &str, _note: &PickedNote) {}
+
     /// Whether the frame offers « Example ».
     fn has_sample(&self) -> bool {
         false
@@ -53,10 +70,24 @@ pub trait Tool {
     fn clear(&mut self);
 }
 
+/// What « Save as note » keeps: the tool decides, so the dialog asks nothing it could infer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ToolResult {
+    /// Proposed, and the dialog lets it be changed.
+    pub title: String,
+    pub language: engine::notes::language::Language,
+    pub content: String,
+    /// Said in the dialog, whose button then reads « Save anyway »: a password.
+    pub warning: Option<i18n::Key>,
+}
+
 /// What a tool has at hand while it is drawn.
 pub struct Drawn<'a> {
+    pub entry: &'static ToolEntry,
     pub language: Language,
     pub actions: &'a mut Actions,
+    /// The input « Import from a note » was pressed for.
+    pub importing: Option<&'static str>,
 }
 
 /// What only the area's drawing sees (D13), the tools' sessions among it.
@@ -65,6 +96,8 @@ pub struct View {
     rail_width: widgets::RailWidth,
     home: home::HomeView,
     sessions: HashMap<&'static str, Box<dyn Tool>>,
+    picker: Option<Picker>,
+    note_form: Option<save_as_note::NoteForm>,
 }
 
 impl View {
@@ -83,6 +116,26 @@ impl View {
 
     pub fn update(&mut self, entry: &'static ToolEntry, turn: &mut Turn<'_>) {
         self.session(entry).update(turn);
+        let Some(picker) = &mut self.picker else {
+            return;
+        };
+        if let Some(picked) = picker.update(turn) {
+            let field = picker.field;
+            self.picker = None;
+            turn.status.report(said_imported(&picked));
+            self.session(entry).imported(field, &picked);
+        }
+    }
+
+    /// A dialog of the area is open: its keys stand aside.
+    pub fn is_picking(&self) -> bool {
+        self.picker.is_some()
+    }
+
+    /// Tests only: a session of the test's own in the place of `id`'s.
+    #[cfg(test)]
+    pub fn put(&mut self, id: &'static str, tool: Box<dyn Tool>) {
+        self.sessions.insert(id, tool);
     }
 }
 
@@ -100,8 +153,23 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         Some(entry) => frame::show(&mut page, rest, state, (entry, view), actions),
         None => home::show(&mut page, rest, state, &mut view.home, actions),
     }
+    if let Some(picker) = &mut view.picker {
+        note_picker::show(ui, state, picker);
+        if picker.is_closed() {
+            view.picker = None;
+        }
+    }
+    save_as_note::show(ui, state, &mut view.note_form, actions);
     if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
+    }
+}
+
+fn said_imported(note: &PickedNote) -> i18n::Message {
+    if note.title.is_empty() {
+        i18n::Message::new(keys::tools::from_note::DONE_UNTITLED)
+    } else {
+        i18n::Message::new(keys::tools::from_note::DONE).with("title", note.title.as_str())
     }
 }
 

@@ -291,7 +291,7 @@ impl HttpState {
         }
         self.forget_closed(backend);
         self.sockets.update();
-        self.kept_answer = self.kept.update(backend, errors);
+        self.update_kept(backend, errors);
         self.save_next(backend);
         if self.leave.take_close() {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -668,6 +668,11 @@ impl HttpState {
 
     pub fn kept_mut(&mut self) -> &mut kept::Kept {
         &mut self.kept
+    }
+
+    /// From the Tools area too, whose results go through the same dialog.
+    pub fn update_kept(&mut self, backend: &Backend, errors: &mut ErrorNotifier) {
+        self.kept_answer = self.kept.update(backend, errors);
     }
 
     pub fn take_kept_answer(&mut self) -> kept::KeptAnswer {

@@ -785,9 +785,15 @@ impl AppState {
                 ctx,
                 backend,
                 time,
+                now: self.clock.now(),
                 errors: &mut self.errors,
+                status: &mut self.status,
             };
             self.tools_view.update(entry, &mut turn);
+        }
+        if self.settings.area == Area::Tools {
+            self.http.update_kept(backend, &mut self.errors);
+            self.report_kept();
         }
         if self.closing_editor && !self.editor.is_open() {
             self.closing_editor = false;
@@ -800,13 +806,7 @@ impl AppState {
         let tz_offset = notes_query::tz_offset_minutes(self.clock.now());
         self.http
             .update_history((ctx, backend), (time, tz_offset), &mut self.errors);
-        let kept = self.http.take_kept_answer();
-        if kept.note_made {
-            self.revision.bump();
-        }
-        if let Some(said) = kept.said {
-            self.status.report(said);
-        }
+        self.report_kept();
         if let Some(count) = self.http.take_history_cleared() {
             let cleared = i18n::Message::new(i18n::keys::http::history::CLEARED);
             self.status.report(cleared.with("count", count));
@@ -816,6 +816,17 @@ impl AppState {
             self.status.report(removed.with("count", count));
         }
         self.remember_http(backend);
+    }
+
+    /// A note kept, from an answer or from a tool: the canvas learns of it, wherever it is.
+    fn report_kept(&mut self) {
+        let kept = self.http.take_kept_answer();
+        if kept.note_made {
+            self.revision.bump();
+        }
+        if let Some(said) = kept.said {
+            self.status.report(said);
+        }
     }
 
     fn remember_http(&mut self, backend: &Backend) {
