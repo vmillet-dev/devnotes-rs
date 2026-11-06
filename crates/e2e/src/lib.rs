@@ -483,6 +483,28 @@ impl App {
         panic!("{author_id} never came above {under}");
     }
 
+    /// Until `author_id` stands in the same place on two frames: a wheel's scroll glides, and a
+    /// click aimed at where it was lands on something else.
+    pub fn at_rest(&mut self, author_id: &str) {
+        let place = |app: &mut Self| {
+            let tree = app.tree();
+            tree.find(author_id)
+                .and_then(Node::bounds)
+                .map(|bounds| (bounds.x0, bounds.y0))
+        };
+        let until = Instant::now() + PATIENCE;
+        let mut last = place(self);
+        loop {
+            self.ask(&Request::Settle { max_steps: 10 });
+            let now = place(self);
+            if now.is_some() && now == last {
+                return;
+            }
+            assert!(Instant::now() < until, "{author_id} never came to rest");
+            last = now;
+        }
+    }
+
     /// Back to the top of `within`: rows out of view are not drawn, so not counted.
     pub fn scroll_top(&mut self, within: &str) {
         self.wait_for(within);

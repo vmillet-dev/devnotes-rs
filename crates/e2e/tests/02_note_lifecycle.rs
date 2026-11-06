@@ -44,6 +44,7 @@ fn note_lifecycle() {
         || {
             app.scroll_to("canvas", "create-ghost");
             app.scroll_above("canvas", "create-ghost", "canvas-keyboard-hint");
+            app.at_rest("create-ghost");
             app.click("create-ghost");
             app.wait_for("editor-title");
             app.click("editor-close");

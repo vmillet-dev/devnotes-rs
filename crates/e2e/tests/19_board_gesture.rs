@@ -161,6 +161,22 @@ fn cards(app: &mut App) {
         });
     });
 
+    step("dropped on the rail, it is filed in that folder", || {
+        let tree = app.tree();
+        let card = bounds_of(&tree, "board-loose-card", LOOSE).unwrap();
+        let row = bounds_of(&tree, "folder-option", "Migrations").unwrap();
+        app.drag(centre(card), centre(row), PointerButton::Primary);
+        app.eventually("the card flows in the zone", |tree| {
+            titles_in(tree, "Migrations") == [LOOSE]
+        });
+        let card = bounds_of(&app.tree(), "board-zone-card", LOOSE).unwrap();
+        let ground = Pos2::new(centre(card).x, centre(card).y + 360.0);
+        app.drag(centre(card), ground, PointerButton::Primary);
+        app.eventually("the card is loose again", |tree| {
+            titles_in(tree, "Migrations").is_empty()
+        });
+    });
+
     step(
         "the keyboard files with no pointer, from the selection bar",
         || {
