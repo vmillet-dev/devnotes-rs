@@ -6143,7 +6143,40 @@ state, text fields included, in clear on disk. The creation closure fills the `W
 creates the tokio runtime and the `Engine` (D20); `App::logic`, which runs while the window is
 hidden, shows it on the first frame. Under Linux, X11 is taken whenever `DISPLAY` exists
 (D15). The geometry is written on exit, the size the window had unmaximised kept under a
-maximised one.
+maximised one, a full screen never.
+
+**What the desktop answers** is one value, `ui::Desktop`, built by `crates/app/src/desktop.rs`
+on the thread the window's loop will run on: under Windows that loop serves the tray and the
+keys. Its `Default` answers nothing, so no test touches the session. Each subject is a module of
+`platform` with a trait a test fakes; what only a real desktop can run sits in its `system.rs`
+and is answered for by `docs/os-checklist.md`, not by coverage.
+
+- `tray`: the icon and its menu, translated in Rust and rebuilt when the language moves. Under
+  Linux on a thread of its own, the only GTK one (D29), reached by message; a desktop without the
+  indicator library answers `exists() == false`.
+- `shortcuts`: the three global keys, first come first served. `GlobalKeys` takes them from the
+  saved settings, says what another application holds, and lets go while a field listens.
+- `autostart`: the system is read at the launch and the preference follows; the switch is pushed
+  only when it differs.
+- `notify`: a toast, never load-bearing. A palette copy over another application is its one use.
+- `dialog`: under Linux the portal is asked for first, or `rfd` answers `None` like a cancel.
+- `links`: `http` and `https` only.
+- `updater`: see below.
+
+The `e2e` flavour takes no global key and writes no autostart entry.
+
+**Closing is not quitting.** The close button hides the window when a tray exists and « Close to
+tray » is on; otherwise it ends the application, as « Quit » always does (`AppState::quitting`).
+⚠️ A hidden window draws nothing, so a close held for a question or for the editor brings it up
+first. `on_exit` runs in this order: the sends cancelled, the plain copies swept and the db queue
+drained (D19, 30 s at most), the keys released, the tray removed, the geometry written, and last
+an update installed. ⚠️ Under Windows the update client ends the process there and then, so a
+download only asks to quit: nothing may follow that line. Under Linux a detached shell waits for
+the process to be gone before starting the `AppImage` again: beside it, the new one would find
+the profile taken.
+
+An update comes from `latest.json` (D26), checked against the minisign key before it is kept.
+Only an `AppImage` or a folder holding the NSIS uninstaller offers one.
 
 ### The notes index
 

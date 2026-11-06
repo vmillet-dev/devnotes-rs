@@ -91,6 +91,10 @@ pub(super) struct View {
 }
 
 impl View {
+    pub(super) fn listens_for_a_global_key(&self) -> bool {
+        self.shortcuts.listens_for_a_global_key
+    }
+
     pub(super) fn open(&mut self, settings: &Settings) {
         *self = Self {
             draft: Some(SettingsDraft::open(settings.clone())),
@@ -129,6 +133,7 @@ pub(crate) fn id() -> Id {
 }
 
 pub(super) fn show(ctx: &egui::Context, state: &AppState, view: &mut View, actions: &mut Actions) {
+    view.shortcuts.listens_for_a_global_key = false;
     let shown = widgets::framed_dialog(ctx, &state.dialogs, id(), SIZE, |ui| {
         body(ui, state, view, actions);
     });

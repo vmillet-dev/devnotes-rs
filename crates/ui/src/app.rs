@@ -5,18 +5,27 @@ use std::sync::Arc;
 
 use crossbeam_channel::Receiver;
 use engine::{EngineEvent, Paths};
+use platform::autostart::{Autostart, NoAutostart};
+use platform::dialog::{FileDialog, NoDialog};
 use platform::instance::Message;
+use platform::notify::{NoNotifier, Notifier};
+use platform::shortcuts::{Global, NoShortcuts, Shortcuts};
+use platform::tray::{self, Tray};
+use platform::updater::{NoUpdater, Updater};
 use platform::window::Geometry;
 
 use crate::action::AppAction;
 use crate::action::{Action, Actions, GlobalAction};
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
+use crate::services::autostart::AutostartState;
+use crate::services::global_keys::GlobalKeys;
 use crate::services::preferences::Preferences;
-use crate::state::AppState;
+use crate::services::updates::UpdateState;
 use crate::state::Area;
+use crate::state::{AppState, put_away};
 use crate::theme;
-use crate::{banners, gate, http, keys, notes, titlebar, tools};
+use crate::{api, banners, gate, http, keys, notes, titlebar, tools};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -34,6 +43,30 @@ pub struct Startup {
     pub inbox: Inbox,
     pub waker: Waker,
     pub inputs: Receiver<Input>,
+    pub desktop: Desktop,
+}
+
+/// What the operating system answers. `Default` is a desktop that answers nothing.
+pub struct Desktop {
+    pub tray: Box<dyn Tray>,
+    pub shortcuts: Box<dyn Shortcuts>,
+    pub autostart: Arc<dyn Autostart + Send + Sync>,
+    pub notifier: Arc<dyn Notifier + Send + Sync>,
+    pub dialog: Arc<dyn FileDialog + Send + Sync>,
+    pub updater: Arc<dyn Updater + Send + Sync>,
+}
+
+impl Default for Desktop {
+    fn default() -> Self {
+        Self {
+            tray: Box::new(tray::NoTray),
+            shortcuts: Box::new(NoShortcuts),
+            autostart: Arc::new(NoAutostart),
+            notifier: Arc::new(NoNotifier),
+            dialog: Arc::new(NoDialog),
+            updater: Arc::new(NoUpdater),
+        }
+    }
 }
 
 pub struct DevNotesApp {
@@ -43,6 +76,10 @@ pub struct DevNotesApp {
     window_file: PathBuf,
     geometry: Option<Geometry>,
     shown: bool,
+    tray: Box<dyn Tray>,
+    /// The language of the tray's menu.
+    tray_language: i18n::Language,
+    was_minimized: bool,
 }
 
 impl DevNotesApp {
@@ -55,6 +92,11 @@ impl DevNotesApp {
         cc.egui_ctx
             .options_mut(|options| options.zoom_with_keyboard = false);
         let mut state = AppState::new(startup.preferences, startup.reduced_motion);
+        state.global_keys = GlobalKeys::with(startup.desktop.shortcuts);
+        state.autostart = AutostartState::with(startup.desktop.autostart);
+        state.notifier = startup.desktop.notifier;
+        state.dialog = startup.desktop.dialog;
+        state.updates = UpdateState::with(startup.desktop.updater);
         state.apply_look(&cc.egui_ctx);
         // The grammars take a few hundred milliseconds to load: never on the frame, which is
         // drawn again once they are in.
@@ -64,8 +106,12 @@ impl DevNotesApp {
             ctx.request_repaint();
         });
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
+        // A crash reaches no exit: what it left goes before anyone unlocks anything.
+        drop(api::attachments::sweep_copies(&backend));
         state.gate.ask(&backend);
         state.updates.check(&backend, true);
+        state.autostart.read(&backend);
+        let tray_language = state.language;
         Ok(Self {
             backend,
             state,
@@ -73,6 +119,9 @@ impl DevNotesApp {
             window_file: startup.window_file,
             geometry: startup.geometry,
             shown: false,
+            tray: startup.desktop.tray,
+            tray_language,
+            was_minimized: false,
         })
     }
 
@@ -87,7 +136,7 @@ impl DevNotesApp {
     /// The size and place to reopen at: the last ones the window had unmaximised, so that a
     /// window closed maximised comes back maximised over the size it had before.
     fn remember(&mut self, viewport: &egui::ViewportInfo) {
-        if viewport.minimized == Some(true) {
+        if viewport.minimized == Some(true) || viewport.fullscreen == Some(true) {
             return;
         }
         if viewport.maximized == Some(true) {
@@ -96,10 +145,14 @@ impl DevNotesApp {
             }
             return;
         }
-        if let (Some(outer), Some(inner)) = (viewport.outer_rect, viewport.inner_rect) {
+        if let Some(inner) = viewport.inner_rect {
+            // Native Wayland names no place: nothing reads it back there either.
+            let place = viewport
+                .outer_rect
+                .map_or(egui::Pos2::ZERO, |outer| outer.min);
             self.geometry = Some(Geometry {
-                x: outer.min.x,
-                y: outer.min.y,
+                x: place.x,
+                y: place.y,
                 width: inner.width(),
                 height: inner.height(),
                 maximized: false,
@@ -115,7 +168,58 @@ fn reveal(ctx: &egui::Context) {
     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
 }
 
+/// Whether a person is already looking at the window: the palette then only opens.
+fn in_front(ctx: &egui::Context) -> bool {
+    ctx.input(|input| {
+        let viewport = input.viewport();
+        viewport.focused == Some(true) && viewport.minimized != Some(true)
+    })
+}
+
 impl DevNotesApp {
+    /// Read before the window is brought back: afterwards it is always in front.
+    fn asked_from_outside(&mut self, action: GlobalAction, ctx: &egui::Context) {
+        let action = if action == GlobalAction::Palette && in_front(ctx) {
+            GlobalAction::PaletteHere
+        } else {
+            action
+        };
+        reveal(ctx);
+        self.state.apply(Action::Global(action), ctx, &self.backend);
+    }
+
+    fn asked_by_tray(&mut self, asked: tray::Asked, ctx: &egui::Context) {
+        match asked {
+            tray::Asked::Reveal => reveal(ctx),
+            tray::Asked::NewNote => self.asked_from_outside(GlobalAction::NewNote, ctx),
+            tray::Asked::Capture => self.asked_from_outside(GlobalAction::Capture, ctx),
+            tray::Asked::Palette => self.asked_from_outside(GlobalAction::Palette, ctx),
+            tray::Asked::Quit => {
+                self.state
+                    .apply(Action::Global(GlobalAction::Quit), ctx, &self.backend);
+            }
+        }
+    }
+
+    fn asked_by_a_key(&mut self, key: Global, ctx: &egui::Context) {
+        let action = match key {
+            Global::Palette => GlobalAction::Palette,
+            Global::Capture => GlobalAction::Capture,
+            Global::NewNote => GlobalAction::NewNote,
+        };
+        self.asked_from_outside(action, ctx);
+    }
+
+    /// Replaced only when the language moved: a menu rebuilt every frame would close under the
+    /// mouse.
+    fn keep_the_tray_in_the_language(&mut self) {
+        if self.tray_language != self.state.language {
+            self.tray_language = self.state.language;
+            self.tray
+                .set_labels(&crate::services::tray::labels(self.tray_language));
+        }
+    }
+
     fn over_the_area(&mut self, ui: &egui::Ui, actions: &mut Actions) {
         let mut palette = std::mem::take(&mut self.state.palette_view);
         crate::palette::show(ui.ctx(), &self.state, &mut palette, actions);
@@ -129,16 +233,39 @@ impl DevNotesApp {
         self.state.http_view = view;
     }
 
-    /// The window goes hidden, its queue drained behind it (`on_exit`), or stays for an answer.
+    /// Both need a tray: hidden without one, nothing could call the window back.
+    fn hides_on_close(&self) -> bool {
+        !self.state.quitting && self.state.settings.close_to_tray && self.tray.exists()
+    }
+
+    /// To the tray; or hidden, its queue drained behind it (`on_exit`); or kept for an answer.
+    /// ⚠️ Kept, it comes up: a hidden window draws nothing, neither the question nor the editor
+    /// that has to close.
     fn close_asked(&mut self, ctx: &egui::Context) {
+        if self.hides_on_close() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            put_away(ctx);
+            return;
+        }
         if self.state.may_close() {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
             return;
         }
         ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-        if self.state.http.leave().is_asking() {
-            reveal(ctx);
+        reveal(ctx);
+    }
+
+    /// On the way down only: a window still minimised while it comes back stays.
+    fn follow_the_minimize(&mut self, viewport: &egui::ViewportInfo, ctx: &egui::Context) {
+        let minimized = viewport.minimized == Some(true);
+        if minimized
+            && !self.was_minimized
+            && self.state.settings.minimize_to_tray
+            && self.tray.exists()
+        {
+            put_away(ctx);
         }
+        self.was_minimized = minimized;
     }
 }
 
@@ -186,13 +313,20 @@ impl eframe::App for DevNotesApp {
             self.shown = true;
         }
         theme::focus::track(ctx);
-        for input in self.inputs.try_iter() {
+        let inputs = self.inputs.clone();
+        for input in inputs.try_iter() {
             match input {
                 Input::Instance(Message::Reveal) => reveal(ctx),
                 Input::Instance(Message::Action(name)) => match GlobalAction::named(&name) {
                     Some(action) => self.state.apply(Action::Global(action), ctx, &self.backend),
                     None => log::warn!("A second launch asked for an unknown action"),
                 },
+                Input::Tray(asked) => self.asked_by_tray(asked, ctx),
+                Input::Shortcut(key) => self.asked_by_a_key(key, ctx),
+                Input::NoFileDialog => {
+                    let said = i18n::Message::new(i18n::keys::errors::NO_FILE_DIALOG);
+                    self.state.errors.notify(said);
+                }
                 Input::Engine(EngineEvent::IndexProgress { done, total }) => {
                     self.state.gate.index_progress(done, total);
                 }
@@ -205,8 +339,16 @@ impl eframe::App for DevNotesApp {
             }
         }
         self.state.update(ctx, &self.backend);
+        self.keep_the_tray_in_the_language();
+        let listening = self.state.titlebar_view.listens_for_a_global_key();
+        self.state.global_keys.update(
+            &self.state.settings.bindings,
+            listening,
+            &mut self.state.errors,
+        );
         let viewport = ctx.input(|input| input.viewport().clone());
         self.remember(&viewport);
+        self.follow_the_minimize(&viewport, ctx);
         if viewport.close_requested() {
             self.close_asked(ctx);
         }
@@ -302,15 +444,18 @@ impl eframe::App for DevNotesApp {
 
     fn on_exit(&mut self) {
         self.state.http.leaving(&self.backend);
+        drop(api::attachments::sweep_copies(&self.backend));
         if !self.backend.drain(EXIT_LIMIT) {
             log::warn!("The exit did not wait any longer for the database to finish");
         }
-        let Some(geometry) = self.geometry else {
-            return;
-        };
-        if let Err(error) = platform::window::write(&self.window_file, &geometry) {
+        self.state.global_keys.release();
+        self.tray.remove();
+        if let Some(geometry) = self.geometry
+            && let Err(error) = platform::window::write(&self.window_file, &geometry)
+        {
             log::warn!("The window geometry was not written: {error}");
         }
+        self.state.updates.install_on_the_way_out();
     }
 }
 
@@ -328,6 +473,15 @@ mod about_link_tests;
 
 #[cfg(test)]
 mod prompt_tests;
+
+#[cfg(test)]
+mod window_tests;
+
+#[cfg(test)]
+mod global_key_tests;
+
+#[cfg(test)]
+mod palette_copy_tests;
 
 #[cfg(test)]
 mod tests {
@@ -360,7 +514,116 @@ mod tests {
             inbox,
             waker,
             inputs: receiver,
+            desktop: Desktop::default(),
         }
+    }
+
+    /// Remembers what the application asked of it.
+    #[derive(Clone, Default)]
+    pub(super) struct FakeTray {
+        labels: std::sync::Arc<std::sync::Mutex<Vec<tray::Labels>>>,
+        removed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    }
+
+    impl Tray for FakeTray {
+        fn exists(&self) -> bool {
+            !self.removed.load(std::sync::atomic::Ordering::Relaxed)
+        }
+
+        fn set_labels(&self, labels: &tray::Labels) {
+            self.labels.lock().unwrap().push(labels.clone());
+        }
+
+        fn remove(&self) {
+            self.removed
+                .store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    pub(super) fn with_a_tray(
+        directory: &std::path::Path,
+    ) -> (Harness<'static, DevNotesApp>, FakeTray, Inbox) {
+        let fake = FakeTray::default();
+        let (inbox, waker, receiver) = inputs::channel();
+        let posted = inbox.clone();
+        let mut startup = startup_with(directory, (inbox, waker, receiver));
+        startup.desktop.tray = Box::new(fake.clone());
+        let harness = Harness::new_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
+        (harness, fake, posted)
+    }
+
+    pub(super) fn commands(harness: &Harness<'_, DevNotesApp>) -> Vec<egui::ViewportCommand> {
+        harness
+            .output()
+            .viewport_output
+            .values()
+            .flat_map(|viewport| viewport.commands.clone())
+            .collect()
+    }
+
+    #[test]
+    fn the_tray_brings_the_window_back() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut harness, _, posted) = with_a_tray(directory.path());
+
+        posted.post(Input::Tray(tray::Asked::Reveal));
+        harness.step();
+
+        let commands = commands(&harness);
+        assert!(commands.contains(&egui::ViewportCommand::Visible(true)));
+        assert!(commands.contains(&egui::ViewportCommand::Focus));
+    }
+
+    #[test]
+    fn the_trays_quit_closes_the_window() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut harness, _, posted) = with_a_tray(directory.path());
+
+        posted.post(Input::Tray(tray::Asked::Quit));
+        harness.step();
+
+        assert!(commands(&harness).contains(&egui::ViewportCommand::Close));
+    }
+
+    #[test]
+    fn the_trays_palette_opens_over_the_library() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let ctx = harness.ctx.clone();
+
+        harness
+            .state_mut()
+            .asked_by_tray(tray::Asked::Palette, &ctx);
+        settle(&mut harness);
+
+        assert!(harness.state().state().palette.is_open());
+    }
+
+    #[test]
+    fn the_trays_menu_follows_the_language_on_screen_and_goes_at_the_exit() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut harness, fake, _) = with_a_tray(directory.path());
+        let other = match harness.state().state().language {
+            i18n::Language::Fr => i18n::Language::En,
+            i18n::Language::En => i18n::Language::Fr,
+        };
+
+        harness.step();
+        assert!(
+            fake.labels.lock().unwrap().is_empty(),
+            "built with its menu"
+        );
+
+        harness.state_mut().state.language = other;
+        harness.step();
+        harness.step();
+        assert_eq!(
+            *fake.labels.lock().unwrap(),
+            [crate::services::tray::labels(other)]
+        );
+
+        eframe::App::on_exit(harness.state_mut());
+        assert!(!fake.exists());
     }
 
     fn visible_requests(harness: &Harness<'_, DevNotesApp>) -> usize {
@@ -407,6 +670,39 @@ mod tests {
             .collect();
         assert!(commands.contains(&&egui::ViewportCommand::Visible(true)));
         assert!(commands.contains(&&egui::ViewportCommand::Focus));
+    }
+
+    fn left_in_the_plain_copies(directory: &std::path::Path) -> std::path::PathBuf {
+        let copies = directory.join("open");
+        std::fs::create_dir_all(&copies).unwrap();
+        std::fs::write(copies.join("left.txt"), "step one").unwrap();
+        copies
+    }
+
+    #[test]
+    fn plain_copies_are_gone_after_the_launch_and_after_the_exit() {
+        let directory = tempfile::tempdir().unwrap();
+        let copies = left_in_the_plain_copies(directory.path());
+
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        settle(&mut harness);
+        assert!(!copies.exists(), "before anything is unlocked");
+
+        left_in_the_plain_copies(directory.path());
+        eframe::App::on_exit(harness.state_mut());
+        assert!(!copies.exists());
+    }
+
+    #[test]
+    fn a_desktop_with_no_file_dialog_says_so() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut harness, _, posted) = with_a_tray(directory.path());
+
+        posted.post(Input::NoFileDialog);
+        settle(&mut harness);
+
+        assert!(present(&harness, "error-banner"));
     }
 
     #[test]
@@ -625,11 +921,12 @@ mod tests {
 
         app.state.settings.copy_confirmation = false;
         app.state
-            .copy_out(&ctx, "echo quiet".to_owned(), said.clone());
+            .copy_out(&ctx, &app.backend, "echo quiet".to_owned(), said.clone());
         assert!(app.state.status.latest().is_none());
 
         app.state.settings.copy_confirmation = true;
-        app.state.copy_out(&ctx, "echo said".to_owned(), said);
+        app.state
+            .copy_out(&ctx, &app.backend, "echo said".to_owned(), said);
         assert!(app.state.status.latest().is_some());
     }
 

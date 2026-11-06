@@ -23,9 +23,20 @@ serde_json = "1.0.151"
 open = "5.4.5"
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 sha2 = "0.11.0"
+tray-icon = "0.26.1"
+global-hotkey = "0.9.0"
+auto-launch = "0.6.0"
+notify-rust = "4.18.2"
+cargo-packager-updater = "0.2.3"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56.0"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# The tray's thread, the only GTK one of the process (D29); the version `tray-icon` draws with.
+gtk = "0.18.2"
+# Whether a portal answers before a dialog is asked of it; the version `rfd` already draws in.
+zbus = "5.19.0"
 
 [dev-dependencies]
 tempfile = "3.27.0"

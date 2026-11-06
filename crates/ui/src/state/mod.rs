@@ -114,6 +114,8 @@ pub struct AppState {
     pub editor: editor::EditorState,
     /// The window waits for the note open to close.
     pub closing_editor: bool,
+    /// « Quit », and not the close button: the window goes whatever the tray preference says.
+    pub quitting: bool,
     pub revisions: note_revisions::RevisionsState,
     pub selection: selection::SelectionState,
     pub undo: undo::UndoState,
@@ -136,6 +138,9 @@ pub struct AppState {
     /// Not the library's: it outlives a switch, and is read at the gate too.
     pub help: help::HelpState,
     pub updates: crate::services::updates::UpdateState,
+    pub global_keys: crate::services::global_keys::GlobalKeys,
+    pub autostart: crate::services::autostart::AutostartState,
+    pub notifier: std::sync::Arc<dyn platform::notify::Notifier + Send + Sync>,
     /// The bar's menus and what they open: only their drawing reads it (D13).
     pub titlebar_view: crate::titlebar::View,
     /// The modals the bar's menus open, in the order they are drawn.
@@ -156,6 +161,16 @@ pub struct AppState {
     pub clock: Box<dyn Clock>,
     /// The system's wish; the look adds nothing to it.
     pub reduced_motion: bool,
+}
+
+/// Out of sight, for the tray or a key to call back. Nothing hides a window under native
+/// Wayland: it minimises there (E12).
+pub(crate) fn put_away(ctx: &egui::Context) {
+    ctx.send_viewport_cmd(if platform::window::is_native_wayland() {
+        egui::ViewportCommand::Minimized(true)
+    } else {
+        egui::ViewportCommand::Visible(false)
+    });
 }
 
 impl AppState {
@@ -180,6 +195,7 @@ impl AppState {
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
             closing_editor: false,
+            quitting: false,
             revisions: note_revisions::RevisionsState::default(),
             selection: selection::SelectionState::default(),
             undo: undo::UndoState::default(),
@@ -199,10 +215,13 @@ impl AppState {
             backups: backups::BackupsState::default(),
             help: help::HelpState::default(),
             updates: crate::services::updates::UpdateState::default(),
+            global_keys: crate::services::global_keys::GlobalKeys::default(),
+            autostart: crate::services::autostart::AutostartState::default(),
+            notifier: std::sync::Arc::new(platform::notify::NoNotifier),
             titlebar_view: crate::titlebar::View::default(),
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
-            dialog: platform::dialog::system(),
+            dialog: std::sync::Arc::new(platform::dialog::NoDialog),
             opener: platform::desktop::system(),
             clipboard: platform::clipboard::system(),
             attachments: attachments::AttachmentsState::default(),
@@ -231,6 +250,12 @@ impl AppState {
             .update(backend, &mut self.status, &mut self.errors)
         {
             self.reset_library_scope(ctx, backend);
+        }
+        if self.autostart.update(backend, &mut self.settings) {
+            self.save_settings(backend);
+        }
+        if self.updates.take_leaving() {
+            self.apply(Action::Global(GlobalAction::Quit), ctx, backend);
         }
         self.adopt_library_preferences(backend);
         self.adopt_seeding(backend);
@@ -267,7 +292,7 @@ impl AppState {
             .update(backend, &mut self.revision, &mut self.errors);
         let filled = self.fill.update(&mut self.revision, &mut self.errors);
         for (text, said) in filled.copied {
-            self.copy_out(ctx, text, said);
+            self.copy_out(ctx, backend, text, said);
         }
         let pinned_first = self.settings.show_pinned_first;
         self.palette.update(
@@ -302,7 +327,7 @@ impl AppState {
         self.presentation.update(ctx, &mut self.errors);
         for (note, sheet) in self.calc.update(&mut self.errors) {
             let text = crate::notes::calc::copy_text(&note.content, &sheet, self.calc_format());
-            self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
+            self.copy_out(ctx, backend, text, placeholder_fill::copied_note(&note));
         }
         self.follow_revisions(backend);
         self.update_area_or_exit(ctx, backend, time);
@@ -678,6 +703,7 @@ impl AppState {
             Action::Tools(action) => self.apply_tools(action, backend),
             Action::Menu(action) => self.apply_menu(action, ctx, backend),
             Action::Global(GlobalAction::Quit) => {
+                self.quitting = true;
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
             // A note opens over the canvas: what the native side asks comes back to the notes.
@@ -692,8 +718,10 @@ impl AppState {
                 }
             }
             Action::Palette(asked) => self.apply_palette(asked, ctx, backend),
-            // The capture arrives with its own phase.
-            Action::Global(GlobalAction::Capture) => {}
+            Action::Global(GlobalAction::Capture) => {
+                self.apply(Action::App(AppAction::ShowArea(Area::Notes)), ctx, backend);
+                self.capture(backend);
+            }
         }
     }
 
@@ -1032,7 +1060,10 @@ impl AppState {
             Http::SendMessage { key, text } => self.http.send_message(backend, &key, text),
             Http::ClearSocketLog(key) => self.http.clear_socket_log(&key),
             Http::Runner(asked) => self.http.ask_runner(backend, &self.dialog, asked),
-            Http::Leave(asked) => self.http.answer_leave(asked),
+            Http::Leave(asked) => {
+                self.quitting &= asked != http::leave::Asked::Cancel;
+                self.http.answer_leave(asked);
+            }
             Http::History(asked) => self.http.ask_history(backend, asked),
             Http::Code(asked) => self.http.ask_code(asked),
             Http::CopyCode(text) => self.say_copied(ctx, text, i18n::keys::http::code::COPIED),
@@ -1075,7 +1106,9 @@ impl AppState {
         if !self.gate.is_open() {
             return true;
         }
-        if !self.http.ask_leave(http::leave::Reason::Quit) {
+        // Asked before the download: once is enough.
+        let answered = self.updates.status() == crate::services::updates::Status::Installed;
+        if !answered && !self.http.ask_leave(http::leave::Reason::Quit) {
             return false;
         }
         self.closing_editor = self.editor.is_open();
@@ -1211,7 +1244,7 @@ impl AppState {
                     self.palette.copied();
                 }
                 if let Some((text, said)) = self.fill.apply(asked, backend) {
-                    self.copy_out(ctx, text, said);
+                    self.copy_out(ctx, backend, text, said);
                 }
             }
             Notes::Trash(asked) => {
@@ -1455,7 +1488,7 @@ impl AppState {
             Fields::CopyRaw(text) => {
                 let note = self.editor.opened().and_then(|open| open.note());
                 if let Some(said) = note.map(placeholder_fill::copied_note) {
-                    self.copy_out(ctx, text, said);
+                    self.copy_out(ctx, backend, text, said);
                 }
             }
             Fields::Fold(open) => {
@@ -1651,18 +1684,46 @@ impl AppState {
             .copy_text
             .clone()
             .unwrap_or_else(|| note.content.clone());
-        self.copy_out(ctx, text, placeholder_fill::copied_note(&note));
+        self.copy_out(ctx, backend, text, placeholder_fill::copied_note(&note));
     }
 
-    /// Onto the clipboard, and said; a copy asked from the palette closes it.
-    pub(crate) fn copy_out(&mut self, ctx: &egui::Context, text: String, said: i18n::Message) {
+    /// Onto the clipboard, and said; a copy asked from the palette closes it. Over another
+    /// application the window goes back where it came from: a toast is the only way left to say
+    /// it.
+    pub(crate) fn copy_out(
+        &mut self,
+        ctx: &egui::Context,
+        backend: &Backend,
+        text: String,
+        said: i18n::Message,
+    ) {
         ctx.copy_text(text);
-        if self.palette.copied() {
+        let from_palette = self.palette.copied();
+        let from_elsewhere = from_palette && self.palette.from_elsewhere();
+        if from_palette {
             self.palette.close();
         }
-        if self.settings.copy_confirmation {
+        if from_elsewhere {
+            put_away(ctx);
+        }
+        if !self.settings.copy_confirmation {
+            return;
+        }
+        if from_elsewhere {
+            self.say_on_the_desktop(backend, &said);
+        } else {
             self.status.report(said);
         }
+    }
+
+    fn say_on_the_desktop(&self, backend: &Backend, said: &i18n::Message) {
+        let title = i18n::translate(self.language, i18n::keys::palette::COPIED_TITLE, &[]);
+        let body = said.text(self.language);
+        let notifier = std::sync::Arc::clone(&self.notifier);
+        drop(backend.compute(move |_| {
+            notifier.notify(&title, &body);
+            Ok(())
+        }));
     }
 
     fn apply_palette(
@@ -1743,6 +1804,30 @@ impl AppState {
         self.editor.draft(kind, space, folder);
     }
 
+    /// The clipboard read like a paste into an empty Note: code makes a snippet in the language
+    /// the core reads in it, prose a Note. Holding its content, it is written at once.
+    fn capture(&mut self, backend: &Backend) {
+        use engine::notes::kind::NoteKind;
+        use engine::notes::language::Language;
+        if !self.gate.is_open() {
+            return;
+        }
+        let Some(content) = self.clipboard.text().filter(|text| !text.trim().is_empty()) else {
+            return;
+        };
+        let Some((space, folder)) = self.new_place() else {
+            return;
+        };
+        let language = crate::api::notes::detect_language(&content);
+        let kind = if language == Language::Txt {
+            NoteKind::Note
+        } else {
+            NoteKind::Snippet
+        };
+        self.editor
+            .draft_filled(backend, (kind, space, folder), content, language);
+    }
+
     /// Where a new note goes: the space and folder shown, or the first space for « all »; said
     /// when there is none.
     fn new_place(&mut self) -> Option<(String, Option<String>)> {
@@ -1770,9 +1855,9 @@ impl AppState {
         }
     }
 
-    /// The desktop's own browser: a URL goes the way a file does.
+    /// The desktop's own browser, for the web alone.
     fn open_link(&self, url: &str) {
-        drop(self.opener.open(std::path::Path::new(url)));
+        platform::links::open(self.opener.as_ref(), url);
     }
 
     fn set_prettier(

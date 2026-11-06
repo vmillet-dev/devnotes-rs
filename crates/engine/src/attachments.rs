@@ -69,6 +69,12 @@ pub fn decrypted_copy(engine: &Engine, id: String) -> Result<std::path::PathBuf,
     Ok(write_plaintext_copy(&directory, &attachment, &bytes)?)
 }
 
+/// The decrypted copies of every library: at the launch, before any is unlocked, and at the exit.
+pub fn sweep_copies(engine: &Engine) -> Result<(), AppError> {
+    sealed::sweep_plaintext(&engine.paths);
+    Ok(())
+}
+
 /// The path comes from a native picker; the write stays here.
 pub fn save_attachment(engine: &Engine, id: String, path: String) -> Result<(), AppError> {
     let db = &engine.db;

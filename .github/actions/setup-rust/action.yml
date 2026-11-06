@@ -13,15 +13,15 @@ inputs:
 runs:
   using: composite
   steps:
-    # Nothing to link: Wayland, X11, xkbcommon and fontconfig are opened at run time. What
-    # kittest draws on is, a software Vulkan (lavapipe); Windows has WARP.
-    - name: Software Vulkan and xkbcommon
+    # GTK is the tray's, the one library linked. Wayland, X11, xkbcommon and fontconfig are opened
+    # at run time. What kittest draws on is, a software Vulkan (lavapipe); Windows has WARP.
+    - name: GTK, software Vulkan and xkbcommon
       if: runner.os == 'Linux'
       shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers
+          libgtk-3-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers
 
     # Read from `rust-toolchain.toml` rather than written here: two places would end up
     # diverging, and drift is precisely what pinning avoids.
