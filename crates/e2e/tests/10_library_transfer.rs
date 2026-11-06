@@ -177,7 +177,13 @@ fn library_transfer() {
             std::fs::write(&file, NEWER).unwrap();
             menu(&mut app, "import");
             report(&mut app);
-            cards(&mut app, CARDS + 2, "the note from the future is drawn");
+            // In its own space: a list draws only what is in view, and the window's size is the
+            // machine's.
+            app.click_where("space-option", |node| node.label() == Some("Ailleurs"));
+            app.eventually("the note from the future is drawn", |tree| {
+                tree.texts("note-card-title")
+                    .contains(&"Ahead of this build".to_owned())
+            });
         },
     );
 
