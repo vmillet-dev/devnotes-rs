@@ -269,6 +269,7 @@ dependencies = [
  "egui",
  "engine",
  "flexi_logger",
+ "i18n",
  "log",
  "platform",
  "tempfile",

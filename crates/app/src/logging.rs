@@ -52,23 +52,69 @@ fn report(info: &PanicHookInfo<'_>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Arc, Mutex, OnceLock};
+
+    use engine::notes::model::NotePatch;
+    use tempfile::TempDir;
 
     use super::*;
 
-    #[test]
-    fn the_log_is_written_in_its_directory() {
-        let directory = tempfile::tempdir().unwrap();
+    /// One logger a process: the tests share it, and each looks for its own line.
+    fn logger() -> &'static (TempDir, LoggerHandle) {
+        static LOGGER: OnceLock<(TempDir, LoggerHandle)> = OnceLock::new();
+        LOGGER.get_or_init(|| {
+            let directory = tempfile::tempdir().unwrap();
+            let logger = start(directory.path()).unwrap();
+            (directory, logger)
+        })
+    }
 
-        let logger = start(directory.path()).unwrap();
-        log::warn!("a line the test looks for");
+    fn written() -> String {
+        let (directory, logger) = logger();
         logger.flush();
-
-        let written: String = std::fs::read_dir(directory.path())
+        std::fs::read_dir(directory.path())
             .unwrap()
             .map(|entry| std::fs::read_to_string(entry.unwrap().path()).unwrap())
-            .collect();
+            .collect()
+    }
+
+    #[test]
+    fn the_log_is_written_in_its_directory() {
+        logger();
+
+        log::warn!("a line the test looks for");
+
+        let written = written();
         assert!(written.contains("a line the test looks for"), "{written}");
+    }
+
+    #[test]
+    fn a_failing_operation_is_logged_without_the_text_of_the_note() {
+        logger();
+        let profile = tempfile::tempdir().unwrap();
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let paths = engine::Paths {
+            profile: profile.path().to_path_buf(),
+            resources: profile.path().to_path_buf(),
+        };
+        let sink = Arc::new(engine::RecordingSink::default());
+        let closed = engine::Engine::new(paths, sink, runtime.handle().clone());
+        let patch = NotePatch {
+            title: Some("title never logged".to_owned()),
+            content: Some("psql -h prod -W hunter2".to_owned()),
+            ..Default::default()
+        };
+
+        let failed = engine::db::run_here(&closed, |engine| {
+            engine::notes::update_note(engine, "note-id".to_owned(), patch)
+        });
+        ui::services::errors::ErrorNotifier::default()
+            .report(i18n::keys::errors::NOTE_GONE, &failed.unwrap_err());
+
+        let written = written();
+        assert!(written.contains("errors.noteGone"), "{written}");
+        assert!(!written.contains("hunter2"), "{written}");
+        assert!(!written.contains("title never logged"), "{written}");
     }
 
     #[test]
