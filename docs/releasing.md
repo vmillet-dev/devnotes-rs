@@ -1,5 +1,7 @@
 # Releasing
 
+Before a release, pass `docs/os-checklist.md` and record the pass there.
+
 A release is a `workflow_dispatch`. One run writes the changelog, commits it, tags, builds
 every bundle and publishes — there is no step to do by hand between them, and no partial
 state to clean up if it stops.
