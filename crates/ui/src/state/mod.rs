@@ -11,6 +11,7 @@ pub mod editor;
 pub mod explored;
 pub mod folders;
 pub mod formatting;
+pub mod help;
 pub mod http;
 pub mod libraries;
 pub mod note_revisions;
@@ -132,6 +133,8 @@ pub struct AppState {
     pub libraries: libraries::LibrariesState,
     pub security: security::SecurityState,
     pub backups: backups::BackupsState,
+    /// Not the library's: it outlives a switch, and is read at the gate too.
+    pub help: help::HelpState,
     /// The bar's menus and what they open: only their drawing reads it (D13).
     pub titlebar_view: crate::titlebar::View,
     /// The modals the bar's menus open, in the order they are drawn.
@@ -193,6 +196,7 @@ impl AppState {
             libraries: libraries::LibrariesState::default(),
             security: security::SecurityState::default(),
             backups: backups::BackupsState::default(),
+            help: help::HelpState::default(),
             titlebar_view: crate::titlebar::View::default(),
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
@@ -215,6 +219,7 @@ impl AppState {
     /// Once a frame, before drawing: the answers that arrived are adopted.
     pub fn update(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.dialogs.begin_frame(ctx);
+        self.help.update();
         if self
             .gate
             .update(backend, &mut self.status, &mut self.errors)
@@ -737,6 +742,20 @@ impl AppState {
                     .open(Layer::Settings, crate::titlebar::preferences::id(), opener);
             }
             Menu::Preferences(asked) => self.apply_preferences(asked, ctx, backend),
+            Menu::OpenHelp(panel) => {
+                if panel == crate::titlebar::about_menu::Panel::WhatsNew {
+                    self.help.load(backend);
+                }
+                self.titlebar_view.show_help(panel);
+                let opener = self.titlebar_view.about_anchor();
+                self.dialogs
+                    .open(Layer::App, crate::titlebar::about_menu::id(), opener);
+            }
+            Menu::CloseHelp => {
+                self.titlebar_view.close_help();
+                self.dialogs.close(ctx, crate::titlebar::about_menu::id());
+            }
+            Menu::OpenLink(url) => self.open_link(&url),
         }
     }
 

@@ -8,6 +8,7 @@ pub mod attachments;
 pub mod backups;
 pub mod board;
 pub mod folders;
+pub mod help;
 pub mod http;
 pub mod json;
 pub mod libraries;

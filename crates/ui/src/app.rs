@@ -126,9 +126,6 @@ impl DevNotesApp {
         let mut view = std::mem::take(&mut self.state.http_view);
         http::leave::show(ui, &self.state, &mut view, actions);
         self.state.http_view = view;
-        let mut view = std::mem::take(&mut self.state.titlebar_view);
-        titlebar::dialogs(ui.ctx(), &self.state, &mut view, actions);
-        self.state.titlebar_view = view;
     }
 
     /// The window goes hidden, its queue drained behind it (`on_exit`), or stays for an answer.
@@ -285,6 +282,10 @@ impl eframe::App for DevNotesApp {
         if self.state.gate.is_open() {
             self.over_the_area(ui, &mut actions);
         }
+        // The About menu stays at the gate, and what it opens with it.
+        let mut view = std::mem::take(&mut self.state.titlebar_view);
+        titlebar::dialogs(ui.ctx(), &self.state, &mut view, &mut actions);
+        self.state.titlebar_view = view;
         if let Some(action) = self.dispatch_keys(ui.ctx()) {
             actions.push(action);
         }
@@ -473,6 +474,10 @@ mod tests {
         let mut harness = Harness::builder()
             .with_size(egui::vec2(1100.0, 720.0))
             .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
+        // The window finds the arrows in the system's fonts, which a bench has not.
+        harness
+            .ctx
+            .set_missing_glyph_policy(egui::epaint::text::MissingGlyphPolicy::Tofu);
         settle(&mut harness);
         type_into(&mut harness, "vault-passphrase", crate::testing::PASSPHRASE);
         type_into(
@@ -616,6 +621,75 @@ mod tests {
         app.state.settings.copy_confirmation = true;
         app.state.copy_out(&ctx, "echo said".to_owned(), said);
         assert!(app.state.status.latest().is_some());
+    }
+
+    #[test]
+    fn the_about_menu_stays_at_the_gate() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness =
+            Harness::new_eframe(|cc| DevNotesApp::new(cc, startup(directory.path())).unwrap());
+        settle(&mut harness);
+        assert!(!present(&harness, "file-menu"));
+
+        click(&mut harness, "about-open");
+        click(&mut harness, "about-about");
+
+        assert!(present(&harness, "about-dialog"));
+        click(&mut harness, "about-close");
+        assert!(!present(&harness, "about-dialog"));
+    }
+
+    #[test]
+    fn whats_new_shows_the_changelog_and_marks_what_is_installed() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+
+        click(&mut harness, "about-open");
+        click(&mut harness, "about-whats-new");
+        settle(&mut harness);
+
+        assert!(count(&harness, "news-version") > 0);
+        click(&mut harness, "news-close");
+        assert!(!present(&harness, "news-close"));
+    }
+
+    #[test]
+    fn the_guide_walks_jumps_and_closes_from_any_chapter() {
+        use egui_kittest::kittest::{NodeT, Queryable};
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let chapter = |harness: &Harness<'_, DevNotesApp>| {
+            let node = harness.get_by(|node| node.author_id() == Some("guide-chapter"));
+            node.accesskit_node().value().unwrap_or_default()
+        };
+
+        click(&mut harness, "about-open");
+        click(&mut harness, "about-getting-started");
+        let first = chapter(&harness);
+        click(&mut harness, "guide-next");
+        let second = chapter(&harness);
+        assert_ne!(first, second);
+
+        click(&mut harness, "guide-dot-http");
+        assert!(!present(&harness, "guide-next"), "the last has no next");
+        assert_ne!(chapter(&harness), second);
+
+        click(&mut harness, "guide-close");
+        assert!(!present(&harness, "guide-chapter"));
+    }
+
+    #[test]
+    fn the_sheet_lists_its_groups_and_escape_closes_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+
+        click(&mut harness, "about-open");
+        click(&mut harness, "about-shortcuts");
+        assert!(count(&harness, "shortcut-group") > 2);
+
+        harness.key_press(egui::Key::Escape);
+        settle(&mut harness);
+        assert!(!present(&harness, "sheet-close"));
     }
 
     #[test]

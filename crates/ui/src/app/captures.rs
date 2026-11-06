@@ -24,6 +24,10 @@ fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
         .with_size(SIZE)
         .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
     harness.state_mut().state.clock = Box::new(FakeClock::at("2026-11-03T09:30:00Z"));
+    // The window finds the arrows in the system's fonts, which a bench has not.
+    harness
+        .ctx
+        .set_missing_glyph_policy(egui::epaint::text::MissingGlyphPolicy::Tofu);
     settle(&mut harness);
     harness
 }
@@ -121,6 +125,29 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     click(&mut harness, "vault-submit");
     settle(&mut harness);
     capture(&mut harness, "titlebar-notes");
+
+    click(&mut harness, "about-open");
+    capture(&mut harness, "about-menu");
+    click(&mut harness, "about-about");
+    settle(&mut harness);
+    capture(&mut harness, "about-card");
+    click(&mut harness, "about-close");
+    click(&mut harness, "about-open");
+    click(&mut harness, "about-getting-started");
+    settle(&mut harness);
+    capture(&mut harness, "getting-started");
+    click(&mut harness, "guide-close");
+    click(&mut harness, "about-open");
+    click(&mut harness, "about-shortcuts");
+    settle(&mut harness);
+    capture(&mut harness, "shortcut-sheet");
+    click(&mut harness, "sheet-close");
+    click(&mut harness, "about-open");
+    click(&mut harness, "about-whats-new");
+    settle(&mut harness);
+    capture(&mut harness, "whats-new");
+    click(&mut harness, "news-close");
+    settle(&mut harness);
 
     click(&mut harness, "file-menu");
     capture(&mut harness, "file-menu");
