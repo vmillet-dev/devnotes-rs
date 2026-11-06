@@ -5,6 +5,7 @@
 //! Built after the unlock, newest first, a slice at a time on the db queue ([`fill`]), so a
 //! command sent meanwhile runs between two slices.
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
@@ -129,6 +130,9 @@ pub struct NoteIndex {
     folders: HashMap<String, NoteFolder>,
     /// The global `{{field}}` values, sealed on disk.
     globals: BTreeMap<String, String>,
+    /// What [`Self::facets`] counted, by space, until a note changes: a count walks every note,
+    /// and every list asks for one.
+    counted: RefCell<HashMap<Option<String>, Facets>>,
 }
 
 impl Drop for NoteIndex {
@@ -179,6 +183,7 @@ impl NoteIndex {
         for entry in entries {
             self.notes.insert(entry.note.id.clone(), Arc::new(entry));
         }
+        self.counted.get_mut().clear();
         self.complete = i64::try_from(read).unwrap_or(i64::MAX) < SLICE;
         self.filling &= !self.complete;
         Ok(!self.complete)
@@ -218,6 +223,7 @@ impl NoteIndex {
                 self.notes
                     .insert(note.id.clone(), Arc::new(IndexedNote::of(note)));
             }
+            self.counted.get_mut().clear();
         }
         Ok(())
     }
@@ -315,6 +321,16 @@ impl NoteIndex {
     /// Counted as the SQL counted them, a space or every one. ⚠️ Tags that differ only in case
     /// are one, as under `COLLATE NOCASE`, named by their smallest spelling.
     pub(crate) fn facets(&self, space_id: Option<&str>) -> Facets {
+        let space = space_id.map(str::to_owned);
+        if let Some(counted) = self.counted.borrow().get(&space) {
+            return counted.clone();
+        }
+        let counted = self.count_facets(space_id);
+        self.counted.borrow_mut().insert(space, counted.clone());
+        counted
+    }
+
+    fn count_facets(&self, space_id: Option<&str>) -> Facets {
         let mut tags: BTreeMap<String, (String, i64)> = BTreeMap::new();
         let mut languages: BTreeMap<&str, i64> = BTreeMap::new();
         let mut kinds: HashMap<&str, i64> = HashMap::new();
@@ -593,6 +609,21 @@ mod tests {
         index.next_slice(&mut library).unwrap();
 
         assert!(!index.filling);
+    }
+
+    #[test]
+    fn a_count_follows_a_note_that_changes() {
+        let mut library = library(2);
+        let mut index = NoteIndex::default();
+        index.ready(&mut library).unwrap();
+        assert_eq!(index.facets(None).tags[0].count, 2);
+
+        store::trash::trash(&mut library, "n-00", at(NOW)).unwrap();
+        index
+            .refresh(&mut library, &Changed::notes(["n-00".to_string()]))
+            .unwrap();
+
+        assert_eq!(index.facets(None).tags[0].count, 1);
     }
 
     #[test]
