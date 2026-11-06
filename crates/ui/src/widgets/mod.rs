@@ -129,8 +129,8 @@ pub(crate) fn one_line(
     )
 }
 
-/// What an arrow takes in a wrapped text: it keeps its room, and no line breaks inside it.
-const ARROW_ROOM: &str = "\u{a0}\u{a0}\u{a0}";
+/// What an arrow takes in a wrapped text, in non-breaking spaces: it keeps its room, and no line
+/// breaks inside it.
 const ARROW_CHARS: usize = 4;
 
 /// A text laid out, its arrows waiting to be painted over the room kept for them.
@@ -173,7 +173,7 @@ pub(crate) fn wrapped(
     for glyph in words.chars() {
         if let Some(icon) = arrow_of(glyph) {
             arrows.push((rank, icon));
-            laid.push_str(ARROW_ROOM);
+            laid.extend(std::iter::repeat_n('\u{a0}', ARROW_CHARS));
             rank += ARROW_CHARS;
         } else {
             laid.push(glyph);
