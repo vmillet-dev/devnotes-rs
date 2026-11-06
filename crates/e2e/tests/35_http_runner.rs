@@ -122,7 +122,7 @@ fn order_kept(app: &mut App) {
     step("the order moved by the keys", || {
         app.click_nth("http-runner-row", 0);
         app.eventually("the row has the focus", |tree| {
-            tree.focused().contains("http-runner-row")
+            tree.focused().contains("http-runner-row") && tree.focused().contains("Login")
         });
         app.press(Key::ArrowDown, Modifiers::ALT);
         app.eventually("the rows are swapped", |tree| {
