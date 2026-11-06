@@ -391,7 +391,7 @@ impl AttachmentsState {
 }
 
 /// An image in the closed list, as pixels; `None` for anything else.
-fn decode(uri: &str) -> Option<ColorImage> {
+pub(crate) fn decode(uri: &str) -> Option<ColorImage> {
     let (head, payload) = uri.split_once(";base64,")?;
     let bytes = BASE64.decode(payload).ok()?;
     if head == "data:image/svg+xml" {

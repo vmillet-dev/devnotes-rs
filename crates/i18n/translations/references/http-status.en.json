@@ -1,0 +1,166 @@
+{
+  "codes": {
+    "100": {
+      "meaning": "The server got the headers; the client may send the body.",
+      "use": "The answer to Expect: 100-continue, before a large upload."
+    },
+    "101": {
+      "meaning": "The server switches to the protocol asked for in Upgrade.",
+      "use": "The handshake that opens a WebSocket."
+    },
+    "102": { "meaning": "The request is still being processed (WebDAV); servers hardly send it any more." },
+    "103": {
+      "meaning": "Hints, such as Link: rel=preload, sent before the final response.",
+      "use": "Let the browser preload assets while the page is computed."
+    },
+    "200": {
+      "meaning": "The request succeeded; the body carries the result.",
+      "use": "A successful GET, or a POST that answers with content."
+    },
+    "201": {
+      "meaning": "A resource was created; Location says where.",
+      "use": "A POST that creates something."
+    },
+    "202": {
+      "meaning": "Accepted for processing that has not finished.",
+      "use": "A job queued for later."
+    },
+    "203": { "meaning": "Success, but a transforming proxy modified the content." },
+    "204": {
+      "meaning": "Success, with no body to send.",
+      "use": "A DELETE or a PUT with nothing to return."
+    },
+    "205": { "meaning": "Success; the client should reset the form or view the request came from." },
+    "206": {
+      "meaning": "Only the range of the resource that was asked for (Range).",
+      "use": "Resuming a download, streaming a video."
+    },
+    "207": { "meaning": "Several statuses for several resources, in an XML body (WebDAV)." },
+    "208": { "meaning": "Members already listed earlier in the same response are not repeated (WebDAV)." },
+    "226": {
+      "meaning": "The response is the result of manipulations applied to the resource (delta encoding)."
+    },
+    "300": { "meaning": "Several representations are available; the client may choose." },
+    "301": {
+      "meaning": "The resource moved for good; clients and search engines follow the new URL.",
+      "use": "A permanent move, when a POST may turn into a GET."
+    },
+    "302": {
+      "meaning": "The resource is temporarily elsewhere; clients often switch to GET.",
+      "use": "A legacy temporary redirect: prefer 303 or 307."
+    },
+    "303": {
+      "meaning": "The answer is at another URL, to fetch with GET.",
+      "use": "After a form POST, redirect to the result page (Post/Redirect/Get)."
+    },
+    "304": {
+      "meaning": "The cached copy is still valid; no body is sent.",
+      "use": "The answer to If-None-Match or If-Modified-Since."
+    },
+    "305": { "meaning": "Must go through the proxy given; dropped for security reasons." },
+    "307": {
+      "meaning": "Temporarily elsewhere; repeat the request with the same method and body.",
+      "use": "A temporary redirect that must keep a POST a POST."
+    },
+    "308": {
+      "meaning": "Moved for good; repeat the request with the same method and body.",
+      "use": "The permanent move of an API endpoint that receives POSTs."
+    },
+    "400": {
+      "meaning": "The request is malformed and the server will not process it.",
+      "use": "Invalid syntax, an unreadable body, a missing parameter."
+    },
+    "401": {
+      "meaning": "Authentication is missing or invalid; WWW-Authenticate says how to provide it.",
+      "use": "No token, or an expired one."
+    },
+    "402": { "meaning": "Reserved for later; some APIs use it for a payment or a quota." },
+    "403": {
+      "meaning": "The server knows who you are, and refuses.",
+      "use": "Authenticated, but not allowed."
+    },
+    "404": {
+      "meaning": "Nothing at this URL.",
+      "use": "An unknown resource, or one to hide from whoever may not see it."
+    },
+    "405": { "meaning": "The method is not accepted on this resource; Allow lists those that are." },
+    "406": { "meaning": "No representation matches the Accept headers sent." },
+    "407": { "meaning": "Like 401, to authenticate with a proxy." },
+    "408": { "meaning": "The server stopped waiting for the request." },
+    "409": {
+      "meaning": "The request conflicts with the current state of the resource.",
+      "use": "An edit conflict, a duplicate of a unique value."
+    },
+    "410": { "meaning": "The resource is gone for good, with no address to follow." },
+    "411": { "meaning": "The request must carry a Content-Length." },
+    "412": {
+      "meaning": "A precondition in the headers (If-Match…) failed.",
+      "use": "Optimistic concurrency: the ETag no longer matches."
+    },
+    "413": { "meaning": "The body is larger than the server accepts." },
+    "414": { "meaning": "The URI is longer than the server accepts." },
+    "415": { "meaning": "The format of the body (Content-Type) is not supported." },
+    "416": { "meaning": "The range asked for lies outside the resource." },
+    "417": { "meaning": "The Expect header cannot be met." },
+    "418": {
+      "meaning": "The server is a teapot and refuses to brew coffee: an April Fools' joke from 1998."
+    },
+    "421": { "meaning": "The request reached a server that cannot answer for this origin." },
+    "422": {
+      "meaning": "Well formed, but invalid in substance.",
+      "use": "Validation errors on a well-formed JSON body."
+    },
+    "423": { "meaning": "The resource is locked (WebDAV)." },
+    "424": { "meaning": "Failed, because a request it depended on failed (WebDAV)." },
+    "425": { "meaning": "The server refuses a request that might be replayed (TLS early data)." },
+    "426": { "meaning": "The client must switch to the protocol named in Upgrade." },
+    "428": { "meaning": "The server requires the request to be conditional (If-Match)." },
+    "429": {
+      "meaning": "Too many requests in too short a time; Retry-After says when to try again.",
+      "use": "Rate limiting."
+    },
+    "431": { "meaning": "The headers, or one of them, are too large." },
+    "440": { "meaning": "The client's session has expired." },
+    "444": { "meaning": "nginx closed the connection without sending anything." },
+    "449": { "meaning": "Retry after performing the action asked for." },
+    "451": { "meaning": "Unavailable for legal reasons: a court order, censorship." },
+    "494": { "meaning": "The request headers are too large." },
+    "495": { "meaning": "The client certificate is invalid." },
+    "496": { "meaning": "A client certificate is required, and none was sent." },
+    "497": { "meaning": "A plain HTTP request reached an HTTPS port." },
+    "499": {
+      "meaning": "The client closed the connection before the answer; only ever seen in nginx's logs."
+    },
+    "500": {
+      "meaning": "An unexpected error on the server.",
+      "use": "An uncaught exception; never for the client's mistake."
+    },
+    "501": { "meaning": "The server does not support what is asked, the method for instance." },
+    "502": {
+      "meaning": "A gateway or a proxy got an invalid response from the server behind it.",
+      "use": "The upstream application is down or crashed."
+    },
+    "503": {
+      "meaning": "The server cannot handle the request for now; Retry-After may say until when.",
+      "use": "Planned maintenance, an overload, a dependency down."
+    },
+    "504": {
+      "meaning": "A gateway or a proxy got no answer in time from the server behind it.",
+      "use": "The upstream application is too slow."
+    },
+    "505": { "meaning": "The HTTP version of the request is not supported." },
+    "506": { "meaning": "The server's content negotiation is misconfigured." },
+    "507": { "meaning": "The server cannot store what it needs to complete the request (WebDAV)." },
+    "508": { "meaning": "An infinite loop was detected while processing (WebDAV)." },
+    "509": { "meaning": "The site went over its bandwidth allowance (cPanel)." },
+    "510": { "meaning": "The request must carry further extensions." },
+    "511": { "meaning": "The client must authenticate to reach the network: a captive portal." },
+    "520": { "meaning": "The origin returned an unknown or empty response." },
+    "521": { "meaning": "The origin refused the connection." },
+    "522": { "meaning": "The connection to the origin timed out." },
+    "523": { "meaning": "The origin is unreachable." },
+    "524": { "meaning": "The origin did not answer in time once connected." },
+    "525": { "meaning": "The TLS handshake with the origin failed." },
+    "526": { "meaning": "The origin's certificate is invalid." }
+  }
+}

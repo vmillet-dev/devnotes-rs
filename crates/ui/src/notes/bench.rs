@@ -64,6 +64,21 @@ pub(crate) fn area_of(
                     }
                     return;
                 }
+                if bench.state.settings.area == Area::Tools {
+                    let mut view = std::mem::take(&mut bench.state.tools_view);
+                    crate::tools::show(ui, &bench.state, &mut view, &mut actions);
+                    bench.state.tools_view = view;
+                    if let Some(action) = crate::keys::dispatch(
+                        &ctx,
+                        &[&crate::keys::TOOLS, &crate::keys::APPLICATION],
+                    ) {
+                        actions.push(action);
+                    }
+                    for action in actions.drain().collect::<Vec<_>>() {
+                        bench.state.apply(action, &ctx, &bench.backend);
+                    }
+                    return;
+                }
                 let mut view = std::mem::take(&mut bench.state.notes_view);
                 crate::notes::show(ui, &bench.state, &mut view, &mut actions);
                 let mut palette = std::mem::take(&mut bench.state.palette_view);

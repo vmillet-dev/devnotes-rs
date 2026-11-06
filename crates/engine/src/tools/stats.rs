@@ -10,7 +10,7 @@ use crate::count::saturating_u32;
 
 pub const MAX_FREQUENCIES: usize = 300;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatsRequest {
     pub text: String,

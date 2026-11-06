@@ -17,10 +17,11 @@ pub mod notes_query;
 pub mod palette;
 pub mod placeholder_fill;
 pub mod presentation;
-mod query;
+pub(crate) mod query;
 pub mod selection;
 pub mod spaces;
 pub mod tags;
+pub mod tools;
 pub mod trash;
 pub mod undo;
 
@@ -119,6 +120,9 @@ pub struct AppState {
     pub http: http::HttpState,
     /// The HTTP area's view: only its drawing reads it (D13).
     pub http_view: crate::http::View,
+    pub tools: tools::ToolsState,
+    /// The Tools area's view, each tool's session among it: only its drawing reads it (D13).
+    pub tools_view: crate::tools::View,
     pub status: StatusNotifier,
     pub dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
     pub opener: std::sync::Arc<dyn platform::desktop::Opener + Send + Sync>,
@@ -140,6 +144,7 @@ pub struct AppState {
 impl AppState {
     pub fn new(preferences: Preferences, reduced_motion: bool) -> Self {
         let settings = Settings::read(&preferences);
+        let tools = tools::ToolsState::read(&preferences);
         Self {
             gate: Gate::default(),
             gate_view: GateView::default(),
@@ -169,6 +174,8 @@ impl AppState {
             caches: LibraryCaches::default(),
             http: http::HttpState::default(),
             http_view: crate::http::View::default(),
+            tools,
+            tools_view: crate::tools::View::default(),
             status: StatusNotifier::default(),
             dialog: platform::dialog::system(),
             opener: platform::desktop::system(),
@@ -598,9 +605,17 @@ impl AppState {
                 self.settings.history_list_width = width;
                 self.save_settings(backend);
             }
+            Action::App(AppAction::SearchTools) => {
+                if self.gate.is_open() {
+                    self.settings.area = Area::Tools;
+                    self.save_settings(backend);
+                    self.ask_tool_search();
+                }
+            }
             Action::Gate(action) => self.gate.apply(action, &mut self.gate_view, backend),
             Action::Notes(action) => self.apply_notes(action, ctx, backend),
             Action::Http(action) => self.apply_http(action, ctx, backend),
+            Action::Tools(action) => self.apply_tools(action, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
@@ -614,6 +629,55 @@ impl AppState {
             Action::Palette(asked) => self.apply_palette(asked, ctx, backend),
             // The capture arrives with its own phase.
             Action::Global(GlobalAction::Capture) => {}
+        }
+    }
+
+    /// What a tool holds of a secret goes with it.
+    fn leave_tool(&mut self) {
+        if let Some(entry) = self.tools.open_tool() {
+            self.tools_view.left(entry);
+        }
+    }
+
+    fn ask_tool_search(&mut self) {
+        self.leave_tool();
+        self.tools.home(None);
+        self.tools_view.want_search();
+    }
+
+    fn apply_tools(&mut self, action: crate::tools::Action, backend: &Backend) {
+        use crate::tools::Action as Tools;
+        match action {
+            Tools::Home(filter) => {
+                self.leave_tool();
+                self.tools.home(filter);
+            }
+            Tools::Open(id) => {
+                if let Some(entry) = crate::tools::catalogue::find(id) {
+                    if self.tools.open_tool().is_some_and(|open| open.id != id) {
+                        self.leave_tool();
+                    }
+                    self.tools.open(entry, self.clock.now());
+                    self.save_settings(backend);
+                }
+            }
+            Tools::ToggleFavourite(id) => {
+                self.tools.toggle_favourite(id);
+                self.save_settings(backend);
+            }
+            Tools::SearchAsked => self.ask_tool_search(),
+            Tools::SetZones(zones) => {
+                self.tools.set_zones(zones);
+                self.save_settings(backend);
+            }
+            Tools::SetCsvSeparator(separator) => {
+                self.tools.set_csv_separator(separator);
+                self.save_settings(backend);
+            }
+            Tools::SampleLoaded => {
+                let said = i18n::Message::new(i18n::keys::tools::SAMPLE_LOADED);
+                self.status.report(said);
+            }
         }
     }
 
@@ -736,6 +800,27 @@ impl AppState {
         if self.settings.area == Area::Http || self.http.leave().is_under_way() {
             self.update_http(ctx, backend, time);
         }
+        if self.settings.area == Area::Tools
+            && let Some(entry) = self.tools.open_tool()
+        {
+            let mut turn = crate::tools::live::Turn {
+                ctx,
+                backend,
+                time,
+                now: self.clock.now(),
+                errors: &mut self.errors,
+                status: &mut self.status,
+                clipboard: &self.clipboard,
+                dialog: &self.dialog,
+                zones: self.tools.zones(),
+                csv_separator: self.tools.csv_separator(),
+            };
+            self.tools_view.update(entry, &mut turn);
+        }
+        if self.settings.area == Area::Tools {
+            self.http.update_kept(backend, &mut self.errors);
+            self.report_kept();
+        }
         if self.closing_editor && !self.editor.is_open() {
             self.closing_editor = false;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -747,13 +832,7 @@ impl AppState {
         let tz_offset = notes_query::tz_offset_minutes(self.clock.now());
         self.http
             .update_history((ctx, backend), (time, tz_offset), &mut self.errors);
-        let kept = self.http.take_kept_answer();
-        if kept.note_made {
-            self.revision.bump();
-        }
-        if let Some(said) = kept.said {
-            self.status.report(said);
-        }
+        self.report_kept();
         if let Some(count) = self.http.take_history_cleared() {
             let cleared = i18n::Message::new(i18n::keys::http::history::CLEARED);
             self.status.report(cleared.with("count", count));
@@ -763,6 +842,17 @@ impl AppState {
             self.status.report(removed.with("count", count));
         }
         self.remember_http(backend);
+    }
+
+    /// A note kept, from an answer or from a tool: the canvas learns of it, wherever it is.
+    fn report_kept(&mut self) {
+        let kept = self.http.take_kept_answer();
+        if kept.note_made {
+            self.revision.bump();
+        }
+        if let Some(said) = kept.said {
+            self.status.report(said);
+        }
     }
 
     fn remember_http(&mut self, backend: &Backend) {
@@ -1436,6 +1526,7 @@ impl AppState {
 
     fn save_settings(&mut self, backend: &Backend) {
         self.settings.write(&mut self.preferences);
+        self.tools.write(&mut self.preferences);
         // A write that fails says so in the log; nothing on screen waits for it.
         drop(api::preferences::write_application(
             backend,
@@ -1468,6 +1559,8 @@ impl AppState {
         self.notes_view = crate::notes::View::default();
         self.http = http::HttpState::default();
         self.http_view = crate::http::View::default();
+        self.tools = tools::ToolsState::read(&self.preferences);
+        self.tools_view = crate::tools::View::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());
         self.apply_look(ctx);

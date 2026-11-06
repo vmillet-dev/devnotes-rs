@@ -18,6 +18,7 @@ pub mod state;
 mod testing;
 pub mod theme;
 mod titlebar;
+pub mod tools;
 pub mod widgets;
 
 pub use app::{DevNotesApp, Startup};

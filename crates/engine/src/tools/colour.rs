@@ -101,7 +101,7 @@ pub struct Contrast {
     pub fix: Option<ContrastFix>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ColourRequest {
     pub colour: String,

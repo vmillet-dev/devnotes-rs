@@ -115,7 +115,7 @@ impl SizeUnit {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SizesRequest {
     /// A number, with its unit or without one.

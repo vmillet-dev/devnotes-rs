@@ -127,7 +127,7 @@ pub enum LoremUnit {
     Paragraphs,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoremRequest {
     pub unit: LoremUnit,

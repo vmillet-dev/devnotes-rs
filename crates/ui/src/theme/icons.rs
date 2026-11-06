@@ -22,6 +22,8 @@ pub enum Icon {
     ArrowUpDown,
     ArrowRight,
     ArrowLeft,
+    /// The ↔ of a text.
+    MoveHorizontal,
     /// Enter's ↵.
     CornerDownLeft,
     /// Backspace's ⌫.
@@ -110,6 +112,7 @@ impl Icon {
             Self::ArrowUpDown => &["m21 16-4 4-4-4", "M17 20V4", "m3 8 4-4 4 4", "M7 4v16"],
             Self::ArrowRight => &["M5 12h14", "m12 5 7 7-7 7"],
             Self::ArrowLeft => &["M19 12H5", "m12 19-7-7 7-7"],
+            Self::MoveHorizontal => &["m18 8 4 4-4 4", "M2 12h20", "m6 8-4 4 4 4"],
             Self::CornerDownLeft => &["M20 4v7a4 4 0 0 1-4 4H4", "m9 10-5 5 5 5"],
             Self::Delete => &[
                 "M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z",
@@ -380,8 +383,9 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 65] = [
+    const ALL: [Icon; 66] = [
         Icon::ArrowLeftRight,
+        Icon::MoveHorizontal,
         Icon::Sidebar,
         Icon::Trash,
         Icon::Filter,

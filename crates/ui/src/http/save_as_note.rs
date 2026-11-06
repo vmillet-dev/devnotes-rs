@@ -48,7 +48,7 @@ fn tags_of(text: &str) -> Vec<String> {
         .collect()
 }
 
-pub(super) fn show(ui: &Ui, state: &AppState, form: &mut Option<NoteForm>, actions: &mut Actions) {
+pub(crate) fn show(ui: &Ui, state: &AppState, form: &mut Option<NoteForm>, actions: &mut Actions) {
     let Some(asked) = state.http.kept().asked() else {
         *form = None;
         return;
@@ -121,18 +121,25 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
     TextField::new(&mut form.tags, &label, "save-as-note-tags")
         .hint(&tr(keys::tools::save_as_note::TAGS_PLACEHOLDER))
         .show(ui);
+    if let Some(warning) = asked.warning {
+        let warning = egui::RichText::new(tr(warning)).size(12.5).color(p.red);
+        let said = ui.add(egui::Label::new(warning).wrap());
+        widgets::address(ui, &said, "save-as-note-warning");
+    }
     let mut chosen = None;
     let can_save = !form.title.trim().is_empty() && !state.spaces.spaces().is_empty();
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
-        if Button::new(
-            &tr(keys::tools::save_as_note::SUBMIT),
-            "save-as-note-submit",
-        )
-        .kind(Kind::Filled)
-        .enabled(can_save)
-        .show(ui)
-        .clicked()
+        let submit = if asked.warning.is_some() {
+            keys::tools::save_as_note::SUBMIT_ANYWAY
+        } else {
+            keys::tools::save_as_note::SUBMIT
+        };
+        if Button::new(&tr(submit), "save-as-note-submit")
+            .kind(Kind::Filled)
+            .enabled(can_save)
+            .show(ui)
+            .clicked()
         {
             chosen = Some(true);
         }

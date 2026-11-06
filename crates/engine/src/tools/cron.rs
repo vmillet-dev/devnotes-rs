@@ -205,7 +205,7 @@ pub enum CronWindow {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CronRequest {
     pub expression: String,

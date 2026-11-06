@@ -1,0 +1,599 @@
+[
+  {
+    "name": "Content-Type",
+    "group": "content",
+    "direction": "both",
+    "example": "application/json; charset=utf-8",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Content-Length",
+    "group": "content",
+    "direction": "both",
+    "example": "348",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Content-Encoding",
+    "group": "content",
+    "direction": "both",
+    "example": "br",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Content-Language",
+    "group": "content",
+    "direction": "both",
+    "example": "fr-FR",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Content-Disposition",
+    "group": "content",
+    "direction": "response",
+    "example": "attachment; filename=\"rapport.pdf\"",
+    "by": "RFC 6266"
+  },
+  {
+    "name": "Content-Location",
+    "group": "content",
+    "direction": "response",
+    "example": "/documents/rapport.json",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Transfer-Encoding",
+    "group": "content",
+    "direction": "both",
+    "example": "chunked",
+    "by": "RFC 9112"
+  },
+  {
+    "name": "Accept",
+    "group": "content",
+    "direction": "request",
+    "example": "application/json, text/plain;q=0.9",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Accept-Encoding",
+    "group": "content",
+    "direction": "request",
+    "example": "gzip, br, zstd",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Accept-Language",
+    "group": "content",
+    "direction": "request",
+    "example": "fr-FR, fr;q=0.9, en;q=0.8",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Vary",
+    "group": "content",
+    "direction": "response",
+    "example": "Accept-Encoding",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Cache-Control",
+    "group": "caching",
+    "direction": "both",
+    "example": "max-age=3600, public",
+    "by": "RFC 9111"
+  },
+  {
+    "name": "Expires",
+    "group": "caching",
+    "direction": "response",
+    "example": "Tue, 06 Oct 2026 18:00:00 GMT",
+    "by": "RFC 9111"
+  },
+  {
+    "name": "Age",
+    "group": "caching",
+    "direction": "response",
+    "example": "24",
+    "by": "RFC 9111"
+  },
+  {
+    "name": "ETag",
+    "group": "caching",
+    "direction": "response",
+    "example": "\"33a64df5\"",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Last-Modified",
+    "group": "caching",
+    "direction": "response",
+    "example": "Tue, 06 Oct 2026 18:00:00 GMT",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "If-None-Match",
+    "group": "caching",
+    "direction": "request",
+    "example": "\"33a64df5\"",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "If-Modified-Since",
+    "group": "caching",
+    "direction": "request",
+    "example": "Tue, 06 Oct 2026 18:00:00 GMT",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "If-Match",
+    "group": "caching",
+    "direction": "request",
+    "example": "\"33a64df5\"",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "If-Unmodified-Since",
+    "group": "caching",
+    "direction": "request",
+    "example": "Tue, 06 Oct 2026 18:00:00 GMT",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Pragma",
+    "group": "caching",
+    "direction": "request",
+    "example": "no-cache",
+    "by": "RFC 9111",
+    "deprecated": true
+  },
+  {
+    "name": "Range",
+    "group": "range",
+    "direction": "request",
+    "example": "bytes=0-1023",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Accept-Ranges",
+    "group": "range",
+    "direction": "response",
+    "example": "bytes",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Content-Range",
+    "group": "range",
+    "direction": "response",
+    "example": "bytes 0-1023/146515",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "If-Range",
+    "group": "range",
+    "direction": "request",
+    "example": "\"33a64df5\"",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Authorization",
+    "group": "auth",
+    "direction": "request",
+    "example": "Bearer eyJhbGciOiJIUzI1NiJ9…",
+    "by": "RFC 9110",
+    "security": true
+  },
+  {
+    "name": "WWW-Authenticate",
+    "group": "auth",
+    "direction": "response",
+    "example": "Bearer realm=\"api\", error=\"invalid_token\"",
+    "by": "RFC 9110",
+    "security": true
+  },
+  {
+    "name": "Proxy-Authorization",
+    "group": "auth",
+    "direction": "request",
+    "example": "Basic YWxhZGRpbjpvcGVuc2VzYW1l",
+    "by": "RFC 9110",
+    "security": true
+  },
+  {
+    "name": "Proxy-Authenticate",
+    "group": "auth",
+    "direction": "response",
+    "example": "Basic realm=\"proxy\"",
+    "by": "RFC 9110",
+    "security": true
+  },
+  {
+    "name": "Cookie",
+    "group": "cookies",
+    "direction": "request",
+    "example": "session=38afes7a8; theme=dark",
+    "by": "RFC 6265",
+    "security": true
+  },
+  {
+    "name": "Set-Cookie",
+    "group": "cookies",
+    "direction": "response",
+    "example": "session=38afes7a8; Secure; HttpOnly; SameSite=Lax",
+    "by": "RFC 6265",
+    "security": true
+  },
+  {
+    "name": "HttpOnly",
+    "group": "cookies",
+    "direction": "response",
+    "example": "Set-Cookie: id=a3fWa; HttpOnly",
+    "by": "RFC 6265",
+    "security": true
+  },
+  {
+    "name": "Secure",
+    "group": "cookies",
+    "direction": "response",
+    "example": "Set-Cookie: id=a3fWa; Secure",
+    "by": "RFC 6265",
+    "security": true
+  },
+  {
+    "name": "SameSite",
+    "group": "cookies",
+    "direction": "response",
+    "example": "Set-Cookie: id=a3fWa; SameSite=Lax",
+    "by": "RFC 6265bis",
+    "security": true
+  },
+  {
+    "name": "Domain",
+    "group": "cookies",
+    "direction": "response",
+    "example": "Set-Cookie: id=a3fWa; Domain=exemple.fr",
+    "by": "RFC 6265",
+    "security": true
+  },
+  {
+    "name": "Path",
+    "group": "cookies",
+    "direction": "response",
+    "example": "Set-Cookie: id=a3fWa; Path=/api",
+    "by": "RFC 6265"
+  },
+  {
+    "name": "Max-Age",
+    "group": "cookies",
+    "direction": "response",
+    "example": "Set-Cookie: id=a3fWa; Max-Age=3600",
+    "by": "RFC 6265"
+  },
+  {
+    "name": "__Host-",
+    "group": "cookies",
+    "direction": "response",
+    "example": "Set-Cookie: __Host-id=a3fWa; Secure; Path=/",
+    "by": "RFC 6265bis",
+    "security": true
+  },
+  {
+    "name": "Strict-Transport-Security",
+    "group": "security",
+    "direction": "response",
+    "example": "max-age=63072000; includeSubDomains; preload",
+    "by": "RFC 6797",
+    "security": true
+  },
+  {
+    "name": "Content-Security-Policy",
+    "group": "security",
+    "direction": "response",
+    "example": "default-src 'self'; img-src 'self' data:",
+    "by": "CSP 3",
+    "security": true
+  },
+  {
+    "name": "Content-Security-Policy-Report-Only",
+    "group": "security",
+    "direction": "response",
+    "example": "default-src 'self'; report-to csp",
+    "by": "CSP 3",
+    "security": true
+  },
+  {
+    "name": "X-Content-Type-Options",
+    "group": "security",
+    "direction": "response",
+    "example": "nosniff",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "X-Frame-Options",
+    "group": "security",
+    "direction": "response",
+    "example": "DENY",
+    "by": "RFC 7034",
+    "security": true
+  },
+  {
+    "name": "Referrer-Policy",
+    "group": "security",
+    "direction": "response",
+    "example": "strict-origin-when-cross-origin",
+    "by": "Referrer Policy",
+    "security": true
+  },
+  {
+    "name": "Permissions-Policy",
+    "group": "security",
+    "direction": "response",
+    "example": "camera=(), geolocation=(self)",
+    "by": "Permissions Policy",
+    "security": true
+  },
+  {
+    "name": "Cross-Origin-Opener-Policy",
+    "group": "security",
+    "direction": "response",
+    "example": "same-origin",
+    "by": "HTML",
+    "security": true
+  },
+  {
+    "name": "Cross-Origin-Embedder-Policy",
+    "group": "security",
+    "direction": "response",
+    "example": "require-corp",
+    "by": "HTML",
+    "security": true
+  },
+  {
+    "name": "Cross-Origin-Resource-Policy",
+    "group": "security",
+    "direction": "response",
+    "example": "same-site",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Clear-Site-Data",
+    "group": "security",
+    "direction": "response",
+    "example": "\"cache\", \"cookies\", \"storage\"",
+    "by": "Clear Site Data",
+    "security": true
+  },
+  {
+    "name": "X-XSS-Protection",
+    "group": "security",
+    "direction": "response",
+    "example": "0",
+    "by": "de facto",
+    "security": true,
+    "deprecated": true
+  },
+  {
+    "name": "Origin",
+    "group": "cors",
+    "direction": "request",
+    "example": "https://app.exemple.fr",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Access-Control-Allow-Origin",
+    "group": "cors",
+    "direction": "response",
+    "example": "https://app.exemple.fr",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Access-Control-Allow-Credentials",
+    "group": "cors",
+    "direction": "response",
+    "example": "true",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Access-Control-Allow-Methods",
+    "group": "cors",
+    "direction": "response",
+    "example": "GET, POST, PUT, DELETE",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Access-Control-Allow-Headers",
+    "group": "cors",
+    "direction": "response",
+    "example": "Content-Type, Authorization",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Access-Control-Expose-Headers",
+    "group": "cors",
+    "direction": "response",
+    "example": "X-Request-Id",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Access-Control-Max-Age",
+    "group": "cors",
+    "direction": "response",
+    "example": "600",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Access-Control-Request-Method",
+    "group": "cors",
+    "direction": "request",
+    "example": "PUT",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Access-Control-Request-Headers",
+    "group": "cors",
+    "direction": "request",
+    "example": "content-type, authorization",
+    "by": "Fetch",
+    "security": true
+  },
+  {
+    "name": "Host",
+    "group": "connection",
+    "direction": "request",
+    "example": "api.exemple.fr",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Connection",
+    "group": "connection",
+    "direction": "both",
+    "example": "keep-alive",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Upgrade",
+    "group": "connection",
+    "direction": "both",
+    "example": "websocket",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Via",
+    "group": "connection",
+    "direction": "both",
+    "example": "1.1 varnish, 1.1 nginx",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Forwarded",
+    "group": "connection",
+    "direction": "request",
+    "example": "for=192.0.2.60;proto=https;host=exemple.fr",
+    "by": "RFC 7239"
+  },
+  {
+    "name": "X-Forwarded-For",
+    "group": "connection",
+    "direction": "request",
+    "example": "203.0.113.195, 70.41.3.18",
+    "by": "de facto",
+    "security": true
+  },
+  {
+    "name": "X-Forwarded-Proto",
+    "group": "connection",
+    "direction": "request",
+    "example": "https",
+    "by": "de facto"
+  },
+  {
+    "name": "X-Forwarded-Host",
+    "group": "connection",
+    "direction": "request",
+    "example": "exemple.fr",
+    "by": "de facto"
+  },
+  {
+    "name": "X-Request-Id",
+    "group": "connection",
+    "direction": "both",
+    "example": "f058ebd6-02f7-4d3f-942e-904344e8cde5",
+    "by": "de facto"
+  },
+  {
+    "name": "User-Agent",
+    "group": "request",
+    "direction": "request",
+    "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Referer",
+    "group": "request",
+    "direction": "request",
+    "example": "https://exemple.fr/articles/42",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Expect",
+    "group": "request",
+    "direction": "request",
+    "example": "100-continue",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Sec-Fetch-Site",
+    "group": "request",
+    "direction": "request",
+    "example": "cross-site",
+    "by": "Fetch Metadata",
+    "security": true
+  },
+  {
+    "name": "Location",
+    "group": "response",
+    "direction": "response",
+    "example": "/commandes/42",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Retry-After",
+    "group": "response",
+    "direction": "response",
+    "example": "120",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Allow",
+    "group": "response",
+    "direction": "response",
+    "example": "GET, HEAD, PUT",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Date",
+    "group": "response",
+    "direction": "both",
+    "example": "Tue, 06 Oct 2026 18:00:00 GMT",
+    "by": "RFC 9110"
+  },
+  {
+    "name": "Server",
+    "group": "response",
+    "direction": "response",
+    "example": "nginx/1.27.0",
+    "by": "RFC 9110",
+    "security": true
+  },
+  {
+    "name": "Link",
+    "group": "response",
+    "direction": "response",
+    "example": "</style.css>; rel=preload; as=style",
+    "by": "RFC 8288"
+  },
+  {
+    "name": "Alt-Svc",
+    "group": "response",
+    "direction": "response",
+    "example": "h3=\":443\"; ma=86400",
+    "by": "RFC 7838"
+  },
+  {
+    "name": "Server-Timing",
+    "group": "response",
+    "direction": "response",
+    "example": "db;dur=53, app;dur=47.2",
+    "by": "Server Timing"
+  }
+]

@@ -35,7 +35,7 @@ pub struct ZoneEntry {
     pub abbreviation: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZonesRequest {
     /// A date and time on the wall clock of `from`, or an instant that carries its offset.

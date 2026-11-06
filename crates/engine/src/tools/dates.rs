@@ -41,7 +41,7 @@ impl Magnitude {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstantRequest {
     pub text: String,

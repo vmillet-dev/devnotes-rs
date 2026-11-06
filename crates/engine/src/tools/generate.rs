@@ -222,7 +222,7 @@ pub enum JsonSource {
     Example,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateRequest {
     pub source: JsonSource,

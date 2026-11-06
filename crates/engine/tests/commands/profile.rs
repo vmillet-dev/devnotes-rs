@@ -78,9 +78,7 @@ fn the_identity_tool_answers_that_its_lists_are_missing_rather_than_failing() {
         seed: Some("devnotes".to_string()),
     };
 
-    let outcome = session
-        .wait(|e| async move { generate_identity(e.paths(), request).await })
-        .unwrap();
+    let outcome = session.call(|e| generate_identity(e.paths(), &request));
 
     assert!(matches!(outcome, IdentityOutcome::Unreadable { .. }));
 }
@@ -89,7 +87,6 @@ fn the_identity_tool_answers_that_its_lists_are_missing_rather_than_failing() {
 fn a_qr_code_is_drawn_as_square_rgba_for_the_shell_to_copy() {
     use engine::tools::qr::{QrContent, QrCorrection, QrRequest};
 
-    let session = Session::open();
     let request = |text: &str| QrRequest {
         content: QrContent::Text {
             text: text.to_string(),
@@ -98,12 +95,8 @@ fn a_qr_code_is_drawn_as_square_rgba_for_the_shell_to_copy() {
         margin: 2,
     };
 
-    let drawn = session
-        .wait(|_| engine::tools::qr_code_pixels(request("devnotes")))
-        .unwrap();
-    let nothing = session
-        .wait(|_| engine::tools::qr_code_pixels(request("")))
-        .unwrap();
+    let drawn = engine::tools::qr::rgba(&request("devnotes"));
+    let nothing = engine::tools::qr::rgba(&request(""));
 
     let (side, rgba) = drawn.unwrap();
     assert_eq!(rgba.len(), (side * side * 4) as usize);

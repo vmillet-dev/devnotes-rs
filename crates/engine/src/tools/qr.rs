@@ -61,7 +61,7 @@ pub enum WifiSecurity {
     Open,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -93,7 +93,7 @@ pub enum QrContent {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QrRequest {
     pub content: QrContent,
