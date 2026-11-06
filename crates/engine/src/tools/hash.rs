@@ -63,7 +63,7 @@ pub enum DigestEncoding {
     Base64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum HashInput {
     Text {
@@ -75,7 +75,7 @@ pub enum HashInput {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HashRequest {
     /// `None` to read a pasted digest's shape alone.

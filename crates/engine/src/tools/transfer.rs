@@ -55,7 +55,7 @@ const CONNECTIONS: [(Connection, u64); 3] = [
     (Connection::Adsl, 10_000_000),
 ];
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferRequest {
     /// A quantity, with its unit or without one.

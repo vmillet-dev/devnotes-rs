@@ -14,7 +14,7 @@ pub(crate) const MAX_ROWS: usize = 20_000;
 /// A value in the list of changes is cut to this many characters.
 const SUMMARY_CHARS: usize = 40;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonDiffRequest {
     pub a: String,

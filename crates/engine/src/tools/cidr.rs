@@ -40,7 +40,7 @@ impl IpFamily {
     }
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrRequest {
     pub network: String,

@@ -602,6 +602,26 @@ fn the_http_area() {
 }
 
 #[test]
+fn the_tools_area() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    harness
+        .ctx
+        .set_missing_glyph_policy(egui::epaint::text::MissingGlyphPolicy::Tofu);
+    click(&mut harness, "area-option-tools");
+    capture(&mut harness, "tools-home");
+    click(&mut harness, "tools-entry-star-hash");
+    click(&mut harness, "tools-entry-case");
+    capture(&mut harness, "tool-frame");
+    click(&mut harness, "tool-back");
+    capture(&mut harness, "tools-recents");
+}
+
+#[test]
 fn the_canvas_of_an_open_library() {
     let profile = tempfile::tempdir().unwrap();
     let mut harness = launch(profile.path());

@@ -128,6 +128,26 @@ pub(crate) fn one_line(
     )
 }
 
+/// `words` at a CSS weight, wrapped at `width`.
+pub(crate) fn wrapped(
+    ui: &Ui,
+    words: &str,
+    (size, weight): (f32, f32),
+    ink: Color32,
+    width: f32,
+) -> Arc<Galley> {
+    let words = RichText::new(words)
+        .font(FontId::new(size, FontFamily::Proportional))
+        .variation(*b"wght", weight)
+        .color(ink);
+    egui::WidgetText::from(words).into_galley(
+        ui,
+        Some(egui::TextWrapMode::Wrap),
+        width.max(1.0),
+        egui::TextStyle::Body,
+    )
+}
+
 /// ▾ or ▸, drawn: the glyphs are in none of the embedded faces.
 pub(crate) fn triangle(ui: &Ui, centre: egui::Pos2, open: bool, ink: Color32) {
     let points = if open {

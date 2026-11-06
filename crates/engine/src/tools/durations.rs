@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use super::dates::{self, Parsed, Refusal};
 use crate::count::saturating_u32;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DurationsRequest {
     pub from: String,

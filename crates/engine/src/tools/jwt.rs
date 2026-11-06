@@ -100,7 +100,7 @@ pub enum JwtProblem {
     NotObject,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JwtRequest {
     pub token: String,

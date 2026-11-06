@@ -100,7 +100,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IdentityRequest {
     pub country: Country,
@@ -548,7 +548,7 @@ fn exported(
 }
 
 /// What a batch is made of, beside the person asked for.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PeopleBatch {
     /// The countries that take their turn after the request's own; none is that one alone.
