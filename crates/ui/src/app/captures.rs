@@ -122,6 +122,17 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "titlebar-notes");
 
+    click(&mut harness, "file-menu");
+    capture(&mut harness, "file-menu");
+    harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(
+        profile.path().join("library.devnotes"),
+    ));
+    click(&mut harness, "file-option-exportAll");
+    settle(&mut harness);
+    capture(&mut harness, "passphrase-prompt");
+    click(&mut harness, "passphrase-prompt-cancel");
+    settle(&mut harness);
+
     click(&mut harness, "area-option-http");
     let state = &mut harness.state_mut().state;
     state.errors.report(

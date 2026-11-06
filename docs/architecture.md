@@ -3999,14 +3999,15 @@ The titlebar carries a **File menu** next to "À propos" — the convention of a
 application. It holds import, export, "copy the selection as Markdown", the preferences and
 quitting.
 
-**The menu owns its entries**: `FileMenuComponent` declares them as an array and injects what
-they need — `TransferStore`, `NoteSelectionStore`, `SpacesStore`, `ClockService`. `disabled` is
-a `Signal` because "Exporter la sélection" follows what is checked at that instant, and the
-order on screen is the order in the array.
+**The menu owns its entries**: `titlebar/file_menu.rs` lists them in the order on screen, and an
+entry with nothing to act on stays, muted: "Exporter la sélection" follows what is checked at
+that instant. The menu exists only while a library is open, every entry acting on it.
 
-**Its two dialogs, like the About menu's four panels, sit behind `@defer (on immediate)`**:
-the titlebar is in the initial chunk, and those six weighed ~95 kB of it before anyone opened
-one. Each is imported by its menu alone, which is what lets the compiler split it off.
+**One operation at a time, in `state/transfer.rs`.** Its stages say where it stands: counted
+before any dialog, placed, protected, written; picked, probed, unlocked, read. The file dialogs
+block until answered, so they run on the pool. The passphrase prompt follows the stage and stays
+up, working, while the key is derived; a refused phrase comes back to it rather than failing the
+import. The phrase reaches `AppState::apply` through the bar's view, never through an `Action`.
 
 There used to be a contribution registry here — three of them, in fact, one per extension
 point — so the chrome could stay ignorant of a feature it might not have. That indirection had

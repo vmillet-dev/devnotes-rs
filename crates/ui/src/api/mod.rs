@@ -14,5 +14,6 @@ pub mod notes;
 pub mod preferences;
 pub mod spaces;
 pub mod tools;
+pub mod transfer;
 pub mod undo;
 pub mod vault;

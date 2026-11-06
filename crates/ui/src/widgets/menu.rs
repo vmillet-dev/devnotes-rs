@@ -121,7 +121,7 @@ fn entries<'a>(ui: &mut Ui, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
 
 /// The first entry takes the focus when the menu opens; egui's own arrow navigation moves it
 /// from there, entry to entry.
-fn arrows(ui: &Ui, ids: &[Id]) {
+pub fn arrows(ui: &Ui, ids: &[Id]) {
     let Some(first) = ids.first().copied() else {
         return;
     };

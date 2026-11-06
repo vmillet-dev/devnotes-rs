@@ -7,6 +7,10 @@ use std::sync::Arc;
 pub trait FileDialog {
     /// A file to read: `None` when the person cancelled.
     fn open(&self) -> Option<PathBuf>;
+    /// A file to read among those of `extensions`.
+    fn open_of(&self, _extensions: &[&str]) -> Option<PathBuf> {
+        self.open()
+    }
     /// Where to write a file proposed as `name`: `None` when the person cancelled.
     fn save(&self, name: &str) -> Option<PathBuf>;
 }
@@ -17,6 +21,12 @@ pub struct System;
 impl FileDialog for System {
     fn open(&self) -> Option<PathBuf> {
         rfd::FileDialog::new().pick_file()
+    }
+
+    fn open_of(&self, extensions: &[&str]) -> Option<PathBuf> {
+        rfd::FileDialog::new()
+            .add_filter(extensions[0], extensions)
+            .pick_file()
     }
 
     fn save(&self, name: &str) -> Option<PathBuf> {

@@ -2,7 +2,7 @@
 //! one rung per layer, the higher drawn over the lower and served first by Escape. A modal
 //! blocks what is under it, keeps Tab inside, and hands the focus back to what opened it.
 
-use egui::{Context, CornerRadius, Id, Margin, Response, Stroke};
+use egui::{Context, CornerRadius, Id, Margin, ModalResponse, Stroke};
 
 use crate::theme::{palette, spacing};
 
@@ -67,6 +67,15 @@ impl DialogStack {
         }
     }
 
+    /// Open as long as `open` says: a modal that follows an operation rather than a click.
+    pub fn follow(&mut self, ctx: &Context, layer: Layer, id: Id, open: bool) {
+        if open {
+            self.open(layer, id, None);
+        } else {
+            self.close(ctx, id);
+        }
+    }
+
     pub fn is_open(&self, id: Id) -> bool {
         self.open.iter().any(|opened| opened.id == id)
     }
@@ -89,7 +98,7 @@ pub fn dialog<R>(
     stack: &DialogStack,
     id: Id,
     content: impl FnOnce(&mut egui::Ui) -> R,
-) -> Option<(R, Response)> {
+) -> Option<ModalResponse<R>> {
     if !stack.is_open(id) {
         return None;
     }
@@ -110,7 +119,7 @@ pub fn dialog<R>(
             ui.set_width(480.0_f32.min(ctx.content_rect().width() * 0.9));
             content(ui)
         });
-    Some((shown.inner, shown.backdrop_response))
+    Some(shown)
 }
 
 #[cfg(test)]
