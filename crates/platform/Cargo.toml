@@ -27,6 +27,7 @@ tray-icon = "0.26.1"
 global-hotkey = "0.9.0"
 auto-launch = "0.6.0"
 notify-rust = "4.18.2"
+cargo-packager-updater = "0.2.3"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56.0"

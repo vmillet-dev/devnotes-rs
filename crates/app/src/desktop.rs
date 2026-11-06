@@ -8,12 +8,20 @@ use platform::autostart::Autostart;
 use platform::dialog::FileDialog;
 use platform::shortcuts::Shortcuts;
 use platform::tray::{NoTray, Picture, Tray};
+use platform::updater::Source;
 use ui::inputs::{Inbox, Input};
 use ui::services::preferences::Preferences;
 use ui::services::settings::Settings;
 
 /// Who sends a toast on Windows.
 const IDENTIFIER: &str = "com.devnotes.app";
+
+/// The address and the key the published versions already use (D26).
+const UPDATES: Source<'_> = Source {
+    version: env!("CARGO_PKG_VERSION"),
+    endpoint: "https://github.com/vmillet-dev/devnotes-rs/releases/latest/download/latest.json",
+    public_key: "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZBMjJGNDA1RkVGMEEzNkYKUldSdm8vRCtCZlFpK3IzSFdQSFZ0YlM3VTh5eXNpVDhueWp2SzNPYyt6VmVHQVJ6eWs1ZDBzeE4K",
+};
 
 /// ⚠️ Here, on the thread the window's loop will run on: on Windows that loop serves the icon
 /// and the keys.
@@ -24,6 +32,7 @@ pub(crate) fn start(preferences: &Preferences, inbox: &Inbox) -> ui::Desktop {
         autostart: autostart(),
         notifier: platform::notify::system(METADATA.name, IDENTIFIER),
         dialog: dialog(inbox.clone()),
+        updater: platform::updater::system(&UPDATES),
     }
 }
 

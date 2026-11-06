@@ -11,6 +11,7 @@ use platform::instance::Message;
 use platform::notify::{NoNotifier, Notifier};
 use platform::shortcuts::{Global, NoShortcuts, Shortcuts};
 use platform::tray::{self, Tray};
+use platform::updater::{NoUpdater, Updater};
 use platform::window::Geometry;
 
 use crate::action::AppAction;
@@ -20,6 +21,7 @@ use crate::inputs::{Inbox, Input, Waker};
 use crate::services::autostart::AutostartState;
 use crate::services::global_keys::GlobalKeys;
 use crate::services::preferences::Preferences;
+use crate::services::updates::UpdateState;
 use crate::state::Area;
 use crate::state::{AppState, put_away};
 use crate::theme;
@@ -51,6 +53,7 @@ pub struct Desktop {
     pub autostart: Arc<dyn Autostart + Send + Sync>,
     pub notifier: Arc<dyn Notifier + Send + Sync>,
     pub dialog: Arc<dyn FileDialog + Send + Sync>,
+    pub updater: Arc<dyn Updater + Send + Sync>,
 }
 
 impl Default for Desktop {
@@ -61,6 +64,7 @@ impl Default for Desktop {
             autostart: Arc::new(NoAutostart),
             notifier: Arc::new(NoNotifier),
             dialog: Arc::new(NoDialog),
+            updater: Arc::new(NoUpdater),
         }
     }
 }
@@ -92,6 +96,7 @@ impl DevNotesApp {
         state.autostart = AutostartState::with(startup.desktop.autostart);
         state.notifier = startup.desktop.notifier;
         state.dialog = startup.desktop.dialog;
+        state.updates = UpdateState::with(startup.desktop.updater);
         state.apply_look(&cc.egui_ctx);
         // The grammars take a few hundred milliseconds to load: never on the frame, which is
         // drawn again once they are in.
@@ -445,12 +450,12 @@ impl eframe::App for DevNotesApp {
         }
         self.state.global_keys.release();
         self.tray.remove();
-        let Some(geometry) = self.geometry else {
-            return;
-        };
-        if let Err(error) = platform::window::write(&self.window_file, &geometry) {
+        if let Some(geometry) = self.geometry
+            && let Err(error) = platform::window::write(&self.window_file, &geometry)
+        {
             log::warn!("The window geometry was not written: {error}");
         }
+        self.state.updates.install_on_the_way_out();
     }
 }
 

@@ -75,7 +75,7 @@ fn a_ticked_box_writes_the_version_down_whichever_way_out() {
 }
 
 #[test]
-fn installing_relaunches_and_cannot_be_dismissed() {
+fn installing_leaves_first_and_cannot_be_dismissed() {
     let directory = tempfile::tempdir().unwrap();
     let fake = FakeUpdater::offering("0.26.0");
     let mut harness = offered(directory.path(), Arc::clone(&fake));
@@ -83,12 +83,19 @@ fn installing_relaunches_and_cannot_be_dismissed() {
     click(&mut harness, "update-install");
     settle(&mut harness);
 
-    assert!(*fake.relaunched.lock().unwrap());
+    assert!(harness.state().state().quitting);
+    assert!(
+        !*fake.relaunched.lock().unwrap(),
+        "after the exit, not before"
+    );
     assert!(present(&harness, "update-status"));
     assert!(!present(&harness, "update-later"));
     harness.key_press(egui::Key::Escape);
     settle(&mut harness);
     assert!(present(&harness, "update-prompt"));
+
+    eframe::App::on_exit(harness.state_mut());
+    assert!(*fake.relaunched.lock().unwrap());
 }
 
 #[test]
@@ -107,5 +114,8 @@ fn an_unsaved_request_is_asked_about_before_the_install() {
     assert!(!*fake.relaunched.lock().unwrap());
     click(&mut harness, "http-leave-discard");
     settle(&mut harness);
+    assert!(harness.state_mut().state.may_close(), "asked once");
+
+    eframe::App::on_exit(harness.state_mut());
     assert!(*fake.relaunched.lock().unwrap());
 }

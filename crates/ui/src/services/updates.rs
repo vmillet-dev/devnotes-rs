@@ -1,9 +1,7 @@
 //! Offering a new version. Nothing installs without an explicit gesture: a silent update would
 //! restart the application mid-keystroke. A failed check at launch stays silent — offline it would
-//! fail every morning — while one asked from the menu says so.
-//!
-//! The updater itself is the platform phase's: until then `NoUpdater` has nothing to offer, and
-//! the menu offers no check.
+//! fail every morning — while one asked from the menu says so. An installation that cannot update
+//! itself offers no check at all.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -11,49 +9,12 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use engine::app_info::METADATA;
 use engine::changelog::model::ChangelogRelease;
 use i18n::{Message, keys};
+use platform::updater::{AvailableUpdate, DownloadError, NoUpdater, Updater};
 
 use super::errors::ErrorNotifier;
 use super::settings::Settings;
 use crate::api;
 use crate::backend::{Backend, Pending};
-
-/// A version the updater found.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AvailableUpdate {
-    pub version: String,
-    pub current_version: String,
-    pub notes: Option<String>,
-}
-
-/// What the platform answers. ⚠️ Each blocks until it is done: never on the window's thread.
-pub trait Updater {
-    /// Whether anything can be checked at all.
-    fn is_available(&self) -> bool;
-    /// `None` when the application is up to date.
-    fn check(&self) -> Result<Option<AvailableUpdate>, String>;
-    /// `progress` in percent, when the size of the download is known.
-    fn install(&self, progress: &dyn Fn(u32)) -> Result<(), String>;
-    fn relaunch(&self);
-}
-
-/// What the application has until the platform phase.
-pub struct NoUpdater;
-
-impl Updater for NoUpdater {
-    fn is_available(&self) -> bool {
-        false
-    }
-
-    fn check(&self) -> Result<Option<AvailableUpdate>, String> {
-        Ok(None)
-    }
-
-    fn install(&self, _progress: &dyn Fn(u32)) -> Result<(), String> {
-        Err("no updater".to_owned())
-    }
-
-    fn relaunch(&self) {}
-}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Status {
@@ -86,8 +47,10 @@ pub struct UpdateState {
     status: Status,
     check: CheckState,
     asked: Option<(bool, Pending<Checked>)>,
-    installing: Option<Pending<Result<(), String>>>,
+    installing: Option<Pending<Result<(), DownloadError>>>,
     percent: Arc<AtomicU32>,
+    /// Downloaded and checked: the application is to leave, the installer following it out.
+    leaving: bool,
 }
 
 impl Default for UpdateState {
@@ -107,6 +70,7 @@ impl UpdateState {
             asked: None,
             installing: None,
             percent: Arc::new(AtomicU32::new(UNKNOWN)),
+            leaving: false,
         }
     }
 
@@ -165,10 +129,22 @@ impl UpdateState {
         self.percent.store(UNKNOWN, Ordering::Relaxed);
         let updater = Arc::clone(&self.updater);
         let percent = Arc::clone(&self.percent);
-        self.installing = Some(
-            backend
-                .compute(move |_| Ok(updater.install(&|at| percent.store(at, Ordering::Relaxed)))),
-        );
+        self.installing =
+            Some(backend.compute(move |_| {
+                Ok(updater.download(&|at| percent.store(at, Ordering::Relaxed)))
+            }));
+    }
+
+    /// `true` once, when the application is to leave for the installer.
+    pub fn take_leaving(&mut self) -> bool {
+        std::mem::take(&mut self.leaving)
+    }
+
+    /// The end of the exit, everything written: under Windows the process stops in here.
+    pub fn install_on_the_way_out(&self) {
+        if self.status == Status::Installed {
+            self.updater.install_and_relaunch();
+        }
     }
 
     /// « Later ». A version is what gets written down, never a boolean: remembering « no » would
@@ -191,14 +167,27 @@ impl UpdateState {
             return;
         };
         self.installing = None;
-        if matches!(answer, Ok(Ok(()))) {
-            self.status = Status::Installed;
-            self.updater.relaunch();
-            return;
-        }
+        let failed = match answer {
+            Ok(Ok(())) => {
+                self.status = Status::Installed;
+                self.leaving = true;
+                return;
+            }
+            Ok(Err(failed)) => failed,
+            Err(error) => DownloadError::Failed(error.detail),
+        };
         // Back to the offer: it can be tried again from the prompt.
         self.status = Status::Available;
-        errors.notify(Message::new(keys::errors::UPDATE_FAILED).with("app", METADATA.name));
+        errors.notify(match failed {
+            DownloadError::Refused(detail) => {
+                log::error!("The update was refused: {detail}");
+                Message::new(keys::errors::UPDATE_REFUSED)
+            }
+            DownloadError::Failed(detail) => {
+                log::warn!("The update failed: {detail}");
+                Message::new(keys::errors::UPDATE_FAILED).with("app", METADATA.name)
+            }
+        });
     }
 
     fn adopt_check(&mut self, settings: &Settings, errors: &mut ErrorNotifier) {
@@ -253,6 +242,7 @@ pub(crate) mod fake {
     pub(crate) struct FakeUpdater {
         pub found: Mutex<Option<AvailableUpdate>>,
         pub fails: Mutex<bool>,
+        pub refused: Mutex<bool>,
         pub relaunched: Mutex<bool>,
     }
 
@@ -280,15 +270,18 @@ pub(crate) mod fake {
             Ok(self.found.lock().unwrap().clone())
         }
 
-        fn install(&self, progress: &dyn Fn(u32)) -> Result<(), String> {
+        fn download(&self, progress: &dyn Fn(u32)) -> Result<(), DownloadError> {
             progress(50);
+            if *self.refused.lock().unwrap() {
+                return Err(DownloadError::Refused("bad signature".to_owned()));
+            }
             if *self.fails.lock().unwrap() {
-                return Err("the download stopped".to_owned());
+                return Err(DownloadError::Failed("the download stopped".to_owned()));
             }
             Ok(())
         }
 
-        fn relaunch(&self) {
+        fn install_and_relaunch(&self) {
             *self.relaunched.lock().unwrap() = true;
         }
     }
@@ -416,7 +409,7 @@ mod tests {
     }
 
     #[test]
-    fn an_install_goes_to_the_end_and_relaunches() {
+    fn an_install_leaves_first_and_runs_on_the_way_out() {
         let fake = FakeUpdater::offering("0.26.0");
         let mut bench = bench(Arc::clone(&fake));
         bench.check(true);
@@ -431,8 +424,42 @@ mod tests {
 
         assert_eq!(bench.updates.status(), Status::Installed);
         assert_eq!(bench.updates.progress(), Some(50));
-        assert!(*fake.relaunched.lock().unwrap());
         assert!(!bench.updates.has_pending());
+        assert!(bench.updates.take_leaving());
+        assert!(!bench.updates.take_leaving(), "once");
+        assert!(!*fake.relaunched.lock().unwrap(), "nothing is written yet");
+
+        bench.updates.install_on_the_way_out();
+        assert!(*fake.relaunched.lock().unwrap());
+    }
+
+    #[test]
+    fn a_refused_signature_says_so_and_installs_nothing() {
+        let fake = FakeUpdater::offering("0.26.0");
+        let mut bench = bench(Arc::clone(&fake));
+        bench.check(true);
+        *fake.refused.lock().unwrap() = true;
+
+        bench.updates.install(&bench.backend);
+        bench.settle();
+
+        assert_eq!(bench.updates.status(), Status::Available);
+        assert!(!bench.updates.take_leaving());
+        let said = bench.errors.notice().unwrap().text(i18n::Language::En);
+        assert!(said.contains("signature"), "{said}");
+        bench.updates.install_on_the_way_out();
+        assert!(!*fake.relaunched.lock().unwrap());
+    }
+
+    #[test]
+    fn a_quit_with_no_update_installs_nothing() {
+        let fake = FakeUpdater::offering("0.26.0");
+        let mut bench = bench(Arc::clone(&fake));
+        bench.check(true);
+
+        bench.updates.install_on_the_way_out();
+
+        assert!(!*fake.relaunched.lock().unwrap());
     }
 
     #[test]

@@ -5,9 +5,10 @@
 use egui::{Align, Id, Layout, RichText, Ui, Vec2};
 use engine::app_info::METADATA;
 use i18n::{Key, Message, keys};
+use platform::updater::AvailableUpdate;
 
 use crate::action::{Action as Asked, Actions};
-use crate::services::updates::{AvailableUpdate, Status};
+use crate::services::updates::Status;
 use crate::state::AppState;
 use crate::theme::palette;
 use crate::titlebar::Action;

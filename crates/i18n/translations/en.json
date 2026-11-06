@@ -603,6 +603,7 @@
       "empty": "This file holds no row of data."
     },
     "noFileDialog": "This desktop has no file dialog to show: xdg-desktop-portal is missing.",
+    "updateRefused": "This update was refused: its signature does not match. Nothing was installed.",
     "calcFailed": "The sheet could not be computed.",
     "folderMoveFailed": "The folder could not be moved."
   },

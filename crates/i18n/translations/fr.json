@@ -603,6 +603,7 @@
       "empty": "Ce fichier ne contient aucune ligne de données."
     },
     "noFileDialog": "Ce bureau n’a pas de dialogue de fichiers à afficher : xdg-desktop-portal est absent.",
+    "updateRefused": "Cette mise à jour a été refusée : sa signature ne correspond pas. Rien n’a été installé.",
     "calcFailed": "La feuille n’a pas pu être calculée.",
     "folderMoveFailed": "Le dossier n’a pas pu être déplacé."
   },

@@ -254,6 +254,9 @@ impl AppState {
         if self.autostart.update(backend, &mut self.settings) {
             self.save_settings(backend);
         }
+        if self.updates.take_leaving() {
+            self.apply(Action::Global(GlobalAction::Quit), ctx, backend);
+        }
         self.adopt_library_preferences(backend);
         self.adopt_seeding(backend);
         if self.gate.is_open() && self.library_preferences_read.is_none() && self.seeding.is_none()
@@ -1103,7 +1106,9 @@ impl AppState {
         if !self.gate.is_open() {
             return true;
         }
-        if !self.http.ask_leave(http::leave::Reason::Quit) {
+        // Asked before the download: once is enough.
+        let answered = self.updates.status() == crate::services::updates::Status::Installed;
+        if !answered && !self.http.ask_leave(http::leave::Reason::Quit) {
             return false;
         }
         self.closing_editor = self.editor.is_open();
