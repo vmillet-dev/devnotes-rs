@@ -17,6 +17,8 @@ path = "src/main.rs"
 [features]
 # The flavour the end-to-end scenarios drive: never in a release.
 e2e = ["eframe/inspection", "platform/e2e"]
+# egui's frames, for `puffin_viewer` on 127.0.0.1:8585: never in a release.
+profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http", "profiling/profile-with-puffin"]
 
 [dependencies]
 engine = { path = "../engine" }
@@ -26,6 +28,9 @@ eframe = { version = "0.37.0", default-features = false, features = ["accesskit"
 egui = "0.37.0"
 flexi_logger = { version = "0.31.10", default-features = false }
 log = "0.4.34"
+profiling = { version = "1.0.18", optional = true }
+puffin = { version = "0.20.0", optional = true }
+puffin_http = { version = "0.17.0", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # The one eframe uses, for its X11 switch (D15).

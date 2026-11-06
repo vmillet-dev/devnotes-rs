@@ -95,5 +95,10 @@ harness = false
 name = "index"
 harness = false
 
+# Not a measure: writes a reference library into a profile, for the interface's bench.
+[[bench]]
+name = "reference_profile"
+harness = false
+
 [lints]
 workspace = true

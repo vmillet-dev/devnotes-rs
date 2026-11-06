@@ -56,6 +56,8 @@ fn main() -> ExitCode {
     };
     let _logger = logging::start(&locations.logs);
     logging::install_panic_hook();
+    #[cfg(feature = "profiling")]
+    let _profiler = profiler();
 
     match run(locations, instance) {
         Ok(()) => ExitCode::SUCCESS,
@@ -117,6 +119,14 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
     )
 }
 
+#[cfg(feature = "profiling")]
+fn profiler() -> Option<puffin_http::Server> {
+    puffin::set_scopes_on(true);
+    puffin_http::Server::new("127.0.0.1:8585")
+        .inspect_err(|error| log::warn!("The profiler did not start: {error}"))
+        .ok()
+}
+
 /// Created hidden at the restored geometry, shown by the first frame. eframe's persistence is
 /// off: it would write egui's state, text fields included, in clear on disk.
 fn options(restored: Option<Geometry>) -> eframe::NativeOptions {
@@ -149,12 +159,16 @@ fn options(restored: Option<Geometry>) -> eframe::NativeOptions {
 }
 
 /// The `e2e` flavour draws on the software adapter whatever the machine offers, as the runners
-/// do (WARP, lavapipe): eframe reads no variable to choose one.
+/// do (WARP, lavapipe): eframe reads no variable to choose one. `DEVNOTES_E2E_GPU` leaves the
+/// choice to eframe, to measure what a person's window costs.
 #[cfg(feature = "e2e")]
 fn wgpu_options() -> eframe::egui_wgpu::WgpuConfiguration {
     use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
     use eframe::wgpu;
 
+    if std::env::var_os("DEVNOTES_E2E_GPU").is_some() {
+        return WgpuConfiguration::default();
+    }
     let mut setup = WgpuSetupCreateNew::without_display_handle();
     setup.native_adapter_selector = Some(std::sync::Arc::new(|adapters, surface| {
         let draws_here = |adapter: &&wgpu::Adapter| {

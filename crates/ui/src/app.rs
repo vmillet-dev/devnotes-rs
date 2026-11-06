@@ -463,6 +463,9 @@ impl eframe::App for DevNotesApp {
 mod captures;
 
 #[cfg(test)]
+mod perf;
+
+#[cfg(test)]
 mod screens;
 
 #[cfg(test)]
