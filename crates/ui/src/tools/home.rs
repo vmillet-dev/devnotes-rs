@@ -242,14 +242,8 @@ fn sections(
     }
 }
 
-/// A section's title inside the home: small capitals, muted.
-pub(super) fn section_title(ui: &mut Ui, words: &str) {
-    let p = palette(ui.ctx());
-    let shown = words.to_uppercase();
-    let galley = widgets::text(ui, &shown, 11.0, 700.0, FontFamily::Proportional, p.text_2);
-    let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Heading, true, words));
-    ui.painter().galley(rect.min, galley, p.text_2);
+fn section_title(ui: &mut Ui, words: &str) {
+    super::ui::section_title(ui, words);
     ui.add_space(10.0);
 }
 
@@ -646,32 +640,10 @@ fn keys_of_the_search(
     {
         actions.push(Asked::Tools(Action::Open(tool.id)));
     }
-    if widgets::takes_keys(ui, field) {
-        if let Some(id) = view.results.first()
-            && pressed(ui, Key::ArrowDown)
-        {
-            ui.memory_mut(|memory| memory.request_focus(*id));
-        }
-        return;
-    }
+    super::ui::walk(ui, &view.results, field);
     let focused = ui.memory(egui::Memory::focused);
-    let Some(at) = focused.and_then(|id| view.results.iter().position(|it| *it == id)) else {
+    if !focused.is_some_and(|id| view.results.contains(&id)) {
         return;
-    };
-    // The arrows are ours here: egui would walk them by position, stars included.
-    let filter = egui::EventFilter {
-        vertical_arrows: true,
-        ..egui::EventFilter::default()
-    };
-    ui.memory_mut(|memory| memory.set_focus_lock_filter(view.results[at], filter));
-    if pressed(ui, Key::ArrowDown)
-        && let Some(id) = view.results.get(at + 1)
-    {
-        ui.memory_mut(|memory| memory.request_focus(*id));
-    }
-    if pressed(ui, Key::ArrowUp) {
-        let up = at.checked_sub(1).map_or(field.id, |it| view.results[it]);
-        ui.memory_mut(|memory| memory.request_focus(up));
     }
     if view.searching() && pressed(ui, Key::Escape) {
         view.search.clear();

@@ -5,6 +5,7 @@ use i18n::keys;
 
 use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
+use crate::services::status::StatusNotifier;
 use crate::state::query::QueryCell;
 
 /// Long enough to let a word be typed, short enough to read as live.
@@ -15,7 +16,9 @@ pub struct Turn<'a> {
     pub ctx: &'a egui::Context,
     pub backend: &'a Backend,
     pub time: f64,
+    pub now: chrono::DateTime<chrono::Utc>,
     pub errors: &'a mut ErrorNotifier,
+    pub status: &'a mut StatusNotifier,
 }
 
 pub struct Live<P, T> {
@@ -99,6 +102,7 @@ mod tests {
     struct Bench {
         backend: Backend,
         errors: ErrorNotifier,
+        status: StatusNotifier,
         ctx: egui::Context,
         live: Live<u32, u32>,
         launched: Vec<u32>,
@@ -110,6 +114,7 @@ mod tests {
             let bench = Self {
                 backend,
                 errors: ErrorNotifier::default(),
+                status: StatusNotifier::default(),
                 ctx: egui::Context::default(),
                 live: Live::default(),
                 launched: Vec::new(),
@@ -122,7 +127,9 @@ mod tests {
                 ctx: &self.ctx,
                 backend: &self.backend,
                 time,
+                now: chrono::Utc::now(),
                 errors: &mut self.errors,
+                status: &mut self.status,
             };
             let launched = &mut self.launched;
             self.live.update(&mut turn, request, |backend, params| {

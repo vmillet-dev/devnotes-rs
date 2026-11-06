@@ -141,6 +141,40 @@ impl DevNotesApp {
     }
 }
 
+impl DevNotesApp {
+    /// Who reads what the widgets left of the keys, on what is on screen.
+    fn dispatch_keys(&self, ctx: &egui::Context) -> Option<Action> {
+        let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
+        // A modal over the canvas takes its keys: the canvas's stand aside.
+        let levels: &[&[keys::Binding]] = if self.state.palette.is_open() {
+            &[&keys::APPLICATION]
+        } else if notes_shown && !self.state.modal_open() {
+            &[
+                &keys::NOTES,
+                &notes::canvas::shortcuts::CANVAS,
+                &keys::APPLICATION,
+            ]
+        } else if notes_shown {
+            &[&keys::NOTES, &keys::APPLICATION]
+        } else if self.state.gate.is_open()
+            && self.state.settings.area == Area::Http
+            && self.state.http.tabs().closing().is_none()
+            && !self.state.http.leave().is_asking()
+        {
+            &[&keys::HTTP, &keys::APPLICATION]
+        } else if self.state.gate.is_open()
+            && self.state.settings.area == Area::Tools
+            && !self.state.tools_view.is_picking()
+            && self.state.http.kept().asked().is_none()
+        {
+            &[&keys::TOOLS, &keys::APPLICATION]
+        } else {
+            &[&keys::APPLICATION]
+        };
+        keys::dispatch(ctx, levels)
+    }
+}
+
 impl eframe::App for DevNotesApp {
     /// Runs while the window is hidden too: eframe draws nothing then, so the window is shown
     /// from here, once it exists at its restored geometry.
@@ -251,30 +285,7 @@ impl eframe::App for DevNotesApp {
         if self.state.gate.is_open() {
             self.over_the_area(ui, &mut actions);
         }
-        let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
-        // A modal over the canvas takes its keys: the canvas's stand aside.
-        let levels: &[&[keys::Binding]] = if self.state.palette.is_open() {
-            &[&keys::APPLICATION]
-        } else if notes_shown && !self.state.modal_open() {
-            &[
-                &keys::NOTES,
-                &notes::canvas::shortcuts::CANVAS,
-                &keys::APPLICATION,
-            ]
-        } else if notes_shown {
-            &[&keys::NOTES, &keys::APPLICATION]
-        } else if self.state.gate.is_open()
-            && self.state.settings.area == Area::Http
-            && self.state.http.tabs().closing().is_none()
-            && !self.state.http.leave().is_asking()
-        {
-            &[&keys::HTTP, &keys::APPLICATION]
-        } else if self.state.gate.is_open() && self.state.settings.area == Area::Tools {
-            &[&keys::TOOLS, &keys::APPLICATION]
-        } else {
-            &[&keys::APPLICATION]
-        };
-        if let Some(action) = keys::dispatch(ui.ctx(), levels) {
+        if let Some(action) = self.dispatch_keys(ui.ctx()) {
             actions.push(action);
         }
         for action in actions.drain() {
