@@ -138,6 +138,7 @@ pub struct AppState {
     /// Not the library's: it outlives a switch, and is read at the gate too.
     pub help: help::HelpState,
     pub updates: crate::services::updates::UpdateState,
+    pub global_keys: crate::services::global_keys::GlobalKeys,
     /// The bar's menus and what they open: only their drawing reads it (D13).
     pub titlebar_view: crate::titlebar::View,
     /// The modals the bar's menus open, in the order they are drawn.
@@ -202,6 +203,7 @@ impl AppState {
             backups: backups::BackupsState::default(),
             help: help::HelpState::default(),
             updates: crate::services::updates::UpdateState::default(),
+            global_keys: crate::services::global_keys::GlobalKeys::default(),
             titlebar_view: crate::titlebar::View::default(),
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
@@ -696,8 +698,10 @@ impl AppState {
                 }
             }
             Action::Palette(asked) => self.apply_palette(asked, ctx, backend),
-            // The capture arrives with its own phase.
-            Action::Global(GlobalAction::Capture) => {}
+            Action::Global(GlobalAction::Capture) => {
+                self.apply(Action::App(AppAction::ShowArea(Area::Notes)), ctx, backend);
+                self.capture(backend);
+            }
         }
     }
 
@@ -1748,6 +1752,30 @@ impl AppState {
         };
         let kind = kind.unwrap_or(self.settings.default_note_kind);
         self.editor.draft(kind, space, folder);
+    }
+
+    /// The clipboard read like a paste into an empty Note: code makes a snippet in the language
+    /// the core reads in it, prose a Note. Holding its content, it is written at once.
+    fn capture(&mut self, backend: &Backend) {
+        use engine::notes::kind::NoteKind;
+        use engine::notes::language::Language;
+        if !self.gate.is_open() {
+            return;
+        }
+        let Some(content) = self.clipboard.text().filter(|text| !text.trim().is_empty()) else {
+            return;
+        };
+        let Some((space, folder)) = self.new_place() else {
+            return;
+        };
+        let language = crate::api::notes::detect_language(&content);
+        let kind = if language == Language::Txt {
+            NoteKind::Note
+        } else {
+            NoteKind::Snippet
+        };
+        self.editor
+            .draft_filled(backend, (kind, space, folder), content, language);
     }
 
     /// Where a new note goes: the space and folder shown, or the first space for « all »; said

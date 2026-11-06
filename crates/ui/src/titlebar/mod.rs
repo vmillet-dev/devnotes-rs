@@ -76,6 +76,11 @@ impl View {
         self.preferences = preferences::View::default();
     }
 
+    /// As of the last frame drawn.
+    pub fn listens_for_a_global_key(&self) -> bool {
+        self.preferences.listens_for_a_global_key()
+    }
+
     pub fn show_help(&mut self, panel: about_menu::Panel) {
         self.about.show_panel(panel);
     }

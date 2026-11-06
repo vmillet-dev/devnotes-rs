@@ -20,6 +20,7 @@ use std::process::ExitCode;
 use engine::app_info::METADATA;
 use platform::instance::{self, Claim, Instance, Message};
 use platform::paths::{self, Locations};
+use platform::shortcuts::Shortcuts;
 use platform::window::Geometry;
 use ui::services::preferences::Preferences;
 
@@ -89,6 +90,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
         log::warn!("Second launches will not be heard: {error}");
     }
     let tray = desktop::start_tray(&preferences, inbox.clone());
+    let shortcuts = take_shortcuts(inbox.clone());
     let startup = ui::Startup {
         paths: engine::Paths {
             profile: locations.profile,
@@ -102,6 +104,7 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
         waker,
         inputs,
         tray,
+        shortcuts,
     };
 
     eframe::run_native(
@@ -115,6 +118,18 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
             Ok(Box::new(ui::DevNotesApp::new(cc, startup)?))
         }),
     )
+}
+
+#[cfg(not(feature = "e2e"))]
+fn take_shortcuts(inbox: ui::inputs::Inbox) -> Box<dyn Shortcuts> {
+    platform::shortcuts::system(move |key| inbox.post(ui::inputs::Input::Shortcut(key)))
+}
+
+/// A scenario presses no key of the machine (`--action` stands for it), and one held by a
+/// person's own copy would open every run on a banner.
+#[cfg(feature = "e2e")]
+fn take_shortcuts(_inbox: ui::inputs::Inbox) -> Box<dyn Shortcuts> {
+    Box::new(platform::shortcuts::NoShortcuts)
 }
 
 /// Created hidden at the restored geometry, shown by the first frame. eframe's persistence is
