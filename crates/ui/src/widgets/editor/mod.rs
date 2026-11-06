@@ -121,6 +121,16 @@ impl Editor {
     }
 }
 
+/// ⚠️ An id of its own, not the next automatic one: a bar opening above would change it, and the
+/// text would lose the focus as the bar closes.
+fn text_surface(ui: &Ui, visible: Rect, id: Id) -> Response {
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "named and addressed by the view, as the text"
+    )]
+    ui.interact(visible, id.with("text"), Sense::click_and_drag())
+}
+
 /// A line on screen and its first row.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Row {
@@ -345,13 +355,7 @@ impl<'a> EditorView<'a> {
         ui.allocate_rect(rect, Sense::hover());
         // The part on screen only: what is clicked, and what the accessibility tree points at.
         let visible = viewport.translate(origin.to_vec2());
-        // ⚠️ Of its own, not the next automatic one: a bar opening above would change it, and
-        // the text would lose the focus as the bar closes.
-        #[expect(
-            clippy::disallowed_methods,
-            reason = "named and addressed below, as the text"
-        )]
-        let mut response = ui.interact(visible, text_id.with("text"), Sense::click_and_drag());
+        let mut response = text_surface(ui, visible, text_id);
         let id = response.id;
         if std::mem::take(&mut editor.wants_focus) {
             ui.memory_mut(|memory| memory.request_focus(id));

@@ -182,11 +182,7 @@ fn ctrl_alt_g_puts_the_caret_on_the_line_and_gives_the_keys_back() {
         "the bar went"
     );
     breaks_the_line(&mut harness);
-    assert_eq!(
-        code(&harness),
-        "un\n
-deux\ntrois"
-    );
+    assert_eq!(code(&harness), "un\n\ndeux\ntrois");
 }
 
 #[test]
@@ -195,11 +191,7 @@ fn a_line_past_the_end_is_the_last_and_escape_leaves_the_bar() {
     click_id(&mut harness, "editor-body");
     go_to(&mut harness, "99");
     breaks_the_line(&mut harness);
-    assert_eq!(
-        code(&harness),
-        "un\n
-deux"
-    );
+    assert_eq!(code(&harness), "un\n\ndeux");
 
     press(&mut harness, Modifiers::COMMAND | Modifiers::ALT, Key::G);
     press(&mut harness, Modifiers::NONE, Key::Escape);

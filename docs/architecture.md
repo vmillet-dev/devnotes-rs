@@ -3534,8 +3534,8 @@ knowing:
   (`devnotes.editorSearchOptions`, `search/search-options.ts`), handed to `search()` when a
   snippet's state is made. Past 200 000 characters, finding and counting wait for
   a 120 ms pause — a word found nowhere costs a whole read of 2 MB, some 150 ms a key — and the
-  count reads « … » meanwhile. Go to line (Ctrl+Alt+G) stays CodeMirror's dialog, given the bar's
-  field and button by `theme.ts`.
+  count reads « … » meanwhile. Go to line (Ctrl+Alt+G) is a bar of its own over the code
+  (`notes/overlays/editor/go_to_line.rs`).
 - CodeMirror's words still on screen or spoken (go to line, the screen reader's announcements)
   are `EditorState.phrases`, read from `editor.code` in the translations.
 - The specs run the real editor on jsdom, which has no rectangles for text ranges
