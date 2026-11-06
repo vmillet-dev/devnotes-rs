@@ -118,6 +118,17 @@ impl Tree {
             .collect()
     }
 
+    /// Whether any node says `words`, read with plain spaces: a tool's answer is one of many.
+    pub fn mentions(&self, words: &str) -> bool {
+        let plain = |text: &str| text.replace([' ', ' '], " ");
+        self.nodes.iter().any(|(_, node)| {
+            [node.label(), node.value()]
+                .into_iter()
+                .flatten()
+                .any(|text| plain(text).contains(words))
+        })
+    }
+
     /// What a node says: its name, or its value for a node that has no name.
     pub fn text(&self, author_id: &str) -> Option<String> {
         let node = self.find(author_id)?;
