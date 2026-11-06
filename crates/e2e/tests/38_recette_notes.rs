@@ -137,6 +137,8 @@ fn recette_creating() {
         assert_eq!(titles.iter().filter(|it| *it == "Course").count(), 1);
     });
 
+    a_snippet(&mut app, "Psql", "psql -h localhost");
+
     step("NOT-07 a title changed, another card clicked", || {
         open_card(&mut app, "Course");
         app.click("editor-title");
@@ -144,7 +146,7 @@ fn recette_creating() {
         app.type_text("Titre modifié au clic");
         app.capture("not-07-before");
         app.click_where("note-card-open", |node| {
-            node.label().is_some_and(|it| it.contains("Connexion"))
+            node.label().is_some_and(|it| it.contains("Psql"))
         });
         app.eventually("the editor closed or moved", |tree| {
             !tree.has("editor-title") || has_card(tree, "Titre modifié au clic")
@@ -159,7 +161,7 @@ fn recette_creating() {
     });
 
     step("NOT-10 a snippet made a Note, and taken back", || {
-        open_card(&mut app, "Connexion");
+        open_card(&mut app, "Psql");
         app.click("editor-kind");
         app.click_nth("editor-kind-0", 0);
         app.wait_for("editor-rich");

@@ -12,6 +12,7 @@ pub use server::{serve, serve_socket};
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use egui::accesskit::{Node, NodeId, TreeUpdate};
@@ -20,6 +21,10 @@ use egui_inspection::protocol::{self, Request, Response};
 
 /// How long a condition may take to come true.
 const PATIENCE: Duration = Duration::from_secs(30);
+
+/// One window at a time: the tests of a file run side by side, and a window another covers stops
+/// painting under xvfb.
+static ONE_WINDOW: Mutex<()> = Mutex::new(());
 
 /// A test value, never anyone's phrase.
 pub const PASSPHRASE: &str = "correct horse battery staple";
@@ -150,6 +155,7 @@ pub struct App {
     profile: PathBuf,
     child: Child,
     stream: TcpStream,
+    _alone: MutexGuard<'static, ()>,
 }
 
 impl App {
@@ -166,6 +172,9 @@ impl App {
     }
 
     fn start(scenario: &'static str, profile: &Path, mut command: Command) -> Self {
+        let alone = ONE_WINDOW
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let port = free_port();
         let mut child = command
             .arg("--profile")
@@ -183,6 +192,7 @@ impl App {
             profile: profile.to_path_buf(),
             child,
             stream,
+            _alone: alone,
         }
     }
 
