@@ -1,6 +1,7 @@
 //! The collections laid flat for the rail: one row a line, its level kept as a depth. What
 //! nests in what is the core's `HttpTree`; this only lays it out.
 
+use super::containers::Container;
 use std::collections::BTreeSet;
 
 use engine::http::model::{
@@ -48,6 +49,49 @@ pub struct RailRow {
     pub expanded: bool,
     /// A request's alone.
     pub badge: Option<Badge>,
+}
+
+/// A collection or a folder of the tree, for its settings.
+pub fn container_of(tree: &HttpTree, id: &str) -> Option<Container> {
+    fn inside(
+        nodes: &[HttpNode],
+        collection_id: &str,
+        parent: Option<&str>,
+        id: &str,
+    ) -> Option<Container> {
+        nodes.iter().find_map(|node| {
+            let HttpNode::Folder { folder, children } = node else {
+                return None;
+            };
+            if folder.id == id {
+                return Some(Container {
+                    item: HttpItem {
+                        kind: HttpItemKind::Folder,
+                        id: folder.id.clone(),
+                    },
+                    name: folder.name.clone(),
+                    collection_id: collection_id.to_owned(),
+                    folder_id: parent.map(str::to_owned),
+                });
+            }
+            inside(children, collection_id, Some(&folder.id), id)
+        })
+    }
+    tree.collections.iter().find_map(|node| {
+        let collection = &node.collection;
+        if collection.id == id {
+            return Some(Container {
+                item: HttpItem {
+                    kind: HttpItemKind::Collection,
+                    id: collection.id.clone(),
+                },
+                name: collection.name.clone(),
+                collection_id: collection.id.clone(),
+                folder_id: None,
+            });
+        }
+        inside(&node.children, &collection.id, None, id)
+    })
 }
 
 /// A place a request can be saved in: a collection's root or a folder, by its path.

@@ -23,11 +23,12 @@ use egui::{
     TextEdit, Ui, Vec2, WidgetInfo, pos2,
 };
 use engine::http::model::{HttpMethod, RequestAuth, RequestKind};
+use engine::http::scripts::model::ScriptKind;
 use engine::http::send::{ImpliedHeader, ImpliedSource};
 use engine::http::variables::UsedVariable;
 use i18n::keys;
 
-use super::{Action, variables_table};
+use super::{Action, scripts, variables_table};
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
 use crate::state::http::tabs::{DraftEdit, Tab};
@@ -46,6 +47,7 @@ pub(crate) enum Section {
     Query,
     Variables,
     Scripts,
+    Tests,
     Settings,
     Message,
     Protocols,
@@ -61,6 +63,7 @@ impl Section {
             Self::Query => "query",
             Self::Variables => "variables",
             Self::Scripts => "scripts",
+            Self::Tests => "tests",
             Self::Settings => "settings",
             Self::Message => "message",
             Self::Protocols => "protocols",
@@ -76,6 +79,7 @@ impl Section {
             Self::Query => keys::http::editor::sections::QUERY,
             Self::Variables => keys::http::editor::sections::VARIABLES,
             Self::Scripts => keys::http::editor::sections::SCRIPTS,
+            Self::Tests => keys::http::editor::sections::TESTS,
             Self::Settings => keys::http::editor::sections::SETTINGS,
             Self::Message => keys::http::editor::sections::MESSAGE,
             Self::Protocols => keys::http::editor::sections::PROTOCOLS,
@@ -93,6 +97,7 @@ fn sections(kind: RequestKind) -> &'static [Section] {
             Section::Body,
             Section::Variables,
             Section::Scripts,
+            Section::Tests,
             Section::Settings,
         ],
         RequestKind::Graphql => &[
@@ -101,6 +106,7 @@ fn sections(kind: RequestKind) -> &'static [Section] {
             Section::Auth,
             Section::Variables,
             Section::Scripts,
+            Section::Tests,
             Section::Settings,
         ],
         RequestKind::Websocket => &[
@@ -129,6 +135,8 @@ pub(crate) struct TextBoxes {
     revealed: bool,
     numbers: transport::Typed,
     secrets_shown: variables_table::Revealed,
+    scripts: scripts::ScriptsView,
+    tests: scripts::ScriptsView,
 }
 
 impl TextBoxes {
@@ -194,6 +202,7 @@ pub(crate) fn show(
                     if state.http.environments().asking() == Some(tab.key.as_str()) {
                         protected(ui, state, tab, actions);
                     }
+                    take_focus(state, tab, view, actions);
                     section_tabs(ui, state, tab, view);
                     let section = view.section(tab.draft.kind);
                     let boxes = view.boxes.of(&tab.key);
@@ -215,7 +224,14 @@ pub(crate) fn show(
                             }
                         }
                         Section::Variables => variables(ui, tab, boxes, actions, language),
-                        Section::Scripts => extractions::show(ui, tab, actions, language),
+                        Section::Scripts => {
+                            let phases = &[ScriptKind::Before, ScriptKind::After];
+                            scripts_of(ui, state, tab, (boxes, phases), actions);
+                        }
+                        Section::Tests => {
+                            let phases = &[ScriptKind::Tests];
+                            scripts_of(ui, state, tab, (boxes, phases), actions);
+                        }
                         Section::Settings => settings(ui, state, tab, boxes, actions),
                         Section::Message => composer::show(ui, state, tab, boxes, actions),
                         Section::Protocols => {
@@ -635,11 +651,83 @@ fn counted(tab: &Tab, section: Section) -> usize {
             .iter()
             .filter(|row| row.enabled && !row.name.is_empty())
             .count(),
-        Section::Scripts => document.extractions.len(),
+        Section::Scripts => [&document.scripts.before, &document.scripts.after]
+            .iter()
+            .filter(|source| !source.trim().is_empty())
+            .count(),
+        Section::Tests => crate::api::http::tests_declared(&document.scripts.tests),
         Section::Message => document.websocket.messages.len(),
         Section::Protocols => document.websocket.protocols.len(),
         Section::Settings => transport::set_fields(&document.transport),
         Section::Auth | Section::Body | Section::Query => 0,
+    }
+}
+
+/// « Open the script »: the tab's own, on the phase and the line that stopped.
+fn take_focus(state: &AppState, tab: &Tab, view: &mut EditorView, actions: &mut Actions) {
+    let Some(focus) = state.http.script_focus().filter(|it| it.key == tab.key) else {
+        return;
+    };
+    let boxes = view.boxes.of(&tab.key);
+    if focus.phase == ScriptKind::Tests {
+        boxes.tests.focus(focus.phase, focus.line);
+        view.chosen = Section::Tests;
+    } else {
+        boxes.scripts.focus(focus.phase, focus.line);
+        view.chosen = Section::Scripts;
+    }
+    actions.push(Asked::Http(Action::ScriptFocusTaken));
+}
+
+fn scripts_of(
+    ui: &mut Ui,
+    state: &AppState,
+    tab: &Tab,
+    (boxes, phases): (&mut TextBoxes, &[ScriptKind]),
+    actions: &mut Actions,
+) {
+    let document = &tab.draft.document;
+    let above = tab
+        .place
+        .as_ref()
+        .and(state.http.inherited())
+        .map_or(&[][..], |above| above.scripts.as_slice());
+    let field = scripts::ScriptsField {
+        scripts: &document.scripts,
+        owner: &tab.key,
+        phases,
+        above: Some(above),
+        request_name: &tab.draft.name,
+    };
+    let tests = phases == [ScriptKind::Tests];
+    let view = if tests {
+        &mut boxes.tests
+    } else {
+        &mut boxes.scripts
+    };
+    let language = state.language;
+    let mut removal = None;
+    let changed = scripts::show(ui, &field, view, language, |ui, phase| {
+        if phase == ScriptKind::After && !document.extractions.is_empty() {
+            removal = extractions::show(ui, tab, language);
+        }
+    });
+    if let Some(rules) = removal {
+        edit(actions, tab, DraftEdit::Extractions(rules));
+    }
+    match changed {
+        Some(scripts::Changed::Scripts(scripts)) => {
+            edit(actions, tab, DraftEdit::Scripts(scripts));
+        }
+        Some(scripts::Changed::Level(origin)) => {
+            let phase = if tests {
+                ScriptKind::Tests
+            } else {
+                boxes.scripts.phase()
+            };
+            actions.push(Asked::Http(Action::OpenLevel { origin, phase }));
+        }
+        None => {}
     }
 }
 

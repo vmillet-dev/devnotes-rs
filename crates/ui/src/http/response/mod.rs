@@ -3,7 +3,10 @@
 //! a failure or a cancelled send stays on screen as an answer does, and goes the same way.
 
 pub(crate) mod body;
+mod stop;
 
+use engine::error::ErrorCode;
+use engine::http::scripts::model::ScriptStop;
 use std::sync::Arc;
 
 use egui::{CornerRadius, FontFamily, Margin, Rect, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
@@ -109,6 +112,16 @@ pub(crate) fn show(
                 Some(Sent {
                     phase: Phase::Failed(error),
                     ..
+                }) if error.code == ErrorCode::HttpScript => {
+                    let stopped = ScriptStop::of_params(&error.params);
+                    if stop::show(ui, &stopped, true, language) {
+                        open_script(actions, tab, stopped);
+                    }
+                    clear(ui, tab, actions, language);
+                }
+                Some(Sent {
+                    phase: Phase::Failed(error),
+                    ..
                 }) => {
                     let message = crate::services::errors::message_of(error)
                         .unwrap_or_else(|| i18n::Message::new(keys::http::send::FAILED));
@@ -179,6 +192,9 @@ pub(crate) fn recorded(
     actions: &mut Actions,
 ) {
     bar(ui, state, (None, response), view, actions);
+    if let Some(stopped) = &response.scripts.failure {
+        stop::show(ui, stopped, false, state.language);
+    }
     section_of(ui, state, (id, response), view, actions);
 }
 
@@ -190,7 +206,19 @@ fn answered(
     actions: &mut Actions,
 ) {
     bar(ui, state, (Some(tab), response), view, actions);
+    if let Some(stopped) = &response.scripts.failure
+        && stop::show(ui, stopped, true, state.language)
+    {
+        open_script(actions, tab, stopped.clone());
+    }
     section_of(ui, state, (id, response), view, actions);
+}
+
+fn open_script(actions: &mut Actions, tab: &Tab, stop: ScriptStop) {
+    actions.push(Asked::Http(Action::OpenScript {
+        key: tab.key.clone(),
+        stop: Box::new(stop),
+    }));
 }
 
 fn section_of(

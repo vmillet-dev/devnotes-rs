@@ -5063,6 +5063,16 @@ connecting; on a closed socket it says so and connects nothing. The log draws it
 alone, so a message reads on one line, whole in its tooltip. Closing a live socket's tab asks
 first, and a closed tab closes its socket.
 
+`http::scripts` is the script editor of a request, a folder or a collection: the text core's
+`Editor` by phase, each with its history, JavaScript coloured as a snippet is, a menu of examples
+written at the end of the script, and for a request the order the scripts run in, a level above
+a click from its settings on the same script. The extractions stand among the scripts after the
+answer. What runs them is the application relaunched as their host: a kittest bench is not that
+binary, so running them is scenario 34's. A script that stopped before the send stands in place
+of the answer, read back from its error's params (`ScriptStop::of_params`); after it, above the
+answer that came. « Open the script » goes to the request's own, or to the settings of what
+holds it, on the phase, the line marked until the next edit (`HttpState::script_focus`).
+
 A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
 queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
 (`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's

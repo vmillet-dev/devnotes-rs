@@ -239,6 +239,9 @@ fn the_http_request_editor() {
     capture(&mut harness, "http-environment-picker");
     harness.key_press(egui::Key::Escape);
     settle(&mut harness);
+    click(&mut harness, "http-section-scripts");
+    settle(&mut harness);
+    capture(&mut harness, "http-request-scripts");
     click(&mut harness, "http-section-body");
     let app = harness.state_mut();
     app.state.http.tabs_mut().edit(&key, |draft| {

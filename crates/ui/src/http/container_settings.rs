@@ -3,11 +3,12 @@
 
 use egui::{Align, FontFamily, Layout, Sense, Ui};
 use engine::http::model::{ContainerSettings, HttpItemKind};
+use engine::http::scripts::model::ScriptKind;
 use engine::http::transport::Transport;
 use i18n::keys;
 
 use super::request::{auth, table, transport};
-use super::{Action, modal, variables_table};
+use super::{Action, modal, scripts, variables_table};
 use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
 use crate::state::http::containers::Form;
@@ -22,6 +23,10 @@ pub(crate) struct DialogView {
     revealed: bool,
     numbers: transport::Typed,
     secrets_shown: variables_table::Revealed,
+    scripts: scripts::ScriptsView,
+    tests: scripts::ScriptsView,
+    /// The focus asked was shown.
+    focused: bool,
 }
 
 pub(super) fn show(ui: &Ui, state: &AppState, view: &mut DialogView, actions: &mut Actions) {
@@ -29,6 +34,16 @@ pub(super) fn show(ui: &Ui, state: &AppState, view: &mut DialogView, actions: &m
         *view = DialogView::default();
         return;
     };
+    if !view.focused
+        && let Some((phase, line)) = form.focus
+    {
+        view.focused = true;
+        if phase == ScriptKind::Tests {
+            view.tests.focus(phase, line);
+        } else {
+            view.scripts.focus(phase, line);
+        }
+    }
     let shown = modal(ui, "http-settings-dialog", |ui| {
         body(ui, state, form, view, actions);
     });
@@ -174,6 +189,40 @@ fn fields(
     if let Some(transport) = transport::show(ui, &field, &mut view.numbers, language) {
         changed = Some(ContainerSettings {
             transport,
+            ..settings.clone()
+        });
+    }
+    let owner = form.container.item.id.as_str();
+    let scripts_of = |phases: &'static [ScriptKind]| scripts::ScriptsField {
+        scripts: &settings.scripts,
+        owner,
+        phases,
+        above: None,
+        request_name: "",
+    };
+    heading(
+        ui,
+        &tr(keys::http::editor::sections::SCRIPTS),
+        Some(tr(keys::http::settings::SCRIPTS_HINT)),
+    );
+    let field = scripts_of(&[ScriptKind::Before, ScriptKind::After]);
+    let typed = scripts::show(ui, &field, &mut view.scripts, language, |_, _| {});
+    if let Some(scripts::Changed::Scripts(scripts)) = typed {
+        changed = Some(ContainerSettings {
+            scripts,
+            ..settings.clone()
+        });
+    }
+    heading(
+        ui,
+        &tr(keys::http::editor::sections::TESTS),
+        Some(tr(keys::http::settings::TESTS_HINT)),
+    );
+    let field = scripts_of(&[ScriptKind::Tests]);
+    let typed = scripts::show(ui, &field, &mut view.tests, language, |_, _| {});
+    if let Some(scripts::Changed::Scripts(scripts)) = typed {
+        changed = Some(ContainerSettings {
+            scripts,
             ..settings.clone()
         });
     }

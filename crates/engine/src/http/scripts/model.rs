@@ -536,6 +536,26 @@ pub struct ScriptStop {
 }
 
 impl ScriptStop {
+    /// The stop a send refused before it left carries in its error's params.
+    #[must_use]
+    pub fn of_params(params: &std::collections::BTreeMap<String, String>) -> Self {
+        fn parsed<T: std::str::FromStr>(
+            params: &std::collections::BTreeMap<String, String>,
+            name: &str,
+        ) -> Option<T> {
+            params.get(name).and_then(|value| value.parse().ok())
+        }
+        Self {
+            kind: parsed(params, "failure").unwrap_or_default(),
+            level: parsed(params, "level"),
+            script: Some(ScriptKind::Before),
+            name: params.get("name").cloned(),
+            owner: params.get("owner").cloned(),
+            line: parsed(params, "line"),
+            message: params.get("message").cloned().unwrap_or_default(),
+        }
+    }
+
     /// `scripts` the phase's, which the failure names by id.
     #[must_use]
     pub fn of(failure: &ScriptFailure, scripts: &[Script]) -> Self {
@@ -594,10 +614,56 @@ pub struct ScriptsAnswer {
     pub wrote: bool,
 }
 
+/// How many tests a script declares, as its tab counts them: `test(` and `pm.test(`.
+#[must_use]
+pub fn tests_declared(source: &str) -> usize {
+    source
+        .match_indices("test")
+        .filter(|(at, word)| {
+            let before = &source[..*at];
+            let after = source[at + word.len()..].trim_start();
+            let starts = before
+                .chars()
+                .next_back()
+                .is_none_or(|c| !(c.is_alphanumeric() || c == '_' || c == '.'));
+            after.starts_with('(') && (starts || before.ends_with("pm."))
+        })
+        .count()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::http::graphql::GraphqlDocument;
+
+    #[test]
+    fn a_test_is_counted_by_its_call_alone() {
+        let source = "test('a', () => {});\npm.test('b', () => {});\ntest.skip('c');";
+        assert_eq!(tests_declared(source), 2);
+        assert_eq!(
+            tests_declared("const latest = 1; env.test('x'); attest(1);"),
+            0
+        );
+    }
+
+    #[test]
+    fn a_stop_is_read_back_from_what_its_error_carries() {
+        let params = [
+            ("failure", "syntax"),
+            ("level", "folder"),
+            ("name", "Auth"),
+            ("line", "3"),
+            ("message", "oops"),
+        ]
+        .map(|(key, value)| (key.to_owned(), value.to_owned()))
+        .into();
+        let stop = ScriptStop::of_params(&params);
+
+        assert_eq!(stop.kind, FailureKind::Syntax);
+        assert_eq!(stop.level, Some(ScriptLevel::Folder));
+        assert_eq!(stop.line, Some(3));
+        assert_eq!(stop.script, Some(ScriptKind::Before));
+    }
 
     fn header(key: &str, value: &str) -> KeyValue {
         KeyValue {

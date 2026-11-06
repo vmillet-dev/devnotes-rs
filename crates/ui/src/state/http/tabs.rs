@@ -10,7 +10,7 @@ use engine::http::environments::Variable;
 use engine::http::graphql::GraphqlDocument;
 use engine::http::model::{
     Extraction, HttpMethod, HttpRequest, HttpRequestDraft, HttpRequestPatch, HttpTree, KeyValue,
-    NewPlace, RequestAuth, RequestBody, RequestDocument, RequestKind,
+    NewPlace, RequestAuth, RequestBody, RequestDocument, RequestKind, RequestScripts,
 };
 use engine::http::query::QuerySide;
 use engine::http::transport::TransportSettings;
@@ -63,6 +63,7 @@ pub enum DraftEdit {
     Variables(Vec<Variable>),
     Extractions(Vec<Extraction>),
     Websocket(WebsocketDocument),
+    Scripts(RequestScripts),
 }
 
 impl Draft {
@@ -90,6 +91,7 @@ impl Draft {
             DraftEdit::Variables(variables) => document.variables = variables,
             DraftEdit::Extractions(rules) => document.extractions = rules,
             DraftEdit::Websocket(websocket) => document.websocket = websocket,
+            DraftEdit::Scripts(scripts) => document.scripts = scripts,
         }
     }
 }
