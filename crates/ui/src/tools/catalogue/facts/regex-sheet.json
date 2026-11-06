@@ -1,0 +1,614 @@
+[
+  {
+    "syntax": "^",
+    "group": "anchors",
+    "js": true,
+    "pcre": true,
+    "pattern": "^Bon",
+    "text": "Bonjour",
+    "matched": ["Bon"]
+  },
+  {
+    "syntax": "$",
+    "group": "anchors",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\d+$",
+    "text": "lot 42",
+    "matched": ["42"]
+  },
+  {
+    "syntax": "\\b",
+    "group": "anchors",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\bcat\\b",
+    "text": "cat scatter",
+    "matched": ["cat"]
+  },
+  {
+    "syntax": "\\B",
+    "group": "anchors",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\Bcat",
+    "text": "cat scatter",
+    "matched": ["cat"]
+  },
+  {
+    "syntax": "\\A",
+    "group": "anchors",
+    "js": false,
+    "pcre": true,
+    "pattern": "\\Aab",
+    "text": "abab",
+    "matched": ["ab"]
+  },
+  {
+    "syntax": "\\z",
+    "group": "anchors",
+    "js": false,
+    "pcre": true,
+    "pattern": "ab\\z",
+    "text": "abab",
+    "matched": ["ab"]
+  },
+  {
+    "syntax": "\\Z",
+    "group": "anchors",
+    "js": false,
+    "pcre": true,
+    "pattern": "fin\\Z",
+    "text": "fin␊",
+    "matched": ["fin"]
+  },
+  {
+    "syntax": "\\G",
+    "group": "anchors",
+    "js": false,
+    "pcre": true,
+    "pattern": "\\G\\d",
+    "text": "12a3",
+    "matched": ["1", "2"]
+  },
+  {
+    "syntax": ".",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "a.c",
+    "text": "abc a-c",
+    "matched": ["abc", "a-c"]
+  },
+  {
+    "syntax": "\\d",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\d+",
+    "text": "v12.3",
+    "matched": ["12", "3"]
+  },
+  {
+    "syntax": "\\D",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\D+",
+    "text": "v12",
+    "matched": ["v"]
+  },
+  {
+    "syntax": "\\w",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\w+",
+    "text": "user_id-2",
+    "matched": ["user_id", "2"]
+  },
+  {
+    "syntax": "\\W",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\W",
+    "text": "a-b",
+    "matched": ["-"]
+  },
+  {
+    "syntax": "\\s",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "a\\sb",
+    "text": "a b",
+    "matched": ["a b"]
+  },
+  {
+    "syntax": "\\S",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\S+",
+    "text": "x = 1",
+    "matched": ["x", "=", "1"]
+  },
+  {
+    "syntax": "[abc]",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "[aeiou]",
+    "text": "regex",
+    "matched": ["e", "e"]
+  },
+  {
+    "syntax": "[^abc]",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "[^0-9]+",
+    "text": "a1b2",
+    "matched": ["a", "b"]
+  },
+  {
+    "syntax": "[a-z]",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "[a-f0-9]+",
+    "text": "0xff",
+    "matched": ["0", "ff"]
+  },
+  {
+    "syntax": "\\p{L}",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\p{L}+",
+    "text": "été 2026",
+    "matched": ["été"]
+  },
+  {
+    "syntax": "\\P{L}",
+    "group": "classes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\P{L}+",
+    "text": "été 2026",
+    "matched": [" 2026"]
+  },
+  {
+    "syntax": "[[:alpha:]]",
+    "group": "classes",
+    "js": false,
+    "pcre": true,
+    "pattern": "[[:alpha:]]+",
+    "text": "abc123",
+    "matched": ["abc"]
+  },
+  {
+    "syntax": "\\h",
+    "group": "classes",
+    "js": false,
+    "pcre": true,
+    "pattern": "a\\hb",
+    "text": "a b",
+    "matched": ["a b"]
+  },
+  {
+    "syntax": "\\R",
+    "group": "classes",
+    "js": false,
+    "pcre": true,
+    "pattern": "a\\Rb",
+    "text": "a␍␊b",
+    "matched": ["a␍␊b"]
+  },
+  {
+    "syntax": "\\X",
+    "group": "classes",
+    "js": false,
+    "pcre": true,
+    "pattern": "^\\X$",
+    "text": "é",
+    "matched": ["é"]
+  },
+  {
+    "syntax": "*",
+    "group": "quantifiers",
+    "js": true,
+    "pcre": true,
+    "pattern": "ab*",
+    "text": "a ab abbb",
+    "matched": ["a", "ab", "abbb"]
+  },
+  {
+    "syntax": "+",
+    "group": "quantifiers",
+    "js": true,
+    "pcre": true,
+    "pattern": "ab+",
+    "text": "a ab abbb",
+    "matched": ["ab", "abbb"]
+  },
+  {
+    "syntax": "?",
+    "group": "quantifiers",
+    "js": true,
+    "pcre": true,
+    "pattern": "colou?r",
+    "text": "color colour",
+    "matched": ["color", "colour"]
+  },
+  {
+    "syntax": "{n}",
+    "group": "quantifiers",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\d{4}",
+    "text": "2026-10",
+    "matched": ["2026"]
+  },
+  {
+    "syntax": "{n,}",
+    "group": "quantifiers",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\d{2,}",
+    "text": "1 22 333",
+    "matched": ["22", "333"]
+  },
+  {
+    "syntax": "{n,m}",
+    "group": "quantifiers",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\d{2,3}",
+    "text": "1 22 4444",
+    "matched": ["22", "444"]
+  },
+  {
+    "syntax": "*?",
+    "group": "quantifiers",
+    "js": true,
+    "pcre": true,
+    "pattern": "<.+?>",
+    "text": "<a><b>",
+    "matched": ["<a>", "<b>"]
+  },
+  {
+    "syntax": "*+",
+    "group": "quantifiers",
+    "js": false,
+    "pcre": true,
+    "pattern": "\\d++\\d",
+    "text": "123",
+    "matched": []
+  },
+  {
+    "syntax": "(…)",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "(\\d+)-(\\d+)",
+    "text": "10-20",
+    "matched": ["10-20"]
+  },
+  {
+    "syntax": "(?:…)",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "(?:ab)+",
+    "text": "ababx",
+    "matched": ["abab"]
+  },
+  {
+    "syntax": "(?<name>…)",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "(?<year>\\d{4})",
+    "text": "en 2026",
+    "matched": ["2026"]
+  },
+  {
+    "syntax": "(?P<name>…)",
+    "group": "groups",
+    "js": false,
+    "pcre": true,
+    "pattern": "(?P<year>\\d{4})",
+    "text": "en 2026",
+    "matched": ["2026"]
+  },
+  {
+    "syntax": "\\1",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "(\\w)\\1",
+    "text": "hello",
+    "matched": ["ll"]
+  },
+  {
+    "syntax": "\\k<name>",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "(?<c>\\w)\\k<c>",
+    "text": "hello",
+    "matched": ["ll"]
+  },
+  {
+    "syntax": "a|b",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "cat|dog",
+    "text": "a dog",
+    "matched": ["dog"]
+  },
+  {
+    "syntax": "(?=…)",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\d+(?=€)",
+    "text": "12€ 30$",
+    "matched": ["12"]
+  },
+  {
+    "syntax": "(?!…)",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\b\\d+\\b(?!€)",
+    "text": "12€ 30$",
+    "matched": ["30"]
+  },
+  {
+    "syntax": "(?<=…)",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "(?<=\\$)\\d+",
+    "text": "€12 $30",
+    "matched": ["30"]
+  },
+  {
+    "syntax": "(?<!…)",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "(?<!\\$)\\b\\d+",
+    "text": "$12 30",
+    "matched": ["30"]
+  },
+  {
+    "syntax": "(?>…)",
+    "group": "groups",
+    "js": false,
+    "pcre": true,
+    "pattern": "(?>a+)b",
+    "text": "aaab",
+    "matched": ["aaab"]
+  },
+  {
+    "syntax": "(?i:…)",
+    "group": "groups",
+    "js": true,
+    "pcre": true,
+    "pattern": "(?i:abc)D",
+    "text": "ABCD abcd",
+    "matched": ["ABCD"]
+  },
+  {
+    "syntax": "(?i)",
+    "group": "groups",
+    "js": false,
+    "pcre": true,
+    "pattern": "(?i)abc",
+    "text": "ABC",
+    "matched": ["ABC"]
+  },
+  {
+    "syntax": "(?R)",
+    "group": "groups",
+    "js": false,
+    "pcre": true,
+    "pattern": "\\((?:[^()]|(?R))*\\)",
+    "text": "f((a)(b))",
+    "matched": ["((a)(b))"]
+  },
+  {
+    "syntax": "(?#…)",
+    "group": "groups",
+    "js": false,
+    "pcre": true,
+    "pattern": "a(?#comment)b",
+    "text": "ab",
+    "matched": ["ab"]
+  },
+  {
+    "syntax": "i",
+    "group": "flags",
+    "js": true,
+    "pcre": true,
+    "pattern": "/abc/i",
+    "text": "ABC",
+    "matched": ["ABC"]
+  },
+  {
+    "syntax": "m",
+    "group": "flags",
+    "js": true,
+    "pcre": true,
+    "pattern": "/^\\d/m",
+    "text": "a␊1",
+    "matched": ["1"]
+  },
+  {
+    "syntax": "s",
+    "group": "flags",
+    "js": true,
+    "pcre": true,
+    "pattern": "/a.b/s",
+    "text": "a␊b",
+    "matched": ["a␊b"]
+  },
+  {
+    "syntax": "g",
+    "group": "flags",
+    "js": true,
+    "pcre": false,
+    "pattern": "/\\d/g",
+    "text": "a1b2",
+    "matched": ["1", "2"]
+  },
+  {
+    "syntax": "u",
+    "group": "flags",
+    "js": true,
+    "pcre": true,
+    "pattern": "/^.$/u",
+    "text": "😀",
+    "matched": ["😀"]
+  },
+  {
+    "syntax": "y",
+    "group": "flags",
+    "js": true,
+    "pcre": false,
+    "pattern": "/\\d/y",
+    "text": "1a2",
+    "matched": ["1"]
+  },
+  {
+    "syntax": "d",
+    "group": "flags",
+    "js": true,
+    "pcre": false,
+    "pattern": "/b(c)/d",
+    "text": "abc",
+    "matched": ["bc"]
+  },
+  {
+    "syntax": "v",
+    "group": "flags",
+    "js": true,
+    "pcre": false,
+    "pattern": "/[\\p{L}--[a-z]]/v",
+    "text": "aÉb",
+    "matched": ["É"]
+  },
+  {
+    "syntax": "x",
+    "group": "flags",
+    "js": false,
+    "pcre": true,
+    "pattern": "(?x) \\d+  # digits",
+    "text": "n° 42",
+    "matched": ["42"]
+  },
+  {
+    "syntax": "n",
+    "group": "flags",
+    "js": false,
+    "pcre": true,
+    "pattern": "(?n)(a)(?<b>b)",
+    "text": "ab",
+    "matched": ["ab"]
+  },
+  {
+    "syntax": "U",
+    "group": "flags",
+    "js": false,
+    "pcre": true,
+    "pattern": "(?U)a+",
+    "text": "aaa",
+    "matched": ["a", "a", "a"]
+  },
+  {
+    "syntax": "\\.",
+    "group": "escapes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\d\\.\\d",
+    "text": "v3.5",
+    "matched": ["3.5"]
+  },
+  {
+    "syntax": "\\t",
+    "group": "escapes",
+    "js": true,
+    "pcre": true,
+    "pattern": "a\\tb",
+    "text": "a⇥b",
+    "matched": ["a⇥b"]
+  },
+  {
+    "syntax": "\\n",
+    "group": "escapes",
+    "js": true,
+    "pcre": true,
+    "pattern": "a\\nb",
+    "text": "a␊b",
+    "matched": ["a␊b"]
+  },
+  {
+    "syntax": "\\xhh",
+    "group": "escapes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\x41",
+    "text": "ABC",
+    "matched": ["A"]
+  },
+  {
+    "syntax": "\\uhhhh",
+    "group": "escapes",
+    "js": true,
+    "pcre": false,
+    "pattern": "\\u00e9",
+    "text": "café",
+    "matched": ["é"]
+  },
+  {
+    "syntax": "\\u{h…}",
+    "group": "escapes",
+    "js": true,
+    "pcre": false,
+    "pattern": "/\\u{1F600}/u",
+    "text": "😀",
+    "matched": ["😀"]
+  },
+  {
+    "syntax": "\\x{h…}",
+    "group": "escapes",
+    "js": false,
+    "pcre": true,
+    "pattern": "\\x{1F600}",
+    "text": "😀",
+    "matched": ["😀"]
+  },
+  {
+    "syntax": "\\Q…\\E",
+    "group": "escapes",
+    "js": false,
+    "pcre": true,
+    "pattern": "\\Q1+1=2\\E",
+    "text": "1+1=2",
+    "matched": ["1+1=2"]
+  },
+  {
+    "syntax": "\\cX",
+    "group": "escapes",
+    "js": true,
+    "pcre": true,
+    "pattern": "\\cJ",
+    "text": "a␊b",
+    "matched": ["␊"]
+  }
+]

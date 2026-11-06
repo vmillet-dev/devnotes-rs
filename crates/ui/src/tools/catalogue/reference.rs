@@ -3,6 +3,7 @@
 
 use egui::Ui;
 use i18n::{Key, Language};
+use serde_json::Value;
 
 use crate::tools::ui::{Column, Group, ReferenceRow, ReferenceTable};
 use crate::tools::{Drawn, Opening, Tool};
@@ -100,6 +101,16 @@ impl Tool for Reference {
         self.query.clear();
         self.lit = None;
     }
+}
+
+/// The facts of a reference, kept as data beside it: a test holds every row to its words.
+pub(super) fn facts(json: &str) -> Vec<Value> {
+    serde_json::from_str(json).unwrap_or_default()
+}
+
+/// A field of a fact; nothing when it has none.
+pub(super) fn text<'a>(fact: &'a Value, field: &str) -> &'a str {
+    fact[field].as_str().unwrap_or_default()
 }
 
 /// The groups of a reference, their labels under `path`.

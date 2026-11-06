@@ -673,7 +673,8 @@ reads. A tool is found by its name, its line, its keywords and **the name of its
 (« 418 I'm a teapot — Codes de statut HTTP »), four a reference then « n autres ».
 
 - **A reference is data apart from its drawing** (`catalogue/<id>.rs`): the facts in a table of
-  its own, its words in each language, the rows built from them, what a row is called away from
+  its own, or in `catalogue/facts/<id>.json` when a row has more to say than a line holds (a long
+  table of same-shaped Rust literals reads as duplication), its words in each language, the rows built from them, what a row is called away from
   its table (`ReferenceRow::found_as`), and its own matcher when it reads a query its own way. The
   reference's table draws those rows and the home searches them (`Table::found`, the list
   `catalogue::REFERENCES`): one function builds, one matcher finds, so « too many » finds the
@@ -983,7 +984,7 @@ screen and fills both sides, each read by its shape again.
 
 **A reference is a table to search, and its words are a file of its own**
 (`crates/i18n/translations/references/<id>.{fr,en}.json`, read as `tools.<id>.words.…`), the
-facts in `catalogue/<id>.rs`: nothing is computed and nothing is kept as a note. `Reference` holds
+facts beside its `catalogue/<id>.rs`: nothing is computed and nothing is kept as a note. `Reference` holds
 the query and builds the rows once a language; `ReferenceTable` (`tools/ui/`) is the rest: the
 search, folded like the catalogue's, the groups, the count, each row's key to copy. A row is
 searched by its group's heading too (« redirection » finds every 3xx). Each group is a card, and
