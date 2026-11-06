@@ -438,6 +438,9 @@ pub async fn fill(engine: Arc<Engine>) {
             let mut library = lock(&engine.db)?;
             let mut index = engine.index()?;
             let more = index.next_slice(&mut library)?;
+            if !more {
+                library.map_less()?;
+            }
             let done = u32::try_from(index.len()).unwrap_or(u32::MAX);
             Ok((more, done, index.is_complete()))
         })
