@@ -82,6 +82,11 @@ mod tests {
         assert!(locations.profile.ends_with(DEFAULT_PROFILE));
         assert!(
             locations
+                .logs
+                .ends_with(Path::new(DEFAULT_PROFILE).join("logs"))
+        );
+        assert!(
+            locations
                 .window
                 .ends_with(Path::new(DEFAULT_PROFILE).join(WINDOW_FILE))
         );
