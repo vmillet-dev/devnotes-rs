@@ -20,7 +20,7 @@ pub enum DataFormat {
     Yaml,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConvertRequest {
     pub text: String,

@@ -16,7 +16,7 @@ use crate::services::preferences::Preferences;
 use crate::state::AppState;
 use crate::state::Area;
 use crate::theme;
-use crate::{banners, gate, http, keys, notes, titlebar};
+use crate::{banners, gate, http, keys, notes, titlebar, tools};
 
 /// How long the exit waits for the database queue to empty (D19).
 const EXIT_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -105,19 +105,6 @@ impl DevNotesApp {
             });
         }
     }
-}
-
-/// An area before its screens: the whole room, named, so that the switch has somewhere to go.
-/// Not drawn, it costs nothing, and its state stays in `AppState`.
-fn area_shell(ui: &mut egui::Ui, area: Area) {
-    let id = match area {
-        Area::Notes => "area-notes",
-        Area::Tools => "area-tools",
-        Area::Http => "area-http",
-    };
-    let (_, response) = ui.allocate_exact_size(ui.available_size(), egui::Sense::hover());
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Main, true, id));
-    crate::widgets::address(ui, &response, id);
 }
 
 /// Brought back from the tray, from under other windows, or from the taskbar.
@@ -241,7 +228,11 @@ impl eframe::App for DevNotesApp {
                             http::show(ui, &self.state, &mut view, &mut actions);
                             self.state.http_view = view;
                         }
-                        Area::Tools => area_shell(ui, Area::Tools),
+                        Area::Tools => {
+                            let mut view = std::mem::take(&mut self.state.tools_view);
+                            tools::show(ui, &self.state, &mut view, &mut actions);
+                            self.state.tools_view = view;
+                        }
                     }
                 } else {
                     let mut asked = Vec::new();
@@ -278,6 +269,8 @@ impl eframe::App for DevNotesApp {
             && !self.state.http.leave().is_asking()
         {
             &[&keys::HTTP, &keys::APPLICATION]
+        } else if self.state.gate.is_open() && self.state.settings.area == Area::Tools {
+            &[&keys::TOOLS, &keys::APPLICATION]
         } else {
             &[&keys::APPLICATION]
         };

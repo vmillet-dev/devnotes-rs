@@ -55,7 +55,7 @@ fn base64_engine(url: bool) -> GeneralPurpose {
     )
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EncodeRequest {
     pub text: String,
@@ -218,7 +218,7 @@ pub enum DecodedBytes {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DecodeRequest {
     pub text: String,

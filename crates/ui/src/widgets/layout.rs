@@ -14,6 +14,14 @@ use crate::theme::palette;
 #[derive(Debug, Default)]
 pub struct RailWidth(Option<(u16, f32)>);
 
+/// The whole room of an area, named: the three are found by it.
+pub fn area_room(ui: &mut Ui, author_id: &str) -> Rect {
+    let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(Role::Main, true, author_id));
+    address(ui, &response, author_id);
+    region
+}
+
 /// The edge between the rail and what is beside it.
 const EDGE: f32 = 8.0;
 
@@ -44,6 +52,22 @@ impl RailWidth {
         let moved = split_handle(&mut edge_ui, edge_id);
         self.0 = Some((setting, (width + moved).clamp(min, max)));
         Rect::from_min_max(edge.right_top(), region.max)
+    }
+
+    /// The library rail of an area, when it is out: the region left beside it.
+    pub fn beside(
+        &mut self,
+        ui: &mut Ui,
+        region: Rect,
+        (shown, setting): (bool, u16),
+        edge_id: &str,
+        content: impl FnOnce(&mut Ui),
+    ) -> Rect {
+        if !shown {
+            return region;
+        }
+        let setting = (setting, crate::services::settings::RAIL_WIDTH);
+        self.show(ui, region, setting, edge_id, content)
     }
 
     /// The width to write, once the edge rests somewhere else than `setting`.

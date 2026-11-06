@@ -67,7 +67,7 @@ pub enum TitleLanguage {
     French,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CaseRequest {
     pub text: String,
@@ -338,7 +338,7 @@ impl SlugSeparator {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SlugOptions {
     pub separator: SlugSeparator,
@@ -396,7 +396,7 @@ pub enum FinalNewline {
     Remove,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LineBreaksRequest {
     pub text: String,

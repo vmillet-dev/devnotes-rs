@@ -191,7 +191,7 @@ pub enum UmaskReading {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PermissionsRequest {
     /// `755`, `0644`, `4755`, `rwxr-xr-x`, `drwxr-xr-x`.

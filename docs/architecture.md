@@ -626,53 +626,41 @@ format for its messages, and nothing else in it is per format.
 
 ### The tools: one contract, and the rest written once
 
-The Outils area (`tools/`) is a home, a rail and a frame, and a tool is what the frame draws.
-**A tool is a pure Rust function and a component**; everything around it — the catalogue in
-its panels, the search, the recent tools, the breadcrumb, Vider — is written once, and knows a
-tool only through `Tool` (`core/services/tools/tool.model.ts`):
+The Outils area (`ui/src/tools/`) is a home, a rail and a frame, and a tool is what the frame draws.
+**A tool is a pure Rust function and a drawing**; everything around it — the catalogue in its
+panels, the search, the recent and starred tools, the breadcrumb, Vider — is written once, and
+knows a tool only through the `Tool` trait (`tools/mod.rs`):
 
-- `result`, what "Enregistrer comme note" keeps. ⚠️ An output, never an input: an HMAC key or a
-  password typed into a tool cannot reach a note, because nothing in the contract carries one.
-- `actions`, the tool's own buttons in the header ("Échanger A et B").
-- `sample()`, which « Exemple » calls: the tool fills its inputs with test data through its own
-  signals, the path typing takes, and replaces what was there. The data lives in the component —
-  a constant, or a translation key when its language matters — and never carries a real secret
-  (a token signed with « secret », the published example IBAN). Optional: a tool with nothing to
-  fill offers no button.
+- `update()`, once a frame on screen: what its inputs ask now, and the answers that came.
+- `ui()`, its body in the frame.
+- `sample()`, which « Exemple » calls: the tool fills its inputs with test data, and replaces
+  what was there. Never a real secret (a token signed with « secret », the published example
+  IBAN). Optional: a tool with nothing to fill offers no button.
 - `clear()`, which Vider calls.
 
-**The catalogue is one list** (`tools/catalogue/catalogue.ts`), each tool in a folder beside
-it: an id, a category, keywords, a loader. The name and the line are read from the id
-(`tools.<id>.name`, `.description`), and a tool is a chunk of its own, loaded the first time it
-is opened, so the fourteenth costs nothing at startup. The page provides the list as
-`TOOL_CATALOGUE`: the home, the rail and the frame are tested on a fake one (`FAKE_TOOLS`).
+**The catalogue is one list** (`tools/catalogue.rs`), each tool in a file beside it: an id, a
+category, keywords, the inputs a note can fill, and what makes its session. The name and the line
+are read from the id (`tools.<id>.name`, `.description`).
 
-**The frame creates the tool by hand** (`ViewContainerRef.createComponent`, in an effect)
-rather than through `NgComponentOutlet`, so the header reads the tool's signals from the moment
-it exists.
+**What a tool holds lives for the session** (`tools::View`, a session a tool, made the first time
+it is opened): left for another tool or for the notes, it is found as it was. In memory only —
+never on disk — and gone when the library changes. ⚠️ A secret is never kept in a session: a key
+or a generated password dies with the tool when it is left.
 
-**What a tool holds lives for the session** (`toolState`, over `ToolSessions`): left for
-another tool or for the notes, it is found as it was. In memory only — never on disk — and gone
-with the page when the library changes. ⚠️ A secret is never a `toolState`: a key or a
-generated password is a plain `signal` of the component, and dies with it when the tool is
-left.
-
-**Every tool calls Rust the same way** (`liveResult`): the request as the inputs change,
-debounced, compared by value — a fresh literal would ask again for nothing — and the previous
-answer on screen until the next lands; `undefined` asks nothing. A tool's own failure, a line
-that does not parse, is part of its answer and drawn in place; `liveResult` reports only the
-unexpected.
+**Every tool calls Rust the same way** (`tools::live::Live`, over a `QueryCell`, on the `compute`
+queue): the request as the inputs change, debounced as a deadline, compared by value, and the
+previous answer on screen until the next lands; `None` asks nothing. A tool's own failure, a line
+that does not parse, is part of its answer and drawn in place; `Live` reports only the unexpected.
 
 ⚠️ Since the previous answer stays on screen, whatever describes it — a label, a note's language
 or title, a direction — reads `answered()`, the request that answer was computed from, and never
 the inputs as they stand: for a debounce and a round trip they already describe the next one, and
 a plain digest would read "HMAC-SHA256" — on screen, in a copy, in a note.
 
-**Searching the catalogue runs on the front**, a deliberate exception to "data processing
-belongs to Rust": it matches the translated names and lines, and Rust knows no string the user
-reads. It folds case and accents, as `view::fold` does. A tool is found by its name, its line,
-its keywords and **the name of its category**: « generateur » finds the three tools filed under
-« Générateurs ».
+**Searching the catalogue folds in the core and matches on screen** (`api::tools::fold`, called
+directly, D12): it matches the translated names and lines, and Rust knows no string the user
+reads. A tool is found by its name, its line, its keywords and **the name of its category**:
+« generateur » finds the three tools filed under « Générateurs ».
 
 **The search reads inside the references too**, in a second group under the tools that match
 (« Dans les références »): a row an entry, what it is called, what it means and where it lives

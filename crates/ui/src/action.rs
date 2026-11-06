@@ -5,14 +5,13 @@
 use crate::state::Area;
 use crate::theme::Appearance;
 
-/// An area's own actions join as a variant of their own (`Notes`, `Http`, `Tools`) when the area
-/// is ported.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     App(AppAction),
     Gate(crate::gate::Action),
     Notes(crate::notes::Action),
     Http(crate::http::Action),
+    Tools(crate::tools::Action),
     Palette(crate::palette::Asked),
     Global(GlobalAction),
 }
@@ -30,6 +29,8 @@ pub enum AppAction {
     SetHistoryWidth(u16),
     /// The library rail shown or put away: the switchers take its place.
     ToggleRail,
+    /// `Ctrl+Shift+T`: the tools' search, from any area.
+    SearchTools,
 }
 
 /// Asked from outside the window: a global shortcut, the tray, a second launch.

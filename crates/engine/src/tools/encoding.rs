@@ -47,7 +47,7 @@ pub enum CodecDirection {
     Decode,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UrlCodecRequest {
     pub text: String,

@@ -270,7 +270,7 @@ fn french_account(bban: &str) -> Option<(String, RibKey)> {
     ))
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckRequest {
     pub text: String,

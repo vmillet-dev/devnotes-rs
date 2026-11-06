@@ -13,5 +13,6 @@ pub mod libraries;
 pub mod notes;
 pub mod preferences;
 pub mod spaces;
+pub mod tools;
 pub mod undo;
 pub mod vault;

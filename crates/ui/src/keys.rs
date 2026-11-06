@@ -32,10 +32,17 @@ pub struct Binding {
 }
 
 /// Every area's key, `Ctrl` and its rank in the switch, read by position.
-pub static APPLICATION: [Binding; 4] = [
+pub static APPLICATION: [Binding; 5] = [
     area(Key::Num1, Area::Notes),
     area(Key::Num2, Area::Tools),
     area(Key::Num3, Area::Http),
+    Binding {
+        key: Key::T,
+        modifiers: Modifiers::COMMAND.plus(Modifiers::SHIFT),
+        read: Read::Character,
+        while_typing: true,
+        action: Action::App(AppAction::SearchTools),
+    },
     // The window's own: the global shortcut, from another application, joins in P9.
     Binding {
         key: Key::P,
@@ -77,6 +84,24 @@ pub static HTTP: [Binding; 3] = [
         read: Read::Character,
         while_typing: true,
         action: Action::Http(crate::http::Action::Send(None)),
+    },
+];
+
+/// The Tools area's, read while it is on screen.
+pub static TOOLS: [Binding; 2] = [
+    Binding {
+        key: Key::K,
+        modifiers: Modifiers::COMMAND,
+        read: Read::Character,
+        while_typing: true,
+        action: Action::Tools(crate::tools::Action::SearchAsked),
+    },
+    Binding {
+        key: Key::B,
+        modifiers: Modifiers::COMMAND,
+        read: Read::Character,
+        while_typing: true,
+        action: Action::App(AppAction::ToggleRail),
     },
 ];
 

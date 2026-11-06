@@ -54,7 +54,7 @@ impl NanoAlphabet {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IdentifiersRequest {
     pub kind: IdKind,

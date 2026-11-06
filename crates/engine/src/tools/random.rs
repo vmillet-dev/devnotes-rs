@@ -40,7 +40,7 @@ impl CharacterSet {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PasswordRequest {
     pub length: u32,
