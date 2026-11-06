@@ -3,6 +3,8 @@
 use engine::tools::bases::{
     self, Base64FileAnswer, DecodeAnswer, DecodeRequest, EncodeRequest, Encodings, SavedBytes,
 };
+use engine::tools::checks::{self, CheckAnswer, CheckRequest};
+use engine::tools::cidr::{self, CidrAnswer, CidrRequest};
 use engine::tools::cron::{CronAnswer, CronRequest};
 use engine::tools::dates::{self, InstantAnswer, InstantRequest};
 use engine::tools::diff::{self, JsonDiffAnswer, JsonDiffRequest};
@@ -11,12 +13,15 @@ use engine::tools::encoding::{self, UrlCodecAnswer, UrlCodecRequest};
 use engine::tools::generate::{self, LoremAnswer, LoremRequest};
 use engine::tools::hash::{self, HashAnswer, HashRequest};
 use engine::tools::jwt::{JwtAnswer, JwtRequest};
+use engine::tools::permissions::{self, PermissionsAnswer, PermissionsRequest};
 use engine::tools::random::{PasswordAnswer, PasswordRequest};
+use engine::tools::sizes::{self, SizesAnswer, SizesRequest};
 use engine::tools::stats::{self, StatsRequest, TextStats};
 use engine::tools::text::{self, CaseAnswer, CaseRequest, LineBreaksAnswer, LineBreaksRequest};
 
 use engine::tools::text_diff::{self, TextDiffAnswer, TextDiffRequest};
 
+use engine::tools::transfer::{self, TransferAnswer, TransferRequest};
 use engine::tools::url_parts::{self, UrlAnswer};
 use engine::tools::zones::{ZoneEntry, ZonesAnswer, ZonesRequest};
 
@@ -113,4 +118,27 @@ pub fn time_in_zone(backend: &Backend, zone: Option<String>) -> Pending<String> 
 
 pub fn describe_cron(backend: &Backend, request: CronRequest) -> Pending<CronAnswer> {
     backend.compute(move |_| Ok(engine::tools::describe_cron(&request)))
+}
+
+pub fn convert_size(backend: &Backend, request: SizesRequest) -> Pending<SizesAnswer> {
+    backend.compute(move |_| Ok(sizes::convert(&request)))
+}
+
+pub fn estimate_transfer(backend: &Backend, request: TransferRequest) -> Pending<TransferAnswer> {
+    backend.compute(move |_| Ok(transfer::estimate(&request)))
+}
+
+pub fn describe_permissions(
+    backend: &Backend,
+    request: PermissionsRequest,
+) -> Pending<PermissionsAnswer> {
+    backend.compute(move |_| Ok(permissions::describe(&request)))
+}
+
+pub fn check_digits(backend: &Backend, request: CheckRequest) -> Pending<CheckAnswer> {
+    backend.compute(move |_| Ok(checks::check(&request)))
+}
+
+pub fn describe_cidr(backend: &Backend, request: CidrRequest) -> Pending<CidrAnswer> {
+    backend.compute(move |_| Ok(cidr::describe(&request)))
 }
