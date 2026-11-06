@@ -530,11 +530,39 @@ fn recette_on_the_canvas() {
     app.quit();
 }
 
-/// KO on the sheet: the focus stays on the card's place, not on the card, so the second P acts on
-/// the note that took its place.
 #[test]
-#[ignore = "MET-04: the focus does not follow a card that moved"]
-fn ko_met_04_a_second_p_gives_the_card_back() {
+fn recette_a_line_gone_to() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut app = a_new_library("38_recette_go_to_line", profile.path());
+
+    step(
+        "COD-15 Ctrl+Alt+G goes to a line, the keys back in the code",
+        || {
+            app.click("new-note");
+            app.fill("editor-title", "Lignes");
+            app.click("editor-body");
+            app.paste("un\ndeux\ntrois");
+            app.press(Key::G, Modifiers::COMMAND | Modifiers::ALT);
+            app.eventually("the field has the focus", |tree| {
+                tree.focused().starts_with("go-to-line-input")
+            });
+            app.type_text("2");
+            app.press(Key::Enter, Modifiers::NONE);
+            app.eventually("the code has the focus", |tree| {
+                !tree.has("go-to-line-input") && tree.focused().starts_with("editor-body")
+            });
+            app.type_text("X");
+            app.eventually("typed on line 2", |tree| code(tree) == "un\nXdeux\ntrois");
+            close_editor(&mut app);
+        },
+    );
+
+    app.quit();
+}
+
+/// The focus follows the card: the second P reaches the note the first one moved.
+#[test]
+fn recette_a_second_p_gives_the_card_back() {
     let profile = tempfile::tempdir().unwrap();
     let mut app = a_new_library("38_ko_met_04", profile.path());
     app.eventually("the six samples", |tree| tree.count("note-card") == 6);
