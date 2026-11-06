@@ -17,7 +17,11 @@ fn has(harness: &Harness<'_, Bench>, author_id: &str) -> bool {
 }
 
 fn ask(harness: &mut Harness<'_, Bench>) -> bool {
-    let may_go = harness.state_mut().state.http.ask_leave();
+    let may_go = harness
+        .state_mut()
+        .state
+        .http
+        .ask_leave(crate::state::http::leave::Reason::Quit);
     settle(harness);
     may_go
 }

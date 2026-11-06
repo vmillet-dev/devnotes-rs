@@ -11,6 +11,7 @@ pub mod explored;
 pub mod folders;
 pub mod formatting;
 pub mod http;
+pub mod libraries;
 pub mod note_revisions;
 pub mod notes;
 pub mod notes_query;
@@ -39,6 +40,7 @@ use crate::services::settings::Settings;
 use crate::services::status::StatusNotifier;
 use crate::services::time::{Clock, SystemClock};
 use crate::theme;
+use crate::widgets::Layer;
 use notes_query::NotesQueryState;
 
 /// Bumped after every write the interface adopts: the queries that read notes carry it among
@@ -125,6 +127,7 @@ pub struct AppState {
     /// The Tools area's view, each tool's session among it: only its drawing reads it (D13).
     pub tools_view: crate::tools::View,
     pub transfer: transfer::TransferState,
+    pub libraries: libraries::LibrariesState,
     /// The bar's menus and what they open: only their drawing reads it (D13).
     pub titlebar_view: crate::titlebar::View,
     /// The modals the bar's menus open, in the order they are drawn.
@@ -183,6 +186,7 @@ impl AppState {
             tools,
             tools_view: crate::tools::View::default(),
             transfer: transfer::TransferState::default(),
+            libraries: libraries::LibrariesState::default(),
             titlebar_view: crate::titlebar::View::default(),
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
@@ -258,7 +262,6 @@ impl AppState {
             .adopt(backend, &mut self.revision, &mut self.errors);
         self.editor.update(backend, self.revision, &mut self.errors);
         self.exports.update(&mut self.status, &mut self.errors);
-        self.update_transfer(ctx, backend);
         if self.attachments.wants_row() {
             self.editor.write_draft(backend);
         }
@@ -286,6 +289,7 @@ impl AppState {
         }
         self.follow_revisions(backend);
         self.update_area_or_exit(ctx, backend, time);
+        self.update_menus(ctx, backend);
         for id in self.editor.take_redrawn() {
             self.caches.thumbnails.redrawn(&id);
             self.caches.pictures.redrawn(&id);
@@ -321,7 +325,15 @@ impl AppState {
         }
     }
 
-    fn update_transfer(&mut self, ctx: &egui::Context, backend: &Backend) {
+    /// What the bar's menus set going.
+    fn update_menus(&mut self, ctx: &egui::Context, backend: &Backend) {
+        self.libraries
+            .update(backend, &mut self.status, &mut self.errors);
+        if self.http.take_switch()
+            && let Some(goal) = self.libraries.take_goal()
+        {
+            self.switch_library(goal, backend);
+        }
         let mut reports = attachments::Reports {
             status: &mut self.status,
             errors: &mut self.errors,
@@ -332,8 +344,7 @@ impl AppState {
             .update(ctx, backend, &self.dialog, now, &mut reports);
         let asking = self.transfer.prompt().is_some();
         let prompt = crate::gate::prompt::id();
-        self.dialogs
-            .follow(ctx, crate::widgets::Layer::Passphrase, prompt, asking);
+        self.dialogs.follow(ctx, Layer::Passphrase, prompt, asking);
     }
 
     /// The board, when it is what the canvas shows: the space's, or the open folder's when it
@@ -694,7 +705,56 @@ impl AppState {
                 }
             }
             Menu::Quit => self.apply(Action::Global(GlobalAction::Quit), ctx, backend),
+            Menu::OpenLibraries => {
+                self.libraries.load(backend);
+                let opener = self.titlebar_view.file_anchor;
+                self.dialogs
+                    .open(Layer::Settings, crate::titlebar::libraries::id(), opener);
+            }
+            Menu::Libraries(asked) => self.apply_libraries(asked, ctx, backend),
         }
+    }
+
+    fn apply_libraries(
+        &mut self,
+        asked: crate::titlebar::libraries::Ask,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::titlebar::libraries::Ask;
+        use libraries::Goal;
+        match asked {
+            Ask::Close => {
+                self.libraries.dismiss_deletion();
+                self.dialogs.close(ctx, crate::titlebar::libraries::id());
+            }
+            Ask::Create(name) => self.ask_switch(Goal::Create(name), backend),
+            Ask::Open(id) => self.ask_switch(Goal::Open(id), backend),
+            Ask::Rename { id, name } => self.libraries.rename(backend, id, name),
+            Ask::Delete(id) => self.libraries.ask_to_delete(id),
+            Ask::KeepIt => self.libraries.dismiss_deletion(),
+            Ask::ConfirmDelete => self.libraries.confirm_deletion(backend),
+        }
+    }
+
+    /// A switch takes what the HTTP tabs hold: asked before the library changes, not after.
+    fn ask_switch(&mut self, goal: libraries::Goal, backend: &Backend) {
+        if self.http.ask_leave(http::leave::Reason::Switch) {
+            self.switch_library(goal, backend);
+        } else {
+            self.libraries.hold(goal);
+        }
+    }
+
+    /// Closes the open library: the gate comes back once it is answered, and what belonged to
+    /// that library goes with `reset_library_scope`.
+    fn switch_library(&mut self, goal: libraries::Goal, backend: &Backend) {
+        self.http.leaving(backend);
+        let pending = match goal {
+            libraries::Goal::Open(id) => api::libraries::open(backend, id),
+            libraries::Goal::Create(name) => api::libraries::create_and_open(backend, name),
+        };
+        self.gate.leave_for(pending);
     }
 
     fn checked_on_screen(&self) -> Vec<String> {
@@ -859,7 +919,7 @@ impl AppState {
         if !self.gate.is_open() {
             return true;
         }
-        if !self.http.ask_leave() {
+        if !self.http.ask_leave(http::leave::Reason::Quit) {
             return false;
         }
         self.closing_editor = self.editor.is_open();
@@ -1612,7 +1672,11 @@ impl AppState {
     pub fn reset_library_scope(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.library_preferences = Preferences::default();
         self.prettier = crate::notes::prettier::PrettierSettings::default();
-        self.library_preferences_read = Some(api::preferences::library(backend));
+        // A library left for the gate has nothing to read until it is unlocked.
+        self.library_preferences_read = self
+            .gate
+            .is_open()
+            .then(|| api::preferences::library(backend));
         self.seeding = None;
         self.presentation.close(ctx);
         self.caches = LibraryCaches::default();
@@ -1634,6 +1698,7 @@ impl AppState {
         self.tools = tools::ToolsState::read(&self.preferences);
         self.tools_view = crate::tools::View::default();
         self.transfer = transfer::TransferState::default();
+        self.libraries = libraries::LibrariesState::default();
         self.titlebar_view = crate::titlebar::View::default();
         self.dialogs = crate::widgets::DialogStack::default();
         self.revision.bump();
@@ -1675,6 +1740,9 @@ mod tests {
         let ctx = egui::Context::default();
         let mut state = AppState::new(compact(), true);
         state.apply_look(&ctx);
+        state.gate.ask(&backend);
+        backend.settle();
+        state.update(&ctx, &backend);
         let typed = egui::Id::unique("typed");
         ctx.data_mut(|data| data.insert_temp(typed, "psql -h prod".to_string()));
         let before = state.revision;

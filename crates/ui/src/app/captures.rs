@@ -132,6 +132,12 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     capture(&mut harness, "passphrase-prompt");
     click(&mut harness, "passphrase-prompt-cancel");
     settle(&mut harness);
+    click(&mut harness, "file-menu");
+    click(&mut harness, "file-libraries");
+    settle(&mut harness);
+    capture(&mut harness, "libraries");
+    click(&mut harness, "libraries-close");
+    settle(&mut harness);
 
     click(&mut harness, "area-option-http");
     let state = &mut harness.state_mut().state;
@@ -545,7 +551,13 @@ fn the_http_response() {
     click(&mut harness, "http-history-item");
     settle(&mut harness);
     capture(&mut harness, "http-history");
-    assert!(!harness.state_mut().state.http.ask_leave());
+    assert!(
+        !harness
+            .state_mut()
+            .state
+            .http
+            .ask_leave(crate::state::http::leave::Reason::Quit)
+    );
     settle(&mut harness);
     capture(&mut harness, "http-leave");
 }

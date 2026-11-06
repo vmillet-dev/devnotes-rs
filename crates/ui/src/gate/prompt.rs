@@ -10,6 +10,8 @@ use super::passphrase::{self, PassphraseField};
 use crate::theme::palette;
 use crate::widgets::{self, Button, DialogStack, Kind};
 
+const WIDTH: f32 = 480.0;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Purpose {
     Protect,
@@ -62,7 +64,9 @@ pub fn show(
     view: &mut PromptView,
     language: Language,
 ) -> Option<Answer> {
-    let shown = widgets::dialog(ctx, stack, id(), |ui| body(ui, request, view, language))?;
+    let shown = widgets::dialog(ctx, stack, id(), WIDTH, |ui| {
+        body(ui, request, view, language)
+    })?;
     let dismissed = shown.should_close() && !request.working;
     shown.inner.or(dismissed.then_some(Answer::Cancel))
 }
