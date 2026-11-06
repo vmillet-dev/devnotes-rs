@@ -139,18 +139,23 @@ fn recette_security() {
         assert!(app.has("note-card"), "no phrase is asked again");
     });
 
+    restoring(&mut app, profile);
+    app.quit();
+}
+
+fn restoring(app: &mut App, profile: &Path) {
     step(
         "SEC-08 the restore says what leaves, and Cancel keeps it",
         || {
-            a_note(&mut app, LATER, "echo after");
-            security(&mut app);
+            a_note(app, LATER, "echo after");
+            security(app);
             app.scroll_to("settings-content", "backup-row");
             app.click("backup-restore");
             app.wait_for("backup-confirm");
             app.capture("restore-confirm");
             app.click("backup-cancel");
             app.eventually("the strip is gone", |tree| !tree.has("backup-confirm"));
-            close(&mut app);
+            close(app);
             app.eventually("the note stays", |tree| {
                 tree.texts("note-card-title").iter().any(|it| it == LATER)
             });
@@ -160,7 +165,7 @@ fn recette_security() {
     step(
         "SEC-09 a restore sets the library aside in replaced",
         || {
-            security(&mut app);
+            security(app);
             app.scroll_to("settings-content", "backup-row");
             app.click("backup-restore");
             app.scroll_above(
@@ -186,7 +191,7 @@ fn recette_security() {
                 tree.text("vault-problem")
                     .is_some_and(|said| !said.is_empty())
             });
-            unlock(&mut app, NEXT);
+            unlock(app, NEXT);
         },
     );
 
@@ -194,8 +199,6 @@ fn recette_security() {
         let titles = app.tree().texts("note-card-title");
         assert!(!titles.contains(&LATER.to_owned()), "{titles:?}");
     });
-
-    app.quit();
 }
 
 #[test]

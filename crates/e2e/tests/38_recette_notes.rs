@@ -169,6 +169,14 @@ fn recette_creating() {
         close_editor(&mut app);
     });
 
+    app.quit();
+}
+
+#[test]
+fn recette_a_snippet_and_a_list() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut app = a_new_library("38_recette_snippet", profile.path());
+
     step(
         "COD-01 the language menu filters, and the card says it",
         || {

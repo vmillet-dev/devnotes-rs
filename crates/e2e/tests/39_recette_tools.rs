@@ -87,7 +87,7 @@ const CASES: &[Case] = &[
         "colour",
         "colour-input",
         "#1e90ff",
-        &["#1e90ff", "30", "144", "255", "210"],
+        &["#1e90ff", "30 144 255", "209.6", "oklch("],
     ),
     (
         "GEN-18",
@@ -288,6 +288,14 @@ fn recette_tools_of_several_gestures() {
         app.click("tool-clear");
     });
 
+    app.quit();
+}
+
+#[test]
+fn recette_crypto() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut app = the_tools("39_recette_crypto", profile.path());
+
     step("CRY-03 HMAC in hex, then in base64", || {
         open_tool(&mut app, "hash");
         retype(&mut app, "hash-input", "DevNotes");
@@ -346,6 +354,14 @@ fn recette_tools_of_several_gestures() {
         app.capture("CRY-13");
     });
 
+    app.quit();
+}
+
+#[test]
+fn recette_encoders() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut app = the_tools("39_recette_encoders", profile.path());
+
     step("ENC-04 a URL taken apart", || {
         open_tool(&mut app, "url-codec");
         app.click("url-tab-1");
@@ -384,7 +400,7 @@ fn recette_tools_of_several_gestures() {
         }
         app.capture("ENC-08");
         retype(&mut app, "base64-input", PIXEL);
-        app.wait_for("base64-picture");
+        app.wait_for("base64-image-facts");
         app.capture("ENC-11");
     });
 
@@ -402,6 +418,14 @@ fn recette_tools_of_several_gestures() {
             app.capture("ENC-20");
         },
     );
+
+    app.quit();
+}
+
+#[test]
+fn recette_the_rest() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut app = the_tools("39_recette_rest", profile.path());
 
     step("GEN-01 documents drawn from a schema", || {
         open_tool(&mut app, "json-generator");
@@ -427,10 +451,10 @@ fn recette_tools_of_several_gestures() {
         app.click("dates-tab-1");
         retype(&mut app, "dates-from", "2026-01-01 00:00");
         retype(&mut app, "dates-to", "2026-03-01 12:00");
-        reads(&mut app, &["59 j 12 h 00", "8 sem 3 j", "1428 h 00"]);
+        reads(&mut app, &["59 j 12 h 00", "8 sem 3 j", "1 428 h 00"]);
         app.capture("TPS-07");
         retype(&mut app, "dates-duration", "PT1H30M");
-        reads(&mut app, &["5400"]);
+        reads(&mut app, &["5 400"]);
         retype(&mut app, "dates-duration", "1h30");
         reads(&mut app, &["PT1H30M"]);
         retype(&mut app, "dates-duration", "P1M");
