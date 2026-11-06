@@ -1,7 +1,7 @@
 //! Attachments: an empty strip that says so, a file chosen and kept under its name, an image shown
 //! at once and grown in the lightbox, the card counting them, two files of one name, a removal
-//! on the second click, and a file over the limit refused. The system's dialog is the one step no
-//! driver reaches: the scenario answers it.
+//! on the second click, a file over the limit refused, and the plain copies swept. The system's
+//! dialog is the one step no driver reaches: the scenario answers it.
 
 use e2e::{App, Tree, step};
 use egui::{Key, Modifiers};
@@ -91,5 +91,18 @@ fn attachments() {
         assert_eq!(app.tree().count("attachment-open"), 1);
     });
 
+    let copies = profile.path().join("open");
+    let leave_a_copy = || {
+        std::fs::create_dir_all(&copies).unwrap();
+        std::fs::write(copies.join("left.txt"), "plain").unwrap();
+    };
+    leave_a_copy();
+    app.quit();
+    assert!(!copies.exists(), "swept at the exit");
+
+    leave_a_copy();
+    let mut app = App::launch("11_attachments", profile.path());
+    app.wait_for("vault-passphrase");
+    assert!(!copies.exists(), "swept at the launch, before the unlock");
     app.quit();
 }
