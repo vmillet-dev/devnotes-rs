@@ -22,6 +22,7 @@ pub mod selection;
 pub mod spaces;
 pub mod tags;
 pub mod tools;
+pub mod transfer;
 pub mod trash;
 pub mod undo;
 
@@ -123,6 +124,11 @@ pub struct AppState {
     pub tools: tools::ToolsState,
     /// The Tools area's view, each tool's session among it: only its drawing reads it (D13).
     pub tools_view: crate::tools::View,
+    pub transfer: transfer::TransferState,
+    /// The bar's menus and what they open: only their drawing reads it (D13).
+    pub titlebar_view: crate::titlebar::View,
+    /// The modals the bar's menus open, in the order they are drawn.
+    pub dialogs: crate::widgets::DialogStack,
     pub status: StatusNotifier,
     pub dialog: std::sync::Arc<dyn platform::dialog::FileDialog + Send + Sync>,
     pub opener: std::sync::Arc<dyn platform::desktop::Opener + Send + Sync>,
@@ -176,6 +182,9 @@ impl AppState {
             http_view: crate::http::View::default(),
             tools,
             tools_view: crate::tools::View::default(),
+            transfer: transfer::TransferState::default(),
+            titlebar_view: crate::titlebar::View::default(),
+            dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
             dialog: platform::dialog::system(),
             opener: platform::desktop::system(),
@@ -195,6 +204,7 @@ impl AppState {
 
     /// Once a frame, before drawing: the answers that arrived are adopted.
     pub fn update(&mut self, ctx: &egui::Context, backend: &Backend) {
+        self.dialogs.begin_frame(ctx);
         if self
             .gate
             .update(backend, &mut self.status, &mut self.errors)
@@ -248,6 +258,7 @@ impl AppState {
             .adopt(backend, &mut self.revision, &mut self.errors);
         self.editor.update(backend, self.revision, &mut self.errors);
         self.exports.update(&mut self.status, &mut self.errors);
+        self.update_transfer(ctx, backend);
         if self.attachments.wants_row() {
             self.editor.write_draft(backend);
         }
@@ -308,6 +319,21 @@ impl AppState {
             self.board
                 .update(backend, now, (place, criteria), (self.revision, index));
         }
+    }
+
+    fn update_transfer(&mut self, ctx: &egui::Context, backend: &Backend) {
+        let mut reports = attachments::Reports {
+            status: &mut self.status,
+            errors: &mut self.errors,
+            revision: &mut self.revision,
+        };
+        let now = self.clock.now();
+        self.transfer
+            .update(ctx, backend, &self.dialog, now, &mut reports);
+        let asking = self.transfer.prompt().is_some();
+        let prompt = crate::gate::prompt::id();
+        self.dialogs
+            .follow(ctx, crate::widgets::Layer::Passphrase, prompt, asking);
     }
 
     /// The board, when it is what the canvas shows: the space's, or the open folder's when it
@@ -616,6 +642,7 @@ impl AppState {
             Action::Notes(action) => self.apply_notes(action, ctx, backend),
             Action::Http(action) => self.apply_http(action, ctx, backend),
             Action::Tools(action) => self.apply_tools(action, backend),
+            Action::Menu(action) => self.apply_menu(action, ctx, backend),
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
@@ -630,6 +657,50 @@ impl AppState {
             // The capture arrives with its own phase.
             Action::Global(GlobalAction::Capture) => {}
         }
+    }
+
+    fn apply_menu(
+        &mut self,
+        action: crate::titlebar::Action,
+        ctx: &egui::Context,
+        backend: &Backend,
+    ) {
+        use crate::titlebar::Action as Menu;
+        use engine::transfer::model::ExportScope;
+        match action {
+            Menu::Import => self.transfer.import(backend, &self.dialog),
+            Menu::ExportAll => self.transfer.export(backend, ExportScope::Library),
+            Menu::ExportSpace => {
+                if let Some(space_id) = self.spaces.active_space().map(str::to_owned) {
+                    self.transfer
+                        .export(backend, ExportScope::Space { space_id });
+                }
+            }
+            Menu::ExportSelection => {
+                let ids = self.checked_on_screen();
+                if !ids.is_empty() {
+                    self.transfer.export(backend, ExportScope::Notes { ids });
+                }
+            }
+            Menu::CopyMarkdown => {
+                let ids = self.checked_on_screen();
+                if !ids.is_empty() {
+                    self.transfer.share(backend, ids);
+                }
+            }
+            Menu::Prompted => {
+                if let Some(answer) = self.titlebar_view.answer.take() {
+                    self.transfer.answer(answer, backend);
+                }
+            }
+            Menu::Quit => self.apply(Action::Global(GlobalAction::Quit), ctx, backend),
+        }
+    }
+
+    fn checked_on_screen(&self) -> Vec<String> {
+        let order = self.on_screen();
+        let order: Vec<&str> = order.iter().map(String::as_str).collect();
+        self.selection.checked_in(&order)
     }
 
     /// What a tool holds of a secret goes with it.
@@ -1437,6 +1508,7 @@ impl AppState {
             || self.folders.naming()
             || self.board.drawn_zone().is_some()
             || self.http.leave().is_asking()
+            || self.dialogs.top().is_some()
     }
 
     /// In the space shown, or the first one for « all spaces », and the folder shown.
@@ -1561,6 +1633,9 @@ impl AppState {
         self.http_view = crate::http::View::default();
         self.tools = tools::ToolsState::read(&self.preferences);
         self.tools_view = crate::tools::View::default();
+        self.transfer = transfer::TransferState::default();
+        self.titlebar_view = crate::titlebar::View::default();
+        self.dialogs = crate::widgets::DialogStack::default();
         self.revision.bump();
         ctx.memory_mut(|memory| memory.data.clear());
         self.apply_look(ctx);
