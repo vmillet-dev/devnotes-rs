@@ -18,6 +18,7 @@ pub enum Reason {
     Quit,
     Switch,
     Restore,
+    Update,
 }
 
 #[derive(Default)]

@@ -16,6 +16,8 @@ pub enum Goal {
     Create(String),
     /// A copy of the open library, in its place.
     Restore(String),
+    /// The installer stops the application: asked before it starts.
+    Install,
 }
 
 enum Work {
