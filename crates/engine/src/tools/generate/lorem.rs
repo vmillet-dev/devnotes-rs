@@ -97,9 +97,14 @@ pub(crate) fn words(draw: &mut Draw, count: usize, opening: bool) -> String {
     out.join(" ")
 }
 
-/// Six to fourteen words, a comma now and then, a capital and a full stop.
+/// Six to fourteen words, a comma now and then, a capital and a full stop; the opening whole.
 fn sentence(draw: &mut Draw, opening: bool) -> String {
-    let length = usize::try_from(draw.between(6, 14)).unwrap_or(8);
+    let drawn = usize::try_from(draw.between(6, 14)).unwrap_or(8);
+    let length = if opening {
+        drawn.max(OPENING.split(' ').count())
+    } else {
+        drawn
+    };
     let mut words: Vec<String> = words(draw, length, opening)
         .split(' ')
         .map(str::to_owned)
@@ -223,6 +228,20 @@ mod tests {
 
         assert_eq!(drawn.split("\n\n").count(), 3);
         assert!(drawn.starts_with("Lorem ipsum dolor sit amet, consectetur"));
+    }
+
+    #[test]
+    fn the_opening_is_never_cut_whatever_the_draw() {
+        for seed in 0..200 {
+            let request = LoremRequest {
+                unit: LoremUnit::Paragraphs,
+                count: 1,
+                opening: true,
+                seed: Some(seed),
+            };
+            let text = lorem(&request).text;
+            assert!(text.starts_with(OPENING), "{text}");
+        }
     }
 
     #[test]
