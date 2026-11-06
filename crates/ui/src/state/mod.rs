@@ -669,7 +669,11 @@ impl AppState {
             Action::Global(GlobalAction::Quit) => {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
-            Action::Global(GlobalAction::NewNote) => self.new_note(None),
+            // A note opens over the canvas: what the native side asks comes back to the notes.
+            Action::Global(GlobalAction::NewNote) => {
+                self.apply(Action::App(AppAction::ShowArea(Area::Notes)), ctx, backend);
+                self.new_note(None);
+            }
             // Not before a library is open: there is nothing to search.
             Action::Global(global @ (GlobalAction::Palette | GlobalAction::PaletteHere)) => {
                 if self.gate.is_open() {

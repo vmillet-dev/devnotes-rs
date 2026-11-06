@@ -423,6 +423,42 @@ impl App {
         self.wait_for(author_id);
     }
 
+    /// Scrolls `within` down until `author_id` stands above `under`: a panel draws what lies past
+    /// its edge too, clipped, where no click reaches it.
+    pub fn scroll_above(&mut self, within: &str, author_id: &str, under: &str) {
+        self.wait_for(author_id);
+        for _ in 0..40 {
+            let tree = self.tree();
+            let place = |id| tree.find(id).and_then(Node::bounds);
+            let (Some(target), Some(limit)) = (place(author_id), place(under)) else {
+                break;
+            };
+            if target.y1 < limit.y0 {
+                return;
+            }
+            let Some(bounds) = place(within) else {
+                break;
+            };
+            #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+            let pos = Pos2::new(
+                f64::midpoint(bounds.x0, bounds.x1) as f32,
+                f64::midpoint(bounds.y0, bounds.y1) as f32,
+            );
+            self.apply(vec![
+                Event::PointerMoved(pos),
+                Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    delta: egui::vec2(0.0, -120.0),
+                    phase: egui::TouchPhase::Move,
+                    source: egui::MouseWheelSource::Wheel,
+                    modifiers: Modifiers::NONE,
+                },
+            ]);
+            self.ask(&Request::Settle { max_steps: 10 });
+        }
+        panic!("{author_id} never came above {under}");
+    }
+
     /// Back to the top of `within`: rows out of view are not drawn, so not counted.
     pub fn scroll_top(&mut self, within: &str) {
         self.wait_for(within);
