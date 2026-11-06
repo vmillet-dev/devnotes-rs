@@ -46,10 +46,10 @@ available, and no package exists before phase 11: nothing here stands for a pass
 | 7   | entry written, read and removed, driven; a real session start not run                                | —                    | —                | —   |
 | 8   | ok, scenarios and `app` tests                                                                        | —                    | —                | —   |
 | 9   | the call returned without an error; the toast not looked at                                          | —                    | —                | —   |
-| 10  | —                                                                                                    | —                    | —                | —   |
+| 10  | open shown and cancelled, driven: nothing attached, nothing said; save not run                       | —                    | —                | —   |
 | 11  | —                                                                                                    | —                    | —                | —   |
 | 12  | image paste ok, driven: a real Ctrl+V attached the image; QR copy not run                            | —                    | —                | —   |
 | 13  | —                                                                                                    | —                    | —                | —   |
 | 14  | —                                                                                                    | —                    | —                | —   |
-| 15  | —                                                                                                    | —                    | —                | —   |
+| 15  | ok, driven: the window took the whole screen and came back to the same rectangle                     | —                    | —                | —   |
 | 16  | —                                                                                                    | —                    | —                | —   |
