@@ -3,6 +3,7 @@
 
 mod close;
 mod code;
+mod console;
 mod container_settings;
 mod cookie_jar;
 mod environment_picker;
@@ -12,6 +13,7 @@ mod history;
 mod rail;
 mod request;
 mod response;
+mod save_as_note;
 mod save_request;
 mod scripts;
 mod socket_log;
@@ -115,6 +117,18 @@ pub enum Action {
     },
     /// The editor has shown what was asked.
     ScriptFocusTaken,
+    ToggleConsole,
+    ClearConsole(String),
+    /// The whole body of an answer, to a file proposed under that name.
+    SaveResponseFile {
+        send_id: String,
+        name: String,
+    },
+    /// An answer's text: Rust masks what the request sent, then the dialog asks where it goes.
+    AskResponseNote(Box<crate::state::http::kept::ResponseNote>),
+    AskNote(Box<crate::state::http::kept::NoteAsked>),
+    SaveNote(crate::state::http::kept::Placement),
+    CancelNote,
     /// A text on the tab's open socket.
     SendMessage {
         key: String,
@@ -157,6 +171,8 @@ pub struct View {
     save_form: Option<save_request::SaveForm>,
     response: response::ResponseView,
     socket_log: socket_log::LogView,
+    console: console::ConsoleView,
+    note_form: Option<save_as_note::NoteForm>,
     /// How tall the request's content was last drawn: what an automatic share follows.
     editor_height: f32,
     /// The share while the line is dragged, written once let go.
@@ -195,6 +211,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     container_settings::show(ui, state, &mut view.container, actions);
     code::show(ui, state, &mut view.code, actions);
     save_request::show(ui, state, &mut view.save_form, actions);
+    save_as_note::show(ui, state, &mut view.note_form, actions);
     extract::show(ui, state, view.response.extracting(), actions);
     if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
@@ -234,6 +251,9 @@ fn requests(ui: &mut Ui, rest: Rect, state: &AppState, view: &mut View, actions:
 /// its tabs above, the status line and a few lines of body below.
 const FLOORS: (f32, f32) = (148.0, 160.0);
 const HANDLE: f32 = 8.0;
+
+/// What an unfolded console takes of the answer's pane.
+const CONSOLE_SHARE: f32 = 0.45;
 
 /// The request above, its answer below, the line between them dragged to share the height.
 /// Left to itself the request takes what it holds, up to 60 %.
@@ -284,13 +304,24 @@ fn split(
             }
         }
     }
-    let mut answer = ui.new_child(UiBuilder::new().max_rect(bottom));
-    answer.set_clip_rect(bottom);
     if tab.draft.kind == RequestKind::Websocket {
+        let mut answer = ui.new_child(UiBuilder::new().max_rect(bottom));
+        answer.set_clip_rect(bottom);
         socket_log::show(&mut answer, state, (tab, &mut view.socket_log), actions);
-    } else {
-        response::show(&mut answer, state, (tab, &mut view.response), actions);
+        return;
     }
+    let held = if state.http.console().is_open() {
+        (bottom.height() * CONSOLE_SHARE).max(console::FOLDED)
+    } else {
+        console::FOLDED
+    };
+    let (above, below) = bottom.split_top_bottom_at_y(bottom.bottom() - held);
+    let mut answer = ui.new_child(UiBuilder::new().max_rect(above));
+    answer.set_clip_rect(above);
+    response::show(&mut answer, state, (tab, &mut view.response), actions);
+    let mut lines = ui.new_child(UiBuilder::new().max_rect(below));
+    lines.set_clip_rect(below);
+    console::show(&mut lines, state, (tab, &mut view.console), actions);
 }
 
 /// `upper` points of `total`, as tenths of a percent within the share's bounds.
@@ -362,6 +393,8 @@ mod dialogs_tests;
 mod environments_tests;
 #[cfg(test)]
 mod history_tests;
+#[cfg(test)]
+mod kept_tests;
 #[cfg(test)]
 mod scripts_tests;
 #[cfg(test)]

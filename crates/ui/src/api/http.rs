@@ -13,7 +13,7 @@ use engine::http::{
         RequestDocument, RequestKind,
     },
     query::{QuerySide, SyncedQuery},
-    send::{ImpliedHeader, SendRequest, SentResponse},
+    send::{Exchange, ImpliedHeader, NoteText, SendRequest, SentResponse},
     settings::Inherited,
     variables::UsedVariable,
 };
@@ -290,6 +290,21 @@ pub fn close_socket(backend: &Backend, id: String) -> Pending<bool> {
 /// How many tests a script declares. Pure (D12).
 pub fn tests_declared(source: &str) -> usize {
     http::scripts::model::tests_declared(source)
+}
+
+/// The whole body of the last answer to `id`: `false` when there is none.
+pub fn save_response(backend: &Backend, id: String, path: String) -> Pending<bool> {
+    backend.spawn(move |engine| http::save_http_response(engine, id, path))
+}
+
+/// An answer's text made a note: the secrets the request sent, masked.
+pub fn response_note(
+    backend: &Backend,
+    id: Option<String>,
+    exchange: Exchange,
+    text: String,
+) -> Pending<NoteText> {
+    backend.spawn(move |engine| http::http_response_note(engine, id, exchange, text))
 }
 
 /// The globals and every environment.

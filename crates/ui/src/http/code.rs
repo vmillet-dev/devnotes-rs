@@ -11,6 +11,7 @@ use crate::action::{Action as Asked, Actions};
 use crate::api;
 use crate::state::AppState;
 use crate::state::http::code::{Asked as Ask, CodeDialog, Switch};
+use crate::state::http::kept::NoteAsked;
 use crate::state::http::tabs::Tab;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
@@ -113,7 +114,7 @@ fn body(
             });
         });
     });
-    foot(ui, dialog, language, actions);
+    foot(ui, (dialog, tab), language, actions);
 }
 
 fn head(ui: &mut Ui, state: &AppState, tab: &Tab) {
@@ -382,10 +383,40 @@ fn notes(ui: &mut Ui, dialog: &CodeDialog, generated: &GeneratedCode, language: 
     }
 }
 
-fn foot(ui: &mut Ui, dialog: &CodeDialog, language: i18n::Language, actions: &mut Actions) {
+fn foot(
+    ui: &mut Ui,
+    (dialog, tab): (&CodeDialog, &Tab),
+    language: i18n::Language,
+    actions: &mut Actions,
+) {
     let tr = |key| i18n::translate(language, key, &[]);
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
+        if Button::new(&tr(keys::http::code::SAVE), "http-code-save")
+            .enabled(dialog.code().is_some())
+            .show(ui)
+            .clicked()
+            && let Some(generated) = dialog.code()
+        {
+            let name = &tab.draft.name;
+            let title = i18n::translate(
+                language,
+                keys::http::code::NOTE_TITLE,
+                &[
+                    ("name", name.as_str().into()),
+                    ("target", entry(dialog.target()).0.into()),
+                ],
+            );
+            let asked = NoteAsked {
+                title,
+                language: generated.language,
+                content: generated.code.clone(),
+                what: keys::http::code::NOTE_WHAT,
+                tags: "http".to_owned(),
+                source: format!("{} / {name}", tr(keys::areas::HTTP)),
+            };
+            actions.push(Asked::Http(Action::AskNote(Box::new(asked))));
+        }
         if Button::new(&tr(keys::http::code::COPY), "http-code-copy")
             .kind(Kind::Filled)
             .enabled(dialog.code().is_some())
