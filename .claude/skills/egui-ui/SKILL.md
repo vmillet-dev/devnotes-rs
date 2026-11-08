@@ -5,7 +5,7 @@ description: Use when writing or reviewing the egui interface (crates/ui, crates
 
 # egui UI
 
-Sources of truth: `docs/egui-migration-plan.md` (§ 3.3–3.8 architecture, § 5 visual parity, § 8
+Sources of truth: `../../../docs/egui-migration/egui-migration-plan.md` (§ 3.3–3.8 architecture, § 5 visual parity, § 8
 tests), then `docs/architecture.md` as sections are ported. The look to reproduce is the Angular
 application, kept in `reference/angular/` (whole at the `angular-reference` tag): read a screen's
 component and its SCSS before porting it, and its captures (§ 5.2).

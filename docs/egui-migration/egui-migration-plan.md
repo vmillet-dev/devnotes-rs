@@ -2,7 +2,7 @@
 
 > Statut : **plan arrêté** — décisions prises le 2026-11-02 (§ 11), complétées le même jour après
 > relecture (D10–D30). Les quatre qui attendaient une mesure sont tranchées par les spikes de la
-> phase 0 (2026-11-02, ADR dans `docs/egui-migration/adr/`) : D1 Prettier dans QuickJS (S8), D15
+> phase 0 (2026-11-02, ADR dans `adr`) : D1 Prettier dans QuickJS (S8), D15
 > X11 dès que `DISPLAY` existe (S1), D22 `onig` (S5), D26 `cargo-packager-updater` (S9) ; D2
 > retient `merman` (S7). Les dix spikes ont été rejoués sous Windows 11 ; ce qui reste à vérifier
 > (vrais bureaux Wayland, IME japonais, mise à l'échelle Windows, AppImage) est listé au § 7,
@@ -56,7 +56,7 @@ bêta, aucune compatibilité promise avec les versions Tauri.
 2. **Phase 2 et suivantes** : Angular, les e2e WebdriverIO et `src-tauri` quittent `main` ; on y
    construit l'application **egui** (`devnotes`), qui appelle `engine` sans IPC, sans
    sérialisation, sans WebView. Les sources Angular et ses scénarios restent, jamais construits,
-   dans `reference/angular/` (et entiers sur l'étiquette) : on les relit quand un écran est porté.
+   dans `../../reference/angular` (et entiers sur l'étiquette) : on les relit quand un écran est porté.
 3. **1.0.0** quand l'application egui atteint la parité fonctionnelle (35 scénarios portés),
    visuelle (toute l'application, même apparence) et de performance (budgets du § 6).
 
@@ -111,7 +111,7 @@ hôte QuickJS séparé, explorateur JSON, et les fonctions pures des 32 dossiers
 
 ### 1.3 Ce que le front fait encore et qui doit passer en Rust
 
-Les « exceptions front-end » de `CLAUDE.md` disparaissent comme exceptions et deviennent du Rust :
+Les « exceptions front-end » de `../../CLAUDE.md` disparaissent comme exceptions et deviennent du Rust :
 
 | Aujourd'hui (front)                                                            | Demain (Rust)                                                                                         |
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
@@ -192,12 +192,12 @@ sont eux-mêmes construits sur ces crates (`global-hotkey`, `tray-icon`, `muda`,
   limités au § 5.3.
 - Budgets de performance (§ 6) tenus sur les deux corpus de référence.
 - Installation propre et mise à jour 1.0.0 → 1.0.1 testées (NSIS, AppImage).
-- `docs/architecture.md`, `CLAUDE.md` et les skills mis à jour (§ 12).
+- `../architecture.md`, `CLAUDE.md` et les skills mis à jour (§ 12).
 
 ### 2.4 Règles d'écriture du code
 
 Le code sera maintenu par un humain : **concis mais lisible**, et **KISS** (_keep it simple,
-stupid_). Ces règles sont aussi dans `CLAUDE.md`, que Claude Code lit à chaque session, et dans
+stupid_). Ces règles sont aussi dans `../../CLAUDE.md`, que Claude Code lit à chaque session, et dans
 les skills `egui-ui` et `rust-guidelines` (§ 12).
 
 - La solution la plus simple qui marche. Pas d'abstraction — trait, générique, macro, couche — avant
@@ -243,7 +243,7 @@ src-tauri/                    coquille Tauri mince : phase 1 seulement (filet de
 reference/angular/            sources Angular et e2e WebdriverIO, en lecture seule depuis P2 (jamais construits)
 ```
 
-**Nommage.** Les crates portent un nom court, sans préfixe : le dossier `crates/` et le workspace
+**Nommage.** Les crates portent un nom court, sans préfixe : le dossier `../../crates` et le workspace
 disent déjà de quel projet elles sont, et aucune n'est publiée. Le cœur s'appelle **`engine`** et
 non `core` : une dépendance nommée `core` masquerait la crate `core` de Rust, que les macros
 dérivées (serde, diesel, thiserror…) désignent en `::core::…`. Les autres noms (`text`, `ui`,
@@ -294,7 +294,7 @@ qu'au cœur. Une crate d'édition ne la redéfinit pas : `ui` lui passe le résu
 - les **options de `pulldown-cmark`** de `richtext` et de `notes::markdown` sont les mêmes : un
   test de `ui`, seule crate qui voit les deux, les compare.
 
-Les principes de `CLAUDE.md` se transposent :
+Les principes de `../../CLAUDE.md` se transposent :
 
 - **Le traitement des données reste au cœur.** L'UI ne filtre, ne trie, ne groupe pas ; elle
   demande une vue au cœur. La différence : la vue n'est plus sérialisée en JSON, elle est passée par
@@ -1283,7 +1283,7 @@ ouverte à côté.
      refusé) et lance NSIS en passif (`/P /R`). Il exige un champ `format` (`nsis`, `appimage`) par
      plateforme, que `release.yml` ajoute au `latest.json` : aucune version Tauri ne le lira (D6).
 3. **Une seule version** (D27) : `[workspace.package] version`, héritée par toutes les crates ;
-   `app_info` lit ses métadonnées à la compilation comme aujourd'hui. `package.json` (qui ne sert
+   `app_info` lit ses métadonnées à la compilation comme aujourd'hui. `../../package.json` (qui ne sert
    plus qu'au bac à sable et aux scripts) n'en porte plus : une montée de version touche le
    `Cargo.toml` racine et `Cargo.lock`. `release.yml` lit la version dans `[workspace.package]`
    (aujourd'hui `src-tauri/Cargo.toml`) et ne compare plus que ces deux fichiers (aujourd'hui
@@ -1434,7 +1434,7 @@ restent à part, dans le tableau du processus.
 - **Banc d'interface** : un binaire de test pilote l'application réelle sans fenêtre
   (`egui_kittest`), rejoue des parcours (défiler 30 000 notes, taper une recherche, ouvrir/fermer
   dix notes, déplier le rail HTTP) et rapporte p50/p95/p99 du temps CPU par frame. Hors CI, comme
-  les benchs actuels ; les tableaux de résultats vont dans `docs/architecture.md` (→ « The
+  les benchs actuels ; les tableaux de résultats vont dans `../architecture.md` (→ « The
   baseline »).
 - `puffin` en développement, lu par `puffin_viewer` (feature `profiling` de `app`) : `puffin_egui`
   s'arrête à egui 0.33 ; journal de durée des appels `Backend` au-dessus de 16 ms en debug.
@@ -1477,7 +1477,7 @@ P7 se font pendant P3–P5 et la 1.0.0 arrive environ quatre mois plus tôt.
 ### Phase 0 — Spikes et décisions (3 S)
 
 Des prototypes jetables, non conservés dans le dépôt, chacun avec un compte rendu et une
-décision consignée (ADR courte dans `docs/egui-migration/adr/`).
+décision consignée (ADR courte dans `adr`).
 
 | Spike                  | Question                                                                                                                                                                                                                                                                                                                                                                                                                                       | Sortie attendue                                                                                                              |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -1497,7 +1497,7 @@ décision consignée (ADR courte dans `docs/egui-migration/adr/`).
 estimation recalée, risques réévalués.
 
 **Résultat (2026-11-02).** Les dix prototypes, jetés après mesure, ont chacun leur ADR dans
-`docs/egui-migration/adr/`. Mesures prises dans un conteneur Linux
+`adr`. Mesures prises dans un conteneur Linux
 (4 vCPU Xeon 2,1 GHz, Xvfb, Mesa lavapipe/llvmpipe, weston sans écran), plus lent par cœur que la
 machine de référence du § 6.2. Puis rejoués sous Windows 11 (Ryzen 7 9800X3D, RTX 5070 Ti,
 AZERTY) : aucune décision ne change et les chiffres y sont meilleurs. Trois pièges relevés : le
@@ -1525,7 +1525,7 @@ Windows de S10) et P11 (S9) ; aucune ne remet en cause une décision prise ici s
 
 ### Phase 1 — Le cœur sans Tauri, l'index, les références (5 S)
 
-1. Créer le workspace ; `git mv src-tauri/src` (hors coquille) vers `crates/engine/src`,
+1. Créer le workspace ; `git mv src-tauri/src` (hors coquille) vers `../../crates/engine/src`,
    avec `migrations/`, `resources/`, `sandbox/`, `benches/`, `tests/`.
 2. Introduire `Engine` et `host.rs` (§ 3.3.2, § 3.3.4) : `struct Paths` et `trait EventSink` ;
    remplacer les usages d'`AppHandle`, `app.state`, `emit`, `resource_dir`, `app_data_dir` ; sortir
@@ -1547,12 +1547,12 @@ Windows de S10) et P11 (S9) ; aucune ne remet en cause une décision prise ici s
    l'étiquette `angular-reference`, capturer, publier la pré-version.
 
 **Fin de phase** : `cargo test`, `clippy --all-targets --all-features`, les 35 e2e verts ; benchs
-`index_*` dans `architecture.md` ; aucun `use tauri` dans `engine` ; corpus d'or versionnés ;
+`index_*` dans `../architecture.md` ; aucun `use tauri` dans `engine` ; corpus d'or versionnés ;
 étiquette posée et référence capturée. Rien n'est publié.
 
 ### Phase 2 — Fondations de l'interface (5,5 S)
 
-- **Nettoyage** : `src/` et `e2e/` passent dans `reference/angular/`, en lecture seule (décidé le
+- **Nettoyage** : `src/` et `e2e/` passent dans `../../reference/angular`, en lecture seule (décidé le
   2026-11-03 : relire un composant sans changer de branche) ; retirer de `main` `src-tauri/`,
   `angular.json`, `tsconfig*`,
   `eslint.config.mjs`, `vitest-base.config.ts`, les dépendances npm de l'application et les crates
@@ -1783,7 +1783,7 @@ l'écran (`GetScreenshot`), redimensionner (`Resize`).
 - **La saveur `e2e`** : `cargo build -p app --features e2e`. La feature allume la feature
   `inspection` d'eframe et les deux portes ci-dessous, rien d'autre. Elle n'entre jamais dans une
   version publiée : le port d'inspection n'a pas d'authentification.
-- **Le pilote** : la crate `e2e` (`crates/e2e/`), quelques centaines de lignes. Il lance le binaire
+- **Le pilote** : la crate `e2e` (`../../crates/e2e`), quelques centaines de lignes. Il lance le binaire
   (`--profile <dossier temporaire>`, `EGUI_INSPECTION=127.0.0.1:<port libre>`), s'y connecte,
   trouve un nœud par `author_id`, clique au centre de sa boîte, tape, presse une touche, attend une
   condition (`eventually`), capture l'écran et garde le journal en cas d'échec, arrête et
@@ -1831,16 +1831,16 @@ reste à faire tourner avant d'en dépendre.
 | `lint-rust`                                | `fmt` + `clippy` dans `src-tauri`, avec un faux `frontendDist` | `fmt` + `clippy --workspace --all-targets --all-features` | idem, sans faux `frontendDist`                                                                                                     | idem                                                                  |
 | `build-front`, `test-front`, `sonar-front` | build Angular, Vitest + couverture, Sonar                      | inchangés                                                 | **supprimés**                                                                                                                      | —                                                                     |
 | `test-rust`                                | `cargo test` Linux + Windows, couverture sous Linux            | `cargo test --workspace`                                  | + kittest et snapshots (Mesa sous Linux, WARP sous Windows)                                                                        | idem                                                                  |
-| `sonar-rust`                               | sources `src-tauri`                                            | `crates/` + `src-tauri`                                   | `crates/`                                                                                                                          | idem                                                                  |
+| `sonar-rust`                               | sources `src-tauri`                                            | `../../crates` + `src-tauri`                                   | `../../crates`                                                                                                                          | idem                                                                  |
 | `e2e-scenarios`                            | `e2e/groups.json` contre `e2e/specs`                           | inchangé                                                  | **supprimé** : plus de groupes (D31)                                                                                               | —                                                                     |
 | `e2e.yml` › `build`                        | `npm ci` + `tauri build --debug --features e2e`                | inchangé                                                  | **remplacé** par le job `e2e` de `ci.yml`, un par OS, dès `changes` : `cargo build -p app --features e2e` puis `cargo test -p e2e` | idem                                                                  |
 | `e2e.yml` › `group`                        | WebKitGTK + xvfb, `npm run test:e2e` scénario par scénario     | inchangé (filet de l'extraction)                          | dans ce même job : Mesa + xvfb sous Linux, WARP sous Windows ; cache Rust ; captures et journaux en artefact                       | idem                                                                  |
 | **nouveau** `visual`                       | —                                                              | —                                                         | remis à plus tard (§ 5.2) : les écrans se comparent à l'œil aux captures d'`angular-reference`                                     | comparé à la version egui précédente                                  |
-| `security-cargo.yml`                       | `src-tauri/Cargo.*`, `deny.toml`                               | chemins du workspace racine                               | idem                                                                                                                               | idem                                                                  |
+| `security-cargo.yml`                       | `src-tauri/Cargo.*`, `../../deny.toml`                               | chemins du workspace racine                               | idem                                                                                                                               | idem                                                                  |
 | `security-npm.yml`                         | `npm audit` de l'application                                   | inchangé                                                  | réduit aux outils de build (sandbox, scripts)                                                                                      | idem                                                                  |
 | `release.yml`                              | `tauri-action` : NSIS, MSI, deb, rpm, AppImage                 | inchangé, non lancé                                       | inchangé, non lancé                                                                                                                | `cargo-packager` (P11, § 4.3), version de `[workspace.package]` (D27) |
 | `stop.yml`                                 | annule un run en échec                                         | inchangé                                                  | inchangé                                                                                                                           | inchangé                                                              |
-| `.github/actions/setup-rust`               | dépendances apt de Tauri                                       | + cache du workspace                                      | dépendances apt d'egui (xkbcommon, Mesa, GTK, appindicator)                                                                        | idem                                                                  |
+| `../../.github/actions/setup-rust`               | dépendances apt de Tauri                                       | + cache du workspace                                      | dépendances apt d'egui (xkbcommon, Mesa, GTK, appindicator)                                                                        | idem                                                                  |
 
 Entre la phase 2 et le portage de chaque écran, la couverture e2e est partielle : les scénarios
 arrivent avec leurs écrans (colonne « Phase » de l'annexe D), et la phase 2 livre le pilote avec
@@ -1856,11 +1856,11 @@ Lucide) ; la skill `dependency-audit` passe avant chaque ajout.
 | `e2e-groups`              | disparaît avec les groupes (D31)                                                                                                                                                                                                                                            |
 | `palette`, `motion`       | tests Rust sur `theme::tokens` et `theme::motion` (§ 3.7)                                                                                                                                                                                                                   |
 | `board-geometry`          | disparaît : le flux des cartes est calculé par le Rust qui les dessine                                                                                                                                                                                                      |
-| `focus-rings`             | par construction : tout widget maison passe par `widgets::interact` (réponse, nœud AccessKit, anneau de focus) ; `Ui::interact` est interdit ailleurs par `disallowed-methods` dans le `clippy.toml` de `ui` ; les widgets natifs restylés reçoivent l'anneau par `Visuals` |
-| `e2e-waits`               | `disallowed-methods` (`std::thread::sleep`, `tokio::time::sleep`) dans le `clippy.toml` de `crates/e2e` ; la seule exception (asserter que **rien** n'arrive) porte un `#[expect]` commenté, comme l'excuse d'aujourd'hui                                                   |
-| `icons` (outil, pas test) | gardé (`npm run icons`), écrit dans `crates/app/icons/` ; les petites tailles `.ico` viennent toujours de `icons/source/`                                                                                                                                                   |
+| `focus-rings`             | par construction : tout widget maison passe par `widgets::interact` (réponse, nœud AccessKit, anneau de focus) ; `Ui::interact` est interdit ailleurs par `disallowed-methods` dans le `../../clippy.toml` de `ui` ; les widgets natifs restylés reçoivent l'anneau par `Visuals` |
+| `e2e-waits`               | `disallowed-methods` (`std::thread::sleep`, `tokio::time::sleep`) dans le `../../clippy.toml` de `crates/e2e` ; la seule exception (asserter que **rien** n'arrive) porte un `#[expect]` commenté, comme l'excuse d'aujourd'hui                                                   |
+| `icons` (outil, pas test) | gardé (`npm run icons`), écrit dans `../../crates/app/icons` ; les petites tailles `.ico` viennent toujours de `icons/source/`                                                                                                                                                   |
 
-Un `clippy.toml` de crate remplace celui de la racine au lieu de s'y ajouter : chacun reprend
+Un `../../clippy.toml` de crate remplace celui de la racine au lieu de s'y ajouter : chacun reprend
 `doc-valid-idents`.
 
 ### 8.5 Liste de contrôle manuelle (par version)
@@ -1879,7 +1879,7 @@ il doit lister les écarts, est capturé **en phase 1, tant que ce JavaScript to
 après la phase 2, il ne reste que l'étiquette. Ce sont des fichiers de données, pas des tests :
 chaque crate les lit dans ses propres tests.
 
-- **Où** : `golden/<sujet>/` à la racine ; `golden/README.md` donne pour chaque sujet la version de
+- **Où** : `golden/<sujet>/` à la racine ; `../../golden/README.md` donne pour chaque sujet la version de
   la bibliothèque (TipTap 3.32, Prettier 3.9.10, Mermaid 12.2, Fabric 7.4, ICU de Node) et la date.
 - **Forme** : un JSON par sujet, `[{ "input": …, "options": …, "output": … }]` ; les sorties
   binaires (SVG, PNG) à côté, nommées par leur cas.
@@ -1963,7 +1963,7 @@ d'abord.
 | D6  | Bêta, double exploitation, compatibilité                | **aucune** : l'application n'a pas d'utilisateurs                                                                                                                                                                                                                                                                                                                                        | § 0, § 4, § 9 ; Tauri gardé seulement en phase 1 comme filet de tests, puis figé par `angular-reference` |
 | D7  | `unsafe_code = "forbid"`                                | **interdit dans toutes les crates**                                                                                                                                                                                                                                                                                                                                                      | § 3.10 : uniquement des dépendances à API sûre                                                           |
 | D8  | Paquets Windows                                         | **NSIS seul**, plus de `.msi`                                                                                                                                                                                                                                                                                                                                                            | § 4.3, Phase 11                                                                                          |
-| D9  | Langue de ce plan                                       | **français** ; `architecture.md` reste en anglais                                                                                                                                                                                                                                                                                                                                        | —                                                                                                        |
+| D9  | Langue de ce plan                                       | **français** ; `../architecture.md` reste en anglais                                                                                                                                                                                                                                                                                                                                        | —                                                                                                        |
 | D10 | Règles de données et crates d'édition                   | **une règle, une définition, au cœur** ; `engine` ne dépend d'aucune crate nouvelle ; `text`, `richtext`, `drawing`, `diagram` reçoivent les résultats en argument ; seuls partages : le bouclier `{{…}}` de `text`, les options `pulldown-cmark` comparées par un test                                                                                                                  | § 3.2, § 3.8                                                                                             |
 | D11 | Concurrence avec la base                                | **un seul ouvrier** : `Engine` possède une file et un thread « db » qui l'exécute dans l'ordre ; tout ce qui touche la base ou l'index y passe, lectures comprises, en phase 1 comme après ; `compute` pour le calcul pur, tokio pour le réseau ; pas de voie de lecture parallèle tant qu'aucune mesure ne la demande                                                                   | § 3.3.5, § 3.3.6, P1                                                                                     |
 | D12 | Appels directs au cœur depuis le thread UI              | **permis** pour une fonction pure (ni verrou ni E/S) dont l'entrée est bornée par l'écran et qui tient sous 1 ms au p95 ; toujours par `api/` ; cas listés au § 3.3.5                                                                                                                                                                                                                    | § 3.3.1, § 3.3.5                                                                                         |
@@ -1979,9 +1979,9 @@ d'abord.
 | D22 | Moteur de regex de la coloration                        | **`onig`** (S5 : 1 Mo de TypeScript en 2,7 s contre 12,9 s pour `fancy-regex`, aucun des deux sous 200 ms). Critère : `fancy-regex` si 1 Mo de JSON et 1 Mo de TypeScript se colorent en ≤ 200 ms (p95) ; sinon `onig` (du C compilé par `cc`, comme SQLite : « pas de C » n'est pas une règle du projet). La coloration ne bloque jamais le thread UI                                   | § 3.6, § 3.9, ADR S5, E11                                                                                |
 | D23 | Texte et images d'un Dessin                             | **une coupure de ligne** (celle de Fabric, dans `drawing`) pour l'éditeur et les images ; **une voie d'image** : le SVG d'export, rastérisé par `resvg`                                                                                                                                                                                                                                  | § 3.9.2, E14                                                                                             |
 | D24 | Référence visuelle                                      | Captures PNG seules, WebView2 sous Windows à 100 %, comparées à l'œil ; harnais inactif ; PNG en pré-version GitHub ; automatisation remise à plus tard                                                                                                                                                                                                                                  | § 5.2, P1                                                                                                |
-| D25 | Corpus d'or                                             | **livrable de P1**, dans `golden/`, générés par des specs `*.golden.spec.ts` gardées sur `angular-reference` ; liste au § 8.6                                                                                                                                                                                                                                                            | § 8.6, P1                                                                                                |
+| D25 | Corpus d'or                                             | **livrable de P1**, dans `../../golden`, générés par des specs `*.golden.spec.ts` gardées sur `angular-reference` ; liste au § 8.6                                                                                                                                                                                                                                                            | § 8.6, P1                                                                                                |
 | D26 | Signature et client de mise à jour                      | signé par `cargo-packager` avec la clé actuelle ; artefacts : `.exe` NSIS et `.AppImage` ; client **`cargo-packager-updater`** (S9 : clé Tauri acceptée, AppImage remplacée en place, NSIS passif `/P /R`) ; `latest.json` gagne un champ `format` par plateforme                                                                                                                        | § 4.3, ADR S9                                                                                            |
-| D27 | Numéro de version                                       | **`[workspace.package] version`** seul ; plus de version dans `package.json` ; `release.yml` compare `Cargo.toml` et `Cargo.lock`                                                                                                                                                                                                                                                        | § 4.3, § 8.4                                                                                             |
+| D27 | Numéro de version                                       | **`[workspace.package] version`** seul ; plus de version dans `../../package.json` ; `release.yml` compare `Cargo.toml` et `Cargo.lock`                                                                                                                                                                                                                                                        | § 4.3, § 8.4                                                                                             |
 | D28 | Formats d'image affichés                                | PNG, JPEG, GIF (première image), WebP, BMP, ICO par `image` ; SVG par `resvg` ; le reste : « Ouvrir »                                                                                                                                                                                                                                                                                    | § 3.6, E13                                                                                               |
 | D29 | GTK sous Linux                                          | **un seul thread GTK**, celui du tray ; dialogues de fichiers par le portail XDG (`rfd`, feature `xdg-portal`)                                                                                                                                                                                                                                                                           | § 3.10, § 4.3                                                                                            |
 | D30 | Écritures différées après un changement de bibliothèque | **numéro de bibliothèque** : chaque `Library` ouverte en reçoit un (compteur du processus, en mémoire) ; un envoi le note en lisant et n'écrit rien s'il a changé ; l'annulation à l'ouverture reste, la justesse n'en dépend plus                                                                                                                                                       | § 3.3.6, § 3.13, P1                                                                                      |
@@ -1991,24 +1991,24 @@ d'abord.
 
 ## 12. Documentation et outillage à mettre à jour
 
-- **`docs/architecture.md`** : chaque phase met à jour les sections qu'elle touche ; en phase 2
+- **`../architecture.md`** : chaque phase met à jour les sections qu'elle touche ; en phase 2
   (retrait d'Angular et de Tauri) et à la 1.0.0, réécriture de « Overview », « Front-end »
   (devient « Interface (egui) »), « IPC boundary » (devient « Backend et événements »), « State »,
   « Tauri configuration » (devient « Plateforme »), « Testing » ; ajout de « Index de notes en
   mémoire », « Noyau d'édition », « Rendu et virtualisation », « Clavier » (D14). Les sections
   métier ne changent presque pas.
-- **`CLAUDE.md`** : commandes (plus de npm pour l'application), principes (frontière cœur/UI à la
+- **`../../CLAUDE.md`** : commandes (plus de npm pour l'application), principes (frontière cœur/UI à la
   place de l'IPC, une règle une définition — D10), pièges retirés (`@defer`, CSP, `bindings.ts`,
   WebKit, zoneless) et nouveaux : thread UI sans E/S sauf appels directs bornés (D12), file « db »
   unique et `compute` (D11), réseau en trois temps et numéro de bibliothèque (§ 3.3.6, D30), état
   et vue (D13), ordre du clavier (D14), `LibraryCaches` (D17), crochet de panique sans message
   (D18), profil `.dev` jusqu'à la 1.0.0 (D16), virtualisation, `author_id`, persistance d'eframe
   désactivée, champ secret ; procédure de version (D27).
-- **Skills** (`.claude/skills/`) :
+- **Skills** (`../../.claude/skills`) :
   - **déjà fait** (2026-11-02) : `rust-guidelines` vendue depuis `microsoft/rust-guidelines`
     (copie non modifiée, `SKILL.md` local qui fixe les priorités) ; `egui-ui` écrite localement —
     ni `emilk/egui` ni `rerun-io` ne publient de skill, et les packs communautaires décrivent
-    d'autres architectures (`PROVENANCE.md`) ; règle clean code / KISS ajoutée à `CLAUDE.md` ;
+    d'autres architectures (`PROVENANCE.md`) ; règle clean code / KISS ajoutée à `../../CLAUDE.md` ;
     `egui-ui` alignée sur D12–D14 et D17 ;
   - **en phase 2** : `angular-ui` et `angular-developer` retirées ; `desktop-e2e-testing` réécrite
     pour le pilote `egui_inspection` ; `tauri-integration` → `platform-integration` ;
@@ -2016,18 +2016,18 @@ d'abord.
     auront fixé ;
   - **outil local facultatif** : `egui_mcp` dans son `.mcp.json` (local, jamais versionné) pour que
     Claude Code voie et conduise l'application egui en cours d'écriture.
-- **`docs/security.md`** : index résident, caches de l'UI non effacés (D17), crochet de panique
+- **`../security.md`** : index résident, caches de l'UI non effacés (D17), crochet de panique
   sans message (D18), une application par profil (D16), champ secret, fin de la CSP.
-- **`docs/releasing.md`** : nouveau workflow de paquets et de signatures (D26), version unique
+- **`../releasing.md`** : nouveau workflow de paquets et de signatures (D26), version unique
   (D27).
-- **`README.md`, `CONTRIBUTING.md`, `docs/tour.gif`** : prérequis (plus de Node ni de WebView2 pour
+- **`../../README.md`, `CONTRIBUTING.md`, `docs/tour.gif`** : prérequis (plus de Node ni de WebView2 pour
   l'application), capture refaite.
 
 ---
 
 ## Annexe A — Composants Angular → modules egui
 
-Chemins relatifs à `crates/ui/src/`. Un composant Angular devient en général une fonction
+Chemins relatifs à `../../crates/ui/src`. Un composant Angular devient en général une fonction
 de dessin (`fn show(ui, state, actions)`) ou un widget ; les gabarits, styles et l'état du composant
 se retrouvent dans le même fichier Rust.
 
@@ -2192,7 +2192,7 @@ RxJS, GraphQL) et de test (Vitest, jsdom, WebdriverIO, angular-eslint…) ; côt
 | Paquets (outils)    | `cargo-packager`, `cargo-generate-rpm`                                                                                                                                                                                                                   |
 
 Polices et icônes embarquées : Inter et JetBrains Mono (OFL, fichiers variables : S2), Noto Emoji
-(OFL), tracés Lucide (ISC) — à consigner avec leurs licences. Reste dans `package.json`, à côté du
+(OFL), tracés Lucide (ISC) — à consigner avec leurs licences. Reste dans `../../package.json`, à côté du
 bac à sable : `prettier` (D1), dont le paquet est empaqueté au build.
 
 ## Annexe F — Logique TypeScript hors composants → destination

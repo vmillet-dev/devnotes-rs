@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README. The migration to egui follows `docs/egui-migration-plan.md` (decisions in its § 11); a decision is changed there first, never silently in code.
+Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README. The migration to egui follows `docs/egui-migration/egui-migration-plan.md` (decisions in its § 11); a decision is changed there first, never silently in code.
 
 ## Project
 

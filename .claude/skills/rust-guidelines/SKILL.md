@@ -13,7 +13,7 @@ rendered book, not at these files). Read the `<why>` before applying a rule: the
 ## Order of precedence
 
 1. `CLAUDE.md`, `.claude/rules/security.md`, `docs/architecture.md` and the local skills.
-2. `docs/egui-migration-plan.md` for work on the migration.
+2. `../../../docs/egui-migration/egui-migration-plan.md` for work on the migration.
 3. These guidelines.
 
 Keep it simple: a guideline is a reason to write less, plainer code, never a licence to add a

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration du service de facturation -->
+<service replicas="2" nom="billing">
+  <port>8080</port>
+  <port>8443</port>
+  <base host="db.internal">5432</base>
+  <debug/>
+</service>

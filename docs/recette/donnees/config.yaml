@@ -1,0 +1,13 @@
+# Configuration du service de facturation
+service: billing
+replicas: 2
+ports:
+  - 8080
+  - 8443
+base: &base
+  host: db.internal
+  port: 5432
+primaire:
+  <<: *base
+  role: lecture-ecriture
+debug: false

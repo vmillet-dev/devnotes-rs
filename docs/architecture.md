@@ -6,7 +6,7 @@ For build/run instructions see [CONTRIBUTING](../CONTRIBUTING.md).
 ## Overview
 
 DevNotes is a desktop application being rewritten from Angular + Tauri to **egui**, in one Rust
-process (`docs/egui-migration-plan.md`). The core, `crates/engine`, owns everything that is not
+process (`egui-migration/egui-migration-plan.md`). The core, `crates/engine`, owns everything that is not
 drawing: storage, encryption, the in-memory index of notes, HTTP, the tools. The egui interface
 calls it directly, through one façade and three queues, with no serialisation in between. The
 Angular application it replaces is kept, never built, in `reference/angular/`; the sections of
@@ -137,7 +137,7 @@ also derives `specta::Type`, which is what lets tauri-specta generate the front-
 > **Angular reference.** This section describes the Angular application, which left the build in
 > v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
 > tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
-> screen by screen (`docs/egui-migration-plan.md` § 12).
+> screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 ### Where a file goes
 
@@ -5082,7 +5082,7 @@ let go; a double click or Enter makes it automatic again.
 > **Angular reference.** This section describes the Angular application, which left the build in
 > v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
 > tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
-> screen by screen (`docs/egui-migration-plan.md` § 12).
+> screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 **The boundary is generated, not written.** `src/app/core/ipc/bindings.ts` is produced by
 [tauri-specta](https://docs.rs/tauri-specta) from the Rust signatures: one typed function per
@@ -7266,7 +7266,7 @@ tests: it builds the flavour into its cached `target/`, runs `cargo test -p e2e`
 > **Angular reference.** This section describes the Angular application, which left the build in
 > v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
 > tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
-> screen by screen (`docs/egui-migration-plan.md` § 12).
+> screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 `npm run test:e2e` drives the **assembled application**: the real binary, a real WebView, the
 real IPC bridge and a real SQLite file. It is the only suite that can see a missing capability,

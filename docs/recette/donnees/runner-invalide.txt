@@ -1,0 +1,1 @@
+ceci n’est ni un CSV avec en-tête ni un tableau JSON

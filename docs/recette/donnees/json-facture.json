@@ -1,0 +1,30 @@
+{
+  "id": "FAC-2026-0042",
+  "statut": "payée",
+  "emise": "2026-09-29T14:03:12+02:00",
+  "client": {
+    "nom": "Atelier Rivière",
+    "siret": "73282932000074",
+    "adresse": {
+      "rue": "12 rue des Lilas",
+      "ville": "Lyon",
+      "codePostal": "69003"
+    }
+  },
+  "lignes": [
+    {
+      "produit": "Hébergement",
+      "quantite": 12,
+      "prixUnitaire": 9.5
+    },
+    {
+      "produit": "Nom de domaine",
+      "quantite": 1,
+      "prixUnitaire": 12
+    }
+  ],
+  "total": 126,
+  "devise": "EUR",
+  "remise": null,
+  "tags": ["api", "facturation"]
+}

@@ -7,7 +7,7 @@ DevNotes is licensed under the [GNU GPL v3.0](LICENSE). Opening a pull request m
 to have your contribution distributed under those terms.
 
 DevNotes is being rewritten from Angular + Tauri to egui, in Rust alone
-([the plan](docs/egui-migration-plan.md)). Until the egui application is complete, `main` has no
+([the plan](docs/egui-migration/egui-migration-plan.md)). Until the egui application is complete, `main` has no
 usable application; the Angular one is kept for reading in `reference/angular/`, and runs from
 the `angular-reference` tag (see [its README](reference/angular/README.md)).
 

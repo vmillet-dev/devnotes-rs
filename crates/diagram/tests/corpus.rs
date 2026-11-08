@@ -5,7 +5,7 @@
 use diagram::{Drawn, Fonts, Theme, draw};
 
 const INTER: &[u8] = include_bytes!("../../ui/assets/fonts/inter-latin-wght-normal.ttf");
-const PLAN: &str = include_str!("../../../docs/egui-migration-plan.md");
+const PLAN: &str = include_str!("../../../docs/egui-migration/egui-migration-plan.md");
 
 const SPECS: [&str; 6] = [
     "graph TD; A-->B",
