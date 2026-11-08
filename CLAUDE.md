@@ -104,4 +104,4 @@ Read in `reference/angular/`; the egui mechanism is in the plan (§ 3.3–3.12).
 
 ## Design reference
 
-`docs/scratch-mockup-v2.html` and `docs/scratch-folders.html` are static mockups of the intended UI (canvas; folders and board). Visual references, not code to import.
+`docs/mockups/scratch-mockup-v2.html` and `docs/mockups/scratch-folders.html` are static mockups of the intended UI (canvas; folders and board). Visual references, not code to import.
