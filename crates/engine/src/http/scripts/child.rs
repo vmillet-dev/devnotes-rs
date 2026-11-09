@@ -1,4 +1,4 @@
-//! The script host: the application started again with `ARG`, read in `main` before Tauri, so
+//! The script host: the application started again with `ARG`, read in `main` before any window, so
 //! no window, no single instance and no library. It reads a phase at a time on its standard
 //! input, runs it, and writes on its standard output what the scripts ask and what they left —
 //! one JSON message a line.

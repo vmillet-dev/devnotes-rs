@@ -45,7 +45,7 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          code=$(git diff --name-only "$BASE" HEAD | grep -vE '\.md$|^docs/|^reference/|^LICENSE$' || true)
+          code=$(git diff --name-only "$BASE" HEAD | grep -vE '\.md$|^docs/|^LICENSE$' || true)
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
@@ -230,18 +230,18 @@ jobs:
           args: >
             -Dsonar.organization=vmillet-dev
             -Dsonar.projectKey=devnotes-rust
-            -Dsonar.sources=crates
-            -Dsonar.tests=crates
-            -Dsonar.test.inclusions=crates/*/tests/**,crates/*/benches/**
+            -Dsonar.sources=crates,e2e
+            -Dsonar.tests=crates,e2e
+            -Dsonar.test.inclusions=crates/*/tests/**,crates/*/benches/**,e2e/tests/**
             -Dsonar.exclusions=crates/engine/sandbox/dist/**,crates/engine/sandbox/node_modules/**
-            -Dsonar.coverage.exclusions=crates/engine/src/**/*.js,crates/engine/sandbox/*.mjs,crates/e2e/**,crates/app/src/unpainted.rs,crates/app/src/desktop.rs,crates/platform/src/**/system.rs,crates/ui/src/app/screens.rs,crates/ui/src/app/perf.rs
+            -Dsonar.coverage.exclusions=crates/engine/src/**/*.js,crates/engine/sandbox/*.mjs,e2e/**,crates/app/src/unpainted.rs,crates/app/src/desktop.rs,crates/platform/src/**/system.rs,crates/ui/src/app/screens.rs,crates/ui/src/app/perf.rs
             -Dsonar.rust.cargo.manifestPaths=Cargo.toml
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true
 
       - *stop-the-run
 
-  # From `changes` on, beside the Rust tests: the flavour, then every scenario of `crates/e2e`,
+  # From `changes` on, beside the Rust tests: the flavour, then every scenario of `e2e/`,
   # one after the other, each its own process and profile (D31). One failing scenario decides the
   # run: the other platform is cancelled with it.
   e2e:

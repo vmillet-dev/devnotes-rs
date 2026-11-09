@@ -11,6 +11,7 @@ on:
     paths:
       - 'Cargo.toml'
       - 'crates/*/Cargo.toml'
+      - 'e2e/Cargo.toml'
       - 'Cargo.lock'
       - 'deny.toml'
       - '.github/workflows/security-cargo.yml'

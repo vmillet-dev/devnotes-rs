@@ -275,6 +275,7 @@ dependencies = [
  "profiling",
  "puffin",
  "puffin_http",
+ "resvg",
  "tempfile",
  "tokio",
  "ui",

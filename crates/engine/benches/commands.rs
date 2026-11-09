@@ -1,9 +1,7 @@
 //! What the IPC surface costs, by class of command.
 //!
-//! Below the command boundary, not through Tauri: a command is four lines, so
-//! `store::*` plus `view::*` plus the serde round trip captures nearly all of the cost.
-//! `tauri::test::mock_app` would drag the whole app lifecycle in and buy only the IPC
-//! transport, which this codebase does not control.
+//! The service functions alone: `store::*` plus `view::*` plus the serde round trip captures
+//! nearly all of the cost, and no window is needed to measure them.
 //!
 //! ```
 //! cargo bench -- --save-baseline main

@@ -92,8 +92,8 @@ fn write(profile: &Path, registry: &Registry) -> Result<(), StorageError> {
 
 /// The registry as it stands, adopting what is already on disk the first time.
 ///
-/// Gathering a library from before the registry is the migration. Takes a path rather than an
-/// `AppHandle`, like every rule below: a Tauri handle cannot be built in a unit test.
+/// Gathering a library from before the registry is the migration. Takes a path rather than the
+/// engine, like every rule below: a unit test builds a folder, not an engine.
 pub(crate) fn registry_in(profile: &Path) -> Registry {
     let mut registry = read(profile);
 

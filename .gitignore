@@ -20,8 +20,6 @@ yarn-error.log
 
 # Miscellaneous
 /coverage
-/.angular
-/reference/angular/e2e/logs
 # Claude Code: skills, rules and the shared permissions are versioned, local state is not.
 .claude/*
 !.claude/skills/

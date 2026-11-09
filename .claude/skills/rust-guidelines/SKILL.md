@@ -1,6 +1,6 @@
 ---
 name: rust-guidelines
-description: Use when writing, reviewing or refactoring Rust in DevNotes (crates/engine and the src-tauri shell today, every crate of the egui migration) and a question of idiom comes up — naming, errors, panics, module layout, docs, performance, lints. Microsoft's Pragmatic Rust Guidelines, vendored; the project's own rules win where they differ.
+description: Use when writing, reviewing or refactoring Rust in DevNotes (every crate of the workspace) and a question of idiom comes up — naming, errors, panics, module layout, docs, performance, lints. Microsoft's Pragmatic Rust Guidelines, vendored; the project's own rules win where they differ.
 ---
 
 # Pragmatic Rust Guidelines

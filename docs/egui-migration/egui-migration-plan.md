@@ -56,7 +56,8 @@ bêta, aucune compatibilité promise avec les versions Tauri.
 2. **Phase 2 et suivantes** : Angular, les e2e WebdriverIO et `src-tauri` quittent `main` ; on y
    construit l'application **egui** (`devnotes`), qui appelle `engine` sans IPC, sans
    sérialisation, sans WebView. Les sources Angular et ses scénarios restent, jamais construits,
-   dans `../../reference/angular` (et entiers sur l'étiquette) : on les relit quand un écran est porté.
+   dans `reference/angular` jusqu'à la 1.0.0, puis sur l'étiquette seule (D32) : on les relit quand
+   un écran est porté.
 3. **1.0.0** quand l'application egui atteint la parité fonctionnelle (35 scénarios portés),
    visuelle (toute l'application, même apparence) et de performance (budgets du § 6).
 
@@ -240,8 +241,13 @@ crates/
 ├── ui/                       NOUVEAU : l'application egui (thème, widgets, zones, état)
 └── app/                      NOUVEAU : le binaire `devnotes` (main : hôte de scripts ou eframe)
 src-tauri/                    coquille Tauri mince : phase 1 seulement (filet des e2e), supprimée en P2
-reference/angular/            sources Angular et e2e WebdriverIO, en lecture seule depuis P2 (jamais construits)
+e2e/                          le pilote des scénarios e2e, hors des crates du produit (D33)
 ```
+
+`reference/angular/` (sources Angular et e2e WebdriverIO, en lecture seule de P2 à la 1.0.0) a
+quitté l'arbre à la 1.0.0 ; il reste entier sur l'étiquette `angular-reference` (D32). Chaque
+dépendance externe est déclarée une fois, dans `[workspace.dependencies]` du `Cargo.toml` racine ;
+une crate la prend par `workspace = true` (D33).
 
 **Nommage.** Les crates portent un nom court, sans préfixe : le dossier `../../crates` et le workspace
 disent déjà de quel projet elles sont, et aucune n'est publiée. Le cœur s'appelle **`engine`** et
@@ -1783,7 +1789,7 @@ l'écran (`GetScreenshot`), redimensionner (`Resize`).
 - **La saveur `e2e`** : `cargo build -p app --features e2e`. La feature allume la feature
   `inspection` d'eframe et les deux portes ci-dessous, rien d'autre. Elle n'entre jamais dans une
   version publiée : le port d'inspection n'a pas d'authentification.
-- **Le pilote** : la crate `e2e` (`../../crates/e2e`), quelques centaines de lignes. Il lance le binaire
+- **Le pilote** : la crate `e2e` (`../../e2e`, D33), quelques centaines de lignes. Il lance le binaire
   (`--profile <dossier temporaire>`, `EGUI_INSPECTION=127.0.0.1:<port libre>`), s'y connecte,
   trouve un nœud par `author_id`, clique au centre de sa boîte, tape, presse une touche, attend une
   condition (`eventually`), capture l'écran et garde le journal en cas d'échec, arrête et
@@ -1791,7 +1797,7 @@ l'écran (`GetScreenshot`), redimensionner (`Resize`).
   pas que le `Backend` ait répondu (une réponse arrive une frame plus tard, par le `Waker`) :
   `eventually` relit donc l'arbre jusqu'à sa condition, sans `Settle` entre deux lectures, chaque
   lecture rendant déjà une frame (jusqu'à 300 ms sous WARP).
-- **Un fichier par scénario** : `crates/e2e/tests/<nn>_<nom>.rs`, un seul `#[test]` qui enchaîne
+- **Un fichier par scénario** : `e2e/tests/<nn>_<nom>.rs`, un seul `#[test]` qui enchaîne
   des étapes nommées, lancé seul (`cargo test -p e2e --test <nn>_<nom>`). Chaque fichier lance sa
   propre application sur son propre profil, donc sa propre instance unique (D16), en local comme
   en CI : le piège actuel des fichiers d'un même run qui partagent un processus et un profil
@@ -1857,8 +1863,8 @@ Lucide) ; la skill `dependency-audit` passe avant chaque ajout.
 | `palette`, `motion`       | tests Rust sur `theme::tokens` et `theme::motion` (§ 3.7)                                                                                                                                                                                                                   |
 | `board-geometry`          | disparaît : le flux des cartes est calculé par le Rust qui les dessine                                                                                                                                                                                                      |
 | `focus-rings`             | par construction : tout widget maison passe par `widgets::interact` (réponse, nœud AccessKit, anneau de focus) ; `Ui::interact` est interdit ailleurs par `disallowed-methods` dans le `../../clippy.toml` de `ui` ; les widgets natifs restylés reçoivent l'anneau par `Visuals` |
-| `e2e-waits`               | `disallowed-methods` (`std::thread::sleep`, `tokio::time::sleep`) dans le `../../clippy.toml` de `crates/e2e` ; la seule exception (asserter que **rien** n'arrive) porte un `#[expect]` commenté, comme l'excuse d'aujourd'hui                                                   |
-| `icons` (outil, pas test) | gardé (`npm run icons`), écrit dans `../../crates/app/icons` ; les petites tailles `.ico` viennent toujours de `icons/source/`                                                                                                                                                   |
+| `e2e-waits`               | `disallowed-methods` (`std::thread::sleep`, `tokio::time::sleep`) dans le `clippy.toml` de `../../e2e` ; la seule exception (asserter que **rien** n'arrive) porte un `#[expect]` commenté, comme l'excuse d'aujourd'hui                                                   |
+| `icons` (outil, pas test) | gardé (`cargo run -p app --example icons` depuis la 1.0.0, D32), écrit dans `../../crates/app/icons` ; les petites tailles `.ico` viennent toujours de `icons/source/`                                                                                                                                                   |
 
 Un `../../clippy.toml` de crate remplace celui de la racine au lieu de s'y ajouter : chacun reprend
 `doc-valid-idents`.
@@ -1986,6 +1992,8 @@ d'abord.
 | D29 | GTK sous Linux                                          | **un seul thread GTK**, celui du tray ; dialogues de fichiers par le portail XDG (`rfd`, feature `xdg-portal`)                                                                                                                                                                                                                                                                           | § 3.10, § 4.3                                                                                            |
 | D30 | Écritures différées après un changement de bibliothèque | **numéro de bibliothèque** : chaque `Library` ouverte en reçoit un (compteur du processus, en mémoire) ; un envoi le note en lisant et n'écrit rien s'il a changé ; l'annulation à l'ouverture reste, la justesse n'en dépend plus                                                                                                                                                       | § 3.3.6, § 3.13, P1                                                                                      |
 | D31 | Répartition des scénarios e2e en CI                     | **aucune** : un job par OS, `cargo test -p e2e` enchaîne les fichiers, chacun dans son processus, dès `changes` et en parallèle des tests Rust ; à revoir sur des durées mesurées, en parallélisant d'après les noms de fichiers, jamais d'après une liste tenue à la main (décidé le 2026-11-03)                                                                                        | § 8.3, § 8.4                                                                                             |
+| D32 | L'application Angular dans l'arbre                      | **retirée à la 1.0.0** : `reference/angular/` (sources et scénarios WebdriverIO), la CLI Tauri et leurs entrées Dependabot quittent `main` ; l'étiquette `angular-reference` et sa pré-version gardent tout ; les icônes sont dessinées par `cargo run -p app --example icons` (resvg), au pixel près comme la CLI Tauri (décidé le 2026-11-09) | § 3.1, § 5 |
+| D33 | Manifeste du workspace                                  | **chaque dépendance déclarée une fois**, version et features communes, dans `[workspace.dependencies]` du `Cargo.toml` racine ; une crate prend `workspace = true` et n'ajoute que ses features propres ; le pilote e2e quitte `crates/` pour `e2e/` à la racine (décidé le 2026-11-09) | § 3.1, § 8.3 |
 
 ---
 
@@ -2126,7 +2134,7 @@ enveloppes Tauri d'une ligne ne vivent que pendant la phase 1.
 
 ## Annexe D — Scénarios e2e : de WebdriverIO au pilote egui_inspection
 
-Chaque fichier devient `crates/e2e/tests/<nn>_<nom>.rs`, même nom, même ordre, même groupe de CI,
+Chaque fichier devient `e2e/tests/<nn>_<nom>.rs`, même nom, même ordre, même groupe de CI,
 lancé seul contre le binaire `--features e2e` sur un profil vierge (§ 8.3).
 
 | #   | Scénario             | Phase | Particularité du portage                                                                                                                              |

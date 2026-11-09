@@ -6,7 +6,7 @@ Guidance for Claude Code in this repository. `docs/architecture.md` is the detai
 
 DevNotes — desktop notes app for developers, being rewritten from Angular + Tauri to **egui** (100 % Rust, one process; phase 2 of the plan in progress). The core is **`crates/engine`** (SQLite via Diesel, vault, HTTP, tools); the egui application arrives in `crates/ui` and `crates/app` (binary `devnotes`). Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted), todo lists, Calcul sheets (one result a line) or drawings; they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a palette, requests, tools and spaces. Libraries are **encrypted**, several, each behind its own passphrase.
 
-The Angular application is kept, never built, in **`reference/angular/`** (`src/`, `e2e/`) and whole at the tag `angular-reference`: read a screen's Angular twin before porting it — same look, same behaviour (plan § 5). Its captures are the files of the `angular-reference` pre-release.
+The Angular application is no longer in the tree: it stays whole at the tag `angular-reference` (its `src/` and `e2e/`; `git show angular-reference:src/app/…`, D32). A screen that existed there keeps its look and behaviour (plan § 5); its captures are the files of the `angular-reference` pre-release.
 
 Principles:
 
@@ -20,9 +20,9 @@ Principles:
 ## Commands (repo root)
 
 - Run: `cargo run -p app -- --profile <dir>` (the whole profile, logs and window geometry in `<dir>`; without it, the installed profile `com.devnotes.app.dev`).
-- Cargo workspace: `cargo check|build|test --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings` (⚠️ `--all-features` is what compiles the `e2e` flavour), `cargo fmt --all --check`, `cargo bench -p engine` (not in CI; `autobenches = false` is load-bearing; → "Benchmarks"). Toolchain pinned in `rust-toolchain.toml`; `unsafe_code` forbidden in every crate (D7), `clippy::pedantic` denied.
-- Node is only a build tool: `npm install` · `npm run lint` (Prettier over Markdown, JSON, YAML; `format` writes) · `npm run test:scripts` (⚠️ test files are named one by one in `package.json`; add new ones there) · `npm run icons` (writes `crates/app/icons/`; ⚠️ small `.ico` sizes come from `icons/source/`) · `npm run prettier` (copies the pinned Prettier into `crates/text/prettier/`, the formatter compiled in). The request-script libraries are bundled by `crates/engine/sandbox/build.mjs`, from that folder's own `package.json`.
-- E2E: `cargo build -p app --features e2e --target-dir target/e2e`, then `cargo test -p e2e` (all scenarios, one after the other; `--test 01_first_launch` for one; `cargo test --workspace --exclude e2e` otherwise). The WebdriverIO scenarios come back one by one on this driver (plan § 8.3, Annex D). → "The scenarios, on the assembled window".
+- Cargo workspace: `cargo check|build|test --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings` (⚠️ `--all-features` is what compiles the `e2e` flavour), `cargo fmt --all --check`, `cargo bench -p engine` (not in CI; `autobenches = false` is load-bearing; → "Benchmarks"). Every external dependency is declared once, in the root `[workspace.dependencies]`; a crate takes it with `dep.workspace = true` and adds only its own features (D33). Toolchain pinned in `rust-toolchain.toml`; `unsafe_code` forbidden in every crate (D7), `clippy::pedantic` denied.
+- Node is only a build tool: `npm install` · `npm run lint` (Prettier over Markdown, JSON, YAML; `format` writes) · `npm run test:scripts` (⚠️ test files are named one by one in `package.json`; add new ones there) · `cargo run -p app --example icons` (writes `crates/app/icons/`; ⚠️ small `.ico` sizes come from `icons/source/`) · `npm run prettier` (copies the pinned Prettier into `crates/text/prettier/`, the formatter compiled in). The request-script libraries are bundled by `crates/engine/sandbox/build.mjs`, from that folder's own `package.json`.
+- E2E: `cargo build -p app --features e2e --target-dir target/e2e`, then `cargo test -p e2e` (the driver is `e2e/` at the root; all scenarios, one after the other; `--test 01_first_launch` for one; `cargo test --workspace --exclude e2e` otherwise). `01`–`35` are the WebdriverIO scenarios ported (plan § 8.3, Annex D), the rest are this application's own. → "The scenarios, on the assembled window".
 - Release is a `workflow_dispatch` after a version bump; the version is `[workspace.package] version` in `Cargo.toml` alone (D27), so a bump touches `Cargo.toml` and `Cargo.lock`. `release.yml` still packages Tauri and is not run before 1.0.0 (plan § 4.3). ⚠️ A version branch (`dev/x.y.z`) reaches `main` by a merge commit, never a squash: the release notes read what the merge brings. → "Releasing", `docs/releasing.md`.
 
 ## Things that will bite you
@@ -70,7 +70,7 @@ Principles:
 
 ### Behaviours to keep when porting a screen
 
-Read in `reference/angular/`; the egui mechanism is in the plan (§ 3.3–3.12).
+Read at the `angular-reference` tag; the egui mechanism is in the plan (§ 3.3–3.12).
 
 - Writes are not optimistic: persist, adopt the answer, bump the revision; nothing reloads a view by hand. Time comes from an injectable clock.
 - Creating a note writes nothing until worth keeping. Editor drafts are keyed on note id and committed on blur and every closing path. → "Creating a note writes nothing".
@@ -100,7 +100,7 @@ Read in `reference/angular/`; the egui mechanism is in the plan (§ 3.3–3.12).
 
 ## Claude Code setup
 
-- `.claude/skills/` is versioned. Local: `add-feature`, `egui-ui`, `platform-integration`, `database-migration`, `devnotes-security-review`, `verify-change`, `desktop-e2e-testing` (the `crates/e2e` driver), `backup-restore`, `bug-investigation`, `release-packaging`, `marketing-site`, `performance-profiling`, `dependency-audit`. Vendored, unmodified and pinned in `.claude/skills/PROVENANCE.md`: `frontend-design`, `webapp-testing` (`anthropics/skills`); `seo`, `core-web-vitals`, `accessibility` (`addyosmani/web-quality-skills`); `rust-guidelines` (`microsoft/rust-guidelines`, its `SKILL.md` ours). A vendored skill is generic: where it disagrees with this file or a local skill, the project wins. `frontend-design`, `webapp-testing`, `seo`, `core-web-vitals` and `accessibility` are for the website. `.claude/settings.json` holds the permission rules that back `.claude/rules/security.md`; `settings.local.json`, `launch.json` and `.mcp.json` stay local.
+- `.claude/skills/` is versioned. Local: `add-feature`, `egui-ui`, `platform-integration`, `database-migration`, `devnotes-security-review`, `verify-change`, `desktop-e2e-testing` (the `e2e/` driver), `backup-restore`, `bug-investigation`, `release-packaging`, `marketing-site`, `performance-profiling`, `dependency-audit`. Vendored, unmodified and pinned in `.claude/skills/PROVENANCE.md`: `frontend-design`, `webapp-testing` (`anthropics/skills`); `seo`, `core-web-vitals`, `accessibility` (`addyosmani/web-quality-skills`); `rust-guidelines` (`microsoft/rust-guidelines`, its `SKILL.md` ours). A vendored skill is generic: where it disagrees with this file or a local skill, the project wins. `frontend-design`, `webapp-testing`, `seo`, `core-web-vitals` and `accessibility` are for the website. `.claude/settings.json` holds the permission rules that back `.claude/rules/security.md`; `settings.local.json`, `launch.json` and `.mcp.json` stay local.
 
 ## Design reference
 

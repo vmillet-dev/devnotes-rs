@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="src-tauri/icons/devnotes.svg" width="96" alt="DevNotes">
+<img src="crates/app/icons/devnotes.svg" width="96" alt="DevNotes">
 
 # DevNotes
 

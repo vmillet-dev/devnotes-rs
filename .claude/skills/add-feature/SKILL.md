@@ -5,7 +5,7 @@ description: Use when adding or changing a DevNotes feature end to end (core ser
 
 # Add a feature
 
-1. Read the matching section of `docs/architecture.md` (headings are named in `CLAUDE.md`), the plan's section for the screen, the nearest existing feature of the same shape, and the screen's Angular twin in `reference/angular/` (same look, same behaviour). Copy the layout; do not invent a new one.
+1. Read the matching section of `docs/architecture.md` (headings are named in `CLAUDE.md`), the plan's section for the screen, the nearest existing feature of the same shape, and, for a screen that existed before 1.0.0, its Angular twin at the `angular-reference` tag (`git show angular-reference:src/app/…`; same look, same behaviour). Copy the layout; do not invent a new one.
 2. Decide the side: data processing, filtering, rules and validation are the **core** (`crates/engine/src/<feature>/{model,store}.rs`, service functions in `<feature>.rs`). The interface describes and displays.
 3. Schema change? Run `database-migration` first.
 4. The call: one function in `crates/ui/src/api/<feature>.rs`, the only place that names the engine, returning a `Pending` from the right `Backend` queue (`db` for anything touching the library or the index, `compute` for pure work, `spawn` for the network). A new `ErrorCode` gets its sentence in the UI's exhaustive `match` and its key in `fr.json` **and** `en.json`.
