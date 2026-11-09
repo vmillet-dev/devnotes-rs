@@ -1,7 +1,8 @@
 use chrono::Utc;
 use engine::error::ErrorCode;
 use engine::folders::board::{
-    BoardFrame, BoardQuery, BoardScope, MIN_ZONE_HEIGHT, MIN_ZONE_WIDTH, ZonePlacement,
+    BoardFrame, BoardQuery, BoardScope, MIN_ZONE_HEIGHT, MIN_ZONE_WIDTH, PreviewLines,
+    ZonePlacement,
 };
 use engine::folders::model::{FolderColour, FolderDraft};
 use engine::folders::{
@@ -35,6 +36,7 @@ fn board(space_id: &str) -> BoardQuery {
         kinds: Vec::new(),
         priorities: Vec::new(),
         now: Utc::now(),
+        preview_lines: PreviewLines::default(),
     }
 }
 
@@ -53,7 +55,9 @@ fn a_folder_is_created_renamed_recoloured_and_deleted() {
     let listed = session
         .call(|e| list_folders(e, Some(space.clone())))
         .unwrap();
-    session.call(|e| delete_folder(e, id.clone())).unwrap();
+    session
+        .call(|e| delete_folder(e, id.clone(), PreviewLines::default()))
+        .unwrap();
 
     assert_eq!(renamed.name, "Shell");
     assert_eq!(recoloured.colour, FolderColour::Amber);
@@ -100,10 +104,19 @@ fn a_filing_is_undone_by_the_filings_it_answered() {
         .id;
 
     let filings = session
-        .call(|e| file_notes(e, vec![note.clone()], Some(zone.clone())))
+        .call(|e| {
+            file_notes(
+                e,
+                vec![note.clone()],
+                Some(zone.clone()),
+                PreviewLines::default(),
+            )
+        })
         .unwrap();
     let filed = session.call(|e| board_view(e, board(&space))).unwrap();
-    let undone = session.call(|e| file_notes_back(e, filings)).unwrap();
+    let undone = session
+        .call(|e| file_notes_back(e, filings, PreviewLines::default()))
+        .unwrap();
     let unfiled = session.call(|e| board_view(e, board(&space))).unwrap();
 
     assert_eq!(filed.zones[0].notes.len(), 1);
@@ -135,7 +148,15 @@ fn a_saved_layout_is_what_a_tidy_up_hands_back() {
         .unwrap();
     let saved = session.call(|e| board_view(e, board(&space))).unwrap();
     let arranged = session
-        .call(|e| arrange_board(e, space.clone(), None, BoardScope::Everything))
+        .call(|e| {
+            arrange_board(
+                e,
+                space.clone(),
+                None,
+                BoardScope::Everything,
+                PreviewLines::default(),
+            )
+        })
         .unwrap();
 
     assert_eq!(saved.zones[0].frame, frame);
@@ -179,7 +200,14 @@ fn filed_note(session: &Session, space_id: &str, folder_id: &str) -> String {
         .note
         .id;
     session
-        .call(|e| file_notes(e, vec![id.clone()], Some(folder_id.to_string())))
+        .call(|e| {
+            file_notes(
+                e,
+                vec![id.clone()],
+                Some(folder_id.to_string()),
+                PreviewLines::default(),
+            )
+        })
         .unwrap();
     id
 }

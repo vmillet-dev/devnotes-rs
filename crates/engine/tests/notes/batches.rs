@@ -289,6 +289,7 @@ fn putting_a_move_back_files_the_note_into_its_folder_again() {
         std::slice::from_ref(&note.id),
         Some(&folder.id),
         t0(),
+        crate::CARD,
     )
     .unwrap();
 
@@ -324,6 +325,7 @@ fn a_folder_gone_since_the_move_leaves_the_note_loose() {
         std::slice::from_ref(&note.id),
         Some(&folder.id),
         t0(),
+        crate::CARD,
     )
     .unwrap();
     let previous = move_many(
@@ -333,7 +335,7 @@ fn a_folder_gone_since_the_move_leaves_the_note_loose() {
         t1(),
     )
     .unwrap();
-    folders::delete(&mut connection, &folder.id).unwrap();
+    folders::delete(&mut connection, &folder.id, crate::CARD).unwrap();
 
     assert_eq!(restore_placements(&mut connection, &previous).unwrap(), 1);
 

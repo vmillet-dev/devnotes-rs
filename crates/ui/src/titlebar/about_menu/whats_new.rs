@@ -70,7 +70,7 @@ fn release(ui: &mut Ui, release: &ChangelogRelease, language: Language) {
         }
         if release.version == VERSION {
             let installed = i18n::translate(language, keys::whats_new::INSTALLED, &[]);
-            let badge = widgets::hue_badge(ui, &installed, p.amber_text, None);
+            let badge = widgets::hue_badge(ui, &installed, p.amber_text);
             widgets::address(ui, &badge, "news-installed");
         }
     });

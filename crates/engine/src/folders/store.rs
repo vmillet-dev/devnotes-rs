@@ -367,7 +367,7 @@ fn place(
 /// What it held goes to its parent — its notes, filed there, and its sub-folders, each to a
 /// free slot on that board — or loose at the top of the space. `updated_at` is not touched:
 /// the user aimed at the folder.
-pub fn delete(connection: &mut Library, id: &str) -> Result<(), StorageError> {
+pub fn delete(connection: &mut Library, id: &str, card: i32) -> Result<(), StorageError> {
     connection.transaction(|connection, _vault| {
         let lineage = lineage_of(connection, id)?;
         let parent = lineage.parent(id).map(str::to_string);
@@ -390,7 +390,7 @@ pub fn delete(connection: &mut Library, id: &str) -> Result<(), StorageError> {
 
         if let Some(parent) = &parent {
             let after = lineage_of(connection, parent)?;
-            grow_with_ancestors(connection, &after, parent)?;
+            grow_with_ancestors(connection, &after, parent, card)?;
         }
         Ok(())
     })
@@ -402,11 +402,12 @@ fn grow_with_ancestors(
     connection: &mut SqliteConnection,
     lineage: &Lineage,
     folder_id: &str,
+    card: i32,
 ) -> Result<(), StorageError> {
     for zone in lineage.path(folder_id) {
         let held = count_filed(connection, &lineage.subtree(&zone))?;
         let nested = !lineage.children(Some(&zone)).is_empty();
-        board::grow_to_fit(connection, &zone, held, nested)?;
+        board::grow_to_fit(connection, &zone, (held, nested), card)?;
     }
     Ok(())
 }
@@ -419,6 +420,7 @@ pub fn file_many(
     ids: &[String],
     folder_id: Option<&str>,
     now: DateTime<Utc>,
+    card: i32,
 ) -> Result<Vec<NoteFiling>, StorageError> {
     if ids.is_empty() {
         return Ok(Vec::new());
@@ -461,7 +463,7 @@ pub fn file_many(
         // The gesture that filled the zone is the one that should make room in it.
         if let Some(folder_id) = folder_id {
             let lineage = lineage_of(connection, folder_id)?;
-            grow_with_ancestors(connection, &lineage, folder_id)?;
+            grow_with_ancestors(connection, &lineage, folder_id, card)?;
         }
 
         Ok(filed)
@@ -486,6 +488,7 @@ fn count_filed(
 pub fn restore_filings(
     connection: &mut Library,
     filings: &[NoteFiling],
+    card: i32,
 ) -> Result<usize, StorageError> {
     if filings.is_empty() {
         return Ok(0);
@@ -523,7 +526,7 @@ pub fn restore_filings(
             .collect::<std::collections::BTreeSet<_>>()
         {
             let lineage = lineage_of(connection, folder_id)?;
-            grow_with_ancestors(connection, &lineage, folder_id)?;
+            grow_with_ancestors(connection, &lineage, folder_id, card)?;
         }
 
         Ok(restored)

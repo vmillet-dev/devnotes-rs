@@ -69,14 +69,14 @@ pub fn frame_of(
 pub fn grow_to_fit(
     connection: &mut SqliteConnection,
     folder_id: &str,
-    note_count: usize,
-    nested: bool,
+    (note_count, nested): (usize, bool),
+    card: i32,
 ) -> Result<(), StorageError> {
     let Some(frame) = frame_of(connection, folder_id)? else {
         return Ok(());
     };
 
-    let needed = board::zone_height(note_count, board::columns_in(frame.width), nested);
+    let needed = board::zone_height(note_count, board::columns_in(frame.width), nested, card);
     if frame.height >= needed {
         return Ok(());
     }
@@ -230,6 +230,7 @@ pub fn geometry(
     space_id: &str,
     zones: &[(String, bool)],
     occupancy: &Occupancy,
+    card: i32,
 ) -> Result<Geometry, StorageError> {
     connection.transaction(|connection, _vault| {
         let mut stored_frames = frames(connection, space_id)?;
@@ -253,7 +254,7 @@ pub fn geometry(
                     nested: *nested,
                 })
                 .collect();
-            let arranged = board::arrange_zones(&contents);
+            let arranged = board::arrange_zones(&contents, card);
 
             for (id, frame) in folder_ids.into_iter().zip(arranged) {
                 if stored_frames.contains_key(id) {
@@ -279,7 +280,7 @@ pub fn geometry(
             let mut seat = 0;
 
             for id in unplaced {
-                let (reached, point) = board::free_slot_from(seat, top, &standing, &zones);
+                let (reached, point) = board::free_slot_from(seat, top, (&standing, &zones), card);
                 seat = reached;
                 set_position(connection, id, point)?;
                 stored_positions.insert(id.clone(), point);
@@ -365,6 +366,7 @@ pub fn arrange(
     space_id: &str,
     root: Option<&str>,
     scope: BoardScope,
+    card: i32,
 ) -> Result<BoardArrangement, StorageError> {
     connection.transaction(|connection, _vault| {
         let loose = loose_ids(connection, space_id, root)?;
@@ -375,10 +377,10 @@ pub fn arrange(
         places.retain(|id, _| loose.contains(id));
 
         let next = match scope {
-            BoardScope::Everything => board::arrange_everything(&zones, &loose),
+            BoardScope::Everything => board::arrange_everything(&zones, &loose, card),
             BoardScope::LooseCards => {
                 let standing: Vec<BoardFrame> = before.values().copied().collect();
-                board::arrange_loose_cards(&standing, &loose)
+                board::arrange_loose_cards(&standing, &loose, card)
             }
         };
 

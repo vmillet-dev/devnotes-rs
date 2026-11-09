@@ -3,7 +3,10 @@
 
 use engine::folders::{
     self,
-    board::{BoardArrangement, BoardQuery, BoardScope, BoardView, CardPlacement, ZonePlacement},
+    board::{
+        BoardArrangement, BoardQuery, BoardScope, BoardView, CardPlacement, PreviewLines,
+        ZonePlacement,
+    },
 };
 
 use crate::backend::{Backend, Pending};
@@ -30,6 +33,7 @@ pub fn arrange(
     space_id: String,
     root_id: Option<String>,
     scope: BoardScope,
+    lines: PreviewLines,
 ) -> Pending<BoardArrangement> {
-    backend.db(move |engine| folders::arrange_board(engine, space_id, root_id, scope))
+    backend.db(move |engine| folders::arrange_board(engine, space_id, root_id, scope, lines))
 }

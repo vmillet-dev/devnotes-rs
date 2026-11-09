@@ -3,6 +3,7 @@
 //! on the board. Writes are not optimistic: each answer bumps the revision, and the list is asked
 //! again with it.
 
+use engine::folders::board::PreviewLines;
 use engine::folders::model::{Folder, FolderColour, FolderMove};
 use i18n::{Message, keys};
 
@@ -222,11 +223,11 @@ impl FoldersState {
     }
 
     /// What it held goes up a level, and so does the canvas if it was showing it.
-    pub fn delete(&mut self, backend: &Backend, id: String) {
+    pub fn delete(&mut self, backend: &Backend, id: String, lines: PreviewLines) {
         let parent = self.find(&id).and_then(|folder| folder.parent_id.clone());
         let failed = Message::new(keys::errors::FOLDER_DELETE_FAILED);
         let write = Write::Deleted {
-            pending: api::folders::delete(backend, id.clone()),
+            pending: api::folders::delete(backend, id.clone(), lines),
             folder: id,
             parent,
         };

@@ -6,7 +6,6 @@ use std::ops::Range;
 
 use engine::notes::view::NotesView;
 
-pub const CARD_HEIGHT: f32 = 150.0;
 const CARD_MIN_WIDTH: f32 = 220.0;
 /// A heading's line, 11 px uppercase, and the 12 px under it.
 pub const HEADING_HEIGHT: f32 = 15.0;
@@ -35,8 +34,9 @@ pub struct Rows {
 }
 
 impl Rows {
-    /// `grid` is the gap between cards, `section` the one after a section.
-    pub fn of(view: &NotesView, width: f32, grid: f32, section: f32) -> Self {
+    /// `card` is a card's height, `grid` the gap between cards, `section` the one after a
+    /// section.
+    pub fn of(view: &NotesView, width: f32, card: f32, (grid, section): (f32, f32)) -> Self {
         let columns = columns(width, grid);
         #[expect(clippy::cast_precision_loss, reason = "a handful of columns")]
         let card_width = ((width - grid * (columns - 1) as f32) / columns as f32).max(0.0);
@@ -58,7 +58,7 @@ impl Rows {
                         section: index,
                         first,
                     },
-                    CARD_HEIGHT + gap,
+                    card + gap,
                 );
                 first += columns;
             }

@@ -72,7 +72,12 @@ fn a_folder_chosen_shows_its_notes_in_its_space() {
     let runbooks = folder(&backend, &spaces[0], None, "Runbooks");
     let (id, into) = (filed.id.clone(), runbooks.id.clone());
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::folders::file_notes(engine, vec![id], Some(into))
+        engine::folders::file_notes(
+            engine,
+            vec![id],
+            Some(into),
+            engine::folders::board::PreviewLines::default(),
+        )
     })
     .unwrap();
     let mut harness = area(backend, profile);

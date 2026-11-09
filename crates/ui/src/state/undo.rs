@@ -4,6 +4,8 @@
 use i18n::keys;
 
 use super::Revision;
+use engine::folders::board::PreviewLines;
+
 use crate::api::{self, undo::Reversible};
 use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
@@ -48,12 +50,13 @@ impl UndoState {
     }
 
     /// `false` when there was nothing to put back.
-    pub fn revert(&mut self, backend: &Backend) -> bool {
+    pub fn revert(&mut self, backend: &Backend, lines: PreviewLines) -> bool {
         let Some(action) = self.last.take() else {
             return false;
         };
         self.banner_until = None;
-        self.reverting.push(api::undo::revert(backend, action));
+        self.reverting
+            .push(api::undo::revert(backend, action, lines));
         true
     }
 
@@ -97,8 +100,14 @@ mod tests {
         assert!(undo.banner(17.9).is_some());
         assert!(undo.banner(18.0).is_none());
         assert!(undo.banner_left(18.0).is_none());
-        assert!(undo.revert(&backend), "Ctrl+Z still reads the record");
-        assert!(!undo.revert(&backend), "and puts it back once");
+        assert!(
+            undo.revert(&backend, PreviewLines::default()),
+            "Ctrl+Z still reads the record"
+        );
+        assert!(
+            !undo.revert(&backend, PreviewLines::default()),
+            "and puts it back once"
+        );
     }
 
     #[test]
@@ -124,6 +133,6 @@ mod tests {
         undo.dismiss();
 
         assert!(undo.banner(0.0).is_none());
-        assert!(!undo.revert(&backend));
+        assert!(!undo.revert(&backend, PreviewLines::default()));
     }
 }
