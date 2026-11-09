@@ -314,10 +314,13 @@ impl App {
     }
 
     /// Clicks the first `author_id` that `which` picks, once it is shown: a row of a list, by
-    /// what the user named it.
+    /// what the user named it. ⚠️ Shown means placed too: a node joins the tree a frame before
+    /// it has bounds, and a card just written was clicked in that frame.
     pub fn click_where(&mut self, author_id: &str, which: impl Fn(&Node) -> bool) {
         self.eventually(&format!("{author_id} is shown"), |tree| {
-            tree.all(author_id).into_iter().any(&which)
+            tree.all(author_id)
+                .into_iter()
+                .any(|node| which(node) && node.bounds().is_some())
         });
         let bounds = self
             .tree()
