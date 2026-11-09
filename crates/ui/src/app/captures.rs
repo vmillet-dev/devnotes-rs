@@ -935,7 +935,7 @@ fn the_editor_full_screen_per_kind() {
         capture(&mut harness, &format!("editor-fullscreen-{name}"));
         if name == "calc" {
             click(&mut harness, "editor-details");
-            capture(&mut harness, "editor-fullscreen-details");
+            capture(&mut harness, "editor-fullscreen-details-hidden");
             click(&mut harness, "editor-details");
         }
         // Full screen is a preference: the next note opens expanded.
