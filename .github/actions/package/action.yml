@@ -1,0 +1,111 @@
+name: Package
+description: >-
+  The packages of the release build already in target/release (NSIS on Windows; deb, AppImage and
+  rpm on Linux), signed, each checked to hold the application alone, gathered with the standalone
+  executable into a folder.
+
+inputs:
+  private-key:
+    description: The minisign private key, as `cargo packager signer generate` writes it.
+    required: true
+  password:
+    description: Its password.
+    required: false
+    default: ''
+  out:
+    description: The folder the packages and their signatures are gathered into.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Pinned: the packages' layout and the signatures' format are what the updater reads (D26).
+    - name: Packaging tools
+      shell: bash
+      run: |
+        cargo install --locked cargo-packager@0.11.8
+        if [ "$RUNNER_OS" = Linux ]; then
+          cargo install --locked cargo-generate-rpm@0.21.1
+          sudo apt-get install -y --no-install-recommends rpm
+        fi
+
+    # The packager builds nothing: it takes `target/release/devnotes` as the step before left it,
+    # and signs every package it writes. The AppImage tools are downloaded from GitHub.
+    - name: Packages
+      shell: bash
+      env:
+        CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ inputs.private-key }}
+        CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ inputs.password }}
+        # linuxdeploy is itself an AppImage: extracted rather than mounted, no FUSE needed.
+        APPIMAGE_EXTRACT_AND_RUN: '1'
+      run: |
+        packages="$GITHUB_WORKSPACE/target/release/packages"
+        rm -rf "$packages"
+        if [ "$RUNNER_OS" = Windows ]; then
+          cargo packager -p app --release -f nsis -o "$packages"
+        else
+          cargo packager -p app --release -f deb,appimage -o "$packages"
+          version=$(cargo metadata --format-version 1 --no-deps \
+            | jq -r '.packages[] | select(.name == "app") | .version')
+          cargo generate-rpm -p crates/app -o "$packages/devnotes-$version.x86_64.rpm"
+          cargo packager signer sign "$packages/devnotes-$version.x86_64.rpm"
+        fi
+        ls -l "$packages"
+
+    # A package carries what it is told to: one stray binary (0.9.1 shipped `export-bindings`
+    # beside the application) is refused here. NSIS is installed into a scratch folder and
+    # uninstalled: listing the installer would read NSIS's own plugins as files.
+    - name: Each package holds the application alone
+      shell: bash
+      run: |
+        packages="$GITHUB_WORKSPACE/target/release/packages"
+        check() {
+          found=$(echo "$2" | sort | tr '\n' ' ')
+          echo "$1: $found"
+          if [ "$found" != "$3 " ]; then
+            echo "::error::$1 carries more or less than the application: $found"
+            exit 1
+          fi
+        }
+        if [ "$RUNNER_OS" = Windows ]; then
+          installer=$(ls "$packages"/*-setup.exe)
+          scratch="$RUNNER_TEMP/nsis-check"
+          pwsh -NoProfile -Command "Start-Process '$(cygpath -w "$installer")' -ArgumentList '/S','/D=$(cygpath -w "$scratch")' -Wait"
+          check NSIS "$(find "$scratch" -maxdepth 1 -name '*.exe' -printf '%f\n')" 'devnotes.exe uninstall.exe'
+          test -f "$scratch/identity/names.txt" || { echo "::error::NSIS: no identity lists beside the executable"; exit 1; }
+          pwsh -NoProfile -Command "Start-Process '$(cygpath -w "$scratch/uninstall.exe")' -ArgumentList '/S' -Wait"
+          # The uninstaller leaves the remembered folder behind; a later install would reuse it.
+          reg delete 'HKCU\Software\vmillet-dev\DevNotes' //f > /dev/null 2>&1 || true
+        else
+          deb=$(ls "$packages"/*.deb)
+          check deb "$(dpkg-deb -c "$deb" | awk '$6 ~ /^\.?\/?usr\/bin\/[^\/]+$/ { n = split($6, p, "/"); print p[n] }')" devnotes
+          dpkg-deb -c "$deb" | grep -q 'usr/lib/devnotes/identity/names.txt' || { echo "::error::deb: no identity lists"; exit 1; }
+          rpm=$(ls "$packages"/*.rpm)
+          check rpm "$(rpm -qlp "$rpm" | grep '^/usr/bin/' | xargs -n1 basename)" devnotes
+          rpm -qlp "$rpm" | grep -q '^/usr/lib/devnotes/identity/names.txt$' || { echo "::error::rpm: no identity lists"; exit 1; }
+          image=$(ls "$packages"/*.AppImage)
+          (cd "$RUNNER_TEMP" && rm -rf squashfs-root && "$image" --appimage-extract > /dev/null)
+          check AppImage "$(ls "$RUNNER_TEMP/squashfs-root/usr/bin")" devnotes
+          test -f "$RUNNER_TEMP/squashfs-root/usr/lib/devnotes/identity/names.txt" || { echo "::error::AppImage: no identity lists"; exit 1; }
+        fi
+
+    # The packages, their signatures, and the standalone executable, renamed so that the two
+    # operating systems do not overlap in a release.
+    - name: Gather
+      shell: bash
+      env:
+        OUT: ${{ inputs.out }}
+      run: |
+        packages="$GITHUB_WORKSPACE/target/release/packages"
+        version=$(cargo metadata --format-version 1 --no-deps \
+          | jq -r '.packages[] | select(.name == "app") | .version')
+        mkdir -p "$OUT"
+        find "$packages" -maxdepth 1 -type f \
+          \( -name '*-setup.exe' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.sig' \) \
+          -exec cp {} "$OUT/" \;
+        if [ "$RUNNER_OS" = Windows ]; then
+          cp target/release/devnotes.exe "$OUT/devnotes-$version-windows.exe"
+        else
+          cp target/release/devnotes "$OUT/devnotes-$version-linux"
+        fi
+        ls -l "$OUT"

@@ -11,12 +11,7 @@ use resvg::{tiny_skia, usvg};
 const HINTED: [u32; 3] = [16, 24, 32];
 const SCALED: [u32; 3] = [48, 64, 256];
 /// The window's icon, the packages' and the desktop entries'.
-const PNGS: [(&str, u32); 4] = [
-    ("32x32.png", 32),
-    ("128x128.png", 128),
-    ("128x128@2x.png", 256),
-    ("icon.png", 512),
-];
+const PNGS: [(&str, u32); 3] = [("32x32.png", 32), ("128x128.png", 128), ("icon.png", 512)];
 
 fn main() {
     let icons = Path::new(env!("CARGO_MANIFEST_DIR")).join("icons");

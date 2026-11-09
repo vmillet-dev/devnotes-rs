@@ -2,9 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-/// The profile of the egui application until 1.0.0: the Angular reference keeps
-/// `com.devnotes.app`, and the two never share a library (D16).
-pub const DEFAULT_PROFILE: &str = "com.devnotes.app.dev";
+/// The installed profile, named after the packages' identifier (`[package.metadata.packager]`).
+/// Until 1.0.0 it was `com.devnotes.app.dev`, kept apart from the Angular application (D16).
+pub const DEFAULT_PROFILE: &str = "com.devnotes.app";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Locations {

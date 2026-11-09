@@ -186,13 +186,15 @@ jobs:
         if: ${{ inputs.dry_run }}
         run: echo "::notice::dry run — nothing was committed, tagged or published"
 
+  # In a dry run too: the packages and their signatures by the real key are what a dry run
+  # proves, without publishing them. Its binary carries the changelog as it was, without the
+  # section `prepare` did not commit.
   release-build:
-    name: Bundle ${{ matrix.target }}
+    name: Package ${{ matrix.target }}
     needs: prepare
-    if: ${{ !inputs.dry_run }}
     environment: release
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash
@@ -211,82 +213,23 @@ jobs:
       # cannot come to mean something else in between.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.prepare.outputs.sha }}
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
+          ref: ${{ needs.prepare.outputs.sha || github.sha }}
 
       - uses: ./.github/actions/setup-rust
         with:
           shared-key: release-${{ matrix.target }}
           save-if: 'true'
 
-      - run: npm ci
+      - run: cargo build -p app --release --locked
 
-      # Without `tagName` the action only builds: it creates no release, so the two matrix
-      # jobs do not fight over the same one.
-      # `bundle.targets: "all"` produces NSIS + MSI on Windows, deb + rpm + AppImage on Linux.
-      #
-      # `bundle.createUpdaterArtifacts` being on, the bundler demands the private signing key:
-      # without the secret this job fails instead of publishing binaries the updater would
-      # then refuse to install.
-      - uses: tauri-apps/tauri-action@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      # ⚠️ The secrets keep the names they had under Tauri: the same minisign key, the same
+      # password (D26). Without them the packager signs nothing and `publish` refuses a
+      # manifest with no signature, rather than shipping what the updater would refuse.
+      - uses: ./.github/actions/package
         with:
-          args: --verbose
-
-      # The bundler packages every binary Cargo builds, which is how 0.9.1's installers came to
-      # carry `export-bindings` beside the application. The MSI is unpacked by an administrative
-      # install, which installs nothing, and the .deb listed (Tauri writes its entries without a
-      # leading `./`); NSIS, RPM and the AppImage are made from the same list of binaries.
-      - name: Each bundle holds the application alone
-        run: |
-          if [ '${{ matrix.target }}' = 'windows' ]; then
-            msi=$(cygpath -w "$(ls target/release/bundle/msi/*.msi)")
-            pwsh -NoProfile -Command "Start-Process msiexec -ArgumentList '/a','$msi','/qn','TARGETDIR=$(cygpath -w "$RUNNER_TEMP/msi")' -Wait"
-            found=$(find "$RUNNER_TEMP/msi" -type f -name '*.exe' -printf '%f\n' | sort)
-            expected='devnotes.exe'
-          else
-            found=$(dpkg-deb -c target/release/bundle/deb/*.deb \
-              | awk '$6 ~ /^(\.\/)?usr\/bin\/[^\/]+$/ { n = split($6, part, "/"); print part[n] }' | sort)
-            expected='devnotes'
-          fi
-          echo "executables: $found"
-          if [ "$found" != "$expected" ]; then
-            echo "::error::a bundle carries more than the application: $found"
-            exit 1
-          fi
-
-      # The `.sig` files are collected wholesale — the bundler produces one per target,
-      # including those the updater cannot install. `publish` is what sorts them, rather than
-      # this filter: a signature dropped here would vanish from the logs, and with it the
-      # means of understanding an incomplete manifest.
-      #
-      # ⚠️ The version comes from `prepare` and not from `GITHUB_REF_NAME`: on a
-      # `workflow_dispatch` the latter is `main`, and the binaries would be called
-      # `devnotes-main-windows.exe`.
-      - name: Gather installers and the standalone executable
-        env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          mkdir -p release
-          find target/release/bundle -type f \
-            \( -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' \
-               -o -name '*.AppImage' -o -name '*.sig' \) \
-            -exec cp {} release/ \;
-          # The bundler does not collect the bare binary; renaming it keeps the two operating
-          # systems from overlapping in the release.
-          if [ '${{ matrix.target }}' = 'windows' ]; then
-            cp target/release/devnotes.exe "release/devnotes-${VERSION}-windows.exe"
-          else
-            cp target/release/devnotes "release/devnotes-${VERSION}-linux"
-          fi
-          ls -l release
+          private-key: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          password: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          out: release
 
       - uses: actions/upload-artifact@v7
         with:
@@ -327,100 +270,15 @@ jobs:
             --out "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md"
 
-      # The manifest the updater plugin reads. It is assembled here rather than by
-      # `tauri-action`: that one only produces it when it creates the release itself, which
-      # the build matrix avoids so as not to publish twice.
+      # The manifest the updater reads, with each platform's `format` (D26).
       - name: Assemble latest.json
         env:
           TAG: ${{ needs.prepare.outputs.tag }}
           REPO: ${{ github.repository }}
-          # The section the step above extracted, which the prompt shows without a click.
-          NOTES_FILE: ${{ runner.temp }}/release-notes.md
         run: |
-          node <<'EOF'
-          const fs = require('fs');
-
-          const dir = 'release';
-          const { TAG, REPO } = process.env;
-
-          // The bundler signs everything it produces, system packages included. But the
-          // updater only knows how to install the NSIS installer and the AppImage: the
-          // other signatures (.deb, .rpm, .msi) are ignored, not fatal.
-          const TARGETS = [
-            { suffix: '.exe', key: 'windows-x86_64' },
-            { suffix: '.AppImage', key: 'linux-x86_64' },
-          ];
-
-          // Each .sig names the file it signs. That is what tells the NSIS installer from
-          // the standalone executable, both of them .exe: only the first one is signed.
-          const platforms = {};
-          const chosen = {};
-          const ignored = [];
-
-          for (const sig of fs.readdirSync(dir).filter((name) => name.endsWith('.sig'))) {
-            const asset = sig.slice(0, -'.sig'.length);
-            if (!fs.existsSync(`${dir}/${asset}`)) {
-              throw new Error(`orphan signature: ${sig}`);
-            }
-
-            const target = TARGETS.find(({ suffix }) => asset.endsWith(suffix));
-            if (!target) {
-              ignored.push(asset);
-              continue;
-            }
-            // Two candidates for one platform: picking one at random might ship the one
-            // the updater cannot launch.
-            if (chosen[target.key]) {
-              throw new Error(
-                `two artifacts for ${target.key}: ${chosen[target.key]} and ${asset}`,
-              );
-            }
-
-            chosen[target.key] = asset;
-            platforms[target.key] = {
-              signature: fs.readFileSync(`${dir}/${sig}`, 'utf8').trim(),
-              url: `https://github.com/${REPO}/releases/download/${TAG}/${asset}`,
-            };
-          }
-
-          if (ignored.length) {
-            console.log(`Signatures ignored (targets outside the updater): ${ignored.join(', ')}`);
-          }
-
-          // Windows is the priority target: without it the manifest would serve nobody, so
-          // publication breaks. Linux ships if it is there, but its absence must not hold
-          // back an otherwise healthy Windows release.
-          if (!platforms['windows-x86_64']) {
-            throw new Error('no Windows update artifact in release/');
-          }
-          if (!platforms['linux-x86_64']) {
-            console.log('::warning::No Linux update artifact: Windows-only manifest.');
-          }
-
-          // Without the "v": the updater compares the value as semver, and a prefix would
-          // make it unreadable — no update would ever be offered.
-          // The prompt has rendered `update.notes` since it was written, and the manifest
-          // has never carried the key — so the block was dead markup that looked like a
-          // shipped feature. The text already exists at this point in the job: it is what
-          // the release body is built from.
-          //
-          // ⚠️ This file is the changelog section alone. The release **page** gets a copy
-          // with a compare link appended; the manifest gets this one, because a link in a
-          // `<pre>` inside the update prompt is noise nobody can click.
-          const notes = fs.readFileSync(process.env.NOTES_FILE, 'utf8').trim();
-          if (!notes) {
-            throw new Error(`no release notes at ${process.env.NOTES_FILE}`);
-          }
-
-          const manifest = {
-            version: TAG.replace(/^v/, ''),
-            pub_date: new Date().toISOString(),
-            notes,
-            platforms,
-          };
-          fs.writeFileSync(`${dir}/latest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
-          console.log(JSON.stringify(manifest, null, 2));
-          EOF
+          node scripts/latest-json.mjs --dir release --version "$TAG" \
+            --base "https://github.com/$REPO/releases/download/$TAG" \
+            --notes "$RUNNER_TEMP/release-notes.md"
 
       - name: Checksums
         run: |

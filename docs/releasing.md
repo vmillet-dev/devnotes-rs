@@ -19,11 +19,12 @@ state to clean up if it stops.
    re-run rather than a deleted tag.
 
 2. **Actions → Release → Run workflow, with `dry_run` checked.** It prints the notes it
-   would write to the run summary and changes nothing. Read them: this is the only moment
-   where a misfiled entry is free to fix.
+   would write to the run summary, builds and signs the packages (kept as the run's
+   artifacts), and changes nothing. Read the notes: this is the only moment where a misfiled
+   entry is free to fix.
 
 3. **Run it again unchecked.** It writes the `CHANGELOG.md` section, commits it, tags,
-   builds the bundles and publishes the release.
+   builds the packages and publishes the release.
 
 ## A version on a branch of its own
 
@@ -93,23 +94,38 @@ hand is fine until the next release regenerates it. Older sections are never tou
 
 ## What gets published
 
-Per platform, from one matrix build:
+Per platform, from one matrix build: `cargo build -p app --release`, then
+`cargo packager -p app --release` (`.github/actions/package`), which builds nothing and packages
+what the build left in `target/release`. Its configuration is `[package.metadata.packager]` in
+`crates/app/Cargo.toml`.
 
-- **Windows** — the NSIS installer (`*_x64-setup.exe`), the MSI (`*_x64_en-US.msi`) and the
+- **Windows** — the NSIS installer, per user and without administrator rights
+  (`devnotes_<version>_x64-setup.exe`, the only Windows format: no `.msi`, D8), and the
   standalone executable (`devnotes-<version>-windows.exe`).
-- **Linux** — AppImage, `.deb`, `.rpm`, and the standalone binary (`devnotes-<version>-linux`).
+- **Linux** — the AppImage (`devnotes_<version>_x86_64.AppImage`), the `.deb` (by
+  `cargo-packager`), the `.rpm` (by `cargo-generate-rpm`, `[package.metadata.generate-rpm]`),
+  and the standalone binary (`devnotes-<version>-linux`).
 
 Plus `SHA256SUMS.txt` over all of them, and `latest.json` — the manifest the in-app updater
-reads.
+reads, written by `scripts/latest-json.mjs`. Neither package needs WebView2 or WebKitGTK any
+more; the Linux ones depend on GTK (the tray alone), xkbcommon, Vulkan and the indicator
+library.
 
-`bundle.createUpdaterArtifacts` makes the bundler emit a `.sig` beside every bundle,
-including the `.deb` and `.rpm` that the updater can never install; system packages are
-updated by their package manager by design, so the manifest step ignores those signatures
-rather than choking on them.
+Each package is checked to hold the application alone (one binary, and the identity tool's
+lists where `Paths::resources` looks for them) before anything is uploaded.
 
-⚠️ **The release build fails outright without the minisign private key.** That is deliberate:
-an unsigned release would be one the updater refuses to install, discovered by users rather
-than by CI. The public half lives in `tauri.conf.json`.
+**Signatures.** `cargo-packager` signs every package it writes with the minisign key, and the
+`.rpm` is signed by `cargo packager signer sign`. The key and its password are the release
+environment's secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`,
+passed as `CARGO_PACKAGER_SIGN_PRIVATE_KEY[_PASSWORD]`: the key the published versions were
+signed with, kept (D26). The updater (`cargo-packager-updater`, `crates/platform/src/updater`)
+installs only the NSIS installer (passive, `/P /R`) and the AppImage (replaced in place), so the
+manifest carries those two, each with its `format`; the `.deb` and `.rpm` are updated by their
+package manager by design, and their signatures are ignored rather than fatal.
+
+⚠️ **A release without the private key publishes nothing.** That is deliberate: an unsigned
+release would be one the updater refuses to install, discovered by users rather than by CI.
+The public half is `UPDATES.public_key` in `crates/app/src/desktop.rs`.
 
 ## If something goes wrong
 

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Categories=Development;
+Comment=A developer's notes and snippets manager for the desktop
+Exec=devnotes
+Icon=devnotes
+Name=DevNotes
+Terminal=false
+Type=Application
