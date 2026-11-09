@@ -1512,18 +1512,25 @@ impl AppState {
                 self.presentation.ask(backend, title, markdown);
             }
             Editing::StopPresenting => self.presentation.close(ctx),
-            Editing::Fullscreen(on) => {
-                self.settings.editor_fullscreen = on;
-                self.save_settings(backend);
-            }
             Editing::Revisions(asked) => self.apply_revisions(asked, backend),
             Editing::Decimals(places) => self.set_decimals(places, backend),
-            Editing::FoldHeader(folded) => {
-                self.settings.editor_header_folded = folded;
-                self.save_settings(backend);
+            display @ (Editing::Fullscreen(_) | Editing::FoldHeader(_) | Editing::Details(_)) => {
+                self.set_editor_display(&display, backend);
             }
         }
         ctx.request_repaint();
+    }
+
+    /// A display preference of the editor, kept from note to note.
+    fn set_editor_display(&mut self, display: &crate::notes::Editing, backend: &Backend) {
+        use crate::notes::Editing;
+        match *display {
+            Editing::Fullscreen(on) => self.settings.editor_fullscreen = on,
+            Editing::FoldHeader(folded) => self.settings.editor_header_folded = folded,
+            Editing::Details(open) => self.settings.editor_details_open = open,
+            _ => return,
+        }
+        self.save_settings(backend);
     }
 
     fn ask_attachment(&mut self, asked: attachments::Asked, backend: &Backend) {

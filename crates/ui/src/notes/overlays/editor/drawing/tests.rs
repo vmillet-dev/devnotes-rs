@@ -326,13 +326,19 @@ fn said(harness: &Harness) -> String {
     message.text(state.language)
 }
 
+/// Expanded, the exports wait in the toolbar's menu.
+fn export_as(harness: &mut Harness, author_id: &str) {
+    click_id(harness, "editor-export");
+    click_id(harness, author_id);
+}
+
 #[test]
 fn a_drawing_is_exported_as_a_png_and_says_where() {
     let (mut harness, _) = opened("");
     draw_rectangle(&mut harness);
     let (_folder, path) = exporting_to(&mut harness, "sketch.png");
 
-    click_id(&mut harness, "drawing-export-png");
+    export_as(&mut harness, "drawing-export-png");
     settle(&mut harness);
 
     assert!(std::fs::read(&path).unwrap().starts_with(b"\x89PNG"));
@@ -345,7 +351,7 @@ fn a_drawing_is_exported_as_its_svg() {
     draw_rectangle(&mut harness);
     let (_folder, path) = exporting_to(&mut harness, "sketch.svg");
 
-    click_id(&mut harness, "drawing-export-svg");
+    export_as(&mut harness, "drawing-export-svg");
     settle(&mut harness);
 
     let written = std::fs::read_to_string(&path).unwrap();
@@ -371,7 +377,7 @@ fn a_dialog_cancelled_writes_nothing_and_says_nothing() {
     draw_rectangle(&mut harness);
     harness.state_mut().state.dialog = std::sync::Arc::new(Cancelled);
 
-    click_id(&mut harness, "drawing-export-png");
+    export_as(&mut harness, "drawing-export-png");
     settle(&mut harness);
 
     assert!(harness.state().state.status.latest().is_none());
@@ -386,7 +392,7 @@ fn a_file_that_cannot_be_written_says_so() {
     let folder_itself = folder.path().to_path_buf();
     harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(folder_itself));
 
-    click_id(&mut harness, "drawing-export-png");
+    export_as(&mut harness, "drawing-export-png");
     settle(&mut harness);
 
     assert!(harness.state().state.errors.notice().is_some());
@@ -398,9 +404,11 @@ fn nothing_drawn_has_nothing_to_export() {
     let (mut harness, _) = opened("");
     let (_folder, path) = exporting_to(&mut harness, "sketch.png");
 
-    click_id(&mut harness, "drawing-export-png");
+    click_id(&mut harness, "editor-export");
     settle(&mut harness);
 
+    let offered = harness.query_by(|node| node.author_id() == Some("drawing-export-png"));
+    assert!(offered.is_none(), "the menu stays shut");
     assert!(!path.exists());
 }
 

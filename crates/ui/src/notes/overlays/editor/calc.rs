@@ -112,14 +112,25 @@ pub(super) fn show(
     let language = state.language;
     let sheet = state.calc.sheet(session);
     let whole = ui.max_rect();
-    let footer_top = whole.bottom() - FOOTER_HEIGHT;
-    let body = Rect::from_min_max(whole.min, egui::pos2(whole.right(), footer_top));
+    // Expanded, the counts and the decimals head the sheet; beside the cards they close it.
+    let (body, footer) = if state.settings.editor_fullscreen {
+        let split = whole.top() + FOOTER_HEIGHT;
+        (
+            Rect::from_min_max(egui::pos2(whole.left(), split + 8.0), whole.max),
+            Rect::from_min_max(whole.min, egui::pos2(whole.right(), split)),
+        )
+    } else {
+        let split = whole.bottom() - FOOTER_HEIGHT;
+        (
+            Rect::from_min_max(whole.min, egui::pos2(whole.right(), split)),
+            Rect::from_min_max(egui::pos2(whole.left(), split), whole.max),
+        )
+    };
     let mut body_ui = ui.new_child(egui::UiBuilder::new().max_rect(body));
     let shown = sheet_field(&mut body_ui, view, sheet, language);
     if let Some(sheet) = sheet {
         results(ui, view, sheet, &shown.rows, state.calc_format());
     }
-    let footer = Rect::from_min_max(egui::pos2(whole.left(), footer_top), whole.max);
     let mut footer_ui = ui.new_child(egui::UiBuilder::new().max_rect(footer));
     self::footer(&mut footer_ui, view, sheet, state, actions);
     ui.advance_cursor_after_rect(whole);

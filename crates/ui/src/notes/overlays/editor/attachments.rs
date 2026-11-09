@@ -24,10 +24,11 @@ fn ask(actions: &mut Actions, asked: Asked) {
     actions.push(super::editor(Editing::Attachment(asked)));
 }
 
+/// `titled`: the band says what it is; the details column names it above instead.
 pub(super) fn show(
     ui: &mut Ui,
     state: &AppState,
-    confirming: &mut Option<String>,
+    (confirming, titled): (&mut Option<String>, bool),
     actions: &mut Actions,
 ) {
     let language = state.language;
@@ -35,8 +36,10 @@ pub(super) fn show(
     let attachments = &state.attachments;
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = Vec2::splat(6.0);
-        let title = i18n::translate(language, keys::attachments::TITLE, &[]);
-        ui.label(RichText::new(title).size(11.0).color(p.text_2));
+        if titled {
+            let title = i18n::translate(language, keys::attachments::TITLE, &[]);
+            ui.label(RichText::new(title).size(11.0).color(p.text_2));
+        }
         for attachment in attachments.list() {
             item(ui, state, attachment, confirming, actions);
         }

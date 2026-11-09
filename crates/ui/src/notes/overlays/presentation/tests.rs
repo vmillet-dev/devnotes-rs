@@ -36,6 +36,7 @@ fn presented() -> Harness<'static> {
         crate::notes::bench::cards(harness) == 1
     });
     click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-more");
     click_id(&mut harness, "editor-present");
     until(&mut harness, "the cover", |harness| {
         harness

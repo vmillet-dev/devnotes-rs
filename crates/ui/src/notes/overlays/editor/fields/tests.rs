@@ -225,3 +225,21 @@ fn copy_as_is_keeps_the_tokens() {
 
     assert_eq!(copied.as_deref(), Some(BODY));
 }
+
+/// Expanded, the code stays and its filled text stands under it, following the typing.
+#[test]
+fn expanded_the_filled_text_stands_under_the_code() {
+    let (mut harness, _) = opened(BODY);
+    harness.state_mut().state.settings.editor_fullscreen = true;
+    settle(&mut harness);
+    assert!(!has(&harness, "placeholder-panel-preview"));
+
+    type_first(&mut harness, "db");
+    settle(&mut harness);
+
+    assert!(has(&harness, "editor-body"));
+    assert!(has(&harness, "editor-filled"));
+    let session = harness.state().state.editor.opened().unwrap().session;
+    let filled = harness.state().state.fill.preview(session);
+    assert_eq!(filled, Some("psql -h db -p 5432"));
+}

@@ -80,6 +80,8 @@ pub struct Settings {
     pub editor_panel_width: u16,
     pub editor_header_folded: bool,
     pub editor_fields_open: bool,
+    /// Expanded, the column of what the note is and where it lives, beside the body.
+    pub editor_details_open: bool,
     /// The request's share of the height it has with its answer, in tenths of a percent; `0`
     /// leaves it to what the request holds.
     pub http_request_share: u16,
@@ -130,6 +132,7 @@ impl Default for Settings {
             editor_panel_width: 0,
             editor_header_folded: false,
             editor_fields_open: true,
+            editor_details_open: true,
             http_request_share: 0,
             history_list_width: 380,
             code_indent: IndentChoice::default(),
@@ -162,6 +165,7 @@ const EDITOR_FULLSCREEN: &str = "devnotes.editorFullscreen";
 const EDITOR_PANEL_WIDTH: &str = "devnotes.editorPanelWidth";
 const EDITOR_HEADER_FOLDED: &str = "devnotes.editorHeaderFolded";
 const EDITOR_FIELDS_OPEN: &str = "devnotes.editorFieldsPanel";
+const EDITOR_DETAILS_OPEN: &str = "devnotes.editorDetails";
 const HTTP_REQUEST_SHARE: &str = "devnotes.httpRequestShare";
 const HISTORY_LIST_WIDTH_KEY: &str = "devnotes.httpHistoryListWidth";
 const CODE_INDENT: &str = "devnotes.codeIndent";
@@ -208,6 +212,7 @@ impl Settings {
                 .unwrap_or(0),
             editor_header_folded: preferences.get(EDITOR_HEADER_FOLDED) == Some("true"),
             editor_fields_open: preferences.get(EDITOR_FIELDS_OPEN) != Some("false"),
+            editor_details_open: preferences.get(EDITOR_DETAILS_OPEN) != Some("false"),
             http_request_share: read_share(preferences.get(HTTP_REQUEST_SHARE)),
             history_list_width: preferences
                 .get(HISTORY_LIST_WIDTH_KEY)
@@ -254,6 +259,7 @@ impl Settings {
         preferences.set(EDITOR_PANEL_WIDTH, &self.editor_panel_width.to_string());
         preferences.set(EDITOR_HEADER_FOLDED, flag(self.editor_header_folded));
         preferences.set(EDITOR_FIELDS_OPEN, flag(self.editor_fields_open));
+        preferences.set(EDITOR_DETAILS_OPEN, flag(self.editor_details_open));
         preferences.set(HISTORY_LIST_WIDTH_KEY, &self.history_list_width.to_string());
         let share = f64::from(self.http_request_share) / 10.0;
         preferences.set(HTTP_REQUEST_SHARE, &share.to_string());
@@ -454,6 +460,7 @@ mod tests {
             editor_panel_width: 620,
             editor_header_folded: true,
             editor_fields_open: false,
+            editor_details_open: false,
             http_request_share: 423,
             history_list_width: 500,
             code_indent: IndentChoice::Tab,

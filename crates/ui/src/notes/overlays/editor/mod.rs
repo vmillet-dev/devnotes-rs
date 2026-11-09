@@ -10,6 +10,7 @@ mod calc;
 mod checklist;
 mod code;
 mod drawing;
+mod expanded;
 mod fields;
 mod format;
 mod go_to_line;
@@ -210,14 +211,13 @@ fn panel(
         format::adopt(ui, state, session, editing);
         format::shortcut(ui, state, (session, note), editing, actions);
     }
-    let closed = top(ui, state, (session, note), editing, actions);
-    if state.settings.editor_header_folded {
-        band(ui, Margin::symmetric(20, 8), true, |ui| {
-            header::summary(ui, state, note, actions);
-        });
-    } else {
-        header::bands(ui, state, (session, note), editing, actions);
+    if state.settings.editor_fullscreen {
+        return expanded::show(ui, state, (session, note), (editing, layout), actions);
     }
+    let closed = band(ui, Margin::symmetric(20, 12), true, |ui| {
+        toolbar(ui, state, (session, note), editing, actions)
+    });
+    header(ui, state, (session, note), editing, actions);
     fields::show(ui, state, (session, note), editing, actions);
     if editing.code.is_some() {
         json_view::follow(&mut editing.exploring, note);
@@ -236,26 +236,67 @@ fn panel(
         ui.new_child(UiBuilder::new().max_rect(body_rect.shrink2(Vec2::new(20.0, 14.0))));
     // In a small window the bands leave it little: what does not fit stops at its edge.
     body_ui.set_clip_rect(body_ui.clip_rect().intersect(body_rect));
-    let filled = state
-        .fill
-        .preview(session)
-        .filter(|_| editing.fields.previewing);
-    let left = if let Some(filled) = filled {
+    let previewing = editing.fields.previewing;
+    let left = body(
+        &mut body_ui,
+        state,
+        (session, note),
+        (editing, layout),
+        previewing,
+        actions,
+    );
+    if left {
+        save(session, note, editing, actions);
+    }
+    format::notice(ui, state, body_rect, editing);
+    under_body(ui, state, note, editing, (body_rect, history), actions);
+    ui.advance_cursor_after_rect(whole);
+    closed
+}
+
+/// The header's bands, or their summary once folded.
+fn header(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &mut EditorView,
+    actions: &mut Actions,
+) {
+    if state.settings.editor_header_folded {
+        band(ui, Margin::symmetric(20, 8), true, |ui| {
+            header::summary(ui, state, note, actions);
+        });
+    } else {
+        header::bands(ui, state, (session, note), editing, actions);
+    }
+}
+
+/// The note's body, by its kind — or, `previewing`, the snippet filled. `true` once it is left.
+fn body(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    (editing, layout): (&mut EditorView, &mut ExplorerLayout),
+    previewing: bool,
+    actions: &mut Actions,
+) -> bool {
+    let expanded = state.settings.editor_fullscreen;
+    let filled = state.fill.preview(session).filter(|_| previewing);
+    if let Some(filled) = filled {
         let lines: Vec<&str> = filled.lines().collect();
-        widgets::code_viewer(&mut body_ui, "editor-preview", &lines);
+        widgets::code_viewer(ui, "editor-preview", &lines);
         false
     } else if let Some(view) = &mut editing.drawing {
-        let shown = drawing::show(&mut body_ui, view, &note.title, state.language);
+        let shown = drawing::show(ui, view, (&note.title, state.language), expanded);
         if let Some(format) = shown.export {
-            let export = view.export(&note.title, format, state.language, palette(ui.ctx()));
-            actions.push(editor(Editing::Export(export)));
+            export(ui, note, view, format, state, actions);
         }
         if shown.left {
             pictures(ui, session, editing, actions);
         }
         shown.save
     } else if let Some(sheet) = &mut editing.sheet {
-        let shown = calc::show(&mut body_ui, sheet, state, session, actions);
+        let shown = calc::show(ui, sheet, state, session, actions);
         if shown.changed {
             editing.body = sheet.text();
         }
@@ -264,14 +305,9 @@ fn panel(
         let shown = match &mut editing.exploring {
             Some(exploring) => {
                 let at = (session, note);
-                json_view::body(&mut body_ui, state, at, exploring, code, layout, actions)
+                json_view::body(ui, state, at, exploring, code, layout, actions)
             }
-            None => code::show(
-                &mut body_ui,
-                code,
-                note.language,
-                (state.language, &state.settings),
-            ),
+            None => code::show(ui, code, note.language, (state.language, &state.settings)),
         };
         if shown.changed {
             editing.format.typed();
@@ -279,30 +315,30 @@ fn panel(
         }
         shown.left
     } else if let Some(view) = &mut editing.rich {
-        rich_body(
-            &mut body_ui,
-            state,
-            (session, view),
-            &mut editing.body,
-            actions,
-        )
+        rich_body(ui, state, (session, view), &mut editing.body, actions)
     } else if note.kind == NoteKind::Checklist {
         egui::ScrollArea::vertical()
             .auto_shrink(false)
-            .show(&mut body_ui, |ui| {
-                checklist::show(ui, &mut editing.checklist, state.language)
+            .show(ui, |ui| {
+                checklist::show(ui, &mut editing.checklist, state.language, expanded)
             })
             .inner
     } else {
-        body::show(&mut body_ui, state, note, &mut editing.body)
-    };
-    if left {
-        save(session, note, editing, actions);
+        body::show(ui, state, note, &mut editing.body)
     }
-    format::notice(ui, state, body_rect, editing);
-    under_body(ui, state, note, editing, (body_rect, history), actions);
-    ui.advance_cursor_after_rect(whole);
-    closed
+}
+
+/// A drawing written to a file, in the palette on screen.
+fn export(
+    ui: &Ui,
+    note: &DisplayNote,
+    view: &drawing::DrawingView,
+    format: ::drawing::Format,
+    state: &AppState,
+    actions: &mut Actions,
+) {
+    let export = view.export(&note.title, format, state.language, palette(ui.ctx()));
+    actions.push(editor(Editing::Export(export)));
 }
 
 /// The history, when open, then the footer: from under the body to the panel's bottom.
@@ -416,9 +452,6 @@ fn toolbar(
                 format::button(ui, state, (session, note), editing, labelled, actions);
                 language_menu(ui, state, note, actions);
             }
-            if state.settings.editor_fullscreen {
-                steps(ui, state, actions);
-            }
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                 title(ui, state, (session, note), editing, actions);
             });
@@ -458,7 +491,7 @@ fn compact_toolbar(
         }
         priority(ui, state, note, actions);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            more_menu(ui, state, (session, note), editing, actions);
+            more_menu(ui, state, (session, note), (editing, true), actions);
             pin(ui, state, note, false, actions);
             if note.kind != NoteKind::Drawing {
                 copy(ui, state, (session, note), editing, true, actions);
@@ -528,13 +561,13 @@ fn fold_button(
     }
 }
 
-/// ⋯: folding the header, presenting a Note, deleting in two clicks. It stays open on a click
-/// inside, so the second click of a deletion is in reach.
+/// ⋯: folding the header — where there is one — presenting a Note, deleting in two clicks. It
+/// stays open on a click inside, so the second click of a deletion is in reach.
 fn more_menu(
     ui: &mut Ui,
     state: &AppState,
     (session, note): (u64, &DisplayNote),
-    editing: &mut EditorView,
+    (editing, foldable): (&mut EditorView, bool),
     actions: &mut Actions,
 ) {
     let label = i18n::translate(state.language, keys::editor::MORE, &[]);
@@ -544,123 +577,14 @@ fn more_menu(
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
             ui.spacing_mut().item_spacing.y = 4.0;
-            fold_button(ui, state, (session, note), editing, actions, true);
+            if foldable {
+                fold_button(ui, state, (session, note), editing, actions, true);
+            }
             if note.kind == NoteKind::Note {
                 present(ui, state, editing, true, actions);
             }
             delete(ui, state, editing, true, actions);
         });
-}
-
-/// The way back over the expanded editor, then the toolbar. `true` once closed.
-fn top(
-    ui: &mut Ui,
-    state: &AppState,
-    (session, note): (u64, &DisplayNote),
-    editing: &mut EditorView,
-    actions: &mut Actions,
-) -> bool {
-    if state.settings.editor_fullscreen {
-        band(ui, Margin::symmetric(20, 8), true, |ui| {
-            way_back(ui, state, note, actions);
-        });
-    }
-    band(ui, Margin::symmetric(20, 12), true, |ui| {
-        toolbar(ui, state, (session, note), editing, actions)
-    })
-}
-
-/// Over the expanded editor: the way back to the cards, where the note is, and the keys.
-fn way_back(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut Actions) {
-    let p = palette(ui.ctx());
-    let tr = |key| i18n::translate(state.language, key, &[]);
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
-        let back = tr(keys::editor::BACK_TO_CARDS);
-        if Button::new(&back, "editor-back-to-cards")
-            .kind(Kind::Quiet)
-            .icon(Icon::ArrowLeft)
-            .show(ui)
-            .clicked()
-        {
-            actions.push(editor(Editing::Fullscreen(false)));
-        }
-        let place = place_of(state, note);
-        let shown = ui.label(egui::RichText::new(&place).size(12.5).color(p.text_2));
-        widgets::address(ui, &shown, "editor-breadcrumb");
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            let hint = tr(keys::editor::STEP_HINT);
-            ui.label(
-                egui::RichText::new(hint)
-                    .size(11.5)
-                    .family(egui::FontFamily::Monospace)
-                    .color(p.text_2),
-            );
-        });
-    });
-}
-
-/// The note's space, then its folders down to its own.
-fn place_of(state: &AppState, note: &DisplayNote) -> String {
-    let space = state
-        .spaces
-        .spaces()
-        .iter()
-        .find(|space| space.id == note.space_id)
-        .map(|space| space.name.clone());
-    let folders = note
-        .folder
-        .iter()
-        .flat_map(|folder| folder.path.iter().cloned());
-    space
-        .into_iter()
-        .chain(folders)
-        .collect::<Vec<_>>()
-        .join(" › ")
-}
-
-/// ‹ n / total ›: where the note open sits among the cards shown, and the way to its neighbours.
-fn steps(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
-    let Some((at, order)) = state.editor_position() else {
-        return;
-    };
-    let tr = |key| i18n::translate(state.language, key, &[]);
-    let next = ui.add_enabled_ui(at + 1 < order.len(), |ui| {
-        IconButton::new(
-            Icon::ChevronRight,
-            &tr(keys::editor::NEXT_NOTE),
-            "editor-next",
-        )
-        .show(ui)
-    });
-    if next.inner.clicked() {
-        actions.push(editor(Editing::Step(1)));
-    }
-    let position = i18n::translate(
-        state.language,
-        keys::editor::POSITION,
-        &[
-            ("at", u32::try_from(at + 1).unwrap_or(u32::MAX).into()),
-            (
-                "total",
-                u32::try_from(order.len()).unwrap_or(u32::MAX).into(),
-            ),
-        ],
-    );
-    let shown = ui.label(
-        egui::RichText::new(position)
-            .size(12.0)
-            .family(egui::FontFamily::Monospace)
-            .color(palette(ui.ctx()).text_2),
-    );
-    widgets::address(ui, &shown, "editor-position");
-    let previous = ui.add_enabled_ui(at > 0, |ui| {
-        let label = tr(keys::editor::PREVIOUS_NOTE);
-        IconButton::new(Icon::ChevronLeft, &label, "editor-previous").show(ui)
-    });
-    if previous.inner.clicked() {
-        actions.push(editor(Editing::Step(-1)));
-    }
 }
 
 fn title(
