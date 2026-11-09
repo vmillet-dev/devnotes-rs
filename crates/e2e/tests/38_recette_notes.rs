@@ -358,6 +358,8 @@ fn recette_a_sheet_and_a_drawing() {
 
     step("CAL-45 a sheet pasted answers line by line", || {
         app.press(Key::M, SHIFT_COMMAND);
+        // Every result in view: the sheet expanded over the cards.
+        app.click("editor-fullscreen");
         app.fill("editor-title", "Feuille");
         app.click("editor-body");
         app.paste(SHEET);

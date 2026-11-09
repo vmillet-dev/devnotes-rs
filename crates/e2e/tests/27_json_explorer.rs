@@ -38,6 +38,8 @@ fn json_explorer() {
     step("the band says the draft parses, over its code", || {
         app.click("note-card-open");
         app.wait_for("editor-json-validity");
+        // The whole graph wants the whole area, not the panel beside the cards.
+        app.click("editor-fullscreen");
         app.eventually("the draft read as valid", |tree| !invalid(tree));
     });
 
