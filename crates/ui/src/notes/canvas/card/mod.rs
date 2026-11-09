@@ -39,6 +39,8 @@ pub(super) struct Context<'a> {
     pub(super) selecting: bool,
     /// How many lines a card shows: its height follows.
     pub(super) lines: PreviewLines,
+    /// The note open in the editor beside the cards: its card stays lit.
+    pub(super) opened: Option<&'a str>,
 }
 
 impl<'a> Context<'a> {
@@ -55,6 +57,7 @@ impl<'a> Context<'a> {
             selection: &state.selection,
             selecting: !state.selection.checked_in(on_screen).is_empty(),
             lines: state.preview_lines,
+            opened: state.editor.open_id(),
         }
     }
 
@@ -122,9 +125,10 @@ pub(super) fn show(
     let checked = context.selection.is_checked(&note.id);
     let armed = context.armed == Some(note.id.as_str());
     let hovered = ui.rect_contains_pointer(rect);
+    let opened = context.opened == Some(note.id.as_str());
     let (fill, edge) = if armed {
         (p.bg_2, p.red)
-    } else if checked {
+    } else if opened || checked {
         (p.bg_2, p.amber_edge)
     } else if hovered {
         (p.bg_2, p.line)
@@ -138,6 +142,16 @@ pub(super) fn show(
         Stroke::new(1.0, edge),
         StrokeKind::Inside,
     );
+    if opened {
+        let tint = p.amber_fill.gamma_multiply(0.08);
+        ui.painter().rect(
+            rect,
+            CornerRadius::same(10),
+            tint,
+            Stroke::new(1.5, edge),
+            StrokeKind::Inside,
+        );
+    }
 
     let inner = rect.shrink(1.0);
     let top = Rect::from_min_size(inner.min, vec2(inner.width(), bands::TOP_HEIGHT));

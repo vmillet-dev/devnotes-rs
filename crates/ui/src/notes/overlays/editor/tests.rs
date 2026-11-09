@@ -421,3 +421,126 @@ fn copying_from_the_editor_writes_first_and_full_screen_is_remembered() {
     click_id(&mut harness, "editor-fullscreen");
     assert!(!harness.state().state.settings.editor_fullscreen);
 }
+
+fn rect_of(harness: &egui_kittest::Harness<'_, Bench>, id: &str) -> egui::Rect {
+    harness.get_by(|node| node.author_id() == Some(id)).rect()
+}
+
+fn title_of_open(harness: &egui_kittest::Harness<'_, Bench>) -> String {
+    let opened = harness.state().state.editor.opened().unwrap();
+    opened.note().unwrap().title.clone()
+}
+
+/// The cards stay on screen beside the note open; expanded, the note takes the area, and the
+/// way back brings the cards again.
+#[test]
+fn a_note_opens_beside_the_cards_and_expands_over_them() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = area(backend, profile);
+
+    click_id(&mut harness, "note-card-open");
+
+    assert!(is_open(&harness));
+    assert_eq!(cards(&harness), 1, "the card is still drawn");
+    assert!(rect_of(&harness, "note-card").right() <= rect_of(&harness, "editor-title").left());
+
+    click_id(&mut harness, "editor-fullscreen");
+    assert_eq!(cards(&harness), 0);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-breadcrumb"))
+            .is_some()
+    );
+
+    click_id(&mut harness, "editor-back-to-cards");
+    assert_eq!(cards(&harness), 1);
+    assert!(is_open(&harness));
+}
+
+/// A card clicked while a note is open: what was typed in the first is written on the way.
+#[test]
+fn another_card_opens_once_the_note_open_wrote_its_title() {
+    let (backend, profile) = testing::unlocked();
+    let first = testing::note(&backend, "first").id.clone();
+    testing::note(&backend, "second");
+    let mut harness = area(backend, profile);
+    crate::notes::bench::click(&mut harness, "note-card-open", "first");
+    harness
+        .get_by(|node| node.author_id() == Some("editor-title"))
+        .type_text(" edited");
+    settle(&mut harness);
+
+    crate::notes::bench::click(&mut harness, "note-card-open", "second");
+
+    assert_eq!(title_of_open(&harness), "second");
+    assert_eq!(stored(&harness, &first).title, "first edited");
+}
+
+/// J and K walk the cards as they are shown, once no field has the focus; expanded, the
+/// position says where the note sits; Escape leaves full screen, then closes.
+#[test]
+fn j_and_k_step_through_the_cards_and_escape_steps_back() {
+    let (backend, profile) = testing::unlocked();
+    for title in ["one", "two", "three"] {
+        testing::note(&backend, title);
+    }
+    let mut harness = area(backend, profile);
+    let order = harness.state().state.on_screen();
+    let first = order[0].clone();
+    harness.state_mut().state.editor.open(first);
+    settle(&mut harness);
+    // The title takes the focus as the note opens: Escape gives it up first.
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    assert!(is_open(&harness));
+
+    harness.key_press(egui::Key::J);
+    settle(&mut harness);
+    assert_eq!(
+        harness.state().state.editor.open_id(),
+        Some(order[1].as_str())
+    );
+    harness.key_press(egui::Key::K);
+    settle(&mut harness);
+    assert_eq!(
+        harness.state().state.editor.open_id(),
+        Some(order[0].as_str())
+    );
+
+    click_id(&mut harness, "editor-fullscreen");
+    let position = harness
+        .get_by(|node| node.author_id() == Some("editor-position"))
+        .accesskit_node()
+        .value()
+        .unwrap_or_default();
+    assert_eq!(position, "1 / 3");
+    click_id(&mut harness, "editor-next");
+    assert_eq!(
+        harness.state().state.editor.open_id(),
+        Some(order[1].as_str())
+    );
+
+    // Stepped to, the note leaves the focus where it was: one Escape leaves full screen.
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    assert!(is_open(&harness) && !harness.state().state.settings.editor_fullscreen);
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    assert!(!is_open(&harness));
+}
+
+/// Too narrow for both, the note takes the area beside the rail.
+#[test]
+fn in_a_narrow_window_the_note_covers_the_cards() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = area(backend, profile);
+    harness.set_size(egui::vec2(760.0, 700.0));
+    settle(&mut harness);
+
+    click_id(&mut harness, "note-card-open");
+
+    assert!(is_open(&harness));
+    assert_eq!(cards(&harness), 0);
+}

@@ -1,5 +1,6 @@
-//! The note editor over the canvas (the reference's `note-editor-overlay`): the toolbar with the
-//! title, the header's bands — or their summary, folded — the body, and the footer. Every field
+//! The note editor, in a panel beside the cards or over the whole area once expanded: the
+//! toolbar with the title, the header's bands — or their summary, folded — the body, and the
+//! footer. Every field
 //! is a draft of this view, keyed on the opening's session, and written when it is left and on
 //! every closing path, none of which leaves a field on its own.
 
@@ -33,10 +34,10 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, Button, ChoiceMenu, IconButton, Kind};
 
-/// The reference's `--dialog-width` and `--dialog-height`.
-const SIZE: Vec2 = Vec2::new(880.0, 640.0);
 /// Under it, the toolbar's buttons keep their icon alone (the reference's container query).
 const LABELS_FROM: f32 = 1_000.0;
+/// Under it, the title sits above the toolbar's buttons rather than beside them.
+const STACKED_UNDER: f32 = 700.0;
 
 /// What is being typed, for the opening it began in.
 #[derive(Default)]
@@ -89,7 +90,7 @@ impl EditorView {
             format: format::FormatView::default(),
             removing: None,
             tag: String::new(),
-            focus: true,
+            focus: !open.stepped,
             confirming_delete: false,
         }
     }
@@ -121,19 +122,22 @@ pub(crate) use json_view::Layout as ExplorerLayout;
 const BODY_FLOOR: f32 = 96.0;
 pub(in crate::notes) use rich::embedded;
 
+/// The editor in `room`: beside the cards, or the whole area once expanded. `None` while no
+/// note is open.
 pub(crate) fn show(
-    ui: &Ui,
+    ui: &mut Ui,
+    room: Option<Rect>,
     state: &AppState,
-    view: &mut Option<EditorView>,
-    layout: &mut ExplorerLayout,
+    (view, layout): (&mut Option<EditorView>, &mut ExplorerLayout),
     actions: &mut Actions,
 ) {
-    let Some((open, note)) = state
-        .editor
-        .opened()
-        .and_then(|open| open.note().map(|note| (open, note)))
-    else {
+    let opened = state.editor.opened();
+    let Some((open, note, room)) = opened.and_then(|open| Some((open, open.note()?, room?))) else {
         *view = None;
+        // Still being read: nothing typed yet to write, so what was asked next opens now.
+        if opened.is_some() && state.editor_next.is_some() {
+            actions.push(editor(Editing::Close));
+        }
         return;
     };
     if view
@@ -143,40 +147,48 @@ pub(crate) fn show(
         *view = Some(EditorView::of(open, note));
     }
     let Some(editing) = view else { return };
-    let ctx = ui.ctx();
-    let p = palette(ctx);
-    let fullscreen = state.settings.editor_fullscreen;
-    let room = ctx.content_rect();
-    let size = if fullscreen {
-        room.size() - Vec2::splat(24.0)
-    } else {
-        SIZE.min(room.size() * 0.92)
-    };
-    // Escape first leaves the field being typed in; only a second one closes. egui drops the
-    // focus before the frame is drawn, so the field is the one that had it at the last frame.
+    let ctx = ui.ctx().clone();
+    let p = palette(&ctx);
+    // Escape first leaves the field being typed in; only a second one steps back. egui drops
+    // the focus before the frame is drawn, so the field is the one that had it at the last frame.
     let typing_id = Id::unique("note-editor.typing");
     let typing = ctx.data(|data| data.get_temp::<bool>(typing_id).unwrap_or(false));
-    let escaped = ctx.input(|input| input.key_pressed(egui::Key::Escape));
-    let frame = egui::Frame::new()
-        .fill(p.bg_1)
-        .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(if fullscreen { 10 } else { 14 }))
-        .shadow(p.shadow_overlay);
-    let shown = egui::Modal::new(Id::unique("note-editor"))
-        .backdrop_color(p.backdrop.gamma_multiply(0.7))
-        .frame(frame)
-        .show(ctx, |ui| {
-            ui.set_min_size(size);
-            ui.set_max_size(size);
-            panel(ui, state, (open.session, note), editing, layout, actions)
-        });
+    // A menu of the editor closes on Escape first.
+    let overlaid = state.overlay_open()
+        || state.attachments.zoomed().is_some()
+        || state.presentation.shown().is_some()
+        || egui::Popup::is_any_open(&ctx);
+    ui.painter().rect_filled(room, CornerRadius::ZERO, p.bg_1);
+    ui.painter()
+        .vline(room.left(), room.y_range(), Stroke::new(1.0, p.line));
+    let mut panel_ui = ui.new_child(
+        UiBuilder::new()
+            .max_rect(room)
+            .id_salt("note-editor")
+            .layout(Layout::top_down(Align::Min)),
+    );
+    panel_ui.set_clip_rect(room.intersect(ui.clip_rect()));
+    let closed = panel(
+        &mut panel_ui,
+        state,
+        (open.session, note),
+        editing,
+        layout,
+        actions,
+    );
+    // After the panel: what in it answers Escape (a search bar, a drawing's tool) took it.
+    let escaped = !overlaid
+        && !typing
+        && ctx.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
     arrivals(ui, actions);
-    let lightbox = state.attachments.zoomed().is_some();
-    let dismissed = !lightbox && shown.should_close() && !(escaped && typing);
     // A field being typed in asks for the input method; a focused button asks for nothing.
     let focused = ctx.output(|output| output.ime.is_some());
     ctx.data_mut(|data| data.insert_temp(typing_id, focused));
-    if shown.inner || dismissed || state.closing_editor {
+    if escaped && state.settings.editor_fullscreen {
+        actions.push(editor(Editing::Fullscreen(false)));
+        return;
+    }
+    if closed || escaped || state.closing_editor || state.editor_next.is_some() {
         pictures(ui, open.session, editing, actions);
         missing_pictures(ui, open.session, note, editing, actions);
         close(open.session, note, editing, actions);
@@ -198,9 +210,7 @@ fn panel(
         format::adopt(ui, state, session, editing);
         format::shortcut(ui, state, (session, note), editing, actions);
     }
-    let closed = band(ui, Margin::symmetric(20, 12), true, |ui| {
-        toolbar(ui, state, (session, note), editing, actions)
-    });
+    let closed = top(ui, state, (session, note), editing, actions);
     if state.settings.editor_header_folded {
         band(ui, Margin::symmetric(20, 8), true, |ui| {
             header::summary(ui, state, note, actions);
@@ -384,10 +394,17 @@ fn toolbar(
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let labelled = ui.available_width() >= LABELS_FROM - 40.0;
+    // Beside the cards the buttons leave the title no room: it takes a line of its own.
+    let stacked = ui.available_width() < STACKED_UNDER;
+    if stacked {
+        title(ui, state, (session, note), editing, actions);
+        ui.add_space(8.0);
+    }
     let mut closed = false;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+        ui.spacing_mut().item_spacing = Vec2::new(8.0, 6.0);
+        let buttons = Layout::right_to_left(Align::Center).with_main_wrap(stacked);
+        ui.with_layout(buttons, |ui| {
             let close = tr(keys::editor::CLOSE);
             closed = IconButton::new(Icon::X, &close, "editor-close")
                 .show(ui)
@@ -434,12 +451,128 @@ fn toolbar(
                 format::button(ui, state, (session, note), editing, labelled, actions);
                 language_menu(ui, state, note, actions);
             }
-            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                title(ui, state, (session, note), editing, actions);
-            });
+            if state.settings.editor_fullscreen {
+                steps(ui, state, actions);
+            }
+            if !stacked {
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    title(ui, state, (session, note), editing, actions);
+                });
+            }
         });
     });
     closed
+}
+
+/// The way back over the expanded editor, then the toolbar. `true` once closed.
+fn top(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &mut EditorView,
+    actions: &mut Actions,
+) -> bool {
+    if state.settings.editor_fullscreen {
+        band(ui, Margin::symmetric(20, 8), true, |ui| {
+            way_back(ui, state, note, actions);
+        });
+    }
+    band(ui, Margin::symmetric(20, 12), true, |ui| {
+        toolbar(ui, state, (session, note), editing, actions)
+    })
+}
+
+/// Over the expanded editor: the way back to the cards, where the note is, and the keys.
+fn way_back(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut Actions) {
+    let p = palette(ui.ctx());
+    let tr = |key| i18n::translate(state.language, key, &[]);
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 10.0;
+        let back = tr(keys::editor::BACK_TO_CARDS);
+        if Button::new(&back, "editor-back-to-cards")
+            .kind(Kind::Quiet)
+            .icon(Icon::ArrowLeft)
+            .show(ui)
+            .clicked()
+        {
+            actions.push(editor(Editing::Fullscreen(false)));
+        }
+        let place = place_of(state, note);
+        let shown = ui.label(egui::RichText::new(&place).size(12.5).color(p.text_2));
+        widgets::address(ui, &shown, "editor-breadcrumb");
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            let hint = tr(keys::editor::STEP_HINT);
+            ui.label(
+                egui::RichText::new(hint)
+                    .size(11.5)
+                    .family(egui::FontFamily::Monospace)
+                    .color(p.text_2),
+            );
+        });
+    });
+}
+
+/// The note's space, then its folders down to its own.
+fn place_of(state: &AppState, note: &DisplayNote) -> String {
+    let space = state
+        .spaces
+        .spaces()
+        .iter()
+        .find(|space| space.id == note.space_id)
+        .map(|space| space.name.clone());
+    let folders = note
+        .folder
+        .iter()
+        .flat_map(|folder| folder.path.iter().cloned());
+    space
+        .into_iter()
+        .chain(folders)
+        .collect::<Vec<_>>()
+        .join(" › ")
+}
+
+/// ‹ n / total ›: where the note open sits among the cards shown, and the way to its neighbours.
+fn steps(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+    let Some((at, order)) = state.editor_position() else {
+        return;
+    };
+    let tr = |key| i18n::translate(state.language, key, &[]);
+    let next = ui.add_enabled_ui(at + 1 < order.len(), |ui| {
+        IconButton::new(
+            Icon::ChevronRight,
+            &tr(keys::editor::NEXT_NOTE),
+            "editor-next",
+        )
+        .show(ui)
+    });
+    if next.inner.clicked() {
+        actions.push(editor(Editing::Step(1)));
+    }
+    let position = i18n::translate(
+        state.language,
+        keys::editor::POSITION,
+        &[
+            ("at", u32::try_from(at + 1).unwrap_or(u32::MAX).into()),
+            (
+                "total",
+                u32::try_from(order.len()).unwrap_or(u32::MAX).into(),
+            ),
+        ],
+    );
+    let shown = ui.label(
+        egui::RichText::new(position)
+            .size(12.0)
+            .family(egui::FontFamily::Monospace)
+            .color(palette(ui.ctx()).text_2),
+    );
+    widgets::address(ui, &shown, "editor-position");
+    let previous = ui.add_enabled_ui(at > 0, |ui| {
+        let label = tr(keys::editor::PREVIOUS_NOTE);
+        IconButton::new(Icon::ChevronLeft, &label, "editor-previous").show(ui)
+    });
+    if previous.inner.clicked() {
+        actions.push(editor(Editing::Step(-1)));
+    }
 }
 
 fn title(

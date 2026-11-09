@@ -3,7 +3,7 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use engine::notes::kind::NoteKind;
 use engine::notes::language::Language;
 
-use crate::notes::bench::{Bench, area, click_id, settle};
+use crate::notes::bench::{Bench, click_id, expanded_area, settle};
 use crate::testing;
 
 type Harness<'a> = egui_kittest::Harness<'a, Bench>;
@@ -25,7 +25,7 @@ fn note(content: &str) -> (Harness<'static>, String) {
     .unwrap()
     .id
     .clone();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     harness
         .get_by(|node| node.author_id() == Some("search-input"))
         .focus();
@@ -442,7 +442,7 @@ fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
         engine::notes::create_note(engine, draft)
     })
     .unwrap();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     harness
         .get_by(|node| node.author_id() == Some("search-input"))
         .focus();

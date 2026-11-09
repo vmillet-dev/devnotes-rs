@@ -4,7 +4,7 @@ use engine::notes::kind::NoteKind;
 use engine::notes::model::{DisplayNote, NotePatch};
 
 use super::{css, file_name};
-use crate::notes::bench::{Bench, area, click_id, settle};
+use crate::notes::bench::{Bench, click_id, expanded_area, settle};
 use crate::testing;
 
 type Harness = egui_kittest::Harness<'static, Bench>;
@@ -23,7 +23,7 @@ fn opened(content: &str) -> (Harness, String) {
         engine::notes::update_note(engine, at, patch)
     })
     .unwrap();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     harness.state_mut().state.editor.open(id.clone());
     settle(&mut harness);
     (harness, id)
@@ -179,7 +179,7 @@ fn a_drawing_with_no_picture_takes_them_on_being_left_and_no_date_moves() {
 }
 
 #[test]
-fn the_tools_answer_to_their_letters_and_escape_drops_tool_then_selection_then_leaves() {
+fn the_tools_answer_to_their_letters_and_escape_drops_tool_then_selection_then_steps_back() {
     let (mut harness, _) = opened("");
     draw_rectangle(&mut harness);
 
@@ -193,6 +193,10 @@ fn the_tools_answer_to_their_letters_and_escape_drops_tool_then_selection_then_l
     press(&mut harness, Key::Escape, Modifiers::NONE);
     assert!(is_open(&harness));
 
+    // Expanded, the editor goes back beside the cards first, then closes.
+    press(&mut harness, Key::Escape, Modifiers::NONE);
+    settle(&mut harness);
+    assert!(is_open(&harness) && !harness.state().state.settings.editor_fullscreen);
     press(&mut harness, Key::Escape, Modifiers::NONE);
     settle(&mut harness);
     assert!(!is_open(&harness));
@@ -277,7 +281,7 @@ fn a_text_is_typed_where_clicked_and_stored() {
 fn a_new_drawing_left_empty_is_never_written() {
     let (backend, profile) = testing::unlocked();
     let space = testing::note(&backend, "seed").space_id.clone();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     let state = &mut harness.state_mut().state;
     state.editor.draft(NoteKind::Drawing, space, None);
     settle(&mut harness);

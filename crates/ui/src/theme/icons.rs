@@ -31,6 +31,7 @@ pub enum Icon {
     ChevronDown,
     ChevronUp,
     ChevronRight,
+    ChevronLeft,
     X,
     Plus,
     Minus,
@@ -136,6 +137,7 @@ impl Icon {
             Self::ChevronDown => &["m6 9 6 6 6-6"],
             Self::ChevronUp => &["m18 15-6-6-6 6"],
             Self::ChevronRight => &["m9 18 6-6-6-6"],
+            Self::ChevronLeft => &["m15 18-6-6 6-6"],
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
             Self::Plus => &["M5 12h14", "M12 5v14"],
             Self::Minus => &["M5 12h14"],
@@ -422,7 +424,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 75] = [
+    const ALL: [Icon; 76] = [
         Icon::ArrowLeftRight,
         Icon::MoveHorizontal,
         Icon::Sidebar,
@@ -438,6 +440,7 @@ mod tests {
         Icon::ChevronDown,
         Icon::ChevronUp,
         Icon::ChevronRight,
+        Icon::ChevronLeft,
         Icon::X,
         Icon::Plus,
         Icon::Minus,

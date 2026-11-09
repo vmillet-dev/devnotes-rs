@@ -3,7 +3,7 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use engine::notes::kind::NoteKind;
 use engine::notes::language::Language;
 
-use crate::notes::bench::{Bench, area, click_id, settle, until};
+use crate::notes::bench::{Bench, click_id, expanded_area, settle, until};
 use crate::testing;
 
 type Harness<'a> = egui_kittest::Harness<'a, Bench>;
@@ -24,7 +24,7 @@ fn presented() -> Harness<'static> {
         engine::notes::create_note(engine, draft)
     })
     .unwrap();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     harness
         .get_by(|node| node.author_id() == Some("search-input"))
         .focus();

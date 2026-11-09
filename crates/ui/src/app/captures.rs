@@ -831,6 +831,9 @@ fn the_canvas_of_an_open_library() {
         .click();
     settle(&mut harness);
     capture(&mut harness, "editor-snippet");
+    click(&mut harness, "editor-fullscreen");
+    capture(&mut harness, "editor-snippet-expanded");
+    click(&mut harness, "editor-back-to-cards");
     click(&mut harness, "editor-fold-header");
     capture(&mut harness, "editor-header-folded");
     click(&mut harness, "editor-header-summary");

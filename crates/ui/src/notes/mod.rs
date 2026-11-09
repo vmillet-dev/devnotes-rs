@@ -242,6 +242,8 @@ pub enum Editing {
     /// Read as written, then onto the clipboard; a note with fields asks for them.
     Copy,
     Close,
+    /// J or K: the note so many cards after the one open (before, negative).
+    Step(isize),
     Fullscreen(bool),
     FoldHeader(bool),
     /// « Présenter »: the draft on screen, cut into slides.
@@ -374,31 +376,15 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         .beside(ui, region, rail, "library-rail-edge", |ui| {
             sidebar::show(ui, state, &mut view.sidebar, actions);
         });
-    let mut header_ui = ui.new_child(UiBuilder::new().max_rect(rest));
-    header::show(
-        &mut header_ui,
-        state,
-        (&mut view.header, &mut view.focus_search),
-        actions,
-    );
-    let below = Rect::from_min_max(
-        egui::pos2(rest.left(), header_ui.min_rect().bottom()),
-        rest.max,
-    );
-    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
-    // A card dragged on the board can be let go of over a row of the rail, which lights.
-    view.canvas.rail = if state.settings.rail_shown {
-        view.sidebar.rows().to_vec()
-    } else {
-        Vec::new()
-    };
-    canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
-    view.sidebar.card_over = view.canvas.over_rail.take();
+    let (cards, editor) = beside_the_cards(rest, state);
+    if let Some(cards) = cards {
+        cards_and_header(ui, cards, state, view, actions);
+    }
     overlays::editor::show(
         ui,
+        editor,
         state,
-        &mut view.editor,
-        &mut view.explorer_layout,
+        (&mut view.editor, &mut view.explorer_layout),
         actions,
     );
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
@@ -410,6 +396,62 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }
+}
+
+/// The panel's share of the area beside the cards, and its bounds.
+const PANEL_SHARE: f32 = 0.45;
+const PANEL_MIN: f32 = 480.0;
+const PANEL_MAX: f32 = 760.0;
+/// Under this, the cards beside the panel would be a sliver: the panel takes the area.
+const CARDS_MIN: f32 = 400.0;
+
+/// Where the cards and the note open go: side by side, or the note over the whole area once
+/// expanded or when the window is too narrow for both.
+fn beside_the_cards(rest: Rect, state: &AppState) -> (Option<Rect>, Option<Rect>) {
+    let editing = state
+        .editor
+        .opened()
+        .is_some_and(|open| open.note().is_some());
+    if !editing {
+        return (Some(rest), None);
+    }
+    let width = (rest.width() * PANEL_SHARE).clamp(PANEL_MIN, PANEL_MAX);
+    if state.settings.editor_fullscreen || rest.width() - width < CARDS_MIN {
+        return (None, Some(rest));
+    }
+    let split = rest.right() - width;
+    let cards = Rect::from_min_max(rest.min, egui::pos2(split, rest.bottom()));
+    let editor = Rect::from_min_max(egui::pos2(split, rest.top()), rest.max);
+    (Some(cards), Some(editor))
+}
+
+fn cards_and_header(
+    ui: &mut Ui,
+    room: Rect,
+    state: &AppState,
+    view: &mut View,
+    actions: &mut Actions,
+) {
+    let mut header_ui = ui.new_child(UiBuilder::new().max_rect(room));
+    header::show(
+        &mut header_ui,
+        state,
+        (&mut view.header, &mut view.focus_search),
+        actions,
+    );
+    let below = Rect::from_min_max(
+        egui::pos2(room.left(), header_ui.min_rect().bottom()),
+        room.max,
+    );
+    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
+    // A card dragged on the board can be let go of over a row of the rail, which lights.
+    view.canvas.rail = if state.settings.rail_shown {
+        view.sidebar.rows().to_vec()
+    } else {
+        Vec::new()
+    };
+    canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
+    view.sidebar.card_over = view.canvas.over_rail.take();
 }
 
 /// « Snippets », the heading of a kind's section.
