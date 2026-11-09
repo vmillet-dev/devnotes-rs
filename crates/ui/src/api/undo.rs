@@ -2,7 +2,7 @@
 
 use engine::folders::{
     self,
-    board::BoardLayout,
+    board::{BoardLayout, PreviewLines},
     model::{FolderMove, NoteFiling},
 };
 use engine::notes::{
@@ -65,7 +65,8 @@ impl Reversible {
     }
 }
 
-pub fn revert(backend: &Backend, action: Reversible) -> Pending<u32> {
+/// `lines` sizes the rows a zone grows by when notes are filed back into it.
+pub fn revert(backend: &Backend, action: Reversible, lines: PreviewLines) -> Pending<u32> {
     backend.db(move |engine| match action {
         Reversible::Deletion { ids, .. } => notes::restore_notes(engine, ids),
         Reversible::Move(previous) => notes::move_notes_back(engine, previous),
@@ -75,7 +76,7 @@ pub fn revert(backend: &Backend, action: Reversible) -> Pending<u32> {
             notes::set_pinned(engine, ids, !pinned).map(|ids| count(ids.len()))
         }
         Reversible::Priority(previous) => notes::restore_priorities(engine, previous),
-        Reversible::File(previous) => folders::file_notes_back(engine, previous),
+        Reversible::File(previous) => folders::file_notes_back(engine, previous, lines),
         Reversible::Arrangement {
             root_id, previous, ..
         } => {

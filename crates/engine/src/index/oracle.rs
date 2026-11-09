@@ -185,7 +185,12 @@ impl World {
             }
             8 => {
                 let folder = self.dice.pick(&self.folders).clone();
-                drop(folders::file_notes(&engine, one, Some(folder)));
+                drop(folders::file_notes(
+                    &engine,
+                    one,
+                    Some(folder),
+                    crate::folders::board::PreviewLines::default(),
+                ));
             }
             9 => {
                 let values = BTreeMap::from([("host".to_string(), self.text())]);

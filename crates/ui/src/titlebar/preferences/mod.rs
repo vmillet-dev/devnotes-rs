@@ -10,6 +10,7 @@ mod variables;
 pub(crate) use security::change_id;
 
 use egui::{Align, CornerRadius, FontFamily, Id, Layout, Rect, Role, Sense, Stroke, Ui, Vec2};
+use engine::folders::board::PreviewLines;
 use i18n::{Key, Message, keys};
 use zeroize::Zeroizing;
 
@@ -84,6 +85,8 @@ pub(super) struct View {
     /// the backdrop produce no click, so either would be a silent Cancel.
     confirming_close: bool,
     variables: Option<Vec<Variable>>,
+    /// The library's card height, once chosen here: it is not one of the application's settings.
+    preview_lines: Option<PreviewLines>,
     change: security::ChangeView,
     /// The restore strip just asked for, to bring into view.
     reveal_strip: bool,
@@ -111,6 +114,10 @@ impl View {
         self.draft.as_mut().map(SettingsDraft::apply)
     }
 
+    pub(super) fn changed_preview_lines(&self, stored: PreviewLines) -> Option<PreviewLines> {
+        self.preview_lines.filter(|lines| *lines != stored)
+    }
+
     pub(super) fn changed_variables(&self, stored: Option<&[Variable]>) -> Option<Vec<Variable>> {
         self.variables
             .as_ref()
@@ -122,9 +129,11 @@ impl View {
         self.change.take()
     }
 
-    fn pending(&self, stored: Option<&[Variable]>) -> u32 {
+    fn pending(&self, state: &AppState) -> u32 {
         let settings = self.draft.as_ref().map_or(0, SettingsDraft::pending);
-        settings + u32::from(self.changed_variables(stored).is_some())
+        let variables = self.changed_variables(state.security.variables()).is_some();
+        let lines = self.changed_preview_lines(state.preview_lines).is_some();
+        settings + u32::from(variables) + u32::from(lines)
     }
 }
 
@@ -141,7 +150,7 @@ pub(super) fn show(ctx: &egui::Context, state: &AppState, view: &mut View, actio
     if !shown.is_some_and(|shown| shown.should_close()) {
         return;
     }
-    if view.pending(state.security.variables()) > 0 {
+    if view.pending(state) > 0 {
         view.confirming_close = true;
     } else {
         actions.push(Asked::Menu(Action::Preferences(Ask::Discard)));
@@ -287,7 +296,10 @@ fn current_page(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Ac
         return;
     };
     match view.page {
-        Page::General => general::show(ui, state, draft, actions),
+        Page::General => {
+            let lines = view.preview_lines.get_or_insert(state.preview_lines);
+            general::show(ui, state, (draft, lines), actions);
+        }
         Page::Security => {
             let mut settings = draft.draft().clone();
             security::page(ui, state, (&mut settings, &mut view.reveal_strip), actions);
@@ -326,7 +338,7 @@ fn buttons(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions) {
             ask(Ask::ApplyAndClose);
         }
         if Button::new(&tr(keys::settings::APPLY), "settings-apply")
-            .enabled(view.pending(state.security.variables()) > 0)
+            .enabled(view.pending(state) > 0)
             .show(ui)
             .clicked()
         {
@@ -346,7 +358,7 @@ fn confirming(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions)
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let said = Message::new(keys::settings::UNAPPLIED)
-        .with("count", view.pending(state.security.variables()))
+        .with("count", view.pending(state))
         .text(language);
     let warning = ui.label(egui::RichText::new(said).size(12.0).color(p.red));
     widgets::address(ui, &warning, "settings-unapplied");

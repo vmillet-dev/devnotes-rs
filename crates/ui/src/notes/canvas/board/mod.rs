@@ -15,9 +15,7 @@ use egui::{
     CornerRadius, FontFamily, PointerButton, Pos2, Rect, Response, Role, Sense, Shape, Stroke,
     StrokeKind, Ui, UiBuilder, Vec2, WidgetInfo, pos2, vec2,
 };
-use engine::folders::board::{
-    BoardFrame, BoardNote, BoardPoint, BoardView, CARD_HEIGHT, CARD_WIDTH, zone_at,
-};
+use engine::folders::board::{BoardFrame, BoardNote, BoardPoint, BoardView, CARD_WIDTH, zone_at};
 use i18n::{Key, keys};
 
 use super::selection_bar::{self, Shown};
@@ -247,7 +245,7 @@ fn ground(
         reveal(
             ui,
             (board, view),
-            surface.min,
+            (surface.min, context.card_height()),
             canvas_view.request.as_deref(),
         );
         cards_and_zones(
@@ -315,7 +313,11 @@ fn cards_and_zones(
         }
     }
     for entry in loose_cards(board, view) {
-        let rect = card_rect(origin, place_of(board, entry, hand.moving()));
+        let rect = card_rect(
+            origin,
+            place_of(board, entry, hand.moving()),
+            context.card_height(),
+        );
         if rect.intersects(clip) {
             let seat = (rect, "board-loose-card", false);
             seated(
@@ -576,7 +578,11 @@ fn ghost(ui: &mut Ui, board: &BoardState, context: &card::Context<'_>, hand: &Ha
     let Some(entry) = board.cards().find(|entry| entry.note.id == *note_id) else {
         return;
     };
-    let rect = card_rect(hand.origin, BoardPoint { x: to.x, y: to.y });
+    let rect = card_rect(
+        hand.origin,
+        BoardPoint { x: to.x, y: to.y },
+        context.card_height(),
+    );
     let mut ghost_ui = ui.new_child(
         UiBuilder::new()
             .max_rect(rect)
@@ -642,7 +648,12 @@ fn bands(ui: &Ui, hand: &Hand<'_>) {
 
 /// A card asked to take the focus may sit out of view, so not be drawn: the ground scrolls to
 /// it, a zone's own body then to the card.
-fn reveal(ui: &Ui, (board, view): (&BoardState, &BoardView), origin: Pos2, request: Option<&str>) {
+fn reveal(
+    ui: &Ui,
+    (board, view): (&BoardState, &BoardView),
+    (origin, card_height): (Pos2, f32),
+    request: Option<&str>,
+) {
     let Some(id) = request else { return };
     let zone = view
         .zones
@@ -653,7 +664,10 @@ fn reveal(ui: &Ui, (board, view): (&BoardState, &BoardView), origin: Pos2, reque
         .loose
         .iter()
         .find(|entry| entry.note.id == id)
-        .map(|entry| card_rect(origin, board.place(entry).unwrap_or(UNPLACED)));
+        .map(|entry| {
+            let at = board.place(entry).unwrap_or(UNPLACED);
+            card_rect(origin, at, card_height)
+        });
     if let Some(rect) = zone.or(card) {
         ui.scroll_to_rect(rect, None);
     }
@@ -722,10 +736,10 @@ fn frame_rect(origin: Pos2, frame: BoardFrame) -> Rect {
     )
 }
 
-fn card_rect(origin: Pos2, at: BoardPoint) -> Rect {
+fn card_rect(origin: Pos2, at: BoardPoint, height: f32) -> Rect {
     Rect::from_min_size(
         origin + vec2(px(at.x), px(at.y)),
-        vec2(px(CARD_WIDTH), px(CARD_HEIGHT)),
+        vec2(px(CARD_WIDTH), height),
     )
 }
 

@@ -65,6 +65,8 @@
     "manageTags": "Manage",
     "newNoteKindLabel": "Choose the note type",
     "kindTag": {
+      "snippet": "Snippet",
+      "plain": "Text",
       "note": "Note",
       "checklist": "Tasks",
       "calc": "Calc",
@@ -96,7 +98,6 @@
     },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Tick the task {{text}}",
-    "checklistMore": "+{count, plural, one {# more} other {# more}}",
     "samples": {
       "space": "Getting started",
       "welcome": {
@@ -443,6 +444,20 @@
     "neverExpires": "Never expires"
   },
   "time": {
+    "short": {
+      "justNow": "now",
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "yesterday": "yesterday",
+      "days": "{{count}} d",
+      "weeks": "{{count}} wk",
+      "months": "{{count}} mo",
+      "years": "{{count}} y",
+      "expired": "expired",
+      "inMinutes": "in {{count}} min",
+      "inHours": "in {{count}} h",
+      "inDays": "in {{count}} d"
+    },
     "justNow": "just now",
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}}h ago",
@@ -1011,6 +1026,11 @@
     "density": {
       "comfortable": "Comfortable",
       "compact": "Compact"
+    },
+    "cards": {
+      "title": "Cards",
+      "previewLines": "Preview lines",
+      "previewLinesHint": "What a card shows of its note, in this library: 3, 4 or 5 lines. After a change, loose cards on the board may overlap: « Align » lines them up again, leaving the folders alone."
     },
     "editor": {
       "title": "Editor",

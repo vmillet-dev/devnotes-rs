@@ -12,6 +12,7 @@ const FRENCH: &str = "setting-locale-1";
 const ENGLISH: &str = "setting-locale-2";
 const NOTE_KIND_NOTE: &str = "setting-note-kind-0";
 const NOTE_KIND_SNIPPET: &str = "setting-note-kind-1";
+const FIVE_LINES: &str = "setting-preview-lines-2";
 
 fn open(app: &mut App) {
     app.click("file-menu");
@@ -31,6 +32,13 @@ fn locale(app: &mut App, choice: &str) {
 /// What the theme control offers, which names the theme it would switch to: it reads the window's.
 fn theme_word(app: &mut App) -> String {
     app.tree().text("theme-toggle").unwrap_or_default()
+}
+
+/// A card's height, in the window's own units.
+fn card_height(app: &mut App) -> f64 {
+    let tree = app.tree();
+    let card = tree.find("note-card").and_then(|node| node.bounds());
+    card.map_or(0.0, |card| card.y1 - card.y0)
 }
 
 fn file_word(app: &mut App) -> String {
@@ -125,6 +133,23 @@ fn preferences() {
         app.eventually("the editor closed", |tree| !tree.has("editor-body"));
     });
 
+    let four = card_height(&mut app);
+    step(
+        "five preview lines make every card 160 px rather than 140",
+        || {
+            open(&mut app);
+            app.click(FIVE_LINES);
+            app.click("settings-apply");
+            app.click("settings-close");
+            closed(&mut app);
+            app.eventually("the cards grew by a line", |tree| {
+                tree.find("note-card")
+                    .and_then(|node| node.bounds())
+                    .is_some_and(|card| ((card.y1 - card.y0) / four - 160.0 / 140.0).abs() < 0.02)
+            });
+        },
+    );
+
     let theme = theme_word(&mut app);
     let mut app = app.relaunch();
     app.fill("vault-passphrase", e2e::PASSPHRASE);
@@ -136,6 +161,12 @@ fn preferences() {
         || {
             assert_eq!(file_word(&mut app), "File");
             assert_eq!(theme_word(&mut app), theme);
+            app.wait_for("note-card");
+            let five = card_height(&mut app);
+            assert!(
+                (five / four - 160.0 / 140.0).abs() < 0.02,
+                "{five} for {four}"
+            );
             open(&mut app);
             app.click(COMFORTABLE);
             app.click("settings-cancel");

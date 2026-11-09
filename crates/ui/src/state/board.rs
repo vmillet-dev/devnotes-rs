@@ -10,7 +10,7 @@ use chrono::{DateTime, Local, NaiveDate, Utc};
 use engine::error::AppError;
 use engine::folders::board::{
     BoardArrangement, BoardFrame, BoardNote, BoardPoint, BoardQuery, BoardScope, BoardView,
-    BoardZone, CardPlacement, ZonePlacement,
+    BoardZone, CardPlacement, PreviewLines, ZonePlacement,
 };
 use engine::folders::model::Folder;
 use i18n::{Message, keys};
@@ -69,6 +69,8 @@ pub struct Place {
 struct Params {
     place: Place,
     criteria: Criteria,
+    /// The library's card height, which sizes a first layout.
+    lines: PreviewLines,
     /// The local day, not the instant: what dims by date moves at midnight, not every frame.
     day: NaiveDate,
     revision: Revision,
@@ -123,12 +125,13 @@ impl BoardState {
         &mut self,
         backend: &Backend,
         now: DateTime<Utc>,
-        (place, criteria): (Place, Criteria),
+        (place, criteria, lines): (Place, Criteria, PreviewLines),
         revision: Revision,
     ) -> bool {
         self.cell.want(Params {
             place,
             criteria,
+            lines,
             day: now.with_timezone(&Local).date_naive(),
             revision,
         });
@@ -153,13 +156,14 @@ impl BoardState {
         place: &Place,
         (note_id, folder): (String, Option<String>),
         (at, now): (BoardPoint, f64),
+        lines: PreviewLines,
     ) {
         if folder.is_none() {
             self.move_card(place, note_id.clone(), at, now);
         }
         let into = folder.clone().or_else(|| place.root_id.clone());
         self.filing.insert(note_id.clone(), folder);
-        let pending = api::folders::file(backend, vec![note_id.clone()], into);
+        let pending = api::folders::file(backend, vec![note_id.clone()], into, lines);
         self.filings.push((note_id, pending));
     }
 
@@ -341,12 +345,19 @@ impl BoardState {
     }
 
     /// The board on screen put back in order, as far as `scope` allows.
-    pub fn arrange(&mut self, backend: &Backend, place: &Place, scope: BoardScope) {
+    pub fn arrange(
+        &mut self,
+        backend: &Backend,
+        place: &Place,
+        scope: BoardScope,
+        lines: PreviewLines,
+    ) {
         let pending = api::board::arrange(
             backend,
             place.space_id.clone(),
             place.root_id.clone(),
             scope,
+            lines,
         );
         self.arranging = Some((place.root_id.clone(), pending));
     }
@@ -481,6 +492,7 @@ fn query(params: Params, now: DateTime<Utc>) -> BoardQuery {
         kinds: facets.kinds.into_iter().collect(),
         priorities: facets.priorities.into_iter().collect(),
         now,
+        preview_lines: params.lines,
     }
 }
 
@@ -495,7 +507,7 @@ mod tests {
             state.update(
                 backend,
                 Utc::now(),
-                (place.clone(), Criteria::default()),
+                (place.clone(), Criteria::default(), PreviewLines::default()),
                 revision,
             );
             backend.settle();
@@ -551,7 +563,7 @@ mod tests {
             state.update(
                 &backend,
                 Utc::now(),
-                (place.clone(), criteria.clone()),
+                (place.clone(), criteria.clone(), PreviewLines::default()),
                 Revision::default(),
             );
             backend.settle();
@@ -629,7 +641,12 @@ mod tests {
         })
         .unwrap();
 
-        state.arrange(&backend, &place, BoardScope::Everything);
+        state.arrange(
+            &backend,
+            &place,
+            BoardScope::Everything,
+            PreviewLines::default(),
+        );
         backend.settle();
         let done = state.write(&ctx, &backend, &mut revision, &mut errors);
 

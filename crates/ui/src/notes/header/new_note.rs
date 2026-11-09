@@ -230,35 +230,11 @@ fn kind_item(
     response
 }
 
-/// The kind's mark on a neutral tile, ringed in its hue: the hue is how the kinds are told apart.
+/// The kind's icon on its tinted tile: where it is learnt, beside its word, before a card
+/// shows it alone.
 fn tile(ui: &Ui, at: egui::Pos2, kind: NoteKind) {
-    let p = palette(ui.ctx());
-    let hue = match kind {
-        NoteKind::Snippet => p.blue,
-        NoteKind::Note => p.purple,
-        NoteKind::Checklist => p.green,
-        NoteKind::Calc => p.pink,
-        NoteKind::Drawing => p.teal,
-    };
     let rect = Rect::from_min_size(at, Vec2::splat(TILE));
-    ui.painter().rect(
-        rect,
-        CornerRadius::same(7),
-        p.bg_3,
-        Stroke::new(1.0, hue.gamma_multiply(0.4)),
-        egui::StrokeKind::Inside,
-    );
-    let glyph = Rect::from_center_size(rect.center(), Vec2::splat(16.0));
-    let mark = match kind {
-        NoteKind::Snippet => "</>",
-        NoteKind::Note => "Aa",
-        NoteKind::Checklist => return icons::paint(ui, glyph, Icon::Check, hue),
-        NoteKind::Calc => return icons::paint(ui, glyph, Icon::Calculator, hue),
-        NoteKind::Drawing => return icons::paint(ui, glyph, Icon::Image, hue),
-    };
-    let words = widgets::text(ui, mark, 12.0, 700.0, FontFamily::Monospace, hue);
-    ui.painter()
-        .galley(rect.center() - words.size() / 2.0, words, hue);
+    crate::notes::ui::kind_tile(ui, rect, kind);
 }
 
 /// « New », until a note of that kind was made.

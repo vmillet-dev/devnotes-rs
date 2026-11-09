@@ -24,7 +24,7 @@ use crate::state::AppState;
 use crate::theme::{palette, spacing};
 use crate::titlebar::about_menu::Panel;
 use crate::widgets::{self, Button, address, interact, priority_dot};
-use rows::{CARD_HEIGHT, HEADING_HEIGHT, Row, Rows};
+use rows::{HEADING_HEIGHT, Row, Rows};
 
 /// What only the canvas's drawing sees: the card with the focus, the one asked to take it, and
 /// how many columns the cards were laid out in — what the arrows move through.
@@ -185,7 +185,7 @@ fn sections(
         .auto_shrink([false, false])
         .show_viewport(ui, |ui, viewport| {
             let width = ui.available_width() - 2.0 * s.canvas;
-            let rows = Rows::of(view, width, s.grid, s.section);
+            let rows = Rows::of(view, width, context.card_height(), (s.grid, s.section));
             let origin = ui.min_rect().min + Vec2::splat(s.canvas);
             // Past the keyboard hint, which lies over the bottom edge.
             ui.set_height(rows.height() + 2.0 * s.canvas + HINT_HEIGHT);
@@ -196,7 +196,8 @@ fn sections(
                 .as_deref()
                 .and_then(|id| rows.top_of(view, id))
             {
-                let rect = Rect::from_min_size(origin + vec2(0.0, top), vec2(width, CARD_HEIGHT));
+                let size = vec2(width, context.card_height());
+                let rect = Rect::from_min_size(origin + vec2(0.0, top), size);
                 ui.scroll_to_rect(rect, None);
             }
             canvas_view.anchor = canvas_view.focused.take();
@@ -233,8 +234,8 @@ fn cards(
         #[expect(clippy::cast_precision_loss, reason = "a handful of columns")]
         let left = column as f32 * (rows.card_width() + grid);
         // On whole points: a badge laid out right to left from a fraction is drawn blurred.
-        let rect = Rect::from_min_size(min + vec2(left, 0.0), vec2(rows.card_width(), CARD_HEIGHT))
-            .round_ui();
+        let size = vec2(rows.card_width(), context.card_height());
+        let rect = Rect::from_min_size(min + vec2(left, 0.0), size).round_ui();
         let mut cell_ui = ui.new_child(UiBuilder::new().max_rect(rect).id_salt((section, cell)));
         match shown.cards.get(cell) {
             Some(shown_card) => {

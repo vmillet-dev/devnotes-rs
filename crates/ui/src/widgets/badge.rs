@@ -1,14 +1,13 @@
-//! What labels a thing rather than acts: a chip, a priority's dot, a kind's or a language's
+//! What labels a thing rather than acts: a chip, a priority's dot, a hue's
 //! badge, a key cap, the spinner.
 
 use egui::{
-    Color32, CornerRadius, FontFamily, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
+    Color32, CornerRadius, FontFamily, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
     WidgetInfo,
 };
 use engine::notes::priority::Priority;
 
 use super::{hovered, interact, text, towards};
-use crate::theme::icons::{self, Icon};
 use crate::theme::{motion, palette};
 
 /// A pill a rail toggles: amber edge and label when selected.
@@ -87,17 +86,14 @@ pub fn priority_dot(ui: &mut Ui, priority: Priority) -> Response {
     response
 }
 
-/// A kind's or a language's badge: the hue is the information, so the label keeps it and the
-/// fill goes neutral, with a hairline in the hue that gives the badge its shape on a light page.
-pub fn hue_badge(ui: &mut Ui, label: &str, hue: Color32, icon: Option<Icon>) -> Response {
+/// A badge whose hue is the information, so the label keeps it and the fill goes neutral, with
+/// a hairline in the hue that gives the badge its shape on a light page.
+pub fn hue_badge(ui: &mut Ui, label: &str, hue: Color32) -> Response {
     let p = palette(ui.ctx());
     let words = label.to_uppercase();
     let galley = text(ui, &words, 9.5, 700.0, FontFamily::Monospace, hue);
-    let icon_room = if icon.is_some() { 10.0 + 3.0 } else { 0.0 };
-    let (rect, response) = ui.allocate_exact_size(
-        galley.size() + Vec2::new(12.0 + icon_room, 4.0),
-        Sense::hover(),
-    );
+    let (rect, response) =
+        ui.allocate_exact_size(galley.size() + Vec2::new(12.0, 4.0), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, label));
     let corner = CornerRadius::same(4);
     ui.painter().rect(
@@ -107,17 +103,7 @@ pub fn hue_badge(ui: &mut Ui, label: &str, hue: Color32, icon: Option<Icon>) -> 
         Stroke::new(1.0, hue.gamma_multiply(0.4)),
         StrokeKind::Inside,
     );
-    if let Some(icon) = icon {
-        let at = Rect::from_center_size(
-            egui::pos2(rect.left() + 6.0 + 5.0, rect.center().y),
-            Vec2::splat(10.0),
-        );
-        icons::paint(ui, at, icon, hue);
-    }
-    let at = egui::pos2(
-        rect.left() + 6.0 + icon_room,
-        rect.center().y - galley.size().y / 2.0,
-    );
+    let at = egui::pos2(rect.left() + 6.0, rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, hue);
     response
 }

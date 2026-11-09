@@ -9,8 +9,8 @@ use egui::{
     StrokeKind, Ui, UiBuilder, Vec2, WidgetInfo, pos2, vec2,
 };
 use engine::folders::board::{
-    BoardChild, BoardFrame, BoardNote, BoardZone, CARD_HEIGHT, CARD_WIDTH, GAP, ZONE_BORDER,
-    ZONE_HEADER, ZONE_PADDING, ZONE_SUBFOLDERS, columns_in,
+    BoardChild, BoardFrame, BoardNote, BoardZone, CARD_WIDTH, GAP, ZONE_BORDER, ZONE_HEADER,
+    ZONE_PADDING, ZONE_SUBFOLDERS, columns_in,
 };
 use i18n::keys;
 
@@ -516,7 +516,7 @@ fn flow(
         .unwrap_or(1)
         .max(1);
     let rows = notes.len().div_ceil(columns);
-    let (width, height, gap) = (px(CARD_WIDTH), px(CARD_HEIGHT), px(GAP));
+    let (width, height, gap) = (px(CARD_WIDTH), context.card_height(), px(GAP));
     #[expect(
         clippy::cast_precision_loss,
         reason = "a zone holds far under 2²⁴ rows"

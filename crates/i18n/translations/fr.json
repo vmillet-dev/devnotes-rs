@@ -65,6 +65,8 @@
     "manageTags": "Gérer",
     "newNoteKindLabel": "Choisir le type de note",
     "kindTag": {
+      "snippet": "Snippet",
+      "plain": "Texte",
       "note": "Note",
       "checklist": "Tâches",
       "calc": "Calcul",
@@ -96,7 +98,6 @@
     },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Cocher la tâche {{text}}",
-    "checklistMore": "+{count, plural, one {# autre} other {# autres}}",
     "samples": {
       "space": "Découverte",
       "welcome": {
@@ -443,6 +444,20 @@
     "neverExpires": "N’expire jamais"
   },
   "time": {
+    "short": {
+      "justNow": "à l’instant",
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "yesterday": "hier",
+      "days": "{{count}} j",
+      "weeks": "{{count}} sem.",
+      "months": "{{count}} mois",
+      "years": "{count, plural, one {# an} other {# ans}}",
+      "expired": "expirée",
+      "inMinutes": "dans {{count}} min",
+      "inHours": "dans {{count}} h",
+      "inDays": "dans {{count}} j"
+    },
     "justNow": "à l’instant",
     "minutesAgo": "il y a {{count}} min",
     "hoursAgo": "il y a {{count}}h",
@@ -1011,6 +1026,11 @@
     "density": {
       "comfortable": "Confortable",
       "compact": "Compacte"
+    },
+    "cards": {
+      "title": "Cartes",
+      "previewLines": "Lignes d’aperçu",
+      "previewLinesHint": "Ce qu’une carte montre de sa note, dans cette bibliothèque : 3, 4 ou 5 lignes. Après un changement, des cartes libres du tableau peuvent se chevaucher : « Aligner » les remet en rang, sans toucher aux dossiers."
     },
     "editor": {
       "title": "Éditeur",

@@ -13,7 +13,8 @@ use crate::error::AppError;
 use crate::index::Changed;
 
 use board::{
-    BoardArrangement, BoardQuery, BoardScope, BoardView, CardPlacement, Occupancy, ZonePlacement,
+    BoardArrangement, BoardQuery, BoardScope, BoardView, CardPlacement, Occupancy, PreviewLines,
+    ZonePlacement,
 };
 use model::{Folder, FolderColour, FolderDraft, FolderMove, Lineage, NoteFiling};
 
@@ -45,6 +46,7 @@ pub fn board_view(engine: &Engine, query: BoardQuery) -> Result<BoardView, AppEr
         &query.space_id,
         &zones,
         &Occupancy::on(&notes, &lineage, root),
+        query.preview_lines.card_height(),
     )?;
 
     drop(connection);
@@ -171,39 +173,55 @@ pub fn move_folder_back(engine: &Engine, was: FolderMove) -> Result<bool, AppErr
 }
 
 /// No refuge, unlike [`crate::spaces::delete_space`]: what it held goes to its parent, or
-/// loose at the top of the space.
-pub fn delete_folder(engine: &Engine, id: String) -> Result<(), AppError> {
+/// loose at the top of the space. `lines` sizes the rows the parent's zone grows by.
+pub fn delete_folder(engine: &Engine, id: String, lines: PreviewLines) -> Result<(), AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        store::delete(&mut connection, &id)?;
+        store::delete(&mut connection, &id, lines.card_height())?;
         let changed = Changed::everything();
         Ok(((), changed))
     })
 }
 
 /// A batch, like [`crate::notes::move_notes`]: the selection bar files a whole selection,
-/// and a drop on the board is a batch of one. `folderId` absent unfiles.
+/// and a drop on the board is a batch of one. `folderId` absent unfiles. `lines` sizes the
+/// rows a zone grows by to show what was filed into it.
 pub fn file_notes(
     engine: &Engine,
     ids: Vec<String>,
     folder_id: Option<String>,
+    lines: PreviewLines,
 ) -> Result<Vec<NoteFiling>, AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        let answer = store::file_many(&mut connection, &ids, folder_id.as_deref(), Utc::now())?;
+        let answer = store::file_many(
+            &mut connection,
+            &ids,
+            folder_id.as_deref(),
+            Utc::now(),
+            lines.card_height(),
+        )?;
         let changed = Changed::notes(ids.clone());
         Ok((answer, changed))
     })
 }
 
 /// The undo of [`file_notes`]: each note goes back to the folder it left, or to loose.
-pub fn file_notes_back(engine: &Engine, filings: Vec<NoteFiling>) -> Result<u32, AppError> {
+pub fn file_notes_back(
+    engine: &Engine,
+    filings: Vec<NoteFiling>,
+    lines: PreviewLines,
+) -> Result<u32, AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        let answer = count(store::restore_filings(&mut connection, &filings)?);
+        let answer = count(store::restore_filings(
+            &mut connection,
+            &filings,
+            lines.card_height(),
+        )?);
         let changed = Changed::notes(filings.iter().map(|one| one.note_id.clone()));
         Ok((answer, changed))
     })
@@ -217,6 +235,7 @@ pub fn arrange_board(
     space_id: String,
     root_id: Option<String>,
     scope: BoardScope,
+    lines: PreviewLines,
 ) -> Result<BoardArrangement, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
@@ -226,5 +245,6 @@ pub fn arrange_board(
         &space_id,
         root_id.as_deref(),
         scope,
+        lines.card_height(),
     )?)
 }

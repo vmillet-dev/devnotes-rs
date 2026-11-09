@@ -19,6 +19,21 @@ fn note_lifecycle() {
     app.create_library();
     cards(&mut app, CARDS, "the samples are drawn");
 
+    step(
+        "a card names its kind by an icon, and only a snippet its format",
+        || {
+            let tree = app.tree();
+            assert_eq!(tree.count("kind-icon"), CARDS);
+            let formats = tree.count("note-format");
+            assert!(formats > 0 && formats < CARDS, "{formats} formats");
+            // Title bar over status line, on every card.
+            for (icon, when) in tree.all("kind-icon").iter().zip(tree.all("note-card-when")) {
+                let (icon, when) = (icon.bounds().unwrap(), when.bounds().unwrap());
+                assert!(icon.y1 <= when.y0, "{icon:?} over {when:?}");
+            }
+        },
+    );
+
     step("a new note opens as a draft that is not yet a note", || {
         app.click("new-note");
         app.wait_for("editor-title");

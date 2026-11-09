@@ -32,6 +32,8 @@ pub mod undo;
 
 pub use query::QueryCell;
 
+use engine::folders::board::PreviewLines;
+
 use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
@@ -45,6 +47,9 @@ use crate::services::time::{Clock, SystemClock};
 use crate::theme;
 use crate::widgets::Layer;
 use notes_query::NotesQueryState;
+
+/// The library's: its board's loose cards are stored in pixels, at that card's height.
+pub const PREVIEW_LINES_KEY: &str = "devnotes.notes.previewLines";
 
 /// Bumped after every write the interface adopts: the queries that read notes carry it among
 /// their parameters, so the list and the board ask again together. Writes are not optimistic:
@@ -159,6 +164,8 @@ pub struct AppState {
     pub presentation: presentation::PresentationState,
     /// The open library's, read with its preferences.
     pub prettier: crate::notes::prettier::PrettierSettings,
+    /// How many lines a card shows, the library's (`devnotes.notes.previewLines`).
+    pub preview_lines: PreviewLines,
     pub errors: ErrorNotifier,
     pub clock: Box<dyn Clock>,
     /// The system's wish; the look adds nothing to it.
@@ -234,6 +241,7 @@ impl AppState {
             formatting: formatting::FormattingState::default(),
             presentation: presentation::PresentationState::default(),
             prettier: crate::notes::prettier::PrettierSettings::default(),
+            preview_lines: PreviewLines::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
             reduced_motion,
@@ -365,9 +373,8 @@ impl AppState {
         self.notes_query
             .update(ctx, backend, now, place, self.revision);
         if let Some(place) = self.board_place() {
-            let criteria = self.notes_query.criteria();
-            self.board
-                .update(backend, now, (place, criteria), self.revision);
+            let asked = (place, self.notes_query.criteria(), self.preview_lines);
+            self.board.update(backend, now, asked, self.revision);
         }
     }
 
@@ -433,16 +440,21 @@ impl AppState {
                 note_id,
                 folder,
                 at,
-            } => self
-                .board
-                .drop_card(backend, &place, (note_id, folder), (at, now)),
+            } => self.board.drop_card(
+                backend,
+                &place,
+                (note_id, folder),
+                (at, now),
+                self.preview_lines,
+            ),
             BoardGesture::MoveZone { folder_id, frame } => {
                 self.board.move_zone(&place, folder_id, frame, now);
             }
             BoardGesture::DrawZone(frame) => self.board.propose_zone(frame),
             BoardGesture::Band(ids) => self.selection.check_all(ids),
             BoardGesture::FileOnRail { note_id, folder } => {
-                self.notes.file(backend, vec![note_id], folder);
+                self.notes
+                    .file(backend, (vec![note_id], folder), self.preview_lines);
             }
             BoardGesture::SelectFolder(id) => {
                 let held: Vec<String> = self
@@ -461,7 +473,8 @@ impl AppState {
     /// The board on screen put back in order; nothing while the list shows.
     fn tidy(&mut self, backend: &Backend, scope: engine::folders::board::BoardScope) {
         if let Some(place) = self.board_place() {
-            self.board.arrange(backend, &place, scope);
+            self.board
+                .arrange(backend, &place, scope, self.preview_lines);
         }
     }
 
@@ -473,7 +486,7 @@ impl AppState {
         ) {
             self.board.restored();
         }
-        self.undo.revert(backend);
+        self.undo.revert(backend, self.preview_lines);
     }
 
     /// The folder open, `None` for every one: a folder of another space than the one shown is
@@ -656,6 +669,10 @@ impl AppState {
                 self.prettier = crate::notes::prettier::PrettierSettings::read(
                     preferences.get(crate::notes::prettier::KEY),
                 );
+                self.preview_lines = preferences
+                    .get(PREVIEW_LINES_KEY)
+                    .and_then(|stored| stored.parse().ok())
+                    .unwrap_or_default();
                 self.library_preferences = preferences;
             }
             Err(error) => self
@@ -892,6 +909,9 @@ impl AppState {
             self.language = self.settings.locale.language();
             self.apply_look(ctx);
             self.save_settings(backend);
+        }
+        if let Some(lines) = self.titlebar_view.adopt_preview_lines(self.preview_lines) {
+            self.set_preview_lines(lines, backend);
         }
         if let Some(rows) = self
             .titlebar_view
@@ -1237,7 +1257,7 @@ impl AppState {
             } => self.folders.create(backend, space_id, parent_id, &name),
             Notes::RenameFolder { id, name } => self.folders.rename(backend, id, &name),
             Notes::RecolourFolder { id, colour } => self.folders.recolour(backend, id, colour),
-            Notes::DeleteFolder(id) => self.folders.delete(backend, id),
+            Notes::DeleteFolder(id) => self.folders.delete(backend, id, self.preview_lines),
             Notes::MoveFolder { id, parent, space } => {
                 self.move_folder(backend, id, (parent, space));
             }
@@ -1339,7 +1359,8 @@ impl AppState {
                 self.notes.prioritise(backend, vec![id], priority);
             }
             Notes::File { id, folder } => {
-                self.notes.file(backend, vec![id], folder);
+                self.notes
+                    .file(backend, (vec![id], folder), self.preview_lines);
             }
             Notes::MoveTo { id, space } => {
                 self.notes.move_to(backend, vec![id], space);
@@ -1443,7 +1464,8 @@ impl AppState {
                     .change_draft(backend, |note| note.folder_id = into)
                     && let Some(id) = id
                 {
-                    self.notes.file(backend, vec![id], folder);
+                    self.notes
+                        .file(backend, (vec![id], folder), self.preview_lines);
                 }
             }
             Editing::Convert {
@@ -1563,7 +1585,7 @@ impl AppState {
         }
         match batch {
             Batch::MoveTo(space) => self.notes.move_to(backend, ids, space),
-            Batch::File(folder) => self.notes.file(backend, ids, folder),
+            Batch::File(folder) => self.notes.file(backend, (ids, folder), self.preview_lines),
             Batch::Prioritise(priority) => self.notes.prioritise(backend, ids, priority),
             Batch::Tag(tag) => self.notes.tag(backend, ids, tag),
             Batch::Untag(tag) => self.notes.untag(backend, ids, tag),
@@ -1932,6 +1954,18 @@ impl AppState {
         platform::links::open(self.opener.as_ref(), url);
     }
 
+    /// The library's, like the Prettier settings: the board's loose cards are stored there in
+    /// pixels, so their height must be the library's too.
+    fn set_preview_lines(&mut self, lines: PreviewLines, backend: &Backend) {
+        self.preview_lines = lines;
+        self.library_preferences
+            .set(PREVIEW_LINES_KEY, lines.as_str());
+        drop(api::preferences::write_library(
+            backend,
+            self.library_preferences.clone(),
+        ));
+    }
+
     fn set_prettier(
         &mut self,
         settings: crate::notes::prettier::PrettierSettings,
@@ -1992,6 +2026,7 @@ impl AppState {
     pub fn reset_library_scope(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.library_preferences = Preferences::default();
         self.prettier = crate::notes::prettier::PrettierSettings::default();
+        self.preview_lines = PreviewLines::default();
         // A library left for the gate has nothing to read until it is unlocked.
         self.library_preferences_read = self
             .gate
@@ -2083,6 +2118,33 @@ mod tests {
         assert_eq!(theme::spacing(&ctx), &theme::tokens::COMPACT);
         assert!(theme::motion::reduced(&ctx));
         assert_ne!(state.revision, before);
+    }
+
+    /// The library's, not the application's: read when it opens, written into its own file.
+    #[test]
+    fn the_preview_lines_are_the_librarys() {
+        let (backend, _profile) = testing::unlocked();
+        let directory =
+            engine::db::run_here(backend.engine(), engine::libraries::open_library_directory)
+                .unwrap();
+        let file = directory.join(engine::layout::PREFERENCES);
+        let mut library = Preferences::read(&file);
+        library.set(PREVIEW_LINES_KEY, "5");
+        library.write(&file).unwrap();
+        let ctx = egui::Context::default();
+        let mut state = AppState::new(Preferences::default(), true);
+        state.gate.ask(&backend);
+        backend.settle();
+        state.update(&ctx, &backend);
+        state.reset_library_scope(&ctx, &backend);
+        backend.settle();
+        state.update(&ctx, &backend);
+        assert_eq!(state.preview_lines, PreviewLines::Five);
+
+        state.set_preview_lines(PreviewLines::Three, &backend);
+        backend.settle();
+
+        assert_eq!(Preferences::read(&file).get(PREVIEW_LINES_KEY), Some("3"));
     }
 
     #[test]

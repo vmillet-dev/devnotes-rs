@@ -282,7 +282,12 @@ mod tests {
         let folder = crate::notes::bench::folder(&backend, &spaces[0], None, "Runbooks");
         let into = folder.id.clone();
         engine::db::run_here(backend.engine(), move |engine| {
-            engine::folders::file_notes(engine, vec![filed], Some(into))
+            engine::folders::file_notes(
+                engine,
+                vec![filed],
+                Some(into),
+                engine::folders::board::PreviewLines::default(),
+            )
         })
         .unwrap();
         let mut harness = area(backend, profile);
