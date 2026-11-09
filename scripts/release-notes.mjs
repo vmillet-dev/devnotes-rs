@@ -7,7 +7,8 @@
 // different things. The grammar is the one `crates/engine/src/changelog/model.rs` parses.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 /**
@@ -226,6 +227,32 @@ export function groupEntries(entries) {
  * A release with no entry, or a heading with no bullet under it, turns `cargo test` red
  * once committed — and the commit this workflow makes is never seen by CI.
  */
+/** The heading of the summary a release may open on, written by hand. */
+export const LEAD_HEADING = '📌 In short';
+
+/**
+ * The bullets of `docs/release-notes/<version>.md`, the summary a release opens on when the
+ * pull requests alone cannot say it (a release that changes the whole application). Its `- `
+ * lines and the indented lines continuing them, as the changelog's grammar reads them;
+ * anything else in the file is the author's note and left out.
+ */
+export function leadItems(markdown) {
+  const items = [];
+  for (const line of markdown.split('\n')) {
+    if (line.startsWith('- ')) {
+      items.push(line.slice(2).trim());
+    } else if (/^\s+\S/.test(line) && items.length > 0) {
+      items[items.length - 1] += ` ${line.trim()}`;
+    }
+  }
+  return items;
+}
+
+/** The summary first, when there is one, then the pull requests' sections. */
+export function withLead(groups, items) {
+  return items.length > 0 ? [{ heading: LEAD_HEADING, items }, ...groups] : groups;
+}
+
 export function assertRenderable(groups) {
   if (groups.length === 0) {
     throw new Error('nothing to release: no commit since the last tag carries a change');
@@ -487,7 +514,9 @@ function main() {
     );
   }
 
-  const groups = groupEntries(entries);
+  const leadFile = join('docs', 'release-notes', `${version}.md`);
+  const lead = existsSync(leadFile) ? leadItems(readFileSync(leadFile, 'utf8')) : [];
+  const groups = withLead(groupEntries(entries), lead);
   assertRenderable(groups);
   const release = renderRelease({ version, date, groups });
 

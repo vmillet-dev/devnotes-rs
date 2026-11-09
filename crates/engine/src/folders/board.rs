@@ -2,8 +2,8 @@
 //! free canvas and its notes sit inside it.
 //!
 //! A query of its own rather than a bent [`crate::notes::view::NotesQuery`]: it answers
-//! folders and positions, and `build_sections` must never learn about a folder. Neither Diesel
-//! nor Tauri is imported here, so the layout rules are tested without a database.
+//! folders and positions, and `build_sections` must never learn about a folder. Diesel is not
+//! imported here, so the layout rules are tested without a database.
 
 use std::collections::HashMap;
 

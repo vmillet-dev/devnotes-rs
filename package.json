@@ -1,6 +1,6 @@
 {
   "name": "devnotes",
-  "description": "Build tools of DevNotes: Prettier, the icons and the release scripts",
+  "description": "Build tools of DevNotes: Prettier and the release scripts",
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
@@ -8,16 +8,12 @@
   },
   "private": true,
   "scripts": {
-    "test:scripts": "node --test scripts/release-notes.test.mjs",
+    "test:scripts": "node --test scripts/release-notes.test.mjs scripts/version.test.mjs scripts/latest-json.test.mjs",
     "lint": "prettier --check .",
     "format": "prettier --write .",
-    "icons": "node scripts/icons.mjs",
     "prettier": "node scripts/prettier.mjs"
   },
   "dependencies": {
     "prettier": "3.9.10"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^2"
   }
 }

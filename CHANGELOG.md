@@ -4,8 +4,8 @@ Notable changes to DevNotes, newest first.
 
 **The newest section is generated.** `.github/workflows/release.yml` writes it from the pull
 requests merged since the last tag, then commits it **before** creating the tag — this file is
-shipped inside the binary (`src-tauri/src/changelog.rs` embeds it with `include_str!`) and read
-by "À propos → Nouveautés", so a release whose section came after the tag would ship a binary
+shipped inside the binary (`crates/engine/src/changelog.rs` embeds it with `include_str!`) and read
+by "About → What's new", so a release whose section came after the tag would ship a binary
 missing its own entry. Sections already written are never touched: edit them by hand freely.
 
 Keep the shape — a `## ` heading per release, `### ` headings for the categories, one `- `

@@ -6,24 +6,28 @@ handful of conventions that are load-bearing, and where the traps are.
 DevNotes is licensed under the [GNU GPL v3.0](LICENSE). Opening a pull request means you agree
 to have your contribution distributed under those terms.
 
-DevNotes is being rewritten from Angular + Tauri to egui, in Rust alone
-([the plan](docs/egui-migration/egui-migration-plan.md)). Until the egui application is complete, `main` has no
-usable application; the Angular one is kept for reading in `reference/angular/`, and runs from
-the `angular-reference` tag (see [its README](reference/angular/README.md)).
+DevNotes is Rust alone: an egui window over a core, in one process. It was an Angular + Tauri
+application until 1.0.0 ([the plan](docs/egui-migration/egui-migration-plan.md) tells the
+migration and holds its decisions); that application stays whole, sources and scenarios, at the
+`angular-reference` tag.
 
 ## Getting set up
 
-You need Rust via `rustup` (the toolchain is pinned in `rust-toolchain.toml`, so a new stable
-release cannot turn CI red on a commit nobody touched) and Node.js 24 — the version `.nvmrc`
-pins — for Prettier, the icons and the release scripts only.
+You need Rust via `rustup` — the toolchain is pinned in `rust-toolchain.toml`, so a new stable
+release cannot turn CI red on a commit nobody touched — and, on Linux, what the window and the
+tray link or open (on Ubuntu: `libgtk-3-dev libxkbcommon-x11-0`, plus `mesa-vulkan-drivers` for
+a machine without a GPU driver). Nothing else: no WebView, no Node, to build and run the
+application.
 
 ```bash
-npm install
 cargo run -p app -- --profile ../devnotes-profile
 ```
 
 `--profile` keeps the run apart from an installed DevNotes: its libraries, logs and window
 geometry all go in that directory.
+
+Node.js 24 (the version `.nvmrc` pins) is a build tool only, for Prettier over the docs and the
+release scripts: `npm install` before `npm run lint`.
 
 ## What CI checks
 
@@ -42,13 +46,13 @@ type-checks.
 
 ## The scripts
 
-| Command                 | What it does                                                |
-| ----------------------- | ----------------------------------------------------------- |
-| `npm run lint`          | Prettier check over the Markdown, JSON and YAML             |
-| `npm run format`        | Prettier write                                              |
-| `npm run test:scripts`  | `node --test` on the release-notes generator                |
-| `npm run icons`         | Regenerates `crates/app/icons/` from `devnotes.svg`         |
-| `cargo bench -p engine` | The core's benchmarks (not in CI; see docs/architecture.md) |
+| Command                            | What it does                                                |
+| ---------------------------------- | ----------------------------------------------------------- |
+| `npm run lint`                     | Prettier check over the Markdown, JSON and YAML             |
+| `npm run format`                   | Prettier write                                              |
+| `npm run test:scripts`             | `node --test` on the release scripts                        |
+| `cargo bench -p engine`            | The core's benchmarks (not in CI; see docs/architecture.md) |
+| `cargo run -p app --example icons` | Redraws `crates/app/icons/` from `devnotes.svg`             |
 
 ## The layout
 
@@ -63,7 +67,7 @@ crates/engine/src/
   db.rs           Connection, migrations, schema, stored-instant format
   error.rs        The three errors and the translation between them
 crates/i18n/      The interface's translations
-reference/angular The Angular application and its scenarios, for reading only
+e2e/              The end-to-end driver and its scenarios, on the assembled window
 docs/             Architecture notes, the migration plan, the release procedure, the mockups
 ```
 
