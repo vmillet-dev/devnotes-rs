@@ -6194,7 +6194,7 @@ restoring a copy closes the sockets and cancels the sends and runs first
 (the core's `serve_scripts`: no window, no log), then `--profile <directory>`, which puts the
 whole profile, its logs and the window's geometry in that directory — tests and development
 only. Without it, `platform::paths::Locations::installed` resolves the profile
-`com.devnotes.app.dev` (D16; the Angular reference keeps `com.devnotes.app`): roaming data on
+`com.devnotes.app`, the packages' identifier (`com.devnotes.app.dev` until 1.0.0, D16): roaming data on
 Windows, `$XDG_DATA_HOME` and `$XDG_CONFIG_HOME` on Linux, the logs under the local data
 directory. The resources are found beside the executable, under `lib/devnotes` in a Linux
 package, or in `crates/engine/resources` for a binary run from `target/`.

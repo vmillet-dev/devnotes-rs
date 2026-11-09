@@ -14,6 +14,48 @@ publish = false
 name = "devnotes"
 path = "src/main.rs"
 
+# The packages of a release (plan § 4.3, D8, D26): `cargo packager -p app --release`, after
+# `cargo build -p app --release`, which it does not run. Paths are read from this folder.
+[package.metadata.packager]
+product-name = "DevNotes"
+identifier = "com.devnotes.app"
+publisher = "vmillet-dev"
+homepage = "https://github.com/vmillet-dev/devnotes-rs"
+license-file = "../../LICENSE"
+category = "DeveloperTool"
+binaries = [{ path = "devnotes", main = true }]
+icons = ["icons/32x32.png", "icons/128x128.png", "icons/icon.png", "icons/icon.ico"]
+# Read through `Paths::resources`: beside the executable (NSIS), under `lib/devnotes` (deb, AppImage).
+resources = [{ src = "../engine/resources/identity", target = "identity" }]
+
+# Per user, without administrator rights: the only Windows format (D8).
+[package.metadata.packager.nsis]
+installer-mode = "currentUser"
+
+# GTK for the tray alone (D29); xkbcommon, Vulkan and the indicator are opened at run time.
+[package.metadata.packager.deb]
+package-name = "devnotes"
+section = "devel"
+depends = ["libgtk-3-0", "libxkbcommon0", "libxkbcommon-x11-0", "libvulkan1", "libayatana-appindicator3-1"]
+
+# `cargo generate-rpm -p crates/app`: the paths of the deb, which `Paths::resources` reads.
+[package.metadata.generate-rpm]
+name = "devnotes"
+summary = "A developer's notes and snippets manager for the desktop"
+assets = [
+    { source = "target/release/devnotes", dest = "/usr/bin/devnotes", mode = "755" },
+    { source = "../engine/resources/identity/**/*", dest = "/usr/lib/devnotes/identity/", mode = "644" },
+    { source = "packaging/devnotes.desktop", dest = "/usr/share/applications/devnotes.desktop", mode = "644" },
+    { source = "icons/128x128.png", dest = "/usr/share/icons/hicolor/128x128/apps/devnotes.png", mode = "644" },
+]
+
+[package.metadata.generate-rpm.requires]
+gtk3 = "*"
+libxkbcommon = "*"
+libxkbcommon-x11 = "*"
+vulkan-loader = "*"
+libayatana-appindicator-gtk3 = "*"
+
 [features]
 # The flavour the end-to-end scenarios drive: never in a release.
 e2e = ["eframe/inspection", "platform/e2e"]
