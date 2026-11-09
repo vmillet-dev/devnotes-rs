@@ -71,6 +71,11 @@ missing. From there:
 | the `(feat)` / `(fix)` prefix of the title | when there is no label anywhere                           |
 | "Under the hood"                           | when there is none of the three                           |
 
+**A version can open on a summary written by hand.** When the pull requests alone cannot say
+what a version changes — 1.0.0 changes the whole application — `docs/release-notes/<version>.md`
+holds a few bullets, which the generator puts first, under « 📌 In short ». Only its `- ` lines
+(and the indented lines continuing them) are read; the rest of the file is a note to its author.
+
 Nothing is ever dropped for want of a label, and the dry run names the rule that filed each
 entry — so a surprise in the summary tells you which of the four fired.
 
