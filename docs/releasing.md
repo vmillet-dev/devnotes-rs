@@ -8,14 +8,15 @@ state to clean up if it stops.
 
 ## The three steps
 
-1. **Bump the version.** `npm version <x.y.z> --no-git-tag-version` covers `package.json`
-   and its lockfile; the root `Cargo.toml` (`[workspace.package]`) is edited by hand, then `cargo update -p devnotes`
-   writes the Cargo lockfile. Merge to `main` and wait for CI to go green — the release
+1. **Bump the version.** One place holds it (D27): `version` under `[workspace.package]` in
+   the root `Cargo.toml`, which every crate inherits. Edit it, then `cargo update --workspace`
+   writes it into `Cargo.lock`; nothing else carries a version (`package.json` has none). The
+   bump touches those two files alone. Merge to `main` and wait for CI to go green — the release
    refuses to start on a commit CI has not passed.
 
-   The workflow reads the version from `Cargo.toml` and stops unless `package.json`,
-   `package-lock.json` and `Cargo.lock` all agree. It checks that **before the tag exists**,
-   so a mismatch costs a re-run rather than a deleted tag.
+   The workflow reads the version with `scripts/version.mjs` and stops unless `Cargo.lock`
+   says the same for `app`. It checks that **before the tag exists**, so a mismatch costs a
+   re-run rather than a deleted tag.
 
 2. **Actions → Release → Run workflow, with `dry_run` checked.** It prints the notes it
    would write to the run summary and changes nothing. Read them: this is the only moment
