@@ -4752,8 +4752,9 @@ own, as the reference: egui's 8 px cost the header its one row at the window's d
 
 A card's click surface (`note-card-open`, a layer under its controls) opens the note editor
 (`notes::overlays::editor`, `state::editor`) **in a panel beside the cards**, not over them: 45 %
-of the area right of the rail, between 460 and 760 px (`notes::beside_the_cards`), always leaving
-at least two columns of cards on its left, drawn and clickable, the open one lit (amber edge, a tint). Expanded (the
+of the area right of the rail, between 460 and 760 px (`notes::beside_the_cards`) until its edge is moved (`editor-panel-edge`,
+remembered as `editorPanelWidth`), always leaving at least two columns of cards on its left, drawn
+and clickable, the cards taking the columns their width has room for, the open one lit (amber edge, a tint). Expanded (the
 toolbar's button, remembered as `editorFullscreen`) or in a window too narrow to keep two columns
 of cards, it takes the whole area right of the rail, with a bar over it: « ← Cards », the note's
 space › folders, and the keys. ⚠️ **What the editor opens next waits for the note open to

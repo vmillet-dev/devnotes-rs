@@ -588,3 +588,55 @@ fn beside_the_cards_the_seldom_used_wait_in_the_menu() {
     });
     assert!(gone.is_err(), "in the trash");
 }
+
+fn columns(harness: &egui_kittest::Harness<'_, Bench>) -> usize {
+    let mut lefts: Vec<f32> = harness
+        .query_all_by(|node| node.author_id() == Some("note-card"))
+        .map(|node| node.rect().left().round())
+        .collect();
+    lefts.sort_by(f32::total_cmp);
+    lefts.dedup();
+    lefts.len()
+}
+
+/// The edge between the cards and the panel moves: the cards take the columns they have room
+/// for, and the width chosen stays.
+#[test]
+fn the_panels_edge_moves_and_the_cards_follow() {
+    let (backend, profile) = testing::unlocked();
+    for title in ["one", "two", "three", "four"] {
+        testing::note(&backend, title);
+    }
+    let mut harness = wide(area(backend, profile));
+    crate::notes::bench::click(&mut harness, "note-card-open", "one");
+    assert_eq!(columns(&harness), 2);
+
+    let edge = rect_of(&harness, "editor-panel-edge").center();
+    let to = edge + egui::vec2(160.0, 0.0);
+    harness.event(egui::Event::PointerMoved(edge));
+    harness.run_steps(1);
+    harness.event(egui::Event::PointerButton {
+        pos: edge,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    harness.run_steps(1);
+    for step in 1..=8_u8 {
+        harness.event(egui::Event::PointerMoved(
+            edge + egui::vec2(20.0 * f32::from(step), 0.0),
+        ));
+        harness.run_steps(1);
+    }
+    harness.event(egui::Event::PointerButton {
+        pos: to,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::NONE,
+    });
+    settle(&mut harness);
+
+    assert_eq!(columns(&harness), 3);
+    // Moved past its narrowest, the panel stops there, and that is what is kept.
+    assert_eq!(harness.state().state.settings.editor_panel_width, 460);
+}

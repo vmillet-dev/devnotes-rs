@@ -740,6 +740,10 @@ impl AppState {
                 self.settings.rail_width = width;
                 self.save_settings(backend);
             }
+            Action::App(AppAction::SetEditorPanelWidth(width)) => {
+                self.settings.editor_panel_width = width;
+                self.save_settings(backend);
+            }
             Action::App(AppAction::SetHistoryWidth(width)) => {
                 self.settings.history_list_width = width;
                 self.save_settings(backend);

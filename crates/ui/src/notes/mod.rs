@@ -350,6 +350,8 @@ pub struct View {
     pub sidebar: sidebar::SidebarView,
     pub canvas: canvas::CanvasView,
     rail_width: crate::widgets::RailWidth,
+    /// Where the panel's edge is while it moves, in points of width.
+    panel_width: Option<f32>,
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
     pub(crate) focus_search: bool,
     header: header::HeaderView,
@@ -376,7 +378,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         .beside(ui, region, rail, "library-rail-edge", |ui| {
             sidebar::show(ui, state, &mut view.sidebar, actions);
         });
-    let (cards, editor) = beside_the_cards(rest, state);
+    let (cards, editor) = beside_the_cards(rest, state, view.panel_width);
     if let Some(cards) = cards {
         cards_and_header(ui, cards, state, view, actions);
     }
@@ -387,6 +389,9 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         (&mut view.editor, &mut view.explorer_layout),
         actions,
     );
+    if let (Some(_), Some(editor)) = (cards, editor) {
+        panel_edge(ui, editor, view, actions);
+    }
     overlays::trash_panel::show(ui, state, &mut view.trash, actions);
     overlays::tag_manager::show(ui, state, &mut view.tag_manager, actions);
     overlays::folder_prompt::show(ui, state, &mut view.folder_name, actions);
@@ -398,17 +403,21 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     }
 }
 
-/// The panel's share of the area beside the cards, and its bounds.
+/// The panel's share of the area beside the cards until its edge is moved, and its bounds.
 const PANEL_SHARE: f32 = 0.45;
 const PANEL_MIN: f32 = 460.0;
-const PANEL_MAX: f32 = 760.0;
+const PANEL_DEFAULT_MAX: f32 = 760.0;
 /// Two columns of cards at their narrowest, their gap and the canvas's margins: never a single
 /// column beside the panel; under it the panel takes the area.
 const CARDS_MIN: f32 = 2.0 * 220.0 + 12.0 + 2.0 * 24.0;
 
 /// Where the cards and the note open go: side by side, or the note over the whole area once
 /// expanded or when the window is too narrow for both.
-fn beside_the_cards(rest: Rect, state: &AppState) -> (Option<Rect>, Option<Rect>) {
+fn beside_the_cards(
+    rest: Rect,
+    state: &AppState,
+    moving: Option<f32>,
+) -> (Option<Rect>, Option<Rect>) {
     let editing = state
         .editor
         .opened()
@@ -416,17 +425,46 @@ fn beside_the_cards(rest: Rect, state: &AppState) -> (Option<Rect>, Option<Rect>
     if !editing {
         return (Some(rest), None);
     }
-    let width = (rest.width() * PANEL_SHARE)
-        .clamp(PANEL_MIN, PANEL_MAX)
-        .min(rest.width() - CARDS_MIN);
-    if state.settings.editor_fullscreen || width < PANEL_MIN {
+    let chosen = match state.settings.editor_panel_width {
+        0 => (rest.width() * PANEL_SHARE).clamp(PANEL_MIN, PANEL_DEFAULT_MAX),
+        width => f32::from(width),
+    };
+    let widest = rest.width() - CARDS_MIN;
+    if state.settings.editor_fullscreen || widest < PANEL_MIN {
         return (None, Some(rest));
     }
+    let width = moving.unwrap_or(chosen).clamp(PANEL_MIN, widest);
     // On a whole point: the header measures what it draws, and a fraction never settles.
     let split = (rest.right() - width).round();
     let cards = Rect::from_min_max(rest.min, egui::pos2(split, rest.bottom()));
     let editor = Rect::from_min_max(egui::pos2(split, rest.top()), rest.max);
     (Some(cards), Some(editor))
+}
+
+/// The edge between the cards and the panel: moved, the cards take the columns they now have
+/// room for. The width is written once the pointer lets go.
+fn panel_edge(ui: &mut Ui, editor: Rect, view: &mut View, actions: &mut Actions) {
+    let edge = Rect::from_center_size(
+        egui::pos2(editor.left(), editor.center().y),
+        egui::vec2(8.0, editor.height()),
+    );
+    let mut edge_ui = ui.new_child(UiBuilder::new().max_rect(edge));
+    let moved = crate::widgets::split_handle(&mut edge_ui, "editor-panel-edge");
+    if moved != 0.0 {
+        view.panel_width = Some((editor.width() - moved).max(PANEL_MIN));
+    }
+    let resting = !ui.input(|input| input.pointer.any_down());
+    if let Some(width) = view.panel_width.filter(|_| resting) {
+        view.panel_width = None;
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "a width on screen"
+        )]
+        actions.push(Asked::App(AppAction::SetEditorPanelWidth(
+            width.round() as u16
+        )));
+    }
 }
 
 fn cards_and_header(
