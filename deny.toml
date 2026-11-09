@@ -11,6 +11,7 @@ unmaintained = "workspace"
 unsound = "all"
 ignore = [
     { id = "RUSTSEC-2024-0429", reason = "glib 0.18, held by tray-icon's GTK 3 on Linux; VariantStrIter is never called" },
+    { id = "RUSTSEC-2026-0459", reason = "SQLite before 3.54 and a crafted -wal (local, files written by someone else); fixed in libsqlite3-sys 0.39, which diesel 2.3.14 refuses. Ignored 2026-11-09 for 1.0.0, lifted by #1451" },
 ]
 
 # What the application may ship under GPL-3.0-only: the licences the tree holds today. A new one
