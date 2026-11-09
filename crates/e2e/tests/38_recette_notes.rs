@@ -145,9 +145,15 @@ fn recette_creating() {
         app.press(Key::A, Modifiers::COMMAND);
         app.type_text("Titre modifié au clic");
         app.capture("not-07-before");
-        app.click_where("note-card-open", |node| {
-            node.label().is_some_and(|it| it.contains("Psql"))
-        });
+        let psql =
+            |node: &egui::accesskit::Node| node.label().is_some_and(|it| it.contains("Psql"));
+        // In a window too narrow to keep the cards beside the editor, none is there to click.
+        let beside = app.tree().all("note-card-open").into_iter().any(psql);
+        if beside {
+            app.click_where("note-card-open", psql);
+        } else {
+            close_editor(&mut app);
+        }
         app.eventually("the editor closed or moved", |tree| {
             !tree.has("editor-title") || has_card(tree, "Titre modifié au clic")
         });
