@@ -32,6 +32,8 @@ pub(super) struct FieldsView {
     /// Against this and not the note: until the write answers, the note holds the old values.
     kept: Values,
     pub(super) previewing: bool,
+    /// Expanded, the filled text under the code was asked for once in this opening.
+    pub(super) asked: bool,
 }
 
 impl FieldsView {
@@ -45,6 +47,7 @@ impl FieldsView {
             typed: stored.clone(),
             kept: stored,
             previewing: false,
+            asked: false,
         }
     }
 
@@ -114,12 +117,18 @@ pub(super) fn show(
         changed
     });
     let changed = changed | (open && body(ui, state, note, editing, actions));
-    if changed && editing.fields.previewing {
+    // Expanded, the filled text stands under the code at all times.
+    if changed && (editing.fields.previewing || state.settings.editor_fullscreen) {
         preview(session, note, editing, actions);
     }
 }
 
-fn preview(session: u64, note: &DisplayNote, editing: &EditorView, actions: &mut Actions) {
+pub(super) fn preview(
+    session: u64,
+    note: &DisplayNote,
+    editing: &EditorView,
+    actions: &mut Actions,
+) {
     actions.push(editor(Editing::Fields(Fields::Preview {
         session,
         content: editing.body.clone(),
@@ -292,14 +301,15 @@ fn head_actions(
         ))));
     }
     let previewing = editing.fields.previewing;
-    if Button::new(
-        &tr(keys::placeholders::PREVIEW),
-        "placeholder-panel-preview",
-    )
-    .icon(Icon::Eye)
-    .armed(previewing)
-    .show(ui)
-    .clicked()
+    if !state.settings.editor_fullscreen
+        && Button::new(
+            &tr(keys::placeholders::PREVIEW),
+            "placeholder-panel-preview",
+        )
+        .icon(Icon::Eye)
+        .armed(previewing)
+        .show(ui)
+        .clicked()
     {
         editing.fields.previewing = !previewing;
         if !previewing {

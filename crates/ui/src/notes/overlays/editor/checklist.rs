@@ -14,7 +14,7 @@ use i18n::{Language, keys};
 
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
-use crate::widgets::{self, IconButton, address, interact};
+use crate::widgets::{self, IconButton, Segmented, address, interact};
 
 const ROW: f32 = 30.0;
 
@@ -26,6 +26,26 @@ pub(super) struct ChecklistView {
     dragging: Option<(usize, usize)>,
     /// The row to focus at the next frame, and its caret.
     focus: Option<(usize, usize)>,
+    /// Expanded: the tasks shown — all, those left to do, or those done.
+    shown: Shown,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+enum Shown {
+    #[default]
+    All,
+    Open,
+    Done,
+}
+
+impl Shown {
+    fn keeps(self, item: &ChecklistItem) -> bool {
+        match self {
+            Self::All => true,
+            Self::Open => !item.done,
+            Self::Done => item.done,
+        }
+    }
 }
 
 impl ChecklistView {
@@ -56,22 +76,35 @@ enum RowKey {
     Move(isize),
 }
 
-/// The list; `true` once something is to be written.
-pub(super) fn show(ui: &mut Ui, view: &mut ChecklistView, language: Language) -> bool {
+/// The list; `true` once something is to be written. `filters`: the tasks shown can be narrowed
+/// to those left to do or those done, and a row is dragged only while all are shown.
+pub(super) fn show(
+    ui: &mut Ui,
+    view: &mut ChecklistView,
+    language: Language,
+    filters: bool,
+) -> bool {
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     let mut changed = false;
     ui.spacing_mut().item_spacing = Vec2::new(8.0, 2.0);
-    progress(ui, &view.items, language);
+    let narrowing = filters.then_some(&mut view.shown);
+    progress(ui, &view.items, language, narrowing);
+    if !filters {
+        view.shown = Shown::All;
+    }
     ui.add_space(10.0);
     let rows_top = ui.cursor().top();
+    let shown: Vec<usize> = (0..view.items.len())
+        .filter(|index| view.shown.keeps(&view.items[*index]))
+        .collect();
     // A row left and another clicked come in the same frame: both count.
     let mut asked = Vec::new();
     // The rows keep their places while one is dragged — a row moved under the pointer would
     // be another widget to egui — and a line shows where it would land.
-    for index in 0..view.items.len() {
+    for (rank, &index) in shown.iter().enumerate() {
         #[expect(clippy::cast_precision_loss, reason = "a list's length")]
-        let top = rows_top + index as f32 * (ROW + 2.0);
+        let top = rows_top + rank as f32 * (ROW + 2.0);
         let rect = Rect::from_min_size(
             egui::pos2(ui.max_rect().left(), top),
             Vec2::new(ui.available_width(), ROW),
@@ -94,7 +127,9 @@ pub(super) fn show(ui: &mut Ui, view: &mut ChecklistView, language: Language) ->
         if let Some(outcome) = outcome {
             asked.push((index, outcome));
         }
-        if let Some(dropped) = drag(ui, view, index, &grip, rows_top) {
+        if view.shown == Shown::All
+            && let Some(dropped) = drag(ui, view, index, &grip, rows_top)
+        {
             asked.push((index, dropped));
         }
     }
@@ -107,7 +142,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut ChecklistView, language: Language) ->
         ui.painter().hline(x, y, Stroke::new(2.0, p.amber_text));
     }
     #[expect(clippy::cast_precision_loss, reason = "a list's length")]
-    let height = view.items.len() as f32 * (ROW + 2.0);
+    let height = shown.len() as f32 * (ROW + 2.0);
     ui.allocate_space(Vec2::new(ui.available_width(), height));
     for (index, outcome) in asked {
         let count = view.items.len();
@@ -125,6 +160,10 @@ pub(super) fn show(ui: &mut Ui, view: &mut ChecklistView, language: Language) ->
         .show(ui)
         .clicked()
     {
+        // A task added is left to do: it shows where it is typed.
+        if view.shown == Shown::Done {
+            view.shown = Shown::All;
+        }
         view.items.push(ChecklistItem {
             text: String::new(),
             done: false,
@@ -500,8 +539,13 @@ fn pasted_item(line: &str) -> ChecklistItem {
     }
 }
 
-/// The bar and « 2/5 tâches ».
-fn progress(ui: &mut Ui, items: &[ChecklistItem], language: Language) {
+/// The bar and « 2/5 tâches », then — `narrowing` — the choice of the tasks shown.
+fn progress(
+    ui: &mut Ui,
+    items: &[ChecklistItem],
+    language: Language,
+    narrowing: Option<&mut Shown>,
+) {
     let p = palette(ui.ctx());
     let done = items.iter().filter(|item| item.done).count();
     let total = items.len();
@@ -511,9 +555,25 @@ fn progress(ui: &mut Ui, items: &[ChecklistItem], language: Language) {
         keys::editor::CHECKLIST_STATS,
         &[("done", count(done).into()), ("total", count(total).into())],
     );
+    let tr = |key| i18n::translate(language, key, &[]);
+    let names = [
+        (Shown::All, tr(keys::editor::tasks_shown::ALL)),
+        (Shown::Open, tr(keys::editor::tasks_shown::OPEN)),
+        (Shown::Done, tr(keys::editor::tasks_shown::DONE)),
+    ];
+    let options: Vec<(Shown, &str)> = names
+        .iter()
+        .map(|(shown, name)| (*shown, name.as_str()))
+        .collect();
+    let choice = Segmented::new(&options, "checklist-shown");
     ui.horizontal(|ui| {
         let galley = widgets::text(ui, &words, 11.0, 400.0, FontFamily::Monospace, p.text_2);
-        let width = ui.available_width() - galley.size().x - 10.0;
+        let choice_width = if narrowing.is_some() {
+            choice.width(ui) + 10.0
+        } else {
+            0.0
+        };
+        let width = ui.available_width() - galley.size().x - 10.0 - choice_width;
         let (track, _) = ui.allocate_exact_size(Vec2::new(width.max(40.0), 6.0), Sense::hover());
         ui.painter()
             .rect_filled(track, CornerRadius::same(3), p.bg_3);
@@ -527,6 +587,10 @@ fn progress(ui: &mut Ui, items: &[ChecklistItem], language: Language) {
         }
         let response = ui.label(galley);
         address(ui, &response, "checklist-progress");
+        if let Some(shown) = narrowing {
+            ui.add_space(4.0);
+            choice.show(ui, shown);
+        }
     });
 }
 

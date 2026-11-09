@@ -246,6 +246,8 @@ pub enum Editing {
     Step(isize),
     Fullscreen(bool),
     FoldHeader(bool),
+    /// Expanded: the column of details shown beside the body, or not.
+    Details(bool),
     /// « Présenter »: the draft on screen, cut into slides.
     Present {
         title: String,

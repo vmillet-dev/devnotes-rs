@@ -445,6 +445,25 @@
       "copy": "Copy",
       "paste": "Paste",
       "selectAll": "Select all"
+    },
+    "details": {
+      "show": "Details",
+      "hide": "Hide the details",
+      "location": "Location",
+      "kind": "Kind",
+      "context": "Context",
+      "tags": "Tags",
+      "priority": "Priority",
+      "expires": "Expires",
+      "attachments": "Attachments",
+      "history": "History"
+    },
+    "export": "Export",
+    "filledPreview": "Preview · with your fields",
+    "tasksShown": {
+      "all": "All",
+      "open": "Open",
+      "done": "Done"
     }
   },
   "lifecycle": {

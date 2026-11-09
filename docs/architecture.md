@@ -4774,7 +4774,23 @@ toolbar takes two lines: the title with expand and close, then the language, the
 priority on the left and copy, pin and ⋯ on the right; folding the header, presenting and deleting
 (two clicks, the menu staying open between them) wait in ⋯. ⚠️ The split between the cards and the
 panel is on a whole point: on a fraction the header's measure of itself drifted by thousandths of
-a point each frame and never settled. The editor has: a toolbar
+a point each frame and never settled. **Expanded, each kind has its layout**
+(`notes::overlays::editor::expanded`): the toolbar holds the kind's icon, a snippet's format, the
+title, ‹ `n / total` ›, the kind's own action (copy, filled for a snippet with fields; « Export ▾ »
+for a Dessin), « Details », pin, ⋯ (presenting a Note, deleting), back from full screen and close.
+What the header's bands hold — space › folder, kind, context, tags, priority, deadline,
+attachments — stands in a **details column** on the right, the history at its foot, for every
+kind; « Details » puts it away (remembered as `editorDetails`, shown by default). ⚠️ Where the
+body would be left under 720 px beside it (a JSON graph beside its code needs that), the column
+gives way and the header's bands come back over the body, the button disabled: the note's
+details are never out of reach. A snippet keeps its fields band over its code, its language and
+formatter in a strip over the code, and its text filled under the code (`editor-filled`,
+asked again at every change, the fields' « Preview » toggle gone); a task list is a column of
+760 px at most, its progress beside « All / Open / Done » (`checklist-shown-*`, a view's choice;
+a row is dragged only while all are shown, and a task added shows them all); a Calcul sheet has
+its counts and decimals over the sheet; a Dessin has its tools in a column down the stage's left
+where the stage is tall enough for them, in a row over it otherwise. The status line along the
+foot is the footer's counts. The editor beside the cards has: a toolbar
 (title, language for a snippet, pin, priority, copy, delete in two clicks, fold, full screen,
 close), the header's two bands — context, tags and deadline; kind (a conversion menu, a Dessin
 named only), space › folder — or, folded, one line of what they hold, and the footer's counts.

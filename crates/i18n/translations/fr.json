@@ -445,6 +445,25 @@
       "copy": "Copier",
       "paste": "Coller",
       "selectAll": "Tout sélectionner"
+    },
+    "details": {
+      "show": "Détails",
+      "hide": "Masquer les détails",
+      "location": "Emplacement",
+      "kind": "Type",
+      "context": "Contexte",
+      "tags": "Tags",
+      "priority": "Priorité",
+      "expires": "Échéance",
+      "attachments": "Pièces jointes",
+      "history": "Historique"
+    },
+    "export": "Exporter",
+    "filledPreview": "Aperçu · avec vos champs",
+    "tasksShown": {
+      "all": "Toutes",
+      "open": "À faire",
+      "done": "Faites"
     }
   },
   "lifecycle": {

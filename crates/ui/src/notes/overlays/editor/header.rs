@@ -2,7 +2,7 @@
 //! is and where it lives on the next — or, folded, one line saying what they hold.
 
 use chrono::{Local, NaiveTime, TimeZone, Utc};
-use egui::{Align, FontFamily, Layout, Margin, Ui, Vec2};
+use egui::{Align, FontFamily, Layout, Margin, Rect, Ui, Vec2};
 use engine::notes::kind::NoteKind;
 use engine::notes::model::{DisplayNote, NoteLifecycle};
 use i18n::keys;
@@ -47,16 +47,36 @@ pub(super) fn bands(
         placement(ui, state, (session, note), editing, actions);
     });
     band(ui, Margin::symmetric(20, 8), true, |ui| {
-        super::attachments::show(ui, state, &mut editing.removing, actions);
+        super::attachments::show(ui, state, (&mut editing.removing, true), actions);
     });
 }
 
-/// The free-form breadcrumb a pinned card shows instead of its age.
+/// The free-form breadcrumb a pinned card shows instead of its age, and a dot before the tags.
 fn context(
     ui: &mut Ui,
     state: &AppState,
     (session, note): (u64, &DisplayNote),
     editing: &mut EditorView,
+    actions: &mut Actions,
+) {
+    let p = palette(ui.ctx());
+    context_field(ui, state, (session, note), editing, 160.0, actions);
+    ui.label(widgets::text(
+        ui,
+        "·",
+        11.5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    ));
+}
+
+fn context_field(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &mut EditorView,
+    width: f32,
     actions: &mut Actions,
 ) {
     let p = palette(ui.ctx());
@@ -68,7 +88,7 @@ fn context(
             .hint_text(hint)
             .text_color(p.text_1)
             .font(egui::FontId::new(11.5, FontFamily::Proportional))
-            .desired_width(160.0),
+            .desired_width(width),
     );
     ui.ctx()
         .accesskit_node_builder(response.id, |node| node.set_label(name.clone()));
@@ -76,14 +96,6 @@ fn context(
     if response.lost_focus() {
         save(session, note, editing, actions);
     }
-    ui.label(widgets::text(
-        ui,
-        "·",
-        11.5,
-        400.0,
-        FontFamily::Proportional,
-        p.text_2,
-    ));
 }
 
 /// Each tag with the cross that takes it off, then the field that adds one: on Enter, on leaving
@@ -261,47 +273,154 @@ fn placement(
             ));
         };
         label(ui, &tr(keys::editor::kind::LABEL));
-        let current = tr(kind_name(note.kind));
-        if note.kind == NoteKind::Drawing {
-            let response = ui.label(widgets::text(
-                ui,
-                &current,
-                12.0,
-                400.0,
-                FontFamily::Proportional,
-                p.text_1,
-            ));
-            widgets::address(ui, &response, "editor-kind");
-        } else {
-            let names: Vec<(NoteKind, String)> = NoteKind::ALL
-                .into_iter()
-                .filter(|kind| *kind != note.kind)
-                .map(|kind| (kind, tr(convert_name(kind))))
-                .collect();
-            let options: Vec<(NoteKind, &str)> = names
-                .iter()
-                .map(|(kind, name)| (*kind, name.as_str()))
-                .collect();
-            let mut chosen = note.kind;
-            if ChoiceMenu::new(&current, "editor-kind", &options)
-                .naming(Naming::Label)
-                .show(ui, &mut chosen)
-                .changed()
-                && chosen != note.kind
-            {
-                actions.push(editor(Editing::Convert {
-                    session,
-                    into: chosen,
-                    edit: editing.edit(note),
-                }));
-            }
-        }
+        kind_menu(ui, state, (session, note), editing, actions);
         ui.add_space(14.0);
         label(ui, &tr(keys::editor::PLACEMENT_LABEL));
         space_menu(ui, state, note, actions);
         label(ui, "›");
         folder_menu(ui, state, note, actions);
     });
+}
+
+/// What the note is: a menu converting it into another kind, a drawing named only.
+fn kind_menu(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &EditorView,
+    actions: &mut Actions,
+) {
+    let p = palette(ui.ctx());
+    let tr = |key| i18n::translate(state.language, key, &[]);
+    let current = tr(kind_name(note.kind));
+    if note.kind == NoteKind::Drawing {
+        let response = ui.label(widgets::text(
+            ui,
+            &current,
+            12.0,
+            400.0,
+            FontFamily::Proportional,
+            p.text_1,
+        ));
+        widgets::address(ui, &response, "editor-kind");
+        return;
+    }
+    let names: Vec<(NoteKind, String)> = NoteKind::ALL
+        .into_iter()
+        .filter(|kind| *kind != note.kind)
+        .map(|kind| (kind, tr(convert_name(kind))))
+        .collect();
+    let options: Vec<(NoteKind, &str)> = names
+        .iter()
+        .map(|(kind, name)| (*kind, name.as_str()))
+        .collect();
+    let mut chosen = note.kind;
+    if ChoiceMenu::new(&current, "editor-kind", &options)
+        .naming(Naming::Label)
+        .show(ui, &mut chosen)
+        .changed()
+        && chosen != note.kind
+    {
+        actions.push(editor(Editing::Convert {
+            session,
+            into: chosen,
+            edit: editing.edit(note),
+        }));
+    }
+}
+
+/// Expanded, the column beside the body: where the note lives, what it is, its context, tags,
+/// priority, deadline and attachments, each under its name, then its history at the foot.
+pub(super) fn details(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &mut EditorView,
+    actions: &mut Actions,
+) {
+    let whole = ui.max_rect();
+    let history = super::revisions::height(state, whole.height() / 2.0);
+    let sections = Rect::from_min_max(
+        whole.min,
+        egui::pos2(whole.right(), whole.bottom() - history),
+    );
+    let mut sections_ui = ui.new_child(egui::UiBuilder::new().max_rect(sections));
+    egui::ScrollArea::vertical()
+        .id_salt("editor-details")
+        .auto_shrink(false)
+        .show(&mut sections_ui, |ui| {
+            egui::Frame::new()
+                .inner_margin(Margin::symmetric(18, 14))
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.spacing_mut().item_spacing = Vec2::new(6.0, 6.0);
+                    detail_sections(ui, state, (session, note), editing, actions);
+                });
+        });
+    if history > 0.0 {
+        let foot = Rect::from_min_max(egui::pos2(whole.left(), sections.bottom()), whole.max);
+        let mut foot_ui = ui.new_child(egui::UiBuilder::new().max_rect(foot));
+        super::revisions::show(&mut foot_ui, state, actions);
+    }
+}
+
+fn detail_sections(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &mut EditorView,
+    actions: &mut Actions,
+) {
+    use keys::editor::details;
+    let at = (session, note);
+    section(ui, state, details::LOCATION, |ui| {
+        space_menu(ui, state, note, actions);
+        ui.label(widgets::text(
+            ui,
+            "›",
+            11.0,
+            400.0,
+            FontFamily::Proportional,
+            palette(ui.ctx()).text_2,
+        ));
+        folder_menu(ui, state, note, actions);
+    });
+    section(ui, state, details::KIND, |ui| {
+        kind_menu(ui, state, at, editing, actions);
+    });
+    section(ui, state, details::CONTEXT, |ui| {
+        let width = ui.available_width();
+        context_field(ui, state, at, editing, width, actions);
+    });
+    section(ui, state, details::TAGS, |ui| {
+        tags(ui, state, at, editing, actions);
+    });
+    section(ui, state, details::PRIORITY, |ui| {
+        super::priority(ui, state, note, actions);
+    });
+    section(ui, state, details::EXPIRES, |ui| {
+        lifecycle_badge(ui, state, note);
+        deadline(ui, state, at, actions);
+    });
+    section(ui, state, details::ATTACHMENTS, |ui| {
+        super::attachments::show(ui, state, (&mut editing.removing, false), actions);
+    });
+}
+
+/// A section of the details: its name in capitals, what it holds wrapping under it.
+fn section(ui: &mut Ui, state: &AppState, name: i18n::Key, content: impl FnOnce(&mut Ui)) {
+    let p = palette(ui.ctx());
+    let words = i18n::translate(state.language, name, &[]).to_uppercase();
+    ui.label(widgets::text(
+        ui,
+        &words,
+        10.5,
+        600.0,
+        FontFamily::Proportional,
+        p.text_2,
+    ));
+    ui.horizontal_wrapped(content);
+    ui.add_space(12.0);
 }
 
 fn space_menu(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut Actions) {

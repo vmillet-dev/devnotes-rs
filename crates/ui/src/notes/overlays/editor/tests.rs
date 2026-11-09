@@ -640,3 +640,40 @@ fn the_panels_edge_moves_and_the_cards_follow() {
     // Moved past its narrowest, the panel stops there, and that is what is kept.
     assert_eq!(harness.state().state.settings.editor_panel_width, 460);
 }
+
+/// Expanded, the details stand in a column beside the body for every kind, or are put away.
+#[test]
+fn expanded_the_details_stand_beside_the_body_and_can_be_put_away() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = wide(area(backend, profile));
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-fullscreen");
+
+    assert!(rect_of(&harness, "editor-space").left() > rect_of(&harness, "editor-body").right());
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-fold-header"))
+            .is_none()
+    );
+
+    click_id(&mut harness, "editor-details");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-space"))
+            .is_none()
+    );
+    assert!(!harness.state().state.settings.editor_details_open);
+}
+
+/// Expanded in a window too narrow for the column, the header's bands hold the details.
+#[test]
+fn expanded_without_room_for_the_details_the_header_holds_them() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = area(backend, profile);
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-fullscreen");
+
+    assert!(rect_of(&harness, "editor-space").bottom() < rect_of(&harness, "editor-body").top());
+}
