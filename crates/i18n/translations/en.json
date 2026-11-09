@@ -98,6 +98,7 @@
     },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Tick the task {{text}}",
+    "checklistMore": "+{count, plural, one {# more} other {# more}}",
     "samples": {
       "space": "Getting started",
       "welcome": {
