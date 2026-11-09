@@ -1,5 +1,5 @@
-//! The JSON shape of everything that crosses the Tauri bridge, gathered here rather
-//! than scattered beside each type: it is **one** contract, and the compiler checks
+//! The JSON shape of the core's types, gathered here rather than scattered beside each
+//! type: it is **one** contract, and the compiler checks
 //! none of it.
 
 use std::collections::BTreeMap;

@@ -2,9 +2,9 @@
 //! ⚠️ **The names are one list**: no origin and no country is attached to a name — not in the
 //! data, not in a file's name, not in the order of the file, which is alphabetical. Sorting
 //! people's names by where they come from is not something this tool does; what is a
-//! country's own is its places, its formats and its numbers. ⚠️ Files shipped beside the application (`resources/identity/`, a Tauri resource),
-//! read once and kept for the session: a name is corrected or a list completed without
-//! building the application again. What was a constant is a file someone can remove, so each
+//! country's own is its places, its formats and its numbers. ⚠️ Files shipped beside the
+//! application (`resources/identity/`, read through `Paths::resources`), read once and kept for
+//! the session: a name is corrected or a list completed without building the application again. What was a constant is a file someone can remove, so each
 //! list is checked when read, and a missing or damaged one is said — nothing divides by the
 //! length of an empty list. Every list together is held under [`BUDGET`] by a test: the lists
 //! do not have to be long, they have to be well chosen.

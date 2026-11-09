@@ -9,8 +9,8 @@ DevNotes is a desktop application being rewritten from Angular + Tauri to **egui
 process (`egui-migration/egui-migration-plan.md`). The core, `crates/engine`, owns everything that is not
 drawing: storage, encryption, the in-memory index of notes, HTTP, the tools. The egui interface
 calls it directly, through one façade and three queues, with no serialisation in between. The
-Angular application it replaces is kept, never built, in `reference/angular/`; the sections of
-this document that still describe it say so.
+Angular application it replaces left the tree at 1.0.0 and stays whole at the
+`angular-reference` tag; the sections of this document that still describe it say so.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
 tags, languages, quick filters), grouping into display sections, facet aggregation and tag
@@ -37,10 +37,10 @@ crates/text/       the editing core, egui-free: rope, undo, search, indent, high
 crates/drawing/    a Dessin, egui-free: the stored scene, its geometry, text lines, SVG and pictures
 crates/platform/   paths, window geometry: what is asked of the operating system
 crates/ui/         the egui interface: the frame, its state, its screens
-crates/app/        the `devnotes` binary (main) and its icons (`npm run icons`)
+crates/app/        the `devnotes` binary (main) and its icons (`--example icons`)
 crates/i18n/translations/  fr.json and en.json, the interface's strings
 golden/             outputs of the JavaScript libraries, captured before they left
-reference/angular/  the Angular application and its WebdriverIO scenarios, for reading only
+e2e/                the end-to-end driver and its scenarios, on the assembled window
 ```
 
 ### Feature-first, not layer-first
@@ -135,8 +135,7 @@ also derives `specta::Type`, which is what lets tauri-specta generate the front-
 ## Front-end
 
 > **Angular reference.** This section describes the Angular application, which left the build in
-> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
-> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> v0.19.0 and the tree at 1.0.0, and stays whole at the `angular-reference` tag. It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
 > screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 ### Where a file goes
@@ -5147,8 +5146,7 @@ let go; a double click or Enter makes it automatic again.
 ## IPC boundary (Angular ↔ Rust)
 
 > **Angular reference.** This section describes the Angular application, which left the build in
-> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
-> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> v0.19.0 and the tree at 1.0.0, and stays whole at the `angular-reference` tag. It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
 > screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 **The boundary is generated, not written.** `src/app/core/ipc/bindings.ts` is produced by
@@ -6683,7 +6681,7 @@ Treated as part of the definition of done, and partly enforced by
 ## Theming
 
 Every colour, shadow, gap and duration of the interface is a token of `ui::theme`, copied one
-for one from the reference's `styles.scss` (`reference/angular/src/styles/`): `tokens::DARK` and
+for one from the reference's `styles.scss` (`src/styles/` at the `angular-reference` tag): `tokens::DARK` and
 `tokens::LIGHT` (a `Palette` each), `tokens::COMFORTABLE` and `tokens::COMPACT` (a `Spacing`),
 `tokens::TITLEBAR_HEIGHT`, and the four durations of `theme::motion`. A widget reads them through
 `theme::palette(ctx)` and `theme::spacing(ctx)`, never a literal. The CSS `--*-rgb` triplets are
@@ -7101,7 +7099,7 @@ every note's tags at each call.
 Three tools, none in CI. `benches/reference_profile.rs` writes a reference library into a real
 profile; `app::perf` (`DEVNOTES_PERF=<profile> cargo test --release -p ui --lib app::perf --
 --nocapture`) replays the journeys of § 6.3 through the real application without a window;
-`crates/e2e/examples/footprint.rs` reads memory and idle CPU of the running process from outside,
+`e2e/examples/footprint.rs` reads memory and idle CPU of the running process from outside,
 on the machine's GPU (`DEVNOTES_E2E_GPU`) and painting every frame (`DEVNOTES_E2E_PAINT_ALL`). The
 `e2e` flavour cannot be a release build, so that one runs at `CARGO_PROFILE_DEV_OPT_LEVEL=3`.
 `app --features profiling` serves egui's frames to `puffin_viewer`: `puffin_egui` stops at egui
@@ -7305,7 +7303,7 @@ build of the flavour does not compile (`compile_error!`), and `lint-rust` checks
 default build does not link `egui_inspection`. Its own target directory keeps every other build
 from overwriting it.
 
-`crates/e2e` is the driver. `App::launch` starts the flavour with `--profile <dir>` and
+`e2e/`, at the root beside the product's crates, is the driver. `App::launch` starts the flavour with `--profile <dir>` and
 `EGUI_INSPECTION=127.0.0.1:<free port>`, and speaks egui's inspection protocol: it reads the
 AccessKit tree, finds a control by its `author_id`, clicks the middle of its box, types, presses
 a key at its place (the area keys read the position), captures the window. `eventually` reads
@@ -7316,11 +7314,11 @@ end its queue drained, and starts it again on the same profile. A failed scenari
 last screen and the application's log in `target/e2e/scenarios/<scenario>/`, beside its
 captures.
 
-One file per scenario, `crates/e2e/tests/<nn>_<name>.rs`, one `#[test]` of named steps
+One file per scenario, `e2e/tests/<nn>_<name>.rs`, one `#[test]` of named steps
 (`e2e::step`): `cargo test -p e2e --test 01_first_launch` runs one, `cargo test -p e2e` all of
 them, one file after the other. Each launches its own application on its own profile, so the
 files never share a process. `cargo test --workspace` is run with `--exclude e2e`.
-`crates/e2e/clippy.toml` refuses `std::thread::sleep`: a scenario waits on conditions, never
+`e2e/clippy.toml` refuses `std::thread::sleep`: a scenario waits on conditions, never
 durations.
 
 In CI, the `e2e` job of `ci.yml` runs once per platform from `changes` on, beside the Rust
@@ -7331,8 +7329,7 @@ tests: it builds the flavour into its cached `target/`, runs `cargo test -p e2e`
 ### End to end
 
 > **Angular reference.** This section describes the Angular application, which left the build in
-> v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
-> tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
+> v0.19.0 and the tree at 1.0.0, and stays whole at the `angular-reference` tag. It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
 > screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 `npm run test:e2e` drives the **assembled application**: the real binary, a real WebView, the

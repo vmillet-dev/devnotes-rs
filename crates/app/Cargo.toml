@@ -21,25 +21,27 @@ e2e = ["eframe/inspection", "platform/e2e"]
 profiling = ["dep:profiling", "dep:puffin", "dep:puffin_http", "profiling/profile-with-puffin"]
 
 [dependencies]
-engine = { path = "../engine" }
-platform = { path = "../platform" }
-ui = { path = "../ui" }
-eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "clipboard", "system_fonts", "wayland", "wgpu", "x11"] }
-egui = "0.37.0"
-flexi_logger = { version = "0.31.10", default-features = false }
-log = "0.4.34"
-profiling = { version = "1.0.18", optional = true }
-puffin = { version = "0.20.0", optional = true }
-puffin_http = { version = "0.17.0", optional = true }
+engine.workspace = true
+platform.workspace = true
+ui.workspace = true
+eframe.workspace = true
+egui = { workspace = true, features = ["default"] }
+flexi_logger.workspace = true
+log.workspace = true
+profiling = { workspace = true, optional = true }
+puffin = { workspace = true, optional = true }
+puffin_http = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # The one eframe uses, for its X11 switch (D15).
-winit = { version = "0.30.13", default-features = false, features = ["x11"] }
+winit.workspace = true
 
 [dev-dependencies]
-i18n = { path = "../i18n" }
-tempfile = "3.27.0"
-tokio = { version = "1.53.1", default-features = false, features = ["rt-multi-thread"] }
+i18n.workspace = true
+# `examples/icons.rs`, which draws the icons.
+resvg.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [lints]
 workspace = true

@@ -24,62 +24,62 @@ test = false
 bench = false
 
 [build-dependencies]
-toml = "1.1"
+toml.workspace = true
 
 [dependencies]
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = { version = "1.0.151", features = ["preserve_order", "raw_value"] }
-diesel = { version = "2.3.13", features = ["sqlite"] }
-diesel_migrations = { version = "2.3.2", features = ["sqlite"] }
-libsqlite3-sys = { version = "0.38.2", features = ["bundled"] }
-uuid = { version = "1.27.0", features = ["v4", "v7"] }
-chrono = { version = "0.4.45", features = ["serde"] }
-base64 = "0.23.1"
-png = "0.18.1"
-log = "0.4.34"
-thiserror = "2.0.21"
-unicode-normalization = "0.1.25"
-zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2"] }
-aes-gcm = { version = "0.11.1", features = ["zeroize"] }
-argon2 = "0.6.0"
-zeroize = "1.9.0"
-rayon = "1.11.0"
-getrandom = "0.4.3"
-similar = "3.2.0"
-pulldown-cmark = { version = "0.13.4", default-features = false }
-deunicode = "1.6.2"
-url = "2.5.8"
-reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "http2", "form", "multipart", "charset"] }
-rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
-tokio = { version = "1.53.1", default-features = false, features = ["rt", "sync", "macros", "time"] }
-tokio-tungstenite = { version = "0.30.0", default-features = false, features = ["connect", "__rustls-tls"] }
-rustls-platform-verifier = "0.7.0"
-futures-util = { version = "0.3.33", default-features = false, features = ["sink", "std"] }
-percent-encoding = "2.3.2"
-md-5 = "0.11.0"
-sha1 = "0.11.0"
-sha2 = "0.11.0"
-sha3 = "0.12.0"
-hmac = "0.13.0"
-toml = "1.1.3"
-quick-xml = "0.42.0"
-yaml-rust2 = "0.13.0"
-chrono-tz = "0.10.4"
-iana-time-zone = "0.1.65"
-croner = "4.0.1"
-rust_decimal = { version = "1.43.0", default-features = false, features = ["std", "maths"] }
-iban_validate = "5.0.1"
-unicode-segmentation = "1.13.3"
-qrcode = { version = "0.14.1", default-features = false }
-ipnet = "2.12.2"
-psl = "2.1.241"
-rquickjs = "0.14.0"
+serde.workspace = true
+serde_json = { workspace = true, features = ["preserve_order", "raw_value"] }
+diesel.workspace = true
+diesel_migrations.workspace = true
+libsqlite3-sys.workspace = true
+uuid = { workspace = true, features = ["v7"] }
+chrono = { workspace = true, features = ["default", "serde"] }
+base64.workspace = true
+png.workspace = true
+log.workspace = true
+thiserror.workspace = true
+unicode-normalization.workspace = true
+zip.workspace = true
+aes-gcm.workspace = true
+argon2.workspace = true
+zeroize.workspace = true
+rayon.workspace = true
+getrandom.workspace = true
+similar.workspace = true
+pulldown-cmark.workspace = true
+deunicode.workspace = true
+url.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+tokio = { workspace = true, features = ["rt", "sync", "macros", "time"] }
+tokio-tungstenite.workspace = true
+rustls-platform-verifier.workspace = true
+futures-util.workspace = true
+percent-encoding.workspace = true
+md-5.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+sha3.workspace = true
+hmac.workspace = true
+toml.workspace = true
+quick-xml.workspace = true
+yaml-rust2.workspace = true
+chrono-tz.workspace = true
+iana-time-zone.workspace = true
+croner.workspace = true
+rust_decimal.workspace = true
+iban_validate.workspace = true
+unicode-segmentation.workspace = true
+qrcode.workspace = true
+ipnet.workspace = true
+psl.workspace = true
+rquickjs.workspace = true
 
 [dev-dependencies]
-richtext = { path = "../richtext" }
-tempfile = "3.27.0"
-tokio = { version = "1.53.1", default-features = false, features = ["rt-multi-thread"] }
-criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+richtext.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+criterion.workspace = true
 
 [[bench]]
 name = "commands"
