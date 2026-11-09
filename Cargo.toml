@@ -114,6 +114,9 @@ opt-level = 3
 [profile.dev.package.blake2]
 opt-level = 3
 
+# Speed first: "s" or 2 make the binary smaller (62.4 or 76.0 MB against 78.6) and the core
+# slower (a query over 8000 notes +37 % or +7 %), and per-crate levels do not reach Rust code
+# under fat LTO. The figures: architecture.md, "The release binary".
 [profile.release]
 lto = true
 codegen-units = 1
