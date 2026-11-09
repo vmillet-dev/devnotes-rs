@@ -12,6 +12,38 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [1.0.0] - 2026-11-09
+
+### 📌 In short
+
+- **A native application.** DevNotes is now one Rust program drawing its own window: no browser engine inside, no WebView2 to install on Windows, no WebKitGTK on Linux. It holds the open library in memory to search, sort and draw it without reading the disk again, and every screen keeps its look and its behaviour.
+- **New packages.** Windows: an installer for you alone, without administrator rights (no more `.msi`). Linux: AppImage, `.deb` and `.rpm`. The installer and the AppImage update themselves, signed and checked as before. The libraries of an earlier version open as they are.
+- **What looks different:** emoji in your notes are drawn in one colour; the date picker and the tooltips are drawn by the application; there is no spell checker; Mermaid diagrams are drawn by a native renderer, close to Mermaid's but not identical; code colouring splits some tokens differently; images other than PNG, JPEG, GIF, WebP, BMP and ICO open with your system's viewer, and an animated GIF shows its first frame.
+- **On a Wayland session without XWayland** (rare: DevNotes uses X11 whenever it is there), the window's position is not restored, closing to the tray minimises, a file cannot be dropped from the file manager, and HTML pasted into a Note keeps its text only.
+
+### 🔧 Changed
+
+- Release binary: size weighed against speed, the fast profile kept (#1450)
+- Release notes: a version opens on a summary written by hand (#1448)
+- Release workflow: NSIS, AppImage, deb and rpm packages built and signed (#1446)
+- Version: one workspace version for every crate (#1445)
+- Note editor: full screen laid out per kind, with a details column (#1443)
+- Cards: title bar, 3 to 5 lines of preview, status line (#1441)
+
+### 🔒 Security
+
+- Advisories: SQLite's WAL advisory ignored until diesel accepts the fix (#1452)
+
+### 🧰 Under the hood
+
+- Guides: architecture, security, contributing and README describe the egui application (#1453)
+- Release check: clean install and update 1.0.0 to 1.0.1 tested in CI (#1447)
+- Scenarios: a click waits until its control has a place on screen (#1449)
+- Workspace: dependencies declared once, e2e at root, old front removed (#1444)
+- Note editor: opens beside the cards, J/K step from note to note (#1442)
+- Docs clean doc folder and add recette data files
+- Add mockups for new note design
+
 ## [0.16.2] - 2026-10-27
 
 ### ✨ Added
