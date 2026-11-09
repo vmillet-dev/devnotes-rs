@@ -62,7 +62,7 @@ HTTP, GraphQL and WebSocket. Collections, environments and variables, a history 
 
 ## Notes and snippets
 
-![A tour of DevNotes: a space shown as a board of folders, the same notes by date, a search quoting the line that matched, a tag filter, a Rust snippet open with its highlighting, then the quick-paste palette asking a snippet for its fields](docs/tour.gif)
+![A tour of DevNotes: the notes by date, the same space as a board of folders, a search quoting the line that matched, a tag filter, a snippet open with its fields, a formatted Note, a todo list, a Calcul sheet, the palette, a request in the HTTP area, the tools, the JWT tool, and the light theme](docs/tour.gif)
 
 - **Three kinds of note.** Snippets highlighted in twenty-six languages and formatted with Prettier; Notes written formatted — headings, lists, checkboxes, tables, code blocks — and stored as Markdown; todo lists you tick off.
 - **`{{fields}}`.** `ssh -p {{port=22}} {{user}}@{{host}}` asks for its values before it reaches the clipboard, with defaults you set once.
