@@ -6461,7 +6461,8 @@ pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
 `app::screens` replays the reference's own screens, its data, gestures, file names and window
 sizes: `DEVNOTES_SCREENS=<dir> cargo test -p ui --lib app::screens` writes the PNGs to set beside
 the `angular-reference` zip, one profile copy a screen since a board shown or a rail put away is
-remembered. Without the variable it does nothing, and CI does not set it.
+remembered. Without the variable it does nothing, and CI does not set it. The three tours of the README (`docs/tour-notes.gif`,
+`docs/tour-tools.gif`, `docs/tour-http.gif`) are frames of those screens, two seconds each.
 
 ### The scenarios, on the assembled window
 

@@ -62,7 +62,7 @@ HTTP, GraphQL and WebSocket. Collections, environments and variables, a history 
 
 ## Notes and snippets
 
-![A tour of DevNotes: the notes by date, the same space as a board of folders, a search quoting the line that matched, a tag filter, a snippet open with its fields, a formatted Note, a todo list, a Calcul sheet, the palette, a request in the HTTP area, the tools, the JWT tool, and the light theme](docs/tour.gif)
+![The notes: by date, as a board of folders, a search quoting the line that matched, the facets, a selection, a snippet with its fields and their form, its history, a formatted Note and its presentation, a todo list, a Calcul sheet, the palette, the trash, and the light theme](docs/tour-notes.gif)
 
 - **Three kinds of note.** Snippets highlighted in twenty-six languages and formatted with Prettier; Notes written formatted — headings, lists, checkboxes, tables, code blocks — and stored as Markdown; todo lists you tick off.
 - **`{{fields}}`.** `ssh -p {{port=22}} {{user}}@{{host}}` asks for its values before it reaches the clipboard, with defaults you set once.
@@ -77,6 +77,8 @@ HTTP, GraphQL and WebSocket. Collections, environments and variables, a history 
 
 Every tool runs on your machine and calls nothing. Search them, star the ones you use, and keep a result as a note.
 
+![The tools: their home, then JWT, the JSON generator, Diff, Hash and HMAC, passwords, dates, time zones, Cron, CIDR subnets, colours, QR codes, fictitious identities and HTTP statuses](docs/tour-tools.gif)
+
 | Kind          | Tools                                                                                           |
 | ------------- | ----------------------------------------------------------------------------------------------- |
 | **Text**      | change case, fix line breaks, count words and characters, compare two texts or two documents    |
@@ -88,6 +90,8 @@ Every tool runs on your machine and calls nothing. Search them, star the ones yo
 | **Reference** | HTTP statuses and headers, MIME types, ports, signals, ASCII, regex, Markdown and Mustache      |
 
 ## API client
+
+![The API client: its collections, an HTTP request, a GraphQL request, a WebSocket, the environments, the code generated from a request, and the light theme](docs/tour-http.gif)
 
 - **HTTP and GraphQL** requests in tabs, with bodies, authentication and cookies; a GraphQL answer's errors read apart from its data.
 - **WebSocket** connections with a live log, and messages kept to send again.
