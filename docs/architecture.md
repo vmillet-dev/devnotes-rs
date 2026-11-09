@@ -6136,6 +6136,41 @@ release that replayed it would pay for it twice.
   successful jobs are not replayed and their outputs survive. "Re-run all jobs" will stop on
   the "tag already exists" guard — safe, but surprising.
 
+### The release binary
+
+**Speed first, then size.** The release profile is `opt-level = 3`, fat LTO, one codegen unit,
+stripped. Measured on Linux (same machine, same commit, `cargo bench -p engine` and the text
+crate's timings, 8000 notes of ~13 kB):
+
+| `opt-level`              | Binary  | `query_notes` | Cookie jar (500) | Argon2 unlock | Prettier 13 kB p95 | 1 MB of TS coloured |
+| ------------------------ | ------- | ------------- | ---------------- | ------------- | ------------------ | ------------------- |
+| **3 (kept)**             | 78.6 MB | 697 ms        | 0.63 ms          | 163 ms        | 653 ms             | 2.1 s               |
+| 2                        | 76.0 MB | 744 ms        | 0.84 ms          | 152 ms        | 598 ms             | —                   |
+| `s`, C code and KDF at 3 | 62.4 MB | 955 ms        | 1.09 ms          | 220 ms        | 662 ms             | 2.3 s               |
+| `s`                      | 61.0 MB | —             | —                | —             | 788 ms             | 3.2 s               |
+| `z`                      | 57.2 MB | —             | —                | —             | 813 ms             | 3.1 s               |
+
+- **Rejected: `s`, `z` and 2.** A fifth to a quarter off the binary costs the core a third more on
+  every query and the cookie jar three quarters more; 2 buys 3 % for up to a third on the same
+  paths. The packages are compressed anyway: the AppImage is 40.7 MB, the `.deb` 33.5 MB, the
+  `.rpm` 25.9 MB.
+- **Rejected: an `opt-level` per crate under `s`.** It reaches the C compiled by `cc` (QuickJS,
+  onig, SQLite), whose speed came back, but **not Rust code under fat LTO**: Argon2 and BLAKE2
+  left at 3 were still 35 % slower.
+- **Rejected: `panic = "abort"`** (no unwinding tables, ~5 MB): the db queue and the compute pool
+  catch a panic and answer `StorageUnavailable` (D18).
+- **Where the size is** (symbols of the release build): the Mermaid renderer and what it draws
+  with (`merman`, its own `usvg` 0.47 and fonts, the math layout of `ratex`) about 11 MB, the
+  interface 5.6 MB, the core 2.6 MB, D-Bus for the tray, notifications and the screen reader
+  3.2 MB, fonts and text shaping 1.9 MB, `wgpu` and `naga` 3 MB; the embedded assets about
+  6 MB (Prettier 2.4 MB, the fonts 2.4 MB, the request-script libraries 1.2 MB). Removing a
+  Mermaid feature or a `wgpu` backend would save under 1 MB each and lose a diagram or a GPU.
+- **Duplicates that stay**, each pulled by a dependency: `reqwest` 0.12 (the updater client),
+  `usvg` and `fontdb` (`merman`), `dirs` 5 and 6 (the updater, `auto-launch`), `calloop` and
+  `smithay-client-toolkit` (winit against the clipboard), and build-time crates.
+- **Never in a release**: `egui_inspection` (the `e2e` flavour), `puffin` and `puffin_http`
+  (`profiling`). `lint-rust` fails if the default build of `app` links any of them.
+
 ### How far back an upgrade reaches
 
 **A release opens in place the libraries of 0.2.0 and later.** Code that exists only to carry

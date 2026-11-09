@@ -109,13 +109,16 @@ jobs:
       # `--all-features` is what type-checks the `e2e` feature.
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
-      # The inspection port answers anyone on the machine: only the `e2e` flavour links it.
-      - name: No inspection port outside the e2e flavour
+      # The inspection port answers anyone on the machine: only the `e2e` flavour links it. The
+      # profiler serves egui's frames on a port too: only `--features profiling` does.
+      - name: No inspection port nor profiler outside their flavours
         run: |
-          if cargo tree -p app --edges normal --invert egui_inspection --locked > /dev/null 2>&1; then
-            echo "::error::the default build of app links egui_inspection"
-            exit 1
-          fi
+          for crate in egui_inspection puffin puffin_http; do
+            if cargo tree -p app --edges normal --invert "$crate" --locked > /dev/null 2>&1; then
+              echo "::error::the default build of app links $crate"
+              exit 1
+            fi
+          done
 
       - *stop-the-run
 
