@@ -1,6 +1,6 @@
 # Releasing
 
-Before a release, pass `docs/os-checklist.md` and record the pass there.
+Before a release, pass the manual checklist (`docs/recette/recette.html`, plan § 8.5) on both operating systems.
 
 A release is a `workflow_dispatch`. One run writes the changelog, commits it, tags, builds
 every bundle and publishes — there is no step to do by hand between them, and no partial

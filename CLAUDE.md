@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README. The migration to egui follows `docs/egui-migration/egui-migration-plan.md` (decisions in its § 11); a decision is changed there first, never silently in code.
+Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README. The decisions taken for the egui application are § 11 of `docs/egui-migration/egui-migration-plan.md` (D1–D33); a decision is changed there first, never silently in code.
 
 ## Project
 
-DevNotes — desktop notes app for developers, being rewritten from Angular + Tauri to **egui** (100 % Rust, one process; phase 2 of the plan in progress). The core is **`crates/engine`** (SQLite via Diesel, vault, HTTP, tools); the egui application arrives in `crates/ui` and `crates/app` (binary `devnotes`). Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted), todo lists, Calcul sheets (one result a line) or drawings; they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a palette, requests, tools and spaces. Libraries are **encrypted**, several, each behind its own passphrase.
+DevNotes — desktop notes app for developers, in **Rust alone**: an **egui** window over a core, in one process (since 1.0.0; no WebView, no IPC). The core is **`crates/engine`** (SQLite via Diesel, vault, the in-memory index, HTTP, tools); the interface is `crates/ui`, the binary `crates/app` (`devnotes`); beside them `text` (the editing core), `richtext`, `drawing`, `diagram`, `i18n` and `platform` (what is asked of the OS). Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted), todo lists, Calcul sheets (one result a line) or drawings; they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a palette, requests, tools and spaces. Libraries are **encrypted**, several, each behind its own passphrase.
 
 The Angular application is no longer in the tree: it stays whole at the tag `angular-reference` (its `src/` and `e2e/`; `git show angular-reference:src/app/…`, D32). A screen that existed there keeps its look and behaviour (plan § 5); its captures are the files of the `angular-reference` pre-release.
 
@@ -61,6 +61,17 @@ Principles:
 - `closed_enum!` declares enums once. **Imports degrade rather than fail**, in one transaction; an added variant does not bump `FORMAT_VERSION`. → "Import, export and copying out".
 - App metadata is read from `Cargo.toml` at compile time; the changelog is baked in (`include_str!`).
 
+### Interface (egui)
+
+- ⚠️ **The UI thread does no I/O, crypto or waiting** (D11, D12): every call goes `ui::api` → `Backend` → `Pending`, polled each frame — `db` (the core's one ordered queue) for anything touching the library or the index, reads included; `compute` for pure work; `spawn` for the network. Never `block_on`, never a lock taken while drawing. Only exception: a pure core function whose input the screen bounds, under 1 ms, still called through `api/`. The one wait allowed is draining the db queue at exit (D19). → "Backend and events".
+- **State and view** (D13): drawing reads a screen's state (`&…State`) and may change its view (`&mut …View`: text typed, menus, scroll, gestures); everything else is an `Action`, applied by `AppState::apply` at the end of the frame. → "Drawing, state and actions".
+- **One keyboard order** (D14): IME → focused widget (`consume_key`) → `keys::dispatch` (modal, area, application). No screen reads shortcuts on its own; bindings are tables. → "The keyboard".
+- **Every cache of library content lives in `LibraryCaches`** (D17), emptied with egui's widget memory when the library changes; not wiped byte by byte (in the threat model).
+- **Anything longer than ~100 rows is virtualised** (`widgets::list`, the canvas rows, the code editor); a costly `LayoutJob` is cached; nothing costly runs in the frame. → "Rendering and virtualisation".
+- **Widgets go through `widgets::interact`** (≥ 24 × 24, role and name, `author_id` = the reference's `data-testid`, focus ring); `egui::Ui::interact` is refused elsewhere by `disallowed-methods`.
+- ⚠️ **The passphrase is typed into `gate::passphrase::PassphraseField`, never egui's `TextEdit`** (which keeps an undo history in egui's memory); the text is a `Zeroizing<String>` handed to the core and wiped. ⚠️ **eframe persistence stays off**: it would write egui's state, text fields included, in clear.
+- ⚠️ **Installing an update is the last thing the process does** (Windows ends there): everything is written and the library closed before. → "Closing is not quitting", "Application updates".
+
 ### Core and interface
 
 - **Errors are codes**: `AppError { code, params, detail }`; the UI translates by an exhaustive `match` on `ErrorCode`, so a new code does not compile until it has its key in both locales; `detail` goes to the log, never to the screen.
@@ -68,7 +79,7 @@ Principles:
 - **Lists send previews** (`PREVIEW_LINES`); ⚠️ opening a note always reads it whole by id (`get_note`). → "A list sends previews, and the body is read by id".
 - No user-visible string in Rust outside the translation files (`crates/i18n/translations/{fr,en}.json`): code returns a key and its params. ⚠️ Never interpolate user content (a snippet's `{{fields}}`) into a translation template.
 
-### Behaviours to keep when porting a screen
+### Behaviours every screen keeps
 
 Read at the `angular-reference` tag; the egui mechanism is in the plan (§ 3.3–3.12).
 

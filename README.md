@@ -102,20 +102,19 @@ Several libraries, each behind its own passphrase · a daily backup restored in 
 
 ## Install
 
-DevNotes runs on **Windows** and **Linux**. Take the file for your system from the [latest release](https://github.com/vmillet-dev/devnotes-rs/releases/latest):
+DevNotes runs on **Windows** and **Linux**, as one native program: no browser engine, no runtime to install beside it. The Windows installer installs for you alone and needs no administrator rights. Take the file for your system from the [latest release](https://github.com/vmillet-dev/devnotes-rs/releases/latest):
 
-| Platform | File                                | Pick it if                                       |
-| -------- | ----------------------------------- | ------------------------------------------------ |
-| Windows  | `devnotes_<version>_x64-setup.exe`  | you just want it installed — **the one to take** |
-| Windows  | `devnotes_<version>_x64_en-US.msi`  | you deploy software through group policy         |
-| Windows  | `devnotes-<version>-windows.exe`    | you want no installer at all                     |
-| Linux    | `devnotes_<version>_amd64.AppImage` | any distribution, nothing to install             |
-| Linux    | `devnotes_<version>_amd64.deb`      | Debian, Ubuntu and derivatives                   |
-| Linux    | `devnotes-<version>-1.x86_64.rpm`   | Fedora, RHEL and derivatives                     |
-| Linux    | `devnotes-<version>-linux`          | the bare executable                              |
+| Platform | File                                 | Pick it if                                       |
+| -------- | ------------------------------------ | ------------------------------------------------ |
+| Windows  | `devnotes_<version>_x64-setup.exe`   | you just want it installed — **the one to take** |
+| Windows  | `devnotes-<version>-windows.exe`     | you want no installer at all                     |
+| Linux    | `devnotes_<version>_x86_64.AppImage` | any distribution, nothing to install             |
+| Linux    | `devnotes_<version>_amd64.deb`       | Debian, Ubuntu and derivatives                   |
+| Linux    | `devnotes-<version>.x86_64.rpm`      | Fedora, RHEL and derivatives                     |
+| Linux    | `devnotes-<version>-linux`           | the bare executable                              |
 
 ```bash
-chmod +x devnotes_*_amd64.AppImage        # then launch it
+chmod +x devnotes_*_x86_64.AppImage       # then launch it
 sudo apt install ./devnotes_*_amd64.deb   # Debian and Ubuntu
 sudo dnf install ./devnotes-*.x86_64.rpm  # Fedora and RHEL
 ```
@@ -125,7 +124,7 @@ sudo dnf install ./devnotes-*.x86_64.rpm  # Fedora and RHEL
 
 <br>
 
-Choose **More info**, then **Run anyway**. The warning is about the publisher's identity, not the file: DevNotes has no code-signing certificate. Its updates are signed and verified before they install, and every release publishes `SHA256SUMS.txt`.
+Choose **More info**, then **Run anyway**. The warning is about the publisher's identity, not the file: DevNotes has no code-signing certificate. Its updates are signed and verified before they install — the installer and the AppImage update themselves from inside the application; the `.deb` and `.rpm` are updated by your package manager — and every release publishes `SHA256SUMS.txt`.
 
 </details>
 
@@ -154,7 +153,7 @@ DevNotes asks for a passphrase the first time it runs, and at every launch after
 | [Your library, in detail](docs/security.md) | encryption, backups, and where your data lives          |
 | [Changelog](CHANGELOG.md)                   | what changed, and when                                  |
 | [Contributing](CONTRIBUTING.md)             | building from source, testing, and the code conventions |
-| [Architecture](docs/architecture.md)        | how both halves are built, for whoever changes them     |
+| [Architecture](docs/architecture.md)        | how it is built, for whoever changes it                 |
 
 ## License
 
