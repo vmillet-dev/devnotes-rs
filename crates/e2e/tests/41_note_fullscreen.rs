@@ -1,11 +1,12 @@
 //! A note expanded over the cards, with the layout of its kind: a snippet's fields over its code
 //! and its text filled under it, the details in a column beside the body and put away, a task
 //! list narrowed to the tasks done, and a title typed before J: the draft is written when the
-//! next note opens. The samples are found by their names, which no translation touches.
+//! next note opens. The scenario writes its own notes: the samples' names are translated.
 
 use e2e::{App, Tree, step};
 use egui::{Key, Modifiers};
 
+const SHIFT_COMMAND: Modifiers = Modifiers::COMMAND.plus(Modifiers::SHIFT);
 const RENAMED: &str = "Renamed while expanded";
 
 fn open_title(tree: &Tree) -> String {
@@ -13,13 +14,6 @@ fn open_title(tree: &Tree) -> String {
         .and_then(|title| title.value())
         .unwrap_or_default()
         .to_owned()
-}
-
-fn search(app: &mut App, words: &str) {
-    app.click("search-input");
-    app.press(Key::A, Modifiers::COMMAND);
-    app.type_text(words);
-    app.eventually("the sample alone", |tree| tree.count("note-card") == 1);
 }
 
 fn close(app: &mut App) {
@@ -39,8 +33,13 @@ fn note_fullscreen() {
     step(
         "a snippet expanded: its fields over the code, filled under it, details beside",
         || {
-            search(&mut app, "psql connection");
-            app.click("note-card-open");
+            app.click("new-note-kind");
+            app.click("new-note-snippet");
+            app.fill("editor-title", "Connexion");
+            app.click("editor-body");
+            app.paste("psql -h {{host}} -p {{port=5432}}");
+            app.click("editor-title");
+            app.wait_for("placeholder-input");
             app.click("editor-fullscreen");
             app.eventually("the column and the filled text", |tree| {
                 !tree.has("note-card") && tree.has("editor-space") && tree.has("editor-filled")
@@ -66,8 +65,12 @@ fn note_fullscreen() {
     });
 
     step("a task list expanded narrows to the tasks done", || {
-        search(&mut app, "Things to try");
-        app.click("note-card-open");
+        app.press(Key::L, SHIFT_COMMAND);
+        app.fill("editor-title", "Tâches");
+        app.click("checklist-add");
+        app.type_text("Préparer");
+        app.press(Key::Enter, Modifiers::NONE);
+        app.type_text("Déployer");
         app.wait_for("checklist-shown-0");
         let all = app.tree().count("checklist-text");
         app.click_nth("checklist-check", 0);
@@ -86,10 +89,6 @@ fn note_fullscreen() {
     step(
         "a title typed is written when J opens the next note",
         || {
-            app.click("search-input");
-            app.press(Key::A, Modifiers::COMMAND);
-            app.press(Key::Backspace, Modifiers::NONE);
-            app.eventually("every card", |tree| tree.count("note-card") > 2);
             app.click_nth("note-card-open", 0);
             app.wait_for("editor-position");
             app.click("editor-title");
