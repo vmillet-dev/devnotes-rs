@@ -76,6 +76,8 @@ pub struct Settings {
     pub rail_shown: bool,
     /// Display preferences of the editor, not of a note: they outlive moving to the next one.
     pub editor_fullscreen: bool,
+    /// The panel beside the cards, in points, as its edge was left; `0` is its share of the area.
+    pub editor_panel_width: u16,
     pub editor_header_folded: bool,
     pub editor_fields_open: bool,
     /// The request's share of the height it has with its answer, in tenths of a percent; `0`
@@ -125,6 +127,7 @@ impl Default for Settings {
             rail_width: RAIL_WIDTH.0,
             rail_shown: true,
             editor_fullscreen: false,
+            editor_panel_width: 0,
             editor_header_folded: false,
             editor_fields_open: true,
             http_request_share: 0,
@@ -156,6 +159,7 @@ const AREA: &str = "devnotes.area";
 const RAIL: &str = "devnotes.libraryRailWidth";
 const RAIL_SHOWN: &str = "devnotes.showLibraryRail";
 const EDITOR_FULLSCREEN: &str = "devnotes.editorFullscreen";
+const EDITOR_PANEL_WIDTH: &str = "devnotes.editorPanelWidth";
 const EDITOR_HEADER_FOLDED: &str = "devnotes.editorHeaderFolded";
 const EDITOR_FIELDS_OPEN: &str = "devnotes.editorFieldsPanel";
 const HTTP_REQUEST_SHARE: &str = "devnotes.httpRequestShare";
@@ -198,6 +202,10 @@ impl Settings {
                 }),
             rail_shown: preferences.get(RAIL_SHOWN) != Some("false"),
             editor_fullscreen: preferences.get(EDITOR_FULLSCREEN) == Some("true"),
+            editor_panel_width: preferences
+                .get(EDITOR_PANEL_WIDTH)
+                .and_then(|width| width.parse().ok())
+                .unwrap_or(0),
             editor_header_folded: preferences.get(EDITOR_HEADER_FOLDED) == Some("true"),
             editor_fields_open: preferences.get(EDITOR_FIELDS_OPEN) != Some("false"),
             http_request_share: read_share(preferences.get(HTTP_REQUEST_SHARE)),
@@ -243,6 +251,7 @@ impl Settings {
         preferences.set(RAIL, &self.rail_width.to_string());
         preferences.set(RAIL_SHOWN, flag(self.rail_shown));
         preferences.set(EDITOR_FULLSCREEN, flag(self.editor_fullscreen));
+        preferences.set(EDITOR_PANEL_WIDTH, &self.editor_panel_width.to_string());
         preferences.set(EDITOR_HEADER_FOLDED, flag(self.editor_header_folded));
         preferences.set(EDITOR_FIELDS_OPEN, flag(self.editor_fields_open));
         preferences.set(HISTORY_LIST_WIDTH_KEY, &self.history_list_width.to_string());
@@ -442,6 +451,7 @@ mod tests {
             rail_width: 240,
             rail_shown: false,
             editor_fullscreen: true,
+            editor_panel_width: 620,
             editor_header_folded: true,
             editor_fields_open: false,
             http_request_share: 423,

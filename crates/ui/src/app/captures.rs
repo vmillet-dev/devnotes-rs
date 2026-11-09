@@ -16,12 +16,16 @@ use engine::http::model::{HttpMethod, RequestKind};
 const SIZE: egui::Vec2 = egui::vec2(1100.0, 720.0);
 
 fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
+    launch_at(profile, SIZE)
+}
+
+fn launch_at(profile: &Path, size: egui::Vec2) -> Harness<'static, DevNotesApp> {
     // Loaded before the first frame, as the window has them a moment after: the captures show
     // the colours.
     text::highlight::warm();
     let startup = startup(profile);
     let mut harness = Harness::builder()
-        .with_size(SIZE)
+        .with_size(size)
         .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
     harness.state_mut().state.clock = Box::new(FakeClock::at("2026-11-03T09:30:00Z"));
     // The window finds the arrows in the system's fonts, which a bench has not.
@@ -831,6 +835,9 @@ fn the_canvas_of_an_open_library() {
         .click();
     settle(&mut harness);
     capture(&mut harness, "editor-snippet");
+    click(&mut harness, "editor-fullscreen");
+    capture(&mut harness, "editor-snippet-expanded");
+    click(&mut harness, "editor-back-to-cards");
     click(&mut harness, "editor-fold-header");
     capture(&mut harness, "editor-header-folded");
     click(&mut harness, "editor-header-summary");
@@ -877,6 +884,30 @@ fn the_canvas_of_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "header-two-rows");
     harness.set_size(SIZE);
+}
+
+/// Wide enough for the panel beside two columns of cards: the snippet open, then its ⋯.
+#[test]
+fn the_editor_beside_the_cards() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "editor-beside-the-cards");
+    click(&mut harness, "editor-more");
+    capture(&mut harness, "editor-more-menu");
 }
 
 #[test]

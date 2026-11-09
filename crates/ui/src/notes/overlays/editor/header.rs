@@ -18,6 +18,8 @@ use crate::widgets::{self, ChoiceMenu, IconButton, Naming, date};
 
 /// The lifecycle's badge and the date, side by side.
 const DEADLINE_WIDTH: f32 = 240.0;
+/// Under it the deadline never shares the line of the tags.
+const OWN_ROW_UNDER: f32 = 640.0;
 
 pub(super) fn bands(
     ui: &mut Ui,
@@ -31,7 +33,8 @@ pub(super) fn bands(
             ui.spacing_mut().item_spacing = Vec2::new(8.0, 6.0);
             context(ui, state, (session, note), editing, actions);
             tags(ui, state, (session, note), editing, actions);
-            if ui.available_width() < DEADLINE_WIDTH {
+            // In a panel the tags wrap under the field: the deadline takes a line of its own.
+            if ui.available_width() < DEADLINE_WIDTH || ui.max_rect().width() < OWN_ROW_UNDER {
                 ui.end_row();
             }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

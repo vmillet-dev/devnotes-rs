@@ -48,6 +48,16 @@ use crate::theme;
 use crate::widgets::Layer;
 use notes_query::NotesQueryState;
 
+/// What the editor opens once the note open has closed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EditorNext {
+    Note(String),
+    /// Reached by J or K.
+    Stepped(String),
+    /// A new note of that kind, or of the preferred one.
+    Draft(Option<engine::notes::kind::NoteKind>),
+}
+
 /// The library's: its board's loose cards are stored in pixels, at that card's height.
 pub const PREVIEW_LINES_KEY: &str = "devnotes.notes.previewLines";
 
@@ -119,6 +129,9 @@ pub struct AppState {
     pub editor: editor::EditorState,
     /// The window waits for the note open to close.
     pub closing_editor: bool,
+    /// What was asked for while a note is open beside the cards: opened once that one has
+    /// written its fields and closed, by its own closing path.
+    pub editor_next: Option<EditorNext>,
     /// « Quit », and not the close button: the window goes whatever the tray preference says.
     pub quitting: bool,
     pub revisions: note_revisions::RevisionsState,
@@ -204,6 +217,7 @@ impl AppState {
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
             closing_editor: false,
+            editor_next: None,
             quitting: false,
             revisions: note_revisions::RevisionsState::default(),
             drawing_choices: QueryCell::default(),
@@ -280,7 +294,7 @@ impl AppState {
     pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend) {
         let answered = self.notes.update(&mut self.revision, &mut self.errors);
         if let Some(id) = answered.open {
-            self.editor.open(id);
+            self.open_in_editor(EditorNext::Note(id));
         }
         for note in answered.copied {
             self.copied(ctx, backend, note);
@@ -724,6 +738,10 @@ impl AppState {
             }
             Action::App(AppAction::SetRailWidth(width)) => {
                 self.settings.rail_width = width;
+                self.save_settings(backend);
+            }
+            Action::App(AppAction::SetEditorPanelWidth(width)) => {
+                self.settings.editor_panel_width = width;
                 self.save_settings(backend);
             }
             Action::App(AppAction::SetHistoryWidth(width)) => {
@@ -1349,7 +1367,7 @@ impl AppState {
                     self.library_preferences.clone(),
                 ));
             }
-            Notes::OpenNote(id) => self.editor.open(id),
+            Notes::OpenNote(id) => self.open_in_editor(EditorNext::Note(id)),
             Notes::Editor(editing) => self.apply_editing(editing, ctx, backend),
             Notes::NewNote(kind) => self.new_note_asked(kind, backend),
             Notes::Pin { id, pinned } => {
@@ -1488,7 +1506,8 @@ impl AppState {
                     self.notes.copy(backend, id);
                 }
             }
-            Editing::Close => self.editor.close(),
+            Editing::Close => self.close_editor(),
+            Editing::Step(by) => self.step_in_editor(by),
             Editing::Present { title, markdown } => {
                 self.presentation.ask(backend, title, markdown);
             }
@@ -1818,7 +1837,7 @@ impl AppState {
         use crate::palette::commands::Command;
         use crate::palette::options::Chosen;
         match chosen {
-            Chosen::Note(id) => self.editor.open(id),
+            Chosen::Note(id) => self.open_in_editor(EditorNext::Note(id)),
             Chosen::Request(id) => {
                 let open = crate::http::Action::OpenRequest(id);
                 self.apply(Action::Http(open), ctx, backend);
@@ -1862,10 +1881,15 @@ impl AppState {
         crate::notes::calc::Format::of(&self.settings, self.language)
     }
 
-    /// A modal over the canvas takes its keys: the canvas's stand aside.
+    /// A modal over the canvas takes its keys: the canvas's stand aside. The editor is one for
+    /// the keys, though it sits beside the cards.
     pub fn modal_open(&self) -> bool {
-        self.editor.is_open()
-            || self.trash.is_open()
+        self.editor.is_open() || self.overlay_open()
+    }
+
+    /// What opens over the canvas and the editor beside it.
+    pub fn overlay_open(&self) -> bool {
+        self.trash.is_open()
             || self.tags.is_open()
             || self.fill.is_open()
             || self.palette.is_open()
@@ -1891,11 +1915,64 @@ impl AppState {
     }
 
     fn new_note(&mut self, kind: Option<engine::notes::kind::NoteKind>) {
-        let Some((space, folder)) = self.new_place() else {
+        self.open_in_editor(EditorNext::Draft(kind));
+    }
+
+    /// Now if nothing is open; otherwise once the note open has gone by its closing path, which
+    /// writes what was typed in it.
+    fn open_in_editor(&mut self, next: EditorNext) {
+        if !self.editor.is_open() {
+            self.open_now(next);
+            return;
+        }
+        if let EditorNext::Note(id) | EditorNext::Stepped(id) = &next
+            && self.editor.open_id() == Some(id.as_str())
+        {
+            return;
+        }
+        self.editor_next = Some(next);
+    }
+
+    fn open_now(&mut self, next: EditorNext) {
+        match next {
+            EditorNext::Note(id) => self.editor.open(id),
+            EditorNext::Stepped(id) => self.editor.step_to(id),
+            EditorNext::Draft(kind) => {
+                let Some((space, folder)) = self.new_place() else {
+                    return;
+                };
+                let kind = kind.unwrap_or(self.settings.default_note_kind);
+                self.editor.draft(kind, space, folder);
+            }
+        }
+    }
+
+    /// Then what was asked while it was open, if anything.
+    fn close_editor(&mut self) {
+        self.editor.close();
+        if let Some(next) = self.editor_next.take() {
+            self.open_now(next);
+        }
+    }
+
+    /// J and K: the note before or after the one open, in the order the cards are shown.
+    fn step_in_editor(&mut self, by: isize) {
+        let Some((at, order)) = self.editor_position() else {
             return;
         };
-        let kind = kind.unwrap_or(self.settings.default_note_kind);
-        self.editor.draft(kind, space, folder);
+        let Some(next) = at.checked_add_signed(by).and_then(|to| order.get(to)) else {
+            return;
+        };
+        self.open_in_editor(EditorNext::Stepped(next.clone()));
+    }
+
+    /// Where the note open sits among the cards shown, and those cards; `None` for a draft or a
+    /// note the view does not show.
+    pub fn editor_position(&self) -> Option<(usize, Vec<String>)> {
+        let id = self.editor.open_id()?;
+        let order = self.on_screen();
+        let at = order.iter().position(|shown| shown == id)?;
+        Some((at, order))
     }
 
     /// The clipboard read like a paste into an empty Note: code makes a snippet in the language

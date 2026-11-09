@@ -393,6 +393,10 @@ click; a dialog projects its content into it and says which rung it sits on:
 | `dismissible`          | `false` refuses Escape and the backdrop click (an update being installed)         |
 | `labelledBy` / `label` | what names it to assistive technology                                             |
 
+⚠️ **The note editor is no longer one of them** (0.28.0): it opens in a panel beside the cards,
+not over them (→ the editor's paragraph under "The canvas, drawn"), so its `editor` rung and the
+`fullscreen` input have no egui twin.
+
 What a shell cannot guess — how wide the panel is, the gap between its blocks, its padding,
 where it sits on the scrim — comes from CSS custom properties the consumer sets on the
 `app-dialog` element from its own stylesheet: `--dialog-width`, `--dialog-height`,
@@ -4747,7 +4751,30 @@ the search gives way first, then the switchers' names. ⚠️ The central panel 
 own, as the reference: egui's 8 px cost the header its one row at the window's default width.
 
 A card's click surface (`note-card-open`, a layer under its controls) opens the note editor
-(`notes::overlays::editor`, `state::editor`), the reference's `note-editor-overlay`: a toolbar
+(`notes::overlays::editor`, `state::editor`) **in a panel beside the cards**, not over them: 45 %
+of the area right of the rail, between 460 and 760 px (`notes::beside_the_cards`) until its edge is moved (`editor-panel-edge`,
+remembered as `editorPanelWidth`), always leaving at least two columns of cards on its left, drawn
+and clickable, the cards taking the columns their width has room for, the open one lit (amber edge, a tint). Expanded (the
+toolbar's button, remembered as `editorFullscreen`) or in a window too narrow to keep two columns
+of cards, it takes the whole area right of the rail, with a bar over it: « ← Cards », the note's
+space › folders, and the keys. ⚠️ **What the editor opens next waits for the note open to
+close** (`AppState::editor_next`): a card clicked, a new note, J or K, the palette's choice —
+each goes through the closing path first, which writes the drafts, and `Editing::Close` opens
+what was asked. Opening straight away replaced the view and lost what was being typed. **J and K**
+(`keys::EDITOR`, read while no field has the focus and nothing opens over the editor) step to
+the card after or before, in the order the cards are shown (`AppState::on_screen`: the list's or
+the board's); a note reached that way does not give its title the focus, so the keys go on
+stepping. Expanded, the toolbar says `n / total` between ‹ and ›. **Escape** steps back: it
+leaves the field first (egui drops the focus before the frame is drawn, so the editor remembers
+whether a field had it at the last frame), then full screen, then closes; it is read after the
+panel is drawn, so a search bar or a drawing's tool takes it first, and not at all while a
+menu, the lightbox, the presentation or an overlay is open. While the editor is open the canvas's
+keys stand aside (`AppState::overlay_open` is every modal but the editor). Under 700 px the
+toolbar takes two lines: the title with expand and close, then the language, the format and the
+priority on the left and copy, pin and ⋯ on the right; folding the header, presenting and deleting
+(two clicks, the menu staying open between them) wait in ⋯. ⚠️ The split between the cards and the
+panel is on a whole point: on a fraction the header's measure of itself drifted by thousandths of
+a point each frame and never settled. The editor has: a toolbar
 (title, language for a snippet, pin, priority, copy, delete in two clicks, fold, full screen,
 close), the header's two bands — context, tags and deadline; kind (a conversion menu, a Dessin
 named only), space › folder — or, folded, one line of what they hold, and the footer's counts.

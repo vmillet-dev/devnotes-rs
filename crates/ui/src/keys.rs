@@ -62,6 +62,22 @@ pub static NOTES: [Binding; 1] = [Binding {
     action: Action::Notes(crate::notes::Action::FocusSearch),
 }];
 
+/// The note open beside the cards, while no field has the focus: J the next card, K the one
+/// before, in the order they are shown.
+pub static EDITOR: [Binding; 2] = [step(Key::J, 1), step(Key::K, -1)];
+
+const fn step(key: Key, by: isize) -> Binding {
+    Binding {
+        key,
+        modifiers: Modifiers::NONE,
+        read: Read::Character,
+        while_typing: false,
+        action: Action::Notes(crate::notes::Action::Editor(crate::notes::Editing::Step(
+            by,
+        ))),
+    }
+}
+
 /// The rail's, in the three areas, wherever the person moved it.
 pub fn rail(bindings: &crate::services::shortcuts::Bindings) -> Binding {
     let (key, modifiers) = bindings
