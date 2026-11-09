@@ -3,7 +3,8 @@
 //! and the find bar finding in it. Then a drawing: drawn on its stage, shown on its card from the
 //! picture kept beside it, written as a PNG, and Escape stepping back through it. Then Notes:
 //! the sample opens formatted and a box ticked there is kept, and one typed from the toolbar
-//! keeps « 2 * 3 * 4 » as typed.
+//! keeps « 2 * 3 * 4 » as typed. The editor sits beside the cards: J steps to the next one, and
+//! Escape leaves full screen before it closes.
 
 use e2e::{App, Tree, step};
 use egui::{Key, Modifiers};
@@ -106,6 +107,54 @@ fn drawings(app: &mut App, exported: &std::path::Path) {
                 app.has("editor-title"),
                 "the selection went, not the editor"
             );
+            app.press(Key::Escape, Modifiers::NONE);
+            app.eventually("the editor is closed", |tree| !tree.has("editor-title"));
+        },
+    );
+}
+
+/// The title of the note open, as its field holds it.
+fn open_title(tree: &Tree) -> String {
+    tree.find("editor-title")
+        .and_then(|title| title.value())
+        .unwrap_or_default()
+        .to_owned()
+}
+
+/// Beside the cards, J and K step through them; expanded, the cards go; Escape steps back.
+fn beside_the_cards(app: &mut App) {
+    step(
+        "a note opens beside the cards, and J steps to the next one",
+        || {
+            app.click("search-input");
+            app.press(Key::A, Modifiers::COMMAND);
+            app.press(Key::Delete, Modifiers::NONE);
+            app.eventually("every card back", |tree| tree.count("note-card") > 2);
+            app.click_nth("note-card-open", 0);
+            app.wait_for("editor-title");
+            let first = open_title(&app.tree());
+            // The title takes the focus as the note opens: Escape gives it up first.
+            app.press(Key::Escape, Modifiers::NONE);
+            app.press(Key::J, Modifiers::NONE);
+            app.eventually("the next card open", |tree| {
+                tree.has("editor-title") && open_title(tree) != first
+            });
+            app.capture("editor-beside-the-cards");
+        },
+    );
+
+    step(
+        "expanded, the note takes the area; Escape steps back",
+        || {
+            app.click("editor-fullscreen");
+            app.eventually("the cards gone", |tree| {
+                !tree.has("note-card") && tree.has("editor-position")
+            });
+            app.press(Key::Escape, Modifiers::NONE);
+            // Beside the cards again, or over them in a window too narrow for both.
+            app.eventually("out of full screen", |tree| {
+                !tree.has("editor-position") && tree.has("editor-title")
+            });
             app.press(Key::Escape, Modifiers::NONE);
             app.eventually("the editor is closed", |tree| !tree.has("editor-title"));
         },
@@ -270,6 +319,7 @@ fn editing_a_note() {
         },
     );
 
+    beside_the_cards(&mut app);
     drawings(&mut app, &exported);
     notes(&mut app);
 

@@ -110,7 +110,12 @@ fn folders_attachments_and_global_values_are_read_again() {
     let sql = written(&session, |e| create_folder(e, folder("SQL", &space)));
     let prod = written(&session, |e| create_folder(e, folder("Prod", &space)));
     written(&session, |e| {
-        file_notes(e, vec![note.clone()], Some(sql.id.clone()))
+        file_notes(
+            e,
+            vec![note.clone()],
+            Some(sql.id.clone()),
+            engine::folders::board::PreviewLines::default(),
+        )
     });
     written(&session, |e| {
         rename_folder(e, sql.id.clone(), "Postgres".to_string())
@@ -123,7 +128,9 @@ fn folders_attachments_and_global_values_are_read_again() {
     });
     written(&session, |e| delete_attachment(e, attachment.id));
     written(&session, |e| set_global_placeholders(e, globals));
-    written(&session, |e| delete_folder(e, prod.id));
+    written(&session, |e| {
+        delete_folder(e, prod.id, engine::folders::board::PreviewLines::default())
+    });
 }
 
 #[test]

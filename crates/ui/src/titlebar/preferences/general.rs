@@ -3,6 +3,7 @@
 
 use egui::{Align, FontFamily, Layout, RichText, Sense, Stroke, Ui, Vec2};
 use engine::app_info::METADATA;
+use engine::folders::board::PreviewLines;
 use engine::notes::kind::NoteKind;
 use i18n::{Key, Language, Message, keys};
 
@@ -25,13 +26,14 @@ const SAMPLE: &str = "1578.13";
 pub(super) fn show(
     ui: &mut Ui,
     state: &AppState,
-    draft: &mut SettingsDraft,
+    (draft, lines): (&mut SettingsDraft, &mut PreviewLines),
     actions: &mut Actions,
 ) {
     let language = state.language;
     let mut settings = draft.draft().clone();
     ui.spacing_mut().item_spacing.y = 0.0;
     appearance(ui, language, &mut settings);
+    cards(ui, language, lines);
     editor(ui, language, &mut settings);
     calculation(ui, language, &mut settings);
     behaviour(ui, language, &mut settings);
@@ -96,6 +98,27 @@ fn appearance(ui: &mut Ui, language: Language, settings: &mut Settings) {
     row(ui, &tr(keys::settings::appearance::DENSITY), |ui| {
         Segmented::new(&densities, "setting-density").show(ui, &mut settings.density);
     });
+}
+
+/// The library's, not the application's: the board's loose cards are stored at that height.
+fn cards(ui: &mut Ui, language: Language, lines: &mut PreviewLines) {
+    use keys::settings::cards;
+    group(ui, language, cards::TITLE);
+    let counts: Vec<(PreviewLines, &str)> = PreviewLines::ALL
+        .iter()
+        .map(|lines| (*lines, lines.as_str()))
+        .collect();
+    row(
+        ui,
+        &i18n::translate(language, cards::PREVIEW_LINES, &[]),
+        |ui| {
+            Segmented::new(&counts, "setting-preview-lines").show(ui, lines);
+        },
+    );
+    note(
+        ui,
+        &i18n::translate(language, cards::PREVIEW_LINES_HINT, &[]),
+    );
 }
 
 fn editor(ui: &mut Ui, language: Language, settings: &mut Settings) {

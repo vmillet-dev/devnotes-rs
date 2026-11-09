@@ -1,0 +1,9 @@
+# Configuration du service de facturation
+service = "billing"
+replicas = 2
+ports = [8080, 8443]
+demarre = 2026-09-29T14:03:12+02:00
+
+[base]
+host = "db.internal"
+port = 5432

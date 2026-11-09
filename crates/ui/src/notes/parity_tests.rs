@@ -316,7 +316,7 @@ fn a_drawing_is_inserted_from_the_toolbar_of_a_note() {
         engine::notes::update_note(engine, at, patch)
     })
     .unwrap();
-    let mut harness = area(backend, profile);
+    let mut harness = crate::notes::bench::expanded_area(backend, profile);
     click(&mut harness, "note-card-open", "Procédure");
     until(&mut harness, "the toolbar offers the drawing", |harness| {
         present(harness, "rich-embed-drawing")

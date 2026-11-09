@@ -1,7 +1,7 @@
 use egui_kittest::kittest::Queryable;
 use engine::notes::model::{DisplayNote, NotePatch};
 
-use crate::notes::bench::{Bench, area, click_id, settle};
+use crate::notes::bench::{Bench, click_id, expanded_area, settle};
 use crate::testing;
 
 type Harness = egui_kittest::Harness<'static, Bench>;
@@ -27,7 +27,7 @@ fn edited() -> (Harness, String) {
         engine::notes::update_note(engine, at, patch)
     })
     .unwrap();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     click_id(&mut harness, "note-card-open");
     (harness, id)
 }
@@ -90,7 +90,7 @@ fn going_back_puts_the_body_back_in_the_editor_and_leaves_the_date() {
 fn a_new_note_and_a_todo_list_offer_no_history() {
     let (backend, profile) = testing::unlocked();
     testing::note(&backend, "psql");
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     click_id(&mut harness, "new-note");
     settle(&mut harness);
     assert!(

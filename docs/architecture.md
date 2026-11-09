@@ -6,7 +6,7 @@ For build/run instructions see [CONTRIBUTING](../CONTRIBUTING.md).
 ## Overview
 
 DevNotes is a desktop application being rewritten from Angular + Tauri to **egui**, in one Rust
-process (`docs/egui-migration-plan.md`). The core, `crates/engine`, owns everything that is not
+process (`egui-migration/egui-migration-plan.md`). The core, `crates/engine`, owns everything that is not
 drawing: storage, encryption, the in-memory index of notes, HTTP, the tools. The egui interface
 calls it directly, through one façade and three queues, with no serialisation in between. The
 Angular application it replaces is kept, never built, in `reference/angular/`; the sections of
@@ -137,7 +137,7 @@ also derives `specta::Type`, which is what lets tauri-specta generate the front-
 > **Angular reference.** This section describes the Angular application, which left the build in
 > v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
 > tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
-> screen by screen (`docs/egui-migration-plan.md` § 12).
+> screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 ### Where a file goes
 
@@ -392,6 +392,10 @@ click; a dialog projects its content into it and says which rung it sits on:
 | `fullscreen`           | fills the window under the titlebar — the editor's toggle                         |
 | `dismissible`          | `false` refuses Escape and the backdrop click (an update being installed)         |
 | `labelledBy` / `label` | what names it to assistive technology                                             |
+
+⚠️ **The note editor is no longer one of them** (0.28.0): it opens in a panel beside the cards,
+not over them (→ the editor's paragraph under "The canvas, drawn"), so its `editor` rung and the
+`fullscreen` input have no egui twin.
 
 What a shell cannot guess — how wide the panel is, the gap between its blocks, its padding,
 where it sits on the scrim — comes from CSS custom properties the consumer sets on the
@@ -1848,22 +1852,35 @@ card's accessible name; `.card` is a `<div>` above it in `pointer-events: none`,
 control takes its own events back. The checklist's tickable items are simply in the flow
 instead of a floating layer of their own.
 
-**One row holds the tick, the title and the marks.** The marks — a pin, a format badge, a ⚡,
-a 📎 — used to have a band of their own above the title: a line that says nothing about the
-note, on a card that is a fixed 150px. They are right-aligned on the title's row now, the
-title gives way to them (`flex: 1` plus `min-width: 0`, without which a long title pushes
-them off the card instead of clamping), and the body is what got the line back — five lines
-where it was four, which is `notes::model::PREVIEW_LINES` since a list sends no more than that.
+**A card reads like a small editor window: a title bar, a preview, a status line**. The
+title bar (28 px, `card::bands::top`) holds the kind's icon in an 18 px tile tinted with its hue,
+a snippet's format (« TS », « Texte » in grey for plain text), the title on one line with an ellipsis, then on the right a list's « 1/4 », the priority as three
+bars (« Urgent » written out in red beside them, the others named in the tooltip), the pin, and
+— while cards are ticked — the selection box, last, so nothing on its left moves but the pin,
+which steps over for it. The status line (22 px, `card::bands::bottom`) is passive: where the
+note is on the left (the folder's square and name, the space first under « All spaces », the
+space alone with no folder, nothing inside the folder's own view), and on the right ⚡ and the
+fields to fill, 📎 and the attachments, and the short date (« 4 h »,
+« hier », « dans 2 h » in red for a near expiry; the long label is the node's name). Neither
+band is ever empty, both have no fill but under the pointer (`bg_3`) and a `line_soft` rule
+toward the preview. A card shows no tag: a search that found one says so in the preview. An
+armed deletion turns the status line red with its two keys.
 
-⚠️ `MAX_VISIBLE_ITEMS` deliberately did **not** move. A todo list with nothing to mark never
-drew that band, so it gave nothing up; and 21px recovered is less than the 24px a row needs
-now that every row clears the hit target.
+⚠️ **The title bar was chosen over a band of marks** (2026-11-09). The first version put the
+kind, the format and the counts in a band above a title line, as the mockup
+(`docs/mockups/note-cards.html`) drew it; on a note with no field, attachment, priority or pin
+that band held an icon alone and read as empty. The title went up beside the icon and a snippet's
+format, the counts went down with the date, and the line given back went to the card's height.
 
-⚠️ **The tick is in the flow**, at the head of that row, and always drawn — quiet at rest,
-amber once ticked. It used to float in a pill over the card's top-right corner, which is
-precisely where the marks now are: anything floating there sits on top of them, and that
-collision is what decided this layout. A selection affordance that exists only under the
-pointer is also one nobody finds.
+**The preview is whole lines, the library's count** — 3, 4 or 5 (`devnotes.notes.previewLines`,
+`PreviewLines` in `folders::board`), making the card 120, 140 or 160 px, a multiple of the
+board's 20 px grid. A list shows one task fewer than the lines (a task's row is 24 px), code has
+no frame and marks its `{{fields}}` as the editor does (`api::notes::field_ranges`). The core
+still sends `PREVIEW_LINES` (5): the card clips. An untitled note writes no « Untitled »: its
+icon stands alone in its title bar, and only its accessible name says it.
+
+⚠️ **The tick is allocated on every frame**, shown or not: a widget that comes and goes moves
+the ids of every one after it, and the ⋯'s menu lost its own.
 
 **The card's ⋯ menu is the complete one.** Open, pin, copy, duplicate, file into…, move to…, delete —
 a note's properties used to be spread over four surfaces with none of them complete: filing
@@ -3114,6 +3131,13 @@ ended up out of sight behind its scrollbar. Rows are counted against the zone's 
 Shrinking was refused: it would move the board under the pointer every time a card is taken
 out, and a zone somebody stretched is a zone they chose the size of.
 
+⚠️ **A card's height is the library's, so every geometry call is told it.** A row is
+`PreviewLines::card_height()` (120, 140 or 160 px): `BoardQuery::preview_lines` sizes a first
+layout and the free grid, and `file_notes`, `file_notes_back`, `delete_folder` and
+`arrange_board` take the lines their zones grow by. Nothing moves when the setting changes; loose
+cards stored at the old pitch may overlap until « Align » puts them back in rows, which the
+setting's hint says.
+
 ⚠️ **`columns_in` predicts the browser, so it measures the zone the browser’s way**: the
 hairline off, the padding off, the `SCROLLBAR` allowance **not** off. That allowance belongs
 to `default_zone_width`, which reserves it so the nominal zone still shows two cards across
@@ -3856,7 +3880,8 @@ last chip. `#` lists the tags with how many notes carry each. `>` lists the comm
 `areaKeys`), the preferences (`PreferencesDialogStore`, which the File menu reads too) and the
 shortcut sheet.
 
-**Each kind has its mark**, in one column so that the titles align: a note's kind badge, a
+**Each kind has its mark**, in one column so that the titles align: a note's kind icon and a
+snippet's format, a
 request's method in its hue (`http-method-hues`), a tool's category icon in its hue
 (`tool-hues`, `TOOL_CATEGORY_ICONS`), a space's dot — the switcher's: a space has no colour of
 its own — and `>`. The highlighted row says what Enter does in place of its context, and so
@@ -4578,8 +4603,11 @@ without one.
   pointer), `Filled` (the primary, solid amber), `Quiet` (text alone, filled when pressed),
   `Destructive` (**red at rest**, `bg-3` and a red edge when armed or hovered); `.large()` is the
   gate's submit. `IconButton`, `SplitButton`, `RailToggle` (32 px).
-- `Chip`, `priority_dot`, `hue_badge` (a kind's or a language's: the hue in the label, a neutral
-  fill, a hairline in the hue), `Kbd`, `spinner`.
+- `Chip`, `priority_dot`, `hue_badge` (the hue in the label, a neutral fill, a hairline in the
+  hue), `Kbd`, `spinner`. A note's kind is not a badge: `notes::ui::kind_icon` is its icon on a
+  tile of its hue (Snippet olive, the one hue no language uses), named for the screen reader, and
+  `kind_tile` the same drawing wherever a kind is chosen beside its word (« New note », the
+  palette).
 - `Segmented` (the segment on is filled, its label bright), `TextField` (the reference's
   `.input`: 9 × 11 on `bg-1`, red when refused), `SearchField`, `Checkbox`.
 
@@ -4654,7 +4682,8 @@ open, and emptied with the library scope.
 
 The list view is `notes::canvas`. `canvas::rows::Rows` flattens the view into rows of one
 height — a section's heading, then its cards a row at a time — with the column count of the
-reference's `repeat(auto-fill, minmax(220px, 1fr))` and cards a fixed 150 px. Their tops are
+reference's `repeat(auto-fill, minmax(220px, 1fr))` and cards of the library's height (120, 140 or
+160 px, → "A card is two layers"). Their tops are
 worked out once a frame and only the rows that cross the viewport are drawn
 (`ScrollArea::show_viewport`): of 30 000 notes, a screenful. Sections are the core's, in its
 order, empty ones included (they are exhaustive); the cell after a section's last card is its
@@ -4662,13 +4691,12 @@ order, empty ones included (they are exhaustive); the cell after a section's las
 found (`matched == 0`, `canvas-no-results`) or a failure with its retry (`canvas-retry`, which
 bumps the revision) instead of the sections.
 
-A card (`canvas::card`) draws the core's `DisplayNote` and decides nothing about it: its title on
-two lines at most beside the kind's badge (`notes::ui::kind_badge`: a snippet's format and hue from
-`notes::language`, the others their kind), then what the kind previews — a snippet's first lines in
-the mono face, a Note's outline, a list's progress and open items (ticking one writes it through
-`state::notes`, not optimistically), a sheet's last results, a drawing's picture — and the footer:
-when it changed (or its source, or its expiry), its marks (priority pill, pin, fields to fill,
-attachment), its folder and two tags. Previews are monochrome until syntax colouring arrives with
+A card (`canvas::card`) draws the core's `DisplayNote` and decides nothing about it, in three
+bands (→ "A card is two layers"): the title bar (the kind's icon, `notes::ui::kind_icon`; a
+snippet's format, `notes::ui::format_label`; the title; the priority's bars, the pin, the box), the preview by kind — a snippet's first lines in
+the mono face, a Note's outline, a list's open tasks (ticking one writes it through
+`state::notes`, not optimistically), a sheet's last results, a drawing's picture — and the status
+line (the place; the fields, the attachments, the short date). Previews are monochrome until syntax colouring arrives with
 the editors. A sheet's results are written by `notes::calc::value`, the reference's formatter in
 Rust, held by the core's golden cases (`golden/calc-format`).
 
@@ -4723,7 +4751,46 @@ the search gives way first, then the switchers' names. ⚠️ The central panel 
 own, as the reference: egui's 8 px cost the header its one row at the window's default width.
 
 A card's click surface (`note-card-open`, a layer under its controls) opens the note editor
-(`notes::overlays::editor`, `state::editor`), the reference's `note-editor-overlay`: a toolbar
+(`notes::overlays::editor`, `state::editor`) **in a panel beside the cards**, not over them: 45 %
+of the area right of the rail, between 460 and 760 px (`notes::beside_the_cards`) until its edge is moved (`editor-panel-edge`,
+remembered as `editorPanelWidth`), always leaving at least two columns of cards on its left, drawn
+and clickable, the cards taking the columns their width has room for, the open one lit (amber edge, a tint). Expanded (the
+toolbar's button, remembered as `editorFullscreen`) or in a window too narrow to keep two columns
+of cards, it takes the whole area right of the rail, with a bar over it: « ← Cards », the note's
+space › folders, and the keys. ⚠️ **What the editor opens next waits for the note open to
+close** (`AppState::editor_next`): a card clicked, a new note, J or K, the palette's choice —
+each goes through the closing path first, which writes the drafts, and `Editing::Close` opens
+what was asked. Opening straight away replaced the view and lost what was being typed. **J and K**
+(`keys::EDITOR`, read while no field has the focus and nothing opens over the editor) step to
+the card after or before, in the order the cards are shown (`AppState::on_screen`: the list's or
+the board's); a note reached that way does not give its title the focus, so the keys go on
+stepping. Expanded, the toolbar says `n / total` between ‹ and ›. **Escape** steps back: it
+leaves the field first (egui drops the focus before the frame is drawn, so the editor remembers
+whether a field had it at the last frame), then full screen, then closes; it is read after the
+panel is drawn, so a search bar or a drawing's tool takes it first, and not at all while a
+menu, the lightbox, the presentation or an overlay is open. While the editor is open the canvas's
+keys stand aside (`AppState::overlay_open` is every modal but the editor). Under 700 px the
+toolbar takes two lines: the title with expand and close, then the language, the format and the
+priority on the left and copy, pin and ⋯ on the right; folding the header, presenting and deleting
+(two clicks, the menu staying open between them) wait in ⋯. ⚠️ The split between the cards and the
+panel is on a whole point: on a fraction the header's measure of itself drifted by thousandths of
+a point each frame and never settled. **Expanded, each kind has its layout**
+(`notes::overlays::editor::expanded`): the toolbar holds the kind's icon, a snippet's format, the
+title, ‹ `n / total` ›, the kind's own action (copy, filled for a snippet with fields; « Export ▾ »
+for a Dessin), « Details », pin, ⋯ (presenting a Note, deleting), back from full screen and close.
+What the header's bands hold — space › folder, kind, context, tags, priority, deadline,
+attachments — stands in a **details column** on the right, the history at its foot, for every
+kind; « Details » puts it away (remembered as `editorDetails`, shown by default). ⚠️ Where the
+body would be left under 720 px beside it (a JSON graph beside its code needs that), the column
+gives way and the header's bands come back over the body, the button disabled: the note's
+details are never out of reach. A snippet keeps its fields band over its code, its language and
+formatter in a strip over the code, and its text filled under the code (`editor-filled`,
+asked again at every change, the fields' « Preview » toggle gone); a task list is a column of
+760 px at most, its progress beside « All / Open / Done » (`checklist-shown-*`, a view's choice;
+a row is dragged only while all are shown, and a task added shows them all); a Calcul sheet has
+its counts and decimals over the sheet; a Dessin has its tools in a column down the stage's left
+where the stage is tall enough for them, in a row over it otherwise. The status line along the
+foot is the footer's counts. The editor beside the cards has: a toolbar
 (title, language for a snippet, pin, priority, copy, delete in two clicks, fold, full screen,
 close), the header's two bands — context, tags and deadline; kind (a conversion menu, a Dessin
 named only), space › folder — or, folded, one line of what they hold, and the footer's counts.
@@ -5082,7 +5149,7 @@ let go; a double click or Enter makes it automatic again.
 > **Angular reference.** This section describes the Angular application, which left the build in
 > v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
 > tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
-> screen by screen (`docs/egui-migration-plan.md` § 12).
+> screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 **The boundary is generated, not written.** `src/app/core/ipc/bindings.ts` is produced by
 [tauri-specta](https://docs.rs/tauri-specta) from the Rust signatures: one typed function per
@@ -5887,10 +5954,10 @@ with every one of them still on disk and nothing pointing at them.
 A preference belongs to the **application** or to the **library**, and the line is one
 prefix: ⚠️ **`devnotes.notes.*` is the library's, everything else is the application's.**
 
-|                             | file                                        | holds                                                                                   |
-| --------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `PreferencesService`        | `preferences.json`, at the profile root     | theme, language, density, the keys, the tray, autostart, the window, `automaticBackups` |
-| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, the space and folder it was left on, and each space's view          |
+|                             | file                                        | holds                                                                                                |
+| --------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `PreferencesService`        | `preferences.json`, at the profile root     | theme, language, density, the keys, the tray, autostart, the window, `automaticBackups`              |
+| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, the space and folder it was left on, each space's view, the cards' preview lines |
 
 Both extend `KeyValueStore`, which holds the synchronous cache and the plugin's own
 loading — the API stays synchronous where the plugin's is not, because a preference is read
@@ -7266,7 +7333,7 @@ tests: it builds the flavour into its cached `target/`, runs `cargo test -p e2e`
 > **Angular reference.** This section describes the Angular application, which left the build in
 > v0.19.0 and is kept, never built, in `reference/angular/` (and whole at the `angular-reference`
 > tag). It stays as the behaviour each screen keeps while it is ported to egui, and is rewritten
-> screen by screen (`docs/egui-migration-plan.md` § 12).
+> screen by screen (`egui-migration/egui-migration-plan.md` § 12).
 
 `npm run test:e2e` drives the **assembled application**: the real binary, a real WebView, the
 real IPC bridge and a real SQLite file. It is the only suite that can see a missing capability,

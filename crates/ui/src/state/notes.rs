@@ -1,6 +1,7 @@
 //! The notes' one writer. Writes are not optimistic: the core persists, its answer is adopted,
 //! and the revision is bumped so that every view that reads notes asks again.
 
+use engine::folders::board::PreviewLines;
 use engine::notes::checklist::ChecklistItem;
 use engine::notes::model::{DisplayNote, NotePatch};
 use engine::notes::priority::Priority;
@@ -53,8 +54,13 @@ impl NotesState {
         self.writes.push((keys::errors::NOTE_SAVE_FAILED, pending));
     }
 
-    pub fn file(&mut self, backend: &Backend, ids: Vec<String>, folder: Option<String>) {
-        let pending = api::folders::file(backend, ids, folder);
+    pub fn file(
+        &mut self,
+        backend: &Backend,
+        (ids, folder): (Vec<String>, Option<String>),
+        lines: PreviewLines,
+    ) {
+        let pending = api::folders::file(backend, ids, folder, lines);
         self.writes.push((keys::errors::NOTE_MOVE_FAILED, pending));
     }
 

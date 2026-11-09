@@ -23,7 +23,12 @@ fn note_in(
     engine::db::run_here(harness_backend.engine(), move |engine| {
         let note = engine::notes::create_note(engine, draft)?;
         if folder.is_some() {
-            engine::folders::file_notes(engine, vec![note.id.clone()], folder)?;
+            engine::folders::file_notes(
+                engine,
+                vec![note.id.clone()],
+                folder,
+                engine::folders::board::PreviewLines::default(),
+            )?;
         }
         Ok::<_, engine::error::AppError>(note.id.clone())
     })

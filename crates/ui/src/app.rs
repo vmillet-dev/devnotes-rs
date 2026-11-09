@@ -283,6 +283,8 @@ impl DevNotesApp {
             &[&keys::APPLICATION]
         } else if notes_shown && !self.state.modal_open() {
             &[&keys::NOTES, &rail, &canvas, &keys::APPLICATION]
+        } else if notes_shown && !self.state.overlay_open() {
+            &[&keys::NOTES, &rail, &keys::EDITOR, &keys::APPLICATION]
         } else if notes_shown {
             &[&keys::NOTES, &rail, &keys::APPLICATION]
         } else if self.state.gate.is_open()

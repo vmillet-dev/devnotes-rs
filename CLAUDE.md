@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README. The migration to egui follows `docs/egui-migration-plan.md` (decisions in its § 11); a decision is changed there first, never silently in code.
+Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README. The migration to egui follows `docs/egui-migration/egui-migration-plan.md` (decisions in its § 11); a decision is changed there first, never silently in code.
 
 ## Project
 
@@ -104,4 +104,4 @@ Read in `reference/angular/`; the egui mechanism is in the plan (§ 3.3–3.12).
 
 ## Design reference
 
-`docs/scratch-mockup-v2.html` and `docs/scratch-folders.html` are static mockups of the intended UI (canvas; folders and board). Visual references, not code to import.
+`docs/mockups/scratch-mockup-v2.html` and `docs/mockups/scratch-folders.html` are static mockups of the intended UI (canvas; folders and board). Visual references, not code to import.

@@ -12,6 +12,7 @@ use egui::{
     CornerRadius, FontFamily, Margin, Rect, Role, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo,
 };
 use engine::app_info::METADATA;
+use engine::folders::board::PreviewLines;
 use i18n::{Language, keys};
 use zeroize::Zeroizing;
 
@@ -94,6 +95,11 @@ impl View {
 
     pub fn adopt(&mut self) -> Option<Settings> {
         self.preferences.adopt()
+    }
+
+    /// The library's card height to write, when it differs from `stored`.
+    pub fn adopt_preview_lines(&self, stored: PreviewLines) -> Option<PreviewLines> {
+        self.preferences.changed_preview_lines(stored)
     }
 
     /// The rows to send, when they differ from `stored`.

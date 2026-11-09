@@ -32,6 +32,8 @@ pub mod undo;
 
 pub use query::QueryCell;
 
+use engine::folders::board::PreviewLines;
+
 use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
@@ -45,6 +47,19 @@ use crate::services::time::{Clock, SystemClock};
 use crate::theme;
 use crate::widgets::Layer;
 use notes_query::NotesQueryState;
+
+/// What the editor opens once the note open has closed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EditorNext {
+    Note(String),
+    /// Reached by J or K.
+    Stepped(String),
+    /// A new note of that kind, or of the preferred one.
+    Draft(Option<engine::notes::kind::NoteKind>),
+}
+
+/// The library's: its board's loose cards are stored in pixels, at that card's height.
+pub const PREVIEW_LINES_KEY: &str = "devnotes.notes.previewLines";
 
 /// Bumped after every write the interface adopts: the queries that read notes carry it among
 /// their parameters, so the list and the board ask again together. Writes are not optimistic:
@@ -114,6 +129,9 @@ pub struct AppState {
     pub editor: editor::EditorState,
     /// The window waits for the note open to close.
     pub closing_editor: bool,
+    /// What was asked for while a note is open beside the cards: opened once that one has
+    /// written its fields and closed, by its own closing path.
+    pub editor_next: Option<EditorNext>,
     /// « Quit », and not the close button: the window goes whatever the tray preference says.
     pub quitting: bool,
     pub revisions: note_revisions::RevisionsState,
@@ -159,6 +177,8 @@ pub struct AppState {
     pub presentation: presentation::PresentationState,
     /// The open library's, read with its preferences.
     pub prettier: crate::notes::prettier::PrettierSettings,
+    /// How many lines a card shows, the library's (`devnotes.notes.previewLines`).
+    pub preview_lines: PreviewLines,
     pub errors: ErrorNotifier,
     pub clock: Box<dyn Clock>,
     /// The system's wish; the look adds nothing to it.
@@ -197,6 +217,7 @@ impl AppState {
             notes: notes::NotesState::default(),
             editor: editor::EditorState::default(),
             closing_editor: false,
+            editor_next: None,
             quitting: false,
             revisions: note_revisions::RevisionsState::default(),
             drawing_choices: QueryCell::default(),
@@ -234,6 +255,7 @@ impl AppState {
             formatting: formatting::FormattingState::default(),
             presentation: presentation::PresentationState::default(),
             prettier: crate::notes::prettier::PrettierSettings::default(),
+            preview_lines: PreviewLines::default(),
             errors: ErrorNotifier::default(),
             clock: Box::new(SystemClock),
             reduced_motion,
@@ -272,7 +294,7 @@ impl AppState {
     pub fn update_library(&mut self, ctx: &egui::Context, backend: &Backend) {
         let answered = self.notes.update(&mut self.revision, &mut self.errors);
         if let Some(id) = answered.open {
-            self.editor.open(id);
+            self.open_in_editor(EditorNext::Note(id));
         }
         for note in answered.copied {
             self.copied(ctx, backend, note);
@@ -365,9 +387,8 @@ impl AppState {
         self.notes_query
             .update(ctx, backend, now, place, self.revision);
         if let Some(place) = self.board_place() {
-            let criteria = self.notes_query.criteria();
-            self.board
-                .update(backend, now, (place, criteria), self.revision);
+            let asked = (place, self.notes_query.criteria(), self.preview_lines);
+            self.board.update(backend, now, asked, self.revision);
         }
     }
 
@@ -433,16 +454,21 @@ impl AppState {
                 note_id,
                 folder,
                 at,
-            } => self
-                .board
-                .drop_card(backend, &place, (note_id, folder), (at, now)),
+            } => self.board.drop_card(
+                backend,
+                &place,
+                (note_id, folder),
+                (at, now),
+                self.preview_lines,
+            ),
             BoardGesture::MoveZone { folder_id, frame } => {
                 self.board.move_zone(&place, folder_id, frame, now);
             }
             BoardGesture::DrawZone(frame) => self.board.propose_zone(frame),
             BoardGesture::Band(ids) => self.selection.check_all(ids),
             BoardGesture::FileOnRail { note_id, folder } => {
-                self.notes.file(backend, vec![note_id], folder);
+                self.notes
+                    .file(backend, (vec![note_id], folder), self.preview_lines);
             }
             BoardGesture::SelectFolder(id) => {
                 let held: Vec<String> = self
@@ -461,7 +487,8 @@ impl AppState {
     /// The board on screen put back in order; nothing while the list shows.
     fn tidy(&mut self, backend: &Backend, scope: engine::folders::board::BoardScope) {
         if let Some(place) = self.board_place() {
-            self.board.arrange(backend, &place, scope);
+            self.board
+                .arrange(backend, &place, scope, self.preview_lines);
         }
     }
 
@@ -473,7 +500,7 @@ impl AppState {
         ) {
             self.board.restored();
         }
-        self.undo.revert(backend);
+        self.undo.revert(backend, self.preview_lines);
     }
 
     /// The folder open, `None` for every one: a folder of another space than the one shown is
@@ -656,6 +683,10 @@ impl AppState {
                 self.prettier = crate::notes::prettier::PrettierSettings::read(
                     preferences.get(crate::notes::prettier::KEY),
                 );
+                self.preview_lines = preferences
+                    .get(PREVIEW_LINES_KEY)
+                    .and_then(|stored| stored.parse().ok())
+                    .unwrap_or_default();
                 self.library_preferences = preferences;
             }
             Err(error) => self
@@ -707,6 +738,10 @@ impl AppState {
             }
             Action::App(AppAction::SetRailWidth(width)) => {
                 self.settings.rail_width = width;
+                self.save_settings(backend);
+            }
+            Action::App(AppAction::SetEditorPanelWidth(width)) => {
+                self.settings.editor_panel_width = width;
                 self.save_settings(backend);
             }
             Action::App(AppAction::SetHistoryWidth(width)) => {
@@ -892,6 +927,9 @@ impl AppState {
             self.language = self.settings.locale.language();
             self.apply_look(ctx);
             self.save_settings(backend);
+        }
+        if let Some(lines) = self.titlebar_view.adopt_preview_lines(self.preview_lines) {
+            self.set_preview_lines(lines, backend);
         }
         if let Some(rows) = self
             .titlebar_view
@@ -1237,7 +1275,7 @@ impl AppState {
             } => self.folders.create(backend, space_id, parent_id, &name),
             Notes::RenameFolder { id, name } => self.folders.rename(backend, id, &name),
             Notes::RecolourFolder { id, colour } => self.folders.recolour(backend, id, colour),
-            Notes::DeleteFolder(id) => self.folders.delete(backend, id),
+            Notes::DeleteFolder(id) => self.folders.delete(backend, id, self.preview_lines),
             Notes::MoveFolder { id, parent, space } => {
                 self.move_folder(backend, id, (parent, space));
             }
@@ -1329,7 +1367,7 @@ impl AppState {
                     self.library_preferences.clone(),
                 ));
             }
-            Notes::OpenNote(id) => self.editor.open(id),
+            Notes::OpenNote(id) => self.open_in_editor(EditorNext::Note(id)),
             Notes::Editor(editing) => self.apply_editing(editing, ctx, backend),
             Notes::NewNote(kind) => self.new_note_asked(kind, backend),
             Notes::Pin { id, pinned } => {
@@ -1339,7 +1377,8 @@ impl AppState {
                 self.notes.prioritise(backend, vec![id], priority);
             }
             Notes::File { id, folder } => {
-                self.notes.file(backend, vec![id], folder);
+                self.notes
+                    .file(backend, (vec![id], folder), self.preview_lines);
             }
             Notes::MoveTo { id, space } => {
                 self.notes.move_to(backend, vec![id], space);
@@ -1443,7 +1482,8 @@ impl AppState {
                     .change_draft(backend, |note| note.folder_id = into)
                     && let Some(id) = id
                 {
-                    self.notes.file(backend, vec![id], folder);
+                    self.notes
+                        .file(backend, (vec![id], folder), self.preview_lines);
                 }
             }
             Editing::Convert {
@@ -1466,23 +1506,31 @@ impl AppState {
                     self.notes.copy(backend, id);
                 }
             }
-            Editing::Close => self.editor.close(),
+            Editing::Close => self.close_editor(),
+            Editing::Step(by) => self.step_in_editor(by),
             Editing::Present { title, markdown } => {
                 self.presentation.ask(backend, title, markdown);
             }
             Editing::StopPresenting => self.presentation.close(ctx),
-            Editing::Fullscreen(on) => {
-                self.settings.editor_fullscreen = on;
-                self.save_settings(backend);
-            }
             Editing::Revisions(asked) => self.apply_revisions(asked, backend),
             Editing::Decimals(places) => self.set_decimals(places, backend),
-            Editing::FoldHeader(folded) => {
-                self.settings.editor_header_folded = folded;
-                self.save_settings(backend);
+            display @ (Editing::Fullscreen(_) | Editing::FoldHeader(_) | Editing::Details(_)) => {
+                self.set_editor_display(&display, backend);
             }
         }
         ctx.request_repaint();
+    }
+
+    /// A display preference of the editor, kept from note to note.
+    fn set_editor_display(&mut self, display: &crate::notes::Editing, backend: &Backend) {
+        use crate::notes::Editing;
+        match *display {
+            Editing::Fullscreen(on) => self.settings.editor_fullscreen = on,
+            Editing::FoldHeader(folded) => self.settings.editor_header_folded = folded,
+            Editing::Details(open) => self.settings.editor_details_open = open,
+            _ => return,
+        }
+        self.save_settings(backend);
     }
 
     fn ask_attachment(&mut self, asked: attachments::Asked, backend: &Backend) {
@@ -1563,7 +1611,7 @@ impl AppState {
         }
         match batch {
             Batch::MoveTo(space) => self.notes.move_to(backend, ids, space),
-            Batch::File(folder) => self.notes.file(backend, ids, folder),
+            Batch::File(folder) => self.notes.file(backend, (ids, folder), self.preview_lines),
             Batch::Prioritise(priority) => self.notes.prioritise(backend, ids, priority),
             Batch::Tag(tag) => self.notes.tag(backend, ids, tag),
             Batch::Untag(tag) => self.notes.untag(backend, ids, tag),
@@ -1796,7 +1844,7 @@ impl AppState {
         use crate::palette::commands::Command;
         use crate::palette::options::Chosen;
         match chosen {
-            Chosen::Note(id) => self.editor.open(id),
+            Chosen::Note(id) => self.open_in_editor(EditorNext::Note(id)),
             Chosen::Request(id) => {
                 let open = crate::http::Action::OpenRequest(id);
                 self.apply(Action::Http(open), ctx, backend);
@@ -1840,10 +1888,15 @@ impl AppState {
         crate::notes::calc::Format::of(&self.settings, self.language)
     }
 
-    /// A modal over the canvas takes its keys: the canvas's stand aside.
+    /// A modal over the canvas takes its keys: the canvas's stand aside. The editor is one for
+    /// the keys, though it sits beside the cards.
     pub fn modal_open(&self) -> bool {
-        self.editor.is_open()
-            || self.trash.is_open()
+        self.editor.is_open() || self.overlay_open()
+    }
+
+    /// What opens over the canvas and the editor beside it.
+    pub fn overlay_open(&self) -> bool {
+        self.trash.is_open()
             || self.tags.is_open()
             || self.fill.is_open()
             || self.palette.is_open()
@@ -1869,11 +1922,64 @@ impl AppState {
     }
 
     fn new_note(&mut self, kind: Option<engine::notes::kind::NoteKind>) {
-        let Some((space, folder)) = self.new_place() else {
+        self.open_in_editor(EditorNext::Draft(kind));
+    }
+
+    /// Now if nothing is open; otherwise once the note open has gone by its closing path, which
+    /// writes what was typed in it.
+    fn open_in_editor(&mut self, next: EditorNext) {
+        if !self.editor.is_open() {
+            self.open_now(next);
+            return;
+        }
+        if let EditorNext::Note(id) | EditorNext::Stepped(id) = &next
+            && self.editor.open_id() == Some(id.as_str())
+        {
+            return;
+        }
+        self.editor_next = Some(next);
+    }
+
+    fn open_now(&mut self, next: EditorNext) {
+        match next {
+            EditorNext::Note(id) => self.editor.open(id),
+            EditorNext::Stepped(id) => self.editor.step_to(id),
+            EditorNext::Draft(kind) => {
+                let Some((space, folder)) = self.new_place() else {
+                    return;
+                };
+                let kind = kind.unwrap_or(self.settings.default_note_kind);
+                self.editor.draft(kind, space, folder);
+            }
+        }
+    }
+
+    /// Then what was asked while it was open, if anything.
+    fn close_editor(&mut self) {
+        self.editor.close();
+        if let Some(next) = self.editor_next.take() {
+            self.open_now(next);
+        }
+    }
+
+    /// J and K: the note before or after the one open, in the order the cards are shown.
+    fn step_in_editor(&mut self, by: isize) {
+        let Some((at, order)) = self.editor_position() else {
             return;
         };
-        let kind = kind.unwrap_or(self.settings.default_note_kind);
-        self.editor.draft(kind, space, folder);
+        let Some(next) = at.checked_add_signed(by).and_then(|to| order.get(to)) else {
+            return;
+        };
+        self.open_in_editor(EditorNext::Stepped(next.clone()));
+    }
+
+    /// Where the note open sits among the cards shown, and those cards; `None` for a draft or a
+    /// note the view does not show.
+    pub fn editor_position(&self) -> Option<(usize, Vec<String>)> {
+        let id = self.editor.open_id()?;
+        let order = self.on_screen();
+        let at = order.iter().position(|shown| shown == id)?;
+        Some((at, order))
     }
 
     /// The clipboard read like a paste into an empty Note: code makes a snippet in the language
@@ -1930,6 +2036,18 @@ impl AppState {
     /// The desktop's own browser, for the web alone.
     fn open_link(&self, url: &str) {
         platform::links::open(self.opener.as_ref(), url);
+    }
+
+    /// The library's, like the Prettier settings: the board's loose cards are stored there in
+    /// pixels, so their height must be the library's too.
+    fn set_preview_lines(&mut self, lines: PreviewLines, backend: &Backend) {
+        self.preview_lines = lines;
+        self.library_preferences
+            .set(PREVIEW_LINES_KEY, lines.as_str());
+        drop(api::preferences::write_library(
+            backend,
+            self.library_preferences.clone(),
+        ));
     }
 
     fn set_prettier(
@@ -1992,6 +2110,7 @@ impl AppState {
     pub fn reset_library_scope(&mut self, ctx: &egui::Context, backend: &Backend) {
         self.library_preferences = Preferences::default();
         self.prettier = crate::notes::prettier::PrettierSettings::default();
+        self.preview_lines = PreviewLines::default();
         // A library left for the gate has nothing to read until it is unlocked.
         self.library_preferences_read = self
             .gate
@@ -2083,6 +2202,33 @@ mod tests {
         assert_eq!(theme::spacing(&ctx), &theme::tokens::COMPACT);
         assert!(theme::motion::reduced(&ctx));
         assert_ne!(state.revision, before);
+    }
+
+    /// The library's, not the application's: read when it opens, written into its own file.
+    #[test]
+    fn the_preview_lines_are_the_librarys() {
+        let (backend, _profile) = testing::unlocked();
+        let directory =
+            engine::db::run_here(backend.engine(), engine::libraries::open_library_directory)
+                .unwrap();
+        let file = directory.join(engine::layout::PREFERENCES);
+        let mut library = Preferences::read(&file);
+        library.set(PREVIEW_LINES_KEY, "5");
+        library.write(&file).unwrap();
+        let ctx = egui::Context::default();
+        let mut state = AppState::new(Preferences::default(), true);
+        state.gate.ask(&backend);
+        backend.settle();
+        state.update(&ctx, &backend);
+        state.reset_library_scope(&ctx, &backend);
+        backend.settle();
+        state.update(&ctx, &backend);
+        assert_eq!(state.preview_lines, PreviewLines::Five);
+
+        state.set_preview_lines(PreviewLines::Three, &backend);
+        backend.settle();
+
+        assert_eq!(Preferences::read(&file).get(PREVIEW_LINES_KEY), Some("3"));
     }
 
     #[test]

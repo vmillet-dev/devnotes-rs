@@ -2,6 +2,7 @@
 
 use engine::folders::{
     self,
+    board::PreviewLines,
     model::{Folder, FolderColour, FolderDraft, FolderMove},
 };
 
@@ -36,8 +37,8 @@ pub fn recolour(backend: &Backend, id: String, colour: FolderColour) -> Pending<
 }
 
 /// What it holds goes up a level.
-pub fn delete(backend: &Backend, id: String) -> Pending<()> {
-    backend.db(move |engine| folders::delete_folder(engine, id))
+pub fn delete(backend: &Backend, id: String, lines: PreviewLines) -> Pending<()> {
+    backend.db(move |engine| folders::delete_folder(engine, id, lines))
 }
 
 /// Under `parent_id`, or at the top of its space, with what it holds: answers where it was.
@@ -52,6 +53,11 @@ pub fn sort_key(name: &str) -> String {
 }
 
 /// Into `folder`, or out of every folder for `None`.
-pub fn file(backend: &Backend, ids: Vec<String>, folder: Option<String>) -> Pending<Reversible> {
-    backend.db(move |engine| folders::file_notes(engine, ids, folder).map(Reversible::File))
+pub fn file(
+    backend: &Backend,
+    ids: Vec<String>,
+    folder: Option<String>,
+    lines: PreviewLines,
+) -> Pending<Reversible> {
+    backend.db(move |engine| folders::file_notes(engine, ids, folder, lines).map(Reversible::File))
 }

@@ -421,3 +421,259 @@ fn copying_from_the_editor_writes_first_and_full_screen_is_remembered() {
     click_id(&mut harness, "editor-fullscreen");
     assert!(!harness.state().state.settings.editor_fullscreen);
 }
+
+/// Wide enough for the panel beside two columns of cards.
+fn wide(
+    mut harness: egui_kittest::Harness<'static, Bench>,
+) -> egui_kittest::Harness<'static, Bench> {
+    harness.set_size(egui::vec2(1_440.0, 800.0));
+    settle(&mut harness);
+    harness
+}
+
+fn rect_of(harness: &egui_kittest::Harness<'_, Bench>, id: &str) -> egui::Rect {
+    harness.get_by(|node| node.author_id() == Some(id)).rect()
+}
+
+fn title_of_open(harness: &egui_kittest::Harness<'_, Bench>) -> String {
+    let opened = harness.state().state.editor.opened().unwrap();
+    opened.note().unwrap().title.clone()
+}
+
+/// The cards stay on screen beside the note open; expanded, the note takes the area, and the
+/// way back brings the cards again.
+#[test]
+fn a_note_opens_beside_the_cards_and_expands_over_them() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = wide(area(backend, profile));
+
+    click_id(&mut harness, "note-card-open");
+
+    assert!(is_open(&harness));
+    assert_eq!(cards(&harness), 1, "the card is still drawn");
+    assert!(rect_of(&harness, "note-card").right() <= rect_of(&harness, "editor-title").left());
+
+    click_id(&mut harness, "editor-fullscreen");
+    assert_eq!(cards(&harness), 0);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-breadcrumb"))
+            .is_some()
+    );
+
+    click_id(&mut harness, "editor-back-to-cards");
+    assert_eq!(cards(&harness), 1);
+    assert!(is_open(&harness));
+}
+
+/// A card clicked while a note is open: what was typed in the first is written on the way.
+#[test]
+fn another_card_opens_once_the_note_open_wrote_its_title() {
+    let (backend, profile) = testing::unlocked();
+    let first = testing::note(&backend, "first").id.clone();
+    testing::note(&backend, "second");
+    let mut harness = wide(area(backend, profile));
+    crate::notes::bench::click(&mut harness, "note-card-open", "first");
+    harness
+        .get_by(|node| node.author_id() == Some("editor-title"))
+        .type_text(" edited");
+    settle(&mut harness);
+
+    crate::notes::bench::click(&mut harness, "note-card-open", "second");
+
+    assert_eq!(title_of_open(&harness), "second");
+    assert_eq!(stored(&harness, &first).title, "first edited");
+}
+
+/// J and K walk the cards as they are shown, once no field has the focus; expanded, the
+/// position says where the note sits; Escape leaves full screen, then closes.
+#[test]
+fn j_and_k_step_through_the_cards_and_escape_steps_back() {
+    let (backend, profile) = testing::unlocked();
+    for title in ["one", "two", "three"] {
+        testing::note(&backend, title);
+    }
+    let mut harness = area(backend, profile);
+    let order = harness.state().state.on_screen();
+    let first = order[0].clone();
+    harness.state_mut().state.editor.open(first);
+    settle(&mut harness);
+    // The title takes the focus as the note opens: Escape gives it up first.
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    assert!(is_open(&harness));
+
+    harness.key_press(egui::Key::J);
+    settle(&mut harness);
+    assert_eq!(
+        harness.state().state.editor.open_id(),
+        Some(order[1].as_str())
+    );
+    harness.key_press(egui::Key::K);
+    settle(&mut harness);
+    assert_eq!(
+        harness.state().state.editor.open_id(),
+        Some(order[0].as_str())
+    );
+
+    click_id(&mut harness, "editor-fullscreen");
+    let position = harness
+        .get_by(|node| node.author_id() == Some("editor-position"))
+        .accesskit_node()
+        .value()
+        .unwrap_or_default();
+    assert_eq!(position, "1 / 3");
+    click_id(&mut harness, "editor-next");
+    assert_eq!(
+        harness.state().state.editor.open_id(),
+        Some(order[1].as_str())
+    );
+
+    // Stepped to, the note leaves the focus where it was: one Escape leaves full screen.
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    assert!(is_open(&harness) && !harness.state().state.settings.editor_fullscreen);
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    assert!(!is_open(&harness));
+}
+
+/// Too narrow for both, the note takes the area beside the rail.
+#[test]
+fn in_a_narrow_window_the_note_covers_the_cards() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = area(backend, profile);
+    harness.set_size(egui::vec2(760.0, 700.0));
+    settle(&mut harness);
+
+    click_id(&mut harness, "note-card-open");
+
+    assert!(is_open(&harness));
+    assert_eq!(cards(&harness), 0);
+}
+
+/// Beside the cards the toolbar keeps two lines; folding and deleting wait in ⋯, and at least
+/// two columns of cards stay beside it.
+#[test]
+fn beside_the_cards_the_seldom_used_wait_in_the_menu() {
+    let (backend, profile) = testing::unlocked();
+    let id = testing::note(&backend, "psql prod").id.clone();
+    testing::note(&backend, "second");
+    let mut harness = wide(area(backend, profile));
+    crate::notes::bench::click(&mut harness, "note-card-open", "psql prod");
+
+    let cards: Vec<egui::Rect> = harness
+        .query_all_by(|node| node.author_id() == Some("note-card"))
+        .map(|node| node.rect())
+        .collect();
+    assert!(
+        cards.len() == 2 && (cards[0].top() - cards[1].top()).abs() < 1.0,
+        "{cards:?}"
+    );
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-delete"))
+            .is_none()
+    );
+
+    click_id(&mut harness, "editor-more");
+    click_id(&mut harness, "editor-delete");
+    click_id(&mut harness, "editor-delete");
+
+    assert!(!is_open(&harness));
+    let gone = engine::db::run_here(harness.state().backend.engine(), move |engine| {
+        engine::notes::get_note(engine, id)
+    });
+    assert!(gone.is_err(), "in the trash");
+}
+
+fn columns(harness: &egui_kittest::Harness<'_, Bench>) -> usize {
+    let mut lefts: Vec<f32> = harness
+        .query_all_by(|node| node.author_id() == Some("note-card"))
+        .map(|node| node.rect().left().round())
+        .collect();
+    lefts.sort_by(f32::total_cmp);
+    lefts.dedup();
+    lefts.len()
+}
+
+/// The edge between the cards and the panel moves: the cards take the columns they have room
+/// for, and the width chosen stays.
+#[test]
+fn the_panels_edge_moves_and_the_cards_follow() {
+    let (backend, profile) = testing::unlocked();
+    for title in ["one", "two", "three", "four"] {
+        testing::note(&backend, title);
+    }
+    let mut harness = wide(area(backend, profile));
+    crate::notes::bench::click(&mut harness, "note-card-open", "one");
+    assert_eq!(columns(&harness), 2);
+
+    let edge = rect_of(&harness, "editor-panel-edge").center();
+    let to = edge + egui::vec2(160.0, 0.0);
+    harness.event(egui::Event::PointerMoved(edge));
+    harness.run_steps(1);
+    harness.event(egui::Event::PointerButton {
+        pos: edge,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    harness.run_steps(1);
+    for step in 1..=8_u8 {
+        harness.event(egui::Event::PointerMoved(
+            edge + egui::vec2(20.0 * f32::from(step), 0.0),
+        ));
+        harness.run_steps(1);
+    }
+    harness.event(egui::Event::PointerButton {
+        pos: to,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::NONE,
+    });
+    settle(&mut harness);
+
+    assert_eq!(columns(&harness), 3);
+    // Moved past its narrowest, the panel stops there, and that is what is kept.
+    assert_eq!(harness.state().state.settings.editor_panel_width, 460);
+}
+
+/// Expanded, the details stand in a column beside the body for every kind, or are put away.
+#[test]
+fn expanded_the_details_stand_beside_the_body_and_can_be_put_away() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = wide(area(backend, profile));
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-fullscreen");
+
+    assert!(rect_of(&harness, "editor-space").left() > rect_of(&harness, "editor-body").right());
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-fold-header"))
+            .is_none()
+    );
+
+    click_id(&mut harness, "editor-details");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-space"))
+            .is_none()
+    );
+    assert!(!harness.state().state.settings.editor_details_open);
+}
+
+/// Expanded in a window too narrow for the column, the header's bands hold the details.
+#[test]
+fn expanded_without_room_for_the_details_the_header_holds_them() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = area(backend, profile);
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-fullscreen");
+
+    assert!(rect_of(&harness, "editor-space").bottom() < rect_of(&harness, "editor-body").top());
+}

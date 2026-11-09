@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "required": ["id", "email", "age", "role"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "age": {
+      "type": "integer",
+      "minimum": 18,
+      "maximum": 99
+    },
+    "role": {
+      "enum": ["admin", "lecteur", "redacteur"]
+    },
+    "actif": {
+      "type": "boolean"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "maxItems": 3
+    }
+  }
+}

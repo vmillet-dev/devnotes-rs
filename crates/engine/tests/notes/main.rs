@@ -27,6 +27,9 @@ use engine::notes::view::{self, Grouping, NoteFilter, NoteOrder, NotesQuery, Not
 use engine::spaces::store as spaces;
 use std::collections::BTreeMap;
 
+/// A four-line card, the default `PreviewLines`: what the board's geometry is sized from.
+const CARD: i32 = 140;
+
 #[path = "../common/mod.rs"]
 mod common;
 use common::{at, snippet, space, t0, t1};

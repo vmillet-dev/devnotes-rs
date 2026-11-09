@@ -5,7 +5,7 @@ use egui::{ColorImage, Event};
 use egui_kittest::kittest::Queryable;
 use engine::attachments::model::Attachment;
 
-use crate::notes::bench::{Bench, area, click_id, settle};
+use crate::notes::bench::{Bench, click_id, expanded_area, settle};
 use crate::testing;
 
 type Harness = egui_kittest::Harness<'static, Bench>;
@@ -32,7 +32,7 @@ impl platform::desktop::Opener for Opened {
 fn opened() -> (Harness, String, tempfile::TempDir) {
     let (backend, profile) = testing::unlocked();
     let id = testing::note(&backend, "with files").id.clone();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     harness.state_mut().state.editor.open(id.clone());
     settle(&mut harness);
     (harness, id, tempfile::tempdir().unwrap())
@@ -259,7 +259,7 @@ fn a_file_over_the_limit_is_refused_and_says_so() {
 fn a_draft_is_written_for_the_file_dropped_on_it() {
     let (backend, profile) = testing::unlocked();
     let space = testing::note(&backend, "seed").space_id.clone();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     let state = &mut harness.state_mut().state;
     state
         .editor

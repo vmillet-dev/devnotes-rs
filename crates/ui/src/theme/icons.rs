@@ -31,6 +31,7 @@ pub enum Icon {
     ChevronDown,
     ChevronUp,
     ChevronRight,
+    ChevronLeft,
     X,
     Plus,
     Minus,
@@ -96,6 +97,12 @@ pub enum Icon {
     Undo,
     Redo,
     Play,
+    /// The five kinds of note, each a silhouette no other shares: a snippet's `</>`, a Note's
+    /// page ([`Icon::FileText`]), a list's ticked box, a sheet's Σ, a drawing's brush.
+    CodeXml,
+    SquareCheck,
+    Sigma,
+    Brush,
 }
 
 impl Icon {
@@ -130,6 +137,7 @@ impl Icon {
             Self::ChevronDown => &["m6 9 6 6 6-6"],
             Self::ChevronUp => &["m18 15-6-6-6 6"],
             Self::ChevronRight => &["m9 18 6-6-6-6"],
+            Self::ChevronLeft => &["m15 18-6-6 6-6"],
             Self::X => &["M18 6 6 18", "m6 6 12 12"],
             Self::Plus => &["M5 12h14", "M12 5v14"],
             Self::Minus => &["M5 12h14"],
@@ -314,6 +322,19 @@ impl Icon {
                 "M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13",
             ],
             Self::Play => &["M6 3 20 12 6 21z"],
+            Self::CodeXml => &["m18 16 4-4-4-4", "m6 8-4 4 4 4", "m14.5 4-5 16"],
+            Self::SquareCheck => &[
+                "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+                "m9 12 2 2 4-4",
+            ],
+            Self::Sigma => &[
+                "M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2",
+            ],
+            Self::Brush => &[
+                "m11 10 3 3",
+                "M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z",
+                "M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031",
+            ],
             Self::Maximize => &["M15 3h6v6", "M9 21H3v-6", "M21 3l-7 7", "M3 21l7-7"],
             Self::Minimize => &["M4 14h6v6", "M20 10h-6V4", "M14 10l7-7", "M3 21l7-7"],
             Self::Hourglass => &[
@@ -403,7 +424,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 71] = [
+    const ALL: [Icon; 76] = [
         Icon::ArrowLeftRight,
         Icon::MoveHorizontal,
         Icon::Sidebar,
@@ -419,6 +440,7 @@ mod tests {
         Icon::ChevronDown,
         Icon::ChevronUp,
         Icon::ChevronRight,
+        Icon::ChevronLeft,
         Icon::X,
         Icon::Plus,
         Icon::Minus,
@@ -475,6 +497,10 @@ mod tests {
         Icon::Undo,
         Icon::Redo,
         Icon::Play,
+        Icon::CodeXml,
+        Icon::SquareCheck,
+        Icon::Sigma,
+        Icon::Brush,
     ];
 
     fn coverage(image: &ColorImage) -> usize {

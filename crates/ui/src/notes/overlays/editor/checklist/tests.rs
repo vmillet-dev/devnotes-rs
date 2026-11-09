@@ -232,3 +232,36 @@ fn a_box_clicked_while_a_row_is_typed_in_is_ticked() {
         owned(&[("milk", true), ("eggs", false)])
     );
 }
+
+fn texts(harness: &Harness) -> Vec<String> {
+    harness
+        .get_all_by(|node| node.author_id() == Some("checklist-text"))
+        .map(|node| node.value().unwrap_or_default())
+        .collect()
+}
+
+/// Expanded, the list narrows to the tasks left to do or to those done; beside the cards it
+/// shows them all.
+#[test]
+fn expanded_the_tasks_shown_narrow_to_those_open_or_done() {
+    let (mut harness, _) = list(&[item("milk", true), item("bread", false)]);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("checklist-shown-0"))
+            .is_none()
+    );
+    harness.state_mut().state.settings.editor_fullscreen = true;
+    settle(&mut harness);
+
+    click_id(&mut harness, "checklist-shown-1");
+    assert_eq!(texts(&harness), ["bread"]);
+    click_id(&mut harness, "checklist-shown-2");
+    assert_eq!(texts(&harness), ["milk"]);
+
+    click_id(&mut harness, "checklist-add");
+    assert_eq!(
+        texts(&harness),
+        ["milk", "bread", ""],
+        "a task added shows them all"
+    );
+}

@@ -6,10 +6,10 @@ package-lock.json
 # The Angular application, kept as a reference for porting: never built nor formatted again.
 reference
 # Maquette statique de référence : conservée telle quelle, hors périmètre du formatage.
-docs/scratch-mockup-v2.html
-docs/scratch-folders.html
+docs/mockups/*
 # La feuille de recette : une page autonome, ses cas sur une ligne de données.
-docs/recette.html
+docs/recette/*
+docs/egui-migration/*
 # Vendored skills (.claude/skills/PROVENANCE.md): kept byte-identical to their source.
 .claude/skills/frontend-design
 .claude/skills/webapp-testing

@@ -11,7 +11,7 @@ use i18n::{Message, keys};
 use crate::api;
 use crate::backend::Pending;
 use crate::notes::language;
-use crate::notes::ui::kind_badge;
+use crate::notes::ui::kind_mark;
 use crate::state::AppState;
 use crate::theme::palette;
 use crate::tools::catalogue::NoteInput;
@@ -254,7 +254,7 @@ fn option(ui: &mut Ui, state: &AppState, card: &engine::notes::view::Card) -> eg
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
     row.spacing_mut().item_spacing.x = 8.0;
-    let badge = kind_badge(&mut row, note.kind, note.language, locale);
+    let badge = kind_mark(&mut row, note.kind, note.language, locale);
     let place = where_of(state, card);
     let tail = widgets::one_line(&row, &place, (11.5, 400.0), p.text_2, inner.width() * 0.35);
     let room = inner.right() - badge.rect.right() - tail.size().x - 24.0;

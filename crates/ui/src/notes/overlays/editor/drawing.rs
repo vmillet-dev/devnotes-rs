@@ -73,6 +73,11 @@ struct Typing {
 }
 
 /// Right to left, as the toolbar lays them out.
+/// Expanded, the column of tools down the stage's left, and the height it takes: shorter, the
+/// tools stay in a row over the stage.
+const PALETTE_WIDTH: f32 = 32.0;
+const PALETTE_HEIGHT: f32 = 520.0;
+
 const EXPORTS: [(Format, i18n::Key, &str); 2] = [
     (Format::Svg, keys::drawing::EXPORT_SVG, "drawing-export-svg"),
     (Format::Png, keys::drawing::EXPORT_PNG, "drawing-export-png"),
@@ -211,9 +216,28 @@ pub(super) struct Shown {
     pub(super) export: Option<Format>,
 }
 
-pub(super) fn show(ui: &mut Ui, view: &mut DrawingView, title: &str, language: Language) -> Shown {
+/// Beside the cards, the tools in a row over the stage; `expanded`, in a column down its left
+/// where it is tall enough, and the exports in the toolbar's menu.
+pub(super) fn show(
+    ui: &mut Ui,
+    view: &mut DrawingView,
+    (title, language): (&str, Language),
+    expanded: bool,
+) -> Shown {
     ui.spacing_mut().item_spacing = Vec2::ZERO;
-    let export = toolbar(ui, view, language);
+    if expanded && ui.max_rect().height() >= PALETTE_HEIGHT {
+        let stage = palette_column(ui, view, language);
+        let mut stage_ui = ui.new_child(egui::UiBuilder::new().max_rect(stage));
+        return on_stage(&mut stage_ui, view, (title, language));
+    }
+    let export = toolbar(ui, view, language, !expanded);
+    Shown {
+        export,
+        ..on_stage(ui, view, (title, language))
+    }
+}
+
+fn on_stage(ui: &mut Ui, view: &mut DrawingView, (title, language): (&str, Language)) -> Shown {
     let stage = stage(ui, view, title, language);
     keys_of(ui, view, &stage);
     pointer(ui, view, &stage);
@@ -226,7 +250,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut DrawingView, title: &str, language: L
     Shown {
         save: pause_over(ui, view) || left,
         left,
-        export,
+        export: None,
     }
 }
 
@@ -249,56 +273,26 @@ fn pause_over(ui: &Ui, view: &mut DrawingView) -> bool {
     true
 }
 
-fn toolbar(ui: &mut Ui, view: &mut DrawingView, language: Language) -> Option<Format> {
+/// The tools in a row; `exports`, the two buttons at its end.
+fn toolbar(
+    ui: &mut Ui,
+    view: &mut DrawingView,
+    language: Language,
+    exports: bool,
+) -> Option<Format> {
     let p = palette(ui.ctx());
-    let tr = |key| i18n::translate(language, key, &[]);
     let mut export = None;
     let row = ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
-        for (tool, icon, key, name, _) in TOOLS {
-            let id = format!("drawing-tool-{name}");
-            if IconButton::new(icon, &tr(key), &id)
-                .pressed(view.editor.tool() == tool)
-                .show(ui)
-                .clicked()
-            {
-                view.editor.set_tool(tool);
-            }
-        }
-        ui.add_space(14.0);
-        for hue in Hue::ALL {
-            swatch(ui, view, hue, language);
-        }
-        ui.add_space(14.0);
-        ui.add_enabled_ui(view.editor.can_undo(), |ui| {
-            if IconButton::new(Icon::Undo, &tr(keys::drawing::UNDO), "drawing-undo")
-                .show(ui)
-                .clicked()
-            {
-                view.editor.undo();
-            }
-        });
-        ui.add_enabled_ui(view.editor.can_redo(), |ui| {
-            if IconButton::new(Icon::Redo, &tr(keys::drawing::REDO), "drawing-redo")
-                .show(ui)
-                .clicked()
-            {
-                view.editor.redo();
-            }
-        });
-        if IconButton::new(Icon::Trash, &tr(keys::drawing::REMOVE), "drawing-delete")
-            .show(ui)
-            .clicked()
-        {
-            view.editor.remove_selection();
+        tools(ui, view, language, 14.0);
+        if !exports {
+            return;
         }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let drawn = view.editor.shapes() > 0;
-            for (format, key, id) in EXPORTS {
-                if Button::new(&tr(key), id).enabled(drawn).show(ui).clicked() {
-                    export = Some(format);
-                }
-            }
+            export = ui
+                .add_enabled_ui(drawn, |ui| self::exports(ui, language))
+                .inner;
         });
     });
     ui.painter().hline(
@@ -308,6 +302,79 @@ fn toolbar(ui: &mut Ui, view: &mut DrawingView, language: Language) -> Option<Fo
     );
     ui.add_space(8.0);
     export
+}
+
+/// Expanded: the tools down the stage's left. Gives the room left to the stage.
+fn palette_column(ui: &mut Ui, view: &mut DrawingView, language: Language) -> Rect {
+    let p = palette(ui.ctx());
+    let whole = ui.max_rect();
+    let column = Rect::from_min_size(whole.min, Vec2::new(PALETTE_WIDTH, whole.height()));
+    let mut column_ui = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(column)
+            .layout(Layout::top_down(Align::Center)),
+    );
+    column_ui.spacing_mut().item_spacing.y = 4.0;
+    tools(&mut column_ui, view, language, 10.0);
+    let edge = whole.left() + PALETTE_WIDTH + 8.0;
+    ui.painter()
+        .vline(edge, whole.y_range(), Stroke::new(1.0, p.line_soft));
+    ui.advance_cursor_after_rect(whole);
+    Rect::from_min_max(egui::pos2(edge + 8.0, whole.top()), whole.max)
+}
+
+/// The tools, the colours, then undo, redo and delete, `gap` apart in groups.
+fn tools(ui: &mut Ui, view: &mut DrawingView, language: Language, gap: f32) {
+    let tr = |key| i18n::translate(language, key, &[]);
+    for (tool, icon, key, name, _) in TOOLS {
+        let id = format!("drawing-tool-{name}");
+        if IconButton::new(icon, &tr(key), &id)
+            .pressed(view.editor.tool() == tool)
+            .show(ui)
+            .clicked()
+        {
+            view.editor.set_tool(tool);
+        }
+    }
+    ui.add_space(gap);
+    for hue in Hue::ALL {
+        swatch(ui, view, hue, language);
+    }
+    ui.add_space(gap);
+    ui.add_enabled_ui(view.editor.can_undo(), |ui| {
+        if IconButton::new(Icon::Undo, &tr(keys::drawing::UNDO), "drawing-undo")
+            .show(ui)
+            .clicked()
+        {
+            view.editor.undo();
+        }
+    });
+    ui.add_enabled_ui(view.editor.can_redo(), |ui| {
+        if IconButton::new(Icon::Redo, &tr(keys::drawing::REDO), "drawing-redo")
+            .show(ui)
+            .clicked()
+        {
+            view.editor.redo();
+        }
+    });
+    if IconButton::new(Icon::Trash, &tr(keys::drawing::REMOVE), "drawing-delete")
+        .show(ui)
+        .clicked()
+    {
+        view.editor.remove_selection();
+    }
+}
+
+/// « Export as SVG », « Export as PNG »: the one clicked.
+pub(super) fn exports(ui: &mut Ui, language: Language) -> Option<Format> {
+    let mut chosen = None;
+    for (format, key, id) in EXPORTS {
+        let words = i18n::translate(language, key, &[]);
+        if Button::new(&words, id).show(ui).clicked() {
+            chosen = Some(format);
+        }
+    }
+    chosen
 }
 
 fn swatch(ui: &mut Ui, view: &mut DrawingView, hue: Hue, language: Language) {

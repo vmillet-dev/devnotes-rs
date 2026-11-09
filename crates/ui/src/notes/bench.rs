@@ -23,6 +23,17 @@ pub(crate) fn area(backend: Backend, profile: tempfile::TempDir) -> Harness<'sta
     area_of(Area::Notes, backend, profile)
 }
 
+/// The notes area with the editor expanded over it: what a test of the editor's own content
+/// draws, as wide as a person would give it.
+pub(crate) fn expanded_area(
+    backend: Backend,
+    profile: tempfile::TempDir,
+) -> Harness<'static, Bench> {
+    let mut harness = area(backend, profile);
+    harness.state_mut().state.settings.editor_fullscreen = true;
+    harness
+}
+
 pub(crate) fn area_of(
     shown: Area,
     backend: Backend,
@@ -98,8 +109,14 @@ pub(crate) fn area_of(
                 // As the window reads them.
                 let levels: &[&[crate::keys::Binding]] = if bench.state.palette.is_open() {
                     &[&crate::keys::APPLICATION]
-                } else if bench.state.modal_open() {
+                } else if bench.state.overlay_open() {
                     &[&crate::keys::NOTES, &crate::keys::APPLICATION]
+                } else if bench.state.modal_open() {
+                    &[
+                        &crate::keys::NOTES,
+                        &crate::keys::EDITOR,
+                        &crate::keys::APPLICATION,
+                    ]
                 } else {
                     &[
                         &crate::keys::NOTES,

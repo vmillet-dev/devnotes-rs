@@ -1,0 +1,1 @@
+{ "service": "billing", "replicas": 2, "ports": [8080, 8443], "labels": { "tier": "api", "env": "recette" } }

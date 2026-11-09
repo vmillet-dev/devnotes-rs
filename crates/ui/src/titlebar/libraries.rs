@@ -191,7 +191,7 @@ fn name(ui: &mut Ui, entry: &LibraryEntry, open: bool, language: Language) {
     ui.label(RichText::new(shown).size(12.5).color(p.text_1));
     if open {
         let words = i18n::translate(language, keys::libraries::OPEN, &[]);
-        let badge = widgets::hue_badge(ui, &words, p.amber_text, None);
+        let badge = widgets::hue_badge(ui, &words, p.amber_text);
         widgets::address(ui, &badge, "library-open");
     }
 }

@@ -14,6 +14,9 @@ use engine::notes::priority::Priority;
 use engine::notes::store::{create as create_note, update};
 use engine::spaces::store as spaces;
 
+/// A four-line card, the default `PreviewLines`: what the board's geometry is sized from.
+const CARD: i32 = 140;
+
 mod common;
 use common::{at, snippet as draft, space, t0, t1};
 
@@ -207,6 +210,7 @@ fn filing_a_note_answers_where_it_came_from() {
         std::slice::from_ref(&note.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
@@ -231,10 +235,18 @@ fn filing_with_no_folder_takes_a_note_back_out() {
         std::slice::from_ref(&note.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
-    let unfiled = file_many(&mut connection, std::slice::from_ref(&note.id), None, t1()).unwrap();
+    let unfiled = file_many(
+        &mut connection,
+        std::slice::from_ref(&note.id),
+        None,
+        t1(),
+        CARD,
+    )
+    .unwrap();
 
     assert_eq!(unfiled[0].folder_id, Some(perf.id));
     assert_eq!(folder_of(&mut connection, &note.id), None);
@@ -254,6 +266,7 @@ fn a_note_already_in_the_folder_is_not_reported_as_filed() {
         std::slice::from_ref(&already.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
@@ -262,6 +275,7 @@ fn a_note_already_in_the_folder_is_not_reported_as_filed() {
         &[already.id.clone(), moving.id.clone()],
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
@@ -284,6 +298,7 @@ fn a_note_of_another_space_is_left_where_it_is() {
         std::slice::from_ref(&elsewhere.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
@@ -304,6 +319,7 @@ fn undoing_a_filing_puts_every_note_back_where_it_was() {
         std::slice::from_ref(&filed.id),
         Some(&migrations.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
@@ -312,9 +328,10 @@ fn undoing_a_filing_puts_every_note_back_where_it_was() {
         &[loose.id.clone(), filed.id.clone()],
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
-    restore_filings(&mut connection, &batch).unwrap();
+    restore_filings(&mut connection, &batch, CARD).unwrap();
 
     assert_eq!(folder_of(&mut connection, &loose.id), None);
     assert_eq!(folder_of(&mut connection, &filed.id), Some(migrations.id));
@@ -333,9 +350,10 @@ fn undoing_a_filing_leaves_the_instant_alone() {
         std::slice::from_ref(&note.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
-    restore_filings(&mut connection, &batch).unwrap();
+    restore_filings(&mut connection, &batch, CARD).unwrap();
 
     assert_eq!(
         updated_at_of(&mut connection, &note.id),
@@ -355,10 +373,11 @@ fn deleting_a_folder_leaves_its_notes_loose_rather_than_deleting_them() {
         std::slice::from_ref(&note.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
-    delete(&mut connection, &perf.id).unwrap();
+    delete(&mut connection, &perf.id, CARD).unwrap();
 
     assert!(list(&mut connection, Some(&sql)).unwrap().is_empty());
     assert_eq!(folder_of(&mut connection, &note.id), None);
@@ -369,7 +388,7 @@ fn deleting_an_unknown_folder_says_so_rather_than_answering_ok() {
     let mut connection = open_in_memory().unwrap();
 
     assert!(matches!(
-        delete(&mut connection, "nowhere"),
+        delete(&mut connection, "nowhere", CARD),
         Err(StorageError::FolderNotFound(_))
     ));
 }
@@ -388,6 +407,7 @@ fn deleting_a_space_takes_its_folders_and_unfiles_the_notes_it_hands_over() {
         std::slice::from_ref(&note.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
@@ -410,6 +430,7 @@ fn moving_a_note_to_another_space_takes_it_out_of_its_folder() {
         std::slice::from_ref(&note.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
@@ -434,6 +455,7 @@ fn a_patch_that_says_nothing_about_the_space_leaves_the_folder_alone() {
         std::slice::from_ref(&note.id),
         Some(&perf.id),
         t1(),
+        CARD,
     )
     .unwrap();
 
@@ -469,7 +491,9 @@ fn a_draft_can_name_the_folder_it_is_born_in() {
 mod board {
     use super::*;
 
-    use engine::folders::board::{self, BoardFrame, BoardPoint, BoardQuery, BoardView};
+    use engine::folders::board::{
+        self, BoardFrame, BoardPoint, BoardQuery, BoardView, PreviewLines,
+    };
     use engine::folders::store::board as geometry;
     use engine::notes::store::fetch;
     use engine::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery};
@@ -485,6 +509,7 @@ mod board {
             kinds: Vec::new(),
             priorities: Vec::new(),
             now: t1(),
+            preview_lines: PreviewLines::default(),
         }
     }
 
@@ -524,6 +549,7 @@ mod board {
             &query.space_id,
             &zones,
             &board::Occupancy::on(&notes, &lineage, root),
+            CARD,
         )
         .unwrap();
 
@@ -558,6 +584,7 @@ mod board {
             std::slice::from_ref(&filed.id),
             Some(&migrations.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -589,6 +616,7 @@ mod board {
             std::slice::from_ref(&filed.id),
             Some(&perf.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -615,6 +643,7 @@ mod board {
             std::slice::from_ref(&filed.id),
             Some(&perf.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -662,7 +691,7 @@ mod board {
             .iter()
             .map(|title| titled(&mut connection, &sql, title).id)
             .collect();
-        file_many(&mut connection, &filled, Some(&perf.id), t1()).unwrap();
+        file_many(&mut connection, &filled, Some(&perf.id), t1(), CARD).unwrap();
         let before = view(&mut connection, &request(&sql)).zones[0].frame;
 
         let extra = titled(&mut connection, &sql, "c");
@@ -671,6 +700,7 @@ mod board {
             std::slice::from_ref(&extra.id),
             Some(&perf.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -696,7 +726,7 @@ mod board {
             x: 0,
             y: 40,
             width: board::default_zone_width() - 14,
-            height: board::zone_height(2, 2, false),
+            height: board::zone_height(2, 2, false, CARD),
         };
         connection
             .transaction(|connection, _vault| geometry::set_frame(connection, &perf.id, shaved))
@@ -706,13 +736,13 @@ mod board {
             .iter()
             .map(|title| titled(&mut connection, &sql, title).id)
             .collect();
-        file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+        file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
 
         let after = view(&mut connection, &request(&sql)).zones[0].frame;
         assert_eq!(after.width, shaved.width, "the width must not move");
         assert_eq!(
             after.height,
-            board::zone_height(3, 2, false),
+            board::zone_height(3, 2, false, CARD),
             "three cards two across are two rows, not three"
         );
     }
@@ -742,6 +772,7 @@ mod board {
             std::slice::from_ref(&note.id),
             Some(&perf.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -761,10 +792,10 @@ mod board {
             .iter()
             .map(|title| titled(&mut connection, &sql, title).id)
             .collect();
-        file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+        file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
         let grown = view(&mut connection, &request(&sql)).zones[0].frame;
 
-        file_many(&mut connection, &notes[..1], None, t1()).unwrap();
+        file_many(&mut connection, &notes[..1], None, t1(), CARD).unwrap();
 
         assert_eq!(view(&mut connection, &request(&sql)).zones[0].frame, grown);
     }
@@ -779,7 +810,7 @@ mod board {
             .iter()
             .map(|title| titled(&mut connection, &sql, title).id)
             .collect();
-        file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+        file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
         let grown = view(&mut connection, &request(&sql)).zones[0].frame;
 
         // Squashed back down behind the zone's back, as a resize would.
@@ -795,8 +826,8 @@ mod board {
                 )
             })
             .unwrap();
-        let left = file_many(&mut connection, &notes[..1], None, t1()).unwrap();
-        restore_filings(&mut connection, &left).unwrap();
+        let left = file_many(&mut connection, &notes[..1], None, t1(), CARD).unwrap();
+        restore_filings(&mut connection, &left, CARD).unwrap();
 
         assert_eq!(
             view(&mut connection, &request(&sql)).zones[0].frame.height,
@@ -852,6 +883,7 @@ mod board {
             std::slice::from_ref(&wanted.id),
             Some(&perf.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -1066,6 +1098,7 @@ mod board {
             std::slice::from_ref(&note.id),
             Some(&perf.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -1297,6 +1330,7 @@ mod gesture {
             std::slice::from_ref(&note.id),
             Some(&perf.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -1482,13 +1516,13 @@ mod gesture {
             let perf = create(&mut connection, &sql, None, "Perf", t0()).unwrap();
             place(&mut connection, &[zone_at_frame(&perf.id, DRAGGED)], &[]);
 
-            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything).unwrap();
+            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD).unwrap();
 
             let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
             assert_eq!(frame.x, 16);
             assert_eq!(frame.y, 16);
             assert_eq!(frame.width, default_zone_width());
-            assert_eq!(frame.height, default_zone_height(0, false));
+            assert_eq!(frame.height, default_zone_height(0, false, CARD));
         }
 
         /// The half that makes it a tidy-up: a zone too small for what it holds is reopened.
@@ -1498,12 +1532,12 @@ mod gesture {
             let sql = space(&mut connection, "SQL");
             let perf = create(&mut connection, &sql, None, "Perf", t0()).unwrap();
             let notes: Vec<String> = (0..5).map(|_| note_in(&mut connection, &sql).id).collect();
-            file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+            file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
 
-            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything).unwrap();
+            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD).unwrap();
 
             let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
-            assert_eq!(frame.height, default_zone_height(5, false));
+            assert_eq!(frame.height, default_zone_height(5, false, CARD));
         }
 
         #[test]
@@ -1512,10 +1546,10 @@ mod gesture {
             let sql = space(&mut connection, "SQL");
             let perf = create(&mut connection, &sql, None, "Perf", t0()).unwrap();
             let filed = note_in(&mut connection, &sql).id;
-            file_many(&mut connection, &[filed], Some(&perf.id), t1()).unwrap();
+            file_many(&mut connection, &[filed], Some(&perf.id), t1(), CARD).unwrap();
             let loose = note_in(&mut connection, &sql).id;
 
-            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything).unwrap();
+            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD).unwrap();
 
             let zone = *frames(&mut connection, &sql).get(&perf.id).unwrap();
             let at = *positions(&mut connection, &sql).get(&loose).unwrap();
@@ -1537,9 +1571,10 @@ mod gesture {
                 &[card_at(&note.id, seat)],
             );
 
-            let before = geometry::arrange(&mut connection, &sql, None, BoardScope::Everything)
-                .unwrap()
-                .previous;
+            let before =
+                geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD)
+                    .unwrap()
+                    .previous;
             place(&mut connection, &before.zones, &before.cards);
 
             assert_eq!(frames(&mut connection, &sql).get(&perf.id), Some(&DRAGGED));
@@ -1556,7 +1591,8 @@ mod gesture {
             note_in(&mut connection, &sql);
 
             let before =
-                geometry::arrange(&mut connection, &sql, None, BoardScope::Everything).unwrap();
+                geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD)
+                    .unwrap();
 
             assert!(before.previous.zones.is_empty());
             assert!(before.previous.cards.is_empty());
@@ -1576,8 +1612,8 @@ mod gesture {
                 &[card_at(&note.id, BoardPoint { x: 640, y: 1200 })],
             );
 
-            let done =
-                geometry::arrange(&mut connection, &sql, None, BoardScope::LooseCards).unwrap();
+            let done = geometry::arrange(&mut connection, &sql, None, BoardScope::LooseCards, CARD)
+                .unwrap();
 
             assert_eq!(frames(&mut connection, &sql).get(&perf.id), Some(&DRAGGED));
             assert!(done.previous.zones.is_empty());
@@ -1594,7 +1630,7 @@ mod gesture {
             let note = note_in(&mut connection, &sql);
             place(&mut connection, &[zone_at_frame(&perf.id, DRAGGED)], &[]);
 
-            geometry::arrange(&mut connection, &sql, None, BoardScope::LooseCards).unwrap();
+            geometry::arrange(&mut connection, &sql, None, BoardScope::LooseCards, CARD).unwrap();
 
             let at = *positions(&mut connection, &sql).get(&note.id).unwrap();
             assert!(at.y > DRAGGED.y + DRAGGED.height);
@@ -1608,10 +1644,11 @@ mod gesture {
             let sql = space(&mut connection, "SQL");
             create(&mut connection, &sql, None, "Perf", t0()).unwrap();
             note_in(&mut connection, &sql);
-            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything).unwrap();
+            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD).unwrap();
 
             let again =
-                geometry::arrange(&mut connection, &sql, None, BoardScope::Everything).unwrap();
+                geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD)
+                    .unwrap();
 
             assert_eq!(again.moved, 0);
         }
@@ -1624,13 +1661,13 @@ mod gesture {
             let sql = space(&mut connection, "SQL");
             let perf = create(&mut connection, &sql, None, "Perf", t0()).unwrap();
             let notes: Vec<String> = (0..4).map(|_| note_in(&mut connection, &sql).id).collect();
-            file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+            file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
             trash_many(&mut connection, &notes[..3], t1()).unwrap();
 
-            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything).unwrap();
+            geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD).unwrap();
 
             let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
-            assert_eq!(frame.height, default_zone_height(1, false));
+            assert_eq!(frame.height, default_zone_height(1, false, CARD));
         }
     }
 }
@@ -1684,6 +1721,7 @@ mod nesting {
             std::slice::from_ref(&note.id),
             Some(&folder.id),
             t1(),
+            CARD,
         )
         .unwrap();
         note
@@ -1833,7 +1871,7 @@ mod nesting {
         let mut connection = open_in_memory().unwrap();
         let tree = tree(&mut connection);
         let was = move_to(&mut connection, &tree.migrations.id, None).unwrap();
-        delete(&mut connection, &tree.sql.id).unwrap();
+        delete(&mut connection, &tree.sql.id, CARD).unwrap();
 
         assert!(!move_back(&mut connection, &was).unwrap());
         assert_eq!(parent_of(&mut connection, &tree.migrations.id), None);
@@ -1847,7 +1885,7 @@ mod nesting {
         let held = filed(&mut connection, &tree, "EXPLAIN", &tree.perf);
         let below = filed(&mut connection, &tree, "Index partiel", &tree.index);
 
-        delete(&mut connection, &tree.perf.id).unwrap();
+        delete(&mut connection, &tree.perf.id, CARD).unwrap();
 
         assert_eq!(
             folder_of(&mut connection, &held.id),
@@ -1869,7 +1907,7 @@ mod nesting {
         let tree = tree(&mut connection);
         let held = filed(&mut connection, &tree, "Requête", &tree.sql);
 
-        delete(&mut connection, &tree.sql.id).unwrap();
+        delete(&mut connection, &tree.sql.id, CARD).unwrap();
 
         assert_eq!(folder_of(&mut connection, &held.id), None);
         assert_eq!(parent_of(&mut connection, &tree.perf.id), None);
@@ -1957,7 +1995,7 @@ mod nesting {
         let notes: Vec<String> = (0..5)
             .map(|index| titled(&mut connection, &tree.space, &format!("n{index}")).id)
             .collect();
-        file_many(&mut connection, &notes, Some(&tree.index.id), t1()).unwrap();
+        file_many(&mut connection, &notes, Some(&tree.index.id), t1(), CARD).unwrap();
 
         assert!(frame_of(&mut connection, &tree.sql.id).unwrap().height > top.height);
     }
@@ -1997,6 +2035,7 @@ mod nesting {
             std::slice::from_ref(&note.id),
             Some(&tree.perf.id),
             t1(),
+            CARD,
         )
         .unwrap();
 
@@ -2032,6 +2071,7 @@ mod nesting {
             &tree.space,
             Some(&tree.sql.id),
             engine::folders::board::BoardScope::Everything,
+            CARD,
         )
         .unwrap();
 

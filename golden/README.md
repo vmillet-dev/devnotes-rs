@@ -1,6 +1,6 @@
 # Golden corpora
 
-What the JavaScript libraries of the Angular front produce today, kept for the Rust that replaces them (`docs/egui-migration-plan.md`, § 8.6): each port reproduces these outputs, or lists where it differs and why. Data, not tests: nothing here is asserted by CI.
+What the JavaScript libraries of the Angular front produce today, kept for the Rust that replaces them (`../docs/egui-migration/egui-migration-plan.md`, § 8.6): each port reproduces these outputs, or lists where it differs and why. Data, not tests: nothing here is asserted by CI.
 
 Written by `npm run golden` (the `*.golden.spec.ts` files, inert in `npm test`), in the `Europe/Paris` time zone. Two runs give the same bytes; rewrite them only on purpose, and say in the commit which library moved.
 

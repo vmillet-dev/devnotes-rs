@@ -28,6 +28,8 @@ pub enum AppAction {
     SetRailWidth(u16),
     /// The history list's width, once its edge rests.
     SetHistoryWidth(u16),
+    /// The note editor's panel beside the cards, once its edge rests.
+    SetEditorPanelWidth(u16),
     /// The library rail shown or put away: the switchers take its place.
     ToggleRail,
     /// `Ctrl+Shift+T`: the tools' search, from any area.

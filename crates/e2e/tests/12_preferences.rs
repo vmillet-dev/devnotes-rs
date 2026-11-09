@@ -2,6 +2,7 @@
 //! language is established here, never assumed: `system` is the machine's.
 
 use e2e::{App, step};
+use egui::accesskit::{Node, Rect};
 use egui::{Key, Modifiers};
 
 const THEME_LIGHT: &str = "setting-theme-2";
@@ -12,6 +13,7 @@ const FRENCH: &str = "setting-locale-1";
 const ENGLISH: &str = "setting-locale-2";
 const NOTE_KIND_NOTE: &str = "setting-note-kind-0";
 const NOTE_KIND_SNIPPET: &str = "setting-note-kind-1";
+const FIVE_LINES: &str = "setting-preview-lines-2";
 
 fn open(app: &mut App) {
     app.click("file-menu");
@@ -31,6 +33,38 @@ fn locale(app: &mut App, choice: &str) {
 /// What the theme control offers, which names the theme it would switch to: it reads the window's.
 fn theme_word(app: &mut App) -> String {
     app.tree().text("theme-toggle").unwrap_or_default()
+}
+
+/// A card's height, in the window's own units.
+fn card_height(app: &mut App) -> f64 {
+    let tree = app.tree();
+    tree.find("note-card")
+        .and_then(Node::bounds)
+        .map_or(0.0, |card| card.y1 - card.y0)
+}
+
+/// Taller by the ratio of a 160 px card to a 140 px one: the window's scale aside.
+fn one_line_taller(card: f64, four: f64) -> bool {
+    (card / four - 160.0 / 140.0).abs() < 0.02
+}
+
+fn still_five_lines(app: &mut App, four: f64) {
+    app.wait_for("note-card");
+    let five = card_height(app);
+    assert!(one_line_taller(five, four), "{five} for {four}");
+}
+
+fn five_lines(app: &mut App, four: f64) {
+    open(app);
+    app.click(FIVE_LINES);
+    app.click("settings-apply");
+    app.click("settings-close");
+    closed(app);
+    app.eventually("the cards grew by a line", |tree| {
+        tree.find("note-card")
+            .and_then(Node::bounds)
+            .is_some_and(|card: Rect| one_line_taller(card.y1 - card.y0, four))
+    });
 }
 
 fn file_word(app: &mut App) -> String {
@@ -125,6 +159,12 @@ fn preferences() {
         app.eventually("the editor closed", |tree| !tree.has("editor-body"));
     });
 
+    let four = card_height(&mut app);
+    step(
+        "five preview lines make every card 160 px rather than 140",
+        || five_lines(&mut app, four),
+    );
+
     let theme = theme_word(&mut app);
     let mut app = app.relaunch();
     app.fill("vault-passphrase", e2e::PASSPHRASE);
@@ -136,6 +176,7 @@ fn preferences() {
         || {
             assert_eq!(file_word(&mut app), "File");
             assert_eq!(theme_word(&mut app), theme);
+            still_five_lines(&mut app, four);
             open(&mut app);
             app.click(COMFORTABLE);
             app.click("settings-cancel");

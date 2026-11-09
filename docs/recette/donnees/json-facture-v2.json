@@ -1,0 +1,30 @@
+{
+  "devise": "EUR",
+  "total": 138,
+  "id": "FAC-2026-0042",
+  "statut": "payée",
+  "emise": "2026-09-29T14:03:12+02:00",
+  "client": {
+    "nom": "Atelier Rivière",
+    "siret": "73282932000074",
+    "adresse": {
+      "rue": "12 rue des Lilas",
+      "ville": "Villeurbanne",
+      "codePostal": "69100"
+    }
+  },
+  "lignes": [
+    {
+      "produit": "Hébergement",
+      "quantite": 12,
+      "prixUnitaire": 9.5
+    },
+    {
+      "produit": "Nom de domaine",
+      "quantite": 2,
+      "prixUnitaire": 12
+    }
+  ],
+  "tags": ["api", "facturation"],
+  "payeeLe": "2026-10-02"
+}

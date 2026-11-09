@@ -1,22 +1,23 @@
-//! A note's card: a fixed 150 px, its title and kind on top, what the note holds by its kind,
-//! and the footer at the bottom (`note-card` in the reference).
+//! A note's card, read like a small editor window: a title bar (the kind's icon, the title, and
+//! what asks for attention), a preview of whole lines (3, 4 or 5, the library's choice: the card
+//! is 120, 140 or 160 px), and a status line (where the note is, what it holds, when it changed).
 
 mod actions;
+mod bands;
 mod body;
-mod footer;
 
 use std::sync::Arc;
 
 use egui::text::{LayoutJob, TextFormat, TextWrapping};
 use egui::{
     Color32, CornerRadius, FontFamily, FontId, Galley, Pos2, Rect, Role, Sense, Stroke, StrokeKind,
-    Ui, UiBuilder, WidgetInfo, pos2, vec2,
+    Ui, WidgetInfo, pos2, vec2,
 };
+use engine::folders::board::PreviewLines;
 use engine::notes::model::DisplayNote;
 use i18n::keys;
 
 use crate::action::Actions;
-use crate::notes::ui::kind_badge;
 use crate::services::time::Clock;
 use crate::state::drawing_pictures::Thumbnails;
 use crate::theme::{palette, spacing};
@@ -36,6 +37,10 @@ pub(super) struct Context<'a> {
     /// The ticked cards: while any is, every card shows its box.
     pub(super) selection: &'a crate::state::selection::SelectionState,
     pub(super) selecting: bool,
+    /// How many lines a card shows: its height follows.
+    pub(super) lines: PreviewLines,
+    /// The note open in the editor beside the cards: its card stays lit.
+    pub(super) opened: Option<&'a str>,
 }
 
 impl<'a> Context<'a> {
@@ -51,11 +56,20 @@ impl<'a> Context<'a> {
             armed: state.selection.armed(),
             selection: &state.selection,
             selecting: !state.selection.checked_in(on_screen).is_empty(),
+            lines: state.preview_lines,
+            opened: state.editor.open_id(),
         }
+    }
+
+    pub(super) fn card_height(&self) -> f32 {
+        #[expect(clippy::cast_precision_loss, reason = "140, 160 or 180")]
+        let height = self.lines.card_height() as f32;
+        height
     }
 }
 
-const FOOTER_HEIGHT: f32 = 18.0;
+/// Between the bands and the preview.
+const GAP: f32 = 6.0;
 
 pub(super) fn show(
     ui: &mut Ui,
@@ -65,7 +79,6 @@ pub(super) fn show(
     (canvas_view, actions): (&mut super::CanvasView, &mut Actions),
 ) {
     let p = palette(ui.ctx());
-    let padding = spacing(ui.ctx()).card;
     let title = if note.title.is_empty() {
         i18n::translate(context.language, keys::notes::UNTITLED, &[])
     } else {
@@ -107,27 +120,17 @@ pub(super) fn show(
         ui.memory_mut(|memory| memory.set_focus_lock_filter(open.id, kept));
     }
     if open.clicked() {
-        let modifiers = ui.input(|input| input.modifiers);
-        let id = note.id.clone();
-        let asked = if modifiers.command {
-            crate::notes::Action::Check(id)
-        } else if modifiers.shift {
-            crate::notes::Action::CheckRange {
-                id,
-                anchor: canvas_view.anchor.clone(),
-            }
-        } else {
-            crate::notes::Action::OpenNote(id)
-        };
-        actions.push(crate::action::Action::Notes(asked));
+        clicked(ui, note, canvas_view, actions);
     }
     let checked = context.selection.is_checked(&note.id);
     let armed = context.armed == Some(note.id.as_str());
+    let hovered = ui.rect_contains_pointer(rect);
+    let opened = context.opened == Some(note.id.as_str());
     let (fill, edge) = if armed {
         (p.bg_2, p.red)
-    } else if checked {
+    } else if opened || checked {
         (p.bg_2, p.amber_edge)
-    } else if ui.rect_contains_pointer(rect) {
+    } else if hovered {
         (p.bg_2, p.line)
     } else {
         (p.bg_1, p.line_soft)
@@ -139,124 +142,60 @@ pub(super) fn show(
         Stroke::new(1.0, edge),
         StrokeKind::Inside,
     );
+    if opened {
+        let tint = p.amber_fill.gamma_multiply(0.08);
+        ui.painter().rect(
+            rect,
+            CornerRadius::same(10),
+            tint,
+            Stroke::new(1.5, edge),
+            StrokeKind::Inside,
+        );
+    }
 
-    let inner = rect.shrink(padding);
-    let checklist = note.kind == engine::notes::kind::NoteKind::Checklist;
-    let mut title_room = inner;
-    // Not under the pointer alone: the title would jump as the pointer crosses the card.
+    let inner = rect.shrink(1.0);
+    let top = Rect::from_min_size(inner.min, vec2(inner.width(), bands::TOP_HEIGHT));
+    let bottom = Rect::from_min_max(
+        pos2(inner.left(), inner.bottom() - bands::BOTTOM_HEIGHT),
+        inner.max,
+    );
+    bands::frame(ui, (top, bottom), hovered, armed);
+    // Not under the pointer alone: the box would come and go as the pointer crosses the card.
     let ticking = checked || context.selecting;
-    if tick(ui, inner, &title, (checked, ticking), context.language) {
+    if bands::top(ui, top, (note, &title), context, (checked, ticking)) {
         actions.push(crate::action::Action::Notes(crate::notes::Action::Check(
             note.id.clone(),
         )));
     }
-    if ticking {
-        title_room.min.x += crate::widgets::MIN_TARGET + 2.0;
-    }
-    let title_bottom = title_row(ui, title_room, &title, note, context.language);
-    let gap = if checklist { 6.0 } else { 8.0 };
-    let footer_gap = if checklist { 4.0 } else { 8.0 };
-    let footer = Rect::from_min_max(
-        pos2(inner.left(), inner.bottom() - FOOTER_HEIGHT),
-        inner.max,
-    );
+    let inset = spacing(ui.ctx()).card.min(12.0);
     let room = Rect::from_min_max(
-        pos2(inner.left(), title_bottom + gap),
-        pos2(inner.right(), footer.top() - footer_gap),
+        pos2(inner.left() + inset, top.bottom() + GAP),
+        pos2(inner.right() - inset, bottom.top() - GAP),
     );
-    body::show(ui, room, note, context, actions);
+    body::show(ui, room, note, (context, context.lines.count()), actions);
     if armed {
-        arming(ui, footer, context.language);
+        bands::arming(ui, bottom, context.language);
     } else {
-        footer::show(ui, footer, note, context);
+        bands::bottom(ui, bottom, note, context);
     }
     actions::show(ui, rect, note, (context, ticking), actions);
 }
 
-/// In the footer's place, real words and both keys: what finishes the deletion, and the way out.
-fn arming(ui: &mut Ui, footer: Rect, language: i18n::Language) {
-    let p = palette(ui.ctx());
-    let words = i18n::translate(language, keys::notes::DELETE_ARMED, &[]);
-    let shown = galley(
-        ui,
-        &words,
-        &Font::proportional(11.0, 600.0, 1.2),
-        p.red,
-        footer.width(),
-        1,
-    );
-    let at = pos2(footer.left(), footer.center().y - shown.size().y / 2.0);
-    text_at(ui, at, shown, &words, "note-card-arming");
-}
-
-/// The card's box, before its title, while cards are ticked: ticked, the card joins them.
-/// ⚠️ Allocated on every frame, shown or not: a widget that comes and goes moves the ids of
-/// every one after it, and the ⋯'s menu lost its own.
-fn tick(
-    ui: &mut Ui,
-    inner: Rect,
-    title: &str,
-    (checked, shown): (bool, bool),
-    language: i18n::Language,
-) -> bool {
-    let p = palette(ui.ctx());
-    let label = i18n::translate(
-        language,
-        keys::notes::SELECT_NOTE,
-        &[("title", title.into())],
-    );
-    let target = Rect::from_min_size(
-        inner.min - vec2(4.0, 3.0),
-        egui::Vec2::splat(crate::widgets::MIN_TARGET),
-    );
-    let sense = if shown {
-        Sense::click()
+/// Opened by a click; ticked with Ctrl, or as far as the anchor with Shift.
+fn clicked(ui: &Ui, note: &DisplayNote, canvas_view: &super::CanvasView, actions: &mut Actions) {
+    let modifiers = ui.input(|input| input.modifiers);
+    let id = note.id.clone();
+    let asked = if modifiers.command {
+        crate::notes::Action::Check(id)
+    } else if modifiers.shift {
+        crate::notes::Action::CheckRange {
+            id,
+            anchor: canvas_view.anchor.clone(),
+        }
     } else {
-        Sense::hover()
+        crate::notes::Action::OpenNote(id)
     };
-    let response = ui.allocate_rect(target, sense);
-    if !shown {
-        return false;
-    }
-    response.widget_info(|| WidgetInfo::selected(Role::CheckBox, true, checked, &label));
-    address(ui, &response, "note-card-check");
-    crate::theme::focus::ring(ui, &response, CornerRadius::same(4));
-    let colour = if checked { p.amber_text } else { p.text_2 };
-    let square = Rect::from_center_size(target.center(), egui::Vec2::splat(14.0));
-    crate::notes::ui::tick_box(ui, square, checked, colour);
-    response.clicked()
-}
-
-/// The title on two lines at most, the kind's badge on its first line. Answers where it ends.
-fn title_row(
-    ui: &mut Ui,
-    inner: Rect,
-    title: &str,
-    note: &DisplayNote,
-    language: i18n::Language,
-) -> f32 {
-    let mut badge_ui = ui.new_child(
-        UiBuilder::new()
-            .max_rect(inner)
-            .layout(egui::Layout::right_to_left(egui::Align::Min)),
-    );
-    badge_ui.add_space(0.0);
-    let badge = kind_badge(&mut badge_ui, note.kind, note.language, language);
-    let width = (badge.rect.left() - 6.0 - inner.left()).max(0.0);
-    let p = palette(ui.ctx());
-    let galley = galley(
-        ui,
-        title,
-        &Font::proportional(13.0, 600.0, 1.3),
-        p.text_0,
-        width,
-        2,
-    );
-    let at = inner.min + vec2(0.0, 1.0);
-    let rect = Rect::from_min_size(at, galley.size());
-    label(ui, rect, title, "note-card-title");
-    ui.painter().galley(at, galley, Color32::TRANSPARENT);
-    rect.bottom().max(badge.rect.bottom())
+    actions.push(crate::action::Action::Notes(asked));
 }
 
 /// A text's face: its size, its CSS weight, its family, and its line height as a factor.

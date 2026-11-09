@@ -1,6 +1,7 @@
-//! What a card shows of its note, by its kind: a snippet's first lines, a Note's outline, a
-//! list's progress and two of its items, a sheet's last results, a drawing's picture — or the
-//! line a search found, when that is not code.
+//! What a card shows of its note, by its kind, in whole lines and no more than the library's
+//! count: a snippet's first lines, a Note's outline, a list's tasks (one fewer than the lines, a
+//! task's row being taller), a sheet's last results, a drawing's picture — or the line a search
+//! found, when that is not code.
 
 use egui::{
     Color32, CornerRadius, Rect, Role, Sense, Stroke, Ui, UiBuilder, WidgetInfo, pos2, vec2,
@@ -20,7 +21,8 @@ use crate::state::drawing_pictures::{Stamp, Thumbnail};
 use crate::theme::palette;
 use crate::widgets::{address, interact};
 
-const MAX_VISIBLE_ITEMS: usize = 2;
+/// A task's row: a box to tick needs it.
+const ITEM_HEIGHT: f32 = 24.0;
 /// A task's marks, as the screen reader is told them; drawn as boxes.
 const TICKED: &str = "☑";
 const UNTICKED: &str = "☐";
@@ -29,79 +31,106 @@ pub(super) fn show(
     ui: &mut Ui,
     rect: Rect,
     note: &DisplayNote,
-    context: &Context<'_>,
+    (context, lines): (&Context<'_>, usize),
     actions: &mut Actions,
 ) {
     let hit = note.search_hit.as_ref();
     match note.kind {
-        NoteKind::Checklist => checklist(ui, rect, note, context.language, actions),
+        NoteKind::Checklist => {
+            let rows = lines.saturating_sub(1).max(1);
+            checklist(ui, rect, (note, rows), context.language, actions);
+        }
         NoteKind::Drawing if hit.is_none() => drawing(ui, rect, note, context, actions),
         NoteKind::Calc if hit.is_none() && !note.calc.is_empty() => {
-            calc_lines(ui, rect, note, context.calc);
+            calc_lines(ui, rect, (note, lines), context.calc);
         }
-        NoteKind::Note if hit.is_none() => outline(ui, rect, &note.outline),
+        NoteKind::Note if hit.is_none() => outline(ui, rect, &note.outline, lines),
         NoteKind::Snippet if hit.is_none_or(|hit| hit.field == SearchField::Body) => {
             let shown = hit.map_or(note.content.as_str(), |hit| hit.excerpt.as_str());
-            code(
-                ui,
-                rect,
-                shown,
-                crate::notes::language::syntax(note.language),
-            );
+            let syntax = crate::notes::language::syntax(note.language);
+            code(ui, rect, (shown, lines), syntax);
         }
         _ => {
             let tag = hit.is_some_and(|hit| hit.field == SearchField::Tag);
             let words = hit.map_or(note.content.as_str(), |hit| hit.excerpt.as_str());
-            prose(ui, rect, words, tag, "note-card-hit");
+            prose(ui, rect, (words, lines), tag, "note-card-hit");
         }
     }
 }
 
 /// Monospaced, a line a row, cut at the card's edge rather than wrapped; coloured by the
-/// grammar of its language, plain in the card's grey where it has none.
-fn code(ui: &mut Ui, rect: Rect, content: &str, syntax: Option<&str>) {
-    let p = palette(ui.ctx());
-    let font = Font::mono(11.0, 1.55);
+/// grammar of its language, plain in the card's grey where it has none, with no frame. Its
+/// `{{fields}}` are marked as the editor marks them.
+fn code(ui: &mut Ui, rect: Rect, (content, lines): (&str, usize), syntax: Option<&str>) {
+    let font = Font::mono(11.0, 16.0 / 11.0);
     label(ui, rect, content, "note-card-snippet");
     let painter = ui.painter().with_clip_rect(rect);
     let coloured = syntax.map(|syntax| highlight::short(ui.ctx(), syntax, content));
     let mut top = rect.top();
-    for (at, line) in content.lines().enumerate() {
+    for (at, line) in content.lines().take(lines).enumerate() {
         if top + font.height() > rect.bottom() + 0.5 {
             break;
         }
         let tokens = coloured.as_ref().and_then(|lines| lines.get(at));
-        let mut job = egui::text::LayoutJob::default();
-        let mut cut = 0;
-        let mut push = |job: &mut egui::text::LayoutJob, to: usize, colour, italics| {
-            let end = line
-                .char_indices()
-                .nth(to)
-                .map_or(line.len(), |(byte, _)| byte);
-            if end > cut {
-                let mut format = font.format(colour);
-                format.italics = italics;
-                job.append(&line[cut..end], 0.0, format);
-                cut = end;
-            }
-        };
-        for (range, token) in tokens.into_iter().flatten() {
-            push(&mut job, range.start, p.text_2, false);
-            let (colour, italics) = highlight::colour(p, *token);
-            push(&mut job, range.end, colour, italics);
-        }
-        push(&mut job, line.chars().count(), p.text_2, false);
+        let job = code_line(ui, line, tokens, &font);
         let shown = ui.fonts_mut(|fonts| fonts.layout_job(job));
         painter.galley(pos2(rect.left(), top), shown, Color32::TRANSPARENT);
         top += font.height();
     }
 }
 
-/// The line a tag, an item or a Note's text put on the results: prose, never painted as code.
-fn prose(ui: &mut Ui, rect: Rect, words: &str, tag: bool, author_id: &str) {
+/// One line's runs: each character's colour from its token, a field's over it.
+fn code_line(
+    ui: &Ui,
+    line: &str,
+    tokens: Option<&text::highlight::Line>,
+    font: &Font,
+) -> egui::text::LayoutJob {
     let p = palette(ui.ctx());
-    let font = Font::proportional(11.0, 400.0, 1.55);
-    let rows = rows_in(rect.height(), font.height());
+    let plain = (p.text_2, false, false);
+    let mut styles = vec![plain; line.chars().count()];
+    for (range, token) in tokens.into_iter().flatten() {
+        let (colour, italics) = highlight::colour(p, *token);
+        for style in styles.iter_mut().take(range.end).skip(range.start) {
+            *style = (colour, italics, false);
+        }
+    }
+    for range in crate::api::notes::field_ranges(line) {
+        for style in styles.iter_mut().take(range.end).skip(range.start) {
+            *style = (p.amber_text, false, true);
+        }
+    }
+    let mut job = egui::text::LayoutJob::default();
+    let mut run = String::new();
+    let mut current = styles.first().copied().unwrap_or(plain);
+    let flush = |job: &mut egui::text::LayoutJob, run: &mut String, (colour, italics, field)| {
+        if run.is_empty() {
+            return;
+        }
+        let mut format = font.format(colour);
+        format.italics = italics;
+        if field {
+            format.background = p.amber_fill.gamma_multiply(0.14);
+        }
+        job.append(run, 0.0, format);
+        run.clear();
+    };
+    for (c, style) in line.chars().zip(styles) {
+        if style != current {
+            flush(&mut job, &mut run, current);
+            current = style;
+        }
+        run.push(c);
+    }
+    flush(&mut job, &mut run, current);
+    job
+}
+
+/// The line a tag, an item or a Note's text put on the results: prose, never painted as code.
+fn prose(ui: &mut Ui, rect: Rect, (words, lines): (&str, usize), tag: bool, author_id: &str) {
+    let p = palette(ui.ctx());
+    let font = Font::proportional(11.5, 400.0, 17.0 / 11.5);
+    let rows = rows_in(rect.height(), font.height()).min(lines);
     let mut job = egui::text::LayoutJob::default();
     if tag {
         job.append("# ", 0.0, font.format(p.text_2));
@@ -129,22 +158,23 @@ fn rows_in(height: f32, line: f32) -> usize {
 
 /// A Note's lines as the core read them: headings, text, items and tasks with their markers,
 /// code. A line that does not fit is not drawn — never half a line.
-fn outline(ui: &mut Ui, rect: Rect, lines: &[OutlineLine]) {
+fn outline(ui: &mut Ui, rect: Rect, lines: &[OutlineLine], count: usize) {
     let p = palette(ui.ctx());
+    let lines = &lines[..lines.len().min(count)];
     let words: Vec<String> = lines.iter().map(plain).collect();
     label(ui, rect, &words.join("\n"), "note-card-outline");
     let mut top = rect.top();
     for line in lines {
         let (font, colour, marker, depth, text) = match line {
             OutlineLine::Heading { text } => (
-                Font::proportional(12.0, 600.0, 1.45),
+                Font::proportional(12.0, 600.0, 17.0 / 12.0),
                 p.text_0,
                 None,
                 0,
                 text,
             ),
             OutlineLine::Text { text } => (
-                Font::proportional(12.0, 400.0, 1.45),
+                Font::proportional(12.0, 400.0, 17.0 / 12.0),
                 p.text_1,
                 None,
                 0,
@@ -155,7 +185,7 @@ fn outline(ui: &mut Ui, rect: Rect, lines: &[OutlineLine]) {
                 depth,
                 marker,
             } => (
-                Font::proportional(12.0, 400.0, 1.45),
+                Font::proportional(12.0, 400.0, 17.0 / 12.0),
                 p.text_1,
                 Some(marker.clone()),
                 *depth,
@@ -164,14 +194,14 @@ fn outline(ui: &mut Ui, rect: Rect, lines: &[OutlineLine]) {
             OutlineLine::Task { text, depth, done } => {
                 let marker = if *done { TICKED } else { UNTICKED };
                 (
-                    Font::proportional(12.0, 400.0, 1.45),
+                    Font::proportional(12.0, 400.0, 17.0 / 12.0),
                     p.text_1,
                     Some(marker.to_string()),
                     *depth,
                     text,
                 )
             }
-            OutlineLine::Code { text } => (Font::mono(11.0, 1.45), p.text_2, None, 0, text),
+            OutlineLine::Code { text } => (Font::mono(11.0, 17.0 / 11.0), p.text_2, None, 0, text),
         };
         if top + font.height() > rect.bottom() + 0.5 {
             break;
@@ -199,7 +229,7 @@ fn outline(ui: &mut Ui, rect: Rect, lines: &[OutlineLine]) {
         ui.painter()
             .with_clip_rect(rect)
             .galley(pos2(left, top), shown, Color32::TRANSPARENT);
-        top += font.height() + 3.0;
+        top += font.height();
     }
 }
 
@@ -216,12 +246,12 @@ fn plain(line: &OutlineLine) -> String {
 }
 
 /// A sheet's last results, each on the right of its line; a rule above a total.
-fn calc_lines(ui: &mut Ui, rect: Rect, note: &DisplayNote, format: calc::Format) {
+fn calc_lines(ui: &mut Ui, rect: Rect, (note, lines): (&DisplayNote, usize), format: calc::Format) {
     let p = palette(ui.ctx());
-    let font = Font::mono(11.0, 1.3);
+    let font = Font::mono(11.0, 16.0 / 11.0);
     let mut top = rect.top();
     let mut covered = egui::Rect::NOTHING;
-    for line in &note.calc {
+    for line in note.calc.iter().take(lines) {
         let height = font.height() + if line.aggregate { 2.0 } else { 0.0 };
         if top + height > rect.bottom() + 0.5 {
             break;
@@ -243,7 +273,7 @@ fn calc_lines(ui: &mut Ui, rect: Rect, note: &DisplayNote, format: calc::Format)
             &result,
             &Font {
                 weight,
-                ..Font::mono(11.0, 1.3)
+                ..Font::mono(11.0, 16.0 / 11.0)
             },
             p.text_0,
             f32::INFINITY,
@@ -272,88 +302,22 @@ fn calc_lines(ui: &mut Ui, rect: Rect, note: &DisplayNote, format: calc::Format)
     }
 }
 
-/// The progress over the list, then two items: what is left to do first, the item a search
-/// found always. Each item is ticked from the card.
+/// As many tasks as the card has rows for: what is left to do first, the task a search found
+/// always. Each one is ticked from the card; how far along the list is sits beside its title.
 fn checklist(
     ui: &mut Ui,
     rect: Rect,
-    note: &DisplayNote,
+    (note, rows): (&DisplayNote, usize),
     language: i18n::Language,
     actions: &mut Actions,
 ) {
-    let p = palette(ui.ctx());
     let items = &note.items;
-    let done = items.iter().filter(|item| item.done).count();
-    let seats = seats(note);
-    let font = Font::mono(9.5, 1.0);
-    let count = i18n::translate(
-        language,
-        keys::notes::CHECKLIST_PROGRESS,
-        &[
-            ("done", u32::try_from(done).unwrap_or(u32::MAX).into()),
-            (
-                "total",
-                u32::try_from(items.len()).unwrap_or(u32::MAX).into(),
-            ),
-        ],
-    );
-    let count = galley(ui, &count, &font, p.text_2, f32::INFINITY, 1);
-    let hidden = items.len() - seats.len();
-    let more = (hidden > 0).then(|| {
-        let words = i18n::translate(
-            language,
-            keys::notes::CHECKLIST_MORE,
-            &[("count", u32::try_from(hidden).unwrap_or(u32::MAX).into())],
-        );
-        galley(
-            ui,
-            &words,
-            &Font::proportional(9.5, 400.0, 1.0),
-            p.text_2,
-            f32::INFINITY,
-            1,
-        )
-    });
-    let row = rect.top() + 6.0;
-    let mut right = rect.right();
-    if let Some(more) = more {
-        right -= more.size().x;
-        let words = more.text().to_string();
-        text_at(
-            ui,
-            pos2(right, row - more.size().y / 2.0),
-            more,
-            &words,
-            "note-card-more",
-        );
-        right -= 8.0;
-    }
-    right -= count.size().x;
-    let words = count.text().to_string();
-    text_at(
-        ui,
-        pos2(right, row - count.size().y / 2.0),
-        count,
-        &words,
-        "note-card-progress",
-    );
-    let track = Rect::from_min_max(pos2(rect.left(), row - 2.5), pos2(right - 8.0, row + 2.5));
-    ui.painter()
-        .rect_filled(track, CornerRadius::same(3), p.bg_3);
-    if !items.is_empty() {
-        #[expect(clippy::cast_precision_loss, reason = "a list's length")]
-        let share = done as f32 / items.len() as f32;
-        let fill = Rect::from_min_size(track.min, vec2(track.width() * share, track.height()));
-        ui.painter()
-            .rect_filled(fill, CornerRadius::same(3), p.amber_fill);
-    }
-
-    let mut top = rect.top() + 12.0 + 4.0;
-    for at in seats {
-        if top + 24.0 > rect.bottom() + 0.5 {
+    let mut top = rect.top();
+    for at in seats(note, rows) {
+        if top + ITEM_HEIGHT > rect.bottom() + 0.5 {
             break;
         }
-        let row = Rect::from_min_size(pos2(rect.left(), top), vec2(rect.width(), 24.0));
+        let row = Rect::from_min_size(pos2(rect.left(), top), vec2(rect.width(), ITEM_HEIGHT));
         if item(ui, row, &items[at], language) {
             let mut ticked = items.clone();
             ticked[at].done = !ticked[at].done;
@@ -362,13 +326,13 @@ fn checklist(
                 items: ticked,
             }));
         }
-        top += 24.0;
+        top += ITEM_HEIGHT;
     }
 }
 
 /// Which items a card shows, in the note's order: the one a search found, then the first
 /// ones left to do, then the last ones — the top of a finished list says the least.
-fn seats(note: &DisplayNote) -> Vec<usize> {
+fn seats(note: &DisplayNote, count: usize) -> Vec<usize> {
     let items = &note.items;
     let mut seats = Vec::new();
     if let Some(hit) = note
@@ -382,7 +346,7 @@ fn seats(note: &DisplayNote) -> Vec<usize> {
         }
     }
     for (at, item) in items.iter().enumerate() {
-        if seats.len() >= MAX_VISIBLE_ITEMS {
+        if seats.len() >= count {
             break;
         }
         if !item.done && !seats.contains(&at) {
@@ -390,7 +354,7 @@ fn seats(note: &DisplayNote) -> Vec<usize> {
         }
     }
     for at in (0..items.len()).rev() {
-        if seats.len() >= MAX_VISIBLE_ITEMS {
+        if seats.len() >= count {
             break;
         }
         if !seats.contains(&at) {
@@ -471,7 +435,7 @@ fn drawing(
         Thumbnail::Waiting => {}
         Thumbnail::Missing => {
             let words = i18n::translate(context.language, keys::drawing::NO_PICTURE, &[]);
-            prose(ui, rect, &words, false, "note-card-drawing-empty");
+            prose(ui, rect, (&words, 1), false, "note-card-drawing-empty");
         }
         Thumbnail::Shown(texture) => {
             let size = texture.size_vec2();

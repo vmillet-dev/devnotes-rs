@@ -11,6 +11,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::model::{Folder, FolderColour, Lineage, Seat};
+use crate::closed_enum::closed_enum;
 use crate::count::saturating_u32;
 use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
@@ -20,8 +21,8 @@ use crate::notes::view::{Criteria, Facets, Grouping, NoteFilter, NoteOrder, Note
 
 /// The same card as on the canvas, full size: the board is large, and pans.
 pub const CARD_WIDTH: i32 = 240;
-/// Nominal: only a first frame is computed from it; a resized zone keeps its stored size.
-pub const CARD_HEIGHT: i32 = 150;
+/// The shortest card, three lines: what a zone must hold one of.
+pub const MIN_CARD_HEIGHT: i32 = 120;
 pub const GAP: i32 = 12;
 pub const ZONE_PADDING: i32 = 12;
 /// The zone's own hairline, inside the width: `box-sizing` is `border-box`.
@@ -44,6 +45,37 @@ pub const LOOSE_COLUMNS: usize = 4;
 /// Added to [`default_zone_width`] only, never taken off a count; generous on purpose.
 pub const SCROLLBAR: i32 = 18;
 
+closed_enum! {
+    /// How many lines a card shows of its note: the library's choice
+    /// (`devnotes.notes.previewLines`), since the board's loose cards are stored there in pixels.
+    pub enum PreviewLines {
+        Three = "3",
+        #[default]
+        Four = "4",
+        Five = "5",
+    }
+}
+
+impl PreviewLines {
+    pub fn count(self) -> usize {
+        match self {
+            Self::Three => 3,
+            Self::Four => 4,
+            Self::Five => 5,
+        }
+    }
+
+    /// 120, 140 or 160: always a whole number of the board's 20 px grid. Nominal: only a first
+    /// frame is computed from it; a resized zone keeps its stored size.
+    pub fn card_height(self) -> i32 {
+        match self {
+            Self::Three => 120,
+            Self::Four => 140,
+            Self::Five => 160,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardQuery {
@@ -59,6 +91,9 @@ pub struct BoardQuery {
     pub kinds: Vec<NoteKind>,
     pub priorities: Vec<Priority>,
     pub now: DateTime<Utc>,
+    /// Sizes the first layout of zones and loose cards.
+    #[serde(default)]
+    pub preview_lines: PreviewLines,
 }
 
 impl BoardQuery {
@@ -250,7 +285,7 @@ pub fn clamp_point(point: BoardPoint) -> BoardPoint {
 
 /// Big enough for the header and one card, or nothing can be dropped in.
 pub const MIN_ZONE_WIDTH: i32 = ZONE_BORDER * 2 + ZONE_PADDING * 2 + CARD_WIDTH;
-pub const MIN_ZONE_HEIGHT: i32 = ZONE_BORDER * 2 + ZONE_HEADER + ZONE_PADDING * 2 + CARD_HEIGHT;
+pub const MIN_ZONE_HEIGHT: i32 = ZONE_BORDER * 2 + ZONE_HEADER + ZONE_PADDING * 2 + MIN_CARD_HEIGHT;
 /// Far enough for any board, near enough that a runaway drag leaves it usable.
 pub const MAX_SIDE: i32 = 100_000;
 
@@ -294,7 +329,7 @@ pub fn columns_in(width: i32) -> i32 {
 /// cards, `.zone-body` shows a vertical scrollbar, which takes a slice of the row and wraps two
 /// cards into one column.
 #[must_use]
-pub fn zone_height(note_count: usize, columns: i32, nested: bool) -> i32 {
+pub fn zone_height(note_count: usize, columns: i32, nested: bool, card: i32) -> i32 {
     let columns = columns.max(1);
     let notes = px(note_count);
     let rows = notes.div_euclid(columns) + i32::from(notes.rem_euclid(columns) != 0);
@@ -304,15 +339,15 @@ pub fn zone_height(note_count: usize, columns: i32, nested: bool) -> i32 {
         + ZONE_HEADER
         + if nested { ZONE_SUBFOLDERS } else { 0 }
         + ZONE_PADDING
-        + rows * CARD_HEIGHT
+        + rows * card
         + (rows - 1) * GAP
         + ZONE_PADDING
 }
 
 /// The height a zone gets on its first layout, at [`ZONE_COLUMNS`] cards across.
 #[must_use]
-pub fn default_zone_height(note_count: usize, nested: bool) -> i32 {
-    zone_height(note_count, ZONE_COLUMNS, nested)
+pub fn default_zone_height(note_count: usize, nested: bool, card: i32) -> i32 {
+    zone_height(note_count, ZONE_COLUMNS, nested, card)
 }
 
 /// Lays zones out in reading order, wrapping every [`BOARD_COLUMNS`].
@@ -320,7 +355,7 @@ pub fn default_zone_height(note_count: usize, nested: bool) -> i32 {
 /// Deterministic, and driven only by the order it is handed: the caller reads folders in
 /// `created_at` order so the board does not look shuffled at every launch.
 #[must_use]
-pub fn arrange_zones(contents: &[ZoneContents]) -> Vec<BoardFrame> {
+pub fn arrange_zones(contents: &[ZoneContents], card: i32) -> Vec<BoardFrame> {
     let width = default_zone_width();
 
     let mut frames: Vec<BoardFrame> = Vec::with_capacity(contents.len());
@@ -334,7 +369,7 @@ pub fn arrange_zones(contents: &[ZoneContents]) -> Vec<BoardFrame> {
             row_height = 0;
         }
 
-        let height = default_zone_height(zone.notes, zone.nested);
+        let height = default_zone_height(zone.notes, zone.nested, card);
         row_height = row_height.max(height);
 
         frames.push(BoardFrame {
@@ -360,40 +395,40 @@ pub fn loose_top(frames: &[BoardFrame]) -> i32 {
 }
 
 /// The `index`-th seat of the flow grid, left to right, wrapping every [`LOOSE_COLUMNS`].
-fn slot(index: usize, top: i32) -> BoardPoint {
+fn slot(index: usize, top: i32, card: i32) -> BoardPoint {
     BoardPoint {
         x: BOARD_MARGIN + px(index % LOOSE_COLUMNS) * (CARD_WIDTH + GAP),
-        y: top + px(index / LOOSE_COLUMNS) * (CARD_HEIGHT + GAP),
+        y: top + px(index / LOOSE_COLUMNS) * (card + GAP),
     }
 }
 
 /// Flows loose cards left to right under the zones, wrapping every [`LOOSE_COLUMNS`].
 #[must_use]
-pub fn arrange_loose(count: usize, top: i32) -> Vec<BoardPoint> {
-    (0..count).map(|index| slot(index, top)).collect()
+pub fn arrange_loose(count: usize, top: i32, card: i32) -> Vec<BoardPoint> {
+    (0..count).map(|index| slot(index, top, card)).collect()
 }
 
-fn overlaps(at: BoardPoint, frame: BoardFrame) -> bool {
+fn overlaps(at: BoardPoint, card: i32, frame: BoardFrame) -> bool {
     at.x < frame.x + frame.width
         && frame.x < at.x + CARD_WIDTH
         && at.y < frame.y + frame.height
-        && frame.y < at.y + CARD_HEIGHT
+        && frame.y < at.y + card
 }
 
-fn card_frame(at: BoardPoint) -> BoardFrame {
+fn card_frame(at: BoardPoint, card: i32) -> BoardFrame {
     BoardFrame {
         x: at.x,
         y: at.y,
         width: CARD_WIDTH,
-        height: CARD_HEIGHT,
+        height: card,
     }
 }
 
 /// Below everything already on the board — where a seat goes when the grid has none free.
-fn under_everything(taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
+fn under_everything(taken: &[BoardPoint], zones: &[BoardFrame], card: i32) -> BoardPoint {
     let bottom = taken
         .iter()
-        .map(|at| at.y + CARD_HEIGHT)
+        .map(|at| at.y + card)
         .chain(zones.iter().map(|frame| frame.y + frame.height))
         .max()
         .unwrap_or(BOARD_MARGIN);
@@ -411,8 +446,8 @@ fn under_everything(taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
 /// and would land on whichever card sits on seat 0. A rectangle test, because a card dragged
 /// by hand half covers the seats it straddles.
 #[must_use]
-pub fn free_slot(top: i32, taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
-    free_slot_from(0, top, taken, zones).1
+pub fn free_slot(top: i32, taken: &[BoardPoint], zones: &[BoardFrame], card: i32) -> BoardPoint {
+    free_slot_from(0, top, (taken, zones), card).1
 }
 
 /// As [`free_slot`], with the seat it stopped on: a run of cards seated one after the other
@@ -421,25 +456,27 @@ pub fn free_slot(top: i32, taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardP
 pub fn free_slot_from(
     first: usize,
     top: i32,
-    taken: &[BoardPoint],
-    zones: &[BoardFrame],
+    (taken, zones): (&[BoardPoint], &[BoardFrame]),
+    card: i32,
 ) -> (usize, BoardPoint) {
     // Each occupant blocks at most the four seats its box straddles; past that, under it all.
     let limit = (taken.len() + zones.len()) * 4;
 
     (first..=limit)
-        .map(|index| (index, slot(index, top)))
+        .map(|index| (index, slot(index, top, card)))
         .find(|(_, at)| {
-            !taken.iter().any(|other| overlaps(*at, card_frame(*other)))
-                && !zones.iter().any(|frame| overlaps(*at, *frame))
+            !taken
+                .iter()
+                .any(|other| overlaps(*at, card, card_frame(*other, card)))
+                && !zones.iter().any(|frame| overlaps(*at, card, *frame))
         })
-        .unwrap_or_else(|| (first, under_everything(taken, zones)))
+        .unwrap_or_else(|| (first, under_everything(taken, zones, card)))
 }
 
 /// The surface to pan over: the furthest zone or card plus a margin, and never smaller than
 /// a screen, so one small zone still sits on a canvas.
 #[must_use]
-pub fn surface(zones: &[BoardZone], loose: &[BoardNote]) -> (i32, i32) {
+pub fn surface(zones: &[BoardZone], loose: &[BoardNote], card: i32) -> (i32, i32) {
     const MIN_WIDTH: i32 = 960;
     const MIN_HEIGHT: i32 = 540;
 
@@ -453,7 +490,7 @@ pub fn surface(zones: &[BoardZone], loose: &[BoardNote]) -> (i32, i32) {
     for note in loose {
         if let Some(position) = note.position {
             right = right.max(position.x + CARD_WIDTH);
-            bottom = bottom.max(position.y + CARD_HEIGHT);
+            bottom = bottom.max(position.y + card);
         }
     }
 
@@ -518,6 +555,7 @@ pub fn build<S: std::hash::BuildHasher>(
 
     let lineage = Lineage::of(folders);
     let root = request.root_id.as_deref();
+    let card = request.preview_lines.card_height();
 
     let mut held: HashMap<String, usize> = HashMap::new();
     for note in &notes {
@@ -572,7 +610,7 @@ pub fn build<S: std::hash::BuildHasher>(
                 x: BOARD_MARGIN,
                 y: BOARD_MARGIN,
                 width: default_zone_width(),
-                height: default_zone_height(notes.len(), !children.is_empty()),
+                height: default_zone_height(notes.len(), !children.is_empty(), card),
             });
 
             BoardZone {
@@ -593,7 +631,7 @@ pub fn build<S: std::hash::BuildHasher>(
     let mut seat = 0;
     for entry in &mut loose {
         if entry.position.is_none() {
-            let (reached, at) = free_slot_from(seat, fallback_top, &standing, &placed);
+            let (reached, at) = free_slot_from(seat, fallback_top, (&standing, &placed), card);
             seat = reached;
             entry.position = Some(at);
             standing.push(at);
@@ -603,7 +641,7 @@ pub fn build<S: std::hash::BuildHasher>(
     // The quick filter counts on the board, which dims on it; the list view keeps its sections.
     let is_filtering = criteria.narrows() || request.filter != NoteFilter::All;
 
-    let (width, height) = surface(&zones, &loose);
+    let (width, height) = surface(&zones, &loose, card);
 
     let mut view = BoardView {
         zones,
@@ -664,9 +702,10 @@ pub struct BoardArrangement {
 pub fn arrange_everything(
     folder_counts: &[(String, ZoneContents)],
     loose_ids: &[String],
+    card: i32,
 ) -> BoardLayout {
     let counts: Vec<ZoneContents> = folder_counts.iter().map(|(_, count)| *count).collect();
-    let frames = arrange_zones(&counts);
+    let frames = arrange_zones(&counts, card);
 
     BoardLayout {
         zones: folder_counts
@@ -677,7 +716,7 @@ pub fn arrange_everything(
                 frame: *frame,
             })
             .collect(),
-        cards: flowed(loose_ids, loose_top(&frames)),
+        cards: flowed(loose_ids, loose_top(&frames), card),
     }
 }
 
@@ -685,17 +724,17 @@ pub fn arrange_everything(
 ///
 /// `zones` comes back empty: nothing placed or sized by hand is touched.
 #[must_use]
-pub fn arrange_loose_cards(frames: &[BoardFrame], loose_ids: &[String]) -> BoardLayout {
+pub fn arrange_loose_cards(frames: &[BoardFrame], loose_ids: &[String], card: i32) -> BoardLayout {
     BoardLayout {
         zones: Vec::new(),
-        cards: flowed(loose_ids, loose_top(frames)),
+        cards: flowed(loose_ids, loose_top(frames), card),
     }
 }
 
-fn flowed(loose_ids: &[String], top: i32) -> Vec<CardPlacement> {
+fn flowed(loose_ids: &[String], top: i32, card: i32) -> Vec<CardPlacement> {
     loose_ids
         .iter()
-        .zip(arrange_loose(loose_ids.len(), top))
+        .zip(arrange_loose(loose_ids.len(), top, card))
         .map(|(note_id, position)| CardPlacement {
             note_id: note_id.clone(),
             position,
@@ -707,6 +746,9 @@ fn flowed(loose_ids: &[String], top: i32) -> Vec<CardPlacement> {
 mod tests {
     use super::*;
     use crate::notes::fixtures::{NOW, at, note};
+
+    /// The default card, four lines.
+    const CARD: i32 = 140;
 
     fn notes(count: usize) -> ZoneContents {
         ZoneContents {
@@ -732,6 +774,7 @@ mod tests {
             kinds: vec![NoteKind::Note],
             priorities: Vec::new(),
             now: at(NOW),
+            preview_lines: PreviewLines::default(),
         };
 
         let wide = request.whole_space();
@@ -830,22 +873,22 @@ mod tests {
 
     #[test]
     fn a_zone_grows_a_row_at_a_time() {
-        let one_row = default_zone_height(2, false);
-        let two_rows = default_zone_height(3, false);
+        let one_row = default_zone_height(2, false, CARD);
+        let two_rows = default_zone_height(3, false, CARD);
 
-        assert_eq!(two_rows - one_row, CARD_HEIGHT + GAP);
-        assert_eq!(default_zone_height(4, false), two_rows);
+        assert_eq!(two_rows - one_row, CARD + GAP);
+        assert_eq!(default_zone_height(4, false, CARD), two_rows);
     }
 
     /// One pixel short of two rows brings a vertical scrollbar that wraps the second card.
     #[test]
     fn a_zone_is_tall_enough_for_its_rows_once_its_own_hairlines_are_paid_for() {
-        let body = zone_height(3, 2, false) - ZONE_BORDER * 2 - ZONE_HEADER;
+        let body = zone_height(3, 2, false, CARD) - ZONE_BORDER * 2 - ZONE_HEADER;
 
         assert!(
-            body >= ZONE_PADDING * 2 + CARD_HEIGHT * 2 + GAP,
+            body >= ZONE_PADDING * 2 + CARD * 2 + GAP,
             "{body}px of body for two rows that need {}",
-            ZONE_PADDING * 2 + CARD_HEIGHT * 2 + GAP
+            ZONE_PADDING * 2 + CARD * 2 + GAP
         );
     }
 
@@ -856,8 +899,8 @@ mod tests {
 
         assert_eq!(columns_in(shaved), 2);
         assert_eq!(
-            zone_height(3, columns_in(shaved), false),
-            zone_height(3, ZONE_COLUMNS, false)
+            zone_height(3, columns_in(shaved), false, CARD),
+            zone_height(3, ZONE_COLUMNS, false, CARD)
         );
     }
 
@@ -879,7 +922,8 @@ mod tests {
         assert_eq!(columns_in(nominal), ZONE_COLUMNS);
         assert_eq!(columns_in(wider), ZONE_COLUMNS + 1);
         assert!(
-            zone_height(6, columns_in(wider), false) < zone_height(6, columns_in(nominal), false)
+            zone_height(6, columns_in(wider), false, CARD)
+                < zone_height(6, columns_in(nominal), false, CARD)
         );
     }
 
@@ -893,12 +937,15 @@ mod tests {
     /// A zone with nothing in it is still a target to drop a card into.
     #[test]
     fn an_empty_zone_is_still_a_row_tall() {
-        assert_eq!(default_zone_height(0, false), default_zone_height(1, false));
+        assert_eq!(
+            default_zone_height(0, false, CARD),
+            default_zone_height(1, false, CARD)
+        );
     }
 
     #[test]
     fn zones_are_laid_out_in_reading_order() {
-        let frames = arrange_zones(&holding(&[1, 1, 1]));
+        let frames = arrange_zones(&holding(&[1, 1, 1]), CARD);
 
         assert_eq!(frames[0].y, frames[1].y);
         assert!(frames[0].x < frames[1].x);
@@ -907,7 +954,7 @@ mod tests {
 
     #[test]
     fn the_layout_wraps_after_three_zones() {
-        let frames = arrange_zones(&holding(&[1, 1, 1, 1]));
+        let frames = arrange_zones(&holding(&[1, 1, 1, 1]), CARD);
 
         assert_eq!(frames[3].x, frames[0].x);
         assert!(frames[3].y > frames[0].y);
@@ -916,7 +963,7 @@ mod tests {
     /// A row advances by its tallest zone, or the next row lands on top of it.
     #[test]
     fn a_wrapped_row_clears_the_tallest_zone_above_it() {
-        let frames = arrange_zones(&holding(&[1, 9, 1, 1]));
+        let frames = arrange_zones(&holding(&[1, 9, 1, 1]), CARD);
 
         let tallest = frames[..3].iter().map(|f| f.y + f.height).max().unwrap();
         assert!(frames[3].y >= tallest);
@@ -925,19 +972,19 @@ mod tests {
     #[test]
     fn the_layout_is_the_same_every_time() {
         assert_eq!(
-            arrange_zones(&holding(&[3, 1, 7])),
-            arrange_zones(&holding(&[3, 1, 7]))
+            arrange_zones(&holding(&[3, 1, 7]), CARD),
+            arrange_zones(&holding(&[3, 1, 7]), CARD)
         );
     }
 
     #[test]
     fn loose_cards_flow_under_the_zones_with_room_for_their_label() {
-        let frames = arrange_zones(&holding(&[1]));
+        let frames = arrange_zones(&holding(&[1]), CARD);
         let top = loose_top(&frames);
 
         assert!(top > frames[0].y + frames[0].height);
 
-        let points = arrange_loose(5, top);
+        let points = arrange_loose(5, top, CARD);
         assert_eq!(
             points[0],
             BoardPoint {
@@ -947,7 +994,7 @@ mod tests {
         );
         assert_eq!(points[3].y, top);
         assert_eq!(points[4].x, BOARD_MARGIN);
-        assert_eq!(points[4].y, top + CARD_HEIGHT + GAP);
+        assert_eq!(points[4].y, top + CARD + GAP);
     }
 
     #[test]
@@ -959,10 +1006,10 @@ mod tests {
     #[test]
     fn a_card_with_no_place_never_takes_one_that_is_occupied() {
         let top = loose_top(&[]);
-        let first = slot(0, top);
+        let first = slot(0, top, CARD);
 
-        assert_eq!(free_slot(top, &[], &[]), first);
-        assert_eq!(free_slot(top, &[first], &[]), slot(1, top));
+        assert_eq!(free_slot(top, &[], &[], CARD), first);
+        assert_eq!(free_slot(top, &[first], &[], CARD), slot(1, top, CARD));
     }
 
     /// A card dragged by hand hides the seats it straddles.
@@ -974,10 +1021,10 @@ mod tests {
             y: top + 20,
         };
 
-        let at = free_slot(top, &[nudged], &[]);
+        let at = free_slot(top, &[nudged], &[], CARD);
 
-        assert!(!overlaps(at, card_frame(nudged)));
-        assert_eq!(at, slot(2, top));
+        assert!(!overlaps(at, CARD, card_frame(nudged, CARD)));
+        assert_eq!(at, slot(2, top, CARD));
     }
 
     #[test]
@@ -987,12 +1034,12 @@ mod tests {
             x: BOARD_MARGIN,
             y: top,
             width: CARD_WIDTH,
-            height: CARD_HEIGHT,
+            height: CARD,
         };
 
         assert_eq!(
-            free_slot(top, &[], std::slice::from_ref(&over)),
-            slot(1, top)
+            free_slot(top, &[], std::slice::from_ref(&over), CARD),
+            slot(1, top, CARD)
         );
     }
 
@@ -1000,19 +1047,19 @@ mod tests {
     fn seats_given_in_a_run_are_the_ones_given_one_by_one() {
         let top = 100;
         let wall = BoardFrame {
-            x: slot(2, top).x,
-            y: slot(2, top).y,
+            x: slot(2, top, CARD).x,
+            y: slot(2, top, CARD).y,
             width: CARD_WIDTH,
-            height: CARD_HEIGHT,
+            height: CARD,
         };
         let zones = [wall];
-        let mut one_by_one = vec![slot(5, top)];
+        let mut one_by_one = vec![slot(5, top, CARD)];
         let mut run = one_by_one.clone();
         let mut seat = 0;
 
         for _ in 0..40 {
-            one_by_one.push(free_slot(top, &one_by_one, &zones));
-            let (reached, at) = free_slot_from(seat, top, &run, &zones);
+            one_by_one.push(free_slot(top, &one_by_one, &zones, CARD));
+            let (reached, at) = free_slot_from(seat, top, (&run, &zones), CARD);
             seat = reached;
             run.push(at);
         }
@@ -1023,9 +1070,9 @@ mod tests {
     #[test]
     fn a_seat_freed_in_the_middle_is_the_next_one_given() {
         let top = loose_top(&[]);
-        let taken = [slot(0, top), slot(2, top)];
+        let taken = [slot(0, top, CARD), slot(2, top, CARD)];
 
-        assert_eq!(free_slot(top, &taken, &[]), slot(1, top));
+        assert_eq!(free_slot(top, &taken, &[], CARD), slot(1, top, CARD));
     }
 
     #[test]
@@ -1038,7 +1085,7 @@ mod tests {
             height: MAX_SIDE,
         };
 
-        let at = free_slot(top, &[], std::slice::from_ref(&wall));
+        let at = free_slot(top, &[], std::slice::from_ref(&wall), CARD);
 
         assert_eq!(at.x, BOARD_MARGIN);
         assert!(at.y >= wall.y + wall.height);
@@ -1065,7 +1112,7 @@ mod tests {
             children: Vec::new(),
         };
 
-        let (width, height) = surface(std::slice::from_ref(&zone), &[]);
+        let (width, height) = surface(std::slice::from_ref(&zone), &[], CARD);
 
         assert_eq!(width, 2300 + BOARD_MARGIN);
         assert_eq!(height, 1700 + BOARD_MARGIN);
@@ -1073,7 +1120,7 @@ mod tests {
 
     #[test]
     fn the_surface_is_never_smaller_than_a_screen() {
-        let (width, height) = surface(&[], &[]);
+        let (width, height) = surface(&[], &[], CARD);
 
         assert!(width >= 960);
         assert!(height >= 540);
@@ -1087,7 +1134,7 @@ mod tests {
             ("c".into(), notes(3)),
         ];
 
-        let layout = arrange_everything(&counts, &[]);
+        let layout = arrange_everything(&counts, &[], CARD);
 
         let xs: Vec<i32> = layout.zones.iter().map(|zone| zone.frame.x).collect();
         assert_eq!(xs[0], BOARD_MARGIN);
@@ -1098,15 +1145,19 @@ mod tests {
     /// A zone stretched or squashed by hand comes back at the height its contents need.
     #[test]
     fn tidying_up_resizes_a_zone_to_what_it_holds() {
-        let layout = arrange_everything(&[("a".into(), notes(5))], &[]);
+        let layout = arrange_everything(&[("a".into(), notes(5))], &[], CARD);
 
-        assert_eq!(layout.zones[0].frame.height, default_zone_height(5, false));
+        assert_eq!(
+            layout.zones[0].frame.height,
+            default_zone_height(5, false, CARD)
+        );
         assert_eq!(layout.zones[0].frame.width, default_zone_width());
     }
 
     #[test]
     fn tidied_loose_cards_flow_under_the_zones() {
-        let layout = arrange_everything(&[("a".into(), notes(2))], &["n1".into(), "n2".into()]);
+        let layout =
+            arrange_everything(&[("a".into(), notes(2))], &["n1".into(), "n2".into()], CARD);
 
         let zone = layout.zones[0].frame;
         assert!(
@@ -1125,15 +1176,45 @@ mod tests {
         let loose = vec!["n1".to_string(), "n2".to_string()];
 
         assert_eq!(
-            arrange_everything(&counts, &loose),
-            arrange_everything(&counts, &loose)
+            arrange_everything(&counts, &loose, CARD),
+            arrange_everything(&counts, &loose, CARD)
         );
     }
 
     #[test]
     fn tidying_an_empty_space_writes_nothing() {
-        let layout = arrange_everything(&[], &[]);
+        let layout = arrange_everything(&[], &[], CARD);
 
         assert!(layout.zones.is_empty() && layout.cards.is_empty());
+    }
+
+    /// 3, 4 or 5 lines: a zone's rows and the loose grid's pitch follow the card, on the grid.
+    #[test]
+    fn the_first_layout_follows_the_libraries_preview_lines() {
+        for (lines, card) in [
+            (PreviewLines::Three, 120),
+            (PreviewLines::Four, 140),
+            (PreviewLines::Five, 160),
+        ] {
+            assert_eq!(lines.card_height(), card);
+            assert_eq!(card % 20, 0, "{lines}: off the board's grid");
+            let layout = arrange_everything(
+                &[("a".into(), notes(3))],
+                &[
+                    "n1".into(),
+                    "n2".into(),
+                    "n3".into(),
+                    "n4".into(),
+                    "n5".into(),
+                ],
+                lines.card_height(),
+            );
+            let zone = layout.zones[0].frame;
+            let body = zone.height - ZONE_BORDER * 2 - ZONE_HEADER - ZONE_PADDING * 2;
+            assert_eq!(body, card * 2 + GAP, "{lines}: two rows of cards");
+            let cards = &layout.cards;
+            assert_eq!(cards[4].position.y - cards[0].position.y, card + GAP);
+            assert!(cards[0].position.y >= zone.y + zone.height);
+        }
     }
 }

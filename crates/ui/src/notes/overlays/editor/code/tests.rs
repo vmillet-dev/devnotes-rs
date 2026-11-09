@@ -3,7 +3,7 @@ use egui_kittest::kittest::Queryable;
 use engine::notes::language::Language;
 use engine::notes::model::NotePatch;
 
-use crate::notes::bench::{Bench, area, click_id, settle};
+use crate::notes::bench::{Bench, click_id, expanded_area, settle};
 use crate::testing;
 
 type Harness = egui_kittest::Harness<'static, Bench>;
@@ -23,7 +23,7 @@ fn snippet(content: &str, language: Language) -> (Harness, String) {
         engine::notes::update_note(engine, at, patch)
     })
     .unwrap();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     click_id(&mut harness, "note-card-open");
     (harness, id)
 }

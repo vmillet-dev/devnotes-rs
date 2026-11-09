@@ -16,12 +16,16 @@ use engine::http::model::{HttpMethod, RequestKind};
 const SIZE: egui::Vec2 = egui::vec2(1100.0, 720.0);
 
 fn launch(profile: &Path) -> Harness<'static, DevNotesApp> {
+    launch_at(profile, SIZE)
+}
+
+fn launch_at(profile: &Path, size: egui::Vec2) -> Harness<'static, DevNotesApp> {
     // Loaded before the first frame, as the window has them a moment after: the captures show
     // the colours.
     text::highlight::warm();
     let startup = startup(profile);
     let mut harness = Harness::builder()
-        .with_size(SIZE)
+        .with_size(size)
         .build_eframe(|cc| DevNotesApp::new(cc, startup).unwrap());
     harness.state_mut().state.clock = Box::new(FakeClock::at("2026-11-03T09:30:00Z"));
     // The window finds the arrows in the system's fonts, which a bench has not.
@@ -782,7 +786,7 @@ fn the_canvas_of_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "canvas-samples");
 
-    kinds(&harness.state().backend);
+    let _ = kinds(&harness.state().backend);
     harness.state_mut().state.revision.bump();
     settle(&mut harness);
     capture(&mut harness, "canvas-notes");
@@ -831,6 +835,9 @@ fn the_canvas_of_an_open_library() {
         .click();
     settle(&mut harness);
     capture(&mut harness, "editor-snippet");
+    click(&mut harness, "editor-fullscreen");
+    capture(&mut harness, "editor-snippet-expanded");
+    click(&mut harness, "editor-back-to-cards");
     click(&mut harness, "editor-fold-header");
     capture(&mut harness, "editor-header-folded");
     click(&mut harness, "editor-header-summary");
@@ -877,6 +884,63 @@ fn the_canvas_of_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "header-two-rows");
     harness.set_size(SIZE);
+}
+
+/// Wide enough for the panel beside two columns of cards: the snippet open, then its ⋯.
+#[test]
+fn the_editor_beside_the_cards() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "editor-beside-the-cards");
+    click(&mut harness, "editor-more");
+    capture(&mut harness, "editor-more-menu");
+}
+
+/// Each kind expanded over the cards, with the layout of its own.
+#[test]
+fn the_editor_full_screen_per_kind() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let ids = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    let shown = ["snippet", "note", "tasks", "calc", "drawing"];
+    for (at, (id, name)) in ids.into_iter().zip(shown).enumerate() {
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        let open = crate::action::Action::Notes(crate::notes::Action::OpenNote(id));
+        app.state.apply(open, &ctx, &app.backend);
+        settle(&mut harness);
+        if at == 0 {
+            click(&mut harness, "editor-fullscreen");
+        }
+        capture(&mut harness, &format!("editor-fullscreen-{name}"));
+        if name == "calc" {
+            click(&mut harness, "editor-details");
+            capture(&mut harness, "editor-fullscreen-details-hidden");
+            click(&mut harness, "editor-details");
+        }
+        // Full screen is a preference: the next note opens expanded.
+        click(&mut harness, "editor-close");
+    }
 }
 
 #[test]
@@ -1006,7 +1070,8 @@ fn drawing_editor(harness: &mut Harness<'_, DevNotesApp>) {
 }
 
 /// One note of each kind, with marks, tags and a search's worth of words.
-fn kinds(backend: &crate::backend::Backend) {
+/// The notes of each kind, and their ids in that order.
+fn kinds(backend: &crate::backend::Backend) -> Vec<String> {
     use engine::notes::checklist::ChecklistItem;
     use engine::notes::kind::NoteKind;
     use engine::notes::model::NotePatch;
@@ -1057,8 +1122,10 @@ fn kinds(backend: &crate::backend::Backend) {
             Vec::new(),
         ),
     ];
+    let mut ids = Vec::new();
     for (title, kind, content, tags, items) in shapes {
         let id = crate::testing::note(backend, "seed").id.clone();
+        ids.push(id.clone());
         let patch = NotePatch {
             title: Some(title.to_string()),
             kind: Some(kind),
@@ -1080,4 +1147,5 @@ fn kinds(backend: &crate::backend::Backend) {
         backend.settle();
         written.poll().unwrap().unwrap();
     }
+    ids
 }

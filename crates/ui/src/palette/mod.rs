@@ -447,11 +447,12 @@ fn mark(ui: &mut Ui, item: &Item, inner: Rect, language: i18n::Language) -> f32 
     match item {
         Item::Note(note) => {
             let place =
-                Rect::from_min_size(pos2(inner.left(), inner.center().y - 9.0), vec2(60.0, 18.0));
-            let mut child = ui.new_child(UiBuilder::new().max_rect(place));
-            let badge =
-                crate::notes::ui::kind_badge(&mut child, note.kind, note.language, language);
-            badge.rect.right().max(inner.left() + 26.0) + 10.0
+                Rect::from_min_size(pos2(inner.left(), inner.center().y - 9.0), vec2(90.0, 18.0));
+            let row = egui::Layout::left_to_right(egui::Align::Center);
+            let mut child = ui.new_child(UiBuilder::new().max_rect(place).layout(row));
+            child.spacing_mut().item_spacing.x = 6.0;
+            let mark = crate::notes::ui::kind_mark(&mut child, note.kind, note.language, language);
+            mark.rect.right().max(inner.left() + 26.0) + 10.0
         }
         Item::Request(request) => {
             let badge = match request.kind {
@@ -477,6 +478,11 @@ fn mark(ui: &mut Ui, item: &Item, inner: Rect, language: i18n::Language) -> f32 
             tile.right() + 10.0
         }
         Item::Create(_) => inner.left(),
+        // Where a kind is chosen, its icon comes with its word: a card then shows it alone.
+        Item::Command(commands::Command::Create(kind)) => {
+            crate::notes::ui::kind_tile(ui, tile, *kind);
+            tile.right() + 10.0
+        }
         Item::Space { .. }
         | Item::Chip {
             chip: Chip::Space { .. },

@@ -3,7 +3,7 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use engine::notes::language::Language;
 use engine::notes::model::NotePatch;
 
-use crate::notes::bench::{Bench, area, click_id, settle, until};
+use crate::notes::bench::{Bench, click_id, expanded_area, settle, until};
 use crate::testing;
 
 type Harness<'a> = egui_kittest::Harness<'a, Bench>;
@@ -33,7 +33,7 @@ fn snippet(content: &str, language: Language) -> Harness<'static> {
         engine::notes::update_note(engine, id, patch)
     })
     .unwrap();
-    let mut harness = area(backend, profile);
+    let mut harness = expanded_area(backend, profile);
     click_id(&mut harness, "note-card-open");
     until(&mut harness, "the draft explored", |harness| {
         has(harness, "editor-json-validity")
@@ -265,7 +265,7 @@ fn a_yaml_snippet_is_explored_and_plain_text_is_not() {
     let harness = {
         let (backend, profile) = testing::unlocked();
         testing::note(&backend, "page");
-        let mut harness = area(backend, profile);
+        let mut harness = expanded_area(backend, profile);
         click_id(&mut harness, "note-card-open");
         harness
     };
