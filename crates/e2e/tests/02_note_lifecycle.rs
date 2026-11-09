@@ -37,9 +37,9 @@ fn note_lifecycle() {
     step("a new note opens as a draft that is not yet a note", || {
         app.click("new-note");
         app.wait_for("editor-title");
-        // Beside the editor fewer cards fit on screen: none is added.
+        // Beside the editor fewer cards fit on screen, none in a narrow window: none is added.
         let drawn = app.tree().count("note-card");
-        assert!(drawn > 0 && drawn <= CARDS, "{drawn} cards drawn");
+        assert!(drawn <= CARDS, "{drawn} cards drawn");
     });
 
     step(
