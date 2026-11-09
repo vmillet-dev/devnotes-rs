@@ -360,6 +360,7 @@
     },
     "fullscreen": "Enter fullscreen",
     "exitFullscreen": "Exit fullscreen",
+    "more": "More actions",
     "backToCards": "Cards",
     "stepHint": "Esc exit · J/K next/previous",
     "previousNote": "Previous note",

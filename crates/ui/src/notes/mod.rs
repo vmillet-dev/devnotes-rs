@@ -400,10 +400,11 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
 
 /// The panel's share of the area beside the cards, and its bounds.
 const PANEL_SHARE: f32 = 0.45;
-const PANEL_MIN: f32 = 480.0;
+const PANEL_MIN: f32 = 460.0;
 const PANEL_MAX: f32 = 760.0;
-/// Under this, the cards beside the panel would be a sliver: the panel takes the area.
-const CARDS_MIN: f32 = 400.0;
+/// Two columns of cards at their narrowest, their gap and the canvas's margins: never a single
+/// column beside the panel; under it the panel takes the area.
+const CARDS_MIN: f32 = 2.0 * 220.0 + 12.0 + 2.0 * 24.0;
 
 /// Where the cards and the note open go: side by side, or the note over the whole area once
 /// expanded or when the window is too narrow for both.
@@ -415,11 +416,14 @@ fn beside_the_cards(rest: Rect, state: &AppState) -> (Option<Rect>, Option<Rect>
     if !editing {
         return (Some(rest), None);
     }
-    let width = (rest.width() * PANEL_SHARE).clamp(PANEL_MIN, PANEL_MAX);
-    if state.settings.editor_fullscreen || rest.width() - width < CARDS_MIN {
+    let width = (rest.width() * PANEL_SHARE)
+        .clamp(PANEL_MIN, PANEL_MAX)
+        .min(rest.width() - CARDS_MIN);
+    if state.settings.editor_fullscreen || width < PANEL_MIN {
         return (None, Some(rest));
     }
-    let split = rest.right() - width;
+    // On a whole point: the header measures what it draws, and a fraction never settles.
+    let split = (rest.right() - width).round();
     let cards = Rect::from_min_max(rest.min, egui::pos2(split, rest.bottom()));
     let editor = Rect::from_min_max(egui::pos2(split, rest.top()), rest.max);
     (Some(cards), Some(editor))

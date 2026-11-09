@@ -36,7 +36,7 @@ use crate::widgets::{self, Button, ChoiceMenu, IconButton, Kind};
 
 /// Under it, the toolbar's buttons keep their icon alone (the reference's container query).
 const LABELS_FROM: f32 = 1_000.0;
-/// Under it, the title sits above the toolbar's buttons rather than beside them.
+/// Under it, the toolbar takes two lines and keeps what is seldom used in ⋯.
 const STACKED_UNDER: f32 = 700.0;
 
 /// What is being typed, for the opening it began in.
@@ -391,53 +391,18 @@ fn toolbar(
     editing: &mut EditorView,
     actions: &mut Actions,
 ) -> bool {
-    let language = state.language;
-    let tr = |key| i18n::translate(language, key, &[]);
     let labelled = ui.available_width() >= LABELS_FROM - 40.0;
-    // Beside the cards the buttons leave the title no room: it takes a line of its own.
-    let stacked = ui.available_width() < STACKED_UNDER;
-    if stacked {
-        title(ui, state, (session, note), editing, actions);
-        ui.add_space(8.0);
+    // Beside the cards: the title and the way out on one line, what acts on the note under it.
+    if ui.available_width() < STACKED_UNDER {
+        return compact_toolbar(ui, state, (session, note), editing, actions);
     }
     let mut closed = false;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::new(8.0, 6.0);
-        let buttons = Layout::right_to_left(Align::Center).with_main_wrap(stacked);
-        ui.with_layout(buttons, |ui| {
-            let close = tr(keys::editor::CLOSE);
-            closed = IconButton::new(Icon::X, &close, "editor-close")
-                .show(ui)
-                .clicked();
-            let fullscreen = state.settings.editor_fullscreen;
-            let (icon, words) = if fullscreen {
-                (Icon::Minimize, tr(keys::editor::EXIT_FULLSCREEN))
-            } else {
-                (Icon::Maximize, tr(keys::editor::FULLSCREEN))
-            };
-            if IconButton::new(icon, &words, "editor-fullscreen")
-                .pressed(fullscreen)
-                .show(ui)
-                .clicked()
-            {
-                actions.push(editor(Editing::Fullscreen(!fullscreen)));
-            }
-            let folded = state.settings.editor_header_folded;
-            let (icon, words) = if folded {
-                (Icon::Unfold, tr(keys::editor::header::UNFOLD))
-            } else {
-                (Icon::Fold, tr(keys::editor::header::FOLD))
-            };
-            if IconButton::new(icon, &words, "editor-fold-header")
-                .show(ui)
-                .clicked()
-            {
-                if !folded {
-                    save(session, note, editing, actions);
-                    editing.tag.clear();
-                }
-                actions.push(editor(Editing::FoldHeader(!folded)));
-            }
+        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            closed = close_button(ui, state);
+            expand_button(ui, state, actions);
+            fold_button(ui, state, (session, note), editing, actions, false);
             if note.kind == NoteKind::Note {
                 present(ui, state, editing, labelled, actions);
             }
@@ -454,14 +419,137 @@ fn toolbar(
             if state.settings.editor_fullscreen {
                 steps(ui, state, actions);
             }
-            if !stacked {
-                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                    title(ui, state, (session, note), editing, actions);
-                });
+            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                title(ui, state, (session, note), editing, actions);
+            });
+        });
+    });
+    closed
+}
+
+/// The toolbar in a panel: the title, expand and close on a line; under it the language, the
+/// format and the priority on the left, copy, pin and ⋯ on the right. What is seldom used —
+/// folding the header, presenting, deleting — waits in ⋯.
+fn compact_toolbar(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &mut EditorView,
+    actions: &mut Actions,
+) -> bool {
+    let mut closed = false;
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            closed = close_button(ui, state);
+            expand_button(ui, state, actions);
+            ui.add_space(6.0);
+            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                title(ui, state, (session, note), editing, actions);
+            });
+        });
+    });
+    ui.add_space(10.0);
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        if note.kind.has_language() {
+            language_menu(ui, state, note, actions);
+            format::button(ui, state, (session, note), editing, false, actions);
+        }
+        priority(ui, state, note, actions);
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            more_menu(ui, state, (session, note), editing, actions);
+            pin(ui, state, note, false, actions);
+            if note.kind != NoteKind::Drawing {
+                copy(ui, state, (session, note), editing, true, actions);
             }
         });
     });
     closed
+}
+
+fn close_button(ui: &mut Ui, state: &AppState) -> bool {
+    let close = i18n::translate(state.language, keys::editor::CLOSE, &[]);
+    IconButton::new(Icon::X, &close, "editor-close")
+        .show(ui)
+        .clicked()
+}
+
+fn expand_button(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+    let fullscreen = state.settings.editor_fullscreen;
+    let (icon, key) = if fullscreen {
+        (Icon::Minimize, keys::editor::EXIT_FULLSCREEN)
+    } else {
+        (Icon::Maximize, keys::editor::FULLSCREEN)
+    };
+    let words = i18n::translate(state.language, key, &[]);
+    if IconButton::new(icon, &words, "editor-fullscreen")
+        .pressed(fullscreen)
+        .show(ui)
+        .clicked()
+    {
+        actions.push(editor(Editing::Fullscreen(!fullscreen)));
+    }
+}
+
+/// Folds the header to its summary, or opens it again; `labelled` in the ⋯ menu.
+fn fold_button(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &mut EditorView,
+    actions: &mut Actions,
+    labelled: bool,
+) {
+    let folded = state.settings.editor_header_folded;
+    let (icon, key) = if folded {
+        (Icon::Unfold, keys::editor::header::UNFOLD)
+    } else {
+        (Icon::Fold, keys::editor::header::FOLD)
+    };
+    let words = i18n::translate(state.language, key, &[]);
+    let clicked = if labelled {
+        Button::new(&words, "editor-fold-header")
+            .kind(Kind::Quiet)
+            .icon(icon)
+            .show(ui)
+            .clicked()
+    } else {
+        IconButton::new(icon, &words, "editor-fold-header")
+            .show(ui)
+            .clicked()
+    };
+    if clicked {
+        if !folded {
+            save(session, note, editing, actions);
+            editing.tag.clear();
+        }
+        actions.push(editor(Editing::FoldHeader(!folded)));
+    }
+}
+
+/// ⋯: folding the header, presenting a Note, deleting in two clicks. It stays open on a click
+/// inside, so the second click of a deletion is in reach.
+fn more_menu(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    editing: &mut EditorView,
+    actions: &mut Actions,
+) {
+    let label = i18n::translate(state.language, keys::editor::MORE, &[]);
+    let trigger = IconButton::new(Icon::Ellipsis, &label, "editor-more").show(ui);
+    egui::Popup::menu(&trigger)
+        .frame(widgets::menu_frame(ui.ctx()))
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .show(|ui| {
+            ui.spacing_mut().item_spacing.y = 4.0;
+            fold_button(ui, state, (session, note), editing, actions, true);
+            if note.kind == NoteKind::Note {
+                present(ui, state, editing, true, actions);
+            }
+            delete(ui, state, editing, true, actions);
+        });
 }
 
 /// The way back over the expanded editor, then the toolbar. `true` once closed.

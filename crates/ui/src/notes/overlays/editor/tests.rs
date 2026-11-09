@@ -422,6 +422,15 @@ fn copying_from_the_editor_writes_first_and_full_screen_is_remembered() {
     assert!(!harness.state().state.settings.editor_fullscreen);
 }
 
+/// Wide enough for the panel beside two columns of cards.
+fn wide(
+    mut harness: egui_kittest::Harness<'static, Bench>,
+) -> egui_kittest::Harness<'static, Bench> {
+    harness.set_size(egui::vec2(1_440.0, 800.0));
+    settle(&mut harness);
+    harness
+}
+
 fn rect_of(harness: &egui_kittest::Harness<'_, Bench>, id: &str) -> egui::Rect {
     harness.get_by(|node| node.author_id() == Some(id)).rect()
 }
@@ -437,7 +446,7 @@ fn title_of_open(harness: &egui_kittest::Harness<'_, Bench>) -> String {
 fn a_note_opens_beside_the_cards_and_expands_over_them() {
     let (backend, profile) = testing::unlocked();
     testing::note(&backend, "psql prod");
-    let mut harness = area(backend, profile);
+    let mut harness = wide(area(backend, profile));
 
     click_id(&mut harness, "note-card-open");
 
@@ -464,7 +473,7 @@ fn another_card_opens_once_the_note_open_wrote_its_title() {
     let (backend, profile) = testing::unlocked();
     let first = testing::note(&backend, "first").id.clone();
     testing::note(&backend, "second");
-    let mut harness = area(backend, profile);
+    let mut harness = wide(area(backend, profile));
     crate::notes::bench::click(&mut harness, "note-card-open", "first");
     harness
         .get_by(|node| node.author_id() == Some("editor-title"))
@@ -543,4 +552,39 @@ fn in_a_narrow_window_the_note_covers_the_cards() {
 
     assert!(is_open(&harness));
     assert_eq!(cards(&harness), 0);
+}
+
+/// Beside the cards the toolbar keeps two lines; folding and deleting wait in ⋯, and at least
+/// two columns of cards stay beside it.
+#[test]
+fn beside_the_cards_the_seldom_used_wait_in_the_menu() {
+    let (backend, profile) = testing::unlocked();
+    let id = testing::note(&backend, "psql prod").id.clone();
+    testing::note(&backend, "second");
+    let mut harness = wide(area(backend, profile));
+    crate::notes::bench::click(&mut harness, "note-card-open", "psql prod");
+
+    let cards: Vec<egui::Rect> = harness
+        .query_all_by(|node| node.author_id() == Some("note-card"))
+        .map(|node| node.rect())
+        .collect();
+    assert!(
+        cards.len() == 2 && (cards[0].top() - cards[1].top()).abs() < 1.0,
+        "{cards:?}"
+    );
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("editor-delete"))
+            .is_none()
+    );
+
+    click_id(&mut harness, "editor-more");
+    click_id(&mut harness, "editor-delete");
+    click_id(&mut harness, "editor-delete");
+
+    assert!(!is_open(&harness));
+    let gone = engine::db::run_here(harness.state().backend.engine(), move |engine| {
+        engine::notes::get_note(engine, id)
+    });
+    assert!(gone.is_err(), "in the trash");
 }

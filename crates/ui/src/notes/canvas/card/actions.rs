@@ -513,7 +513,9 @@ mod tests {
         open_menu(&mut harness);
         click_id(&mut harness, "note-card-duplicate");
 
-        assert_eq!(cards(&harness), 2);
+        // The editor opened on the copy may cover the cards: the view counts them.
+        let view = harness.state().state.notes_query.view().unwrap();
+        assert_eq!(view.cards().count(), 2);
         let opened = harness.state().state.editor.opened().unwrap();
         assert_eq!(opened.note().unwrap().title, "psql (copy)");
     }
