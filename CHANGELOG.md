@@ -4,13 +4,284 @@ Notable changes to DevNotes, newest first.
 
 **The newest section is generated.** `.github/workflows/release.yml` writes it from the pull
 requests merged since the last tag, then commits it **before** creating the tag — this file is
-shipped inside the binary (`src-tauri/src/changelog.rs` embeds it with `include_str!`) and read
-by "À propos → Nouveautés", so a release whose section came after the tag would ship a binary
+shipped inside the binary (`crates/engine/src/changelog.rs` embeds it with `include_str!`) and read
+by "About → What's new", so a release whose section came after the tag would ship a binary
 missing its own entry. Sections already written are never touched: edit them by hand freely.
 
 Keep the shape — a `## ` heading per release, `### ` headings for the categories, one `- `
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
+
+## [1.0.0] - 2026-11-09
+
+### 📌 In short
+
+- **A native application.** DevNotes is now one Rust program drawing its own window: no browser engine inside, no WebView2 to install on Windows, no WebKitGTK on Linux. It holds the open library in memory to search, sort and draw it without reading the disk again, and every screen keeps its look and its behaviour.
+- **New packages.** Windows: an installer for you alone, without administrator rights (no more `.msi`). Linux: AppImage, `.deb` and `.rpm`. The installer and the AppImage update themselves, signed and checked as before. The libraries of an earlier version open as they are.
+- **What looks different:** emoji in your notes are drawn in one colour; the date picker and the tooltips are drawn by the application; there is no spell checker; Mermaid diagrams are drawn by a native renderer, close to Mermaid's but not identical; code colouring splits some tokens differently; images other than PNG, JPEG, GIF, WebP, BMP and ICO open with your system's viewer, and an animated GIF shows its first frame.
+- **On a Wayland session without XWayland** (rare: DevNotes uses X11 whenever it is there), the window's position is not restored, closing to the tray minimises, a file cannot be dropped from the file manager, and HTML pasted into a Note keeps its text only.
+
+### 🔧 Changed
+
+- Release binary: size weighed against speed, the fast profile kept (#1450)
+- Release notes: a version opens on a summary written by hand (#1448)
+- Release workflow: NSIS, AppImage, deb and rpm packages built and signed (#1446)
+- Version: one workspace version for every crate (#1445)
+- Note editor: full screen laid out per kind, with a details column (#1443)
+- Cards: title bar, 3 to 5 lines of preview, status line (#1441)
+
+### 🔒 Security
+
+- Advisories: SQLite's WAL advisory ignored until diesel accepts the fix (#1452)
+
+### 🧰 Under the hood
+
+- Guides: architecture, security, contributing and README describe the egui application (#1453)
+- Release check: clean install and update 1.0.0 to 1.0.1 tested in CI (#1447)
+- Scenarios: a click waits until its control has a place on screen (#1449)
+- Workspace: dependencies declared once, e2e at root, old front removed (#1444)
+- Note editor: opens beside the cards, J/K step from note to note (#1442)
+- Docs clean doc folder and add recette data files
+- Add mockups for new note design
+
+## [0.16.2] - 2026-10-27
+
+### ✨ Added
+
+- Identifiers: a decoded date is also given in local time (#1103)
+
+### 🔧 Changed
+
+- Scripts: the order shown says which way the scripts run (#1118)
+
+### 🐛 Fixed
+
+- Shortcuts: a field says when its combination is held elsewhere (#1107)
+- Export: a CSV opens with its accents and columns in a spreadsheet (#1117)
+- Keyboard: Ctrl+1/2/3 focus the area, and ↓ leaves the search (#1109)
+- Cards: tags end on whole words, never cut mid-word (#1111)
+- JSON generator: documents keep the template's key order (#1116)
+- Shortcuts: a global combination already used is refused by name (#1106)
+- Calcul: a line's precision is shown, Auto keeps four significant figures (#1100)
+- Runner: a cancelled run says it was cancelled (#1113)
+- Notes: Ctrl+Alt+1/2/3 set headings on an AZERTY keyboard (#1108)
+- HTTP: a multipart file part is sent with its type (#1112)
+- Attachments: an opened file keeps its own name (#1110)
+- Shortcuts: a reserved canvas key is refused with a message (#1105)
+- Snippets: « Aller à la ligne : » is spaced like French text (#1102)
+- Search: an empty result offers « Effacer la recherche » (#1101)
+- HTTP: a saved response proposes an extension from its type (#1104)
+- Todo lists: Enter moves the caret to the new item (#1099)
+
+### 🔒 Security
+
+- HTTP: secrets echoed in a response are masked (#1115)
+
+## [0.16.1] - 2026-10-27
+
+### 🐛 Fixed
+
+- Notes: a plain click on a link places the caret without opening it (#1079)
+- Backups: a restored copy shows at once, without a reload (#1087)
+- Dessin: an imported drawing shows its preview on its card (#1086)
+- Notes: formatted text pasted into an empty Note keeps bold and links (#1081)
+- Notes: « Insérer un dessin » says when there is no drawing (#1085)
+- Dessin: C on a drawing's card copies no scene (#1084)
+- Dessin: Escape clears the selection before closing (#1083)
+- Notes: « 2 * 3 * 4 » stays as typed, without italics (#1080)
+- Notes: a banner over the editor takes its first click (#1078)
+- Editor: a click on another card opens it (#1077)
+- Notes: a new note titled and closed with Escape is kept (#1076)
+- Notes: an expiry three days away reads « dans 3j » all day (#1074)
+- Palette: a title holding the words comes before a body match (#1070)
+- Search: a snippet's context is searched and shown on its card (#1068)
+- Fields: the card's fill form says the values were filled in (#1073)
+- Attachments: the card's count follows an added or removed file (#1075)
+- Copies: « Accuser chaque copie » off silences the card's message (#1072)
+- Snippets: the Format tooltip names the language, not its badge (#1065)
+- Wording: a count of one reads in the singular (#1066)
+- Palette: « Rien ne correspond » shows beside the create option (#1071)
+- Filters: the Format and Tags facets show their counts (#1069)
+- Scripts: a syntax error says the script is not valid JavaScript (#1062)
+- HTTP code: unresolved variables leave the URL as written (#1061)
+- JSON explorer: « Copier la valeur » copies a string without quotes (#1067)
+- Runner: a request added shows in the run order, which is kept (#1064)
+- Runner: a data file neither CSV nor JSON says so (#1063)
+- HTTP: « Name: value » typed in a header name trims the value (#1060)
+- JSON generator: a text seed gives the same documents every time (#1058)
+- Export: each export proposes a file name of its own (#1059)
+- Subnets: a plan places a two-host need in a /30 (#1054)
+- Tools: the YAML merge key « << » is applied (#1057)
+- Durations: « 90 min » is written PT1H30M (#1056)
+- Hashes: « zzz » reads as neither hex nor base64 (#1055)
+
+### 🔒 Security
+
+- Advisories: tokio, ctutils patched; a failed audit stops no other run (#1097)
+
+### 🧰 Under the hood
+
+- HTTP headers: the space typed after the colon is checked end to end (#1082)
+- Changelog: 0.13.0 to 0.15.0 list features as Added, fixes as Fixed (#996)
+
+## [0.16.0] - 2026-10-21
+
+### ✨ Added
+
+- Notes: « Dessin », a kind for sketches, exported and embedded in a Note (#995)
+- Notes: « Présenter » shows a Note full screen, a section a slide (#993)
+- Notes: mermaid code blocks drawn as diagrams (#992)
+
+### 🔒 Security
+
+- HTTPS: a distrusted intermediate certificate is refused (#994)
+
+## [0.15.0] - 2026-10-20
+
+### ✨ Added
+
+- Folders: new sub-folder from a folder's menu (#989)
+- Folders: folders inside folders, a board opened at any level (#987)
+- Code editor: 142 languages, coloured alike on cards and in the editor (#986)
+
+### 🐛 Fixed
+
+- Rails: a row let go after a drag never opens, whatever the timing (#991)
+
+## [0.14.0] - 2026-10-20
+
+### ✨ Added
+
+- HTTP: run a collection or a folder over iterations and a data file (#984)
+- HTTP: a console with the traffic, script logs and errors (#983)
+- HTTP: a response value kept in a variable for the next request (#982)
+- HTTP: named tests after the response, with a Tests tab of results (#981)
+- HTTP: scripts run before the send and after the response (#980)
+- HTTP: dynamic variables, and a sandbox to run request scripts (#979)
+
+### 🐛 Fixed
+
+- Scripts: timers due together fire in the order of their deadlines (#985)
+
+## [0.13.1] - 2026-10-19
+
+### ✨ Added
+
+- Calcul: compound interest, returns, present value and loans (#976)
+- Calcul: every percentage form, fractions, multipliers and proportions (#975)
+- Calcul: rounding, functions, bases and bits, CSS units and frequencies (#974)
+- Calcul: up to 14 decimals, a number format and a date format (#973)
+- Calcul: operators in words, labels, scales and the previous result (#972)
+- Calcul: one table of words, and a rule when a name collides (#971)
+
+### 🐛 Fixed
+
+- Calcul: fixes to totals, finance forms, long roots and copied results (#978)
+
+### 📦 Dependencies
+
+- Dependencies: zip moves to 9.0.5, past three security advisories (#970)
+
+## [0.13.0] - 2026-10-17
+
+### ✨ Added
+
+- Notes: a fourth kind, Calcul, that computes each line as typed (#945)
+- Palette: one search over notes, requests, tools, spaces and commands (#944)
+- Tools: fill a tool's input from a note, a snippet or a todo list (#943)
+
+## [0.12.2] - 2026-10-16
+
+### ✨ Added
+
+- Code editor: highlight {{fields}} where they are written (#903)
+- Note editor: find and replace with Ctrl+F and Ctrl+H (#902)
+- First launch: new sample notes and guide chapters (#904)
+- Selection: remove a tag, pin and unpin, each with undo (#900)
+- Editor: convert a note between snippet, Note and todo list (#901)
+- Tools home: more columns on wide screens, results in two columns (#899)
+- Notes: reopen a library on the space and folder it was left on (#895)
+- Trash: search deleted notes and restore all results at once (#898)
+- Todo lists: paste lines as items, split and join items at the caret (#897)
+- Shortcut sheet: add the Note editor's keys and Tab in code (#893)
+- Ctrl+K: focus the tools search when the tools are on screen (#894)
+
+### 🔧 Changed
+
+- Capture: save prose as a Note, and the palette query as a title (#896)
+- Delete space: say how many notes move and that its folders go (#890)
+- UI texts: fix outdated labels in history, Prettier, trash, preferences (#889)
+- Canvas: Note excerpts in the text font, folder list named after it (#888)
+
+### 🐛 Fixed
+
+- Attachments: name the file and the 10 MB limit when it is too large (#891)
+- Export: say there is nothing to export before any dialog (#892)
+- JSON explorer: show the selected value at full height in the panel (#884)
+- Fields form: open with the focus in the first empty field (#882)
+- Editor: keep a tag typed without Enter when the field or editor closes (#881)
+- Cards: show a todo list's two rows whole, keep the date in the footer (#887)
+- Notes: undo moving one note to another space, its folder too (#885)
+- Title bar: keep the note title readable, wrap the row below it (#886)
+- Quick palette: copy the whole snippet as is, not its first lines (#883)
+
+### 🔒 Security
+
+- TLS: update rustls to 0.23.46, fixing four RustSec advisories (#938)
+
+### 🧰 Under the hood
+
+- Keep commit kinds out of the area of a title
+- Open popovers in the unit tests
+- Pipeline: stop every job as soon as one fails (#942)
+- Stop the e2e profile's leftover WebView2 before wiping it, so the next scenario of a group starts on Windows
+- Drop versioning-strategy from Dependabot's Cargo entry
+- Dependabot: raise Cargo.toml with Cargo.lock in Rust updates (#936)
+- Pipeline: e2e scenarios in three groups per OS, not one job each (#937)
+- Tickets: titles say what changed, and name no other software (#935)
+
+### 📦 Dependencies
+
+- Bump the rich-editor group with 7 updates (#940)
+- Bump the crypto group across 1 directory with 2 updates (#939)
+- Bump the angular group across 1 directory with 8 updates (#855)
+- Bump the lint-and-format group across 1 directory with 2 updates (#828)
+- Bump uuid from 1.27.0 to 1.28.0 in /src-tauri in the rust-other group across 1 directory (#829)
+- Bump jsdom from 30.1.1 to 30.1.2 in the unit-tests group across 1 directory (#831)
+- Bump diesel from 2.3.13 to 2.3.14 in /src-tauri in the storage group across 1 directory (#822)
+- Bump the network group across 1 directory with 4 updates (#825)
+
+## [0.12.1] - 2026-10-15
+
+### 🔧 Changed
+
+- Code editor: new find-and-replace bar with match count and options (#854)
+- Editor: fold the header with one button, the fields panel separately (#853)
+- Code editor: indent a wrapped line like the line it continues (#852)
+
+## [0.12.0] - 2026-10-14
+
+### ✨ Added
+
+- Edit snippets in CodeMirror (#848)
+- Show the code and the graph or the tree side by side (#842)
+- Explore XML snippets like JSON (#840)
+- Explore TOML snippets like JSON (#838)
+- Explore YAML snippets like JSON (#837)
+- Move the JSON graph's nodes (#835)
+- Collapse the JSON explorer to its root (#834)
+- Filter long choice menus, the formats first (#832)
+
+### 🧰 Under the hood
+
+- Keep the HTTP tree inside the rail's box (#847)
+- Bound each WebDriver command, and stop the e2e run at its first failure (#845)
+- Keep the e2e logs of every attempt (#844)
+- Stop the CI run when an e2e scenario fails (#841)
+- Skip the build, tests and scenarios for a documentation-only pull request (#836)
+- Wait for the canvas to narrow before reading it in 05-spaces (#833)
+- Rewrite the README as an overview of the three areas (#821)
+- Check dependencies weekly, grouped by kind (#820)
 
 ## [0.11.0] - 2026-10-13
 

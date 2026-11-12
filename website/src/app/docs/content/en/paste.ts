@@ -7,7 +7,7 @@ export const QUICK_PASTE: DocPage = {
   summary:
     'Finding a snippet and pasting it without leaving what you are doing, capturing the clipboard into a note, and setting the shortcuts.',
   body: [
-    h2('palette', 'The quick paste palette'),
+    h2('palette', 'The palette'),
     p(
       keys('Ctrl Alt P'),
       ' opens the palette over any application, even when the DevNotes window is closed. It searches all your spaces at once, ignoring the canvas filters: when you recall a snippet, you do not always remember where you filed it.',
@@ -27,10 +27,23 @@ export const QUICK_PASTE: DocPage = {
       keys('Enter'),
       ' or a click opens the note instead of copying it, which also makes the palette a “find this note”.',
     ),
+    p(
+      'It finds more than notes. The same field searches the requests of the API client, the tools and the spaces, and runs commands; three prefixes narrow the search:',
+    ),
+    table(
+      'Narrowing the search',
+      ['Type', 'To'],
+      [
+        keys('@'),
+        'choose where to search: the notes, the requests, the tools, the spaces, or the notes of one space',
+      ],
+      [keys('#'), 'list the notes of a tag'],
+      [keys('>'), 'run a command: new request, new folder, preferences, the shortcut sheet'],
+    ),
     shortcuts(
       'In the palette',
       ['↑ ↓', 'Go through the results (Tab too)'],
-      ['Enter', 'Open the note'],
+      ['Enter', 'Open the note, the request, the tool or the space'],
       ['Ctrl C', 'Copy the note and close'],
       ['Esc', 'Close the palette'],
     ),
@@ -45,7 +58,7 @@ export const QUICK_PASTE: DocPage = {
     h2('tray', 'From the system tray'),
     p(
       'The DevNotes icon in the system tray offers ',
-      ui('Quick paste'),
+      ui('Palette'),
       ', ',
       ui('New note'),
       ' and ',
@@ -60,7 +73,7 @@ export const QUICK_PASTE: DocPage = {
     table(
       'Active everywhere, even with the window closed',
       ['Default', 'Action'],
-      [keys('Ctrl Alt P'), 'Open the quick paste palette'],
+      [keys('Ctrl Alt P'), 'Open the palette'],
       [keys('Ctrl Alt V'), 'Capture the clipboard into a note'],
       [keys('Ctrl Alt N'), 'Create a note'],
     ),

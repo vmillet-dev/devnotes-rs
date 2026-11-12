@@ -86,7 +86,7 @@ export const SAFETY: DocPage = {
     ),
     h2('versions', 'A snippet’s versions'),
     p(
-      'A snippet keeps its last twenty versions. The editor’s ',
+      'A snippet, like a Note, keeps its last twenty versions. The editor’s ',
       ui('History'),
       ' shows what would come back and what would go before you ',
       ui('Go back to this version'),

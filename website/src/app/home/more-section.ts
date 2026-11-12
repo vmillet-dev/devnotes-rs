@@ -61,6 +61,30 @@ const FR = {
     after: ', protégée si vous le voulez, ou la sélection copiée en Markdown.',
     items: ['travail-2026-10-14.devnotes', 'Copier la sélection en Markdown'],
   },
+  calc: {
+    title: 'Des calculs',
+    line: 'Une ligne, un résultat : unités, dates, pourcentages.',
+    items: [
+      ['prix = 120 €', '120 €'],
+      ['3 h 20 min en min', '200 min'],
+      ['20 % de 340', '68'],
+    ] as readonly (readonly [string, string])[],
+  },
+  diagrams: {
+    title: 'Des schémas',
+    line: 'Mermaid et dessins dans une Note, présentée en plein écran.',
+    items: ['Diagramme Mermaid', 'Dessin, en PNG ou SVG', 'Présentation plein écran'],
+  },
+  scripts: {
+    title: 'Des scripts et des tests',
+    line: 'Du JavaScript autour de chaque requête, et des tests nommés.',
+    items: ['Avant l’envoi', 'Après la réponse', 'Tests : 3/3 réussis'],
+  },
+  palette: {
+    title: 'Une palette',
+    line: 'Notes, requêtes, outils et espaces, d’une seule recherche.',
+    items: ['@ où chercher', '# un tag', '> une commande'],
+  },
   themes: { title: 'Deux thèmes, deux langues', line: 'Clair ou sombre, français ou anglais.' },
 };
 
@@ -110,6 +134,30 @@ const EN: typeof FR = {
     before: 'A',
     after: ' archive, protected if you wish, or the selection copied as Markdown.',
     items: ['work-2026-10-14.devnotes', 'Copy the selection as Markdown'],
+  },
+  calc: {
+    title: 'Calculations',
+    line: 'One line, one result: units, dates, percentages.',
+    items: [
+      ['price = 120 €', '120 €'],
+      ['3 h 20 min in min', '200 min'],
+      ['20 % of 340', '68'],
+    ] as readonly (readonly [string, string])[],
+  },
+  diagrams: {
+    title: 'Diagrams',
+    line: 'Mermaid and drawings in a Note, presented full screen.',
+    items: ['Mermaid diagram', 'Drawing, as PNG or SVG', 'Full-screen presentation'],
+  },
+  scripts: {
+    title: 'Scripts and tests',
+    line: 'JavaScript around each request, and named tests.',
+    items: ['Before the send', 'After the response', 'Tests: 3/3 passed'],
+  },
+  palette: {
+    title: 'A palette',
+    line: 'Notes, requests, tools and spaces, from one search.',
+    items: ['@ where to search', '# a tag', '> a command'],
   },
   themes: { title: 'Two themes, two languages', line: 'Light or dark, French or English.' },
 };

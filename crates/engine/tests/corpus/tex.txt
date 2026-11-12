@@ -1,0 +1,7 @@
+\documentclass{article}
+\usepackage{amsmath}
+
+\begin{document}
+\section{Introduction}
+Some text.
+\end{document}

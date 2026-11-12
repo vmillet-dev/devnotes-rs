@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <ul>
+  {% for note in notes %}
+    <li>{{ note.title }}</li>
+  {% endfor %}
+  </ul>
+{% endblock %}

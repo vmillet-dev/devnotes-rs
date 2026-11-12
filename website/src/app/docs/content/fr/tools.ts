@@ -19,6 +19,7 @@ export const TOOLS: DocPage = {
         keys('Ctrl Shift T'),
         ' cherche un outil depuis n’importe quelle zone, et fouille aussi les références.',
       ],
+      ['Le champ d’un outil peut aussi se remplir depuis une note, un snippet ou une liste de tâches.'],
       [
         'Une étoile met un outil dans les ',
         ui('Favoris'),

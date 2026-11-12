@@ -1,0 +1,6 @@
+(defun square (x)
+  (* x x))
+
+(defvar *total* 0)
+(setf *total* (square 4))
+(format t "~a~%" *total*)

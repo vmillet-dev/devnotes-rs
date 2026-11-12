@@ -1,0 +1,3 @@
+message Note {
+  string id;
+}

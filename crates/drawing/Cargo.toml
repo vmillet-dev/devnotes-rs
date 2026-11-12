@@ -1,0 +1,19 @@
+[package]
+name = "drawing"
+description = "A Dessin's scene, read and written as Fabric stores it, its geometry, its text lines and its pictures"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+resvg = { workspace = true, features = ["text"] }
+serde_json = { workspace = true, features = ["float_roundtrip", "preserve_order"] }
+skrifa.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

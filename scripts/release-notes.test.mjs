@@ -14,10 +14,13 @@ import {
   groupEntries,
   isReleaseCommit,
   kindOf,
+  LEAD_HEADING,
+  leadItems,
   parsePrNumber,
   publishedNumbers,
   renderSections,
   sectionFor,
+  withLead,
   splice,
   subjectsSince,
 } from './release-notes.mjs';
@@ -387,5 +390,32 @@ describe('subjectsSince', () => {
       'Add a board (#720)',
       'Move a card (#721)',
     ]);
+  });
+});
+
+describe('a summary written by hand', () => {
+  it('reads its bullets and their continuation lines, and nothing else', () => {
+    const markdown = '# Notes for 1.0.0\n\nIgnored prose.\n\n- One process,\n  no WebView\n- Faster\n';
+
+    assert.deepEqual(leadItems(markdown), ['One process, no WebView', 'Faster']);
+  });
+
+  it('comes first, under its own heading', () => {
+    const groups = withLead([{ heading: '🐛 Fixed', items: ['A fix (#1)'] }], ['Faster']);
+
+    assert.deepEqual(
+      groups.map((group) => group.heading),
+      [LEAD_HEADING, '🐛 Fixed'],
+    );
+  });
+
+  it('changes nothing when there is none', () => {
+    const groups = [{ heading: '🐛 Fixed', items: ['A fix (#1)'] }];
+
+    assert.deepEqual(withLead(groups, []), groups);
+  });
+
+  it('renders as a section the changelog grammar reads', () => {
+    assert.equal(renderSections(withLead([], ['Faster'])), `### ${LEAD_HEADING}\n\n- Faster\n`);
   });
 });

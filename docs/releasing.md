@@ -1,31 +1,36 @@
 # Releasing
 
+Before a release, pass the manual checklist (`docs/recette/recette.html`, plan § 8.5) on both operating systems.
+
 A release is a `workflow_dispatch`. One run writes the changelog, commits it, tags, builds
 every bundle and publishes — there is no step to do by hand between them, and no partial
 state to clean up if it stops.
 
 ## The steps
 
-1. **Bump the version.** `npm version <x.y.z> --no-git-tag-version` covers `package.json`
-   and its lockfile; `src-tauri/Cargo.toml` is edited by hand, then `cargo update -p devnotes`
-   writes the Cargo lockfile. Merge to `main` and wait for CI to go green — the release
+1. **Bump the version.** One place holds it (D27): `version` under `[workspace.package]` in
+   the root `Cargo.toml`, which every crate inherits. Edit it, then `cargo update --workspace`
+   writes it into `Cargo.lock`; nothing else carries a version (`package.json` has none). The
+   bump touches those two files alone. Merge to `main` and wait for CI to go green — the release
    refuses to start on a commit CI has not passed.
 
-   The workflow reads the version from `Cargo.toml` and stops unless `package.json`,
-   `package-lock.json` and `Cargo.lock` all agree. It checks that **before the tag exists**,
-   so a mismatch costs a re-run rather than a deleted tag.
+   The workflow reads the version with `scripts/version.mjs` and stops unless `Cargo.lock`
+   says the same for `app`. It checks that **before the tag exists**, so a mismatch costs a
+   re-run rather than a deleted tag.
 
 2. **Actions → Release → Run workflow, with `dry_run` checked.** It prints the notes it
-   would write to the run summary and changes nothing. Read them: this is the only moment
-   where a misfiled entry is free to fix.
+   would write to the run summary, builds and signs the packages (kept as the run's
+   artifacts), and changes nothing. Read the notes: this is the only moment where a misfiled
+   entry is free to fix.
 
 3. **Run it again unchecked.** It writes the `CHANGELOG.md` section, commits it, tags,
-   builds the bundles and publishes the release.
+   builds the packages and publishes the release.
 
-4. **Publish the website again.** Its download links lead straight to this version's files,
-   named from `package.json`'s version at build time: `npm run website:build`, then push
-   `dist/website/` to `vmillet-dev/devnotes-website`'s `main`. Built before the release is
-   published, the build stops on links that answer 404.
+4. **Nothing to do for the website.** `website.yml` runs when the release run completes and
+   publishes the site again: its download links lead to the files of the latest release, whose
+   version, sizes and SHA-256 `website/scripts/fetch-release.mjs` reads at build time. A dry run
+   publishes nothing new (the latest release is the same one). → "The website" in
+   `docs/architecture.md`.
 
 ## A version on a branch of its own
 
@@ -54,6 +59,12 @@ not — merged into `main`, or into a version branch merged since — and what s
 **labels**. A pull request an older section already lists is left out: nothing is released
 twice.
 
+An entry is the pull request's **title**, as it reads on GitHub when the release runs — so a
+title says what changed for the person using the application (`Code editor: new
+find-and-replace bar with match count and options`), never how it was built. A title can still
+be edited after the merge, up to the release. The rule is in `CLAUDE.md`, « Tickets and pull
+requests ».
+
 GitHub propagates nothing on its own, so a pull request inherits the labels of the issue it
 closes — which only works if the body says `Closes #42`. GitHub does not always record that
 link for a pull request aimed at a version branch, so the description is read when it is
@@ -65,6 +76,11 @@ missing. From there:
 | the labels of the closed issue             | the ordinary case                                         |
 | the `(feat)` / `(fix)` prefix of the title | when there is no label anywhere                           |
 | "Under the hood"                           | when there is none of the three                           |
+
+**A version can open on a summary written by hand.** When the pull requests alone cannot say
+what a version changes — 1.0.0 changes the whole application — `docs/release-notes/<version>.md`
+holds a few bullets, which the generator puts first, under « 📌 In short ». Only its `- ` lines
+(and the indented lines continuing them) are read; the rest of the file is a note to its author.
 
 Nothing is ever dropped for want of a label, and the dry run names the rule that filed each
 entry — so a surprise in the summary tells you which of the four fired.
@@ -80,7 +96,7 @@ is an addition.
 
 ## Why the changelog is committed before the tag
 
-`src-tauri/src/changelog.rs` pulls `CHANGELOG.md` in with `include_str!`, so the file is
+`crates/engine/src/changelog.rs` pulls `CHANGELOG.md` in with `include_str!`, so the file is
 baked into the binary at compile time. A release whose changelog was written after the build
 would ship a binary that cannot show its own release notes in "What's new".
 
@@ -89,23 +105,38 @@ hand is fine until the next release regenerates it. Older sections are never tou
 
 ## What gets published
 
-Per platform, from one matrix build:
+Per platform, from one matrix build: `cargo build -p app --release`, then
+`cargo packager -p app --release` (`.github/actions/package`), which builds nothing and packages
+what the build left in `target/release`. Its configuration is `[package.metadata.packager]` in
+`crates/app/Cargo.toml`.
 
-- **Windows** — the NSIS installer (`*_x64-setup.exe`), the MSI (`*_x64_en-US.msi`) and the
+- **Windows** — the NSIS installer, per user and without administrator rights
+  (`devnotes_<version>_x64-setup.exe`, the only Windows format: no `.msi`, D8), and the
   standalone executable (`devnotes-<version>-windows.exe`).
-- **Linux** — AppImage, `.deb`, `.rpm`, and the standalone binary (`devnotes-<version>-linux`).
+- **Linux** — the AppImage (`devnotes_<version>_x86_64.AppImage`), the `.deb` (by
+  `cargo-packager`), the `.rpm` (by `cargo-generate-rpm`, `[package.metadata.generate-rpm]`),
+  and the standalone binary (`devnotes-<version>-linux`).
 
 Plus `SHA256SUMS.txt` over all of them, and `latest.json` — the manifest the in-app updater
-reads.
+reads, written by `scripts/latest-json.mjs`. Neither package needs WebView2 or WebKitGTK any
+more; the Linux ones depend on GTK (the tray alone), xkbcommon, Vulkan and the indicator
+library.
 
-`bundle.createUpdaterArtifacts` makes the bundler emit a `.sig` beside every bundle,
-including the `.deb` and `.rpm` that the updater can never install; system packages are
-updated by their package manager by design, so the manifest step ignores those signatures
-rather than choking on them.
+Each package is checked to hold the application alone (one binary, and the identity tool's
+lists where `Paths::resources` looks for them) before anything is uploaded.
 
-⚠️ **The release build fails outright without the minisign private key.** That is deliberate:
-an unsigned release would be one the updater refuses to install, discovered by users rather
-than by CI. The public half lives in `tauri.conf.json`.
+**Signatures.** `cargo-packager` signs every package it writes with the minisign key, and the
+`.rpm` is signed by `cargo packager signer sign`. The key and its password are the release
+environment's secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`,
+passed as `CARGO_PACKAGER_SIGN_PRIVATE_KEY[_PASSWORD]`: the key the published versions were
+signed with, kept (D26). The updater (`cargo-packager-updater`, `crates/platform/src/updater`)
+installs only the NSIS installer (passive, `/P /R`) and the AppImage (replaced in place), so the
+manifest carries those two, each with its `format`; the `.deb` and `.rpm` are updated by their
+package manager by design, and their signatures are ignored rather than fatal.
+
+⚠️ **A release without the private key publishes nothing.** That is deliberate: an unsigned
+release would be one the updater refuses to install, discovered by users rather than by CI.
+The public half is `UPDATES.public_key` in `crates/app/src/desktop.rs`.
 
 ## If something goes wrong
 

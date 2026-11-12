@@ -78,9 +78,14 @@ export const SETTINGS: DocPage = {
         b('Apparence'),
         'la langue (français ou anglais), le thème (Système, Sombre, Clair), la densité (Confortable, Compacte)',
       ],
+      [b('Cartes'), 'combien de lignes d’une note une carte aperçoit'],
       [b('Éditeur'), 'le type de note par défaut, l’indentation avec Tab, le retour à la ligne dans le code'],
+      [
+        b('Calcul'),
+        'les décimales (jusqu’à quatorze), le format des nombres et celui des dates des feuilles de calcul',
+      ],
       [b('Comportement'), 'démarrer avec le système, réduire et fermer dans la barre système'],
-      [b('Collage rapide'), 'les notes épinglées en premier dans la palette'],
+      [b('Palette'), 'les notes épinglées en premier dans la palette'],
       [b('Notifications'), 'accuser chaque copie, signaler les mises à jour'],
     ),
     p(
@@ -161,9 +166,21 @@ export const FAQ: DocPage = {
     ),
     h2('mises-a-jour', 'Comment mettre à jour ?'),
     p(
-      'DevNotes propose lui-même les nouvelles versions, avec leurs notes. Vous pouvez aussi télécharger ',
+      'DevNotes propose lui-même les nouvelles versions, avec leurs notes, et les installe pour l’installateur Windows et l’AppImage. Un ',
+      code('.deb'),
+      ' ou un ',
+      code('.rpm'),
+      ' est mis à jour par le gestionnaire de paquets de votre distribution. Vous pouvez aussi télécharger ',
       link('la dernière version', '/telecharger'),
       ' et l’installer par-dessus : vos bibliothèques ne sont pas touchées.',
+    ),
+    h2('anciennes', 'Mes bibliothèques d’une version précédente s’ouvriront-elles ?'),
+    p(
+      'Oui, telles quelles. DevNotes est désormais une application native : aucun moteur de navigateur à l’intérieur, donc rien comme WebView2 ou WebKitGTK à installer.',
+    ),
+    h2('wayland', 'Sous Linux avec Wayland, il manque quelque chose.'),
+    p(
+      'DevNotes utilise X11 dès qu’il est là, XWayland compris. Dans une session Wayland sans XWayland, ce qui est rare, la position de la fenêtre n’est pas restaurée, fermer dans la barre système ne fait que réduire, un fichier ne se dépose pas depuis le gestionnaire de fichiers, et un HTML collé dans une Note n’en garde que le texte.',
     ),
     h2('donnees', 'Où sont mes notes ?'),
     p(

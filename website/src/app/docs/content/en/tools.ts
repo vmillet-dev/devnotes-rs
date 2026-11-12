@@ -18,6 +18,7 @@ export const TOOLS: DocPage = {
       [keys('Ctrl Shift T'), ' searches for a tool from any area, and searches the references too.'],
       ['A star puts a tool in the ', ui('Favourites'), '; the last ones opened are in ', ui('Recent'), '.'],
       ['A tool’s ', ui('Example'), ' button fills it in, to see what it does.'],
+      ['A tool’s input can also be filled from a note, a snippet or a todo list.'],
     ),
     h2('keep', 'Keeping a result'),
     p(

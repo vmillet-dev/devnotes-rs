@@ -1,0 +1,45 @@
+[package]
+name = "platform"
+description = "What DevNotes asks of the operating system: paths, window geometry, one instance per profile"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+# The dialog a scenario answers: only in the `e2e` flavour.
+e2e = []
+
+[dependencies]
+arboard.workspace = true
+dirs.workspace = true
+interprocess.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+open.workspace = true
+rfd.workspace = true
+sha2.workspace = true
+tray-icon.workspace = true
+global-hotkey.workspace = true
+auto-launch.workspace = true
+notify-rust.workspace = true
+cargo-packager-updater.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+winreg.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# The tray's thread, the only GTK one of the process (D29); the version `tray-icon` draws with.
+gtk.workspace = true
+# Whether a portal answers before a dialog is asked of it; the version `rfd` already draws in.
+zbus.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

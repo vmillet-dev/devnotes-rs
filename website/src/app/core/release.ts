@@ -1,17 +1,15 @@
-import { version } from '../../../../package.json';
 import { Lang } from './lang';
 import RELEASE from './release-files.json';
 import { REPOSITORY } from './site';
 
 /**
- * The version the site offers: the application's own, read at build time. A bump changes it,
- * so the site is rebuilt and published once that version's release exists (docs/releasing.md);
- * `website/scripts/fetch-release.mjs` reads its files' sizes and SHA-256 before the build, and
- * `finish-build.mjs` refuses a build whose links lead nowhere.
+ * The version the site offers: the latest published release. `scripts/fetch-release.mjs` reads
+ * it, with its files' sizes and SHA-256, before every build (`website.yml` builds again after each
+ * release), and `finish-build.mjs` refuses a build whose links lead nowhere.
  */
-export const VERSION = version;
+export const VERSION = RELEASE.version;
 
-const FILES = `${REPOSITORY}/releases/download/v${version}`;
+const FILES = `${REPOSITORY}/releases/download/v${VERSION}`;
 
 export type System = 'windows' | 'linux';
 
@@ -61,7 +59,7 @@ export function offers(lang: Lang): readonly Offer[] {
       primary: file(
         lang,
         fr ? 'Installateur' : 'Installer',
-        `devnotes_${version}_x64-setup.exe`,
+        `devnotes_${VERSION}_x64-setup.exe`,
         fr
           ? "Il s'installe pour votre compte, sans droits administrateur."
           : 'Installs for your account, no administrator rights needed.',
@@ -69,14 +67,8 @@ export function offers(lang: Lang): readonly Offer[] {
       others: [
         file(
           lang,
-          fr ? 'Paquet MSI' : 'MSI package',
-          `devnotes_${version}_x64_en-US.msi`,
-          fr ? 'Pour un déploiement par stratégie de groupe.' : 'For deployment through Group Policy.',
-        ),
-        file(
-          lang,
           fr ? 'Exécutable portable' : 'Portable executable',
-          `devnotes-${version}-windows.exe`,
+          `devnotes-${VERSION}-windows.exe`,
           fr ? "Sans installation, à lancer d'où vous voulez." : 'Nothing to install, run it from anywhere.',
         ),
       ],
@@ -88,26 +80,26 @@ export function offers(lang: Lang): readonly Offer[] {
       primary: file(
         lang,
         'AppImage',
-        `devnotes_${version}_amd64.AppImage`,
+        `devnotes_${VERSION}_x86_64.AppImage`,
         fr ? 'Toutes les distributions, rien à installer.' : 'Any distribution, nothing to install.',
       ),
       others: [
         file(
           lang,
           fr ? 'Paquet .deb' : '.deb package',
-          `devnotes_${version}_amd64.deb`,
+          `devnotes_${VERSION}_amd64.deb`,
           fr ? 'Debian, Ubuntu et dérivées.' : 'Debian, Ubuntu and derivatives.',
         ),
         file(
           lang,
           fr ? 'Paquet .rpm' : '.rpm package',
-          `devnotes-${version}-1.x86_64.rpm`,
+          `devnotes-${VERSION}.x86_64.rpm`,
           fr ? 'Fedora, RHEL et dérivées.' : 'Fedora, RHEL and derivatives.',
         ),
         file(
           lang,
           fr ? 'Binaire seul' : 'Bare binary',
-          `devnotes-${version}-linux`,
+          `devnotes-${VERSION}-linux`,
           fr ? "L'exécutable, sans paquet." : 'The executable, without a package.',
         ),
       ],
@@ -125,4 +117,4 @@ export function visitorSystem(): System {
 export const CHECKSUMS = `${FILES}/SHA256SUMS.txt`;
 
 /** This version's page on GitHub, with its notes and every file. */
-export const RELEASE_PAGE = `${REPOSITORY}/releases/tag/v${version}`;
+export const RELEASE_PAGE = `${REPOSITORY}/releases/tag/v${VERSION}`;

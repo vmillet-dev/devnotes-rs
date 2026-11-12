@@ -1,0 +1,5 @@
+function [total, mean_value] = stats(values)
+  total = sum(values);
+  mean_value = total / numel(values);
+  disp(mean_value);
+end

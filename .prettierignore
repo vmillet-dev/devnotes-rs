@@ -1,22 +1,22 @@
 dist
-out-tsc
 node_modules
-.angular
 coverage
-src-tauri/target
-# Schémas générés par Tauri au build.
-src-tauri/gen
-# Bindings générés par tauri-specta : réécrits à chaque build Rust, les reformater
-# ferait diverger le fichier de ce que le générateur produit.
-src/app/core/ipc/bindings.ts
+target
 package-lock.json
 # Maquette statique de référence : conservée telle quelle, hors périmètre du formatage.
-docs/scratch-mockup-v2.html
-docs/scratch-folders.html
+docs/mockups/*
+# La feuille de recette : une page autonome, ses cas sur une ligne de données.
+docs/recette/*
+docs/egui-migration/*
 # Vendored skills (.claude/skills/PROVENANCE.md): kept byte-identical to their source.
 .claude/skills/frontend-design
 .claude/skills/webapp-testing
-.claude/skills/angular-developer
+.claude/skills/rust-guidelines/guidelines
 .claude/skills/seo
 .claude/skills/core-web-vitals
 .claude/skills/accessibility
+
+# Written by `npm run golden` on `angular-reference`, byte for byte.
+golden/*/
+# Prettier itself, copied by `npm run prettier`: kept as published.
+crates/text/prettier

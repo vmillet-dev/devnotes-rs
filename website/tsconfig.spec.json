@@ -1,8 +1,11 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../out-tsc/website-spec",
-    "types": []
+    "outDir": "./out-tsc/spec",
+    "types": [],
+    // Relaxed for specs only, like the ESLint overrides: indexing into a queried NodeList and
+    // asserting on the result is the idiom here, and guarding each one adds noise, not safety.
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src/**/*.spec.ts", "src/**/*.d.ts", "src/testing/**/*.ts"]
 }

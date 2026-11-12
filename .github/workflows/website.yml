@@ -1,0 +1,113 @@
+name: Website
+
+# devnotes.fr: the site built from `website/` and pushed, as the whole content of one commit, to
+# the `main` of `vmillet-dev/devnotes-website`, whose webhook deploys it (docs/architecture.md →
+# "The website"). Two things change what it shows: a merge to `main` that touches the site, and a
+# release, whose files the download page names; hence the run that follows `Release`.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'crates/ui/src/theme/tokens.rs'
+      - '.github/workflows/website.yml'
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build and check, then show what would change without pushing.'
+        type: boolean
+        default: false
+
+# One publication at a time, none cancelled: two pushes to the target would race, and a cancelled
+# one would leave it half written.
+concurrency:
+  group: website
+  cancel-in-progress: false
+
+# Read-only: the write to the other repository goes through its deploy key.
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish
+    # A release that failed published no file the site could name.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      # The default branch's head: after a release, the commit holding its changelog.
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - run: npm ci
+        working-directory: website
+
+      - run: npm run test:scripts
+        working-directory: website
+
+      - run: npm test
+        working-directory: website
+
+      # Reads the latest release, then refuses a build whose download links do not answer 200.
+      - name: Build and check
+        run: npm run build
+        working-directory: website
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Publish
+        env:
+          DEPLOY_KEY: ${{ secrets.WEBSITE_DEPLOY_KEY }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SOURCE: ${{ github.sha }}
+        run: |
+          if [ "$DRY_RUN" != true ] && [ -z "$DEPLOY_KEY" ]; then
+            echo "::error::the secret WEBSITE_DEPLOY_KEY is not set: no write access to devnotes-website"
+            exit 1
+          fi
+
+          mkdir -p ~/.ssh
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/deploy_key"
+          export GIT_SSH_COMMAND="ssh -i $RUNNER_TEMP/deploy_key -o IdentitiesOnly=yes"
+
+          # Read-only when dry: the clone is public, so a dry run needs no key.
+          if [ "$DRY_RUN" = true ]; then
+            git clone --depth 1 https://github.com/vmillet-dev/devnotes-website.git "$RUNNER_TEMP/site"
+          else
+            git clone --depth 1 git@github.com:vmillet-dev/devnotes-website.git "$RUNNER_TEMP/site"
+          fi
+
+          # The target becomes the build, nothing more: the previous site's leftovers go.
+          rsync -a --delete --exclude .git website/dist/ "$RUNNER_TEMP/site/"
+
+          cd "$RUNNER_TEMP/site"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The site is already what this build writes: nothing to push."
+            exit 0
+          fi
+          git diff --cached --stat | tail -5
+
+          if [ "$DRY_RUN" = true ]; then
+            echo "::notice::dry run: nothing was pushed"
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -q -m "Site built from devnotes-rs@${SOURCE:0:7}"
+          # No force: a rejected push rebases once and tries again.
+          git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main; }

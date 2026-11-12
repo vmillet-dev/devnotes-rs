@@ -4,23 +4,22 @@
     <div class="hero-side">
       <p class="lede">{{ t().lede }}</p>
       @if (offer(); as get) {
-        <div class="cta-row">
-          <a class="btn btn-primary get" [href]="get.primary.url"
-            ><span>{{ t().downloadFor }} {{ get.label }}</span
-            ><span class="ver">v{{ version }}</span></a
-          >
-          <a class="btn btn-ghost" [routerLink]="links().docs">{{ t().docs }}</a>
-        </div>
+      <div class="cta-row">
+        <a class="btn btn-primary get" [href]="get.primary.url"
+          ><span>{{ t().downloadFor }} {{ get.label }}</span><span class="ver">v{{ version }}</span></a
+        >
+        <a class="btn btn-ghost" [routerLink]="links().docs">{{ t().docs }}</a>
+      </div>
       }
       <ul class="facts">
         @for (fact of t().facts; track fact; let i = $index) {
-          <li>
-            @if (i === t().sourceFact) {
-              <a [href]="repository">{{ fact }}</a>
-            } @else {
-              <span>{{ fact }}</span>
-            }
-          </li>
+        <li>
+          @if (i === t().sourceFact) {
+          <a [href]="repository">{{ fact }}</a>
+          } @else {
+          <span>{{ fact }}</span>
+          }
+        </li>
         }
         <li class="more">
           <a [routerLink]="links().download">{{ t().others }}</a>
@@ -40,20 +39,20 @@
   [durations]="[1150, 1550, 1700, 1200]"
 >
   @if (lang() === 'fr') {
-    <p lede>
-      Un snippet peut contenir des champs comme <code>{{ field('host') }}</code> ou
-      <code>{{ field('port=22') }}</code
-      >. DevNotes vous demande leurs valeurs, puis copie la commande complète. Depuis n'importe quelle
-      application, avec <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
-      >.
-    </p>
+  <p lede>
+    Un snippet peut contenir des champs comme <code>{{ field('host') }}</code> ou
+    <code>{{ field('port=22') }}</code>. DevNotes vous demande leurs valeurs, puis copie la commande complète.
+    Depuis n'importe quelle application, avec
+    <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
+    >.
+  </p>
   } @else {
-    <p lede>
-      A snippet can hold fields like <code>{{ field('host') }}</code> or <code>{{ field('port=22') }}</code
-      >. DevNotes asks for their values, then copies the whole command. From any application, with
-      <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
-      >.
-    </p>
+  <p lede>
+    A snippet can hold fields like <code>{{ field('host') }}</code> or <code>{{ field('port=22') }}</code>.
+    DevNotes asks for their values, then copies the whole command. From any application, with
+    <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
+    >.
+  </p>
   }
   <app-snippets-scene />
 </app-feature>
@@ -68,15 +67,15 @@
   [durations]="[1100, 1350, 1450, 1200]"
 >
   @if (lang() === 'fr') {
-    <p lede>
-      Un espace par contexte, des dossiers dedans, et une vue Tableau où chaque dossier est une zone. La
-      recherche lit les titres, le code, les listes et les tags.
-    </p>
+  <p lede>
+    Un espace par contexte, des dossiers dedans, et une vue Tableau où chaque dossier est une zone. La
+    recherche lit les titres, le code, les listes et les tags.
+  </p>
   } @else {
-    <p lede>
-      A space for each context, folders inside it, and a Board view where each folder is a zone. The search
-      reads titles, code, lists and tags.
-    </p>
+  <p lede>
+    A space for each context, folders inside it, and a Board view where each folder is a zone. The search
+    reads titles, code, lists and tags.
+  </p>
   }
   <app-organise-scene />
 </app-feature>
@@ -91,15 +90,15 @@
   [durations]="[1700, 1350, 1950]"
 >
   @if (lang() === 'fr') {
-    <p lede>
-      Vingt-six langages colorés, Prettier en un clic, et vos JSON, YAML, TOML ou XML lisibles en graphe à
-      côté du code.
-    </p>
+  <p lede>
+    Vingt-six langages colorés, Prettier en un clic, et vos JSON, YAML, TOML ou XML lisibles en graphe à côté
+    du code.
+  </p>
   } @else {
-    <p lede>
-      Twenty-six highlighted languages, Prettier in one click, and your JSON, YAML, TOML or XML readable as a
-      graph beside the code.
-    </p>
+  <p lede>
+    Twenty-six highlighted languages, Prettier in one click, and your JSON, YAML, TOML or XML readable as a
+    graph beside the code.
+  </p>
   }
   <app-code-scene />
 </app-feature>
@@ -113,15 +112,15 @@
   [durations]="[1300, 1800, 1700, 1700]"
 >
   @if (lang() === 'fr') {
-    <p lede>
-      Encoder, hacher, convertir, lire une date ou une expression cron. Chaque outil tourne sur votre machine
-      et n'appelle rien. Un résultat se garde comme une note.
-    </p>
+  <p lede>
+    Encoder, hacher, convertir, lire une date ou une expression cron. Chaque outil tourne sur votre machine et
+    n'appelle rien. Un résultat se garde comme une note.
+  </p>
   } @else {
-    <p lede>
-      Encode, hash, convert, read a date or a cron expression. Every tool runs on your machine and calls
-      nothing. A result can be kept as a note.
-    </p>
+  <p lede>
+    Encode, hash, convert, read a date or a cron expression. Every tool runs on your machine and calls
+    nothing. A result can be kept as a note.
+  </p>
   }
   <app-tools-scene />
 </app-feature>
@@ -136,15 +135,15 @@
   [durations]="[1350, 1600, 1700, 1600]"
 >
   @if (lang() === 'fr') {
-    <p lede>
-      HTTP, GraphQL et WebSocket, avec des collections, des environnements et des variables. L'historique est
-      chiffré comme le reste.
-    </p>
+  <p lede>
+    HTTP, GraphQL et WebSocket, avec des collections, des environnements et des variables. L'historique est
+    chiffré comme le reste.
+  </p>
   } @else {
-    <p lede>
-      HTTP, GraphQL and WebSocket, with collections, environments and variables. The history is encrypted like
-      everything else.
-    </p>
+  <p lede>
+    HTTP, GraphQL and WebSocket, with collections, environments and variables. The history is encrypted like
+    everything else.
+  </p>
   }
   <app-api-scene />
 </app-feature>
@@ -159,15 +158,15 @@
   [durations]="[1450, 1700, 1350]"
 >
   @if (lang() === 'fr') {
-    <p lede>
-      Vos notes sont chiffrées sur le disque, derrière une phrase de passe que DevNotes n'enregistre nulle
-      part. Pas de compte, pas de cloud. Perdue, elle ne se récupère pas : gardez un export.
-    </p>
+  <p lede>
+    Vos notes sont chiffrées sur le disque, derrière une phrase de passe que DevNotes n'enregistre nulle part.
+    Pas de compte, pas de cloud. Perdue, elle ne se récupère pas : gardez un export.
+  </p>
   } @else {
-    <p lede>
-      Your notes are encrypted on disk, behind a passphrase DevNotes stores nowhere. No account, no cloud.
-      Lost, it cannot be recovered: keep an export.
-    </p>
+  <p lede>
+    Your notes are encrypted on disk, behind a passphrase DevNotes stores nowhere. No account, no cloud. Lost,
+    it cannot be recovered: keep an export.
+  </p>
   }
   <app-vault-scene />
 </app-feature>

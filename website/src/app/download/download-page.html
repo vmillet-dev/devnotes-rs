@@ -3,46 +3,46 @@
   <h1 id="download-h">{{ text().heading }}</h1>
   <p class="lede">{{ text().lede }}</p>
   @if (onPhone()) {
-    <p class="phone">{{ text().phone }}</p>
+  <p class="phone">{{ text().phone }}</p>
   }
 </section>
 
 <section class="wrap systems" [attr.aria-label]="text().systems">
   @for (offer of offers(); track offer.system) {
-    <article
-      class="window system"
-      [class.yours]="yours() === offer.system"
-      [attr.aria-labelledby]="'system-' + offer.system"
-    >
-      <header class="win-head">
-        <h2 class="win-title" [id]="'system-' + offer.system">{{ offer.label }}</h2>
-        @if (yours() === offer.system) {
-          <span class="mine">{{ text().yours }}</span>
+  <article
+    class="window system"
+    [class.yours]="yours() === offer.system"
+    [attr.aria-labelledby]="'system-' + offer.system"
+  >
+    <header class="win-head">
+      <h2 class="win-title" [id]="'system-' + offer.system">{{ offer.label }}</h2>
+      @if (yours() === offer.system) {
+      <span class="mine">{{ text().yours }}</span>
+      }
+      <span class="arch">{{ text().arch }}</span>
+    </header>
+    <div class="body">
+      <a class="btn btn-primary" [href]="offer.primary.url">{{ offer.action }}</a>
+      <p class="file">
+        <code>{{ offer.primary.file }}</code>
+        @if (offer.primary.size) {
+        <span class="size">{{ offer.primary.size }}</span>
         }
-        <span class="arch">{{ text().arch }}</span>
-      </header>
-      <div class="body">
-        <a class="btn btn-primary" [href]="offer.primary.url">{{ offer.action }}</a>
-        <p class="file">
-          <code>{{ offer.primary.file }}</code>
-          @if (offer.primary.size) {
-            <span class="size">{{ offer.primary.size }}</span>
-          }
-        </p>
-        <p class="who">{{ offer.primary.who }}</p>
-        <p class="heads-up">{{ offer.system === 'windows' ? text().unsigned : text().executable }}</p>
-        <h3>{{ text().others }}</h3>
-        <ul class="others">
-          @for (other of offer.others; track other.file) {
-            <li>
-              <a [href]="other.url">{{ other.name }}</a>
-              <code>{{ other.file }}</code>
-              <span>{{ other.who }}</span>
-            </li>
-          }
-        </ul>
-      </div>
-    </article>
+      </p>
+      <p class="who">{{ offer.primary.who }}</p>
+      <p class="heads-up">{{ offer.system === 'windows' ? text().unsigned : text().executable }}</p>
+      <h3>{{ text().others }}</h3>
+      <ul class="others">
+        @for (other of offer.others; track other.file) {
+        <li>
+          <a [href]="other.url">{{ other.name }}</a>
+          <code>{{ other.file }}</code>
+          <span>{{ other.who }}</span>
+        </li>
+        }
+      </ul>
+    </div>
+  </article>
   }
 </section>
 
@@ -80,15 +80,15 @@
       </thead>
       <tbody>
         @for (file of files(); track file.file) {
-          <tr>
-            <th scope="row">
-              <code>{{ file.file }}</code>
-            </th>
-            <td>{{ file.size }}</td>
-            <td>
-              <code class="hash">{{ file.sha256 }}</code>
-            </td>
-          </tr>
+        <tr>
+          <th scope="row">
+            <code>{{ file.file }}</code>
+          </th>
+          <td>{{ file.size }}</td>
+          <td>
+            <code class="hash">{{ file.sha256 }}</code>
+          </td>
+        </tr>
         }
       </tbody>
     </table>
@@ -106,10 +106,9 @@
     <li>
       <h3>{{ text().changed }}</h3>
       <p>
-        <a [href]="releasePage">{{ text().notes }}</a
-        >. {{ text().changedBefore }} <a [href]="changelog">{{ text().changelog }}</a>
-        {{ text().changedMiddle }} <a [routerLink]="startPath()">{{ text().start }}</a
-        >.
+        <a [href]="releasePage">{{ text().notes }}</a>. {{ text().changedBefore }}
+        <a [href]="changelog">{{ text().changelog }}</a> {{ text().changedMiddle }}
+        <a [routerLink]="startPath()">{{ text().start }}</a>.
       </p>
     </li>
   </ul>

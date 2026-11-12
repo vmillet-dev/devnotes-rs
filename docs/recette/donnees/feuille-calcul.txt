@@ -1,0 +1,32 @@
+# Hébergement
+prix = 0,045 €/h
+serveurs = 3
+coût = prix × 730 h × serveurs        // 98,55 €
+remise = 15 %
+ttc = coût − remise + 20 %            // 100,521 € (≈ 100,52 € à 2 décimales)
+
+# Pourcentages
+20 % de 340                           // 68
+30 sur 120 en %                       // 25 %
+de 80 à 100                           // +25 %
+250 + 20 %                            // 300
+300 hors 20 %                         // 250
+
+# Unités
+3 h 20 min en min                     // 200 min
+1,44 To à 100 Mo/s                    // 4 h
+38 °C en °F                           // 100,4 °F
+12 pt en px                           // 16 px
+
+# Courses
+10 €
+20 €
+30 €
+total                                 // 60 €
+moyenne                               // 20 €
+
+# Erreurs attendues
+x + 1                                 // erreur : « x » n’est défini nulle part au-dessus
+4 / 0                                 // erreur : division par zéro
+100 € en $                            // erreur : hors ligne : pas de taux de change
+5 jours ouvrés                        // erreur : cette ligne ne se lit pas

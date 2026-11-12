@@ -1,0 +1,45 @@
+[graph]
+targets = [
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+]
+all-features = true
+
+[advisories]
+unmaintained = "workspace"
+unsound = "all"
+ignore = [
+    { id = "RUSTSEC-2024-0429", reason = "glib 0.18, held by tray-icon's GTK 3 on Linux; VariantStrIter is never called" },
+    { id = "RUSTSEC-2026-0459", reason = "SQLite before 3.54 and a crafted -wal (local, files written by someone else); fixed in libsqlite3-sys 0.39, which diesel 2.3.14 refuses. Ignored 2026-11-09 for 1.0.0, lifted by #1451" },
+]
+
+# What the application may ship under GPL-3.0-only: the licences the tree holds today. A new one
+# is a decision, not a line to add.
+[licenses]
+confidence-threshold = 0.9
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "GPL-3.0-only",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+
+# Two versions of a crate are the normal state of this tree: wgpu and the platform crates hold
+# their own. Nothing here is refused by name.
+[bans]
+multiple-versions = "allow"
+
+# crates.io alone: a git or foreign dependency is a decision, not a line in a manifest.
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

@@ -1,0 +1,6 @@
+case class Point(x: Int, y: Int)
+
+object Main extends App {
+  val p = Point(1, 2)
+  println(p)
+}

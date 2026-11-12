@@ -2,9 +2,8 @@
 # apparaître des lints clippy d'un jour à l'autre sans qu'aucun commit n'ait bougé.
 # La relever est un commit délibéré.
 #
-# À la racine et non dans `src-tauri/` malgré le crate : rustup résout ce fichier
-# depuis le répertoire courant en remontant, et la CI lance cargo depuis la racine
-# avec `--manifest-path`.
+# À la racine : rustup résout ce fichier depuis le répertoire courant en remontant, et
+# chaque crate du workspace le trouve ainsi.
 [toolchain]
 channel = "1.97.1"
 components = ["clippy", "rustfmt"]

@@ -5,91 +5,80 @@ For build/run instructions see [CONTRIBUTING](../CONTRIBUTING.md).
 
 ## Overview
 
-DevNotes is a Tauri v2 desktop app: an Angular single-page front-end rendered in a WebView,
-and a Rust process that owns everything native (storage, encryption, the filesystem).
-The two halves talk only through Tauri's `invoke()` bridge.
-
-Notes and spaces are complete end to end: the front-end has no in-memory dataset left, every
-read and write goes through `invoke()`, and the Rust commands persist to an embedded SQLite
-database. Built on top of that: a 30-day trash with undo, multiple selection and bulk actions,
-corpus-wide tag management, `{{fields}}` in snippets, a quick-paste palette on a global
-shortcut, attachments, and import / export / share.
+DevNotes is a desktop application in **one Rust process**: an **egui** window over a core that
+owns everything that is not drawing. Since 1.0.0 there is no WebView, no JavaScript in the
+interface and no IPC (`egui-migration/egui-migration-plan.md` tells how it got there). The core,
+`crates/engine`, holds storage, encryption, the in-memory index of notes, HTTP, the tools; the
+interface, `crates/ui`, calls it directly, through one façade and three queues, with no
+serialisation in between (→ "Backend and events"). The one other process is the application
+relaunched as a **script host**, which runs a request's scripts in QuickJS (→ "Request scripts, in
+a process of their own"). The Angular + Tauri application it replaced stays whole at the
+`angular-reference` tag: where a section below names one of its files, it is the behaviour the
+egui screen was ported from, read there.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
 tags, languages, quick filters), grouping into display sections, facet aggregation and tag
-normalisation, and the choice of what a card's footer shows all run in `src-tauri/src/notes/`.
-The front-end describes what the user asked for and renders the view it gets back — it does
-not filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels
-must age on their own, without a round trip), the ISO ↔ `Date` conversion at the serialisation
-boundary, syntax highlighting (it colours the in-flight editor draft, which is not persisted
-yet — a round trip per keystroke), formatting a snippet with Prettier (the same draft, and
-Prettier is JavaScript), searching the tools' catalogue (its names are translated), and plain UI
-concerns like keyboard shortcuts and drafts.
+normalisation, and the choice of what a card's footer shows all run in `crates/engine/src/notes/`.
+The interface describes what the user asked for and draws the view it gets back — it does not
+filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels must age
+on their own, without a round trip), syntax highlighting (it colours the in-flight editor draft,
+which is not persisted yet), and plain UI concerns like keyboard shortcuts and drafts.
 
 ```
-src/                Angular front-end
-├── app/
-│   ├── app.component.*   the frame: titlebar, banners, the areas behind @defer, their keys
-│   ├── core/       everything that has no place on screen
-│   │   ├── model/      the vocabulary: note, space, checklist, variable, language
-│   │   ├── data/       repositories and the wire mapper
-│   │   ├── state/      the stores, flat
-│   │   ├── ipc/        generated bindings, error contract, native events
-│   │   └── services/   one folder per subject: i18n, errors, time, preferences,
-│   │                   settings, updates, app-info, clipboard, dialogs, window,
-│   │                   shortcuts, autostart, tray, notifications, areas, tools
-│   ├── notes/      the page at the root, then its four zones: sidebar/ (the library
-│   │               rail), header/ (above the canvas), canvas/ (the cards),
-│   │               overlays/ (drawn over the page), plus ui/ for what two of them share
-│   ├── tools/      the Outils area: its page, rail/, home/, frame/, and catalogue/ with one
-│   │               folder per tool
-│   ├── titlebar/   titlebar.component, then file-menu/ and about-menu/ with the panels
-│   │               each of them opens, nested where they open from
-│   ├── banners/    error banner, status toast, update prompt — siblings of the page
-│   └── shared/     what crosses two areas of the screen: the modal frame, a11y directives
-├── assets/         static images
-├── styles/         global theme (styles.scss) and SCSS partials
-└── testing/        test doubles, fixtures and shared providers
-src-tauri/          Rust back-end
+Cargo.toml          the workspace: one version, every dependency once, lints, release profile
+crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches/)
 ├── src/notes/      the notes feature: model, language, view, placeholder, trash, store/
+├── src/index/      the decrypted, folded notes of the open library, in memory
+├── src/folders/    folders, the board, their geometry
+├── src/http/       requests, collections, environments, sends, sockets, scripts, history
 ├── src/spaces/     the spaces feature: model, SQL
 ├── src/attachments/ the attachments feature: model, SQL (the bytes live on disk)
 ├── src/transfer/   import, export and share: bundle rules, the file, the exchange format
 ├── src/tools/      the Outils area: one pure module per group of tools, no lock, no store
-├── src/db.rs       connection, migrations, schema, stored-instant format
+├── src/host.rs     what the core asks of its shell: paths and an event sink
+├── src/db.rs       connection, migrations, schema, stored-instant format, the db queue
 ├── src/error.rs    the three errors and the translation between them
-├── src/desktop.rs  tray and global shortcuts — native glue, not a feature
-├── src/lib.rs      Tauri builder, database setup + command registration
-└── capabilities/   Tauri v2 permission manifests
+└── src/lib.rs      the modules and the `Engine`
+crates/text/        the editing core, egui-free: rope, undo, search, indent, highlighting, Prettier, {{…}} shield
+crates/richtext/    a Note's document: blocks and marks, read from Markdown and written back
+crates/drawing/     a Dessin, egui-free: the stored scene, its geometry, text lines, SVG and pictures
+crates/diagram/     a Note's Mermaid block, drawn in the theme's colours and the app's fonts
+crates/i18n/        the interface's strings (translations/fr.json, en.json), plurals, formats
+crates/platform/    what is asked of the operating system: paths, window, instance, tray,
+                    shortcuts, clipboard, dialogs, notifications, autostart, updater
+crates/ui/          the egui interface: the frame, its state, its screens, its widgets
+crates/app/         the `devnotes` binary (main), its icons (`--example icons`) and packages
+e2e/                the end-to-end driver and its scenarios, on the assembled window
+golden/             outputs of the JavaScript libraries, captured before they left
 ```
 
 ### Feature-first, not layer-first
 
-The back-end is filed by **subject**. `notes.rs`, `spaces.rs`, `folders.rs`, `attachments.rs`
-and `transfer.rs` are the features, and each owns everything about itself: its model, its SQL,
-and the Tauri commands that expose it. Deleting `src/notes/` deletes the feature.
+The core is filed by **subject**. `notes.rs`, `spaces.rs`, `folders.rs`, `attachments.rs`,
+`http.rs`, `tools.rs` and `transfer.rs` are the features, and each owns everything about itself:
+its model, its SQL, and the service functions that expose it. Deleting `src/notes/` deletes the feature.
 
 `changelog.rs` is the smallest of them, and the odd one out: it owns no table and reads no
 database — the repository's `CHANGELOG.md` is baked into the binary by `include_str!` and
-parsed by `changelog/model.rs`. It keeps the convention all the same, the command in the file
-and the rules in the module, which is what lets the parser be tested without a Tauri runtime.
+parsed by `changelog/model.rs`. It keeps the convention all the same, the service function in the file
+and the rules in the module, which is what lets the parser be tested on its own.
 `json.rs` is the other one without a table: it takes a text and answers what the JSON
 visualiser draws — see [The JSON visualiser's model](#the-json-visualisers-model).
 
 `transfer` is the one without a `store.rs`: import and export read and write **whole
 libraries**, so they compose the two other stores rather than owning a table. That is also why
-it is the only feature allowed a `notes::store::all` — a raw note list, which no command ever
-returns to the front (see [Data access](#data-access)). Its rules sit in two modules of its
+it is the only feature allowed a `notes::store::all` — a raw note list, which no service function ever
+returns to the interface (see [Data access](#data-access)). Its rules sit in two modules of its
 own instead: `transfer/bundle.rs` (what travels with an export, how an import merges) and
 `transfer/file.rs` (reading and writing the file, staged then renamed).
 
 Both follow the same three-part convention:
 
-| File                 | Holds                                                                   |
-| -------------------- | ----------------------------------------------------------------------- |
-| `<feature>.rs`       | the `#[tauri::command]` functions — validate, lock, delegate, translate |
-| `<feature>/model.rs` | the types and the business rules, testable without opening a database   |
-| `<feature>/store.rs` | the SQL, and nothing else                                               |
+| File                 | Holds                                                                 |
+| -------------------- | --------------------------------------------------------------------- |
+| `<feature>.rs`       | the service functions — validate, lock, delegate, translate           |
+| `<feature>/model.rs` | the types and the business rules, testable without opening a database |
+| `<feature>/store.rs` | the SQL, and nothing else                                             |
 
 `notes/` carries extra modules, all of them notes-specific vocabulary: `language.rs`
 (the closed `Language` enum and the heuristics that guess one from pasted content),
@@ -114,22 +103,22 @@ What is left at the root is what belongs to no single feature:
 
 | Module           | Holds                                                                                             |
 | ---------------- | ------------------------------------------------------------------------------------------------- |
-| `error.rs`       | `ValidationError`, `StorageError`, and the `AppError` that crosses the bridge                     |
+| `error.rs`       | `ValidationError`, `StorageError`, and the `AppError` a service function answers                  |
 | `db.rs`          | the connection and its `Mutex`, `open`/`open_in_memory`, plus `db::schema` and `db::migration`    |
 | `db::iso8601`    | the stored-instant format — millisecond-exact, because the canvas sorts on a TEXT column          |
-| `desktop.rs`     | tray and global shortcuts, including the `sync_tray` command that feeds the tray its labels       |
+| `host.rs`        | what the core asks of its shell: `Paths` and an `EventSink`                                       |
 | `app_info.rs`    | what the application says about itself, read from `Cargo.toml` at compile time by `build.rs`      |
 | `name.rs`        | what a space and a folder share about their names: trimmed, never blank, unique whatever the case |
 | `closed_enum.rs` | the `closed_enum!` macro: one literal per variant for serde, the column, `Display` and `FromStr`  |
-| `count.rs`       | `saturating_u32`, the one conversion a count takes to cross the bridge                            |
+| `count.rs`       | `saturating_u32`, the one conversion a count takes                                                |
 | `layout.rs`      | the names on disk — a library's directory and the profile beside it                               |
 
-The library plumbing sits at the root too, and follows the features' split: the commands in
+The library plumbing sits at the root too, and follows the features' split: the service functions in
 `vault.rs`, `libraries.rs` and `backup.rs`, the work in a module of each — `vault::gate` (a
 library opened under its key and handed to the `Mutex`), `vault::key` and `vault::file`,
 `libraries::registry` (the registry and the directories it names) and `backup::copies`
 (taking, listing, putting back and rewrapping the copies). `recovery.rs` is small enough to
-hold its two commands and `set_aside` together. `attachments` does the same with
+hold its two functions and `set_aside` together. `attachments` does the same with
 `attachments::files`, the bytes on disk beside their records.
 
 This replaces an earlier split into three technical layers (`commands/ → domain/ ← storage/`),
@@ -137,7 +126,7 @@ which cost three files and three modules per subject and a `check-layers.sh` scr
 hold the direction — for a back-end whose whole job is a CRUD over two entities.
 
 The property that split was really protecting survives on its own: `notes/model.rs`,
-`notes/view.rs`, `notes/language.rs` and `spaces/model.rs` import neither Diesel nor Tauri,
+`notes/view.rs`, `notes/language.rs` and `spaces/model.rs` import no Diesel,
 so their tests run without opening a database — section placement, timezone boundaries, tag
 normalisation, search folding, footer choice and expiry thresholds, in a few milliseconds
 with no fixture setup.
@@ -147,332 +136,153 @@ The features are not fully independent, and that is visible rather than hidden:
 moves notes out before dropping a space, and `folders/store.rs` writes `notes.folder_id`. The Diesel schema therefore stays shared in
 `db/schema.rs` — splitting it per feature would break `allow_tables_to_appear_in_same_query!`.
 
-Serde attributes sit on the model types rather than on a separate DTO family. At this size a
-second set of types and their mapping would cost more than it protects. Each of these types
-also derives `specta::Type`, which is what lets tauri-specta generate the front-end's
-`bindings.ts` from them.
+Serde attributes sit on the model types rather than on a separate DTO family: they shape the
+export bundle and the stored JSON, and at this size a second set of types and their mapping
+would cost more than it protects. The interface takes the same types, in the same process.
 
-## Front-end
+## Interface (egui)
+
+`crates/ui` is the window: the frame, its state, its screens and its widgets. It is the shape of
+the screen, and it calls the core through `ui::api` alone (→ "Backend and events"). Each
+screen keeps the look and the behaviour of its Angular twin at the `angular-reference` tag
+(plan § 5); the subsections below describe that behaviour, and name the egui module that draws
+it.
 
 ### Where a file goes
 
-⚠️ **"Library" means one thing on each side.** On the front it is the registry of libraries
-(`LibrariesStore`, the File menu's dialog); in Rust it is the open database and its key
-(`db::Library`). Moving notes in and out of a file is `TransferStore`, and the phrase such a
-file may ask for is `PassphrasePromptStore`. The private helper that fills the connection
-`Mutex` is `vault::gate::install`, so a search for `open_library` finds the command alone — the
-one that points the registry elsewhere and empties that `Mutex`.
+> **A folder's path is its place on screen** (plan § 3.2). What draws sits where it is drawn;
+> what has no place on screen sits apart, filed by subject.
 
-> **A folder's path is its address in the interface** — for everything that has one. A
-> component lives in the folder of its parent on screen; one with two parents rises to their
-> nearest common ancestor. What has no place on screen lives in `core/`: the model, the data
-> access, the stores, the IPC, and one folder per cross-cutting subject under `services/`.
+| Question                                                                              | Answer                                                                    |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Where is it drawn?                                                                    | `notes/`, `http/`, `tools/`, `titlebar/`, `banners/`, `gate/`, `palette/` |
+| Inside the notes area: beside, above, among, over the cards?                          | `notes/sidebar/`, `notes/header/`, `notes/canvas/`, `notes/overlays/`     |
+| What a screen remembers between frames?                                               | `state/<subject>.rs`                                                      |
+| Something with no place on screen (preferences, time, notifiers, shortcuts, updates)? | `services/<subject>.rs`                                                   |
+| A call to the core?                                                                   | `api/<feature>.rs`, the only files that name `engine`                     |
+| A control two areas draw?                                                             | `widgets/`, which reads the theme and no state                            |
+| A colour, a gap, a duration, a font, an icon?                                         | `theme/`                                                                  |
 
-The tree used to answer a question nobody asks. Every path said what _technical kind_ a file
-was — `state/`, `data/`, `ui/`, `layout/` — which you know before you open the tree. What you
-do not know, and what you are actually looking for, is **where the thing is on screen**: you
-see a button, you want the code behind it. `titlebar/about-menu/whats-new-dialog/` says
-exactly where to click. Walking down the tree is walking down the screen.
+`backend.rs` owns the engine and the queues, `keys.rs` the keyboard's order, `action.rs` the
+actions a frame applies, `inputs.rs` what arrives from outside the frame (the core's events, a
+second launch, the tray, a global shortcut). A screen that grows is cut into named drawing
+functions, not into layers; a helper, a trait or a generic waits for its second real use
+(`CLAUDE.md`).
 
-**But a store is not a component.** A `providedIn: 'root'` singleton has no place on screen —
-it has consumers, and `SpacesStore`, `NoteSelectionStore` and `TransferStore` are read by the
-File menu in the titlebar as much as by the canvas. Filing one under a consumer would claim a
-containment that does not exist. The same holds for the model and the repositories: there is
-**one application and one domain**, so its vocabulary sits at the top rather than inside the
-single screen that happens to show it. `core/model/`, `core/data/` and `core/state/` are one
-flat folder each, and `notes/` holds the interface alone.
-
-⚠️ The cost is explicit and was accepted: deleting `notes/` no longer deletes the feature — the
-vocabulary, the repositories and the stores stay behind in `core/`. `core/` is therefore no
-longer "what a second tool would inject verbatim"; it is "what has no place on screen".
-
-Membership is decidable, not a matter of taste:
-
-| Question                                    | Answer                                       |
-| ------------------------------------------- | -------------------------------------------- |
-| Where does this component appear on screen? | in the folder of the component that shows it |
-| Two or more parents show it?                | their nearest common ancestor                |
-| Is it a model, a repository or a store?     | `core/model/`, `core/data/`, `core/state/`   |
-| Is it a cross-cutting service?              | `core/services/<subject>/`                   |
-| Does it cross two areas of the screen?      | `shared/`                                    |
-
-**`notes/ui/` holds what several zones draw**: the code viewer, the copy button, the language
-badge, the `{{field}}` rows and the tag pill. They are the common ancestor rule applied to
-`notes/` itself — shown by more than one zone, so they rise to the zones' parent — and they sit
-in one folder rather than loose at the root beside the page.
-
-**What has no place on screen is filed by subject, even when a store uses it.**
-`core/state/` holds the stores and nothing else; `NoteCopyService` is under
-`core/services/clipboard/`, `SampleNotesService` under `core/services/samples/`, and the boot
-sequence is `startApplication()` in `core/services/startup/`, with a spec that holds its order
-— `app.config.ts` is configuration. The canvas keyboard (`CanvasKeyboardDirective`) is the
-page's host directive and lives beside the page in `notes/`: it injects nine stores, and
-`shared/` injects nothing.
-
-**The other way round, a store or a model that belongs to one subject stays with it.**
-`SettingsStore`, `HelpStore`, `UpdateStore` and `ShortcutBindingsStore`, with their models, sit
-in their `core/services/<subject>/` folder beside the service they drive; `core/state/` and
-`core/model/` hold the notes' domain. Helpers with no subject at all — equality, ordering, the
-local day, grid navigation — are `core/utils/`.
-
-**The zones come from the template, not from taste.** `notes/` used to hold eleven entries
-that mixed screen zones with invented categories — `tag-rail` sat outside `topbar/` while
-`search-box` sat inside, `image-lightbox` outside `overlays/` while the palette sat inside, and
-nothing said why. The page's template has four zones: what sits beside the canvas, what sits
-above it, the canvas, and what is drawn over the page. `sidebar/`, `header/`, `canvas/` and
-`overlays/` are those four, so finding a component is one question with four answers — left of
-the notes, above them, among them, or over them.
-
-**Each zone has a container, and the page is their layout.** `notes-sidebar`, `notes-header`,
-`notes-canvas` and `notes-overlays` sit at the root of their zone and inject what that zone
-draws; each host is `display: contents`, so the flex layout of `.page` and `.workspace` is
-exactly what it was when the four were one template. The page keeps what belongs to no zone —
-the actions the native side asks for, the first-launch seeding and the canvas keyboard — and
-injects five things for it. State that crosses two zones goes to a store rather than up to the
-page: the band drawn on the board waits for its name in `BoardStore.pendingZone`, where the
-canvas proposes it and an overlay names it.
-
-Two consequences worth stating. **Rendering something is not owning it:** the preferences
-panel hosts the variables page through `NgComponentOutlet`, and the shortcuts sheet imports
-the notes' key groups — neither moves those files into `titlebar/`, because the notes own
-them. And **deletion became local**: the trash is one folder, where it used to be a panel in
-`ui/` and a store adrift among twenty-four others in `state/`.
-
-There is **one** exception, and it is deliberate: `DialogComponent` (`shared/layout/dialog/`)
-injects `DialogStack`, its own neighbour in the same folder. What the rule forbids is a shared
-component knowing a feature or an application store; a modal has to know which modal is in
-front, and that knowledge cannot be handed down an `input()` from twelve callers.
-
-### Imports
-
-**One alias per area of the screen**: `@notes/*`, `@tools/*`, `@http/*`, `@titlebar/*`, `@banners/*`, plus
-`@core/*`, `@shared/*`, `@testing/*`, and `@app/*` for what two areas draw and sits at the root
-(declared in `tsconfig.json`, and nowhere else). An import says
-which part of the interface it reaches into before it says which file.
-
-The linter holds three conventions that used to be kept by taste: two `../` are refused
-everywhere, **one** is refused inside `core/` (a neighbour folder there is `@core/…` too),
-and a module is imported once per file (`no-duplicate-imports`). A class lists its fields,
-then its constructor, then its methods (`@typescript-eslint/member-ordering`) — a field
-holding a function counts as a method, as the rule sees it. Field initialisers run in
-declaration order whatever the constructor's position, so moving one above another it reads
-is the only way to break a class by reordering it.
-
-The rule is **relative when a single `../` reaches the target, alias otherwise** — so
-`notes/canvas/note-section/` reads `../note-card/note-card.component`, while
-`notes/canvas/note-card/` reaches the model through `@core/model/note.model`, and inside `core/`
-even a neighbour folder is `@core/…`. There is
-no `../../` anywhere in `src/`, and since this reorganisation that is **enforced**:
-`no-restricted-imports` in `eslint.config.mjs` refuses the pattern. The aliases are what make
-it possible — the tree is four levels deep in places, and without them a card reaching the
-model would write `../../../`.
-
-**No `index.ts` barrels.** Three reasons, in order of weight: a barrel at `notes/index.ts`
-would pull `data/`, `state/` and every component into the lazy chunk _while hiding that it
-does_ — the one import of `NotesPageComponent`, deferred by `AppComponent`, is what keeps the
-chunk honest; barrels re-close
-import cycles by construction, and this codebase has one deliberate cycle broken by hand
-(`core/ipc` ↔ `core/data`, see below); and with six aliases the
-import lines are already short. The tree has zero barrels — keep it that way.
-
-The app bootstraps standalone components (`src/main.ts` → `bootstrapApplication`); there
-are no NgModules. Change detection is **zoneless** (`provideZonelessChangeDetection()`).
-State lives in signals and every component is `OnPush` — enforced by the
-`prefer-on-push-component-change-detection` lint rule, not by convention alone.
+⚠️ **"Library" means two things.** In the interface it is the registry of libraries (the File
+menu's dialog, `state::libraries`); in the core it is the open database and its key
+(`db::Library`). Moving notes in and out of a file is `state::transfer`.
 
 ### No router
 
-`AppComponent` _is_ the persistent chrome — titlebar, global error banner, status toast and
-update prompt — around the areas: the notes page, which it loads with `@defer (on immediate)`,
-and the tools page, deferred until it is first shown. There is no router: its only job would be
-a lazy `loadComponent` per area, 67 kB of the initial chunk to do what `@defer` does. Nothing
-else a router offers has a use in a desktop window — no link to share, no deep URL to reload.
-[#23](https://github.com/vmillet-dev/devnotes-rs/issues/23) had settled that there would be no
-second tool; the tools of v0.9.0 reversed that, and the answer stayed state.
+The areas, the list view and the board are **state**, not routes: there is no URL in a window.
+The area is an application preference (`devnotes.area`), so the window reopens on it; the list
+view or board is remembered per space (`state::board`). Every area's state lives in `AppState`
+whether the area is drawn or not, so an area left keeps its scroll, its focus and its drafts,
+and a native action (capture, new note, the palette) brings the notes back before it opens
+anything. **One key per area**, `Ctrl+1/2/3`, read by physical key (`keys::APPLICATION`; on
+AZERTY the digit row types `&é"`). The switch heads each area's rail and comes to the title bar
+while the rail is put away (`titlebar::area_switch`).
 
-⚠️ **The areas, the list view and the board are state, not routes.** The area is an
-application preference (`AreaStore.current`, `devnotes.area`), a state the window is in like
-the rail, so the window reopens on it. The list view or board switch is remembered per space and
-falls back on "all spaces" and inside a folder (`BoardStore.mode`, `isShowing`). A URL would be
-a second source of truth to keep in step, and history a trap — a mouse's back button would
-switch views. The board has a `@defer` of its own instead.
+### Drawing, state and actions
 
-⚠️ **The notes page is created once and hidden behind another area, never destroyed.** Its
-scroll, its focus and the native side's actions — capture, new note, the palette — need it
-alive. So its document listeners (`CanvasKeyboardDirective`, the search box's Ctrl+K) ask
-`AreaStore` first, and a native action brings the notes back before it opens anything. The
-tools page is created when shown and dropped when left: what a tool holds lives outside it.
+A screen's drawing reads its **state** (`&…State`) and may change its **view** (`&mut …View`:
+text being typed, editor buffers, open menus, scroll, gestures); everything else it wants done
+is an `Action` it pushes, applied by `AppState::apply` at the end of the frame (D13). Data flows
+down as arguments, so a screen is tested with a literal; an action goes straight to the state
+that owns it rather than up through its parents. `widgets/` is the exception that pushes nothing
+and reads no state: it is the kit (→ "The widget kit").
 
-**One key per area**, Ctrl and its rank, read from `KeyboardEvent.code` — on AZERTY the digit
-row types `&é"` — and bound by `AreaKeysDirective` on `AppComponent`, whose listener runs
-before the notes' own and never behind a modal. The switch (`shared/controls/area-switch/`)
-heads each area's rail, and comes to the **titlebar** while the library rail is hidden — not to
-the notes' topbar, which has no width left at the shipped 1100px.
+A card cannot decide what its own click means — ticking, extending a range or opening depends on
+the visible list — so it answers what was pressed and the canvas decides.
 
-⚠️ The defer sits **outside** the `@if` on the vault: the page's chunk loads from the first
-render, behind the gate, and unlocking never waits for it — while the page itself is still
-not created until the library is open.
+**Menus, dialogs and their stacking** are one implementation each, in `widgets/`: `menu` (focus on
+the first entry, arrows, sub-menus, Escape) and `DialogStack`, whose rungs are the reference's
+`dialog.model.ts` in back-to-front order — the index is both the drawing order and the order
+Escape follows. A dialog opened by another one (the fields form, from the palette) is drawn in
+front of it whatever the order they opened in. The two banners are drawn under the title bar,
+outside the stack, so a modal never covers them.
 
-### Component contracts
+### The editing core
 
-Components communicate through signal inputs (`input()` / `input.required()`), `model()` where
-a value is genuinely two-way (the search field), and `output()` emitters.
+`crates/text` is under every editor that is not a one-line field (plan § 3.8), and knows no egui:
 
-**Where the line sits between an input and an injected store:** data still flows **down** as
-inputs — a component is driven by its parent and stays testable with a literal — but an
-**action goes straight to the store** rather than bubbling up to be forwarded. That is why
-`NoteEditorOverlayComponent` takes `[note]` as an input and injects `AttachmentsStore` and
-`PlaceholderFillStore`: attachments and `{{field}}` filling have a write cycle of their own,
-and routing them through the page cost seventeen bindings and made adding one a four-file
-change. What stays an output is what the **page** has to arbitrate: closing the overlay, a
-patch (only `NotesStore` knows whether the note exists yet), a deletion.
+- **`Buffer`** — the text, a rope (`ropey`), and its selection. Every edit goes through
+  `Buffer::replace`, which records it for undo and says from which line the text changed: what
+  the highlighter and the layout throw away starts there. Offsets are `char`s, everywhere in the
+  crate; the caret moves by grapheme, word and line.
+- **`history`** — undo and redo by steps: one keystroke, one paste, one indent, one « replace
+  all ». Typing joins the step before it while it goes on where it left off, so one undo takes
+  back a word typed, not a letter.
+- **`indent`** (Tab, Shift+Tab, a whole text swapped as one edit), **`search`** (a text or an
+  expression, case, whole words), **`diff`** (which lines a format or a revision changed),
+  **`words`** (a Note's words as it reads), **`shield`** (every `{{…}}` kept from a formatter's
+  reach), **`highlight`** and **`format`** (→ the two subsections below).
 
-**`shared/` is the exception that injects nothing at all** — it is a presentation kit, and
-a component there takes everything through `input()`. `CodeViewerComponent` knows nothing
-about notes. Components specific to the notes live under their own `ui/` folder, and are free
-to reach for the feature's stores.
+`crates/richtext` is the same for a Note: its document, blocks and marks, read from Markdown and
+written back, its edits and its undo (→ "A Note is written formatted, and stored as Markdown").
+The widgets that draw them, `widgets::editor` and `widgets::rich`, are `ui`'s: what a field or a
+heading **is** stays the core's, handed to them as ranges (D10).
 
-Components never reach into each other imperatively. A keyboard shortcut belongs to the
-component that owns the affected element: `Ctrl/⌘+K` is handled inside `SearchBoxComponent`,
-which also renders the hint, rather than travelling down a chain of `viewChild` calls.
+### Rendering and virtualisation
 
-A component that only relays inputs and outputs is not a component. The zone containers pass
-that test — each injects the stores its zone draws and decides every binding — where the
-topbar and canvas wrappers before them only forwarded what the page handed down. The same rule
-applied to `NoteSectionComponent`, which used to forward
-eleven bindings to the card without reading one of them: the section now takes `[section]`,
-the card takes `[note]` and reads selection, focus and ticks off the stores, and the whole
-binding list is
+egui draws the whole window every frame it repaints, so what a frame costs is what is on screen,
+never what is stored (plan § 3.6):
 
-```html
-<app-note-section [section]="section" (noteActivated)="onNoteActivated($event)" />
-```
+- **Anything that can run to thousands of rows is virtualised**: `widgets::list` (uniform rows,
+  only those in the viewport drawn), the canvas (`notes::canvas::rows`: the view flattened into
+  rows of one height — a heading, then a row of cards — since cards are a fixed height in an
+  auto-filled grid), the code (`widgets::editor`, only the lines on screen laid out), the HTTP
+  history, console and socket log, the runner's results, the diffs. 30 000 rows draw fewer than
+  twenty.
+- **What is costly to lay out is kept**: a `LayoutJob` in egui's galley cache, a card's
+  highlighted lines in its frame cache, a Mermaid drawing or a Dessin's picture as a texture in
+  `LibraryCaches` (bounded, emptied with the library scope, D17).
+- **Nothing costly runs in the frame**: highlighting a long text, formatting, a diagram, a
+  picture, a Calcul sheet and a JSON document are computed on `compute` or a thread of their own,
+  and the frame draws the last answer meanwhile.
+- **The window repaints when something changed**, not continuously: an answer wakes it (the
+  `Waker`), a relative time asks for the instant its label changes (`request_repaint_after`), an
+  animation for its own frames; at rest the window costs nothing.
 
-`noteActivated` stays an output because **the card cannot decide what its own click means**:
-ticking, extending a range or opening depends on the visible list, which is the canvas's.
+### The keyboard
 
-### Shared behaviour lives in one place, not in copies
-
-Three menus (space switcher, card actions, about) share their interaction rules through
-directives in `shared/directives/`, applied with `hostDirectives` so no wrapper element is needed:
-
-| Directive                | Selector                                  | Owns                                                                                      |
-| ------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `MenuTriggerDirective`   | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click (while open), Escape, focus returned to `[appMenuAnchor]`       |
-| `MenuPanelDirective`     | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]`         |
-| `FloatingPanelDirective` | `[appFloatingPanel]`                      | the panel in the top layer, placed from its anchor, above it when the room under is short |
-
-Four details are load-bearing:
-
-- `MenuPanelDirective` walks `[appMenuItem]` rather than every button, because a menu may
-  carry a secondary action deliberately outside the arrow cycle — the `⋯` that opens a
-  space's edit panel is reachable by Tab, not by arrows.
-- ⚠️ `MenuTriggerDirective` listens to `document` **only while open**, from an effect. A host
-  `(document:click)` ran on every card, and Angular marks a listener's view dirty before calling
-  it: any click re-rendered every card — 1001 translation-pipe runs for 200 cards.
-- `MenuTriggerDirective` **closes on Escape by default**, and a host that needs more hands it
-  a handler with `handleEscape()` — the switchers first collapse their create/edit panel and
-  only close on the second press. One handler, so nothing depends on listener order.
-- ⚠️ A choice menu's panel is **not drawn under its trigger in the flow**: the request editor
-  scrolls, and a panel `position: absolute` inside it was cut at its bottom edge, leaving one
-  entry of five in view. `FloatingPanelDirective` makes it a `popover="manual"` — the top
-  layer, which no `overflow` and no transformed ancestor reaches — and places it from the
-  anchor's rectangle. It shows the popover in the `write` phase of `afterNextRender`, ahead of
-  `MenuPanelDirective`'s focus: a panel still `display: none` refuses it. A scroll of what holds
-  the anchor, or a resize, closes the menu. ⚠️ The same for a panel whose host is a stacking
-  context — `position: sticky`, a `transform`, a `filter`: its `z-index` only counts inside it,
-  and what is positioned after the host is painted over the panel. « + Nouvelle requête » is
-  sticky at the end of the HTTP tabs, and the URL field covered its menu until it floated too.
-
-Putting the click listener in a directive also removes the `click-events-have-key-events`
-suppressions the three modal templates used to carry: the keyboard equivalent exists, it is
-Escape, and the template no longer declares a bare `(click)` for the linter to flag.
-
-#### The modal frame
-
-The twelve modals do **not** each carry a frame. `DialogComponent` (`shared/layout/dialog/`) owns
-the scrim, the panel, `role="dialog"`, `aria-modal`, the focus trap, Escape and the backdrop
-click; a dialog projects its content into it and says which rung it sits on:
-
-```html
-<app-dialog [layer]="'app'" labelledBy="about-dialog-title" (closed)="closed.emit()">
-  …the panel's content…
-</app-dialog>
-```
-
-| Input                  | Decides                                                                           |
-| ---------------------- | --------------------------------------------------------------------------------- |
-| `layer` (required)     | the rung: `editor`, `app`, `settings`, `update`, `palette`, `fields`, `zoom`      |
-| `variant`              | `fitted` (height follows the content), `framed` (fixed, scrolling middle), `bare` |
-| `fullscreen`           | fills the window under the titlebar — the editor's toggle                         |
-| `dismissible`          | `false` refuses Escape and the backdrop click (an update being installed)         |
-| `labelledBy` / `label` | what names it to assistive technology                                             |
-
-What a shell cannot guess — how wide the panel is, the gap between its blocks, its padding,
-where it sits on the scrim — comes from CSS custom properties the consumer sets on the
-`app-dialog` element from its own stylesheet: `--dialog-width`, `--dialog-height`,
-`--dialog-gap`, `--dialog-padding`, `--dialog-align`, `--dialog-offset`, `--dialog-scrim`.
-
-**No measurement travels through an `input()`**, and none is spelled in a template. The
-clamps stay in `dialog.component.scss` — `min(var(--dialog-width, 480px), 90vw)` on both
-surfaced variants, `min(var(--dialog-height, 560px), 86vh)` on `framed` alone, and
-`fullscreen` last so it wins over either. `bare` is deliberately left unsized: it is
-whatever it shows, an image the panel only bounds.
-
-**The stacking order is a list, not a set of magic numbers.** `dialog.model.ts` holds
-`LAYERS` in back-to-front order, and its index _is_ both the `z-index` and the priority
-Escape follows. No stylesheet carries a modal `z-index` any more, and adding a rung is one
-entry in that array.
-
-⚠️ **A full-screen editor leaves the titlebar in reach**, so what the titlebar opens lands
-over the editor: `titlebar` — no dialog, the rung its two menus take — and then `app`, the
-About menu's four help panels. The price is the other way in: a global shortcut or the palette opening the
-editor while a help panel is up would draw the note behind it, so the editor puts every panel
-away each time it opens (`HelpStore.close`, on its `session`), and `HelpStore` holds which
-panel is up for that reason.
-⚠️ An open menu stops the Escape it handles, or the editor behind it closed on the same key.
-
-`DialogStack` is what makes Escape reach **one** dialog. Every open modal listens on
-`document`, so without it they all answer the same keystroke — which used to be patched case
-by case (the editor checked whether the lightbox was open; the "About" menu's four panels
-shared one signal so two could never stack). The stack orders by rung and not by arrival,
-because a dialog opened _by_ another one — the fields form, from the palette — is created
-second but drawn in front. It also answers `hasOpenDialog()`, which is how the notes page
-knows to keep its hands off the keyboard: the page used to name its five modals one by one and
-could not see the ones the titlebar opens at all.
-
-**80 is reserved for the two banners** in `banners/` — `StatusToastComponent` and
-`ErrorBannerComponent`. They sit in the flow under the titlebar, so without it a modal's fixed,
-blurred backdrop covers them; and it is precisely from a modal that they get raised ("copied
-with your field values" from the editor, "could not save the note" while editing). A new rung
-therefore goes **below** that line, never above it.
+**One order** (D14, `ui::keys`, → "A frame, its actions and its keys"): an input method composing
+keeps every key; the focused widget consumes what it handles; then `keys::dispatch` reads what is
+left by level — the top modal, the area on screen, the application — and the first that knows the
+key takes it. Bindings are **tables**, one per level (`keys::APPLICATION`, the canvas's
+`notes::canvas::shortcuts`…), from which the shortcut sheet is drawn, so a key cannot be bound and left
+undocumented. A key is read **by position** (a W3C `code`, so `Ctrl+1` is the same key on AZERTY)
+or **by character**; global shortcuts are stored by `code` too (→ "Shortcuts: two vocabularies,
+two storage paths"). While a text field has the focus only the entries marked `while_typing` are
+read. Every drag has its keyboard twin.
 
 ### Syntax highlighting
 
-`CodeViewerComponent` renders read-only coloured code — a card excerpt, or the filled preview;
-the editor's code field is CodeMirror, coloured in the same palette (see "Editing a note"). It
-delegates to `shared/code-viewer/highlighter.ts`, the **only** module
-that imports highlight.js.
+Every coloured code — a card excerpt, the editor, a Note's code block, an HTTP answer, generated
+code — is coloured by **one grammar per language**: TextMate grammars run by `syntect`, the set
+`bat` maintains (`two-face`), regular expressions by `onig` (D22, ADR S5), plus a Prisma grammar
+of ours (`crates/text/syntaxes/`). `text::highlight` answers a line's stretches as the
+reference's classes (`Token`: keyword, string, literal, name, property, meta, comment…), and
+`ui::services::highlight::colour` gives each its colour from the theme — the reference's
+`_code-theme.scss`, one for one.
 
-- **Grammars are imported one by one** from `highlight.js/lib/`, never the default bundle,
-  which carries close to 200 languages. `GRAMMARS` maps a `LanguageTag` onto the grammar that
-  describes it; five do not share a name (`toml` is `ini`, `html` is `xml`, `yml` is `yaml`,
-  `rs` is `rust`, `cs` is `csharp`), and `txt` deliberately has none — free text has nothing
-  to colour, so it is only escaped. The discipline is what keeps the cost legible: the six
-  compiled languages added in v0.1.4 weigh 5.9 kB over the wire, all of it in the lazy
-  notes-page chunk, which is where the viewer already lived.
-- **Adding a language is five edits and no migration.** A variant in `closed_enum!`
-  (`notes/language.rs`), a grammar in `GRAMMARS`, a label in `LANGUAGE_LABELS`, a
-  `.lang-*` rule in `language-badge.component.scss`, and `npm run bindings`. The column
-  stores the literal and carries no `CHECK`, so nothing on disk changes. Three
-  `Record<LanguageTag, …>` tables — the grammars, the labels and the highlighter spec's
-  samples — are exhaustive by type, so a variant added in Rust stops the front end compiling
-  until each has an answer for it. ⚠️ The badge rule is the one edit **no type can catch**: a
-  format with no `.lang-*` is valid CSS and simply draws bare text, which is how six of the
-  nineteen ended up with no badge at all. `scripts/language-hues.test.mjs` is what catches it
-  now, by reading the enum and the stylesheet off disk. A detection heuristic in
-  `language::from_content` is optional, and it is **weights** now rather than an order —
-  see below.
+- **Which grammar a language takes is one table**, `ui::notes::language::syntax`, an exhaustive
+  `match` on the core's `Language`: a variant added in `closed_enum!` does not compile until it
+  has a grammar or `None` (plain text alone has none). Beside it in the same file: the label, the
+  name, the hue of the badge, the line-comment marker, the Prettier parser and the indent unit.
+  Adding a language is the variant and those arms — no migration: the column stores the literal
+  and carries no `CHECK`.
+- **The grammars load on a thread at startup** (`text::highlight::warm`, a few hundred ms); until
+  then nothing is coloured, and the interface never waits for them.
+- **Never in the frame.** A card's few lines are coloured at once and kept in egui's frame cache
+  while drawn; a long text is coloured by windows on a thread of its own, which keeps the
+  parser's state every `EVERY` (128) lines so an edit throws away only what follows it — a line
+  not reached yet is drawn plain meanwhile. 1 MB of TypeScript shows its first screen in ~25 ms
+  and is coloured whole in ~2 s, off the frame (`cargo test -p text --release budget -- --ignored`).
+- **A line is a line.** A stretch that spans lines (a block comment, a string) is cut at each
+  line break, so a viewer's gutter and an editor's row draw one line each, nothing left open.
+- The code is never interpreted: colouring only reads it.
 
 **Detection scores, and can say it does not know.** `from_content` guessed by _first match
 wins_, down a hand-ordered chain of `if`s, and the order **was** the priority: a Rust
@@ -503,195 +313,175 @@ opening on `&` is a signature, and a stylesheet with none of them is CSS. GraphQ
 `type User {` is TypeScript's shape too, so a definition is weak and a non-null type
 (`ID!`, `[String!]!`), which TypeScript never writes after a name, is what outweighs it.
 
-⚠️ **`src-tauri/tests/corpus/` is what says whether this is better rather than differently
+**Most languages are chosen, not guessed.** Of the 142, detection answers 76 (`detectable`):
+the first 26, and the 50 others that write something nothing else does — a Dockerfile's `FROM`
+with its instructions, Terraform's `resource "…" "…" {`, `syntax = "proto3"`, nginx's
+`proxy_pass`, a diff's hunk. The rest are only ever picked from the menu. ⚠️ **A language
+added since is guessed on a signature or not at all** (`signed`): what else it writes only
+adds to the signature, so none of them can tie an older language on a shared marker and turn
+its answer into `txt` — `return ` scored Cypher three without one, and every Python function
+came back as prose. A language that is another one plus something (TSX over TypeScript,
+Cython over Python, JSON-LD over JSON, a Vue or Angular template over its HTML) adds to the
+other's score, so it always outscores it once its own sign is there. A shebang names its
+interpreter (`python3`, `node`, `perl`…), any other being a shell as before.
+
+⚠️ **`crates/engine/tests/corpus/` is what says whether this is better rather than differently
 wrong.** One file per case, named `<language>[-<variant>].txt`, read from disk and asserted
-in bulk — adding a case is adding a file. It earned its keep immediately: CSS's "a selector
-and a declaration" scored a signature on `export interface Note {` with `id: string;` inside
-it, **and** on PHP's `foreach (…) {` with an `echo …;` inside it, so both tied at six and
-came back as prose. That shape is strong evidence now, not proof; a unit or a custom property
-is what makes it a stylesheet.
-
-⚠️ The languages still absent — C++, Kotlin, Swift, Ruby, Dockerfile, PowerShell and the
-rest — were deliberately **not** added in the same pass. Each is five edits of its own, and
-the whole point of the change is that adding one is no longer a slot to find by hand.
-
-- **`ignoreIllegals` is on.** A note is free text, often a fragment that does not parse end to
-  end; without it a truncated JSON snippet would throw instead of rendering.
-- **Output is re-split into lines** by `splitHighlightedLines`. highlight.js colours the whole
-  block — that is exactly what lets it handle a comment or string spanning several lines — but
-  the viewer renders one element per line for its gutter. A plain `split('\n')` would cut
-  through `<span>`s straddling a line break, so the splitter tracks the open tag stack, closes
-  it at end of line and reopens it on the next.
-- **The theme is global**, in `src/styles/_code-theme.scss`. The coloured HTML arrives through
-  `[innerHTML]`, and Angular does not stamp `_ngcontent-*` on DOM created that way: a
-  `.hljs-keyword` rule written in `code-viewer.component.scss` would be rewritten into
-  `.hljs-keyword[_ngcontent-xxx]` and never match. No highlight.js stylesheet is imported —
-  they hard-code hex values, where the rest of the app only reads theme variables.
-- **The markup is never trusted.** highlight.js escapes the source text and the result still
-  goes through Angular's sanitizer; nothing calls `bypassSecurityTrust*`, and nothing should —
-  the content is typed by the user.
-- Two inputs let a card reuse it: `showLineNumbers` (a gutter on a three-line excerpt is
-  noise) and `compact` (no padding, no scroll, no font size of its own — the card decides).
-  A third, `markedLines`, is the editor's: the lines a format just changed.
+in bulk — adding a case is adding a file. Every detectable language has one, and each language
+added since has a `txt-weak-<tag>.txt` holding only what it shares with others, which must
+stay plain text (or what the older language makes of it: `html-weak-jsx.txt`). It earned its
+keep immediately: CSS's "a selector and a declaration" scored a signature on
+`export interface Note {` with `id: string;` inside it, **and** on PHP's `foreach (…) {` with
+an `echo …;` inside it, so both tied at six and came back as prose. That shape is strong
+evidence now, not proof; a unit or a custom property is what makes it a stylesheet.
 
 ### Formatting a snippet with Prettier
 
-"Formater" (Shift+Alt+F) runs Prettier 3 on the editor's draft, **in the front**: the exception
-sits beside highlighting, for the same reason — the text is the unsaved draft — and because
-Prettier is JavaScript. `core/services/format/` holds all of it.
+"Formater" (Shift+Alt+F) runs Prettier itself — 3.9.10, as `package.json` pins it — on the
+editor's draft, **in QuickJS** (plan D1, ADR S8): the output is the reference's, byte for byte,
+on the whole `golden/format` corpus. `text::format` holds all of it; the editor asks through
+`FormattingState`, on `compute`.
 
-- **A worker, started by the first format and kept.** `PrettierWorker` builds it from
-  `prettier.worker.ts` (the Angular builder bundles a `new Worker(new URL(…))`); the worker
-  loads each language's plugins by `import()`, one chunk each (`prettier-plugins.ts`). Nothing
-  of Prettier is in the initial bundle: the worker is 25 kB over the wire, TypeScript's plugin
-  the heaviest at 166 kB, and each is fetched by the first format that needs it. The spike's
-  numbers (#458): a first format of 2,000 lines of TypeScript takes 158 ms on a developer
-  machine, 915 ms on the CI's WebKitGTK.
-- ⚠️ **The worker has no CSP.** Tauri puts `Content-Security-Policy` on the HTML only, and a
-  dedicated worker takes its policy from its own response: `new Function` succeeds inside it,
-  on both engines. Prettier never evaluates, so this costs nothing today — but the worker must
-  only ever be handed text to format (`FormatRequest`), never code to run.
-- **What runs is `prettier-runner.ts`**, apart from the worker's message glue, so its spec
-  drives the real Prettier and its real plugins. It answers `formatted` (the text, the caret,
-  the changed lines), `unchanged`, `syntax` (Prettier's one-based line and column), `fields`
-  or `failed` — never a throw.
-- **Every `{{…}}` is shielded** (`field-shield.ts`): read as code, `{{db_host}}` is two nested
+- **One host, started by the first format and kept** (`text::format::host`): a thread of its
+  own with one QuickJS runtime — a runtime is not shared between threads — in which
+  `standalone.js` and nine plugins are evaluated once. `npm run prettier` copies them into
+  `crates/text/prettier/` after a bump; they are compiled in (2.4 MB). A host that cannot start
+  answers every format `Failed`.
+- **Only text crosses**: the draft, the caret and Prettier's options, never code. The answer is
+  `Formatted` (the text, the caret, the changed lines), `Unchanged`, `Syntax` (Prettier's
+  one-based line and column), `Fields` or `Failed` — never a panic. Prettier counts the caret in
+  UTF-16 units, the editor in `char`s: converted on the way in and out.
+- **Every `{{…}}` is shielded** (`text::shield`): read as code, `{{db_host}}` is two nested
   blocks in JavaScript and a flow mapping in YAML. Each becomes an identifier of its own
   length, made of a two-letter marker absent from the text, and comes back in order afterwards.
-  One missing, copied or moved past another and the answer is `fields`: nothing is applied. A
-  field or not — Angular's `{{ user.name }}` is shielded too.
+  One missing, copied or moved past another and the answer is `Fields`: nothing is applied.
 - **The snippet keeps its own shape:** `endOfLine: 'auto'` (Prettier's `lf` would rewrite a
   CRLF snippet), and no final newline added where there was none.
-- **Through the editor's own history**: `rewrite` turns the answer into one edit of only what
-  differs, one CodeMirror transaction kept apart from the typing either side (`isolateHistory`),
-  so Ctrl+Z undoes a format in one step and the notice's "Annuler" is the same undo. An answer
-  about a text typed over meanwhile is dropped.
-- **The style is the library's** (`PrettierSettingsStore`, under `devnotes.notes.prettier`),
-  set from the button's chevron and applied as it is chosen, like the arrangement: every
-  snippet of a library formats alike. Its indentation is by default "Éditeur", the Tab key's
-  own level (`indentUnit`), so the two agree until the panel forces 2, 4 or Tab.
-- **Formatting on save** (off by default) runs on the body's blur and on close, through the
-  same service; its text comes back into the editor as a change from outside, still one step
-  of its history. Only a body that changed is formatted, a text Prettier refuses is saved as it is, and a
-  close waits for the answer only then: with the option off, nothing waits.
-- The button is `aria-disabled` rather than `disabled` on a language Prettier does not format:
-  a disabled button shows no tooltip, and this one says why.
+- **Through the editor's own history**: `Editor::replace_all` is one step, so Ctrl+Z undoes a
+  format and the notice's "Annuler" is the same step (`Editor::undo`). The lines it changed are
+  marked in the gutter until the next keystroke. An answer about a text typed over meanwhile is
+  dropped.
+- **The style is the library's** (`notes::prettier`, under `devnotes.notes.prettier`, read as
+  the reference wrote it), set from the button's chevron and applied as it is chosen. Its
+  indentation is by default "Éditeur", the Tab key's own level (`language::indent_unit`).
+- **Formatting on save** (off by default): a snippet's body that changed is held back from the
+  save and written once formatted — or as typed if Prettier refuses it — so the revisions keep
+  one body, not two. Written after the editor closed, it goes by id; still open, the field
+  follows unless it was typed into since. A draft never written is saved as it is.
+- The button stays drawn, disabled, on a language Prettier does not read
+  (`language::formatter`), its tooltip naming the language.
 
 ### Exploring a JSON snippet
 
 A snippet whose language Rust has a reader for — JSON, YAML, TOML, XML (not HTML) — has a band of its own: **Code /
-Graphe / Arbre**, and « YAML valide » or where the draft stops parsing. The model is Rust's —
-see [The JSON visualiser's model](#the-json-visualisers-model); the front draws it. Which
-languages have a reader is one table, `explorableFormat` in `core/model/json.model.ts`; the
-explorer takes the format as an input for its messages, and nothing else in it is per format.
+Graphe / Arbre**, « Côte à côte », and « YAML valide » or where the draft stops parsing. The model is Rust's —
+see [The JSON visualiser's model](#the-json-visualisers-model); the interface draws it. Which
+languages have a reader is one table, `json::read::explorable_format`; the explorer takes the
+format for its messages, and nothing else in it is per format.
 
-- **The explorer takes inputs only** (`shared/json-explorer/`: the explorer, its graph and its
-  tree), so an HTTP response can show one too. Its state is `JsonExplorerStore`, provided by
-  the **editor** and not at the root — two documents may be explored at once — and handed over
-  by `JsonViewComponent`, the editor's container, which is a `@defer` chunk imported on a line
-  of its own: the visualiser loads with a first Graphe or Arbre.
-- **The draft is explored as it is typed**, debounced, so the band answers for what is on
-  screen; a note just opened is explored at once, from its first level.
+- **The explorer reads no global state** (`ui::widgets::json_explorer`: the explorer, its graph and
+  its tree), so an HTTP response can show one too. Its state is the caller's `Explorer`, kept by
+  the **editor** (`overlays/editor/json_view.rs`) — two documents may be explored at once — and
+  the answer is `ExploredState`'s, a `QueryCell` on `compute` keyed on the opening: the view and
+  the text it was made of, whose spans point into it rather than into the draft typed since.
+- **The draft is explored as it is typed**, debounced (250 ms), so the band answers for what is
+  on screen; a note just opened is explored at once, from its first level. The editor asks only
+  when the query changed: an action is a repaint, and asking every frame never settles.
 - **Côte à côte**: the code on the left, the visualiser on the right, the line between them
-  `app-split-handle` standing up (`orientation: vertical`, ← → as its keyboard twin). The
-  layout, the code hidden or not and the share are `ExplorerLayoutStore`'s: the session's,
-  written nowhere. Under `SIDE_BY_SIDE_FROM` the body is not squeezed — the toggle is disabled
-  and says so — measured by a `ResizeObserver` on the body's frame once it exists. The two
-  select in step through `CodeSelection` (`code-selection.ts`, which the code editor
-  implements): a node chosen selects its span in the code without taking the focus and lights
-  its lines (`focusedLines`); the caret, moved by a key or a click, selects `entryAt` its
-  offset — never a selection the visualiser set, which carries no user event. ⚠️ The explorer is projected into
-  `app-side-by-side`, whose CSS cannot reach it: its pane is a one-cell grid that stretches it.
-  Narrower than 600 px, the explorer drops its selection panel (a container query).
-- **What is open is read back from each answer.** The front keeps no set of its own: it sends
+  `widgets::split_handle` (← → as its keyboard twin). The layout, the code hidden or not and the
+  share are `json_view::Layout`, kept by the notes area for the application's session and written
+  nowhere. Under 700 px of body it is not squeezed — the toggle is disabled and says so. The two
+  select in step: a node chosen selects its span in the code without taking the keys and lights
+  its lines (`EditorView::lit_lines`); the caret, moved by a key or a click, selects `entry_at`
+  its offset — never a selection the explorer set. Narrower than 600 px, the selection panel goes
+  under the graph with the path and its actions alone. A string is copied by its own text,
+  unquoted (`JsonRow.text`, `JsonLine.text`); anything else as it is written.
+- **What is open is read back from each answer.** The interface keeps no set of its own: it sends
   the paths of the nodes it was given, plus or minus the one clicked, and Rust decides what
   that opens, caps included. Opening a container opens one level. Stepping to a match sends
-  it as `reveal`, and Rust opens what is above it — the front never takes a path apart.
-- **The graph draws in the layout's units**: a node's `left` and `width` in `ch` of the
-  monospace font the plane is set in, its `top` in lines of 24 px; the edges are one SVG in
-  the same units, stretched, with `vector-effect: non-scaling-stroke`.
-- ⚠️ **Pointer events for the pan**, like every drag here, and the wheel scrolls it; the zoom
-  is three buttons. The keyboard twin is a cursor, one tab stop: the arrows walk a node's rows,
-  into a child and back up, Enter opens or closes, and Escape goes up — at the root it lets
-  go, and the editor closes.
+  it as `reveal`, and Rust opens what is above it — the interface never takes a path apart.
+- **The graph draws in the layout's units**: a node's `x` and `width` in columns of the
+  monospace font at 11.5 px, its `y` in lines of 24 px, times the zoom; the edges are cubic
+  curves in the same units. Only the nodes on the ground are drawn and named: the e2e driver
+  presses « Ajuster à l'écran » before counting them.
+- ⚠️ **One gesture for both**: a press that starts on a node moves it, anywhere else it pans,
+  and the wheel pans too; the zoom is three buttons. Every node, header and row takes its id from
+  its path (`widgets::region`), or a drag would lose its node when the culling changes. The
+  keyboard twin is a cursor and the ground the one tab stop: the arrows walk a node's rows, into a
+  child and back up, Enter opens or closes, Alt with an arrow moves the node, and Escape goes
+  up — at the root it lets go, and the editor closes. egui matches a key with extra Shift or Alt,
+  so Shift and Alt with an arrow are read first.
+- An entry's AccessKit node carries its path as its description and a container's state as
+  `expanded`: what kittest and the e2e driver find it by, untouched by translation.
 - "Voir dans le code" goes back to Code with the value **selected** — its span is in UTF-16
-  units, CodeMirror's own positions — and the body scrolled to it.
+  units, turned into the rope's characters (`utf16_cu_to_char`) — and the code takes the keys.
 
 ### The tools: one contract, and the rest written once
 
-The Outils area (`tools/`) is a home, a rail and a frame, and a tool is what the frame draws.
-**A tool is a pure Rust function and a component**; everything around it — the catalogue in
-its panels, the search, the recent tools, the breadcrumb, Vider — is written once, and knows a
-tool only through `Tool` (`core/services/tools/tool.model.ts`):
+The Outils area (`ui/src/tools/`) is a home, a rail and a frame, and a tool is what the frame draws.
+**A tool is a pure Rust function and a drawing**; everything around it — the catalogue in its
+panels, the search, the recent and starred tools, the breadcrumb, Vider — is written once, and
+knows a tool only through the `Tool` trait (`tools/mod.rs`):
 
-- `result`, what "Enregistrer comme note" keeps. ⚠️ An output, never an input: an HMAC key or a
-  password typed into a tool cannot reach a note, because nothing in the contract carries one.
-- `actions`, the tool's own buttons in the header ("Échanger A et B").
-- `sample()`, which « Exemple » calls: the tool fills its inputs with test data through its own
-  signals, the path typing takes, and replaces what was there. The data lives in the component —
-  a constant, or a translation key when its language matters — and never carries a real secret
-  (a token signed with « secret », the published example IBAN). Optional: a tool with nothing to
-  fill offers no button.
+- `update()`, once a frame on screen: what its inputs ask now, and the answers that came.
+- `ui()`, its body in the frame, built from `tools/ui/`: two columns, fields, result and output
+  rows, a copy button, the reference table.
+- `result()`, what "Enregistrer comme note" keeps, through the dialog an HTTP answer uses. ⚠️ An
+  output, never an input: an HMAC key or a password typed into a tool cannot reach a note, because
+  nothing in the contract carries one.
+- `imported()`, what a note gave an input the catalogue lists in `from_note`, copied in once. A
+  key, a password, a token or a card number is never one: its field offers no import.
+- `sample()`, which « Exemple » calls: the tool fills its inputs with test data, and replaces
+  what was there. Never a real secret (a token signed with « secret », the published example
+  IBAN). Optional: a tool with nothing to fill offers no button.
 - `clear()`, which Vider calls.
 
-**The catalogue is one list** (`tools/catalogue/catalogue.ts`), each tool in a folder beside
-it: an id, a category, keywords, a loader. The name and the line are read from the id
-(`tools.<id>.name`, `.description`), and a tool is a chunk of its own, loaded the first time it
-is opened, so the fourteenth costs nothing at startup. The page provides the list as
-`TOOL_CATALOGUE`: the home, the rail and the frame are tested on a fake one (`FAKE_TOOLS`).
+**The catalogue is one list** (`tools/catalogue.rs`), each tool in a file beside it: an id, a
+category, keywords, the inputs a note can fill, and what makes its session. The name and the line
+are read from the id (`tools.<id>.name`, `.description`).
 
-**The frame creates the tool by hand** (`ViewContainerRef.createComponent`, in an effect)
-rather than through `NgComponentOutlet`, so the header reads the tool's signals from the moment
-it exists.
+**What a tool holds lives for the session** (`tools::View`, a session a tool, made the first time
+it is opened): left for another tool or for the notes, it is found as it was. In memory only —
+never on disk — and gone when the library changes. ⚠️ A secret is never kept in a session: a key
+or a generated password dies with the tool when it is left.
 
-**What a tool holds lives for the session** (`toolState`, over `ToolSessions`): left for
-another tool or for the notes, it is found as it was. In memory only — never on disk — and gone
-with the page when the library changes. ⚠️ A secret is never a `toolState`: a key or a
-generated password is a plain `signal` of the component, and dies with it when the tool is
-left.
-
-**Every tool calls Rust the same way** (`liveResult`): the request as the inputs change,
-debounced, compared by value — a fresh literal would ask again for nothing — and the previous
-answer on screen until the next lands; `undefined` asks nothing. A tool's own failure, a line
-that does not parse, is part of its answer and drawn in place; `liveResult` reports only the
-unexpected.
+**Every tool calls Rust the same way** (`tools::live::Live`, over a `QueryCell`, on the `compute`
+queue): the request as the inputs change, debounced as a deadline, compared by value, and the
+previous answer on screen until the next lands; `None` asks nothing. A tool's own failure, a line
+that does not parse, is part of its answer and drawn in place; `Live` reports only the unexpected.
 
 ⚠️ Since the previous answer stays on screen, whatever describes it — a label, a note's language
 or title, a direction — reads `answered()`, the request that answer was computed from, and never
 the inputs as they stand: for a debounce and a round trip they already describe the next one, and
 a plain digest would read "HMAC-SHA256" — on screen, in a copy, in a note.
 
-**Searching the catalogue runs on the front**, a deliberate exception to "data processing
-belongs to Rust": it matches the translated names and lines, and Rust knows no string the user
-reads. It folds case and accents, as `view::fold` does. A tool is found by its name, its line,
-its keywords and **the name of its category**: « generateur » finds the three tools filed under
-« Générateurs ».
+**Searching the catalogue folds in the core and matches on screen** (`api::tools::fold`, called
+directly, D12): it matches the translated names and lines, and Rust knows no string the user
+reads. A tool is found by its name, its line, its keywords and **the name of its category**:
+« generateur » finds the three tools filed under « Générateurs ».
 
 **The search reads inside the references too**, in a second group under the tools that match
 (« Dans les références »): a row an entry, what it is called, what it means and where it lives
 (« 418 I'm a teapot — Codes de statut HTTP »), four a reference then « n autres ».
 
-- **A reference is data apart from its component** (`ReferenceSource`, a
-  `<id>.reference.ts` beside its facts): its words in each language, the rows built from them,
-  what a row is called away from its table, and its own matcher when it reads a query its own
-  way. The reference's table draws those rows (`referenceRows`) and the home searches them
-  (`referenceSearch`): one function builds, one matcher finds, so « too many » finds the same
-  rows from either field.
-- ⚠️ **Loaded by the first thing typed, not by the home opening** (`ToolDefinition.reference`,
-  a chunk of its own): the nine sources and their words in the language on screen, once a
-  language. The tools answer at once and the second group arrives when it can; « nothing
-  matches » waits for it. A single character searches no reference — it is nearly every row of
-  each.
-- **Choosing a row opens the reference on it** (`ToolsStore.open(id, entry)`): its own search
-  emptied, the row brought into view once and lit (`ReferenceTableComponent` reads
-  `ToolsStore.entry`), until the reference is searched by hand. « n autres » opens it searched
-  for what was typed on the home — a reference's search is the session slot
-  `referenceQueryKey(id)`, which the home writes.
+- **A reference is data apart from its drawing** (`catalogue/<id>.rs`): the facts in a table of
+  its own, or in `catalogue/facts/<id>.json` when a row has more to say than a line holds (a long
+  table of same-shaped Rust literals reads as duplication), its words in each language, the rows built from them, what a row is called away from
+  its table (`ReferenceRow::found_as`), and its own matcher when it reads a query its own way. The
+  reference's table draws those rows and the home searches them (`Table::found`, the list
+  `catalogue::REFERENCES`): one function builds, one matcher finds, so « too many » finds the
+  same rows from either field.
+- **Built by the first thing typed, not by the home opening** (`home/hits.rs`): the nine tables
+  in the language on screen, once a language. A single character searches no reference — it is
+  nearly every row of each.
+- **Choosing a row opens the reference on it** (`Tool::opened`, `Opening::OnRow`): its own search
+  emptied, the row brought into view once and lit, until the reference is searched by hand.
+  « n autres » opens it searched for what was typed on the home (`Opening::Searched`).
 
 **The keyboard reaches the results**: Enter in the field opens the first — a tool before a
 reference's row, marked `↵` — the down arrow goes into them and the arrows walk them in the
 order they are read, back up to the field; Escape empties the search, a second one leaves the
-field. One listener on the home's host, no handler a row.
+field.
 
 **The recent tools are an application preference** (`devnotes.recentTools`): which and when,
 nothing typed into them. Sixteen are kept (`KEPT_RECENT_TOOLS`) and five shown
@@ -699,47 +489,52 @@ nothing typed into them. Sixteen are kept (`KEPT_RECENT_TOOLS`) and five shown
 first five that its section above does not already list — no tool twice in one rail, and five
 all the same. A favourite is left out of the home's recents: it has its chip above them.
 
-**A tool is starred, and that is kept with the application too** (`devnotes.favouriteTools`,
-`ToolsStore.toggleFavourite`): ids in the order they were starred, read like any input — an id
-the catalogue no longer has is dropped by whoever lists them (`favouritesAmong`), never
+**A tool is starred, and that is kept with the application too** (`devnotes.favouriteTools`):
+ids in the order they were starred, read like any input — an id
+the catalogue no longer has is dropped by whoever lists them, never
 written out of the file for it. The same exception to « the tools keep nothing on disk » that
 the recents and the zones are: an id, never what a tool holds.
 
-- **The star is a toggle** (`aria-pressed`) in the frame's header, and on each row of the home:
-  shown on the row's hover and on its own focus, always once on — full, in amber, so that on
-  is not said by a colour alone. ⚠️ A row of the home is a `<button>`: the star is its
-  **sibling**, laid over its end (`.tool-row`), as a note's card is two layers.
+- **The star is a toggle** in the frame's header, and on each row of the home: shown on the row's
+  hover and on its own focus, always once on — full, in amber, so that on is not said by a colour
+  alone. It is a control of its own laid over the row's end, as a note's card is two layers.
 - **« Favoris » is a section of the home above « Récents »**, the same chips, and an entry of
   the rail above « Tous les outils » with its count; both are absent while there is none.
-- **The entry narrows the home as a category does** (`ToolFilter`: a category, or
-  `favourites`): the starred tools in their own panels. Unstarring the last one widens the
-  home again. A search still answers over the whole catalogue, in its order — a favourite
-  does not outrank a better match. `catalogue.spec.ts` holds the first figure to the largest category. Ctrl+Shift+T
-  opens the home on its search from any area — the home takes `ToolsStore.searchWanted` whether
-  it already existed or not.
+- **The entry narrows the home as a category does** (`Filter`: a category, or the favourites):
+  the starred tools in their own panels. Unstarring the last one widens the home again. A search
+  still answers over the whole catalogue, in its order — a favourite does not outrank a better
+  match. Ctrl+Shift+T opens the home on its search from any area.
 
 **"Enregistrer comme note" belongs to the frame**: one dialog for every tool and for an HTTP
-response, at their common ancestor (`save-as-note/`, reached as `@app/…`). It asks for a title (the tool proposes one, as a
-`TranslationRef`), a space and a folder (those open in the notes by default) and tags; the kind
-and the language are the tool's own. It takes the result as it stood on the click. `ToolNotes`
-creates the note through `NotesRepository` like any other, with the source its caller names —
-"Outils / <tool>", "HTTP / <request>" — bumps `NotesRevision` for the canvas behind, and
-`StatusNotifier` says where it went.
+response (`http/save_as_note.rs`). It asks for a title (the tool proposes one), a space and a
+folder (those open in the notes by default) and tags; the kind and the language are the tool's
+own. It takes the result as it stood on the click, and creates the note like any other, with the
+source its caller names — "Outils / <tool>", "HTTP / <request>".
 
-**In Rust, a tool is a module of `tools/`** (`text`, `url_parts`, …): pure functions and
-their types, tested in place, no Tauri. `tools.rs` holds the commands, three lines each
-through `off_thread` — no lock, but never on the window's thread. One command per tool rather
-than one `run_tool` over an enum: a registration line is the price of precise generated types.
+**An input can be filled from a note** (`ToolEntry::from_note`, in the catalogue): the tool names
+its inputs a note may fill and which notes may — kinds, and for a snippet its languages
+(`NoteInput`). The tool places `note_import` beside such an input: an input declared nowhere has
+no button, so a key, a password, a token or a card number never takes a note.
+
+- **The picker asks Rust** for the kinds and languages declared (`query_notes`, every space) and
+  says what it lists (« Snippets JSON, YAML, TOML ou XML »). The note chosen is read whole by id,
+  and a todo list gives the Markdown copying it gives.
+- **A copy, taken once**: the tool's input is set as typing would set it, and nothing ties the
+  tool to the note afterwards — editing or deleting the note leaves the tool as it was. The
+  converter reads a snippet in its own format; the diffs show the note's title over the side.
+
+**In Rust, a tool is a module of `engine/src/tools/`** (`text`, `url_parts`, …): pure functions
+and their types, tested in place, called from `ui/src/api/tools.rs` on the `compute` queue — no
+lock, and never on the window's thread.
 
 **A tool reading a file takes its path** (`tools/files.rs`): Rust reads the bytes where they
-lie and they never cross the bridge. What a tool sends back of a file is refused past 10 MB
+lie. What a tool shows of a file is refused past 10 MB
 (`MAX_SENT_BYTES`), and a missing or unreadable file is part of the answer (`FileProblem`),
 not an `AppError`. Bytes that are no text — a Base64 decoding — are written to a file the user
 chooses, never to a note.
 
-⚠️ **The HMAC key never outlives the tool**: it is a plain `signal` of the component, never a
-`toolState`, and Rust zeroes its copy once the digests are computed. The switch alone is
-remembered. A file is hashed a block at a time, so its size has no limit, and a pasted
+⚠️ **The HMAC key never outlives the tool**: `Tool::left` zeroes it when the tool leaves the
+screen, and Rust zeroes its copy once the digests are computed. The switch alone is remembered. A file is hashed a block at a time, so its size has no limit, and a pasted
 signature is compared with every algorithm in both encodings, whichever are shown. With nothing
 to hash it is still read, by its length alone (`DigestShape`): 64 hex characters are SHA-256 or
 SHA3-256, and an HMAC has the shape of the hash it uses.
@@ -747,7 +542,7 @@ SHA3-256, and an HMAC has the shape of the hash it uses.
 **Randomness is the system's** (`getrandom`), never a seeded generator: a character is drawn by
 rejection, so none comes up more often than another, and a system that gives no randomness is
 an `AppError` rather than a weaker fallback. Generated passwords are the answer of a
-`liveResult` and die with the tool. They may be kept as a note — the choice made for v0.9.0 —
+`Live` and die with the tool. They may be kept as a note — the choice made for v0.9.0 —
 but the tool's `ToolResult.warning` makes the dialog say why they had better not be, and its
 button read "Enregistrer quand même".
 
@@ -781,25 +576,22 @@ the other readings its shape allows are named, any of them forced on request. A 
 two Base64 alone.
 
 **A decoding that is a picture is shown** (`tools/image.rs`, read by `bases::decode`): PNG,
-JPEG, GIF, WebP and SVG are known by their first bytes and sized by their header — no decoder,
-nothing draws a pixel in Rust — and the answer carries the picture as a `data:` URL
-(`DecodedImage`). ⚠️ The CSP is unchanged: `img-src 'self' data:` already lets a picture be a
-`data:` URL, which is how a response's image is drawn too. ⚠️ An SVG goes into an `<img>` like
-the others, **never inlined**: nothing in it runs there. Past 2 MB (`PREVIEW_LIMIT`) the picture
-is still named and sized, and the page says it is not drawn rather than drawing nothing.
+JPEG, GIF, WebP and SVG are known by their first bytes and sized by their header, and the answer
+carries the picture. ⚠️ An SVG is drawn as a picture, nothing in it runs. Past 2 MB
+(`PREVIEW_LIMIT`) the picture is still named and sized, and the page says it is not drawn rather
+than drawing nothing.
 « Enregistrer comme fichier » proposes the extension of what was recognised. A
 `data:image/png;base64,…` URI pasted whole is read by its header — its payload is Base64
 whatever reading was asked — and a refusal inside it still counts characters from the text as
 given.
 
-**A QR code is Rust's, the front draws a path** (`tools/qr.rs`, the `qrcode` crate): the form
-becomes a payload there (Wi-Fi in the ZXing format, `mailto:`, a vCard 3.0 folded at 75 octets),
-always in byte mode, so the capacity reads in the bytes typed. The answer carries the dark
-modules as one SVG path, drawn inline (no data URL, CSP-safe); the SVG file is written around the
-same path and the PNG from the same modules, so a download is the preview. ⚠️ The plate is white
-and the modules black in both themes: an inverted code is not read by every scanner. A copy puts
-the image on the clipboard natively, its pixels never crossing the bridge. The Wi-Fi password is
-a plain `signal`, and a note keeping it is warned against, as a password is.
+**A QR code is Rust's, the window draws its pixels** (`tools/qr.rs`, the `qrcode` crate): the
+form becomes a payload there (Wi-Fi in the ZXing format, `mailto:`, a vCard 3.0 folded at 75
+octets), always in byte mode, so the capacity reads in the bytes typed. `qr::rgba` gives the
+preview's texture, drawn `NEAREST` so that a module stays a square; the SVG and PNG files are
+written from the same modules, so a download is the preview. ⚠️ The plate is white and the modules
+black in both themes: an inverted code is not read by every scanner. The Wi-Fi password dies with
+the tool (`Tool::left`), and a note keeping it is warned against, as a password is.
 
 **A CIDR block is computed on a `u128`** (`tools/cidr.rs`, `ipnet` for the reading): an IPv4
 address sits in its low 32 bits, so one set of arithmetic serves both families. A block is read
@@ -828,9 +620,10 @@ checked after rounding to the bytes its HEX writes, or said to be out of reach.
 `serde_json::Value` and written out of it, so any format reaches any other. ⚠️ `serde_json`
 has `preserve_order` on: without it a `Map` sorts its keys, and a converted document would
 come back in alphabetical order. YAML is `yaml-rust2`, maintained and pure Rust — `serde_yaml`
-is archived — and XML is read and written by hand around `quick-xml`, to one convention the
-tool states beside its result (`@name`, `#text`, a repeated element as a list). What a format
-cannot hold — a TOML `null` in a list, a list at a TOML root, two XML roots, a name XML
+is archived; it expands aliases but not YAML 1.1 merge keys, so `<<` is applied in
+`convert::merged` (the own keys win), for the conversion and the Diff alike — and XML is read
+and written by hand around `quick-xml`, to one convention the tool states beside its result
+(`@name`, `#text`, a repeated element as a list). What a format cannot hold — a TOML `null` in a list, a list at a TOML root, two XML roots, a name XML
 refuses — is an answer carrying its `JSONPath`, never a guess. A key holding `null` is the one
 exception: TOML leaves it out and the answer names it, since dropping it moves nothing else. The
 two sides never hold the same format.
@@ -857,7 +650,9 @@ magnitude.
 - **The seed has one place, its field**: the one just drawn is said beside it (« · 3634897658
   utilisée ») with a pin, a toggle, that writes it there; pinned, « Régénérer » stays offered
   and a line says it gives the same documents. « Régénérer » is the one name of that action in
-  the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers).
+  the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers). The JSON
+  generator's seed is any text, handed to Rust as typed: a number up to `u32::MAX` is itself,
+  any other text its FNV-1a hash (`generate::fnv1a`, the identity tool's too).
 
 **A cron expression's runs are listed between two moments, and counted** (`tools/cron.rs`,
 `croner`): « À partir de » and « jusqu'à », read in the zone chosen like the date that is
@@ -911,7 +706,9 @@ landing on its last (31 January plus a month is 28 February), then the wall cloc
 clock, in real seconds. The two part when the zone's offset differs at either end; the answer
 then names the last change, found a day at a time back from the later date, then to the second.
 An ISO 8601 duration is parsed by hand, so a refusal is located; « 1h30 » or « 90 min » are read
-too and written back in ISO. A month or a year has no length in seconds: such a duration has no
+too and written back in ISO. Sixty seconds are carried into a minute and sixty minutes into an
+hour (« 90 min » is `PT1H30M`), never hours into a day, which the clocks can make 23 or 25 hours
+long. A month or a year has no length in seconds: such a duration has no
 total. The words that spell either aloud are the front's, from typed parts.
 
 **A zone is the IANA database's**, compiled into the binary (`tools/zones.rs`, `chrono-tz`):
@@ -927,7 +724,7 @@ does not know leaves it. An abbreviation several zones use lists them all rather
 **A cron expression is read twice** (`tools/cron.rs`): by hand, field by field, so that a
 refusal names its field and its token and the page can light the field under the caret; then by
 `croner`, which counts the next runs in a zone and checks a date. Rust answers what each field
-holds (`Piece`), never a sentence: `cron-sentence.ts` builds it from translation keys — times
+holds (`Piece`), never a sentence: `catalogue/cron/sentence.rs` builds it from translation keys — times
 written as times when the minute and the hour are plain values, one clause per field otherwise.
 When both day fields are set, either one matching is enough, as in cron, and the tool says so.
 `@midnight` is expanded here, since `croner` does not know it.
@@ -943,9 +740,7 @@ ten instead (`formatScientific`). An all-lowercase `gb` is read as bytes, `Gb` a
 transfer is the same bits over a rate (`tools/transfer.rs`), slowed by an efficiency held
 between 50 and 100 %, answered to the second as typed parts and in days past a year; the common
 connections it is also given for are Rust constants, their names translation keys. The
-percentages are five questions answered at once, each on its own two fields
-(`tools/percentages.rs`): a division by zero, or a change from zero, is said rather than
-answered with `∞`, and the formula beside each result is the page's, from translation keys.
+percentages are lines of a Calcul note now (`notes::calc`), not a tool.
 
 **A Unix mode has three ways in** (`tools/permissions.rs`): the octal digits, the letters `ls -l`
 prints (its file-type letter read and named, `s`/`S` and `t`/`T` telling a special bit with and
@@ -960,13 +755,13 @@ its prefix and length as a hint, and an IBAN's mod 97 with its country's BBAN fo
 `iban_validate`. That crate keeps its formats to itself, so the length each country expects is
 a table summed from its registry, held to it by a test. A French or Monégasque IBAN is read in its
 parts — bank, branch, account — and its RIB key checked apart from the IBAN's own. ⚠️ A card
-number or an IBAN is a secret: a plain `signal`, and the tool has nothing to save as a note.
+number or an IBAN is a secret: it dies with the tool, which has nothing to save as a note.
 
 **A JWT is taken apart in Rust** (`tools/jwt.rs`), without a JWT crate — `jsonwebtoken` brings
 `ring`: its header and payload decoded, `exp`, `nbf`, `iat` and `auth_time` read against now,
 and its signature verified for HS256, HS384 and HS512 alone, in constant time
 (`Mac::verify_slice`); the other families are named and left unverified, `alg: none` is flagged.
-⚠️ The token and the secret are plain `signal`s, zeroed in Rust once the answer is made; a note
+⚠️ The token and the secret die with the tool, and are zeroed in Rust once the answer is made; a note
 keeps the decoded header and payload as one JSON document, after a warning, never the token.
 
 **The diff's « Données » tab compares documents, and says when a text is none**
@@ -979,26 +774,17 @@ The detection answers the narrowest format that fits (`convert::detect`): every 
 is YAML too, and one that parses as JSON is said to be JSON. « Exemple » belongs to the tab on
 screen and fills both sides, each read by its shape again.
 
-**A reference is a tool that is read, never typed into** (the « Références » category): no
-`result` — the frame then offers no "Enregistrer comme note" — no `sample()`, and no Rust. Its
-facts are typed constants beside the component; its words are a JSON per language beside them,
-imported with the tool's chunk by `referenceWords` rather than merged into the main translations,
-so sixty descriptions weigh nothing until the tool opens. `app-reference-table` (`tools/ui/`) is
-the rest: the search, folded like the catalogue's — a front-end exception of the same kind,
-translated text — the groups, the count, each row's key to copy. A row is searched by its group's
-heading too (« redirection » finds every 3xx), so headings are translated in code
-(`referenceHeadings` for the table, the source's `label` for a row), not in the template. The
-rows themselves are built by the reference's `ReferenceSource`, which the home's search reads
-as well (above). The reference draws its own
-`<td>`s through `appReferenceCells`, and so styles them itself (`reference-cell`): the table's
-stylesheet cannot reach them. A spec holds both files of words to the same keys. Each group is a
-table of its own, a card, and the cards flow into as many columns as the width holds, each never
-narrower than the reference's `--reference-column`; a card is never cut between two columns.
+**A reference is a table to search, and its words are a file of its own**
+(`crates/i18n/translations/references/<id>.{fr,en}.json`, read as `tools.<id>.words.…`), the
+facts beside its `catalogue/<id>.rs`: nothing is computed and nothing is kept as a note. `Reference` holds
+the query and builds the rows once a language; `ReferenceTable` (`tools/ui/`) is the rest: the
+search, folded like the catalogue's, the groups, the count, each row's key to copy. A row is
+searched by its group's heading too (« redirection » finds every 3xx). Each group is a card, and
+the cards flow into as many columns as the width holds, each never narrower than the reference's
+`card_width`.
 
-A cheat sheet's claims are checked where an engine is at hand: every JavaScript example of the
-regex sheet runs through `RegExp` in its spec. ⚠️ The Mustache sheet's `{{…}}` are constants and
-chunk words, never main translation strings: Transloco would replace an unknown `{{name}}` with
-nothing.
+⚠️ A reference's words are read with `i18n::as_written`, never `translate`: the Mustache sheet speaks
+of `{{ }}`, which an interpolation would replace with nothing.
 
 **A fictitious identity is drawn from one list of names and a profile a country** — decided by
 a spike before any list was written, because the obvious way was refused: a few thousand names
@@ -1056,7 +842,7 @@ a country, hard-coded, is a megabyte of test data in the binary.
   more than half of itself for the ones that follow.
 
 **The identity tool is that design, for thirteen countries** (`tools/identity.rs`;
-`tools/catalogue/identity/`). A pure function of the options and a seed behind one command.
+`ui/src/tools/catalogue/identity.rs`). A pure function of the options and a seed.
 Four files under `tools/identity/`, each one thing:
 
 | File         | What it holds                                                                                              |
@@ -1072,12 +858,10 @@ sums the files.
 ⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
 is corrected or a list completed without building the application again.
 
-- **A Tauri resource**: `src-tauri/resources/identity/` (`names.txt`, `places/*.txt`) is
-  declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
-  on Windows and in a development or e2e build (`tauri-build` copies it into the target
-  directory), under the package's own folder on Linux. The two commands take the
-  `AppHandle` for nothing else: `resource_dir()`, joined with `identity`. No Tauri permission
-  is involved — Rust reads the files, the page never does.
+- **A resource**: `crates/engine/resources/identity/` (`names.txt`, `places/*.txt`) lands in
+  `<resources>/identity/` — beside the executable on Windows, under the package's own folder on
+  Linux, and read from the crate in a development or e2e build. `Paths::resources` says where
+  (`platform::paths::resources`), joined with `identity`.
 - **Read once, kept for the session** (`data::library`): every file is read at the first card
   and its text given away for as long as the application runs, every name drawn afterwards
   pointing into it. ⚠️ Only a reading that was whole is kept: a file put back is found at the
@@ -1160,169 +944,91 @@ is corrected or a list completed without building the application again.
   is a file, JSON or CSV, written by Rust where the file dialog says and starting from the
   person on screen. **Several countries take their turn in one file** (`PeopleBatch`), the
   card's own first; a CSV holds the numbers of a person in one column, `kind:value` and a bar
-  between, since they differ from a country to the next.
+  between, since they differ from a country to the next. A CSV opens on a UTF-8 BOM, or a spreadsheet reads
+  `Şimşek` in its own code page, and is separated by what the export chose (`CsvSeparator`:
+  `;` for a French spreadsheet), kept as the application's `csvSeparator`.
 
 **Adding a tool**, the whole of it:
 
-1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.
-2. `tools.rs`: a command through `off_thread`; `lib.rs`: a line in `collect_commands!`; then
-   `npm run bindings`.
-3. `core/data/tools.repository.ts`: a method, and its twin in `FakeToolsRepository`; the types
-   re-exported by `core/model/tool-answers.model.ts`.
-4. `tools/catalogue/catalogue.ts`: an entry; `tools/catalogue/<id>/`: the component
-   implementing `Tool`, its `sample()` included (`catalogue.spec.ts` holds every tool to one),
-   and its spec through `renderTool`. A reference has no `sample()` and a
-   `<id>.reference.ts`, named by the entry's `reference`.
-5. `tools.<id>.*` in both locales, and a scenario in `29-tools.e2e.ts`.
+1. `crates/engine/src/tools/<module>.rs`: the function, its request and answer types, its tests.
+2. `ui/src/api/tools.rs`: one function through `backend.compute`.
+3. `ui/src/tools/catalogue/<id>.rs`: a struct implementing `Tool`, its `make()`; `catalogue.rs`: an
+   entry and a `mod`. A reference is `Reference::of(table)` and a line of `REFERENCES`.
+4. `tools.<id>.*` in both locales, its kittest over a real core, a step in scenario 29, and its
+   state in `app::captures` by itself: `the_tools` walks the catalogue.
 
-What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-result-row`,
-`app-copy-value`) and the `tool-*` mixins. ⚠️ A row of a results card gives its value two
-thirds of the card beside its name, which a long one turned into a strip running down the
-page with its copy icon at mid-height: past `LONG_RESULT` characters a value takes the card's
-width **under** its name, held to eight lines it scrolls in — focusable, so the keyboard
-scrolls it — and its icon stays at its top; `app-output-row` holds its value to a height the
-same way. A tool whose results are long takes the width it is given (`tool-columns`) rather
-than a width of its own.
+What every tool draws alike is the kit, `tools/ui/`: `columns`, `line`, `section_head`, `text_area`,
+`card`, `ResultRow`, `OutputRow`, `CopyValue`, `notice`, `code_output`. ⚠️ A row of a results card
+gives its value two thirds of the card beside its name, which a long one turned into a strip
+running down the page: past `LONG_RESULT` characters a value takes the card's width **under** its
+name, held to eight lines it scrolls in, and its icon stays at its top. A results card
+(`result_rows`) puts its rows two abreast once it holds two of `ROW_MIN`.
 
-⚠️ **The line breaks tool has no `<textarea>`**: a textarea's value turns every CRLF and CR
-into LF, the very thing it is asked about. A paste is read raw from its `clipboardData`, Coller
-reads the native clipboard, and the text is drawn with its endings.
+The home's panels are stacks in columns: as many as `column_count` fits at 260 px, the panels cut
+into consecutive stacks by `stack_in_columns`, the tallest as short as it can be: one tall panel
+(the references) would leave the last columns of a large screen empty otherwise. A panel's height
+is counted in rows, near enough to share the columns out.
+
+⚠️ **The line breaks tool never reads its text through a field**: a paste keeps its CRLF and CR
+only from the native clipboard, so Coller reads it there, and the text is drawn with its endings.
 
 ### State
 
-The canvas is held by **three** stores, all `providedIn: 'root'`, split by the question they
-answer. They were one 800-line class, which is the shape a store takes when nobody asks what
-it is _about_:
+`ui::state` holds what the interface remembers between frames, one module per subject, all
+fields of `AppState` (→ "State between frames" for `QueryCell`, `Revision` and `LibraryCaches`).
+The notes are held by modules split by the question they answer:
 
-| Store                | Answers                                         | Depends on               |
-| -------------------- | ----------------------------------------------- | ------------------------ |
-| `NotesQueryStore`    | which notes the canvas shows                    | `SpacesStore`, the clock |
-| `NoteSelectionStore` | which one it is pointing at, and what is ticked | `NotesQueryStore`        |
-| `NotesStore`         | the open note: creating, writing, deleting      | both of the above        |
-| `NoteBatchStore`     | writes over the selection, or the whole board   | the selection, the board |
-| `UndoStore`          | the last write that can be put back             | the board                |
+| Module              | Answers                                                          |
+| ------------------- | ---------------------------------------------------------------- |
+| `notes_query`       | which notes the canvas shows: a `QueryCell` over `query_notes`   |
+| `selection`         | what is ticked, and the card a first `Delete` armed              |
+| `editor`            | the note open, read whole by id, and its draft                   |
+| `notes`             | the notes' one writer: create, patch, delete                     |
+| `board`             | which view a space is looked at in, and what the board draws     |
+| `undo`              | the last write that can be put back, and its bar                 |
+| `spaces`, `folders` | the library's spaces and folders, and which one narrows the view |
 
-The dependency runs one way only, which is what makes each of them readable on its own. The
-notes page injects them under names that say which is which (`canvas`, `selection`,
-`store`, `batch`, `undo`).
+Beside them, one module per screen or job that is not the canvas: `trash` (loaded when its panel
+opens, not by a permanent query), `tags` (global management: nothing runs before the core has
+counted what it touches), `transfer` (import, export and share, each reporting), `palette`,
+`attachments`, `placeholder_fill`, `note_revisions`, `formatting`, `calc_sheets`, `diagrams`,
+`drawing_pictures`, `explored`, `libraries`, `backups`, `security`, `help`, `tools`, `http/`.
 
-`NotesQueryStore` holds the **query state** — search text, active filter, selected tags,
-selected languages — and the view the back-end returned for it. It does no filtering, sorting
-or grouping of its own: those criteria are sent to `query_notes`, and `sections`, `allTags`,
-`allLanguages`, `isFiltering` and `hasNoResults` are all reads of the resulting `NotesView`.
+`notes_query` holds the **query** — search text, quick filter, tags, languages — and the
+`NotesView` the core answered. It does no filtering, sorting or grouping: those are
+`query_notes`'s, and everything the canvas draws is read from the view.
 
-⚠️ Any new query criterion needs three edits in lockstep: a field in `QueryParams`, its clause
-in `sameQueryParams`, and the copy into the `NotesQuery` the loader builds. `resource` compares
-its params by identity, so a criterion missing from the comparator changes nothing on screen —
-the rail looks wired and simply never refetches.
+- **The search is debounced** (`DEBOUNCE`, 150 ms): the field takes every keystroke, the query
+  is asked once the typing pauses.
+- **The last view stays while the next loads**, and after an error: a keystroke never blanks the
+  canvas. One query in flight, the latest waiting — a burst asks the one in flight and the
+  newest, never one per pause (the core computes a query to its end once asked).
+- **Its parameters are compared by value**, and they include the local **day**, not the instant:
+  a clock tick asks nothing again; midnight does, through `request_repaint_after`.
+- **The space is a filter, not a label.** `None` means « all spaces » and is a choice, not a
+  loading state; an id matching no known space falls back to `None`. The space also scopes the
+  facet rails: a tag that filters nothing in the space is not offered.
 
-Two consequences worth knowing:
-
-- **The search is debounced (`SEARCH_DEBOUNCE_MS`, 150 ms).** The field updates on every
-  keystroke so typing never lags, but the query crosses the IPC bridge, and one round trip
-  per character would be wasted work.
-- **The last view is kept during a reload** (a `linkedSignal` over the resource). Otherwise
-  each debounced keystroke would blank the canvas and the list would flicker between
-  "Loading…" and the results. `isLoading` is therefore true only until the _first_ view
-  arrives. That `linkedSignal` only retains what it has been read through, so everything the
-  store exposes reads it, and `isLoading` does so without short-circuiting.
-
-`SpacesStore` owns the spaces and the active one. Two decisions matter there:
-
-- **The active space is a filter, not a label.** `NotesStore` injects `SpacesStore` (never the
-  other way round) and sends `activeSpaceId()` with every query, so the space also scopes the
-  facet rails — a tag or a language that filters nothing in the current space has no reason to
-  be offered.
-- **`null` means "all spaces", and is a choice, not a loading state.** There is deliberately
-  no "All" row in the data: it would be a phantom space that notes could be filed into by
-  mistake. The label lives in the translations, and an active id matching no known space
-  degrades back to `null` rather than hiding every note.
-
-Creating a note files it in the active space, falling back to the first one in "all spaces"
-mode; with no space at all, creation is refused with a translated message, because a note
-with no `spaceId` would vanish as soon as a space filter is applied.
-
-`NoteSelectionStore` owns two things that are **not** query criteria and deliberately never
-reach `query_notes`. They live together because they are the same idea — a **position in the
-visible list** — and a range selection spans from one to the other:
-
-- **The multiple selection** (`checkedIds`), derived through `checkedNotes` so that an id
-  checked and then gone — note deleted, filter tightened — never reaches a bulk action.
-- **The keyboard focus** (`focusedNoteId`), read against `visibleNotes`, the sections
-  flattened in display order. Both the arrow keys and the Shift-range selection reason in
-  **indexes** into that list, the only reference that survives a note being renamed.
-
-`NotesStore` is left with the note itself: the open one, its unsaved draft, every write to it
-and its deletion. The writes that act on many notes at once live in `NoteBatchStore`, and
-every undoable write — single or batch — hands what it changed to `UndoStore`. **One method writes a note's fields**, `applyPatch(id,
-patch)`, and a table of per-field comparators (`UNCHANGED`) decides what actually moved — so
-closing the editor on an untouched note makes no round trip. There used to be nine setters,
-each restating that comparison, and a new field meant editing four files.
-
-Smaller stores sit beside them, each for a screen or a job that is not the canvas:
-
-| Store                   | Owns                                                                          |
-| ----------------------- | ----------------------------------------------------------------------------- |
-| `TrashStore`            | the trash panel: open/close, list, restore, purge, empty                      |
-| `TagsStore`             | global tag management: list with counts, selection, rename/merge              |
-| `TransferStore`         | import, export and copy-out, each reporting through `StatusNotifier`          |
-| `PassphrasePromptStore` | the phrase an export or an import waits for, and the prompt that asks it      |
-| `PaletteStore`          | the quick-paste palette: its own search, highlight and copy                   |
-| `AttachmentsStore`      | the open note's attachments, the preview, and the three ways of adding one    |
-| `PlaceholderFillStore`  | filling a snippet's `{{fields}}` before copying, from card, palette or editor |
-| `NoteCopyService`       | putting text on the clipboard, and saying so when that failed                 |
-
-The first four know nothing of `NotesStore` — the reverse dependency exists and closing the
-loop would be an injection cycle — so each writes through `NotesRevision` and the canvas
-re-queries on its own. The last three do inject it, in that direction only: they orchestrate
-_around_ the open note rather than being read by it.
-
-⚠️ **`NotesStore` bumps that same revision**, rather than reloading the canvas it happens to
-hold. There are **two** views of the same notes: `NotesQueryStore.queryParams` and
-`BoardStore.queryParams` both read `NotesRevision`, and a write that reloaded only the first
-one is exactly what left a todo list ticked on the board still showing unticked until the view
-was switched. The same trap in the other direction: `NotesStore.find` resolves a note through
-`NoteSelectionStore.noteOnScreen`, which reads the board whenever the board is showing, because
-the board _dims_ where the canvas _narrows_ — a card there can be ticked, moved or deleted while its note is nowhere
-in the canvas view, and an unresolved note is a gesture that writes nothing, silently.
-
-`TrashStore` and `TagsStore` load **on opening** rather than through a permanent `resource`:
-neither is displayed anywhere else, and a resource would re-query on every deletion.
+Creating a note files it in the active space, the first one in « all spaces »; with no space at
+all creation is refused with a translated message.
 
 Rules of the house:
 
-- **Writable signals stay private, exposed read-only.** A store field is
-  `private readonly _x = signal(...)` plus `readonly x = this._x.asReadonly()`. Every
-  mutation therefore goes through a method, which stays the single entry point the day a
-  write becomes more than a `set()`.
-- **The view is a parameterised `resource()`.** Its params are the query criteria plus the
-  current **local day** — not `clock.now()`, since only the day affects section boundaries.
-  The exact instant is read `untracked` in the loader. `resource.value()` **throws** while
-  the resource is in error; read it through a `hasValue()` guard.
-- **That params `computed` needs its `equal` comparator.** `resource` compares its parameters
-  by identity, and `queryParams` builds a fresh object literal that depends on `clock.now()`.
-  Stabilising the day _value_ is not enough — without `sameQueryParams`, every 30 s tick
-  produced a new object, a new request, and a full `query_notes` + SQLite round trip, hidden
-  by the retained view and by `isLoading` staying false. A spec covers it: a clock tick must
-  not increment `queryCount`.
-- **Its loader runs through `OneInFlight`** (`core/utils/`), and so does the board's. `resource`
-  drops a stale answer, but Rust has already queued the call behind its one lock and computes
-  it to the end: at 8000 notes, five pauses in typing were five half-second queries in line.
-  The loader waits for the call in flight and gives up if `abortSignal` fired meanwhile, so a
-  burst sends the one in flight and the newest.
-- **The back-end is authoritative; writes are not optimistic.** A mutation persists, adopts
-  the returned note, then reloads the view. Nothing is applied locally first, so there is
-  nothing to roll back on failure — an `ErrorNotifier` message is raised and the screen still
-  shows what is actually stored. A write can move a note between sections, which is precisely
-  why the view is recomputed rather than patched.
-- **Ids, timestamps and normalisation come from persistence**, never from the front-end.
-- Derived state is `computed()`, never a manually maintained signal.
-- Formatting logic that needs no injection lives beside its subject (relative time in `core/services/time/`) as pure functions taking
-  `now: Date` as a parameter.
+- **The core is authoritative; writes are not optimistic.** A write persists, its answer is
+  adopted, and the `Revision` is bumped, so every view that reads notes — the list and the board
+  alike — asks again. Nothing is applied locally first, so nothing is rolled back on a failure:
+  the `ErrorNotifier` says it and the screen shows what is stored. ⚠️ A write that reloaded one
+  view only is what once left a todo list ticked on the board and unticked in the list.
+- **One function writes a note's fields** (`state::notes`, with a `NotePatch` whose `None` is
+  « untouched »); closing the editor on an untouched note writes nothing.
+- **Ids, instants and normalisation come from the core**, never from the interface; time comes
+  from the injectable clock (`services::time`).
+- **The board dims where the list narrows**: a card there can be ticked, moved or deleted while
+  its note is outside the list's view, so a gesture resolves its note through the view on screen.
 
 ### Display sections
 
-Sections are built in Rust (`src-tauri/src/notes/view.rs`) and arrive ready to render.
+Sections are built in Rust (`crates/engine/src/notes/view.rs`) and arrive ready to render.
 The front-end preserves the order it receives and never drops or merges a section.
 
 The classification into `pinned`, `today`, `week` and `older` is **exhaustive**: apart from
@@ -1356,11 +1062,11 @@ serialises to `"pinned"` / `"today"` / … and no user-visible label ever crosse
 The footer carries one of three things, and which one is a **product rule**, so it is decided
 in `notes::model` and arrives as a tagged `footer` field:
 
-| variant  | when                         | rendered as                |
-| -------- | ---------------------------- | -------------------------- |
-| `expiry` | the note has a deadline      | `expiryRef(at, now)`       |
-| `source` | pinned, and it has a context | the first path segment     |
-| `age`    | everything else              | `relativeTimeRef(at, now)` |
+| variant  | when                    | rendered as                |
+| -------- | ----------------------- | -------------------------- |
+| `expiry` | the note has a deadline | `expiryRef(at, now)`       |
+| `source` | it has a context        | the first path segment     |
+| `age`    | everything else         | `relativeTimeRef(at, now)` |
 
 The dated variants carry a **date, not a label**: formatting stays on the front so "4 min ago"
 keeps ageing on screen without a round trip. That is the line — the back decides _what_ to
@@ -1371,9 +1077,9 @@ previously lived only on the front (`isExpiringSoon`, 3 days) while the back sep
 computed `has_expiring_notes` — two definitions of "soon" behind a hint that reads "to triage
 soon". The section flag now derives from the same per-note value.
 
-### The three kinds of note
+### The five kinds of note
 
-A note is a `snippet`, a `note` or a `checklist`, and `notes::kind::NoteKind` is a closed
+A note is a `snippet`, a `note`, a `checklist`, a `calc` — a sheet, below — or a `drawing`, and `notes::kind::NoteKind` is a closed
 enum for the same reason `Language` is: the front receives a generated union, so an unhandled
 variant stops compiling rather than surfacing at runtime.
 
@@ -1427,6 +1133,8 @@ measures it): below 1280 px the button is a glyph, the order in its tooltip.
 **A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
 counted by one helper, `view::counted`; its rail reads the levels from the most pressing
 down, offers no chip for `none`, and stays away from a space where nothing has a priority.
+The tags and the formats count their notes the same way (`tag_counts`, `language_counts`, a
+`GROUP BY` each, `available_*` in their order), shown beside each chip.
 
 A checklist has **no body**. Its items replace `content` — they are not an addition to it —
 and they live in `note_items`, keyed `(note_id, position)`. That key is the whole design: an
@@ -1434,6 +1142,11 @@ item has no identity beyond where it sits, so every write replaces the entire li
 the way `note_tags` does. Nothing addresses a single item, and nothing generates an id for
 one. Reordering is therefore an ordinary write, not a shuffle of rows under a primary key
 that forbids duplicates halfway through.
+
+**The editor writes a list the way a text field would.** Enter cuts the item at the caret,
+Backspace at the very start of one joins it to the item above, and several lines pasted into a
+row become as many items — a list marker dropped, a `[x]` read as done — what stood around the
+caret heading the first and ending the last. Each gesture is one write of the whole list.
 
 Three behaviours would go quietly wrong without a thought for the kind, and each is handled
 where its rule already lived:
@@ -1480,10 +1193,159 @@ a task list reads `- [x] …` is a rule, and it now has exactly one home —
 `notes::checklist::to_markdown`, which sharing and exporting already used. The front end held
 a second copy of that syntax, and one of the two was going to drift.
 
+**A note changes kind in Rust alone** (`notes::convert`, `convert_note`), from the editor's
+« Type » menu, at the head of the band holding the space and the folder — the title bar keeps
+its room for the title. A snippet and a Note keep their text as it is (a snippet reads it for a
+language); a todo list gives its items to a Note as a task list and to a snippet as lines; a
+text becomes one item
+per line that is not blank, its list markers dropped and its `[x]` read as done. One
+transaction; the body it replaces goes into the history like any edit's, so converting into a
+todo list keeps the text it was made from. The command answers the body the note had
+(`NoteBody`), which the undo writes back through `update_note`. `NotesStore.convertNote` first
+writes what the editor still holds, awaited — a conversion landing under a write of the old body
+would lose it — then bumps the editor session so its drafts re-seed. Code pasted into an empty
+Note makes it a snippet with that same undo, back to the Note with the pasted text.
+
+### A Calcul note: one result a line
+
+A `calc` note is a sheet: its body is text, as a snippet's is — sealed, searched, its last 20
+revisions kept, exported in a bare fence — with no language. Each line is computed as it is
+typed, and **the results are never stored**: they are computed when the sheet is read.
+
+**Rust computes, the interface writes** (`notes::calc`; the footer's sum and mean are `calc::summary`,
+exact, and come back as values like any other). `evaluate_calc(sheet, today)` answers the
+whole sheet — one `CalcRow` a line, with its spans for the colours and, after `en` or `à`, the
+kind being converted — and `query_notes` gives a card its last four lines that gave something
+(`DisplayNote.calc`, read from the whole body before it is cut). Values cross as exact decimals
+in text, units as `UnitId`s, errors as codes: `ui::notes::calc` writes them
+in the language on screen — its decimal mark, `Go` or `GB`, `j` or `d`, the date — and says `≈`
+when the display rounds. `today` is the local day of the window (`CalcSheets.today`); the board,
+which knows no time zone, gives its cards the UTC day.
+
+**The grammar** is a recursive descent over a lexer counting UTF-16 units, as the editor does
+(`calc/lexer.rs`, `calc/eval.rs`):
+
+- **Numbers** take a comma or a point before the decimals, and thousands grouped by a space —
+  a plain, no-break or narrow one, so `1 578,13 €` as the front writes it reads back; a group is
+  three digits after at most three. Arithmetic is `rust_decimal`, exact — a factor such as `€/h`
+  is kept as a fraction, multiplied before it is divided, or `0,045 €/h` would read back as
+  `0,04499…`. A scale after a number multiplies it: `k`, `M`, `Md`/`bn`, `T`/`tn` in their case
+  (`m` stays a metre), `mille`/`thousand`, `million`, `milliard`/`billion`, `trillion` in any —
+  `billion` is 10⁹ for everyone, the French one is `mille milliards`.
+- **Operators** are symbols or words: `plus`, `et`/`and`, `avec`/`with`; `moins`/`minus`,
+  `subtract`, `sans`/`without` (a subtraction: `hors` alone takes a percentage back off);
+  `fois`/`times`, `multiplié par`/`multiplied by`, `mul`; `divisé par`/`divided by`; `mod`, whose
+  remainder takes the divisor's sign. A parenthesis right after a value multiplies it: `6 (3)`.
+  `préc`/`prev` is the result of the last line above that gave one.
+- **Text left out**: a label before a colon (`Prix : 11 € + 34,45 €`), a quoted text and the words
+  after a result that lead up to it (`275 € pour le "Modèle 227"`), parentheses after a value
+  holding words and no name (`999 € (pour l'iPhone)`). Words alone after a result are an error,
+  not prose: `5 jours ouvrés` says it is not read rather than give 5 days.
+- **Units** (`calc/units.rs`, one table) are lengths, masses, durations, data sizes (the sizes
+  tool's factors), temperatures, and euros and dollars, which are units like the others: added,
+  multiplied, never converted into each other — ⚠️ no rate is fetched, so `100 € en $` is
+  refused on its line. A quantity carries its dimensions, so `€/h × h` is euros and a size `à` a
+  rate is a duration. A temperature is converted by formula, never by factor. Quantities of one
+  kind written side by side add up: `3 h 20 min`. Lowercase `to` and `mo` are left to English and
+  to the month. Frequencies are a second to the power of minus one (`1 / 2 s` is 0,5 Hz,
+  `60 Hz × 2 s` a number); `ns`, `µs`, `nm`, `µm` and the data sizes up to `YB`/`YiB` are
+  units of the table. **Screen units**: `pt` is the 72nd of an inch, `px` an inch over the
+  sheet's `ppi`, `em` and `rem` its sizes in pixels — 96 and 16 until a line `ppi = 326`,
+  `em = 20 px` or `rem = 18` sets them, from that line down (`Css`, carried by the walk). Those
+  three are settings, not names (`WordClass::Setting`), nor figures `total` or `préc` reads. `in`
+  is the inch after a number, but the conversion word before a notation or `%` (`255 in hex`).
+- **Functions and constants** (`calc/maths.rs`): `racine`/`sqrt` (`racine 2 (8)`, a degree
+  before parentheses), `cbrt`, `log` (`log 2 (8)`, a base), `ln`, `abs`, `arrondi`/`round`,
+  `plafond`/`ceil`, `plancher`/`floor`, with or without parentheses; `pi`/`π`, `e`, `tau`/`τ`,
+  `phi`/`φ`, which a name hides. A root or a logarithm is exact where one exists (`sqrt 16` is 4),
+  through `rust_decimal`'s `maths`; an even root of a negative number, a logarithm of zero or
+  less are errors of their own. A degree is computed whatever its size, in a moment: powers go
+  by squaring, and past a `u32` a root is a fractional power. `le plus grand de 100 et 200`/`larger of`, `le plus petit de`
+  take numbers of one kind, `et` separating them there rather than adding.
+- **Rounding** is the line's own value, so the lines below read it rounded:
+  `à 2 décimales`/`to 2 dp`, `à 5 chiffres`/`to 5 digits` (places too), `arrondi`/`rounded`
+  (a half away from zero), `arrondi supérieur`/`inférieur`, `au 10 près`/`to nearest 10`,
+  `au millier près`, `à la centaine près`, combined (`arrondi supérieur au 5 près`). A quantity
+  rounds in the unit it is shown in. The places asked for travel with the result (`CalcLine::Value.places`)
+  and decide its display over the sheet's « Décimales ».
+- **Bases and bits**: `0xFF`, `0b1010`, `0o377` and `5,3e+3` are numbers; `en hex`/`bin`/`oct`/
+  `sci`, `en base 2|8|16`, `hex(…)`, `bin(…)`, `int(…)` say how the line's plain number is written
+  (`CalcValue::Base`, `Scientific`, the front putting `0x` before the digits Rust sends).
+  `&`, `|`, `xor`, `<<`, `>>` take whole numbers, below the sums as in C. A result is tidied to
+  25 figures before it is sent, so a quotient carried on is not `15,999…` (`tidy`).
+- **Words** are one table (`calc/words.rs`): each concept a `CalcWord` with its spellings in
+  French and in English, read in both whatever the language on screen, so a sheet keeps its
+  meaning for everyone. The evaluator matches concepts, a spelling of several words included; a
+  spelling names one concept, except the ones `SHARED` declares, where the position decides
+  (`de` is `Of` after a percentage, `From` opening `de … à`). A **syntax** word (`en`, `de`,
+  `sur`, `hors`…) is reserved: `en = 5` is an error on its line. A **value** (`total`,
+  `moyenne`, `aujourd'hui`…) is a name of the sheet: one defined above hides it from its line
+  down, so a word added later never breaks a sheet that already uses it as a name.
+- **A bare word** is read, where a value is expected, as a name defined above, then a value of
+  the table, then a syntax word opening a form (`de … à`), else an unknown name — but a form
+  spelled in several words wins over a name, which is one: `mensualité de …` is the loan even
+  where `mensualité` names a value (`phrase_ahead`). After a number or a conversion word it is
+  first a scale or a unit: `5 m` is metres even where `m` is a name.
+- **The percentages tool's five questions** are lines: `20 % de 340`, `30 sur 120 en %`,
+  `de 80 à 100`, `250 + 20 %`, `300 hors 20 %`. A percentage added to a quantity is a share of it.
+- **Every percentage form** turns on what a share is taken against (`Share`: `de`/`of`,
+  `de plus sur`/`on`, `de moins sur`/`off`, the longest read first): `5 % de plus sur 200`
+  applies it; `5 % de combien font 6`/`5% of what is 6` solves for the whole; `50 en % de 100`,
+  `70 as a % on 20` and `180 c'est combien de % de moins que 200` give a value as a share of
+  another; `50 à 75 c'est combien de %` and `40 to 90 as %` a signed change, `is what x` a
+  multiplier. After `en`: `fraction` (the simplest within 10⁻²⁰: `1/3`), `multiple`/`x` (`×4`,
+  `en multiple de 5`), `décimal`/`dec`. A proportion solves for its unknown, its ratio taken
+  first so the unit is kept: `6 est à 60 ce que 8 est à combien`. `x`, `a` and `multiple` are
+  values, not syntax: they stay free names.
+- **Finance**, over years of the calendar's mean length, the amount keeping its currency:
+  `1 000 € après 3 ans à 7 %` (compound, `composés mensuellement`/`compounding monthly` or
+  quarterly, yearly, daily), `intérêts sur … après …`, `500 € investis 1 500 € récupérés` (×3),
+  `rendement annuel sur … investis … récupérés en 7 ans` (a percentage),
+  `valeur actuelle de … dans 20 ans à 10 %`, and a loan `sur 6 ans à 6 %`: `mensualité de`,
+  `coût total de`, `intérêts totaux de`. Its amount is read up to the words of the form
+  (`sur 6 ans` is no ratio there); `après`, `pendant`, `after`, `for` are a length only before
+  a number or a name holding a duration (`for the` is prose); a rate is a percentage
+  (`rateExpected`). English writes `$1,000` and `@ 7%`: commas group thousands after `$`, in
+  `1,000,000` and in `1,578.13`, never in a lone French `1,000`.
+- **Dates** move by whole days, and by calendar months for months and years; two dates subtract
+  into days. A duration converted into weeks keeps the days left (`6 sem 3 j`).
+- **Blocks** run from a `# heading` or a blank line to the next: `total` and `moyenne` read the
+  quantities above in theirs. `name = …` names a result from that line down; `//` starts a
+  comment, which is what a copied sheet carries its results in.
+- **An error stays on its line** and says why; the others go on. A line with no number and no
+  name is a sentence, not a mistake.
+
+**The editor** (`calc-editor/`) is CodeMirror with the results laid over the right edge of each
+line (`sheet-marks.ts`, widgets at the line's end, mapped through each edit until the next
+answer), its theme its own (`calc-theme.ts`). A result is picked by a click, Shift for a range,
+Ctrl for one more, or by selecting lines of the text; the footer adds them up and averages them
+— in exact decimals, on the strings Rust sent (`decimalSum`) — and says when they are of
+different units. Three application preferences change the display, never the computation:
+« Décimales » (`calcDecimals`, Auto or 0 to 14, in the footer and in the preferences; Auto keeps
+four significant figures and never fewer than two decimals, money two), « Format
+des nombres et des dates » (`calcNumberFormat`: the language on screen or one of
+`CALC_LOCALES`, written by `Intl` — a locale carries no data of ours) and « Format de date »
+(`calcDateFormat`: numeric, short, long). They are the application's, not the sheet's: a sheet
+shared or imported reads the same everywhere. The units and the messages stay in the language
+on screen. A number is handed to `Intl` as the decimal text Rust sent, never as a float, which
+would invent figures past the fifteenth. After `en` or `à`, the completion proposes the units of
+the kind Rust read on that line (`CALC_UNITS`), written in the language on screen; elsewhere,
+from the third letter, the values and the phrases of the table (`CALC_WORDS`) in the spelling of
+the language on screen — the front writes no Calcul word of its own (`CalcWords`). A name hovered says
+its exact value, the line it was given on and the lines that read it.
+
+**Copying** — `C` on the card, « Copier » in the editor or the palette — gives the text with each
+result after its line as a comment (`CalcFormatter.copyText`): pasted into another sheet, the
+comments are read past and the same lines compute again. The front writes it, since Rust knows no
+word on screen; `DisplayNote.copy_text` stays `None`. **One result** copied
+(`CalcFormatter.exact`) is pasted back into a sheet, so its thousands are never grouped, whatever
+the number format: `1.578` (de-DE) and `1,578` (en-US) would read back as decimals, so every
+format copies `1578,13 €` or `1578.13 €`; the result column keeps the format chosen.
+
 ### A Note is written formatted, and stored as Markdown
 
 A Note is a kind of its own (`NoteKind::Note`), edited in the rich editor instead of the code
-field (`Note::is_rich_text` in Rust, `isRichText` in the overlay), and its body is still one
+field (`Note::is_rich_text`), and its body is still one
 string: it is sealed, exported, copied, searched and kept in revisions like a snippet's. A
 snippet in `txt` is plain text, in the code field. What the editor writes is GitHub-flavoured
 Markdown, and it offers only what that can hold — headings, emphasis, inline code, lists, task
@@ -1491,68 +1353,168 @@ boxes, quotes, tables, links, code blocks. No underline. A code block keeps its 
 fence, picked from the toolbar while the caret is in it (`txt` writes the fence bare). Sharing
 and exporting write a Note as the Markdown it is, where a snippet is fenced.
 
-- **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
-  `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as
-  `a -&gt; b`. `rich-text.engine.ts` replaces its private `encodeTextForMarkdown` with
-  `escapeMarkdownText`, which escapes a character only where it would read as syntax and never
-  inside a `{{field}}`. `markdown-text.spec.ts` fails if an upgrade stops calling it.
-- **⚠️ Focus before a chain, never inside it.** On WebKit, which Linux runs, TipTap's
-  `chain().focus()` focuses synchronously, and the focus dispatches first: a note ending in a
-  list gains its trailing paragraph under the chain's transaction, which then throws "Applying a
-  mismatched transaction". `focusFirst` runs before every chain the toolbar builds, and a
-  capture listener runs it before TaskItem's own when a box is ticked. Chromium defers that
-  focus to the next frame, so Windows never shows it; the component spec fakes WebKit's agent.
-- **TipTap is a chunk of its own**, some 135 kB gzipped, loaded by `@defer (on immediate)` when
-  a Note opens. ⚠️ `viewChild(RichTextEditorComponent)` names the class at runtime and
-  pulls the whole editor back into the page's chunk: the overlay queries it by template
-  reference, with a type-only import.
+- **The document is `richtext`'s** (egui migration, no egui in it): blocks and marked runs,
+  read by `pulldown-cmark` with the core's own options (`notes::markdown` holds the two equal in
+  a test) and written back byte for byte as the reference's editor wrote it — `golden/markdown`
+  and `golden/markdown-escape` pass whole. What the schema does not hold is read as what it shows:
+  raw HTML as its text, a footnote as its brackets, a reference link inline, a bare `https://`
+  address as a link to itself. `richtext::escape` is `escapeMarkdownText`, ported rule for rule.
+  Undo keeps the document and the selection before each transaction (`History`): a Note is a
+  few kilobytes.
+- **Editing is `richtext::edit`'s**, the view `overlays/editor/rich.rs`'s. A caret is a path to a
+  leaf — a paragraph, a heading, a cell, a code block — through items, quotes and tables, and a
+  `char` offset; each operation takes the selection and answers the next one, as the reference's
+  keymap did: Enter in an empty item leaves the list, Backspace at an item's start lifts it, Tab
+  nests it under the one above. The view draws through `widgets::rich` (the reader's own
+  layout), which says where each leaf was laid out: the caret, a click and ↑ ↓ are read from those
+  galleys. A Note opened and left is written back untouched — the Markdown is rewritten only once
+  something changed. After a toolbar button the text takes the keys back, as the reference's
+  `mousedown` kept them. A task's box is a control of its own (`rich-task`).
+- **A paste reads the clipboard itself**: egui hands the field the text alone, so the editor asks
+  `platform::clipboard` (`arboard`) for the page's HTML. HTML the reference called formatted —
+  emphasis, a link, a heading, a list, a quote, a table, and no `pre` or `code` — goes in as
+  blocks (`richtext::from_html`, on `html5ever`'s tokenizer; `golden/html-paste` passes
+  whole); code pasted into an empty Note makes it a snippet, the conversion detecting its
+  language; anything else is text. A pasted image becomes an attachment, as in every editor.
+- **An embedded drawing is read where it is shown**: `devnotes:drawing/<id>` asks
+  `LibraryCaches.pictures` (the large picture, by id, decoded off the frame and kept with the
+  thumbnails' limit); a drawing saved again drops it. Any other image stays as written: a Note
+  never fetches an address. **Ctrl+F and Ctrl+H** open the code's find bar over the text the reader
+  sees (`search_bar::Searchable`): no match crosses from one block into the next, and a
+  replacement wears what the match it replaces wore.
+
+- **⚠️ The escaping is the reference's, not a Markdown library's.** A general escaper turns
+  every `_ * ~ [ ] \` into syntax and `& < >` into entities, so `{{db_host}}` stops being a field
+  and `a -> b` is stored as `a -&gt; b`. `richtext::escape` escapes a character only where it
+  would read as syntax and never inside a `{{field}}` (the shield, D10), held by
+  `golden/markdown-escape`. A `*` or `_` with a space inside (« 2 \* 3 \* 4 ») is kept as typed.
 - **A card shows a Note's shape, not its Markdown.** `notes::markdown::outline`
   (pulldown-cmark) reads the body into one line per block, each saying what it is — a heading,
   an item and its marker, a task, a code block, text, table cells joined by `·` — and the card
-  draws those (`DisplayNote.outline`, `NoteOutlineComponent`), cut to a card's lines. `plain`
+  draws those (`DisplayNote.outline`), cut to a card's lines. `plain`
   is the same lines with their markers spelled out (`•`, `1.`, `☐`/`☑`): `cut_to_preview`
   puts it in place of the body, one parse for both, marked `truncated` even when it is short —
   a copy taken from the list rereads the Markdown instead of copying the words. The search
   matches the stored body and quotes the readable one (`Note::readable_body`). A snippet names
-  its format on its card and in the palette, a Note and a list their kind (`KindBadgeComponent`).
-- **Typing never changes the kind; a paste into an empty Note can.** The rich editor hands
-  plain text pasted into an empty Note to the overlay, which asks `detect_language`. Prose
+  its format on its card and in the palette, a Note and a list their kind (`notes::ui::kind_icon`).
+- **Typing never changes the kind; a paste into an empty Note can.** Plain text pasted into an
+  empty Note is handed to `detect_language`. Prose
   stays a Note and is written as it is; code is written as a snippet with its language, in one
   patch, and the note moves to the code field with its characters intact — the rich editor
   would have folded its indentation into paragraphs.
-- **A code block is coloured by decorations.** TipTap holds text, not HTML: `highlightRanges`
-  reads highlight.js's output back as offsets over the block's text, and `CodeHighlight` lays
-  them as inline decorations, the language as a label on the block — the code field's grammars,
-  nothing loaded twice. Tab indents as the code field does (`indentUnit`), and `withTabs`
-  leaves a fence alone: nothing is escaped in one, so its `&#9;` is text. A card and a search
-  read its lines as they are (`notes::markdown::plain`).
+- **A code block is coloured by the code's grammars** (`text::highlight`, → "Syntax
+  highlighting"), its language as a label on the block, drawn plain until the grammars have
+  loaded. Tab indents as the code does (`indent_unit`). A card and a search read its lines as
+  they are (`notes::markdown::plain`).
+- **A `mermaid` block is drawn under its code** (`widgets::rich`, D2), offered first in the
+  block's language menu; a snippet has no Mermaid language. The `diagram` crate draws it:
+  `merman` writes the SVG through its `resvg_safe` pipeline (labels as `<text>`, which `resvg`
+  paints), measuring them with the embedded Inter (`native-fonts`; without it labels are cut),
+  in Mermaid's `base` theme with its variables from the tokens; `resvg` paints it at twice its
+  size. Built without ELK. A parse error names its line, from the byte span `merman` gives, and
+  shows its message; a source that draws nothing else is « type not supported » and stays code.
+  `LibraryCaches.diagrams` keeps the last 64 drawings, by theme and source, uploaded once, and
+  draws one at a time on `compute`. The view asks for a source it has no drawing of; the editor
+  asks at once when nothing stands in its place and once typing pauses (`REDRAW_AFTER_SECS`)
+  otherwise, the last drawing in that place (egui's memory, by the block's rank) shown
+  meanwhile. Away from the caret the code folds to its first line; a click on the drawing puts
+  the caret at the end of its code. The fence is stored as it was typed, and a card shows the
+  block's lines.
+- **« Présenter » shows the Note full screen, a slide at a time.** Rust cuts the draft on
+  screen, not the stored body (`present_note`, `notes::markdown::present`): a slide starts at
+  each `#` or `##` heading and after each `---` rule outside any list, quote or fence, each slide
+  a slice of the body so it is drawn as written, empty ones dropped; the headings come back as a
+  tree, each with the slide it is on. `overlays::presentation` puts the Note's title first as a
+  cover and draws each slide with `widgets::rich` read only and larger — the editor's own blocks,
+  colours and diagrams, a diagram without its code — centred by the height it took last frame.
+  ← → (and the keys a clicker sends), Home/End, `M` for the map, Escape out: a modal over
+  everything, the editor kept under it. `PresentationState` sends `ViewportCommand::Fullscreen`
+  only when the window was not full screen already, and gives back only what it took — on
+  leaving, and when another library opens. The map (`presentation::mind_map`, checked against
+  the `mind-map` corpus) rings the headings around the title, a share of the sector by leaves,
+  stretched to the screen; its headings are buttons over the links, one pressed opens its slide.
 - **The editor says what it holds.** A "Note" badge sits where a snippet has its format menu,
   and the footer counts the draft's words (`countWords`) where a snippet counts lines and bytes:
-  presenting the draft is the front's job, as the line count is. The toolbar runs headings, what
+  counting the draft is the interface's job, as the line count is. The toolbar runs headings, what
   marks words (the link among them), blocks, then what is inserted, each tool naming its key.
-- **A link opens on Ctrl+click**, through `ExternalLinksService`, which refuses any scheme but
-  `http` and `https`. A plain click places the caret, as it does everywhere else in the text,
+- **A link opens on Ctrl+click**, through `platform::links`, which refuses any scheme but
+  `http` and `https`: a `file:` link is a program to run. A plain click places the caret, as it does everywhere else in the text,
   so the pointer turns to a hand only while Ctrl is held, and the surface carries the "Ctrl+click
   to open" tooltip: a link's own `title` is its Markdown title. The link form edits the words
   and the address; words left as they were keep their formatting and only gain the mark.
-- The draft is committed on blur and on every closing path, like the code field's: the overlay
-  blurs the rich editor before it closes, so the last keystrokes are not lost.
-- **Tab is a character once lists and tables pass on it** (`TabCharacter`, priority below
-  theirs): it nests a list item, moves to the next cell, and otherwise types a tab. ⚠️ A tab
-  starting a line is written `&#9;` (`escapeMarkdownText`), since Markdown reads a leading tab
-  as an indented code block, or drops it after a line break. `@tiptap/markdown` decodes only
-  four named entities, so `MarkdownWithTabs` wraps its `parse` and turns `&#9;` back into a
-  tab. pulldown-cmark decodes it by itself for the cards.
+- The draft is committed when the focus leaves and on every closing path, like the code's, so
+  the last keystrokes are not lost.
+- **Tab is a character once lists and tables pass on it**: it nests a list item, moves to the
+  next cell, and otherwise types a tab. ⚠️ A tab starting a line is written `&#9;`
+  (`richtext::escape`), since Markdown reads a leading tab as an indented code block, or drops it
+  after a line break; reading decodes it back.
+
+### A Dessin: a scene, and its pictures beside it
+
+A Dessin (`NoteKind::Drawing`) is drawn in `overlays/editor/drawing.rs` over `drawing::Editor`.
+**Its body is the scene alone** — `{ version, scene }`, the JSON of Fabric, which drew it in the
+reference — and Rust reads it only for its words (`notes::drawing::words`, the texts on it,
+through the groups): what a search matches and quotes, what a conversion or the Markdown share
+gives. It has no field (`{{x}}` written on it is words), no revision (a scene compares as no
+text), no copy (a card and the palette offer none: it is exported), and no conversion either
+way — the kind menu names it and offers nothing.
+
+- **⚠️ Its pictures are not in the body.** A list opens every body it searches, at every
+  keystroke; two PNGs are most of a drawing's bytes. They sit in `drawing_pictures`, one row
+  per drawing, both sealed as raw bytes, cascaded with the note: a small one for its card, a
+  large one for a Note that embeds it. The editor takes them only when it flushes — on blur and
+  on every closing path, never as it draws — and they go with the body in one patch
+  (`NotePatch.pictures`, validated as PNGs before the lock, written by `store::update_drawn`
+  in the patch's transaction; both empty takes them away). A new drawing's first pictures
+  follow the write that makes it (`NotesStore.editDraft`). A list sends none
+  (`cut_to_preview` clears the body): a card asks `drawing_thumbnail` once drawn, through
+  `DrawingPicturesStore`, kept until the drawing's next save (`updatedAt`) or its pictures'
+  (`redrawn`, which moves no date); a duplicate takes them, an export does not. A drawing
+  that has none, as one that came by import, has them taken when it opens: the editor asks
+  `hasPictures` and they go with its next flush.
+- **`crates/drawing` reads the scene** (`Drawing::read`, `write`): an object is the fields it was
+  read with and is read through them, so a body comes back byte for byte (`golden/fabric`, what
+  Fabric itself wrote); `serde_json`'s `preserve_order` and `float_roundtrip` are what hold that.
+- **One line break, one way to a picture** (D23): `text::wrap` is Fabric's `_wrapLine` on the advances
+  of the embedded fonts, for the editor and the pictures; a browser kerns, so a word can break
+  elsewhere (E14: one case of `golden/fabric-wrap`). `picture::svg` writes the export from the scene
+  and `resvg` rasterises it (`pictures`, 480 and 1,600 px). ⚠️ `resvg` knows no
+  `non-scaling-stroke`: a `strokeUniform` shape has its geometry scaled, not its plane.
+- **What is drawn keeps its colours by name.** Each object carries a `hue` (ink, blue…),
+  painted from the tokens on `:root` (`paletteOf`), so a theme changed later redraws it; the
+  pictures are taken on the theme's paper (`--bg-1`). ⚠️ Fabric 7 places an object by its
+  centre: `left`/`top` are the middle of the box a drag covers.
+- **An arrow started or ended on a shape stays on its edge** (`from`/`to` ids, `ends`,
+  `boundEnds`): it follows the shape as it moves, and a shape removed lets go of it. A path's
+  box is read when it is made, so an arrow whose ends move is made again in its place.
+- **`drawing::Editor` holds every gesture**, in the scene's units, with no egui: `press`, `drag` and
+  `release`, a selection framed by its handles, each step read from the objects as they were when
+  the gesture began, so nothing drifts. The widget paints `marks`, the scene flattened to lines and
+  words. A click moves nothing: an arrow is rebound only when something moved.
+- **The editor**: a toolbar in the app's look (selection, rectangle, ellipse, diamond, arrow,
+  freehand, text, by their letters; six swatches; undo, redo and delete; Escape drops the tool
+  and gives back the selection it was taken over, then drops the selection, then leaves), a
+  history of the scene's states, and an export as PNG or SVG (`drawing::export`), written with
+  `tools::write_file` where `FileDialog` says. ⚠️ `rfd`'s dialog blocks until answered, so the whole
+  export runs on `compute`, never on the window's thread. An e2e scenario answers it through
+  `DEVNOTES_E2E_DIALOG` (`App::launch_answering`).
+- **A Note embeds one by its id**: `![title](devnotes:drawing/<id>)`, the Markdown image of
+  TipTap's extension, drawn by a node view that asks `drawing_picture` (`rich-text-drawings.ts`);
+  the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose
+  list is `list_drawings` (titles only opened), and which is there with no drawing to say there
+  is none. Any other image stays as written: the CSP loads nothing from elsewhere.
 
 ### A list sends previews, and the body is read by id
 
-`query_notes` and `board_view` send each body cut to what a card shows —
-`notes::model::PREVIEW_LINES` lines, and at most `PREVIEW_CHARS` characters, since a minified
-file is one line — and say so with `DisplayNote.truncated`. The cut is the **last** pass of
-`view::build` and `board::build`: the fields, the matching and the search excerpt read the
-whole body first, so a list still knows a snippet has a `{{field}}` on its fortieth line, and
-still quotes the line a search found there. The card draws what it is sent; it no longer
-slices anything itself.
+A card shows each body cut to its room — `notes::model::PREVIEW_LINES` lines, and at most
+`PREVIEW_CHARS` characters, since a minified file is one line — and says so with
+`DisplayNote.truncated`. `query_notes` answers no copy at all: its sections hold
+`view::Card`s, the index's own `Arc<IndexedNote>` entries with the quote of what the search
+found, and `NotesView::display(card)` computes what one card draws (footer, fields, chip,
+counter, preview) for the cards on screen only. The cut is its **last** pass, as it is of
+`board::build`: the fields, the matching and the search excerpt read the whole body first, so a
+list still knows a snippet has a `{{field}}` on its fortieth line, and still quotes the line a
+search found there.
 
 ⚠️ **A note from a list is never edited.** `NotesStore.openNote` takes an id and reads the note
 with `get_note`, every time: a draft seeded from a preview would write the first lines back
@@ -1584,22 +1546,35 @@ card's accessible name; `.card` is a `<div>` above it in `pointer-events: none`,
 control takes its own events back. The checklist's tickable items are simply in the flow
 instead of a floating layer of their own.
 
-**One row holds the tick, the title and the marks.** The marks — a pin, a format badge, a ⚡,
-a 📎 — used to have a band of their own above the title: a line that says nothing about the
-note, on a card that is a fixed 150px. They are right-aligned on the title's row now, the
-title gives way to them (`flex: 1` plus `min-width: 0`, without which a long title pushes
-them off the card instead of clamping), and the body is what got the line back — five lines
-where it was four, which is `notes::model::PREVIEW_LINES` since a list sends no more than that.
+**A card reads like a small editor window: a title bar, a preview, a status line**. The
+title bar (28 px, `card::bands::top`) holds the kind's icon in an 18 px tile tinted with its hue,
+a snippet's format (« TS », « Texte » in grey for plain text), the title on one line with an ellipsis, then on the right a list's « 1/4 », the priority as three
+bars (« Urgent » written out in red beside them, the others named in the tooltip), the pin, and
+— while cards are ticked — the selection box, last, so nothing on its left moves but the pin,
+which steps over for it. The status line (22 px, `card::bands::bottom`) is passive: where the
+note is on the left (the folder's square and name, the space first under « All spaces », the
+space alone with no folder, nothing inside the folder's own view), and on the right ⚡ and the
+fields to fill, 📎 and the attachments, and the short date (« 4 h »,
+« hier », « dans 2 h » in red for a near expiry; the long label is the node's name). Neither
+band is ever empty, both have no fill but under the pointer (`bg_3`) and a `line_soft` rule
+toward the preview. A card shows no tag: a search that found one says so in the preview. An
+armed deletion turns the status line red with its two keys.
 
-⚠️ `MAX_VISIBLE_ITEMS` deliberately did **not** move. A todo list with nothing to mark never
-drew that band, so it gave nothing up; and 21px recovered is less than the 24px a row needs
-now that every row clears the hit target.
+⚠️ **The title bar was chosen over a band of marks** (2026-11-09). The first version put the
+kind, the format and the counts in a band above a title line, as the mockup
+(`docs/mockups/note-cards.html`) drew it; on a note with no field, attachment, priority or pin
+that band held an icon alone and read as empty. The title went up beside the icon and a snippet's
+format, the counts went down with the date, and the line given back went to the card's height.
 
-⚠️ **The tick is in the flow**, at the head of that row, and always drawn — quiet at rest,
-amber once ticked. It used to float in a pill over the card's top-right corner, which is
-precisely where the marks now are: anything floating there sits on top of them, and that
-collision is what decided this layout. A selection affordance that exists only under the
-pointer is also one nobody finds.
+**The preview is whole lines, the library's count** — 3, 4 or 5 (`devnotes.notes.previewLines`,
+`PreviewLines` in `folders::board`), making the card 120, 140 or 160 px, a multiple of the
+board's 20 px grid. A list shows one task fewer than the lines (a task's row is 24 px), code has
+no frame and marks its `{{fields}}` as the editor does (`api::notes::field_ranges`). The core
+still sends `PREVIEW_LINES` (5): the card clips. An untitled note writes no « Untitled »: its
+icon stands alone in its title bar, and only its accessible name says it.
+
+⚠️ **The tick is allocated on every frame**, shown or not: a widget that comes and goes moves
+the ids of every one after it, and the ⋯'s menu lost its own.
 
 **The card's ⋯ menu is the complete one.** Open, pin, copy, duplicate, file into…, move to…, delete —
 a note's properties used to be spread over four surfaces with none of them complete: filing
@@ -1619,9 +1594,11 @@ belongs to one space, so `NotePatch::apply` clears `folder_id` whenever `space_i
 A folder control without the space control beside it would go on naming a folder the space
 switcher can no longer reach.
 
-⚠️ **Filing is not a `NotePatch` field.** `NotesStore.fileNote` is a **batch of one**
-through `file_notes`, the same command the selection bar takes, because that command
-answers the placements it actually changed and that answer is what the undo puts back. It
+⚠️ **Filing and moving are not `NotePatch` fields there.** `NotesStore.fileNote` and
+`NotesStore.moveNote` are **batches of one** through `file_notes` and `move_notes`, the
+commands the selection bar takes, because they answer the placements they actually changed and
+that answer is what the undo puts back — for a move, the space **and** the folder the note left,
+filed back into while it still exists there. It
 is also the one write with no note to adopt — `adoptFiling` refreshes the open note from
 the filing that was accepted and the folder list the control offered, or the editor's own
 control goes on naming the folder the note just left until it is closed and reopened.
@@ -1875,8 +1852,8 @@ so the filter, the badge and the section hint were all reachable but permanently
 
 ### The card actions menu
 
-`NoteCardMenuComponent` is the `⋯` menu on a card: move the note to another space, or delete
-it. It is a separate component from `NoteCardComponent` because it brings what the card has
+`NoteCardMenuComponent` is the `⋯` menu on a card: open, pin, priority, copy, duplicate, file
+into a folder, move to another space, delete. It is a separate component from `NoteCardComponent` because it brings what the card has
 none of — open/closed state, a document-click listener, focus management — leaving the card
 purely derived from its note.
 
@@ -1962,6 +1939,28 @@ own `_ngcontent` and can never reach into a component's. The rows inside then **
 squeeze**: under about 230px the submit drops below the field. The floor is 160, and so is the
 default, the width being remembered like the window's own geometry — the default is a first
 launch and nothing else.
+
+**A folder holds folders, so the rail draws them under their parent**, one `ul.folders` a
+level, from a recursive `ng-template`: the indent is the nesting. A folder that holds folders
+has its twisty; the others keep its column, so the names line up. **Siblings are sorted by name
+and have no order of their own**, so a folder dropped on a row always goes _inside_ it, never
+before or after; a drop on its space's row brings it back to the top. The move is the rail's
+own — `FoldersStore.moveFolder`, recorded for the undo by the rail, since `UndoStore` injects
+`BoardStore`, which injects `FoldersStore` — dragged by its row or with `Alt+←` (up a level)
+and `Alt+→` (into the folder above it among its siblings). A row it cannot go into — itself,
+what it holds, another space — is ringed in red and said, rather than left silent.
+
+⚠️ **The gesture, its landing mark and what it says are the HTTP rail's, not a copy of them.**
+`shared/rail/row-drag.ts` is the pointer state machine — a threshold, the click a drag ends
+with swallowed, `railRowAt` reading the row under a point from `data-rail-row` and `data-id` —
+and `shared/rail/rail-marks.ts` the mark on the row and on what now holds it, and the sentence
+for the live region. The look is the `rail-landing` mixin. Each rail keeps only what is its
+own: where a drop lands, and what moving means.
+
+**A card on the board can be let go over a row of the rail**, and is filed there at any depth.
+The board reads the row under the pointer (`railHovered`, which `BoardStore.railTarget` hands to
+the rail to light it), and on release `fileFromRail` files it — staged in the zone that holds
+that folder on the board on screen, or off it — and the canvas records the undo.
 
 ⚠️ **A row's name is ellipsised by `.node-label`, a box of its own.** `text-overflow` is a
 property of a block container and `.node-name` is a flex one, which ignores it outright: the
@@ -2278,6 +2277,11 @@ is logged.
   also keeps the environment it left with, its name and colour then (`HistorySummary::environment`,
   sealed with the rest), shown on its row. « Rouvrir » puts the `{{name}}` back, which resolves
   again.
+- **What the request sent as a secret is masked where the answer says it back**: the token of
+  its auth (and the whole header), each cookie value, the API key (`history::sent_secrets`). An
+  echo service answering `Authorization: Bearer …` keeps `••••••••` in the history. A note made
+  of an answer goes through the same (`http_response_note`: the answer kept under the send's id
+  for its secret variables, its exchange for the rest) and says so; the answer shown is left as it came.
 - ⚠️ **The limit of the mask**: it knows the secrets a request _declares_. A token typed by
   hand as a parameter or in a body, or one a server answers in its body, is kept as it is —
   sealed like the rest of the record, and shown to whoever opens the entry. A test a secret
@@ -2468,6 +2472,11 @@ is left out; a value naming another is filled again, eight times at most.
   its place, the environment or a set changes, the last one kept while the next is read.
 - A send first writes what an environment's table still holds (`HttpEnvironmentsStore.flush`):
   it resolves from what Rust has.
+- **`{{$guid}}`, `{{$randomUUID}}`, `{{$timestamp}}`, `{{$isoTimestamp}}` and `{{$randomInt}}` are
+  made at the send** (`variables::is_dynamic`), a new value each place one is written; no level
+  can set one, `$` being no letter of a name. The editor's chip says so in the purple of
+  `VariableScope::Dynamic`. The `$random…` names that invent people, places or words are not
+  among them: each would be a list to compile in.
 
 ### Generating code from a request
 
@@ -2510,6 +2519,136 @@ written again with `GOLDEN_WRITE=1`, then read before they are kept).
   (`sh`, `ps1` — PowerShell joined the languages for it, chosen and never detected) and `http`
   proposed as its tag.
 
+### Request scripts, in a process of their own
+
+**A script is JavaScript run by QuickJS in a script host: the application started again**
+(#492, `http/scripts/`). The WebView cannot run it — its CSP forbids `eval`, and should — and the
+application's own process holds the library's key and every note: an engine bug there reaches
+them. So `ScriptProcess::start` (`process.rs`) launches `current_exe()` with
+`--devnotes-script-host`, which `main` reads **before Tauri** (no window, no single instance, no
+library), its environment cleared but for what loads the executable (`SystemRoot`,
+`LD_LIBRARY_PATH`). The host (`child.rs`) reads one JSON message a line on its standard input and
+answers on its standard output.
+
+- **One host for one request**, given a phase at a time (`Job`, `model.rs`): before the send,
+  then after it — the second reads what the first left in `pm.variables`. A phase has
+  `PHASE_TIME` (30 s), its sends included: past it QuickJS's interrupt handler stops the script
+  (an endless loop ends as `FailureKind::Timeout`, never as a frozen window), and 2 s later the
+  application kills the host, which is never given another phase. 128 MB of heap; QuickJS's
+  stack limit is 8 MB on a 16 MB thread — Ajv's schema compiler needs more than the default
+  megabyte.
+- **The engine** (`engine.rs`) compiles each script as the body of an async function under its
+  own name (`script-3`), so a stack names the script and the user's line, and an `await` reads at
+  its top level. It then drives the phase: the promises' jobs, then the prelude's timers
+  (`nextTimer`, `fireTimers`), until the phase's promise settles; a wait nothing can end — no job,
+  no timer — is said rather than waited for. Timers due together fire by deadline, then by
+  creation, as in Node: Windows wakes a 5 ms sleep about 15 ms later, so several are often due at
+  once.
+- **The API is the prelude's** (`prelude.js`, JavaScript over four natives: `call`, `log`,
+  `random`, `module`): `req`, `res`, `env`, `test`, `expect`, `console`, the timers, and
+  Postman's `pm` (request, response, environment, globals, collection variables, variables,
+  iteration data, cookies and their jar, `sendRequest`, `execution`) with its older names
+  (`tests[…]`, `postman.*`, `responseBody`, `xml2Json`…). `pm.visualizer` draws nothing and says
+  so; `pm.require` and `pm.vault` have nothing behind them.
+- **`expect` is chai's, with Jest's words on the same object** (`toBe`, `toEqual`, `toContain`,
+  `toMatch`, `toHaveProperty`…, `.not` included) and Postman's response assertions
+  (`pm.response.to.have.status(200)`, `.be.ok` for a response only). A failure carries what was
+  expected and what came, written by the prelude (a text quoted, the rest as JSON).
+- **`env.set` and `env.secret` write the active environment, the globals with « Aucun »**; a
+  phase answers what it wrote (`VariableWrite`), the request as changed (`ScriptRequest`, Postman's
+  shape — `ScriptRequest::onto` writes it back, a method Rust does not send refused by name), its
+  tests and its failure.
+- **`require` is a list compiled in** (`libraries.rs`): lodash, moment, chai, crypto-js, uuid,
+  Ajv, tv4, xml2js, cheerio (its slim build), csv-parse, and Node's assert, buffer, events, path,
+  punycode, querystring, stream, string_decoder, timers, url, util as their browser polyfills —
+  about 1 MB, each evaluated on its first `require`. They are bundled by
+  `crates/engine/sandbox/build.mjs` from its own `package.json` (not the application's: none of it
+  reaches the WebView) into `sandbox/dist/`, which is committed with a manifest and the
+  libraries' licences; `libraries::tests` holds the table to the manifest. Node's modules are
+  left out of the other bundles, so one copy serves them all. Nothing else is found: `fs`,
+  `child_process`, `net` answer `MODULE_NOT_FOUND`.
+- ⚠️ **The network is this process's, not the script's** (`network.rs`): `pm.sendRequest` and
+  `pm.cookies.jar()` are calls the host makes and waits for. A send is composed by `compose`
+  with nothing inherited, sent by `send::alone` with the transport of the request carrying the
+  script, on the copy of the jar that request's send works on; what it did to the jar joins the
+  changes merged under the lock afterwards, and it is not written in the history. On a protected
+  environment nobody confirmed, a send that is not a `GET`, `HEAD` or `OPTIONS` is refused
+  (`httpScriptProtected`), and the script's `Error` says so.
+- ⚠️ **An imported script runs with the user's secrets and the network**: the import review
+  (#618) lists the scripts a collection carries before anything is written.
+
+**Around a send** (#493). A request, a folder and a collection each hold `RequestScripts`
+(`before`, `after`), sealed with the document or the settings that carry them. `Around::of`
+(`around.rs`) lists what one send runs: before it leaves the collection's script, each folder's,
+then the request's; once answered, the other way round; a blank one is not run.
+`send_http_request` is a `Flight` (`http.rs`), one host for both phases (`session.rs`):
+
+- What it inherits, the levels it resolves from, the environment and a copy of the jar are read
+  under the lock; the phase runs on a blocking thread, the lock free. « Annuler » kills the host
+  (`Sending::watch`) and answers `httpCancelled`.
+- What a phase wrote is kept under the lock at once (`keep_writes`: the active environment,
+  the globals, the collection's variables — a run's data row is none of them) and applied to the
+  levels in memory, so the send resolves from it. `pm.variables` as the phase before left them
+  is the nearest level. `ScriptRequest::onto` writes back what the script changed.
+- ⚠️ **Rust asks the protected environment's question again after the script**: the front asked
+  about the method it saw; one the script made a change, unconfirmed, is `httpScriptProtected`
+  (`method`, `environment`), and the pane asks with « Envoyer quand même », which sends again,
+  scripts included, with `confirmed`.
+- A script before the send that fails keeps the request in: `httpScript` carries how
+  (`failure`), whose script (`level`, `name`, `owner`), the `line` and — for a throw or a syntax
+  error only — the script's own `message`. `skipRequest()` is `httpScriptSkipped`; a method Rust
+  does not send, `httpScriptMethod`. Nothing is written in the history: nothing left.
+- The phase after runs on an answer only; what stops it is `SentResponse.scripts.failure`,
+  shown above the answer, which stays. **The tests are a third script** (`RequestScripts.tests`,
+  #494) run in that phase after the scripts after the answer, request › folder › collection; a
+  `pm.test` in a script after the answer counts too. `TestResult::placed` names whose test it
+  is and the line of code that failed, as written; secrets are written as their `{{name}}`, and
+  the results are kept with the history entry. The response's Tests tab groups them by holder. The console's lines cross once, each secret in force
+  written as its `{{name}}`; `history::record_of` drops them. `scripts.wrote` makes the front
+  read the environments and the settings again; a script error does too.
+- **An extraction is a rule of the request, not a script** (`RequestDocument.extractions`,
+  #495): after the scripts and the tests, `extract::extract` reads its path from the JSON body —
+  `body.access_token`, `body.items[0]`, `body['a key']`, the response explorer's own way of
+  writing a path from `body` — and the value goes into the active environment, the globals with
+  « Aucun ». A path that leads nowhere leaves the variable as it was and is said in
+  `scripts.extracted`. Every variable a send writes, by a rule or by `env.set`, carries
+  `filled_by` — the request's id and name —, which the environment page shows as « remplie par
+  Login » and opens. The response explorer's right-click menu and its selection panel offer
+  « Extraire vers une variable… » on an answer only (`extractable`).
+- **The console is events, not an answer** (`http/console.rs`, #497): a `Flight` says each
+  line as it goes — the request leaving and its answer or failure, a phase's logs and
+  `pm.sendRequest`s in the order they happened, the tests that failed, what stopped, an
+  extraction that led nowhere — as `HTTP_CONSOLE_EVENT`, under the send's id, so a script that
+  stops the send still has its logs shown. Each secret in force is written as its name and an
+  auth or a cookie header masked (`history::shown`); the phase after is said once the
+  extractions ran, so a value one makes a secret is hidden in what was logged before. The front
+  keeps them per tab for the session (`HttpConsoleStore`, 500 lines, never written), folded
+  under the answer until unfolded; its height is the application's (`httpConsoleShare`).
+- **A run is sends, not a history** (`http/runner.rs`, `run_http_collection`, #496): the
+  requests under a collection or a folder, in the order the page set, one after the other, each a
+  `Flight` with `record` off — no history entry — and, when the variables are not kept,
+  `persist` off: what its scripts and extractions write lives in the run's `overlay`, laid over
+  the levels each next request reads. A data file (`read_data`: a CSV with its header, or a JSON
+  array of objects) is an iteration a row, the row `pm.iterationData` and the nearest level.
+  `pm.execution.setNextRequest` goes to the request of that name, `null` ends the run; a skipped
+  request neither fails nor stops it. Each step is `HTTP_RUN_EVENT` (`Started`, `Ended` with its
+  `RunResult`, `Finished`); `cancel_http_run` cancels the send under way and the delay. The lock is
+  taken for the tree and each request read, never across a send. Its console lines are under
+  `run:<id>#…`, one console for the run. A protected environment is asked once by the page,
+  counting the requests that could change it; the yes is the run's `confirmed`.
+- **The order the page sets is kept with the collection or the folder** (`run_order` in its
+  `ContainerSettings`, `save_http_run_order` at each move or tick): `http_run_order` answers it
+  less the requests gone since, then those added since in the tree's order (`runner::run_order`).
+  The runner reads it on « Exécuter… » and again when the tree changes. The settings dialog does
+  not hold it: `save_http_settings` keeps the stored one.
+- ⚠️ A test's executable is its harness, not the application: `process::host_from` points the
+  hosts at `CARGO_BIN_EXE_devnotes` (`tests/commands/http_scripts.rs`).
+
+On screen, the Scripts tab and the settings dialog's section are one `ScriptEditorComponent`
+(`http/ui/`), the snippets' code editor rendered without being owned. « Ouvrir le script »
+goes through `HttpScriptFocusStore`: the request's own tab, or the settings of the folder or
+collection that holds the script (`HttpCollectionsStore.settingsOpen`), on the line that stopped.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation
@@ -2518,7 +2657,11 @@ nesting inside it — a text field or a `<select>` inside a `role="menu"` is nei
 nor navigable the way options are. Escape unwinds one level at a time.
 
 The delete control only appears when another space exists to receive the notes; with a single
-space the panel explains why rather than offering a button that could only fail. Each space
+space the panel explains why rather than offering a button that could only fail. **It says what
+goes before the first click**: `count_space_contents` answers the space's live notes and its
+folders when the panel opens, and the panel words them with the refuge chosen — « Ses 12 notes
+iront dans « Perso », hors de tout dossier. Ses 2 dossiers partent avec lui. » — since the
+folders cascade with the space and nothing undoes it. Each space
 row is a `role="none"` wrapper holding the select button and the `⋯` trigger, so the menu
 keeps its direct menuitem children. Arrow-key navigation stays on the select buttons only.
 
@@ -2544,11 +2687,23 @@ holds is deliberately small:
 | Piece                      | Where it lives                                              |
 | -------------------------- | ----------------------------------------------------------- |
 | name, colour, owning space | the `folders` table — domain, and it travels with an export |
+| the folder it is in        | `folders.parent_id`, nullable, in the same space            |
 | which folder a note is in  | `notes.folder_id`, nullable, `ON DELETE SET NULL`           |
 
 ⚠️ **`ON DELETE SET NULL`, never `CASCADE`.** Deleting a folder must not delete a note. It is
 also why `delete_folder` takes no refuge argument where `delete_space(id, targetSpaceId)`
-must: "no folder" is a legitimate state, so the notes simply come out loose. `spaces/`
+must: what the folder held goes to **its parent** — its notes filed there, its sub-folders each
+to a free slot on that board — or loose at the top of the space. That is done in Rust, in one
+transaction, before the row goes; `parent_id`'s own `SET NULL` is only a guard.
+
+**A folder holds folders, one tree per space.** Every rule about it is `folders::model::Lineage`,
+built from ids and parents alone, so no name is opened to answer one: the sub-tree, the path, the
+depth, where a note sits on a board (`Seat`), and what a move may do — never into itself or what
+it holds, never out of its space, its whole sub-tree within `MAX_DEPTH` (8, a guard and not a
+level anyone should reach). A name is unique **among its siblings**: two folders may each hold a
+« Perf », as two spaces may. `move_folder` answers where the folder was — its parent and its
+zone's frame — which `move_folder_back` puts back; the frame is let go of on the way, since a
+frame is a place on one parent's board and means nothing on another's. `spaces/`
 cascades into `folders/`, and that cascade then fires the `SET NULL` — a space's notes reach
 their refuge unfiled, which is correct, since a folder of the deleted space no longer exists.
 
@@ -2571,12 +2726,14 @@ for the same reason: rebuilding the set from the selection would unfile a note t
 touched. A note already in the target folder is not reported, so a batch that changed nothing
 opens no undo window.
 
-**The card says where a note lives, and the back end is what resolved it.**
+**A card says where a note lives, and the back end is what resolved it** — the deepest folder,
+its path from the top of the space on hover (`NoteFolder.path`).
 `view::Decorations` fills `DisplayNote.folder` in the same pass as the attachment count and
 the global `{{field}}` defaults — one pass that `query_notes`, `board_view` and every
 single-note answer run, where there used to be three. `notes::store::decorations` reads the
-counters and the globals; the chips are added by `query_notes` alone, and only when
-`NotesQuery::shows_folder_chips`. The front end never joins a `folderId` against a list it
+counters and the globals; which chips a card keeps is the view's: none for the folder opened,
+whose breadcrumb names it (`NotesQuery::keeps_chip`), none for the zone a card sits in on the
+board (`BoardView::keep_chips_from_below`) — a card from a sub-folder says which. The front end never joins a `folderId` against a list it
 happens to hold. ⚠️ The chip is a **square swatch on a neutral
 pill** — never a coloured pill, which is what a tag is. A note with no folder gets no chip at
 all: the absence reads on its own, and an "unfiled" chip would soil every loose card.
@@ -2607,8 +2764,12 @@ sessions never show it. ⚠️ `notes-canvas` imports `CardDrop` with an `import
 the compiler defers an import only when every symbol on its line serves the deferred block,
 and a shared line kept the board in the page's chunk without a word.
 
-**The board has a query of its own.** `board_view` answers folders and positions, not
-sections — `build_sections` must never learn about a folder. It reads the whole space and
+**The board has a query of its own, and it draws one level.** `board_view` answers folders and
+positions, not sections — `build_sections` must never learn about a folder. `BoardQuery.rootId`
+is the folder whose board it is (`None` for the space's): its **children are the zones**, each
+gathering the notes of its whole sub-tree, and what is filed in the root itself is free on its
+ground; nothing from outside the root is drawn. No zone is drawn inside a zone — a zone lists its
+sub-folders as chips under its title, and opening one is opening that folder's board. It reads the whole space and
 marks each note `matches`, because the search, the quick filter and the kind, tag and
 language rails all **dim** on the board rather than narrow it. ⚠️ Reflowing the survivors
 into a list would throw away the spatial memory the board exists for, which is the one
@@ -2616,16 +2777,17 @@ thing the list view cannot give.
 
 **Cards flow inside a zone and sit freely outside it.** That is the whole geometry:
 
-| What                 | Where it is stored                                   |
-| -------------------- | ---------------------------------------------------- |
-| a zone's frame       | `folders.x/y/w/h`, nullable — all four move together |
-| a loose card's place | `note_positions`, one row per **unfiled** note       |
-| a filed card's place | nowhere: it flows, in canvas order                   |
+| What                | Where it is stored                                                          |
+| ------------------- | --------------------------------------------------------------------------- |
+| a zone's frame      | `folders.x/y/w/h`, nullable — all four move together, on its parent's board |
+| a free card's place | `note_positions`, one row per note, on the board of **its own** folder      |
+| a card in a zone    | nowhere: it flows, in canvas order                                          |
 
-⚠️ A `note_positions` row means "this note is loose". `file_many` deletes the rows of the
-notes it files, so the table's meaning stays exact and a zone never has two competing
-notions of where a card is. It is also why `#133` can say the inside of a folder is not
-spatial without contradicting anything.
+⚠️ A `note_positions` row means "placed on the board of its own folder" — the space's for a
+loose note. `file_many` deletes the row of every note it files, since a place on one board
+means nothing on another, and `save_layout` keeps a place only for a note filed in the root of
+the board the gesture was made on: one filed elsewhere between the drag and the save would get
+back the row `file_many` just dropped. A zone never has two competing notions of where a card is.
 
 **The first layout is materialised, not computed on the fly.** `store::board::geometry`
 reads the frames and positions and writes one for anything that has never been laid out, in
@@ -2633,8 +2795,10 @@ a single transaction. ⚠️ A read that writes, deliberately: computing a place
 it would let the first drag land next to cards that have no stored place of their own, and
 the board would look shuffled at every launch. It is idempotent — the second read of a space
 writes nothing — and a folder added later lands in the slot reading order gives it rather
-than on top of the first zone, because the arrangement is computed against every folder and
-only the missing frames are written.
+than on top of the first zone, because the arrangement is computed against every zone and
+only the missing frames are written. ⚠️ Against the zones **of this board** and its free cards
+alone: the frames of folders a level down sit on their own parent's board, and would take a seat
+on this one.
 
 The layout rules live in `folders/board.rs`, which imports neither Diesel nor Tauri:
 `arrange_zones` flows zones three across, each row clearing the tallest zone above it;
@@ -2653,12 +2817,20 @@ placed cards _and_ the zones, not an equality one: a card dragged by hand almost
 exactly on a seat, and one half over a seat hides what lands there just as well.
 
 ⚠️ **A zone grows to fit and never shrinks.** `store::board::grow_to_fit` runs from
-`file_many` and from `restore_filings`, so both ways in are covered and so is the undo. A
+`file_many` and from `restore_filings`, so both ways in are covered and so is the undo — for the
+folder filed into **and every folder above it**, since each of their zones gathers it. A
 frame is otherwise computed once and never again, which is how a card filed into a full zone
 ended up out of sight behind its scrollbar. Rows are counted against the zone's **own** width
 (`columns_in`), not the nominal two columns — a zone widened by hand fits more across.
 Shrinking was refused: it would move the board under the pointer every time a card is taken
 out, and a zone somebody stretched is a zone they chose the size of.
+
+⚠️ **A card's height is the library's, so every geometry call is told it.** A row is
+`PreviewLines::card_height()` (120, 140 or 160 px): `BoardQuery::preview_lines` sizes a first
+layout and the free grid, and `file_notes`, `file_notes_back`, `delete_folder` and
+`arrange_board` take the lines their zones grow by. Nothing moves when the setting changes; loose
+cards stored at the old pitch may overlap until « Align » puts them back in rows, which the
+setting's hint says.
 
 ⚠️ **`columns_in` predicts the browser, so it measures the zone the browser’s way**: the
 hairline off, the padding off, the `SCROLLBAR` allowance **not** off. That allowance belongs
@@ -2671,7 +2843,10 @@ prediction — the card’s width and height, the gap, the zone’s padding and 
 and `scripts/board-geometry.test.mjs` reads them out of the stylesheets and out of `board.rs`
 and fails when one moves alone, because nothing else would: both sides are valid on their
 own and the symptom is a band of empty board. It pins `GRID_PX` against the dotted
-background it snaps to for the same reason. ⚠️ `ZONE_HEADER` is **not** in it and cannot be:
+background it snaps to for the same reason. A zone that holds folders is taller by their row, `ZONE_SUBFOLDERS`, which the sweep reads off
+`.zone-children` as well: one line, scrolled sideways and never wrapped, its height fixed — the
+list inside scrolls, so that `ring-room` hands its room back without touching the row's.
+⚠️ `ZONE_HEADER` is **not** in it and cannot be:
 the header’s height is its padding plus wherever the text lands, and no stylesheet says so —
 so `19-board-gesture` measures the drawn header against the constant instead.
 
@@ -2890,9 +3065,13 @@ to a `SQL / ● Perf` breadcrumb: from inside a folder there is one place to go,
 back. Leaving restores whichever view you came from, because the board's own mode is never
 touched.
 
-⚠️ **The inside of a folder is not spatial.** No zones, no coordinates, nothing to draw —
-it is already sorted by the fact of being there, and a second board inside the first would
-be a second set of positions to maintain for nothing.
+**A folder that holds folders opens on a board of its own; one that holds none is a flat
+grid**, as every folder was before nesting: sorted by the fact of being there, with nothing to
+draw. `BoardStore.root` is the open folder when it holds folders (`FoldersStore.activeHasChildren`),
+and the board then draws its sub-folders as zones and its own notes as free cards. In the list
+view an open folder is the flat grid of **its whole sub-tree** — the zone's rule — read in Rust:
+`fetch` filters on `folder_id IN` the sub-tree, bound up to `BIND_AT_MOST` and kept after the
+read past it. The breadcrumb reads the path, `Space / ● Base › ● Perf`, each step a level up.
 
 **It is a flat grid, and that is decided in Rust.** `notes::view::build` counts an opened
 folder as filtering, so the view comes back as a single `results` section. ⚠️
@@ -2901,30 +3080,35 @@ and the list view's own sections are untouched, because nothing sends a `folder_
 a folder has actually been opened.
 
 **A note created here arrives already filed.** That and a drop on the board are the only two
-places that file a new note. ⚠️ The quick-paste palette deliberately does not: it is used
+places that file a new note. ⚠️ The palette deliberately does not: it is used
 mid-task from another application, and a decision there would sit in the fastest path in the
 product.
 
 **Escape falls through**, in this order: the selection, then the search and the facets, then
-out of the folder. Leaving is the biggest of the three, so it goes last. ⚠️ The middle rung
+up a level of folders (`FoldersStore.goUp`), and out at the top. Leaving is the biggest of the
+three, so it goes last, and a step at a time. ⚠️ The middle rung
 asks `hasUserFilters` and not `isFiltering` — the latter is the _view's_ answer and is true
 inside an opened folder, so Escape would clear a search that is not there and never fall
 through.
 
-**The folder's three actions live in one component, and it performs them.** `folder-editor/`
-holds the rename, the palette and the delete and calls `FoldersStore` itself; the switcher,
-the breadcrumb, the rail and the zone menu on the board all project it, and hear only
-`finished`, to close whatever they opened it from. `space-editor/` is its twin over
-`SpacesStore`, and the page binds none of their events. Deleting from the breadcrumb goes back, with the
-notes now loose — `FoldersStore.deleteFolder` clears the open folder.
+**The folder's actions live in one component, and it performs them.** `folder-editor/`
+holds the rename, the palette, a new sub-folder and the delete and calls `FoldersStore`
+itself; the switcher, the breadcrumb, the rail and the zone menu on the board all project it,
+and hear only `finished`, to close whatever they opened it from. The rail alone also hears
+`created`, to open the parent and mark the new row. A sub-folder is made in its parent's
+space, which the rail offers whether or not it is the space open. `space-editor/` is its twin over
+`SpacesStore`, and the page binds none of their events. Deleting from the breadcrumb goes back a level, to the
+parent that now holds what it held — `FoldersStore.deleteFolder` opens the parent.
 
 ### A folder travels; its coordinates do not
 
 The folder is part of what a note is. Where its zone sat on a board is not.
 
 **Out.** `Bundle` gains the folders actually cited, beside the spaces it already carries,
-and each note carries its `folderId`. Only the cited ones travel, for the same reason only
-the cited spaces do: exporting one space should not recreate a whole tree on the other side.
+and each note carries its `folderId`. Only the cited ones travel, **with the folders above
+them**, for the same reason only the cited spaces do: exporting one space should not recreate a
+whole tree on the other side, and a folder without its parents would land at the top. A folder
+carries `parentId` with the same `#[serde(default)]`: an older file reads flat.
 ⚠️ `#[serde(default)]` on both new fields, exactly as `kind` and `items` carry it — an
 export written before folders must stay readable, and there is **no `FORMAT_VERSION` bump**
 because such a file still parses.
@@ -2934,9 +3118,11 @@ geometry: where a zone sits lives in columns only the board's own query reads. T
 whole reason the geometry was kept off the model in the first place, and a test reads the
 written file to prove no `x` ever reaches it.
 
-**In.** A folder is matched **by name inside the destination space**, case-insensitively,
-and created when absent — the rule spaces already follow. Spaces are merged first, because a
-folder needs its space to exist.
+**In.** A folder is matched **by name under the same parent in the destination space**,
+case-insensitively, and created when absent — the rule spaces already follow. Spaces are merged
+first, because a folder needs its space to exist, and parents before their children, whatever
+order the file wrote them in. What a file cannot hold degrades rather than fails: a parent it
+does not carry, a cycle, a tree past `MAX_DEPTH` — that folder lands at the top.
 
 ⚠️ A note's `folderId` is the _sending_ library's, so it is remapped, and **dropped when the
 file did not carry the folder**: a dangling id would be refused by the foreign key, losing
@@ -2995,78 +3181,52 @@ the table that binds it and the chapter that names it read the same constant.
 
 ### Editing a note
 
-The editor overlay is where every note mutation starts (title, body, language, tags, pin,
-filing, deletion). It talks to stores like every other editor — `NotesStore` for the note,
-and the attachments, the history and the `{{field}}` filling each through their own — and
-holds **local drafts** for the title and the body, because persisting on every keystroke
-means one IPC round-trip per character.
+The editor (`notes::overlays::editor`) opens in a **panel beside the cards** — or over the whole
+area once expanded (`expanded.rs`), with the details in a column beside the body — and is where
+every note mutation starts: title, body, language, tags, pin, filing, deletion. Its toolbar holds
+the title, the header's bands (context, tags, deadline; what the note is and where it lives) fold
+into one line, and the body under them is drawn by kind (`body.rs`): `code.rs`, `rich.rs`,
+`checklist.rs`, `calc.rs`, `drawing.rs`.
 
-**Every field goes through one method**, `requestPatch`, which calls
-`NotesStore.applyPatch(note.id, patch)`; the page binds nothing on the overlay but the note
-and the session. Whether a value actually moved is not the editor's call: the store holds what
-is stored, and it is the one that drops an unchanged field. The overlay's spec records what it
-asks of `NotesStore` rather than listening to outputs. Drafts are confirmed on blur, and, crucially, on every closing path:
-Escape, the backdrop and the close button all skip `blur`, so closing goes through a single
-`requestClose()` that commits first.
+- **Local drafts, keyed on the note's id.** The title and the body are drafts of the editor's
+  view, so typing never waits for the core; a save refreshes `updated_at` and the note is read
+  again, which must not wipe the draft in flight — hence the id, not the note, as the key.
+- **Every field goes through one patch** (`state::notes`); whether a value actually moved is
+  the writer's call, which drops an unchanged field. Drafts are committed when the focus leaves
+  and on **every closing path** — Escape, the close button, a note stepped to with J/K, another
+  area, the window's exit — which all go through one commit first.
+- **The code is `widgets::editor`** (plan § 3.8): `text::Buffer`, a rope, drawn line by line
+  with only the lines on screen laid out (`geometry.rs`), so a 2 MB snippet opens and types like
+  a short one. It owns its undo history (`text`), the IME, the gutter and the hanging indent of
+  wrapped lines, which egui's `TextEdit` cannot do; the keys it handles are taken out of the
+  frame's input (D14), so `Ctrl+Z` meant for the text never reaches an application shortcut. A
+  text changed from outside — a revision restored, a format — is one step of its history, and a
+  new note is a new history: `Ctrl+Z` never reaches into the note before.
+- **Tab stays in the code**: at a caret one level (spaces to the next stop, or a tab), over a
+  selection one level on every line, Shift+Tab one back. What a level is comes from Preferences
+  → Editor (`codeIndent`), by the language unless forced (`notes::language::indent_unit`: a tab
+  for Go, four spaces for Python, Rust, Java, C#, PHP and C, two elsewhere). **Escape leaves the
+  code before it closes anything**, the keyboard's way out of a field that keeps Tab.
+- **Long lines scroll sideways**; `codeWrap` wraps them, a wrapped row continuing two columns
+  past its line's indentation, capped at half the width.
+- **The find-and-replace bar** (`search_bar.rs`, Ctrl+F; Ctrl+H unfolds the replacement) speaks
+  to the text's search (`text`): the count, capped at 1 000, next and previous, case, whole word
+  and expression — remembered for the application in both editors (`devnotes.editorSearchOptions`)
+  —, replace one or all, Replace all being one step of the history. In a Note it searches each
+  block's characters, its marks unseen (`**Ship** it` holds « Ship it »). Past 200 000
+  characters, counting waits for a 120 ms pause. Go to line is Ctrl+Alt+G (`go_to_line.rs`).
+- **Deletion is a two-step confirm** in the toolbar, never a blocking dialog.
 
-Those drafts are `linkedSignal`s keyed on the note **id**, not on the note object: every save
-refreshes `updatedAt` and produces a new object, which would otherwise wipe the in-flight
-edit.
+**The header folds, the fields fold apart.** A button in the toolbar folds the bands into one
+line saying what they hold (the deadline kept, since a date is a warning); the fields panel of a
+snippet with `{{fields}}` (`fields.rs`) keeps its own fold, so the code can have the height and
+the values stay in sight. The editor never folds them by itself: folding at the first keystroke
+would move the line being read. Folding commits what the bands hold in hand.
 
-The code field is **CodeMirror 6** (`note-editor-overlay/code-editor/`), a `@defer` chunk imported on
-a line of its own, like TipTap. It draws only the lines on screen and parses as it goes, so a
-2 MB snippet opens and types like a short one: the textarea it replaced, over a highlighted
-viewer, took six seconds to open one and a second to echo a key (#604). Consequences worth
-knowing:
-
-- **The draft stays the overlay's.** The editor hands every edit out (`changed`) and is handed
-  the draft back; a text changed from outside — a revision restored, a format on save — is
-  applied as one step of its history, and not handed out again. A new session is a new
-  `EditorState`: Ctrl+Z never reaches into the note before.
-- ⚠️ **It scrolls itself**, which is what lets it draw only the visible lines: it needs a
-  height, never its content's. `.overlay-body.coding` stops scrolling, and side by side the
-  code pane is a one-cell grid that stretches it.
-- ⚠️ **CodeMirror joins lines with `\n`**: a CRLF draft reads back as LF, and is not an edit
-  until the user makes one — as the textarea's value already did.
-- **Tab stays in the code.** At a caret it inserts one level (spaces up to the next stop, or a
-  tab); a selection gains a level on every line it touches, and Shift+Tab takes one back
-  (`indentation.ts`, pure, bound in `code-editor/editing.ts`). What a level is comes from
-  Preferences → Editor (`codeIndent`), by the note's language unless the user forced one: a tab
-  for Go, four spaces for Python, Rust, Java, C#, PHP and C, two elsewhere.
-- **Escape leaves the code before closing the overlay** (`onDismiss` blurs the editor when it
-  holds the focus), so a keystroke aimed at the field does not dismiss the modal; it is the
-  keyboard's way out of a field that keeps Tab. An Escape CodeMirror used — closing its search
-  panel, folding a selection to a caret — stops at the editor. Escape itself comes from the
-  dialog shell, which only gives it to the modal in front.
-- **Long lines scroll sideways**; Preferences → Editor wraps them (`codeWrap`).
-- **The colours are the cards'**: `code-editor/theme.ts` maps Lezer's tags onto the variables
-  `_code-theme.scss` gives highlight.js. Each language's grammar is a chunk of its own
-  (`code-editor/languages.ts`), loaded the first time a snippet in it opens: the official
-  Lezer packages, `@codemirror/legacy-modes` for TOML, the shells, C#, Kotlin, Ruby, Swift and
-  Dart, and community packages for GraphQL (`cm6-graphql`, its grammar alone: its completion
-  and lint want a schema) and Elixir (`codemirror-lang-elixir`).
-- The search panel (Ctrl+F) speaks the application's language: CodeMirror's words are
-  `EditorState.phrases`, read from `editor.code` in the translations.
-- The specs run the real editor on jsdom, which has no rectangles for text ranges
-  (`src/testing/text-ranges.setup.ts`); the scenarios type through `execCommand('insertText')`
-  into `.cm-content`, which CodeMirror reads from the DOM as it reads a keyboard.
-
-Deletion is a two-step confirm in the toolbar rather than a native `confirm()`, which would
-freeze the whole WebView. The fullscreen toggle expands the panel to fill the backdrop and
-persists through `PreferencesService`; the backdrop starts under the titlebar
-(`--titlebar-height`), which stays usable over the note.
-
-Where the note lives — its space, then its folder — is a **band of its own** under the meta
-row, labelled like the attachments below it. It used to sit inside the meta row, between the
-tags and the deadline, with the two choices stacked on two lines: neither metadata nor
-header (#324). The two stay together, because moving the space clears the folder
-(`NotePatch::apply`) and a folder control on its own would lie about that.
-
-The attachment strip sits between that band and the body. It is fed by inputs and emits
-outputs like everything else here: `AttachmentsStore` owns the state and follows the open note
-itself, through an effect on `NotesStore.persistedNoteId()`. Attachments deliberately do
-**not** travel inside `Note` — they have their own write cycle, and routing them through the
-note would mean reloading the whole note on every add.
+Where the note lives — its space, then its folder — is a band of its own; the two stay together,
+because moving the space clears the folder (`NotePatch::apply`). The attachments
+(`attachments.rs`, `state::attachments`) have their own write cycle and follow the open note:
+they do **not** travel inside `Note`, which would reload the whole note on every add.
 
 ### The trash, and undoing a deletion
 
@@ -3086,11 +3246,17 @@ consequences:
 `purgeAt` is **derived**, never stored: the retention can change between versions and a
 deadline frozen in the database would not follow.
 
+The panel is searched like the canvas: `list_trash(search)` folds case and accents with
+`view::fold` and matches with `view::matches_search`. `restore_trash(search)` takes the same
+search, so "restore" puts back exactly what the list shows, the whole trash when nothing is
+typed: the way out of a mistaken bulk deletion. Emptying the trash stands aside while it is
+searched — it would erase notes the user cannot see.
+
 On the front, a reversible action records what it changed and shows `UndoBarComponent` for
 `UNDO_WINDOW_MS` (8 s).
 
 `Reversible` is a union — a deletion, a move, a tagging, a filing, an arrangement — and
-`UndoStore.reverse` switches over it exhaustively, so a fourth kind of undoable action stops the front compiling
+`UndoStore.reverse` switches over it exhaustively, so a new kind of undoable action stops the front compiling
 until it says how to put itself back. ⚠️ Each branch carries **what the back end answered**,
 never what the front end guessed: `move_notes` returns the placements it actually changed and
 `tag_notes` the `(note, tag)` pairs it actually added. Recomputing either from the selection
@@ -3171,7 +3337,7 @@ otherwise the arrows would move an outline while the keyboard stayed behind.
 `Ctrl`-click checks a card, `Shift`-click extends the range from the focused one, `X` toggles
 it from the keyboard — the conventions of a file list, which is what the canvas becomes once
 several notes are selected. `SelectionBarComponent` appears only when something is checked and
-offers: move to a space, add a tag, share, move to trash.
+offers: move to a space, file, give a priority, add or remove a tag, pin, copy, move to trash.
 
 Each action is **one command for the whole batch** (`move_notes`, `tag_notes`,
 `delete_notes`), not a loop of single writes: a stale id in the selection produces a partial
@@ -3196,7 +3362,16 @@ the canvas filters, sorts and groups on it. The command answers each note whose 
 moved, with the one it had, and `restore_priorities` gives each note its own back — never one
 level for the whole batch. ⚠️ Neither moves `updated_at`: triaging is not editing, and a note
 given a priority would jump to the head of a list sorted by modification. That is why the
-priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field.
+priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field it
+changes.
+
+**A pin is triage too**: `set_pinned(ids, pinned)` answers the notes whose pin changed and moves
+no date; its undo is the same call the other way over those. The selection bar, the card menu,
+the `P` key and the editor all go through it (`NotesStore.setPinned`, a batch of one with its
+undo); only a draft takes its pin as a field. The bar's one button pins what is ticked, or unpins
+it once all of it is pinned. **A tag is taken off** by `remove_tag(ids, tag)`, which answers the
+pairs as stored and moves `updated_at` like tagging; `restore_tags` puts back exactly those.
+The bar offers the tags the ticked notes carry (`NoteSelectionStore.checkedTags`).
 
 **On screen, a priority is said three ways**: a pill on the card (`PriorityPillComponent`, in
 `notes/ui/`) with three bars and the level's name, in a hue that only repeats them — none at
@@ -3222,6 +3397,13 @@ as a field is decided in `notes::placeholder` and nowhere else: the name is rest
 into a form on every copy. Values arrive parsed on `DisplayNote.placeholders`, and
 `fill_placeholders` — a pure command, no database — does the substitution.
 
+**The code marks them where they are written**, from Rust too: `field_spans` answers each
+token's range and its default's, in UTF-16 units — the editor's offsets — from the same `scan`
+that `parse` and `fill` walk. `FieldMarksStore` asks 250 ms after the typing pauses and keeps
+the text an answer was found in; the code field (`code-editor/field-marks.ts`) marks only that
+text, so a late answer places nothing on newer code. Amber for the token, the default dimmed;
+nothing past 200 000 characters, where the incremental search also waits.
+
 **The values are the note's, and they are kept.** `note_placeholders` stores them per note
 (`(note_id, name)`, case-sensitive — `notes::placeholder::fill` tells `{{Host}}` from
 `{{host}}`, where `note_tags` folds case), `set_placeholder_values` writes them, and
@@ -3231,6 +3413,12 @@ stored but out of sight until the token comes back; and writing a value **does n
 `updated_at`** — filling a field is not editing the note, and the canvas sorts on that column.
 A field left empty is not stored (`normalize_values`): empty means "keep what the text
 suggests", and storing it would freeze that answer the day the default changes.
+
+**In the editor, the panel over the body holds them** (`overlays/editor/fields.rs`): a draft of
+the opening, written when a field is left and on the closing path, none of which leaves a field
+on its own. It follows the note as last read, so a token typed joins it once the body is written.
+The preview shows the body filled in place of the code, and folding the panel ends it: a
+read-only body without the button that caused it would be a trap.
 
 **A value can also belong to no note at all.** The preferences panel's "Variables" page edits
 `global_placeholders` (migration 7, `name` as the primary key, case-sensitive for the same
@@ -3276,71 +3464,82 @@ button's tick, which would claim success before the bridge answered. "Copy as is
 click away in the panel, for the note that only looks templated — the heuristic is careful,
 not infallible.
 
-### The quick-paste palette
+### The palette
 
-`Ctrl+Alt+P` reveals the window and emits `devnotes:palette`; `PaletteStore` opens,
-searches, and on `Enter` copies the highlighted snippet and **hides the window** so the user
-lands back where they were pasting.
+`Ctrl+Alt+P` — the one shortcut — reveals the window and posts an action; `ui::palette`, drawn
+over whichever area is on screen, opens with `state::palette`.
+It finds **notes, HTTP requests, tools and spaces**, and runs commands. Rust says which action
+it was: `palette` when the window was not in front (another application had the keyboard, or the
+tray asked), `palette-here` when it was. Only over another application does copying a note put
+the window away again; in front, the palette just closes and `StatusNotifier` says what was
+copied.
 
-It searches **every space and ignores the canvas filters**: when you recall a snippet you do
-not remember which space you filed it in. It also keeps its own state rather than reusing
-`NotesStore`, whose search would otherwise change what the canvas shows behind it.
+It searches **every space and ignores the canvas filters**: when you recall a snippet you do not
+remember which space you filed it in. It keeps its own state rather than reusing the canvas's
+query, whose search would otherwise change what the canvas shows behind it.
+
+**What the core answers, and what the interface reads.** The notes come from `query_notes` asked
+`ranked`: by how the title answers what is typed — all of it, its start, the start of a word,
+anywhere — then a match in the body, the tags or the context, the last edit breaking ties
+(`view::rank_notes`); by date alone, `psql` opened a note holding it in its body. The
+requests come from `search_http_requests`, which ranks them in Rust (`http::search`): a name
+starting with what is typed, then a word of the name, then the name, the URL as typed — read from each
+sealed document — and the collection › folders; nothing typed lists the requests edited last.
+The tools, the spaces and the commands are matched in the interface, as the tools' home matches
+its catalogue: their words are translations, which Rust does not know. The tools and the spaces
+are ranked there by the same order, on their name (by name), before the cap of each
+kind: « json » kept « Diff » and « JWT » and cut the tool named JSON. The groups come in a
+fixed order — notes, requests, tools, spaces — each with its heading and count when more than
+one answers, and share the screen (`palette::options`: five notes and three of the others,
+eight for a kind alone). An empty field lists a few recent things of each kind and a line naming
+the prefixes.
+
+**Prefixes become chips.** `@` lists where to search — `@notes`, `@outils`, `@requêtes`,
+`@espaces`, in either language whatever the one on screen, and `@<space>` for a space's notes —
+and Tab or Enter turns the choice into a chip in the field. Kinds add up; a space or a tag
+narrows to notes; a second space takes the place of the first; ⌫ in an empty field removes the
+last chip. `#` lists the tags with how many notes carry each. `>` lists the commands
+(`palette::commands`): a new snippet, Note or todo list (their keys read from the bindings, so a
+rebound key shows as bound), a new request, a new folder in the space open (asked by the folder
+prompt), an area (its keys from `keys::APPLICATION`), the preferences and the shortcut sheet.
+
+**Each kind has its mark**, in one column so that the titles align: a note's kind icon and a
+snippet's format, a
+request's method in its hue, a tool's category icon in its hue, a space's dot — the switcher's: a space has no colour of
+its own — and `>`. The highlighted row says what Enter does in place of its context, and so
+does the line under the list.
+
+**Enter opens**: the note in the notes, the request in its tab (the tabs left open last time
+restored first, so it is the one in front), the tool, the space; it runs a command and creates
+the note named after what was typed from the « créer une note » row, which comes **after** the
+results while notes are searched. What each kind does is an `Action` the palette pushes; the
+state it reaches is the area's.
 
 A snippet with fields goes through the fill form first — copying `psql -h {{host}}` verbatim
-gives an unusable command. `Tab` opens the note instead of copying it, which is what makes the
-palette double as a "find that note" shortcut.
+gives an unusable command. The form (`notes::overlays::placeholder_form`, which the notes' own
+copy uses too) is drawn **in front of** the palette, on the rung above it.
 
-⚠️ **A click on a row opens the note; it does not copy it.** Copying hides the window, and a
-window that disappears on a click with nothing on screen saying why reads as the application
-crashing. Nobody clicked their way here from another application — the window is already in
-front — so the mouse gets the gesture a click on a note means everywhere else in the product,
-and the paste path gets a control of its own beside the row (⧉, which copies and hides, like
-`Enter`). The keyboard is untouched: it is the fast path and the muscle memory is the feature.
+⚠️ **A click on a row opens; it does not copy.** Copying may hide the window, and a window that
+disappears on a click reads as the application crashing. The paste path has a control of its
+own beside a note's row (which copies, like `Ctrl+C`). The keyboard is untouched: it is the fast
+path and the muscle memory is the feature.
 
-**It captures as much as it retrieves.** As soon as the query is non-empty, a "créer une note"
-row is appended **after** the results — retrieving a snippet is the more frequent gesture and
-keeps the first place, but a query that matches nothing highlights the create row by default,
-which is exactly the quick-capture case. Choosing it turns what was typed into the note's
-content, saved and opened straight away (no draft: there is nothing to wait for).
+⚠️ **A copy over another application is acknowledged on the desktop, not in the window**, because
+the window is what the gesture takes away: the palette copies, closes, hides the window, and only
+then asks `platform::notify` to say which note it took. Without a word from the desktop the window
+simply vanished, and it read as the application crashing on a copy that had in fact worked.
+`platform::notify` is **never load-bearing**: what it says has already happened, so a refused
+permission or a desktop that drops the toast change nothing. Its words come translated from the
+interface: the platform crate holds no user-visible string.
 
-`PaletteStore` does not create the note itself — it does not know `NotesStore`, and the
-reverse would be a cycle. `takeNewNoteContent()` hands the text over and closes; the page
-chains `NotesStore.createWithContent`, the same path the clipboard capture uses.
+The palette is an overlay in the main window rather than a second window: the window is already
+warm behind the global shortcut.
 
-The palette is an overlay in the main window rather than a second Tauri window: the window is
-already warm behind the global shortcut, and a second one would mean a second Angular
-bootstrap, its own CSP and its own lifecycle for the same result.
-
-⚠️ **A copy from the palette is acknowledged on the desktop, not in the window**, because
-the window is what the gesture takes away: `copyAndDismiss` copies, closes, hides, and only
-then asks `DesktopNotifier` to say which note it took. Every other copy path in the
-application answers through `StatusNotifier`, which draws under the titlebar — correct and
-invisible here. Without a word from the desktop the window simply vanished, and it read as
-the application crashing on a copy that had in fact worked (#285).
-
-`DesktopNotifier` (`core/services/notifications/`) wraps `tauri-plugin-notification` behind a
-token and an adapter, like `ClipboardService` and for the same reasons. ⚠️ It is **never
-load-bearing**: whatever it is asked to say has already happened, so a refused permission, a
-plugin that is not there and a desktop that drops the toast all come to the same thing —
-`false`, and nothing thrown. It is also the one place that **translates imperatively**:
-everywhere else code hands a `TranslationRef` to the `transloco` pipe, and there is no
-template on the other side of this one. Permission is asked for **once** and remembered; a
-prompt on every copy would be worse than no acknowledgement at all.
-
-The field keeps the focus from start to finish and the list is walked with
-`aria-activedescendant`; moving the real focus onto an option would lose the query being
-typed. ⚠️ **Tab is an arrow here**, and every row button carries `tabindex="-1"` so that
-the field is the only stop in the panel. Released to the DOM it walked a list of stops
-nothing drew a ring on while the highlight stayed where the arrows had left it — two notions
-of "the current row", one of them invisible (#283). The copy control is then out of reach of
-the keyboard, and that is the accepted cost: `Ctrl+C` copies the current row.
-
-⚠️ Taking the rows out of the order was not enough on its own. `FocusTrapDirective`'s
-selector excluded `tabindex="-1"` on the bare `[tabindex]` clause only, so a
-`<button tabindex="-1">` was still focusable as far as the trap was concerned and Shift+Tab
-in the field wrapped onto the last row's copy control. The exclusion is on every candidate
-now, and the trap leaves alone a Tab whose default a descendant has already prevented — the
-same `defaultPrevented` guard `CanvasKeyboardDirective` carries, for the same reason.
+**The field keeps the focus from start to finish**: the arrows move a highlight, not the focus,
+which would lose the query being typed — one current row, which Enter or a click opens, and
+which the screen reader is told of. ⚠️ **Tab is an arrow here** — except on a chip `@` or `#`
+offers, which it chooses —, so the field is the only stop in the panel: two notions of « the
+current row », one of them invisible, was a bug the reference had to fix twice.
 
 ### Global tag management
 
@@ -3387,16 +3586,17 @@ the library's `attachments/` (`libraries/<id>/attachments/`) under a name derive
 called `capture.png` must not overwrite each other, and a name coming from outside has no
 business deciding a write path.
 
-The bytes cross the bridge only on demand, as a `data:` URI: the WebView's CSP forbids loading
-a local file, and opening the `asset:` protocol would be a wide door for displaying a
-screenshot. That encoding costs a third more than the file, which is why `read_attachment`
-fetches **one** at a time and never the list.
+The bytes are read only on demand, as a `data:` URI, which costs a third more than the file: this
+is why `read_attachment` fetches **one** at a time and never the list. `state::attachments` follows
+the note open and holds no bytes but the one image shown, decoded on `compute`, from the closed
+list of D28 (`is_shown`); anything else offers « Open ». A file waits there until the note has a row:
+a draft is written for it, a dialog cancelled writes nothing.
 
 **Three ways in, two ways back out.** A file arrives through the picker, through a drag-drop
-onto the window (`FileDropService` — the drop is a _window_ event carrying real paths, a DOM
-`drop` handler would receive nothing), or as an image pasted into the editor. It leaves
-through `open_attachment` (the system's default application) or `save_attachment` (copied
-where the user asks). A file you can only read the name of is not attached, it is stored.
+onto the window (`RawInput::dropped_files`), or as an image pasted into the editor
+(`Event::PasteImage`, which egui sends when the clipboard holds no text). It leaves through
+`decrypted_copy` and `platform::desktop` (the system's default application) or `save_attachment`
+(copied where the user asks). A file you can only read the name of is not attached, it is stored.
 
 All three go through `AttachmentsStore`, which owns the order of operations rather than
 leaving it to the page: **attaching demands a note in the database**, so the draft is saved on
@@ -3432,14 +3632,15 @@ The titlebar carries a **File menu** next to "À propos" — the convention of a
 application. It holds import, export, "copy the selection as Markdown", the preferences and
 quitting.
 
-**The menu owns its entries**: `FileMenuComponent` declares them as an array and injects what
-they need — `TransferStore`, `NoteSelectionStore`, `SpacesStore`, `ClockService`. `disabled` is
-a `Signal` because "Exporter la sélection" follows what is checked at that instant, and the
-order on screen is the order in the array.
+**The menu owns its entries**: `titlebar/file_menu.rs` lists them in the order on screen, and an
+entry with nothing to act on stays, muted: "Exporter la sélection" follows what is checked at
+that instant. The menu exists only while a library is open, every entry acting on it.
 
-**Its two dialogs, like the About menu's four panels, sit behind `@defer (on immediate)`**:
-the titlebar is in the initial chunk, and those six weighed ~95 kB of it before anyone opened
-one. Each is imported by its menu alone, which is what lets the compiler split it off.
+**One operation at a time, in `state/transfer.rs`.** Its stages say where it stands: counted
+before any dialog, placed, protected, written; picked, probed, unlocked, read. The file dialogs
+block until answered, so they run on the pool. The passphrase prompt follows the stage and stays
+up, working, while the key is derived; a refused phrase comes back to it rather than failing the
+import. The phrase reaches `AppState::apply` through the bar's view, never through an `Action`.
 
 There used to be a contribution registry here — three of them, in fact, one per extension
 point — so the chrome could stay ignorant of a feature it might not have. That indirection had
@@ -3457,8 +3658,10 @@ not operations on a file:
 
 ### Preferences
 
-"Préférences…" opens `SettingsDialogComponent` (`titlebar/file-menu/settings-dialog/`): a rail of pages on
-the left, the chosen page on the right, and Annuler / Appliquer / OK at the bottom.
+"Préférences…" opens `titlebar/preferences/`: a rail of pages on the left, the chosen page on the
+right, and Annuler / Appliquer / OK at the bottom. The draft is the bar's view: the controls edit
+it where they are drawn, and `AppState` adopts it on a button. Autostart and the tray's two
+switches are stored and read by nothing until the platform phase.
 
 **Appliquer, Annuler, OK — and a draft under them.** Every control used to write straight
 into `SettingsStore`, which was written down as a decision rather than an oversight. The
@@ -3467,9 +3670,9 @@ half-entered one was registered with the operating system for as long as it took
 finish; a theme flipped under the cursor; and there was no way back from a change other
 than remembering what it was.
 
-So the panel edits `SettingsDraftStore` (`core/services/settings/`), and Appliquer or OK
+So the panel edits `SettingsDraft` (`ui/src/services/settings.rs`), and Appliquer or OK
 writes it through. ⚠️ It stages **both paths a preference can take**, because the panel
-edits both: an `AppSettings` key, and a shortcut binding. A draft covering only the first
+edits both: a setting, and a shortcut binding. A draft covering only the first
 would make OK mean two different things on two pages.
 
 **A setting is one line.** `SettingsStore.setting(key, codec)` builds the signal, its restore
@@ -3594,11 +3797,10 @@ derived from that accelerator, so a key is spelled once. Two constants come out 
 table — `CANVAS_SHORTCUT_GROUP` for the sheet, `CANVAS_ACTIONS` for the panel — and a key
 cannot be documented, bound or made movable without the other two following.
 
-**`ShortcutBindingsStore` (`core/services/shortcuts/`) reads both paths as one table.** The
-global three live in `AppSettings`, because the native command takes them as a block; a canvas
-key is one preference of its own, `devnotes.shortcut.<id>`. ⚠️ The store holds **no list**: a
-`Rebindable` carries its own fallback, so nothing has to register and there is no third place
-to add a key to. Reading both halves together is also what makes a collision _between_ them
+**`Bindings` (`ui/src/services/shortcuts.rs`) reads both paths as one table.** The global
+three are stored as `devnotes.<id>Shortcut`, because the native side takes them as a block; a
+canvas key is one preference of its own, `devnotes.shortcut.<id>`. ⚠️ Only the keys moved are
+held: a `Rebindable` carries its own fallback, so there is no third place to add a key to. Reading both halves together is also what makes a collision _between_ them
 something the panel can say out loud.
 
 ⚠️ **The two halves read the keyboard differently, and it is a deliberate fork.**
@@ -3651,11 +3853,11 @@ cards are, a bar where the rail is: a screenshot would be a fourth thing to keep
 with the interface, and it is the _arrangement_ they have to show. They are `aria-hidden`,
 and every chapter says in words what its figure shows.
 
-⚠️ **It opens at a chapter**, and that is what `core/services/help/` exists for. An empty
-canvas offers the chapter about notes and an empty board the one about folders — reaching
-help from the thing it explains, neither of which is anywhere near the titlebar. `HelpStore`
-holds which chapter is open, the About menu reads it, and `GUIDE_CHAPTERS` is the one list
-of ids so a link cannot point at nothing.
+⚠️ **It opens at a chapter.** An empty canvas offers the chapter about notes and an empty board
+the one about folders — reaching help from the thing it explains, neither of which is anywhere
+near the titlebar. `Panel::Guide` carries the chapter, and `guide::CHAPTERS` is the one list of
+ids, so a link cannot point at nothing. The figures and the shortcut sheet are data beside the
+code (`services/guide_figures.json`, `services/shortcut_sheet.json`).
 
 ⚠️ "Fermer" is on **every** chapter, not only the last: a walk you can only leave by
 finishing it is a wall with extra steps. ⚠️ The figure band is a fixed height, or a chapter
@@ -3669,7 +3871,7 @@ a time, and four flags would allow a state where two of them are stacked and the
 the loser keeps the keyboard.
 
 - **"Nouveautés"** renders `CHANGELOG.md`, the repository's own, **embedded in the binary** by
-  `include_str!` (`src-tauri/src/changelog.rs`) and read through `app_changelog`. The Markdown
+  `include_str!` (`crates/engine/src/changelog.rs`) and read through `app_changelog`. The Markdown
   is parsed **in Rust** (`changelog/model.rs`) into releases, categories and entries, so the
   front renders a typed structure with the components it already has: no Markdown renderer to
   pull in, no `innerHTML`, nothing for the CSP to forbid. The grammar is deliberately thin —
@@ -3723,34 +3925,41 @@ not look alike would read as three unrelated windows.
 
 ### The first launch
 
-A brand-new installation opens on **sample notes**, in a space of their own
-(`SampleNotesService`, `core/state/`). This is not decoration: a virgin database has
+A brand-new library opens on **sample notes**, in a space of their own
+(`ui::services::samples`, seeded from `AppState` once the library's preferences are read). This
+is not decoration: a virgin database has
 no space, and creating a note with nowhere to file it is refused on purpose — so without them
 the first screen is empty, silent, and offers a "+ Nouvelle note" button that does nothing.
 
-Four notes, one feature each: a pinned welcome note (so the first screen is not an empty
-"pinned" heading), a shell snippet carrying `{{fields}}`, a checklist, and a code snippet with a
-deadline — which is what lights the ⏳ badge and gives the "à trier" filter something to find.
-They are ordinary notes: editing or trashing them is the point, and the written guide behind
+Six notes, one feature each, none longer than a screen: a pinned welcome Note (the three
+areas and the keys that matter, as a table), a shell snippet carrying `{{fields}}`, a JSON
+snippet to open as a graph, a Note with tasks, a table and a code block, a todo list with a
+deadline and a priority — which lights the ⏳ badge and gives the "à trier" filter something to
+find, and is left loose on purpose — and a TypeScript line for Prettier to lay out. They are
+ordinary notes: editing or trashing them is the point, and the written guide behind
 "Prise en main" is what survives the day they go.
 
 **The content comes from the front end**, not from a seed in Rust, for the reason no
 user-facing string ever comes out of the back end: it would ship French into an English
 interface. It also means the samples arrive in the language the application starts in. The two
-snippet bodies are the exception and are hard-coded in the service — they are _code_, so they
-are not translated, and they could not be: Transloco reads `{{name}}` as an interpolation and
-would replace a snippet's fields with empty strings on the way out.
+snippet bodies are the exception and are hard-coded in the service — they are _code_ and
+_data_, so they are not translated, and the fields could not be: a translation reads `{{name}}`
+as one of its parameters and would replace a snippet's fields with empty strings on the way out.
 
 ⚠️ **Two guards decide a first launch, not one.** A preference marker
 (`devnotes.notes.samplesSeeded`) alone would re-seed anyone whose preferences file went missing;
 "no space at all" alone would re-seed the day the last space disappears. Together they only ever
-match a database that has never been written to. The marker is written **after** the seeding,
-because the seeding is one write: `seed_samples` creates the space and the four notes in a
+match a database that has never been written to: the marker is read with the library's
+preferences, and the space is counted on the db queue just before `seed_samples`, in the same
+job. Nothing reads notes meanwhile, so the canvas never shows the empty library first. The marker
+is written **after** the seeding,
+because the seeding is one write: `seed_samples` creates the space and its notes in a
 single transaction, so there is no halfway. ⚠️ It used to be six round trips, and a process
 killed between any two left a space standing with nothing in it — which both guards then read
-as "already seeded", leaving that install with an empty canvas for good. An installation that
-predates the samples is marked as skipped so the check stops running on every launch. A failure is silent: the canvas reports its own, and a second banner
-about samples nobody asked for would only add noise.
+as "already seeded", leaving that install with an empty canvas for good. A library that has a
+space and no marker is marked as skipped, so the check stops running on every open. A failure is
+silent (a line in the log): the canvas reports its own, and a second banner about samples nobody
+asked for would only add noise.
 
 ### Import, export and copying out
 
@@ -3819,7 +4028,9 @@ about samples nobody asked for would only add noise.
 re-importing at once is the first thing anyone tries, and it legitimately imports zero notes:
 every id is already there. Without a message that outcome is indistinguishable from a
 failure, so `TransferStore` pushes a distinct `file.importedNothing` for it, and an export
-names the file it wrote. The report goes to `StatusNotifier` (`core/services/notifications/`), rendered
+names the file it wrote. **An export of nothing is said first**: `count_export` answers how many notes
+the scope holds before the save dialog, so an empty space asks for no place and no phrase, and
+`export_notes` writes no file for a bundle with no note. The report goes to `StatusNotifier` (`core/services/notifications/`), rendered
 under the titlebar by `StatusToastComponent` — not inside the menu, which closes on the click
 and which a native file dialog covers anyway.
 
@@ -3855,399 +4066,765 @@ and the global shortcut call.
 
 ### Data access
 
-Stores never talk to a data source directly. They inject `NotesRepository` /
-`SpacesRepository` — ordinary `providedIn: 'root'` classes, not an interface behind an
-`InjectionToken`. There is one implementation and there has only ever been one; the triad
-described a variation that does not exist, and `app.config.ts` binds nothing for them.
+**Nothing but `ui::api` names an engine function.** One file per feature (`api/notes.rs`,
+`api/spaces.rs`, `api/http.rs`…), each function choosing its queue once and answering a
+`Pending` (→ "Backend and events"); states call `api`, screens call neither. A state test runs
+those functions against the real core on a temporary library, so there is no repository to fake
+and no double to keep in step: only the platform is faked.
 
-Substituting them is still a one-liner: `provideAppTesting()` overrides each class with
-`{ provide: NotesRepository, useValue: fake }`, exactly as it already does for
-`UpdaterService` and `AppInfoService`. What the interface really bought was the _compile-time
-check on the doubles_, and the fakes keep it with
-`implements Pick<NotesRepository, keyof NotesRepository>`: `keyof` on a class type yields only
-its public members, which both drops the private `ipc` (nominal, hence unimplementable) and
-keeps the method list in sync by construction. Rename a method on the real class and
-`src/testing/` fails to compile.
-
-The notes contract is `query` / `create` / `update` / `delete`, plus the batch and trash
-operations (`deleteMany`, `restore`, `loadTrash`, `purge`, `emptyTrash`, `moveMany`,
-`tagMany`), the corpus-wide tag operations (`loadTags`, `countNotesTagged`, `renameTags`,
-`deleteTags`) and `fillPlaceholders`. Spaces expose `loadAll` / `create` / `rename` / `delete`.
-`AttachmentsRepository` covers `loadFor` / `attach` / `read` / `delete`, and
-`TransferRepository` covers `export` / `import` / `share`.
-
-There is deliberately **no method returning the raw list of notes** — offering one would invite
+There is deliberately **no function returning the raw list of notes** — offering one would invite
 a caller to filter it again. That holds even for export: `export_notes` returns a _count_, and
-the note list it assembled never leaves Rust.
+the note list it assembled never leaves the core.
 
-`SpacesRepository.delete` takes a refuge (`delete(id, targetSpaceId)`) rather than an id
-alone: a one-argument signature would have made data loss the default, since the schema
-cascades. Moving a single note needs no dedicated method — `spaceId` is part of `NotePatch`,
-and `NotesStore.moveNote` is a thin wrapper over the ordinary update path.
+Deleting a space takes a **refuge** rather than an id alone: a one-argument signature would make
+data loss the default, since the schema cascades. Moving a single note goes through `move_notes`
+like a selection, so the card menu and the editor offer the same undo; `space_id` stays in
+`NotePatch` for a draft, which has no row to batch. A space deleted bumps the `Revision`, so the
+canvas asks again even when its query did not mention that space.
 
-`SpacesStore.deleteSpace` returns a boolean and does **not** reload the notes: it does not
-know `NotesStore` (the reverse dependency already exists, and closing the loop would be an
-injection cycle). `NotesPageComponent` chains the reload, which matters when the current
-query does not mention the deleted space and would otherwise show nothing new.
+## Backend and events (interface ↔ core)
 
-Keep this seam intact: no component or store calls a command, the repositories do.
+The interface calls the core in the same process, through **one façade**, `ui::api` — the only
+place that names an engine function, one file per feature, each function choosing its queue
+once — and **one backend**, `ui::Backend`, which owns the `Arc<Engine>` and its tokio runtime.
+The UI thread does no I/O, crypto or waiting: every call returns a `Pending<T>`, polled each
+frame (`poll` answers once), and the worker that resolves it wakes the window.
 
-## IPC boundary (Angular ↔ Rust)
+| Queue     | For                                                    | Runs on                        |
+| --------- | ------------------------------------------------------ | ------------------------------ |
+| `db`      | anything touching the database or the index, reads too | the core's one db thread (D11) |
+| `compute` | pure work: formatting, a tool, highlighting, decoding  | rayon's pool                   |
+| `spawn`   | the network, and what chains db jobs around it         | tokio                          |
 
-**The boundary is generated, not written.** `src/app/core/ipc/bindings.ts` is produced by
-[tauri-specta](https://docs.rs/tauri-specta) from the Rust signatures: one typed function per
-command, plus a TypeScript type for every struct and enum that crosses the bridge. It is
-committed — the front-end does not compile without it — and regenerated by
+⚠️ `Backend::db` **queues at the call** (`engine::db::submit`), on the UI thread: two writes sent
+one after the other run in that order. Handing the job to a task that queued it later let two
+of them swap. A job that panics answers `StorageUnavailable` on every queue and the queue goes
+on (D18); an `Answer` dropped without a word still answers, so **no `Pending` is ever left
+unanswered**. Dropping a `Pending` does not stop work begun on the database.
 
-- `npm run tauri dev`, which rewrites it at every launch (`export_bindings()` in `lib.rs`,
-  behind `debug_assertions`), or
-- `npm run bindings`, which runs the `export-bindings` binary alone when a Rust signature
-  changed and starting the whole app is not worth it. ⚠️ That binary is built only with the
-  `bindings` feature (`required-features`): Tauri's bundler packages every binary Cargo
-  builds, and without the gate the installers shipped it beside the application.
-  `release.yml` checks each bundle holds one executable.
+Creating or unlocking a library is a `spawn` that runs the vault's db job and then starts
+`index::fill`, which fills the index a slice a job behind the gate. What the core says unasked
+(`EngineEvent`) and what a second launch asks arrive on the input channel, drained at the start
+of each frame. State tests run against the real core on a temporary profile and wait with
+`Backend::settle()` — a condition, never a duration (`ui::testing`).
 
-It deliberately is **not** a `#[test]`: on Windows the test executable lives in
-`target/debug/deps/`, where the `WebView2Loader.dll` that `tauri-build` drops is absent, and
-merely linking `Builder::export` there stops the binary from starting at all.
+### State between frames
 
-This replaces the hand-written `IpcContract` table and the `tauri::generate_handler![…]`
-list, which were two mirrors of the same thing kept in step by review. `collect_commands![…]`
-in `lib.rs` is now the single list: it both registers the commands with Tauri and decides
-what `bindings.ts` contains. Tauri matches arguments **by name** and renames them to
-camelCase; nobody spells `targetSpaceId` by hand any more.
+`ui::state::AppState` is the root of what the interface remembers; each screen's state joins it
+as the screen is ported. Three pieces replace the reference's `resource()`, `linkedSignal`,
+`OneInFlight`, `NotesRevision` and the reload of the page:
 
-Only `core/data/` and `core/ipc/` call a generated **command**: everything above the
-boundary speaks the **model**, which `note.mapper.ts` converts to and from. The generated file
-stays behind the same boundary the hand-written types were behind. `core/services/app-info/` is the
-third and last file to import `bindings.ts`, and it reads a **constant** and not a command —
-see below.
+- **`QueryCell<P, T>`**: a value asked of the core again whenever its parameters change, compared
+  by value. `want(params)` records what the screen depends on; `update(launch)`, once a frame,
+  adopts the answer that arrived — unless newer parameters were wanted since, a stale search is
+  dropped — and asks for what is wanted when nothing is in flight. **One call in flight, the
+  latest waiting**; the last value stays while the next loads, and after an error.
+- **`Revision`**: bumped after every write the interface adopts, and part of the parameters of
+  every query that reads notes, so the list and the board ask again together.
+- **`LibraryCaches`**: the one field holding every cache of a library's content (D17).
+  `AppState::reset_library_scope` empties it and **egui's whole widget memory** — a text field's
+  undo history holds what was typed — then puts the application's look back, which outlives a
+  switch. Not wiped byte by byte: the threat model says so.
 
-### Calling a command
+### A frame, its actions and its keys
 
-`commands.queryNotes(query)` returns a **discriminated result**, not a promise that rejects:
-`{ status: 'ok', data }` or `{ status: 'error', error }`. Repositories pass it through
-`unwrap()` (`core/ipc/ipc.error.ts`), which returns the data or throws an `IpcError`. Stores
-and components therefore keep the `try`/`catch` they already had, and `ErrorNotifier` stays
-the one place that branches on a cause.
+`DevNotesApp` does the same thing every frame, in this order (plan § 3.3.7): `logic` drains the
+inputs (engine events, a second launch's `reveal` or `action <name>`), adopts the answers that
+arrived and asks the `QueryCell`s again; `ui` draws, then reads the keys the widgets left, then
+applies the actions. **Drawing never changes the state**: it reads a screen's state, may change
+its view (text being typed, a menu open, a scroll), and pushes `Action`s — `Action::App` for the
+frame (an area, the look), `Action::Global` for what comes from outside the window (capture, new
+note, palette, quit); each area's own variant joins when the area is ported. `AppState::apply`
+runs them at the end of the frame, in the order pushed.
 
-### Error contract
+**One order for the keyboard** (D14, `ui::keys`). An input method composing keeps every key; the
+focused widget consumes what it handles while drawing; then `keys::dispatch` reads what is left
+by level — the top modal, then the area on screen, then the application (`keys::APPLICATION`:
+`Ctrl+1/2/3`) — and the first level that knows the key takes it and consumes it. While a text
+field has the focus, only the entries marked `while_typing` are read: the « editable target »
+guards of the reference, written table by table. A binding reads its key **by position** (a W3C
+`code`: on AZERTY the key that types « & » is still `Ctrl+1`) or **by character** (the canvas's
+keys), and its modifiers exactly. egui's keyboard zoom is off, as the WebView's was; Tab keeps
+egui's focus navigation.
 
-Commands return `Result<T, AppError>`, never `Result<T, String>`. An `AppError`
-(`src-tauri/src/error.rs`) carries a stable **code**, its interpolation **params**
-and a technical **detail**:
+**At the exit** the db queue is drained — the one wait the UI thread is allowed (D19):
+`Backend::drain` queues a last job and waits up to 30 s for it, so everything sent before it
+(drafts, an import, a restore) has run; then the geometry is written.
+
+### Preferences, settings and the notifiers
+
+The two `preferences.json` keep the reference's format — one flat object of `devnotes.*` keys,
+each a string — so the core still reads `automaticBackups` from the application's file itself.
+`services::preferences::Preferences` keeps every key it read, those this version does not know
+included, and is written staged then renamed. The application's file is read by `main` before
+the window exists; the open library's (`devnotes.notes.*`) is read again on the db queue each
+time a library opens (`AppState::reset_library_scope`). Both are written on the db queue, so two
+changes in a row land in that order.
+
+`services::settings::Settings` is the typed part (locale, theme, density, the last area), read
+with defaults for anything unknown and written back without touching the rest; a setting joins
+it with the screen that reads it. `SettingsDraft` is what the preferences panel edits: only the
+theme and the density are previewed before « Apply », and the native side reads the applied
+settings, never the draft.
+
+`services::time`: an injectable `Clock` (`SystemClock`, a `FakeClock` in tests) and
+`relative(at, clock)`, which answers the label and **how long it holds**, the next frame asked
+for exactly then. `services::status::StatusNotifier` keeps the toast's last report, numbered so
+the same words said twice show twice; `services::errors::ErrorNotifier` the banner's last
+failure: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
+choosing its sub-key by one parameter), or the action's own when the code says nothing better.
+⚠️ The error's `detail` goes to the log, never to the screen.
+
+### The widget kit
+
+`ui::widgets` replaces the reference's `shared/`: components painted by hand after its CSS,
+reading the theme and nothing else. **Every one goes through `widgets::interact`**, which
+allocates at least 24 × 24 px for anything clickable (WCAG 2.5.8), gives the AccessKit node its
+role and name, sets its `author_id` — the `data-testid` its Angular twin had, which kittest and
+the e2e driver find it by — and paints the focus ring. `egui::Ui::interact` is refused
+elsewhere by `disallowed-methods` (`crates/ui/clippy.toml`), which is what `focus-rings.test.mjs`
+checked. A text field carries its accessible name apart from its hint: kittest refuses a field
+without one.
+
+- `Button`: `Outline` (a dialog's action — `surface` at 6 px, 6 × 12, 12 px, amber under the
+  pointer), `Filled` (the primary, solid amber), `Quiet` (text alone, filled when pressed),
+  `Destructive` (**red at rest**, `bg-3` and a red edge when armed or hovered); `.large()` is the
+  gate's submit. `IconButton`, `SplitButton`, `RailToggle` (32 px).
+- `Chip`, `priority_dot`, `hue_badge` (the hue in the label, a neutral fill, a hairline in the
+  hue), `Kbd`, `spinner`. A note's kind is not a badge: `notes::ui::kind_icon` is its icon on a
+  tile of its hue (Snippet olive, the one hue no language uses), named for the screen reader, and
+  `kind_tile` the same drawing wherever a kind is chosen beside its word (« New note », the
+  palette).
+- `Segmented` (the segment on is filled, its label bright), `TextField` (the reference's
+  `.input`: 9 × 11 on `bg-1`, red when refused), `SearchField`, `Checkbox`.
+
+- `menu` (an `egui::Popup` on the reference's surface: `bg-2`, 8 px, 4 px inside, the dropdown's
+  shadow): the first entry takes the focus, egui's arrow navigation walks the rest, → opens a
+  sub-menu and ← comes back, Escape closes. ⚠️ egui keeps **one** popup in its memory — the parent —
+  so a sub-menu keeps its open state apart. `ChoiceMenu` names its value (`Naming::Value`) or its
+  own label, and from `FILTER_FROM` (9) entries puts a filter on top that takes the focus.
+- `DialogStack` and `dialog`: one rung per layer of `dialog.model.ts` (editor … passphrase), the
+  higher drawn over the lower and served first by Escape; an `egui::Modal` blocks what is under it
+  and keeps Tab inside; the fitted frame is `bg-1`, 14 px, `line`, the overlay's shadow, 480 px,
+  over a solid scrim (E7). The focus goes back to the opener — **the frame after**, once no modal
+  layer blocks it (`DialogStack::begin_frame`), since egui drops a focus given while one does.
+- `virtual_list` (uniform rows, only those in view drawn — 30 000 rows draw fewer than twenty),
+  `code_viewer` (read-only, numbered in `line_no`), `rail_frame` and `split_handle` (a drag or the
+  arrows, 16 px a press, within bounds), `tooltip` (drawn, E3), `release_notes` (the core's runs:
+  plain, strong, code).
+
+Hover colours ease over `motion::FAST`; a disabled control is drawn at half strength.
+`DEVNOTES_LOOK=<dir> cargo test -p ui widgets::tests::look` renders the kit in both themes, to
+look at.
+
+### The gate
+
+`ui::gate` is the first screen of a launch and of every library switch: nothing else is drawn
+until the library is open. `Gate` asks the vault's state and the registry, and draws one panel
+in the middle of the window (`surface`, 420 px, 28 px inside), naming its library — a choice menu
+when there are several — then asking what it needs: a phrase **twice, held to
+`vault::MINIMUM_LENGTH` (12)** for a library that has none yet; the phrase **at any length** to
+unlock one; nothing but « set it aside » for a damaged or keyless one; a confirmation before
+archiving one whose phrase is forgotten. A wrong phrase says so on the problem line, whose room
+is kept so the button never moves; `LibraryDamaged` turns the form into the damaged panel.
+Opening another library re-asks everything and resets the library scope.
+
+⚠️ **The phrase is typed into `gate::passphrase::PassphraseField`, never egui's `TextEdit`**,
+which keeps an undo history in egui's memory. The field keeps nothing of its own: the text is a
+`Zeroizing<String>` the gate's view owns, typed at its end (letters, a paste, an input method's
+committed text, Backspace; Enter submits), and `passphrase::take` hands it to the core and
+leaves the field empty — the core wipes it once used. A test types a phrase and looks for it in
+egui's memory and in the AccessKit tree. `gate::prompt` is the same field in a modal on the
+`Passphrase` rung, for a file sealed with a phrase of its own (protect: the floor and twice;
+unlock: any length).
+
+The index fills behind the gate after an unlock (`IndexProgress`, `IndexReady`), and `Gate` keeps
+how far it got: the views say they are partial until it is whole.
+
+### The title bar, and the two bands under it
+
+The window keeps the system's decorations, so `ui::titlebar` is a bar inside it, 38 px on
+`bg-0`: the menus on the left, the application's name centred on the window, the theme toggle on
+the right. The area switch (`titlebar::area_switch`) heads each area's rail, three columns of an
+icon over its name, and comes to the bar, icons alone, only while the rail is put away: nothing
+else then leads to the other areas. It is drawn only once the library is open — every area acts
+on it. Its options are named for the screen reader and the tooltip (`area-option-notes`, `-tools`,
+`-http`), in the order of `Ctrl+1/2/3`, which `keys::APPLICATION` reads by position. The toggle
+names what it switches **to**, its icon and its label alike, and writes the appearance like the
+preferences panel does. Until the screens arrive, an area is an empty room addressed
+`area-notes`, `area-tools` or `area-http`.
+
+`ui::banners` draws the `ErrorNotifier`'s failure (red, announced assertively, `error-banner`)
+and the `StatusNotifier`'s report (green, announced politely, `status-toast`) as top panels
+under the bar, one of each, each until its X is pressed (`DismissError`, `DismissStatus`).
+
+### The notes canvas
+
+`ui::notes` draws the area; `state::notes_query::NotesQueryState` holds the view it draws, a
+`QueryCell` over `api::notes::query`. Its parameters are what the view depends on, compared by
+value — the space, the folder, the **local day** (the instant is not one: the sections move at
+midnight, which `request_repaint_after` asks for, and not every frame), the `Revision`, and how
+far the index is (each slice it adds is asked again). It is updated only while the library is
+open, and emptied with the library scope.
+
+The list view is `notes::canvas`. `canvas::rows::Rows` flattens the view into rows of one
+height — a section's heading, then its cards a row at a time — with the column count of the
+reference's `repeat(auto-fill, minmax(220px, 1fr))` and cards of the library's height (120, 140 or
+160 px, → "A card is two layers"). Their tops are
+worked out once a frame and only the rows that cross the viewport are drawn
+(`ScrollArea::show_viewport`): of 30 000 notes, a screenful. Sections are the core's, in its
+order, empty ones included (they are exhaustive); the cell after a section's last card is its
+« paste or create » ghost when the core says so. The region (`canvas`) says loading, nothing
+found (`matched == 0`, `canvas-no-results`) or a failure with its retry (`canvas-retry`, which
+bumps the revision) instead of the sections.
+
+A card (`canvas::card`) draws the core's `DisplayNote` and decides nothing about it, in three
+bands (→ "A card is two layers"): the title bar (the kind's icon, `notes::ui::kind_icon`; a
+snippet's format, `notes::ui::format_label`; the title; the priority's bars, the pin, the box), the preview by kind — a snippet's first lines in
+the mono face, a Note's outline, a list's open tasks (ticking one writes it through
+`state::notes`, not optimistically), a sheet's last results, a drawing's picture — and the status
+line (the place; the fields, the attachments, the short date). Previews are monochrome until syntax colouring arrives with
+the editors. A sheet's results are written by `notes::calc::value`, the reference's formatter in
+Rust, held by the core's golden cases (`golden/calc-format`).
+
+The header (`notes::header`) asks, and `NotesQueryState` holds what it asked: the search as typed,
+the search the core is asked for (the typed one once the keys have rested 150 ms, a deadline in
+egui's time and not a timer), the quick filter (all, pinned, untriaged), and the arrangement —
+order, grouping, pinned first — which is the library's (`devnotes.notes.arrangement`, the
+reference's JSON). All of them are parameters of the one `QueryCell`, so a search typed faster
+than the core answers asks once, and a stale answer is dropped. The search shows the count once
+something is filtered, zero included, and its cross empties the field alone; `Ctrl+K` is the
+notes area's key (`keys::NOTES`). The List/Board switch is the board's (below). Arrows in the menu's words (« A → Z ») are painted as icons (`widgets::arrowed`): no
+embedded face has them.
+
+The facets (`notes::header::facets`) are the kind, priority, tag and format rails under the
+header, with the way out of them: shown while their toggle (`facets-toggle`) asks, and held open
+while a chip is pressed — a filter nobody can see is a filter nobody can undo. The chips are
+`NotesQueryState`'s `Facets`, parameters of the same `QueryCell`; the counts are the space's,
+from the core, so pressing one zeroes no other. Escape clears the search and the rails together,
+as « clear the filters » does.
+
+The tag rail's « Manage » opens the tag manager (`notes::overlays::tag_manager`,
+`state::tags::TagsState`): the library's tags from `list_tags`, ticked, then renamed — a merge
+when several are ticked or the name exists — or deleted. Nothing runs before the core has counted
+the notes it touches (`count_notes_tagged`, each note once), and the confirmation takes the
+actions' place: the click that asked is where a second one would land. A write bumps the revision
+and reads the tags again.
+
+Copying a note with `{{fields}}` — its card's ⚡ (`note-card-fill`, in place of the copy) or `C` —
+reads it whole and opens the fields form (`notes::overlays::placeholder_form`,
+`state::placeholder_fill`) instead: one row a field, seeded with the values the note stores, each
+default a hint and never a value, the first empty field focused. « Copy filled » asks the core to
+fill (`fill_placeholders`: typed, else global, else the text's default), copies the answer and
+keeps the values (`set_placeholder_values`, which leaves `updated_at`); « copy as is » copies the
+text, tokens included; cancelled, nothing is written.
+
+The palette (`ui::palette`, `state::palette`) is drawn by the window over whichever area is
+shown, the fields form after it: `Ctrl+Alt+P` in the window (`keys::APPLICATION`), or
+`devnotes --action palette` from a second launch, which hands the action over the profile's
+socket — the path the global shortcut takes in P9, with the hidden window and the desktop
+notification after a copy. It asks the core for the notes of every space, ranked
+(`ranked: true`), and for the requests, through `QueryCell`s of its own: the canvas's search must
+not change behind it. The tools are read here, by their names first, and the empty field recalls
+a few of each kind. What is typed is read as a mode — `@` a scope or a space, `#` a tag, `>` a command — and a
+chosen chip narrows the search. The focus never leaves the field: the arrows, Tab, Enter and
+Backspace are taken from the input before the field reads them, and move a highlight.
+`> New folder` asks for the name in a prompt of its own (`notes::overlays::folder_prompt`).
+
+The header is one row while every control holds in it and two on purpose past that
+(`notes::header::layout`): the reference's floors decide, not the widths drawn, which differ
+between one row and two. What does not narrow is measured as drawn, the same in either layout;
+the search gives way first, then the switchers' names. ⚠️ The central panel has no margin of its
+own, as the reference: egui's 8 px cost the header its one row at the window's default width.
+
+A card's click surface (`note-card-open`, a layer under its controls) opens the note editor
+(`notes::overlays::editor`, `state::editor`) **in a panel beside the cards**, not over them: 45 %
+of the area right of the rail, between 460 and 760 px (`notes::beside_the_cards`) until its edge is moved (`editor-panel-edge`,
+remembered as `editorPanelWidth`), always leaving at least two columns of cards on its left, drawn
+and clickable, the cards taking the columns their width has room for, the open one lit (amber edge, a tint). Expanded (the
+toolbar's button, remembered as `editorFullscreen`) or in a window too narrow to keep two columns
+of cards, it takes the whole area right of the rail, with a bar over it: « ← Cards », the note's
+space › folders, and the keys. ⚠️ **What the editor opens next waits for the note open to
+close** (`AppState::editor_next`): a card clicked, a new note, J or K, the palette's choice —
+each goes through the closing path first, which writes the drafts, and `Editing::Close` opens
+what was asked. Opening straight away replaced the view and lost what was being typed. **J and K**
+(`keys::EDITOR`, read while no field has the focus and nothing opens over the editor) step to
+the card after or before, in the order the cards are shown (`AppState::on_screen`: the list's or
+the board's); a note reached that way does not give its title the focus, so the keys go on
+stepping. Expanded, the toolbar says `n / total` between ‹ and ›. **Escape** steps back: it
+leaves the field first (egui drops the focus before the frame is drawn, so the editor remembers
+whether a field had it at the last frame), then full screen, then closes; it is read after the
+panel is drawn, so a search bar or a drawing's tool takes it first, and not at all while a
+menu, the lightbox, the presentation or an overlay is open. While the editor is open the canvas's
+keys stand aside (`AppState::overlay_open` is every modal but the editor). Under 700 px the
+toolbar takes two lines: the title with expand and close, then the language, the format and the
+priority on the left and copy, pin and ⋯ on the right; folding the header, presenting and deleting
+(two clicks, the menu staying open between them) wait in ⋯. ⚠️ The split between the cards and the
+panel is on a whole point: on a fraction the header's measure of itself drifted by thousandths of
+a point each frame and never settled. **Expanded, each kind has its layout**
+(`notes::overlays::editor::expanded`): the toolbar holds the kind's icon, a snippet's format, the
+title, ‹ `n / total` ›, the kind's own action (copy, filled for a snippet with fields; « Export ▾ »
+for a Dessin), « Details », pin, ⋯ (presenting a Note, deleting), back from full screen and close.
+What the header's bands hold — space › folder, kind, context, tags, priority, deadline,
+attachments — stands in a **details column** on the right, the history at its foot, for every
+kind; « Details » puts it away (remembered as `editorDetails`, shown by default). ⚠️ Where the
+body would be left under 720 px beside it (a JSON graph beside its code needs that), the column
+gives way and the header's bands come back over the body, the button disabled: the note's
+details are never out of reach. A snippet keeps its fields band over its code, its language and
+formatter in a strip over the code, and its text filled under the code (`editor-filled`,
+asked again at every change, the fields' « Preview » toggle gone); a task list is a column of
+760 px at most, its progress beside « All / Open / Done » (`checklist-shown-*`, a view's choice;
+a row is dragged only while all are shown, and a task added shows them all); a Calcul sheet has
+its counts and decimals over the sheet; a Dessin has its tools in a column down the stage's left
+where the stage is tall enough for them, in a row over it otherwise. The status line along the
+foot is the footer's counts. The editor beside the cards has: a toolbar
+(title, language for a snippet, pin, priority, copy, delete in two clicks, fold, full screen,
+close), the header's two bands — context, tags and deadline; kind (a conversion menu, a Dessin
+named only), space › folder — or, folded, one line of what they hold, and the footer's counts.
+The note is read whole by id (`get_note`) through a `QueryCell` keyed on the revision, so a pin,
+a filing or an undo made anywhere shows at once. Title, context, body and the tag being typed
+are drafts of the view, keyed on the opening's session, written when a field is left and on
+every closing path; `Edit::changed_from` drops a field that did not move. Pin, priority, space,
+folder, deletion and a conversion go through `NotesState`, as from a card, and offer the undo; a
+conversion starts the drafts again from what the core wrote. ⚠️ egui drops the focus on Escape
+before the frame is drawn: the editor remembers whether a text field had it at the last frame,
+so a first Escape only leaves the field. « + New note » (or its kind menu, the ghost card, the
+global shortcut) opens it on a draft that has no id: the draft holds every change — pinned,
+filed, prioritised included — and nothing is written until it is worth keeping (the reference's
+`isWorthSaving`), then the note is created once; what is left while that creation is in flight
+waits for its id and is sent after. The bodies stay plain text until each kind's editor lands
+(phase 4): a list one task a line, `[x] ` before a done one; a Dessin has none.
+
+Under the pointer a card shows its pill over its bottom edge (`canvas::card::actions`): copy (the
+note read whole by id, then onto the clipboard and said) and the ⋯ of its menu — open, pin,
+priority › (a sub-menu of its own, egui keeping one popup in memory), copy, duplicate (opened in
+the editor under « (copy) »), file into a folder of its space, move to another space, delete in
+two clicks. ⚠️ The pill is drawn in the card's layer, after its click surface: in an area above
+it, clicks went through to the card.
+
+The canvas's keys are one table (`canvas::shortcuts::CANVAS`), read by `keys::dispatch` after the
+focused widget, above the application's and below the notes area's, and never while a text field
+has the focus — ⚠️ known by its asking for the IME, not by `egui_wants_keyboard_input`, which is
+true for a focused button too. They read the character: `Ctrl+N` and `Ctrl+Shift+N/L/M/D` make a
+draft of each kind, the arrows move the focus, `C` copies, `P` pins, `0`…`4` set a priority,
+`Delete` arms the card (its footer says how to finish or back out) and a second one trashes it,
+Escape steps back — what is armed, then the search, then up a folder. Enter is the card button's
+own. The focus is egui's, on the card's button, which keeps the arrows and Escape from egui's own
+focus moves; where the arrows go is `canvas::grid::neighbour`, read from the core's sections and
+the column count last laid out, not from what is drawn, and a card asked to take the focus is
+scrolled to first.
+
+Several notes are ticked at once (`state::selection`): `Ctrl`-click or the card's box toggles one,
+`Shift`-click ticks from the card that had the focus the frame before (a click focuses what it
+clicks) to this one, `X` toggles the focused card. While any is ticked, the selection bar floats
+over the canvas, never in its flow: the count, then commands — move to a space, file into a
+folder or out of every one, a priority, a tag added or removed, pin or unpin, delete in two
+clicks. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
+the selection go after disarming and before the search. ⚠️ The card's box is allocated on every
+frame, shown or not: a widget that comes and goes moved the ids of every widget after it, and the
+⋯ lost its menu.
+
+Every write of the card, the keys and the selection bar answers what it changed as an
+`api::undo::Reversible` — the core's own answer, as on the front — and `state::undo::UndoState`
+records the last one: the undo bar (`notes::undo_bar`) offers it for `UNDO_WINDOW`, on egui's
+clock and redrawn when it runs out; `Ctrl+Z` (in `CANVAS`) reads the record after the bar is
+gone; Escape takes it back only while the bar is up, after disarming and before the selection.
+The bar is an `Order::Tooltip` area, above the editor's modal. `Ctrl+Z` is never both histories:
+the canvas's keys stand aside while a field is typed into or the editor is open, and the field
+keeps its own.
+
+The trash panel (`notes::overlays::trash_panel`, opened by `trash-open` in the header) reads
+`state::trash::TrashState`, loaded when it opens and searched after the canvas's 150 ms pause; each
+restore, purge or emptying bumps the revision and reloads it. Its rows are all as tall — each line
+cut at its rows — so the list draws only those in view, and the list is as tall from its first
+frame as it will be: grown from the last frame's content, the modal crept up the screen and a
+click landed where it had been. While it is open, the canvas's keys stand aside as for the editor.
+
+The rail can be put away (`library-rail-toggle`, the application setting `showLibraryRail`): the
+space and folder switchers then take its place in the header, their rows' ⋯ opening the same
+panels as the rail (`notes::panel`, shared). While a folder is open, its breadcrumb replaces
+them — back to its space, the folders above it, its name, its panel.
+
+The library rail (`notes::sidebar`) is drawn left of the canvas, as wide as the application setting
+`libraryRailWidth` (160–520, written once its edge rests). `state::spaces::SpacesState` holds the
+spaces and the one chosen, `state::folders::FoldersState` every space's folders — the rail draws
+the whole library — and the one open; both are asked again with the revision and remembered in
+the library's preferences (`activeSpace`, `activeFolder`). `AppState` joins them: choosing a
+space leaves the folder, opening a folder shows its space, and `AppState::active_folder` is the
+open folder within the space shown. An id no space or folder answers to any more reads as « every
+space » or « every folder »: a space deleted elsewhere hides no note. `sidebar::tree` flattens
+the library into rows; what nests in what is `folders::model::Lineage`'s, siblings ordered by
+`view::fold` of their name. A row's ⋯ opens its panel under it, one at a time: a space is
+pinned, renamed (written when the field is left, or on Enter), and deleted in two steps with a
+refuge chosen and what moves counted by the core first; a folder is recoloured, renamed, given a
+sub-folder, and deleted, what it held going up a level. A folder's row is dragged onto another
+row — into that folder, or to the top of that space — or moved by `Alt+←` (up a level) and
+`Alt+→` (into the sibling above it); there is no order of siblings, so no `Alt+↑/↓`. The rail
+records its rows each frame and reports the gesture; whether the folder may go there is
+`AppState`'s, by `Lineage::check_move` and the space, and a refusal is said, never written. A
+move answers where the folder was, `Reversible::FolderMove`, which the undo bar names and puts
+back through `move_folder_back`. A card dragged on the board and let go of over a row of its
+space is filed there at any depth (`BoardGesture::FileOnRail`), the row lit while it is over
+it, and offered back like any filing. Inside an open folder, the list's one section is named
+after the folder until something is searched.
+
+A drawing's picture is never in the list: the card asks for it by `Stamp` (id and `updated_at`, so
+a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
+reads it on the db queue, decodes the PNG on the compute queue, uploads it once and keeps the last
+256; it is library content, so it lives in `LibraryCaches` and goes with the library scope.
+
+### The board, drawn
+
+The List/Board switch is remembered per space in the library's preferences
+(`devnotes.notes.view.<spaceId>`, `state::board::Mode`), and disabled on « all spaces », which
+has no zones. `AppState::board_place` is the one place that says whether the board is on screen:
+the space's, or the open folder's when it holds folders — one that holds none is the flat grid,
+whatever the switch says. `state::board::BoardState` is a `QueryCell` over `board_view`, with
+the list's criteria (`notes_query::Criteria`) among its parameters: the board reads the whole
+space and dims, it never narrows. While it shows, the selection, the arrows (zone by zone, then
+the ground, one step at a time) and the search's count read the board's cards, dimmed ones
+included, and the selection bar takes them as `selection_bar::Shown`.
+
+`notes::canvas::board` draws it: a dotted ground (`GRID_PX`) that pans both ways and never
+zooms, at least as large as what is seen, so past the content's edge it still takes the pointer;
+zones from their stored frames (`board::zone`), the same card as the list's, full size, and the
+loose cards where they were left. Only what crosses the viewport is drawn — zones and loose cards
+by their rectangle, a zone's cards by the rows its body shows — and every card's `Ui` is salted
+with its note's id, so what scrolls in and out moves no other id. ⚠️ A zone's cards flow in the
+columns `folders::board::columns_in` counts: the Rust that sizes a zone is the Rust that lays it
+out, and egui's scroll bars float over the body rather than taking a slice of the row, so the
+reference's one-pixel wrap cannot happen. A zone's title and its sub-folders' chips open their
+folder; its ⋯ opens the folder's panel, the rail's.
+
+What the criteria leave out is drawn at a third of its opacity in its seat
+(`board::seated`), never reflowed, and the seat node says it disabled, which is what the e2e
+reads. A gesture's result is staged in `BoardState` and laid over the view — a zone's frame, a
+loose card's place — then written behind `LAYOUT_SAVE_DEBOUNCE` (400 ms, a deadline in egui's
+time) as one `save_board_layout`. ⚠️ The overlay is let go of when a view carries the same
+value, never when the write returns (the view still drawn then is the one read before the
+gesture); a failed write keeps it. The tidy control floats in the ground's corner
+(`board::tidy`): « Aligner » (and `A`) flows the loose cards, its chevron offers « Réorganiser
+N dossiers et M cartes », and the arrangement answered is `Reversible::Arrangement`, offered by
+the undo bar and put back through `save_board_layout`. The ground pans home after an
+arrangement and back after its undo: `BoardState::pans` counts both, and the drawing forces the
+`ScrollArea`'s offset once per new count.
+
+The four gestures are pointer drags read by `board::Hand`, never egui's drag and drop: a card is
+its own handle (its seat senses the drag, the card under it the click, and egui gives each to
+its own, so a card dragged is never also opened), a zone moves by its header's grip and resizes
+by its corner, the left button on the empty ground draws a folder, and the right button anywhere
+sweeps a selection over the cards drawn this frame. The arithmetic is `board::gesture`, egui-free:
+nothing moves before the pointer travels 4 px, everything lands on `GRID_PX` (20 px, the
+dotted lattice), a drawn band snaps both corners and a resize snaps before it clamps to
+`folders::board`'s minimum. ⚠️ The pointer is read before anything is drawn (`track`) and the
+gesture commits on release alone (`follow`), as one `notes::BoardGesture`: a drop files through
+`file_notes` — the zone under the card's corner, or the board's root on the ground — and is staged
+in `BoardState` so the card is drawn in its new home at once; a membership refused is let go of
+where a refused place is kept. A filed card dragged out leaves its seat faded and travels as a
+ghost on a layer above the board; the zone it would land in says so. A drawn band opens the
+folder-name prompt, and the folder made gets its frame written straight through. The keyboard
+twins: a focused grip or corner moves or resizes the zone a dot per arrow; a card is filed from
+the selection bar; a folder is made from the rail. A zone's ⋯ ticks its every card, dimmed ones
+included.
+
+### The HTTP area, drawn
+
+`ui::http` draws the area (`area-http`); `state::http::HttpState` holds the tree, a `QueryCell`
+over `http_tree` asked again under the area's own `Revision` — a request renamed does not ask
+the notes again — and read the first time the area is shown. The library rail is one for the
+two areas: shown or hidden and its width are the application's settings, drawn by
+`widgets::RailWidth`, which takes a setting changed in the other area since its edge last
+moved; `Ctrl+B` is the area's key (`keys::HTTP`). `state::http::tree::rail_rows` lays the
+tree flat once per answer or fold, not per frame (2,000 rows), and the rail draws the rows in
+view alone (`widgets::virtual_list`): 8 px a level with a line a level in the indent, a
+twisty on a collection or a folder only, a request after its method in its colour
+(`http::rail::row::badge_hue`, `Badge::short` for `DEL` and `OPT`, `GQL`, `WS`), whose
+accessible name is the method then the name. What is folded is the library's
+(`devnotes.notes.http.collapsed`), a list of ids; anything else folds nothing.
+
+A row's `⋯` (`http-node-menu`) sits over the end of its name, inked only on hover or focus,
+and opens `widgets::menu`: « Nouvelle requête › » keeps the three kinds behind one entry, then a
+folder, rename, duplicate and delete; a request is only renamed, duplicated or deleted. ⚠️ The
+menu closes on a click outside or on the entry picked, never on any click: an entry that opens a
+sub-menu would close the menu it opens from. Creating and renaming are a field in place
+(`http::rail::forms`): the field left for anything else keeps what was typed, left empty it
+closes, Escape cancels. A deletion asks once Rust has counted what goes with it
+(`count_http_contents`, `HttpState::ask_delete`), the question opened under the row. What
+opens under a row is measured as it is drawn and the rows below it move down by that much: the
+rows are placed by hand (`ScrollArea::show_viewport`), the ones in view alone. ⚠️ Each row's
+`Ui` takes an explicit id (`UiBuilder::scope_id`), not a salt: a salted child's widgets take
+their ids from its rank, and a row moved with the keys lost its focus. A click focuses the name,
+as a button in a browser is: `F2` renames, `Delete` asks, `Alt` and an arrow move
+(`state::http::moves`: `key_move`, `drop_move`, `refusal`). A move made with the keys is read
+back from the tree Rust answers (`landing`), marked on the row and what now holds it for
+`MARK_SECONDS`, scrolled into view and said in a live region (`http-rail-moved`); a refusal is
+said there too. A drag lands before or after a row, or inside a folder or a collection when let go
+mid-row. Every write bumps the area's revision; one into a folded parent unfolds it.
+
+`state::http::tabs::Tabs` holds the open requests, one tab each: a `Draft` (name, kind, method,
+document) beside what Rust holds, modified while the two differ (`PartialEq`, where the reference
+compared JSON). A request begun from « New request » — one click for HTTP, the chevron for GraphQL
+or a WebSocket, or the empty workspace's three buttons — is a draft alone (`draft-n`), written
+nowhere until saved. `Ctrl+S` (`keys::HTTP`) writes the draft in front whole
+(`save_http_request`); typing during the write keeps what was typed. Closing a modified tab asks
+first (`http::close`: cancel, close without saving, save — save waits for the first save's
+dialog on a draft); the middle button closes a tab as in a browser. ⚠️ A tab follows every tree
+that is read: a request deleted closes its tab, one moved takes its new place, one renamed takes
+the name in what is saved and in what is edited, so the next save does not write the old one
+back. The rail lights the request in front, and its deletion question names the open tabs it
+would close with changes (`tree::requests_under`, `Tabs::unsaved_among`): Rust counts what is
+deleted, only the interface what is typed. Which requests were open and which was in front is the
+library's (`devnotes.notes.http.tabs`), read once the area is shown and written, with the folds,
+whenever either changes (`HttpState::remember`).
+
+`http::request` draws the tab in front: its name, the method — or the kind, said where a method
+would be chosen and no control — the URL and « Save », the `{{variables}}` it uses as chips, and
+its parts a tab each. A field edits the draft directly: its text is
+the draft's each frame, and a change is a `DraftEdit` applied at the end of the frame — no
+buffer of the view's to keep in step. The URL and the parameters' table follow each other
+through the core's `query::sync` (the side edited wins), called directly (D12). The URL's
+variables are lit by a `TextEdit` layouter from `variables::spans` — what a variable is and
+where it stands is the core's — in the colour of where each resolves from
+(`http_variables`, asked with the draft, its place and the area's revision), red when nothing
+sets it, amber until Rust has said. `http::request::table` is the key/value table: a blank row
+at the end becomes a row once typed in; as headers, a row that cannot be sent is marked with why
+(`header_faults`), `Name: value` typed in a name is split into its two cells, the caret moving
+to the value (`headers_from_text`), and lines pasted in a name fill a row each. The headers
+sent unasked are listed above the table with where each comes from
+(`implied_http_headers`): Rust composes the request, so Rust says. ⚠️ The header names a key
+field proposed came from the HTTP-headers tool's data: they return with the tools (phase 7).
+
+`http::request::body` draws the body by its kind. Another kind sets the one left aside, by tab
+(`state::http::bodies`), and it comes back as it was: « Switch to None » on a `GET` would
+otherwise cost the text it warns about; JSON and plain text share theirs. Never written: a
+request saves the body it shows. What the body implies, whether a JSON one reads and whether its
+method seldom carries one are one answer (`describe_http_body`), also read from the other tabs
+for the mark on « Body ». A multipart row (`http::request::parts`) is a text or a file by its
+path; the system's dialog opens off the frame (`HttpState::pick_file`), and its answer is
+dropped if the body changed kind meanwhile. `http::request::graphql` lays its two boxes out in
+rows of two cells, so that they start on one line whatever is said above each. These boxes are
+the text core's `Editor`, the only fields here with a buffer of their own: the view holds those
+of the tab in front (`TextBoxes`), the draft's text wins when the two differ, and what the core
+rewrites — Prettier's format, the `null`s of « Add » — reaches them through the draft, unless
+typing moved on since it was asked (`HttpState::rewrite`). ⚠️ `Ctrl+Enter` in a box sends: the
+editor leaves it to `keys::dispatch` instead of writing a line.
+
+`http::request::auth` holds a request's auth: the secret half masked until asked for, and
+« Inherited » saying what it takes and from where (`inherited_http_settings`, a `QueryCell` on the
+place of the tab in front), the secret masked unless it is a `{{variable}}`. A draft has no place
+yet, so it says so. `http::request::transport` lays the settings out with what each unset field
+takes beside it; a number is settled once its field is left, since a timeout typed digit by
+digit passes through values the floor would raise. `http::variables_table` is the table of a
+request's variables, and of the environments' to come. `http::extract` is « Extract to a
+variable », opened from the explorer under an answer: the path, the name proposed and whether it
+reads as a secret are the core's (`extract::{body_path, variable_name_of, looks_secret}`, called
+directly, D12). A rule is a part of the draft, saved with the request; `http::request::extractions`
+reads and removes them, under « Scripts », where the scripts join them. `http::environment_picker`
+is at the end of the tabs' strip: the active environment is the library's
+(`devnotes.notes.http.environment`), one deleted since it was chosen is none, and a send and the
+variables' chips both resolve from it (`state::http::environments`). ⚠️ JetBrains Mono and Inter
+have no `→` and no fullwidth `＋`: egui panics on a missing glyph in a test, so an arrow is an
+`Icon` and a plus is a plain `+`.
+
+`state::http::Page` is what the workspace shows: the open requests, or a page from the rail's
+foot, one at a time; a request opened from the rail leaves it. `http::environments` is the page
+of the globals and the environments. Its table keeps the rows as typed and writes them once the
+keys rest (`SAVE_AFTER`), on another set chosen and on leaving the page, then drops them once
+what is read back holds them; typing during a write keeps what was typed. Every write of this
+page bumps a revision of its own, so that a key typed does not read the tree again; a send that
+ends bumps the area's, since an extraction or a script may have written a variable. A secret
+shown in one set is masked in the next. Under a protected environment, what could change
+something waits for a yes under the request line (`environments::asks_before_sending`), and the
+yes goes to the core with the send (`confirmed`), a script then being free to change the
+environment. A chip nothing sets is a click from a row of its own on the page, in the active
+environment or the globals.
+
+`http::cookie_jar` lists what answers set, by domain, and throws it away: a cookie, a domain, or
+the whole jar once Rust has counted it (`state::http::cookies`). `http::container_settings` is a
+collection's or a folder's variables, auth, headers and transport, opened from its row's menu.
+The draft is the state's and is written whole on « Save »; a folder's « Inherited » reads from its
+parent, what it sets itself not being what it inherits. It shares the request's editors, which
+take a value and answer the value edited: `Inherit` on a collection is no auth at all, and reads
+as « None ». `http::modal` is the frame of the area's dialogs. ⚠️ A dialog centres itself again
+when its height changes: what clicks in a test settles first, a pointer aimed at the old place
+hits nothing.
+
+`http::code` is « Generate code »: Rust writes the request for a target (`generate_http_code`,
+asked again whenever the draft, the place, the environment, the target or a switch changes), the
+dialog names the targets, a `match` a new target will not compile without, and says what was
+left as a variable. « Include secrets » asks every time it is switched on, never when off. The
+target last chosen stays for the session. `response::body::TextLines` is the text read by lines
+it shares with the answer's body. `http::save_request` asks where a draft goes the first time it
+is saved, from `Ctrl+S`, « Save » or the close question, and creates what it lacks in one write
+(`create_http_request_in`): refused, it leaves no empty collection behind. The tab then takes the
+request's id for its key, and what is kept by key follows it (`Answered::rekeyed`). ⚠️
+`Ui::allocate_ui` keeps the parent's layout: in a `horizontal`, what is inside runs on a line
+until it is given a `vertical`.
+
+`http::history` is the page of what was sent, a `Page` as the environments are: the sends by
+local day, in rows drawn only in view, beside the entry chosen, read through
+`response::recorded`, the answer's parts without a tab to clear it from. It is read again when a
+send ends. A send is deleted unasked and comes back from the bar under the list for
+`UNDO_WINDOW`; emptying it says how many go first. « Reopen » puts a send back onto the request
+it came from, as changes to save or not (`http_history_onto_request`, `Tabs::open_with`), asking
+before it writes over a tab's own; the request gone, or the send made from a draft, it is a
+draft named after the send and its time. The core keeps `KEPT_AT_MOST` sends, so the list holds
+500 rows at most, whatever the plan's budget of 20,000 assumed.
+
+A WebSocket's tab holds a composer above and a log below. `state::http::sockets` keeps where each
+socket stands and its last `LOG_KEPT` events, under the id it was connected with: the core's
+`EngineEvent::Socket` names that id, so a draft saved meanwhile is rekeyed and an event from a
+socket replaced since is dropped. Connecting asks as a send does under a protected environment.
+`Ctrl+Enter` in the message sends it and is taken there, the area answering the same key by
+connecting; on a closed socket it says so and connects nothing. The log draws its rows in view
+alone, so a message reads on one line, whole in its tooltip. Closing a live socket's tab asks
+first, and a closed tab closes its socket.
+
+`http::scripts` is the script editor of a request, a folder or a collection: the text core's
+`Editor` by phase, each with its history, JavaScript coloured as a snippet is, a menu of examples
+written at the end of the script, and for a request the order the scripts run in, a level above
+a click from its settings on the same script. The extractions stand among the scripts after the
+answer. What runs them is the application relaunched as their host: a kittest bench is not that
+binary, so running them is scenario 34's. A script that stopped before the send stands in place
+of the answer, read back from its error's params (`ScriptStop::of_params`); after it, above the
+answer that came. « Open the script » goes to the request's own, or to the settings of what
+holds it, on the phase, the line marked until the next edit (`HttpState::script_focus`).
+
+`http::console` sits under the answer: `EngineEvent::Console` names a send, `Sends::key_of` its
+tab, and each tab keeps its last `LINES_KEPT` lines for the session, never written. Rust masks what
+it says; `console::secret_segments` cuts a text where a secret stands as its `{{name}}`, to set it
+apart. Folded it says how much it holds; unfolded it filters, by rows drawn in view alone. The
+Tests part of an answer groups them by whose they are, a line a click from the script. An answer
+goes to a file whole, from Rust and not from what is shown, or to a note: `http::save_as_note` asks
+where, `state::http::kept` holds what is on its way, and the core masks what the request sent
+before the dialog even opens (`http_response_note`). Generated code takes the same dialog.
+
+`http::runner` is the area's fourth page: a collection or a folder run, over iterations or the rows
+of a data file. `state::http::runner` holds how, in which order and the report of the last run,
+for the session; Rust runs and says its steps as `EngineEvent::Run`, and the order follows the
+tree, kept with the collection (`http_run_order`). Its report is a list of lines of one height,
+drawn in view alone, summed up by `RunSummary`; the kept answer last unfolded reads beneath it. A
+run's sends are named `run:<id>#…` (`runner::run_of`), and so its console has a key of its own,
+forgotten when the next run starts.
+
+Closing the window, or Quit, goes through `AppState::may_close`: with a tab modified, `http::leave`
+asks first, over any area, and « Save all » walks the tabs, a request never saved asked its place.
+A write that fails or a place refused leaves the question out. A note open closes by its own path,
+which writes its drafts, and the window follows it. Then the window hides, `on_exit` queues what
+waits, stops the network behind it and drains the queue (30 s at most).
+
+A send leaves on the network queue (`Backend::spawn`, `send_http_request`) and never holds the db
+queue; `state::http::send::Sends` keeps one a tab, under a send id fixed at the send
+(`<key>#<n>`), so a draft saved meanwhile changes its tab's key, not that. Its start is egui's
+time, so the count under way survives leaving the tab. « Send » turns into « Cancel » while it
+runs (`cancel_http_send`), `Ctrl+Enter` sends the tab in front, and a closed tab or « Clear »
+lets Rust forget the body it kept (`forget_http_response`). `http::response` draws the answer:
+the status on a tint of its family (`2xx` green, `3xx` blue, `4xx` amber, the rest red), time
+and size, then the body, headers, cookies and the exchange as it went (redirects, request,
+response). The body is cut into lines once per send and view and drawn by rows, a line-number
+gutter beside it, coloured window by window by `services::highlight::Colouring` (a 785 KB answer
+is laid out in under 150 ms, a frame of scrolling stays under a millisecond); a JSON answer is
+also explored as a graph or a tree — the explorer of the notes, without its « show in the
+code » (`ExplorerView::with_code(false)`), asked through `HttpState::explore` — and an image is
+decoded once from its `data:` URL into a texture. The line between the request and its answer is
+the application's `devnotes.httpRequestShare` (tenths of a percent here, a percent in the file):
+left automatic, the request takes what it holds up to 60 %; dragged, the share is written once
+let go; a double click or Enter makes it automatic again.
+
+### Errors are codes
+
+A service function returns `Result<T, AppError>`, never `Result<T, String>`. An `AppError`
+(`crates/engine/src/error.rs`) carries a stable **code**, its interpolation **params** and a
+technical **detail**:
 
 ```json
 { "code": "duplicateSpaceName", "params": { "name": "Perso" }, "detail": "Un espace nommé …" }
 ```
 
-This exists because business rules live in Rust. A message written there would be French in
-an English UI, and branching on a cause would mean parsing a sentence that breaks at the
-first rewording.
+Business rules live in the core, and a message written there would be one language in an
+interface showing another; branching on a cause would mean parsing a sentence that breaks at
+the first rewording.
 
-**`AppError` appears in command signatures and nowhere else.** Helpers answer
-`StorageError` or `ValidationError`, and the command's `?` is the one translation. A file
-failure is named after what it was about through `error::FileContext` —
+**`AppError` appears in service signatures and nowhere else.** Helpers answer `StorageError` or
+`ValidationError`, and the service function's `?` is the one translation. A file failure is
+named after what it was about through `error::FileContext` —
 `fs::write(&path, bytes).context(path.display())?` — which builds the `"<what>: <error>"`
-detail every `StorageError::File` carries, rather than a `format!` at each call site.
+detail every `StorageError::File` carries.
 
-The mapping lives in **one** place, `core/services/errors/error-notifier.service.ts`: `ipcNotice(error, fallback)`
-turns a failure into the message that helps most. A named cause wins over the attempted
-action — "this note no longer exists" beats "could not save the note", which would leave the
-user retrying something that can never succeed. `fallback` is used when the cause adds
-nothing actionable (a generic SQLite failure) or when there is no code at all.
+**The interface translates by an exhaustive `match`** on `ErrorCode`
+(`ui::services::errors::ErrorNotifier`), so a code added in the core does not compile until it
+has its key in both locales. A named cause wins over the attempted action — « this note no longer
+exists » beats « could not save the note », which would leave the user retrying something that
+can never succeed; the action's own sentence is the fallback when the cause adds nothing
+actionable. ⚠️ The `detail` goes to the log, never to the screen.
 
-`IpcErrorCode` is a plain alias of the **generated** `ErrorCode` union, so it is no longer a
-mirror at all — adding a Rust variant makes it appear on the front at the next generation.
-Two tables then fail to compile until the new case is handled: `CODE_KEYS`, typed
-`Record<IpcErrorCode, string | null>`, and `IPC_ERROR_CODES` in `ipc.error.ts`.
+Three codes exist for what happens **outside** the database: `attachmentNotFound`, `fileAccess`
+(reading, copying or writing a file — attachments, export and import all land there) and
+`importFormat` (a file offered as a bundle that is not one, or one written by a newer version).
+Each has a different thing to tell the user, and only `importFormat` means « choose another
+file ». A schema too recent for the binary has no code: it can only happen while a library
+opens, and the gate says it.
 
-That second table is a runtime guard, and it still earns its place: `bindings.ts` _declares_
-the error branch as an `AppError`, but Tauri itself rejects with a plain **string** for an
-unknown command or an argument that fails to deserialise, and that value lands in the same
-branch. `IpcError.code` is `null` in exactly those cases, and the message falls back to the
-raw cause so the failure stays readable.
+### The language is detected, not asked for
 
-`ErrorCode` has no variant for a too-recent schema: that failure is only produced by the
-migration during Tauri's `setup()`, where it aborts startup. No command can return it, so
-giving it a code would advertise a case the front can never handle.
+`notes/language.rs` (`Language`, a `closed_enum!`) is the known list; the interface's table of
+labels, hues and grammars (`ui::notes::language`) is an exhaustive `match` on it. An unknown
+value read from disk degrades to `txt` instead of failing the load.
 
-Three codes exist for what happens **outside** the database: `attachmentNotFound`,
-`fileAccess` (reading, copying or writing a file — attachments, export and import all land
-there) and `importFormat` (a file offered as a bundle that is not one, or one written by a
-newer version). They are codes rather than a generic storage failure because each has a
-different thing to tell the user, and only `importFormat` means "choose another file".
+Detection reads the content and returns one of the languages; without it every note is born
+`txt` and the format rail only serves people who remember to touch the select.
 
-### Serialisation contract
+- `txt` doubles as **« nothing chosen »**, and detection runs on the moments a snippet acquires
+  its first content: `language::for_draft` on a draft that reaches `create_note` as `txt` (the
+  capture shortcut, which pastes and creates in one go, and a new snippet whose body is committed
+  before its title); `language::after_patch`, when a patch fills the empty body of a snippet left
+  `txt`; `detect_language`, asked when text is **pasted** into an empty Note: code turns it into
+  a snippet, written with the content and the kind in one patch.
+- **A Note is never read for a language.** It is where prose is typed. Once a snippet has
+  content, nothing is guessed either: re-detecting on every write would take the select back
+  from the user.
+- The heuristics are cheap and **allowed to be wrong**: the result is a starting value the editor
+  can change (→ "Syntax highlighting" for how it scores).
 
-**The wire types are generated; the conversion is not.** `model/` is the vocabulary the
-application reasons in — what stores, components and templates manipulate; `data/` is the
-boundary — the shape that crosses the bridge, the repository that crosses it, and the
-conversion between the two. There are **two** shapes and not three: the wire types are the
-generated ones, imported under a `Wire*` name where a model type carries the same name, and
-`note.mapper.ts` holds the conversion. Nothing re-declares a wire shape by hand.
+### The service functions
 
-Where the two shapes coincide, the model type travels as it is: a space still has no mapper.
-An identity mapper is not symmetry, it is one more name for one type.
+- **Three families** (plan § 3.3.3): a **data** function (`fn name(engine: &Engine, …)`,
+  synchronous, run on the db queue), a **network** one (`async fn name(engine: Arc<Engine>, …)`,
+  which reaches the queue through `db::run` and never holds the lock while it waits), and a pure
+  **tool**, run on `compute`. `ui::api` gives each its queue once.
+- A module holding service functions is `pub`; everything else is `pub(crate)` or narrower, so
+  that `dead_code` and `unreachable_pub` still have something to say.
+- They are **adapters**: validate the input, lock, delegate, translate the error. One that grows
+  is a sign a rule was written in the wrong place.
+- `crates/engine/tests/` calls them on an engine over a temporary profile, the way the interface
+  does.
 
-What generation does **not** remove, and why `core/data/note.mapper.ts` is still
-the biggest file in `data/`:
+The service functions, grouped by the feature that owns them (`crates/engine/src/<feature>.rs`):
 
-- **JSON has no date type.** Rust types every timestamp as a `String`, so the bindings do too.
-  The mapper parses it into a `Date` and throws a `ContractError` on an unparseable value,
-  rather than letting an `Invalid Date` propagate and resurface as `NaN` in a relative-time
-  label. The reverse direction (`toIsoString`) guards the same way.
-- **The front no longer narrows the language.** It was a free `String` in the model;
-  the front restricts it to a `LanguageTag`.
-- **A patch omits what it does not touch.** The Rust fields carry `#[specta(optional)]`, so
-  the generated `NotePatch` has optional keys and `toNotePatchDto` can copy field by field —
-  an explicit `undefined` would serialise to `null` and overwrite the stored value.
-
-The serde attributes are still load-bearing (`rename_all = "camelCase"` on the structs,
-`tag = "kind"` on the data-carrying enums), but they no longer need to be mirrored by hand:
-specta reads them and the generated types follow. The tests in `notes/model.rs` that pin the
-JSON shape are now a second line of defence rather than the only one.
-
-An unknown `language` value degrades to `txt` instead of failing the load, and an unknown
-entry in `availableLanguages` is dropped from the rail: a newer backend may know a language
-this front-end build does not — and since Rust types it as a plain string, the bindings cannot
-rule it out. A section key needs no such guard any more: `NoteSectionKey` is generated, so a
-variant added in Rust breaks the assignment at compile time instead of throwing at runtime.
-
-The known list is `notes/language.rs` (`Language`), aliased by `core/model/language.model.ts`
-(`LanguageTag` + `LANGUAGE_LABELS`). Adding a language means editing both, plus a `.lang-*`
-rule in `language-badge.component.scss` and, if it should be coloured, an entry in `GRAMMARS`.
-The typed tables drift no further than the next build; the stylesheet is the one that can, and
-`scripts/language-hues.test.mjs` compares it against the enum for exactly that reason.
-
-**The language is detected, not asked for.** `notes/language.rs` reads the content and returns
-one of `LANGUAGES`; without it every note is born `txt` and the format rail only serves people
-who remember to touch the select. Three things keep it honest:
-
-- `txt` doubles as **"nothing chosen"**, and detection runs on the moments a snippet
-  acquires its first content:
-  - `language::for_draft` on a draft that reaches `create_note` as `txt` — the capture
-    shortcut, which pastes and creates in one go, and a new snippet whose body is committed
-    before its title;
-  - `language::after_patch`, when a patch fills the empty body of a snippet left `txt` — the
-    title came first, so creation saw no content;
-  - `detect_language`, asked by the rich editor when text is **pasted** into an empty Note:
-    code turns it into a snippet, and the front end writes the answer with the content and the
-    kind, in one patch.
-- **A Note is never read for a language.** It is where prose is typed, and the first blur of
-  typed prose would otherwise hand it to a heuristic built for code. Once a snippet has content,
-  nothing is guessed either: re-detecting on every write would take the select back from the
-  user, and there would be no way to overrule a bad guess.
-- The heuristics are cheap and **allowed to be wrong**: the result is a starting value the
-  editor can change. A miss costs one click.
-- Order runs from the most discriminating signal to the vaguest (a wrapping brace beats a
-  `key: value`), so each new rule goes in at the position its confidence earns.
-
-### Rules
-
-- A new command needs **one** registration: `collect_commands![…]` in `src-tauri/src/lib.rs`.
-  Make it an `async fn` whose body runs in `db::blocking` when it takes the lock — see the
-  threading note under [Persistence](#persistence-rust) — **and** annotate it
-  `#[specta::specta]`, then regenerate; an
-  unannotated function will not compile inside `collect_commands!`. A command handed an
-  `AppHandle` is generic over `R: Runtime` and registered as `name::<tauri::Wry>`: that is what
-  lets `tests/commands` call it on the mock runtime, and specta needs the concrete type.
-- A module holding commands is `pub`, and that is not decoration: `#[specta::specta]`
-  generates a macro per command that `collect_commands!` resolves from the crate root.
-  Everything else is `pub(crate)` or narrower, so that `dead_code` and `unreachable_pub` —
-  both denied in `Cargo.toml` — still have something to say. A blanket `pub` silenced them
-  across the whole back end, and three unused items had accumulated behind it.
-- Every type crossing the bridge must derive `specta::Type` alongside its serde derives.
-- Specta refuses to export `usize`, `isize` and the 64-bit-and-wider integers, since JSON
-  cannot carry them without precision loss. Use a sized type the wire can hold — `NotesView.matched`
-  is a `u32` for exactly this reason.
-- Commands are **adapters only**: validate the input, lock the shared connection, delegate,
-  translate the error. A command that grows is a sign a rule was written in the wrong place.
-- `bindings.ts` is excluded from ESLint and Prettier: its shape belongs to the generator, and
-  reformatting it would make every regeneration a diff.
-
-### The downward direction: events
-
-`bindings.ts` covers the front asking the back a question. The reverse — the back telling the
-front something happened — goes through **`AppEventsService`** (`core/ipc/app-events.service.ts`),
-which wraps `listen` from `@tauri-apps/api/event`.
-
-**One topic, carrying a closed action.** There used to be three (`devnotes:capture`,
-`devnotes:new-note`, `devnotes:palette`), spelled out on both sides, where a typo produced a
-subscription that was silently inert and that nothing reported. Now `desktop::GlobalAction` is a
-`closed_enum!` and the topic is a single constant, and **both are generated**: `lib.rs` exports
-them with `.typ::<GlobalAction>()` and `.constant("GLOBAL_ACTION_EVENT", …)`, neither of which
-needs a command to hang off. The front imports both from `bindings.ts`, and its `switch` over
-the action is exhaustive — a variant added in Rust stops the front compiling. `Quit` is the
-one that is a question rather than something to do (→ "Leaving with requests not saved").
-
-**Application metadata travels the same way.** `app_info::METADATA` is exported with
-`.constant("APP_METADATA", …)` and holds what the front used to spell out: the display name,
-the repository URL, the author and their handle, plus the Rust toolchain the project pins —
-`build.rs` reads the `channel` out of `rust-toolchain.toml`, the same file rustup resolves for
-every build. The about card completes the line with Angular's own `VERSION.full` and with
-`getTauriVersion()`: that one is **asked of the running framework**, not baked in, for the
-same reason as the application's own version — a committed `bindings.ts` can lag behind a
-dependency bump, an answer from the bridge cannot. Every value comes from `Cargo.toml` — the
-standard fields through `CARGO_PKG_*`, and what Cargo has no field for through
-`[package.metadata.devnotes]`, which `build.rs` hands to the crate as environment variables
-read with `env!`. It is a constant and not a command on purpose: the titlebar reads the name
-**synchronously**, where a round trip would leave it empty for a frame. `core/services/app-info/`
-re-exports it once as `APP_INFO`, so nothing else imports `bindings.ts` for it.
-
-⚠️ The **version** is not in it. It is read from the running binary with `getVersion()`, which
-cannot go stale the way a committed `bindings.ts` can, and `tauri.conf.json` no longer declares
-one either — without the key, Tauri takes the version from `Cargo.toml`. The release workflow's
-`prepare` job reads that version and refuses to go on unless `package.json`, `package-lock.json`
-and `Cargo.lock` say the same thing — **before** the tag exists, so it prevents the drift rather
-than reporting it afterwards.
-
-That is deliberately **not** `collect_events![…]`: it would generate a `listen` call per event,
-imported straight from `@tauri-apps/api/event`, and the `EVENT_SUBSCRIBER` token every spec
-substitutes would have nothing left to stand in front of.
-
-Today it carries the desktop integration, which lives in `src-tauri/src/desktop.rs` — global
-shortcuts and the system tray. It is native glue rather than a feature, so it sits beside
-`notes/` and `spaces/` rather than inside either. None of it needs a
-capability: capabilities gate the API the **WebView** calls, not what the native side does on
-its own.
-
-Two producers, **the same three actions**, so the front wires them once:
-
-- `Ctrl+Alt+V` / `Ctrl+Alt+N` / `Ctrl+Alt+P`, registered at startup;
-- the tray menu's "new note", "paste from clipboard" and "quick paste" items.
-
-Each reveals the window and emits `GlobalAction::Capture`, `NewNote` or `Palette`;
-`NotesPageComponent` listens once, reads the clipboard, creates the note or opens the palette.
-
-⚠️ **A global shortcut is first-come, first-served across the whole machine**, and the loser
-gets no error — the key simply does nothing. `Ctrl+Alt+Space` was the palette's first choice
-and lost it to a widely installed application, which is why it is now `Ctrl+Alt+P`. Losing one
-is still possible, so `set_global_shortcuts` **returns** what it could not take and the front
-says so. A log line is not an interface. The same command re-registers the three from scratch
-whenever the preference changes — everything is released first, or an abandoned combination
-would keep answering.
-
-- **Rust does not create the note.** Keeping creation on the front means one creation path
-  (`create_note`), so a captured note gets language detection without a second implementation,
-  and the adapter stays thin.
-- Neither the topic nor the action set is spelled twice any more: both are generated, so a
-  typo cannot produce the silently inert subscription this used to risk.
-- A shortcut already taken by another application is **logged and ignored**, never fatal:
-  DevNotes has to start without it.
-- `AppEventsService.on()` returns an unsubscribe immediately although the subscription only
-  lands a tick later; a component destroyed in between would otherwise stay subscribed for the
-  whole session.
-
-### Window geometry
-
-`tauri-plugin-window-state` remembers the size, the position and whether the window was
-maximized, in `.window-state.json` beside the database. `tauri.conf.json` still declares a
-size, and it is only a **first** launch: 1100×720, with a 640×480 floor so a window cannot be
-restored — or dragged — to something nothing fits in.
-
-⚠️ The flags are explicit (`WINDOW_STATE_FLAGS`, `lib.rs`) and that is the whole subtlety.
-The plugin's default is `all()`, which includes `VISIBLE`; quitting from the tray saves a
-window that is **hidden**, and the next launch would restore it hidden — an application that
-starts with nothing on screen and only a tray icon to be found by. A unit test holds the flag
-out. `DECORATIONS` and `FULLSCREEN` are left out for the opposite reason: nothing here
-changes either, so saving them stores noise.
-
-A minimized window needs no guard of ours — the plugin's `Moved` and `Resized` handlers
-both skip one, which on Windows reports itself at -32000. And the file is written on
-`RunEvent::Exit`, not on every move: the tray's "Quitter" is `app.exit(0)`, so it goes
-through, while a force-kill saves nothing and leaves the previous geometry standing.
-
-⚠️ **The window is declared `"visible": false` and shown from `setup`.** The plugin restores
-the geometry from `on_webview_ready`, which runs _after_ the window is on screen: created
-visible, the window appeared at the config's size and then jumped to the remembered one.
-Measured by polling the window rectangle through startup — 1116×759 at +172 ms, 900×600 at
-+359 ms, so nearly 200 ms of the wrong window. Created hidden, there is one rectangle and no
-jump. `setup` is also the right place rather than the front end: a front end that fails to
-boot would otherwise leave a process with no window at all.
-
-`backgroundColor` is the dark `--bg-0`, for the same reason the dark palette is the base
-one — the WebView paints white before the first frame, and the theme preference cannot be
-read before Angular boots.
-
-### System tray
-
-DevNotes stays resident in the notification area, and **the window's close button only hides it**
-— quitting goes through the tray menu. An app made to be one shortcut away would be pointless
-if closing it killed the shortcut. It is a preference now (see _Preferences_), still on by
-default; minimising to the tray is the same idea, off by default. Tauri emits nothing for
-"minimised", so `lib.rs` watches `Resized` and asks the window where it stands.
-
-- **The front creates the tray, not the native startup.** `TrayService` (`core/services/tray/`) pushes
-  the menu labels through `sync_tray`, and Rust holds **no user-visible string at all**: the
-  interface language is a front-end preference, and a translation table in Rust would be a
-  second source to keep in step. The subscription re-emits on every language change, so the
-  menu re-translates itself.
-- **Closing only hides when a tray exists** (`desktop::tray_exists`). Without that guard, a
-  desktop with no notification area would leave a hidden window and a process nothing could
-  bring back.
-- `sync_tray` is the one command that returns no `Result`. A missing tray is not a failure the
-  front can act on, and giving it an `ErrorCode` would add a branch no UI would ever render —
-  it is logged natively, like an unavailable global shortcut.
-
-### Leaving with requests not saved
-
-A request typed in a tab and never saved, or a saved one with changes, does not survive the
-page: `HttpTabsStore` keeps the ids of the saved requests that are open, nothing else. They are
-**not** kept across a restart; the application **asks before they are lost**
-(`HttpLeaveStore`, `core/services/http/`, and `LeaveRequestsDialogComponent`, drawn by the
-shell because any area can be the one on screen).
-
-- **Everything that takes the page away goes through `HttpLeaveStore.confirm(reason)`** and goes
-  on only on `true`: « Quitter » in the File menu, a library opened or created
-  (`LibrariesStore`, which reloads), a backup restored (`BackupsStore`), an update installed
-  (`UpdateStore`). ⚠️ Nothing is asked when no tab is modified: leaving stays instant.
-- **One dialog**: how many requests, their names under the dot a modified tab wears, a sentence
-  for the WebSockets that will be cut, then « Annuler », « … sans enregistrer » and « Tout
-  enregistrer ». That last one writes the requests that have a place, then walks those never
-  saved through the save dialog, one at a time; a place not given comes back to the question,
-  and a write that fails leaves it standing.
-- **A quit asked from outside the page asks the page.** The tray's « Quitter » called
-  `app.exit(0)`, and closing the window when that does not hide it ended the process as well.
-  Both now go through `desktop::request_quit`: one `GlobalAction::Quit` down, and the page
-  answers — at once with `exit` when nothing would be lost; otherwise `hold_quit` first, which
-  stops Rust waiting and shows the window (it may be hidden in the tray, where no dialog is
-  seen), then its question, and the process ends from the page or not at all.
-- ⚠️ **The wait is bounded** (`QUIT_PATIENCE`, 3 s): a page that never answers — hung, not
-  loaded — must not make the application impossible to quit. Questions are numbered
-  (`PendingQuit`), so the timer of one never quits for the next.
-- ⚠️ `HttpLeaveStore` exists from the first render and resolves the HTTP stores **when asked**,
-  never at construction: they read the library's preferences as they are built — what is
-  folded, which tabs were open — and would read nothing before the library is open.
-
-The commands, grouped by the feature that owns them:
-
-| Feature       | Commands                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Feature       | Functions                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `notes`       | `count_notes_tagged`, `create_note`, `delete_note`, `delete_notes`, `delete_tags`, `empty_trash`, `fill_placeholders`, `get_note`, `list_global_placeholders`, `list_revisions`, `list_tags`, `list_trash`, `move_notes`, `move_notes_back`, `purge_notes`, `query_notes`, `rename_tags`, `restore_notes`, `restore_revision`, `revision_diff`, `seed_samples`, `set_global_placeholders`, `set_placeholder_values`, `tag_notes`, `untag_notes`, `update_note` |
-| `spaces`      | `create_space`, `delete_space`, `list_spaces`, `pin_space`, `rename_space`                                                                                                                                                                                                                                                                                                                                                                                     |
+| `spaces`      | `count_space_contents`, `create_space`, `delete_space`, `list_spaces`, `pin_space`, `rename_space`                                                                                                                                                                                                                                                                                                                                                             |
 | `folders`     | `arrange_board`, `board_view`, `create_folder`, `delete_folder`, `file_notes`, `file_notes_back`, `list_folders`, `recolour_folder`, `rename_folder`, `save_board_layout`                                                                                                                                                                                                                                                                                      |
 | `attachments` | `attach_clipboard_image`, `attach_file`, `delete_attachment`, `list_attachments`, `open_attachment`, `read_attachment`, `save_attachment`                                                                                                                                                                                                                                                                                                                      |
-| `transfer`    | `export_is_protected`, `export_notes` (over an `ExportScope`: the library, a space or a selection), `import_notes`, `share_notes`                                                                                                                                                                                                                                                                                                                              |
+| `transfer`    | `count_export`, `export_is_protected`, `export_notes` (over an `ExportScope`: the library, a space or a selection), `import_notes`, `share_notes`                                                                                                                                                                                                                                                                                                              |
 | `vault`       | `change_passphrase`, `create_vault`, `unlock_vault`, `vault_state`                                                                                                                                                                                                                                                                                                                                                                                             |
 | `libraries`   | `create_library`, `delete_library`, `list_libraries`, `open_library`, `rename_library`                                                                                                                                                                                                                                                                                                                                                                         |
 | `backup`      | `list_backups`, `restore_backup`                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `recovery`    | `archive_locked_library`, `set_aside_damaged_library`                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `changelog`   | `app_changelog`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `desktop`     | `hold_quit`, `set_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                                                        |
+| `desktop`     | `hold_quit`, `set_global_shortcuts`, `release_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                            |
 
-The guarantees the front-end relies on (persisted value returned, `Err` on an unknown id,
+The guarantees the interface relies on (persisted value returned, `Err` on an unknown id,
 "absent field means unchanged" for patches) are implemented in each feature, and tested there.
-The batch commands return a **count** rather than a `Result` per note: a selection can hold an
+The batch functions return what they changed rather than a `Result` per note: a selection can hold an
 id that has gone stale, and failing the whole batch for one of them would be worse than a
 partial result.
 
-`fill_placeholders` is the one command with no `State<Db>`: it is a pure function, so the
-palette can fill an unsaved draft as easily as the note it just opened.
+`fill_placeholders` is pure (called on `compute`), so the palette can fill an unsaved draft as
+easily as the note it just opened.
 
-`delete_space` takes a **refuge** (`targetSpaceId`) and is the one command whose argument is
-multi-word, so it is the first to actually exercise Tauri's camelCase renaming. The refuge is
-not optional: `notes.space_id` carries an `ON DELETE CASCADE`, so a bare delete would take
+`delete_space` takes a **refuge** (`target_space_id`). The refuge is not optional: `notes.space_id` carries an `ON DELETE CASCADE`, so a bare delete would take
 the notes with it. `spaces::store::delete` moves them and drops the space in one
 transaction, in that order, and deliberately leaves `updated_at` alone — the canvas orders on
 that column, and refreshing it would float the whole absorbed space to the top as if every
@@ -4255,41 +4832,58 @@ note had just been edited. A space cannot be its own refuge (`spaces::model::val
 the cascade would take the notes back out one statement after the move.
 
 `query_notes` takes a `NotesQuery` (space, search, quick filter, tags, languages, `now`,
-`tzOffsetMinutes`) and returns a `NotesView` (sections, `availableTags`, `availableLanguages`,
-`isFiltering`, `matched`). The pair `isFiltering` + `matched` is what lets the UI distinguish
-"no results" from "this space is empty" without recomputing anything. Its two steps are
-visible in the command body: `notes::store::fetch` runs the indexed SQL, `notes::view::build`
-applies the rules to what came back. `fetch` returns the notes plus a `Facets { tags,
-languages }` — the two rails ask the same question of two columns, and passing two bare
-`Vec<String>` side by side would be indistinguishable at the call site.
+`tz_offset_minutes`) and returns a `NotesView` (sections, `available_tags`,
+`available_languages`, `is_filtering`, `matched`), shared as an `Arc` snapshot. The pair `is_filtering` + `matched` is what lets the UI distinguish
+"no results" from "this space is empty" without recomputing anything. It reads the in-memory index
+(`index::NoteIndex`), never a sealed column, and `notes::view::build` applies the rules.
 
 **Tags and languages are both facet rails**, and behave identically: union semantics (a note
 passes if it carries _at least one_ of the selected values), facets scoped to the space rather
 than to the current filter, and a selection counts as `is_filtering` — which collapses the
 canvas into a single flat `results` section. The quick filters (pinned / untriaged) do not:
 they narrow a view that stays chronological. One asymmetry: selected tags go through
-`notes::model::normalize_tags` before hitting SQL, selected languages do not — a language is picked
+`notes::model::normalize_tags` before they are compared, selected languages do not — a language is picked
 from a closed list, not typed, and `notes::language` compares it exactly.
 
-The serialisation contract is pinned by tests in `notes/model.rs`, `notes/view.rs` and
-`spaces/model.rs` rather than left to review: they assert the emitted
-JSON keys are camelCase, that a lifecycle serialises to `{"kind":"expires","at":…}`, that a
-section key serialises to `"older"`, that a decorated note serialises **flat**, and that an
-error code serialises to `"noteNotFound"`. A serde attribute deleted by accident fails
-`cargo test` instead of silently breaking the UI.
+**The JSON shape that is still written** — the export bundle, the stored preferences, a
+request's document — is pinned by tests in the models (`notes/model.rs`, `spaces/model.rs`,
+`tests/ipc_contract.rs`): camelCase keys, a lifecycle as `{"kind":"expires","at":…}`, an error
+code as `"noteNotFound"`. A serde attribute deleted by accident fails `cargo test`.
 
 ### Input validation
 
-The back validates what the front already constrains, because a rule held only by a form is
-not held at all. `error.rs` defines a `ValidationError` carrying the offending
-`field`; commands call `draft.validate()` / `draft.validated_name()` before touching the
-connection, and `AppError` turns the refusal into `invalidInput` with `{{field}}`.
+The core validates what the interface already constrains, because a rule held only by a form
+is not held at all. `error.rs` defines a `ValidationError` carrying the offending
+`field`; service functions call `draft.validate()` / `draft.validated_name()` before touching the
+connection, and `AppError` turns the refusal into `invalidInput` with `{{field}}`. ⚠️ That field
+is a name of the code: the interface never shows it, and an `invalidInput` falls back on the action's
+own message. What a person can actually run into gets a code of its own — a file past what an
+attachment may weigh is `fileTooLarge`, with its name and the limit in megabytes
+(`ATTACHMENT_MAX_MEGABYTES`, which the attachment strip also says).
 
-What is checked: `language` against the known list (an arbitrary value would be unreadable by
-any front build), a space name trimmed and non-empty (`COLLATE NOCASE` folds case but not
+What is checked: `language` against the known list (an arbitrary value would be unreadable by an
+older build), a space name trimmed and non-empty (`COLLATE NOCASE` folds case but not
 whitespace, so `"Personal "` would otherwise sit beside `"Personal"`, identical on screen), and
-`NotesQuery.now` as a parseable instant — falling back to the server clock would silently
+`NotesQuery.now` as a parseable instant — falling back to another clock would silently
 re-cut every section on a different day.
+
+### Leaving with requests not saved
+
+A request typed in a tab and never saved, or a saved one with changes, does not survive a
+restart: the tabs keep the ids of the saved requests that are open, nothing else. The window
+**asks before they are lost** (`state::http::leave`, drawn by `ui::http::leave`, since any area
+can be the one on screen).
+
+- **Everything that takes the window away asks first**: « Quit » (the File menu, the tray, the
+  close button when it does not hide), a library opened or created, a backup restored, an update
+  installed. What waits for the answer is a `libraries::Goal`. ⚠️ Nothing is asked when no tab is
+  modified: leaving stays instant.
+- **One dialog**: how many requests, their names under the dot a modified tab wears, a sentence
+  for the WebSockets that will be cut, then « Cancel », « … without saving » and « Save all ».
+  That last one writes the requests that have a place, then walks those never saved through the
+  save dialog, one at a time; a place not given comes back to the question, and a write that
+  fails leaves it standing.
+- A hidden window draws nothing, so a quit held for the question brings the window up first.
 
 ## Encryption at rest
 
@@ -4382,11 +4976,27 @@ still verify. Binding it would mean threading the row identity through every sea
 call in the stores; it buys nothing against the threat above, where the attacker reads the
 file rather than edits it and hands it back.
 
-⚠️ Nor is it a defence against a machine already compromised while DevNotes runs. The
-plaintext is in the heap as ordinary `String`s, never zeroized: every body `query_notes` matched
-against, the previews it sent (a few lines each, not the whole body), and the note open in the
-editor — so it can reach swap, a hibernation image or a crash dump. And the key is in this
-process’s memory for the length of the session, and there is no idle re-lock.
+⚠️ Nor is it a defence against a machine already compromised while DevNotes runs. Since the
+notes index (« The notes index »), **the whole open library is in memory in the clear** for as
+long as it is open: every note's title, body, source, tags, items and field values, their folded
+copies, the folder names and the global `{{field}}` values. That changes nothing at rest — no
+index is ever written to disk, and a cache sealed on disk would be a new file format — but it
+changes what a read of the process's memory reveals: no longer the notes a search happened to
+open, but all of them. What is done about it:
+
+- an index entry wipes its texts when it is dropped (`zeroize`), and so do the folder names
+  and global values the index replaces or drops;
+- the index is emptied when another library is opened, when a copy is restored, and when the
+  application exits (`Engine::wipe_index`, from the shell's `RunEvent::Exit`);
+- nothing of it is logged, nor sent in an event (`IndexProgress` carries two counts).
+
+What is not: the copies a view makes are ordinary `String`s, dropped unwiped, as before the
+index — the notes `query_notes` matched and the previews it sent, the note open in the editor.
+Pages of the heap can reach swap, a hibernation image or a crash dump, wiped or not, and a
+process killed outside `RunEvent::Exit` frees its memory without wiping it. The key is in the
+process's memory for the length of the session. **There is no « lock » action, and the
+migration adds none**: the vault has `vault_state`, `create_vault`, `unlock_vault` and
+`change_passphrase`, nothing that closes a library short of opening another or quitting.
 
 ### The pieces
 
@@ -4619,15 +5229,15 @@ already locked. ⚠️ `libraries::open_directory(app)` reads and parses `librar
 every call, so it is kept for what runs while **no** library is open: `vault_state`,
 `create_vault`, `unlock_vault` and the recovery commands. Reading the thumbnail of a
 screenshot used to pay that lookup plus two `create_dir_all`; `attachments/` is now created
-once, by `vault::gate::install`. A module that reaches for `app_data_dir()` directly writes
+once, by `vault::gate::install`. A module that reaches for `Paths::profile` directly writes
 into the profile, which holds no library. The one directory that lives there on purpose is
 `open/`, the decrypted attachment copies: they are ephemeral and swept wholesale, and one
 directory means one sweep catches every library's leftovers.
 
-**Switching is a full teardown, and the front end is reloaded for it.** `open_library`
-empties the connection `Mutex` under the same lock every other command takes, then
-`LibrariesStore` reloads the page (`AppWindowService.reload()`). The vault state lives in
-Rust, so the front end comes back on the gate of the library just opened. ⚠️ The other
+**Switching is a full teardown.** `open_library` empties the connection `Mutex` under the same
+lock every other command takes, then `AppState::reset_library_scope` drops what belonged to the
+library, panels included. The vault state lives in the core, so the window comes back on the gate
+of the library just opened. ⚠️ The other
 library has its own passphrase, and asking for it is the only proof the right one is open.
 
 ⚠️ **A reload, not a gate over the same stores.** Destroying the notes page is not enough: every
@@ -4667,19 +5277,27 @@ with every one of them still on disk and nothing pointing at them.
 A preference belongs to the **application** or to the **library**, and the line is one
 prefix: ⚠️ **`devnotes.notes.*` is the library's, everything else is the application's.**
 
-|                             | file                                        | holds                                                                                   |
-| --------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `PreferencesService`        | `preferences.json`, at the profile root     | theme, language, density, the keys, the tray, autostart, the window, `automaticBackups` |
-| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, and which view each space was left on                               |
+|                             | file                                        | holds                                                                                                |
+| --------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `PreferencesService`        | `preferences.json`, at the profile root     | theme, language, density, the keys, the tray, autostart, the window, `automaticBackups`              |
+| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, the space and folder it was left on, each space's view, the cards' preview lines |
 
 Both extend `KeyValueStore`, which holds the synchronous cache and the plugin's own
 loading — the API stays synchronous where the plugin's is not, because a preference is read
 when a component is constructed and an async read would show the interface in one state
 then the other.
 
+**The space and the folder a library was left on** (`devnotes.notes.activeSpace`,
+`devnotes.notes.activeFolder`) are written on every choice and read when the notes page opens —
+before, the library's file is not open, and the title bar has already built `SpacesStore`. A
+space or a folder gone since falls back on « Tous les espaces » or every note by itself. The
+first launch's own pick of the seeded space is shown, not remembered: nothing was chosen yet.
+
 ⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
 launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
-out of that file before the front end has booted (`backup::copies::wanted`).
+out of that file before the front end has booted (`backup::copies::wanted`). Rust reads the
+JSON file itself (`backup::wanted_by_preference`), not through `tauri-plugin-store`: the core
+knows no plugin.
 
 ⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
 opened once. A space id means nothing in another library, and a samples marker carried
@@ -4753,21 +5371,24 @@ is built like it.
   from the front end, and `../2026-01-01_00-00-00` joins to a path outside the directory
   whose file name still parses as a stamp.
 
-Afterwards every command answers `Locked`, `VaultStore.load()` sees it, and the notes page
-is destroyed — with the File menu the panel was opened from, which is gated on the same
-signal. The restored copy needs a passphrase, and asking for it is the only proof the
-right file is in place.
+Afterwards every command answers `Locked`, and the page reloads to the gate, as opening
+another library does: a `VaultStore.load()` over the same stores, all `providedIn: 'root'`,
+carried the replaced library's notes, undo record and open Preferences past the unlock. The
+restored copy needs a passphrase, and asking for it is the only proof the right file is in
+place. Where the replaced files went is said across the reload: Rust keeps it
+(`backup::Restored`, handed once by `take_restored_aside`), since nothing in the page outlives
+the reload on WebKitGTK, and the startup says it once the vault's state is known.
 
-⚠️ `BackupsStore` follows the shape the tag manager and the trash already use: `ask()`
-only **proposes**, `pending()` names which copy and what it would cost, and `confirm()` is
-what writes. The trigger is replaced by that sentence and the confirm sits somewhere else
+⚠️ `BackupsState` follows the shape the tag manager and the trash already use: `ask()`
+only **proposes**, `pending()` names which copy, and the confirmation is what writes. A library
+archived, set aside or restored loses its samples mark: its successor holds no space, where no
+note can be created, and the next open seeds only where there is none. The trigger is replaced by that sentence and the confirm sits somewhere else
 — a second click on the button that fired it is the guard a double click defeats. The
 strip scrolls itself into view, because it replaces a trigger further down a panel that
 scrolls and would otherwise appear below the fold.
 
-`23-backups.e2e.ts` ends on that gate for real: its final scenario replaces the library and
-leaves it locked, so a file run after it in the same application meets the gate, which
-`waitForCanvas` passes.
+`23-backups.e2e.ts` goes through that gate for real: its final scenario replaces the library,
+unlocks the copy, and finds neither a note written after the copy nor Preferences open.
 
 ### Attachments, and the one plaintext copy
 
@@ -4780,7 +5401,8 @@ and decrypted is time every other command would spend waiting.
 
 ⚠️ `open_attachment` is the exception, and a deliberate one: the program that opens a
 document reads it from disk, so DevNotes writes a decrypted copy under `app_data_dir()/open/`
-and opens that — one click, as before. Those copies are swept on the way out
+and opens that — one click, as before. The copy is `<id>/<its own name>` (`Attachment::opened_copy`):
+the viewer shows the name the user knows, and two of one name do not meet. Those copies are swept on the way out
 (`RunEvent::Exit`) and again at every launch, which is what covers one another application
 still held, and a crash. ⚠️ The profile and **not** the OS temporary directory: that one is
 shared with every account on the machine, where the copy would be readable by all of them
@@ -4843,7 +5465,7 @@ is not the WebView's thread's to parse.
 - **The matches cover the whole document**, open or not, in its order: stepping to one opens
   its ancestors.
 - **A node can be moved; the layout stays Rust's.** An offset per node, in the layout's own
-  units, kept by path in `JsonExplorerStore` — never in the note — so an edited document keeps
+  units, kept by path in the `Explorer` — never in the note — so an edited document keeps
   the place of every node whose path survives, and opening another note starts afresh. A
   gesture that starts on a node moves it, anywhere else it pans; it commits on `pointerup`, and
   the pointer is captured only once the press has travelled 4 px, or the click would land on the
@@ -4872,16 +5494,134 @@ ids, parents, positions, the request's kind (`http`, `graphql`, `websocket`) and
 - The launch copy and a restore carry them, being in the database; the library export
   (`transfer::Bundle`) does not — a collection travels in a file of its own.
 
+## The engine and its host
+
+The core (`crates/engine`) owns its state in one `Engine`, which the shell creates once and
+manages as an `Arc<Engine>`: the `Db` slot (empty until `vault::unlock`), the sends, runs and
+sockets under way, the restore set aside. It asks the shell for two things only (`host.rs`):
+
+- **`Paths`**, a plain struct resolved before the engine exists: `profile` (the registry,
+  `libraries/`, the application's `preferences.json`, `open/`) and `resources` (the identity
+  lists). A struct, not a trait: every host only fills in two paths.
+- **`EventSink`**, the one trait: what the core says unasked, as an `EngineEvent` (a socket's
+  traffic, a script's console, a run's steps, the index filling). The interface's `Inbox` posts
+  each on its input channel and wakes the window; tests keep them in a `RecordingSink`.
+
+What reaches the platform stays out of the core's work: the clipboard is read before an
+attachment is stored and written after a QR code is drawn, and a decrypted attachment is opened
+once its copy is written — by the interface, not by the core. Opening a library or
+restoring a copy closes the sockets and cancels the sends and runs first
+(`Engine::let_go_of_the_network`). Nothing in `crates/engine` names egui or Tauri.
+
+### The binary, its profile and its window
+
+`crates/app` builds `devnotes`. `main` reads `--devnotes-script-host` before anything else
+(the core's `serve_scripts`: no window, no log), then `--profile <directory>`, which puts the
+whole profile, its logs and the window's geometry in that directory — tests and development
+only. Without it, `platform::paths::Locations::installed` resolves the profile
+`com.devnotes.app`, the packages' identifier (`com.devnotes.app.dev` until 1.0.0, D16): roaming data on
+Windows, `$XDG_DATA_HOME` and `$XDG_CONFIG_HOME` on Linux, the logs under the local data
+directory. The resources are found beside the executable, under `lib/devnotes` in a Linux
+package, or in `crates/engine/resources` for a binary run from `target/`.
+
+**One application per profile (D16).** Before the log, `platform::instance::claim` binds a local socket named after a digest of the canonical profile path (a named pipe on Windows, the abstract namespace on Linux). A second launch that cannot bind it connects, sends `reveal` — or `action <name>` from the `e2e` flavour, its way to press a global shortcut — and exits; the first hears it on a thread of its own and brings its window forward. ⚠️ Windows answers a pipe already taken with « access denied », not « address in use ». A claim that fails otherwise stops the launch: a second writer would leave the index silently wrong. Two profiles never collide, so a scenario never meets a development instance.
+
+The log (`flexi_logger`, `devnotes.log`, three files of 5 MB) starts before the window, and a
+panic hook replaces the default one: it logs where and on which thread, **never the message** —
+a panic slicing a string quotes it (D18). Then the input channel and its `Waker` are made, and
+eframe opens the window **hidden** at the geometry `platform::window` read back (size, place,
+maximised; never whether it was visible), with eframe's persistence off: it would write egui's
+state, text fields included, in clear on disk. The creation closure fills the `Waker` and
+creates the tokio runtime and the `Engine` (D20); `App::logic`, which runs while the window is
+hidden, shows it on the first frame. Under Linux, X11 is taken whenever `DISPLAY` exists
+(D15). The geometry is written on exit, the size the window had unmaximised kept under a
+maximised one, a full screen never.
+
+**What the desktop answers** is one value, `ui::Desktop`, built by `crates/app/src/desktop.rs`
+on the thread the window's loop will run on: under Windows that loop serves the tray and the
+keys. Its `Default` answers nothing, so no test touches the session. Each subject is a module of
+`platform` with a trait a test fakes; what only a real desktop can run sits in its `system.rs`
+and is answered for by the manual checklist (`docs/recette/recette.html`, plan § 8.5), not by coverage.
+
+- `tray`: the icon and its menu, translated in Rust and rebuilt when the language moves. Under
+  Linux on a thread of its own, the only GTK one (D29), reached by message; a desktop without the
+  indicator library answers `exists() == false`.
+- `shortcuts`: the three global keys, first come first served. `GlobalKeys` takes them from the
+  saved settings, says what another application holds, and lets go while a field listens.
+- `autostart`: the system is read at the launch and the preference follows; the switch is pushed
+  only when it differs.
+- `notify`: a toast, never load-bearing. A palette copy over another application is its one use.
+- `dialog`: under Linux the portal is asked for first, or `rfd` answers `None` like a cancel.
+- `links`: `http` and `https` only.
+- `updater`: see below.
+
+The `e2e` flavour takes no global key and writes no autostart entry.
+
+**Closing is not quitting.** The close button hides the window when a tray exists and « Close to
+tray » is on; otherwise it ends the application, as « Quit » always does (`AppState::quitting`).
+⚠️ A hidden window draws nothing, so a close held for a question or for the editor brings it up
+first. `on_exit` runs in this order: the sends cancelled, the plain copies swept and the db queue
+drained (D19, 30 s at most), the keys released, the tray removed, the geometry written, and last
+an update installed. ⚠️ Under Windows the update client ends the process there and then, so a
+download only asks to quit: nothing may follow that line. Under Linux a detached shell waits for
+the process to be gone before starting the `AppImage` again: beside it, the new one would find
+the profile taken.
+
+An update comes from `latest.json` (D26), checked against the minisign key before it is kept.
+Only an `AppImage` or a folder holding the NSIS uninstaller offers one.
+
+### The notes index
+
+`index::NoteIndex`, in the `Engine` and touched on the db thread alone, holds the live notes of
+the open library decrypted, with their folded text (`view::Folded`: title, tags, body, items,
+source), and the decorations a card needs (attachment counts, every folder's chip, the global
+`{{field}}` values). An entry is an `Arc` never changed in place, and wipes its texts when it
+goes (`zeroize`); nothing of the index reaches the disk.
+
+It fills after an unlock (`index::fill`, spawned by the shell's `unlock_vault` and
+`create_vault`): newest first, a slice of 2 000 notes a job of the queue, opened and folded in
+parallel (rayon), `IndexProgress` after each slice and `IndexReady` at the end. ⚠️ A slice is
+read in the order of `notes_updated_at` (`store::newest`, a keyset on `updated_at` then `id`):
+sorting itself, SQLite would read every sealed body before the first row. A slice read for a
+library closed since stops (`Library::number`); opening a library or restoring a copy empties
+the index first.
+
+**Who reads it.** `query_notes` (the list and the palette), `board_view` and `list_tags` read the
+index, never a sealed column: `NoteIndex::select` keeps what `store::fetch` kept (space,
+folders, quick filter, rails) in the same order, `facets` counts what the SQL counted,
+`index::search` runs `view::answers` over the folded text in parallel and answers shared cards,
+and `view::arrange` is `view::build` past its search — the one definition of sections, ranking
+and quotes. A view holds its `Arc`s, so it is drawn without any lock, and an entry a write
+replaced is freed (and wiped) when the last view holding it goes. Only the
+folders under an opened one are still asked of SQLite (plain ids). A read waits for no slice:
+one that arrives while the index fills finishes it first (`NoteIndex::ready`), since the views
+cannot yet say they are partial. ⚠️ Tags that differ only in case count as one, as under
+`COLLATE NOCASE`, named by their smallest spelling. `count_notes_tagged` stays in SQL: it counts
+the trashed notes too, which a rename touches. The path the index replaced (SQL, every body
+opened, `view::build`) is kept as a `#[cfg(test)]` oracle: `index/oracle.rs` chains random
+writes through the service functions and compares both answers to random queries after each.
+
+**One path keeps it true.** A service function that writes what the index holds goes through
+`Engine::write(|db| …)`, whose closure answers its value and an `index::Changed`: the notes it
+touched (re-read, or dropped when no longer live), and whether the attachment counts, the
+folders or the global values moved. `write` refreshes the index once the closure returned —
+its transactions committed. A corpus-wide write (renaming or dropping a tag, deleting a space or
+a folder, an import, the first launch's samples) says `Changed::everything()`: the index is
+emptied and the next read builds it whole. No service function refreshes the index itself.
+⚠️ A write that forgets to declare leaves the index silently wrong: `tests/commands/index.rs`
+checks the index against one rebuilt from the database right after each write
+(`Engine::index_matches_library`).
+
 ## Persistence (Rust)
 
 Storage is **SQLite**, queried through **Diesel** and embedded via `libsqlite3-sys` with the
 `bundled` feature — SQLite is compiled from source and statically linked, so nothing has to be
-installed or shipped alongside the executable. The database file lives in Tauri's
-`app_data_dir()`.
+installed or shipped alongside the executable. The database file lives under the profile
+(`Paths::profile`, the profile `platform::paths` resolves).
 
 - **The store is plain functions.** `notes::store` and `spaces::store` take a
-  `&mut SqliteConnection`; the `#[tauri::command]`s sit on top. That is what makes persistence
-  testable against `SqliteConnection::establish(":memory:")` without launching Tauri. A store
+  `&mut SqliteConnection`; the service functions sit on top. That is what makes persistence
+  testable against `SqliteConnection::establish(":memory:")` without an engine. A store
   holds **no business rule** — it reads and writes the model defined in its sibling
   `model.rs`, which it depends on. What a write needs decided is asked of the model:
   `revision::worth_keeping` for a kept body, `Note::normalized` for an imported note,
@@ -4898,37 +5638,35 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   the migration SQL. Diesel obeys those; it does not own them. Adding a column means editing **both** the migration and this file; `check_for_backend` on
   `NoteRow` turns a divergence into a compile error.
 - **Concurrency.** A `SqliteConnection` is not `Sync`, and Diesel takes it exclusively for
-  every query, reads included. A single connection is shared as `tauri::State<Db>`
-  (`Db = Mutex<Option<Library>>`, the connection and the key together), registered with
-  `.manage()` in `lib.rs` — never a global, and empty until the library is unlocked.
-  Overlapping commands serialize on that mutex, and each command holds `db::lock` from its
+  every query, reads included. A single connection is held by the `Engine`
+  (`Db = Mutex<Option<Library>>`, the connection and the key together) — never a global, and
+  empty until the library is unlocked. Each service function holds `db::lock` from its
   first read to its last write, so a check and the write that depends on it cannot be
   interleaved. A read lets it go before the work that needs no more rows: `view::build`,
   `board::build`, reading an attachment's file. Whether one lock is enough was measured rather
   than assumed: see "Who holds the lock" under Benchmarks.
-- **⚠️ A command that takes the lock is an `async fn` whose body runs in `db::blocking`.** A
-  plain `#[tauri::command]` over a synchronous function is compiled as
-  `ExecutionContext::Blocking` and runs **inline in the WebView's IPC handler** — on the main
-  thread, where it freezes the window for as long as it takes. `(async)` on the same function
-  frees the window but not much else: `tauri-macros` hands the body to `async_runtime::spawn`,
-  so it occupies a Tokio **worker** — a pool the size of the core count, shared with the
-  updater and the plugins — for its whole duration, waiting on the lock included. At 8000 notes
-  `query_notes` holds that lock for ~430 ms, and each command queued behind it would park a
-  worker of its own. `db::blocking(app, |app, db| …)` runs the body on Tokio's **blocking** pool
-  instead and hands it the handle and the `Db`; `bindings.ts` is unaffected, the generated
-  TypeScript having always been promise-based. A body that panics answers
-  `StorageError::Unavailable`, the answer the lock it would have poisoned gives. `blocking`
-  and the commands are generic over `R: Runtime`, so a test runs them on Tauri's mock runtime. The commands
-  that never take the lock — the registry of libraries, `export_is_protected`, the changelog —
-  stay `(async)`: a short read of a file.
+- **⚠️ Every data function runs on the engine's one db thread** (D11). `engine::db::submit`
+  queues a job on it, which the interface does at the call (`Backend::db`), and `db::run_here`
+  is what a test or the queue itself calls. A job that panics answers
+  `StorageError::Unavailable`, the answer the lock it would have poisoned gives, and the queue
+  goes on with the next one.
 
-  The exception is `desktop.rs`: `sync_tray`, `set_global_shortcuts` and
-  `set_window_behavior` stay blocking, because the tray and shortcut registration want the
-  main thread. That is also why every piece of native state is managed in `desktop::init`
-  before any command can run — a command creating its own on first call would race another
-  doing the same.
+  **One thread, in order.** The queue is one thread that runs its jobs in the order they
+  arrive: two writes sent one after the other land in that order , and the `Mutex` is never contended. ⚠️ `db::lock` asserts
+  in debug builds that it runs on that thread; the crate's unit tests, which lock in-memory
+  libraries on their own thread, are exempt. A job never waits on another job, nor on the
+  network. Async code that holds the engine reaches the queue through `db::run`. Sends
+  and sockets run on the runtime the shell passes to `Engine::new`.
 
-- **Migrations.** They live as SQL files in `src-tauri/migrations/`, are compiled into the
+  **A send in three steps.** It _reads_ in a job (inheritance, variables, the jar, and the
+  number of the library open), _sends_ on the runtime without coming back to the queue, then
+  _writes_ in a job: history, cookies, the variables the scripts wrote — merged into what is
+  there by then, never overwritten, so two sends at once keep both. Each `Library` gets a
+  number from a process counter when it is opened (`Library::number`); the write step goes
+  through `db::lock_library` and writes nothing, and says so in the log, if another library was
+  opened since the read.
+
+- **Migrations.** They live as SQL files in `crates/engine/migrations/`, are compiled into the
   binary by `embed_migrations!`, and are tracked in the `__diesel_schema_migrations` table.
   Evolving the model means adding a `YYYY-MM-DD-HHMMSS_name/` directory — never editing a
   shipped migration, it has already run on user machines. Each migration is atomic. A database
@@ -4979,8 +5717,8 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   antivirus, a second instance — into a storage error on the first write; and
   ⚠️ `synchronous = NORMAL`, WAL's default, written down because it is a durability choice:
   a power cut can cost the last committed transaction and cannot corrupt the file. `FULL`
-  would fsync every commit to protect a note the user can retype. `mmap_size = 1 GiB` reads
-  pages in place rather than copying each one through SQLite's 2 MB cache: against the same
+  would fsync every commit to protect a note the user can retype. `mmap_size = 1 GiB`, 64 MiB once the
+  index is whole, reads pages in place rather than copying each one through SQLite's 2 MB cache: against the same
   build without it, `list_tags` and a pinned-only query halve and the whole-corpus queries
   gain 7–13 % at 8000 notes. ⚠️ An I/O error or a truncation under the mapping is a `SIGBUS`,
   not an error code: a library's files live in the profile, and nothing moves them while its
@@ -5098,199 +5836,153 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   the trash, filling a `{{field}}` records a value — none of the four refreshes it. The canvas
   sorts on that column, and touching it would float notes nobody reopened to the top. It is
   also why the field values are a command of their own rather than a `NotePatch` field: the
-  patch path exists to refresh that column.
+  patch path exists to refresh that column. A patch that changes nothing refreshes nothing
+  (`NotePatch::apply` compares the note before and after): closing the editor sends a body
+  compared with the list's preview of it, once the note it held is gone, and a drawing's
+  pictures may be taken of a scene left as it was.
 
 ## Cross-cutting services
 
-- **`ClockService`** (`core/services/time/`) exposes `now` as a signal ticking every 30 s. Relative
-  time computed with `new Date()` inside a `computed()` freezes: the computed depends on no
-  signal representing time, so it never re-evaluates and a card shows "4 min ago" forever.
-  Injecting `now()` makes those computeds both pure and self-refreshing.
-- **`PreferencesService`** (`core/services/preferences/`) stores UI preferences in a real file through
-  `tauri-plugin-store` (`preferences.json` in `app_data_dir()`, next to the database — the plugin
-  resolves against `BaseDirectory::AppData`; ⚠️ that is indistinguishable from `app_config_dir()`
-  on Windows, where both are `%APPDATA%\<identifier>`), readable from Rust and
-  immune to a WebView cache wipe — unlike the `localStorage` it replaced. Two consumers:
-  `LocaleService`, and the editor overlay's two display toggles — fullscreen
-  (`devnotes.editorFullscreen`) and the fields drawer (`devnotes.editorFieldsPanel`, open by
-  default: a drawer folded on first sight hides the feature from whoever does not know it yet).
-  - **The API stays synchronous** although the plugin's is not: both consumers read at
-    construction time, and an async read would show the interface in one state then the
-    other. The file is loaded **once** by `hydrate()` from an app initializer, into an
-    in-memory cache; writes hit the cache immediately and are pushed without being awaited.
-  - The plugin is reached through the `PREFERENCES_STORE_LOADER` token rather than by calling
-    `load` directly. Beyond the usual seam argument, it is a practical necessity: the Angular
-    builder bundles modules before Vitest sees them, so `vi.mock` on an external package
-    intercepts only intermittently. Outside Tauri the loader rejects and the service degrades
-    to a memory-only cache, which is how every other spec runs.
-  - `hydrate()` adopts any `devnotes.*` key left in `localStorage` by an earlier version, then
-    clears it. Without that, updating the app would silently reset the interface language.
-  - Adding a plugin also means declaring its permission (`store:default`) in
-    `src-tauri/capabilities/default.json`, or the call is refused at runtime.
-- **`SettingsStore`** (`core/services/settings/`) is the application's own settings, on top of
-  `PreferencesService`. It writes as it is read — there is no draft to validate — and it talks
-  to nobody: `GlobalShortcutsService`, `WindowBehaviorService` and `AutostartService` read its
-  signals and carry each change to the native side. See _Preferences_.
-- **`ErrorNotifier` + `AppErrorHandler`** (`core/services/errors/`) surface failures on screen through
-  `ErrorBannerComponent`. On a desktop app the console is not an interface: an uncaught
-  exception or a failed write has to be visible, or the app just looks unresponsive.
-- **`ClipboardService`** (`core/services/clipboard/`) is the system clipboard. The CSP locks the WebView
-  to `'self'` and `navigator.clipboard` is unusable there, so everything goes through
-  `tauri-plugin-clipboard-manager` (permissions `clipboard-manager:allow-read-text` and
-  `allow-write-text`). Same `CLIPBOARD_ADAPTER` token and same degradation as
-  `PreferencesService`: outside Tauri the plugin rejects, and the service reports a `false`
-  rather than throwing — a copy that failed only has a visual acknowledgement to withhold.
-  It is in `core/` by the usual test: a hashing tool would inject it verbatim.
-- **`FileDialogService`** (`core/services/dialogs/`) is the native file picker, behind
-  `tauri-plugin-dialog` (permissions `dialog:allow-open` and `dialog:allow-save`). Same
-  `FILE_DIALOG_ADAPTER` token and same degradation as above, with one addition: `null` covers
-  both a cancelled dialog **and** an unavailable plugin. An exception would force every caller
-  to tell two non-choices apart, and there is nothing to open either way. It also flattens the
-  plugin's `string | string[]` union, which stays a union even with `multiple: false`.
-- **`AppWindowService`** (`core/services/window/`) hides the window and quits the app
-  (`core:window:allow-hide`, `process:allow-exit`). The two are and stay distinct: the window's
-  close button **hides** (`lib.rs` intercepts `CloseRequested` while there is a tray), the
-  palette hides after copying, and `quit()` is the only path that really ends the process. The
-  adapter is substituted in **every** spec — a real `exit()` would take the test runner down
-  with the application.
+What has no place on screen is `ui::services`, one module per subject, and what is asked of the
+operating system is `platform`, one module per subject with a trait a test fakes
+(→ "The binary, its profile and its window"):
+
+- **`services::time`** — an injectable `Clock` and `relative(at, clock)`, which answers the label
+  and **how long it holds**: the next frame is asked for exactly then, so « 4 min ago » ages on
+  its own and nothing repaints every frame.
+- **`services::preferences`** and **`services::settings`** — the two `preferences.json` and the
+  typed settings over them (→ "Preferences, settings and the notifiers"). A key this version does
+  not know is kept and written back; the files are written staged then renamed, on the db queue.
+- **`services::errors::ErrorNotifier`** and **`services::status::StatusNotifier`** — the banner's
+  failure and the toast's report. On a desktop application the log is not an interface: a failed
+  write has to be visible, or the window just looks unresponsive. A panic is logged without its
+  message (D18).
+- **`platform::clipboard`** — what the clipboard holds beyond the text egui hands a field (a
+  page's HTML, for a paste into a Note); a clipboard that cannot be opened answers `None`, and a
+  copy that failed only withholds its acknowledgement.
+- **`platform::dialog`** — the file dialog: `None` covers a cancel **and** a dialog the desktop
+  could not show, since there is nothing to open either way. Under Linux the XDG portal is asked
+  first (D29).
+- **Closing and quitting** stay distinct: the close button **hides** while there is a tray and
+  « Close to tray » is on, the palette hides after copying, and « Quit » is the only path that
+  ends the process (→ "Closing is not quitting").
 
 ## i18n
 
-UI strings live in `src/app/core/services/i18n/translations/{fr,en}.json` and render through
-Transloco's `transloco` pipe. French is the fallback locale.
+The interface's strings are `crates/i18n/translations/{fr,en}.json`, in the format the
+reference wrote them (plan § 3.11). The `i18n` crate embeds both and **generates one constant
+per key at build time** (`build.rs`, from `fr.json`): `vault.unlockTitle` is
+`i18n::keys::vault::UNLOCK_TITLE`, a segment that is a Rust keyword takes `r#`, `fr-FR` becomes
+`FR_FR`. A misspelled key does not compile; two segments that would make the same name stop the
+build. A key composed at run time goes through `Key::find`, which answers `None` for one that
+does not exist — an enum of the cases, matched once, is better wherever the set is known.
 
-- Translations are `import()`ed rather than fetched over HTTP — a small desktop binary gains
-  nothing from `HttpClient` and a round-trip. **One chunk per language**, imported when it
-  becomes active: both used to sit in the initial bundle, ~68 kB of which one half is never
-  read. ⚠️ `LocaleService.restore()` resolves only once the active one is in, and
-  `startApplication()` awaits it, or the first render shows empty labels. Specs read both
-  files synchronously through their own loader (`provideTranslocoTesting`), since they assert
-  on text right after a render. The files deliberately sit **outside** `src/assets`, where the
-  assets glob would copy them into `dist` a second time, never to be read.
-- **The choice belongs to `SettingsStore`** (`locale`: `system` / `fr` / `en`, default
-  `system`), exactly like the theme. `LocaleService` is what _resolves_ it and pushes it to
-  Transloco and `<html lang>` — the same shape as the three services that carry a preference
-  down to the native side. The preferences panel is the one control that writes it.
-- `system` resolves through `resolveSystemLocale()` (`core/services/i18n/locale.model.ts`), which reads
-  `navigator.languages` — the WebView takes it from the OS — and falls back to
-  `SYSTEM_FALLBACK_LOCALE` (English) when the machine speaks neither language. Nothing is
-  persisted while the preference stays on `system`, so DevNotes keeps following the OS.
-- ⚠️ `DEFAULT_LOCALE` is a different thing: Transloco's fallback _bundle_, the file that
-  answers when a key is missing from the other one.
-- `LocaleService.restore()` runs from the app initializer, **after** `SettingsStore.restore()`
-  and before `TrayService.start()`, which builds the tray with translated labels. The effect
-  alone would only flush after the first render, showing the interface in one language then
-  the other.
-- Code that produces user-visible text returns a **`TranslationRef`** (`{ key, params }`)
-  instead of a formatted string, so translation always happens in the template. This applies
-  to error messages too.
-- **The application's name is never written in a translation.** A string carries `{{app}}`, and
-  `AppTranslocoLoader` adds one key to every language: `app: APP_INFO.name`. No interceptor and
-  no transpiler — Transloco's own transpiler resolves an interpolation it cannot find in the
-  params against a **sibling key of the same translation**, so a key is all the mechanism
-  needed. It costs one line in the loader, no call site passes a parameter, and a string that
-  carries parameters of its own (`{{palette}}`, `{{version}}`) still resolves both. A spec on
-  the shipped locale files refuses a string that spells the name out.
-- **A count is an ICU plural, read by a transpiler of our own** (`plural-transpiler.ts`, about
-  sixty lines over `Intl.PluralRules`). ⚠️ Not `@jsverse/transloco-messageformat`: it compiles
-  each message with `new Function`, the CSP is `script-src 'self'`, and the application boots
-  onto an error banner and seeds nothing — which the unit suite cannot see, jsdom having no
-  policy to violate. The grammar is deliberately tiny: `plural`, exact `=N`, the categories
-  `Intl.PluralRules` answers, and `#`; no `select`, no `selectordinal`, no nesting. Plain
-  `{{name}}` stays `DefaultTranspiler`'s, which is what keeps the `{{app}}` sibling key working.
-  `TranslocoService` asks for the transpiler in its own constructor, so the service is resolved
-  on the first render rather than injected. `=0` is written out wherever zero reads badly —
-  French calls zero `one` — and two specs on the shipped files refuse "(s)" and any brace that is
-  neither an interpolation nor a plural.
-- ⚠️ **Transloco replaces an unknown `{{name}}` with the empty string**, so no translated string
-  can carry a snippet's `{{fields}}`: the sample snippet bodies are hard-coded in
-  `core/services/samples/sample-notes.service.ts`, and a guide chapter that names a key receives
-  it as an interpolation parameter.
-- A new string means adding it to **both** locale files.
-- Nothing user-visible is hard-coded in the Rust back-end. A new note is created with an
-  empty title and source, and the UI renders translated placeholders — storing
-  "Nouvelle note" would freeze French into the data.
+- Code returns a **`Message`** (`{ key, params }`), never a sentence: the text is chosen where it
+  is drawn, by `Message::text(language)` or `i18n::translate`. Nothing user-visible is written in
+  Rust outside the two files: a new note has an empty title, and the interface draws a translated
+  placeholder.
+- **Plurals** are the reference's ICU subset, ported (`i18n::plural`): `{name, plural, =N {…} one
+{…} other {…}}`, `#`, no `select`, no nesting; an exact `=N` wins over a category (French calls
+  zero `one`), and the categories are CLDR's for the two languages — French `one` for an integer
+  part of 0 or 1 (1.5 included), `many` for a whole million. `golden/plurals` (every plural key
+  of both files at 0, 1, 2, 5, 21, 1 000, 1 000 000 and 1.5) is read back by a test.
+- Then `{{name}}` is filled; ⚠️ **a parameter not given is left empty**, as Transloco did — so
+  no translated string can carry a snippet's `{{fields}}`, and user content is never interpolated
+  into a template. `{{app}}` is the application's name, read by `build.rs` from the engine's
+  `[package.metadata.devnotes] display-name`: no translation spells it out (a test refuses it),
+  and none hedges a plural with « (s) ».
+- Both files have the same keys, and a name one language fills in, the other reads too, filled
+  in or counted (« il y a {{count}} mois » counts in English): two tests.
+- **Localised formats are written by hand** (D21, `i18n::format`): one function per pattern the
+  interface uses, named by its use — `date_short` (« 25 juil. 2026 »), `time_millis` (« 11:05:07,123 »),
+  `fixed`, `at_most`, `signed`, `ungrouped`, `and_list`, `or_list`, `country` (the IBAN
+  registry's countries only)… A date arrives as the wall-clock value to show; the caller puts it
+  in the local zone, or in UTC where the screen says so. Numbers round the shortest decimal half
+  away from zero, as ICU does (12.345 is 12.35 at two digits), and French groups with a narrow
+  no-break space. `golden/intl` — every `Intl` call of the reference with its options, at its
+  edge values — is read back by a test. No ICU.
+- **Ageing labels** are `i18n::time`: `relative` (« il y a 3 min »), `expiry` (in local calendar
+  days: an expiry is the end of its day), `span` (« dans 2 jours », the largest whole unit). They
+  answer a `Message`, `now` given; `golden/relative-time` is read back by a test.
+- **The language** is a preference (`system` / `fr` / `en`); `system` is
+  `Language::of_system()`, the first of the system's preferred languages (`sys-locale`) whose
+  primary tag is `fr` or `en`, English otherwise.
+- A new string means adding it to **both** files.
 
 ## Accessibility
 
-Treated as part of the definition of done, and partly enforced by
-`angular.configs.templateAccessibility` in the ESLint config.
+Treated as part of the definition of done. egui speaks to screen readers through **AccessKit**
+(UI Automation on Windows, AT-SPI and Orca on Linux), and the kit makes most of it a property of
+the widget rather than of each screen (plan § 3.12):
 
-- **Decorative pictograms carry `aria-hidden="true"`.** The app uses emoji as icons; unmuted,
-  each one is announced ("pushpin", "hourglass").
-- **An icon-only control draws an `<app-icon>`, not a glyph** (`shared/icon/`: a handful of
-  Lucide paths, ISC, stroked in `currentColor` at 16 px). `🗑` is drawn by the system's
-  colour font and looks different on every machine, `▤` barely renders, neither follows
-  the theme's `color` — and `⚙` opened the **filters**, the one thing a gear is never for
-  (#322). The icon is `aria-hidden` by construction: the control names itself, through
-  `aria-label` and `title`. A glyph beside a word, as in the editor's toolbar, reads fine
-  and stays.
-- **Information conveyed only graphically is duplicated as text.** A pinned card renders a
-  `.visually-hidden` label, because the pin itself is a CSS pseudo-element.
-- **Toggles expose `aria-pressed`**, not just a CSS class: tag pills, filter chips, the pin
-  button, the gate's "Afficher". A non-interactive tag pill renders a `<span>`, not a button —
-  announcing a button would advertise an action that does not exist.
-- **Every modal is a real dialog**: `role="dialog"`, `aria-modal`, `aria-labelledby` and a
-  focus trap that confines Tab and restores focus on close. All of it comes from
-  `DialogComponent` (`shared/layout/dialog/`), written once — an accessibility fix here used to be
-  a twelve-file change. Written by hand rather than pulling in `@angular/cdk` for it.
-- **The space switcher is a real menu**: `aria-expanded`, `aria-haspopup`, focus moved into
-  the menu on open, arrow/Home/End navigation, Escape closing and restoring focus. Creating a
-  space _replaces_ the menu with a form instead of nesting a text field inside `role="menu"`,
-  which is neither valid ARIA nor navigable the same way; Escape then steps back to the menu
-  before closing the dropdown.
-- **Controls that wrap decorations get an explicit `aria-label`.** The search input sits
-  inside a `<label>` that also holds the magnifier and the shortcut hint; without one, the
-  field would be announced as "🔍 Ctrl+K".
-- A `<button>` contains only phrasing content — nested `<div>` is invalid HTML with
-  undefined accessibility behaviour.
-- **A control's target is 24×24 of box** (`@include hit-target`), never a bigger glyph: growing
-  the type would be a density change. `min-*` rather than `height`, so a taller control still
-  grows. ⚠️ On a card that box is not free — the card is a fixed 150px and `.card-items` is
-  `overflow: hidden` — so `MAX_VISIBLE_ITEMS` and the "+N autres" badge have to agree with what
-  is drawn, which `07-checklists` measures.
-- **A destructive control looks like one at rest** (`@include destructive`): red text and a
-  hairline, not on `:hover` — a warning that arrives under the pointer plays no part in
-  choosing. Never a solid fill, which beside the single amber accent reads as a second accent,
-  and the pressed state fills with `--bg-3`, since red text on a tint of itself falls under AA.
-- **What the linter cannot see is held elsewhere**: contrast by `scripts/palette.test.mjs`
-  (every colour drawn as text clears 4.5:1 on all four surfaces), a missing `:focus-visible` by
-  `scripts/focus-rings.test.mjs`.
+- **Every interactive widget goes through `widgets::interact`**, which gives the AccessKit node
+  its role and its name, sets its `author_id`, paints the focus ring and allocates at least
+  **24 × 24 px** for anything clickable (WCAG 2.5.8). `egui::Ui::interact` is refused elsewhere by
+  `disallowed-methods` (`crates/ui/clippy.toml`), and kittest refuses a control without an
+  accessible name (its check, on by default and left on).
+- **An icon-only control draws an icon** (`theme::icons`, stroked in the text's colour), never a
+  glyph from the system's emoji font, which looks different on every machine and follows no
+  theme; the control names itself, and a decorative picture says nothing.
+- **What is shown only graphically is said too**: a pinned card says it is pinned, a toggle says
+  whether it is pressed, a banner is announced (the error assertively, the report politely).
+- **Every modal is a real dialog**: `DialogStack` and `egui::Modal` block what is under it, keep
+  Tab inside, serve Escape to the one in front and give the focus back to the opener — written
+  once, for every dialog.
+- **Menus are real menus**: the first entry takes the focus, the arrows walk the rest, Escape
+  closes and gives the focus back. Creating a space replaces the switcher's menu with a form
+  rather than nesting a field inside a menu.
+- **A destructive control looks like one at rest**: red text and a hairline, not a colour that
+  arrives under the pointer — a warning that appears on hover plays no part in choosing. Never a
+  solid fill, which beside the single amber accent reads as a second accent.
+- **Contrast is held by a Rust test** over `theme::tokens`: every colour drawn as text clears
+  4.5:1 on all four surfaces, in both themes.
 
 ## Theming
 
-All colors, fonts and shadows are CSS custom properties defined on `:root` in the global
-`src/styles/_tokens.scss`, which `src/styles/styles.scss` and the website's stylesheet both
-`@use`; components only consume them via `var(…)`.
+Every colour, shadow, gap and duration of the interface is a token of `ui::theme`, copied one
+for one from the reference's `styles.scss` (`src/styles/` at the `angular-reference` tag): `tokens::DARK` and
+`tokens::LIGHT` (a `Palette` each), `tokens::COMFORTABLE` and `tokens::COMPACT` (a `Spacing`),
+`tokens::TITLEBAR_HEIGHT`, and the four durations of `theme::motion`. A widget reads them through
+`theme::palette(ctx)` and `theme::spacing(ctx)`, never a literal. The CSS `--*-rgb` triplets are
+gone: a tint is the colour itself at an alpha.
 
-Those variables **must** stay in the global stylesheet. Angular's emulated encapsulation
-rewrites a `:root` selector written inside a `*.component.scss` into a form that never
-matches `<html>`, silently invalidating every variable.
+`theme::apply(ctx, appearance, density)` sets egui's style for **both** themes at once
+(`set_style_of`), then the preference (`System`, `Dark`, `Light`): egui switches by itself when
+the system does, so a « system » theme follows live. The window's own title bar is told the
+same (`ViewportCommand::SetTheme`). Dark stays the base: `Appearance::default()` is `System`,
+and the window is created hidden, so nothing flashes before the first frame. egui's own
+widgets are restyled from the palette (`Visuals`); the visible components are painted by hand
+from it.
 
-Recurring style patterns (unstyled control, card surface, accent state, focus ring, tinted
-badge) are SCSS mixins in `src/styles/_mixins.scss`, imported as `@use 'mixins' as *;` —
-resolved via `stylePreprocessorOptions.includePaths` in `angular.json`. Colors needing
-translucency are also exposed as RGB triplets (e.g. `--amber-rgb`, which is the **fill**) so
-`rgba()` never hard-codes a hex value. ⚠️ The triplets are **comma-separated**: write `rgba(var(--amber-rgb), 0.1)`, never
-`rgb(var(--amber-rgb) / 10%)` — the slash over commas is invalid, and the browser drops the whole
-declaration without a word.
+**Type.** Inter and JetBrains Mono are embedded as the variable TrueType files the reference
+loaded (Latin and Latin Extended, `theme::fonts`), so the CSS weights, 650 included, apply as
+written (ADR S2); Noto Emoji, monochrome, comes next, so an emoji is drawn the same on every
+machine; eframe's `system_fonts` finds the rest (CJK) on demand. egui's own fonts are not
+compiled in. The body is 14 px. Licences and sources: `crates/ui/assets/README.md`.
 
-**Three sweeps read the shipped files**, all `node --test` rather than `*.spec.ts` because the
-Angular builder compiles its specs for a browser, where `node:fs` does not exist:
-`palette.test.mjs` for contrast, `focus-rings.test.mjs` for a control styled with no
-`:focus-visible` — the linter cannot see a missing one, and four had accumulated — and
-`language-hues.test.mjs` for a `Language` variant with no `.lang-*` rule, whose badge is then
-bare text. ⚠️ Each is named in `test:scripts` one by one; Node 24 will not expand a directory.
+**Icons** are Lucide's paths (`theme::icons::Icon`), rasterised by resvg into a white alpha mask
+at the size asked × `pixels_per_point`, cached per size in the context's memory, and tinted by
+the colour they are painted in — `currentColor`. The interface draws no emoji of its own any
+more: 📎 🖼 ⏳ are `Paperclip`, `Image`, `Hourglass`.
 
-`styles.scss` also carries the `.visually-hidden` utility and a `prefers-reduced-motion`
-block.
+**Motion** is `theme::motion`: `FAST` (120 ms, what follows the pointer, also egui's own
+`animation_time`), `ENTER` (160 ms, what enters), `TURN` (a spinner's 800 ms), `MARK` (2 s, a
+mark fading). The three entrances (`Rise`, `Lift`, `Fade`) are an opacity and a 4 px offset
+from the first frame an element is drawn after a frame it was not, as a CSS animation runs on an
+element that did not exist a frame ago. **One switch**, `motion::set_reduced`, cuts all of it —
+the system's wish read by `platform::motion` (the registry under Windows, `gsettings` under
+GNOME), as the reference's `prefers-reduced-motion` was: there is no setting of its own. A test sweeps `crates/ui/src` for a duration typed anywhere
+else, as `motion.test.mjs` did.
 
-**Light theme.** `:root` stays the dark palette and `:root[data-theme='light']` redefines the
-colours only — fonts, shadows and spacing are shared. Dark stays the base on purpose: the
-preference lives in a file nothing can read before Angular has booted, so any other order would
-flash white at launch. `color-scheme` switches with the palette, which is what repaints the
-native `<select>`s, scrollbars and autofill. The syntax-highlighting theme needs nothing: it
-only ever consumed these variables.
+**The focus ring** (`theme::focus`) is 2 px of `amber_edge`, 2 px outside the control, and shows
+only after the keyboard moved: `focus::track` reads, once a frame, whether the last input that
+moves around was a key (Tab, arrows, Enter, Space, Escape…) or a pointer press — typing does not
+count. Scrollbars are 9 px.
+
+**Contrast is a Rust test** (`theme::tokens::tests`, which replaced `palette.test.mjs`): every
+text colour at 4.5:1 on the four surfaces, a badge's label on the strongest tint (0.15) and a
+status on its fill (0.3), the edge at 3:1, the ink on solid amber. The palette is destructured
+without `..` there: a colour added to it does not compile until it is given a role.
 
 **The accent is three variables, one per job.** `#e8a33d` on white is 2.16:1, and what that
 rules out depends entirely on what it is being used for — a surface only has to carry the ink
@@ -5308,103 +6000,64 @@ the light theme show the same amber everywhere it is a surface. Only the line an
 down. One token doing all three meant drawing the whole accent at the _label's_ darkness, which
 is where a warm hue lands at 4.5:1 on white, and which read as mustard.
 
-`--amber-dim` is the softer hairline a hover draws, and `--amber-ink` the text laid on the
-fill; with the same fill in both themes there is one of each. `scripts/palette.test.mjs` holds
-each of the three to its own bar, in both themes, and fails if the fill is ever declared twice.
+`amber_dim` is the softer hairline a hover draws, and `amber_ink` the text laid on the fill; with
+the same fill in both themes there is one of each. The contrast test holds each of the three to
+its own bar, in both themes, and fails if the fill differs between them.
 
-**Two badge mixins, with opposite trades.** A tint moves the background toward the colour it is
-made of, so a hue drawn on a tint of itself loses about a point of contrast. `tint-badge` keeps
-the tinted fill and makes the label neutral — for a **state**: active, pinned, expiring.
-`hue-badge` keeps the hue in the label and goes neutral behind it — for a badge whose **hue is
-the information**, as on a language badge — and carries a hairline in the hue, because `--bg-3`
-sits at 1.1:1 against the light theme's surfaces and a neutral fill alone left bare text there.
-`palette.test.mjs` measures the composite a badge is drawn on, not only the plain surface.
+**Two badge styles, with opposite trades.** A tint moves the background toward the colour it is
+made of, so a hue drawn on a tint of itself loses about a point of contrast. A **state** badge
+(active, pinned, expiring) keeps the tinted fill and makes the label neutral; a badge whose
+**hue is the information** (a language) keeps the hue in the label, goes neutral behind it and
+carries a hairline in the hue. The test measures the composite a badge is drawn on, not only
+the plain surface.
 
-**Density.** `:root[data-density='compact']` tightens four variables — `--space-card`,
-`--space-grid`, `--space-section`, `--space-canvas` — and nothing else. Typography is
-untouched: shrinking the text would be a zoom, not a density. Four named gaps rather than a
-global factor, because these four are what decide how many cards fit on screen.
-
-They reach past the canvas where a surface claims them: the topbar's padding, the library rail's
-own padding and its rows, and a dialog's default padding and gap are written in terms of the four,
-so "Compact" tightens the whole window. A rail row is `calc(var(--space-grid) / 4 + 2px)`:
-5px, 4px in Compact, which keeps it above the 24px target. The board's surface stays out of it: its
-geometry is computed in Rust, and a padding there would offset every gesture. A dialog that sets
-its own `--dialog-padding` keeps it.
-
-Fonts are self-hosted through the `@fontsource-variable` packages listed in `angular.json`'s
-`styles` array. They used to come from Google Fonts, which on a desktop app meant degraded
-typography offline and a CSP that could not be locked down.
-
-**Variable, and every script kept.** The per-weight `@fontsource` packages shipped each weight
-of each script twice, as woff2 and woff: 118 files, 1.49 MB embedded in the binary for the few
-the WebView ever loads. The `wght` files carry every weight in one woff2 per script — 13 files,
-~300 kB — and `unicode-range` still loads only the scripts on screen. Cyrillic and Greek stay:
-a note is free text. The family names carry the `Variable` suffix.
+**Density.** Compact tightens four gaps — card, grid, section, canvas — and nothing else.
+Typography is untouched: shrinking the text would be a zoom, not a density. Four named gaps
+rather than a global factor, because these four decide how many cards fit on screen; the
+surfaces that claim them (the top bar, the library rail, a dialog's padding) are written in
+terms of them, and a rail row stays above the 24 px target in Compact.
 
 ## Application updates
 
-Built on `tauri-plugin-updater`. Each release bundle is signed at build time with a minisign
-key; the matching public key is compiled into the binary, so a compromised release host
-cannot push a payload the app will accept — only the private key can produce an installable
-update.
+The client is `cargo-packager-updater` (D26, ADR S9), behind `platform::updater::Updater`, a trait
+the interface fakes. Each release package is signed at packaging time with a minisign key; the
+matching public key is compiled into the binary (`UPDATES` in `crates/app/src/desktop.rs`), so a
+compromised release host cannot push a payload the application will accept — only the private
+key can produce an installable update. It is the key the Tauri releases were signed with, kept.
 
-- **The user decides.** `check()` only produces an offer; `UpdateStore.accept()` is the only
-  path that downloads. A silent update would restart the app mid-keystroke, and the editor
-  only commits its drafts on blur.
-- **`UpdaterService`** (`core/services/updates/`) is the seam, for the same reason the repositories are
-  one: no component or store imports `@tauri-apps/plugin-updater`, which needs a Tauri bridge
-  that jsdom does not have. These are plugin commands, not ours, so they never appear in
-  `bindings.ts`. The service also holds the plugin's `Update` object — a **native resource**
-  with a Rust-side id that must be closed if the offer is declined, hence
-  `UpdaterService.discard()`.
-- **A failed check is silent; a failed install is not.** Offline, behind a proxy, or on a dev
-  build whose public key is still the placeholder, `check()` fails on every launch — a banner
-  there would be a daily reproach about something the user cannot act on. An install failure
-  follows an explicit click, so it reaches `ErrorNotifier` and leaves the prompt open for a
-  retry.
-- **A manual check speaks where the startup one stays quiet.** `checkNow()`, behind the
-  titlebar's About menu, reports all three outcomes — including "nothing to do", which the
-  silent path has no way to express. Its failures also reach `ErrorNotifier`: the user clicked
-  and is owed an answer, and the banner outlives the menu, whereas the in-menu status line
-  disappears with it. Both paths share one private `runCheck({ silent })`.
-- **`CheckState` is deliberately separate from `UpdateStatus`.** The latter is the install
-  lifecycle that `UpdatePromptComponent.busy()` reads; the former is only what the menu has
-  left to announce. Its `idle` covers both "not checked yet" and "found something" — in the
-  second case the prompt is doing the talking.
-- **"Later" can be made to stick, and what is written down is a version.** The prompt
-  carries a checkbox, because the decision belongs where the interruption happens.
-  `AppSettings.skippedUpdate` holds the version that was set aside — storing "the user said
-  no" would silence the release after it too, and a newer one is a new offer that needs no
-  gesture to become one again. `AppSettings.updateNotifications` is the blunter switch next
-  to it, and the preferences panel names the silenced version with a way to take it back,
-  since waiting for the next release is not one.
-  ⚠️ Only the **silent** startup check is silenced. `checkNow()` is a question asked out
-  loud and always answers, which is also what stops the feature from being a trap.
-- **The dot is a third thing, next to `UpdateStatus` and `CheckState`.** `hasPendingUpdate`
-  is "an update exists and is not installed", and the About menu wears it. It cannot read
-  `status()`: `dismiss()` returns that to `idle` — which is what closes the prompt — so a dot
-  driven by it would vanish with the dialog it exists to outlive. For the same reason
-  `dismiss()` leaves `_update` standing and moves only the status; `offered` is the computed
-  the prompt reads, and it is `null` exactly when the status is `idle`, so the dialog stays
-  up through the install it would otherwise disappear from.
-- **The download does not cross the CSP.** It runs in Rust through the plugin's HTTP client,
-  not in the WebView, so pointing `endpoints` at GitHub needs no widening of `connect-src`.
-- `bundle.createUpdaterArtifacts` makes the bundler emit a `.sig` beside **every** bundle it
-  produces, `.deb` and `.rpm` included — but the updater can only install the NSIS installer
-  and the AppImage. System packages are updated by their package manager, by design, so the
-  manifest step ignores their signatures instead of choking on them.
-- The manifest (`latest.json`) is assembled by the `publish` job from those `.sig` files
-  rather than by `tauri-action`, which only writes one when it creates the release itself —
-  something the build matrix deliberately avoids. Windows is the one platform whose absence
-  fails the job; a missing Linux artifact only logs a warning, so a Linux bundling problem
-  cannot hold back an otherwise sound Windows release. The release is published straight
-  away, which is what keeps `releases/latest/download/latest.json` — the endpoint compiled
-  into the binary — resolvable.
-- Building a bundle now requires `TAURI_SIGNING_PRIVATE_KEY` (and its password) in the
-  environment. Without it `tauri build` fails, instead of shipping binaries the updater would
-  later refuse. Both secrets live in the `release` **environment** rather than in the
-  repository, so no other workflow and no other branch can reach them.
+- **The user decides.** A check only produces an offer; the prompt's « Install now » is the only
+  path that downloads. A silent update would restart the application mid-keystroke.
+- **What updates itself**: only an `AppImage` (`$APPIMAGE`, replaced in place) or a folder holding
+  the NSIS uninstaller (the installer run passive, `/P /R`). A binary run from `target/`, a
+  `.deb` or an `.rpm` offers no check at all: system packages are updated by their package
+  manager, by design.
+- **The file is checked before it is kept**: downloaded whole, verified against the signature and
+  the compiled key, and refused otherwise (`DownloadError::Refused`) — nothing is installed.
+- ⚠️ **Installing is the very last thing the process does.** Under Windows the client launches the
+  installer and ends the process there and then, so everything is written and the library closed
+  before it is called (→ "Closing is not quitting"); under Linux a detached shell waits for the
+  process to be gone before starting the new `AppImage`, which beside it would find the profile
+  taken.
+- **A failed check is silent; a failed install is not.** Offline, behind a proxy, the check at
+  launch fails every morning — a banner there would be a daily reproach about something the user
+  cannot act on. A check asked from the About menu says all three outcomes, « nothing to do »
+  included, and its failures reach the `ErrorNotifier`; an install failure follows a click, so it
+  reaches it too and leaves the prompt open for a retry.
+- **« Later » can be made to stick, and what is written down is a version** (`skippedUpdate`):
+  storing « the user said no » would silence the release after it too. `updateNotifications` is
+  the blunter switch next to it, and the preferences name the silenced version with a way to take
+  it back. ⚠️ Only the **silent** check at launch is silenced; the one asked from the menu always
+  answers.
+- **The dot on the About menu** says « an update exists and is not installed », and outlives the
+  prompt it was raised with.
+- **The notes the prompt shows** are the release's changelog section, carried by `latest.json`
+  (→ "The update prompt shows the release's notes").
+- **The manifest** (`latest.json`, `scripts/latest-json.mjs`) carries the NSIS installer and the
+  AppImage, each with its `format` (`nsis`, `appimage`), which the client requires. Windows is the
+  one platform whose absence fails the release; a missing Linux artefact only warns. It is
+  published at `releases/latest/download/latest.json`, the endpoint compiled into the binary.
+- The signing key and its password are the `release` **environment**'s secrets, so no other
+  workflow and no other branch can reach them; `packages.yml` signs with a key made for its run.
 
 ## Releasing
 
@@ -5415,10 +6068,8 @@ carries the whole path — `prepare`, `release-build`, `publish` — and `ci.yml
 `windows-latest` and `ubuntu-22.04`, the CI matrix tests the same two, and that is the whole
 list. macOS is out of scope and stays out: nothing here can test it, and Gatekeeper wants a
 paid Apple Developer account with no free bypass on recent versions — a build that can be
-neither tested nor distributed is a liability wearing the costume of a feature. The bundle
-therefore declares no `.icns`, and the README says which platforms it ships. ⚠️ One macOS
-name survives and is meant to: `tauri_plugin_autostart::init` takes a `MacosLauncher` on
-every platform and ignores it off macOS, so it is a required argument, not a dead branch.
+neither tested nor distributed is a liability wearing the costume of a feature. The packages
+therefore declare no `.icns`, and the README says which platforms it ships.
 
 Two facts shape that, and neither is negotiable:
 
@@ -5435,6 +6086,18 @@ The same property has a price worth stating: **the changelog commit is never see
 `prepare` is therefore its own gate — it runs `npm run test:scripts` and `prettier --check` on
 the file it just wrote, and `scripts/release-notes.mjs` mirrors, in `assertRenderable`, the
 three invariants `changelog::tests::the_shipped_file_parses_into_something_to_show` asserts.
+
+**The packages** are built by `cargo build -p app --release`, then `.github/actions/package`:
+`cargo packager` (NSIS per user on Windows; AppImage and deb on Linux) and `cargo generate-rpm`,
+each signed with the minisign key, each checked to hold the application alone and the identity
+lists where `Paths::resources` reads them (→ `docs/releasing.md`, "What gets published").
+`packages.yml` runs the same action on a pull request that touches packaging, with a key made
+for the run, then installs 1.0.0 on a clean runner, refuses a 1.0.1 altered by one byte and
+installs the whole one through the application's own updater client
+(`crates/platform/examples/update.rs`).
+
+**One version** (D27): `[workspace.package] version`, which every crate inherits;
+`scripts/version.mjs` refuses a release where `Cargo.lock` says otherwise.
 
 What `prepare` does **not** do is rerun the suites. It checks that `ci.yml` concluded `success`
 on the very commit being released and stops if it did not; the work was already done, and a
@@ -5473,6 +6136,41 @@ release that replayed it would pay for it twice.
   successful jobs are not replayed and their outputs survive. "Re-run all jobs" will stop on
   the "tag already exists" guard — safe, but surprising.
 
+### The release binary
+
+**Speed first, then size.** The release profile is `opt-level = 3`, fat LTO, one codegen unit,
+stripped. Measured on Linux (same machine, same commit, `cargo bench -p engine` and the text
+crate's timings, 8000 notes of ~13 kB):
+
+| `opt-level`              | Binary  | `query_notes` | Cookie jar (500) | Argon2 unlock | Prettier 13 kB p95 | 1 MB of TS coloured |
+| ------------------------ | ------- | ------------- | ---------------- | ------------- | ------------------ | ------------------- |
+| **3 (kept)**             | 78.6 MB | 697 ms        | 0.63 ms          | 163 ms        | 653 ms             | 2.1 s               |
+| 2                        | 76.0 MB | 744 ms        | 0.84 ms          | 152 ms        | 598 ms             | —                   |
+| `s`, C code and KDF at 3 | 62.4 MB | 955 ms        | 1.09 ms          | 220 ms        | 662 ms             | 2.3 s               |
+| `s`                      | 61.0 MB | —             | —                | —             | 788 ms             | 3.2 s               |
+| `z`                      | 57.2 MB | —             | —                | —             | 813 ms             | 3.1 s               |
+
+- **Rejected: `s`, `z` and 2.** A fifth to a quarter off the binary costs the core a third more on
+  every query and the cookie jar three quarters more; 2 buys 3 % for up to a third on the same
+  paths. The packages are compressed anyway: the AppImage is 40.7 MB, the `.deb` 33.5 MB, the
+  `.rpm` 25.9 MB.
+- **Rejected: an `opt-level` per crate under `s`.** It reaches the C compiled by `cc` (QuickJS,
+  onig, SQLite), whose speed came back, but **not Rust code under fat LTO**: Argon2 and BLAKE2
+  left at 3 were still 35 % slower.
+- **Rejected: `panic = "abort"`** (no unwinding tables, ~5 MB): the db queue and the compute pool
+  catch a panic and answer `StorageUnavailable` (D18).
+- **Where the size is** (symbols of the release build): the Mermaid renderer and what it draws
+  with (`merman`, its own `usvg` 0.47 and fonts, the math layout of `ratex`) about 11 MB, the
+  interface 5.6 MB, the core 2.6 MB, D-Bus for the tray, notifications and the screen reader
+  3.2 MB, fonts and text shaping 1.9 MB, `wgpu` and `naga` 3 MB; the embedded assets about
+  6 MB (Prettier 2.4 MB, the fonts 2.4 MB, the request-script libraries 1.2 MB). Removing a
+  Mermaid feature or a `wgpu` backend would save under 1 MB each and lose a diagram or a GPU.
+- **Duplicates that stay**, each pulled by a dependency: `reqwest` 0.12 (the updater client),
+  `usvg` and `fontdb` (`merman`), `dirs` 5 and 6 (the updater, `auto-launch`), `calloop` and
+  `smithay-client-toolkit` (winit against the clipboard), and build-time crates.
+- **Never in a release**: `egui_inspection` (the `e2e` flavour), `puffin` and `puffin_http`
+  (`profiling`). `lint-rust` fails if the default build of `app` links any of them.
+
 ### How far back an upgrade reaches
 
 **A release opens in place the libraries of 0.2.0 and later.** Code that exists only to carry
@@ -5485,43 +6183,11 @@ that sealed a 0.1.x library written in the clear. What it keeps: gathering a pre
 library into `libraries/<id>/`, and moving the library-scoped preferences out of the
 application's file — both serve 0.3.x, the release before the one that introduced them.
 
-## Tauri configuration
-
-- `src-tauri/tauri.conf.json` wires the pipeline to Angular: `beforeDevCommand` /
-  `beforeBuildCommand` run the npm scripts, `devUrl` must match the Angular dev server port
-  (1420, fixed in `angular.json`), and `frontendDist` must match Angular's build output path.
-- `src-tauri/capabilities/default.json` is the v2 permission manifest for the main window.
-  Any new plugin or restricted API needs its permission listed there, or the call is denied
-  at runtime — that is where `updater:default` and `process:allow-restart` come from.
-- **`opener:allow-open-url` carries a scope**, not the bare permission: `http://*` and
-  `https://*`, for the About dialog and a link Ctrl+clicked in a Note, and nothing else —
-  no `file:`, no scheme a program registered for itself. It is the WebView's only escape hatch
-  to the system, and `ExternalLinksService` refuses any other scheme before the call as well.
-  The About dialog needs the plugin precisely because the CSP is locked to `'self'` — a plain `<a href>` leads nowhere — and
-  `AppInfoService` (`core/services/app-info/`) is its seam, alongside `getVersion()`. That one needs no
-  permission of its own: `core:app:allow-version` already ships inside `core:default`.
-- `serde_json` is a **runtime** dependency, not just a dev one: `generate_context!` embeds the
-  `plugins` section of `tauri.conf.json` as JSON, and drops the section without it.
-- **CSP is enabled.** `csp` locks production down to same-origin resources; `devCsp`
-  additionally allows the dev server's websocket and inline scripts for hot reload. Both
-  keep `ipc:` and `http://ipc.localhost` in `connect-src` — without them `invoke()` is
-  blocked. Loading anything remote means widening these, deliberately.
-- ⚠️ **The CSP is a control, not a formality.** `attach_file` takes any path — it is the native
-  picker's answer, so there is nothing to check it against — and `read_attachment` hands the
-  bytes back as a `data:` URI: together they read any file the account can read into the
-  WebView. That is harmless only because no code can be injected there: `script-src 'self'`
-  with no `'unsafe-inline'`, the one `[innerHTML]` (the highlighter) escaping before it
-  renders, and nothing loaded from anywhere else. `devCsp` carries `'unsafe-inline'` for the
-  dev server; it is the shape somebody copies when widening the production one in a hurry, and
-  it must not be.
-- ⚠️ **The Prettier worker runs outside it.** Tauri sets the header on the HTML response only,
-  and a worker's policy is its own response's: see "Formatting a snippet with Prettier".
-
 ## Testing
 
 ### Benchmarks
 
-`cargo bench` from `src-tauri/`. They are **not in CI**: a timing assertion on a shared
+`cargo bench -p engine`. They are **not in CI**: a timing assertion on a shared
 runner flaps, and a suite that flaps is a suite everyone learns to ignore. They run
 locally, on demand.
 
@@ -5532,16 +6198,14 @@ cargo bench -- --baseline main        # after
 
 That comparison is the whole reason the harness is **criterion** and not divan, which is
 lighter and pleasanter but does not offer it out of the box. ⚠️ The baseline it writes lives
-in `src-tauri/target/criterion/`, which is gitignored: it is local to one machine and dies
+in `target/criterion/`, which is gitignored: it is local to one machine and dies
 with `cargo clean`. The table below is the durable record.
 
-⚠️ **They run below the command boundary, not through Tauri.** A command is four lines —
-validate, lock, delegate, translate the error — so `store::*` plus `view::*` plus the serde
-round-trip captures nearly all of the cost. `tauri::test::mock_app` would drag the whole app
-lifecycle in and buy only the IPC transport, which this codebase does not control. So these
-numbers are **not** "the IPC is fast": they are what the work behind a command costs.
-Serialisation is included on purpose — a `NotesView` over 8000 notes is a real `serde_json`
-cost paid on every keystroke.
+⚠️ **They run at the service functions, without a window.** A service function is four lines —
+validate, lock, delegate, translate the error — so `store::*` plus `view::*` captures nearly all
+of the cost; the interface adds a queue hop and nothing serialised. The figures below up to
+0.19.0 include a `serde_json` round trip that the Tauri bridge paid on every keystroke and that
+no longer exists: they are kept as the record of that application.
 
 ⚠️ **The corpus is file-backed, never `open_in_memory`.** An in-memory database has no pager
 behind a file, no page cache doing real work and no I/O at all — it measures something the
@@ -5666,8 +6330,8 @@ Three things worth reading off the first table.
 debounce, and at 800 notes its 27 ms sat comfortably inside it. At 8000 it costs 403 ms: the
 query fired for one keystroke is still running when the third one after it arrives. That is
 what #21 is about, and this is the number that says the problem has stopped being theoretical.
-The front end now sends the query in flight and the newest, never the ones in between
-(`OneInFlight`, under State), which bounds the wait to two queries rather than shortening one.
+The interface sends the query in flight and the newest, never the ones in between (`QueryCell`,
+under "State between frames"), which bounds the wait to two queries rather than shortening one.
 
 **The search is still not what costs.** Folding accents is the _cheapest_ of the three
 variants (392 ms against 403 ms unfiltered) — fewer notes survive to be serialised. Fetching
@@ -5681,82 +6345,101 @@ rows dereferences a ~13 kB note row; the notes table was 10 MB at 800 notes and 
 the file through a mapping (`mmap_size`) halved it, which points the same way: the cost is
 pages copied, not tags compared.
 
-Unit tests run with Vitest through the `@angular/build:unit-test` builder in a jsdom
-environment (configured in `angular.json`'s `test` target and `vitest-base.config.ts`), so
-no browser is needed. Specs sit next to the file they cover. Coverage thresholds are set at
-80% and enforced by `npm run test:coverage`.
+#### The index on the reference corpora
 
-Test descriptions and comments are written in **English**, like the rest of the repository.
+`cargo bench -p engine --bench index` (`benches/reference.rs` builds the two libraries of the egui
+migration plan, § 6.1, on disk first). Windows 11, Ryzen 7 9800X3D, release profile, the machine
+in use meanwhile — orders of magnitude, not a record. **Realistic**: 30 000 notes (20 000
+snippets of ~1.5 kB, 5 000 Notes of ~4 kB, 3 000 lists of 20 items, 1 500 Calcul sheets, 500
+Dessins of ~20 kB), 4 spaces, 300 folders, 600 tags, 2 000 attachments, and the HTTP side (2 000
+requests, 20 000 history entries, 500 cookies). **Stress**: 30 000 snippets of ~13 kB and the same
+HTTP.
 
-Shared helpers live in `src/testing/`, which is outside the `**/*.spec.ts` include and so
-never collected as tests: `Note` and `NoteSection` fixture builders, in-memory repository
-doubles, and `provideAppTesting()` — one call providing both repositories and Transloco, so
-a new data seam does not have to be added to a dozen spec files by hand.
+| Group, measure                             | Realistic | Stress  | Budget (plan § 6.2) |
+| ------------------------------------------ | --------- | ------- | ------------------- |
+| `index_build`, every slice                 | 1.87 s    | 2.98 s  | ≤ 1.5 s / ≤ 4 s     |
+| `index_query`, search matching nothing     | 12.2 ms   | 22.4 ms | ≤ 50 / 120 ms       |
+| `index_query`, space + tag + pinned        | 2.6 ms    | 2.6 ms  | —                   |
+| `index_query`, unfiltered                  | 10.5 ms   | 10.9 ms | —                   |
+| `index_query`, search `etape` (most match) | 10.9 ms   | 10.9 ms | ≤ 50 / 120 ms       |
+| `index_query`, `list_tags`                 | 7.6 ms    | 7.7 ms  | ≤ 5 / 10 ms         |
+| `index_refresh`, `update_note` (title)     | 0.44 ms   | 0.56 ms | ≤ 5 ms              |
+| `index_refresh`, tag then untag 100 notes  | 4.2 ms    | 10.1 ms | ≤ 30 ms             |
 
-`createNotesHarness()` builds the three canvas stores together onto one fake repository,
-because they _are_ one object graph: the selection reads what the query holds, and a write
-reloads it. Testing any of them against fakes of the other two would test the fakes.
+**Neither the search nor the view costs any more.** Finding nothing reads every folded text and
+stays inside its budget. A query that keeps most notes used to cost what the view cost — every
+kept note copied, decorated and cut to its card, 661 ms on the realistic corpus — until the view
+held the index's `Arc` entries and computed a card only for the cards shown (`NotesView::display`):
+what is left is sorting and sectioning 30 000 shared entries. Two measures are over their budget on this run: the realistic build
+(the 60 000 checklist items and the side tables, read per slice) and `list_tags`, which walks
+every note's tags at each call.
 
-`FakeNotesRepository` and `FakeSpacesRepository` behave like real persistence (they own the
-list and assign ids and timestamps) and expose `failNext`, which is what makes the stores'
-failure paths testable at all. `FakeAttachmentsRepository` and `FakeTransferRepository` follow
-the same pattern; `FakeFileDialog` and `FakeAppWindow` stand in for the two native services.
+#### The window on the reference corpora
 
-`FakeNotesRepository`'s deletion is a **soft** one, like the real back-end's: a deleted note
-moves to its trash list, which is what makes undo and the trash panel observable at all.
-`FakeAppWindow` is provided in **every** spec, not only those that need it: a real `exit()`
-would take the test runner down with the application.
+Three tools, none in CI. `benches/reference_profile.rs` writes a reference library into a real
+profile; `app::perf` (`DEVNOTES_PERF=<profile> cargo test --release -p ui --lib app::perf --
+--nocapture`) replays the journeys of § 6.3 through the real application without a window;
+`e2e/examples/footprint.rs` reads memory and idle CPU of the running process from outside,
+on the machine's GPU (`DEVNOTES_E2E_GPU`) and painting every frame (`DEVNOTES_E2E_PAINT_ALL`). The
+`e2e` flavour cannot be a release build, so that one runs at `CARGO_PROFILE_DEV_OPT_LEVEL=3`.
+`app --features profiling` serves egui's frames to `puffin_viewer`: `puffin_egui` stops at egui
+0.33. A debug build logs every `Backend` database call past 16 ms.
 
-`FakeNotesRepository` deliberately **does not** reimplement filtering, grouping or tag
-normalisation: those live in Rust and are tested there. Duplicating them in the double would
-let a front-end spec pass against rules the real back-end does not apply. It wraps its notes
-in a trivial single-section view, and a spec needing a specific shape (search results, empty
-results, several sections) pins one with `setView`. `lastQuery` and `queryCount` expose what
-the store asked for — which is the part of querying the front-end still owns.
+⚠️ This machine is not the plan's reference: Windows 11, Ryzen 7 9800X3D, RTX 5070 Ti, against a
+four-core laptop on integrated graphics. A frame here is a CPU frame (pass and tessellation, the
+AccessKit tree included, no GPU). Release without LTO, 6 November 2026.
 
-That split also decides where a test belongs: assertions about _what is shown_ (which notes
-match, which section they land in, how tags are cleaned) go in `src-tauri/`, while the
-front-end specs cover assembling the query, pacing it, and reacting to what comes back.
+| Measure                                     | Realistic         | Stress            | Budget (plan § 6.2)      |
+| ------------------------------------------- | ----------------- | ----------------- | ------------------------ |
+| Launch → window shown (release)             | **~500 ms**       | **~500 ms**       | ≤ 400 ms                 |
+| Unlock → past the gate                      | 140 ms            | 220 ms            | —                        |
+| Unlock → first cards                        | 290 ms            | 335 ms            | ≤ 600 / 800 ms           |
+| Unlock → first cards, the real window       | 390 ms            | 480 ms            | ≤ 600 / 800 ms           |
+| Unlock → index whole                        | **1.67 s**        | 1.96 s            | ≤ 1.5 s / ≤ 4 s          |
+| Canvas scrolled, frame p50 / p99            | 5.9 / 8.4 ms      | 5.0 / 6.5 ms      | p99 ≤ 12 ms              |
+| Search, asked → drawn, p95                  | 21 ms             | 16 ms             | ≤ 50 / 120 ms            |
+| A note opened, window at rest, p50 / p95    | 48 / **87 ms**    | 41 / 45 ms        | ≤ 50 ms                  |
+| 1 MB snippet: coloured, window at rest      | 33 ms             | 31 ms             | ≤ 300 ms                 |
+| A key typed, 100 kB / 1 MB, p99             | 2.8 / 7.4 ms      | 3.4 / 7.7 ms      | ≤ 16 / 33 ms             |
+| Board of ~5 000 cards: first opening        | 316 ms            | 149 ms            | —                        |
+| Board scrolled, frame p99                   | 4.9 ms            | 4.8 ms            | 60 frames a second       |
+| HTTP rail: loaded / unfolded / scrolled p99 | 19 / 1.3 / 0.9 ms | 16 / 1.3 / 0.7 ms | ≤ 50 ms, 1 frame, 60 f/s |
+| Requests searched                           | 9 ms              | 9 ms              | ≤ 30 ms                  |
+| HTTP history, first page                    | 1.3 ms            | 1.4 ms            | ≤ 50 ms                  |
+| `list_tags` (`cargo bench`)                 | 14 µs             | —                 | ≤ 5 / 10 ms              |
 
-Component specs follow one consistent pattern:
+Not measured: a 1 MB response body. A list answers from the first slice of the index and is asked
+again when it is whole; a board waits for it. The file stays mapped at 1 GiB until then, as the
+fill reads every page, and at 64 MiB after: from the start, the fill took 30 to 50 % longer.
+That is what the p95 of a note opened pays, the note read through SQLite's own cache.
 
-- Render the component with its **real** children — they're standalone and already declared
-  in the component's own `imports`, so no extra wiring is needed. Don't stub children or
-  mock Angular's DI.
-- Assert against a child's public contract only: read its input signals, and call or
-  subscribe to its output emitters. Don't reach into a child's rendered DOM — that child's
-  behavior is covered by its own spec. Note that a `model()` exposes its change output
-  through the signal itself, not as a separate `xChange` property.
-- Do `TestBed.createComponent(...)` and set required inputs in `beforeEach`, not in a
-  per-test helper, so every spec shares one setup path.
-- Call `fixture.autoDetectChanges()` once in `beforeEach` (it also performs the initial
-  render), then `await fixture.whenStable()` after any state change before asserting on the
-  DOM. This lets Angular's own scheduler decide when to re-render, as it would in
-  production, instead of forcing synchronous checks.
-- For date-dependent output (relative time, expiry), use
-  `vi.useFakeTimers({ toFake: ['Date'] })` with `vi.setSystemTime(...)`; for the search
-  debounce, `toFake: ['setTimeout', 'clearTimeout']`. **Never** call `vi.useFakeTimers()`
-  without a `toFake` list here: it also fakes `requestAnimationFrame`, which the zoneless
-  scheduler relies on, and `await fixture.whenStable()` will hang forever.
-  `clock.service.spec.ts` is the one exception — it asserts on the interval itself.
-- Anything asserting on `document.activeElement` must attach `fixture.nativeElement` to the
-  document; jsdom does not track focus for detached elements.
-- Assert on text through a whitespace-normalising helper. Two templates deliberately keep
-  their interpolations on a single line (and carry a `prettier-ignore`) because Angular does
-  not fully collapse the whitespace a line break would introduce.
-- For anything that transitively needs a store, use `provideAppTesting()` and spy on the real
-  store's methods rather than re-implementing a fake store — stores have their own specs.
+| Process, MiB                  | Working set | Private | Dedicated GPU | Idle CPU |
+| ----------------------------- | ----------- | ------- | ------------- | -------- |
+| At the gate                   | 248         | 445     | 254           | < 0.3 %  |
+| Few notes (samples), unlocked | 258         | 450     | 254           | < 0.3 %  |
+| Few notes, every area visited | 266         | 453     | 254           | < 0.3 %  |
+| 30 000 realistic, unlocked    | 439         | 632     | 254           | < 0.3 %  |
+| Realistic, canvas scrolled    | 533         | 721     | 254           | < 0.3 %  |
+| 30 000 stress, unlocked       | 1 141       | 1 348   | 254           | < 0.3 %  |
+| Stress, canvas scrolled       | 1 221       | 1 423   | 254           | < 0.3 %  |
+
+The budgets are ≤ 350 and ≤ 900 MB resident, read without the GPU driver, which DevNotes does not
+ship (plan § 6.2): `app::perf` prints that figure, 235 MiB on the realistic corpus and **945 MiB on
+the stress one**, canvas scrolled. The ~220 MiB between the two tables at the gate are the driver's.
+What grows with the text is the index, which keeps each note and its folded copy in clear: the
+stress budget holds only if it stops keeping the bodies.
 
 ### Rust
 
-`cargo test` from `src-tauri/` runs everything. `cargo clippy -- -D warnings` and
-`cargo fmt --check` gate the code; `Cargo.toml` sets `unsafe_code = "forbid"` and
-`deny(clippy::all)`.
+`cargo test --workspace --exclude e2e` runs everything but the scenarios.
+`cargo clippy --workspace --all-targets --all-features -- -D warnings` (`--all-features` is what
+compiles the `e2e` flavour) and `cargo fmt --all --check` gate the code; the workspace
+`Cargo.toml` sets `unsafe_code = "forbid"` (D7) and denies `clippy::all` and `clippy::pedantic`.
 
 Unit tests are inline `#[cfg(test)] mod tests` blocks at the bottom of the file they cover —
 the idiomatic Rust form, and the one that keeps a test next to what it asserts. Shared
 fixtures for the notes tests live in `notes::fixtures`, a `#[cfg(test)]` module in `notes.rs`.
-`src-tauri/tests/` holds the integration binaries, which see only the crate's public API. Their
+`crates/engine/tests/` holds the integration binaries, which see only the crate's public API. Their
 instants, the space and the plain snippet they build on are `tests/common/mod.rs`, once;
 `notes` is a directory (`tests/notes/main.rs` and one module per subject — writes, trash,
 tags, fields, queries, revisions…) rather than one file of a hundred tests. A test that writes
@@ -5778,304 +6461,156 @@ The tests split by what they need in order to run:
   `fetch` + `notes::view::build` so the whole read path stays covered end to end.
 - **`db` and `error`** — that a poisoned mutex reports `storageUnavailable` instead of
   panicking a second time, and that each error variant maps to the right code and params.
-- **The commands** — `tests/commands/`, one module per feature, through
-  `tauri::test::mock_app()` (tauri's `test` feature, enabled in `[dev-dependencies]` only) with
-  the library managed as its `Db`. What a command adds to the store is what they check: the
-  lock, the validation before it, and the code a failure crosses the bridge as. The commands
-  that reach the profile (the gate, the registry, the copies) or a plugin (the opener, the
-  clipboard) are left to the end-to-end suite: the mock app has neither. ⚠️ On Windows,
-  `tauri_build` embeds its manifest in the binaries alone; `build.rs` embeds the same Common
-  Controls v6 dependency in the test executables, without which this one dies at load
-  (`STATUS_ENTRYPOINT_NOT_FOUND`) before a single test runs.
+- **The service functions** — `tests/commands/`, one module per feature, on an `Engine` over a
+  temporary profile, the way the interface calls them: what a service function adds to the store
+  is what they check — the lock, the validation before it, and the code a failure answers.
 
-Test names and comments are in English, like the front-end specs. `notes::store::list`
-survives only as a `#[cfg(test)]` helper — no command returns a raw list.
+Test names and comments are in English. `notes::store::list` survives only as a `#[cfg(test)]`
+helper — no service function returns a raw list.
 
-### End to end
+### The interface
 
-`npm run test:e2e` drives the **assembled application**: the real binary, a real WebView, the
-real IPC bridge and a real SQLite file. It is the only suite that can see a missing capability,
-a command registered but unreachable, an argument renamed on one side only, a CSP that blocks
-what it should not, or a front end that fails to boot at all — none of which is visible to
-jsdom or to `open_in_memory()`.
+`crates/ui` is tested with `egui_kittest`, inline like the rest. `testing::harness()` is a
+harness drawing with the application's fonts; `testing::backend()` a real core over an empty
+temporary profile, `testing::unlocked()` the same with a library created through the gate's
+calls; `services::time::fake::FakeClock` the time. A control is found by its `author_id` —
+the `data-testid` its Angular twin had, set by `widgets::address` — so a ported scenario reads
+like the old one. **No fake reimplements a core rule**: only the platform (dialogs, window,
+clipboard, notifications, the clock) is faked. The harness refuses a control without an accessible name (kittest's check,
+on by default and left on).
 
-The runner is WebdriverIO with `@wdio/tauri-service`, configured in `e2e/wdio.conf.ts`. Specs
-live in `e2e/specs/`, one file per scenario; every selector is held in `e2e/pageobjects/`, one
-file per area of the screen as `src/app/` draws it (`sidebar`, `header`, `canvas`, `board` and
-`board-gestures`, `editor`, `overlays`, `titlebar`), and `e2e/support/` holds the bridge helper,
-the application helpers and the profile paths.
+**A test waits on conditions, never on a number of frames.** `testing::settle` waits until the
+core has nothing in flight — answers, and the work it goes on with after one, such as the index
+filling behind an unlock (`Backend::background`) — then lets the window draw, and goes round
+again while drawing launches more. It returns once a drawing launched nothing: everything
+answered is then on screen. A window that still repaints at that point repaints forever, and the
+test fails. `testing::locked()` closes a library before a second core opens its profile, as a
+process that ended leaves it. The widget bench runs with reduced motion, so its spinner rests.
 
-**Nothing of the harness ships.** Three seams keep it out of the release binary, and each one
-is checkable:
+`app::captures` drives the whole window (`DevNotesApp`) through the gate's states, the title
+bar and the banners, and renders each in both themes on a software adapter — WARP on Windows,
+lavapipe on Linux — into `DEVNOTES_CAPTURES` when it is set. `test-rust` sets it and uploads
+the PNGs as `captures-<os>`, to be looked at beside the reference's captures. Nothing compares
+pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
 
-- The `e2e` Cargo feature, off by default, gates the two `tauri-plugin-wdio*` plugins.
-- `src-tauri/tauri.e2e.conf.json`, merged at build time by `npm run e2e:build`, adds
-  `withGlobalTauri`, declares the `wdio` capability **inline** so no file under
-  `capabilities/` can leak into a release, and changes the identifier.
-- The `e2e` Angular configuration in `angular.json`, whose only difference is
-  `"polyfills": ["@wdio/tauri-plugin"]` — no production source file mentions the harness.
+`app::screens` replays the reference's own screens, its data, gestures, file names and window
+sizes: `DEVNOTES_SCREENS=<dir> cargo test -p ui --lib app::screens` writes the PNGs to set beside
+the `angular-reference` zip, one profile copy a screen since a board shown or a rail put away is
+remembered. Without the variable it does nothing, and CI does not set it. The three tours of the README (`docs/tour-notes.gif`,
+`docs/tour-tools.gif`, `docs/tour-http.gif`) are frames of those screens, two seconds each.
 
-⚠️ The Rust half and the npm half go **together**. With the crates but no polyfill the runner
-never sees `window.wdioTauri` and hangs before opening a session; with the polyfill but no
-crates the front end invokes `plugin:wdio|…` commands nothing answers, and the error banner
-comes up on launch.
+### The scenarios, on the assembled window
 
-#### One application per run, one run per scenario
+A scenario drives the **real application** — the built binary, a real window, real `wgpu`, a
+real SQLite file — on a blank profile, and knows of it only what it shows. The binary is the
+`e2e` flavour, `cargo build -p app --features e2e --target-dir target/e2e`: eframe's
+`inspection` feature, the software adapter whatever the machine offers (WARP, lavapipe, as on
+the runners), a window painted only on the frames a capture asks for (`app::unpainted`: the
+driver reads the AccessKit tree, which every pass builds, and a painted frame cost up to 300 ms
+on WARP; `DEVNOTES_E2E_PAINT_ALL` paints every frame, to watch a scenario run), and two doors the protocol has no way through — `--action <name>` from a second
+launch for a global action, and `platform::dialog::from_scenario`, a file dialog answering the
+path in `DEVNOTES_E2E_DIALOG`. ⚠️ **Its inspection port has no authentication**: a release
+build of the flavour does not compile (`compile_error!`), and `lint-rust` checks that the
+default build does not link `egui_inspection`. Its own target directory keeps every other build
+from overwriting it.
 
-**⚠️ `driverProvider: 'embedded'`, and that decides the shape of every scenario.** The
-WebDriver server lives _inside_ the application, reached through
-`tauri-plugin-wdio-webdriver`, so there is no `tauri-driver`, no msedgedriver and no Chrome
-DevTools protocol. That is what made the suite runnable on CI at all: the external chain drives
-the WebView through msedgedriver, which launches the binary expecting Chromium's handshake and
-gives up on `DevToolsActivePort file doesn't exist`.
+`e2e/`, at the root beside the product's crates, is the driver. `App::launch` starts the flavour with `--profile <dir>` and
+`EGUI_INSPECTION=127.0.0.1:<free port>`, and speaks egui's inspection protocol: it reads the
+AccessKit tree, finds a control by its `author_id`, clicks the middle of its box, types, presses
+a key at its place (the area keys read the position), captures the window. `eventually` reads
+the tree until its condition holds, with no `Settle` between reads: `Settle` waits for egui to
+be idle, not for the core, whose answer arrives frames later, and each read already renders a
+frame (up to 300 ms on WARP). `relaunch` asks `--action quit`, waits for the process to
+end its queue drained, and starts it again on the same profile. A failed scenario leaves its
+last screen and the application's log in `target/e2e/scenarios/<scenario>/`, beside its
+captures.
 
-The cost is that the provider spawns the application **once**, from its own `onPrepare`, and
-never again. Reading `@wdio/tauri-service`: `startEmbeddedDriver` is called there and from
-`restartEmbeddedServer`, which only fires when a health check finds the server already dead;
-`onWorkerStart` — the per-spec-file hook — does nothing else. Raising `maxInstances` would not
-change it either, because the service skips its per-worker spawn for this provider
-(`if (this.perWorkerMode && !instanceId && !this.isEmbeddedMode)`).
+One file per scenario, `e2e/tests/<nn>_<name>.rs`, one `#[test]` of named steps
+(`e2e::step`): `cargo test -p e2e --test 01_first_launch` runs one, `cargo test -p e2e` all of
+them, one file after the other. Each launches its own application on its own profile, so the
+files never share a process. `cargo test --workspace` is run with `--exclude e2e`.
+`e2e/clippy.toml` refuses `std::thread::sleep`: a scenario waits on conditions, never
+durations.
 
-So **every spec file of a run shares one process, one SQLite file and one `preferences.json`**.
-That is why CI gives each file a run of its own, on a runner of its own (see "In CI"):
-`E2E_SPEC=05-spaces npm run test:e2e` runs that file alone, and `e2e/wdio.conf.ts` refuses a
-name that matches no file, since a run that ran nothing would pass. Without it, the run takes
-every file in one application, in the order of their numeric prefix — a local convenience over
-the same files. The rules:
+In CI, the `e2e` job of `ci.yml` runs once per platform from `changes` on, beside the Rust
+tests: it builds the flavour into its cached `target/`, runs `cargo test -p e2e` — under
+`xvfb-run` with lavapipe on Linux, on WARP on Windows — and uploads `scenarios/`. The scenarios are not split into groups
+(plan, D31): when the suite grows long, it is split by file name, never by a list kept by hand.
 
-- **The profile is wiped before each run, before the runner starts** — `npm run test:e2e` is
-  `tsx e2e/reset-profile.ts && wdio run …`. Not from a hook: nothing orders a wdio hook against
-  the service's own `onPrepare`, and a wipe from inside meets a living process, a locked
-  database and an open WAL. A separate process beforehand has no ordering to get wrong.
-  A run that ends, green or red, leaves nothing running: the service stops what it spawned.
-  One cut short might, so the script first stops an application a previous run left behind —
-  the `devnotes` process listening on the embedded port, `EMBEDDED_PORT` in
-  `e2e/support/leftovers.ts`, with its WebView2 tree. ⚠️ Never by executable: `tauri dev` runs
-  the same `target/debug/devnotes`, and only an e2e build listens on that port.
-  ⚠️ The profile is several directories, not one: `tauri-plugin-window-state` writes
-  `.window-state.json` under `app_config_dir()` while everything else the application
-  writes lives under `app_data_dir()`. Windows cannot tell those two apart, so wiping only the
-  data directory passed there and left the window geometry behind on Linux — where a run
-  then opened on the window the previous one closed with. On Windows `%LOCALAPPDATA%\<id>`
-  goes too: it holds the WebView2 profile and the log plugin's file.
-- **Every file passes alone, on a first launch.** `passTheGate()`, behind `waitForCanvas`,
-  waits for the gate or the canvas — neither is drawn before the vault's state has crossed
-  the bridge — and on a first launch it creates the vault, then waits for the samples. They
-  are written after the first view has arrived and settled, empty, so the settle loop cannot
-  see them coming, and a file that created a space before them would find the seeding
-  skipped. It then records the seeded space while it is the only one: `homeSpaceId()` reads
-  it back from a marker file, because WebdriverIO gives each spec file its own worker process
-  and a module-level cache would be empty again in the next one. ⚠️ It cannot be
-  `listSpaces()[0]`: `list_spaces` orders pinned first and then by name, case aside — in
-  Rust, the names being sealed — so after another file creates `Ops` — or pins anything — the
-  first row is no longer the seeded space.
-- **A spec file establishes its own preconditions, and does not assume a clean corpus
-  either.** In a run of several it inherits what the files before it left. `05-spaces` deletes
-  the spaces an earlier file left before asserting on "the only space there is", and puts the
-  canvas back on "all spaces" in its `after`. `24-forgotten-passphrase` makes the locked gate it
-  needs — `open_library` on the open library, then a reload — rather than counting on the one
-  `23-backups` leaves; `16-passphrase-change` puts the phrase every gate types back.
-- **`before()` buys each later file of a run a fresh front end and nothing more.**
-  `browser.refresh()` reboots Angular and every store over the same database; it resets no data.
+**The first job that fails stops everything**, whichever it is: lint, a Rust leg, Sonar, an e2e
+leg, an advisory. Its last step, `if: failure()`, dispatches `stop.yml` with the run's id, and
+that workflow cancels every unfinished run of the commit. ⚠️ Not `gh run cancel` from the failing
+job itself: cancelled from inside, the job ends « cancelled » and hides what failed. A run
+Dependabot started has a read-only token and cannot dispatch: it runs to the end.
 
-The numeric prefix is the order of a run of several files, and only `01-first-launch` needs its
-place in it: it asserts on the virgin profile itself.
+**The suite blocks.** It once carried `continue-on-error: true` while it earned its keep, and a
+real bug — a note keeping its title and losing the body typed after it — sat red on one platform
+across three merges while the run read `success`. A job whose failure reads as a pass is not a
+weak signal, it is a false one: a flaky run blocking a merge until it is re-run is the price
+worth paying.
 
-**⚠️ There is no restart, and no spec may claim one.** `reopenSession()` is a
-`browser.reloadSession()`: it tears the session down and opens a new one against the same
-living process — which has to stay up, since it _is_ the server. The Rust side, its SQLite
-connection and `tauri-plugin-store`'s in-memory map all survive. What it proves is that the
-interface was rebuilt from what the commands answer rather than from a signal it was still
-holding; what it cannot prove is that anything reached the disk. For preferences specifically
-the distinction matters: the store plugin caches in the Rust process and flushes on a 300 ms
-debounce, so a reloaded page reads the map, not the file. `15-preferences-on-disk` reads
-`preferences.json` from Node for that, which is outside the application entirely.
-
-**Seeding goes through the bridge.** `e2e/support/bridge.ts` calls the real commands with the
-types generated in `bindings.ts`, so a Rust signature that moves stops the harness compiling.
-It goes through `window.__TAURI__` rather than `browser.tauri.execute`, which the service
-resolves through an HTTP endpoint it loses after a `reloadSession`. Writing the SQLite file
-directly from Node would bypass the migrations and the model rules, and would let a test pass
-against a state the application cannot produce.
-
-#### Driving the interface
-
-**Selectors are `data-testid`, and page objects own them.** Every `aria-label` and every
-visible string goes through `transloco`, and the default locale follows the machine — a text
-selector would depend on the runner. Repeated elements carry the identifying value beside the
-hook (`data-testid="note-card" data-note-id="…"`), because picking a card by position is the
-brittleness the attribute exists to remove. The preference controls are the exception: they are
-addressed by the `id` their own `<label for>` needs, which cannot be renamed without breaking
-the association.
-
-Three things the embedded WebDriver server will not do, each with a helper in `support/app.ts`:
-
-- **Keyboard.** It answers `POST /session/:id/actions` with a 200 and dispatches nothing, so
-  `browser.keys` silently did nothing at all. `press()` dispatches a synthetic `KeyboardEvent`,
-  which reaches the same handlers — they all listen in the DOM. It fills `code` as carefully as
-  `key`, because the shortcut field reads the physical key.
-- **`<select>` and `<input type="date">`.** `selectByAttribute` moves the selection without the
-  `change` the components listen to, so the model kept the old value while the control showed
-  the new one. `setNativeValue()` assigns and dispatches. A date input is the same helper for a
-  different reason: typed keystrokes go in the _display_ format, which follows the WebView's
-  locale.
-- **Implicit form submission.** Enter in a text input submits its form natively, and the
-  browser reserves that for real user input. `submitFormOf()` calls `requestSubmit()`.
-
-**A scenario waits on a condition, never on a duration.** `eventually(read, matches, what)` in
-`support/app.ts` hands the value back, so the assertion reads what it waited for, and says
-what it last saw when the wait runs out — in an error of its own, a `timeoutMsg` being built
-before the wait starts. A
-`browser.pause` before an `expect` is a guess at a round trip on a runner sharing a CPU with a
-WebView, and it is how one scenario went red on Windows and green on a re-run of the same commit.
-The one exception is an assertion that nothing happened, which no condition can wait on: those
-keep their pause, with a comment above it saying the wait is `deliberately` one.
-`scripts/e2e-waits.test.mjs` holds that: it fails on a `browser.pause` followed within four
-lines by a read or an assertion, unless that comment is there.
-
-⚠️ **A read sent while the page unloads is never answered on WebKitGTK.** The embedded server
-runs every lookup as a script and waits for its answer up to the session's script timeout,
-30 s; a library opened or switched reloads the page, and the read caught by the unload held a
-wait to its end — `25-libraries` failed twice so on Linux, the gate drawn on the failure's
-screenshot, and `24-forgotten-passphrase` once, right after a `browser.refresh()`. Every session
-the run opens takes a script timeout of `SCRIPT_TIMEOUT` (5 s, `e2e/support/timeouts.ts`): the
-lost read fails, and the wait's next one reaches the page that replaced the old one. The few
-commands that derive a key run under `SLOW_SCRIPT_TIMEOUT` (`invokeSlowly` in the bridge).
-
-**The first failure ends the run.** `mochaOpts.bail` stops a file at its first failed test, and
-`bail: 1` the run after its first failed file: what follows a failure fails in cascade and
-buries the one error worth reading. On CI the other scenarios are cancelled with it (see
-"In CI").
-
-**What the suite deliberately does not cover**, because a WebView cannot reach it. In each
-case the control is asserted on — it exists, it is labelled — and never clicked:
-
-- The OS-level global accelerator. WebDriver types into the WebView, not into the machine, so
-  the palette is opened by emitting the same `devnotes:action` event the accelerator sends.
-- The native file picker. `window.__TAURI_INTERNALS__.invoke` — the funnel every `invoke` goes
-  through — is `writable: false, configurable: false`, so nothing can stand in front of it and
-  a picker opened by a click would block the application until a human clicked it. Import,
-  export and attaching a file are exercised through their commands, which take a path.
-- Handing a file to the desktop (`open_attachment`), and `Quit` — one launches whatever the
-  runner has registered, the other takes the application down mid-run.
-- The tray menu, which is native.
-- The pointer-drag handle on a checklist item. `Alt+↑/↓` is its keyboard twin, it has to work
-  anyway for the linter, and it is the testable one.
-- The system clipboard where the machine will not release it: on Windows a clipboard manager
-  can hold the lock indefinitely, and a headless Linux runner may have no selection owner at
-  all. `clipboardText()` answers `null` and the scenario calls `this.skip()` — skipped rather
-  than passed, because a bare `return` is a green test that asserted nothing. What DevNotes owns
-  is asserted anyway, through `DisplayNote.copyText`.
-
-#### In CI
-
-The suite runs on `windows-latest` and `ubuntu-22.04`. `ci.yml` lists the scenarios —
-`e2e-scenarios` reads `e2e/specs/*.e2e.ts`, so a new file joins the matrix without a second list
-to edit — then calls `e2e.yml` once per platform. ⚠️ A workflow per platform and not a matrix of
-builds: a job that `needs` a matrix waits for every leg of it, and the Linux scenarios sat
-behind the Windows build. `e2e.yml` holds two jobs:
-
-- **`build`** builds the binary and uploads it with what it needs beside it: `identity/`, the
-  identity tool's resource, which `tauri-build` copies next to the executable, and
-  `.cargo-lock`. ⚠️ On Linux, Tauri reads resources next to the executable only in a
-  `target/<profile>` directory holding that file; anywhere else it looks in
-  `/usr/lib/devnotes`, and the identity tool answers that its lists are missing. The front end
-  is embedded in the binary; Windows needs no DLL beside it.
-- **`scenario`** is one job per scenario: it installs what the binary loads — WebKitGTK and an
-  X server on Linux, never the toolchain — runs `npm ci`, downloads the binary into
-  `src-tauri/target/debug`, where `wdio.conf.ts` looks, and runs
-  `E2E_SPEC=<name> npm run test:e2e`. No cargo runs there. `fail-fast: false`, so one red
-  scenario does not hide the others, and `max-parallel: 20` per platform: the account's
-  concurrency caps both together, so the platform built first takes every runner until the
-  other's binary is ready.
-
-Each job is a runner of its own, so its process, its profile, its WebDriver port and the
-home-space marker under `tmpdir()` are its own too: that is the isolation, and the harness
-redirects no data directory. It could not on Windows anyway, where `dirs` asks the known-folder
-API rather than reading `%APPDATA%`. A job uploads `e2e-logs-<os>-<scenario>-<attempt>`, even when
-it fails — per attempt, so a re-run that passes keeps the failed attempt's logs beside its own: the runner's log, the application's stdout (`captureBackendLogs`: Rust, through the log
-plugin's stdout target) and, for each failed test, a screenshot and what was on screen — the
-page's console warnings and errors with it, recorded in the page by `beforeTest`. Never the
-profile: its library is the run's. ⚠️ Not the service's `captureFrontendLogs`: the polyfill
-hands the console to `window.__TAURI__.log` first, which the application does not allow, and
-allowing it fed the command's own failures back into the console — hundreds of lines a file.
-
-The suite **blocks**. It did not always: `continue-on-error: true` stood on it while it earned its
-keep, on the reasoning that a flaky E2E job everybody ignores is worse than no job. That
-reasoning turned out to have a worse failure mode than the one it was avoiding. On `main`
-at `e4ed5d9` the Ubuntu leg failed on a real bug — a note keeping its title and losing the
-body typed after it — and the run was reported `success` regardless: `gh run list` said
-success, the badge said passing, and the failure sat there across three merges until it was
-looked for by hand. ⚠️ A job whose failure reads as a pass is not a weak signal, it is a
-false one. The flag is gone, and the price it was paying — a flaky run blocking a merge
-until it is re-run — is the one worth paying.
-
-The two platforms do not break the same way, and **Linux is the one that
-can tell paths apart**: the WebView is WebView2 on one and WebKitGTK on the other, and
-`dirs::data_dir()` and `dirs::config_dir()` are the same `%APPDATA%\<identifier>` on Windows
-but `~/.local/share` against `~/.config` on Linux.
-
-That is not theoretical. `preferences.json` goes to `app_data_dir()` — `tauri-plugin-store`
-resolves against `BaseDirectory::AppData` — and both the service's own comment and the first
-version of `15-preferences-on-disk` said `app_config_dir()`. Windows agreed with the mistake
-because the two resolve to one folder there; the Linux job is what produced a
-`no preferences file at /home/runner/.config/…` and settled it.
-
-On Linux the runner is wrapped in `xvfb-run`: WebKitGTK needs an X server, and it is the wdio
-service that spawns the application, so the `DISPLAY` has to exist for the whole process rather
-than for one command. `logLevel` defaults to `warn`; a session that refuses to open is
-diagnosed by re-running the job with `E2E_LOG_LEVEL=trace`.
+**What the scenarios do not reach**: the system's file dialog (the flavour answers the path the
+scenario fixed), the tray menu, a global accelerator pressed on the machine (a second launch's
+`--action` stands for it), and the packages themselves — installed and updated by
+`packages.yml` (→ "Releasing").
 
 ## The website
 
-The showcase site, devnotes.fr, is a second project of the same Angular workspace:
-`website/` (`angular.json` → `projects.website`), on the root `package.json` and the app's
-Angular version. `npm run website:start` serves it on port 4300, `website:build` writes it to
-`dist/website/`, `website:test` runs its specs.
+The showcase site, devnotes.fr, lives in `website/`: an Angular project of its own, outside the
+Cargo workspace, with its own `package.json` and lockfile (`npm ci` from `website/`). The root
+`package.json` stays the repository's build tool and carries none of it. From `website/`:
+`npm start` serves it on port 4300, `npm run build` writes `website/dist/`, `npm test` runs the
+specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the tokens.
 
-- **It shares the tokens and nothing else.** `website/src/styles.scss` `@use`s
-  `src/styles/_tokens.scss` (palette, both themes, motion, fonts) and adds the few tokens the
-  site draws alone (`_site-tokens.scss`). Nothing under `website/` imports `src/app/`: an
-  ESLint block refuses the app's aliases and paths, so the site never ships the app.
+- **It shares the application's look and no code.** `src/styles/_tokens.scss` is a copy of the
+  palette of `crates/ui/src/theme/tokens.rs` (both themes), the motion and the fonts;
+  `scripts/tokens.test.mjs` fails when the two differ, `scripts/palette.test.mjs` holds the
+  contrast (text ≥ 4.5:1). The site adds the few tokens it draws alone (`_site-tokens.scss`).
 - **Every page is prerendered** (`outputMode: "static"`, `app.routes.server.ts` →
   `RenderMode.Prerender`): one `index.html` per route, at the root of the output for `/`, and
   hydrated in the browser. The routes are the home page, the download page, one per
   documentation page (`docs/doc-index.ts`, kept apart from the text so the first download does
-  not carry it), in each language (`core/pages.ts`), and `404`. Anything that measures or animates runs in `afterNextRender` and asks
-  `core/browser.ts` first: neither the build's Node nor jsdom has `matchMedia` or
-  `IntersectionObserver`.
+  not carry it), in each language (`core/pages.ts`), and `404`. Anything that measures or animates
+  runs in `afterNextRender` and asks `core/browser.ts` first: neither the build's Node nor jsdom
+  has `matchMedia` or `IntersectionObserver`.
 - **Two languages, French at `/` and English under `/en/`.** The language is the address's
   (`core/language.ts`), read at `ResolveEnd` so a page's constructor already writes its title in
   it; each component holds its words as a typed `FR` and an `EN: typeof FR`, so a missing
   string fails the build. `Seo` sets `<html lang>` and the `hreflang` pair (`x-default` is
   French); the globe in the header leads to the same page in the other language
   (`translatedPath`). The documentation is two sets of pages under one index of ids.
-- **The download page links straight to the files of the version in `package.json`**
-  (`core/release.ts`, named as `release.yml` writes them), so the site is rebuilt and published
-  after every release (`docs/releasing.md`, step 4). `website:build` first runs
-  `website/scripts/fetch-release.mjs`, which reads each file's size and SHA-256 from that
-  release (its assets and `SHA256SUMS.txt`) into `core/release-files.json`, shown beside the
-  links. The post-build check asks GitHub for every one of those links and stops on anything
-  but a 200: a site built before its release is published would offer files that do not exist
-  yet.
+- **The download page follows the latest release.** `npm run build` first runs
+  `scripts/fetch-release.mjs`, which reads the latest published release (its version, each
+  file's size and its SHA-256 from `SHA256SUMS.txt`) into `core/release-files.json`;
+  `core/release.ts` names the files as `release.yml` writes them. The post-build check asks
+  GitHub for every download link and stops on anything but a 200: a name that drifts from the
+  packaging fails the build rather than the visitor.
 - **The address is one build setting**, `SITE_URL` (`define` in `angular.json`,
   `https://devnotes.fr`; `--define` overrides it): the canonical links and the social tags are
-  built from it. `website/scripts/finish-build.mjs` runs after the build, reads the address
-  back from the home page's canonical link, checks every page (one `h1`, a title, a
-  canonical, no local address, download links that answer), and writes `sitemap.xml`, `robots.txt` and `404.html`.
-  `website/public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect on
-  the Apache host.
+  built from it. `scripts/finish-build.mjs` runs after the build, reads the address back from the
+  home page's canonical link, checks every page (one `h1`, a title, a canonical, no local
+  address, download links that answer), and writes `sitemap.xml`, `robots.txt` and `404.html`.
+  `public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect on the Apache
+  host.
 - **The home page redraws the application in HTML** rather than showing screenshots. Each
   feature (`home/feature.ts`) is a section whose scene is a pure function of a step and its
   progress `t` (`ScenePlayer`): it plays once well in view, rests when it leaves the
   screen, and a step clicked shows that step. The scroll is never held, except by the hero
   board, which stays centred while its cards are filed; a phone gets a window drawn for its
-  width, one folder and the note filed into it, at a size that reads. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
+  width. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
   whitespace between two elements, and a formatter would reflow it.
 - **The documentation is typed data** (`docs/content/{fr,en}/*.ts`, written with the helpers of
   `docs/doc.model.ts`), rendered by `DocBlocks` without `innerHTML`, grouped in the sidebar
   (`docs/doc-index.ts`) and searched in the browser section by section, accents aside
-  (`docs/doc-search.ts`). `CHECKED_ON` names the
-  version the pages were last checked against in the application, by hand.
-- **The theme** is applied before the first paint by an inline script in
-  `website/src/index.html` (a stored choice, else the system's), then followed by `ThemeStore`.
+  (`docs/doc-search.ts`). `CHECKED_ON` names the version the pages were last checked against in
+  the application, by hand; the labels they quote (`ui(…)`) are the application's own, in
+  `crates/i18n/translations/`.
+- **The theme** is applied before the first paint by an inline script in `src/index.html` (a
+  stored choice, else the system's), then followed by `ThemeStore`.
+- **Publishing** is `.github/workflows/website.yml`. `ci.yml` builds, lints and tests the site on
+  a pull request that touches it, and runs nothing of the Rust side for a change to `website/`
+  alone. On `main`, the same paths — and the end of a `Release` run — build the site and push the
+  output, as the whole content of a commit, to the `main` of `vmillet-dev/devnotes-website`,
+  whose webhook deploys it. The write goes through the deploy key kept in the secret
+  `WEBSITE_DEPLOY_KEY`; the workflow's own token stays read-only. `dry_run` builds and shows what
+  would change.

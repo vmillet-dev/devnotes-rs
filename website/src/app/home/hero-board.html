@@ -3,14 +3,9 @@
     <div class="scroller" #scroller>
       <div class="app-window" #frame role="img" [attr.aria-label]="w().window">
         <div class="titlebar">
-          <span class="menus"
-            ><span>{{ w().file }}</span
-            ><span>{{ w().about }}</span></span
-          >
+          <span class="menus"><span>{{ w().file }}</span><span>{{ w().about }}</span></span>
           <span class="areas"
-            ><span class="on">{{ w().notes }}</span
-            ><span>{{ w().tools }}</span
-            ><span>HTTP</span></span
+            ><span class="on">{{ w().notes }}</span><span>{{ w().tools }}</span><span>HTTP</span></span
           >
           <span class="controls"><i></i><i></i><i></i></span>
         </div>
@@ -33,14 +28,10 @@
           <span class="rail-foot">{{ w().trash }}</span>
         </div>
         <div class="toolbar">
-          <span class="views"
-            ><span>{{ w().list }}</span
-            ><span class="on">{{ w().board }}</span></span
-          >
+          <span class="views"><span>{{ w().list }}</span><span class="on">{{ w().board }}</span></span>
           <span class="search">{{ w().search }}<kbd>Ctrl</kbd><kbd>K</kbd></span>
           <span class="filters"
-            ><span class="on">{{ w().all }}</span
-            ><span>{{ w().pinned }}</span
+            ><span class="on">{{ w().all }}</span><span>{{ w().pinned }}</span
             ><span>{{ w().untriaged }}</span></span
           >
           <span class="new">{{ w().newNote }}</span>
@@ -79,19 +70,14 @@
           </div>
 
           <div class="card" style="left: 36px; top: 98px">
-            <div class="card-top">
-              <span class="tick"></span><strong>{{ w().release }}</strong>
-            </div>
+            <div class="card-top"><span class="tick"></span><strong>{{ w().release }}</strong></div>
             <div class="bar"><span></span></div>
             <div class="items">
               @for (item of w().releaseItems; track item) {
-                <span>{{ item }}</span>
+              <span>{{ item }}</span>
               }
             </div>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#ci</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#ci</span></div>
           </div>
           <div class="card" style="left: 204px; top: 98px">
             <div class="card-top">
@@ -101,10 +87,7 @@
             <pre><span class="k">docker</span> run --rm \
   -p <span class="n">5432</span>:<span class="n">5432</span> \
   -e PW=<span class="fld">{{ field('password') }}</span></pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#docker</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#docker</span></div>
           </div>
           <div class="card" style="left: 400px; top: 98px">
             <div class="card-top">
@@ -114,10 +97,7 @@
             <pre><span class="k">SELECT</span> calls,
   mean_exec_time
 <span class="k">FROM</span> pg_stat_st…</pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#sql</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#sql</span></div>
           </div>
           <div class="card" style="left: 568px; top: 98px">
             <div class="card-top">
@@ -127,10 +107,7 @@
             <pre>conn.<span class="f">transaction</span>(|tx| &#123;
   <span class="k">let</span> id = <span class="f">insert</span>(
     tx, &amp;note)?;</pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#rust</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#rust</span></div>
           </div>
           <div class="card" style="left: 764px; top: 98px">
             <div class="card-top">
@@ -140,29 +117,21 @@
             <pre><span class="k">const</span> <span class="f">debounce</span> =
   (fn, ms) =&gt; &#123;
   <span class="k">let</span> at;</pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#js</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#js</span></div>
           </div>
           <div class="card" style="left: 932px; top: 98px">
             <div class="card-top">
-              <span class="tick"></span><strong>{{ w().store }}</strong
-              ><span class="chip-lang l-ts">TS</span>
+              <span class="tick"></span><strong>{{ w().store }}</strong><span class="chip-lang l-ts">TS</span>
             </div>
             <pre><span class="k">export class</span>
   <span class="f">CounterStore</span> &#123;
   count = <span class="f">signal</span>(<span class="n">0</span>);</pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#angular</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#angular</span></div>
           </div>
 
           <div class="card loose" style="left: 24px; top: 400px">
             <div class="card-top">
-              <span class="tick"></span><strong>{{ w().ssh }}</strong
-              ><span class="chip-lang l-sh">SH</span>
+              <span class="tick"></span><strong>{{ w().ssh }}</strong><span class="chip-lang l-sh">SH</span>
             </div>
             <pre><span class="k">ssh</span> -p <span class="fld">{{ field('port=22') }}</span>
 <span class="fld">{{ field('user') }}</span>&#64;<span class="fld">{{ field('host') }}</span></pre>
@@ -181,10 +150,7 @@
             <pre>- <span class="f">uses</span>: <span class="s">actions/cache&#64;v4</span>
   <span class="f">with</span>:
     <span class="f">path</span>: <span class="s">~/.cargo</span></pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#ci #rust</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#ci #rust</span></div>
           </div>
           <div
             class="card loose mover"
@@ -199,10 +165,7 @@
             <pre><span class="k">ssh</span> -N -L <span class="n">5433</span>:
 <span class="fld">{{ field('db_host') }}</span>:<span class="n">5432</span>
 <span class="fld">{{ field('user') }}</span>&#64;bastion</pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#ops #sql</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#ops #sql</span></div>
           </div>
           <div
             class="card loose mover"
@@ -217,23 +180,16 @@
             <pre>:<span class="f">focus-visible</span> &#123;
   outline: <span class="n">2px</span>
     solid <span class="f">var</span>(…);</pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#a11y</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#a11y</span></div>
           </div>
           <div class="card loose" style="left: 696px; top: 400px">
             <div class="card-top">
-              <span class="tick"></span><strong>{{ w().undo }}</strong
-              ><span class="chip-lang l-sh">SH</span>
+              <span class="tick"></span><strong>{{ w().undo }}</strong><span class="chip-lang l-sh">SH</span>
             </div>
             <pre><span class="k">git</span> reset --soft
   HEAD~<span class="n">1</span>
 <span class="k">git</span> restore --staged</pre>
-            <div class="card-foot">
-              <span>{{ w().now }}</span
-              ><span>#git</span>
-            </div>
+            <div class="card-foot"><span>{{ w().now }}</span><span>#git</span></div>
           </div>
 
           <svg
@@ -257,18 +213,13 @@
       <div class="phone-window" role="img" [attr.aria-label]="w().phone">
         <div class="titlebar">
           <span class="areas"
-            ><span class="on">{{ w().notes }}</span
-            ><span>{{ w().tools }}</span
-            ><span>HTTP</span></span
+            ><span class="on">{{ w().notes }}</span><span>{{ w().tools }}</span><span>HTTP</span></span
           >
           <span class="controls"><i></i><i></i><i></i></span>
         </div>
         <div class="toolbar">
           <span class="space">{{ w().platform }}</span>
-          <span class="views"
-            ><span>{{ w().list }}</span
-            ><span class="on">{{ w().board }}</span></span
-          >
+          <span class="views"><span>{{ w().list }}</span><span class="on">{{ w().board }}</span></span>
         </div>
         <div class="phone-board" #phoneBoard>
           <div class="zone" style="--c: var(--amber-rgb)" [class.drop-target]="placed().cards.db.dropping">
@@ -284,10 +235,7 @@
                 </div>
                 <pre><span class="k">SELECT</span> calls,
   mean_exec_time</pre>
-                <div class="card-foot">
-                  <span>{{ w().now }}</span
-                  ><span>#sql</span>
-                </div>
+                <div class="card-foot"><span>{{ w().now }}</span><span>#sql</span></div>
               </div>
               <div class="card">
                 <div class="card-top">
@@ -296,10 +244,7 @@
                 </div>
                 <pre>conn.<span class="f">transaction</span>(
   |tx| <span class="f">insert</span>(tx))?;</pre>
-                <div class="card-foot">
-                  <span>{{ w().now }}</span
-                  ><span>#rust</span>
-                </div>
+                <div class="card-foot"><span>{{ w().now }}</span><span>#rust</span></div>
               </div>
               <div class="slot" #phoneSlot></div>
             </div>
@@ -318,15 +263,11 @@
               </div>
               <pre><span class="k">ssh</span> -N -L <span class="n">5433</span>:
 <span class="fld">{{ field('db_host') }}</span>:<span class="n">5432</span></pre>
-              <div class="card-foot">
-                <span>{{ w().now }}</span
-                ><span>#ops</span>
-              </div>
+              <div class="card-foot"><span>{{ w().now }}</span><span>#ops</span></div>
             </div>
             <div class="card loose">
               <div class="card-top">
-                <span class="tick"></span><strong>{{ w().ssh }}</strong
-                ><span class="chip-lang l-sh">SH</span>
+                <span class="tick"></span><strong>{{ w().ssh }}</strong><span class="chip-lang l-sh">SH</span>
               </div>
               <pre><span class="k">ssh</span> -p <span class="fld">{{ field('port=22') }}</span>
 <span class="fld">{{ field('user') }}</span>&#64;<span class="fld">{{ field('host') }}</span></pre>

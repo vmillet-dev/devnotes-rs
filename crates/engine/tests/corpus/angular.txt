@@ -1,0 +1,4 @@
+<ul class="notes">
+  <li *ngFor="let note of notes" (click)="open(note)">{{ note.title }}</li>
+</ul>
+<p *ngIf="!notes.length">Nothing yet</p>

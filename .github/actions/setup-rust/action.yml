@@ -1,5 +1,5 @@
 name: Setup Rust
-description: Tauri system dependencies, Rust toolchain and a cargo cache shared between jobs.
+description: What egui loads at run time, Rust toolchain and a cargo cache shared between jobs.
 
 inputs:
   shared-key:
@@ -13,15 +13,15 @@ inputs:
 runs:
   using: composite
   steps:
-    # webkit2gtk-4.1 exists from Ubuntu 22.04 on; patchelf is required by the AppImage bundler.
-    - name: Tauri system dependencies
+    # GTK is the tray's, the one library linked. Wayland, X11, xkbcommon and fontconfig are opened
+    # at run time. What kittest draws on is, a software Vulkan (lavapipe); Windows has WARP.
+    - name: GTK, software Vulkan and xkbcommon
       if: runner.os == 'Linux'
       shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          build-essential curl file libayatana-appindicator3-dev libgtk-3-dev \
-          librsvg2-dev libssl-dev libwebkit2gtk-4.1-dev libxdo-dev patchelf wget
+          libgtk-3-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers
 
     # Read from `rust-toolchain.toml` rather than written here: two places would end up
     # diverging, and drift is precisely what pinning avoids.
@@ -46,15 +46,12 @@ runs:
       shell: bash
       run: echo "CARGO_PROFILE_DEV_DEBUG=line-tables-only" >> "$GITHUB_ENV"
 
-    # `workspaces` is mandatory: the Cargo project lives in src-tauri/, not at the root.
-    # Without it the action finds nothing and the cache stays empty without saying so.
-    #
-    # ⚠️ Saved from main alone, in a quota of ten gigabytes at about one per key: a version
-    # branch saving its own copy of every key had GitHub evict main's Windows E2E entry, and
-    # every pull request then built it from nothing. A pull request or a `dev/**` push reads
-    # main's entry instead — whole when Cargo.lock matches, by prefix when it moved.
+    # The key holds the job, the OS, the `CARGO_*` variables and a hash of Cargo.lock, every
+    # Cargo.toml and the toolchain. Saved by a push to main or to a milestone branch, never by a
+    # pull request: a pull request reads its base branch's entry, then main's — whole when
+    # Cargo.lock matches, by prefix when it moved. ⚠️ A quota of ten gigabytes, about one per
+    # key and branch: two branches' five keys fit, and a merged milestone's are evicted first.
     - uses: Swatinem/rust-cache@v2
       with:
-        workspaces: src-tauri
         shared-key: ${{ inputs.shared-key }}
-        save-if: ${{ inputs.save-if == 'true' && github.ref == 'refs/heads/main' }}
+        save-if: ${{ inputs.save-if == 'true' && github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/dev/')) }}

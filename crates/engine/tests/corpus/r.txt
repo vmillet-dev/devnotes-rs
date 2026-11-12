@@ -1,0 +1,6 @@
+library(ggplot2)
+
+scores <- data.frame(name = c("a", "b"), value = c(3, 5))
+mean_of <- function(xs) {
+  sum(xs) / length(xs)
+}

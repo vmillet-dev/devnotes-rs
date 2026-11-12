@@ -1,0 +1,4 @@
+{% assign total = cart.items | size %}
+{% if total > 0 %}
+  <p>{{ total }} items</p>
+{% endif %}

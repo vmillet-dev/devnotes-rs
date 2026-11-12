@@ -1,0 +1,5 @@
+#import <Foundation/Foundation.h>
+
+@interface Note : NSObject
+@property NSString *title;
+@end

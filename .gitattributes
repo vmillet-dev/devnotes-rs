@@ -1,7 +1,7 @@
 # ⚠️ The repository had no `.gitattributes` and `core.autocrlf` is not something a
 # clone can be relied on to set, so files landed in whatever ending the editor that
-# created them used. The tree was genuinely mixed — thirteen CRLF files under
-# `src-tauri/` alone — and a formatter touching one rewrote every line of it: the
+# created them used. The tree was genuinely mixed — thirteen CRLF files in the
+# Rust shell of the time alone — and a formatter touching one rewrote every line of it: the
 # review branch showed `spaces/store.rs` as +136/-129 for a real change of +28/-21,
 # and `language.rs` as +546/-546 for +9/-9. A diff nobody can read is a diff nobody
 # reviews.

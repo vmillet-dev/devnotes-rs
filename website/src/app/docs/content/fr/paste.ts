@@ -6,7 +6,7 @@ export const QUICK_PASTE: DocPage = {
   summary:
     'Retrouver un snippet et le coller sans quitter ce que vous faites, capturer le presse-papiers dans une note, et régler les raccourcis.',
   body: [
-    h2('palette', 'La palette de collage rapide'),
+    h2('palette', 'La palette'),
     p(
       keys('Ctrl Alt P'),
       ' ouvre la palette par-dessus n’importe quelle application, même quand la fenêtre de DevNotes est fermée. Elle cherche dans tous vos espaces à la fois, sans tenir compte des filtres du canevas : quand on rappelle un snippet, on ne se souvient pas toujours où on l’a rangé.',
@@ -26,10 +26,26 @@ export const QUICK_PASTE: DocPage = {
       keys('Entrée'),
       ' ou un clic ouvrent la note au lieu de la copier, ce qui fait aussi de la palette un « trouver cette note ».',
     ),
+    p(
+      'Elle trouve plus que des notes. Le même champ cherche les requêtes du client API, les outils et les espaces, et lance des commandes ; trois préfixes resserrent la recherche :',
+    ),
+    table(
+      'Resserrer la recherche',
+      ['Taper', 'Pour'],
+      [
+        keys('@'),
+        'choisir où chercher : les notes, les requêtes, les outils, les espaces, ou les notes d’un espace',
+      ],
+      [keys('#'), 'lister les notes d’un tag'],
+      [
+        keys('>'),
+        'lancer une commande : nouvelle requête, nouveau dossier, préférences, feuille des raccourcis',
+      ],
+    ),
     shortcuts(
       'Dans la palette',
       ['↑ ↓', 'Parcourir les résultats (Tab aussi)'],
-      ['Entrée', 'Ouvrir la note'],
+      ['Entrée', 'Ouvrir la note, la requête, l’outil ou l’espace'],
       ['Ctrl C', 'Copier la note et fermer'],
       ['Échap', 'Fermer la palette'],
     ),
@@ -48,7 +64,7 @@ export const QUICK_PASTE: DocPage = {
     h2('barre-systeme', 'Depuis la barre système'),
     p(
       'L’icône de DevNotes dans la barre système propose ',
-      ui('Collage rapide'),
+      ui('Palette'),
       ', ',
       ui('Nouvelle note'),
       ' et ',
@@ -63,7 +79,7 @@ export const QUICK_PASTE: DocPage = {
     table(
       'Actifs partout, même fenêtre fermée',
       ['Par défaut', 'Action'],
-      [keys('Ctrl Alt P'), 'Ouvrir la palette de collage rapide'],
+      [keys('Ctrl Alt P'), 'Ouvrir la palette'],
       [keys('Ctrl Alt V'), 'Capturer le presse-papier dans une note'],
       [keys('Ctrl Alt N'), 'Créer une note'],
     ),

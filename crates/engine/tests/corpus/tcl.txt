@@ -1,0 +1,6 @@
+proc greet {name} {
+    set message "Hello, $name"
+    puts $message
+}
+
+greet world

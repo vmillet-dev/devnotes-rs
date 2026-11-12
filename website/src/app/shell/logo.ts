@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-/** The application's icon, as in `src-tauri/icons/devnotes.svg`: a dark tile in both themes. */
+/** The application's icon, as in `crates/app/icons/devnotes.svg`: a dark tile in both themes. */
 @Component({
   selector: 'app-logo',
   template: `

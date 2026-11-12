@@ -1,0 +1,7080 @@
+[
+  {
+    "input": {
+      "language": "json",
+      "text": "{\n  \"name\": \"devnotes\",\n  \"version\": \"0.3.3\",\n  \"private\": true,\n  \"scripts\": { \"build\": \"ng build\" }\n}\n"
+    },
+    "output": [
+      {
+        "from": 4,
+        "to": 10,
+        "classes": "tok-property"
+      },
+      {
+        "from": 12,
+        "to": 22,
+        "classes": "tok-string"
+      },
+      {
+        "from": 26,
+        "to": 35,
+        "classes": "tok-property"
+      },
+      {
+        "from": 37,
+        "to": 44,
+        "classes": "tok-string"
+      },
+      {
+        "from": 48,
+        "to": 57,
+        "classes": "tok-property"
+      },
+      {
+        "from": 59,
+        "to": 63,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 67,
+        "to": 76,
+        "classes": "tok-property"
+      },
+      {
+        "from": 80,
+        "to": 87,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 99,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "js",
+      "text": "const express = require('express');\nconst app = express();\n\napp.get('/health', (req, res) => {\n  console.log('ping');\n  res.json({ ok: true });\n});\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 5,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 6,
+        "to": 13,
+        "classes": "tok-property"
+      },
+      {
+        "from": 14,
+        "to": 15,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 16,
+        "to": 23,
+        "classes": "tok-name"
+      },
+      {
+        "from": 24,
+        "to": 33,
+        "classes": "tok-string"
+      },
+      {
+        "from": 36,
+        "to": 41,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 42,
+        "to": 45,
+        "classes": "tok-property"
+      },
+      {
+        "from": 46,
+        "to": 47,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 48,
+        "to": 55,
+        "classes": "tok-name"
+      },
+      {
+        "from": 60,
+        "to": 63,
+        "classes": "tok-property"
+      },
+      {
+        "from": 63,
+        "to": 64,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 64,
+        "to": 67,
+        "classes": "tok-name"
+      },
+      {
+        "from": 68,
+        "to": 77,
+        "classes": "tok-string"
+      },
+      {
+        "from": 80,
+        "to": 83,
+        "classes": "tok-property"
+      },
+      {
+        "from": 85,
+        "to": 88,
+        "classes": "tok-property"
+      },
+      {
+        "from": 97,
+        "to": 104,
+        "classes": "tok-property"
+      },
+      {
+        "from": 104,
+        "to": 105,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 105,
+        "to": 108,
+        "classes": "tok-name"
+      },
+      {
+        "from": 109,
+        "to": 115,
+        "classes": "tok-string"
+      },
+      {
+        "from": 120,
+        "to": 123,
+        "classes": "tok-property"
+      },
+      {
+        "from": 123,
+        "to": 124,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 124,
+        "to": 128,
+        "classes": "tok-name"
+      },
+      {
+        "from": 131,
+        "to": 133,
+        "classes": "tok-property"
+      },
+      {
+        "from": 135,
+        "to": 139,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "jsx",
+      "text": "import { useState } from 'react';\n\nexport function Counter() {\n  const [count, setCount] = useState(0);\n  return <button className=\"counter\" onClick={() => setCount(count + 1)}>{count}</button>;\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 9,
+        "to": 17,
+        "classes": "tok-property"
+      },
+      {
+        "from": 20,
+        "to": 24,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 25,
+        "to": 32,
+        "classes": "tok-string"
+      },
+      {
+        "from": 35,
+        "to": 41,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 42,
+        "to": 50,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 51,
+        "to": 58,
+        "classes": "tok-name"
+      },
+      {
+        "from": 65,
+        "to": 70,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 77,
+        "classes": "tok-property"
+      },
+      {
+        "from": 79,
+        "to": 87,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 90,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 91,
+        "to": 99,
+        "classes": "tok-name"
+      },
+      {
+        "from": 100,
+        "to": 101,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 106,
+        "to": 112,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 113,
+        "to": 114,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 114,
+        "to": 120,
+        "classes": "tok-name"
+      },
+      {
+        "from": 121,
+        "to": 130,
+        "classes": "tok-property"
+      },
+      {
+        "from": 130,
+        "to": 131,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 131,
+        "to": 140,
+        "classes": "tok-string"
+      },
+      {
+        "from": 141,
+        "to": 148,
+        "classes": "tok-property"
+      },
+      {
+        "from": 148,
+        "to": 149,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 156,
+        "to": 164,
+        "classes": "tok-name"
+      },
+      {
+        "from": 165,
+        "to": 170,
+        "classes": "tok-property"
+      },
+      {
+        "from": 171,
+        "to": 172,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 173,
+        "to": 174,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 176,
+        "to": 177,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 178,
+        "to": 183,
+        "classes": "tok-property"
+      },
+      {
+        "from": 184,
+        "to": 186,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 186,
+        "to": 192,
+        "classes": "tok-name"
+      },
+      {
+        "from": 192,
+        "to": 193,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "ts",
+      "text": "export interface Note {\n  id: string;\n  title: string;\n  pinned: boolean;\n}\n\nexport function untitled(note: Note): string {\n  return note.title || 'Sans titre';\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 16,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 17,
+        "to": 21,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 26,
+        "to": 28,
+        "classes": "tok-property"
+      },
+      {
+        "from": 30,
+        "to": 36,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 40,
+        "to": 45,
+        "classes": "tok-property"
+      },
+      {
+        "from": 47,
+        "to": 53,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 57,
+        "to": 63,
+        "classes": "tok-property"
+      },
+      {
+        "from": 65,
+        "to": 72,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 77,
+        "to": 83,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 84,
+        "to": 92,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 93,
+        "to": 101,
+        "classes": "tok-name"
+      },
+      {
+        "from": 102,
+        "to": 106,
+        "classes": "tok-property"
+      },
+      {
+        "from": 108,
+        "to": 112,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 115,
+        "to": 121,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 126,
+        "to": 132,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 133,
+        "to": 137,
+        "classes": "tok-property"
+      },
+      {
+        "from": 137,
+        "to": 138,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 138,
+        "to": 143,
+        "classes": "tok-property"
+      },
+      {
+        "from": 144,
+        "to": 146,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 147,
+        "to": 159,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "tsx",
+      "text": "interface Props {\n  label: string;\n}\n\nexport function Badge({ label }: Props) {\n  return <span className=\"badge\">{label}</span>;\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 9,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 10,
+        "to": 15,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 20,
+        "to": 25,
+        "classes": "tok-property"
+      },
+      {
+        "from": 27,
+        "to": 33,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 38,
+        "to": 44,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 45,
+        "to": 53,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 54,
+        "to": 59,
+        "classes": "tok-name"
+      },
+      {
+        "from": 62,
+        "to": 67,
+        "classes": "tok-property"
+      },
+      {
+        "from": 71,
+        "to": 76,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 82,
+        "to": 88,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 89,
+        "to": 90,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 90,
+        "to": 94,
+        "classes": "tok-name"
+      },
+      {
+        "from": 95,
+        "to": 104,
+        "classes": "tok-property"
+      },
+      {
+        "from": 104,
+        "to": 105,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 105,
+        "to": 112,
+        "classes": "tok-string"
+      },
+      {
+        "from": 112,
+        "to": 113,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 114,
+        "to": 119,
+        "classes": "tok-property"
+      },
+      {
+        "from": 120,
+        "to": 122,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 122,
+        "to": 126,
+        "classes": "tok-name"
+      },
+      {
+        "from": 126,
+        "to": 127,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "py",
+      "text": "import json\n\n\ndef load(path):\n    with open(path) as handle:\n        return json.load(handle)\n\n\nif __name__ == \"__main__\":\n    print(load(\"notes.json\"))\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 11,
+        "classes": "tok-property"
+      },
+      {
+        "from": 14,
+        "to": 17,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 18,
+        "to": 22,
+        "classes": "tok-name"
+      },
+      {
+        "from": 23,
+        "to": 27,
+        "classes": "tok-property"
+      },
+      {
+        "from": 34,
+        "to": 38,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 39,
+        "to": 43,
+        "classes": "tok-name"
+      },
+      {
+        "from": 44,
+        "to": 48,
+        "classes": "tok-property"
+      },
+      {
+        "from": 50,
+        "to": 52,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 53,
+        "to": 59,
+        "classes": "tok-property"
+      },
+      {
+        "from": 69,
+        "to": 75,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 76,
+        "to": 80,
+        "classes": "tok-property"
+      },
+      {
+        "from": 80,
+        "to": 81,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 81,
+        "to": 85,
+        "classes": "tok-name"
+      },
+      {
+        "from": 86,
+        "to": 92,
+        "classes": "tok-property"
+      },
+      {
+        "from": 96,
+        "to": 98,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 99,
+        "to": 107,
+        "classes": "tok-property"
+      },
+      {
+        "from": 108,
+        "to": 110,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 111,
+        "to": 121,
+        "classes": "tok-string"
+      },
+      {
+        "from": 127,
+        "to": 132,
+        "classes": "tok-name"
+      },
+      {
+        "from": 133,
+        "to": 137,
+        "classes": "tok-name"
+      },
+      {
+        "from": 138,
+        "to": 150,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "rs",
+      "text": "use std::collections::HashMap;\n\npub fn tally(words: &[&str]) -> HashMap<String, usize> {\n    let mut counts = HashMap::new();\n    for word in words {\n        *counts.entry((*word).to_string()).or_insert(0) += 1;\n    }\n    counts\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 3,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 22,
+        "to": 29,
+        "classes": "tok-property"
+      },
+      {
+        "from": 32,
+        "to": 35,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 36,
+        "to": 38,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 39,
+        "to": 44,
+        "classes": "tok-name"
+      },
+      {
+        "from": 45,
+        "to": 50,
+        "classes": "tok-property"
+      },
+      {
+        "from": 52,
+        "to": 53,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 54,
+        "to": 55,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 55,
+        "to": 58,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 64,
+        "to": 71,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 78,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 80,
+        "to": 85,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 93,
+        "to": 96,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 97,
+        "to": 100,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 101,
+        "to": 107,
+        "classes": "tok-property"
+      },
+      {
+        "from": 108,
+        "to": 109,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 119,
+        "to": 122,
+        "classes": "tok-property"
+      },
+      {
+        "from": 130,
+        "to": 133,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 134,
+        "to": 138,
+        "classes": "tok-property"
+      },
+      {
+        "from": 139,
+        "to": 141,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 142,
+        "to": 147,
+        "classes": "tok-property"
+      },
+      {
+        "from": 158,
+        "to": 159,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 159,
+        "to": 165,
+        "classes": "tok-property"
+      },
+      {
+        "from": 166,
+        "to": 171,
+        "classes": "tok-name"
+      },
+      {
+        "from": 173,
+        "to": 174,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 174,
+        "to": 178,
+        "classes": "tok-property"
+      },
+      {
+        "from": 180,
+        "to": 189,
+        "classes": "tok-name"
+      },
+      {
+        "from": 193,
+        "to": 202,
+        "classes": "tok-name"
+      },
+      {
+        "from": 203,
+        "to": 204,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 206,
+        "to": 208,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 209,
+        "to": 210,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 222,
+        "to": 228,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "go",
+      "text": "package main\n\nimport (\n\t\"fmt\"\n\t\"os\"\n)\n\nfunc main() {\n\thost, err := os.Hostname()\n\tif err != nil {\n\t\tpanic(err)\n\t}\n\tfmt.Println(host)\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 7,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 8,
+        "to": 12,
+        "classes": "tok-property"
+      },
+      {
+        "from": 14,
+        "to": 20,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 24,
+        "to": 29,
+        "classes": "tok-string"
+      },
+      {
+        "from": 31,
+        "to": 35,
+        "classes": "tok-string"
+      },
+      {
+        "from": 39,
+        "to": 43,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 44,
+        "to": 48,
+        "classes": "tok-name"
+      },
+      {
+        "from": 54,
+        "to": 58,
+        "classes": "tok-property"
+      },
+      {
+        "from": 60,
+        "to": 63,
+        "classes": "tok-property"
+      },
+      {
+        "from": 64,
+        "to": 66,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 67,
+        "to": 69,
+        "classes": "tok-property"
+      },
+      {
+        "from": 69,
+        "to": 70,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 70,
+        "to": 78,
+        "classes": "tok-property"
+      },
+      {
+        "from": 82,
+        "to": 84,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 85,
+        "to": 88,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 91,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 92,
+        "to": 95,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 100,
+        "to": 105,
+        "classes": "tok-name"
+      },
+      {
+        "from": 106,
+        "to": 109,
+        "classes": "tok-property"
+      },
+      {
+        "from": 115,
+        "to": 118,
+        "classes": "tok-property"
+      },
+      {
+        "from": 118,
+        "to": 119,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 119,
+        "to": 126,
+        "classes": "tok-property"
+      },
+      {
+        "from": 127,
+        "to": 131,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "java",
+      "text": "import java.util.List;\n\npublic class Greeter {\n    public static void main(String[] args) {\n        System.out.println(\"bonjour\");\n    }\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 11,
+        "classes": "tok-property"
+      },
+      {
+        "from": 11,
+        "to": 12,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 12,
+        "to": 16,
+        "classes": "tok-property"
+      },
+      {
+        "from": 16,
+        "to": 17,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 17,
+        "to": 21,
+        "classes": "tok-property"
+      },
+      {
+        "from": 24,
+        "to": 30,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 31,
+        "to": 36,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 37,
+        "to": 44,
+        "classes": "tok-property"
+      },
+      {
+        "from": 51,
+        "to": 57,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 58,
+        "to": 64,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 65,
+        "to": 69,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 70,
+        "to": 74,
+        "classes": "tok-property"
+      },
+      {
+        "from": 75,
+        "to": 81,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 84,
+        "to": 88,
+        "classes": "tok-property"
+      },
+      {
+        "from": 100,
+        "to": 106,
+        "classes": "tok-property"
+      },
+      {
+        "from": 106,
+        "to": 107,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 107,
+        "to": 110,
+        "classes": "tok-property"
+      },
+      {
+        "from": 110,
+        "to": 111,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 111,
+        "to": 118,
+        "classes": "tok-name"
+      },
+      {
+        "from": 119,
+        "to": 128,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "cs",
+      "text": "using System;\n\nnamespace DevNotes\n{\n    class Program\n    {\n        static void Main() => Console.WriteLine(\"bonjour\");\n    }\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 5,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 6,
+        "to": 12,
+        "classes": "tok-property"
+      },
+      {
+        "from": 15,
+        "to": 24,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 25,
+        "to": 33,
+        "classes": "tok-property"
+      },
+      {
+        "from": 40,
+        "to": 45,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 46,
+        "to": 53,
+        "classes": "tok-property"
+      },
+      {
+        "from": 68,
+        "to": 74,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 75,
+        "to": 79,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 80,
+        "to": 84,
+        "classes": "tok-property"
+      },
+      {
+        "from": 87,
+        "to": 89,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 90,
+        "to": 97,
+        "classes": "tok-property"
+      },
+      {
+        "from": 98,
+        "to": 107,
+        "classes": "tok-property"
+      },
+      {
+        "from": 108,
+        "to": 117,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "php",
+      "text": "<?php\n\n$notes = ['a' => 1, 'b' => 2];\nforeach ($notes as $key => $value) {\n    echo $key . ': ' . $value . \"\\n\";\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 1,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 1,
+        "to": 2,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 13,
+        "classes": "tok-property"
+      },
+      {
+        "from": 14,
+        "to": 15,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 17,
+        "to": 20,
+        "classes": "tok-string"
+      },
+      {
+        "from": 24,
+        "to": 25,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 27,
+        "to": 30,
+        "classes": "tok-string"
+      },
+      {
+        "from": 34,
+        "to": 35,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 38,
+        "to": 45,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 47,
+        "to": 53,
+        "classes": "tok-property"
+      },
+      {
+        "from": 54,
+        "to": 56,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 57,
+        "to": 61,
+        "classes": "tok-property"
+      },
+      {
+        "from": 65,
+        "to": 71,
+        "classes": "tok-property"
+      },
+      {
+        "from": 79,
+        "to": 83,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 84,
+        "to": 88,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 90,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 91,
+        "to": 95,
+        "classes": "tok-string"
+      },
+      {
+        "from": 96,
+        "to": 97,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 98,
+        "to": 104,
+        "classes": "tok-property"
+      },
+      {
+        "from": 105,
+        "to": 106,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 107,
+        "to": 108,
+        "classes": "tok-string"
+      },
+      {
+        "from": 110,
+        "to": 111,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "c",
+      "text": "#include <stdio.h>\n\nint main(void) {\n    printf(\"bonjour\\n\");\n    return 0;\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 8,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 9,
+        "to": 18,
+        "classes": "tok-string"
+      },
+      {
+        "from": 20,
+        "to": 23,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 24,
+        "to": 28,
+        "classes": "tok-name"
+      },
+      {
+        "from": 29,
+        "to": 33,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 41,
+        "to": 47,
+        "classes": "tok-name"
+      },
+      {
+        "from": 48,
+        "to": 59,
+        "classes": "tok-string"
+      },
+      {
+        "from": 66,
+        "to": 72,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 73,
+        "to": 74,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "cpp",
+      "text": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> values{1, 2, 3};\n    for (int v : values) {\n        std::cout << v << std::endl;\n    }\n    return 0;\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 8,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 9,
+        "to": 19,
+        "classes": "tok-string"
+      },
+      {
+        "from": 20,
+        "to": 28,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 29,
+        "to": 37,
+        "classes": "tok-string"
+      },
+      {
+        "from": 39,
+        "to": 42,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 43,
+        "to": 47,
+        "classes": "tok-name"
+      },
+      {
+        "from": 61,
+        "to": 67,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 67,
+        "to": 68,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 68,
+        "to": 71,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 71,
+        "to": 72,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 73,
+        "to": 79,
+        "classes": "tok-property"
+      },
+      {
+        "from": 80,
+        "to": 81,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 83,
+        "to": 84,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 86,
+        "to": 87,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 94,
+        "to": 97,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 99,
+        "to": 102,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 103,
+        "to": 104,
+        "classes": "tok-property"
+      },
+      {
+        "from": 107,
+        "to": 113,
+        "classes": "tok-property"
+      },
+      {
+        "from": 130,
+        "to": 134,
+        "classes": "tok-property"
+      },
+      {
+        "from": 135,
+        "to": 137,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 138,
+        "to": 139,
+        "classes": "tok-property"
+      },
+      {
+        "from": 140,
+        "to": 142,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 148,
+        "to": 152,
+        "classes": "tok-property"
+      },
+      {
+        "from": 164,
+        "to": 170,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 171,
+        "to": 172,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "sql",
+      "text": "SELECT n.id, n.title, count(t.tag) AS tags\nFROM notes n\nLEFT JOIN note_tags t ON t.note_id = n.id\nWHERE n.deleted_at IS NULL\nGROUP BY n.id\nORDER BY n.updated_at DESC;\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 22,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 35,
+        "to": 37,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 43,
+        "to": 47,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 56,
+        "to": 60,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 61,
+        "to": 65,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 78,
+        "to": 80,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 91,
+        "to": 92,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 98,
+        "to": 103,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 117,
+        "to": 119,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 120,
+        "to": 124,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 125,
+        "to": 130,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 131,
+        "to": 133,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 139,
+        "to": 144,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 145,
+        "to": 147,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 161,
+        "to": 165,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "graphql",
+      "text": "query InvoicesOf($customerId: ID!, $first: Int = 20) {\n  customer(id: $customerId) {\n    name\n    invoices(first: $first) {\n      edges {\n        node {\n          id\n          total\n          ...InvoiceStatus\n        }\n      }\n    }\n  }\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 5,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 6,
+        "to": 16,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 17,
+        "to": 28,
+        "classes": "tok-property"
+      },
+      {
+        "from": 30,
+        "to": 32,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 35,
+        "to": 41,
+        "classes": "tok-property"
+      },
+      {
+        "from": 43,
+        "to": 46,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 49,
+        "to": 51,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 57,
+        "to": 65,
+        "classes": "tok-property"
+      },
+      {
+        "from": 66,
+        "to": 68,
+        "classes": "tok-property"
+      },
+      {
+        "from": 70,
+        "to": 81,
+        "classes": "tok-property"
+      },
+      {
+        "from": 82,
+        "to": 83,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 93,
+        "classes": "tok-property"
+      },
+      {
+        "from": 98,
+        "to": 106,
+        "classes": "tok-property"
+      },
+      {
+        "from": 107,
+        "to": 112,
+        "classes": "tok-property"
+      },
+      {
+        "from": 114,
+        "to": 120,
+        "classes": "tok-property"
+      },
+      {
+        "from": 121,
+        "to": 122,
+        "classes": "tok-property"
+      },
+      {
+        "from": 130,
+        "to": 136,
+        "classes": "tok-property"
+      },
+      {
+        "from": 146,
+        "to": 151,
+        "classes": "tok-property"
+      },
+      {
+        "from": 163,
+        "to": 165,
+        "classes": "tok-property"
+      },
+      {
+        "from": 176,
+        "to": 181,
+        "classes": "tok-property"
+      },
+      {
+        "from": 195,
+        "to": 208,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "yml",
+      "text": "name: CI\non:\n  push:\n    branches:\n      - main\njobs:\n  build:\n    runs-on: ubuntu-22.04\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 4,
+        "classes": "tok-property"
+      },
+      {
+        "from": 9,
+        "to": 11,
+        "classes": "tok-property"
+      },
+      {
+        "from": 15,
+        "to": 19,
+        "classes": "tok-property"
+      },
+      {
+        "from": 25,
+        "to": 33,
+        "classes": "tok-property"
+      },
+      {
+        "from": 48,
+        "to": 52,
+        "classes": "tok-property"
+      },
+      {
+        "from": 56,
+        "to": 61,
+        "classes": "tok-property"
+      },
+      {
+        "from": 67,
+        "to": 74,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "toml",
+      "text": "[package]\nname = \"devnotes\"\nversion = \"0.3.3\"\nedition = \"2024\"\n\n[dependencies]\nserde = \"1\"\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 9,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 10,
+        "to": 14,
+        "classes": "tok-property"
+      },
+      {
+        "from": 17,
+        "to": 27,
+        "classes": "tok-string"
+      },
+      {
+        "from": 28,
+        "to": 35,
+        "classes": "tok-property"
+      },
+      {
+        "from": 38,
+        "to": 45,
+        "classes": "tok-string"
+      },
+      {
+        "from": 46,
+        "to": 53,
+        "classes": "tok-property"
+      },
+      {
+        "from": 56,
+        "to": 62,
+        "classes": "tok-string"
+      },
+      {
+        "from": 64,
+        "to": 78,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 79,
+        "to": 84,
+        "classes": "tok-property"
+      },
+      {
+        "from": 87,
+        "to": 90,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "xml",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration>\n  <appender name=\"console\"/>\n  <root level=\"info\"/>\n</configuration>\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 38,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 39,
+        "to": 40,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 40,
+        "to": 53,
+        "classes": "tok-name"
+      },
+      {
+        "from": 53,
+        "to": 54,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 57,
+        "to": 58,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 58,
+        "to": 66,
+        "classes": "tok-name"
+      },
+      {
+        "from": 67,
+        "to": 71,
+        "classes": "tok-property"
+      },
+      {
+        "from": 71,
+        "to": 72,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 81,
+        "classes": "tok-string"
+      },
+      {
+        "from": 81,
+        "to": 83,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 86,
+        "to": 87,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 87,
+        "to": 91,
+        "classes": "tok-name"
+      },
+      {
+        "from": 92,
+        "to": 97,
+        "classes": "tok-property"
+      },
+      {
+        "from": 97,
+        "to": 98,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 98,
+        "to": 104,
+        "classes": "tok-string"
+      },
+      {
+        "from": 104,
+        "to": 106,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 107,
+        "to": 109,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 109,
+        "to": 122,
+        "classes": "tok-name"
+      },
+      {
+        "from": 122,
+        "to": 123,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "html",
+      "text": "<!DOCTYPE html>\n<html lang=\"fr\">\n  <body>\n    <div class=\"card\">Bonjour</div>\n  </body>\n</html>\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 15,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 16,
+        "to": 17,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 17,
+        "to": 21,
+        "classes": "tok-name"
+      },
+      {
+        "from": 22,
+        "to": 26,
+        "classes": "tok-property"
+      },
+      {
+        "from": 26,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 27,
+        "to": 31,
+        "classes": "tok-string"
+      },
+      {
+        "from": 31,
+        "to": 32,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 35,
+        "to": 36,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 36,
+        "to": 40,
+        "classes": "tok-name"
+      },
+      {
+        "from": 40,
+        "to": 41,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 46,
+        "to": 47,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 47,
+        "to": 50,
+        "classes": "tok-name"
+      },
+      {
+        "from": 51,
+        "to": 56,
+        "classes": "tok-property"
+      },
+      {
+        "from": 56,
+        "to": 57,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 57,
+        "to": 63,
+        "classes": "tok-string"
+      },
+      {
+        "from": 63,
+        "to": 64,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 71,
+        "to": 73,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 73,
+        "to": 76,
+        "classes": "tok-name"
+      },
+      {
+        "from": 76,
+        "to": 77,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 80,
+        "to": 82,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 82,
+        "to": 86,
+        "classes": "tok-name"
+      },
+      {
+        "from": 86,
+        "to": 87,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 88,
+        "to": 90,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 90,
+        "to": 94,
+        "classes": "tok-name"
+      },
+      {
+        "from": 94,
+        "to": 95,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "vue",
+      "text": "<template>\n  <ul>\n    <li v-for=\"item in items\" :key=\"item.id\">{{ item.name }}</li>\n  </ul>\n</template>\n\n<script setup>\nconst props = defineProps(['items']);\n</script>\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 1,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 1,
+        "to": 9,
+        "classes": "tok-name"
+      },
+      {
+        "from": 9,
+        "to": 10,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 13,
+        "to": 14,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 14,
+        "to": 16,
+        "classes": "tok-name"
+      },
+      {
+        "from": 16,
+        "to": 17,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 22,
+        "to": 23,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 23,
+        "to": 25,
+        "classes": "tok-name"
+      },
+      {
+        "from": 26,
+        "to": 31,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 31,
+        "to": 32,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 32,
+        "to": 33,
+        "classes": "tok-string"
+      },
+      {
+        "from": 33,
+        "to": 37,
+        "classes": "tok-property"
+      },
+      {
+        "from": 38,
+        "to": 40,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 41,
+        "to": 46,
+        "classes": "tok-property"
+      },
+      {
+        "from": 46,
+        "to": 47,
+        "classes": "tok-string"
+      },
+      {
+        "from": 49,
+        "to": 52,
+        "classes": "tok-property"
+      },
+      {
+        "from": 52,
+        "to": 53,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 53,
+        "to": 54,
+        "classes": "tok-string"
+      },
+      {
+        "from": 54,
+        "to": 58,
+        "classes": "tok-property"
+      },
+      {
+        "from": 58,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 59,
+        "to": 61,
+        "classes": "tok-property"
+      },
+      {
+        "from": 61,
+        "to": 62,
+        "classes": "tok-string"
+      },
+      {
+        "from": 62,
+        "to": 63,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 66,
+        "to": 70,
+        "classes": "tok-property"
+      },
+      {
+        "from": 70,
+        "to": 71,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 71,
+        "to": 75,
+        "classes": "tok-property"
+      },
+      {
+        "from": 78,
+        "to": 80,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 80,
+        "to": 82,
+        "classes": "tok-name"
+      },
+      {
+        "from": 82,
+        "to": 83,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 86,
+        "to": 88,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 88,
+        "to": 90,
+        "classes": "tok-name"
+      },
+      {
+        "from": 90,
+        "to": 91,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 92,
+        "to": 94,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 94,
+        "to": 102,
+        "classes": "tok-name"
+      },
+      {
+        "from": 102,
+        "to": 103,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 105,
+        "to": 106,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 106,
+        "to": 112,
+        "classes": "tok-name"
+      },
+      {
+        "from": 113,
+        "to": 118,
+        "classes": "tok-property"
+      },
+      {
+        "from": 118,
+        "to": 119,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 120,
+        "to": 125,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 126,
+        "to": 131,
+        "classes": "tok-property"
+      },
+      {
+        "from": 132,
+        "to": 133,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 134,
+        "to": 145,
+        "classes": "tok-name"
+      },
+      {
+        "from": 147,
+        "to": 154,
+        "classes": "tok-string"
+      },
+      {
+        "from": 158,
+        "to": 160,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 160,
+        "to": 166,
+        "classes": "tok-name"
+      },
+      {
+        "from": 166,
+        "to": 167,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "angular",
+      "text": "<ul class=\"notes\">\n  <li *ngFor=\"let note of notes\" (click)=\"open(note)\">{{ note.title }}</li>\n</ul>\n<p *ngIf=\"!notes.length\">Nothing yet</p>\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 1,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 1,
+        "to": 3,
+        "classes": "tok-name"
+      },
+      {
+        "from": 4,
+        "to": 9,
+        "classes": "tok-property"
+      },
+      {
+        "from": 9,
+        "to": 10,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 10,
+        "to": 17,
+        "classes": "tok-string"
+      },
+      {
+        "from": 17,
+        "to": 18,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 21,
+        "to": 22,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 22,
+        "to": 24,
+        "classes": "tok-name"
+      },
+      {
+        "from": 26,
+        "to": 31,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 31,
+        "to": 32,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 32,
+        "to": 33,
+        "classes": "tok-string"
+      },
+      {
+        "from": 33,
+        "to": 36,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 37,
+        "to": 41,
+        "classes": "tok-property"
+      },
+      {
+        "from": 42,
+        "to": 45,
+        "classes": "tok-property"
+      },
+      {
+        "from": 45,
+        "to": 50,
+        "classes": "tok-property"
+      },
+      {
+        "from": 50,
+        "to": 51,
+        "classes": "tok-string"
+      },
+      {
+        "from": 53,
+        "to": 58,
+        "classes": "tok-property"
+      },
+      {
+        "from": 59,
+        "to": 60,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 60,
+        "to": 61,
+        "classes": "tok-string"
+      },
+      {
+        "from": 61,
+        "to": 65,
+        "classes": "tok-name"
+      },
+      {
+        "from": 66,
+        "to": 70,
+        "classes": "tok-property"
+      },
+      {
+        "from": 71,
+        "to": 72,
+        "classes": "tok-string"
+      },
+      {
+        "from": 72,
+        "to": 73,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 76,
+        "to": 80,
+        "classes": "tok-property"
+      },
+      {
+        "from": 80,
+        "to": 81,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 81,
+        "to": 86,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 91,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 91,
+        "to": 93,
+        "classes": "tok-name"
+      },
+      {
+        "from": 93,
+        "to": 94,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 97,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 97,
+        "to": 99,
+        "classes": "tok-name"
+      },
+      {
+        "from": 99,
+        "to": 100,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 101,
+        "to": 102,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 102,
+        "to": 103,
+        "classes": "tok-name"
+      },
+      {
+        "from": 105,
+        "to": 109,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 109,
+        "to": 110,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 110,
+        "to": 111,
+        "classes": "tok-string"
+      },
+      {
+        "from": 111,
+        "to": 112,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 112,
+        "to": 117,
+        "classes": "tok-property"
+      },
+      {
+        "from": 117,
+        "to": 118,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 118,
+        "to": 124,
+        "classes": "tok-property"
+      },
+      {
+        "from": 124,
+        "to": 125,
+        "classes": "tok-string"
+      },
+      {
+        "from": 125,
+        "to": 126,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 137,
+        "to": 139,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 139,
+        "to": 140,
+        "classes": "tok-name"
+      },
+      {
+        "from": 140,
+        "to": 141,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "css",
+      "text": ".card {\n  display: flex;\n  padding: 14px;\n  border-radius: 10px;\n  background: var(--bg-1);\n}\n"
+    },
+    "output": [
+      {
+        "from": 1,
+        "to": 5,
+        "classes": "tok-name"
+      },
+      {
+        "from": 10,
+        "to": 17,
+        "classes": "tok-property"
+      },
+      {
+        "from": 19,
+        "to": 23,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 27,
+        "to": 34,
+        "classes": "tok-property"
+      },
+      {
+        "from": 36,
+        "to": 40,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 44,
+        "to": 57,
+        "classes": "tok-property"
+      },
+      {
+        "from": 59,
+        "to": 63,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 67,
+        "to": 77,
+        "classes": "tok-property"
+      },
+      {
+        "from": 79,
+        "to": 82,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 83,
+        "to": 89,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "scss",
+      "text": "@use 'mixins' as *;\n\n.card {\n  @include surface;\n  padding: 14px;\n  border-radius: 10px;\n\n  &:hover {\n    border-color: var(--line-strong);\n  }\n\n  .card-title {\n    font-weight: 600;\n  }\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 4,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 5,
+        "to": 13,
+        "classes": "tok-string"
+      },
+      {
+        "from": 14,
+        "to": 16,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 22,
+        "to": 26,
+        "classes": "tok-name"
+      },
+      {
+        "from": 31,
+        "to": 39,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 40,
+        "to": 47,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 51,
+        "to": 58,
+        "classes": "tok-property"
+      },
+      {
+        "from": 60,
+        "to": 64,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 68,
+        "to": 81,
+        "classes": "tok-property"
+      },
+      {
+        "from": 83,
+        "to": 87,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 92,
+        "to": 93,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 94,
+        "to": 99,
+        "classes": "tok-name"
+      },
+      {
+        "from": 106,
+        "to": 118,
+        "classes": "tok-property"
+      },
+      {
+        "from": 120,
+        "to": 123,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 124,
+        "to": 137,
+        "classes": "tok-property"
+      },
+      {
+        "from": 148,
+        "to": 158,
+        "classes": "tok-name"
+      },
+      {
+        "from": 165,
+        "to": 176,
+        "classes": "tok-property"
+      },
+      {
+        "from": 178,
+        "to": 181,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "less",
+      "text": "@primary: #4a90d9;\n@radius: 4px;\n\n.button {\n  color: @primary;\n  border-radius: @radius;\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 8,
+        "classes": "tok-property"
+      },
+      {
+        "from": 10,
+        "to": 17,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 19,
+        "to": 26,
+        "classes": "tok-property"
+      },
+      {
+        "from": 28,
+        "to": 31,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 34,
+        "to": 41,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 46,
+        "to": 51,
+        "classes": "tok-property"
+      },
+      {
+        "from": 53,
+        "to": 61,
+        "classes": "tok-property"
+      },
+      {
+        "from": 65,
+        "to": 78,
+        "classes": "tok-property"
+      },
+      {
+        "from": 80,
+        "to": 87,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "sh",
+      "text": "cd /srv/app\ngit pull --ff-only\ndocker compose build --pull\ndocker compose up -d\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 2,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 12,
+        "to": 15,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 21,
+        "to": 30,
+        "classes": "tok-property"
+      },
+      {
+        "from": 52,
+        "to": 58,
+        "classes": "tok-property"
+      },
+      {
+        "from": 77,
+        "to": 79,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "ps1",
+      "text": "$headers = @{\n  'Accept' = 'application/json'\n}\n$invoices = Invoke-RestMethod -Uri 'https://api.exemple.fr/invoices' -Method Get -Headers $headers\nforeach ($invoice in $invoices) {\n  Write-Host $invoice.number\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 8,
+        "classes": "tok-property"
+      },
+      {
+        "from": 9,
+        "to": 10,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 16,
+        "to": 24,
+        "classes": "tok-string"
+      },
+      {
+        "from": 25,
+        "to": 26,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 27,
+        "to": 45,
+        "classes": "tok-string"
+      },
+      {
+        "from": 48,
+        "to": 57,
+        "classes": "tok-property"
+      },
+      {
+        "from": 58,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 60,
+        "to": 77,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 78,
+        "to": 79,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 79,
+        "to": 82,
+        "classes": "tok-property"
+      },
+      {
+        "from": 83,
+        "to": 116,
+        "classes": "tok-string"
+      },
+      {
+        "from": 117,
+        "to": 118,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 118,
+        "to": 124,
+        "classes": "tok-property"
+      },
+      {
+        "from": 125,
+        "to": 128,
+        "classes": "tok-property"
+      },
+      {
+        "from": 129,
+        "to": 130,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 130,
+        "to": 137,
+        "classes": "tok-property"
+      },
+      {
+        "from": 138,
+        "to": 146,
+        "classes": "tok-property"
+      },
+      {
+        "from": 147,
+        "to": 154,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 156,
+        "to": 164,
+        "classes": "tok-property"
+      },
+      {
+        "from": 165,
+        "to": 167,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 168,
+        "to": 177,
+        "classes": "tok-property"
+      },
+      {
+        "from": 183,
+        "to": 193,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 194,
+        "to": 202,
+        "classes": "tok-property"
+      },
+      {
+        "from": 203,
+        "to": 209,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "kt",
+      "text": "import okhttp3.OkHttpClient\nimport okhttp3.Request\n\nfun main() {\n    val client = OkHttpClient()\n    val request = Request.Builder().url(\"https://api.exemple.fr/invoices\").build()\n    client.newCall(request).execute().use { response ->\n        println(response.body?.string())\n    }\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 14,
+        "classes": "tok-property"
+      },
+      {
+        "from": 15,
+        "to": 27,
+        "classes": "tok-property"
+      },
+      {
+        "from": 28,
+        "to": 34,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 35,
+        "to": 42,
+        "classes": "tok-property"
+      },
+      {
+        "from": 43,
+        "to": 50,
+        "classes": "tok-property"
+      },
+      {
+        "from": 52,
+        "to": 55,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 56,
+        "to": 60,
+        "classes": "tok-property"
+      },
+      {
+        "from": 69,
+        "to": 72,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 73,
+        "to": 79,
+        "classes": "tok-property"
+      },
+      {
+        "from": 80,
+        "to": 81,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 82,
+        "to": 94,
+        "classes": "tok-property"
+      },
+      {
+        "from": 101,
+        "to": 104,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 105,
+        "to": 112,
+        "classes": "tok-property"
+      },
+      {
+        "from": 113,
+        "to": 114,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 115,
+        "to": 122,
+        "classes": "tok-property"
+      },
+      {
+        "from": 123,
+        "to": 130,
+        "classes": "tok-property"
+      },
+      {
+        "from": 133,
+        "to": 136,
+        "classes": "tok-property"
+      },
+      {
+        "from": 137,
+        "to": 170,
+        "classes": "tok-string"
+      },
+      {
+        "from": 172,
+        "to": 177,
+        "classes": "tok-property"
+      },
+      {
+        "from": 184,
+        "to": 190,
+        "classes": "tok-property"
+      },
+      {
+        "from": 191,
+        "to": 198,
+        "classes": "tok-property"
+      },
+      {
+        "from": 199,
+        "to": 206,
+        "classes": "tok-property"
+      },
+      {
+        "from": 208,
+        "to": 215,
+        "classes": "tok-property"
+      },
+      {
+        "from": 218,
+        "to": 221,
+        "classes": "tok-property"
+      },
+      {
+        "from": 224,
+        "to": 232,
+        "classes": "tok-property"
+      },
+      {
+        "from": 233,
+        "to": 235,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 244,
+        "to": 251,
+        "classes": "tok-property"
+      },
+      {
+        "from": 252,
+        "to": 260,
+        "classes": "tok-property"
+      },
+      {
+        "from": 261,
+        "to": 265,
+        "classes": "tok-property"
+      },
+      {
+        "from": 265,
+        "to": 266,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 267,
+        "to": 273,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "rb",
+      "text": "require 'net/http'\n\nuri = URI('https://api.exemple.fr/invoices')\nNet::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|\n  response = http.get(uri.path)\n  puts response.body\nend\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 7,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 8,
+        "to": 18,
+        "classes": "tok-string"
+      },
+      {
+        "from": 20,
+        "to": 23,
+        "classes": "tok-property"
+      },
+      {
+        "from": 24,
+        "to": 25,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 26,
+        "to": 29,
+        "classes": "tok-name"
+      },
+      {
+        "from": 30,
+        "to": 63,
+        "classes": "tok-string"
+      },
+      {
+        "from": 65,
+        "to": 74,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 74,
+        "to": 75,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 75,
+        "to": 80,
+        "classes": "tok-property"
+      },
+      {
+        "from": 81,
+        "to": 84,
+        "classes": "tok-property"
+      },
+      {
+        "from": 84,
+        "to": 85,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 85,
+        "to": 89,
+        "classes": "tok-property"
+      },
+      {
+        "from": 91,
+        "to": 94,
+        "classes": "tok-property"
+      },
+      {
+        "from": 94,
+        "to": 95,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 99,
+        "classes": "tok-property"
+      },
+      {
+        "from": 101,
+        "to": 109,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 110,
+        "to": 114,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 116,
+        "to": 118,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 120,
+        "to": 124,
+        "classes": "tok-property"
+      },
+      {
+        "from": 128,
+        "to": 136,
+        "classes": "tok-property"
+      },
+      {
+        "from": 137,
+        "to": 138,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 139,
+        "to": 143,
+        "classes": "tok-property"
+      },
+      {
+        "from": 143,
+        "to": 144,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 144,
+        "to": 147,
+        "classes": "tok-property"
+      },
+      {
+        "from": 148,
+        "to": 151,
+        "classes": "tok-property"
+      },
+      {
+        "from": 151,
+        "to": 152,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 152,
+        "to": 156,
+        "classes": "tok-property"
+      },
+      {
+        "from": 160,
+        "to": 164,
+        "classes": "tok-property"
+      },
+      {
+        "from": 165,
+        "to": 173,
+        "classes": "tok-property"
+      },
+      {
+        "from": 173,
+        "to": 174,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 174,
+        "to": 178,
+        "classes": "tok-property"
+      },
+      {
+        "from": 179,
+        "to": 182,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "swift",
+      "text": "import Foundation\n\nfunc invoices() async throws -> Data {\n    guard let url = URL(string: \"https://api.exemple.fr/invoices\") else {\n        throw URLError(.badURL)\n    }\n    let (data, _) = try await URLSession.shared.data(from: url)\n    return data\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 17,
+        "classes": "tok-property"
+      },
+      {
+        "from": 19,
+        "to": 23,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 24,
+        "to": 32,
+        "classes": "tok-property"
+      },
+      {
+        "from": 35,
+        "to": 40,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 41,
+        "to": 47,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 48,
+        "to": 50,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 51,
+        "to": 55,
+        "classes": "tok-property"
+      },
+      {
+        "from": 62,
+        "to": 67,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 68,
+        "to": 71,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 75,
+        "classes": "tok-property"
+      },
+      {
+        "from": 76,
+        "to": 77,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 78,
+        "to": 81,
+        "classes": "tok-property"
+      },
+      {
+        "from": 82,
+        "to": 88,
+        "classes": "tok-property"
+      },
+      {
+        "from": 90,
+        "to": 123,
+        "classes": "tok-string"
+      },
+      {
+        "from": 125,
+        "to": 129,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 140,
+        "to": 145,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 146,
+        "to": 154,
+        "classes": "tok-property"
+      },
+      {
+        "from": 155,
+        "to": 162,
+        "classes": "tok-property"
+      },
+      {
+        "from": 174,
+        "to": 177,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 179,
+        "to": 183,
+        "classes": "tok-property"
+      },
+      {
+        "from": 185,
+        "to": 186,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 188,
+        "to": 189,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 190,
+        "to": 193,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 194,
+        "to": 199,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 200,
+        "to": 210,
+        "classes": "tok-property"
+      },
+      {
+        "from": 210,
+        "to": 222,
+        "classes": "tok-property"
+      },
+      {
+        "from": 223,
+        "to": 227,
+        "classes": "tok-property"
+      },
+      {
+        "from": 229,
+        "to": 232,
+        "classes": "tok-property"
+      },
+      {
+        "from": 238,
+        "to": 244,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 245,
+        "to": 249,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "dart",
+      "text": "import 'package:http/http.dart' as http;\n\nFuture<void> main() async {\n  final response = await http.get(Uri.parse('https://api.exemple.fr/invoices'));\n  print(response.body);\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 31,
+        "classes": "tok-string"
+      },
+      {
+        "from": 32,
+        "to": 34,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 35,
+        "to": 39,
+        "classes": "tok-property"
+      },
+      {
+        "from": 42,
+        "to": 48,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 48,
+        "to": 49,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 49,
+        "to": 53,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 53,
+        "to": 54,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 55,
+        "to": 59,
+        "classes": "tok-property"
+      },
+      {
+        "from": 62,
+        "to": 67,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 77,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 78,
+        "to": 86,
+        "classes": "tok-property"
+      },
+      {
+        "from": 87,
+        "to": 88,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 89,
+        "to": 94,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 99,
+        "classes": "tok-property"
+      },
+      {
+        "from": 100,
+        "to": 103,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 104,
+        "to": 107,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 108,
+        "to": 113,
+        "classes": "tok-property"
+      },
+      {
+        "from": 114,
+        "to": 147,
+        "classes": "tok-string"
+      },
+      {
+        "from": 153,
+        "to": 158,
+        "classes": "tok-property"
+      },
+      {
+        "from": 159,
+        "to": 167,
+        "classes": "tok-property"
+      },
+      {
+        "from": 168,
+        "to": 172,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "ex",
+      "text": "defmodule Invoices do\n  def list do\n    Req.get!(\"https://api.exemple.fr/invoices\")\n    |> Map.get(:body)\n    |> IO.inspect()\n  end\nend\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 9,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 19,
+        "to": 21,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 24,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 28,
+        "to": 32,
+        "classes": "tok-name"
+      },
+      {
+        "from": 33,
+        "to": 35,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 43,
+        "to": 44,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 44,
+        "to": 48,
+        "classes": "tok-name"
+      },
+      {
+        "from": 49,
+        "to": 82,
+        "classes": "tok-string"
+      },
+      {
+        "from": 88,
+        "to": 90,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 94,
+        "to": 95,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 98,
+        "classes": "tok-name"
+      },
+      {
+        "from": 99,
+        "to": 104,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 110,
+        "to": 112,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 115,
+        "to": 116,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 116,
+        "to": 123,
+        "classes": "tok-name"
+      },
+      {
+        "from": 128,
+        "to": 131,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 132,
+        "to": 135,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "clj",
+      "text": "(ns notes.core)\n\n(defn greet [name]\n  (let [greeting (str \"Hello, \" name)]\n    (println greeting)))\n"
+    },
+    "output": [
+      {
+        "from": 1,
+        "to": 3,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 4,
+        "to": 14,
+        "classes": "tok-property"
+      },
+      {
+        "from": 18,
+        "to": 22,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 23,
+        "to": 28,
+        "classes": "tok-property"
+      },
+      {
+        "from": 30,
+        "to": 34,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 39,
+        "to": 42,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 44,
+        "to": 52,
+        "classes": "tok-property"
+      },
+      {
+        "from": 54,
+        "to": 57,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 58,
+        "to": 67,
+        "classes": "tok-string"
+      },
+      {
+        "from": 68,
+        "to": 72,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 80,
+        "to": 87,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 88,
+        "to": 96,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "cmake",
+      "text": "cmake_minimum_required(VERSION 3.20)\nproject(devnotes CXX)\n\nset(CMAKE_CXX_STANDARD 20)\nadd_executable(app main.cpp)\ntarget_link_libraries(app PRIVATE fmt)\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 22,
+        "classes": "tok-property"
+      },
+      {
+        "from": 31,
+        "to": 32,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 37,
+        "to": 44,
+        "classes": "tok-property"
+      },
+      {
+        "from": 60,
+        "to": 63,
+        "classes": "tok-property"
+      },
+      {
+        "from": 83,
+        "to": 85,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 87,
+        "to": 101,
+        "classes": "tok-property"
+      },
+      {
+        "from": 116,
+        "to": 137,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "cobol",
+      "text": "       IDENTIFICATION DIVISION.\n       PROGRAM-ID. HELLO.\n       PROCEDURE DIVISION.\n           DISPLAY 'HELLO'.\n           STOP RUN.\n"
+    },
+    "output": [
+      {
+        "from": 7,
+        "to": 21,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 22,
+        "to": 30,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 30,
+        "to": 31,
+        "classes": "tok-string"
+      },
+      {
+        "from": 39,
+        "to": 49,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 49,
+        "to": 50,
+        "classes": "tok-string"
+      },
+      {
+        "from": 56,
+        "to": 57,
+        "classes": "tok-string"
+      },
+      {
+        "from": 65,
+        "to": 74,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 75,
+        "to": 83,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 83,
+        "to": 84,
+        "classes": "tok-string"
+      },
+      {
+        "from": 96,
+        "to": 103,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 104,
+        "to": 111,
+        "classes": "tok-string"
+      },
+      {
+        "from": 111,
+        "to": 112,
+        "classes": "tok-string"
+      },
+      {
+        "from": 124,
+        "to": 128,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 129,
+        "to": 132,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 132,
+        "to": 133,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "lisp",
+      "text": "(defun square (x)\n  (* x x))\n\n(defvar *total* 0)\n(setf *total* (square 4))\n(format t \"~a~%\" *total*)\n"
+    },
+    "output": [
+      {
+        "from": 1,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 13,
+        "classes": "tok-property"
+      },
+      {
+        "from": 15,
+        "to": 16,
+        "classes": "tok-property"
+      },
+      {
+        "from": 21,
+        "to": 22,
+        "classes": "tok-property"
+      },
+      {
+        "from": 23,
+        "to": 24,
+        "classes": "tok-property"
+      },
+      {
+        "from": 25,
+        "to": 26,
+        "classes": "tok-property"
+      },
+      {
+        "from": 31,
+        "to": 37,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 38,
+        "to": 45,
+        "classes": "tok-property"
+      },
+      {
+        "from": 46,
+        "to": 47,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 50,
+        "to": 54,
+        "classes": "tok-property"
+      },
+      {
+        "from": 55,
+        "to": 62,
+        "classes": "tok-property"
+      },
+      {
+        "from": 64,
+        "to": 70,
+        "classes": "tok-property"
+      },
+      {
+        "from": 71,
+        "to": 72,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 76,
+        "to": 82,
+        "classes": "tok-property"
+      },
+      {
+        "from": 83,
+        "to": 84,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 85,
+        "to": 91,
+        "classes": "tok-string"
+      },
+      {
+        "from": 92,
+        "to": 99,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "cypher",
+      "text": "MATCH (a:Person)-[:KNOWS]->(b:Person)\nWHERE a.name = 'Ada'\nRETURN b.name\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 5,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 15,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 18,
+        "to": 24,
+        "classes": "tok-property"
+      },
+      {
+        "from": 28,
+        "to": 36,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 38,
+        "to": 43,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 44,
+        "to": 45,
+        "classes": "tok-property"
+      },
+      {
+        "from": 46,
+        "to": 50,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 53,
+        "to": 58,
+        "classes": "tok-string"
+      },
+      {
+        "from": 59,
+        "to": 65,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 66,
+        "to": 67,
+        "classes": "tok-property"
+      },
+      {
+        "from": 68,
+        "to": 72,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "cython",
+      "text": "cdef int square(int x):\n    return x * x\n\ndef total(values):\n    return sum(square(v) for v in values)\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 4,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 5,
+        "to": 8,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 9,
+        "to": 15,
+        "classes": "tok-property"
+      },
+      {
+        "from": 16,
+        "to": 19,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 20,
+        "to": 21,
+        "classes": "tok-property"
+      },
+      {
+        "from": 28,
+        "to": 34,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 35,
+        "to": 36,
+        "classes": "tok-property"
+      },
+      {
+        "from": 37,
+        "to": 38,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 39,
+        "to": 40,
+        "classes": "tok-property"
+      },
+      {
+        "from": 42,
+        "to": 45,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 46,
+        "to": 51,
+        "classes": "tok-property"
+      },
+      {
+        "from": 52,
+        "to": 58,
+        "classes": "tok-property"
+      },
+      {
+        "from": 65,
+        "to": 71,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 75,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 76,
+        "to": 82,
+        "classes": "tok-property"
+      },
+      {
+        "from": 83,
+        "to": 84,
+        "classes": "tok-property"
+      },
+      {
+        "from": 86,
+        "to": 89,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 90,
+        "to": 91,
+        "classes": "tok-property"
+      },
+      {
+        "from": 92,
+        "to": 94,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 101,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "d",
+      "text": "import std.stdio;\n\nvoid main() {\n    writeln(\"Hello, D\");\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 10,
+        "classes": "tok-property"
+      },
+      {
+        "from": 11,
+        "to": 16,
+        "classes": "tok-property"
+      },
+      {
+        "from": 19,
+        "to": 23,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 24,
+        "to": 28,
+        "classes": "tok-property"
+      },
+      {
+        "from": 37,
+        "to": 44,
+        "classes": "tok-property"
+      },
+      {
+        "from": 45,
+        "to": 55,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "diff",
+      "text": "diff --git a/src/main.rs b/src/main.rs\n--- a/src/main.rs\n+++ b/src/main.rs\n@@ -1,3 +1,3 @@\n fn main() {\n-    println!(\"hi\");\n+    println!(\"hello\");\n }\n"
+    },
+    "output": [
+      {
+        "from": 39,
+        "to": 56,
+        "classes": "tok-deleted"
+      },
+      {
+        "from": 57,
+        "to": 74,
+        "classes": "tok-string"
+      },
+      {
+        "from": 75,
+        "to": 90,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 104,
+        "to": 124,
+        "classes": "tok-deleted"
+      },
+      {
+        "from": 125,
+        "to": 148,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "dockerfile",
+      "text": "FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nEXPOSE 3000\nCMD [\"npm\", \"start\"]\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 4,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 20,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 33,
+        "to": 37,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 55,
+        "to": 58,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 66,
+        "to": 70,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 75,
+        "to": 81,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 82,
+        "to": 86,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 87,
+        "to": 90,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 92,
+        "to": 97,
+        "classes": "tok-string"
+      },
+      {
+        "from": 99,
+        "to": 106,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "elm",
+      "text": "module Main exposing (main)\n\nimport Html exposing (text)\n\ntype alias Model =\n    { count : Int }\n\nmain =\n    text \"Hello\"\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 11,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 12,
+        "to": 20,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 21,
+        "to": 22,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 22,
+        "to": 26,
+        "classes": "tok-property"
+      },
+      {
+        "from": 26,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 29,
+        "to": 35,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 36,
+        "to": 40,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 41,
+        "to": 49,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 50,
+        "to": 51,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 51,
+        "to": 55,
+        "classes": "tok-property"
+      },
+      {
+        "from": 55,
+        "to": 56,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 58,
+        "to": 62,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 63,
+        "to": 68,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 69,
+        "to": 74,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 75,
+        "to": 76,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 81,
+        "to": 82,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 83,
+        "to": 88,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 90,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 91,
+        "to": 94,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 96,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 98,
+        "to": 102,
+        "classes": "tok-property"
+      },
+      {
+        "from": 103,
+        "to": 104,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 109,
+        "to": 113,
+        "classes": "tok-property"
+      },
+      {
+        "from": 114,
+        "to": 121,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "erl",
+      "text": "-module(hello).\n-export([greet/1]).\n\ngreet(Name) ->\n    io:format(\"Hello, ~s~n\", [Name]).\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 7,
+        "classes": "tok-property"
+      },
+      {
+        "from": 8,
+        "to": 13,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 16,
+        "to": 23,
+        "classes": "tok-property"
+      },
+      {
+        "from": 25,
+        "to": 32,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 37,
+        "to": 42,
+        "classes": "tok-name"
+      },
+      {
+        "from": 43,
+        "to": 47,
+        "classes": "tok-property"
+      },
+      {
+        "from": 56,
+        "to": 58,
+        "classes": "tok-name"
+      },
+      {
+        "from": 59,
+        "to": 65,
+        "classes": "tok-name"
+      },
+      {
+        "from": 66,
+        "to": 79,
+        "classes": "tok-string"
+      },
+      {
+        "from": 82,
+        "to": 86,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "fortran",
+      "text": "program hello\n  implicit none\n  integer :: i\n  do i = 1, 3\n    print *, i\n  end do\nend program hello\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 7,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 8,
+        "to": 13,
+        "classes": "tok-property"
+      },
+      {
+        "from": 16,
+        "to": 24,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 25,
+        "to": 29,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 32,
+        "to": 39,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 40,
+        "to": 42,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 43,
+        "to": 44,
+        "classes": "tok-property"
+      },
+      {
+        "from": 47,
+        "to": 49,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 50,
+        "to": 51,
+        "classes": "tok-property"
+      },
+      {
+        "from": 52,
+        "to": 53,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 54,
+        "to": 55,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 57,
+        "to": 58,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 63,
+        "to": 68,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 69,
+        "to": 70,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 73,
+        "classes": "tok-property"
+      },
+      {
+        "from": 76,
+        "to": 79,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 80,
+        "to": 82,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 83,
+        "to": 86,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 87,
+        "to": 94,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 100,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "gherkin",
+      "text": "Feature: Login\n  Scenario: A known user signs in\n    Given a user named \"ada\"\n    When she signs in\n    Then she sees her notes\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 8,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 15,
+        "to": 26,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 49,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 77,
+        "classes": "tok-string"
+      },
+      {
+        "from": 78,
+        "to": 87,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 100,
+        "to": 109,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "glsl",
+      "text": "#version 330 core\nuniform mat4 mvp;\nin vec3 position;\n\nvoid main() {\n    gl_Position = mvp * vec4(position, 1.0);\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 17,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 18,
+        "to": 25,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 26,
+        "to": 30,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 31,
+        "to": 34,
+        "classes": "tok-property"
+      },
+      {
+        "from": 36,
+        "to": 38,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 39,
+        "to": 43,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 44,
+        "to": 52,
+        "classes": "tok-property"
+      },
+      {
+        "from": 55,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 60,
+        "to": 64,
+        "classes": "tok-property"
+      },
+      {
+        "from": 73,
+        "to": 84,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 85,
+        "to": 86,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 87,
+        "to": 90,
+        "classes": "tok-property"
+      },
+      {
+        "from": 91,
+        "to": 92,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 93,
+        "to": 97,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 98,
+        "to": 106,
+        "classes": "tok-property"
+      },
+      {
+        "from": 108,
+        "to": 111,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "groovy",
+      "text": "plugins {\n    id 'java'\n}\n\ndependencies {\n    implementation 'org.slf4j:slf4j-api:2.0.9'\n    testImplementation 'junit:junit:4.13.2'\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 7,
+        "classes": "tok-property"
+      },
+      {
+        "from": 14,
+        "to": 16,
+        "classes": "tok-property"
+      },
+      {
+        "from": 17,
+        "to": 23,
+        "classes": "tok-string"
+      },
+      {
+        "from": 27,
+        "to": 39,
+        "classes": "tok-property"
+      },
+      {
+        "from": 46,
+        "to": 60,
+        "classes": "tok-property"
+      },
+      {
+        "from": 61,
+        "to": 88,
+        "classes": "tok-string"
+      },
+      {
+        "from": 93,
+        "to": 111,
+        "classes": "tok-property"
+      },
+      {
+        "from": 112,
+        "to": 132,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "hs",
+      "text": "module Main where\n\ndouble :: Int -> Int\ndouble x = x * 2\n\nmain :: IO ()\nmain = do\n  print (double 21)\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 11,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 12,
+        "to": 17,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 19,
+        "to": 25,
+        "classes": "tok-property"
+      },
+      {
+        "from": 26,
+        "to": 28,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 29,
+        "to": 32,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 33,
+        "to": 35,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 36,
+        "to": 39,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 40,
+        "to": 46,
+        "classes": "tok-property"
+      },
+      {
+        "from": 47,
+        "to": 48,
+        "classes": "tok-property"
+      },
+      {
+        "from": 49,
+        "to": 50,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 51,
+        "to": 52,
+        "classes": "tok-property"
+      },
+      {
+        "from": 53,
+        "to": 54,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 55,
+        "to": 56,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 58,
+        "to": 62,
+        "classes": "tok-property"
+      },
+      {
+        "from": 63,
+        "to": 65,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 66,
+        "to": 68,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 76,
+        "classes": "tok-property"
+      },
+      {
+        "from": 77,
+        "to": 78,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 79,
+        "to": 81,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 84,
+        "to": 89,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 91,
+        "to": 97,
+        "classes": "tok-property"
+      },
+      {
+        "from": 98,
+        "to": 100,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "http",
+      "text": "POST /api/notes HTTP/1.1\nHost: localhost:8080\nContent-Type: application/json\n\n{\"title\": \"First\"}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 4,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 5,
+        "to": 15,
+        "classes": "tok-string"
+      },
+      {
+        "from": 16,
+        "to": 24,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 25,
+        "to": 30,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 30,
+        "to": 45,
+        "classes": "tok-string"
+      },
+      {
+        "from": 46,
+        "to": 59,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 59,
+        "to": 76,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "jinja",
+      "text": "{% extends \"base.html\" %}\n\n{% block content %}\n  <ul>\n  {% for note in notes %}\n    <li>{{ note.title }}</li>\n  {% endfor %}\n  </ul>\n{% endblock %}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 2,
+        "classes": "tok-name"
+      },
+      {
+        "from": 2,
+        "to": 10,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 10,
+        "to": 11,
+        "classes": "tok-property"
+      },
+      {
+        "from": 11,
+        "to": 22,
+        "classes": "tok-string"
+      },
+      {
+        "from": 22,
+        "to": 23,
+        "classes": "tok-property"
+      },
+      {
+        "from": 23,
+        "to": 25,
+        "classes": "tok-name"
+      },
+      {
+        "from": 27,
+        "to": 29,
+        "classes": "tok-name"
+      },
+      {
+        "from": 29,
+        "to": 35,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 35,
+        "to": 44,
+        "classes": "tok-property"
+      },
+      {
+        "from": 44,
+        "to": 46,
+        "classes": "tok-name"
+      },
+      {
+        "from": 56,
+        "to": 58,
+        "classes": "tok-name"
+      },
+      {
+        "from": 58,
+        "to": 62,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 62,
+        "to": 67,
+        "classes": "tok-property"
+      },
+      {
+        "from": 67,
+        "to": 70,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 70,
+        "to": 77,
+        "classes": "tok-property"
+      },
+      {
+        "from": 77,
+        "to": 79,
+        "classes": "tok-name"
+      },
+      {
+        "from": 88,
+        "to": 90,
+        "classes": "tok-name"
+      },
+      {
+        "from": 90,
+        "to": 102,
+        "classes": "tok-property"
+      },
+      {
+        "from": 102,
+        "to": 104,
+        "classes": "tok-name"
+      },
+      {
+        "from": 112,
+        "to": 114,
+        "classes": "tok-name"
+      },
+      {
+        "from": 114,
+        "to": 121,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 121,
+        "to": 122,
+        "classes": "tok-property"
+      },
+      {
+        "from": 122,
+        "to": 124,
+        "classes": "tok-name"
+      },
+      {
+        "from": 133,
+        "to": 135,
+        "classes": "tok-name"
+      },
+      {
+        "from": 135,
+        "to": 144,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 144,
+        "to": 145,
+        "classes": "tok-property"
+      },
+      {
+        "from": 145,
+        "to": 147,
+        "classes": "tok-name"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "jsonld",
+      "text": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"Person\",\n  \"name\": \"Ada Lovelace\"\n}\n"
+    },
+    "output": [
+      {
+        "from": 4,
+        "to": 14,
+        "classes": "tok-property"
+      },
+      {
+        "from": 16,
+        "to": 36,
+        "classes": "tok-string"
+      },
+      {
+        "from": 40,
+        "to": 47,
+        "classes": "tok-property"
+      },
+      {
+        "from": 49,
+        "to": 57,
+        "classes": "tok-string"
+      },
+      {
+        "from": 61,
+        "to": 67,
+        "classes": "tok-property"
+      },
+      {
+        "from": 69,
+        "to": 83,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "tex",
+      "text": "\\documentclass{article}\n\\usepackage{amsmath}\n\n\\begin{document}\n\\section{Introduction}\nSome text.\n\\end{document}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 14,
+        "classes": "tok-name"
+      },
+      {
+        "from": 24,
+        "to": 35,
+        "classes": "tok-name"
+      },
+      {
+        "from": 36,
+        "to": 43,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 46,
+        "to": 52,
+        "classes": "tok-name"
+      },
+      {
+        "from": 53,
+        "to": 61,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 63,
+        "to": 71,
+        "classes": "tok-name"
+      },
+      {
+        "from": 97,
+        "to": 101,
+        "classes": "tok-name"
+      },
+      {
+        "from": 102,
+        "to": 110,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "liquid",
+      "text": "{% assign total = cart.items | size %}\n{% if total > 0 %}\n  <p>{{ total }} items</p>\n{% endif %}\n"
+    },
+    "output": [
+      {
+        "from": 3,
+        "to": 9,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 10,
+        "to": 15,
+        "classes": "tok-property"
+      },
+      {
+        "from": 16,
+        "to": 17,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 18,
+        "to": 22,
+        "classes": "tok-property"
+      },
+      {
+        "from": 22,
+        "to": 23,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 23,
+        "to": 28,
+        "classes": "tok-property"
+      },
+      {
+        "from": 31,
+        "to": 35,
+        "classes": "tok-name"
+      },
+      {
+        "from": 42,
+        "to": 44,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 45,
+        "to": 50,
+        "classes": "tok-property"
+      },
+      {
+        "from": 51,
+        "to": 52,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 53,
+        "to": 54,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 60,
+        "to": 61,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 61,
+        "to": 62,
+        "classes": "tok-name"
+      },
+      {
+        "from": 62,
+        "to": 63,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 66,
+        "to": 71,
+        "classes": "tok-property"
+      },
+      {
+        "from": 80,
+        "to": 82,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 82,
+        "to": 83,
+        "classes": "tok-name"
+      },
+      {
+        "from": 83,
+        "to": 84,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 88,
+        "to": 93,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "lua",
+      "text": "local function greet(name)\n  if name == nil then\n    return \"hello\"\n  end\n  return \"hello \" .. name\nend\n\nprint(greet(\"world\"))\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 5,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 6,
+        "to": 14,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 15,
+        "to": 20,
+        "classes": "tok-property"
+      },
+      {
+        "from": 21,
+        "to": 25,
+        "classes": "tok-property"
+      },
+      {
+        "from": 29,
+        "to": 31,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 32,
+        "to": 36,
+        "classes": "tok-property"
+      },
+      {
+        "from": 40,
+        "to": 43,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 44,
+        "to": 48,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 53,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 60,
+        "to": 67,
+        "classes": "tok-string"
+      },
+      {
+        "from": 70,
+        "to": 73,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 76,
+        "to": 82,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 83,
+        "to": 91,
+        "classes": "tok-string"
+      },
+      {
+        "from": 95,
+        "to": 99,
+        "classes": "tok-property"
+      },
+      {
+        "from": 100,
+        "to": 103,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 105,
+        "to": 110,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 111,
+        "to": 116,
+        "classes": "tok-property"
+      },
+      {
+        "from": 117,
+        "to": 124,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "matlab",
+      "text": "function [total, mean_value] = stats(values)\n  total = sum(values);\n  mean_value = total / numel(values);\n  disp(mean_value);\nend\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 8,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 10,
+        "to": 15,
+        "classes": "tok-property"
+      },
+      {
+        "from": 17,
+        "to": 27,
+        "classes": "tok-property"
+      },
+      {
+        "from": 31,
+        "to": 36,
+        "classes": "tok-property"
+      },
+      {
+        "from": 37,
+        "to": 43,
+        "classes": "tok-property"
+      },
+      {
+        "from": 47,
+        "to": 52,
+        "classes": "tok-property"
+      },
+      {
+        "from": 55,
+        "to": 58,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 59,
+        "to": 65,
+        "classes": "tok-property"
+      },
+      {
+        "from": 70,
+        "to": 80,
+        "classes": "tok-property"
+      },
+      {
+        "from": 83,
+        "to": 88,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 90,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 91,
+        "to": 96,
+        "classes": "tok-property"
+      },
+      {
+        "from": 97,
+        "to": 103,
+        "classes": "tok-property"
+      },
+      {
+        "from": 108,
+        "to": 112,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 113,
+        "to": 123,
+        "classes": "tok-property"
+      },
+      {
+        "from": 126,
+        "to": 129,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "nginx",
+      "text": "server {\n    listen 80;\n    server_name example.com;\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:3000;\n        proxy_set_header Host $host;\n    }\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 13,
+        "to": 19,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 28,
+        "to": 39,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 58,
+        "to": 66,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 83,
+        "to": 93,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 94,
+        "to": 98,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 125,
+        "to": 141,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 142,
+        "to": 147,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "nix",
+      "text": "{ pkgs ? import <nixpkgs> {} }:\n\npkgs.mkShell {\n  buildInputs = with pkgs; [ nodejs rustc ];\n}\n"
+    },
+    "output": [
+      {
+        "from": 2,
+        "to": 6,
+        "classes": "tok-property"
+      },
+      {
+        "from": 9,
+        "to": 15,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 17,
+        "to": 24,
+        "classes": "tok-property"
+      },
+      {
+        "from": 33,
+        "to": 37,
+        "classes": "tok-property"
+      },
+      {
+        "from": 38,
+        "to": 45,
+        "classes": "tok-property"
+      },
+      {
+        "from": 50,
+        "to": 61,
+        "classes": "tok-property"
+      },
+      {
+        "from": 64,
+        "to": 68,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 69,
+        "to": 73,
+        "classes": "tok-property"
+      },
+      {
+        "from": 77,
+        "to": 83,
+        "classes": "tok-property"
+      },
+      {
+        "from": 84,
+        "to": 89,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "objc",
+      "text": "#import <Foundation/Foundation.h>\n\n@interface Note : NSObject\n@property NSString *title;\n@end\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 33,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 35,
+        "to": 45,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 46,
+        "to": 50,
+        "classes": "tok-property"
+      },
+      {
+        "from": 53,
+        "to": 61,
+        "classes": "tok-property"
+      },
+      {
+        "from": 62,
+        "to": 71,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 72,
+        "to": 80,
+        "classes": "tok-property"
+      },
+      {
+        "from": 81,
+        "to": 82,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 82,
+        "to": 87,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 93,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "ml",
+      "text": "let rec fact n =\n  match n with\n  | 0 -> 1\n  | n -> n * fact (n - 1)\n\nlet () = Printf.printf \"%d\\n\" (fact 5)\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 3,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 4,
+        "to": 7,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 8,
+        "to": 12,
+        "classes": "tok-property"
+      },
+      {
+        "from": 13,
+        "to": 14,
+        "classes": "tok-property"
+      },
+      {
+        "from": 15,
+        "to": 16,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 19,
+        "to": 24,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 25,
+        "to": 26,
+        "classes": "tok-property"
+      },
+      {
+        "from": 27,
+        "to": 31,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 34,
+        "to": 35,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 36,
+        "to": 37,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 38,
+        "to": 40,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 41,
+        "to": 42,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 45,
+        "to": 46,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 47,
+        "to": 48,
+        "classes": "tok-property"
+      },
+      {
+        "from": 49,
+        "to": 51,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 52,
+        "to": 53,
+        "classes": "tok-property"
+      },
+      {
+        "from": 54,
+        "to": 55,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 56,
+        "to": 60,
+        "classes": "tok-property"
+      },
+      {
+        "from": 62,
+        "to": 63,
+        "classes": "tok-property"
+      },
+      {
+        "from": 64,
+        "to": 65,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 66,
+        "to": 67,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 70,
+        "to": 73,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 77,
+        "to": 78,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 79,
+        "to": 85,
+        "classes": "tok-property"
+      },
+      {
+        "from": 85,
+        "to": 86,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 86,
+        "to": 92,
+        "classes": "tok-property"
+      },
+      {
+        "from": 93,
+        "to": 99,
+        "classes": "tok-string"
+      },
+      {
+        "from": 101,
+        "to": 105,
+        "classes": "tok-property"
+      },
+      {
+        "from": 106,
+        "to": 107,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "perl",
+      "text": "use strict;\nuse warnings;\n\nmy @names = ('ada', 'linus');\nforeach my $name (@names) {\n    print \"$name\\n\" if $name =~ /a/;\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 3,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 4,
+        "to": 10,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 12,
+        "to": 15,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 16,
+        "to": 24,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 27,
+        "to": 29,
+        "classes": "tok-property"
+      },
+      {
+        "from": 30,
+        "to": 36,
+        "classes": "tok-property"
+      },
+      {
+        "from": 37,
+        "to": 38,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 40,
+        "to": 45,
+        "classes": "tok-string"
+      },
+      {
+        "from": 47,
+        "to": 54,
+        "classes": "tok-string"
+      },
+      {
+        "from": 57,
+        "to": 64,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 65,
+        "to": 67,
+        "classes": "tok-property"
+      },
+      {
+        "from": 68,
+        "to": 73,
+        "classes": "tok-property"
+      },
+      {
+        "from": 75,
+        "to": 81,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 94,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 104,
+        "classes": "tok-string"
+      },
+      {
+        "from": 105,
+        "to": 107,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 108,
+        "to": 113,
+        "classes": "tok-property"
+      },
+      {
+        "from": 114,
+        "to": 116,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 117,
+        "to": 120,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "asc",
+      "text": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nmQINBGRtX6sBEAC5fFqrS3d1Pq0nC8z3vL4g\n=Xy3k\n-----END PGP PUBLIC KEY BLOCK-----\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 36,
+        "classes": "tok-name"
+      },
+      {
+        "from": 81,
+        "to": 115,
+        "classes": "tok-name"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "prisma",
+      "text": "datasource db {\n  provider = \"sqlite\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Note {\n  id    String @id @default(cuid())\n  title String\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 10,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 11,
+        "to": 13,
+        "classes": "tok-property"
+      },
+      {
+        "from": 18,
+        "to": 26,
+        "classes": "tok-property"
+      },
+      {
+        "from": 29,
+        "to": 37,
+        "classes": "tok-string"
+      },
+      {
+        "from": 40,
+        "to": 43,
+        "classes": "tok-property"
+      },
+      {
+        "from": 51,
+        "to": 54,
+        "classes": "tok-name"
+      },
+      {
+        "from": 55,
+        "to": 69,
+        "classes": "tok-string"
+      },
+      {
+        "from": 74,
+        "to": 79,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 80,
+        "to": 84,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 91,
+        "classes": "tok-property"
+      },
+      {
+        "from": 95,
+        "to": 101,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 102,
+        "to": 105,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 106,
+        "to": 114,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 115,
+        "to": 119,
+        "classes": "tok-name"
+      },
+      {
+        "from": 125,
+        "to": 130,
+        "classes": "tok-property"
+      },
+      {
+        "from": 131,
+        "to": 137,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "proto",
+      "text": "syntax = \"proto3\";\n\npackage notes;\n\nmessage Note {\n  string id = 1;\n  string title = 2;\n  repeated string tags = 3;\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 9,
+        "to": 17,
+        "classes": "tok-string"
+      },
+      {
+        "from": 20,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 28,
+        "to": 33,
+        "classes": "tok-property"
+      },
+      {
+        "from": 36,
+        "to": 43,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 44,
+        "to": 48,
+        "classes": "tok-property"
+      },
+      {
+        "from": 53,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 60,
+        "to": 62,
+        "classes": "tok-property"
+      },
+      {
+        "from": 65,
+        "to": 66,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 70,
+        "to": 76,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 77,
+        "to": 82,
+        "classes": "tok-property"
+      },
+      {
+        "from": 85,
+        "to": 86,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 90,
+        "to": 98,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 99,
+        "to": 105,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 106,
+        "to": 110,
+        "classes": "tok-property"
+      },
+      {
+        "from": 113,
+        "to": 114,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "puppet",
+      "text": "package { 'nginx':\n  ensure => installed,\n}\n\nservice { 'nginx':\n  ensure => running,\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 7,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 10,
+        "to": 17,
+        "classes": "tok-string"
+      },
+      {
+        "from": 21,
+        "to": 27,
+        "classes": "tok-name"
+      },
+      {
+        "from": 28,
+        "to": 30,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 45,
+        "to": 52,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 55,
+        "to": 62,
+        "classes": "tok-string"
+      },
+      {
+        "from": 66,
+        "to": 72,
+        "classes": "tok-name"
+      },
+      {
+        "from": 73,
+        "to": 75,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 76,
+        "to": 83,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "r",
+      "text": "library(ggplot2)\n\nscores <- data.frame(name = c(\"a\", \"b\"), value = c(3, 5))\nmean_of <- function(xs) {\n  sum(xs) / length(xs)\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 7,
+        "classes": "tok-property"
+      },
+      {
+        "from": 8,
+        "to": 15,
+        "classes": "tok-property"
+      },
+      {
+        "from": 18,
+        "to": 24,
+        "classes": "tok-property"
+      },
+      {
+        "from": 25,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 28,
+        "to": 38,
+        "classes": "tok-property"
+      },
+      {
+        "from": 39,
+        "to": 43,
+        "classes": "tok-property"
+      },
+      {
+        "from": 44,
+        "to": 45,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 46,
+        "to": 47,
+        "classes": "tok-property"
+      },
+      {
+        "from": 48,
+        "to": 51,
+        "classes": "tok-string"
+      },
+      {
+        "from": 53,
+        "to": 56,
+        "classes": "tok-string"
+      },
+      {
+        "from": 59,
+        "to": 64,
+        "classes": "tok-property"
+      },
+      {
+        "from": 65,
+        "to": 66,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 67,
+        "to": 68,
+        "classes": "tok-property"
+      },
+      {
+        "from": 69,
+        "to": 70,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 72,
+        "to": 73,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 76,
+        "to": 83,
+        "classes": "tok-property"
+      },
+      {
+        "from": 84,
+        "to": 86,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 87,
+        "to": 95,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 96,
+        "to": 98,
+        "classes": "tok-property"
+      },
+      {
+        "from": 104,
+        "to": 107,
+        "classes": "tok-property"
+      },
+      {
+        "from": 108,
+        "to": 110,
+        "classes": "tok-property"
+      },
+      {
+        "from": 112,
+        "to": 113,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 114,
+        "to": 120,
+        "classes": "tok-property"
+      },
+      {
+        "from": 121,
+        "to": 123,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "scala",
+      "text": "case class Point(x: Int, y: Int)\n\nobject Main extends App {\n  val p = Point(1, 2)\n  println(p)\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 4,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 5,
+        "to": 10,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 11,
+        "to": 16,
+        "classes": "tok-property"
+      },
+      {
+        "from": 17,
+        "to": 18,
+        "classes": "tok-property"
+      },
+      {
+        "from": 20,
+        "to": 23,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 25,
+        "to": 26,
+        "classes": "tok-property"
+      },
+      {
+        "from": 28,
+        "to": 31,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 34,
+        "to": 40,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 41,
+        "to": 45,
+        "classes": "tok-property"
+      },
+      {
+        "from": 46,
+        "to": 53,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 54,
+        "to": 57,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 62,
+        "to": 65,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 66,
+        "to": 67,
+        "classes": "tok-property"
+      },
+      {
+        "from": 68,
+        "to": 69,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 70,
+        "to": 75,
+        "classes": "tok-property"
+      },
+      {
+        "from": 76,
+        "to": 77,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 79,
+        "to": 80,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 84,
+        "to": 91,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 92,
+        "to": 93,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "scheme",
+      "text": "(define (square x)\n  (* x x))\n\n(define (sum-of-squares a b)\n  (+ (square a) (square b)))\n"
+    },
+    "output": [
+      {
+        "from": 1,
+        "to": 7,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 9,
+        "to": 15,
+        "classes": "tok-property"
+      },
+      {
+        "from": 16,
+        "to": 17,
+        "classes": "tok-property"
+      },
+      {
+        "from": 22,
+        "to": 23,
+        "classes": "tok-property"
+      },
+      {
+        "from": 24,
+        "to": 25,
+        "classes": "tok-property"
+      },
+      {
+        "from": 26,
+        "to": 27,
+        "classes": "tok-property"
+      },
+      {
+        "from": 32,
+        "to": 38,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 40,
+        "to": 54,
+        "classes": "tok-property"
+      },
+      {
+        "from": 55,
+        "to": 56,
+        "classes": "tok-property"
+      },
+      {
+        "from": 57,
+        "to": 58,
+        "classes": "tok-property"
+      },
+      {
+        "from": 63,
+        "to": 64,
+        "classes": "tok-property"
+      },
+      {
+        "from": 66,
+        "to": 72,
+        "classes": "tok-property"
+      },
+      {
+        "from": 73,
+        "to": 74,
+        "classes": "tok-property"
+      },
+      {
+        "from": 77,
+        "to": 83,
+        "classes": "tok-property"
+      },
+      {
+        "from": 84,
+        "to": 85,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "sol",
+      "text": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract Counter {\n    uint256 public count;\n\n    function increment() public {\n        count += 1;\n    }\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 31,
+        "classes": "tok-comment"
+      },
+      {
+        "from": 32,
+        "to": 38,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 39,
+        "to": 47,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 49,
+        "to": 52,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 53,
+        "to": 55,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 58,
+        "to": 66,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 67,
+        "to": 74,
+        "classes": "tok-property"
+      },
+      {
+        "from": 81,
+        "to": 88,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 89,
+        "to": 95,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 96,
+        "to": 101,
+        "classes": "tok-property"
+      },
+      {
+        "from": 108,
+        "to": 116,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 117,
+        "to": 126,
+        "classes": "tok-name"
+      },
+      {
+        "from": 129,
+        "to": 135,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 146,
+        "to": 151,
+        "classes": "tok-property"
+      },
+      {
+        "from": 155,
+        "to": 156,
+        "classes": "tok-literal"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "sparql",
+      "text": "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\nSELECT ?name WHERE {\n  ?person foaf:name ?name .\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 12,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 13,
+        "to": 41,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 42,
+        "to": 48,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 49,
+        "to": 54,
+        "classes": "tok-property"
+      },
+      {
+        "from": 55,
+        "to": 60,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 65,
+        "to": 72,
+        "classes": "tok-property"
+      },
+      {
+        "from": 73,
+        "to": 82,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 83,
+        "to": 88,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "tcl",
+      "text": "proc greet {name} {\n    set message \"Hello, $name\"\n    puts $message\n}\n\ngreet world\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 4,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 24,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 36,
+        "to": 37,
+        "classes": "tok-comment"
+      },
+      {
+        "from": 44,
+        "to": 49,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 49,
+        "to": 50,
+        "classes": "tok-comment"
+      },
+      {
+        "from": 55,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 60,
+        "to": 68,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "tf",
+      "text": "provider \"aws\" {\n  region = var.region\n}\n\nresource \"aws_s3_bucket\" \"assets\" {\n  bucket = \"devnotes-assets\"\n  tags = {\n    Environment = var.environment\n  }\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 8,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 9,
+        "to": 14,
+        "classes": "tok-string"
+      },
+      {
+        "from": 19,
+        "to": 25,
+        "classes": "tok-property"
+      },
+      {
+        "from": 28,
+        "to": 31,
+        "classes": "tok-property"
+      },
+      {
+        "from": 32,
+        "to": 38,
+        "classes": "tok-property"
+      },
+      {
+        "from": 42,
+        "to": 50,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 51,
+        "to": 66,
+        "classes": "tok-string"
+      },
+      {
+        "from": 67,
+        "to": 75,
+        "classes": "tok-string"
+      },
+      {
+        "from": 80,
+        "to": 86,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 106,
+        "classes": "tok-string"
+      },
+      {
+        "from": 109,
+        "to": 113,
+        "classes": "tok-property"
+      },
+      {
+        "from": 122,
+        "to": 133,
+        "classes": "tok-property"
+      },
+      {
+        "from": 136,
+        "to": 139,
+        "classes": "tok-property"
+      },
+      {
+        "from": 140,
+        "to": 151,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "verilog",
+      "text": "module counter(input clk, output reg [3:0] count);\n  always @(posedge clk) begin\n    count <= count + 1;\n  end\nendmodule\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 14,
+        "classes": "tok-property"
+      },
+      {
+        "from": 15,
+        "to": 20,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 21,
+        "to": 24,
+        "classes": "tok-property"
+      },
+      {
+        "from": 26,
+        "to": 32,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 33,
+        "to": 36,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 38,
+        "to": 39,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 40,
+        "to": 41,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 43,
+        "to": 48,
+        "classes": "tok-property"
+      },
+      {
+        "from": 53,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 62,
+        "to": 69,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 70,
+        "to": 73,
+        "classes": "tok-property"
+      },
+      {
+        "from": 75,
+        "to": 80,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 85,
+        "to": 90,
+        "classes": "tok-property"
+      },
+      {
+        "from": 92,
+        "to": 93,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 94,
+        "to": 99,
+        "classes": "tok-property"
+      },
+      {
+        "from": 100,
+        "to": 101,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 102,
+        "to": 103,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 107,
+        "to": 110,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 111,
+        "to": 120,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "vhdl",
+      "text": "library ieee;\nuse ieee.std_logic_1164.all;\n\nentity blink is\n  port (clk : in std_logic; led : out std_logic);\nend entity;\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 7,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 8,
+        "to": 12,
+        "classes": "tok-property"
+      },
+      {
+        "from": 14,
+        "to": 17,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 18,
+        "to": 22,
+        "classes": "tok-property"
+      },
+      {
+        "from": 23,
+        "to": 37,
+        "classes": "tok-property"
+      },
+      {
+        "from": 38,
+        "to": 41,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 44,
+        "to": 50,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 51,
+        "to": 56,
+        "classes": "tok-property"
+      },
+      {
+        "from": 57,
+        "to": 59,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 62,
+        "to": 66,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 68,
+        "to": 71,
+        "classes": "tok-property"
+      },
+      {
+        "from": 74,
+        "to": 76,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 77,
+        "to": 86,
+        "classes": "tok-property"
+      },
+      {
+        "from": 88,
+        "to": 91,
+        "classes": "tok-property"
+      },
+      {
+        "from": 94,
+        "to": 97,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 98,
+        "to": 107,
+        "classes": "tok-property"
+      },
+      {
+        "from": 110,
+        "to": 113,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 114,
+        "to": 120,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "vb",
+      "text": "Module Program\n    Sub Main()\n        Dim count As Integer = 3\n        Console.WriteLine(count)\n    End Sub\nEnd Module\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 6,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 7,
+        "to": 14,
+        "classes": "tok-property"
+      },
+      {
+        "from": 19,
+        "to": 22,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 23,
+        "to": 27,
+        "classes": "tok-property"
+      },
+      {
+        "from": 38,
+        "to": 41,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 42,
+        "to": 47,
+        "classes": "tok-property"
+      },
+      {
+        "from": 48,
+        "to": 50,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 51,
+        "to": 58,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 61,
+        "to": 62,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 71,
+        "to": 88,
+        "classes": "tok-property"
+      },
+      {
+        "from": 89,
+        "to": 94,
+        "classes": "tok-property"
+      },
+      {
+        "from": 100,
+        "to": 103,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 104,
+        "to": 107,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 108,
+        "to": 111,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 112,
+        "to": 118,
+        "classes": "tok-keyword"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "wat",
+      "text": "(module\n  (func $add (param $a i32) (param $b i32) (result i32)\n    local.get $a\n    local.get $b\n    i32.add)\n  (export \"add\" (func $add)))\n"
+    },
+    "output": [
+      {
+        "from": 1,
+        "to": 7,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 11,
+        "to": 15,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 16,
+        "to": 20,
+        "classes": "tok-property"
+      },
+      {
+        "from": 22,
+        "to": 27,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 28,
+        "to": 30,
+        "classes": "tok-property"
+      },
+      {
+        "from": 31,
+        "to": 34,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 37,
+        "to": 42,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 43,
+        "to": 45,
+        "classes": "tok-property"
+      },
+      {
+        "from": 46,
+        "to": 49,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 52,
+        "to": 58,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 59,
+        "to": 62,
+        "classes": "tok-literal"
+      },
+      {
+        "from": 68,
+        "to": 77,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 78,
+        "to": 80,
+        "classes": "tok-property"
+      },
+      {
+        "from": 85,
+        "to": 94,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 95,
+        "to": 97,
+        "classes": "tok-property"
+      },
+      {
+        "from": 102,
+        "to": 109,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 114,
+        "to": 120,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 121,
+        "to": 126,
+        "classes": "tok-string"
+      },
+      {
+        "from": 128,
+        "to": 132,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 133,
+        "to": 137,
+        "classes": "tok-property"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "zig",
+      "text": "const std = @import(\"std\");\n\npub fn main() !void {\n    std.debug.print(\"hello {s}\\n\", .{\"world\"});\n}\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 5,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 6,
+        "to": 9,
+        "classes": "tok-property"
+      },
+      {
+        "from": 12,
+        "to": 19,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 20,
+        "to": 25,
+        "classes": "tok-string"
+      },
+      {
+        "from": 29,
+        "to": 32,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 33,
+        "to": 35,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 36,
+        "to": 40,
+        "classes": "tok-name"
+      },
+      {
+        "from": 44,
+        "to": 48,
+        "classes": "tok-keyword"
+      },
+      {
+        "from": 55,
+        "to": 58,
+        "classes": "tok-property"
+      },
+      {
+        "from": 59,
+        "to": 64,
+        "classes": "tok-property"
+      },
+      {
+        "from": 65,
+        "to": 70,
+        "classes": "tok-name"
+      },
+      {
+        "from": 71,
+        "to": 84,
+        "classes": "tok-string"
+      },
+      {
+        "from": 88,
+        "to": 95,
+        "classes": "tok-string"
+      }
+    ]
+  },
+  {
+    "input": {
+      "language": "md",
+      "text": "# Runbook\n\n## Avant de commencer\n\n- Vérifier les [sauvegardes](https://example.test/backups)\n- Prévenir le support\n"
+    },
+    "output": [
+      {
+        "from": 0,
+        "to": 1,
+        "classes": "tok-name tok-meta"
+      },
+      {
+        "from": 1,
+        "to": 9,
+        "classes": "tok-name"
+      },
+      {
+        "from": 11,
+        "to": 13,
+        "classes": "tok-name tok-meta"
+      },
+      {
+        "from": 13,
+        "to": 32,
+        "classes": "tok-name"
+      },
+      {
+        "from": 34,
+        "to": 35,
+        "classes": "tok-meta"
+      },
+      {
+        "from": 49,
+        "to": 50,
+        "classes": "tok-string tok-meta"
+      },
+      {
+        "from": 50,
+        "to": 61,
+        "classes": "tok-string"
+      },
+      {
+        "from": 61,
+        "to": 62,
+        "classes": "tok-string tok-meta"
+      },
+      {
+        "from": 62,
+        "to": 63,
+        "classes": "tok-string tok-meta"
+      },
+      {
+        "from": 63,
+        "to": 91,
+        "classes": "tok-string tok-string"
+      },
+      {
+        "from": 91,
+        "to": 92,
+        "classes": "tok-string tok-meta"
+      },
+      {
+        "from": 93,
+        "to": 94,
+        "classes": "tok-meta"
+      }
+    ]
+  }
+]

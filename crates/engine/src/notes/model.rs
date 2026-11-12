@@ -1,0 +1,1226 @@
+//! ⚠️ `rename_all` and `tag = "kind"` are load-bearing: without them serde emits
+//! `space_id` and `{"Expires":{…}}`, which the front end cannot read back.
+
+use std::borrow::Cow;
+use std::collections::BTreeMap;
+
+use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
+use serde::{Deserialize, Serialize};
+
+use super::calc::{self, CalcCardLine};
+use super::checklist::{self, ChecklistItem};
+use super::drawing;
+use super::kind::NoteKind;
+use super::language::{self, Language};
+use super::markdown;
+use super::placeholder::{self, Placeholder};
+use super::priority::Priority;
+use super::view::SearchHit;
+use crate::folders::model::NoteFolder;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Note {
+    pub id: String,
+    pub space_id: String,
+    /// The folder travels with an export; where its zone sits must never join this model,
+    /// which `transfer::Bundle` deserialises.
+    #[serde(default)]
+    pub folder_id: Option<String>,
+    pub title: String,
+    pub language: Language,
+    pub content: String,
+    /// Breadcrumb, e.g. "API Gateway / Auth". Can be empty.
+    pub source: String,
+    pub tags: Vec<String>,
+    pub pinned: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub lifecycle: NoteLifecycle,
+    /// `default`: `transfer::Bundle` deserialises `Note`, and export files from before todo
+    /// lists carry no such key.
+    #[serde(default)]
+    pub kind: NoteKind,
+    /// Set by `set_priority` alone, which leaves `updated_at` alone: triaging is not editing.
+    #[serde(default)]
+    pub priority: Priority,
+    /// A checklist has these instead of `content`.
+    #[serde(default)]
+    pub items: Vec<ChecklistItem>,
+    /// Written by `set_placeholder_values` alone, which leaves `updated_at` alone.
+    #[serde(default)]
+    pub placeholder_values: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum NoteLifecycle {
+    Permanent,
+    Expires { at: DateTime<Utc> },
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteDraft {
+    pub space_id: String,
+    /// Set by the two places that file a new note: the board and the inside of a folder.
+    #[serde(default)]
+    pub folder_id: Option<String>,
+    pub title: String,
+    pub language: Language,
+    pub content: String,
+    pub source: String,
+    pub tags: Vec<String>,
+    pub pinned: bool,
+    pub lifecycle: NoteLifecycle,
+    #[serde(default)]
+    pub kind: NoteKind,
+    #[serde(default)]
+    pub priority: Priority,
+    #[serde(default)]
+    pub items: Vec<ChecklistItem>,
+}
+
+/// One seeded note, and which of the seeded folders it lands in.
+///
+/// An index into the folders the same command creates, which have no id yet. `None` stays
+/// loose, which the first launch shows on purpose.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SampleNote {
+    #[serde(default)]
+    pub folder: Option<u32>,
+    pub draft: NoteDraft,
+}
+
+/// A field set to `None` stays unchanged.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotePatch {
+    pub space_id: Option<String>,
+    pub title: Option<String>,
+    pub language: Option<Language>,
+    pub content: Option<String>,
+    pub source: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub pinned: Option<bool>,
+    pub lifecycle: Option<NoteLifecycle>,
+    pub kind: Option<NoteKind>,
+    /// Replaces the whole list, like `tags`: a position is all the identity an item has.
+    pub items: Option<Vec<ChecklistItem>>,
+    /// A Dessin's two pictures, taken as it is saved; written beside the body, not in it.
+    pub pictures: Option<drawing::DrawingPictures>,
+}
+
+impl NoteDraft {
+    /// Only a snippet is read for a language: a checklist has no body, and a Note's is prose.
+    pub fn into_note(self, id: String, now: DateTime<Utc>) -> Note {
+        let language = if self.kind.has_language() {
+            language::for_draft(&self)
+        } else {
+            Language::default()
+        };
+        let tags = normalize_tags(&self.tags);
+        let items = checklist::normalize_items(&self.items);
+
+        Note {
+            id,
+            space_id: self.space_id,
+            folder_id: self.folder_id,
+            title: self.title,
+            language,
+            content: self.content,
+            source: self.source,
+            tags,
+            pinned: self.pinned,
+            created_at: now,
+            updated_at: now,
+            lifecycle: self.lifecycle,
+            kind: self.kind,
+            priority: self.priority,
+            items,
+            placeholder_values: BTreeMap::new(),
+        }
+    }
+}
+
+impl NotePatch {
+    /// Does not check that `space_id` exists: persistence does, before calling. ⚠️ Detects a
+    /// language for a snippet's first content alone: a Note is prose, and a paste of code into
+    /// one asks `detect_language` before it is written.
+    pub fn apply(&self, note: &mut Note, now: DateTime<Utc>) {
+        let before = note.clone();
+        let detected = if self.kind.unwrap_or(note.kind).has_language() {
+            language::after_patch(note, self)
+        } else {
+            None
+        };
+
+        if let Some(space_id) = &self.space_id {
+            // A folder belongs to one space: a chip the space switcher cannot reach is worse
+            // than none.
+            if *space_id != note.space_id {
+                note.folder_id = None;
+            }
+            note.space_id.clone_from(space_id);
+        }
+        if let Some(title) = &self.title {
+            note.title.clone_from(title);
+        }
+        if let Some(language) = self.language {
+            note.language = language;
+        }
+        if let Some(content) = &self.content {
+            note.content.clone_from(content);
+        }
+        if let Some(source) = &self.source {
+            note.source.clone_from(source);
+        }
+        if let Some(pinned) = self.pinned {
+            note.pinned = pinned;
+        }
+        if let Some(tags) = &self.tags {
+            note.tags = normalize_tags(tags);
+        }
+        if let Some(lifecycle) = &self.lifecycle {
+            note.lifecycle = lifecycle.clone();
+        }
+        if let Some(kind) = self.kind {
+            note.kind = kind;
+        }
+        if let Some(items) = &self.items {
+            note.items = checklist::normalize_items(items);
+        }
+        if let Some(language) = detected {
+            note.language = language;
+        }
+        if !note.kind.has_language() {
+            note.language = Language::default();
+        }
+
+        // A field written back as it was, like the body an editor sends on closing, is no edit.
+        if *note != before {
+            note.updated_at = now;
+        }
+    }
+}
+
+const EXPIRING_SOON: TimeDelta = TimeDelta::days(3);
+
+/// The decision, not the rendering: the dated variants carry a date and not a label,
+/// so "4 min ago" ages on screen without a round trip.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum NoteFooter {
+    Source {
+        value: String,
+    },
+    Expiry {
+        at: DateTime<Utc>,
+    },
+    /// Since the last edit.
+    Age {
+        at: DateTime<Utc>,
+    },
+    /// Since the note was made: the age, when the list is sorted by creation.
+    Created {
+        at: DateTime<Utc>,
+    },
+}
+
+/// `flatten`: the front end has a single note type.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisplayNote {
+    #[serde(flatten)]
+    pub note: Note,
+    pub footer: NoteFooter,
+    pub expiring_soon: bool,
+    /// The list is derived from the text; the values are persisted.
+    pub placeholders: Vec<Placeholder>,
+    /// Filled in afterwards by whoever holds a connection: `decorate` reads no database.
+    pub attachment_count: u32,
+    /// Resolved in a pass of its own, like [`Self::attachment_count`]: the front end
+    /// never joins a `folder_id` against a list it happens to hold.
+    pub folder: Option<NoteFolder>,
+    /// What copying yields when that is not the content, so `checklist::to_markdown` stays
+    /// the only place the `- [x] ` syntax exists.
+    pub copy_text: Option<String>,
+    /// Filled in afterwards by `view::build`; `None` outside a search, and for a note
+    /// found by its own title.
+    pub search_hit: Option<SearchHit>,
+    /// `content` holds only its first lines: a list sends previews, `get_note` the body.
+    pub truncated: bool,
+    /// A Note's lines as its card draws them, cut like `content`; empty for the other kinds
+    /// and outside a list.
+    pub outline: Vec<OutlineLine>,
+    /// A Calcul note's last lines that gave something, read from the whole sheet before it is
+    /// cut; empty for the other kinds and outside a list.
+    pub calc: Vec<CalcCardLine>,
+}
+
+/// One line of a Note as a card draws it, read from its Markdown by `notes::markdown`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum OutlineLine {
+    Heading {
+        text: String,
+    },
+    Text {
+        text: String,
+    },
+    /// `marker` is `•` or the item's number.
+    Item {
+        text: String,
+        depth: u32,
+        marker: String,
+    },
+    Task {
+        text: String,
+        depth: u32,
+        done: bool,
+    },
+    /// A code block, its lines as written.
+    Code {
+        text: String,
+    },
+}
+
+impl OutlineLine {
+    /// The line as a search quotes it: its marker spelled out, `☐`/`☑` for a task.
+    pub(crate) fn plain(&self) -> String {
+        let indent = |depth: &u32| "  ".repeat(usize::try_from(*depth).unwrap_or(0));
+        match self {
+            Self::Heading { text } | Self::Text { text } | Self::Code { text } => text.clone(),
+            Self::Item {
+                text,
+                depth,
+                marker,
+            } => format!("{}{marker} {text}", indent(depth)),
+            Self::Task { text, depth, done } => {
+                format!("{}{} {text}", indent(depth), if *done { '☑' } else { '☐' })
+            }
+        }
+    }
+
+    fn text_mut(&mut self) -> &mut String {
+        match self {
+            Self::Heading { text }
+            | Self::Text { text }
+            | Self::Code { text }
+            | Self::Item { text, .. }
+            | Self::Task { text, .. } => text,
+        }
+    }
+}
+
+/// A Note shown a slide at a time, as `notes::markdown::present` cuts it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Presentation {
+    /// Each slide's Markdown, as the body holds it: the slide is drawn by the rich editor.
+    pub slides: Vec<String>,
+    /// The headings, each under the one above it.
+    pub map: Vec<MapNode>,
+}
+
+/// A heading of the Note in its mind map, with the slide it is on and the headings under it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MapNode {
+    pub text: String,
+    pub slide: u32,
+    pub children: Vec<MapNode>,
+}
+
+impl std::ops::Deref for DisplayNote {
+    type Target = Note;
+
+    fn deref(&self) -> &Self::Target {
+        &self.note
+    }
+}
+
+/// What a card shows of a body, and so all a list sends of one.
+pub const PREVIEW_LINES: usize = 5;
+
+/// Lines alone are no bound: a minified file is one line of a megabyte.
+pub const PREVIEW_CHARS: usize = 1_000;
+
+impl DisplayNote {
+    /// The age a list sorted by creation shows: a deadline or a source keeps its place.
+    pub fn dated_by_creation(&mut self) {
+        if matches!(self.footer, NoteFooter::Age { .. }) {
+            self.footer = NoteFooter::Created {
+                at: self.note.created_at,
+            };
+        }
+    }
+
+    /// ⚠️ After everything that reads the body — the fields, the search excerpt — and only
+    /// on what goes into a list: a note cut here must never reach the editor.
+    pub fn cut_to_preview(&mut self, today: NaiveDate) {
+        // Its body is a scene, of which a card draws nothing: the card asks for its picture.
+        if self.note.kind == NoteKind::Drawing {
+            self.note.content.clear();
+            self.truncated = true;
+            return;
+        }
+        if self.note.kind == NoteKind::Calc {
+            self.calc = calc::card_lines(&self.note.content, today);
+        }
+        if self.note.is_rich_text() {
+            // One parse for both: the words a copy must not mistake for the Markdown, and the
+            // lines the card draws.
+            let lines = markdown::outline(&self.note.content);
+            let readable = lines
+                .iter()
+                .map(OutlineLine::plain)
+                .collect::<Vec<_>>()
+                .join("\n");
+            // Marked cut even when it fits: a copy taken from the list would copy the words
+            // without their Markdown.
+            if readable != self.note.content {
+                self.note.content = readable;
+                self.truncated = true;
+            }
+            self.outline = outline_preview(lines);
+        }
+        if let Some(preview) = preview_of(&self.note.content) {
+            self.note.content = preview;
+            self.truncated = true;
+        }
+    }
+}
+
+/// A card's room, `PREVIEW_LINES` lines and `PREVIEW_CHARS` characters, over lines of which a
+/// code block may span several.
+fn outline_preview(lines: Vec<OutlineLine>) -> Vec<OutlineLine> {
+    let mut rows_left = PREVIEW_LINES;
+    let mut chars_left = PREVIEW_CHARS;
+    let mut kept = Vec::new();
+
+    for mut line in lines {
+        if rows_left == 0 || chars_left == 0 {
+            break;
+        }
+        let text = line.text_mut();
+        let rows_end = text
+            .match_indices('\n')
+            .nth(rows_left - 1)
+            .map_or(text.len(), |(at, _)| at);
+        let end = text[..rows_end]
+            .char_indices()
+            .nth(chars_left)
+            .map_or(rows_end, |(at, _)| at);
+        text.truncate(end);
+
+        rows_left = rows_left.saturating_sub(text.lines().count().max(1));
+        chars_left = chars_left.saturating_sub(text.chars().count());
+        kept.push(line);
+    }
+
+    kept
+}
+
+/// `None` when the body already fits, which is most snippets.
+fn preview_of(body: &str) -> Option<String> {
+    let lines_end = body
+        .match_indices('\n')
+        .nth(PREVIEW_LINES - 1)
+        .map_or(body.len(), |(at, _)| at);
+    let end = body[..lines_end]
+        .char_indices()
+        .nth(PREVIEW_CHARS)
+        .map_or(lines_end, |(at, _)| at);
+
+    (end < body.len()).then(|| body[..end].to_string())
+}
+
+impl Note {
+    /// A Note is written in the rich editor, as Markdown.
+    pub fn is_rich_text(&self) -> bool {
+        self.kind == NoteKind::Note
+    }
+
+    /// What a card shows and a search quotes: a Note's words without their Markdown, a
+    /// Dessin's words without its scene.
+    pub fn readable_body(&self) -> Cow<'_, str> {
+        match self.kind {
+            NoteKind::Note => Cow::Owned(markdown::plain(&self.content)),
+            NoteKind::Drawing => Cow::Owned(drawing::words(&self.content)),
+            NoteKind::Snippet | NoteKind::Checklist | NoteKind::Calc => {
+                Cow::Borrowed(&self.content)
+            }
+        }
+    }
+
+    /// Brought to the rules every draft and patch applies: an import inserts whole notes
+    /// through neither.
+    #[must_use]
+    pub fn normalized(mut self) -> Self {
+        self.tags = normalize_tags(&self.tags);
+        self.items = checklist::normalize_items(&self.items);
+        self.placeholder_values =
+            placeholder::normalize_values(std::mem::take(&mut self.placeholder_values));
+
+        self
+    }
+
+    /// Everything the note says, under a new id and title, dated now and not pinned. Its
+    /// history stays with the original: the copy starts its own.
+    #[must_use]
+    pub fn duplicate(self, id: String, title: String, now: DateTime<Utc>) -> Self {
+        Self {
+            id,
+            title,
+            pinned: false,
+            created_at: now,
+            updated_at: now,
+            ..self
+        }
+    }
+}
+
+pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {
+    DisplayNote {
+        footer: footer_of(&note),
+        expiring_soon: expires_soon(&note, now),
+        // A `{{name}}` written on a drawing is words on a picture, not a field to fill.
+        placeholders: if note.kind == NoteKind::Drawing {
+            Vec::new()
+        } else {
+            placeholder::parse(&note.content, &note.placeholder_values)
+        },
+        attachment_count: 0,
+        folder: None,
+        search_hit: None,
+        outline: Vec::new(),
+        calc: Vec::new(),
+        copy_text: match note.kind {
+            NoteKind::Checklist => Some(checklist::to_markdown(&note.items)),
+            // A sheet's results are written in the language on screen: the front copies it. A
+            // drawing is no text to copy: it is exported.
+            NoteKind::Snippet | NoteKind::Note | NoteKind::Calc | NoteKind::Drawing => None,
+        },
+        truncated: false,
+        note,
+    }
+}
+
+pub fn decorate_now(note: Note) -> DisplayNote {
+    decorate(note, Utc::now())
+}
+
+/// They override the default written in the text, never what was typed on the note: copying
+/// one into `value` would freeze the variable the day it changes.
+pub fn apply_global_defaults(note: &mut DisplayNote, globals: &BTreeMap<String, String>) {
+    for placeholder in &mut note.placeholders {
+        if let Some(value) = globals.get(&placeholder.name) {
+            placeholder.default_value.clone_from(value);
+        }
+    }
+}
+
+fn footer_of(note: &Note) -> NoteFooter {
+    if let NoteLifecycle::Expires { at } = note.lifecycle {
+        return NoteFooter::Expiry { at };
+    }
+
+    if let Some(root) = note
+        .source
+        .split(" / ")
+        .next()
+        .filter(|root| !root.trim().is_empty())
+    {
+        return NoteFooter::Source {
+            value: root.to_string(),
+        };
+    }
+
+    NoteFooter::Age {
+        at: note.updated_at,
+    }
+}
+
+pub(crate) fn expires_soon(note: &Note, now: DateTime<Utc>) -> bool {
+    let NoteLifecycle::Expires { at } = note.lifecycle else {
+        return false;
+    };
+
+    // A duration, not a number of whole days: at 3 days and 1 hour, rounding down would
+    // switch the note to alert a day early.
+    at.signed_duration_since(now) <= EXPIRING_SOON
+}
+
+/// Where a note sat before a batch moved it — the only thing that can put it back.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotePlacement {
+    pub note_id: String,
+    pub space_id: String,
+    /// The folder the move took it out of, which the undo puts it back into while it exists.
+    #[serde(default)]
+    pub folder_id: Option<String>,
+}
+
+/// A note's priority before a batch moved it: its undo puts back each note's own.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotePriority {
+    pub note_id: String,
+    pub priority: Priority,
+}
+
+/// One tag on one note: a batch answers pair by pair, so its undo cannot strip a tag the note
+/// already carried.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteTag {
+    pub note_id: String,
+    pub tag: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagUsage {
+    pub tag: String,
+    pub note_count: u32,
+}
+
+/// Written across the whole corpus, so a failure is an error: silence would rename onto nothing.
+pub fn validated_tag(raw: &str) -> Result<String, crate::error::ValidationError> {
+    normalize_tag(raw)
+        .map(str::to_string)
+        .ok_or_else(|| crate::error::ValidationError::new("tag", "a tag must have a readable name"))
+}
+
+/// A rename's two halves, brought to the rules every tag write applies: the sources
+/// normalised, the target refused when nothing readable is left of it.
+pub fn retagging(
+    sources: &[String],
+    into: &str,
+) -> Result<(Vec<String>, String), crate::error::ValidationError> {
+    Ok((normalize_tags(sources), validated_tag(into)?))
+}
+
+pub fn normalize_tag(tag: &str) -> Option<&str> {
+    let cleaned = tag.trim().trim_start_matches('#').trim();
+
+    (!cleaned.is_empty()).then_some(cleaned)
+}
+
+/// Both writing and querying go through here, or a typed `#urgent` would miss the stored
+/// `urgent`. De-duplication folds case and keeps the first spelling, like the column's `NOCASE`.
+pub fn normalize_tags(tags: &[String]) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+
+    tags.iter()
+        .filter_map(|tag| normalize_tag(tag))
+        .filter(|cleaned| seen.insert(cleaned.to_lowercase()))
+        .map(str::to_string)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::notes::fixtures::{NOW, at, note as sample};
+
+    #[test]
+    fn a_rename_normalises_its_sources_and_refuses_a_blank_target() {
+        let (sources, target) =
+            retagging(&["#Auth".to_string(), "auth".to_string()], " #identity ").unwrap();
+
+        assert_eq!(sources, ["Auth"]);
+        assert_eq!(target, "identity");
+        assert_eq!(retagging(&sources, " # ").unwrap_err().field, "tag");
+    }
+
+    #[test]
+    fn an_imported_note_is_brought_to_the_rules_of_a_write() {
+        let imported = Note {
+            tags: vec!["#auth".to_string(), "Auth".to_string(), " ".to_string()],
+            placeholder_values: BTreeMap::from([
+                ("host".to_string(), "db".to_string()),
+                ("not a field".to_string(), "x".to_string()),
+            ]),
+            ..sample()
+        }
+        .normalized();
+
+        assert_eq!(imported.tags, ["auth"]);
+        assert_eq!(imported.placeholder_values.len(), 1);
+    }
+
+    fn normalized(tags: &[&str]) -> Vec<String> {
+        normalize_tags(&tags.iter().copied().map(String::from).collect::<Vec<_>>())
+    }
+
+    #[test]
+    fn padding_and_blanks_are_dropped() {
+        assert_eq!(
+            normalized(&["  urgent ", "", "   ", "later"]),
+            ["urgent", "later"]
+        );
+    }
+
+    #[test]
+    fn a_duplicate_keeps_its_first_spelling() {
+        assert_eq!(normalized(&["Urgent", "urgent", "URGENT"]), ["Urgent"]);
+    }
+
+    #[test]
+    fn only_leading_hashes_are_stripped() {
+        assert_eq!(normalized(&["##c++", "a#b"]), ["c++", "a#b"]);
+    }
+
+    #[test]
+    fn a_tag_reduced_to_nothing_is_dropped_rather_than_stored_empty() {
+        assert!(normalized(&[" # ", "#"]).is_empty());
+    }
+
+    #[test]
+    fn tag_case_folding_reaches_beyond_ascii() {
+        assert_eq!(normalized(&["Étape", "étape"]), ["Étape"]);
+    }
+
+    fn now() -> DateTime<Utc> {
+        at(NOW)
+    }
+
+    fn expiring(at_iso: &str) -> Note {
+        Note {
+            lifecycle: NoteLifecycle::Expires { at: at(at_iso) },
+            ..sample()
+        }
+    }
+
+    fn draft(language: Language, content: &str) -> NoteDraft {
+        NoteDraft {
+            space_id: "s-1".to_string(),
+            folder_id: None,
+            title: "Title".to_string(),
+            language,
+            content: content.to_string(),
+            source: "API Gateway".to_string(),
+            tags: vec!["  #Urgent ".to_string(), "urgent".to_string()],
+            pinned: true,
+            lifecycle: NoteLifecycle::Permanent,
+            kind: NoteKind::Snippet,
+            priority: Priority::None,
+            items: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_draft_becomes_a_note_carrying_the_id_and_the_instant_it_was_given() {
+        let note = draft(Language::Md, "some prose").into_note("n-7".to_string(), now());
+
+        assert_eq!(note.id, "n-7");
+        assert_eq!(note.created_at, now());
+        assert_eq!(note.updated_at, now());
+    }
+
+    #[test]
+    fn turning_a_draft_into_a_note_detects_the_language_and_normalizes_the_tags() {
+        let note = draft(Language::Txt, "{\"a\": 1}").into_note("n-7".to_string(), now());
+
+        assert_eq!(note.language, Language::Json);
+        assert_eq!(note.tags, ["Urgent"]);
+    }
+
+    #[test]
+    fn turning_a_draft_into_a_note_leaves_everything_else_alone() {
+        let note = draft(Language::Md, "SELECT 1").into_note("n-7".to_string(), now());
+
+        assert_eq!(note.language, Language::Md);
+        assert_eq!(note.content, "SELECT 1");
+        assert_eq!(note.space_id, "s-1");
+        assert_eq!(note.source, "API Gateway");
+        assert!(note.pinned);
+    }
+
+    #[test]
+    fn a_patch_only_touches_the_fields_it_carries() {
+        let mut note = sample();
+        let patch = NotePatch {
+            title: Some("New".to_string()),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, at("2026-07-25T10:00:00.000Z"));
+
+        assert_eq!(note.title, "New");
+        assert_eq!(note.content, "Content");
+        assert_eq!(note.tags, ["auth"]);
+        assert_eq!(note.updated_at, at("2026-07-25T10:00:00.000Z"));
+        assert_eq!(note.created_at, now());
+    }
+
+    #[test]
+    fn a_patch_that_changes_nothing_leaves_the_date_alone() {
+        let mut note = sample();
+        let patch = NotePatch {
+            title: Some(note.title.clone()),
+            content: Some(note.content.clone()),
+            tags: Some(vec!["#auth".to_string()]),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, at("2026-07-25T10:00:00.000Z"));
+
+        assert_eq!(note.updated_at, now());
+    }
+
+    #[test]
+    fn a_patch_normalizes_the_tags_it_replaces() {
+        let mut note = sample();
+        let patch = NotePatch {
+            tags: Some(vec![
+                "  #Ops ".to_string(),
+                "OPS".to_string(),
+                " ".to_string(),
+            ]),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.tags, ["Ops"]);
+    }
+
+    #[test]
+    fn typing_into_an_empty_note_keeps_it_a_note() {
+        let mut note = Note {
+            kind: NoteKind::Note,
+            content: String::new(),
+            ..sample()
+        };
+        let patch = NotePatch {
+            content: Some("## Standup\n\nSELECT 1 is slow".to_string()),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.kind, NoteKind::Note);
+        assert_eq!(note.language, Language::Txt);
+    }
+
+    #[test]
+    fn a_patch_filling_an_empty_snippet_detects_its_language() {
+        let mut note = Note {
+            language: Language::Txt,
+            content: String::new(),
+            ..sample()
+        };
+        let patch = NotePatch {
+            content: Some("SELECT 1".to_string()),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.language, Language::Sql);
+    }
+
+    #[test]
+    fn a_patch_gives_a_note_no_language() {
+        let mut note = Note {
+            kind: NoteKind::Note,
+            ..sample()
+        };
+        let patch = NotePatch {
+            language: Some(Language::Sql),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.language, Language::Txt);
+    }
+
+    /// Code pasted into an empty Note: the note leaves for the code field.
+    #[test]
+    fn a_note_turned_into_a_snippet_takes_the_language_it_is_given() {
+        let mut note = Note {
+            kind: NoteKind::Note,
+            content: String::new(),
+            ..sample()
+        };
+        let patch = NotePatch {
+            kind: Some(NoteKind::Snippet),
+            language: Some(Language::Sql),
+            content: Some("SELECT 1".to_string()),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.kind, NoteKind::Snippet);
+        assert_eq!(note.language, Language::Sql);
+    }
+
+    const DRAWING: &str = r#"{"scene":{"objects":[{"type":"Textbox","text":"Fill {{host}}"}]}}"#;
+
+    /// Its scene is no text a card could draw: nothing of the body goes, and the card asks for
+    /// its picture.
+    #[test]
+    fn a_drawing_reaches_a_card_without_its_scene() {
+        let mut note = decorate(
+            Note {
+                kind: NoteKind::Drawing,
+                content: DRAWING.to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        assert_eq!(note.content, "");
+        assert!(note.truncated);
+    }
+
+    #[test]
+    fn a_drawing_reads_as_its_words_and_holds_no_field_to_fill() {
+        let note = Note {
+            kind: NoteKind::Drawing,
+            content: DRAWING.to_string(),
+            ..sample()
+        };
+
+        assert_eq!(note.readable_body(), "Fill {{host}}");
+        let shown = decorate(note, now());
+        assert!(shown.placeholders.is_empty());
+        assert_eq!(shown.copy_text, None);
+    }
+
+    /// Cut even when it fits, so the list never passes the words off as the Markdown.
+    #[test]
+    fn a_note_reaches_a_card_without_its_markdown() {
+        let mut note = decorate(
+            Note {
+                kind: NoteKind::Note,
+                content: "- [x] **ship** it".to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        assert_eq!(note.content, "☑ ship it");
+        assert!(note.truncated);
+        assert_eq!(
+            note.outline,
+            [OutlineLine::Task {
+                text: "ship it".to_string(),
+                depth: 0,
+                done: true
+            }]
+        );
+    }
+
+    #[test]
+    fn a_notes_card_draws_its_heading_and_its_items() {
+        let mut note = decorate(
+            Note {
+                kind: NoteKind::Note,
+                content: "## Décisions\n\n- Bascule le 14/10\n- Réplica d'abord".to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        let item = |text: &str| OutlineLine::Item {
+            text: text.to_string(),
+            depth: 0,
+            marker: "•".to_string(),
+        };
+        assert_eq!(
+            note.outline,
+            [
+                OutlineLine::Heading {
+                    text: "Décisions".to_string()
+                },
+                item("Bascule le 14/10"),
+                item("Réplica d'abord"),
+            ]
+        );
+    }
+
+    /// A code block is one entry of several lines: the card's room is counted in lines.
+    #[test]
+    fn a_notes_card_holds_as_many_lines_as_any_card() {
+        let body = format!("# Title\n\n```sh\n{}\n```", ["one"; 9].join("\n"));
+        let mut note = decorate(
+            Note {
+                kind: NoteKind::Note,
+                content: body,
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        assert_eq!(note.outline.len(), 2);
+        let OutlineLine::Code { text } = &note.outline[1] else {
+            panic!("the second line is the code block");
+        };
+        assert_eq!(text.lines().count(), PREVIEW_LINES - 1);
+    }
+
+    #[test]
+    fn a_snippets_card_has_no_outline() {
+        let mut note = decorate(
+            Note {
+                content: "# not a heading, a comment".to_string(),
+                language: Language::Sh,
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        assert!(note.outline.is_empty());
+    }
+
+    #[test]
+    fn a_text_snippet_keeps_its_markdown_characters_on_a_card() {
+        let mut note = decorate(
+            Note {
+                language: Language::Txt,
+                content: "- [x] **ship** it".to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        assert_eq!(note.content, "- [x] **ship** it");
+        assert!(!note.truncated);
+    }
+
+    #[test]
+    fn a_snippet_keeps_its_characters_on_a_card() {
+        let mut note = decorate(
+            Note {
+                language: Language::Sh,
+                content: "echo **not bold**".to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        assert_eq!(note.content, "echo **not bold**");
+        assert!(!note.truncated);
+    }
+
+    #[test]
+    fn an_ordinary_note_shows_the_age_of_its_last_change() {
+        let footer = footer_of(&sample());
+
+        assert_eq!(footer, NoteFooter::Age { at: at(NOW) });
+    }
+
+    #[test]
+    fn only_a_snippet_is_given_a_guessed_language() {
+        for kind in [NoteKind::Checklist, NoteKind::Note] {
+            let draft = NoteDraft {
+                kind,
+                content: "{ \"a\": 1 }".to_string(),
+                ..draft(Language::Txt, "")
+            };
+
+            let note = draft.into_note("n-2".to_string(), now());
+
+            assert_eq!(note.language, Language::Txt, "{kind}");
+        }
+    }
+
+    #[test]
+    fn turning_a_note_into_a_checklist_does_not_trigger_a_detection() {
+        let mut note = Note {
+            language: Language::Txt,
+            content: String::new(),
+            ..sample()
+        };
+        let patch = NotePatch {
+            kind: Some(NoteKind::Checklist),
+            content: Some("{ \"a\": 1 }".to_string()),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.language, Language::Txt);
+    }
+
+    #[test]
+    fn a_patch_replaces_the_whole_item_list_and_normalizes_it() {
+        let mut note = Note {
+            items: vec![ChecklistItem {
+                text: "Old".to_string(),
+                done: true,
+            }],
+            ..sample()
+        };
+        let patch = NotePatch {
+            items: Some(vec![
+                ChecklistItem {
+                    text: "  Ship it ".to_string(),
+                    done: false,
+                },
+                ChecklistItem {
+                    text: "   ".to_string(),
+                    done: false,
+                },
+            ]),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(
+            note.items,
+            [ChecklistItem {
+                text: "Ship it".to_string(),
+                done: false
+            }]
+        );
+    }
+
+    #[test]
+    fn a_patch_that_says_nothing_about_the_items_leaves_them_alone() {
+        let mut note = Note {
+            items: vec![ChecklistItem {
+                text: "Ship it".to_string(),
+                done: true,
+            }],
+            ..sample()
+        };
+
+        NotePatch {
+            title: Some("T".to_string()),
+            ..NotePatch::default()
+        }
+        .apply(&mut note, now());
+
+        assert_eq!(note.items.len(), 1);
+    }
+
+    /// Shown for pinned notes alone, a context typed under the title was nowhere on its card (COD-21).
+    #[test]
+    fn a_note_shows_the_first_segment_of_its_context_pinned_or_not() {
+        for pinned in [true, false] {
+            let note = Note {
+                pinned,
+                source: "API Gateway / Auth / Tokens".to_string(),
+                ..sample()
+            };
+
+            assert_eq!(
+                footer_of(&note),
+                NoteFooter::Source {
+                    value: "API Gateway".to_string()
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn a_note_without_context_falls_back_to_its_age() {
+        let note = Note {
+            pinned: true,
+            source: String::new(),
+            ..sample()
+        };
+
+        assert!(matches!(footer_of(&note), NoteFooter::Age { .. }));
+    }
+
+    #[test]
+    fn an_expiring_note_shows_its_deadline_even_when_pinned() {
+        let note = Note {
+            pinned: true,
+            source: "API Gateway".to_string(),
+            ..expiring("2026-08-01T00:00:00.000Z")
+        };
+
+        assert!(matches!(footer_of(&note), NoteFooter::Expiry { .. }));
+    }
+
+    #[test]
+    fn a_permanent_note_never_counts_as_expiring_soon() {
+        assert!(!expires_soon(&sample(), now()));
+    }
+
+    #[test]
+    fn the_threshold_is_measured_in_fractions_of_a_day() {
+        assert!(!expires_soon(&expiring("2026-07-28T10:00:00.000Z"), now()));
+        assert!(expires_soon(&expiring("2026-07-28T08:00:00.000Z"), now()));
+    }
+
+    #[test]
+    fn an_already_expired_note_counts_as_expiring_soon() {
+        assert!(expires_soon(&expiring("2026-07-01T00:00:00.000Z"), now()));
+    }
+
+    /// A snippet's: a Note's preview is its words, tested on their own.
+    fn previewed(content: &str) -> DisplayNote {
+        let mut note = decorate(
+            Note {
+                language: Language::Sh,
+                content: content.to_string(),
+                ..sample()
+            },
+            now(),
+        );
+        note.cut_to_preview(chrono::NaiveDate::MIN);
+
+        note
+    }
+
+    #[test]
+    fn a_body_that_fits_is_sent_whole_and_not_marked() {
+        for body in ["", "one", "1\n2\n3\n4\n5"] {
+            let note = previewed(body);
+
+            assert_eq!(note.content, body);
+            assert!(!note.truncated);
+        }
+    }
+
+    #[test]
+    fn a_long_body_keeps_the_lines_a_card_shows() {
+        let note = previewed("1\n2\n3\n4\n5\n6\n7");
+
+        assert_eq!(note.content, "1\n2\n3\n4\n5");
+        assert!(note.truncated);
+    }
+
+    #[test]
+    fn one_long_line_is_cut_on_a_character_boundary() {
+        let note = previewed(&"é".repeat(PREVIEW_CHARS * 3));
+
+        assert_eq!(note.content.chars().count(), PREVIEW_CHARS);
+        assert!(note.truncated);
+    }
+
+    /// Read before the cut: a list must still know a snippet has fields past its first lines.
+    #[test]
+    fn the_fields_are_found_in_the_whole_body() {
+        let note = previewed("1\n2\n3\n4\n5\npsql -h {{host}}");
+
+        assert_eq!(note.placeholders[0].name, "host");
+    }
+}

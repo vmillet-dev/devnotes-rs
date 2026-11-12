@@ -1,0 +1,5 @@
+Mise en production du mardi
+Geler les merges sur main
+Sauvegarder la base
+Déployer billing
+Vérifier /health

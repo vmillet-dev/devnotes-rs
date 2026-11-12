@@ -10,7 +10,7 @@
       <div class="mini" aria-hidden="true">
         <span class="md-h">{{ text().notes.heading }}</span>
         @for (item of text().notes.items; track item) {
-          <span class="md-li">{{ item }}</span>
+        <span class="md-li">{{ item }}</span>
         }
         <code>nginx -s reload</code>
       </div>
@@ -23,7 +23,7 @@
           ><span></span
         ></span>
         @for (item of text().lists.items; track item) {
-          <span class="ck" [class.on]="$index < ticked()">{{ item }}</span>
+        <span class="ck" [class.on]="$index < ticked()">{{ item }}</span>
         }
       </div>
     </li>
@@ -34,10 +34,7 @@
         {{ text().trash.after }}
       </p>
       <div class="mini" aria-hidden="true">
-        <span class="undo-bar"
-          ><span>{{ text().trash.toast }}</span
-          ><b>{{ text().trash.undo }}</b></span
-        >
+        <span class="undo-bar"><span>{{ text().trash.toast }}</span><b>{{ text().trash.undo }}</b></span>
         <span class="bar countdown" [class.running]="countingDown()"><span></span></span>
       </div>
     </li>
@@ -46,10 +43,9 @@
       <p>{{ text().versions.line }}</p>
       <div class="mini" aria-hidden="true">
         @for (version of text().versions.items; track version[0]; let first = $first) {
-          <span class="ver" [class.cur]="first"
-            ><span>{{ version[0] }}</span
-            ><span>{{ version[1] }}</span></span
-          >
+        <span class="ver" [class.cur]="first"
+          ><span>{{ version[0] }}</span><span>{{ version[1] }}</span></span
+        >
         }
       </div>
     </li>
@@ -58,7 +54,7 @@
       <p>{{ text().attachments.line }}</p>
       <div class="mini" aria-hidden="true">
         @for (file of text().attachments.items; track file) {
-          <span class="file"><i></i>{{ file }}</span>
+        <span class="file"><i></i>{{ file }}</span>
         }
       </div>
     </li>
@@ -69,7 +65,7 @@
         <span class="sel">{{ text().selection.count }}</span>
         <span class="acts">
           @for (action of text().selection.actions; track action) {
-            <span>{{ action }}</span>
+          <span>{{ action }}</span>
           }
         </span>
       </div>
@@ -79,7 +75,43 @@
       <p>{{ text().transfer.before }} <code>.devnotes</code>{{ text().transfer.after }}</p>
       <div class="mini" aria-hidden="true">
         @for (file of text().transfer.items; track file) {
-          <span class="file"><i></i>{{ file }}</span>
+        <span class="file"><i></i>{{ file }}</span>
+        }
+      </div>
+    </li>
+    <li class="tile">
+      <h3>{{ text().calc.title }}</h3>
+      <p>{{ text().calc.line }}</p>
+      <div class="mini" aria-hidden="true">
+        @for (line of text().calc.items; track line[0]) {
+        <span class="ver"><span>{{ line[0] }}</span><span>{{ line[1] }}</span></span>
+        }
+      </div>
+    </li>
+    <li class="tile">
+      <h3>{{ text().diagrams.title }}</h3>
+      <p>{{ text().diagrams.line }}</p>
+      <div class="mini" aria-hidden="true">
+        @for (item of text().diagrams.items; track item) {
+        <span class="md-li">{{ item }}</span>
+        }
+      </div>
+    </li>
+    <li class="tile">
+      <h3>{{ text().scripts.title }}</h3>
+      <p>{{ text().scripts.line }}</p>
+      <div class="mini" aria-hidden="true">
+        @for (item of text().scripts.items; track item) {
+        <span class="md-li">{{ item }}</span>
+        }
+      </div>
+    </li>
+    <li class="tile">
+      <h3>{{ text().palette.title }}</h3>
+      <p>{{ text().palette.line }}</p>
+      <div class="mini" aria-hidden="true">
+        @for (item of text().palette.items; track item) {
+        <span class="md-li">{{ item }}</span>
         }
       </div>
     </li>

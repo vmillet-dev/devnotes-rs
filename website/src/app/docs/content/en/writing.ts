@@ -22,13 +22,13 @@ export const WRITING: DocPage = {
   id: 'writing',
   title: 'Writing',
   summary:
-    'The three kinds of note, a snippet’s fields to fill, the code editor and Prettier, formatted notes, checklists and attachments.',
+    'The five kinds of note, a snippet’s fields to fill, the code editor and Prettier, formatted notes and diagrams, calculation sheets, drawings, checklists and attachments.',
   body: [
-    h2('three-kinds', 'Three kinds of note'),
+    h2('three-kinds', 'Five kinds of note'),
     p(
       'The ',
       ui('+ New note'),
-      ' button offers all three. Each also has its shortcut, active on the canvas:',
+      ' button offers each of them. Each also has its shortcut, active on the canvas:',
     ),
     table(
       'Creating a note',
@@ -36,7 +36,10 @@ export const WRITING: DocPage = {
       [b('Code snippet'), 'a block of code, its language and its fields to fill', keys('Ctrl N')],
       [b('Note'), 'formatted text: headings, lists, links, tables, code blocks', keys('Ctrl Shift N')],
       [b('Todo list'), 'steps to tick off, in order', keys('Ctrl Shift L')],
+      [b('Calculation'), 'one line, one result: units, dates, totals', keys('Ctrl Shift M')],
+      [b('Drawing'), 'boxes, arrows and text: a sketch', keys('Ctrl Shift D')],
     ),
+    p('The editor’s ', ui('Kind'), ' menu turns a note into another kind, a drawing excepted.'),
     p(
       'A note has a title, a source (the ',
       ui('Context…'),
@@ -47,15 +50,17 @@ export const WRITING: DocPage = {
     tip('The kind offered by default is chosen in ', ui('Preferences… → General → Default note type'), '.'),
     h2('snippets', 'Snippets'),
     p(
-      'A snippet is highlighted by its language: twenty-six to choose from, from JSON, TypeScript, Python, Rust, Go or SQL to Shell, PowerShell, YAML, TOML or Elixir, plus plain text. The language menu filters from the keyboard: type the first letters, then ',
+      'A snippet is highlighted by its language: 142 to choose from, from JSON, TypeScript, Python, Rust, Go or SQL to Shell, PowerShell, YAML, TOML or Elixir, plus plain text. The colours are the same on the card as in the editor. The language menu filters from the keyboard: type the first letters, then ',
       keys('Enter'),
       '.',
     ),
     p(
       'The code editor numbers its lines, keeps ',
       keys('Tab'),
-      ' in the text to indent, and finds or replaces with ',
+      ' in the text to indent, and finds with ',
       keys('Ctrl F'),
+      ', replaces with ',
+      keys('Ctrl H'),
       '. Line wrapping is set in the preferences.',
     ),
     h3('prettier', 'Formatting with Prettier'),
@@ -139,6 +144,20 @@ export const WRITING: DocPage = {
       ['Ctrl K', 'Link (Ctrl + click opens it)'],
     ),
     p('A table is inserted from the toolbar, then grows row by row or column by column.'),
+    h3('diagrams', 'Diagrams and presenting'),
+    p(
+      'A code block whose language is ',
+      code('mermaid'),
+      ' is drawn as a diagram. It is drawn by DevNotes itself, close to Mermaid’s drawing but not identical. A drawing is embedded the same way, from a sketch of your own.',
+    ),
+    p(
+      ui('Present'),
+      ' shows the Note full screen, one section a slide: the arrows step through them, ',
+      keys('M'),
+      ' opens the map of the headings and ',
+      keys('Esc'),
+      ' leaves.',
+    ),
     h2('lists', 'Todo lists'),
     p(
       'A list is ticked from its card, without opening it, and the card shows its progress. In the editor, ',
@@ -150,6 +169,38 @@ export const WRITING: DocPage = {
       ' or ',
       keys('Alt ↓'),
       ' moves it.',
+    ),
+    h2('calc', 'Calculation sheets'),
+    p(
+      'A calculation sheet gives one result per line, as you type, and keeps none of them: only what you wrote is saved. Name a value, convert units, take a percentage, add durations:',
+    ),
+    snippet('A few lines', '', 'price = 120 €\n3 h 20 min in min\n20 % of 340'),
+    p(
+      'A name is usable on the lines below its own. The sheet reads units (CSS units and frequencies too), dates, every form of percentage, fractions, rounding and functions, bases and bits, and the finance forms: compound interest, returns, present value and loans. Offline, it knows no exchange rate, and says so. A line that cannot be computed says why, beside itself.',
+    ),
+    p(
+      'Click a result to select it, ',
+      keys('Shift'),
+      ' or ',
+      keys('Ctrl'),
+      ' to select more: the sheet adds them up. The number format, the date format and the decimals (up to fourteen) are set in ',
+      ui('Preferences… → General'),
+      '.',
+    ),
+    h2('drawing', 'Drawings'),
+    p(
+      'A drawing is boxes, arrows and text on a free surface. An arrow started on a shape follows it when the shape moves. ',
+      keys('A'),
+      ' draws an arrow and ',
+      keys('Delete'),
+      ' removes the selection.',
+    ),
+    p(
+      'A drawing is exported as ',
+      ui('PNG'),
+      ' or ',
+      ui('SVG'),
+      ', and inserted into a Note, which then shows the picture.',
     ),
     h2('attachments', 'Attachments'),
     p(
@@ -211,7 +262,13 @@ export const ORGANISING: DocPage = {
     p(
       'A folder cuts a space into named, coloured regions: blue, amber, purple, green or red. ',
       ui('New folder'),
-      ' creates one in the open space; its menu renames it, changes its colour or deletes it. The notes of a deleted folder stay, simply without a folder.',
+      ' creates one in the open space; its menu renames it, changes its colour or deletes it, and ',
+      ui('New sub-folder'),
+      ' creates one inside. The notes of a deleted folder stay, handed to the folder above. A folder dragged onto another goes inside it; ',
+      keys('Alt ←'),
+      ' and ',
+      keys('Alt →'),
+      ' do it from the keyboard.',
     ),
     h2('board', 'The Board view'),
     p(
@@ -221,7 +278,7 @@ export const ORGANISING: DocPage = {
       ui('Board'),
       ' switch changes how a space is seen. On the ',
       ui('Board'),
-      ', each folder is a zone you move and resize, and each note a card laid on it:',
+      ', each folder is a zone you move and resize, and each note a card laid on it. The board shows one level at a time, and a click on a zone opens its own board:',
     ),
     ul(
       ['drag a card into a zone to file it in that folder;'],

@@ -1,0 +1,7 @@
+# Replaces the root's rather than adding to it: its line is repeated.
+doc-valid-idents = ["SQLite", "DevNotes", "TextMate", ".."]
+
+# A scenario waits on a condition (`App::eventually`), never on a duration.
+disallowed-methods = [
+    { path = "std::thread::sleep", reason = "wait on a condition with App::eventually" },
+]

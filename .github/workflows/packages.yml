@@ -1,0 +1,173 @@
+name: Packages
+
+# The packages a release publishes, proven before a release depends on them (plan § 4.3 point 5):
+# built and signed as `release.yml` builds them, but with a key made for the run; installed on a
+# clean runner as 1.0.0; offered 1.0.1 by a `latest.json` served on the runner, first altered by
+# one byte — refused, nothing changes — then whole — installed. Both versions package the same
+# binary: what is tested is the package, the manifest, the signature and the client.
+on:
+  pull_request:
+    branches: [main, 'dev/**']
+    paths:
+      - 'Cargo.lock'
+      - 'crates/app/Cargo.toml'
+      - 'crates/app/packaging/**'
+      - 'crates/platform/src/updater/**'
+      - 'crates/platform/examples/update.rs'
+      - 'scripts/latest-json.mjs'
+      - '.github/actions/package/**'
+      - '.github/workflows/packages.yml'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  install-and-update:
+    name: Install and update (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    env:
+      SERVED: ${{ github.workspace }}/served
+      ORIGIN: http://127.0.0.1:8765
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          shared-key: packages-${{ matrix.os }}
+          save-if: 'true'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # Before the versions change: the client is built against the lockfile as committed.
+      - run: cargo build -p app --release --locked
+
+      - run: cargo build -p platform --example update --release --locked
+
+      - name: A signing key for this run alone
+        id: key
+        run: |
+          cargo install --locked cargo-packager@0.11.8
+          cargo packager signer generate --ci --path "$RUNNER_TEMP/test.key" --password test-only
+          echo "public=$(cat "$RUNNER_TEMP/test.key.pub")" >> "$GITHUB_OUTPUT"
+          {
+            echo 'TEST_PRIVATE_KEY<<KEY_END'
+            cat "$RUNNER_TEMP/test.key"
+            echo
+            echo 'KEY_END'
+          } >> "$GITHUB_ENV"
+
+      # The one line of `[workspace.package]` that starts with `version`; Cargo.lock follows.
+      - name: Version 1.0.0
+        run: sed -i 's/^version = ".*"/version = "1.0.0"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
+
+      - uses: ./.github/actions/package
+        with:
+          private-key: ${{ env.TEST_PRIVATE_KEY }}
+          password: test-only
+          out: old
+
+      - name: Version 1.0.1
+        run: sed -i 's/^version = ".*"/version = "1.0.1"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
+
+      - uses: ./.github/actions/package
+        with:
+          private-key: ${{ env.TEST_PRIVATE_KEY }}
+          password: test-only
+          out: new
+
+      # Two manifests for 1.0.1: one whose package is altered by one byte after signing, one
+      # whole. Only the platform of this runner is checked; the manifest script wants both.
+      - name: Serve 1.0.1, altered and whole
+        run: |
+          echo '- A test release' > "$RUNNER_TEMP/notes.md"
+          for kind in altered whole; do
+            mkdir -p "$SERVED/$kind"
+            cp new/* "$SERVED/$kind/"
+            # The manifest script refuses a release without Windows: a stand-in, never fetched.
+            if [ "$RUNNER_OS" = Linux ]; then
+              echo stand-in > "$SERVED/$kind/devnotes_1.0.1_x64-setup.exe"
+              echo stand-in > "$SERVED/$kind/devnotes_1.0.1_x64-setup.exe.sig"
+            fi
+            node scripts/latest-json.mjs --dir "$SERVED/$kind" --version 1.0.1 \
+              --base "$ORIGIN/$kind" --notes "$RUNNER_TEMP/notes.md"
+          done
+          if [ "$RUNNER_OS" = Windows ]; then
+            package=$(ls "$SERVED/altered" | grep -- '-setup\.exe$')
+          else
+            package=$(ls "$SERVED/altered" | grep '\.AppImage$')
+          fi
+          python3 -c "import sys; p=sys.argv[1]; b=bytearray(open(p,'rb').read()); b[len(b)//2]^=1; open(p,'wb').write(b)" \
+            "$SERVED/altered/$package"
+          echo "altered: $package"
+          (cd "$SERVED" && python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/server.log" 2>&1 &)
+          for _ in $(seq 1 30); do curl -sf "$ORIGIN/whole/latest.json" > /dev/null && break; sleep 1; done
+          curl -sf "$ORIGIN/whole/latest.json"
+
+      - name: A clean install of 1.0.0
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            pwsh -NoProfile -Command "Start-Process '$(cygpath -w "$(ls old/*-setup.exe)")' -ArgumentList '/S' -Wait"
+          else
+            mkdir -p "$RUNNER_TEMP/installed"
+            cp old/*.AppImage "$RUNNER_TEMP/installed/DevNotes.AppImage"
+            chmod +x "$RUNNER_TEMP/installed/DevNotes.AppImage"
+          fi
+          .github/scripts/installed.sh 1.0.0
+
+      - name: The altered 1.0.1 is refused, 1.0.0 stays
+        run: |
+          set +e
+          APPIMAGE="$RUNNER_TEMP/installed/DevNotes.AppImage" target/release/examples/update 1.0.0 \
+            "$ORIGIN/altered/latest.json" '${{ steps.key.outputs.public }}'
+          status=$?
+          set -e
+          if [ "$status" != 2 ]; then
+            echo "::error::the altered package was not refused (exit $status)"
+            exit 1
+          fi
+          .github/scripts/installed.sh 1.0.0
+
+      - name: The whole 1.0.1 is installed
+        run: |
+          APPIMAGE="$RUNNER_TEMP/installed/DevNotes.AppImage" target/release/examples/update 1.0.0 \
+            "$ORIGIN/whole/latest.json" '${{ steps.key.outputs.public }}'
+          .github/scripts/installed.sh 1.0.1
+
+      - name: Uninstall
+        if: always() && runner.os == 'Windows'
+        run: |
+          taskkill //IM devnotes.exe //F 2>/dev/null || true
+          folder=$(pwsh -NoProfile -Command "(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object DisplayName -eq 'DevNotes').InstallLocation" | tr -d '\r"')
+          uninstaller="$folder/uninstall.exe"
+          if [ -f "$uninstaller" ]; then
+            pwsh -NoProfile -Command "Start-Process '$(cygpath -w "$uninstaller")' -ArgumentList '/S' -Wait"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: packages-${{ matrix.os }}
+          path: |
+            old
+            new
+            ${{ runner.temp }}/server.log
+          retention-days: 7

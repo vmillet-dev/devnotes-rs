@@ -1,0 +1,134 @@
+name: Security (npm)
+
+# Two triggers, because they catch different things. On a pull request: a dependency
+# arriving with a known advisory, while there is still a review to act on. On a
+# schedule: an advisory published *after* a dependency was merged, which no push would
+# ever surface. Cargo and npm have a workflow each, so a pull request that touches only
+# one of them is never judged on the other's tree.
+on:
+  pull_request:
+    branches: [main, 'dev/**']
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'website/package.json'
+      - 'website/package-lock.json'
+      - '.github/workflows/security-npm.yml'
+  schedule:
+    # Monday morning, so the week starts with the answer rather than ends with it.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    # The root keeps its name: it may be a required check. The site's lockfile is audited alike.
+    name: npm advisories${{ matrix.directory == '.' && '' || ' (website)' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ['.', 'website']
+    defaults:
+      run:
+        working-directory: ${{ matrix.directory }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ matrix.directory }}/package-lock.json
+
+      - run: npm ci
+
+      # Production dependencies only. The dev tree pulls in a build chain whose
+      # advisories never reach a user's machine, and a job that cries wolf on those
+      # is a job everyone learns to ignore.
+      #
+      # ⚠️ `--omit=dev` reads the section a package is *declared* in, not what is
+      # actually bundled. It is a coarse cut, and it errs on the safe side.
+      - name: Advisories that block
+        run: npm audit --omit=dev --audit-level=high
+
+      # `high` and above failed the step above; what is left is reported and does not
+      # hold a pull request. A moderate advisory in a shipped dependency is still
+      # worth seeing — it just should not be the thing that stops a fix landing.
+      #
+      # `success() || failure()` and not `always()`: a red gate above should still print the
+      # whole picture, but a cancelled run or a failed `npm ci` should not reach a step that
+      # can only report on an audit it never got to run.
+      - name: Advisories worth knowing about
+        if: success() || failure()
+        run: |
+          npm audit --omit=dev --json > audit.json || true
+          node <<'EOF'
+          const fs = require('fs');
+
+          // ⚠️ A registry that times out still exits non-zero *and* writes something that is
+          // not an audit — an `{ "error": … }` object, or nothing at all. This step reports;
+          // it must never be the reason a pull request goes red.
+          let audit;
+          try {
+            audit = JSON.parse(fs.readFileSync('audit.json', 'utf8'));
+          } catch (error) {
+            console.log(`::warning title=npm audit::the audit produced no readable report (${error.message})`);
+            process.exit(0);
+          }
+
+          if (!audit.vulnerabilities || !audit.metadata?.vulnerabilities) {
+            console.log('::warning title=npm audit::the audit reported an error instead of a result');
+            process.exit(0);
+          }
+
+          const counts = audit.metadata.vulnerabilities;
+
+          const noted = Object.values(audit.vulnerabilities)
+            .filter((entry) => ['low', 'moderate'].includes(entry.severity))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+          // An advisory entry carries its detail in `via`, where a string is a parent
+          // package and an object is the advisory itself.
+          const detailed = (entry) => entry.via.find((via) => typeof via === 'object');
+
+          for (const entry of noted) {
+            const advisory = detailed(entry);
+            const detail = advisory
+              ? `${advisory.title} — ${advisory.url}`
+              : `via ${entry.via.join(', ')}`;
+            const fix = entry.fixAvailable ? 'fix available' : 'no fix published';
+            console.log(
+              `::warning title=npm audit (${entry.severity})::${entry.name} ${entry.range}: ${detail} (${fix})`,
+            );
+          }
+
+          const lines = ['### npm advisories (production tree)', ''];
+          if (noted.length === 0) {
+            lines.push('Nothing below the blocking threshold.');
+          } else {
+            lines.push(
+              `${counts.moderate} moderate, ${counts.low} low — reported, not blocking. \`high\` and above fail the job.`,
+              '',
+              '| Package | Severity | Advisory | Fix |',
+              '| --- | --- | --- | --- |',
+            );
+            for (const entry of noted) {
+              const advisory = detailed(entry);
+              const link = advisory
+                ? `[${advisory.title}](${advisory.url})`
+                : `via ${entry.via.join(', ')}`;
+              lines.push(
+                `| \`${entry.name}\` | ${entry.severity} | ${link} | ${entry.fixAvailable ? 'yes' : 'none'} |`,
+              );
+            }
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          EOF

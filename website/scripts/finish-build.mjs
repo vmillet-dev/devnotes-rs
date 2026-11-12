@@ -5,7 +5,7 @@
 import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const OUT = 'dist/website';
+const OUT = 'dist';
 
 const routes = JSON.parse(readFileSync(join(OUT, 'prerendered-routes.json'), 'utf8')).routes;
 const paths = Object.keys(routes).filter((path) => path !== '/404');

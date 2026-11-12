@@ -1,8 +1,8 @@
-/* The website's build: its own sources only, on the workspace's compiler options. */
+/* The website's build: its own sources only. */
 {
-  "extends": "../tsconfig.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../out-tsc/website",
+    "outDir": "./out-tsc/app",
     "types": []
   },
   "include": ["src/**/*.ts"],

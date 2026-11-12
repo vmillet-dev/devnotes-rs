@@ -21,13 +21,13 @@ export const WRITING: DocPage = {
   id: 'writing',
   title: 'Écrire',
   summary:
-    'Les trois sortes de notes, les champs à remplir d’un snippet, l’éditeur de code et Prettier, les notes mises en forme, les listes à cocher et les pièces jointes.',
+    'Les cinq sortes de notes, les champs à remplir d’un snippet, l’éditeur de code et Prettier, les notes mises en forme et leurs schémas, les feuilles de calcul, les dessins, les listes à cocher et les pièces jointes.',
   body: [
-    h2('trois-sortes', 'Trois sortes de notes'),
+    h2('trois-sortes', 'Cinq sortes de notes'),
     p(
       'Le bouton ',
       ui('+ Nouvelle note'),
-      ' propose les trois. Chacune a aussi son raccourci, actif sur le canevas :',
+      ' les propose toutes. Chacune a aussi son raccourci, actif sur le canevas :',
     ),
     table(
       'Créer une note',
@@ -39,7 +39,10 @@ export const WRITING: DocPage = {
         keys('Ctrl Shift N'),
       ],
       [b('Liste de tâches'), 'des étapes à cocher, dans l’ordre', keys('Ctrl Shift L')],
+      [b('Calcul'), 'une ligne, un résultat : unités, dates, totaux', keys('Ctrl Shift M')],
+      [b('Dessin'), 'des boîtes, des flèches et du texte : un schéma', keys('Ctrl Shift D')],
     ),
+    p('Le menu ', ui('Type'), ' de l’éditeur transforme une note en une autre sorte, un dessin excepté.'),
     p(
       'Une note porte un titre, une source (le ',
       ui('Contexte…'),
@@ -54,7 +57,7 @@ export const WRITING: DocPage = {
     ),
     h2('snippets', 'Les snippets'),
     p(
-      'Un snippet est coloré selon son langage : vingt-six au choix, de JSON, TypeScript, Python, Rust, Go ou SQL à Shell, PowerShell, YAML, TOML ou Elixir, plus le texte brut. Le menu du langage se filtre au clavier : tapez les premières lettres, puis ',
+      'Un snippet est coloré selon son langage : 142 au choix, de JSON, TypeScript, Python, Rust, Go ou SQL à Shell, PowerShell, YAML, TOML ou Elixir, plus le texte brut. Les couleurs sont les mêmes sur la carte que dans l’éditeur. Le menu du langage se filtre au clavier : tapez les premières lettres, puis ',
       keys('Entrée'),
       '.',
     ),
@@ -148,6 +151,20 @@ export const WRITING: DocPage = {
     p(
       'Un tableau s’insère depuis la barre d’outils, puis s’agrandit ligne par ligne ou colonne par colonne.',
     ),
+    h3('schemas', 'Schémas et présentation'),
+    p(
+      'Un bloc de code dont le langage est ',
+      code('mermaid'),
+      ' est dessiné en schéma. DevNotes le dessine lui-même, proche du dessin de Mermaid sans lui être identique. Un dessin s’intègre de la même façon, depuis un croquis à vous.',
+    ),
+    p(
+      ui('Présenter'),
+      ' montre la Note en plein écran, une section par diapositive : les flèches les parcourent, ',
+      keys('M'),
+      ' ouvre la carte des titres et ',
+      keys('Échap'),
+      ' quitte.',
+    ),
     h2('listes', 'Les listes de tâches'),
     p(
       'Une liste se coche depuis sa carte, sans l’ouvrir, et la carte montre son avancement. Dans l’éditeur, ',
@@ -159,6 +176,38 @@ export const WRITING: DocPage = {
       ' ou ',
       keys('Alt ↓'),
       ' le déplace.',
+    ),
+    h2('calcul', 'Les feuilles de calcul'),
+    p(
+      'Une feuille de calcul donne un résultat par ligne, pendant que vous tapez, et n’en garde aucun : seul ce que vous avez écrit est enregistré. Nommez une valeur, convertissez des unités, prenez un pourcentage, additionnez des durées :',
+    ),
+    snippet('Quelques lignes', '', 'prix = 120 €\n3 h 20 min en min\n20 % de 340'),
+    p(
+      'Un nom est utilisable sur les lignes qui suivent la sienne. La feuille lit les unités (CSS et fréquences comprises), les dates, toutes les formes de pourcentage, les fractions, les arrondis et les fonctions, les bases et les bits, et la finance : intérêts composés, rendements, valeur actuelle et prêts. Hors ligne, elle ne connaît aucun taux de change, et le dit. Une ligne qui ne se calcule pas dit pourquoi, à côté d’elle.',
+    ),
+    p(
+      'Cliquez un résultat pour le sélectionner, ',
+      keys('Shift'),
+      ' ou ',
+      keys('Ctrl'),
+      ' pour en sélectionner d’autres : la feuille les additionne. Le format des nombres, celui des dates et les décimales (jusqu’à quatorze) se règlent dans ',
+      ui('Préférences… → Général'),
+      '.',
+    ),
+    h2('dessin', 'Les dessins'),
+    p(
+      'Un dessin, ce sont des boîtes, des flèches et du texte sur une surface libre. Une flèche commencée sur une forme la suit quand la forme bouge. ',
+      keys('A'),
+      ' trace une flèche et ',
+      keys('Suppr'),
+      ' retire la sélection.',
+    ),
+    p(
+      'Un dessin s’exporte en ',
+      ui('PNG'),
+      ' ou en ',
+      ui('SVG'),
+      ', et s’insère dans une Note, qui en montre alors l’image.',
     ),
     h2('pieces-jointes', 'Les pièces jointes'),
     p(
@@ -225,7 +274,13 @@ export const ORGANISING: DocPage = {
     p(
       'Un dossier découpe un espace en régions nommées et colorées : bleu, ambre, violet, vert ou rouge. ',
       ui('Nouveau dossier'),
-      ' en crée un dans l’espace ouvert ; son menu le renomme, change sa couleur ou le supprime. Les notes d’un dossier supprimé restent, simplement sans dossier.',
+      ' en crée un dans l’espace ouvert ; son menu le renomme, change sa couleur ou le supprime, et ',
+      ui('Nouveau sous-dossier'),
+      ' en crée un à l’intérieur. Les notes d’un dossier supprimé restent, confiées au dossier du dessus. Un dossier glissé sur un autre entre dedans ; ',
+      keys('Alt ←'),
+      ' et ',
+      keys('Alt →'),
+      ' le font au clavier.',
     ),
     h2('tableau', 'La vue Tableau'),
     p(

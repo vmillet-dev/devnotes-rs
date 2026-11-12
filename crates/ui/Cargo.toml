@@ -1,0 +1,40 @@
+[package]
+name = "ui"
+description = "The egui interface of DevNotes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+engine.workspace = true
+text.workspace = true
+richtext.workspace = true
+diagram.workspace = true
+drawing.workspace = true
+platform.workspace = true
+eframe.workspace = true
+egui = { workspace = true, features = ["default"] }
+resvg.workspace = true
+chrono = { workspace = true, features = ["clock", "std"] }
+crossbeam-channel.workspace = true
+i18n.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rayon.workspace = true
+zeroize.workspace = true
+log.workspace = true
+base64.workspace = true
+png.workspace = true
+image.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "net", "time"] }
+
+[dev-dependencies]
+egui_kittest.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

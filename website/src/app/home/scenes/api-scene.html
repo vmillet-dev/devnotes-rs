@@ -12,9 +12,7 @@
     <div class="api-http">
       <div class="req">
         <span class="method">GET</span
-        ><span class="url"
-          ><span class="fld">{{ field('base_url') }}</span
-          >/v1/invoices</span
+        ><span class="url"><span class="fld">{{ field('base_url') }}</span>/v1/invoices</span
         ><span class="send">{{ text().send }}</span>
       </div>
       <div class="env-row">
@@ -23,10 +21,8 @@
         <span class="resolve">base_url = https://api.staging.internal</span>
       </div>
       <div class="req-tabs">
-        <span class="t-params">{{ text().params }}</span
-        ><span>{{ text().headers }}</span
-        ><span>{{ text().body }}</span
-        ><span class="t-code">Code</span>
+        <span class="t-params">{{ text().params }}</span><span>{{ text().headers }}</span
+        ><span>{{ text().body }}</span><span class="t-code">Code</span>
       </div>
       <div class="pane-params params">
         <span>status</span><span>paid</span><span>limit</span><span>20</span>
@@ -34,7 +30,7 @@
       <div class="pane-code">
         <div class="targets">
           @for (each of targets; track each.name) {
-            <span [class.on]="$index === target()">{{ each.name }}</span>
+          <span [class.on]="$index === target()">{{ each.name }}</span>
           }
         </div>
         <pre class="gen">{{ generated() }}</pre>
@@ -55,13 +51,12 @@
       </div>
       <ul class="ws-log">
         @for (message of messages; track $index) {
-          <li [class.on]="$index < received()">
-            <span class="dir" [class.up]="message.up" [class.down]="!message.up">{{
-              message.up ? '↑' : '↓'
-            }}</span>
-            <span class="tm">{{ message.at }}</span
-            ><span class="pl">{{ message.text }}</span>
-          </li>
+        <li [class.on]="$index < received()">
+          <span class="dir" [class.up]="message.up" [class.down]="!message.up"
+            >{{ message.up ? '↑' : '↓' }}</span
+          >
+          <span class="tm">{{ message.at }}</span><span class="pl">{{ message.text }}</span>
+        </li>
         }
       </ul>
     </div>

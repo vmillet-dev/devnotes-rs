@@ -1,0 +1,12 @@
+query Pays($code: ID!) {
+  country(code: $code) {
+    name
+  }
+}
+
+query Continents {
+  continents {
+    code
+    name
+  }
+}

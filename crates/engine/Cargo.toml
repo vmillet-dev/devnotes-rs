@@ -1,0 +1,104 @@
+[package]
+name = "engine"
+description = "A developer's notes and snippets manager for the desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+readme = "../../README.md"
+autobenches = false
+
+[package.metadata.devnotes]
+display-name = "DevNotes"
+author-handle = "@vmillet-dev"
+
+[lib]
+bench = false
+
+[[bin]]
+name = "script-host"
+path = "src/bin/script-host.rs"
+test = false
+bench = false
+
+[build-dependencies]
+toml.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json = { workspace = true, features = ["preserve_order", "raw_value"] }
+diesel.workspace = true
+diesel_migrations.workspace = true
+libsqlite3-sys.workspace = true
+uuid = { workspace = true, features = ["v7"] }
+chrono = { workspace = true, features = ["default", "serde"] }
+base64.workspace = true
+png.workspace = true
+log.workspace = true
+thiserror.workspace = true
+unicode-normalization.workspace = true
+zip.workspace = true
+aes-gcm.workspace = true
+argon2.workspace = true
+zeroize.workspace = true
+rayon.workspace = true
+getrandom.workspace = true
+similar.workspace = true
+pulldown-cmark.workspace = true
+deunicode.workspace = true
+url.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+tokio = { workspace = true, features = ["rt", "sync", "macros", "time"] }
+tokio-tungstenite.workspace = true
+rustls-platform-verifier.workspace = true
+futures-util.workspace = true
+percent-encoding.workspace = true
+md-5.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+sha3.workspace = true
+hmac.workspace = true
+toml.workspace = true
+quick-xml.workspace = true
+yaml-rust2.workspace = true
+chrono-tz.workspace = true
+iana-time-zone.workspace = true
+croner.workspace = true
+rust_decimal.workspace = true
+iban_validate.workspace = true
+unicode-segmentation.workspace = true
+qrcode.workspace = true
+ipnet.workspace = true
+psl.workspace = true
+rquickjs.workspace = true
+
+[dev-dependencies]
+richtext.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+criterion.workspace = true
+
+[[bench]]
+name = "commands"
+harness = false
+
+# ⚠️ Its own target so `cargo bench` stays usable: it seeds 26 000 notes.
+[[bench]]
+name = "corpus_size"
+harness = false
+
+# ⚠️ Generates the two 30 000-note reference libraries on disk first: minutes, and ~0.5 GB.
+[[bench]]
+name = "index"
+harness = false
+
+# Not a measure: writes a reference library into a profile, for the interface's bench.
+[[bench]]
+name = "reference_profile"
+harness = false
+
+[lints]
+workspace = true

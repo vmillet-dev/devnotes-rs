@@ -1,0 +1,4259 @@
+{
+  "notes": {
+    "newNote": "+ New note",
+    "searchLabel": "Search notes",
+    "searchPlaceholder": "Search…",
+    "searchHint": "Search a note, a tag, some code",
+    "spaceSwitcherLabel": "Switch space",
+    "allSpaces": "All spaces",
+    "newSpace": "New space",
+    "newSpaceLabel": "New space name",
+    "newSpacePlaceholder": "Space name",
+    "newSpaceSubmit": "Create",
+    "spaceOptionsLabel": "Options for space {{name}}",
+    "pinSpace": "Pin this space",
+    "unpinSpace": "Unpin",
+    "pinnedSpace": "Pinned space",
+    "renameSpaceLabel": "New space name",
+    "renameSpaceSubmit": "Rename",
+    "moveNotesTo": "Move notes to",
+    "deleteSpace": "Delete the space",
+    "deleteSpaceConfirm": "Confirm?",
+    "deleteSpaceNotes": "{count, plural, one {Its note goes} other {Its # notes go}} to “{{refuge}}”, out of any folder.",
+    "deleteSpaceNoNotes": "It holds no note.",
+    "deleteSpaceFolders": "{count, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",
+    "deleteSpaceNeedsAnother": "Create a second space before deleting this one: its notes need somewhere to go.",
+    "noteOptionsLabel": "Options for note {{title}}",
+    "moveToSpace": "Move to",
+    "tags": "Tags",
+    "tagsGroupLabel": "Filter by tag",
+    "languages": "Format",
+    "languagesGroupLabel": "Filter by format",
+    "kinds": "Type",
+    "kindsGroupLabel": "Filter by type",
+    "kindAll": "All",
+    "priorities": "Priority",
+    "prioritiesGroupLabel": "Filter by priority",
+    "priorityAll": "All",
+    "kindPlural": {
+      "snippet": "Snippets",
+      "note": "Notes",
+      "checklist": "Tasks",
+      "calc": "Calculations",
+      "drawing": "Drawings"
+    },
+    "createOrPaste": "Paste or create",
+    "copyContent": "Copy",
+    "copied": "Copied",
+    "copiedNote": "“{{title}}” copied to the clipboard.",
+    "copiedUntitled": "Untitled note copied to the clipboard.",
+    "drawingNotCopied": "A drawing is not copied as text.",
+    "untitled": "Untitled",
+    "pinnedState": "Pinned note",
+    "deleteArmed": "Del again · Esc to cancel",
+    "loading": "Loading notes…",
+    "noResults": "No note matches this search.",
+    "searchMatched": "{count, plural, =0 {no results} one {# result} other {# results}}",
+    "clearFilters": "Clear the filters",
+    "clearSearch": "Clear the search",
+    "attachmentsCount": "{count, plural, =0 {no attachments} one {# attachment} other {# attachments}}",
+    "moreTags": "{count, plural, one {# more tag} other {# more tags}}",
+    "placeholdersCount": "{count, plural, =0 {no fields to fill} one {# field to fill} other {# fields to fill}}",
+    "selectNote": "Select note {{title}}",
+    "keyboardHint": "↑↓←→ move · Enter open · C copy · X select · Del trash",
+    "trash": "Trash",
+    "manageTags": "Manage",
+    "newNoteKindLabel": "Choose the note type",
+    "kindTag": {
+      "snippet": "Snippet",
+      "plain": "Text",
+      "note": "Note",
+      "checklist": "Tasks",
+      "calc": "Calc",
+      "drawing": "Drawing"
+    },
+    "priorityLabel": "Priority",
+    "footer": {
+      "modified": "modified",
+      "created": "created"
+    },
+    "priority": {
+      "none": "None",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "newSnippet": "Code snippet",
+    "newRichNote": "Note",
+    "newChecklist": "To-do list",
+    "createMenuTitle": "Create",
+    "kindNew": "New",
+    "kindLines": {
+      "snippet": "A block of code, its language and its fields to fill in.",
+      "note": "Formatted text: headings, lists, links, tables, code blocks.",
+      "checklist": "Steps to tick off, in order.",
+      "calc": "One line, one result: units, dates, totals.",
+      "drawing": "Boxes, arrows and text: a sketch."
+    },
+    "checklistProgress": "{{done}}/{{total}}",
+    "checklistToggle": "Tick the task {{text}}",
+    "checklistMore": "+{count, plural, one {# more} other {# more}}",
+    "samples": {
+      "space": "Getting started",
+      "welcome": {
+        "title": "Welcome to {{app}}",
+        "source": "{{app}} / Getting started",
+        "content": "{{app}} keeps your snippets, your notes and your lists within reach of the keyboard. Everything stays on this machine, encrypted; nothing goes over the network.\n\n## Where things are\n- **Notes**, **Tools** and **HTTP**: the three areas, at the side (Ctrl+1, Ctrl+2, Ctrl+3).\n- Cards file themselves: pinned, today, this week, older. The **Board** view, at the top, shows folders as zones.\n- The **About** menu holds the getting-started guide and every shortcut.\n\n## The keys that matter\n| Keys | For |\n| --- | --- |\n| Ctrl+K | Search the notes, or the tools |\n| Ctrl+N · Ctrl+Shift+N | A snippet · a Note |\n| Enter · C · P | Open · copy · pin the card |\n| Ctrl+Alt+P | Paste a note from any application |\n\nThese samples are made to be edited, or sent to the trash."
+      },
+      "snippet": {
+        "title": "psql connection",
+        "source": "PostgreSQL"
+      },
+      "json": {
+        "title": "API response — open it as a graph",
+        "source": "API / Billing"
+      },
+      "release": {
+        "title": "Release day",
+        "content": "A Note is written formatted and stored as Markdown: headings, tasks, tables, code blocks.\n\n## Before\n- [x] Freeze the merges on `main`\n- [ ] Warn the support team\n- [ ] Back the database up\n\n## Where\n| Environment | Address | Who |\n| --- | --- | --- |\n| Staging | staging.example.com | API team |\n| Production | app.example.com | On call |\n\n## Check\n```bash\nkubectl rollout status deploy/billing --timeout=120s\ncurl -fsS https://app.example.com/health\n```"
+      },
+      "checklist": {
+        "title": "Things to try",
+        "open": "Open a note by clicking its card",
+        "fields": "Copy \"psql connection\" and fill in its fields",
+        "graph": "Open the API response as a graph",
+        "search": "Find a word in \"Release day\" with Ctrl+F",
+        "format": "Format the code to format with Shift+Alt+F",
+        "tools": "Open the tools (Ctrl+2) and save a result as a note",
+        "palette": "Paste a note from another application with Ctrl+Alt+P",
+        "board": "Switch to the Board view and drag a note into a zone",
+        "kind": "Turn this list into a Note, from the editor's \"Kind\" menu"
+      },
+      "format": {
+        "title": "Code to format (Shift+Alt+F)",
+        "source": "TypeScript / Prettier"
+      },
+      "tags": {
+        "devnotes": "devnotes",
+        "example": "example",
+        "database": "sql",
+        "json": "json",
+        "typescript": "typescript"
+      },
+      "folders": {
+        "snippets": "Snippets",
+        "startHere": "Start here"
+      }
+    },
+    "openNote": "Open",
+    "copy": "Copy",
+    "duplicate": "Duplicate",
+    "copyTitle": "{{title}} (copy)",
+    "fileInto": "File into",
+    "noFolder": "No folder",
+    "newCalc": "Calculation",
+    "newDrawing": "Drawing"
+  },
+  "filters": {
+    "groupLabel": "Filter notes",
+    "all": "All",
+    "pinned": "Pinned",
+    "untriaged": "Untriaged",
+    "facetsLabel": "Tags and formats"
+  },
+  "folders": {
+    "switcherLabel": "Filter by folder",
+    "allFolders": "All folders",
+    "newFolder": "New folder",
+    "newFolderLabel": "New folder name",
+    "newFolderPlaceholder": "Folder name",
+    "newFolderSubmit": "Create",
+    "newSubfolder": "New sub-folder",
+    "newSubfolderLabel": "Name of the new sub-folder in {{name}}",
+    "needsASpace": "Pick a space to create a folder in it.",
+    "optionsLabel": "Options for folder {{name}}",
+    "renameLabel": "Rename folder",
+    "renameSubmit": "Rename",
+    "colourLabel": "Folder colour",
+    "colour": {
+      "blue": "Blue",
+      "amber": "Amber",
+      "purple": "Purple",
+      "green": "Green",
+      "red": "Red"
+    },
+    "delete": "Delete folder",
+    "deleteConfirm": "Confirm?",
+    "deleteKeepsNotes": "Its notes and sub-folders stay, one level up.",
+    "breadcrumbLabel": "Folder breadcrumb",
+    "selectNotes": "Select {count, plural, one {the note} other {all # notes}}"
+  },
+  "sidebar": {
+    "library": "Spaces",
+    "toggle": "Show or hide the side rail",
+    "expand": "Expand space {{name}}",
+    "collapse": "Collapse space {{name}}",
+    "noFolders": "No folder",
+    "resize": "Width of the side rail",
+    "expandFolder": "Expand the folder {{name}}",
+    "collapseFolder": "Collapse the folder {{name}}",
+    "moved": {
+      "into": "“{{name}}” is now in {{other}}.",
+      "top": "“{{name}}” is now at the top of {{other}}.",
+      "refused": {
+        "atTop": "“{{name}}” is already at the top of its space.",
+        "noFolderAbove": "No folder above “{{name}}” to put it in.",
+        "there": "“{{name}}” cannot go there."
+      }
+    }
+  },
+  "board": {
+    "viewSwitchLabel": "Choose the view",
+    "listView": "List",
+    "boardView": "Board",
+    "needsASpace": "Pick a space to see its board.",
+    "emptyZone": "No note here.",
+    "empty": "Nothing to arrange yet.",
+    "moveZone": "Move the folder {{name}}",
+    "resizeZone": "Resize the folder {{name}}",
+    "dropHere": "Drop here",
+    "nameTheZone": "Name this folder",
+    "nameTheZoneHint": "The colour is assigned; change it from the folder menu.",
+    "align": "Align",
+    "alignHint": "Aligns {cards, plural, =0 {no loose card} one {# loose card} other {# loose cards}} under the folders, leaving those alone.",
+    "tidyMoreLabel": "Other arrangements",
+    "reorganise": "Reorganise {zones, plural, =0 {no folder} one {# folder} other {# folders}} and {cards, plural, =0 {no card} one {# card} other {# cards}}",
+    "reorganiseHint": "Repositions and resizes the folders. Overwrites sizes chosen by hand; undoable.",
+    "subFolders": "Sub-folders of {{name}}",
+    "subFoldersLabel": "Sub-folders"
+  },
+  "sort": {
+    "label": "Sort and group",
+    "sortBy": "Sort by",
+    "keys": {
+      "modified": "Date modified",
+      "created": "Date created",
+      "priority": "Priority",
+      "format": "Format",
+      "title": "Title"
+    },
+    "short": {
+      "modified": "Modified",
+      "created": "Created",
+      "priority": "Priority",
+      "format": "Format",
+      "title": "Title"
+    },
+    "hints": {
+      "modified": "default",
+      "format": "language",
+      "title": "A → Z"
+    },
+    "direction": "Order",
+    "directions": {
+      "descending": "Descending ↓",
+      "ascending": "Ascending ↑"
+    },
+    "groupBy": "Group",
+    "groupings": {
+      "date": "By date",
+      "priority": "By priority",
+      "format": "By format",
+      "none": "No grouping"
+    },
+    "pinnedFirst": "Pinned first"
+  },
+  "sections": {
+    "pinned": "Pinned",
+    "today": "Today",
+    "week": "This week",
+    "older": "Older",
+    "results": "Results",
+    "inFolder": "In “{{name}}”",
+    "all": "All notes",
+    "noPriority": "No priority",
+    "expiringHint": "to triage soon"
+  },
+  "editor": {
+    "titleLabel": "Note title",
+    "contentLabel": "Note content",
+    "emptyBody": "Start writing…",
+    "emptyRich": "Write, or paste a snippet: code keeps its language.",
+    "code": {
+      "close": "close",
+      "currentMatch": "current match",
+      "onLine": "on line",
+      "replacedMatches": "replaced $ matches",
+      "replacedOnLine": "replaced match on line $",
+      "goToLine": "Go to line:",
+      "go": "Go",
+      "controlCharacter": "Control character",
+      "selectionDeleted": "Selection deleted"
+    },
+    "search": {
+      "find": "Find",
+      "replaceWith": "Replace with",
+      "matchCase": "Match case",
+      "wholeWord": "Whole word",
+      "regexp": "Regular expression",
+      "previous": "Previous match (Shift+Enter)",
+      "next": "Next match (Enter)",
+      "close": "Close the search (Escape)",
+      "showReplace": "Replace (Ctrl+H)",
+      "hideReplace": "Hide replace",
+      "replaceOne": "Replace",
+      "replaceAll": "Replace all",
+      "matches": "{count, plural, =0 {No match} one {# match} other {# matches}}"
+    },
+    "rich": {
+      "toolbar": "Formatting",
+      "heading1": "Heading 1 (Ctrl+Alt+1)",
+      "heading2": "Heading 2 (Ctrl+Alt+2)",
+      "heading3": "Heading 3 (Ctrl+Alt+3)",
+      "bold": "Bold (Ctrl+B)",
+      "italic": "Italic (Ctrl+I)",
+      "strike": "Strikethrough (Ctrl+Shift+S)",
+      "code": "Inline code (Ctrl+E)",
+      "bulletList": "Bulleted list (Ctrl+Shift+8)",
+      "orderedList": "Numbered list (Ctrl+Shift+7)",
+      "taskList": "Task list (Ctrl+Shift+9)",
+      "quote": "Quote (Ctrl+Shift+B)",
+      "link": "Link (Ctrl+K)",
+      "codeBlock": "Code block (Ctrl+Alt+C)",
+      "codeLanguage": "Code block language",
+      "table": "Insert a table",
+      "addRow": "+ Row",
+      "addColumn": "+ Column",
+      "deleteRow": "− Row",
+      "deleteColumn": "− Column",
+      "deleteTable": "Delete the table",
+      "linkText": "Text",
+      "linkAddress": "Link address",
+      "linkApply": "Apply",
+      "linkHint": "An empty address removes the link · Ctrl+click opens it",
+      "linkOpen": "Ctrl+click to open",
+      "diagram": {
+        "edit": "Click to edit the diagram’s code",
+        "failed": "The diagram cannot be read.",
+        "failedAt": "The diagram cannot be read, line {{line}}.",
+        "unsupported": "Diagram type not supported"
+      }
+    },
+    "languageLabel": "Content format",
+    "placementLabel": "Location",
+    "sourceLabel": "Note context",
+    "sourcePlaceholder": "Context…",
+    "addTagLabel": "Add a tag",
+    "addTagPlaceholder": "+ tag",
+    "removeTag": "Remove tag {{tag}}",
+    "delete": "Delete",
+    "deleteConfirm": "Confirm?",
+    "close": "Close editor",
+    "header": {
+      "title": "Header",
+      "fold": "Fold the header",
+      "unfold": "Unfold the header",
+      "show": "Show",
+      "tags": "{count, plural, one {# tag} other {# tags}}",
+      "attachments": "{count, plural, one {# attachment} other {# attachments}}"
+    },
+    "fullscreen": "Enter fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "more": "More actions",
+    "backToCards": "Cards",
+    "stepHint": "Esc exit · J/K next/previous",
+    "previousNote": "Previous note",
+    "nextNote": "Next note",
+    "position": "{{at}} / {{total}}",
+    "present": "Present",
+    "presentLabel": "Present the Note full screen, one section a slide",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "noPriority": "No priority",
+    "expiryLabel": "Note deadline (empty = permanent)",
+    "footerStats": "{lines, plural, one {# line} other {# lines}} · {bytes, plural, one {# byte} other {# bytes}} · UTF-8 · {{eol}}",
+    "format": {
+      "label": "Format",
+      "keys": "Shift Alt F",
+      "hint": "Format with Prettier (Shift+Alt+F)",
+      "unsupported": "Prettier does not format {{language}}",
+      "done": "Formatted with Prettier",
+      "changed": "{count, plural, =0 {lines removed only} one {# line changed} other {# lines changed}}",
+      "undo": "Undo",
+      "undoKeys": "Ctrl Z",
+      "unchanged": "Already formatted: nothing to change.",
+      "syntax": "Syntax error at line {{line}}, column {{column}}: the text is unchanged.",
+      "fields": "A field would not have survived formatting: the text is unchanged.",
+      "failed": "Prettier could not format this text.",
+      "footer": "Prettier 3 · library settings",
+      "settings": "Format settings",
+      "scope": "for the whole library",
+      "printWidth": "Line width",
+      "indentation": "Indentation",
+      "indentations": {
+        "editor": "Editor",
+        "two": "2",
+        "four": "4",
+        "tab": "Tab"
+      },
+      "quotes": "Quotes",
+      "quotesSingle": "Single",
+      "quotesDouble": "Double",
+      "semicolons": "Semicolons",
+      "trailingCommas": "Trailing commas",
+      "formatOnSave": "Format on save",
+      "formattedTitle": "Formatted:",
+      "formattedList": "{{list}}.",
+      "notFormattedTitle": "Not by Prettier:",
+      "notFormattedList": "every other language. The button is disabled there and says why."
+    },
+    "modifiedPrefix": "Modified",
+    "kind": {
+      "label": "Kind",
+      "snippet": "Snippet",
+      "note": "Note",
+      "checklist": "Todo list",
+      "convertTo": {
+        "snippet": "Convert to a snippet",
+        "note": "Convert to a Note",
+        "checklist": "Convert to a todo list",
+        "calc": "Convert to a calculation",
+        "drawing": "Convert into a drawing"
+      },
+      "calc": "Calculation",
+      "drawing": "Drawing"
+    },
+    "noteStats": "Note · {count, plural, =0 {no words} one {# word} other {# words}} · saved as Markdown",
+    "drawingStats": "{count, plural, =0 {Empty drawing} one {# shape} other {# shapes}}",
+    "checklistStats": "{{done}}/{total, plural, one {# task} other {# tasks}}",
+    "addItem": "Add a task",
+    "itemLabel": "Task {{position}}",
+    "itemPlaceholder": "Describe the task…",
+    "removeItem": "Delete the task {{text}}",
+    "moveItem": "Move the task {{text}} (Alt + arrows)",
+    "toggleItem": "Tick the task {{text}}",
+    "date": {
+      "empty": "dd/mm/yyyy",
+      "previous": "Previous month",
+      "next": "Next month",
+      "month": "{{month}} {{year}}",
+      "clear": "No deadline"
+    },
+    "menu": {
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select all"
+    },
+    "details": {
+      "show": "Details",
+      "hide": "Hide the details",
+      "location": "Location",
+      "kind": "Kind",
+      "context": "Context",
+      "tags": "Tags",
+      "priority": "Priority",
+      "expires": "Expires",
+      "attachments": "Attachments",
+      "history": "History"
+    },
+    "export": "Export",
+    "filledPreview": "Preview · with your fields",
+    "tasksShown": {
+      "all": "All",
+      "open": "Open",
+      "done": "Done"
+    }
+  },
+  "lifecycle": {
+    "neverExpires": "Never expires"
+  },
+  "time": {
+    "short": {
+      "justNow": "now",
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "yesterday": "yesterday",
+      "days": "{{count}} d",
+      "weeks": "{{count}} wk",
+      "months": "{{count}} mo",
+      "years": "{{count}} y",
+      "expired": "expired",
+      "inMinutes": "in {{count}} min",
+      "inHours": "in {{count}} h",
+      "inDays": "in {{count}} d"
+    },
+    "justNow": "just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "expiresIn": "expires in {{count}}d",
+    "expiresToday": "expires today",
+    "expired": "expired",
+    "span": {
+      "now": "within a minute",
+      "past": {
+        "minutes": "{count, plural, one {# minute ago} other {# minutes ago}}",
+        "hours": "{count, plural, one {# hour ago} other {# hours ago}}",
+        "days": "{count, plural, one {# day ago} other {# days ago}}",
+        "months": "{count, plural, one {# month ago} other {# months ago}}",
+        "years": "{count, plural, one {# year ago} other {# years ago}}"
+      },
+      "future": {
+        "minutes": "{count, plural, one {in # minute} other {in # minutes}}",
+        "hours": "{count, plural, one {in # hour} other {in # hours}}",
+        "days": "{count, plural, one {in # day} other {in # days}}",
+        "months": "{count, plural, one {in # month} other {in # months}}",
+        "years": "{count, plural, one {in # year} other {in # years}}"
+      }
+    }
+  },
+  "errors": {
+    "dismiss": "Dismiss message",
+    "retry": "Retry",
+    "unexpected": "An unexpected error occurred.",
+    "ipcFailed": "Communication with the native engine failed ({{command}}).",
+    "notesLoadFailed": "Could not load notes.",
+    "noteSaveFailed": "Could not save the note. Your text is still on screen.",
+    "noteCreateFailed": "Could not create the note.",
+    "noteDuplicateFailed": "Could not duplicate the note.",
+    "presentFailed": "Could not present the note.",
+    "noteReadFailed": "Could not read the note.",
+    "noteDeleteFailed": "Could not delete the note. It is still there.",
+    "noteMoveFailed": "The note could not be moved.",
+    "spacesLoadFailed": "Could not load spaces.",
+    "spaceCreateFailed": "Could not create the space.",
+    "spaceRenameFailed": "Could not rename the space.",
+    "spacePinFailed": "Could not pin this space.",
+    "spaceDeleteFailed": "Could not delete the space. Its notes have not moved.",
+    "spaceNameTaken": "A space named “{{name}}” already exists.",
+    "spaceRequired": "Create a space first to store your notes in.",
+    "noteGone": "This note no longer exists.",
+    "spaceGone": "This space no longer exists.",
+    "storageUnavailable": "Storage is unavailable. Restart {{app}}.",
+    "wrongPassphrase": "Wrong passphrase.",
+    "locked": "The library is locked.",
+    "libraryDamaged": "This library is damaged and cannot be opened.",
+    "setAsideFailed": "The library could not be set aside. Nothing was moved.",
+    "passphraseRequired": "This file is protected by a passphrase.",
+    "updateFailed": "The update failed. {{app}} remains usable on its current version.",
+    "updateCheckFailed": "The update check failed. Try again later.",
+    "attachmentGone": "This attachment no longer exists.",
+    "revisionGone": "This version no longer exists.",
+    "libraryGone": "This library no longer exists.",
+    "libraryOpen": "Not possible while the library is open.",
+    "lastLibrary": "The last library cannot be deleted.",
+    "nothingToSetAside": "There is no library here to set aside.",
+    "backupGone": "This copy no longer exists.",
+    "backupUnopenable": "This copy cannot be opened: its key file was not copied with it.",
+    "fileAccess": "The file cannot be reached.",
+    "fileTooLarge": "“{{name}}” is over {{limit}} MB: an attachment cannot weigh more.",
+    "importFormat": "This file is not a {{app}} export this version can read.",
+    "trashLoadFailed": "Could not load the trash.",
+    "trashActionFailed": "The trash operation failed.",
+    "tagsLoadFailed": "Could not load tags.",
+    "tagActionFailed": "The tag operation failed.",
+    "bulkActionFailed": "The action on the selection failed.",
+    "exportFailed": "The export failed. Nothing was written.",
+    "importFailed": "The import failed.",
+    "shareFailed": "Could not prepare the share.",
+    "attachFailed": "Could not add the attachment.",
+    "attachmentsLoadFailed": "The attachments of this note could not be read.",
+    "attachmentReadFailed": "Could not read the attachment.",
+    "attachmentDeleteFailed": "Could not remove the attachment.",
+    "copyFailed": "Copying to the clipboard failed.",
+    "attachmentOpenFailed": "Could not open the attachment with an application.",
+    "attachmentSaveFailed": "Could not save the attachment to that location.",
+    "variablesLoadFailed": "Could not load the variables.",
+    "variablesSaveFailed": "Could not save the variables.",
+    "passphraseChangeFailed": "Could not change the passphrase. The old one still opens the library.",
+    "unlockFailed": "Unlocking failed.",
+    "vaultStateFailed": "Could not tell whether the library is encrypted.",
+    "undoFailed": "The undo failed. Nothing was put back.",
+    "foldersLoadFailed": "Folders could not be loaded.",
+    "folderCreateFailed": "Folder “{{name}}” could not be created.",
+    "folderRenameFailed": "The folder could not be renamed.",
+    "folderRecolourFailed": "The folder colour could not be changed.",
+    "folderDeleteFailed": "The folder could not be deleted.",
+    "folderGone": "That folder no longer exists.",
+    "folderNameTaken": "A folder named “{{name}}” already exists in this space.",
+    "boardLoadFailed": "The board could not be loaded.",
+    "boardSaveFailed": "The board layout could not be saved.",
+    "fileFailed": "The note could not be filed.",
+    "priorityFailed": "The priority could not be changed.",
+    "convertFailed": "The note could not be converted.",
+    "pinFailed": "The note could not be pinned.",
+    "boardArrangeFailed": "The board could not be tidied up.",
+    "backupsListFailed": "The backup copies could not be read.",
+    "backupRestoreFailed": "That copy could not be restored. The library was left in place.",
+    "revisionsListFailed": "The history of this note could not be read.",
+    "revisionRestoreFailed": "That version could not be restored.",
+    "revisionDiffFailed": "This version could not be compared with the current text.",
+    "librariesListFailed": "The list of libraries could not be read.",
+    "libraryActionFailed": "That library operation failed.",
+    "toolFailed": "The tool could not compute its result.",
+    "httpItemGone": "This collection item no longer exists.",
+    "httpEnvironmentGone": "This environment no longer exists.",
+    "environmentNameTaken": "An environment named “{{name}}” already exists.",
+    "httpVariable": "The variable “{{name}}” has no value: the request cannot leave.",
+    "httpInvalidUrl": "This URL cannot be sent: it needs http:// or https:// and a host.",
+    "httpUnresolved": "The host name does not resolve.",
+    "httpRefused": "The connection was refused: nothing listens at this address.",
+    "httpTls": "The secure connection failed: certificate refused or unexpected protocol.",
+    "httpTimeout": {
+      "request": "No answer after {{amount}} {{unit}}.",
+      "folder": "No answer after {{amount}} {{unit}} (setting inherited from the folder “{{name}}”).",
+      "collection": "No answer after {{amount}} {{unit}} (setting inherited from the collection “{{name}}”).",
+      "default": "No answer after {{amount}} {{unit}} (default setting)."
+    },
+    "httpTooManyRedirects": {
+      "request": "{count, plural, =0 {Redirect refused: the setting allows none.} one {Too many redirects: more than one.} other {Too many redirects: more than #.}}",
+      "folder": "{count, plural, =0 {Redirect refused: the setting allows none (setting inherited from the folder “{{name}}”).} one {Too many redirects: more than one (setting inherited from the folder “{{name}}”).} other {Too many redirects: more than # (setting inherited from the folder “{{name}}”).}}",
+      "collection": "{count, plural, =0 {Redirect refused: the setting allows none (setting inherited from the collection “{{name}}”).} one {Too many redirects: more than one (setting inherited from the collection “{{name}}”).} other {Too many redirects: more than # (setting inherited from the collection “{{name}}”).}}",
+      "default": "{count, plural, =0 {Redirect refused: the setting allows none (default setting).} one {Too many redirects: more than one (default setting).} other {Too many redirects: more than # (default setting).}}"
+    },
+    "httpFileUnreadable": "The file {{path}} cannot be read.",
+    "httpCancelled": "Send cancelled.",
+    "httpNetwork": "Network error.",
+    "httpWebsocketScheme": "A WebSocket opens on ws:// or wss://.",
+    "httpHeaderName": {
+      "request": "The header “{{header}}” cannot be sent: its name is not valid.",
+      "folder": "The header “{{header}}”, inherited from the folder “{{name}}”, cannot be sent: its name is not valid.",
+      "collection": "The header “{{header}}”, inherited from the collection “{{name}}”, cannot be sent: its name is not valid."
+    },
+    "httpHeaderValue": {
+      "request": "The header “{{header}}” cannot be sent: its value is not valid.",
+      "folder": "The header “{{header}}”, inherited from the folder “{{name}}”, cannot be sent: its value is not valid.",
+      "collection": "The header “{{header}}”, inherited from the collection “{{name}}”, cannot be sent: its value is not valid."
+    },
+    "httpGraphqlVariables": "The GraphQL variables are not a JSON object.",
+    "httpWebsocketRefused": "The server refused the WebSocket (status {{status}}).",
+    "httpScript": {
+      "error": "The script before the send failed: {{message}}",
+      "syntax": "The script before the send is not valid JavaScript: {{message}}",
+      "timeout": "The script before the send took too long: the request was not sent.",
+      "memory": "The script before the send ran out of memory: the request was not sent.",
+      "host": "The scripts could not be started: the request was not sent."
+    },
+    "httpScriptSkipped": "The script before the send skipped the request: it was not sent.",
+    "httpScriptMethod": "The script before the send chose the method “{{method}}”, which does not exist.",
+    "httpScriptProtected": "The script before the send made it a {{method}} to {{environment}}, which is protected.",
+    "httpRunData": {
+      "unreadable": "This file reads neither as a CSV with its header nor as a JSON array of objects.",
+      "empty": "This file holds no row of data."
+    },
+    "noFileDialog": "This desktop has no file dialog to show: xdg-desktop-portal is missing.",
+    "updateRefused": "This update was refused: its signature does not match. Nothing was installed.",
+    "calcFailed": "The sheet could not be computed.",
+    "folderMoveFailed": "The folder could not be moved."
+  },
+  "tray": {
+    "open": "Open {{app}}",
+    "newNote": "New note",
+    "capture": "Paste from clipboard",
+    "quit": "Quit {{app}}",
+    "palette": "Palette"
+  },
+  "locale": {
+    "system": "System",
+    "fr": "French",
+    "en": "English"
+  },
+  "update": {
+    "title": "Update available",
+    "summary": "{{app}} {{version}} is available. You are currently running version {{current}}.",
+    "notesLabel": "Release notes",
+    "install": "Install now",
+    "later": "Later",
+    "downloading": "Downloading…",
+    "downloadingPercent": "Downloading… {{percent}}%",
+    "restarting": "Restarting {{app}}…",
+    "progressLabel": "Download progress",
+    "skipVersion": "Do not offer version {{version}} again"
+  },
+  "about": {
+    "menuLabel": "About",
+    "checkUpdates": "Check for updates",
+    "checking": "Checking…",
+    "upToDate": "✓ {{app}} is up to date",
+    "checkFailed": "✕ Check failed",
+    "openAbout": "About {{app}}",
+    "title": "{{app}}",
+    "description": "Your notes, your snippets and your to-do lists, a shortcut away. Everything stays local.",
+    "versionLabel": "Version",
+    "versionUnknown": "unknown",
+    "developedBy": "Developed by",
+    "repository": "Repository",
+    "builtWith": "Built with",
+    "close": "Close",
+    "whatsNew": "What's new",
+    "gettingStarted": "Getting started",
+    "shortcuts": "Keyboard shortcuts",
+    "updateWaiting": "An update is available"
+  },
+  "trash": {
+    "title": "Trash",
+    "close": "Close trash",
+    "empty": "The trash is empty.",
+    "loading": "Loading…",
+    "retentionHint": "Deleted notes are kept for 30 days, then erased.",
+    "restore": "Restore",
+    "purge": "Delete for good",
+    "purgeConfirm": "Confirm?",
+    "emptyTrash": "Empty the trash",
+    "emptyTrashConfirm": "Erase for good",
+    "deletedAt": "deleted {{when}}",
+    "purgesIn": "erased in {{count}}d",
+    "purgesToday": "erased today",
+    "untitled": "Untitled",
+    "checklistNote": "To-do list",
+    "emptyTrashCancel": "Cancel",
+    "emptyTrashWarning": "Erase {{count}} notes for good? Nothing puts them back.",
+    "emptyTrashWarningOne": "Erase this note for good? Nothing puts it back.",
+    "searchLabel": "Search the trash",
+    "searchPlaceholder": "Search a deleted note…",
+    "noMatch": "No note in the trash matches.",
+    "restoreAll": "{count, plural, one {Restore the note} other {Restore all (#)}}",
+    "restoreFound": "{count, plural, one {Restore the note found} other {Restore the # notes found}}"
+  },
+  "tagManager": {
+    "title": "Manage tags",
+    "close": "Close tag management",
+    "empty": "No tags yet.",
+    "loading": "Loading…",
+    "noteCount": "{count, plural, =0 {no notes} one {# note} other {# notes}}",
+    "selectLabel": "Select tag {{tag}}",
+    "targetLabel": "Target name",
+    "targetPlaceholder": "tag name",
+    "rename": "Rename",
+    "merge": "Merge",
+    "delete": "Delete",
+    "hint": "Renaming onto an existing tag merges the two.",
+    "selectionHint": "Select the tags to merge, then type their common name.",
+    "confirmRename": "Rename #{{tag}} to #{{into}} on {count, plural, one {# note} other {# notes}}?",
+    "confirmMerge": "⚠️ Merge {{tags}} tags into #{{into}} across {count, plural, one {# note} other {# notes}}? A merge cannot be undone: once they are one, nothing knows which note carried which.",
+    "confirmDelete": "Strip {tags, plural, one {# tag} other {# tags}} from {count, plural, one {# note} other {# notes}}? The notes themselves stay.",
+    "confirmAction": "Confirm",
+    "confirmCancel": "Cancel"
+  },
+  "selection": {
+    "label": "Selection actions",
+    "count": "{count, plural, one {# selected} other {# selected}}",
+    "clear": "Clear selection",
+    "moveTo": "Move to",
+    "priority": "Priority",
+    "addTagLabel": "Add a tag to the selection",
+    "addTagPlaceholder": "+ tag",
+    "removeTag": "Remove a tag",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "delete": "Move to trash",
+    "deleteConfirm": "Confirm?",
+    "fileInto": "File into",
+    "unfile": "Take out of folder"
+  },
+  "palette": {
+    "title": "Palette",
+    "placeholder": "A note, a request, a tool, a space…",
+    "placeholderNarrowed": "Search…",
+    "searchLabel": "Search everything: notes, requests, tools, spaces",
+    "resultsLabel": "Results",
+    "removeChip": "Remove {{chip}}",
+    "copyLabel": "Copy “{{title}}”",
+    "createNote": "+ Create a note “{{query}}”",
+    "copiedTitle": "Copied",
+    "copiedNote": "“{{title}}” is on the clipboard",
+    "copiedUntitled": "The note is on the clipboard",
+    "groups": {
+      "notes": "Notes",
+      "requests": "Requests",
+      "tools": "Tools",
+      "spaces": "Spaces",
+      "commands": "Commands",
+      "recent": "Recent",
+      "scopes": "Search in",
+      "spaceNotes": "The notes of a space",
+      "tags": "The notes tagged"
+    },
+    "scopes": {
+      "notes": "notes",
+      "requests": "requests",
+      "tools": "tools",
+      "spaces": "spaces"
+    },
+    "scopeLines": {
+      "notes": "snippets, Notes and lists",
+      "requests": "HTTP, GraphQL, WebSocket",
+      "tools": "the tools catalogue",
+      "spaces": "move from one to another",
+      "space": "its notes"
+    },
+    "tagCount": "{count, plural, one {# note} other {# notes}}",
+    "act": {
+      "note": "↵ open",
+      "request": "↵ open the request",
+      "tool": "↵ open the tool",
+      "space": "↵ switch to this space",
+      "command": "↵ run",
+      "chip": "Tab choose",
+      "create": "↵ create"
+    },
+    "keys": {
+      "navigate": "move",
+      "open": "open",
+      "copy": "copy",
+      "copyBack": "copy and go back",
+      "choose": "choose",
+      "run": "run",
+      "create": "create",
+      "unchip": "remove the chip",
+      "close": "close"
+    },
+    "prefixes": {
+      "at": "choose where to search",
+      "hash": "a tag",
+      "command": "a command"
+    },
+    "empty": {
+      "search": "Nothing matches “{{term}}”.",
+      "nothing": "Nothing to show here.",
+      "none": {
+        "notes": "No note here.",
+        "requests": "No request here.",
+        "tools": "No tool here.",
+        "spaces": "No space here."
+      },
+      "scopes": "Nothing is called “@{{word}}”.",
+      "tags": "No tag starts with “{{word}}”.",
+      "commands": "No command contains “{{term}}”."
+    },
+    "commands": {
+      "newRequest": "New request",
+      "newFolder": "New folder",
+      "preferences": "Preferences",
+      "shortcuts": "Shortcut sheet"
+    }
+  },
+  "placeholders": {
+    "title": "Fill the fields",
+    "hint": "This snippet expects {count, plural, one {# value} other {# values}}.",
+    "hintNote": "This note expects {count, plural, one {# value} other {# values}}.",
+    "fieldLabel": "Value for {{name}}",
+    "copy": "Copy filled",
+    "copyRaw": "Copy as is",
+    "cancel": "Cancel",
+    "panelTitle": "Fields",
+    "panelHint": "A field left empty keeps the value the text suggests.",
+    "filledCount": "{{filled}} of {total, plural, one {# field} other {# fields}} filled",
+    "show": "Show",
+    "summaryMore": "+{{count}}",
+    "preview": "Preview",
+    "reset": "Clear",
+    "copiedFilled": "Copied with your field values."
+  },
+  "attachments": {
+    "title": "Attachments",
+    "add": "+ File",
+    "adding": "Adding…",
+    "remove": "Remove {{name}}",
+    "preview": "Preview of {{name}}",
+    "size": "{{size}} KB",
+    "openPreview": "Show {{name}}",
+    "closePreview": "Close preview",
+    "open": "Open {{name}}",
+    "save": "Save {{name}} as…",
+    "saved": "Attachment saved to {{path}}.",
+    "added": "“{{name}}” attached to the note.",
+    "dropHint": "Drop a file, or paste an image (Ctrl+V), to attach it — up to {{limit}} MB.",
+    "pasteEmpty": "The clipboard holds no image.",
+    "zoom": "Enlarge {{name}}",
+    "closeZoom": "Close the image"
+  },
+  "undo": {
+    "deleted": "{count, plural, one {# note} other {# notes}} moved to the trash",
+    "restore": "Undo",
+    "dismiss": "Dismiss",
+    "moved": "{count, plural, one {# note} other {# notes}} moved",
+    "tagged": "{count, plural, one {# note} other {# notes}} tagged",
+    "untagged": "Tag removed from {count, plural, one {# note} other {# notes}}",
+    "pinned": "{count, plural, one {# note} other {# notes}} pinned",
+    "unpinned": "{count, plural, one {# note} other {# notes}} unpinned",
+    "prioritised": "Priority changed on {count, plural, one {# note} other {# notes}}",
+    "filed": "{count, plural, one {# note} other {# notes}} filed",
+    "restoreKey": "Esc",
+    "arranged": "Board reorganised",
+    "convertedInto": {
+      "note": "Converted to a Note",
+      "snippet": "Converted to a snippet",
+      "checklist": "Converted to a todo list",
+      "calc": "Converted to a calculation",
+      "drawing": "Converted into a drawing"
+    },
+    "folderMoved": "“{{name}}” is now in {{into}}",
+    "folderMovedTop": "“{{name}}” is now at the top of the space"
+  },
+  "file": {
+    "menuLabel": "File",
+    "import": "Import…",
+    "exportAll": "Export everything…",
+    "exportSpace": "Export active space…",
+    "exportSelection": "Export selection…",
+    "copyMarkdown": "Copy selection as Markdown",
+    "quit": "Quit {{app}}",
+    "quitConfirm": "Confirm?",
+    "imported": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}}, {skipped, plural, one {# skipped} other {# skipped}}.",
+    "importedNothing": "Nothing to import: {skipped, plural, one {that note is} other {those # notes are}} already in your library.",
+    "importedFromNewerVersion": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}}, {skipped, plural, one {# skipped} other {# skipped}}. {degraded, plural, one {# comes} other {# come}} from a newer version: its language or its kind was brought down to what this one can read.",
+    "importedWithAttachments": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}}, {skipped, plural, one {# skipped} other {# skipped}}, {attachments, plural, one {# attachment} other {# attachments}} restored.",
+    "importedWithoutSomeAttachments": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}}. ⚠️ {missing, plural, one {# attachment} other {# attachments}} named by the file but missing: their preview will stay empty.",
+    "exported": "{notes, plural, one {# note} other {# notes}} exported to {{path}}.",
+    "exportedWithAttachments": "{notes, plural, one {# note} other {# notes}} and {attachments, plural, one {# attachment} other {# attachments}} exported to {{path}}.",
+    "exportedProtected": "{notes, plural, one {# note} other {# notes}} exported to {{path}}, sealed with the passphrase you gave it.",
+    "exportedProtectedWithAttachments": "{notes, plural, one {# note} other {# notes}} and {attachments, plural, one {# attachment} other {# attachments}} exported to {{path}}, sealed with the passphrase you gave it.",
+    "protectTitle": "Protect this export?",
+    "protectLead": "{{path}} is about to leave your library. A passphrase seals it with a key of its own, which travels with the file rather than with this machine.",
+    "protectWarning": "⚠️ Without one, the file carries every note and every attachment in the clear: anyone holding it can read them.",
+    "protectAction": "Export protected",
+    "protectPlain": "Export in the clear",
+    "unlockTitle": "This file is protected",
+    "unlockLead": "Enter the passphrase {{path}} was exported with.",
+    "unlockAction": "Import",
+    "cancel": "Cancel",
+    "working": "Working…",
+    "copied": "{notes, plural, one {# note} other {# notes}} copied as Markdown to the clipboard.",
+    "needsSelection": "Select at least one note.",
+    "emptyLibrary": "Nothing to export: this library has no notes.",
+    "emptySpace": "Nothing to export: this space has no notes.",
+    "preferences": "Preferences…",
+    "importedIntoFolders": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}} into {folders, plural, one {# new folder} other {# new folders}}, {skipped, plural, one {# skipped} other {# skipped}}."
+  },
+  "shortcuts": {
+    "unavailable": "{count, plural, one {Global shortcut unavailable} other {Global shortcuts unavailable}}: {{list}}. Another application already holds {count, plural, one {it} other {them}}.",
+    "title": "Keyboard shortcuts",
+    "subtitle": "The keys that are live depending on where you are. Bare letters only act on the canvas, never while you are typing.",
+    "editHint": "Shortcuts are set in File → Preferences → Shortcuts.",
+    "close": "Close",
+    "groups": {
+      "global": "Global (even with the window closed)",
+      "canvas": "Canvas",
+      "editor": "Editor",
+      "palette": "Palette",
+      "note": "Formatted Note",
+      "areas": "Areas",
+      "http": "HTTP",
+      "json": "JSON explorer"
+    },
+    "http": {
+      "send": "Send the request, or connect the WebSocket",
+      "save": "Save the request",
+      "moveRow": "Move a row of the rail among its neighbours",
+      "moveIn": "Put the row into the folder right above",
+      "moveOut": "Take the row out of its folder",
+      "rename": "Rename the row of the rail",
+      "delete": "Delete the row of the rail, once confirmed"
+    },
+    "global": {
+      "palette": "Open the palette",
+      "capture": "Capture the clipboard into a note",
+      "newNote": "Create a note"
+    },
+    "canvas": {
+      "search": "Jump to the search field: the notes’, or the tools’",
+      "newSnippet": "New code snippet",
+      "newNote": "New formatted note",
+      "newChecklist": "New to-do list",
+      "move": "Move from card to card",
+      "open": "Open the focused card",
+      "copy": "Copy the card, or ask for its fields",
+      "pin": "Pin or unpin",
+      "check": "Check the card for a bulk action",
+      "checkWithClick": "Check a card with a click",
+      "extendWithClick": "Extend the selection with a click",
+      "trash": "Send to the trash, in two presses",
+      "priority": "Give a priority: 0 none, 1 low… 4 urgent",
+      "undo": "Undo the last deletion",
+      "stepBack": "Take the note back, call off a pending deletion, then the selection, then the filters, then leave the folder",
+      "align": "Align the loose cards (board)",
+      "newCalc": "New calculation",
+      "newDrawing": "New drawing"
+    },
+    "editor": {
+      "close": "Leave the code, then close the editor, saving",
+      "newItem": "Add an item below this one",
+      "removeItem": "Remove an empty item",
+      "moveItem": "Move the item within the list",
+      "format": "Format the snippet with Prettier",
+      "find": "Find in the text, of a snippet as of a Note",
+      "replace": "Replace in the text",
+      "goToLine": "Go to a line of the code",
+      "indent": "Indent, as the “Indent with Tab” setting says",
+      "outdent": "Outdent"
+    },
+    "note": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "strike": "Strikethrough",
+      "code": "Inline code",
+      "link": "Link, on the selection or the word",
+      "openLink": "Open a link in one click, without editing it",
+      "heading": "Heading of level 1, 2 or 3",
+      "bulletList": "Bulleted list",
+      "orderedList": "Numbered list",
+      "taskList": "Task list",
+      "quote": "Quote",
+      "codeBlock": "Code block",
+      "markdown": "Typed at the start of a line, then a space: heading, list, numbered list, task, quote, code block"
+    },
+    "palette": {
+      "navigate": "Walk the results",
+      "paste": "Copy the note: over another application, the window steps away",
+      "open": "Open the note, the request, the tool or the space",
+      "close": "Close the palette",
+      "scope": "Search the notes, the requests, the tools, the spaces or one space",
+      "tag": "Search the notes of a tag",
+      "command": "Run a command",
+      "chip": "Choose what @ or # offers",
+      "unchip": "Remove the last chip, the field empty"
+    },
+    "json": {
+      "navigate": "Move through the graph or the tree",
+      "toggle": "Open or close the entry",
+      "openAll": "Expand everything",
+      "collapseAll": "Collapse to the root",
+      "moveNode": "Move the node the cursor is in",
+      "nextMatch": "Next match, in the search field",
+      "previousMatch": "Previous match, in the search field"
+    }
+  },
+  "settings": {
+    "title": "Preferences",
+    "pagesLabel": "Preference sections",
+    "pages": {
+      "general": "General",
+      "variables": "Variables",
+      "shortcuts": "Shortcuts",
+      "security": "Security"
+    },
+    "copied": "Copied to the clipboard.",
+    "appearance": {
+      "title": "Appearance",
+      "language": "Language",
+      "theme": "Theme",
+      "density": "Density"
+    },
+    "theme": {
+      "system": "System",
+      "dark": "Dark",
+      "light": "Light",
+      "toDark": "Switch to the dark theme",
+      "toLight": "Switch to the light theme"
+    },
+    "density": {
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    },
+    "cards": {
+      "title": "Cards",
+      "previewLines": "Preview lines",
+      "previewLinesHint": "What a card shows of its note, in this library: 3, 4 or 5 lines. After a change, loose cards on the board may overlap: « Align » lines them up again, leaving the folders alone."
+    },
+    "editor": {
+      "title": "Editor",
+      "defaultKind": "Default note type",
+      "indent": "Indent with Tab",
+      "wrap": "Wrap long lines of code"
+    },
+    "calc": {
+      "title": "Calculation",
+      "decimals": "Decimals",
+      "decimalsAuto": "Auto",
+      "numberFormat": "Number and date format",
+      "language": "Interface language",
+      "dateFormat": "Date format",
+      "dates": {
+        "numeric": "Numeric",
+        "short": "Short",
+        "long": "Long"
+      },
+      "locales": {
+        "fr-FR": "français (France)",
+        "fr-CH": "français (Suisse)",
+        "en-US": "English (US)",
+        "en-GB": "English (UK)",
+        "de-DE": "Deutsch",
+        "es-ES": "Español",
+        "it-IT": "Italiano",
+        "pt-BR": "Português (Brasil)",
+        "nl-NL": "Nederlands",
+        "pl-PL": "Polski",
+        "sv-SE": "Svenska",
+        "ru-RU": "Русский",
+        "ja-JP": "日本語",
+        "zh-CN": "中文 (简体)"
+      }
+    },
+    "indent": {
+      "language": "By the note's language",
+      "two-spaces": "2 spaces",
+      "four-spaces": "4 spaces",
+      "tab": "A tab"
+    },
+    "noteKind": {
+      "note": "Note",
+      "snippet": "Snippet",
+      "checklist": "To-do list",
+      "calc": "Calculation"
+    },
+    "behavior": {
+      "title": "Behavior",
+      "startWithSystem": "Start with the system",
+      "minimizeToTray": "Minimize to tray",
+      "closeToTray": "Close to tray",
+      "trayNote": "Without a system tray the window minimizes and closes as usual: {{app}} refuses to hide where nothing could call it back."
+    },
+    "quickPaste": {
+      "title": "Palette",
+      "showPinnedFirst": "Show pinned first"
+    },
+    "security": {
+      "passphrase": "Passphrase",
+      "change": "Change…",
+      "changing": "Changing…",
+      "note": "It opens the library at every launch. Changing it re-encrypts nothing: your notes stay sealed with the same key, which is why it takes a second rather than a rewrite.",
+      "dialogTitle": "Change the passphrase",
+      "dialogLead": "The new one applies at the next launch. This session carries on as it is.",
+      "current": "Current passphrase",
+      "next": "New passphrase",
+      "cancel": "Cancel",
+      "changed": "Passphrase changed. The old one no longer opens the library, nor the copies kept beside it.",
+      "automaticBackups": "Copy the library at launch",
+      "backupsNote": "At most one copy a day, the last three kept beside the library — enough for an emptied trash or an update gone wrong. Not a defence against a dead disk: export somewhere else for that.",
+      "changedOneLeft": "Passphrase changed, but one copy could not be rewrapped: it still opens with the old phrase.",
+      "changedSomeLeft": "Passphrase changed, but {{count}} copies could not be rewrapped: they still open with the old phrase.",
+      "copiesNote": "The copies kept beside the library are rewrapped with it. A key file you copied somewhere else will still open with the old phrase.",
+      "backups": "Backups",
+      "access": "Access",
+      "backupsLimit": "A copy carries the notes, the key that opens them and the attached files. The files are linked rather than duplicated, shared with the library, so a copy costs little more than its notes."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "copyConfirmation": "Confirm every copy",
+      "updates": "Tell me about updates",
+      "updateSkipped": "Version {{version}} will not be offered again.",
+      "updateSkippedForget": "Undo"
+    },
+    "variables": {
+      "intro": "Default values for your snippets' fields, across every note. What you type on a note wins; elsewhere the variable is offered in grey, never copied in.",
+      "name": "Name",
+      "value": "Value",
+      "namePlaceholder": "host",
+      "valuePlaceholder": "db.internal",
+      "add": "Add a variable",
+      "remove": "Remove {{name}}",
+      "empty": "No variables yet.",
+      "duplicate": "Duplicate name: {{names}}. Only the last row will be kept.",
+      "nameRule": "A name is limited to letters, digits, dashes and underscores."
+    },
+    "shortcuts": {
+      "reset": "Reset",
+      "globalNote": "These three work everywhere, window closed included, so each needs at least one modifier — without one the key would be swallowed in every application you use. A combination another application already holds is reported under its field, and cannot be typed there: Windows hands it to that application.",
+      "canvasNote": "These only act on the canvas, never while typing, so a bare letter is enough. Click the field, then press the combination.",
+      "areasNote": "This one acts in the three areas — Notes, Tools and HTTP — and, with Ctrl or Alt, while typing too.",
+      "fixedNote": "The arrows, Escape, Tab and the Ctrl or Shift clicks do not move: they are the navigation, the way out and the selection, and a library you cannot step back through would be worse than a badly placed key.",
+      "taken": "{{accelerator}} is already held by \"{{action}}\".",
+      "needsModifier": "A global shortcut needs at least Ctrl, Alt, Shift or Super.",
+      "heldElsewhere": "Global shortcut unavailable: {{accelerator}}. Another application already holds it.",
+      "reserved": "That key is reserved for navigation.",
+      "unknownKey": "That key has no name here: it could not be read back.",
+      "conflict": "{{accelerator}} answers several actions: {{actions}}. Only one will act."
+    },
+    "cancel": "Cancel",
+    "apply": "Apply",
+    "ok": "OK",
+    "previewHint": "The theme and the density show while you choose; nothing is saved before Apply or OK.",
+    "unapplied": "{count, plural, one {One change has not been applied} other {# changes have not been applied}}.",
+    "closeWithout": "Close without applying",
+    "applyAndClose": "Apply and close"
+  },
+  "gettingStarted": {
+    "title": "Getting started",
+    "subtitle": "What {{app}} can do, in the order you meet it.",
+    "close": "Close",
+    "chapters": {
+      "notes": {
+        "title": "Snippets, Notes and lists",
+        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown —, a todo list or a drawing — boxes, arrows and text; the editor's \"Kind\" menu turns one into another, but for a drawing, which exports as PNG or SVG and is inserted in a Note. In a Note, a Mermaid code block is drawn as a diagram, and \"Present\" shows it full screen, one section a slide. Click a card to open it, or copy it without opening, from its own button."
+      },
+      "spaces": {
+        "title": "Spaces to file things in",
+        "body": "Every note lives in a space: “Personal”, “Work”, whatever you like. Deleting one always asks where its notes should go — they never leave with it."
+      },
+      "folders": {
+        "title": "Folders, and a board",
+        "body": "A folder cuts a space into named, coloured regions, and can hold others. The “Board” view shows one level at a time: drag a card onto a zone or a row of the sidebar to file it, drop it on the background to bring it back to the board’s own level, and click a zone to open its board. A folder dragged onto another in the sidebar goes inside it, or Alt+← and Alt+→. Without a mouse: {{check}} to tick, then “File into”."
+      },
+      "organise": {
+        "title": "Finding things: search, tags, filters",
+        "body": "Search runs through titles, bodies, sources and list items, accents included. The quick filters isolate the pinned ones or the ones carrying a deadline; tags and formats sit behind the button beside them."
+      },
+      "fields": {
+        "title": "Fields to fill in",
+        "body": "Write a field in double braces inside a snippet and its value will be asked for at the moment you copy. What you type stays with the note, and a global variable proposes one for the whole library."
+      },
+      "checklists": {
+        "title": "Lists to tick",
+        "body": "A note is a snippet, a formatted note or a todo list — and a list is ticked from the card, without opening it. In the editor, Enter adds an item and Alt with an arrow moves it."
+      },
+      "explorer": {
+        "title": "A JSON seen as a tree or a graph",
+        "body": "A JSON, YAML, TOML or XML snippet is explored without leaving the editor: the tabs above the code show it as a tree or a graph, side by side with the text when the window allows. Clicking a node selects its lines in the code, and the other way round."
+      },
+      "history": {
+        "title": "The history, and searching the text",
+        "body": "Every edit keeps the body as it was: the last twenty versions open under \"History\", at the foot of the editor, compared with the current text before they are restored. In a snippet as in a Note, Ctrl+F finds and Ctrl+H replaces."
+      },
+      "palette": {
+        "title": "Pasting without leaving what you are doing",
+        "body": "{{palette}} opens the paste palette over any application: type, choose, it is on the clipboard. {{capture}} does the reverse and {{newNote}} opens an empty note, closed window included."
+      },
+      "attachments": {
+        "title": "Attachments",
+        "body": "Drop a file on the window while a note is open, or paste an image: it is copied beside the database and attached to the note. The card shows the count, and the preview grows on a click."
+      },
+      "trash": {
+        "title": "A trash, and Ctrl+Z",
+        "body": "A deleted note goes to the trash and stays there for thirty days. The banner that follows offers to undo, and Ctrl+Z still does it once the banner is gone."
+      },
+      "transfer": {
+        "title": "In and out",
+        "body": "The File menu exports everything, one space or the selection to a file it can read back, and re-imports it without ever making a duplicate. “Copy as Markdown” puts the selection on the clipboard."
+      },
+      "tools": {
+        "title": "Tools, offline",
+        "body": "The Tools area gathers some thirty utilities — encode, hash, convert dates or sizes, generate identifiers, read a JWT — without sending anything over the network. Ctrl+Shift+T opens their search, and \"Save as note\" keeps a result among your notes."
+      },
+      "http": {
+        "title": "Requests: HTTP, GraphQL, WebSocket",
+        "body": "The HTTP area keeps your requests in collections, sealed like your notes. What you begin is chosen as you create it — an HTTP request, a GraphQL request or a WebSocket — from “New request”, at the end of the tabs, or a collection's menu."
+      }
+    },
+    "chaptersLabel": "Guide chapters",
+    "previous": "Previous",
+    "next": "Next",
+    "openChapter": "How this works"
+  },
+  "whatsNew": {
+    "title": "What's new",
+    "subtitle": "The changelog shipped with the application. Deliberately untranslated.",
+    "loading": "Reading the changelog…",
+    "unavailable": "Changelog unavailable.",
+    "empty": "No release described yet.",
+    "installed": "installed",
+    "close": "Close"
+  },
+  "vault": {
+    "library": "Library",
+    "switchLibrary": "Open another library",
+    "createTitle": "Protect this library",
+    "createLead": "Choose a passphrase. {{app}} will ask for it once at every launch.",
+    "noRecovery": "⚠️ This passphrase cannot be recovered. Lose it and the library goes with it — a plaintext export is the only copy that does not depend on it.",
+    "unlockTitle": "Unlock the library",
+    "unlockLead": "Enter your passphrase to open your notes.",
+    "passphrase": "Passphrase",
+    "confirmation": "Confirmation",
+    "tooShort": "At least {{length}} characters.",
+    "reveal": "Show",
+    "mismatched": "The two entries differ.",
+    "createAction": "Protect and continue",
+    "unlockAction": "Unlock",
+    "working": "Unlocking…",
+    "damagedTitle": "This library is damaged",
+    "damagedLead": "SQLite refuses to read {{app}}'s database. A passphrase will not help — the file itself is broken, and writing to it now would make it worse.",
+    "damagedAction": "Set it aside and start fresh",
+    "keyMissingTitle": "This library has lost its key file",
+    "keyMissingLead": "The database is here, but vault.json — the file your passphrase opens — is not. Without it no passphrase can read the notes, and a new one would open nothing they hold.",
+    "keyMissingNote": "⚠️ If you still have a copy of vault.json, from a backup or another machine, put it back beside the database and restart {{app}}. Otherwise, set the library aside: it is moved, still sealed, into a folder of its own, and {{app}} opens on an empty library.",
+    "damagedNote": "⚠️ The damaged database and its attachments are moved into a folder of their own, and what can still be read is rescued beside them. Your passphrase does not change. {{app}} then opens on an empty library.",
+    "setAside": "Library set aside in {{path}}. Enter your passphrase to start on a fresh one.",
+    "creating": "Protecting the library…",
+    "forgottenLink": "Forgotten your passphrase?",
+    "forgottenTitle": "Forgotten passphrase",
+    "forgottenLead": "There is no recovery: the phrase wraps the key that seals the notes, and nothing else opens it. What {{app}} can do is archive the library as it stands and open a fresh one for you.",
+    "forgottenNote": "Your notes are not recovered: they leave sealed and unreadable, in a dated folder beside the library. The key file goes with them — if the phrase comes back to you one day, the copy will still be there. The new library starts empty, with a phrase of your choosing.",
+    "forgottenBack": "Try the phrase again",
+    "forgottenAction": "Archive and start over",
+    "archived": "Library archived, sealed, in {{path}}. Choose a phrase for the new one."
+  },
+  "backups": {
+    "loading": "Reading the copies…",
+    "none": "No copy yet. The first one is taken at the next launch.",
+    "restore": "Restore…",
+    "unopenable": "No key: unreadable",
+    "confirm": "Replace the whole library with the copy from {{when}}. Everything written since leaves the library — nothing is deleted, the current one is set aside in \"replaced\". You will have to type the passphrase again.",
+    "cancel": "Cancel",
+    "confirmRestore": "Replace the library",
+    "restoring": "Replacing…",
+    "restored": "Library restored. The previous one is in {{path}}."
+  },
+  "revisions": {
+    "title": "{count, plural, one {History (# version)} other {History (# versions)}}",
+    "characters": "{count, plural, one {# character} other {# characters}}",
+    "look": "View",
+    "previewOf": "Version kept",
+    "identical": "This version is the same as the current text.",
+    "restoredLegend": "comes back",
+    "droppedLegend": "goes",
+    "restoredLine": "Comes back:",
+    "droppedLine": "Goes:",
+    "skipped": "{count, plural, one {… # unchanged line} other {… # unchanged lines}}",
+    "consequence": "{count, plural, =0 {The current text will be replaced, and not kept.} one {The current text and the newer version will be erased.} other {The current text and the # newer versions will be erased.}}",
+    "back": "Back to the list",
+    "restore": "Go back to this version",
+    "note": "Choose a version to see what would change. The body of a snippet or a Note is kept, the last twenty — a todo list keeps none — and it does not travel with an export."
+  },
+  "libraries": {
+    "title": "Libraries",
+    "lead": "Each library has its own database, attachments, backups and passphrase. Nothing crosses from one to another.",
+    "open": "Open",
+    "unnamed": "Library",
+    "switch": "Open",
+    "rename": "Rename",
+    "delete": "Delete",
+    "create": "Create",
+    "namePlaceholder": "Library name",
+    "close": "Close",
+    "cancel": "Cancel",
+    "deleted": "Library \"{{name}}\" deleted.",
+    "confirmDelete": "Delete \"{{name}}\": its notes, its attachments and its backups go with it, for good.",
+    "confirmDeleteAction": "Delete the library",
+    "menuEntry": "Libraries…"
+  },
+  "json": {
+    "views": "View",
+    "tabs": {
+      "code": "Code",
+      "graph": "Graph",
+      "tree": "Tree"
+    },
+    "sideBySide": {
+      "toggle": "Side by side",
+      "hint": "The code on one side, the graph or the tree on the other",
+      "narrow": "Too narrow for side by side",
+      "hideCode": "Hide the code",
+      "handle": "Width of the code",
+      "share": "The code takes {{share}} %"
+    },
+    "valid": "Valid {{format}}",
+    "invalid": "Invalid {{format}} · line {{line}}",
+    "invalidAt": "Invalid {{format}} at line {{line}}, column {{column}}:",
+    "reasons": {
+      "unexpectedEnd": "the document ends too early.",
+      "unexpectedCharacter": "an unexpected character.",
+      "invalidNumber": "a malformed number.",
+      "invalidEscape": "an unknown escape.",
+      "controlCharacter": "a control character inside a string.",
+      "trailingCharacters": "text follows the document.",
+      "tooDeep": "nesting too deep.",
+      "malformed": "the document is malformed.",
+      "tooLarge": "its aliases make it larger than the explorer reads."
+    },
+    "showInCode": "Show in code",
+    "search": "Search the JSON",
+    "searchPlaceholder": "Search a key or a value",
+    "previousMatch": "Previous match (Shift+Enter)",
+    "nextMatch": "Next match (Enter)",
+    "openAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "openAllKeys": "Expand all (Shift+→)",
+    "collapseAllKeys": "Collapse all (Shift+←)",
+    "fit": "Fit to screen",
+    "resetLayout": "Reset the layout",
+    "folded": "More than 2,000 nodes: arrays stay folded.",
+    "showTree": "Show the tree",
+    "crumbs": "Path",
+    "selectionLabel": "Selected node",
+    "selection": "Selection",
+    "copyPath": "Copy the path",
+    "copyValue": "Copy the value",
+    "extract": "Extract to a variable…",
+    "menu": "Value actions",
+    "kinds": {
+      "object": "{count, plural, =0 {Empty object} one {Object · # key} other {Object · # keys}}",
+      "array": "{count, plural, =0 {Empty array} one {Array · # item} other {Array · # items}}",
+      "string": "String",
+      "number": "Number",
+      "boolean": "Boolean",
+      "null": "Null",
+      "datetime": "Date or time"
+    },
+    "document": "Document",
+    "keys": "Keys",
+    "depth": "Depth",
+    "size": "Size",
+    "bytes": "{{value}} B",
+    "kilobytes": "{{value}} KB",
+    "megabytes": "{{value}} MB",
+    "limitNote": "Past 2,000 nodes, the graph folds arrays and offers the tree.",
+    "notices": {
+      "firstDocumentOnly": "Several documents: only the first one is explored."
+    },
+    "formatNotes": {
+      "yaml": "Comments do not appear, and an alias shows what it names.",
+      "toml": "Comments do not appear; dates and times are shown as written.",
+      "xml": "Comments, processing instructions and the DOCTYPE do not appear; an attribute reads @name, and the text beside children #text, as the converter writes them."
+    },
+    "hiddenRows": "{count, plural, one {+ # more} other {+ # more}}",
+    "tree": "Document tree",
+    "treeTruncated": "The tree stops at 5,000 lines: fold what you do not need.",
+    "zoom": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
+  },
+  "areas": {
+    "label": "Areas",
+    "hint": "{{area}} ({{key}})",
+    "notes": "Notes",
+    "tools": "Tools",
+    "rail": "Show or hide the side rail",
+    "go": {
+      "notes": "Go to the notes",
+      "tools": "Go to the tools",
+      "http": "Go to the HTTP client"
+    },
+    "http": "HTTP"
+  },
+  "tools": {
+    "title": "Tools",
+    "count": "{count, plural, =0 {No utility yet} one {# utility, offline} other {# utilities, all offline}}",
+    "all": "All tools",
+    "recents": "Recent",
+    "favourites": {
+      "title": "Favourites",
+      "toggle": "Favourite",
+      "of": "Favourite: {{name}}",
+      "add": "Add to favourites",
+      "remove": "Remove from favourites"
+    },
+    "searchLabel": "Search for a tool",
+    "searchPlaceholder": "Search for a tool…",
+    "searchKeys": "Ctrl Shift T",
+    "searchShortcut": "Search for a tool",
+    "noMatch": "No tool and no reference entry matches “{{query}}”.",
+    "enterOpens": "Enter opens this result",
+    "references": {
+      "title": "In the references",
+      "more": "{count, plural, one {# more} other {# more}} in {{name}}"
+    },
+    "clear": "Clear",
+    "offline": "No tool reaches the network. What you paste never leaves the application.",
+    "categories": {
+      "text": "Text",
+      "crypto": "Crypto",
+      "encode": "Encoders",
+      "generate": "Generators",
+      "time": "Time",
+      "calc": "Calculate",
+      "reference": "References"
+    },
+    "input": "Input",
+    "result": "Result",
+    "results": "Results",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyWhat": "Copy {{what}}",
+    "case": {
+      "name": "Case converter",
+      "description": "camelCase, snake_case, dot.case, Train-Case…",
+      "inputLabel": "Text to convert",
+      "placeholder": "A variable name, a sentence, or a list, one per line: parse HTTP response",
+      "empty": "The thirteen cases and the slug show here, in three groups.",
+      "noteTitle": "Cases of “{{text}}”",
+      "sample": "Number of items per page\nuser account ID\nparseURL and HTTPServer",
+      "text": "Text",
+      "words": "Detected words",
+      "options": "Options",
+      "stripAccents": "Strip accents in the code formats",
+      "perLine": "Convert each line on its own",
+      "titleCase": "Title Case capitals",
+      "english": "English",
+      "french": "French",
+      "titleCaseHint": "In French, the small words (de, la, un) stay in lower case.",
+      "acronyms": "Acronyms are split with care:",
+      "acronymsDigits": "Check those holding digits:",
+      "forCode": "For code",
+      "forText": "For text",
+      "upper": "UPPERCASE",
+      "lower": "lowercase",
+      "slug": "Slug",
+      "separator": "Slug separator",
+      "separators": {
+        "dash": "Dash -",
+        "underscore": "Underscore _",
+        "dot": "Dot ."
+      },
+      "lowercase": "Lower case",
+      "slugHint": "The slug transliterates everything (Straße → strasse, Привет → privet); the code formats only strip accents.",
+      "forUrl": "For URLs"
+    },
+    "line-breaks": {
+      "name": "Line breaks",
+      "description": "CRLF ↔ LF, trailing spaces",
+      "paste": "Paste",
+      "inputLabel": "Pasted text",
+      "placeholder": "Paste a text here (Ctrl+V): its line endings show.",
+      "mixed": "Mixed",
+      "ending": "Line endings",
+      "endings": {
+        "keep": "Keep",
+        "lf": "LF",
+        "crlf": "CRLF",
+        "cr": "CR"
+      },
+      "final": "Final newline",
+      "finals": {
+        "keep": "Keep",
+        "add": "Add",
+        "remove": "Remove"
+      },
+      "trim": "Remove trailing spaces",
+      "converted": "{count, plural, =0 {no line ending converted} one {# line ending converted} other {# line endings converted}}",
+      "trimmed": "{count, plural, =0 {no line trimmed} one {# line trimmed} other {# lines trimmed}}",
+      "finalChanges": {
+        "unchanged": "final newline unchanged",
+        "added": "final newline added",
+        "removed": "final newline removed"
+      },
+      "moreLines": "{count, plural, one {… and # more line} other {… and # more lines}}",
+      "empty": "The fixed text shows here.",
+      "noteTitle": "Text with fixed line endings"
+    },
+    "saved": "Note “{{title}}” saved in {{place}}.",
+    "saveAsNote": {
+      "open": "Save as note",
+      "nothing": "The tool has computed nothing to keep yet.",
+      "title": "Save as note",
+      "what": "A {{language}} snippet, holding what the tool computed — never what was typed into it.",
+      "noteTitle": "Title",
+      "space": "Space",
+      "folder": "Folder",
+      "noFolder": "No folder",
+      "tags": "Tags",
+      "tagsPlaceholder": "api, webhook",
+      "submit": "Save",
+      "submitAnyway": "Save anyway"
+    },
+    "files": {
+      "notFound": "This file cannot be found.",
+      "tooLarge": "This file is over 10 MB: the tool does not show it.",
+      "unreadable": "This file cannot be read.",
+      "unwritable": "The file could not be written there."
+    },
+    "url-codec": {
+      "name": "URL",
+      "description": "Encode, decode, take apart",
+      "scope": "Scope",
+      "scopes": {
+        "component": "Component",
+        "whole": "Whole URL"
+      },
+      "scopeHints": {
+        "component": "A query or path value: / ? & = are escaped.",
+        "whole": "A complete URL: its structure stays readable."
+      },
+      "decoded": "Text",
+      "encoded": "Encoded",
+      "decodedPlaceholder": "café crème & croissants",
+      "encodedPlaceholder": "caf%C3%A9%20cr%C3%A8me",
+      "malformed": "Incomplete escape at character {{at}}: a % expects two hexadecimal digits.",
+      "notUtf8": "These bytes are no UTF-8 text.",
+      "noteEncoded": "Text encoded for a URL",
+      "noteDecoded": "Decoded URL",
+      "tab": "Tab",
+      "tabs": {
+        "codec": "Encode / decode",
+        "parse": "Analyse"
+      },
+      "analyseThis": "Analyse this URL",
+      "inputLabel": "URL to parse",
+      "placeholder": "https://api.example.com/v1/invoices?status=paid&page=2",
+      "parts": "Parts",
+      "labels": {
+        "scheme": "Scheme",
+        "username": "User",
+        "password": "Password",
+        "host": "Host",
+        "port": "Port",
+        "path": "Path",
+        "query": "Query",
+        "fragment": "Fragment"
+      },
+      "defaultPort": "default",
+      "parameters": "{count, plural, one {Parameter · #} other {Parameters · #}}",
+      "parameterName": "Name",
+      "parameterValue": "Value",
+      "empty": "The URL's parts show here.",
+      "problems": {
+        "empty": "Paste a URL.",
+        "noScheme": "The scheme is missing: a URL starts with https:// or another scheme.",
+        "emptyHost": "The host is empty.",
+        "invalidPort": "The port is not a number between 0 and 65535.",
+        "invalidAddress": "The IP address is malformed.",
+        "invalidDomain": "The domain name holds a forbidden character.",
+        "other": "This URL is not valid."
+      },
+      "noteParsed": "URL of {{host}}"
+    },
+    "base64": {
+      "name": "Base64 and other bases",
+      "description": "Base64, Base32, hexadecimal, binary, bytes — the format recognised on decoding, and a preview of an image",
+      "direction": "Direction",
+      "directions": {
+        "encode": "Encode",
+        "decode": "Decode"
+      },
+      "source": "Source",
+      "sources": {
+        "text": "Text",
+        "file": "File"
+      },
+      "inputLabel": "Text to encode or decode",
+      "encodePlaceholder": "The text to encode",
+      "decodePlaceholder": "Q2Fmw6k=, 43 61 66 c3 a9, 01000011…",
+      "pickFile": "Choose a file…",
+      "fileHint": "The file is read where it lies: its content never crosses the interface.",
+      "fileRead": "{{name}} · {count, plural, one {# byte} other {# bytes}}",
+      "encodeEmpty": "The text shows here in Base64, Base64 URL, Base32, hexadecimal, binary and bytes.",
+      "decodeEmpty": "The decoded text shows here.",
+      "binary": "{count, plural, one {# byte} other {# bytes}} that are no text. Here they are in hexadecimal:",
+      "saveFile": "Save as a file…",
+      "decodedText": "Decoded text",
+      "dataUri": "· data: URI of type {{type}}",
+      "dataUriUntyped": "· data: URI",
+      "image": {
+        "alt": "Preview of the decoded image ({{format}})",
+        "weight": "{count, plural, one {# byte} other {# bytes}}",
+        "tooLarge": "Too large an image for a preview: past {{limit}} MB it is not drawn. Save it as a file to see it."
+      },
+      "saved": "{count, plural, one {File saved: # byte.} other {File saved: # bytes.}}",
+      "problems": {
+        "character": "“{{character}}” does not belong to this format, at character {{at}}.",
+        "truncated": "The text seems cut: “{{character}}” at character {{at}} cannot end it.",
+        "length": "The length does not add up: characters are missing or left over.",
+        "tooLarge": "“{{character}}…” at character {{at}} is past 255: a decimal byte goes from 0 to 255."
+      },
+      "noteEncoded": "Text in Base64 and other bases",
+      "noteDecoded": "Decoded text",
+      "encodings": {
+        "base64": "Base64",
+        "base64Url": "Base64 URL",
+        "base32": "Base32",
+        "hex": "Hexadecimal",
+        "binary": "Binary",
+        "decimal": "Decimal bytes"
+      },
+      "readings": {
+        "auto": "Auto",
+        "base64": "Base64",
+        "base64Url": "Base64 URL",
+        "base32": "Base32",
+        "hex": "Hex",
+        "binary": "Binary",
+        "decimal": "Bytes"
+      },
+      "reading": "Read as",
+      "readAs": "Read as",
+      "guessed": "· by its shape",
+      "also": "Also reads as",
+      "characters": "{count, plural, one {# character} other {# characters}}",
+      "bytes": "{count, plural, one {# byte} other {# bytes}} in UTF-8",
+      "wide": "(“{{character}}” takes {{bytes}})",
+      "spaced": "Separate the bytes with spaces",
+      "uppercase": "Upper-case hexadecimal",
+      "fileOnlyBase64": "A file keeps Base64 and Base64 URL: its other bases, for a megabyte, would only be noise.",
+      "explain": "In “Decode”, paste any format: the tool recognises Base64, Base64 URL, Base32, hexadecimal, binary or bytes. Base64 URL is written without padding, as in a JWT. Base64 is no encryption: anyone can decode it."
+    },
+    "hash": {
+      "name": "Hash / HMAC",
+      "description": "MD5, SHA-1, SHA-2, SHA-3",
+      "source": "Source",
+      "sources": {
+        "text": "Text",
+        "file": "File"
+      },
+      "inputLabel": "Text to hash",
+      "placeholder": "The text to digest",
+      "fileHint": "The file is read where it lies, a block at a time: its size has no limit.",
+      "bytes": "{count, plural, one {# byte} other {# bytes}}",
+      "withNewline": "with a final newline",
+      "withoutNewline": "no final newline",
+      "key": "Key",
+      "showKey": "Show the key",
+      "keyNeverKept": "The key is never saved with the note.",
+      "verify": "Check a signature",
+      "expectedPlaceholder": "The expected digest, in hex or base64",
+      "matches": "Matches {{name}}, in {{encoding}}",
+      "noMatch": "No match",
+      "algorithms": "Algorithms",
+      "encoding": "Output format",
+      "encodings": {
+        "hex": "hex",
+        "base64": "base64"
+      },
+      "bits": "{{count}} bits",
+      "empty": "Choose an algorithm and type a text.",
+      "weak": "MD5 and SHA-1 no longer protect anything: the tool keeps them to compare existing digests. To store passwords, use Argon2 or bcrypt, not a plain hash.",
+      "noteTitle": "Digests",
+      "noNewlineCommand": "(echo -n)",
+      "noMatchHints": "Check the final newlines, the encoding (hex or base64) and whether HMAC should be on.",
+      "hmacShape": "An HMAC has the shape of the hash it uses. Type the text to find out which.",
+      "or": "or",
+      "shapes": {
+        "hex": "{count, plural, one {# hexadecimal character} other {# hexadecimal characters}}: {{names}}",
+        "hexNone": "{count, plural, one {# hexadecimal character} other {# hexadecimal characters}}: no digest of the tool has this length.",
+        "base64": "Base64 of {count, plural, one {# byte} other {# bytes}}: {{names}}",
+        "base64None": "Base64 of {count, plural, one {# byte} other {# bytes}}: no digest of the tool has this length.",
+        "unknown": "Neither hexadecimal nor Base64: this is not a digest."
+      },
+      "obsolete": "obsolete"
+    },
+    "password": {
+      "name": "Passwords",
+      "description": "Length, character sets, entropy",
+      "options": "Options",
+      "length": "Length",
+      "sets": "Characters",
+      "setNames": {
+        "lowercase": "Lower case",
+        "uppercase": "Upper case",
+        "digits": "Digits",
+        "symbols": "Symbols"
+      },
+      "lookAlikes": "No characters that look alike",
+      "count": "Count",
+      "generate": "Regenerate",
+      "passwords": "Passwords",
+      "entropy": "≈ {{bits}} bits of entropy",
+      "strengths": {
+        "veryWeak": "very weak",
+        "weak": "weak",
+        "fair": "fair",
+        "strong": "strong",
+        "veryStrong": "very strong"
+      },
+      "noCharacters": "Choose at least one character set.",
+      "noteTitle": "Generated passwords",
+      "saveWarning": "A password kept in a note is encrypted with the library, but a note gets copied, shared and exported: a password manager keeps it better."
+    },
+    "colour": {
+      "name": "Colours",
+      "description": "HEX, RGB, HSL, OKLCH, contrast",
+      "colour": "Colour",
+      "pick": "Pick the colour",
+      "placeholder": "#1e90ff, rgb(30 144 255), hsl(…), oklch(…)",
+      "invalid": "Not a colour: write #1e90ff, rgb(…), hsl(…) or oklch(…), with or without alpha.",
+      "outOfGamut": "Outside sRGB: the screen cannot show it. Brought inside at the same lightness and hue — that is what the preview, HEX, RGB and HSL show.",
+      "contrast": "Contrast",
+      "background": "Background",
+      "backgroundPlaceholder": "The background colour, #ffffff",
+      "sampleText": "Body text on this background",
+      "normalText": "Body text",
+      "largeText": "Large text",
+      "pass": "passes",
+      "fail": "fails",
+      "wcag": "WCAG 2.2: AA asks for 4.5:1 (3:1 for large text), AAA asks for 7:1 (4.5:1).",
+      "noteTitle": "Colour {{hex}}",
+      "text": "Text",
+      "swap": "Swap the text and the background",
+      "verdicts": {
+        "failsAll": "Not enough, even for large text",
+        "failsNormal": "Not enough for body text",
+        "aa": "Enough for body text (AA)",
+        "aaa": "Excellent for body text (AAA)"
+      },
+      "fix": {
+        "aa": "Adjust the text to reach 4.5:1",
+        "aaa": "Adjust the text to reach 7:1"
+      },
+      "unreachable": {
+        "aa": "No text colour reaches 4.5:1 on this background, toward black or toward white.",
+        "aaa": "No text colour reaches 7:1 on this background, toward black or toward white."
+      }
+    },
+    "convert": {
+      "name": "JSON ↔ YAML ↔ TOML ↔ XML",
+      "description": "From one format to another, in every direction",
+      "from": "From",
+      "to": "To",
+      "formats": {
+        "json": "JSON",
+        "toml": "TOML",
+        "xml": "XML",
+        "yaml": "YAML"
+      },
+      "swap": "Swap the formats and the texts",
+      "inputLabel": "Text to convert",
+      "placeholders": {
+        "json": "{ \"service\": \"billing\", \"replicas\": 2 }",
+        "toml": "service = \"billing\"\nreplicas = 2",
+        "xml": "<service replicas=\"2\">billing</service>",
+        "yaml": "service: billing\nreplicas: 2"
+      },
+      "unreadable": "The {{format}} does not parse: line {{line}}, column {{column}}.",
+      "crossings": {
+        "tomlNull": "TOML has no null, and a list cannot lose one without moving the others:",
+        "tomlRoot": "A TOML document is a table: its root cannot be a list or a value.",
+        "xmlRoot": "An XML document has one root element: it takes an object of one key.",
+        "xmlName": "XML does not take this element or attribute name:",
+        "xmlAttribute": "An @attribute holds a value, not an object or a list:"
+      },
+      "empty": "The result shows here.",
+      "conventions": {
+        "xml": "XML convention: @name for an attribute, #text for text beside elements, a repeated element becomes a list, an empty element becomes null. XML has no types: everything it gives is text.",
+        "toml": "TOML has no null and wants a table at its root; a TOML date becomes a string in JSON."
+      },
+      "noteTitle": "{{from}} converted to {{to}}",
+      "dropped": "{count, plural, one {# key left out:} other {# keys left out:}}",
+      "noTomlNull": "TOML has no null value."
+    },
+    "json-generator": {
+      "name": "JSON",
+      "description": "From a schema or from a template document",
+      "source": "Source",
+      "sources": {
+        "schema": "Schema",
+        "example": "Template"
+      },
+      "inputLabel": "JSON Schema or template document",
+      "placeholders": {
+        "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
+        "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@example.com\", \"amount\": 49.9 }"
+      },
+      "unreadable": "This JSON does not parse: line {{line}}, column {{column}}.",
+      "notASchema": "A JSON Schema is an object.",
+      "count": "Documents",
+      "seed": "Seed",
+      "seedPlaceholder": "random",
+      "documents": "Documents",
+      "seedUsed": "· {{seed}} used",
+      "keepSeed": "Pin this seed: the same documents will come back",
+      "again": "Regenerate",
+      "unsupported": "Schema keywords not supported, ignored:",
+      "empty": "Paste a schema or a template document: the documents show here.",
+      "noteTitle": "Generated JSON documents",
+      "expects": {
+        "schema": "Schema: a JSON Schema describes the documents.",
+        "example": "Template: a model document, whose values are replaced by others of the same kind."
+      },
+      "anExample": "This looks like an example document, not a schema.",
+      "asExample": "Read it as a template",
+      "pinSeed": "Pin the seed",
+      "freeSeed": "Let the seed go: each draw will take a new one",
+      "seedPinned": "Seed pinned: “Regenerate” gives the same documents again.",
+      "unsupportedAt": "at"
+    },
+    "identity": {
+      "name": "Fictitious identity",
+      "description": "A test person whose every number passes its check",
+      "options": "Options",
+      "country": "Country",
+      "countries": {
+        "FR": "France",
+        "BE": "Belgium",
+        "DE": "Germany",
+        "ES": "Spain",
+        "IT": "Italy",
+        "PT": "Portugal",
+        "NL": "Netherlands",
+        "CH": "Switzerland",
+        "GB": "United Kingdom",
+        "PL": "Poland",
+        "SE": "Sweden",
+        "US": "United States",
+        "CA": "Canada"
+      },
+      "nationalities": {
+        "FR": "French",
+        "BE": "Belgian",
+        "DE": "German",
+        "ES": "Spanish",
+        "IT": "Italian",
+        "PT": "Portuguese",
+        "NL": "Dutch",
+        "CH": "Swiss",
+        "GB": "British",
+        "PL": "Polish",
+        "SE": "Swedish",
+        "US": "American",
+        "CA": "Canadian"
+      },
+      "sex": "Sex",
+      "sexes": {
+        "any": "Any",
+        "F": "Female",
+        "M": "Male"
+      },
+      "age": "Age reached this year",
+      "ageMin": "Youngest",
+      "ageMax": "Oldest",
+      "years": "years",
+      "seed": "Seed",
+      "seedPlaceholder": "random",
+      "seedUsed": "· {{seed}} used",
+      "pinSeed": "Pin the seed",
+      "keepSeed": "Pin this seed: the same person will come back",
+      "freeSeed": "Let the seed go: each draw will give someone else",
+      "seedPinned": "Seed pinned: the same person comes back, all year.",
+      "batch": "Batch",
+      "batchCountries": "Countries of the batch",
+      "people": "People",
+      "format": "Format",
+      "formats": {
+        "json": "JSON",
+        "csv": "CSV"
+      },
+      "separator": "Separator",
+      "separators": {
+        "comma": "Comma",
+        "semicolon": "Semicolon"
+      },
+      "export": "Export…",
+      "batchHint": "1 to 100 people in a file, the first being the one on the card; the countries chosen take their turn.",
+      "exported": "{count, plural, one {# person exported.} other {# people exported.}}",
+      "person": "Person",
+      "copyJson": "Copy as JSON",
+      "jsonCopied": "Person copied as JSON.",
+      "again": "Regenerate",
+      "noteTitle": "Fictitious identity of {{name}}",
+      "cardKind": "Fictitious identity",
+      "aged": "({count, plural, one {# year} other {# years}})",
+      "fields": {
+        "surname": "Surname",
+        "givenNames": "Given names",
+        "nationality": "Nationality",
+        "bornOn": "Date of birth",
+        "bornIn": "Place of birth",
+        "document": "Document number (made up)",
+        "address": "Address",
+        "phone": "Phone",
+        "mobile": "Mobile",
+        "email": "E-mail",
+        "bank": "Bank",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "company": "Company name"
+      },
+      "marks": {
+        "mayRing": "may ring",
+        "mayRingTitle": "This country keeps no range of numbers for fiction: this number may ring at someone’s.",
+        "unkeyed": "no key",
+        "unkeyedTitle": "A format only: this number has no check key to verify it by."
+      },
+      "identifiers": {
+        "nir": "N° de sécurité sociale",
+        "siren": "SIREN",
+        "siret": "SIRET",
+        "vat": "TVA intracommunautaire",
+        "nrn": "Numéro national · Rijksregisternummer",
+        "bce": "N° d’entreprise · Ondernemingsnummer",
+        "beVat": "TVA · BTW",
+        "steuerId": "Steuer-ID",
+        "ustIdNr": "USt-IdNr.",
+        "dni": "DNI",
+        "nifEs": "NIF",
+        "codiceFiscale": "Codice fiscale",
+        "partitaIva": "Partita IVA",
+        "nifPt": "NIF",
+        "nipc": "NIPC",
+        "bsn": "BSN",
+        "kvk": "KvK-nummer",
+        "btw": "Btw-nummer",
+        "ahv": "AHV-Nr. · N° AVS",
+        "uid": "UID",
+        "nino": "National Insurance number",
+        "crn": "Company number",
+        "gbVat": "VAT number",
+        "pesel": "PESEL",
+        "nip": "NIP",
+        "regon": "REGON",
+        "personnummer": "Personnummer",
+        "orgnr": "Organisationsnummer",
+        "moms": "Momsnummer",
+        "ssn": "Social Security number",
+        "sin": "SIN · NAS",
+        "sortCode": "Sort code",
+        "accountNumber": "Account number",
+        "routingNumber": "Routing number",
+        "transitNumber": "Transit number"
+      },
+      "blocks": {
+        "contact": "Contact",
+        "bank": "Bank",
+        "company": "Company"
+      },
+      "noFirmNumber": "No company number with a key in this country.",
+      "lists": {
+        "missing": "List not found: {{file}}.",
+        "damaged": "List unreadable: {{file}}.",
+        "where": "The lists are read from {{folder}}"
+      }
+    },
+    "lorem": {
+      "name": "Lorem ipsum",
+      "description": "Words, sentences, paragraphs",
+      "unit": "Unit",
+      "units": {
+        "words": "Words",
+        "sentences": "Sentences",
+        "paragraphs": "Paragraphs"
+      },
+      "count": "Count",
+      "opening": "Start with “Lorem ipsum”",
+      "again": "Regenerate",
+      "noteTitle": "Lorem ipsum",
+      "counted": {
+        "words": "{count, plural, one {# word} other {# words}}",
+        "sentences": "{count, plural, one {# sentence} other {# sentences}}",
+        "paragraphs": "{count, plural, one {# paragraph} other {# paragraphs}}"
+      },
+      "heldTo": {
+        "words": "At most {count, plural, other {# words}} at a time: the count asked is brought down to it.",
+        "sentences": "At most {count, plural, other {# sentences}} at a time: the count asked is brought down to it.",
+        "paragraphs": "At most {count, plural, other {# paragraphs}} at a time: the count asked is brought down to it."
+      }
+    },
+    "dates": {
+      "name": "Dates and durations",
+      "description": "Unix ↔ ISO 8601, gaps and ISO durations",
+      "inputLabel": "Date or timestamp",
+      "placeholder": "1790000000, 2026-09-29T14:03:12+02:00, 2026-W40-2…",
+      "now": "Now",
+      "readAs": "Read as",
+      "guessed": "· from its size",
+      "readings": {
+        "seconds": "a Unix timestamp in seconds",
+        "milliseconds": "a Unix timestamp in milliseconds",
+        "microseconds": "a Unix timestamp in microseconds",
+        "nanoseconds": "a Unix timestamp in nanoseconds",
+        "iso8601": "an ISO 8601 date",
+        "weekDate": "an ISO 8601 week date",
+        "ordinalDate": "an ISO 8601 ordinal date",
+        "rfc2822": "an RFC 2822 date"
+      },
+      "magnitude": "Timestamp unit",
+      "magnitudes": {
+        "auto": "Auto",
+        "seconds": "s",
+        "milliseconds": "ms",
+        "microseconds": "µs",
+        "nanoseconds": "ns"
+      },
+      "localAssumed": "Written without an offset: read in this machine's time.",
+      "ambiguous": "This time happens twice, as the clocks go back: the first one is kept.",
+      "unreadable": "Unreadable from character {{at}} on.",
+      "skipped": "This time does not exist here: the clocks skipped it as they went forward.",
+      "outOfRange": "Beyond what a date can represent: some 262,000 years either side of year 0.",
+      "empty": "Type a timestamp or a date, or take the present instant: every form shows here.",
+      "rows": {
+        "unixSeconds": "Seconds",
+        "unixMilliseconds": "Milliseconds",
+        "unixMicroseconds": "Microseconds",
+        "unixNanoseconds": "Nanoseconds",
+        "isoUtc": "ISO 8601 · UTC",
+        "isoLocal": "ISO 8601 · local",
+        "rfc2822": "RFC 2822",
+        "relative": "Relative to now",
+        "weekday": "Day of the week",
+        "weekDate": "Week date",
+        "week": "ISO week",
+        "ordinalDate": "Ordinal date",
+        "dayOfYear": "Day of the year"
+      },
+      "weekdays": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
+      },
+      "noteTitle": "Instant {{instant}}",
+      "groups": {
+        "unix": "Unix timestamp",
+        "formats": "Date formats",
+        "landmarks": "Landmarks"
+      },
+      "localZone": "local time · UTC{{offset}}",
+      "tab": "Tab",
+      "tabs": {
+        "convert": "Convert",
+        "durations": "Gap and durations"
+      },
+      "gapTitle": "Gap between two dates",
+      "fields": {
+        "from": "From",
+        "to": "To"
+      },
+      "datePlaceholder": "2026-03-12 09:00",
+      "typedIn": "Times typed in {{zone}}.",
+      "elapsedTitle": "Total elapsed",
+      "elapsedRows": {
+        "days": "Days",
+        "weeks": "Weeks",
+        "hours": "Hours",
+        "minutes": "Minutes",
+        "iso": "ISO 8601"
+      },
+      "elapsed": {
+        "days": "{{days}} d {{hours}} h {{minutes}}",
+        "weeks": "{{weeks}} wk {{days}} d",
+        "hours": "{{hours}} h {{minutes}}"
+      },
+      "calendar": {
+        "years": "{count, plural, one {# year} other {# years}}",
+        "months": "{count, plural, one {# month} other {# months}}",
+        "days": "{count, plural, one {# day} other {# days}}",
+        "none": "No gap"
+      },
+      "clock": {
+        "hours": "{{value}} h",
+        "minutes": "{{value}} min",
+        "seconds": "{{value}} s"
+      },
+      "negative": "To falls before From: the gap is counted backwards.",
+      "ambiguousField": "{{field}}: this time happens twice, when the clocks go back; the first is taken.",
+      "transition": {
+        "forward": "The change to summer time on {{date}} falls between the two dates: the calendar gap ({{wall}}) counts {{difference}} more than the time actually elapsed ({{elapsed}}).",
+        "backward": "The change back to winter time on {{date}} falls between the two dates: the calendar gap ({{wall}}) counts {{difference}} less than the time actually elapsed ({{elapsed}}).",
+        "forwardUndated": "A change of time falls between the two dates: the calendar gap ({{wall}}) counts {{difference}} more than the time actually elapsed ({{elapsed}}).",
+        "backwardUndated": "A change of time falls between the two dates: the calendar gap ({{wall}}) counts {{difference}} less than the time actually elapsed ({{elapsed}}).",
+        "hoursApart": "{count, plural, one {one hour} other {# hours}}",
+        "minutesApart": "{{minutes}} min"
+      },
+      "gapProblems": {
+        "unreadable": "{{field}}: unreadable from character {{at}}.",
+        "skipped": "{{field}}: this time does not exist here, the clocks skipped it when they went forward.",
+        "outOfRange": "{{field}}: past the year 9999."
+      },
+      "durationTitle": "ISO 8601 duration",
+      "units": {
+        "years": "{count, plural, one {year} other {years}}",
+        "months": "{count, plural, one {month} other {months}}",
+        "weeks": "{count, plural, one {week} other {weeks}}",
+        "days": "{count, plural, one {day} other {days}}",
+        "hours": "{count, plural, one {hour} other {hours}}",
+        "minutes": "{count, plural, one {minute} other {minutes}}",
+        "seconds": "{count, plural, one {second} other {seconds}}",
+        "none": "No duration"
+      },
+      "totals": {
+        "iso": "ISO 8601",
+        "seconds": "Seconds",
+        "minutes": "Minutes",
+        "hours": "Hours"
+      },
+      "noTotals": "A month or a year has no fixed length: no total in seconds.",
+      "durationProblems": {
+        "unexpected": "Character {{at}}: neither a number nor a unit expected here.",
+        "empty": "Character {{at}}: nothing after “P” or “T”.",
+        "outOfOrder": "Character {{at}}: this unit comes before the previous one; the order is Y M W D, then T H M S.",
+        "repeated": "Character {{at}}: this unit is already given.",
+        "fractionNotLast": "Character {{at}}: only the last part may have decimals."
+      },
+      "durationHint": "Also type “1h30” or “90 min”: the tool gives the ISO form.",
+      "explainMonth": "is a month,",
+      "explainMinute": "is a minute: the",
+      "explainT": "separates the date from the time. A month or a year has no fixed length in seconds.",
+      "noteDurations": "Gap and duration"
+    },
+    "zones": {
+      "name": "Time zones",
+      "description": "One time, in every zone chosen",
+      "inputLabel": "Date and time",
+      "placeholder": "2026-09-29 14:30",
+      "now": "Now",
+      "zones": "Zones",
+      "add": "Add a zone",
+      "addPlaceholder": "City, zone or abbreviation: Tokyo, CEST…",
+      "noMatch": "No zone answers “{{query}}”.",
+      "here": "Type here",
+      "hereLabel": "Type the time in the {{zone}} zone",
+      "remove": "Remove {{zone}}",
+      "local": "this machine",
+      "source": "typed",
+      "summer": "summer time",
+      "dayAhead": "+{{count}} d",
+      "dayBehind": "−{{count}} d",
+      "readings": "Which of the two",
+      "ambiguous": "This time happens twice in {{zone}}, as the clocks go back: which one?",
+      "skipped": "This time does not exist in {{zone}}: the clocks go from UTC{{before}} to UTC{{after}} there.",
+      "unreadable": "Unreadable from character {{at}} on.",
+      "outOfRange": "Beyond the dates a zone can place.",
+      "unknownZone": "Unknown zone: {{zone}}.",
+      "unknown": "Unknown zones, left aside: {{zones}}.",
+      "empty": "Type a date and a time, or take the present time: every zone shows it here.",
+      "noteTitle": "{{time}} in every zone",
+      "typedInBefore": "Typed in the time of ",
+      "typedInAfter": ".",
+      "notAmbiguous": "No daylight-saving ambiguity on this date."
+    },
+    "cron": {
+      "name": "Cron",
+      "description": "Read aloud, its next runs, and those between two moments",
+      "inputLabel": "Cron expression",
+      "placeholder": "*/15 9-18 * * MON-FRI",
+      "expanded": "That is {{expression}}",
+      "fieldsLabel": "Fields of the expression",
+      "fields": {
+        "second": {
+          "name": "Second",
+          "range": "0–59"
+        },
+        "minute": {
+          "name": "Minute",
+          "range": "0–59"
+        },
+        "hour": {
+          "name": "Hour",
+          "range": "0–23"
+        },
+        "dayOfMonth": {
+          "name": "Day of month",
+          "range": "1–31, L, W"
+        },
+        "month": {
+          "name": "Month",
+          "range": "1–12, JAN–DEC"
+        },
+        "dayOfWeek": {
+          "name": "Day of week",
+          "range": "0–7, SUN–SAT, L, #"
+        }
+      },
+      "reboot": "@reboot runs when the machine starts: there is no time to give.",
+      "eitherDay": "Both the day of the month and the day of the week are set: either one is enough, as in cron.",
+      "refusedAt": "Character {{at}}",
+      "problems": {
+        "empty": "An item of the list is empty.",
+        "fieldCount": "Five fields are needed, or six with the seconds first.",
+        "unknownMacro": "“{{token}}” is no known macro: @yearly, @monthly, @weekly, @daily, @hourly, @reboot.",
+        "unknownName": "“{{token}}” is not a name this field knows.",
+        "notANumber": "“{{token}}” is not a number.",
+        "outOfRange": "“{{token}}” is outside this field's values: {{range}}.",
+        "reversedRange": "“{{token}}”: the range is backwards.",
+        "zeroStep": "A step of 0 never moves on.",
+        "notHere": "“{{token}}” means nothing in this field.",
+        "refused": "The scheduler refuses this expression."
+      },
+      "zone": "Zone",
+      "zoneLocal": "this machine",
+      "backToLocal": "Back to this machine",
+      "zoneSearch": "Change zone: Tokyo, UTC…",
+      "unknownZone": "Unknown zone: {{zone}}.",
+      "runs": "Next runs",
+      "noRuns": "This expression never comes: no date fills it.",
+      "check": "Does this date match?",
+      "checkPlaceholder": "2026-09-30 09:15",
+      "matches": "Yes: {{at}} matches.",
+      "notMatches": "No: {{at}} does not match.",
+      "checkUnreadable": "Unreadable from character {{at}} on.",
+      "checkSkipped": "This time does not exist in this zone.",
+      "noteTitle": "Cron {{expression}}",
+      "noteRuns": "Next runs ({{zone}}):",
+      "say": {
+        "at": "at {{list}}",
+        "hourValue": "{{hour}}:00",
+        "dayValue": "{{day}}",
+        "second": {
+          "every": "every second",
+          "step": "{step, plural, one {every second} other {every # seconds}}",
+          "steppedRange": "every {{step}} seconds, from second {{from}} to {{to}}",
+          "values": "{count, plural, one {at second {{list}}} other {at seconds {{list}}}}",
+          "range": "from second {{from}} to {{to}}"
+        },
+        "minute": {
+          "every": "every minute",
+          "step": "{step, plural, one {every minute} other {every # minutes}}",
+          "steppedRange": "every {{step}} minutes, from minute {{from}} to {{to}}",
+          "values": "{count, plural, one {at minute {{list}}} other {at minutes {{list}}}}",
+          "range": "from minute {{from}} to {{to}}"
+        },
+        "hour": {
+          "every": "every hour",
+          "step": "{step, plural, one {every hour} other {every # hours}}",
+          "steppedRange": "every {{step}} hours, from {{from}} to {{to}}",
+          "values": "at {{list}}",
+          "range": "from {{from}} to {{to}}"
+        },
+        "dayOfMonth": {
+          "step": "{step, plural, one {every day} other {every # days}}",
+          "steppedRange": "every {{step}} days, from day {{from}} to {{to}} of the month",
+          "values": "{count, plural, one {on day {{list}} of the month} other {on days {{list}} of the month}}",
+          "range": "from day {{from}} to {{to}} of the month",
+          "last": "on the last day of the month",
+          "nearest": "on the weekday nearest day {{day}}"
+        },
+        "month": {
+          "step": "{step, plural, one {every month} other {every # months}}",
+          "steppedRange": "every {{step}} months, from {{from}} to {{to}}",
+          "values": "in {{list}}",
+          "range": "from {{from}} to {{to}}"
+        },
+        "dayOfWeek": {
+          "step": "{step, plural, one {every day} other {every # days of the week}}",
+          "steppedRange": "every {{step}} days, from {{from}} to {{to}}",
+          "values": "on {{list}}",
+          "range": "from {{from}} to {{to}}",
+          "last": "on the last {{day}} of the month",
+          "nth": "on the {{nth}} {{day}} of the month"
+        }
+      },
+      "days": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "nths": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "5": "fifth"
+      },
+      "from": "From",
+      "fromPlaceholder": "now",
+      "until": "until",
+      "untilPlaceholder": "the next ten",
+      "shortcuts": "Common windows",
+      "shortcut": {
+        "today": "today",
+        "tomorrow": "tomorrow",
+        "weekend": "this weekend",
+        "fridayAfternoon": "Friday afternoon"
+      },
+      "windowCount": "{count, plural, one {# run} other {# runs}} between {{from}} and {{until}}",
+      "windowNone": "No run in this window.",
+      "windowGap": "… {count, plural, one {# more} other {# more}} …",
+      "windowProblems": {
+        "unreadable": {
+          "from": "The start does not read, at character {{at}}.",
+          "until": "The end does not read, at character {{at}}."
+        },
+        "skipped": {
+          "from": "This start does not exist in this zone.",
+          "until": "This end does not exist in this zone."
+        },
+        "backwards": "The end has to come after the start.",
+        "tooLong": "Too long a window: {{years}} years at most."
+      },
+      "nearestBefore": "Nearest run before: {{at}}",
+      "nearestAfter": "Nearest run after: {{at}}"
+    },
+    "sizes": {
+      "name": "Sizes and transfer",
+      "description": "B, kB, MB, GB ↔ KiB, MiB, GiB, bits, and how long a transfer takes",
+      "inputLabel": "Quantity",
+      "placeholder": "1.5 GB · 750 KiB · 100 Mbit",
+      "unit": "Unit when none is typed",
+      "decimals": "Decimals",
+      "unitInText": "The unit typed wins over the one chosen.",
+      "gap": "1 {{decimal}} = {{ratio}} {{binary}}",
+      "conventions": "Decimal (SI): 1 kB = 1,000 B. Binary (IEC): 1 KiB = 1,024 B. A disk is sold in GB; a system often counts in GiB.",
+      "rounded": "≈: a rounded value. Copy gives the exact one.",
+      "groups": {
+        "bytes": "Bytes and bits",
+        "decimal": "Decimal · 1,000",
+        "binary": "Binary · 1,024"
+      },
+      "units": {
+        "bit": "bit",
+        "kilobit": "kbit",
+        "megabit": "Mbit",
+        "gigabit": "Gbit",
+        "terabit": "Tbit",
+        "byte": "B",
+        "kilobyte": "kB",
+        "megabyte": "MB",
+        "gigabyte": "GB",
+        "terabyte": "TB",
+        "petabyte": "PB",
+        "kibibyte": "KiB",
+        "mebibyte": "MiB",
+        "gibibyte": "GiB",
+        "tebibyte": "TiB",
+        "pebibyte": "PiB"
+      },
+      "unitNames": {
+        "bit": "bit",
+        "kilobit": "kilobit (kbit)",
+        "megabit": "megabit (Mbit)",
+        "gigabit": "gigabit (Gbit)",
+        "terabit": "terabit (Tbit)",
+        "byte": "byte (B)",
+        "kilobyte": "kilobyte (kB)",
+        "megabyte": "megabyte (MB)",
+        "gigabyte": "gigabyte (GB)",
+        "terabyte": "terabyte (TB)",
+        "petabyte": "petabyte (PB)",
+        "kibibyte": "kibibyte (KiB)",
+        "mebibyte": "mebibyte (MiB)",
+        "gibibyte": "gibibyte (GiB)",
+        "tebibyte": "tebibyte (TiB)",
+        "pebibyte": "pebibyte (PiB)"
+      },
+      "unreadable": "Unreadable from character {{at}} on.",
+      "negative": "A size cannot be negative (character {{at}}).",
+      "tooLarge": "Too large to count exactly: 28 digits at most.",
+      "empty": "Type a quantity, with its unit or without: every unit shows here.",
+      "noteTitle": "{{value}} {{unit}} in every unit",
+      "value": "Value",
+      "tab": "Tab",
+      "tabs": {
+        "conversion": "Conversion",
+        "transfer": "Transfer"
+      },
+      "transferSize": "Size to transfer",
+      "rate": "Rate",
+      "rateUnit": "Rate unit",
+      "efficiency": "Efficiency",
+      "efficiencyHint": "A link never reaches its nominal rate: protocols, encryption and latency take 5 to 15 % off it.",
+      "bitsAndBytes": "Rates are said in bits per second, files in bytes: 100 Mbit/s ≈ 12.5 MB/s at best. And 4.7 GB (decimal) are 4.377 GiB.",
+      "estimateAt": "Estimated time at {{rate}}, {{efficiency}} % efficiency",
+      "theoretical": "{{time}} in theory, at the full rate.",
+      "byConnection": "By connection",
+      "connections": {
+        "fibre": "Fibre · 1 Gbit/s",
+        "mobile4g": "4G · 30 Mbit/s",
+        "adsl": "ADSL · 10 Mbit/s"
+      },
+      "rateUnits": {
+        "bitPerSecond": "bit/s",
+        "kilobitPerSecond": "kbit/s",
+        "megabitPerSecond": "Mbit/s",
+        "gigabitPerSecond": "Gbit/s",
+        "bytePerSecond": "B/s",
+        "kilobytePerSecond": "kB/s",
+        "megabytePerSecond": "MB/s",
+        "gigabytePerSecond": "GB/s"
+      },
+      "time": {
+        "days": "{{value}} d",
+        "hours": "{{value}} h",
+        "minutes": "{{value}} min",
+        "seconds": "{{value}} s",
+        "underASecond": "< 1 s"
+      },
+      "fields": {
+        "size": "Size",
+        "rate": "Rate"
+      },
+      "transferProblems": {
+        "unreadable": "{{field}}: unreadable from character {{at}}.",
+        "negative": "{{field}}: cannot be negative (character {{at}}).",
+        "zeroRate": "A rate of nothing transfers nothing.",
+        "tooLarge": "Too large to count exactly: 28 digits at most."
+      },
+      "transferEmpty": "Type a size and a rate: the time shows here, and by connection.",
+      "noteTransfer": "{{size}} at {{rate}}, {{efficiency}} % efficiency"
+    },
+    "permissions": {
+      "name": "Unix permissions",
+      "description": "chmod: 755 ↔ rwxr-xr-x, special bits, umask",
+      "octal": "Octal",
+      "octalPlaceholder": "755",
+      "symbolic": "In letters",
+      "symbolicPlaceholder": "rwxr-xr-x or drwxr-xr-x",
+      "grid": "Rights",
+      "classes": {
+        "owner": "Owner",
+        "group": "Group",
+        "others": "Others"
+      },
+      "rights": {
+        "read": "Read",
+        "write": "Write",
+        "execute": "Execute"
+      },
+      "specials": {
+        "owner": "setuid",
+        "group": "setgid",
+        "others": "sticky"
+      },
+      "boxLabel": "{{right}} · {{class}}",
+      "commands": "Commands",
+      "file": "file",
+      "can": "What each may do",
+      "words": {
+        "read": "read",
+        "write": "write",
+        "execute": "execute",
+        "none": "no right"
+      },
+      "specialWords": {
+        "owner": "setuid: runs with the owner's rights",
+        "group": "setgid: runs with the group's rights; a directory gives its group to the files made in it",
+        "others": "sticky: in a directory, only a file's owner may delete it"
+      },
+      "fileType": "Type: {{type}}",
+      "types": {
+        "regular": "regular file",
+        "directory": "directory",
+        "symbolicLink": "symbolic link",
+        "characterDevice": "character device",
+        "blockDevice": "block device",
+        "namedPipe": "named pipe",
+        "socket": "socket"
+      },
+      "umask": "umask",
+      "umaskPlaceholder": "022",
+      "newFile": "New file",
+      "newDirectory": "New directory",
+      "problems": {
+        "unreadable": "Unreadable from character {{at}} on.",
+        "notOctal": "Character {{at}}: an octal digit goes from 0 to 7.",
+        "tooLarge": "Past 7777: a mode fits in twelve bits.",
+        "unexpected": "Character {{at}}: this letter has no business in this place.",
+        "length": "A mode in letters has nine of them, ten with the file type in front."
+      },
+      "empty": "Type a mode in octal or in letters, or tick the boxes.",
+      "noteTitle": "Mode {{octal}}",
+      "specialBits": "Special bits",
+      "directoryExecute": "On a directory, “execute” means going through it and reaching what it holds.",
+      "warnings": {
+        "othersOverGroup": "The others hold a right the group lacks: the group has less than everybody. Check that this is meant.",
+        "groupOverOwner": "The group holds a right the owner lacks. Check that this is meant.",
+        "worldWritable": "Anyone may write, and no sticky bit keeps each to their own files.",
+        "specialWithoutExecute": "setuid or setgid without the execute right it acts on (S in ls -l): it does nothing."
+      }
+    },
+    "checks": {
+      "name": "Luhn and IBAN",
+      "description": "Bank card, IBAN: valid or not, and the right check digits",
+      "inputLabel": "Number to check",
+      "placeholder": "4111 1111 1111 1111 or FR14 2004 1010 0505 0001 3M02 606",
+      "kind": "Read as",
+      "kinds": {
+        "auto": "Auto",
+        "luhn": "Luhn",
+        "iban": "IBAN"
+      },
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "luhnInvalid": "The last digit should be {{digit}}.",
+      "network": "Network",
+      "number": "Number",
+      "completed": "With a check digit added",
+      "country": "Country",
+      "bban": "BBAN",
+      "bank": "Bank code",
+      "branch": "Branch code",
+      "corrected": "Corrected IBAN",
+      "wrongChecksum": "The check digits should be {{expected}}.",
+      "wrongLength": "{{expected}} characters expected for this country, {{found}} found.",
+      "wrongFormat": "The BBAN does not follow this country's format: letters where digits go, or the other way round.",
+      "unknownCountry": "A country missing from the IBAN registry: {{country}}.",
+      "unreadable": "Unreadable from character {{at}} on.",
+      "tooShort": "Too short to carry a check digit.",
+      "networks": {
+        "visa": "Visa",
+        "mastercard": "Mastercard",
+        "americanExpress": "American Express",
+        "discover": "Discover",
+        "dinersClub": "Diners Club",
+        "jcb": "JCB",
+        "unionPay": "UnionPay",
+        "maestro": "Maestro"
+      },
+      "empty": "Type a card number, an IBAN, or any number with a Luhn check digit.",
+      "intro": "Bank card (Luhn), IBAN or any number with a Luhn check digit.",
+      "private": "Nothing is kept in memory and saving as a note is off: a card number or an IBAN must not end up in clear in a note.",
+      "titles": {
+        "card": "Bank card recognised",
+        "luhn": "Number with a Luhn check digit",
+        "iban": "IBAN recognised"
+      },
+      "checksTitle": "Checks",
+      "content": "Content",
+      "length": "Length",
+      "key": "Check digits",
+      "digits": "{count, plural, one {# digit} other {# digits}}",
+      "characters": "{count, plural, one {# character} other {# characters}}",
+      "lengthRight": "{count, plural, one {# character} other {# characters}}, the length of a {{country}} IBAN",
+      "lengthWrong": "{{found}} characters, {{expected}} expected for a {{country}} IBAN",
+      "luhnKeyRight": "{{given}} · Luhn check digit right",
+      "luhnKeyWrong": "{{given}} · {{expected}} expected",
+      "ibanKeyRight": "{{given}} · modulo 97 right",
+      "ibanKeyWrong": "{{given}} · {{expected}} expected",
+      "account": "Account number",
+      "rib": "RIB key",
+      "ribWrong": "{{given}} · {{expected}} expected",
+      "compact": "Compact format",
+      "footnote": "A valid number follows the format and the check digits. It does not prove the account or the card exists."
+    },
+    "jwt": {
+      "name": "JWT",
+      "description": "Decoded, its dates read, its HS* signature verified",
+      "tokenLabel": "JWT token",
+      "tokenPlaceholder": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…",
+      "secret": "Secret",
+      "secretPlaceholder": "To verify an HS256, HS384 or HS512 signature",
+      "show": "Show the secret",
+      "hide": "Hide the secret",
+      "secretBase64": "Base64-encoded secret",
+      "forgotten": "The token and the secret are not kept: they are gone once the tool is left.",
+      "header": "Header",
+      "payload": "Payload",
+      "signature": "Signature",
+      "algorithm": "Algorithm",
+      "families": {
+        "hmac": "HMAC",
+        "rsa": "RSA",
+        "rsaPss": "RSA-PSS",
+        "ecdsa": "ECDSA",
+        "edDsa": "EdDSA",
+        "unsigned": "no signature",
+        "unknown": "unknown"
+      },
+      "states": {
+        "valid": "Valid",
+        "expired": "Expired",
+        "notYetValid": "Not yet valid",
+        "undated": "No expiry date"
+      },
+      "dates": "Dates",
+      "claims": {
+        "exp": "Expires · exp",
+        "nbf": "Not before · nbf",
+        "iat": "Issued · iat",
+        "auth_time": "Authenticated · auth_time"
+      },
+      "verification": {
+        "notAsked": "Type the secret to verify the signature.",
+        "valid": "Valid signature.",
+        "invalid": "Invalid signature.",
+        "notVerifiedHere": "{{family}}: signature not verified here.",
+        "unsigned": "alg: none — this token is not signed: anyone can write it.",
+        "unreadableSecret": "This secret is not base64."
+      },
+      "segments": {
+        "header": "Header",
+        "payload": "Payload",
+        "signature": "Signature"
+      },
+      "problems": {
+        "segmentCount": "A JWT has three segments separated by dots; this one has {{count}}.",
+        "jwe": "Five segments: an encrypted token (JWE), not decrypted here.",
+        "notBase64": "{{segment}}: not base64url.",
+        "notBase64At": "{{segment}}: not base64url (character {{at}}).",
+        "notJson": "{{segment}}: not JSON.",
+        "notObject": "{{segment}}: JSON, but not an object."
+      },
+      "warning": "A JWT can open an account: the note keeps only the decoded header and payload, never the token or the secret.",
+      "empty": "Paste a JWT: its header and its payload show here.",
+      "noteTitle": "Decoded {{algorithm}} JWT"
+    },
+    "identifiers": {
+      "name": "Identifiers",
+      "description": "UUID, ULID, NanoID, CUID2, ObjectId, KSUID — drawn and read back",
+      "generate": "Generate",
+      "all": "every identifier",
+      "kind": "Kind",
+      "count": "Count",
+      "uppercase": "Upper case",
+      "length": "Length",
+      "alphabet": "Alphabet",
+      "alphabets": {
+        "urlSafe": "URL-safe",
+        "alphanumeric": "Alphanumeric",
+        "hexLower": "Hex",
+        "digits": "Digits"
+      },
+      "again": "Regenerate",
+      "hints": {
+        "uuidV4": "{{name}}: 122 random bits, drawn from the system’s generator.",
+        "uuidV7": "{{name}}: 48 bits of milliseconds then 74 drawn bits; sorted, they line up in the order they were made.",
+        "ulid": "{{name}}: 48 bits of milliseconds then 80 drawn bits, in Crockford’s base 32; drawn in the same millisecond, they count up.",
+        "nanoId": "{{name}}: characters drawn without bias from the chosen alphabet; 21 URL-safe characters are worth a UUID v4.",
+        "cuid2": "{{name}}: a letter, then a SHA3-512 of the time, a draw, a counter and a fingerprint, in base 36: nothing can be read in it.",
+        "objectId": "{{name}}: 4 bytes of seconds, 5 drawn for the batch, 3 of a counter started from a drawn number.",
+        "ksuid": "{{name}}: 4 bytes of seconds since May 2014, then 16 drawn, in base 62: sorted, they follow the time."
+      },
+      "check": "Analyse an identifier",
+      "checkLabel": "Identifier to read back",
+      "checkPlaceholder": "01ARZ3NDEKTSV4RRFFQ69G5FAV, a UUID, an ObjectId…",
+      "recognised": {
+        "uuid": "UUID",
+        "ulid": "ULID",
+        "objectId": "ObjectId (MongoDB)",
+        "ksuid": "KSUID",
+        "cuidV1": "CUID, first version, deprecated"
+      },
+      "version": "Version",
+      "variant": "Variant",
+      "variants": {
+        "ncs": "NCS (obsolete)",
+        "rfc": "RFC 9562",
+        "microsoft": "Microsoft",
+        "future": "reserved"
+      },
+      "nil": "Nil UUID",
+      "created": "Created",
+      "createdLocally": "Local time",
+      "counter": "Counter",
+      "possible": "Nothing to read: it has the shape of a {{kinds}}.",
+      "outOfRange": "The shape of a {{kind}}, but past what one can hold.",
+      "unrecognised": "No known identifier has this shape.",
+      "noteTitle": "Generated {{kind}}s",
+      "kinds": {
+        "uuidV4": "UUID v4",
+        "uuidV7": "UUID v7",
+        "ulid": "ULID",
+        "nanoId": "NanoID",
+        "cuid2": "CUID2",
+        "objectId": "ObjectId",
+        "ksuid": "KSUID"
+      },
+      "fewer": "One fewer",
+      "more": "One more",
+      "withoutHyphens": "No hyphens",
+      "counted": "{count, plural, =0 {No identifier} one {# identifier} other {# identifiers}}",
+      "checkHint": "Paste a UUID, a ULID, an ObjectId or a KSUID: the tool recognises the format and reads what it holds.",
+      "format": "Format",
+      "formats": {
+        "uuid": "{count, plural, one {# character} other {# characters}}, hexadecimal",
+        "ulid": "{count, plural, one {# character} other {# characters}}, base32",
+        "objectId": "{count, plural, one {# character} other {# characters}}, hexadecimal",
+        "ksuid": "{count, plural, one {# character} other {# characters}}, base62",
+        "cuidV1": "{count, plural, one {# character} other {# characters}}, base36"
+      },
+      "random": "Random part",
+      "randomPart": "{{text}} · {{bits}} bits"
+    },
+    "text-stats": {
+      "name": "Text statistics",
+      "description": "Characters, words, lines, bytes, frequencies",
+      "inputLabel": "Text to count",
+      "placeholder": "Paste or type a text: every count updates.",
+      "counts": "Counts",
+      "rows": {
+        "characters": "Characters",
+        "nonWhitespace": "Characters without spaces",
+        "words": "Words",
+        "lines": "Lines",
+        "nonEmptyLines": "Non-empty lines",
+        "paragraphs": "Paragraphs",
+        "codePoints": "Code points",
+        "utf16Units": "UTF-16 units",
+        "utf8Bytes": "UTF-8 bytes"
+      },
+      "hints": {
+        "characters": "as they are seen",
+        "utf16Units": "JavaScript's length"
+      },
+      "frequency": "Character frequency",
+      "foldCase": "Upper and lower case together",
+      "countWhitespace": "Count whitespace",
+      "character": "Character",
+      "codePoint": "Code point",
+      "count": "Count",
+      "share": "Share",
+      "distinct": "{count, plural, one {# distinct character} other {# distinct characters}}",
+      "truncated": "The {{shown}} most frequent are listed.",
+      "invisible": {
+        "space": "space",
+        "tab": "tab",
+        "lineBreak": "line break",
+        "noBreakSpace": "no-break space",
+        "narrowNoBreakSpace": "narrow no-break space",
+        "otherSpace": "other space",
+        "zeroWidthSpace": "zero-width space",
+        "zeroWidthJoiner": "zero-width joiner",
+        "zeroWidthNonJoiner": "zero-width non-joiner",
+        "byteOrderMark": "byte order mark (BOM)",
+        "softHyphen": "soft hyphen",
+        "control": "control character"
+      },
+      "empty": "The counts show here.",
+      "noteTitle": "Statistics of a text",
+      "sample": "Summer in Paris: 30 °C, a café crème and 🇫🇷 everywhere.\n\nA naïve question: where is the œuvre?"
+    },
+    "diff": {
+      "name": "Diff",
+      "description": "Two texts line by line, or two JSON, YAML, TOML or XML documents compared by their values",
+      "mode": "Mode",
+      "modes": {
+        "text": "Text",
+        "structured": "Data"
+      },
+      "dataLine": "Compares the values, not the text: key order, indentation and format (JSON, YAML, TOML, XML) do not count.",
+      "pasted": "pasted text",
+      "swap": "Swap A and B",
+      "text": {
+        "inputLabel": "Text {{side}}",
+        "placeholder": "Paste a text",
+        "granularity": "Granularity",
+        "granularities": {
+          "lines": "Lines",
+          "words": "Words",
+          "characters": "Characters"
+        },
+        "ignore": {
+          "trailing": "Ignore trailing spaces",
+          "whitespace": "Ignore all whitespace",
+          "case": "Ignore case",
+          "endings": "Ignore line endings (CRLF, LF)"
+        },
+        "added": {
+          "lines": "{count, plural, one {+ # line} other {+ # lines}}",
+          "words": "{count, plural, one {+ # word} other {+ # words}}",
+          "characters": "{count, plural, one {+ # character} other {+ # characters}}"
+        },
+        "removed": {
+          "lines": "{count, plural, one {− # line} other {− # lines}}",
+          "words": "{count, plural, one {− # word} other {− # words}}",
+          "characters": "{count, plural, one {− # character} other {− # characters}}"
+        },
+        "layout": "Layout",
+        "layouts": {
+          "split": "Side by side",
+          "unified": "Unified"
+        },
+        "identical": "The two texts are identical.",
+        "truncated": "The rest is not shown: the counts and the unified diff stay complete.",
+        "empty": "Paste two texts: their differences show here.",
+        "bothJson": "Both texts are JSON.",
+        "asValues": "Compare as data",
+        "copyUnified": "Copy the unified diff",
+        "noteTitle": "Diff from {{a}} to {{b}}"
+      },
+      "structured": {
+        "inputLabel": "Document {{side}}",
+        "placeholder": "Paste a JSON, YAML, TOML or XML document, or import one from a note",
+        "notStructured": "This text is no structured JSON, YAML, TOML or XML.",
+        "asText": "Compare as text",
+        "unreadable": "This {{format}} does not read: line {{line}}, column {{column}}.",
+        "added": "{count, plural, one {+ # addition} other {+ # additions}}",
+        "removed": "{count, plural, one {− # removal} other {− # removals}}",
+        "modified": "{count, plural, one {~ # change} other {~ # changes}}",
+        "ignoreKeyOrder": "Ignore key order",
+        "ignoreWhitespace": "Ignore spaces",
+        "layout": "Layout",
+        "layouts": {
+          "split": "Side by side",
+          "unified": "Unified"
+        },
+        "identical": "The two documents are identical.",
+        "truncated": "The rest is not shown: the changes and the patch stay whole.",
+        "changes": "Changes",
+        "changesCount": "Changes · {{count}}",
+        "reordered": "key order",
+        "scalar": "{{text}}",
+        "object": "object · {count, plural, one {# key} other {# keys}}",
+        "array": "list · {count, plural, one {# item} other {# items}}",
+        "copyPatch": "Copy the JSON patch (RFC 6902)",
+        "empty": "Paste two documents: their differences show here.",
+        "noteTitle": "JSON patch from {{a}} to {{b}}",
+        "format": "Format of {{side}}",
+        "formats": {
+          "auto": "Detect"
+        },
+        "readAs": "read as {{format}}",
+        "asJson": "Paths are JSONPath, and both documents show in their JSON form, whatever their format.",
+        "yamlNote": "YAML comments, anchors and tags are not values: they are not compared.",
+        "xmlNote": "XML has no types: against it, 5432 and \"5432\" are the same value."
+      }
+    },
+    "sample": "Example",
+    "sampleLoaded": "Example loaded",
+    "fromNote": {
+      "open": "Import from a note",
+      "openSide": "Import {{side}} from a note",
+      "title": "Import from a note",
+      "search": "Search a note",
+      "anyNote": "Every note",
+      "snippets": "{{languages}} snippets",
+      "none": "No compatible note.",
+      "noneFound": "No compatible note matches.",
+      "hint": "Copied once: editing the note afterwards leaves the tool as it is.",
+      "done": "“{{title}}” imported",
+      "doneUntitled": "Note imported"
+    },
+    "copyAll": "Copy all",
+    "reference": {
+      "searchLabel": "Search: {{what}}",
+      "count": "{count, plural, one {# entry} other {# entries}}",
+      "found": "{count, plural, =0 {No entry} one {# entry} other {# entries}} of {{total}}",
+      "empty": "Nothing matches “{{query}}”."
+    },
+    "http-status": {
+      "name": "HTTP status codes",
+      "description": "404, 429, 503: what they mean, and when to send them",
+      "placeholder": "A code, a name or words: 404, not found, redirect…",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "meaning": "Meaning",
+        "by": "Defined by"
+      },
+      "groups": {
+        "1xx": "1xx · Informational",
+        "2xx": "2xx · Success",
+        "3xx": "3xx · Redirection",
+        "4xx": "4xx · Client error",
+        "5xx": "5xx · Server error"
+      },
+      "use": "When:",
+      "standing": {
+        "unofficial": "Unofficial",
+        "obsolete": "Obsolete"
+      }
+    },
+    "http-headers": {
+      "name": "HTTP headers",
+      "description": "Content-Type, Cache-Control, CORS, CSP: what they are for",
+      "placeholder": "A name or words: cache, cors, cookie, Content-Type…",
+      "columns": {
+        "name": "Header",
+        "direction": "Direction",
+        "does": "What it does",
+        "by": "Defined by"
+      },
+      "directions": {
+        "request": "Request",
+        "response": "Response",
+        "both": "Both"
+      },
+      "groups": {
+        "content": "Content and negotiation",
+        "caching": "Caching and conditions",
+        "range": "Partial requests",
+        "auth": "Authentication",
+        "cookies": "Cookies",
+        "security": "Security",
+        "cors": "CORS",
+        "connection": "Connection and proxies",
+        "request": "Request",
+        "response": "Response"
+      },
+      "security": "Security",
+      "deprecated": "Deprecated"
+    },
+    "mime-types": {
+      "name": "MIME types",
+      "description": "The type of an extension, and the extensions of a type",
+      "placeholder": "A type or an extension: json, .webp, image/png…",
+      "columns": {
+        "type": "Type",
+        "extensions": "Extensions",
+        "description": "Description"
+      },
+      "noExtension": "none"
+    },
+    "ports": {
+      "name": "Common ports",
+      "description": "22, 443, 5432, 6379: which service listens where",
+      "placeholder": "A number or a service: 5432, redis, ssh…",
+      "columns": {
+        "port": "Port",
+        "transport": "Protocol",
+        "service": "Service",
+        "note": "Note"
+      },
+      "transports": {
+        "tcp": "TCP",
+        "udp": "UDP",
+        "both": "TCP and UDP"
+      },
+      "ranges": {
+        "well-known": "Well-known ports · 0 to 1023",
+        "registered": "Registered ports · 1024 to 49151",
+        "dynamic": "Dynamic ports · 49152 to 65535"
+      }
+    },
+    "signals": {
+      "name": "Unix signals",
+      "description": "SIGTERM, SIGKILL, SIGHUP: numbers, action and use",
+      "placeholder": "A number, a name or words: 9, SIGTERM, Ctrl+C…",
+      "columns": {
+        "number": "No.",
+        "name": "Signal",
+        "action": "Default",
+        "catchable": "Catchable",
+        "use": "Use",
+        "macos": "macOS"
+      },
+      "actions": {
+        "terminate": "Terminates",
+        "core": "Terminates, core dump",
+        "ignore": "Ignored",
+        "stop": "Stops",
+        "continue": "Continues"
+      },
+      "groups": {
+        "terminal": "Terminal and jobs",
+        "stopping": "Stopping and resuming",
+        "faults": "Program faults",
+        "timers": "Timers and limits",
+        "events": "Children, pipes and I/O",
+        "application": "For the application"
+      },
+      "yes": "Yes",
+      "no": "No"
+    },
+    "ascii": {
+      "name": "ASCII table",
+      "description": "The 128 characters, in decimal, hexadecimal, octal and binary",
+      "placeholder": "A character, a code or a name: A, 65, 0x41, newline…",
+      "columns": {
+        "decimal": "Dec",
+        "hex": "Hex",
+        "octal": "Oct",
+        "binary": "Binary",
+        "character": "Char",
+        "name": "Name",
+        "escape": "Escape",
+        "ctrl": "Ctrl"
+      },
+      "groups": {
+        "control": "Control characters",
+        "punctuation": "Punctuation and symbols",
+        "digits": "Digits",
+        "upper": "Upper case",
+        "lower": "Lower case"
+      }
+    },
+    "regex-sheet": {
+      "name": "Regex cheat sheet",
+      "description": "Regular expression syntax, in JavaScript and in PCRE",
+      "placeholder": "A syntax or words: \\b, (?<=, lookbehind, lazy…",
+      "columns": {
+        "syntax": "Syntax",
+        "what": "Meaning",
+        "example": "Example",
+        "js": "JavaScript",
+        "pcre": "PCRE"
+      },
+      "groups": {
+        "anchors": "Anchors",
+        "classes": "Character classes",
+        "quantifiers": "Quantifiers",
+        "groups": "Groups and assertions",
+        "flags": "Flags",
+        "escapes": "Escapes"
+      },
+      "on": "on",
+      "noMatch": "no match",
+      "yes": "Supported",
+      "no": "Not supported"
+    },
+    "markdown-sheet": {
+      "name": "Markdown cheat sheet",
+      "description": "Headings, lists, links, tables: the syntax, in CommonMark and on GitHub",
+      "placeholder": "A syntax or words: **, table, link, footnote…",
+      "columns": {
+        "syntax": "Syntax",
+        "what": "Meaning",
+        "example": "Example",
+        "commonmark": "CommonMark",
+        "github": "GitHub"
+      },
+      "groups": {
+        "headings": "Headings",
+        "emphasis": "Emphasis",
+        "lists": "Lists",
+        "links": "Links and images",
+        "code": "Code",
+        "blocks": "Quotes, rules and tables",
+        "raw": "Breaks, escapes, HTML and extensions"
+      },
+      "yes": "Supported",
+      "no": "Not supported"
+    },
+    "mustache-sheet": {
+      "name": "Mustache cheat sheet",
+      "description": "Variables, sections, partials: the tags, with what they render",
+      "placeholder": "A tag or words: section, partial, escaping…",
+      "columns": {
+        "syntax": "Tag",
+        "what": "Meaning",
+        "example": "Example"
+      },
+      "groups": {
+        "values": "Values",
+        "sections": "Sections",
+        "more": "Comments, partials and delimiters"
+      },
+      "with": "with"
+    },
+    "qr": {
+      "name": "QR code",
+      "description": "Text, URL, Wi-Fi, e-mail or contact, as SVG or PNG",
+      "content": "Content",
+      "kinds": {
+        "text": "Text",
+        "url": "URL",
+        "wifi": "Wi-Fi",
+        "email": "E-mail",
+        "contact": "Contact"
+      },
+      "fields": {
+        "text": "Text",
+        "url": "URL",
+        "ssid": "Network name (SSID)",
+        "password": "Password",
+        "security": "Security",
+        "hidden": "Hidden network",
+        "to": "To",
+        "subject": "Subject",
+        "body": "Message",
+        "name": "Name",
+        "phone": "Phone",
+        "email": "E-mail",
+        "organisation": "Organisation"
+      },
+      "placeholders": {
+        "text": "A text to encode",
+        "url": "https://example.com/doc"
+      },
+      "securities": {
+        "wpa": "WPA/WPA2",
+        "wep": "WEP",
+        "open": "None"
+      },
+      "missingScheme": "This address has no scheme (https://…): some readers will take it as text.",
+      "correction": "Error correction",
+      "levels": {
+        "low": "L",
+        "medium": "M",
+        "quartile": "Q",
+        "high": "H"
+      },
+      "margin": "Margin",
+      "version": "Version",
+      "versionValue": "{{version}} · {{modules}} × {{modules}} modules",
+      "capacity": "Capacity",
+      "capacityValue": "{bytes, plural, one {# byte} other {# bytes}} of {{capacity}}",
+      "recoverable": "Recoverable if damaged",
+      "recoverableValue": "up to {{percent}} %",
+      "tooLong": "{bytes, plural, one {# byte} other {# bytes}}: too many for this correction level, which holds {{maximum}} at most.",
+      "advice": "Keep the white margin and a strong contrast: a light code on a dark background is not read by every scanner. For print, aim for at least 2 cm a side.",
+      "preview": "Preview",
+      "nothing": "The code shows here as soon as there is something to encode.",
+      "codeLabel": "QR code, version {{version}}",
+      "downloadSvg": "Download SVG",
+      "png": "PNG",
+      "copyImage": "Copy the image",
+      "copied": "QR code image copied.",
+      "saved": "{count, plural, one {QR code saved: # byte.} other {QR code saved: # bytes.}}",
+      "noteTitle": "Content of a QR code",
+      "saveWarning": "This content carries the Wi-Fi network's password. A note is encrypted with the library, but it gets copied, shared and exported: a password manager keeps it better."
+    },
+    "cidr": {
+      "name": "CIDR subnets",
+      "description": "Masks, hosts, splitting, address plans and summarised blocks, IPv4 and IPv6",
+      "network": "Network",
+      "family": "Read as",
+      "families": {
+        "auto": "Auto",
+        "v4": "IPv4",
+        "v6": "IPv6"
+      },
+      "placeholder": "10.24.8.0/21, 192.168.1.0 255.255.255.0, 2001:db8::/32",
+      "problems": {
+        "unreadable": "This network cannot be read: an address, then /prefix or a mask.",
+        "prefixTooLong": "This prefix is longer than the address: /32 at most in IPv4, /128 in IPv6.",
+        "maskWithHoles": "This mask has holes: its 1 bits must follow each other (255.255.240.0, not 255.0.255.0).",
+        "wrongFamily": "This address cannot be read in the family asked for."
+      },
+      "normalised": "Host bits were set: the network is {{cidr}}.",
+      "bits": "{network, plural, one {# network bit} other {# network bits}} · {hosts, plural, =0 {no host bit} one {# host bit} other {# host bits}}",
+      "kinds": {
+        "thisNetwork": "“This network” (RFC 1122, block {{range}}): never a destination.",
+        "private": "Private network (RFC 1918, block {{range}}).",
+        "sharedAddressSpace": "Carrier-grade NAT shared space (RFC 6598, block {{range}}).",
+        "loopback": "Loopback (block {{range}}): never leaves the machine.",
+        "linkLocal": "Link-local (block {{range}}): assigned without DHCP, never routed.",
+        "documentation": "Reserved for documentation (block {{range}}): exists on no network.",
+        "benchmarking": "Reserved for benchmarking (RFC 2544, block {{range}}).",
+        "multicast": "Multicast (block {{range}}).",
+        "reserved": "Reserved range, with no use assigned.",
+        "broadcast": "Limited broadcast: the whole local network.",
+        "public": "Public addresses, routed on the Internet.",
+        "unspecified": "Unspecified address: “no address”.",
+        "ipv4Mapped": "IPv4-mapped IPv6 (block {{range}}): an IPv4 address written as IPv6.",
+        "nat64": "NAT64 prefix (RFC 6052, block {{range}}).",
+        "uniqueLocal": "Unique local addresses (block {{range}}): IPv6’s private networks.",
+        "global": "Global unicast (block {{range}}): routed on the Internet.",
+        "mixed": "This block spans ranges of different uses."
+      },
+      "caveat": "For /31 and /32 there is no network nor broadcast address to take away; IPv6 has no broadcast.",
+      "memberTitle": "Is this address in the network?",
+      "memberPlaceholder": "10.24.12.40",
+      "inside": "Yes · host no. {{host}}",
+      "outside": "No",
+      "memberUnreadable": "This address cannot be read.",
+      "facts": "The block",
+      "rows": {
+        "network": {
+          "v4": "Network address",
+          "v6": "Prefix"
+        },
+        "mask": {
+          "v4": "Mask"
+        },
+        "inverseMask": {
+          "v4": "Inverse mask"
+        },
+        "first": {
+          "v4": "First host address",
+          "v6": "First address"
+        },
+        "last": {
+          "v4": "Last host address",
+          "v6": "Last address"
+        },
+        "broadcast": {
+          "v4": "Broadcast"
+        },
+        "usable": {
+          "v4": "Usable hosts",
+          "v6": "Addresses"
+        }
+      },
+      "usableOf": {
+        "v4": "{{usable}} of {{total}} {count, plural, one {address} other {addresses}}",
+        "v6": "{{total}} {count, plural, one {address} other {addresses}}"
+      },
+      "splitTitle": "Split into subnets",
+      "subnetHosts": {
+        "v4": "{{hosts}} {count, plural, one {host} other {hosts}}",
+        "v6": "{{hosts}} {count, plural, one {address} other {addresses}}"
+      },
+      "more": "And {{more}} more, not listed.",
+      "empty": "Type a network: an address and its prefix, or its mask.",
+      "noteTitle": "CIDR subnet",
+      "writtenTitle": "Other notations",
+      "written": {
+        "integer": {
+          "v4": "As an integer",
+          "v6": "As an integer"
+        },
+        "expanded": {
+          "v4": "In hexadecimal",
+          "v6": "Written in full"
+        },
+        "reverse": {
+          "v4": "Reverse DNS",
+          "v6": "Reverse DNS"
+        }
+      },
+      "reverse": {
+        "zones": "{{count}} zones, from {{first}} to {{last}}",
+        "classless": "{{zone}}, by classless delegation (RFC 2317)"
+      },
+      "masks": {
+        "title": "Masks",
+        "hint": "Every prefix, its mask and its size. Choosing one applies it to the address typed.",
+        "prefix": "Prefix",
+        "mask": "Mask",
+        "wildcard": "Inverse mask",
+        "addresses": "Addresses",
+        "hosts": "Hosts",
+        "networks64": "/64 networks",
+        "apply": "Apply /{{prefix}} to the address"
+      },
+      "plan": {
+        "title": "Address plan",
+        "hint": "One need a line: a name and a host count. The largest are placed first in the network, each on its own boundary.",
+        "placeholder": "Offices 500\nGuest Wi-Fi 120\nWAN link 2",
+        "need": "Need",
+        "asked": "Asked",
+        "subnet": "Subnet",
+        "usable": "Hosts",
+        "range": "Range",
+        "unnamed": "Unnamed",
+        "noRoom": "Not enough room left in the network",
+        "unreadable": "Line without a host count: “{{text}}”",
+        "free": "Left free:",
+        "full": "The network is fully allocated.",
+        "waiting": "Type a valid network first: the plan is placed in it."
+      },
+      "list": {
+        "title": "Summarise a list",
+        "hint": "Blocks, addresses or ranges “a - b”, one a line: the blocks covering exactly the same addresses, and the smallest block holding them all.",
+        "placeholder": "10.24.8.0/24\n10.24.9.0/24\n10.24.13.5 - 10.24.13.20",
+        "supernet": "Common block",
+        "exact": "Exactly the list",
+        "extra": "{{extra}} {count, plural, one {address} other {addresses}} beyond the list",
+        "blocks": {
+          "v4": "IPv4, fewest blocks · {count, plural, one {# block} other {# blocks}}",
+          "v6": "IPv6, fewest blocks · {count, plural, one {# block} other {# blocks}}"
+        },
+        "unreadable": "Cannot be read: {{entries}}"
+      }
+    }
+  },
+  "http": {
+    "failed": "The operation on the collections failed.",
+    "rail": {
+      "title": "Collections",
+      "newCollection": "New collection",
+      "collection": "Collection",
+      "moved": {
+        "into": "{{name}} is now in {{other}}.",
+        "root": "{{name}} is now at the root of {{other}}.",
+        "before": "{{name}} is now before {{other}}.",
+        "after": "{{name}} is now after {{other}}.",
+        "refused": {
+          "first": "{{name}} is already first.",
+          "last": "{{name}} is already last.",
+          "noFolderAbove": "No folder right above {{name}} to move into.",
+          "atRoot": "{{name}} is already at the root of its collection.",
+          "collection": "A collection does not go inside another."
+        }
+      },
+      "empty": "No collection yet.",
+      "placeholders": {
+        "collection": "Collection name",
+        "folder": "Folder name",
+        "request": "Request name"
+      },
+      "create": "Create",
+      "renameLabel": "New name for {{name}}",
+      "options": "Options for {{name}}",
+      "actions": {
+        "newRequest": "New request",
+        "newFolder": "New folder",
+        "run": "Run…",
+        "rename": "Rename",
+        "duplicate": "Duplicate",
+        "delete": "Delete",
+        "settings": "Settings…"
+      },
+      "copyName": "{{name}} (copy)",
+      "expand": "Expand {{name}}",
+      "collapse": "Collapse {{name}}",
+      "confirm": "Delete “{{name}}”?",
+      "cancel": "Cancel",
+      "unsaved": {
+        "self": "Unsaved changes.",
+        "inside": "Unsaved changes:"
+      },
+      "takes": {
+        "requests": "{requests, plural, one {Its request goes with it.} other {Its # requests go with it.}}",
+        "folders": "{folders, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",
+        "both": "{folders, plural, one {# folder} other {# folders}} and {requests, plural, one {# request} other {# requests}} go with it."
+      }
+    },
+    "workspace": {
+      "empty": "Open a request from the rail, or start one:"
+    },
+    "kinds": {
+      "menuTitle": "Begin",
+      "lines": {
+        "http": "A method, a URL, headers and a body.",
+        "graphql": "A query and its variables, sent as a POST.",
+        "websocket": "An open connection: messages both ways."
+      },
+      "new": {
+        "http": "HTTP request",
+        "graphql": "GraphQL request",
+        "websocket": "WebSocket"
+      },
+      "badge": {
+        "graphql": "GraphQL",
+        "websocket": "WS"
+      }
+    },
+    "tabs": {
+      "label": "Open requests",
+      "untitled": "New request",
+      "modified": "modified",
+      "sending": "being sent",
+      "close": "Close {{name}}",
+      "new": "+ New request",
+      "newKind": "Choose the kind of request"
+    },
+    "editor": {
+      "name": "Request name",
+      "method": "Method",
+      "url": "URL",
+      "urlPlaceholder": "https://api.example.com/resource",
+      "socketPlaceholder": "wss://api.example.com/stream",
+      "save": "Save",
+      "saveHint": "Save (Ctrl+S)",
+      "parts": "Parts of the request",
+      "sections": {
+        "params": "Params",
+        "headers": "Headers",
+        "auth": "Auth",
+        "body": "Body",
+        "query": "Query",
+        "message": "Messages",
+        "protocols": "Protocols",
+        "settings": "Settings",
+        "variables": "Variables",
+        "scripts": "Scripts",
+        "tests": "Tests"
+      }
+    },
+    "table": {
+      "enabled": "Sent",
+      "enable": "Send {{key}}",
+      "key": "Key",
+      "value": "Value",
+      "description": "Description",
+      "newKey": "New key",
+      "remove": "Remove",
+      "removeRow": "Remove {{key}}",
+      "faults": {
+        "name": "A header name holds no space, no colon and no accent: the marked row cannot be sent.",
+        "value": "A header value fits on one line, with no control character: the marked row cannot be sent."
+      }
+    },
+    "save": {
+      "title": "Save the request",
+      "name": "Name",
+      "place": "In",
+      "newCollection": "New collection…",
+      "collectionName": "Name of the new collection",
+      "newFolder": "+ New folder…",
+      "folderName": "Name of the new folder",
+      "noFolder": "Do not create a folder",
+      "missing": {
+        "name": "Give the request a name.",
+        "collection": "Give the collection a name.",
+        "folder": "Give the folder a name, or remove it."
+      }
+    },
+    "leave": {
+      "title": "{count, plural, one {One request has changes} other {# requests have changes}}",
+      "hint": {
+        "quit": "They are not saved: quitting loses them.",
+        "switch": "They are not saved: switching library loses them.",
+        "restore": "They are not saved: restoring the backup loses them.",
+        "update": "They are not saved: installing the update loses them."
+      },
+      "connected": "{count, plural, one {One connected WebSocket will be closed.} other {# connected WebSockets will be closed.}}",
+      "saveAll": "Save all",
+      "discard": {
+        "quit": "Quit without saving",
+        "switch": "Switch without saving",
+        "restore": "Restore without saving",
+        "update": "Install without saving"
+      }
+    },
+    "close": {
+      "title": "“{{name}}” has changes",
+      "hint": "They are not saved yet.",
+      "discard": "Close without saving",
+      "connectedTitle": "Close “{{name}}”?",
+      "connected": "The WebSocket is connected: closing the tab cuts the connection.",
+      "close": "Close"
+    },
+    "headers": {
+      "implied": "Sent without being typed",
+      "from": {
+        "body": "from the body",
+        "default": "by default",
+        "url": "from the URL"
+      }
+    },
+    "auth": {
+      "kind": "Type",
+      "kinds": {
+        "inherit": "Inherited",
+        "none": "None",
+        "basic": "Basic",
+        "bearer": "Bearer",
+        "apiKey": "API key"
+      },
+      "inheritsShort": "inherited",
+      "from": {
+        "collection": "inherited from the collection {{name}}",
+        "folder": "inherited from the folder {{name}}"
+      },
+      "nothingAbove": "Nothing above sets an auth: none is sent.",
+      "placeFirst": "Once the request is saved, it takes the auth of its collection or folder.",
+      "noneHint": "No auth is sent.",
+      "username": "Username",
+      "keyName": "Name",
+      "secrets": {
+        "password": "Password",
+        "token": "Token",
+        "value": "Value"
+      },
+      "place": "Sent in",
+      "places": {
+        "header": "a header",
+        "query": "the query"
+      },
+      "show": "Show the secret",
+      "hide": "Hide the secret"
+    },
+    "body": {
+      "kind": "Body type",
+      "kinds": {
+        "none": "None",
+        "json": "JSON",
+        "text": "Text",
+        "form": "Form",
+        "multipart": "Multipart",
+        "binary": "File"
+      },
+      "sentAs": "Sent as {{type}}",
+      "format": "Format",
+      "noneHint": "The request goes without a body.",
+      "unusual": "A {{method}} with a body: many servers ignore or refuse it.",
+      "unusualShort": "on a {{method}}",
+      "toNone": "Switch to None",
+      "partKind": "Type",
+      "partText": "Text",
+      "partFile": "File",
+      "chooseFile": "Choose a file…",
+      "noFile": "No file chosen",
+      "fileHint": "The file is read when the request is sent: its bytes are never kept in the library."
+    },
+    "settings": {
+      "title": {
+        "collection": "Settings of the collection {{name}}",
+        "folder": "Settings of the folder {{name}}"
+      },
+      "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs.",
+      "variables": "Variables",
+      "variablesHint": "over the environment, under a folder and the request",
+      "scriptsHint": "before and after each of its requests",
+      "testsHint": "for each of its requests"
+    },
+    "send": {
+      "send": "Send",
+      "sendHint": "Send (Ctrl+Enter)",
+      "cancel": "Cancel",
+      "failed": "The request could not be sent."
+    },
+    "split": {
+      "label": "Height of the request — arrows to change it, double-click or Enter for automatic",
+      "auto": "automatic",
+      "value": "{{share}}% for the request"
+    },
+    "response": {
+      "label": "Response",
+      "unsent": "Not sent",
+      "clear": "Clear",
+      "idle": "Send the request to read its response here.",
+      "sending": "Sending…",
+      "cancelled": "Send cancelled.",
+      "millis": "{{value}} ms",
+      "bytes": "{{value}} B",
+      "kilobytes": "{{value}} KB",
+      "megabytes": "{{value}} MB",
+      "empty": "Response without a body.",
+      "binary": "Binary body ({{type}}): it is not shown.",
+      "cut": "Only the first MB is shown.",
+      "incomplete": "Reading stopped at 64 MB: the file will hold only those.",
+      "saveFile": "Save to a file…",
+      "saved": "Response saved to {{path}}.",
+      "saveFailed": "The response could not be saved.",
+      "redirects": "{count, plural, one {after # redirect} other {after # redirects}}",
+      "graphqlErrors": "{count, plural, one {# error} other {# errors}}",
+      "parts": "Parts of the response",
+      "sections": {
+        "body": "Body",
+        "tests": "Tests",
+        "headers": "Headers",
+        "cookies": "Cookies",
+        "timeline": "Timeline",
+        "errors": "Errors"
+      },
+      "view": "Body view",
+      "views": {
+        "pretty": "Formatted",
+        "raw": "Raw",
+        "graph": "Graph",
+        "tree": "Tree"
+      },
+      "imageAlt": "Image received ({{type}})",
+      "copy": "Copy",
+      "noteTitle": "Response from {{name}}",
+      "noCookies": "The response sets no cookie.",
+      "cookie": {
+        "name": "Name",
+        "value": "Value",
+        "domain": "Domain",
+        "path": "Path",
+        "expires": "Expires",
+        "flags": "Attributes",
+        "session": "end of session",
+        "setBy": "Set by",
+        "byAnswer": "the answer"
+      },
+      "timeline": {
+        "redirects": "Redirects",
+        "request": "Request sent",
+        "response": "Response received",
+        "bytes": "Binary body of {{size}} bytes.",
+        "multipart": "Multipart body: {{fields}}."
+      },
+      "noteWhat": "A {{language}} snippet, holding the response's body laid out.",
+      "noteWhatMasked": "A {{language}} snippet, holding the response's body laid out; the secrets sent are masked in it."
+    },
+    "history": {
+      "title": "History",
+      "kept": "30 days, 500 sends at most",
+      "clear": "Clear the history",
+      "confirm": "{count, plural, one {Remove the entry?} other {Remove the # entries?}}",
+      "cleared": "{count, plural, =0 {The history was already empty.} one {One entry removed from the history.} other {# entries removed from the history.}}",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "noAnswer": "failed",
+      "empty": "Nothing sent yet: every send is written here.",
+      "choose": "Choose a send to read it again.",
+      "reopenInto": "Reopen in {{name}}",
+      "reopenDraft": "Reopen as a draft",
+      "replace": "“{{name}}” has changes: replace them with this send?",
+      "replaceConfirm": "Replace",
+      "delete": "Delete the send {{name}}",
+      "deleted": "Send “{{name}}” deleted from the history.",
+      "resize": "Width of the list of sends",
+      "failed": "The history could not be read."
+    },
+    "graphql": {
+      "query": "Query",
+      "queryPlaceholder": "query { … }",
+      "variables": "Variables",
+      "operation": "Operation sent",
+      "asGet": "Send as GET",
+      "at": "line:column {{location}}",
+      "format": "Format",
+      "variablesHint": "A JSON object: a value for each $variable of the query.",
+      "variablesPlaceholder": "{ \"code\": \"FR\" }",
+      "problemAt": "Line {{line}}, column {{column}}:",
+      "problems": {
+        "unclosedBrace": "this brace is not closed.",
+        "unclosedParenthesis": "this parenthesis is not closed.",
+        "unclosedString": "this string is not closed.",
+        "strayBrace": "this brace closes nothing.",
+        "strayParenthesis": "this parenthesis closes nothing."
+      },
+      "missing": "Without a value:",
+      "add": "Add",
+      "unknown": "The query does not declare:"
+    },
+    "socket": {
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "failed": "The WebSocket could not open.",
+      "message": "Message to send",
+      "messagePlaceholder": "Text or JSON",
+      "send": "Send",
+      "notOpen": "Connect the WebSocket to send.",
+      "useTwin": "Use {{url}}",
+      "keep": "Keep",
+      "saved": "Kept messages",
+      "noneSaved": "Keep a message to send it again in one click.",
+      "remove": "Remove {{name}}",
+      "protocols": "Subprotocols asked for",
+      "protocolsHint": "Comma-separated, in order of preference: Sec-WebSocket-Protocol.",
+      "log": "WebSocket log",
+      "filter": "Filter the messages",
+      "clear": "Clear",
+      "protocol": "protocol {{protocol}}",
+      "opened": "Connected to {{url}}",
+      "closed": "Closed",
+      "binary": "Binary message",
+      "empty": "Connect the WebSocket: its messages are written here.",
+      "phases": {
+        "connecting": "Connecting…",
+        "open": "Connected",
+        "closing": "Closing…",
+        "closed": "Disconnected"
+      }
+    },
+    "transport": {
+      "timeoutMs": "Timeout",
+      "followRedirects": "Follow redirects",
+      "maxRedirects": "Most redirects",
+      "verifyTls": "Verify TLS certificates",
+      "useCookies": "Send and keep cookies",
+      "inherited": "Inherited",
+      "byDefault": "Default",
+      "on": "Yes",
+      "off": "No",
+      "insecure": "Certificates are not verified: any server can pass itself off as this one. Keep it for development."
+    },
+    "environments": {
+      "title": "Environments",
+      "order": "The nearest wins: request › folder › collection › environment › globals",
+      "new": "+ New environment",
+      "newName": "Environment name",
+      "create": "Create",
+      "globals": "Globals",
+      "globalsMeta": "{count, plural, =0 {No variable} one {# variable} other {# variables}} · every collection",
+      "globalsHint": "Apply to every collection, under the active environment.",
+      "listTitle": "Environments",
+      "empty": "No environment yet. Create Local, Staging, Production…",
+      "active": "active",
+      "protectedBadge": "protected",
+      "count": "{count, plural, =0 {No variable} one {# variable} other {# variables}}",
+      "secrets": "{count, plural, one {# secret} other {# secrets}}",
+      "nameLabel": "Environment name",
+      "use": "Use",
+      "colour": "Environment colour",
+      "protected": "Protected",
+      "protectedNote": "Asks before sending anything but a GET, a HEAD or an OPTIONS, and before opening a WebSocket.",
+      "duplicate": "Duplicate",
+      "copyName": "{{name}} (copy)",
+      "delete": "Delete",
+      "confirmDelete": "Delete “{{name}}”?",
+      "variables": "Variables",
+      "secretsCaption": "Secrets are sealed in the library and masked on screen.",
+      "failed": "The environments could not be read or saved.",
+      "pickerLabel": "Active environment: {{name}}",
+      "activeTitle": "Active environment",
+      "none": "None",
+      "noneMeta": "globals only",
+      "manage": "Manage environments…",
+      "askSend": "{{name}} is protected. Send this {{method}}?",
+      "askConnect": "{{name}} is protected. Open this WebSocket?",
+      "sendAnyway": "Send anyway",
+      "connectAnyway": "Connect anyway"
+    },
+    "scripts": {
+      "phase": "When the script runs",
+      "phases": {
+        "before": "Before the send",
+        "after": "After the response",
+        "tests": "Tests"
+      },
+      "orders": {
+        "before": "They run from the collection down to this request:",
+        "after": "They run from this request back up to the collection:",
+        "tests": "They run after the script after the response, from this request back up to the collection:"
+      },
+      "levels": {
+        "collection": "collection",
+        "folder": "folder",
+        "request": "this request"
+      },
+      "none": "none",
+      "openLevel": "Open its settings on this script",
+      "placeholder": {
+        "before": "Before the send: change the request, read or write a variable…",
+        "after": "After the response: read the response, keep a value of it…",
+        "tests": "Named tests, checked after the response: test('The status is 200', …)"
+      },
+      "hint": "JavaScript, in a process of its own, with no access to files",
+      "examples": {
+        "open": "Examples",
+        "title": "Insert at the end",
+        "readResponse": "Read a value of the response",
+        "setVariable": "Set a variable",
+        "addHeader": "Add a header",
+        "sendRequest": "Send another request",
+        "testStatus": "Test the status",
+        "testName": "The status is 200"
+      },
+      "stop": {
+        "before": {
+          "request": "The script before the send failed",
+          "folder": "The script before the send of the folder “{{name}}” failed",
+          "collection": "The script before the send of the collection “{{name}}” failed"
+        },
+        "after": {
+          "request": "The script after the response failed",
+          "folder": "The script after the response of the folder “{{name}}” failed",
+          "collection": "The script after the response of the collection “{{name}}” failed"
+        },
+        "tests": {
+          "request": "The tests stopped",
+          "folder": "The tests of the folder “{{name}}” stopped",
+          "collection": "The tests of the collection “{{name}}” stopped"
+        },
+        "invalid": {
+          "before": {
+            "request": "The script before the send is not valid JavaScript",
+            "folder": "The script before the send of the folder “{{name}}” is not valid JavaScript",
+            "collection": "The script before the send of the collection “{{name}}” is not valid JavaScript"
+          },
+          "after": {
+            "request": "The script after the response is not valid JavaScript",
+            "folder": "The script after the response of the folder “{{name}}” is not valid JavaScript",
+            "collection": "The script after the response of the collection “{{name}}” is not valid JavaScript"
+          },
+          "tests": {
+            "request": "The tests are not valid JavaScript",
+            "folder": "The tests of the folder “{{name}}” are not valid JavaScript",
+            "collection": "The tests of the collection “{{name}}” are not valid JavaScript"
+          }
+        },
+        "host": "The scripts could not be started",
+        "kinds": {
+          "timeout": "Stopped: it took too long.",
+          "memory": "Stopped: it ran out of memory.",
+          "host": "The scripts’ process stopped."
+        },
+        "notSent": "The request was not sent",
+        "lineNotSent": "Line {{line}} · the request was not sent",
+        "line": "Line {{line}}",
+        "open": "Open the script"
+      }
+    },
+    "tests": {
+      "failed": "{count, plural, one {# failure} other {# failures}}",
+      "allPassed": "All pass",
+      "ratio": "{{passed}}/{total, plural, one {# test} other {# tests}}",
+      "bar": "{passed, plural, one {# test passed} other {# tests passed}} out of {{total}}",
+      "groups": {
+        "request": "{{name}}",
+        "folder": "{{name}} · the folder’s tests",
+        "collection": "{{name}} · the collection’s tests"
+      },
+      "expected": "expected",
+      "actual": "received",
+      "line": "Line {{line}} ›"
+    },
+    "extract": {
+      "title": "Extract to a variable",
+      "path": "Path in the response",
+      "name": "Variable name",
+      "secret": "Secret · masked everywhere",
+      "into": "Written into the active environment at each send of {{request}}, today {{environment}}.",
+      "intoGlobals": "Written into the globals at each send of {{request}}, no environment being chosen.",
+      "submit": "Extract",
+      "added": "“{{variable}}” will be filled at each send: save the request to keep the rule.",
+      "listTitle": "Extractions",
+      "listHint": "after each send, into the active environment",
+      "secretShort": "secret",
+      "remove": "Remove the extraction into “{{variable}}”"
+    },
+    "console": {
+      "title": "Console",
+      "filter": "Filter the console",
+      "filters": {
+        "all": "All",
+        "traffic": "Traffic",
+        "logs": "Logs",
+        "errors": "Errors"
+      },
+      "masked": "Secrets masked",
+      "clear": "Clear",
+      "fold": "Fold the console",
+      "unfold": "Unfold the console",
+      "split": "Share between the response and the console",
+      "exchange": "Open the exchange ›",
+      "empty": "Nothing yet: what the request sends and what its scripts say show here.",
+      "traffic": "{count, plural, =0 {no exchange} one {# exchange} other {# exchanges}}",
+      "logs": "{count, plural, =0 {no log} one {# log} other {# logs}}",
+      "errors": "{count, plural, one {# error} other {# errors}}",
+      "in": "{{status}} {{reason}} · {{millis}} ms · {{size}} B",
+      "test": "{{name}}: expected {{expected}}, received {{actual}}",
+      "testMessage": "{{name}}: {{message}}",
+      "missed": "{{path}} no longer reads in the response: “{{variable}}” was left as it was",
+      "origins": {
+        "request": "{{name}}",
+        "sent": "pm.sendRequest · {{name}}",
+        "before": "before the send · {{name}}",
+        "after": "after the response · {{name}}",
+        "tests": "Tests · {{name}}",
+        "iteration": "{{name}} · iteration {{iteration}}"
+      }
+    },
+    "runner": {
+      "crumb": "Run ›",
+      "noEnvironment": "No environment",
+      "progress": "Iteration {{iteration}} / {{iterations}} · {{index}} / {{count}} · {{name}}…",
+      "cancel": "Cancel",
+      "start": "Start",
+      "again": "Run again",
+      "startAnyway": "Start anyway",
+      "settings": "Run settings",
+      "iterations": "Iterations",
+      "delay": "Delay (ms)",
+      "dataRows": "{count, plural, one {# row} other {# rows}}",
+      "dataColumns": "{count, plural, one {# column} other {# columns}}",
+      "dataClear": "Remove the data file",
+      "dataChoose": "Data file, CSV or JSON…",
+      "dataFailed": "This data file could not be read.",
+      "stopOnFailure": "Stop at the first failure",
+      "keepVariables": "Keep the variables changed",
+      "keepResponses": "Keep the responses",
+      "order": "Order · {{running}} of {count, plural, one {# request} other {# requests}}",
+      "orderLabel": "Order of the requests",
+      "orderHint": "Drag, or Alt ↑ ↓ on the row; Space leaves it out.",
+      "include": "Run {{name}}",
+      "protected": "{{name}} is protected: {count, plural, one {# request} other {# requests}} of {{total}} can change it ({{requests}}).",
+      "failed": "The run could not go to its end.",
+      "failures": "{count, plural, one {# failure} other {# failures}}",
+      "cancelled": "Cancelled · {{done}} of {count, plural, one {# request} other {# requests}}",
+      "allPassed": "All pass",
+      "requests": "{count, plural, one {# request} other {# requests}}",
+      "iterationsCount": "{count, plural, one {# iteration} other {# iterations}}",
+      "filter": "Filter the results",
+      "filters": {
+        "all": "All",
+        "passed": "Passed",
+        "failed": "Failed"
+      },
+      "iteration": "Iteration {{iteration}} / {{count}}",
+      "skipped": "Skipped by a script",
+      "noAnswer": "No answer",
+      "versus": "expected {{expected}}, received {{actual}}"
+    },
+    "variables": {
+      "name": "Name",
+      "value": "Value",
+      "kind": "Type",
+      "newName": "New variable",
+      "kindOf": "Type of {{name}}",
+      "reveal": "Show {{name}}",
+      "hide": "Hide {{name}}",
+      "kinds": {
+        "text": "Text",
+        "number": "Number",
+        "secret": "Secret"
+      },
+      "faults": {
+        "name": "A variable name holds only unaccented letters, digits, “_” and “-”.",
+        "duplicate": "This name is already set above: only the first row counts.",
+        "number": "A Number variable expects a number."
+      },
+      "used": {
+        "label": "Variables of the request",
+        "none": "not found",
+        "define": "Set in {{name}}",
+        "defineGlobals": "Set in the globals",
+        "shadows": "Also hides:",
+        "reveal": "Show",
+        "hide": "Hide",
+        "secret": "secret",
+        "made": "A new value at each send",
+        "scopes": {
+          "request": "request",
+          "folder": "folder",
+          "collection": "collection",
+          "environment": "environment",
+          "globals": "globals",
+          "dynamic": "dynamic"
+        },
+        "from": {
+          "request": "this request",
+          "folder": "folder {{name}}",
+          "collection": "collection {{name}}",
+          "environment": "{{name}}",
+          "globals": "globals",
+          "dynamic": "made at the send"
+        }
+      },
+      "filledBy": "filled by {{name}}",
+      "from": "from {{name}}",
+      "openFiller": "Open {{name}} on its scripts"
+    },
+    "cookies": {
+      "open": "Cookies",
+      "title": "Cookies",
+      "hint": "What answers have set, kept encrypted in the library and sent back to the same domains.",
+      "clear": "Empty the jar",
+      "confirm": "{count, plural, one {Delete the cookie?} other {Delete the # cookies?}}",
+      "removed": "{count, plural, =0 {No cookie deleted.} one {One cookie deleted.} other {# cookies deleted.}}",
+      "count": "{count, plural, one {# cookie} other {# cookies}}",
+      "removeDomain": "Delete the domain",
+      "removeOne": "Delete the cookie {{name}}",
+      "remove": "Delete",
+      "name": "Name",
+      "value": "Value",
+      "path": "Path",
+      "expires": "Expires",
+      "flags": "Attributes",
+      "session": "Session",
+      "hostOnly": "Host only",
+      "empty": "No cookies: those the answers set will show here.",
+      "close": "Close",
+      "failed": "The cookies could not be read or deleted."
+    },
+    "code": {
+      "open": "</> Code",
+      "openLabel": "Generate the code of this request",
+      "title": "Generate code",
+      "filter": "Filter languages",
+      "filterHint": "Languages and tools",
+      "targets": "Language or tool",
+      "groups": {
+        "shell": "Shell",
+        "javascript": "JavaScript",
+        "other": "Other languages"
+      },
+      "noTarget": "No language matches.",
+      "resolve": "Resolve variables",
+      "secrets": "Include secrets",
+      "multiline": "On several lines",
+      "follow": "Follow redirects",
+      "askSecrets": "Write the secrets in clear in the code? Copied or saved, it leaves the library.",
+      "include": "Include",
+      "secretsLeft": "{count, plural, one {1 secret left as a variable:} other {# secrets left as variables:}}",
+      "secretsClear": "The secrets are written in clear in this code.",
+      "unresolved": "{count, plural, one {1 variable with no value, written as typed:} other {# variables with no value, written as typed:}}",
+      "notices": {
+        "multipartUnsupported": "{{target}} sends no multipart form here: the body is left out."
+      },
+      "where": "Saved as a snippet, in the target’s language, tagged #http.",
+      "save": "Save as snippet",
+      "copy": "Copy",
+      "copied": "Code copied.",
+      "noteTitle": "{{name}} · {{target}}",
+      "noteWhat": "The request’s code, for another tool.",
+      "multilineShell": "A program is laid out on its own: only a command line is cut."
+    }
+  },
+  "choiceMenu": {
+    "filterLabel": "Filter {{menu}}",
+    "filterPlaceholder": "Filter…",
+    "noResults": "No results"
+  },
+  "calc": {
+    "percent": "{{value}}%",
+    "units": {
+      "nanometre": "nm",
+      "micrometre": "µm",
+      "millimetre": "mm",
+      "centimetre": "cm",
+      "metre": "m",
+      "kilometre": "km",
+      "inch": "in",
+      "foot": "ft",
+      "yard": "yd",
+      "mile": "mi",
+      "pixel": "px",
+      "point": "pt",
+      "em": "em",
+      "rem": "rem",
+      "milligram": "mg",
+      "gram": "g",
+      "kilogram": "kg",
+      "tonne": "t",
+      "pound": "lb",
+      "ounce": "oz",
+      "nanosecond": "ns",
+      "microsecond": "µs",
+      "millisecond": "ms",
+      "second": "s",
+      "minute": "min",
+      "hour": "h",
+      "day": "d",
+      "week": "wk",
+      "month": "mo",
+      "year": "yr",
+      "bit": "bit",
+      "kilobit": "kbit",
+      "megabit": "Mbit",
+      "gigabit": "Gbit",
+      "terabit": "Tbit",
+      "petabit": "Pbit",
+      "byte": "B",
+      "kilobyte": "kB",
+      "megabyte": "MB",
+      "gigabyte": "GB",
+      "terabyte": "TB",
+      "petabyte": "PB",
+      "exabyte": "EB",
+      "zettabyte": "ZB",
+      "yottabyte": "YB",
+      "kibibyte": "KiB",
+      "mebibyte": "MiB",
+      "gibibyte": "GiB",
+      "tebibyte": "TiB",
+      "pebibyte": "PiB",
+      "exbibyte": "EiB",
+      "zebibyte": "ZiB",
+      "yobibyte": "YiB",
+      "celsius": "°C",
+      "fahrenheit": "°F",
+      "kelvin": "K",
+      "hertz": "Hz",
+      "kilohertz": "kHz",
+      "megahertz": "MHz",
+      "gigahertz": "GHz",
+      "terahertz": "THz",
+      "euro": "€",
+      "dollar": "$"
+    },
+    "unitNames": {
+      "nanometre": "nanometres",
+      "micrometre": "micrometres",
+      "millimetre": "millimetres",
+      "centimetre": "centimetres",
+      "metre": "metres",
+      "kilometre": "kilometres",
+      "inch": "inches",
+      "foot": "feet",
+      "yard": "yards",
+      "mile": "miles",
+      "pixel": "pixels",
+      "point": "typographic points",
+      "em": "em (font size)",
+      "rem": "rem (root font size)",
+      "milligram": "milligrams",
+      "gram": "grams",
+      "kilogram": "kilograms",
+      "tonne": "tonnes",
+      "pound": "pounds",
+      "ounce": "ounces",
+      "nanosecond": "nanoseconds",
+      "microsecond": "microseconds",
+      "millisecond": "milliseconds",
+      "second": "seconds",
+      "minute": "minutes",
+      "hour": "hours",
+      "day": "days",
+      "week": "weeks",
+      "month": "months",
+      "year": "years",
+      "bit": "bits",
+      "kilobit": "kilobits",
+      "megabit": "megabits",
+      "gigabit": "gigabits",
+      "terabit": "terabits",
+      "petabit": "petabits",
+      "byte": "bytes",
+      "kilobyte": "kilobytes",
+      "megabyte": "megabytes",
+      "gigabyte": "gigabytes",
+      "terabyte": "terabytes",
+      "petabyte": "petabytes",
+      "exabyte": "exabytes",
+      "zettabyte": "zettabytes",
+      "yottabyte": "yottabytes",
+      "kibibyte": "kibibytes",
+      "mebibyte": "mebibytes",
+      "gibibyte": "gibibytes",
+      "tebibyte": "tebibytes",
+      "pebibyte": "pebibytes",
+      "exbibyte": "exbibytes",
+      "zebibyte": "zebibytes",
+      "yobibyte": "yobibytes",
+      "celsius": "degrees Celsius",
+      "fahrenheit": "degrees Fahrenheit",
+      "kelvin": "kelvins",
+      "hertz": "hertz",
+      "kilohertz": "kilohertz",
+      "megahertz": "megahertz",
+      "gigahertz": "gigahertz",
+      "terahertz": "terahertz",
+      "euro": "euros",
+      "dollar": "dollars"
+    },
+    "dimensions": {
+      "number": "a number",
+      "length": "a length",
+      "mass": "a mass",
+      "time": "a duration",
+      "data": "a data size",
+      "temperature": "a temperature",
+      "euro": "an amount in euros",
+      "dollar": "an amount in dollars",
+      "frequency": "a frequency",
+      "rate": "a rate",
+      "date": "a date"
+    },
+    "errors": {
+      "unreadable": "this line cannot be read",
+      "unknownName": "“{{name}}” is not defined anywhere above",
+      "reserved": "“{{word}}” is a reserved word, not a name",
+      "mismatchUnit": "{{unit}} is not {{expected}}",
+      "mismatch": "{{found}} does not go with {{expected}}",
+      "currency": "offline: no exchange rates",
+      "notConvertible": "{{from}} does not convert into {{to}}",
+      "divisionByZero": "division by zero",
+      "nothingAbove": "nothing to add up above in this block",
+      "noPrevious": "no line above has a result",
+      "dateShift": "a date moves by whole days, months or years",
+      "negativeRoot": "no even root of a negative number",
+      "logDomain": "a logarithm is taken of a number above zero",
+      "notWhole": "a whole number is expected",
+      "notPositive": "a setting is above zero",
+      "rateExpected": "a rate in % is expected",
+      "overflow": "number too large",
+      "unsupported": "this calculation is not done here"
+    },
+    "editor": {
+      "label": "Calculation sheet",
+      "placeholder": "One line, one result: price = 120 €, 3 h 20 min in min, 20 % of 340…",
+      "results": "Results",
+      "lines": "{count, plural, one {# line} other {# lines}}",
+      "variables": "{count, plural, one {# variable} other {# variables}}",
+      "decimals": "Decimals",
+      "decimalsAuto": "Auto",
+      "selected": "{count, plural, one {# line selected} other {# lines selected}}",
+      "sum": "sum",
+      "mean": "mean",
+      "nothingToAdd": "nothing to add up",
+      "mixedUnits": "different units",
+      "copyResult": "Copy {{value}}",
+      "copied": "Copied: {{value}}",
+      "pick": "Select this result, Shift or Ctrl to add more",
+      "defined": "defined on line {{line}}",
+      "usedOnce": "used on line {{line}}",
+      "usedMany": "used on lines {{lines}}",
+      "unused": "never used"
+    }
+  },
+  "presentation": {
+    "label": "Presenting “{{title}}”",
+    "slide": "Slide {{at}} of {{count}}",
+    "previous": "Previous slide (←)",
+    "next": "Next slide (→)",
+    "map": "Map of the headings (M)",
+    "slides": "Slides (M)",
+    "close": "Leave the presentation (Esc)"
+  },
+  "drawing": {
+    "label": "Drawing “{{title}}”",
+    "tools": "Drawing tools",
+    "select": "Select (V)",
+    "rectangle": "Rectangle (R)",
+    "ellipse": "Ellipse (O)",
+    "diamond": "Diamond (D)",
+    "arrow": "Arrow (A): started on a shape, it follows it",
+    "pen": "Freehand (P)",
+    "text": "Text (T)",
+    "colours": "Colour",
+    "colour": {
+      "ink": "Ink",
+      "blue": "Blue",
+      "green": "Green",
+      "amber": "Amber",
+      "red": "Red",
+      "purple": "Purple"
+    },
+    "remove": "Delete the selection (Del)",
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Y)",
+    "exportPng": "Export as PNG",
+    "exportSvg": "Export as SVG",
+    "exported": "Drawing exported to {{name}}.",
+    "exportFailed": "The drawing could not be exported.",
+    "empty": "Pick a tool, then draw.",
+    "embed": "Insert a drawing",
+    "embedNone": "No drawing to insert",
+    "missing": "Drawing not found",
+    "noPicture": "No preview yet"
+  }
+}

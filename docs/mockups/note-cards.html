@@ -1,0 +1,2009 @@
+<title>Cartes de note</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+/>
+<style>
+  /* Layout: one sheet of the app's canvas; each section is a strip of real-size cards (1 px = 1 egui point) with what it shows. Colours from crates/ui/src/theme/tokens.rs. */
+  :root {
+    --bg-0: #15171c;
+    --bg-1: #1b1e25;
+    --bg-2: #22252e;
+    --bg-3: #2a2e39;
+    --line: #333947;
+    --line-soft: #282c37;
+    --text-0: #eef0f4;
+    --text-1: #aab0c0;
+    --text-2: #9298ac;
+    --amber: #e8a33d;
+    --amber-text: #e8a33d;
+    --amber-edge: #e8a33d;
+    --amber-ink: #1a1508;
+    --green: #6fbf8b;
+    --blue: #6f9bd1;
+    --red: #dc8281;
+    --purple: #a98fd1;
+    --teal: #5fbcbc;
+    --pink: #d68bbd;
+    --olive: #b4bd62;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme='dark']) {
+      --bg-0: #eceef2;
+      --bg-1: #f7f8fa;
+      --bg-2: #ffffff;
+      --bg-3: #e9ecf2;
+      --line: #cdd2dc;
+      --line-soft: #e1e5ec;
+      --text-0: #1a1d24;
+      --text-1: #4a5163;
+      --text-2: #636a7c;
+      --amber-text: #a8500f;
+      --amber-edge: #cf6a08;
+      --green: #297044;
+      --blue: #2a5d99;
+      --red: #b03a39;
+      --purple: #6a4aa6;
+      --teal: #1d6b6e;
+      --pink: #9c3a78;
+      --olive: #5a6114;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme='light'] {
+    --bg-0: #eceef2;
+    --bg-1: #f7f8fa;
+    --bg-2: #ffffff;
+    --bg-3: #e9ecf2;
+    --line: #cdd2dc;
+    --line-soft: #e1e5ec;
+    --text-0: #1a1d24;
+    --text-1: #4a5163;
+    --text-2: #636a7c;
+    --amber-text: #a8500f;
+    --amber-edge: #cf6a08;
+    --green: #297044;
+    --blue: #2a5d99;
+    --red: #b03a39;
+    --purple: #6a4aa6;
+    --teal: #1d6b6e;
+    --pink: #9c3a78;
+    --olive: #5a6114;
+    color-scheme: light;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--bg-0);
+    color: var(--text-1);
+    font: 14px/1.55 var(--sans);
+  }
+  .page {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding-block: 40px 80px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 52px;
+  }
+  header h1 {
+    color: var(--text-0);
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .eyebrow {
+    font: 600 11px/1 var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--amber-text);
+    margin-bottom: 12px;
+  }
+  header p,
+  .lede {
+    max-width: 76ch;
+    margin: 0 0 8px;
+  }
+  h2 {
+    color: var(--text-0);
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+  }
+  section {
+    display: grid;
+    gap: 12px;
+  }
+  code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--text-0);
+  }
+  .stage {
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    padding: 24px;
+    overflow-x: auto;
+    background: var(--bg-0) radial-gradient(var(--line-soft) 1px, transparent 1px) 0 0 / 20px 20px;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px 14px;
+    align-items: flex-start;
+  }
+  .cell {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+  .cap {
+    font: 500 11.5px/1.4 var(--mono);
+    color: var(--text-2);
+    max-width: 240px;
+  }
+  .cap b {
+    color: var(--text-0);
+    font-weight: 600;
+  }
+
+  /* shared pieces */
+  .ico {
+    width: 12px;
+    height: 12px;
+    display: block;
+    flex: none;
+  }
+  .hue {
+    color: var(--hue);
+    display: inline-flex;
+  }
+  .ktile {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    color: var(--hue);
+    background: color-mix(in srgb, var(--hue) 18%, transparent);
+  }
+  .t1 {
+    color: var(--text-0);
+    font: 600 13px/18px var(--sans);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .code {
+    font: 11px/16px var(--mono);
+    color: var(--text-2);
+    white-space: pre;
+    overflow: hidden;
+  }
+  .tk-k {
+    color: var(--purple);
+  }
+  .tk-f {
+    color: var(--blue);
+  }
+  .tk-t {
+    color: var(--teal);
+  }
+  .tk-c {
+    color: var(--text-2);
+    font-style: italic;
+  }
+  .tk-p {
+    color: var(--amber-text);
+    background: color-mix(in srgb, var(--amber) 14%, transparent);
+    border-radius: 2px;
+  }
+  .outline div {
+    font: 12px/17px var(--sans);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .outline .h {
+    color: var(--text-0);
+    font-weight: 600;
+  }
+  .outline .m {
+    color: var(--purple);
+    margin-right: 6px;
+  }
+  .tasks .item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    font: 12px/1 var(--sans);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .tasks .item span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .box {
+    width: 13px;
+    height: 13px;
+    border: 1.5px solid var(--text-2);
+    border-radius: 3px;
+    flex: none;
+    display: grid;
+    place-items: center;
+  }
+  .box.on {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--amber-ink);
+  }
+  .item.done span:last-child {
+    color: var(--text-2);
+    text-decoration: line-through;
+  }
+  .calc div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font: 11px/16px var(--mono);
+  }
+  .calc span {
+    color: var(--text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .calc b {
+    color: var(--text-0);
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .calc .tot {
+    border-top: 1px solid var(--line);
+  }
+  .calc .tot b {
+    font-weight: 700;
+  }
+  .pic {
+    height: 100%;
+  }
+  .pic svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .prose {
+    font: 11.5px/17px var(--sans);
+    color: var(--text-1);
+  }
+  .prose mark {
+    background: color-mix(in srgb, var(--amber) 28%, transparent);
+    color: var(--text-0);
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .urgent {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--red);
+    font: 700 10px/1 var(--sans);
+    letter-spacing: 0.02em;
+    flex: none;
+  }
+  .urgent .bars {
+    --p: var(--red);
+  }
+  .bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 1px;
+    height: 10px;
+    color: var(--p);
+    flex: none;
+  }
+  .bars b {
+    width: 2px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  .bars b.off {
+    opacity: 0.28;
+  }
+  .soon {
+    color: var(--red);
+    font-weight: 600;
+  }
+  .sw {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    background: var(--fh);
+    flex: none;
+    display: inline-block;
+  }
+  .tags {
+    display: flex;
+    gap: 5px;
+    font: 9.5px/14px var(--mono);
+    color: var(--text-2);
+    flex: none;
+  }
+  .tags .hit {
+    color: var(--amber-text);
+  }
+
+  /* ---------- the card: location, title, preview, status ---------- */
+  .card {
+    --h: 160px;
+    width: 240px;
+    height: var(--h);
+    background: var(--bg-1);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 22px 18px minmax(0, 1fr) 22px;
+    row-gap: 6px;
+    grid-template-columns: minmax(0, 1fr);
+    transition: height 0.18s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card {
+      transition: none;
+    }
+  }
+  .card:hover {
+    background: var(--bg-2);
+    border-color: var(--line);
+  }
+  .card.checked {
+    border-color: var(--amber-edge);
+  }
+  .card.armed {
+    border-color: var(--red);
+  }
+  .card.w220 {
+    width: 220px;
+  }
+  .card.untitled {
+    grid-template-rows: 22px minmax(0, 1fr) 22px;
+  }
+  .card.untitled .crumb .count {
+    margin-left: 2px;
+    font: 600 10px/1 var(--mono);
+    color: var(--text-2);
+  }
+  .crumb,
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    background: transparent;
+    font: 10px/1 var(--sans);
+    color: var(--text-2);
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .card:hover .crumb,
+  .card:hover .status {
+    background: var(--bg-3);
+  }
+  .crumb {
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .status {
+    border-top: 1px solid var(--line-soft);
+  }
+  .crumb .fmt {
+    color: var(--lh);
+    font: 600 10px/1 var(--mono);
+    letter-spacing: 0.03em;
+  }
+  .crumb .plain {
+    color: var(--text-1);
+    font: 600 10px/1 var(--mono);
+  }
+  .crumb .attn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex: none;
+  }
+  .crumb .pin {
+    color: var(--amber-text);
+  }
+  .status .right .dot {
+    opacity: 0.6;
+  }
+  .status .right {
+    font-family: var(--mono);
+    gap: 5px;
+  }
+  .status .where {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .status .where span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .crumb .where {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .crumb .where span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .crumb .tags {
+    margin-left: auto;
+  }
+  .crumb .pin {
+    color: var(--amber-text);
+    margin-left: 2px;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    min-width: 0;
+  }
+  .head .count {
+    margin-left: auto;
+    flex: none;
+    font: 600 10px/1 var(--mono);
+    color: var(--text-2);
+  }
+  .crumb .st {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font: 10px/1 var(--mono);
+  }
+  .crumb .fld {
+    color: var(--amber-text);
+  }
+  .crumb .ktile {
+    margin-left: -6px;
+    margin-right: 1px;
+  }
+  .crumb .tick {
+    width: 13px;
+    height: 13px;
+    margin-left: 2px;
+  }
+  .tick {
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--text-2);
+    border-radius: 3px;
+    flex: none;
+    display: grid;
+    place-items: center;
+  }
+  .tick.on {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--amber-ink);
+  }
+  .body {
+    padding: 0 12px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .status .st {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .status .fld {
+    color: var(--amber-text);
+  }
+  .status .right {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    flex: none;
+  }
+  .status .fmt {
+    color: var(--lh);
+    font-weight: 600;
+  }
+  .status .plain {
+    color: var(--text-1);
+  }
+  .status.warn {
+    color: var(--red);
+    font: 600 10px/1 var(--sans);
+    background: color-mix(in srgb, var(--red) 10%, var(--bg-2));
+  }
+  .zones .crumb,
+  .zones .head,
+  .zones .body,
+  .zones .status {
+    outline: 1px dashed color-mix(in srgb, var(--amber-edge) 60%, transparent);
+    outline-offset: -2px;
+  }
+
+  /* anatomy */
+  .anatomy {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px 28px;
+    align-items: flex-start;
+  }
+  .legend {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-width: 560px;
+  }
+  .legend li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .legend li > b {
+    font: 600 11px/22px var(--mono);
+    color: var(--amber-text);
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    height: 22px;
+  }
+  .legend p {
+    margin: 0;
+  }
+  .legend strong {
+    color: var(--text-0);
+  }
+
+  /* compact card at board zoom under 100 % */
+  .key {
+    display: grid;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    min-width: 240px;
+  }
+  .pair {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-0);
+    font: 500 13px/1 var(--sans);
+  }
+  .key .cardsize {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .key h3 {
+    margin: 0;
+    font: 600 11px/1 var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .menu {
+    display: grid;
+    gap: 2px;
+    padding: 6px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    min-width: 200px;
+  }
+  .menu .pair {
+    padding: 7px 8px;
+    border-radius: 6px;
+  }
+  .menu .pair:first-of-type {
+    background: var(--bg-3);
+  }
+  .mini {
+    width: 172px;
+    height: 60px;
+    border-radius: 8px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-soft);
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) 18px;
+  }
+  .mini .head {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .mini .t1 {
+    font-size: 12px;
+  }
+  .mini .status {
+    padding: 0 8px;
+    font-size: 9.5px;
+  }
+
+  .seg {
+    display: inline-flex;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .seg button {
+    font: 500 12.5px/1 var(--sans);
+    color: var(--text-1);
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    padding: 7px 12px;
+    min-width: 32px;
+    min-height: 28px;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed='true'] {
+    background: var(--amber);
+    color: var(--amber-ink);
+    font-weight: 600;
+  }
+  .seg button:focus-visible {
+    outline: 2px solid var(--amber-edge);
+    outline-offset: 1px;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    align-items: center;
+  }
+  .toolbar .label {
+    color: var(--text-0);
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .toolbar .hint {
+    color: var(--text-2);
+    font-size: 12.5px;
+  }
+  .prefs {
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+    max-width: 580px;
+  }
+  .prefs .sec {
+    font: 600 11px/1 var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .prefs .line {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .prefs .name {
+    color: var(--text-0);
+    font-weight: 600;
+  }
+  .prefs .help {
+    color: var(--text-2);
+    font-size: 12.5px;
+    max-width: 52ch;
+  }
+  .prefs .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .btn {
+    font: 600 12.5px/1 var(--sans);
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    color: var(--text-0);
+  }
+  .btn.primary {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--amber-ink);
+  }
+  /* the full grid */
+  #grid {
+    display: grid;
+    gap: 22px;
+    min-width: 0;
+  }
+  .gsec {
+    display: grid;
+    gap: 10px;
+  }
+  .gsec h3 {
+    margin: 0;
+    font: 600 11px/1 var(--sans);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .gsec h3 span {
+    color: var(--text-1);
+  }
+  .gcards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 240px);
+    gap: 12px;
+  }
+  .old {
+    width: 240px;
+    height: 150px;
+    position: relative;
+    background: var(--bg-1);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .old:hover {
+    background: var(--bg-2);
+    border-color: var(--line);
+  }
+  .old .top {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .old .top .t {
+    color: var(--text-0);
+    font: 600 13px/17px var(--sans);
+    flex: 1;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .old .badge {
+    flex: none;
+    font: 600 9.5px/16px var(--mono);
+    padding: 0 5px;
+    border-radius: 4px;
+    border: 1px solid color-mix(in srgb, var(--bh) 45%, transparent);
+    color: var(--bh);
+    text-transform: uppercase;
+  }
+  .old .ob {
+    margin-top: 8px;
+    height: 51px;
+    overflow: hidden;
+  }
+  .old .ob .outline div,
+  .old .ob .code,
+  .old .ob .calc div {
+    line-height: 17px;
+  }
+  .old .ob .tasks .item {
+    height: 17px;
+  }
+  .old .of {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: 10.5px/18px var(--sans);
+    color: var(--text-2);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .old .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 9px;
+    font-weight: 600;
+    color: var(--p);
+    border: 1px solid color-mix(in srgb, var(--p) 45%, transparent);
+    flex: none;
+  }
+  .old .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 16px;
+    padding: 0 7px;
+    border-radius: 9px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    color: var(--text-1);
+    font-size: 9.5px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .old .chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .old .of .tags {
+    margin-left: auto;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+  }
+  .tw {
+    overflow-x: auto;
+  }
+  th,
+  td {
+    text-align: left;
+    vertical-align: top;
+    padding: 9px 14px 9px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  th {
+    color: var(--text-2);
+    font: 600 11px/1.3 var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  td:first-child {
+    white-space: nowrap;
+  }
+  .qs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 12px;
+  }
+  .q {
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .q h3 {
+    margin: 0;
+    color: var(--text-0);
+    font-size: 14px;
+  }
+  .q p {
+    margin: 0;
+  }
+  .q .prop {
+    color: var(--amber-text);
+    font-weight: 600;
+  }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Ticket #1114 · v0.28.0 · piste B retenue</div>
+    <h1>Cartes de note</h1>
+    <p>
+      Une carte se lit comme une petite fenêtre d’éditeur. Le <b>bandeau du haut</b> dit ce qu’est la note et
+      ce qui demande de l’attention : l’icône du type, le format d’un snippet, ses champs à gauche ; la
+      priorité, l’épingle et la case de sélection à droite. Puis le <b>titre</b> seul et l’<b>aperçu</b> par
+      lignes entières. Le <b>bandeau du bas</b> est passif : où la note est rangée (dossier, tags) et, à
+      droite, ses pièces jointes et quand elle a changé. Les deux bandeaux ne sont jamais vides : une note a
+      toujours un type, une place et une date.
+    </p>
+    <p>
+      Cartes à taille réelle, couleurs de <code>theme::tokens</code>, en sombre ou en clair selon votre
+      système.
+    </p>
+  </header>
+
+  <section id="grille">
+    <h2>Une grille complète</h2>
+    <p class="lede">
+      Vingt notes d’un espace de travail ordinaire, rangées comme dans la vue liste. Comparez la carte
+      d’aujourd’hui et la nouvelle, aux bandeaux allégés : un simple filet, et le fond seulement au survol.
+    </p>
+    <div class="toolbar">
+      <span class="label">Carte</span>
+      <div class="seg" role="group" aria-label="Carte montrée" id="grid-mode">
+        <button type="button" data-mode="today" aria-pressed="false" id="g-today">Aujourd’hui</button>
+        <button type="button" data-mode="new" aria-pressed="true" id="g-new">Nouvelle</button>
+      </div>
+    </div>
+    <div class="stage"><div id="grid"></div></div>
+  </section>
+
+  <section>
+    <h2>Anatomie</h2>
+    <div class="anatomy">
+      <div class="cell">
+        <div id="anatomy"></div>
+        <div class="cap"><b>Snippet, tout est posé</b> · 160 px · 4 lignes</div>
+      </div>
+      <ul class="legend">
+        <li>
+          <b>1</b>
+          <p>
+            <strong>Quoi, et ce qui demande de l’attention.</strong> À gauche l’icône du type dans sa tuile
+            teintée (son nom en infobulle et pour le lecteur d’écran), le format d’un snippet en abrégé dans
+            sa teinte (« TS », « SQL », « Texte » en gris pour du texte brut), puis ⚡ et le nombre de champs
+            à remplir, 📎 et le nombre de pièces jointes. À droite la priorité en barres (« Urgente » écrit en
+            toutes lettres, en rouge), l’épingle, et la case de sélection pendant une sélection : rien à sa
+            gauche ne bouge.
+          </p>
+        </li>
+        <li>
+          <b>2</b>
+          <p>
+            <strong>Titre.</strong> Seul sur sa ligne, de toute la largeur, en ellipse. Une liste ajoute « 1/4
+            » à droite. Une note sans titre n’a pas cette ligne : l’aperçu monte et gagne une ligne, et le «
+            1/4 » d’une liste passe dans le bandeau du haut.
+          </p>
+        </li>
+        <li>
+          <b>3</b>
+          <p>
+            <strong>Aperçu.</strong> 3, 4 ou 5 lignes entières selon le réglage. Le code sans cadre, les
+            champs <code>{{…}}</code> surlignés comme dans l’éditeur. Une liste montre une tâche de moins que
+            de lignes (rangées de 24 px).
+          </p>
+        </li>
+        <li>
+          <b>4</b>
+          <p>
+            <strong>Où, et quand.</strong> Le carré de couleur et le nom du dossier, en ellipse (dans « Tous
+            les espaces », l’espace d’abord ; sans dossier, l’espace ; dans la vue du dossier, rien), puis les
+            tags entiers et « +N ». À droite la date courte (« 4 h », « hier », « 3 j ») ; une échéance
+            proche, « dans 2 h », en rouge.
+          </p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="icones">
+    <h2>Les icônes des types</h2>
+    <p class="lede">
+      Une silhouette par type, qu’aucun autre ne partage, et sa couleur dans une tuile de 18 px : on reconnaît
+      la couleur avant la forme. Le mot n’est pas sur la carte. Il accompagne l’icône partout où l’on choisit
+      ou nomme un type : le menu « Nouvelle note », la palette, l’en-tête de l’éditeur (#1052). C’est là qu’on
+      apprend la correspondance.
+    </p>
+    <div class="stage"><div class="row" id="icon-key"></div></div>
+  </section>
+
+  <section>
+    <h2>Les cinq types, et la préférence « Lignes d’aperçu »</h2>
+    <p class="lede">
+      3, 4 ou 5 lignes donnent une carte de 140, 160 ou 180 px, toujours un multiple de la grille de 20 px du
+      tableau. Le réglage par défaut, 4 lignes, donne 160 px.
+    </p>
+    <div class="toolbar">
+      <span class="label">Lignes d’aperçu</span>
+      <div class="seg" role="group" aria-label="Lignes d’aperçu" id="lines">
+        <button type="button" data-lines="3" aria-pressed="false" id="l3">3</button>
+        <button type="button" data-lines="4" aria-pressed="true" id="l4">4</button>
+        <button type="button" data-lines="5" aria-pressed="false" id="l5">5</button>
+      </div>
+      <span class="hint" id="lines-hint"></span>
+    </div>
+    <div class="stage"><div class="row" id="kinds"></div></div>
+  </section>
+
+  <section>
+    <h2>Cas limites</h2>
+    <p class="lede">
+      Ce qui doit rester lisible quand tout est rempli, quand presque rien ne l’est, et quand la carte
+      rétrécit (panneau latéral de la 0.28 ouvert).
+    </p>
+    <div class="stage"><div class="row" id="edges"></div></div>
+  </section>
+
+  <section>
+    <h2>Sur le tableau zoomé en dessous de 100 % (0.28)</h2>
+    <p class="lede">
+      La carte compacte garde la même lecture : l’icône et le titre, puis une barre d’état réduite au format
+      et aux états. L’emplacement disparaît, puisque la zone du tableau le dit déjà.
+    </p>
+    <div class="stage"><div class="row" id="minis"></div></div>
+  </section>
+
+  <section>
+    <h2>Le réglage, dans les préférences de la bibliothèque</h2>
+    <p class="lede">
+      Stocké en <code>devnotes.notes.previewLines</code>, par bibliothèque : les cartes libres du tableau y
+      sont rangées en pixels, leur hauteur doit donc être celle de la bibliothèque. Appliqué au bouton, comme
+      toute préférence.
+    </p>
+    <div class="prefs" role="group" aria-label="Préférences de la bibliothèque, cartes">
+      <div class="sec">Cartes</div>
+      <div class="line">
+        <div>
+          <div class="name">Lignes d’aperçu</div>
+          <div class="help">
+            Le nombre de lignes qu’une carte montre de sa note. Après un changement, des cartes libres du
+            tableau peuvent se chevaucher : « Ranger les cartes » les réaligne d’un clic, sans toucher aux
+            zones.
+          </div>
+        </div>
+        <div class="seg" role="group" aria-label="Lignes d’aperçu, préférence">
+          <button type="button" aria-pressed="false">3</button
+          ><button type="button" aria-pressed="true">4</button
+          ><button type="button" aria-pressed="false">5</button>
+        </div>
+      </div>
+      <div class="actions"><span class="btn">Annuler</span><span class="btn primary">Appliquer</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ce qui change dans le code</h2>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr>
+            <th>Où</th>
+            <th>Ce qui change</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ui/src/notes/canvas/card/mod.rs</code></td>
+            <td>
+              La carte en quatre bandes : quoi et attention (22), titre (18), aperçu, où et quand (22), écarts
+              de 6 px. Les deux bandeaux n’ont pas de fond, seulement un filet <code>line_soft</code> ; ils
+              prennent <code>bg_3</code> au survol.
+            </td>
+          </tr>
+          <tr>
+            <td><code>card/footer.rs</code></td>
+            <td>
+              Se partage en deux : le bandeau du haut (icône, format, champs ; priorité, épingle, case) et
+              celui du bas (dossier, tags entiers et « +N » ; pièces jointes, date courte). La règle des tags
+              entiers et de la recherche dans les tags est gardée.
+            </td>
+          </tr>
+          <tr>
+            <td><code>card/body.rs</code></td>
+            <td>
+              Le code sans cadre ; toutes les vues se coupent par lignes entières selon le réglage ; une liste
+              montre une tâche de moins que de lignes.
+            </td>
+          </tr>
+          <tr>
+            <td><code>ui/src/notes/ui.rs</code></td>
+            <td>
+              <code>kind_badge</code> devient <code>kind_icon</code> (une silhouette par type dans une tuile
+              teintée de 18 px, nommée pour le lecteur d’écran ; le menu « Nouvelle note » et la palette
+              montrent l’icône avec son mot) ; le langage s’écrit en abrégé (« TS », « SQL ») dans sa teinte.
+              La palette, le sélecteur de notes des outils et l’onglet HTTP prennent l’icône, et le format
+              pour un snippet.
+            </td>
+          </tr>
+          <tr>
+            <td><code>notes/canvas/board/</code></td>
+            <td>La carte compacte du zoom en dessous de 100 % : icône, titre, barre d’état réduite.</td>
+          </tr>
+          <tr>
+            <td><code>engine/src/folders/board.rs</code></td>
+            <td>
+              <code>CARD_HEIGHT</code> devient une fonction du réglage (140, 160, 180), passée avec la requête
+              du tableau. <code>PREVIEW_LINES</code> reste à 5.
+            </td>
+          </tr>
+          <tr>
+            <td>Préférences</td>
+            <td>
+              <code>devnotes.notes.previewLines</code> (3, 4, 5 ; 4 par défaut) dans les préférences de
+              bibliothèque ; clés dans <code>fr.json</code> et <code>en.json</code>.
+            </td>
+          </tr>
+          <tr>
+            <td>Tests</td>
+            <td>
+              kittest : les quatre bandes dans l’ordre sans chevauchement ; l’icône nommée par type ; le
+              format seulement pour un snippet ; tags entiers et « +N » à trois largeurs ; les lignes suivent
+              le réglage. Rust : premier placement du tableau pour 140, 160, 180. E2E :
+              <code>02_note_lifecycle</code>, <code>12_preferences</code>,
+              <code>15_preferences_on_disk</code>, <code>18_board</code>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Décidé le 8 novembre 2026</h2>
+    <div class="qs">
+      <div class="q">
+        <h3>1. La couleur du type Snippet</h3>
+        <p>
+          Note violet, Calcul rose, Dessin sarcelle et Tâches neutre existent déjà ; bleu, vert et ambre
+          servent aux langages.
+        </p>
+        <p class="prop">Olive.</p>
+      </div>
+      <div class="q">
+        <h3>2. Le format d’un snippet en texte brut</h3>
+        <p>La barre d’état montre-t-elle quelque chose à la place du langage ?</p>
+        <p class="prop">« Texte », en gris : la place du format n’est jamais vide.</p>
+      </div>
+      <div class="q">
+        <h3>3. L’épingle dans la vue liste</h3>
+        <p>Les notes épinglées y ont déjà leur section « Épinglées ».</p>
+        <p class="prop">Gardée partout : une carte ne change pas selon la vue.</p>
+      </div>
+      <div class="q">
+        <h3>4. Le dossier dans sa propre vue</h3>
+        <p>Dans un dossier, toutes les cartes répètent son nom.</p>
+        <p class="prop">L’emplacement n’y montre que les tags, alignés à gauche.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const ICON = {
+    snippet:
+      '<path d="M3.6 3.4 1.2 6l2.4 2.6M8.4 3.4 10.8 6 8.4 8.6M6.9 2.2 5.1 9.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+    note: '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M2.5 1.3h4.6l2.4 2.4v7H2.5z"/><path d="M7 1.3v2.5h2.5M4.2 6.2h3.6M4.2 8.4h2.4"/></g>',
+    tasks:
+      '<g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="9" height="9" rx="2"/><path d="m3.8 6.1 1.6 1.6 2.9-3.1"/></g>',
+    calc: '<path d="M9.2 2.2H2.8l3.4 3.8-3.4 3.8h6.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+    drawing:
+      '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.4 1.6 5.6 6.4"/><path d="M5.6 6.4c-1.6-.6-3 .4-3 2 0 1-.6 1.6-1.4 1.8 2.6.9 5 .2 5.2-2.2z"/></g>',
+    pin: '<path d="M4 1h4l-.5 3.5L9.5 6.5h-3V11L6 11.5 5.5 11V6.5h-3l2-2z" fill="currentColor"/>',
+    zap: '<path d="M6.8.8 2 7h3.2l-.9 4.2L9.8 5H6.4z" fill="currentColor"/>',
+    clip: '<path d="M9.6 5.6 5.8 9.4a2.4 2.4 0 0 1-3.4-3.4l4-4a1.6 1.6 0 0 1 2.3 2.3L4.8 8.2a.8.8 0 0 1-1.1-1.1l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+    check:
+      '<path d="m2.5 6.2 2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  };
+  const svg = (name, label) =>
+    `<svg class="ico" viewBox="0 0 12 12" ${label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"'}>${ICON[name]}</svg>`;
+  const KIND = {
+    snippet: ['Snippet', 'var(--olive)'],
+    note: ['Note', 'var(--purple)'],
+    tasks: ['Tâches', 'var(--text-1)'],
+    calc: ['Calcul', 'var(--pink)'],
+    drawing: ['Dessin', 'var(--teal)'],
+  };
+  const PRIO = {
+    Haute: ['var(--amber-text)', 3],
+    Urgente: ['var(--red)', 3],
+    Moyenne: ['var(--blue)', 2],
+    Basse: ['var(--text-2)', 1],
+  };
+  const HEIGHT = { 3: 140, 4: 160, 5: 180 };
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+  const kindIcon = (n) =>
+    `<span class="ktile" style="--hue:${KIND[n.kind][1]}" title="${KIND[n.kind][0]}">${svg(n.kind, KIND[n.kind][0])}</span>`;
+  const bars = (n) => {
+    if (!n.prio) return '';
+    const [c, k] = PRIO[n.prio];
+    const glyph = `<span class="bars" style="--p:${c}" ${n.prio === 'Urgente' ? 'aria-hidden="true"' : `role="img" aria-label="Priorité ${n.prio.toLowerCase()}" title="Priorité ${n.prio.toLowerCase()}"`}>${[4, 7, 10].map((h, i) => `<b style="height:${h}px" class="${i < k ? '' : 'off'}"></b>`).join('')}</span>`;
+    return n.prio === 'Urgente' ? `<span class="urgent">${glyph}Urgente</span>` : glyph;
+  };
+  const progress = (n) => {
+    if (n.body[0] !== 'tasks') return '';
+    const done = n.body[1].filter((i) => i[0]).length;
+    return `<span class="count" aria-label="${done} tâches faites sur ${n.body[1].length}">${done}/${n.body[1].length}</span>`;
+  };
+
+  function bodyOf(n, lines) {
+    const [type, data] = n.body;
+    if (type === 'code') return `<div class="code">${data.slice(0, lines).join('\n')}</div>`;
+    if (type === 'outline')
+      return `<div class="outline">${data
+        .slice(0, lines)
+        .map(([k, t]) =>
+          k === 'h'
+            ? `<div class="h">${esc(t)}</div>`
+            : k === 'li'
+              ? `<div><span class="m">•</span>${esc(t)}</div>`
+              : `<div>${esc(t)}</div>`,
+        )
+        .join('')}</div>`;
+    if (type === 'tasks') {
+      const order = [...data.filter((i) => !i[0]), ...data.filter((i) => i[0])];
+      return `<div class="tasks">${order
+        .slice(0, lines - 1)
+        .map(
+          ([d, t]) =>
+            `<div class="item ${d ? 'done' : ''}"><span class="box ${d ? 'on' : ''}">${d ? svg('check') : ''}</span><span>${esc(t)}</span></div>`,
+        )
+        .join('')}</div>`;
+    }
+    if (type === 'calc')
+      return `<div class="calc">${data
+        .slice(0, lines)
+        .map(([e, r, tot]) => `<div class="${tot ? 'tot' : ''}"><span>${esc(e)}</span><b>${r}</b></div>`)
+        .join('')}</div>`;
+    if (type === 'hit') return `<div class="prose">${data}</div>`;
+    return `<div class="pic"><svg viewBox="0 0 200 84" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Aperçu du dessin">
+    <rect x="14" y="10" width="50" height="26" rx="5" fill="none" stroke="var(--teal)" stroke-width="1.5"/><rect x="136" y="10" width="50" height="26" rx="5" fill="none" stroke="var(--blue)" stroke-width="1.5"/>
+    <rect x="72" y="52" width="56" height="24" rx="5" fill="none" stroke="var(--amber-text)" stroke-width="1.5"/><path d="M64 23h72M40 36l38 16M160 36l-36 16" fill="none" stroke="var(--text-2)" stroke-width="1.2"/>
+    <text x="39" y="27" fill="var(--text-1)" font-size="9" text-anchor="middle" font-family="Inter, sans-serif">client</text><text x="161" y="27" fill="var(--text-1)" font-size="9" text-anchor="middle" font-family="Inter, sans-serif">API</text>
+    <text x="100" y="67" fill="var(--text-1)" font-size="9" text-anchor="middle" font-family="Inter, sans-serif">file</text></svg></div>`;
+  }
+
+  // Top band: what the note is, then what asks for attention.
+  function crumb(n) {
+    const fmt =
+      n.kind !== 'snippet'
+        ? ''
+        : n.lang
+          ? `<span class="fmt" style="--lh:${n.lh}" title="Format">${n.lang}</span>`
+          : '<span class="plain">Texte</span>';
+    const fields = n.fields
+      ? `<span class="st fld" title="${n.fields} champs à remplir">${svg('zap')}${n.fields}</span>`
+      : '';
+    const clips = n.clips
+      ? `<span class="st" title="${n.clips} pièces jointes">${svg('clip')}${n.clips}</span>`
+      : '';
+    const pin = n.pin ? `<span class="pin" title="Épinglée">${svg('pin', 'Épinglée')}</span>` : '';
+    const tick = n.ticking
+      ? `<span class="tick ${n.checked ? 'on' : ''}" role="checkbox" aria-checked="${!!n.checked}" aria-label="Sélectionner">${n.checked ? svg('check') : ''}</span>`
+      : '';
+    const right = bars(n) + pin + tick;
+    return `<div class="crumb">${kindIcon(n)}${fmt}${fields}${clips}${n.title ? '' : progress(n)}${right ? `<span class="attn">${right}</span>` : ''}</div>`;
+  }
+
+  // « il y a 4 h » reads « 4 h » in a band this small; an expiry keeps its « dans ».
+  const short = (when) =>
+    when.replace(/^(il y a|créée il y a|modifiée il y a) /, '').replace(/^échéance /, '');
+
+  // Bottom band: where the note is, and when — passive.
+  function status(n) {
+    if (n.armed) return `<div class="status warn">Suppr. encore pour supprimer · Échap annule</div>`;
+    const place = n.inFolder
+      ? ''
+      : n.folder
+        ? `<span class="where" title="${esc(n.folder[0])}"><i class="sw" style="--fh:${n.folder[1]}"></i><span>${esc(n.folder[0])}</span></span>`
+        : `<span class="where"><span>${esc(n.space || 'Travail')}</span></span>`;
+    const tags = `<span class="tags" data-all="${n.tags.length}">${n.tags.map((t) => `<span class="${t === n.hit ? 'hit' : ''}">#${esc(t)}</span>`).join('')}</span>`;
+    return `<div class="status">${place}${tags}<span class="right"><span class="${n.soon ? 'soon' : ''}" title="${esc(n.when)}">${esc(short(n.when))}</span></span></div>`;
+  }
+
+  function card(n, lines = 4, extra = '') {
+    const cls = [
+      'card',
+      extra,
+      n.narrow ? 'w220' : '',
+      n.checked ? 'checked' : '',
+      n.armed ? 'armed' : '',
+      n.title ? '' : 'untitled',
+    ].join(' ');
+    const head = n.title
+      ? `<div class="head"><span class="t1">${esc(n.title)}</span>${progress(n)}</div>`
+      : '';
+    const label = n.title ? '' : ' aria-label="Sans titre"';
+    return `<article class="${cls}" style="--h:${HEIGHT[lines]}px"${label}>${crumb(n)}${head}<div class="body">${bodyOf(n, n.title ? lines : lines + 1)}</div>${status(n)}</article>`;
+  }
+
+  // Whole tags only, then « +N »: a tag is never cut, and the folder keeps room for a few letters.
+  function fitTags(root) {
+    root.querySelectorAll('.crumb, .status').forEach((box) => {
+      const tags = box.querySelector('.tags');
+      if (!tags) return;
+      const all = +tags.dataset.all;
+      const place = box.querySelector('.where');
+      const fits = () =>
+        box.scrollWidth <= box.clientWidth + 0.5 &&
+        (!place ||
+          place.offsetWidth >= 64 ||
+          place.lastElementChild.scrollWidth <= place.lastElementChild.clientWidth);
+      let more = null;
+      while (!fits() && tags.querySelectorAll('span:not(.more)').length) {
+        const shown = tags.querySelectorAll('span:not(.more)');
+        shown[shown.length - 1].remove();
+        if (!more) {
+          more = document.createElement('span');
+          more.className = 'more';
+          tags.appendChild(more);
+        }
+        more.textContent = '+' + (all - tags.querySelectorAll('span:not(.more)').length);
+      }
+    });
+  }
+
+  const TS = [
+    '<span class="tk-k">export function</span> <span class="tk-f">debounced</span>&lt;<span class="tk-t">T</span>&gt;(',
+    '  src: <span class="tk-t">Signal</span>&lt;<span class="tk-t">T</span>&gt;,',
+    '  ms = <span class="tk-p">{{delay}}</span>, key = <span class="tk-p">{{key}}</span>',
+    '): <span class="tk-t">Signal</span>&lt;<span class="tk-t">T</span>&gt; {',
+    '  <span class="tk-k">const</span> out = <span class="tk-f">signal</span>(src());',
+    '  <span class="tk-f">effect</span>(() =&gt; out.<span class="tk-f">set</span>(src()));',
+  ];
+  const debounce = {
+    kind: 'snippet',
+    lang: 'TS',
+    lh: 'var(--blue)',
+    title: 'Debounce d’un signal Angular',
+    prio: 'Haute',
+    pin: true,
+    fields: 2,
+    clips: 1,
+    body: ['code', TS],
+    when: 'il y a 4 h',
+    folder: ['Frontend', 'var(--blue)'],
+    tags: ['angular', 'signals', 'rxjs'],
+  };
+  const kinds = [
+    debounce,
+    {
+      kind: 'note',
+      title: 'Procédure de mise en production',
+      pin: true,
+      body: [
+        'outline',
+        [
+          ['h', 'Avant le déploiement'],
+          ['li', 'Geler la branche release/2.4'],
+          ['li', 'Prévenir l’astreinte sur #ops'],
+          ['h', 'Pendant'],
+          ['li', 'Suivre le tableau des erreurs'],
+        ],
+      ],
+      when: 'hier',
+      folder: ['Exploitation', 'var(--green)'],
+      tags: ['release', 'ops'],
+    },
+    {
+      kind: 'tasks',
+      title: 'Avant la démonstration',
+      prio: 'Urgente',
+      body: [
+        'tasks',
+        [
+          [false, 'Vider le cache du navigateur'],
+          [false, 'Couper les notifications'],
+          [false, 'Ouvrir l’espace « Démo »'],
+          [false, 'Brancher le second écran'],
+          [true, 'Préparer le jeu de données'],
+        ],
+      ],
+      when: 'échéance dans 2 h',
+      soon: true,
+      folder: ['Projets', 'var(--purple)'],
+      tags: ['demo'],
+    },
+    {
+      kind: 'calc',
+      title: 'Budget du déplacement à Lyon',
+      body: [
+        'calc',
+        [
+          ['train = 2 × 89 €', '178,00 €'],
+          ['hôtel = 3 × 112 €', '336,00 €'],
+          ['repas = 6 × 24 €', '144,00 €'],
+          ['taxi', '38,50 €'],
+          ['total', '696,50 €', true],
+        ],
+      ],
+      when: 'il y a 3 j',
+      folder: ['Perso', 'var(--pink)'],
+      tags: ['voyage'],
+    },
+    {
+      kind: 'drawing',
+      title: 'Schéma de la file de paiement',
+      clips: 3,
+      body: ['pic'],
+      when: 'il y a 2 sem.',
+      folder: ['Exploitation', 'var(--green)'],
+      tags: ['archi', 'kafka'],
+    },
+  ];
+
+  const edges = [
+    [
+      { ...debounce, narrow: true },
+      '<b>220 px</b> (panneau latéral ouvert) : le dossier passe en ellipse, les tags cèdent leur place à « +N ».',
+    ],
+    [
+      {
+        kind: 'note',
+        title: 'Compte rendu de la rétrospective du sprint 42 avec l’équipe plateforme',
+        body: [
+          'outline',
+          [
+            ['t', 'Ce qui a marché : les revues courtes.'],
+            ['t', 'À changer : les tickets sans critère.'],
+            ['li', 'Relire le gabarit'],
+            ['li', 'Estimer en points'],
+          ],
+        ],
+        when: 'créée il y a 5 min',
+        tags: [],
+        space: 'Travail',
+      },
+      '<b>Presque rien</b> : pas de dossier ni de tag, le bas dit l’espace et la date ; le haut garde l’icône ; titre long en ellipse.',
+    ],
+    [
+      {
+        kind: 'snippet',
+        lang: 'SQL',
+        lh: 'var(--amber-text)',
+        title: 'Purger les sessions expirées',
+        prio: 'Urgente',
+        pin: true,
+        fields: 3,
+        clips: 4,
+        body: [
+          'code',
+          [
+            '<span class="tk-k">DELETE FROM</span> sessions',
+            '<span class="tk-k">WHERE</span> expires_at &lt; <span class="tk-p">{{cutoff}}</span>',
+            '  <span class="tk-k">AND</span> tenant = <span class="tk-p">{{tenant}}</span>',
+            '<span class="tk-k">RETURNING</span> id;',
+            '<span class="tk-c">-- {{limit}} par lot</span>',
+          ],
+        ],
+        when: 'il y a 1 h',
+        folder: ['Exploitation › Base de données › Maintenance', 'var(--green)'],
+        tags: ['postgres', 'sessions', 'purge', 'cron'],
+      },
+      '<b>Tout est rempli</b> : en haut SQL, ⚡ 3 et 📎 4 à gauche, « Urgente » et l’épingle à droite ; en bas dossier profond en ellipse, tags puis « +N », et la date.',
+    ],
+    [
+      {
+        kind: 'snippet',
+        lang: 'SH',
+        lh: 'var(--green)',
+        title: '',
+        fields: 1,
+        body: [
+          'code',
+          [
+            '<span class="tk-f">ssh</span> -L 5432:localhost:5432 \\',
+            '  deploy@<span class="tk-p">{{host}}</span>',
+            '<span class="tk-c"># puis psql sur localhost</span>',
+            '',
+            '<span class="tk-f">ssh</span> -O exit deploy@db',
+          ],
+        ],
+        when: 'il y a 20 min',
+        folder: ['Exploitation', 'var(--green)'],
+        tags: ['ssh'],
+      },
+      '<b>Sans titre</b> : pas de ligne de titre ; l’aperçu prend sa place et gagne une ligne. Le lecteur d’écran dit « Sans titre ».',
+    ],
+    [
+      { ...kinds[1], ticking: true, checked: true },
+      '<b>Sélection</b> : la case s’ajoute au bout du bandeau du haut, après l’épingle ; rien ne bouge ; la bordure passe à l’ambre.',
+    ],
+    [{ ...kinds[3], ticking: true }, '<b>Sélection en cours</b> : une carte non cochée montre sa case vide.'],
+    [
+      { ...debounce, armed: true },
+      '<b>Suppression armée</b> : le bandeau du bas passe au rouge et dit les deux touches.',
+    ],
+    [
+      {
+        kind: 'note',
+        title: 'Notes d’installation du poste',
+        body: [
+          'hit',
+          '… le <mark>proxy</mark> de l’entreprise demande la variable HTTPS_PROXY avant npm install …',
+        ],
+        when: 'il y a 1 mois',
+        folder: ['Onboarding', 'var(--teal)'],
+        tags: ['windows', 'npm', 'proxy', 'git'],
+        hit: 'proxy',
+      },
+      '<b>Recherche</b> : la ligne trouvée remplace l’aperçu ; le tag trouvé est ramené parmi les visibles.',
+    ],
+    [
+      {
+        kind: 'snippet',
+        title: 'Message de commit type',
+        body: ['code', ['Area: what now happens', '', 'Context line, then the change.', '', 'Closes #']],
+        when: 'il y a 6 j',
+        folder: ['Outils', 'var(--olive)'],
+        tags: ['git'],
+      },
+      '<b>Texte brut</b> : le bandeau du haut dit « Texte » à la place du langage.',
+    ],
+    [
+      { ...kinds[0], inFolder: true },
+      '<b>Dans le dossier Frontend</b> : le bandeau du bas ne répète pas le dossier.',
+    ],
+  ];
+
+  // Tags a search found are brought among the visible ones.
+  edges[6][0].tags = ['proxy', 'windows', 'npm', 'git'];
+
+  function renderKinds(lines) {
+    const root = document.getElementById('kinds');
+    root.innerHTML = kinds
+      .map(
+        (n) =>
+          `<div class="cell">${card(n, lines)}<div class="cap"><b>${KIND[n.kind][0]}</b> · ${HEIGHT[lines]} px</div></div>`,
+      )
+      .join('');
+    fitTags(root);
+    document.getElementById('lines-hint').textContent =
+      `${lines} lignes · carte de ${HEIGHT[lines]} px (${HEIGHT[lines] / 20} pas de grille)`;
+  }
+  function renderEdges() {
+    const root = document.getElementById('edges');
+    root.innerHTML = edges
+      .map(([n, c]) => `<div class="cell">${card(n, 4)}<div class="cap">${c}</div></div>`)
+      .join('');
+    fitTags(root);
+  }
+  function renderAnatomy() {
+    const root = document.getElementById('anatomy');
+    root.innerHTML = card(debounce, 4, 'zones');
+    fitTags(root);
+  }
+  function renderMinis() {
+    const minis = [kinds[0], kinds[1], kinds[2], kinds[3], kinds[4], edges[2][0]];
+    document.getElementById('minis').innerHTML = minis
+      .map((n) => {
+        const st = [
+          bars(n),
+          n.pin ? `<span class="st" style="color:var(--amber-text)">${svg('pin', 'Épinglée')}</span>` : '',
+          n.fields ? `<span class="st fld">${svg('zap')}${n.fields}</span>` : '',
+          n.clips ? `<span class="st">${svg('clip')}${n.clips}</span>` : '',
+        ].join('');
+        const fmt = n.lang ? `<span class="fmt" style="--lh:${n.lh}">${n.lang}</span>` : '';
+        return `<article class="mini"><div class="head">${kindIcon(n)}<span class="t1">${esc(n.title)}</span></div><div class="status">${st}<span class="right">${fmt}</span></div></article>`;
+      })
+      .join('');
+  }
+
+  // Twenty notes of an ordinary working space, in the list view's sections.
+  const F = {
+    ops: ['Exploitation', 'var(--green)'],
+    front: ['Frontend', 'var(--blue)'],
+    back: ['Backend', 'var(--purple)'],
+    proj: ['Projets', 'var(--amber-text)'],
+    perso: ['Perso', 'var(--pink)'],
+    tools: ['Outils', 'var(--olive)'],
+  };
+  const sn = (lang, lh, title, lines, extra) => ({
+    kind: 'snippet',
+    lang,
+    lh,
+    title,
+    body: ['code', lines],
+    ...extra,
+  });
+  const k = (s) => `<span class="tk-k">${s}</span>`,
+    fn = (s) => `<span class="tk-f">${s}</span>`,
+    p = (s) => `<span class="tk-p">{{${s}}}</span>`,
+    c = (s) => `<span class="tk-c">${s}</span>`;
+  const GRID = [
+    [
+      'Épinglées',
+      [
+        sn(
+          'SH',
+          'var(--green)',
+          'Relancer le service de paiement',
+          [
+            `${fn('kubectl')} rollout restart \\`,
+            `  deployment/${p('service')} \\`,
+            `  -n ${p('namespace')}`,
+            `${fn('kubectl')} get pods -n ${p('namespace')}`,
+          ],
+          {
+            pin: true,
+            fields: 2,
+            prio: 'Haute',
+            when: 'il y a 2 h',
+            folder: F.ops,
+            tags: ['kubernetes', 'ops'],
+          },
+        ),
+        {
+          kind: 'note',
+          title: 'Procédure de mise en production',
+          pin: true,
+          body: [
+            'outline',
+            [
+              ['h', 'Avant le déploiement'],
+              ['li', 'Geler la branche release/2.4'],
+              ['li', 'Prévenir l’astreinte sur #ops'],
+              ['h', 'Pendant'],
+              ['li', 'Suivre le tableau des erreurs'],
+            ],
+          ],
+          when: 'hier',
+          folder: F.ops,
+          tags: ['release', 'ops'],
+        },
+        sn(
+          'SQL',
+          'var(--amber-text)',
+          'Connexion psql à la base de recette',
+          [
+            `${fn('psql')} -h ${p('host')} -p 5432 \\`,
+            `  -U ${p('user')} -d recette`,
+            `${c('-- mot de passe dans le coffre')}`,
+            `\\x on`,
+          ],
+          { pin: true, fields: 2, when: 'il y a 5 j', folder: F.back, tags: ['postgres', 'recette'] },
+        ),
+      ],
+    ],
+    [
+      'Aujourd’hui',
+      [
+        {
+          kind: 'tasks',
+          title: 'Avant la démonstration',
+          prio: 'Urgente',
+          body: [
+            'tasks',
+            [
+              [false, 'Vider le cache du navigateur'],
+              [false, 'Couper les notifications'],
+              [false, 'Ouvrir l’espace « Démo »'],
+              [true, 'Préparer le jeu de données'],
+              [true, 'Tester le vidéoprojecteur'],
+            ],
+          ],
+          when: 'échéance dans 2 h',
+          soon: true,
+          folder: F.proj,
+          tags: ['demo'],
+        },
+        sn(
+          'TS',
+          'var(--blue)',
+          'Debounce d’un signal Angular',
+          [
+            `${k('export function')} ${fn('debounced')}&lt;T&gt;(`,
+            `  src: Signal&lt;T&gt;,`,
+            `  ms = ${p('delay')}, key = ${p('key')}`,
+            `): Signal&lt;T&gt; {`,
+            `  ${k('const')} out = ${fn('signal')}(src());`,
+          ],
+          {
+            prio: 'Haute',
+            fields: 2,
+            clips: 1,
+            when: 'il y a 4 h',
+            folder: F.front,
+            tags: ['angular', 'signals', 'rxjs'],
+          },
+        ),
+        {
+          kind: 'calc',
+          title: 'Budget du déplacement à Lyon',
+          body: [
+            'calc',
+            [
+              ['train = 2 × 89 €', '178,00 €'],
+              ['hôtel = 3 × 112 €', '336,00 €'],
+              ['repas = 6 × 24 €', '144,00 €'],
+              ['taxi', '38,50 €'],
+              ['total', '696,50 €', true],
+            ],
+          ],
+          when: 'il y a 6 h',
+          folder: F.perso,
+          tags: ['voyage'],
+        },
+        sn(
+          'JSON',
+          'var(--text-1)',
+          'Réponse de l’API commandes',
+          [
+            '{',
+            '  <span class="tk-t">"id"</span>: <span class="tk-f">4821</span>,',
+            '  <span class="tk-t">"status"</span>: "shipped",',
+            '  <span class="tk-t">"items"</span>: [',
+            '    { <span class="tk-t">"sku"</span>: "A-77", <span class="tk-t">"qty"</span>: 2 }',
+          ],
+          { when: 'il y a 7 h', folder: F.back, tags: ['api', 'exemple'] },
+        ),
+        {
+          kind: 'note',
+          title: 'Compte rendu du point d’équipe',
+          body: [
+            'outline',
+            [
+              ['t', 'Mise en prod de la 2.4 jeudi.'],
+              ['li', 'Alice reprend les tickets de facturation'],
+              ['li', 'Bloquant : accès au bucket de logs'],
+              ['t', 'Prochain point lundi.'],
+            ],
+          ],
+          when: 'il y a 8 h',
+          folder: F.proj,
+          tags: ['réunion'],
+        },
+        {
+          kind: 'drawing',
+          title: 'Schéma de la file de paiement',
+          clips: 3,
+          body: ['pic'],
+          when: 'il y a 9 h',
+          folder: F.ops,
+          tags: ['archi', 'kafka'],
+        },
+        sn(
+          'RS',
+          'var(--red)',
+          'Lire un fichier ligne à ligne',
+          [
+            `${k('let')} file = File::${fn('open')}(path)?;`,
+            `${k('for')} line ${k('in')} BufReader::${fn('new')}(file).${fn('lines')}() {`,
+            `    ${k('let')} line = line?;`,
+            `    ${fn('handle')}(&amp;line);`,
+            '}',
+          ],
+          { when: 'il y a 10 h', folder: F.back, tags: ['rust', 'io'] },
+        ),
+        {
+          kind: 'tasks',
+          title: 'Courses de la semaine',
+          body: [
+            'tasks',
+            [
+              [false, 'Café en grains'],
+              [false, 'Piles AA'],
+              [true, 'Pain'],
+              [true, 'Lait'],
+            ],
+          ],
+          when: 'il y a 11 h',
+          folder: F.perso,
+          tags: [],
+        },
+      ],
+    ],
+    [
+      'Cette semaine',
+      [
+        sn(
+          'SH',
+          'var(--green)',
+          'Nettoyer les images Docker inutilisées',
+          [
+            `${fn('docker')} image prune -a \\`,
+            `  --filter "until=${p('hours')}h"`,
+            `${fn('docker')} volume prune -f`,
+            `${fn('docker')} system df`,
+          ],
+          { fields: 1, when: 'il y a 2 j', folder: F.tools, tags: ['docker'] },
+        ),
+        {
+          kind: 'note',
+          title: 'Idées pour la refonte du tableau de bord',
+          body: [
+            'outline',
+            [
+              ['h', 'Ce qui ne marche pas'],
+              ['li', 'Trop de graphiques par défaut'],
+              ['li', 'Les filtres ne sont pas gardés'],
+              ['h', 'Pistes'],
+              ['li', 'Un écran par rôle'],
+            ],
+          ],
+          when: 'il y a 2 j',
+          folder: F.front,
+          tags: ['ux', 'dashboard', 'refonte', 'idées'],
+        },
+        sn(
+          'YAML',
+          'var(--purple)',
+          'Job de CI pour les tests e2e',
+          [
+            `<span class="tk-t">e2e</span>:`,
+            `  <span class="tk-t">runs-on</span>: windows-latest`,
+            `  <span class="tk-t">timeout-minutes</span>: ${p('timeout')}`,
+            `  <span class="tk-t">steps</span>:`,
+            `    - <span class="tk-t">uses</span>: actions/checkout@v4`,
+          ],
+          { fields: 1, clips: 1, prio: 'Moyenne', when: 'il y a 3 j', folder: F.tools, tags: ['ci', 'e2e'] },
+        ),
+        {
+          kind: 'calc',
+          title: 'Taux journalier de la mission',
+          body: [
+            'calc',
+            [
+              ['jours = 18', '18'],
+              ['tjm = 620 €', '620,00 €'],
+              ['brut = jours × tjm', '11 160,00 €'],
+              ['charges = brut × 22 %', '2 455,20 €'],
+              ['net', '8 704,80 €', true],
+            ],
+          ],
+          when: 'il y a 3 j',
+          folder: F.perso,
+          tags: ['freelance'],
+        },
+        {
+          kind: 'tasks',
+          title: 'Renouveler le certificat TLS',
+          prio: 'Haute',
+          body: [
+            'tasks',
+            [
+              [false, 'Générer la CSR'],
+              [false, 'Faire signer par l’AC interne'],
+              [false, 'Déployer sur la passerelle'],
+              [false, 'Vérifier la chaîne'],
+            ],
+          ],
+          when: 'échéance dans 4 j',
+          folder: F.ops,
+          tags: ['tls', 'sécurité'],
+        },
+        sn(
+          'SQL',
+          'var(--amber-text)',
+          'Requêtes les plus lentes',
+          [
+            `${k('SELECT')} query, mean_exec_time`,
+            `${k('FROM')} pg_stat_statements`,
+            `${k('ORDER BY')} mean_exec_time ${k('DESC')}`,
+            `${k('LIMIT')} ${p('limit')};`,
+          ],
+          { fields: 1, when: 'il y a 4 j', folder: F.back, tags: ['postgres', 'perf'] },
+        ),
+        {
+          kind: 'note',
+          title: 'Raccourcis de l’éditeur',
+          body: [
+            'outline',
+            [
+              ['li', 'Ctrl+D : sélectionner l’occurrence suivante'],
+              ['li', 'Alt+↑ : monter la ligne'],
+              ['li', 'Ctrl+/ : commenter'],
+              ['li', 'F2 : renommer le symbole'],
+            ],
+          ],
+          when: 'il y a 5 j',
+          folder: F.tools,
+          tags: ['éditeur'],
+        },
+        sn(
+          '',
+          '',
+          'Message de commit type',
+          ['Area: what now happens', '', 'Context line, then the change.', '', 'Closes #'],
+          { when: 'il y a 6 j', folder: F.tools, tags: ['git'] },
+        ),
+        {
+          kind: 'note',
+          title: '',
+          body: [
+            'outline',
+            [
+              ['t', 'Rappeler Julie pour le devis du serveur,'],
+              ['t', 'numéro dans le mail du 3 novembre.'],
+              ['li', 'Demander le délai de livraison'],
+              ['li', 'Vérifier la garantie sur site'],
+              ['li', 'Comparer avec l’offre de mars'],
+            ],
+          ],
+          when: 'il y a 6 j',
+          folder: F.perso,
+          tags: [],
+        },
+      ],
+    ],
+  ];
+
+  function oldCard(n) {
+    const [word, hue] =
+      n.kind === 'snippet'
+        ? [n.lang || 'TXT', n.lh || 'var(--text-1)']
+        : [{ note: 'Note', tasks: 'Tâches', calc: 'Calcul', drawing: 'Dessin' }[n.kind], KIND[n.kind][1]];
+    const pill = n.prio
+      ? (() => {
+          const [cl, b] = PRIO[n.prio];
+          return `<span class="pill" style="--p:${cl}"><span class="bars" style="--p:${cl}">${[4, 7, 10].map((h, i) => `<b style="height:${h}px" class="${i < b ? '' : 'off'}"></b>`).join('')}</span>${n.prio}</span>`;
+        })()
+      : '';
+    const marks =
+      (n.pin ? `<span style="color:var(--red)">${svg('pin')}</span>` : '') +
+      (n.fields ? `<span style="color:var(--amber-text)">${svg('zap')}</span>` : '') +
+      (n.clips ? `<span style="display:inline-flex;gap:2px">${svg('clip')}${n.clips}</span>` : '');
+    const chip = n.folder
+      ? `<span class="chip"><i class="sw" style="--fh:${n.folder[1]}"></i><span>${esc(n.folder[0])}</span></span>`
+      : '';
+    const tags = `<span class="tags" data-all="${n.tags.length}">${n.tags
+      .slice(0, 2)
+      .map((t) => `<span>#${esc(t)}</span>`)
+      .join('')}${n.tags.length > 2 ? `<span>+${n.tags.length - 2}</span>` : ''}</span>`;
+    return `<article class="old"><div class="top"><span class="t">${esc(n.title || 'Sans titre')}</span><span class="badge" style="--bh:${hue}">${word}</span></div><div class="ob">${bodyOf(n, 3)}</div>
+    <div class="of"><span class="${n.soon ? 'soon' : ''}">${esc(n.when)}</span>${pill}${marks}${chip}${tags}</div></article>`;
+  }
+
+  function renderGrid(mode) {
+    const root = document.getElementById('grid');
+    root.innerHTML = GRID.map(
+      ([name, list]) =>
+        `<div class="gsec"><h3>${name} · <span>${list.length}</span></h3><div class="gcards">${list.map((n) => (mode === 'today' ? oldCard(n) : card(n, 4))).join('')}</div></div>`,
+    ).join('');
+    if (mode !== 'today') fitTags(root);
+  }
+  document.getElementById('grid-mode').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    document
+      .querySelectorAll('#grid-mode button')
+      .forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    renderGrid(b.dataset.mode);
+  });
+
+  document.getElementById('lines').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    document
+      .querySelectorAll('#lines button')
+      .forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    renderKinds(+b.dataset.lines);
+  });
+  function renderKey() {
+    const kinds5 = ['snippet', 'note', 'tasks', 'calc', 'drawing'];
+    const pair = (k) =>
+      `<div class="pair"><span class="ktile" style="--hue:${KIND[k][1]}">${svg(k)}</span>${KIND[k][0]}</div>`;
+    const small = kinds5
+      .map(
+        (k) =>
+          `<span class="ktile" style="--hue:${KIND[k][1]}" title="${KIND[k][0]}">${svg(k, KIND[k][0])}</span>`,
+      )
+      .join('');
+    document.getElementById('icon-key').innerHTML =
+      `<div class="cell"><div class="key"><h3>Sur la carte, 18 px</h3><div class="cardsize">${small}</div></div><div class="cap"><b>Carte</b> · l’icône seule</div></div>` +
+      `<div class="cell"><div class="menu" role="menu" aria-label="Nouvelle note">${kinds5.map(pair).join('')}</div><div class="cap"><b>Menu « Nouvelle note »</b> · l’icône et son mot</div></div>`;
+  }
+
+  function renderAll() {
+    renderKey();
+    renderGrid(document.querySelector('#grid-mode [aria-pressed="true"]').dataset.mode);
+    renderAnatomy();
+    renderKinds(+document.querySelector('#lines [aria-pressed="true"]').dataset.lines);
+    renderEdges();
+    renderMinis();
+  }
+  renderAll();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderAll);
+</script>

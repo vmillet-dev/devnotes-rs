@@ -1,0 +1,18 @@
+[package]
+name = "diagram"
+description = "A Note's Mermaid block drawn, by merman, in the theme's colours and the app's fonts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+merman.workspace = true
+resvg = { workspace = true, features = ["text"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

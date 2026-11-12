@@ -1,0 +1,20 @@
+[package]
+name = "richtext"
+description = "A Note's document: its blocks and marks, read from Markdown and written back as the reference wrote it, and its undo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+html5ever.workspace = true
+pulldown-cmark.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

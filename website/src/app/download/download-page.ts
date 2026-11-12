@@ -10,16 +10,16 @@ import { DocBlocks } from '../docs/doc-blocks';
 import { docPath } from '../docs/doc-index';
 import { snippet } from '../docs/doc.model';
 
-const LINUX_COMMANDS = `chmod +x devnotes_${VERSION}_amd64.AppImage && ./devnotes_${VERSION}_amd64.AppImage
+const LINUX_COMMANDS = `chmod +x devnotes_${VERSION}_x86_64.AppImage && ./devnotes_${VERSION}_x86_64.AppImage
 sudo apt install ./devnotes_${VERSION}_amd64.deb      # Debian, Ubuntu
-sudo dnf install ./devnotes-${VERSION}-1.x86_64.rpm   # Fedora, RHEL`;
+sudo dnf install ./devnotes-${VERSION}.x86_64.rpm     # Fedora, RHEL`;
 
 const CHECK_COMMANDS = `sha256sum -c SHA256SUMS.txt --ignore-missing     # Linux
 Get-FileHash .\\devnotes_*_x64-setup.exe         # Windows, PowerShell`;
 
 const FR = {
   title: `Télécharger DevNotes ${VERSION} pour Windows et Linux`,
-  description: `DevNotes ${VERSION} pour Windows et Linux : l'installateur, l'AppImage, les paquets .deb, .rpm et MSI, et les exécutables portables. Gratuit et libre.`,
+  description: `DevNotes ${VERSION} pour Windows et Linux : l'installateur, l'AppImage, les paquets .deb et .rpm, et les exécutables autonomes. Gratuit et libre.`,
   label: 'Télécharger',
   heading: 'Télécharger DevNotes',
   lede: `La version ${VERSION}, pour Windows et Linux. Gratuite et libre, sans compte : tout reste sur votre machine.`,
@@ -59,7 +59,7 @@ const FR = {
 
 const EN: typeof FR = {
   title: `Download DevNotes ${VERSION} for Windows and Linux`,
-  description: `DevNotes ${VERSION} for Windows and Linux: the installer, the AppImage, the .deb, .rpm and MSI packages, and the portable executables. Free and open source.`,
+  description: `DevNotes ${VERSION} for Windows and Linux: the installer, the AppImage, the .deb and .rpm packages, and the standalone executables. Free and open source.`,
   label: 'Download',
   heading: 'Download DevNotes',
   lede: `Version ${VERSION}, for Windows and Linux. Free and open source, no account: everything stays on your machine.`,

@@ -1,0 +1,48 @@
+name: Security (Cargo)
+
+# Two triggers, because they catch different things. On a pull request: a dependency
+# arriving with a known advisory, while there is still a review to act on. On a
+# schedule: an advisory published *after* a dependency was merged, which no push would
+# ever surface. Cargo and npm have a workflow each, so a pull request that touches only
+# one of them is never judged on the other's tree.
+on:
+  pull_request:
+    branches: [main, 'dev/**']
+    paths:
+      - 'Cargo.toml'
+      - 'crates/*/Cargo.toml'
+      - 'e2e/Cargo.toml'
+      - 'Cargo.lock'
+      - 'deny.toml'
+      - '.github/workflows/security-cargo.yml'
+  schedule:
+    # Monday morning, so the week starts with the answer rather than ends with it.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-deny:
+    name: Cargo deny
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # Reads `Cargo.lock` and the advisory database; it compiles nothing, which is
+      # why this job needs no Rust toolchain and no cargo cache.
+      #
+      # ⚠️ The repository's only advisory net — Dependabot alerts are off. `licenses` came
+      # back with the egui tree, whose dozens of new crates arrive by pull request: one under a
+      # licence GPL-3.0 cannot ship is refused while it can still be replaced, and `sources`
+      # refuses one from anywhere but crates.io.
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: Cargo.toml
+          command: check

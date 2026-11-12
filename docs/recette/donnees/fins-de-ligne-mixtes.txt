@@ -1,0 +1,4 @@
+ligne un en CRLF
+ligne deux en LF
+ligne trois avec espaces   
+ligne quatre en CRligne cinq sans saut final  

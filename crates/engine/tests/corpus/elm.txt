@@ -1,0 +1,9 @@
+module Main exposing (main)
+
+import Html exposing (text)
+
+type alias Model =
+    { count : Int }
+
+main =
+    text "Hello"

@@ -4,7 +4,7 @@ import * as EN from './en';
 import * as FR from './fr';
 
 /** The version these pages were last checked against, by hand, in the application itself. */
-export const CHECKED_ON = '0.12';
+export const CHECKED_ON = '1.0';
 
 const inOrder = (pages: typeof FR): readonly DocPage[] => [
   pages.OVERVIEW,

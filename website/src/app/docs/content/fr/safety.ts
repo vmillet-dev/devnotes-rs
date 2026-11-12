@@ -88,7 +88,7 @@ export const SAFETY: DocPage = {
     ),
     h2('versions', 'Les versions d’un snippet'),
     p(
-      'Un snippet garde ses vingt dernières versions. L’',
+      'Un snippet, comme une Note, garde ses vingt dernières versions. L’',
       ui('Historique'),
       ' de l’éditeur montre ce qui reviendrait et ce qui partirait avant de ',
       ui('Revenir à cette version'),

@@ -1,0 +1,25 @@
+[package]
+name = "i18n"
+description = "The interface's translations: keys checked at build time, plurals, the system's language"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+chrono = { workspace = true, features = ["clock", "std"] }
+serde_json.workspace = true
+sys-locale.workspace = true
+
+[dev-dependencies]
+chrono-tz.workspace = true
+
+[build-dependencies]
+serde_json.workspace = true
+toml.workspace = true
+
+[lints]
+workspace = true

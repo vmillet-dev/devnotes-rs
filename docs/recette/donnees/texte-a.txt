@@ -1,0 +1,5 @@
+Mise en production du lundi
+Geler les merges sur main
+Prévenir le support
+Sauvegarder la base
+Déployer billing

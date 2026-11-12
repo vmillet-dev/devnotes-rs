@@ -80,9 +80,14 @@ export const SETTINGS: DocPage = {
         b('Appearance'),
         'the language (French or English), the theme (System, Dark, Light), the density (Comfortable, Compact)',
       ],
+      [b('Cards'), 'how many lines of a note a card previews'],
       [b('Editor'), 'the default note type, indenting with Tab, line wrapping in code'],
+      [
+        b('Calculation'),
+        'the decimals (up to fourteen), the number format and the date format of calculation sheets',
+      ],
       [b('Behaviour'), 'start with the system, minimise and close to the system tray'],
-      [b('Quick paste'), 'pinned notes first in the palette'],
+      [b('Palette'), 'pinned notes first in the palette'],
       [b('Notifications'), 'acknowledge each copy, announce updates'],
     ),
     p(
@@ -163,9 +168,21 @@ export const FAQ: DocPage = {
     ),
     h2('updates', 'How do I update?'),
     p(
-      'DevNotes offers new versions itself, with their notes. You can also download ',
+      'DevNotes offers new versions itself, with their notes, and installs them for the Windows installer and the AppImage. A ',
+      code('.deb'),
+      ' or ',
+      code('.rpm'),
+      ' is updated by your distribution’s package manager. You can also download ',
       link('the latest version', downloadPath('en')),
       ' and install it over the old one: your libraries are not touched.',
+    ),
+    h2('earlier', 'Will my libraries from an earlier version open?'),
+    p(
+      'Yes, as they are. DevNotes is now one native application: no browser engine inside, so nothing like WebView2 or WebKitGTK to install.',
+    ),
+    h2('wayland', 'On Linux under Wayland, something is missing.'),
+    p(
+      'DevNotes uses X11 whenever it is there, including XWayland. On a Wayland session without XWayland, which is rare, the window’s position is not restored, closing to the tray only minimises, a file cannot be dropped from the file manager, and HTML pasted into a Note keeps its text only.',
     ),
     h2('data', 'Where are my notes?'),
     p(

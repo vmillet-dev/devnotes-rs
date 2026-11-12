@@ -1,0 +1,6 @@
+let rec fact n =
+  match n with
+  | 0 -> 1
+  | n -> n * fact (n - 1)
+
+let () = Printf.printf "%d\n" (fact 5)

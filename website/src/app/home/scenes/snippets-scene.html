@@ -1,12 +1,9 @@
 <div class="window snip-ed">
   <div class="win-head">
-    <span class="win-title">{{ text().title }}</span
-    ><span class="chip-lang l-sh">SH</span>
+    <span class="win-title">{{ text().title }}</span><span class="chip-lang l-sh">SH</span>
     <span class="btn-small copy">{{ text().copyFilled }}</span>
   </div>
-  <div class="fields-head">
-    {{ text().fields }} <span class="count">{{ filled() }}</span>
-  </div>
+  <div class="fields-head">{{ text().fields }} <span class="count">{{ filled() }}</span></div>
   <div class="fields">
     <span class="lbl">{{ field('db_host') }}</span
     ><span class="fake-in" [class.typing]="hostTyping()">{{ host() }}</span>
@@ -22,7 +19,7 @@
 <div class="snip-desk">
   <div class="snip-keys">
     @for (key of keys; track key) {
-      <kbd class="cap" [class.pressed]="pressed($index)">{{ key }}</kbd>
+    <kbd class="cap" [class.pressed]="pressed($index)">{{ key }}</kbd>
     }
   </div>
   <div class="term">
@@ -40,36 +37,27 @@
         <path d="m20 20-3.5-3.5" />
       </svg>
       @if (query()) {
-        <span class="pal-query">{{ query() }}</span>
+      <span class="pal-query">{{ query() }}</span>
       } @else {
-        <span class="pal-placeholder">{{ text().search }}</span>
+      <span class="pal-placeholder">{{ text().search }}</span>
       }
       <span class="pal-caret"></span>
       <kbd class="esc">{{ text().esc }}</kbd>
     </div>
     <ul class="pal-results">
       @for (result of results(); track result.title; let first = $first) {
-        <li [class.is-sel]="first" [class.copying]="first && copying()">
-          <span class="chip-lang" [class]="'l-' + result.lang">{{ result.lang.toUpperCase() }}</span>
-          <span class="t"
-            >{{ result.before }}<mark>{{ result.match }}</mark
-            >{{ result.after }}</span
-          >
-          <span class="where">{{ text().space }}</span>
-        </li>
+      <li [class.is-sel]="first" [class.copying]="first && copying()">
+        <span class="chip-lang" [class]="'l-' + result.lang">{{ result.lang.toUpperCase() }}</span>
+        <span class="t">{{ result.before }}<mark>{{ result.match }}</mark>{{ result.after }}</span>
+        <span class="where">{{ text().space }}</span>
+      </li>
       }
     </ul>
     <div class="pal-foot">
       <span><kbd>↑</kbd><kbd>↓</kbd>{{ text().move }}</span>
-      <span
-        ><kbd>{{ text().enter }}</kbd
-        >{{ text().open }}</span
-      >
+      <span><kbd>{{ text().enter }}</kbd>{{ text().open }}</span>
       <span [class.lit]="copying()"><kbd>Ctrl</kbd><kbd>C</kbd>{{ text().copy }}</span>
-      <span
-        ><kbd>{{ text().esc }}</kbd
-        >{{ text().close }}</span
-      >
+      <span><kbd>{{ text().esc }}</kbd>{{ text().close }}</span>
     </div>
   </div>
   <div class="snip-toast">{{ text().copied }}</div>

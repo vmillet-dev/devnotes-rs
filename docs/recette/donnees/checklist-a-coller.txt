@@ -1,0 +1,5 @@
+- [x] Geler les merges
+- [ ] Prévenir le support
+* Sauvegarder la base
+1. Déployer billing
+[x] Vérifier /health
