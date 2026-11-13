@@ -355,7 +355,6 @@ pub mod iso8601 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{AppError, ErrorCode};
     use diesel::sql_types::{BigInt, Integer};
 
     /// A command that fell in the middle of a transaction: the next one finds the lock back,
