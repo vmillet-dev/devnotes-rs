@@ -67,8 +67,8 @@ impl<'a> TextField<'a> {
         self
     }
 
-    /// Masked as it is typed. ⚠️ Not a passphrase field: egui keeps an undo history of what
-    /// is typed; the gate has a field of its own.
+    /// Masked as it is typed, and kept out of egui's undo history. ⚠️ Not a passphrase field:
+    /// egui still holds the text in its memory; the gate has a field of its own.
     #[must_use]
     pub fn password(mut self, password: bool) -> Self {
         self.password = password;
@@ -109,9 +109,20 @@ impl<'a> TextField<'a> {
                 );
                 name(ui, &response, self.name);
                 address(ui, &response, self.author_id);
+                if self.password {
+                    forget_undo(ui.ctx(), response.id);
+                }
                 response
             })
             .inner
+    }
+}
+
+/// What an undo would type back into a masked field: a key left behind otherwise returns.
+fn forget_undo(ctx: &egui::Context, id: egui::Id) {
+    if let Some(mut state) = egui::text_edit::TextEditState::load(ctx, id) {
+        state.clear_undoer();
+        state.store(ctx, id);
     }
 }
 

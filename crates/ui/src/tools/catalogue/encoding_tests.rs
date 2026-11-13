@@ -188,3 +188,26 @@ fn the_ascii_table_lists_the_128_codes_and_finds_one_in_any_base() {
 
     assert_eq!(labels(&harness, "reference-row"), ["65"]);
 }
+
+/// Left and opened again: the field's undo does not bring the key back.
+#[test]
+fn a_key_left_behind_is_gone_from_the_undo() {
+    let mut harness = opened("hash");
+    type_in(&mut harness, "hash-input", "hello");
+    click(&mut harness, "hash-hmac");
+    type_in(&mut harness, "hash-key", "key");
+    settle(&mut harness);
+
+    click(&mut harness, "tool-back");
+    let bench = harness.state_mut();
+    let open = crate::action::Action::Tools(crate::tools::Action::Open("hash"));
+    bench
+        .state
+        .apply(open, &egui::Context::default(), &bench.backend);
+    settle(&mut harness);
+
+    click(&mut harness, "hash-key");
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::Z);
+    settle(&mut harness);
+    assert_eq!(value_of(&harness, "hash-key"), "");
+}

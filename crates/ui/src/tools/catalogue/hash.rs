@@ -89,7 +89,11 @@ pub(super) struct HashTool {
 }
 
 pub(super) fn make() -> Box<dyn Tool> {
-    Box::new(HashTool {
+    Box::new(fresh())
+}
+
+fn fresh() -> HashTool {
+    HashTool {
         source: Source::Text,
         text: String::new(),
         path: None,
@@ -102,7 +106,7 @@ pub(super) fn make() -> Box<dyn Tool> {
         answer: Live::default(),
         wants_file: false,
         picking: None,
-    })
+    }
 }
 
 /// « 64 hexadecimal characters: SHA-256 or SHA3-256 », once translated.
@@ -523,5 +527,32 @@ impl Tool for HashTool {
     fn left(&mut self) {
         self.key.zeroize();
         self.key_shown = false;
+        self.answer = Live::default();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tools::live::on_a_turn;
+
+    #[test]
+    fn leaving_drops_the_answer_that_was_keyed() {
+        let (backend, _profile) = crate::testing::backend();
+        let mut tool = HashTool {
+            text: "hello".to_owned(),
+            hmac: true,
+            key: "key".to_owned(),
+            ..fresh()
+        };
+        for time in [0.0, 0.01] {
+            on_a_turn(&backend, time, |turn| tool.update(turn));
+            backend.settle();
+        }
+        assert!(tool.answer.answered().is_some_and(|it| it.key.is_some()));
+
+        tool.left();
+
+        assert!(tool.answer.answered().is_none_or(|it| it.key.is_none()));
     }
 }
