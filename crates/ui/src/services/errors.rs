@@ -13,14 +13,14 @@ impl ErrorNotifier {
     /// `fallback` says what was attempted; a cause the core named says it better. The detail is
     /// the log's, never the screen's: it is the core's English, a path perhaps.
     pub fn report(&mut self, fallback: Key, error: &AppError) {
-        log::warn!("{}: {}", fallback.path(), error.detail);
+        log::warn!("{}: {}", fallback.path(), error.for_log());
         self.notice = Some(message_of(error).unwrap_or_else(|| Message::new(fallback)));
     }
 
     /// The same, the fallback carrying what was typed: « Folder “Runbooks” could not be
     /// created ».
     pub fn report_message(&mut self, fallback: Message, error: &AppError) {
-        log::warn!("{}: {}", fallback.key.path(), error.detail);
+        log::warn!("{}: {}", fallback.key.path(), error.for_log());
         self.notice = Some(message_of(error).unwrap_or(fallback));
     }
 

@@ -76,7 +76,7 @@ impl Sends {
                 Ok(response) => Phase::Answered(Arc::new(response)),
                 Err(error) if error.code == ErrorCode::HttpCancelled => Phase::Cancelled,
                 Err(error) => {
-                    log::warn!("A send failed: {}", error.detail);
+                    log::warn!("A send failed: {}", error.for_log());
                     Phase::Failed(error)
                 }
             };

@@ -74,7 +74,7 @@ Principles:
 
 ### Core and interface
 
-- **Errors are codes**: `AppError { code, params, detail }`; the UI translates by an exhaustive `match` on `ErrorCode`, so a new code does not compile until it has its key in both locales; `detail` goes to the log, never to the screen.
+- **Errors are codes**: `AppError { code, params, detail }`; the UI translates by an exhaustive `match` on `ErrorCode`, so a new code does not compile until it has its key in both locales; `detail` never goes to the screen, and to the log only through `AppError::for_log` (the code, its detail only where nothing typed is in it).
 - `NotePatch`: a field set to `None` is untouched.
 - **Lists send previews** (`PREVIEW_LINES`); ⚠️ opening a note always reads it whole by id (`get_note`). → "A list sends previews, and the body is read by id".
 - No user-visible string in Rust outside the translation files (`crates/i18n/translations/{fr,en}.json`): code returns a key and its params. ⚠️ Never interpolate user content (a snippet's `{{fields}}`) into a translation template.

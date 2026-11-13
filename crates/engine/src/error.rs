@@ -234,6 +234,45 @@ impl AppError {
         }
     }
 
+    /// What a log line says of this error: its code, and its detail only for the codes whose
+    /// detail holds nothing typed or sealed — never a name, a file, a URL or a script's words.
+    #[must_use]
+    pub fn for_log(&self) -> String {
+        use ErrorCode as C;
+        let plain = matches!(
+            self.code,
+            C::NoteNotFound
+                | C::SpaceNotFound
+                | C::FolderNotFound
+                | C::AttachmentNotFound
+                | C::HttpItemNotFound
+                | C::HttpEnvironmentNotFound
+                | C::RevisionNotFound
+                | C::LibraryNotFound
+                | C::BackupNotFound
+                | C::BackupUnopenable
+                | C::LibraryOpen
+                | C::LastLibrary
+                | C::StorageUnavailable
+                | C::WrongPassphrase
+                | C::Locked
+                | C::PassphraseRequired
+                | C::LibraryDamaged
+                | C::Storage
+                | C::HttpTimeout
+                | C::HttpTooManyRedirects
+                | C::HttpCancelled
+                | C::HttpWebsocketRefused
+                | C::HttpScriptSkipped
+                | C::HttpRunData
+        );
+        if plain {
+            format!("{:?}: {}", self.code, self.detail)
+        } else {
+            format!("{:?}", self.code)
+        }
+    }
+
     pub fn storage_unavailable() -> Self {
         Self::new(
             ErrorCode::StorageUnavailable,

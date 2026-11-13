@@ -924,7 +924,7 @@ impl Flight {
         .await;
         match kept {
             Ok(wrote) => self.wrote |= wrote,
-            Err(error) => log::warn!("What a script wrote was not kept: {}", error.detail),
+            Err(error) => log::warn!("What a script wrote was not kept: {}", error.for_log()),
         }
     }
 
@@ -964,7 +964,7 @@ impl Flight {
         if let Err(error) = kept {
             log::warn!(
                 "A send's history or cookies were not kept: {}",
-                error.detail
+                error.for_log()
             );
         }
     }
