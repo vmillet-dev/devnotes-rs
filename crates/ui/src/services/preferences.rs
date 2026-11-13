@@ -30,9 +30,14 @@ impl Preferences {
             .unwrap_or_default()
     }
 
-    /// Durable: a crash halfway leaves the previous file, never half of one.
+    /// Staged then renamed: a crash halfway leaves the previous file, never half of one.
     pub fn write(&self, file: &Path) -> io::Result<()> {
-        platform::durable::write(file, &serde_json::to_vec_pretty(&self.0)?)
+        if let Some(directory) = file.parent() {
+            std::fs::create_dir_all(directory)?;
+        }
+        let staged = file.with_extension("json.part");
+        std::fs::write(&staged, serde_json::to_vec_pretty(&self.0)?)?;
+        std::fs::rename(&staged, file)
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {

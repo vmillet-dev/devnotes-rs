@@ -1,6 +1,9 @@
 //! A file that survives a power cut: written beside its place, flushed to the disk, renamed over
 //! the old one, then its folder flushed so the rename itself is kept. After a cut the old file
 //! or the new one is there, whole — without the flush, a renamed file can be found empty.
+//!
+//! ⚠️ Not for the preferences: rewritten at each change on the db queue, a flush each time
+//! (30–190 ms on a CI disk) holds every job behind it, and an empty one reads as the defaults.
 
 use std::fs::OpenOptions;
 use std::io;

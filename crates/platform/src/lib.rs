@@ -8,7 +8,6 @@ pub mod autostart;
 pub mod clipboard;
 pub mod desktop;
 pub mod dialog;
-pub mod durable;
 pub mod instance;
 pub mod links;
 pub mod motion;

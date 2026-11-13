@@ -36,7 +36,7 @@ Principles:
 - **Switching library resets the library scope of the UI** (plan § 3.3.8); neither the open nor the last library can be deleted.
 - **Two `preferences.json`**: `devnotes.notes.*` is per library, the rest per application (`automaticBackups` stays application-level, read by the core itself). → "Two scopes of preference, one prefix apart".
 - **Profiles**: the binary defaults to `com.devnotes.app`, the packages' identifier (`com.devnotes.app.dev` until 1.0.0, D16); ⚠️ never two processes on one profile — the in-memory index assumes it is the only writer (D16).
-- **Files are written durably** — staged, flushed, renamed, the folder flushed on Unix — through `engine::durable` (registry, key file, export, saved response, restore, attachments) or its twin `platform::durable` (preferences, window geometry).
+- **Files are written durably** — staged, flushed, renamed, the folder flushed on Unix — through `engine::durable` (registry, key file, export, saved response, restore, attachments). ⚠️ The two `preferences.json` and the window geometry are only staged then renamed: rewritten at each change on the db queue, a flush each time clogs it, and an empty one after a power cut reads as the defaults.
 - **Backups**: launch copy via `VACUUM INTO` before sweeps, key file and `attachments/` hard-linked, ≤ 1/day; restore empties the `Mutex` and the index first and sets files aside in `replaced/`. Every open runs `db::quick_check` before migrations; damaged libraries go through `recovery::set_aside`. → "The copies, and putting one back", "The gate".
 - **Attachments** live in `attachments/` under `model::stored_name` (filters imported ids); write the file, then the record. → "Attachments".
 
