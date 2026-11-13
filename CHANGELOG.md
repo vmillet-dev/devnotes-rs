@@ -12,6 +12,34 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [1.0.1] - 2026-11-13
+
+### 🐛 Fixed
+
+- Robustness: no panic on accented text, deep nesting; lock recovered (#1519)
+- Code generation: PowerShell and curl quoting safe; cookie order kept (#1517)
+- Tools: secrets cleared on leaving; Cron weekend right on Sundays (#1515)
+- Core: TLS setting for WebSockets, failed preference writes logged (#1511)
+- Libraries: an unreadable registry is set aside, never overwritten (#1512)
+- Search: Notes and drawings found by the text they show (#1514)
+- Files: key file, registry and exports survive a power cut (#1499)
+- Calcul: a short date before accented text no longer closes the app (#1497)
+
+### 🔒 Security
+
+- Storage: bundled SQLite updated past RUSTSEC-2026-0459 (#1516)
+- Desktop: outside actions and release profiling refused (#1518)
+- Signing job: third-party actions pinned to a commit (#1507)
+- Script libraries: watched, audited and rebuilt in CI (#1513)
+- Linux: rustix updated past RUSTSEC-2026-0486 (#1509)
+- Import: a protected export's key cost is bounded before deriving (#1505)
+- Request scripts: file reads limited to what the user allowed (#1504)
+- Log: errors no longer write what the user typed (#1498)
+
+### 🧰 Under the hood
+
+- Screen tests: clipboard and opener injected (#1508)
+
 ## [1.0.0] - 2026-11-09
 
 ### 📌 In short
