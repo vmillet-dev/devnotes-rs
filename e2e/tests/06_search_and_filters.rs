@@ -201,7 +201,30 @@ fn search_and_filters() {
         );
     });
 
+    read_text(&mut app);
     app.quit();
+}
+
+fn read_text(app: &mut App) {
+    step(
+        "a Note is found by the words it shows, across its bold",
+        || {
+            app.click("new-note-kind");
+            app.click("new-note-note");
+            app.click("editor-rich");
+            app.type_text("ask about the ");
+            app.click("rich-bold");
+            app.type_text("rollout");
+            app.click("rich-bold");
+            app.type_text(" window");
+            app.click("editor-close");
+            app.eventually("the editor is closed", |tree| !tree.has("editor-title"));
+            search(app, "rollout window");
+            app.eventually("the Note alone", |tree| {
+                tree.count("note-card") == 1 && tree.has("search-matched")
+            });
+        },
+    );
 }
 
 /// The facets' rails over the samples, then the header at three widths.
