@@ -33,7 +33,7 @@ runs:
         echo "channel=$channel" >> "$GITHUB_OUTPUT"
         echo "Pinned toolchain: $channel"
 
-    - uses: dtolnay/rust-toolchain@master
+    - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
       with:
         toolchain: ${{ steps.toolchain.outputs.channel }}
         components: clippy, rustfmt
@@ -51,7 +51,7 @@ runs:
     # pull request: a pull request reads its base branch's entry, then main's — whole when
     # Cargo.lock matches, by prefix when it moved. ⚠️ A quota of ten gigabytes, about one per
     # key and branch: two branches' five keys fit, and a merged milestone's are evicted first.
-    - uses: Swatinem/rust-cache@v2
+    - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
       with:
         shared-key: ${{ inputs.shared-key }}
         save-if: ${{ inputs.save-if == 'true' && github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/dev/')) }}

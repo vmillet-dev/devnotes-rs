@@ -132,6 +132,11 @@ package manager by design, and their signatures are ignored rather than fatal.
 release would be one the updater refuses to install, discovered by users rather than by CI.
 The public half is `UPDATES.public_key` in `crates/app/src/desktop.rs`.
 
+⚠️ **Every action a workflow uses is pinned by its commit**, its tag in a comment beside it
+(`actions/checkout@<sha> # v7`), the composite `setup-rust` included: the packaging job runs
+them where the signing key arrives, and a tag or a branch can be moved to other code. Dependabot
+proposes the new commits; a pull request that brings an action by tag is pinned before it merges.
+
 ## If something goes wrong
 
 The workflow is ordered so that everything reversible happens first. The version check, the
