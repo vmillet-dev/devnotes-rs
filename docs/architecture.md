@@ -5065,9 +5065,10 @@ input's `type` flipped rather than a second plain-text field) shows both fields 
 on creation the minimum is the field's description from the start rather than a complaint
 after the first character.
 
-**The cost in a key file is bounded before anything is derived** (`vault::file::bounded`: at most
-1 GiB, 16 passes, 16 lanes). It is the one input an attacker can write, and read unbounded it is
-a multi-gigabyte allocation or an hour of hashing at every unlock.
+**The cost in a key file, or in a protected export's recipe, is bounded before anything is
+derived** (`vault::file::bounded`: at most 1 GiB, 16 passes, 16 lanes). They are the inputs an
+attacker can write, and read unbounded one is a multi-gigabyte allocation or an hour of hashing on
+the database thread, at every unlock or at the import of a forged file.
 
 ### The floor
 
