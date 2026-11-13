@@ -40,3 +40,14 @@ impl Clipboard for NoClipboard {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_empty_clipboard_holds_nothing() {
+        assert_eq!(NoClipboard.html(), None);
+        assert_eq!(NoClipboard.text(), None);
+    }
+}

@@ -29,3 +29,13 @@ impl Opener for NoOpener {
         Err(io::Error::other("no desktop here"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn with_no_desktop_nothing_is_opened() {
+        assert!(NoOpener.open(Path::new("notes.pdf")).is_err());
+    }
+}
