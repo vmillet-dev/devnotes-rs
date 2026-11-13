@@ -11,6 +11,7 @@ on:
     paths:
       - 'package.json'
       - 'package-lock.json'
+      - 'crates/engine/sandbox/**'
       - '.github/workflows/security-npm.yml'
   schedule:
     # Monday morning, so the week starts with the answer rather than ends with it.
@@ -121,3 +122,32 @@ jobs:
           }
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
           EOF
+
+  # What `require` finds in a request script: bundled into the committed `dist/` and compiled
+  # into the binary, so every package there ships, whatever section declares it.
+  script-libraries:
+    name: Script libraries
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: crates/engine/sandbox
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: crates/engine/sandbox/package-lock.json
+
+      - run: npm ci --ignore-scripts
+
+      - name: Advisories that block
+        run: npm audit --audit-level=high
+
+      # A bundle that differs from what its lock file builds is stale, or was altered by hand.
+      - name: The committed bundle is what the lock file builds
+        run: |
+          npm run build
+          git diff --exit-code -- dist

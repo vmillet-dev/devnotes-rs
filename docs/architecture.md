@@ -2564,7 +2564,9 @@ answers on its standard output.
   about 1 MB, each evaluated on its first `require`. They are bundled by
   `crates/engine/sandbox/build.mjs` from its own `package.json` (not the application's: none of it
   reaches the WebView) into `sandbox/dist/`, which is committed with a manifest and the
-  libraries' licences; `libraries::tests` holds the table to the manifest. Node's modules are
+  libraries' licences; `libraries::tests` holds the table to the manifest. Dependabot watches
+  that folder, and the Script libraries job of `security-npm.yml` audits it and fails when a
+  rebuild changes `dist/`. Node's modules are
   left out of the other bundles, so one copy serves them all. Nothing else is found: `fs`,
   `child_process`, `net` answer `MODULE_NOT_FOUND`.
 - ⚠️ **The network is this process's, not the script's** (`network.rs`): `pm.sendRequest` and
