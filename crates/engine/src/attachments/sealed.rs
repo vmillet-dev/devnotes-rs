@@ -11,7 +11,7 @@ use crate::vault::key::Vault;
 
 pub fn write_sealed(vault: &Vault, destination: &Path, bytes: &[u8]) -> Result<u64, StorageError> {
     let sealed = vault.seal_bytes(bytes)?;
-    std::fs::write(destination, &sealed).context(destination.display())?;
+    crate::durable::write(destination, &sealed).context(destination.display())?;
 
     // The plaintext length: the record is what the interface shows.
     Ok(bytes.len() as u64)

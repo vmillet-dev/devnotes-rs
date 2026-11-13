@@ -20,6 +20,7 @@ pub mod vault;
 pub mod app_info;
 pub(crate) mod closed_enum;
 pub(crate) mod count;
+pub(crate) mod durable;
 pub mod layout;
 pub(crate) mod name;
 
