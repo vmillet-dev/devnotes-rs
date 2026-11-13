@@ -2594,6 +2594,13 @@ then the request's; once answered, the other way round; a blank one is not run.
   about the method it saw; one the script made a change, unconfirmed, is `httpScriptProtected`
   (`method`, `environment`), and the pane asks with « Envoyer quand même », which sends again,
   scripts included, with `confirmed`.
+- ⚠️ **A file a script asks to send waits for a yes, path by path** (`SendRequest.files`): a
+  `file` body or a file part the scripts before the send added — compared with what the
+  request's own rows read, variables resolved before any script — and any file a
+  `pm.sendRequest` names. Refused, the send answers `httpScriptFile` (`path`) and the pane asks
+  « Envoyer le fichier », which sends again with that path added to the ones already allowed.
+  A collection run asks nothing halfway: the step fails. Every file a send reads is capped at
+  `SENT_FILE_MEGABYTES` (64), checked before it is read (`httpFileTooLarge`).
 - A script before the send that fails keeps the request in: `httpScript` carries how
   (`failure`), whose script (`level`, `name`, `owner`), the `line` and — for a throw or a syntax
   error only — the script's own `message`. `skipRequest()` is `httpScriptSkipped`; a method Rust

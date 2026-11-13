@@ -1,6 +1,7 @@
 //! Scripts run for real: the application relaunches itself as their host. One keeps a value of the
 //! answer in a variable, a test reads the answer, the console hears them, the answer is kept as a
-//! note, and a throw before the send stops it and leads back to its line.
+//! note, a file a script asks to send waits for a yes, and a throw before the send stops it and
+//! leads back to its line.
 
 use e2e::{App, Tree, step};
 use egui::accesskit::Node;
@@ -99,6 +100,36 @@ fn tests_and_console(app: &mut App) {
     });
 }
 
+fn file_asked(app: &mut App, path: &str) {
+    step("a file a script asks to send waits for a yes", || {
+        app.click("http-section-scripts");
+        app.click("http-script-phase-0");
+        app.fill(
+            "http-script-code",
+            &format!("pm.request.body.update({{ mode: 'file', file: {{ src: '{path}' }} }});"),
+        );
+        app.eventually("the script is typed", |tree| {
+            tree.find("http-script-code")
+                .and_then(Node::value)
+                .is_some_and(|text| text.contains("id_ed25519"))
+        });
+        app.press(Key::Enter, Modifiers::COMMAND);
+        app.eventually("the file is named", |tree| {
+            tree.text("http-script-file-confirm")
+                .is_some_and(|said| said.contains("id_ed25519"))
+        });
+        app.capture("file-asked");
+        app.click("http-script-file-cancel");
+        app.eventually("nothing left", |tree| {
+            !tree.has("http-script-file-confirm") && !tree.has("http-response-status")
+        });
+        app.press(Key::Enter, Modifiers::COMMAND);
+        app.wait_for("http-script-file-confirm");
+        app.click("http-script-file-send");
+        app.wait_for("http-response-status");
+    });
+}
+
 fn stopped(app: &mut App) {
     step(
         "a throw before the send stops it, and leads to its line",
@@ -131,9 +162,15 @@ fn http_scripts() {
     app.create_library();
     app.wait_for("note-card");
 
+    let outside = tempfile::tempdir().unwrap();
+    let key = outside.path().join("id_ed25519");
+    std::fs::write(&key, "not a key").unwrap();
+    let path = key.display().to_string().replace('\\', "/");
+
     request(&mut app);
     kept_value(&mut app);
     tests_and_console(&mut app);
+    file_asked(&mut app, &path);
     stopped(&mut app);
     app.quit_discarding();
 }

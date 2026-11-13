@@ -119,6 +119,7 @@ pub(super) fn request(url: &str) -> SendRequest {
         request_id: None,
         environment_id: None,
         confirmed: false,
+        files: Vec::new(),
     }
 }
 

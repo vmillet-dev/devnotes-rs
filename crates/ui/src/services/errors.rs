@@ -88,6 +88,7 @@ fn key_of(error: &AppError) -> Option<Key> {
         ErrorCode::HttpRefused => e::HTTP_REFUSED,
         ErrorCode::HttpTls => e::HTTP_TLS,
         ErrorCode::HttpFileUnreadable => e::HTTP_FILE_UNREADABLE,
+        ErrorCode::HttpFileTooLarge => e::HTTP_FILE_TOO_LARGE,
         ErrorCode::HttpCancelled => e::HTTP_CANCELLED,
         ErrorCode::HttpGraphqlVariables => e::HTTP_GRAPHQL_VARIABLES,
         ErrorCode::HttpWebsocketRefused => e::HTTP_WEBSOCKET_REFUSED,
@@ -96,6 +97,7 @@ fn key_of(error: &AppError) -> Option<Key> {
         ErrorCode::HttpScriptSkipped => e::HTTP_SCRIPT_SKIPPED,
         ErrorCode::HttpScriptMethod => e::HTTP_SCRIPT_METHOD,
         ErrorCode::HttpScriptProtected => e::HTTP_SCRIPT_PROTECTED,
+        ErrorCode::HttpScriptFile => e::HTTP_SCRIPT_FILE,
         // A sentence per value of one parameter: whose delay ran out, which script failed how.
         ErrorCode::HttpTimeout => variant(error, "errors.httpTimeout", "source")?,
         ErrorCode::HttpTooManyRedirects => variant(error, "errors.httpTooManyRedirects", "source")?,

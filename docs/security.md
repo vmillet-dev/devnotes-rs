@@ -50,6 +50,7 @@ Opening an attachment writes a decrypted copy inside your own profile, never the
 - **One process per profile.** A second launch on the same profile hands over to the first and exits: the index assumes it is the only writer of the library, and two writers would leave it silently wrong.
 - **No note in the logs.** The log (`devnotes.log`, under `%LOCALAPPDATA%\com.devnotes.app\logs` or `~/.local/share/com.devnotes.app/logs`) records what happened, never what you wrote: a crash records where and on which thread, **never its message**, since a message can quote a piece of a note. Neither is a passphrase or a key ever logged.
 - **No web page inside.** Since 1.0.0 the interface is native: there is no WebView, so no page, no script and no content policy to get wrong. A link in a note opens in your browser only if it is `http` or `https`; a `file:` link is a program to run, and is refused.
+- **No file sent behind your back.** A request script that gives a request a file to send, or sends one itself, stops the send and names the file; it leaves only after your yes, for that file alone. A collection run sends no such file. No file over 64 MB is read for a send.
 - **Nothing of the window's state in clear.** The window remembers its size and place, and nothing else of what it showed.
 - **Updates are signed.** An update is downloaded whole and checked against a signature only the release key can make before anything is installed; a file altered by a single byte is refused. Installed from a `.deb` or an `.rpm`, DevNotes leaves updates to your package manager.
 

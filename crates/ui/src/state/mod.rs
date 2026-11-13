@@ -1097,6 +1097,7 @@ impl AppState {
             Http::Environments(asked) => self.http.ask_environments(backend, asked, now),
             Http::Define(name) => self.http.define(backend, name, now),
             Http::SendAnyway(key) => self.http.send_anyway(backend, &key, now),
+            Http::SendFile(key, path) => self.http.send_file(backend, &key, path, now),
             Http::StopAsking => self.http.stop_asking(),
             Http::Cookies(asked) => self.http.ask_cookies(backend, asked),
             Http::ToggleConsole => self.http.toggle_console(),

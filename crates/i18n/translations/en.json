@@ -614,6 +614,7 @@
       "default": "{count, plural, =0 {Redirect refused: the setting allows none (default setting).} one {Too many redirects: more than one (default setting).} other {Too many redirects: more than # (default setting).}}"
     },
     "httpFileUnreadable": "The file {{path}} cannot be read.",
+    "httpFileTooLarge": "The file {{path}} is over {{limit}} MB: a request sends none heavier.",
     "httpCancelled": "Send cancelled.",
     "httpNetwork": "Network error.",
     "httpWebsocketScheme": "A WebSocket opens on ws:// or wss://.",
@@ -639,6 +640,7 @@
     "httpScriptSkipped": "The script before the send skipped the request: it was not sent.",
     "httpScriptMethod": "The script before the send chose the method “{{method}}”, which does not exist.",
     "httpScriptProtected": "The script before the send made it a {{method}} to {{environment}}, which is protected.",
+    "httpScriptFile": "A script wants to send the file {{path}} without your yes: the request did not leave.",
     "httpRunData": {
       "unreadable": "This file reads neither as a CSV with its header nor as a JSON array of objects.",
       "empty": "This file holds no row of data."
@@ -3548,7 +3550,9 @@
       "send": "Send",
       "sendHint": "Send (Ctrl+Enter)",
       "cancel": "Cancel",
-      "failed": "The request could not be sent."
+      "failed": "The request could not be sent.",
+      "askFile": "A script wants to send the file {{path}}. Send it?",
+      "sendFile": "Send the file"
     },
     "split": {
       "label": "Height of the request — arrows to change it, double-click or Enter for automatic",
