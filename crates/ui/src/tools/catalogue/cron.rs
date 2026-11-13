@@ -2,7 +2,7 @@
 
 mod sentence;
 
-use chrono::{DateTime, Days, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use egui::{CornerRadius, FontFamily, Margin, Pos2, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::cron::{
@@ -39,23 +39,23 @@ pub(super) fn make() -> Box<dyn Tool> {
     Box::<CronTool>::default()
 }
 
-fn days_on(date: &str, days: u64) -> String {
+fn days_on(date: &str, days: i64) -> String {
     NaiveDate::parse_from_str(date, "%Y-%m-%d")
         .ok()
-        .and_then(|it| it.checked_add_days(Days::new(days)))
+        .and_then(|it| it.checked_add_signed(TimeDelta::days(days)))
         .map_or_else(|| date.to_owned(), |it| it.format("%Y-%m-%d").to_string())
 }
 
 /// The two ends of a shortcut, as they are typed. `weekday` is 1 for Monday: on a Saturday or a
 /// Sunday « this weekend » is the one under way, and « Friday » the next.
 fn shortcut_window(shortcut: &str, now: &Run) -> (String, String) {
-    let at = |days: u64, time: &str| format!("{} {time}", days_on(&now.date, days));
-    let weekday = u64::from(now.weekday);
+    let at = |days: i64, time: &str| format!("{} {time}", days_on(&now.date, days));
+    let weekday = i64::from(now.weekday);
     match shortcut {
         "today" => (at(0, "00:00"), at(1, "00:00")),
         "tomorrow" => (at(1, "00:00"), at(2, "00:00")),
         "weekend" => {
-            let saturday = 6_u64.saturating_sub(weekday);
+            let saturday = 6 - weekday;
             (at(saturday, "00:00"), at(saturday + 2, "00:00"))
         }
         _ => {
@@ -638,10 +638,20 @@ mod tests {
     }
 
     #[test]
-    fn this_weekend_on_a_sunday_is_the_one_under_way_counted_from_its_saturday() {
+    fn this_weekend_on_a_wednesday_is_the_next_one() {
         let wednesday = run("2026-10-14", 3);
 
         let (from, until) = shortcut_window("weekend", &wednesday);
+
+        assert_eq!(from, "2026-10-17 00:00");
+        assert_eq!(until, "2026-10-19 00:00");
+    }
+
+    #[test]
+    fn this_weekend_on_a_sunday_is_the_one_under_way_counted_from_its_saturday() {
+        let sunday = run("2026-10-18", 7);
+
+        let (from, until) = shortcut_window("weekend", &sunday);
 
         assert_eq!(from, "2026-10-17 00:00");
         assert_eq!(until, "2026-10-19 00:00");
