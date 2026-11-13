@@ -5870,7 +5870,9 @@ operating system is `platform`, one module per subject with a trait a test fakes
   message (D18).
 - **`platform::clipboard`** — what the clipboard holds beyond the text egui hands a field (a
   page's HTML, for a paste into a Note); a clipboard that cannot be opened answers `None`, and a
-  copy that failed only withholds its acknowledgement.
+  copy that failed only withholds its acknowledgement. ⚠️ It reaches `AppState` through
+  `ui::Desktop`, like the opener: `AppState::new` starts with `NoClipboard` and `NoOpener`, so a
+  screen test never pastes the machine's clipboard nor starts one of its programs.
 - **`platform::dialog`** — the file dialog: `None` covers a cancel **and** a dialog the desktop
   could not show, since there is nothing to open either way. Under Linux the XDG portal is asked
   first (D29).

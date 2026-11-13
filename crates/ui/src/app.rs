@@ -6,6 +6,8 @@ use std::sync::Arc;
 use crossbeam_channel::Receiver;
 use engine::{EngineEvent, Paths};
 use platform::autostart::{Autostart, NoAutostart};
+use platform::clipboard::{Clipboard, NoClipboard};
+use platform::desktop::{NoOpener, Opener};
 use platform::dialog::{FileDialog, NoDialog};
 use platform::instance::Message;
 use platform::notify::{NoNotifier, Notifier};
@@ -54,6 +56,8 @@ pub struct Desktop {
     pub notifier: Arc<dyn Notifier + Send + Sync>,
     pub dialog: Arc<dyn FileDialog + Send + Sync>,
     pub updater: Arc<dyn Updater + Send + Sync>,
+    pub clipboard: Arc<dyn Clipboard + Send + Sync>,
+    pub opener: Arc<dyn Opener + Send + Sync>,
 }
 
 impl Default for Desktop {
@@ -65,6 +69,8 @@ impl Default for Desktop {
             notifier: Arc::new(NoNotifier),
             dialog: Arc::new(NoDialog),
             updater: Arc::new(NoUpdater),
+            clipboard: Arc::new(NoClipboard),
+            opener: Arc::new(NoOpener),
         }
     }
 }
@@ -96,6 +102,8 @@ impl DevNotesApp {
         state.autostart = AutostartState::with(startup.desktop.autostart);
         state.notifier = startup.desktop.notifier;
         state.dialog = startup.desktop.dialog;
+        state.clipboard = startup.desktop.clipboard;
+        state.opener = startup.desktop.opener;
         state.updates = UpdateState::with(startup.desktop.updater);
         state.apply_look(&cc.egui_ctx);
         // The grammars take a few hundred milliseconds to load: never on the frame, which is
