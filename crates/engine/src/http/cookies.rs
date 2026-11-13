@@ -89,8 +89,10 @@ fn cookie_date(text: &str) -> Option<DateTime<Utc>> {
             day = Some(found);
             continue;
         }
-        if month.is_none() && token.len() >= 3 {
-            let start = token[..3].to_ascii_lowercase();
+        if month.is_none()
+            && let Some(start) = token.get(..3)
+        {
+            let start = start.to_ascii_lowercase();
             if let Some(at) = MONTHS.iter().position(|name| *name == start) {
                 month = Some(u32::try_from(at).ok()? + 1);
                 continue;
@@ -389,6 +391,13 @@ mod tests {
             ),
             [cookie("named", "127.0.0.1", true)]
         );
+    }
+
+    /// Headers are decoded lossily: a date may hold anything.
+    #[test]
+    fn an_expiry_in_accented_letters_is_no_date() {
+        assert_eq!(cookie_date("éé"), None);
+        assert_eq!(cookie_date("21 éé 2026"), None);
     }
 
     /// #705: RFC 850 and asctime were read as no date at all, and the cookie lived the session.

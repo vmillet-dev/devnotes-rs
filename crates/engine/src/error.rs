@@ -172,6 +172,7 @@ pub enum ErrorCode {
     HttpFileTooLarge,
     /// What « Annuler » answers: the front, which asked, says nothing.
     HttpCancelled,
+    HttpFell,
     HttpGraphqlVariables,
     /// The `status` parameter is what the server answered instead of switching protocols.
     HttpWebsocketRefused,
@@ -266,6 +267,7 @@ impl AppError {
                 | C::HttpTimeout
                 | C::HttpTooManyRedirects
                 | C::HttpCancelled
+                | C::HttpFell
                 | C::HttpWebsocketRefused
                 | C::HttpScriptSkipped
                 | C::HttpRunData
@@ -326,6 +328,7 @@ impl From<SendError> for AppError {
                     .and("limit", &crate::http::send::SENT_FILE_MEGABYTES.to_string())
             }
             SendError::Cancelled => Self::new(ErrorCode::HttpCancelled, detail),
+            SendError::Fell => Self::new(ErrorCode::HttpFell, detail),
             SendError::GraphqlVariables(_) => Self::new(ErrorCode::HttpGraphqlVariables, detail),
             SendError::Handshake(status) => Self::with(
                 ErrorCode::HttpWebsocketRefused,

@@ -90,6 +90,7 @@ fn key_of(error: &AppError) -> Option<Key> {
         ErrorCode::HttpFileUnreadable => e::HTTP_FILE_UNREADABLE,
         ErrorCode::HttpFileTooLarge => e::HTTP_FILE_TOO_LARGE,
         ErrorCode::HttpCancelled => e::HTTP_CANCELLED,
+        ErrorCode::HttpFell => e::HTTP_FELL,
         ErrorCode::HttpGraphqlVariables => e::HTTP_GRAPHQL_VARIABLES,
         ErrorCode::HttpWebsocketRefused => e::HTTP_WEBSOCKET_REFUSED,
         ErrorCode::HttpNetwork => e::HTTP_NETWORK,

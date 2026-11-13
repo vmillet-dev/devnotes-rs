@@ -551,9 +551,26 @@ impl App {
         self.apply(vec![Event::Paste(text.to_owned())]);
     }
 
-    /// Clicks a field, then types into it.
+    /// Clicks a field, then types into it once it holds the focus: text typed a frame early
+    /// goes nowhere, as a passphrase lost on a slow first launch.
+    /// ⚠️ A click can land in a frame that drops it: clicked again until the focus moves.
     pub fn fill(&mut self, author_id: &str, text: &str) {
-        self.click(author_id);
+        let until = Instant::now() + PATIENCE;
+        'clicked: loop {
+            self.click(author_id);
+            // A few frames, each read renders one: a second click at once would be a double.
+            for _ in 0..5 {
+                let tree = self.tree();
+                if tree.focused().starts_with(author_id) {
+                    break 'clicked;
+                }
+                assert!(
+                    Instant::now() < until,
+                    "{author_id} never took the focus; it is on {}",
+                    tree.focused()
+                );
+            }
+        }
         self.type_text(text);
     }
 

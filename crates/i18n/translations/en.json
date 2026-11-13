@@ -616,6 +616,7 @@
     "httpFileUnreadable": "The file {{path}} cannot be read.",
     "httpFileTooLarge": "The file {{path}} is over {{limit}} MB: a request sends none heavier.",
     "httpCancelled": "Send cancelled.",
+    "httpFell": "The send stopped on an internal error.",
     "httpNetwork": "Network error.",
     "httpWebsocketScheme": "A WebSocket opens on ws:// or wss://.",
     "httpHeaderName": {
