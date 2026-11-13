@@ -102,7 +102,7 @@ updates:
           - 'quick-xml'
           - 'yaml-rust2'
 
-  # Prettier alone: Node is a build tool here, the application has no npm dependency.
+  # Prettier alone: Node is a build tool here.
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -110,6 +110,18 @@ updates:
       day: monday
     groups:
       npm:
+        update-types: [minor, patch]
+        patterns:
+          - '*'
+  # The request-script libraries, bundled into the binary: an update needs `dist/` rebuilt,
+  # which the Script libraries job checks.
+  - package-ecosystem: npm
+    directory: /crates/engine/sandbox
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      script-libraries:
         update-types: [minor, patch]
         patterns:
           - '*'

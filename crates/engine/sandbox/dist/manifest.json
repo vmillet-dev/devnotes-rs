@@ -68,8 +68,8 @@
   {
     "name": "ajv",
     "file": "ajv.js",
-    "bytes": 123105,
-    "sha256": "14451869b89e2a331c20066a20c31cb3a949978612803bfec57a610b098c5bbd"
+    "bytes": 124056,
+    "sha256": "6a22663b4d2c4cbaa05236dc7301b5fda82ce665c80f9a307447661c1760baa9"
   },
   {
     "name": "chai",
