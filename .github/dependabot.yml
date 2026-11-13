@@ -126,9 +126,12 @@ updates:
         patterns:
           - '*'
   # Pinned action versions go stale silently: nothing in a green run says an action
-  # is two majors behind.
+  # is two majors behind. Each is pinned by commit, its tag in a comment, and the
+  # composite action is read too: it runs in the job that signs the release.
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/setup-rust
     schedule:
       interval: weekly
       day: monday
