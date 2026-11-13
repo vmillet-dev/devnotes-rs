@@ -4173,7 +4173,8 @@ for exactly then. `services::status::StatusNotifier` keeps the toast's last repo
 the same words said twice show twice; `services::errors::ErrorNotifier` the banner's last
 failure: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
 choosing its sub-key by one parameter), or the action's own when the code says nothing better.
-⚠️ The error's `detail` goes to the log, never to the screen.
+⚠️ The error's `detail` never goes to the screen, and to the log only through `AppError::for_log`:
+the code alone, its detail too where no variant carries a name, a file, a URL or a script's words.
 
 ### The widget kit
 
@@ -4756,7 +4757,8 @@ detail every `StorageError::File` carries.
 has its key in both locales. A named cause wins over the attempted action — « this note no longer
 exists » beats « could not save the note », which would leave the user retrying something that
 can never succeed; the action's own sentence is the fallback when the cause adds nothing
-actionable. ⚠️ The `detail` goes to the log, never to the screen.
+actionable. ⚠️ The `detail` never goes to the screen; the log has it through `AppError::for_log`, for
+the codes that carry nothing typed.
 
 Three codes exist for what happens **outside** the database: `attachmentNotFound`, `fileAccess`
 (reading, copying or writing a file — attachments, export and import all land there) and

@@ -58,7 +58,7 @@ impl AutostartState {
                 settings.start_with_system
             }
             Err(error) => {
-                log::warn!("Autostart could not be read: {}", error.detail);
+                log::warn!("Autostart could not be read: {}", error.for_log());
                 settings.start_with_system
             }
         };
