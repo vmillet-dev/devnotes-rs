@@ -27,10 +27,14 @@ impl Message {
         }
     }
 
+    /// Any process of the machine can open the channel: an action is heard by the `e2e` flavour
+    /// alone, or anyone could open the palette, capture the clipboard or make a note.
     fn read(line: &str) -> Option<Self> {
         match line.trim_end().split_once(' ') {
             None if line.trim_end() == "reveal" => Some(Self::Reveal),
-            Some(("action", name)) if !name.is_empty() => Some(Self::Action(name.to_string())),
+            Some(("action", name)) if cfg!(feature = "e2e") && !name.is_empty() => {
+                Some(Self::Action(name.to_string()))
+            }
             _ => None,
         }
     }
@@ -142,10 +146,30 @@ mod tests {
 
         let wait = Duration::from_secs(10);
         assert_eq!(hearing.recv_timeout(wait).unwrap(), Message::Reveal);
-        assert_eq!(
-            hearing.recv_timeout(wait).unwrap(),
-            Message::Action("palette".to_string())
-        );
+        if cfg!(feature = "e2e") {
+            assert_eq!(
+                hearing.recv_timeout(wait).unwrap(),
+                Message::Action("palette".to_string())
+            );
+        }
+    }
+
+    /// Any process of the machine can open the channel: outside the `e2e` flavour, it can
+    /// show the window and nothing more.
+    #[cfg(not(feature = "e2e"))]
+    #[test]
+    fn outside_the_e2e_flavour_a_connection_asks_for_no_action() {
+        let profile = tempfile::tempdir().unwrap();
+        let (heard, hearing) = mpsc::channel();
+        first(profile.path())
+            .serve(move |message| heard.send(message).unwrap())
+            .unwrap();
+
+        send(profile.path(), &Message::Action("palette".to_string())).unwrap();
+        send(profile.path(), &Message::Reveal).unwrap();
+
+        let wait = Duration::from_secs(10);
+        assert_eq!(hearing.recv_timeout(wait).unwrap(), Message::Reveal);
     }
 
     #[test]
@@ -172,10 +196,8 @@ mod tests {
     #[test]
     fn only_our_two_messages_are_read() {
         assert_eq!(Message::read("reveal\n"), Some(Message::Reveal));
-        assert_eq!(
-            Message::read("action new-note\n"),
-            Some(Message::Action("new-note".to_string()))
-        );
+        let action = cfg!(feature = "e2e").then(|| Message::Action("new-note".to_string()));
+        assert_eq!(Message::read("action new-note\n"), action);
         assert_eq!(Message::read("action \n"), None);
         assert_eq!(Message::read("quit\n"), None);
     }

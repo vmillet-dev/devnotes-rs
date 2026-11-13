@@ -399,6 +399,8 @@ struct Flight {
     environment: Option<environments::Environment>,
     /// The user said yes to what the protected environment asks.
     confirmed: bool,
+    /// The files a script asked for that the user said yes to.
+    files: Vec<String>,
     collection_id: Option<String>,
     info: ScriptInfo,
     /// What each variable written says wrote it: this request.
@@ -440,6 +442,7 @@ impl Flight {
             transport: transport::Transport::default(),
             environment: None,
             confirmed: false,
+            files: Vec::new(),
             collection_id: None,
             info: ScriptInfo {
                 iteration_count: 1,
@@ -470,6 +473,7 @@ impl Flight {
             request_id,
             environment_id,
             confirmed,
+            files,
         } = request;
         let Prepared {
             inherited,
@@ -491,9 +495,12 @@ impl Flight {
         self.transport = inherited.transport.over(&document.transport);
         self.environment = environment;
         self.confirmed = confirmed;
+        self.files = files;
         self.collection_id = collection_id;
         self.named(&name, request_id.as_deref());
         self.layered(&mut layers);
+        // What the request reads as the user wrote it: a file the scripts add waits for a yes.
+        let own = (!around.before.is_empty()).then(|| files_read(&document, &inherited, &layers));
         let mut going = Going {
             kind,
             method,
@@ -506,6 +513,13 @@ impl Flight {
 
         let resolver = variables::Resolver::new(&going.layers);
         let (filled, above) = variables::resolve(&going.document, &inherited, &resolver);
+        if let Some(own) = &own
+            && let Some(path) = filled.body.files().into_iter().find(|path| {
+                !own.iter().any(|read| read == path) && !self.files.iter().any(|yes| yes == path)
+            })
+        {
+            return Err(ScriptError::File(path.to_owned()).into());
+        }
         let method = going.method;
         let mut outgoing = self
             .engine
@@ -689,6 +703,13 @@ impl Flight {
         self.write(&outcome.writes, &mut going.layers).await;
         self.report(scripts, &outcome, &going.layers);
         self.follow(&outcome);
+        let refused = self
+            .session
+            .as_mut()
+            .and_then(|session| session.network.refused_file.take());
+        if let Some(path) = refused {
+            return Err(ScriptError::File(path).into());
+        }
         if let Some(failure) = &outcome.failure {
             return Err(ScriptError::Stopped(ScriptStop::of(failure, scripts)).into());
         }
@@ -747,9 +768,8 @@ impl Flight {
         let mut session = match self.session.take() {
             Some(session) => session,
             None => match ScriptProcess::start() {
-                Ok(host) => Session::new(
-                    host,
-                    Network::new(
+                Ok(host) => {
+                    let mut network = Network::new(
                         tokio::runtime::Handle::current(),
                         self.transport,
                         self.jar.take(),
@@ -758,8 +778,10 @@ impl Flight {
                                 .environment
                                 .as_ref()
                                 .is_some_and(|environment| environment.protected),
-                    ),
-                ),
+                    );
+                    network.files.clone_from(&self.files);
+                    Session::new(host, network)
+                }
                 Err(error) => return Ok(host_failed(&error.to_string())),
             },
         };
@@ -924,7 +946,7 @@ impl Flight {
         .await;
         match kept {
             Ok(wrote) => self.wrote |= wrote,
-            Err(error) => log::warn!("What a script wrote was not kept: {}", error.detail),
+            Err(error) => log::warn!("What a script wrote was not kept: {}", error.for_log()),
         }
     }
 
@@ -964,10 +986,20 @@ impl Flight {
         if let Err(error) = kept {
             log::warn!(
                 "A send's history or cookies were not kept: {}",
-                error.detail
+                error.for_log()
             );
         }
     }
+}
+
+/// The files a request reads as its own rows say, its variables resolved before any script.
+fn files_read(
+    document: &model::RequestDocument,
+    inherited: &settings::Inherited,
+    layers: &[variables::VariableLayer],
+) -> Vec<String> {
+    let (filled, _) = variables::resolve(document, inherited, &variables::Resolver::new(layers));
+    filled.body.files().into_iter().map(str::to_owned).collect()
 }
 
 fn host_failed(message: &str) -> Outcome {
@@ -1400,6 +1432,8 @@ async fn run_step(
             request_id: Some(request.id.clone()),
             environment_id: run.environment_id.clone(),
             confirmed: run.confirmed,
+            // No question halfway through a run: a file a script asks for fails its step.
+            files: Vec::new(),
         })
         .await;
     *overlay = std::mem::take(&mut flight.overlay);

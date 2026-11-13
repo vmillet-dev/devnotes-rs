@@ -4,6 +4,7 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -174,6 +175,147 @@ fn an_endless_loop_is_stopped_at_its_deadline_and_the_host_is_not_given_another_
 
     let outcome = host.run(&job(Phase::After, ""), Duration::from_secs(5), &mut network);
     assert_eq!(outcome.failure.unwrap().kind, FailureKind::Host);
+}
+
+/// Answers every connection with a 200, and keeps each request whole, headers and body.
+fn serve_keeping() -> (u16, Arc<Mutex<Vec<String>>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let kept = Arc::new(Mutex::new(Vec::new()));
+    let into = Arc::clone(&kept);
+    thread::spawn(move || {
+        for stream in listener.incoming() {
+            let mut stream = stream.unwrap();
+            let mut request = Vec::new();
+            let mut buffer = [0; 8192];
+            while let Ok(read) = stream.read(&mut buffer) {
+                request.extend_from_slice(&buffer[..read]);
+                if read == 0 || whole(&request) {
+                    break;
+                }
+            }
+            into.lock()
+                .unwrap()
+                .push(String::from_utf8_lossy(&request).into_owned());
+            let _ = write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"
+            );
+        }
+    });
+    (port, kept)
+}
+
+/// The headers ended, and as many bytes after them as they announced.
+fn whole(request: &[u8]) -> bool {
+    let text = String::from_utf8_lossy(request);
+    let Some(end) = text.find("\r\n\r\n") else {
+        return false;
+    };
+    let length = text[..end]
+        .lines()
+        .find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.eq_ignore_ascii_case("content-length")
+                .then(|| value.trim().parse::<usize>().ok())?
+        })
+        .unwrap_or(0);
+    request.len() >= end + 4 + length
+}
+
+/// A file outside any profile, standing for a private key.
+fn secret_file() -> (tempfile::TempDir, String) {
+    let folder = tempfile::tempdir().unwrap();
+    let path = folder.path().join("id_ed25519");
+    std::fs::write(&path, "PRIVATE KEY 7f3a9c").unwrap();
+    (folder, path.to_string_lossy().into_owned())
+}
+
+#[test]
+fn a_script_sending_a_file_by_itself_waits_for_a_yes() {
+    let (port, kept) = serve_keeping();
+    let (_folder, path) = secret_file();
+    let runtime = runtime();
+    let mut network = Network::new(runtime.handle().clone(), Transport::default(), None, true);
+    let source = format!(
+        "await pm.sendRequest({{ url: 'http://127.0.0.1:{port}/upload', method: 'POST',
+           body: {{ mode: 'file', file: {{ src: {} }} }} }});",
+        serde_json::to_string(&path).unwrap()
+    );
+
+    let refused = host().run(
+        &job(Phase::Before, &source),
+        Duration::from_secs(10),
+        &mut network,
+    );
+
+    assert!(kept.lock().unwrap().is_empty());
+    assert_eq!(refused.failure.unwrap().kind, FailureKind::Error);
+    assert_eq!(network.refused_file.as_deref(), Some(path.as_str()));
+
+    network.files.push(path);
+    let sent = host().run(
+        &job(Phase::Before, &source),
+        Duration::from_secs(10),
+        &mut network,
+    );
+    assert_eq!(sent.failure, None);
+    assert!(kept.lock().unwrap()[0].ends_with("PRIVATE KEY 7f3a9c"));
+}
+
+#[test]
+fn a_script_giving_the_request_a_file_body_waits_for_a_yes() {
+    let (port, kept) = serve_keeping();
+    let (_folder, path) = secret_file();
+    let profile = tempfile::tempdir().unwrap();
+    engine::http::scripts::process::host_from(env!("CARGO_BIN_EXE_script-host").into());
+    let runtime = runtime();
+    let paths = engine::Paths {
+        profile: profile.path().to_path_buf(),
+        resources: profile.path().to_path_buf(),
+    };
+    let sink = Arc::new(engine::RecordingSink::default());
+    let core = Arc::new(engine::Engine::new(paths, sink, runtime.handle().clone()));
+    engine::db::run_here(&core, |core| {
+        let phrase = engine::vault::secret("correct horse battery staple".to_owned());
+        engine::vault::create_vault(core, phrase)
+    })
+    .unwrap();
+    let mut document = engine::http::model::RequestDocument {
+        url: format!("http://127.0.0.1:{port}/upload"),
+        ..Default::default()
+    };
+    document.scripts.before = format!(
+        "pm.request.body.update({{ mode: 'file', file: {{ src: {} }} }});",
+        serde_json::to_string(&path).unwrap()
+    );
+    let request = |files: Vec<String>| engine::http::send::SendRequest {
+        id: "send-1".to_owned(),
+        kind: engine::http::model::RequestKind::Http,
+        method: engine::http::model::HttpMethod::Post,
+        document: document.clone(),
+        collection_id: None,
+        folder_id: None,
+        name: "Upload".to_owned(),
+        request_id: None,
+        environment_id: None,
+        confirmed: false,
+        files,
+    };
+    let send = |files| {
+        runtime.block_on(engine::http::send_http_request(
+            Arc::clone(&core),
+            request(files),
+        ))
+    };
+
+    let refused = send(Vec::new()).unwrap_err();
+    assert!(kept.lock().unwrap().is_empty());
+    assert_eq!(refused.code, engine::error::ErrorCode::HttpScriptFile);
+    assert_eq!(refused.params["path"], path);
+
+    send(vec![path]).unwrap();
+    assert!(kept.lock().unwrap()[0].ends_with("PRIVATE KEY 7f3a9c"));
 }
 
 #[test]

@@ -321,7 +321,12 @@ impl Parser<'_> {
     }
 
     fn error(&self, text: &str, reason: JsonErrorReason) -> JsonError {
-        let before = &text[..self.at.min(text.len())];
+        // An escape ends a byte into the character after it: back to where that one starts.
+        let mut at = self.at.min(text.len());
+        while !text.is_char_boundary(at) {
+            at -= 1;
+        }
+        let before = &text[..at];
         let line_start = before.rfind('\n').map_or(0, |at| at + 1);
         let column = before[line_start..].encode_utf16().count();
 
@@ -344,6 +349,14 @@ mod tests {
 
     fn error(text: &str) -> JsonError {
         parse(text).expect_err("an invalid document")
+    }
+
+    /// The cursor stays on a character boundary, or the error's own message cuts inside one.
+    #[test]
+    fn an_escape_before_an_accent_is_said_where_it_is() {
+        let failed = error(r#"{"a": "x\é"}"#);
+
+        assert_eq!(failed.reason, JsonErrorReason::InvalidEscape);
     }
 
     #[test]

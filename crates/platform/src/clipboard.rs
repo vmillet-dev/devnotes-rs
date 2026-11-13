@@ -27,3 +27,27 @@ impl Clipboard for System {
 pub fn system() -> Arc<dyn Clipboard + Send + Sync> {
     Arc::new(System)
 }
+
+/// An empty clipboard, until the shell hands the system's: a test never reads the machine's.
+pub struct NoClipboard;
+
+impl Clipboard for NoClipboard {
+    fn html(&self) -> Option<String> {
+        None
+    }
+
+    fn text(&self) -> Option<String> {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_empty_clipboard_holds_nothing() {
+        assert_eq!(NoClipboard.html(), None);
+        assert_eq!(NoClipboard.text(), None);
+    }
+}

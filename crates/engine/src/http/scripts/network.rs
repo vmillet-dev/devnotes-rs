@@ -18,6 +18,8 @@ use chrono::DateTime;
 
 /// What a protected environment refuses a script, by its code.
 pub const PROTECTED: &str = "httpScriptProtected";
+/// A file the user has not said yes to, refused a script by this code.
+pub const FILE: &str = "httpScriptFile";
 
 pub struct Network {
     runtime: tokio::runtime::Handle,
@@ -31,6 +33,10 @@ pub struct Network {
     pub logs: Vec<LogEntry>,
     /// Each send a script made, and how it ended: what the console shows.
     pub sent: Vec<ScriptSend>,
+    /// The files the user said yes to: a script sends no other.
+    pub files: Vec<String>,
+    /// The first file refused, for the send to ask about.
+    pub refused_file: Option<String>,
 }
 
 /// A request a script sent, as it left, and what came back.
@@ -60,6 +66,8 @@ impl Network {
             may_change,
             logs: Vec::new(),
             sent: Vec::new(),
+            files: Vec::new(),
+            refused_file: None,
         }
     }
 
@@ -95,10 +103,23 @@ impl Network {
                 Some(PROTECTED),
             ));
         }
+        let document = request.document();
+        if let Some(path) = document
+            .body
+            .files()
+            .into_iter()
+            .find(|path| !self.files.iter().any(|allowed| allowed == path))
+        {
+            self.refused_file.get_or_insert_with(|| path.to_owned());
+            return Err(Refusal::new(
+                format!("Sending the file {path} waits for the user's yes"),
+                Some(FILE),
+            ));
+        }
         let mut outgoing = send::compose(
             RequestKind::Http,
             method,
-            &request.document(),
+            &document,
             &settings::inherit(&[]),
         )
         .map_err(|error| Refusal::new(error.to_string(), Some("httpScriptSend")))?;

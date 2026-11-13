@@ -118,6 +118,49 @@ mod tests {
     }
 
     #[test]
+    fn an_error_is_logged_without_what_was_typed() {
+        logger();
+        let profile = tempfile::tempdir().unwrap();
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let paths = engine::Paths {
+            profile: profile.path().to_path_buf(),
+            resources: profile.path().to_path_buf(),
+        };
+        let sink = Arc::new(engine::RecordingSink::default());
+        let engine = engine::Engine::new(paths, sink, runtime.handle().clone());
+        let draft = || engine::spaces::model::SpaceDraft {
+            name: "Clients Dupont-Aignan".to_owned(),
+        };
+        let duplicate = engine::db::run_here(&engine, |engine| {
+            let phrase = engine::vault::secret("correct horse battery staple".to_owned());
+            engine::vault::create_vault(engine, phrase)?;
+            engine::spaces::create_space(engine, draft())?;
+            engine::spaces::create_space(engine, draft())
+        })
+        .unwrap_err();
+        let too_large = engine::error::StorageError::TooLarge {
+            name: "contrat-signé-dupont.pdf".to_owned(),
+            limit_mb: 10,
+        };
+        let stop = engine::http::scripts::model::ScriptStop {
+            message: "token ghp_s3cr3t refused".to_owned(),
+            ..Default::default()
+        };
+        let script = engine::http::scripts::model::ScriptError::Stopped(stop);
+
+        let mut notifier = ui::services::errors::ErrorNotifier::default();
+        notifier.report(i18n::keys::errors::NOTE_GONE, &duplicate);
+        notifier.report(i18n::keys::errors::NOTE_GONE, &too_large.into());
+        notifier.report(i18n::keys::errors::NOTE_GONE, &script.into());
+
+        let written = written();
+        for typed in ["Dupont-Aignan", "contrat-signé", "ghp_s3cr3t"] {
+            assert!(!written.contains(typed), "{typed} in {written}");
+        }
+        assert!(written.contains("DuplicateSpaceName"), "{written}");
+    }
+
+    #[test]
     fn a_panic_is_reported_by_its_place_and_never_by_its_message() {
         let reports = Arc::new(Mutex::new(Vec::new()));
         let kept = Arc::clone(&reports);

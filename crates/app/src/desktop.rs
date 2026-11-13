@@ -33,6 +33,8 @@ pub(crate) fn start(preferences: &Preferences, inbox: &Inbox) -> ui::Desktop {
         notifier: platform::notify::system(METADATA.name, IDENTIFIER),
         dialog: dialog(inbox.clone()),
         updater: platform::updater::system(&UPDATES),
+        clipboard: platform::clipboard::system(),
+        opener: platform::desktop::system(),
     }
 }
 

@@ -824,7 +824,11 @@ impl HttpState {
         if tab.draft.kind == RequestKind::Websocket {
             self.sockets.connect(backend, tab, environment);
         } else {
-            self.sends.send(backend, tab, (now, environment), true);
+            let consent = send::Consent {
+                protected: true,
+                files: Vec::new(),
+            };
+            self.sends.send(backend, tab, (now, environment), consent);
         }
     }
 
@@ -1116,8 +1120,24 @@ impl HttpState {
         if tab.draft.kind == RequestKind::Websocket {
             self.sockets.connect(backend, tab, environment);
         } else {
-            self.sends.send(backend, tab, (now, environment), false);
+            self.sends
+                .send(backend, tab, (now, environment), send::Consent::default());
         }
+    }
+
+    /// The yes to a file a script asked to send: sent again, with what was already allowed.
+    pub fn send_file(&mut self, backend: &Backend, key: &str, path: String, now: f64) {
+        let Some(tab) = self.tabs.tab(key) else {
+            return;
+        };
+        let mut consent = self
+            .sends
+            .of(key)
+            .map(|sent| sent.consent.clone())
+            .unwrap_or_default();
+        consent.files.push(path);
+        let environment = self.environments.active_id().map(str::to_owned);
+        self.sends.send(backend, tab, (now, environment), consent);
     }
 
     pub fn cancel_send(&self, backend: &Backend, key: &str) {

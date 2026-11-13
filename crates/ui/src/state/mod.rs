@@ -246,8 +246,8 @@ impl AppState {
             dialogs: crate::widgets::DialogStack::default(),
             status: StatusNotifier::default(),
             dialog: std::sync::Arc::new(platform::dialog::NoDialog),
-            opener: platform::desktop::system(),
-            clipboard: platform::clipboard::system(),
+            opener: std::sync::Arc::new(platform::desktop::NoOpener),
+            clipboard: std::sync::Arc::new(platform::clipboard::NoClipboard),
             attachments: attachments::AttachmentsState::default(),
             exports: drawing_exports::DrawingExports::default(),
             calc: calc_sheets::CalcSheets::default(),
@@ -1097,6 +1097,7 @@ impl AppState {
             Http::Environments(asked) => self.http.ask_environments(backend, asked, now),
             Http::Define(name) => self.http.define(backend, name, now),
             Http::SendAnyway(key) => self.http.send_anyway(backend, &key, now),
+            Http::SendFile(key, path) => self.http.send_file(backend, &key, path, now),
             Http::StopAsking => self.http.stop_asking(),
             Http::Cookies(asked) => self.http.ask_cookies(backend, asked),
             Http::ToggleConsole => self.http.toggle_console(),
@@ -2097,7 +2098,7 @@ impl AppState {
     fn save_settings(&mut self, backend: &Backend) {
         self.settings.write(&mut self.preferences);
         self.tools.write(&mut self.preferences);
-        // A write that fails says so in the log; nothing on screen waits for it.
+        // A write that fails says so in the log (`api::preferences`); nothing on screen waits for it.
         drop(api::preferences::write_application(
             backend,
             self.preferences.clone(),

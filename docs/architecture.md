@@ -1395,7 +1395,10 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   is the same lines with their markers spelled out (`•`, `1.`, `☐`/`☑`): `cut_to_preview`
   puts it in place of the body, one parse for both, marked `truncated` even when it is short —
   a copy taken from the list rereads the Markdown instead of copying the words. The search
-  matches the stored body and quotes the readable one (`Note::readable_body`). A snippet names
+  matches and quotes the readable body (`Note::readable_body`), folded once by the index: « rollout
+  window » finds `**rollout** window`, and a drawing is found by its words, never its scene. The
+  trash shows the same text, its first lines cut by the core (`TrashedNote.preview`), without
+  the body. A snippet names
   its format on its card and in the palette, a Note and a list their kind (`notes::ui::kind_icon`).
 - **Typing never changes the kind; a paste into an empty Note can.** Plain text pasted into an
   empty Note is handed to `detect_language`. Prose
@@ -2564,7 +2567,9 @@ answers on its standard output.
   about 1 MB, each evaluated on its first `require`. They are bundled by
   `crates/engine/sandbox/build.mjs` from its own `package.json` (not the application's: none of it
   reaches the WebView) into `sandbox/dist/`, which is committed with a manifest and the
-  libraries' licences; `libraries::tests` holds the table to the manifest. Node's modules are
+  libraries' licences; `libraries::tests` holds the table to the manifest. Dependabot watches
+  that folder, and the Script libraries job of `security-npm.yml` audits it and fails when a
+  rebuild changes `dist/`. Node's modules are
   left out of the other bundles, so one copy serves them all. Nothing else is found: `fs`,
   `child_process`, `net` answer `MODULE_NOT_FOUND`.
 - ⚠️ **The network is this process's, not the script's** (`network.rs`): `pm.sendRequest` and
@@ -2594,6 +2599,13 @@ then the request's; once answered, the other way round; a blank one is not run.
   about the method it saw; one the script made a change, unconfirmed, is `httpScriptProtected`
   (`method`, `environment`), and the pane asks with « Envoyer quand même », which sends again,
   scripts included, with `confirmed`.
+- ⚠️ **A file a script asks to send waits for a yes, path by path** (`SendRequest.files`): a
+  `file` body or a file part the scripts before the send added — compared with what the
+  request's own rows read, variables resolved before any script — and any file a
+  `pm.sendRequest` names. Refused, the send answers `httpScriptFile` (`path`) and the pane asks
+  « Envoyer le fichier », which sends again with that path added to the ones already allowed.
+  A collection run asks nothing halfway: the step fails. Every file a send reads is capped at
+  `SENT_FILE_MEGABYTES` (64), checked before it is read (`httpFileTooLarge`).
 - A script before the send that fails keeps the request in: `httpScript` carries how
   (`failure`), whose script (`level`, `name`, `owner`), the `line` and — for a throw or a syntax
   error only — the script's own `message`. `skipRequest()` is `httpScriptSkipped`; a method Rust
@@ -4173,7 +4185,8 @@ for exactly then. `services::status::StatusNotifier` keeps the toast's last repo
 the same words said twice show twice; `services::errors::ErrorNotifier` the banner's last
 failure: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
 choosing its sub-key by one parameter), or the action's own when the code says nothing better.
-⚠️ The error's `detail` goes to the log, never to the screen.
+⚠️ The error's `detail` never goes to the screen, and to the log only through `AppError::for_log`:
+the code alone, its detail too where no variant carries a name, a file, a URL or a script's words.
 
 ### The widget kit
 
@@ -4756,7 +4769,8 @@ detail every `StorageError::File` carries.
 has its key in both locales. A named cause wins over the attempted action — « this note no longer
 exists » beats « could not save the note », which would leave the user retrying something that
 can never succeed; the action's own sentence is the fallback when the cause adds nothing
-actionable. ⚠️ The `detail` goes to the log, never to the screen.
+actionable. ⚠️ The `detail` never goes to the screen; the log has it through `AppError::for_log`, for
+the codes that carry nothing typed.
 
 Three codes exist for what happens **outside** the database: `attachmentNotFound`, `fileAccess`
 (reading, copying or writing a file — attachments, export and import all land there) and
@@ -5056,9 +5070,10 @@ input's `type` flipped rather than a second plain-text field) shows both fields 
 on creation the minimum is the field's description from the start rather than a complaint
 after the first character.
 
-**The cost in a key file is bounded before anything is derived** (`vault::file::bounded`: at most
-1 GiB, 16 passes, 16 lanes). It is the one input an attacker can write, and read unbounded it is
-a multi-gigabyte allocation or an hour of hashing at every unlock.
+**The cost in a key file, or in a protected export's recipe, is bounded before anything is
+derived** (`vault::file::bounded`: at most 1 GiB, 16 passes, 16 lanes). They are the inputs an
+attacker can write, and read unbounded one is a multi-gigabyte allocation or an hour of hashing on
+the database thread, at every unlock or at the import of a forged file.
 
 ### The floor
 
@@ -5268,9 +5283,14 @@ adopt an empty profile as a library nobody asked for. The deletion itself gets t
 treatment emptying the trash gets: a sentence naming what goes, and a confirm somewhere
 other than the button that fired it.
 
-⚠️ The registry is **staged and renamed**, like an export file. `fs::write` truncates
-first, so a disk that fills mid-write would leave a registry naming no libraries at all,
-with every one of them still on disk and nothing pointing at them.
+⚠️ The registry is **written durably**, like an export file and the key file
+(`engine::durable`): staged, flushed to the disk, renamed, then its folder flushed on Unix.
+`fs::write` truncates first, so a disk that fills mid-write would leave a registry naming no
+libraries at all; and without the flush, a power cut can leave the renamed file empty.
+⚠️ **A registry that does not read is never written over** (`registry::rebuilt`): an absent
+file is a first launch, an unreadable one is moved aside as `libraries.json.unreadable-<when>`
+and the list made again from the folders under `libraries/` that hold one. Their names were in
+the file: they come back unnamed.
 
 ### Two scopes of preference, one prefix apart
 
@@ -5648,8 +5668,8 @@ installed or shipped alongside the executable. The database file lives under the
 - **⚠️ Every data function runs on the engine's one db thread** (D11). `engine::db::submit`
   queues a job on it, which the interface does at the call (`Backend::db`), and `db::run_here`
   is what a test or the queue itself calls. A job that panics answers
-  `StorageError::Unavailable`, the answer the lock it would have poisoned gives, and the queue
-  goes on with the next one.
+  `StorageError::Unavailable`, and the queue goes on with the next one: the next `db::lock`
+  takes the poisoned lock back, rolls back what the job left open and runs a quick check.
 
   **One thread, in order.** The queue is one thread that runs its jobs in the order they
   arrive: two writes sent one after the other land in that order , and the `Mutex` is never contended. ⚠️ `db::lock` asserts
@@ -5859,7 +5879,9 @@ operating system is `platform`, one module per subject with a trait a test fakes
   message (D18).
 - **`platform::clipboard`** — what the clipboard holds beyond the text egui hands a field (a
   page's HTML, for a paste into a Note); a clipboard that cannot be opened answers `None`, and a
-  copy that failed only withholds its acknowledgement.
+  copy that failed only withholds its acknowledgement. ⚠️ It reaches `AppState` through
+  `ui::Desktop`, like the opener: `AppState::new` starts with `NoClipboard` and `NoOpener`, so a
+  screen test never pastes the machine's clipboard nor starts one of its programs.
 - **`platform::dialog`** — the file dialog: `None` covers a cancel **and** a dialog the desktop
   could not show, since there is nothing to open either way. Under Linux the XDG portal is asked
   first (D29).
@@ -6382,7 +6404,8 @@ profile; `app::perf` (`DEVNOTES_PERF=<profile> cargo test --release -p ui --lib 
 `e2e/examples/footprint.rs` reads memory and idle CPU of the running process from outside,
 on the machine's GPU (`DEVNOTES_E2E_GPU`) and painting every frame (`DEVNOTES_E2E_PAINT_ALL`). The
 `e2e` flavour cannot be a release build, so that one runs at `CARGO_PROFILE_DEV_OPT_LEVEL=3`.
-`app --features profiling` serves egui's frames to `puffin_viewer`: `puffin_egui` stops at egui
+`app --features profiling` serves egui's frames to `puffin_viewer` (a debug build at
+`CARGO_PROFILE_DEV_OPT_LEVEL=3`: a release build refuses it); `puffin_egui` stops at egui
 0.33. A debug build logs every `Backend` database call past 16 ms.
 
 ⚠️ This machine is not the plan's reference: Windows 11, Ryzen 7 9800X3D, RTX 5070 Ti, against a
@@ -6459,8 +6482,8 @@ The tests split by what they need in order to run:
   timestamps explicitly instead of reading the clock, which makes assertions on `created_at` /
   `updated_at` deterministic. A `query` helper in the test module recomposes
   `fetch` + `notes::view::build` so the whole read path stays covered end to end.
-- **`db` and `error`** — that a poisoned mutex reports `storageUnavailable` instead of
-  panicking a second time, and that each error variant maps to the right code and params.
+- **`db` and `error`** — that a poisoned mutex is taken back with its transaction rolled
+  back, and that each error variant maps to the right code and params.
 - **The service functions** — `tests/commands/`, one module per feature, on an `Engine` over a
   temporary profile, the way the interface calls them: what a service function adds to the store
   is what they check — the lock, the validation before it, and the code a failure answers.

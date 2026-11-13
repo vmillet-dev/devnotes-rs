@@ -13,8 +13,11 @@ pub const RETENTION: TimeDelta = TimeDelta::days(30);
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrashedNote {
+    /// Without its body: the row shows `preview`.
     #[serde(flatten)]
     pub note: Note,
+    /// The first lines of the text the note shows, never its Markdown or a drawing's scene.
+    pub preview: String,
     pub deleted_at: DateTime<Utc>,
     /// Derived, never stored: retention can change between versions.
     pub purge_at: DateTime<Utc>,
@@ -33,9 +36,20 @@ pub fn expiry_cutoff(now: DateTime<Utc>) -> DateTime<Utc> {
     now - RETENTION
 }
 
-pub fn trashed(note: Note, deleted_at: DateTime<Utc>) -> TrashedNote {
+/// What a trash row shows of a body.
+pub const PREVIEW_LINES: usize = 2;
+
+pub fn trashed(mut note: Note, deleted_at: DateTime<Utc>) -> TrashedNote {
+    let preview = note
+        .readable_body()
+        .lines()
+        .take(PREVIEW_LINES)
+        .collect::<Vec<_>>()
+        .join("\n");
+    note.content.clear();
     TrashedNote {
         note,
+        preview,
         deleted_at,
         purge_at: purge_at(deleted_at),
     }

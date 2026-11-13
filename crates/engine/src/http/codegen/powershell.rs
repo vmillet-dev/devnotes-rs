@@ -4,9 +4,19 @@
 use super::{CodeBody, CodeRequest};
 use crate::http::model::HttpMethod;
 
-/// `'…'` for PowerShell: a quote is doubled.
+/// `'…'` for PowerShell: a quote is doubled, and PowerShell reads the typographic ones
+/// (U+2018 to U+201B) as quotes too.
 fn quoted(text: &str) -> String {
-    format!("'{}'", text.replace('\'', "''"))
+    let mut quoted = String::with_capacity(text.len() + 2);
+    quoted.push('\'');
+    for character in text.chars() {
+        if matches!(character, '\'' | '\u{2018}'..='\u{201B}') {
+            quoted.push(character);
+        }
+        quoted.push(character);
+    }
+    quoted.push('\'');
+    quoted
 }
 
 fn method(method: HttpMethod) -> &'static str {
@@ -149,5 +159,12 @@ mod tests {
     #[test]
     fn a_quote_is_doubled() {
         assert_eq!(quoted("O'Brien"), "'O''Brien'");
+    }
+
+    /// PowerShell ends a string on the typographic apostrophes too.
+    #[test]
+    fn a_typographic_apostrophe_is_doubled() {
+        assert_eq!(quoted("it’s"), "'it’’s'");
+        assert_eq!(quoted("‘a‛"), "'‘‘a‛‛'");
     }
 }

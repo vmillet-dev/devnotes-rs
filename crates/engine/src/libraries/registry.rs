@@ -70,24 +70,63 @@ fn gather(profile: &Path, into: &Path) {
     }
 }
 
-fn read(profile: &Path) -> Registry {
-    std::fs::read_to_string(profile.join(REGISTRY))
-        .ok()
-        .and_then(|raw| serde_json::from_str(&raw).ok())
-        .unwrap_or_default()
+/// `None` for a file that is there and does not read: never taken for an absent one, which a
+/// first launch would write over.
+fn read(profile: &Path) -> Option<Registry> {
+    match std::fs::read_to_string(profile.join(REGISTRY)) {
+        Ok(raw) => serde_json::from_str(&raw).ok(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Some(Registry::default()),
+        Err(_) => None,
+    }
 }
 
-/// Staged and renamed: `fs::write` truncates first, and a registry naming no libraries leaves
-/// every one of them on disk with nothing pointing at them.
+/// An unreadable registry moved aside, as it was, and the list made again from the folders
+/// under `libraries/` that hold one. Their names were in the file: they come back unnamed.
+fn rebuilt(profile: &Path) -> Registry {
+    let aside = format!(
+        "{REGISTRY}.unreadable-{}",
+        Utc::now().format("%Y%m%d-%H%M%S")
+    );
+    if let Err(error) = std::fs::rename(profile.join(REGISTRY), profile.join(&aside)) {
+        log::warn!("The unreadable registry was not set aside: {error}");
+    }
+    let mut libraries: Vec<LibraryEntry> = std::fs::read_dir(profile.join(LIBRARIES))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|folder| holds_a_library(&folder.path()))
+        .filter_map(|folder| {
+            let id = folder.file_name().into_string().ok()?;
+            let created_at = folder
+                .metadata()
+                .and_then(|metadata| metadata.created())
+                .map_or_else(|_| Utc::now(), DateTime::<Utc>::from);
+            Some(LibraryEntry {
+                directory: format!("{LIBRARIES}/{id}"),
+                id,
+                name: String::new(),
+                created_at,
+            })
+        })
+        .collect();
+    libraries.sort_by_key(|entry| entry.created_at);
+    let registry = Registry {
+        open: libraries.first().map(|entry| entry.id.clone()),
+        libraries,
+    };
+    if !registry.libraries.is_empty() {
+        let _ = write(profile, &registry);
+    }
+    registry
+}
+
+/// Durable: a registry naming no libraries leaves every one of them on disk with nothing
+/// pointing at them.
 fn write(profile: &Path, registry: &Registry) -> Result<(), StorageError> {
     let target = profile.join(REGISTRY);
-    let staged = profile.join(format!("{REGISTRY}.writing"));
     let raw = serde_json::to_string_pretty(registry).context(REGISTRY)?;
 
-    std::fs::write(&staged, raw).context(staged.display())?;
-    std::fs::rename(&staged, &target).context(target.display())?;
-
-    Ok(())
+    crate::durable::write(&target, raw.as_bytes()).context(target.display())
 }
 
 /// The registry as it stands, adopting what is already on disk the first time.
@@ -95,7 +134,7 @@ fn write(profile: &Path, registry: &Registry) -> Result<(), StorageError> {
 /// Gathering a library from before the registry is the migration. Takes a path rather than the
 /// engine, like every rule below: a unit test builds a folder, not an engine.
 pub(crate) fn registry_in(profile: &Path) -> Registry {
-    let mut registry = read(profile);
+    let mut registry = read(profile).unwrap_or_else(|| rebuilt(profile));
 
     if registry.libraries.is_empty() {
         let entry = fresh(String::new());
@@ -315,16 +354,52 @@ mod tests {
 
         assert!(profile.join(REGISTRY).is_file());
         assert!(!profile.join(format!("{REGISTRY}.writing")).exists());
-        assert_eq!(read(&profile).libraries, registry.libraries);
+        assert_eq!(read(&profile).unwrap().libraries, registry.libraries);
     }
 
     #[test]
-    fn a_registry_that_cannot_be_read_answers_an_empty_one_rather_than_failing() {
+    fn a_registry_that_cannot_be_read_is_told_from_an_absent_one() {
         let scratch = tempfile::tempdir().unwrap();
         let profile = scratch.path().to_path_buf();
+        assert!(read(&profile).is_some_and(|registry| registry.libraries.is_empty()));
+
         std::fs::write(profile.join(REGISTRY), b"not json at all").unwrap();
 
-        assert!(read(&profile).libraries.is_empty());
+        assert!(read(&profile).is_none());
+    }
+
+    #[test]
+    fn a_registry_cut_short_is_set_aside_and_its_libraries_found_again() {
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
+        let first = create_in(&profile, "Travail").unwrap();
+        let second = create_in(&profile, "Perso").unwrap();
+        for entry in [&first, &second] {
+            std::fs::write(directory_of(&profile, entry).join(DATABASE), b"a database").unwrap();
+        }
+        let whole = std::fs::read(profile.join(REGISTRY)).unwrap();
+        std::fs::write(profile.join(REGISTRY), &whole[..whole.len() / 2]).unwrap();
+
+        let registry = registry_in(&profile);
+
+        let mut found: Vec<&str> = registry
+            .libraries
+            .iter()
+            .map(|entry| entry.id.as_str())
+            .collect();
+        found.sort_unstable();
+        let mut made = vec![first.id.as_str(), second.id.as_str()];
+        made.sort_unstable();
+        assert_eq!(found, made);
+        let aside = std::fs::read_dir(&profile)
+            .unwrap()
+            .filter_map(|entry| entry.unwrap().file_name().into_string().ok())
+            .find(|name| name.starts_with(&format!("{REGISTRY}.unreadable")))
+            .expect("the cut registry is set aside");
+        assert_eq!(
+            std::fs::read(profile.join(aside)).unwrap(),
+            &whole[..whole.len() / 2]
+        );
     }
 
     #[test]

@@ -640,6 +640,7 @@ pub fn matches_search(note: &Note, needle: &str) -> bool {
 }
 
 /// What a search reads of a note, folded: per query on a note just read, once by the index.
+/// The body is the text the note shows, never its Markdown marks or a drawing's scene.
 #[derive(Debug, Default)]
 pub struct Folded {
     pub title: String,
@@ -654,7 +655,7 @@ impl Folded {
         Self {
             title: fold(&note.title),
             tags: note.tags.iter().map(|tag| fold(tag)).collect(),
-            content: fold(&note.content),
+            content: fold(&note.readable_body()),
             items: note.items.iter().map(|item| fold(&item.text)).collect(),
             source: fold(&note.source),
         }
@@ -678,7 +679,6 @@ pub fn answers(note: &Note, folded: &Folded, needle: &str) -> Option<Option<Sear
         return hit(SearchField::Tag, &note.tags[at]);
     }
 
-    // The Markdown only adds characters, so a body without the needle is skipped unparsed.
     if folded.content.contains(needle)
         && let Some(line) = note
             .readable_body()
@@ -1621,6 +1621,38 @@ mod tests {
 
             let hit = hit_for(note, "rollout").expect("a body match is worth quoting");
             assert_eq!(hit.excerpt, "☐ ask about the rollout window");
+        }
+
+        /// What a Note shows is what is searched: across a Markdown mark, and what the editor
+        /// escaped when it wrote the Markdown.
+        #[test]
+        fn finds_a_note_by_the_words_it_shows() {
+            for (stored, searched, quoted) in [
+                (
+                    "ask about the **rollout** window",
+                    "rollout window",
+                    "ask about the rollout window",
+                ),
+                ("read list\\[0] first", "list[0]", "read list[0] first"),
+                (
+                    "def \\_\\_init\\_\\_(self)",
+                    "__init__",
+                    "def __init__(self)",
+                ),
+                ("call(\\*args)", "*args", "call(*args)"),
+            ] {
+                let note = Note {
+                    kind: NoteKind::Note,
+                    content: stored.to_string(),
+                    ..sample()
+                };
+                let hit = hit_for(note, searched);
+                assert_eq!(
+                    hit.map(|hit| hit.excerpt).as_deref(),
+                    Some(quoted),
+                    "{searched}"
+                );
+            }
         }
 
         #[test]

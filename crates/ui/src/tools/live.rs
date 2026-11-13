@@ -113,6 +113,33 @@ impl<P: PartialEq + Clone, T> Live<P, T> {
     }
 }
 
+/// Tests only: one frame's `Turn` over `backend`, the platform doing nothing.
+#[cfg(test)]
+pub(crate) fn on_a_turn<R>(
+    backend: &Backend,
+    time: f64,
+    run: impl FnOnce(&mut Turn<'_>) -> R,
+) -> R {
+    let ctx = egui::Context::default();
+    let mut errors = ErrorNotifier::default();
+    let mut status = StatusNotifier::default();
+    let clipboard: Arc<dyn Clipboard + Send + Sync> = Arc::new(platform::clipboard::NoClipboard);
+    let dialog: Arc<dyn FileDialog + Send + Sync> = Arc::new(platform::dialog::NoDialog);
+    let mut turn = Turn {
+        ctx: &ctx,
+        backend,
+        time,
+        now: chrono::Utc::now(),
+        errors: &mut errors,
+        status: &mut status,
+        clipboard: &clipboard,
+        dialog: &dialog,
+        zones: &[],
+        csv_separator: engine::tools::identity::CsvSeparator::Comma,
+    };
+    run(&mut turn)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,7 +163,7 @@ mod tests {
                 backend,
                 errors: ErrorNotifier::default(),
                 status: StatusNotifier::default(),
-                clipboard: platform::clipboard::system(),
+                clipboard: std::sync::Arc::new(platform::clipboard::NoClipboard),
                 dialog: std::sync::Arc::new(platform::dialog::NoDialog),
                 ctx: egui::Context::default(),
                 live: Live::default(),

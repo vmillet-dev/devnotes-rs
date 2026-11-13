@@ -197,7 +197,7 @@ fn row(
     let preview = if note.note.kind == NoteKind::Checklist {
         tr(keys::trash::CHECKLIST_NOTE)
     } else {
-        snippet(&note.note.content)
+        note.preview.clone()
     };
     let mono = if note.note.kind == NoteKind::Checklist {
         FontFamily::Proportional
@@ -270,15 +270,6 @@ fn buttons(
         actions.push(Action::Notes(Asked::Trash(Trash::Restore(id.to_owned()))));
     }
     buttons.min_rect().left()
-}
-
-/// Its first lines, as they were written.
-fn snippet(content: &str) -> String {
-    content
-        .lines()
-        .take(SNIPPET_LINES)
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 fn line(
@@ -518,6 +509,31 @@ mod tests {
         click_id(&mut harness, "trash-empty-confirm");
 
         assert!(has(&harness, "trash-empty-state"));
+    }
+
+    #[test]
+    fn a_deleted_drawing_shows_its_words_not_its_scene() {
+        let (backend, profile) = testing::unlocked();
+        let seed = testing::note(&backend, "kept");
+        let space = seed.space_id.clone();
+        engine::db::run_here(backend.engine(), move |engine| {
+            let draft = engine::notes::model::NoteDraft {
+                kind: engine::notes::kind::NoteKind::Drawing,
+                content: r#"{"version":1,"scene":{"version":"7.4.0","objects":[{"type":"Textbox","text":"Plan du réseau"}]}}"#.to_owned(),
+                ..testing::snippet(space, "Archi".to_owned())
+            };
+            let id = engine::notes::create_note(engine, draft)?.id.clone();
+            engine::notes::delete_notes(engine, vec![id])
+        })
+        .unwrap();
+        let mut harness = area(backend, profile);
+        click_id(&mut harness, "trash-open");
+
+        let node = harness.get_by(|node| node.author_id() == Some("trash-row-snippet"));
+        let node = node.accesskit_node();
+        let shown = node.label().or_else(|| node.value()).unwrap_or_default();
+
+        assert_eq!(shown, "Plan du réseau");
     }
 
     #[test]

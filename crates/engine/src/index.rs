@@ -470,7 +470,7 @@ pub async fn fill(engine: Arc<Engine>) {
                 return;
             }
             Err(error) => {
-                log::warn!("The notes index stopped filling: {}", error.detail);
+                log::warn!("The notes index stopped filling: {}", error.for_log());
                 give_up(&engine);
                 return;
             }

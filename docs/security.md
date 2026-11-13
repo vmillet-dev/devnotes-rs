@@ -37,6 +37,8 @@ What SQL filters, sorts and joins on is not sealed — sealing it would mean loa
 
 Keep that in mind before a tag or a field name carries the secret itself.
 
+A sealed value is not bound to the row it belongs to: someone who can **write** your files, not just read them, could swap two sealed titles or bodies within the library and DevNotes would open both without complaint. Each still opens only under your key, and nothing new can be forged; protecting against an attacker who rewrites the database is outside what DevNotes promises.
+
 ### What lives in memory while it runs
 
 The key, for the length of the session: there is no idle re-lock. And **your whole open library, decrypted**: once it is unlocked, DevNotes reads every note into an index in memory — titles, bodies, items, tags, folded for the search — so that searching, sorting and drawing the cards never go back to the sealed columns. It is kept until the library is closed or another one is opened, and then let go. The interface keeps caches beside it — the lines on screen, the pictures of a drawing, the diagrams of a Note, what was typed in a field — emptied whenever another library opens, but **not wiped byte by byte** when they are let go. Any of it can reach the swap file, a hibernation image or a crash dump. DevNotes protects files at rest — a stolen laptop, a copied profile — not a machine already compromised while it runs.
@@ -50,6 +52,8 @@ Opening an attachment writes a decrypted copy inside your own profile, never the
 - **One process per profile.** A second launch on the same profile hands over to the first and exits: the index assumes it is the only writer of the library, and two writers would leave it silently wrong.
 - **No note in the logs.** The log (`devnotes.log`, under `%LOCALAPPDATA%\com.devnotes.app\logs` or `~/.local/share/com.devnotes.app/logs`) records what happened, never what you wrote: a crash records where and on which thread, **never its message**, since a message can quote a piece of a note. Neither is a passphrase or a key ever logged.
 - **No web page inside.** Since 1.0.0 the interface is native: there is no WebView, so no page, no script and no content policy to get wrong. A link in a note opens in your browser only if it is `http` or `https`; a `file:` link is a program to run, and is refused.
+- **A request script runs with your rights.** The script host is DevNotes itself, started again: every send and every file a script asks for goes through the application, which asks where it should, but the host's isolation rests on the script engine alone, not on a sandbox of the operating system. Run only scripts you would run yourself.
+- **No file sent behind your back.** A request script that gives a request a file to send, or sends one itself, stops the send and names the file; it leaves only after your yes, for that file alone. A collection run sends no such file. No file over 64 MB is read for a send.
 - **Nothing of the window's state in clear.** The window remembers its size and place, and nothing else of what it showed.
 - **Updates are signed.** An update is downloaded whole and checked against a signature only the release key can make before anything is installed; a file altered by a single byte is refused. Installed from a `.deb` or an `.rpm`, DevNotes leaves updates to your package manager.
 

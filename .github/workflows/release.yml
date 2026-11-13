@@ -56,7 +56,7 @@ jobs:
     steps:
       # `fetch-depth: 0` for `git describe` and the commit range; the credentials stay in the
       # worktree, they are what will push the commit and the tag.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -73,7 +73,7 @@ jobs:
       # One version for the whole workspace (D27): `[workspace.package]` in Cargo.toml, which
       # Cargo.lock must repeat — the build is `--locked`. Checked before the tag exists, so a
       # mismatch costs a re-run rather than a deleted tag. Node is set up first for it.
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -157,7 +157,7 @@ jobs:
             --out "$RUNNER_TEMP/release-notes.md"
           cp CHANGELOG.md "$RUNNER_TEMP/CHANGELOG.md"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-notes
           path: ${{ runner.temp }}/*.md
@@ -211,7 +211,7 @@ jobs:
     steps:
       # The SHA rather than the tag name: the tag was just created by `prepare`, and a SHA
       # cannot come to mean something else in between.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare.outputs.sha || github.sha }}
 
@@ -231,7 +231,7 @@ jobs:
           password: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           out: release
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: dist-${{ matrix.target }}
           path: release
@@ -251,11 +251,11 @@ jobs:
       # downloaded bundles with it. The repository is here for `scripts/release-notes.mjs`,
       # which re-reads the section at the tag — the committed file is the only source of both
       # the release body and the "What's new" panel.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare.outputs.sha }}
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: dist-*
           merge-multiple: true
@@ -315,7 +315,7 @@ jobs:
       # twice on one page, once grouped and once flat. What it also gave was the new
       # contributors, which says nothing on a repository with one author, and the comparison
       # link, which the step above writes in one line.
-      - uses: softprops/action-gh-release@v3
+      - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: ${{ needs.prepare.outputs.tag }}

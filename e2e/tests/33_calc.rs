@@ -71,5 +71,26 @@ fn calc() {
         app.capture("card");
     });
 
+    step(
+        "a short date before an accent leaves the sheet listed",
+        || {
+            app.click("new-note-kind");
+            app.click("new-note-calc");
+            app.fill("editor-title", "Agenda");
+            app.click("editor-body");
+            app.paste("RDV le 5/11/24 à 10h\n2 + 2");
+            app.eventually("the line computed", |tree| {
+                results(tree).contains(&"4".to_owned())
+            });
+            app.click("editor-close");
+            app.eventually("the card listed", |tree| {
+                tree.texts("note-card-title")
+                    .iter()
+                    .any(|title| title == "Agenda")
+            });
+            app.capture("short-date");
+        },
+    );
+
     app.quit();
 }

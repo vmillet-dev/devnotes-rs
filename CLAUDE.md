@@ -36,7 +36,7 @@ Principles:
 - **Switching library resets the library scope of the UI** (plan § 3.3.8); neither the open nor the last library can be deleted.
 - **Two `preferences.json`**: `devnotes.notes.*` is per library, the rest per application (`automaticBackups` stays application-level, read by the core itself). → "Two scopes of preference, one prefix apart".
 - **Profiles**: the binary defaults to `com.devnotes.app`, the packages' identifier (`com.devnotes.app.dev` until 1.0.0, D16); ⚠️ never two processes on one profile — the in-memory index assumes it is the only writer (D16).
-- **Half-written files are staged then renamed** (registry, key file, export, preferences).
+- **Files are written durably** — staged, flushed, renamed, the folder flushed on Unix — through `engine::durable` (registry, key file, export, saved response, restore, attachments). ⚠️ The two `preferences.json` and the window geometry are only staged then renamed: rewritten at each change on the db queue, a flush each time clogs it, and an empty one after a power cut reads as the defaults.
 - **Backups**: launch copy via `VACUUM INTO` before sweeps, key file and `attachments/` hard-linked, ≤ 1/day; restore empties the `Mutex` and the index first and sets files aside in `replaced/`. Every open runs `db::quick_check` before migrations; damaged libraries go through `recovery::set_aside`. → "The copies, and putting one back", "The gate".
 - **Attachments** live in `attachments/` under `model::stored_name` (filters imported ids); write the file, then the record. → "Attachments".
 
@@ -74,7 +74,7 @@ Principles:
 
 ### Core and interface
 
-- **Errors are codes**: `AppError { code, params, detail }`; the UI translates by an exhaustive `match` on `ErrorCode`, so a new code does not compile until it has its key in both locales; `detail` goes to the log, never to the screen.
+- **Errors are codes**: `AppError { code, params, detail }`; the UI translates by an exhaustive `match` on `ErrorCode`, so a new code does not compile until it has its key in both locales; `detail` never goes to the screen, and to the log only through `AppError::for_log` (the code, its detail only where nothing typed is in it).
 - `NotePatch`: a field set to `None` is untouched.
 - **Lists send previews** (`PREVIEW_LINES`); ⚠️ opening a note always reads it whole by id (`get_note`). → "A list sends previews, and the body is read by id".
 - No user-visible string in Rust outside the translation files (`crates/i18n/translations/{fr,en}.json`): code returns a key and its params. ⚠️ Never interpolate user content (a snippet's `{{fields}}`) into a translation template.

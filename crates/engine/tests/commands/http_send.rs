@@ -119,6 +119,7 @@ pub(super) fn request(url: &str) -> SendRequest {
         request_id: None,
         environment_id: None,
         confirmed: false,
+        files: Vec::new(),
     }
 }
 
@@ -1131,6 +1132,20 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
   \"code\": null
 }"
     );
+}
+
+/// Headers are read lossily: an expiry of any letters is no date, and the send is answered.
+#[test]
+fn a_cookie_whose_expiry_is_accented_letters_lives_the_session() {
+    let session = Session::open();
+    let (port, _) = serve(1, |_, _| {
+        response("200 OK", &[("Set-Cookie", "a=1; Expires=éé")], b"")
+    });
+
+    let answer =
+        session.wait(|e| send_http_request(e, request(&format!("http://127.0.0.1:{port}/"))));
+
+    assert_eq!(answer.unwrap().status, 200);
 }
 
 #[test]

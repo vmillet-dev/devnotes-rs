@@ -168,8 +168,11 @@ pub enum ErrorCode {
     HttpTooManyRedirects,
     /// The `path` parameter names the file a body or a part would have sent.
     HttpFileUnreadable,
+    /// `path` is the file, `limit` what a send reads at most, in megabytes.
+    HttpFileTooLarge,
     /// What « Annuler » answers: the front, which asked, says nothing.
     HttpCancelled,
+    HttpFell,
     HttpGraphqlVariables,
     /// The `status` parameter is what the server answered instead of switching protocols.
     HttpWebsocketRefused,
@@ -187,6 +190,8 @@ pub enum ErrorCode {
     HttpScriptMethod,
     /// The scripts made the request one that a protected `environment` asks about: `method`.
     HttpScriptProtected,
+    /// A script asked to send the file at `path`, which the user has not said yes to.
+    HttpScriptFile,
     /// A run's data file: `fault` is `unreadable` or `empty`.
     HttpRunData,
 }
@@ -234,6 +239,46 @@ impl AppError {
         }
     }
 
+    /// What a log line says of this error: its code, and its detail only for the codes whose
+    /// detail holds nothing typed or sealed — never a name, a file, a URL or a script's words.
+    #[must_use]
+    pub fn for_log(&self) -> String {
+        use ErrorCode as C;
+        let plain = matches!(
+            self.code,
+            C::NoteNotFound
+                | C::SpaceNotFound
+                | C::FolderNotFound
+                | C::AttachmentNotFound
+                | C::HttpItemNotFound
+                | C::HttpEnvironmentNotFound
+                | C::RevisionNotFound
+                | C::LibraryNotFound
+                | C::BackupNotFound
+                | C::BackupUnopenable
+                | C::LibraryOpen
+                | C::LastLibrary
+                | C::StorageUnavailable
+                | C::WrongPassphrase
+                | C::Locked
+                | C::PassphraseRequired
+                | C::LibraryDamaged
+                | C::Storage
+                | C::HttpTimeout
+                | C::HttpTooManyRedirects
+                | C::HttpCancelled
+                | C::HttpFell
+                | C::HttpWebsocketRefused
+                | C::HttpScriptSkipped
+                | C::HttpRunData
+        );
+        if plain {
+            format!("{:?}: {}", self.code, self.detail)
+        } else {
+            format!("{:?}", self.code)
+        }
+    }
+
     pub fn storage_unavailable() -> Self {
         Self::new(
             ErrorCode::StorageUnavailable,
@@ -278,7 +323,12 @@ impl From<SendError> for AppError {
             SendError::FileUnreadable(path) => {
                 Self::with(ErrorCode::HttpFileUnreadable, detail, "path", &path)
             }
+            SendError::FileTooLarge(path) => {
+                Self::with(ErrorCode::HttpFileTooLarge, detail, "path", &path)
+                    .and("limit", &crate::http::send::SENT_FILE_MEGABYTES.to_string())
+            }
             SendError::Cancelled => Self::new(ErrorCode::HttpCancelled, detail),
+            SendError::Fell => Self::new(ErrorCode::HttpFell, detail),
             SendError::GraphqlVariables(_) => Self::new(ErrorCode::HttpGraphqlVariables, detail),
             SendError::Handshake(status) => Self::with(
                 ErrorCode::HttpWebsocketRefused,
@@ -352,6 +402,7 @@ impl From<ScriptError> for AppError {
                 refused
             }
             ScriptError::Skipped => Self::new(ErrorCode::HttpScriptSkipped, detail),
+            ScriptError::File(path) => Self::with(ErrorCode::HttpScriptFile, detail, "path", &path),
             ScriptError::Method(method) => {
                 Self::with(ErrorCode::HttpScriptMethod, detail, "method", &method)
             }

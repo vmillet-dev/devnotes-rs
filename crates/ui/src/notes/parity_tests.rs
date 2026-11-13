@@ -303,6 +303,18 @@ fn the_palette_says_how_many_fields_a_note_waits_for() {
 }
 
 #[test]
+fn the_palette_recalls_a_sheet_with_a_short_date_before_an_accent() {
+    let (backend, profile) = testing::unlocked();
+    note(&backend, "Agenda", NoteKind::Calc, "RDV le 5/11/24 à 10h");
+    let mut harness = area(backend, profile);
+    open_palette(&mut harness);
+
+    until(&mut harness, "the sheet is recalled", |harness| {
+        options(harness).iter().any(|name| name == "Agenda")
+    });
+}
+
+#[test]
 fn a_drawing_is_inserted_from_the_toolbar_of_a_note() {
     let (backend, profile) = testing::unlocked();
     let written = note(&backend, "Procédure", NoteKind::Note, "# Titre");

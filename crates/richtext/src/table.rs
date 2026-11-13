@@ -7,12 +7,12 @@ use crate::tree;
 
 /// A new table: a header row and two rows, three columns, as the reference inserted one.
 pub fn insert(document: &mut Document, selection: &Selection) -> Selection {
-    let top = selection.head.path.first().copied().unwrap_or(0);
+    let after = crate::edit::after_top(document, selection);
     let row = || vec![Cell::new(); 3];
     document
         .blocks
-        .insert(top + 1, Block::Table(vec![row(), row(), row()]));
-    caret(vec![top + 1, 0, 0])
+        .insert(after, Block::Table(vec![row(), row(), row()]));
+    caret(vec![after, 0, 0])
 }
 
 fn caret(path: Vec<usize>) -> Selection {

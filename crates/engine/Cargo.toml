@@ -76,6 +76,7 @@ psl.workspace = true
 rquickjs.workspace = true
 
 [dev-dependencies]
+rcgen.workspace = true
 richtext.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }

@@ -75,7 +75,11 @@ pub(super) struct QrTool {
 }
 
 pub(super) fn make() -> Box<dyn Tool> {
-    Box::new(QrTool {
+    Box::new(fresh())
+}
+
+fn fresh() -> QrTool {
+    QrTool {
         kind: ContentKind::Url,
         forms: Forms::default(),
         security: WifiSecurity::Wpa,
@@ -87,7 +91,7 @@ pub(super) fn make() -> Box<dyn Tool> {
         wants_file: None,
         wants_copy: false,
         saving: None,
-    })
+    }
 }
 
 fn extension(format: QrFormat) -> &'static str {
@@ -506,5 +510,39 @@ impl Tool for QrTool {
 
     fn left(&mut self) {
         self.forms.password.zeroize();
+        self.answer = Live::default();
+        self.texture = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tools::live::on_a_turn;
+
+    #[test]
+    fn leaving_drops_the_code_that_held_the_password() {
+        let (backend, _profile) = crate::testing::backend();
+        let mut tool = QrTool {
+            kind: ContentKind::Wifi,
+            ..fresh()
+        };
+        "home".clone_into(&mut tool.forms.ssid);
+        "not a real one".clone_into(&mut tool.forms.password);
+        for time in [0.0, 0.01] {
+            on_a_turn(&backend, time, |turn| tool.update(turn));
+            backend.settle();
+        }
+        let held = |tool: &QrTool| {
+            tool.answer.answered().is_some_and(|asked| {
+                matches!(&asked.content, QrContent::Wifi { password, .. } if !password.is_empty())
+            })
+        };
+        assert!(held(&tool));
+
+        tool.left();
+
+        assert!(!held(&tool));
+        assert!(tool.texture.is_none());
     }
 }
