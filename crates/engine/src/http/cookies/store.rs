@@ -71,11 +71,18 @@ pub fn apply(
         let mut known = read(connection, vault)?;
         for change in changes {
             let (Change::Set(cookie) | Change::Remove(cookie)) = change;
+            let mut replaced = None;
             for stale in known.iter().filter(|stored| stored.cookie.same_as(cookie)) {
                 diesel::delete(http_cookies::table.find(&stale.id)).execute(connection)?;
+                replaced = replaced.or(stale.cookie.created);
             }
             known.retain(|stored| !stored.cookie.same_as(cookie));
             if let Change::Set(cookie) = change {
+                // As the jar held in memory does: a replaced cookie keeps its place.
+                let cookie = &JarCookie {
+                    created: replaced.or(cookie.created),
+                    ..cookie.clone()
+                };
                 let id = Uuid::new_v4().to_string();
                 let json = serde_json::to_string(cookie)
                     .map_err(|error| StorageError::Vault(format!("unwritable cookie: {error}")))?;
@@ -220,5 +227,30 @@ mod tests {
         let id = by_domain(&mut library).unwrap()[0].cookies[0].id.clone();
         assert_eq!(delete(&mut library, &id).unwrap(), 1);
         assert_eq!(count(&mut library).unwrap(), 0);
+    }
+
+    /// As the jar held in memory does: a cookie set again keeps its place among those sent.
+    #[test]
+    fn a_cookie_set_again_keeps_when_it_was_first_made() {
+        let mut library = crate::db::open_in_memory().unwrap();
+        let now: DateTime<Utc> = "2026-10-07T12:00:00Z".parse().unwrap();
+        let at = |seconds| Some(now + TimeDelta::seconds(seconds));
+        let first = JarCookie {
+            created: at(0),
+            ..cookie("session", "a.fr", "1")
+        };
+        let again = JarCookie {
+            created: at(5),
+            ..cookie("session", "a.fr", "2")
+        };
+        apply(&mut library, &[Change::Set(first.clone())], now).unwrap();
+        apply(&mut library, &[Change::Set(again.clone())], now).unwrap();
+
+        let mut held = vec![first];
+        crate::http::cookies::apply(&mut held, &[Change::Set(again)]);
+        let stored = jar(&mut library, now).unwrap();
+
+        assert_eq!(stored[0].created, held[0].created);
+        assert_eq!(stored[0].created, at(0));
     }
 }
