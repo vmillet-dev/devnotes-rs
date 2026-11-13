@@ -8,6 +8,10 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};
+use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
+use rustls::crypto::CryptoProvider;
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+use rustls::{ClientConfig, DigitallySignedStruct, SignatureScheme};
 use rustls_platform_verifier::ConfigVerifierExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -165,6 +169,72 @@ fn failure(error: &tungstenite::Error, timeout: Option<&Limit>) -> SendError {
     }
 }
 
+/// The system's verifier, or with « verify TLS » off any certificate, as a request takes it.
+fn tls_config(verify: bool) -> Result<ClientConfig, SendError> {
+    if verify {
+        return ClientConfig::with_platform_verifier()
+            .map_err(|error| SendError::Tls(error.to_string()));
+    }
+    let provider = CryptoProvider::get_default()
+        .cloned()
+        .unwrap_or_else(|| Arc::new(rustls::crypto::ring::default_provider()));
+    Ok(ClientConfig::builder_with_provider(Arc::clone(&provider))
+        .with_safe_default_protocol_versions()
+        .map_err(|error| SendError::Tls(error.to_string()))?
+        .dangerous()
+        .with_custom_certificate_verifier(Arc::new(AnyCertificate(provider)))
+        .with_no_client_auth())
+}
+
+/// Takes any certificate, and still checks the handshake's signatures against it.
+#[derive(Debug)]
+struct AnyCertificate(Arc<CryptoProvider>);
+
+impl ServerCertVerifier for AnyCertificate {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        Ok(ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        signed: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            signed,
+            &self.0.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        signed: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            signed,
+            &self.0.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        self.0.signature_verification_algorithms.supported_schemes()
+    }
+}
+
 fn emit(events: &dyn EventSink, id: &str, event: SocketEvent) {
     events.emit(EngineEvent::Socket(WebsocketEvent {
         id: id.to_string(),
@@ -210,8 +280,7 @@ impl Sockets {
                 .headers_mut()
                 .insert("Sec-WebSocket-Protocol", value);
         }
-        let tls = rustls::ClientConfig::with_platform_verifier()
-            .map_err(|error| SendError::Tls(error.to_string()))?;
+        let tls = tls_config(outgoing.transport.verify_tls)?;
         let (stream, response) = tokio::time::timeout(
             Duration::from_millis(u64::from(timeout.value)),
             connect_async_tls_with_config(
