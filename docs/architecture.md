@@ -1395,7 +1395,10 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   is the same lines with their markers spelled out (`•`, `1.`, `☐`/`☑`): `cut_to_preview`
   puts it in place of the body, one parse for both, marked `truncated` even when it is short —
   a copy taken from the list rereads the Markdown instead of copying the words. The search
-  matches the stored body and quotes the readable one (`Note::readable_body`). A snippet names
+  matches and quotes the readable body (`Note::readable_body`), folded once by the index: « rollout
+  window » finds `**rollout** window`, and a drawing is found by its words, never its scene. The
+  trash shows the same text, its first lines cut by the core (`TrashedNote.preview`), without
+  the body. A snippet names
   its format on its card and in the palette, a Note and a list their kind (`notes::ui::kind_icon`).
 - **Typing never changes the kind; a paste into an empty Note can.** Plain text pasted into an
   empty Note is handed to `detect_language`. Prose
