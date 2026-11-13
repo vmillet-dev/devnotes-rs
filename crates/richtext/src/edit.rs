@@ -696,7 +696,7 @@ pub fn toggle_list(document: &mut Document, selection: &Selection, kind: ListKin
 /// The quote the caret is in is undone; outside one, its block goes into a quote.
 pub fn toggle_quote(document: &mut Document, selection: &Selection) -> Selection {
     let path = selection.head.path.clone();
-    let Some(&top) = path.first() else {
+    let Some(&top) = path.first().filter(|&&top| top < document.blocks.len()) else {
         return selection.clone();
     };
     if let Some(Block::Quote(inner)) = document.blocks.get_mut(top) {
@@ -823,12 +823,19 @@ pub fn replace_with_rule(document: &mut Document, selection: &Selection) -> Sele
 
 /// A rule after the caret's top block, the caret in a paragraph after it.
 pub fn insert_rule(document: &mut Document, selection: &Selection) -> Selection {
-    let top = selection.head.path.first().copied().unwrap_or(0);
-    document.blocks.insert(top + 1, Block::Rule);
+    let after = after_top(document, selection);
+    document.blocks.insert(after, Block::Rule);
     document
         .blocks
-        .insert(top + 2, Block::Paragraph(Vec::new()));
-    caret(vec![top + 2], 0)
+        .insert(after + 1, Block::Paragraph(Vec::new()));
+    caret(vec![after + 1], 0)
+}
+
+/// Where a block goes after the caret's top one; at the end for a caret the document no
+/// longer reaches.
+pub(crate) fn after_top(document: &Document, selection: &Selection) -> usize {
+    let top = selection.head.path.first().copied().unwrap_or(0);
+    (top + 1).min(document.blocks.len())
 }
 
 #[cfg(test)]

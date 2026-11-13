@@ -825,6 +825,17 @@ pub fn card_lines(sheet: &str, today: NaiveDate) -> Vec<CalcCardLine> {
 mod tests {
     use super::*;
 
+    /// On a stack overflow the process stops, the whole test binary with it.
+    #[test]
+    fn a_line_nested_past_reason_is_an_error_not_a_crash() {
+        for line in ["(".repeat(5_000) + "1", "-".repeat(50_000) + "1"] {
+            let sheet = evaluate(&line, today());
+            assert_eq!(sheet.rows.len(), 1);
+        }
+        let nested = format!("{}2{}", "(".repeat(100), ")".repeat(100));
+        assert_eq!(value(&nested), number("2", None));
+    }
+
     fn today() -> NaiveDate {
         NaiveDate::from_ymd_opt(2026, 10, 16).unwrap()
     }

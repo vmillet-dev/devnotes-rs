@@ -44,13 +44,20 @@ struct Reader {
     marks: Marks,
     /// Emphasis can nest in itself: `*a *b* c*`.
     depth: [u32; 3],
+    /// Quotes opened past `MAX_QUOTES`, read as the one around them.
+    flattened: usize,
 }
+
+/// Each level is a frame of every walk over the tree, and of its drop: an imported Note
+/// quoted thousands deep would overflow the stack.
+const MAX_QUOTES: usize = 64;
 
 pub fn read(markdown: &str) -> Document {
     let mut reader = Reader {
         open: vec![Open::Blocks(Vec::new())],
         marks: Marks::default(),
         depth: [0; 3],
+        flattened: 0,
     };
     for event in Parser::new_ext(markdown, OPTIONS) {
         reader.event(event);
@@ -73,6 +80,10 @@ impl Reader {
             Event::End(TagEnd::Strikethrough) => self.mark(2, false),
             Event::End(TagEnd::Link) => self.marks.link = None,
             Event::End(TagEnd::HtmlBlock) => self.close(),
+            Event::End(TagEnd::BlockQuote(_)) if self.flattened > 0 => {
+                self.end_loose();
+                self.flattened -= 1;
+            }
             Event::End(_) => {
                 self.end_loose();
                 self.close();
@@ -117,6 +128,10 @@ impl Reader {
                 level: heading_level(level),
                 content: Vec::new(),
             },
+            Tag::BlockQuote(_) if self.quotes() == MAX_QUOTES => {
+                self.flattened += 1;
+                return;
+            }
             Tag::BlockQuote(_) => Open::Quote(Vec::new()),
             Tag::CodeBlock(kind) => Open::Code {
                 language: match kind {
@@ -151,6 +166,13 @@ impl Reader {
             _ => return,
         };
         self.open.push(open);
+    }
+
+    fn quotes(&self) -> usize {
+        self.open
+            .iter()
+            .filter(|open| matches!(open, Open::Quote(_)))
+            .count()
     }
 
     fn mark(&mut self, which: usize, on: bool) {

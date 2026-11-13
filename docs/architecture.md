@@ -5668,8 +5668,8 @@ installed or shipped alongside the executable. The database file lives under the
 - **⚠️ Every data function runs on the engine's one db thread** (D11). `engine::db::submit`
   queues a job on it, which the interface does at the call (`Backend::db`), and `db::run_here`
   is what a test or the queue itself calls. A job that panics answers
-  `StorageError::Unavailable`, the answer the lock it would have poisoned gives, and the queue
-  goes on with the next one.
+  `StorageError::Unavailable`, and the queue goes on with the next one: the next `db::lock`
+  takes the poisoned lock back, rolls back what the job left open and runs a quick check.
 
   **One thread, in order.** The queue is one thread that runs its jobs in the order they
   arrive: two writes sent one after the other land in that order , and the `Mutex` is never contended. ⚠️ `db::lock` asserts
@@ -6481,8 +6481,8 @@ The tests split by what they need in order to run:
   timestamps explicitly instead of reading the clock, which makes assertions on `created_at` /
   `updated_at` deterministic. A `query` helper in the test module recomposes
   `fetch` + `notes::view::build` so the whole read path stays covered end to end.
-- **`db` and `error`** — that a poisoned mutex reports `storageUnavailable` instead of
-  panicking a second time, and that each error variant maps to the right code and params.
+- **`db` and `error`** — that a poisoned mutex is taken back with its transaction rolled
+  back, and that each error variant maps to the right code and params.
 - **The service functions** — `tests/commands/`, one module per feature, on an `Engine` over a
   temporary profile, the way the interface calls them: what a service function adds to the store
   is what they check — the lock, the validation before it, and the code a failure answers.

@@ -99,12 +99,40 @@ pub(crate) fn lock(db: &Db) -> Result<LibraryGuard<'_>, StorageError> {
         cfg!(test) || queue::on_db_thread(),
         "the library is locked off the db thread"
     );
-    let guard = db.lock().map_err(|_| StorageError::Unavailable)?;
+    let guard = match db.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => taken_back(db, poisoned.into_inner())?,
+    };
     if guard.is_none() {
         return Err(StorageError::Locked);
     }
 
     Ok(LibraryGuard(guard))
+}
+
+/// The lock of a command that panicked: what it left open is rolled back and the database
+/// checked, or every command after it would answer `Unavailable` until a restart.
+fn taken_back<'a>(
+    db: &'a Db,
+    mut guard: MutexGuard<'a, Option<Library>>,
+) -> Result<MutexGuard<'a, Option<Library>>, StorageError> {
+    use diesel::connection::{AnsiTransactionManager, TransactionManager};
+
+    log::error!("A command panicked holding the library: rolled back and checked");
+    if let Some(library) = guard.as_mut() {
+        let connection = library.db();
+        while AnsiTransactionManager::transaction_manager_status_mut(connection)
+            .transaction_depth()
+            .map_err(|_| StorageError::Unavailable)?
+            .is_some()
+        {
+            AnsiTransactionManager::rollback_transaction(connection)
+                .map_err(|_| StorageError::Unavailable)?;
+        }
+        quick_check(connection).map_err(|_| StorageError::Unavailable)?;
+    }
+    db.clear_poison();
+    Ok(guard)
 }
 
 /// Runs `job` on the engine's db queue: one thread, in the order jobs arrive, so two writes sent
@@ -330,6 +358,29 @@ mod tests {
     use crate::error::{AppError, ErrorCode};
     use diesel::sql_types::{BigInt, Integer};
 
+    /// A command that fell in the middle of a transaction: the next one finds the lock back,
+    /// and that transaction rolled back.
+    #[test]
+    fn a_command_that_panicked_under_the_lock_leaves_it_usable() {
+        use diesel::connection::{AnsiTransactionManager, TransactionManager};
+
+        let db: Db = Mutex::new(Some(open_in_memory().unwrap()));
+        let fell = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let mut guard = lock(&db).unwrap();
+            AnsiTransactionManager::begin_transaction(guard.db()).unwrap();
+            panic!("a command fell");
+        }));
+        assert!(fell.is_err());
+
+        let mut guard = lock(&db).expect("the lock taken back");
+        let depth = AnsiTransactionManager::transaction_manager_status_mut(guard.db())
+            .transaction_depth()
+            .unwrap();
+        assert_eq!(depth, None);
+        drop(guard);
+        assert!(!db.is_poisoned());
+    }
+
     fn in_memory() -> Db {
         Mutex::new(Some(open_in_memory().unwrap()))
     }
@@ -510,30 +561,5 @@ mod tests {
         };
 
         assert!(matches!(error, StorageError::Locked));
-    }
-
-    #[test]
-    fn a_poisoned_connection_is_reported_instead_of_panicking_again() {
-        let db = in_memory();
-
-        // Poison it the way production would: a panic while the guard is held.
-        let hook = std::panic::take_hook();
-        std::panic::set_hook(Box::new(|_| {}));
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let _guard = db.lock().unwrap();
-            panic!("a command panicked while holding the connection");
-        }));
-        std::panic::set_hook(hook);
-
-        // `unwrap_err()` would want the guard to be `Debug`.
-        let Err(error) = lock(&db) else {
-            panic!("a poisoned mutex must be reported, not returned");
-        };
-
-        assert!(matches!(error, StorageError::Unavailable));
-        assert!(matches!(
-            AppError::from(error).code,
-            ErrorCode::StorageUnavailable
-        ));
     }
 }

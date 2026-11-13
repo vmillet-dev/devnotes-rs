@@ -203,7 +203,12 @@ pub(super) struct Parser<'a> {
     no_over: bool,
     /// Where the line ends, for a value missing there.
     end: u32,
+    /// How many signs and brackets are open: each one is a few frames of the stack.
+    depth: usize,
 }
+
+/// Far past what a line is written with; well short of what a thread's stack holds.
+const MAX_NESTING: usize = 128;
 
 type Answer = Result<Value, CalcError>;
 
@@ -226,6 +231,7 @@ impl<'a> Parser<'a> {
             listing: false,
             no_over: false,
             end,
+            depth: 0,
         };
         parser.skip_quoted();
         parser
@@ -906,7 +912,18 @@ impl<'a> Parser<'a> {
         power(base, exponent).map_err(|error| self.blame(error))
     }
 
+    /// Every nesting goes through here: a bracket reads its inside down to a sign or a value.
     fn unary(&mut self) -> Answer {
+        if self.depth == MAX_NESTING {
+            return Err(self.unreadable());
+        }
+        self.depth += 1;
+        let answer = self.signed();
+        self.depth -= 1;
+        answer
+    }
+
+    fn signed(&mut self) -> Answer {
         if let Some(symbol) = self.peek_symbol(&['-', '−', '+']) {
             self.take(TokenKind::Operator);
             let value = self.unary()?;

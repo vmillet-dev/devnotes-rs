@@ -175,6 +175,9 @@ pub enum SendError {
     FileTooLarge(String),
     #[error("The send was cancelled")]
     Cancelled,
+    /// The send's task panicked: never told as a cancel, and the history is still written.
+    #[error("The send stopped on an internal error")]
+    Fell,
     #[error("The GraphQL variables are not a JSON object: {0}")]
     GraphqlVariables(String),
     /// The server answered the WebSocket handshake with this status instead of 101.
@@ -1220,6 +1223,15 @@ pub struct Sending {
     hosts: Mutex<HashMap<String, Killer>>,
 }
 
+/// A task aborted was cancelled; one that panicked fell, which a cancel must not hide.
+fn ended(error: tokio::task::JoinError) -> SendError {
+    if error.is_panic() {
+        SendError::Fell
+    } else {
+        SendError::Cancelled
+    }
+}
+
 impl Sending {
     /// A task of its own, so cancelling aborts it wherever it waits. Beside the answer, what
     /// the hops did to the jar: kept even when the chain ended on a failure, as a browser keeps
@@ -1247,15 +1259,12 @@ impl Sending {
         {
             running.remove(id);
         }
-        let answer = answer
-            .map_err(|_| SendError::Cancelled)
-            .flatten()
-            .map(|received| {
-                if let Ok(mut bodies) = self.bodies.lock() {
-                    bodies.insert(id.to_string(), Arc::new(received.kept));
-                }
-                received.response
-            });
+        let answer = answer.map_err(ended).flatten().map(|received| {
+            if let Ok(mut bodies) = self.bodies.lock() {
+                bodies.insert(id.to_string(), Arc::new(received.kept));
+            }
+            received.response
+        });
         let changes = changes
             .lock()
             .map(|mut set| std::mem::take(&mut *set))
@@ -1355,6 +1364,20 @@ impl Sending {
 mod tests {
     use super::*;
     use crate::http::graphql::GraphqlDocument;
+
+    #[test]
+    fn a_send_that_fell_is_not_told_as_cancelled() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let (fell, aborted) = runtime.block_on(async {
+            let fell = tokio::spawn(async { panic!("a send fell") }).await;
+            let waiting = tokio::spawn(std::future::pending::<()>());
+            waiting.abort();
+            (fell.unwrap_err(), waiting.await.unwrap_err())
+        });
+
+        assert!(matches!(ended(fell), SendError::Fell));
+        assert!(matches!(ended(aborted), SendError::Cancelled));
+    }
     use crate::http::model::{FormPart, HttpItemKind};
     use crate::http::settings::{HttpOrigin, InheritedHeader};
 
