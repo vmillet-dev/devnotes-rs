@@ -31,7 +31,7 @@ pub fn write(request: &CodeRequest, multiline: bool) -> String {
     }
     match &request.body {
         CodeBody::None => {}
-        CodeBody::Text(text) => arguments.push(format!("--data {}", shell_quoted(text))),
+        CodeBody::Text(text) => arguments.push(format!("--data-raw {}", shell_quoted(text))),
         CodeBody::Form(fields) => {
             for (name, value) in fields {
                 arguments.push(format!(
@@ -42,12 +42,13 @@ pub fn write(request: &CodeRequest, multiline: bool) -> String {
         }
         CodeBody::Multipart(parts) => {
             for part in parts {
-                let value = if part.file {
-                    format!("{}=@{}", part.name, part.value)
+                // `--form` reads a file after `@` or `<`: only a file part is meant to.
+                let (option, value) = if part.file {
+                    ("--form", format!("{}=@{}", part.name, part.value))
                 } else {
-                    format!("{}={}", part.name, part.value)
+                    ("--form-string", format!("{}={}", part.name, part.value))
                 };
-                arguments.push(format!("--form {}", shell_quoted(&value)));
+                arguments.push(format!("{option} {}", shell_quoted(&value)));
             }
         }
         CodeBody::File(path) => {
@@ -64,6 +65,35 @@ pub fn write(request: &CodeRequest, multiline: bool) -> String {
 mod tests {
     use super::super::golden;
     use super::*;
+
+    /// `--data @file` and `--form a=<file` read a file; the value is sent as it is.
+    #[test]
+    fn a_value_that_names_a_file_is_sent_as_it_is() {
+        let request = |body| CodeRequest {
+            method: crate::http::model::HttpMethod::Post,
+            url: "https://api.exemple.fr/".to_string(),
+            headers: Vec::new(),
+            basic: None,
+            body,
+            follow_redirects: false,
+        };
+
+        let text = write(
+            &request(CodeBody::Text("@/etc/hostname".to_string())),
+            false,
+        );
+        let form = write(
+            &request(CodeBody::Multipart(vec![super::super::CodePart {
+                name: "a".to_string(),
+                value: "<notes.txt".to_string(),
+                file: false,
+            }])),
+            false,
+        );
+
+        assert!(text.contains("--data-raw '@/etc/hostname'"), "{text}");
+        assert!(form.contains("--form-string 'a=<notes.txt'"), "{form}");
+    }
 
     #[test]
     fn each_case_is_written_as_its_golden_file_says() {
