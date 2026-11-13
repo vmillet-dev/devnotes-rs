@@ -77,17 +77,13 @@ fn read(profile: &Path) -> Registry {
         .unwrap_or_default()
 }
 
-/// Staged and renamed: `fs::write` truncates first, and a registry naming no libraries leaves
-/// every one of them on disk with nothing pointing at them.
+/// Durable: a registry naming no libraries leaves every one of them on disk with nothing
+/// pointing at them.
 fn write(profile: &Path, registry: &Registry) -> Result<(), StorageError> {
     let target = profile.join(REGISTRY);
-    let staged = profile.join(format!("{REGISTRY}.writing"));
     let raw = serde_json::to_string_pretty(registry).context(REGISTRY)?;
 
-    std::fs::write(&staged, raw).context(staged.display())?;
-    std::fs::rename(&staged, &target).context(target.display())?;
-
-    Ok(())
+    crate::durable::write(&target, raw.as_bytes()).context(target.display())
 }
 
 /// The registry as it stands, adopting what is already on disk the first time.

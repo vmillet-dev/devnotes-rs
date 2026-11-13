@@ -2,6 +2,7 @@
 //! under the lock; the request is composed and sent without it, so a slow server stalls nothing.
 
 use std::collections::HashMap;
+use std::io::Read;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Once};
@@ -12,7 +13,6 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tokio::task::AbortHandle;
 use url::Url;
-use uuid::Uuid;
 
 use super::cookies::{self, Change, JarCookie};
 use super::graphql::{self, GraphqlDocument, GraphqlResult};
@@ -43,6 +43,8 @@ pub fn is_default(name: &str, value: &str) -> bool {
 pub const SHOWN_LIMIT: usize = 1024 * 1024;
 /// What is read at all: past it the reading stops.
 pub const KEPT_LIMIT: usize = 64 * 1024 * 1024;
+/// What a file sent as a body or a part may weigh, in megabytes: checked before it is read.
+pub const SENT_FILE_MEGABYTES: u64 = 64;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,6 +66,9 @@ pub struct SendRequest {
     /// The user said yes to what a protected environment asks: a script may then change it.
     #[serde(default)]
     pub confirmed: bool,
+    /// The files a script asked to send that the user said yes to, path by path.
+    #[serde(default)]
+    pub files: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -166,6 +171,8 @@ pub enum SendError {
     TooManyRedirects(Limit),
     #[error("The file {0} cannot be read")]
     FileUnreadable(String),
+    #[error("The file {0} is heavier than a send reads")]
+    FileTooLarge(String),
     #[error("The send was cancelled")]
     Cancelled,
     #[error("The GraphQL variables are not a JSON object: {0}")]
@@ -282,8 +289,22 @@ fn sent(rows: &[KeyValue]) -> impl Iterator<Item = &KeyValue> {
         .filter(|row| row.enabled && !row.key.trim().is_empty())
 }
 
+/// Its size is checked before it is read, and the read stops past it: the file may grow.
 fn read(path: &str) -> Result<Vec<u8>, SendError> {
-    std::fs::read(path).map_err(|_| SendError::FileUnreadable(path.to_string()))
+    let limit = SENT_FILE_MEGABYTES * 1024 * 1024;
+    let unreadable = |_| SendError::FileUnreadable(path.to_string());
+    let file = std::fs::File::open(path).map_err(unreadable)?;
+    if file.metadata().map_err(unreadable)?.len() > limit {
+        return Err(SendError::FileTooLarge(path.to_string()));
+    }
+    let mut bytes = Vec::new();
+    file.take(limit + 1)
+        .read_to_end(&mut bytes)
+        .map_err(unreadable)?;
+    if bytes.len() as u64 > limit {
+        return Err(SendError::FileTooLarge(path.to_string()));
+    }
+    Ok(bytes)
 }
 
 /// The first `{{variable}}` left in what will be sent, in reading order: one no level sets.
@@ -1279,20 +1300,13 @@ impl Sending {
         }
     }
 
-    /// Staged then renamed: a half-written file never takes the name.
+    /// Durable, and the staged file removed on failure: a body cut short by a full disk is a
+    /// response left in the clear under a name nobody chose.
     pub fn save(&self, id: &str, path: &Path) -> Result<bool, std::io::Error> {
         let Some(kept) = self.kept(id) else {
             return Ok(false);
         };
-        let mut staged = path.as_os_str().to_owned();
-        staged.push(format!(".{}.tmp", Uuid::new_v4()));
-        // Removed on either failure: a body cut short by a full disk is a response left in
-        // the clear under a name nobody chose.
-        std::fs::write(&staged, &kept.bytes)
-            .and_then(|()| std::fs::rename(&staged, path))
-            .inspect_err(|_| {
-                let _ = std::fs::remove_file(&staged);
-            })?;
+        crate::durable::write(path, &kept.bytes)?;
         Ok(true)
     }
 
@@ -2103,6 +2117,25 @@ mod tests {
         assert_eq!(
             compose(RequestKind::Http, HttpMethod::Put, &binary, &nothing()),
             Err(SendError::FileUnreadable(missing))
+        );
+    }
+
+    #[test]
+    fn a_file_past_the_limit_is_refused_before_it_is_read() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("dump.bin");
+        // Sparse: its size is said, nothing is written.
+        std::fs::File::create(&path)
+            .unwrap()
+            .set_len(SENT_FILE_MEGABYTES * 1024 * 1024 + 1)
+            .unwrap();
+        let path = path.to_string_lossy().into_owned();
+        let mut binary = document("https://example.com");
+        binary.body = RequestBody::Binary { path: path.clone() };
+
+        assert_eq!(
+            compose(RequestKind::Http, HttpMethod::Put, &binary, &nothing()),
+            Err(SendError::FileTooLarge(path))
         );
     }
 

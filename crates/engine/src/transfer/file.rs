@@ -85,7 +85,7 @@ pub fn write(
         }
     };
 
-    if let Err(error) = std::fs::rename(&staged, path) {
+    if let Err(error) = crate::durable::replace(&staged, Path::new(path)) {
         let _ = std::fs::remove_file(&staged);
         return Err(StorageError::File(format!("{path}: {error}")));
     }

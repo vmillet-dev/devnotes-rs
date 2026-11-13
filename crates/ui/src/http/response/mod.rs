@@ -6,7 +6,7 @@ pub(crate) mod body;
 mod stop;
 mod tests_view;
 
-use engine::error::ErrorCode;
+use engine::error::{AppError, ErrorCode};
 use engine::http::scripts::model::{FailureKind, ScriptKind, ScriptStop, TestResult};
 use std::sync::Arc;
 
@@ -133,6 +133,12 @@ pub(crate) fn show(
                 Some(Sent {
                     phase: Phase::Failed(error),
                     ..
+                }) if error.code == ErrorCode::HttpScriptFile => {
+                    script_file(ui, &tab.key, error, actions, language);
+                }
+                Some(Sent {
+                    phase: Phase::Failed(error),
+                    ..
                 }) => {
                     let message = crate::services::errors::message_of(error)
                         .unwrap_or_else(|| i18n::Message::new(keys::http::send::FAILED));
@@ -146,6 +152,7 @@ pub(crate) fn show(
                 Some(Sent {
                     id,
                     phase: Phase::Answered(response),
+                    ..
                 }) => answered(ui, state, (tab, id, response), view, actions),
             }
         });
@@ -182,6 +189,34 @@ fn sending(ui: &mut Ui, started: f64, language: i18n::Language) {
         widgets::address(ui, &ticking, "http-response-elapsed");
     });
     // The spinner asks for the frames the count needs.
+}
+
+/// A file a script asked to send, named before anything leaves: a yes sends again with it.
+fn script_file(
+    ui: &mut Ui,
+    key: &str,
+    error: &AppError,
+    actions: &mut Actions,
+    language: i18n::Language,
+) {
+    let path = error.params.get("path").cloned().unwrap_or_default();
+    let question = i18n::translate(
+        language,
+        keys::http::send::ASK_FILE,
+        &[("path", path.as_str().into())],
+    );
+    let go = i18n::translate(language, keys::http::send::SEND_FILE, &[]);
+    let cancel = i18n::translate(language, keys::http::rail::CANCEL, &[]);
+    let ids = (
+        "http-script-file-confirm",
+        "http-script-file-send",
+        "http-script-file-cancel",
+    );
+    match super::request::protected_question(ui, (&question, &go, &cancel), ids) {
+        Some(true) => actions.push(Asked::Http(Action::SendFile(key.to_owned(), path))),
+        Some(false) => actions.push(Asked::Http(Action::ClearResponse(key.to_owned()))),
+        None => {}
+    }
 }
 
 fn clear(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n::Language) {
@@ -733,4 +768,40 @@ pub(crate) fn split_handle(ui: &mut Ui, rect: Rect, language: i18n::Language) ->
         ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
     }
     response
+}
+
+#[cfg(test)]
+mod file_tests {
+    use egui_kittest::kittest::{NodeT, Queryable};
+    use engine::http::scripts::model::ScriptError;
+    use i18n::Language;
+
+    use super::*;
+
+    #[test]
+    fn a_file_a_script_asks_for_is_named_and_sent_again_on_a_yes() {
+        let error = AppError::from(ScriptError::File("/home/me/.ssh/id_ed25519".to_owned()));
+        let mut harness = crate::testing::harness().build_ui_state(
+            move |ui, actions: &mut Actions| {
+                script_file(ui, "tab-1", &error, actions, Language::En);
+            },
+            Actions::default(),
+        );
+        harness.run();
+
+        let question = harness.get_by(|node| node.author_id() == Some("http-script-file-confirm"));
+        let said = question.accesskit_node().value().unwrap_or_default();
+        assert!(said.contains("/home/me/.ssh/id_ed25519"), "{said}");
+        harness
+            .get_by(|node| node.author_id() == Some("http-script-file-send"))
+            .click();
+        harness.run();
+
+        let asked: Vec<Asked> = harness.state_mut().drain().collect();
+        assert!(matches!(
+            asked.as_slice(),
+            [Asked::Http(Action::SendFile(key, path))]
+                if key == "tab-1" && path == "/home/me/.ssh/id_ed25519"
+        ));
+    }
 }

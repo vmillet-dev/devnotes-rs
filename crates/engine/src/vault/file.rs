@@ -9,7 +9,6 @@ use std::path::{Path, PathBuf};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use super::key::{Cost, SALT_BYTES, Vault, fresh_salt};
 use crate::error::StorageError;
@@ -155,9 +154,9 @@ const MAX_MEMORY_KIB: u32 = 1024 * 1024;
 const MAX_PASSES: u32 = 16;
 const MAX_LANES: u32 = 16;
 
-/// ⚠️ The key file is the one input an attacker can write: an unbounded cost read out of it is
-/// a gigabyte allocation, or an hour of hashing, at every unlock.
-fn bounded(cost: Cost) -> Result<Cost, StorageError> {
+/// ⚠️ The key file and a protected export are the inputs an attacker can write: an unbounded
+/// cost read out of one is a gigabyte allocation, or an hour of hashing, on the database thread.
+pub(crate) fn bounded(cost: Cost) -> Result<Cost, StorageError> {
     let fits = cost.memory_kib <= MAX_MEMORY_KIB
         && (1..=MAX_PASSES).contains(&cost.passes)
         && (1..=MAX_LANES).contains(&cost.lanes);
@@ -172,22 +171,13 @@ fn bounded(cost: Cost) -> Result<Cost, StorageError> {
     }
 }
 
-/// Staged then renamed: a plain write truncates first, and a half-written key file is a
-/// library nobody opens again.
+/// Durable: a half-written or empty key file is a library nobody opens again.
 fn write_atomically(path: &Path, file: &KeyFile) -> Result<(), StorageError> {
     let json = serde_json::to_string_pretty(file)
         .map_err(|error| StorageError::Vault(error.to_string()))?;
 
-    let staged = path.with_file_name(format!(".{KEY_FILE}.{}.tmp", Uuid::new_v4()));
-    std::fs::write(&staged, json)
-        .map_err(|error| StorageError::Vault(format!("{}: {error}", staged.display())))?;
-
-    if let Err(error) = std::fs::rename(&staged, path) {
-        let _ = std::fs::remove_file(&staged);
-        return Err(StorageError::Vault(format!("{}: {error}", path.display())));
-    }
-
-    Ok(())
+    crate::durable::write(path, json.as_bytes())
+        .map_err(|error| StorageError::Vault(format!("{}: {error}", path.display())))
 }
 
 #[cfg(test)]

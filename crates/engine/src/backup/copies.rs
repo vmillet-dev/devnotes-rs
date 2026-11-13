@@ -204,7 +204,7 @@ pub(crate) fn replace(
 
 fn copy_back(copy: &Path, library: &Path) -> Result<(), String> {
     for name in [layout::DATABASE, KEY_FILE] {
-        std::fs::copy(copy.join(name), library.join(name))
+        crate::durable::copy(&copy.join(name), &library.join(name))
             .map_err(|error| format!("{name}: {error}"))?;
     }
 

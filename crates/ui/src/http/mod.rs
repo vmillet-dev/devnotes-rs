@@ -141,6 +141,8 @@ pub enum Action {
     Leave(crate::state::http::leave::Asked),
     /// Sent all the same, under a protected environment.
     SendAnyway(String),
+    /// Sent again with the file a script asked for: the tab's key, then the path.
+    SendFile(String, String),
     StopAsking,
     ShowPage(crate::state::http::Page),
     /// From the rail's foot: the page shown is put away by the same button.

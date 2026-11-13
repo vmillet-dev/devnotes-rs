@@ -144,6 +144,20 @@ pub enum RequestBody {
 }
 
 impl RequestBody {
+    /// The files the send reads: a binary body's, and every file part that leaves.
+    #[must_use]
+    pub fn files(&self) -> Vec<&str> {
+        match self {
+            Self::Binary { path } => vec![path.as_str()],
+            Self::Multipart { parts } => parts
+                .iter()
+                .filter(|part| part.enabled && part.file && !part.key.trim().is_empty())
+                .map(|part| part.value.as_str())
+                .collect(),
+            _ => Vec::new(),
+        }
+    }
+
     /// Whether anything leaves as the body: a kind chosen and left empty sends none.
     #[must_use]
     pub fn carries_something(&self) -> bool {

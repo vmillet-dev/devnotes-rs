@@ -2594,6 +2594,13 @@ then the request's; once answered, the other way round; a blank one is not run.
   about the method it saw; one the script made a change, unconfirmed, is `httpScriptProtected`
   (`method`, `environment`), and the pane asks with « Envoyer quand même », which sends again,
   scripts included, with `confirmed`.
+- ⚠️ **A file a script asks to send waits for a yes, path by path** (`SendRequest.files`): a
+  `file` body or a file part the scripts before the send added — compared with what the
+  request's own rows read, variables resolved before any script — and any file a
+  `pm.sendRequest` names. Refused, the send answers `httpScriptFile` (`path`) and the pane asks
+  « Envoyer le fichier », which sends again with that path added to the ones already allowed.
+  A collection run asks nothing halfway: the step fails. Every file a send reads is capped at
+  `SENT_FILE_MEGABYTES` (64), checked before it is read (`httpFileTooLarge`).
 - A script before the send that fails keeps the request in: `httpScript` carries how
   (`failure`), whose script (`level`, `name`, `owner`), the `line` and — for a throw or a syntax
   error only — the script's own `message`. `skipRequest()` is `httpScriptSkipped`; a method Rust
@@ -5058,9 +5065,10 @@ input's `type` flipped rather than a second plain-text field) shows both fields 
 on creation the minimum is the field's description from the start rather than a complaint
 after the first character.
 
-**The cost in a key file is bounded before anything is derived** (`vault::file::bounded`: at most
-1 GiB, 16 passes, 16 lanes). It is the one input an attacker can write, and read unbounded it is
-a multi-gigabyte allocation or an hour of hashing at every unlock.
+**The cost in a key file, or in a protected export's recipe, is bounded before anything is
+derived** (`vault::file::bounded`: at most 1 GiB, 16 passes, 16 lanes). They are the inputs an
+attacker can write, and read unbounded one is a multi-gigabyte allocation or an hour of hashing on
+the database thread, at every unlock or at the import of a forged file.
 
 ### The floor
 
@@ -5270,9 +5278,10 @@ adopt an empty profile as a library nobody asked for. The deletion itself gets t
 treatment emptying the trash gets: a sentence naming what goes, and a confirm somewhere
 other than the button that fired it.
 
-⚠️ The registry is **staged and renamed**, like an export file. `fs::write` truncates
-first, so a disk that fills mid-write would leave a registry naming no libraries at all,
-with every one of them still on disk and nothing pointing at them.
+⚠️ The registry is **written durably**, like an export file and the key file
+(`engine::durable`): staged, flushed to the disk, renamed, then its folder flushed on Unix.
+`fs::write` truncates first, so a disk that fills mid-write would leave a registry naming no
+libraries at all; and without the flush, a power cut can leave the renamed file empty.
 
 ### Two scopes of preference, one prefix apart
 
