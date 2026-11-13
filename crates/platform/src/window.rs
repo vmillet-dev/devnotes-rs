@@ -41,14 +41,9 @@ pub fn read(file: &Path) -> Option<Geometry> {
         .ok()
 }
 
-/// Staged then renamed: a crash halfway leaves the previous geometry, never half of one.
+/// Durable: a crash halfway leaves the previous geometry, never half of one.
 pub fn write(file: &Path, geometry: &Geometry) -> io::Result<()> {
-    if let Some(directory) = file.parent() {
-        std::fs::create_dir_all(directory)?;
-    }
-    let staged = file.with_extension("json.part");
-    std::fs::write(&staged, serde_json::to_vec_pretty(geometry)?)?;
-    std::fs::rename(&staged, file)
+    crate::durable::write(file, &serde_json::to_vec_pretty(geometry)?)
 }
 
 #[cfg(test)]

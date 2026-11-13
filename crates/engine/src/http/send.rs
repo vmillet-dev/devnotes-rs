@@ -12,7 +12,6 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tokio::task::AbortHandle;
 use url::Url;
-use uuid::Uuid;
 
 use super::cookies::{self, Change, JarCookie};
 use super::graphql::{self, GraphqlDocument, GraphqlResult};
@@ -1279,20 +1278,13 @@ impl Sending {
         }
     }
 
-    /// Staged then renamed: a half-written file never takes the name.
+    /// Durable, and the staged file removed on failure: a body cut short by a full disk is a
+    /// response left in the clear under a name nobody chose.
     pub fn save(&self, id: &str, path: &Path) -> Result<bool, std::io::Error> {
         let Some(kept) = self.kept(id) else {
             return Ok(false);
         };
-        let mut staged = path.as_os_str().to_owned();
-        staged.push(format!(".{}.tmp", Uuid::new_v4()));
-        // Removed on either failure: a body cut short by a full disk is a response left in
-        // the clear under a name nobody chose.
-        std::fs::write(&staged, &kept.bytes)
-            .and_then(|()| std::fs::rename(&staged, path))
-            .inspect_err(|_| {
-                let _ = std::fs::remove_file(&staged);
-            })?;
+        crate::durable::write(path, &kept.bytes)?;
         Ok(true)
     }
 

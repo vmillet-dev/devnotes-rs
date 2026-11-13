@@ -5268,9 +5268,10 @@ adopt an empty profile as a library nobody asked for. The deletion itself gets t
 treatment emptying the trash gets: a sentence naming what goes, and a confirm somewhere
 other than the button that fired it.
 
-⚠️ The registry is **staged and renamed**, like an export file. `fs::write` truncates
-first, so a disk that fills mid-write would leave a registry naming no libraries at all,
-with every one of them still on disk and nothing pointing at them.
+⚠️ The registry is **written durably**, like an export file and the key file
+(`engine::durable`): staged, flushed to the disk, renamed, then its folder flushed on Unix.
+`fs::write` truncates first, so a disk that fills mid-write would leave a registry naming no
+libraries at all; and without the flush, a power cut can leave the renamed file empty.
 
 ### Two scopes of preference, one prefix apart
 
