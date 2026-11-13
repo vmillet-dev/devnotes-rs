@@ -244,6 +244,19 @@ fn a_sheet_shows_its_last_results() {
 }
 
 #[test]
+fn a_sheet_with_a_short_date_before_an_accent_is_listed() {
+    let (backend, profile) = testing::unlocked();
+    write(&backend, |draft| {
+        draft.kind = NoteKind::Calc;
+        draft.content = "RDV le 5/11/24 à 10h\n2 + 2".into();
+    });
+
+    let harness = canvas(backend, profile);
+
+    assert!(label(&harness, "note-card-calc").contains("2 + 2"));
+}
+
+#[test]
 fn a_drawing_without_a_picture_says_so() {
     let (backend, profile) = testing::unlocked();
     write(&backend, |draft| {

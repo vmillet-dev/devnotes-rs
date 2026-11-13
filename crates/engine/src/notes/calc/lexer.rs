@@ -49,15 +49,15 @@ fn date_at(characters: &[char], at: usize) -> Option<(NaiveDate, usize)> {
             .is_none_or(|c| !c.is_ascii_digit() && *c != '/' && *c != '-')
     };
 
+    // `get`, not a slice: the text runs on past the date, and a byte index can fall in `é`.
     if let [year, month, day] = text.split('-').collect::<Vec<_>>().as_slice()
         && year.len() == 4
         && month.len() == 2
-        && day.len() >= 2
+        && let Some(day) = day.get(..2)
         && digits(year)
         && digits(month)
-        && digits(&day[..2])
+        && digits(day)
     {
-        let day = &day[..2];
         let length = 10;
         if ends(length) {
             let date = NaiveDate::from_ymd_opt(
@@ -73,15 +73,15 @@ fn date_at(characters: &[char], at: usize) -> Option<(NaiveDate, usize)> {
     if let [day, month, rest] = parts.as_slice()
         && (1..=2).contains(&day.len())
         && (1..=2).contains(&month.len())
-        && rest.len() >= 4
+        && let Some(year) = rest.get(..4)
         && digits(day)
         && digits(month)
-        && digits(&rest[..4])
+        && digits(year)
     {
         let length = day.len() + month.len() + 2 + 4;
         if ends(length) {
             let date = NaiveDate::from_ymd_opt(
-                rest[..4].parse().ok()?,
+                year.parse().ok()?,
                 month.parse().ok()?,
                 day.parse().ok()?,
             )?;
@@ -417,6 +417,23 @@ mod tests {
                 Tok::Number(Decimal::from(10))
             ]
         );
+    }
+
+    #[test]
+    fn a_short_date_before_a_wide_character_is_cut_on_characters() {
+        for line in [
+            "2026-10-5é",
+            "RDV le 5/11/24 à 10h",
+            "12/01/25 équipe",
+            "3/4/26 – note",
+            "10/10/26 → livraison",
+            "1/2/24€",
+            "2026-10-5é",
+        ] {
+            assert!(!tokens(line).is_empty(), "{line}");
+        }
+        let date = NaiveDate::from_ymd_opt(2024, 11, 5).unwrap();
+        assert_eq!(toks("5/11/2024 à")[0], Tok::Date(date));
     }
 
     #[test]
