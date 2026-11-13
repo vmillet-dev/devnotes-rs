@@ -136,7 +136,7 @@ mod tests {
                 backend,
                 errors: ErrorNotifier::default(),
                 status: StatusNotifier::default(),
-                clipboard: platform::clipboard::system(),
+                clipboard: std::sync::Arc::new(platform::clipboard::NoClipboard),
                 dialog: std::sync::Arc::new(platform::dialog::NoDialog),
                 ctx: egui::Context::default(),
                 live: Live::default(),

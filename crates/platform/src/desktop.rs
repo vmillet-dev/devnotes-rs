@@ -20,3 +20,12 @@ impl Opener for System {
 pub fn system() -> Arc<dyn Opener + Send + Sync> {
     Arc::new(System)
 }
+
+/// Opens nothing, until the shell hands the system's: a test never starts a program.
+pub struct NoOpener;
+
+impl Opener for NoOpener {
+    fn open(&self, _path: &Path) -> io::Result<()> {
+        Err(io::Error::other("no desktop here"))
+    }
+}
