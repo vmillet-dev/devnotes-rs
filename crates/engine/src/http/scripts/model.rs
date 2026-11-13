@@ -583,6 +583,8 @@ pub enum ScriptError {
     Stopped(ScriptStop),
     #[error("A script skipped the request")]
     Skipped,
+    #[error("A script asked to send the file {0}")]
+    File(String),
     #[error("A script set the method {0}, which no request is sent with")]
     Method(String),
     #[error("The scripts made the request a {method} on {environment}, which is protected")]

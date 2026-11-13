@@ -168,6 +168,8 @@ pub enum ErrorCode {
     HttpTooManyRedirects,
     /// The `path` parameter names the file a body or a part would have sent.
     HttpFileUnreadable,
+    /// `path` is the file, `limit` what a send reads at most, in megabytes.
+    HttpFileTooLarge,
     /// What « Annuler » answers: the front, which asked, says nothing.
     HttpCancelled,
     HttpGraphqlVariables,
@@ -187,6 +189,8 @@ pub enum ErrorCode {
     HttpScriptMethod,
     /// The scripts made the request one that a protected `environment` asks about: `method`.
     HttpScriptProtected,
+    /// A script asked to send the file at `path`, which the user has not said yes to.
+    HttpScriptFile,
     /// A run's data file: `fault` is `unreadable` or `empty`.
     HttpRunData,
 }
@@ -278,6 +282,10 @@ impl From<SendError> for AppError {
             SendError::FileUnreadable(path) => {
                 Self::with(ErrorCode::HttpFileUnreadable, detail, "path", &path)
             }
+            SendError::FileTooLarge(path) => {
+                Self::with(ErrorCode::HttpFileTooLarge, detail, "path", &path)
+                    .and("limit", &crate::http::send::SENT_FILE_MEGABYTES.to_string())
+            }
             SendError::Cancelled => Self::new(ErrorCode::HttpCancelled, detail),
             SendError::GraphqlVariables(_) => Self::new(ErrorCode::HttpGraphqlVariables, detail),
             SendError::Handshake(status) => Self::with(
@@ -352,6 +360,7 @@ impl From<ScriptError> for AppError {
                 refused
             }
             ScriptError::Skipped => Self::new(ErrorCode::HttpScriptSkipped, detail),
+            ScriptError::File(path) => Self::with(ErrorCode::HttpScriptFile, detail, "path", &path),
             ScriptError::Method(method) => {
                 Self::with(ErrorCode::HttpScriptMethod, detail, "method", &method)
             }

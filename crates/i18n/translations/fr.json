@@ -614,6 +614,7 @@
       "default": "{count, plural, =0 {Redirection refusée : le réglage n’en permet aucune (réglage par défaut).} one {Trop de redirections : plus d’une (réglage par défaut).} other {Trop de redirections : plus de # (réglage par défaut).}}"
     },
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
+    "httpFileTooLarge": "Le fichier {{path}} dépasse {{limit}} Mo : une requête n’en envoie pas de plus lourd.",
     "httpCancelled": "Envoi annulé.",
     "httpNetwork": "Erreur réseau.",
     "httpWebsocketScheme": "Un WebSocket s’ouvre sur ws:// ou wss://.",
@@ -639,6 +640,7 @@
     "httpScriptSkipped": "Le script avant l’envoi a écarté la requête : elle n’est pas partie.",
     "httpScriptMethod": "Le script avant l’envoi a choisi la méthode « {{method}} », qui n’existe pas.",
     "httpScriptProtected": "Le script avant l’envoi en a fait un {{method}} vers {{environment}}, qui est protégé.",
+    "httpScriptFile": "Un script veut envoyer le fichier {{path}} sans votre accord : la requête n’est pas partie.",
     "httpRunData": {
       "unreadable": "Ce fichier ne se lit ni comme un CSV avec son en-tête, ni comme un tableau JSON d’objets.",
       "empty": "Ce fichier ne contient aucune ligne de données."
@@ -3548,7 +3550,9 @@
       "send": "Envoyer",
       "sendHint": "Envoyer (Ctrl+Entrée)",
       "cancel": "Annuler",
-      "failed": "La requête n’a pas pu être envoyée."
+      "failed": "La requête n’a pas pu être envoyée.",
+      "askFile": "Un script veut envoyer le fichier {{path}}. L’envoyer ?",
+      "sendFile": "Envoyer le fichier"
     },
     "split": {
       "label": "Hauteur de la requête — flèches pour la changer, double-clic ou Entrée pour l’automatique",

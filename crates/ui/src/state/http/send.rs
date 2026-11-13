@@ -25,6 +25,15 @@ pub enum Phase {
 pub struct Sent {
     pub id: String,
     pub phase: Phase,
+    /// What the user said yes to for it, kept for a send again after another yes.
+    pub consent: Consent,
+}
+
+/// The yes to a protected environment's question, and to each file a script asked to send.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Consent {
+    pub protected: bool,
+    pub files: Vec<String>,
 }
 
 #[derive(Default)]
@@ -98,7 +107,7 @@ impl Sends {
         backend: &Backend,
         tab: &Tab,
         (now, environment_id): (f64, Option<String>),
-        confirmed: bool,
+        consent: Consent,
     ) {
         if self.is_sending(&tab.key) {
             return;
@@ -115,7 +124,8 @@ impl Sends {
             name: tab.draft.name.clone(),
             request_id: tab.request_id.clone(),
             environment_id,
-            confirmed,
+            confirmed: consent.protected,
+            files: consent.files.clone(),
         };
         let pending = api::http::send(backend, request);
         let previous = self.by_tab.insert(
@@ -123,6 +133,7 @@ impl Sends {
             Sent {
                 id: id.clone(),
                 phase: Phase::Sending { started: now },
+                consent,
             },
         );
         if let Some(previous) = previous {
