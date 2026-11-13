@@ -155,9 +155,9 @@ const MAX_MEMORY_KIB: u32 = 1024 * 1024;
 const MAX_PASSES: u32 = 16;
 const MAX_LANES: u32 = 16;
 
-/// ⚠️ The key file is the one input an attacker can write: an unbounded cost read out of it is
-/// a gigabyte allocation, or an hour of hashing, at every unlock.
-fn bounded(cost: Cost) -> Result<Cost, StorageError> {
+/// ⚠️ The key file and a protected export are the inputs an attacker can write: an unbounded
+/// cost read out of one is a gigabyte allocation, or an hour of hashing, on the database thread.
+pub(crate) fn bounded(cost: Cost) -> Result<Cost, StorageError> {
     let fits = cost.memory_kib <= MAX_MEMORY_KIB
         && (1..=MAX_PASSES).contains(&cost.passes)
         && (1..=MAX_LANES).contains(&cost.lanes);

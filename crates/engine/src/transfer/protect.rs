@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::StorageError;
+use crate::vault::file::bounded;
 use crate::vault::key::{Cost, SALT_BYTES, Vault, fresh_salt};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -71,15 +72,13 @@ pub fn open_with(passphrase: &str, recipe: &Recipe) -> Result<Vault, StorageErro
         ));
     }
 
-    Vault::derive(
-        passphrase,
-        &salt,
-        Cost {
-            memory_kib: recipe.memory_kib,
-            passes: recipe.passes,
-            lanes: recipe.lanes,
-        },
-    )
+    // The file may come from anyone: its cost is held to the key file's bounds before deriving.
+    let cost = bounded(Cost {
+        memory_kib: recipe.memory_kib,
+        passes: recipe.passes,
+        lanes: recipe.lanes,
+    })?;
+    Vault::derive(passphrase, &salt, cost)
 }
 
 #[cfg(test)]
@@ -118,6 +117,36 @@ mod tests {
         let sealed = first.seal_bytes(b"the bundle").unwrap();
         let other = open_with("a shared phrase", &second_recipe).unwrap();
         assert!(other.open_bytes(&sealed).is_err());
+    }
+
+    /// A forged export asking more than a key file may is refused before anything is derived.
+    #[test]
+    fn a_cost_out_of_range_is_refused_before_deriving() {
+        let salt = BASE64.encode([7u8; SALT_BYTES]);
+        let recipe = |memory_kib, passes, lanes| Recipe {
+            version: FORMAT_VERSION,
+            algorithm: "argon2id".to_string(),
+            memory_kib,
+            passes,
+            lanes,
+            salt: salt.clone(),
+        };
+
+        // The cheap ones first: where nothing bounds them, they derive at once.
+        for (memory_kib, passes, lanes) in [
+            (64, 64, 1),
+            (1024, 1, 64),
+            (64, 0, 1),
+            (2 * 1024 * 1024, 1, 1),
+        ] {
+            let error = open_with("a shared phrase", &recipe(memory_kib, passes, lanes))
+                .map(|_| "derived")
+                .unwrap_err();
+            assert!(
+                format!("{error}").contains("out of range"),
+                "{memory_kib} KiB, {passes} passes, {lanes} lanes: {error}"
+            );
+        }
     }
 
     #[test]
