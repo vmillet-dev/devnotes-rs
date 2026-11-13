@@ -1,6 +1,7 @@
 //! Several libraries: created from the File menu and opened through the gate, each with its own
 //! phrase and its own samples, a switch that asks before it loses an unsaved request, the way
-//! between them from the gate itself, and a deletion named before it runs.
+//! between them from the gate itself, a deletion named before it runs, and a registry cut short
+//! that loses no library.
 
 use e2e::{App, PASSPHRASE, Tree, step};
 use egui::{Key, Modifiers};
@@ -145,6 +146,22 @@ fn libraries() {
     step("the one that is left offers no deletion", || {
         assert!(!app.has("library-delete"));
         close_panel(&mut app);
+    });
+
+    app.quit();
+    let registry = profile.path().join("libraries.json");
+    let whole = std::fs::read(&registry).unwrap();
+    std::fs::write(&registry, &whole[..whole.len() / 2]).unwrap();
+    let mut app = App::launch("25_libraries", profile.path());
+
+    step("a registry cut short still opens on the library", || {
+        app.wait_for("vault-passphrase");
+        assert!(
+            !app.has("vault-confirmation"),
+            "not taken for a first launch"
+        );
+        pass_the_gate(&mut app);
+        app.eventually("its own spaces are listed", |tree| has_space(tree, HOME));
     });
 
     app.quit();

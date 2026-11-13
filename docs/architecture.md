@@ -5287,6 +5287,10 @@ other than the button that fired it.
 (`engine::durable`): staged, flushed to the disk, renamed, then its folder flushed on Unix.
 `fs::write` truncates first, so a disk that fills mid-write would leave a registry naming no
 libraries at all; and without the flush, a power cut can leave the renamed file empty.
+⚠️ **A registry that does not read is never written over** (`registry::rebuilt`): an absent
+file is a first launch, an unreadable one is moved aside as `libraries.json.unreadable-<when>`
+and the list made again from the folders under `libraries/` that hold one. Their names were in
+the file: they come back unnamed.
 
 ### Two scopes of preference, one prefix apart
 

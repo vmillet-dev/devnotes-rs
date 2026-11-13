@@ -326,8 +326,7 @@ impl App {
             .tree()
             .all(author_id)
             .into_iter()
-            .find(|node| which(node))
-            .and_then(Node::bounds)
+            .find_map(|node| node.bounds().filter(|_| which(node)))
             .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
         #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
         let pos = Pos2::new(
