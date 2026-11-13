@@ -2098,7 +2098,7 @@ impl AppState {
     fn save_settings(&mut self, backend: &Backend) {
         self.settings.write(&mut self.preferences);
         self.tools.write(&mut self.preferences);
-        // A write that fails says so in the log; nothing on screen waits for it.
+        // A write that fails says so in the log (`api::preferences`); nothing on screen waits for it.
         drop(api::preferences::write_application(
             backend,
             self.preferences.clone(),

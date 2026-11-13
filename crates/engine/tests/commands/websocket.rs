@@ -218,3 +218,47 @@ fn a_closed_port_and_a_refused_handshake_fail_by_code() {
         Some("401")
     );
 }
+
+/// Opens sockets over TLS with a certificate nobody signed, for 127.0.0.1.
+fn self_signed_echo() -> u16 {
+    let certified = rcgen::generate_simple_self_signed(vec!["127.0.0.1".to_string()]).unwrap();
+    let key = rustls::pki_types::PrivateKeyDer::Pkcs8(certified.signing_key.serialize_der().into());
+    let provider = std::sync::Arc::new(rustls::crypto::ring::default_provider());
+    let config = rustls::ServerConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .unwrap()
+        .with_no_client_auth()
+        .with_single_cert(vec![certified.cert.der().clone()], key)
+        .unwrap();
+    let config = std::sync::Arc::new(config);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    thread::spawn(move || {
+        for stream in listener.incoming().flatten() {
+            let connection = rustls::ServerConnection::new(std::sync::Arc::clone(&config)).unwrap();
+            let tls = rustls::StreamOwned::new(connection, stream);
+            thread::spawn(move || {
+                if let Ok(mut socket) = tungstenite::accept_hdr(tls, take_chat) {
+                    while socket.read().is_ok() {}
+                }
+            });
+        }
+    });
+    port
+}
+
+#[test]
+fn a_self_signed_server_opens_only_with_the_check_off() {
+    let session = Session::open();
+    let port = self_signed_echo();
+    let url = format!("wss://127.0.0.1:{port}/");
+
+    let checked = session.wait(|e| connect_websocket(e, request(&url)));
+    assert_eq!(code(checked), ErrorCode::HttpTls);
+
+    let mut unchecked = request(&url);
+    unchecked.id = "socket-2".to_string();
+    unchecked.document.transport.verify_tls = Some(false);
+    let opened = session.wait(|e| connect_websocket(e, unchecked));
+    assert!(opened.is_ok(), "{opened:?}");
+}

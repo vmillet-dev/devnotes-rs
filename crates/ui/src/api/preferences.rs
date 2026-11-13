@@ -40,8 +40,58 @@ pub fn write_application(backend: &Backend, preferences: Preferences) -> Pending
     backend.db(move |_| written(&preferences, &file))
 }
 
+/// Logged when it fails: most callers let the answer go, and a setting lost must leave a trace.
 fn written(preferences: &Preferences, file: &std::path::Path) -> Result<(), AppError> {
-    preferences
-        .write(file)
-        .map_err(|error| StorageError::File(format!("{}: {error}", file.display())).into())
+    preferences.write(file).map_err(|error| {
+        let error: AppError = StorageError::File(format!("{}: {error}", file.display())).into();
+        log::warn!("The preferences were not written: {}", error.for_log());
+        error
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+
+    use super::*;
+    use crate::testing;
+
+    /// What the log was told, for the test that reads it: no other test here sets a logger.
+    struct Heard(Mutex<Vec<String>>);
+
+    impl log::Log for Heard {
+        fn enabled(&self, _: &log::Metadata<'_>) -> bool {
+            true
+        }
+
+        fn log(&self, record: &log::Record<'_>) {
+            self.0.lock().unwrap().push(record.args().to_string());
+        }
+
+        fn flush(&self) {}
+    }
+
+    static HEARD: Heard = Heard(Mutex::new(Vec::new()));
+
+    #[test]
+    fn a_preference_write_that_fails_is_logged() {
+        let _ = log::set_logger(&HEARD);
+        log::set_max_level(log::LevelFilter::Warn);
+        let (backend, _profile) = testing::unlocked();
+        let directory =
+            engine::db::run_here(backend.engine(), libraries::open_library_directory).unwrap();
+        // A folder where the file goes: no write can take its place.
+        let taken = directory.join(layout::PREFERENCES);
+        std::fs::create_dir_all(taken.join("inside")).unwrap();
+
+        let mut written = write_library(&backend, Preferences::default());
+        backend.settle();
+
+        assert!(written.poll().unwrap().is_err());
+        let heard = HEARD.0.lock().unwrap();
+        assert!(
+            heard.iter().any(|line| line.contains("preferences")),
+            "{heard:?}"
+        );
+    }
 }
