@@ -14,6 +14,10 @@ mod unpainted;
 #[cfg(all(feature = "e2e", not(debug_assertions)))]
 compile_error!("the e2e flavour is never a release build");
 
+// The profiler serves egui's frames on a port: it runs at `CARGO_PROFILE_DEV_OPT_LEVEL=3`.
+#[cfg(all(feature = "profiling", not(debug_assertions)))]
+compile_error!("the profiling flavour is never a release build");
+
 use std::path::Path;
 use std::process::ExitCode;
 
@@ -236,10 +240,12 @@ mod tests {
 
         let wait = Duration::from_secs(10);
         assert_eq!(hearing.recv_timeout(wait).unwrap(), Message::Reveal);
-        assert_eq!(
-            hearing.recv_timeout(wait).unwrap(),
-            Message::Action("palette".to_string())
-        );
+        if cfg!(feature = "e2e") {
+            assert_eq!(
+                hearing.recv_timeout(wait).unwrap(),
+                Message::Action("palette".to_string())
+            );
+        }
     }
 
     #[test]

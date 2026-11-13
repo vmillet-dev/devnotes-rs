@@ -6400,7 +6400,8 @@ profile; `app::perf` (`DEVNOTES_PERF=<profile> cargo test --release -p ui --lib 
 `e2e/examples/footprint.rs` reads memory and idle CPU of the running process from outside,
 on the machine's GPU (`DEVNOTES_E2E_GPU`) and painting every frame (`DEVNOTES_E2E_PAINT_ALL`). The
 `e2e` flavour cannot be a release build, so that one runs at `CARGO_PROFILE_DEV_OPT_LEVEL=3`.
-`app --features profiling` serves egui's frames to `puffin_viewer`: `puffin_egui` stops at egui
+`app --features profiling` serves egui's frames to `puffin_viewer` (a debug build at
+`CARGO_PROFILE_DEV_OPT_LEVEL=3`: a release build refuses it); `puffin_egui` stops at egui
 0.33. A debug build logs every `Backend` database call past 16 ms.
 
 ⚠️ This machine is not the plan's reference: Windows 11, Ryzen 7 9800X3D, RTX 5070 Ti, against a
