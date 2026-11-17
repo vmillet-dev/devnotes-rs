@@ -6160,7 +6160,7 @@ release that replayed it would pay for it twice.
 ### The release binary
 
 **Speed first, then size.** The release profile is `opt-level = 3`, fat LTO, one codegen unit,
-stripped. Measured on Linux (same machine, same commit, `cargo bench -p engine` and the text
+stripped, no unwinding. Measured on Linux (same machine, same commit, `cargo bench -p engine` and the text
 crate's timings, 8000 notes of ~13 kB):
 
 | `opt-level`              | Binary  | `query_notes` | Cookie jar (500) | Argon2 unlock | Prettier 13 kB p95 | 1 MB of TS coloured |
@@ -6178,17 +6178,25 @@ crate's timings, 8000 notes of ~13 kB):
 - **Rejected: an `opt-level` per crate under `s`.** It reaches the C compiled by `cc` (QuickJS,
   onig, SQLite), whose speed came back, but **not Rust code under fat LTO**: Argon2 and BLAKE2
   left at 3 were still 35 % slower.
-- **Rejected: `panic = "abort"`** (no unwinding tables, ~5 MB): the db queue and the compute pool
-  catch a panic and answer `StorageUnavailable` (D18).
-- **Where the size is** (symbols of the release build): the Mermaid renderer and what it draws
-  with (`merman`, its own `usvg` 0.47 and fonts, the math layout of `ratex`) about 11 MB, the
-  interface 5.6 MB, the core 2.6 MB, D-Bus for the tray, notifications and the screen reader
-  3.2 MB, fonts and text shaping 1.9 MB, `wgpu` and `naga` 3 MB; the embedded assets about
-  6 MB (Prettier 2.4 MB, the fonts 2.4 MB, the request-script libraries 1.2 MB). Removing a
-  Mermaid feature or a `wgpu` backend would save under 1 MB each and lose a diagram or a GPU.
+- **`panic = "abort"`** (1.0.2): unwinding cost 20 MB on Windows — its cleanup code 11.7 MB and
+  its tables 8.4 MB, in the linker's map —, kept only so the db queue and the compute pool could
+  catch a panic and carry on; a panic now ends the process from its hook (D18).
+- **Mermaid removed** (1.0.2, D2): `merman` and the 51 crates only it pulled were 16.6 MB of
+  code, the first dependency by far. With both, the Windows binary went from 79.2 to 42.7 MB.
+- **Where the size is** (the linker's map of 1.0.1, Windows): the interface 8 MB, the core
+  4.3 MB, SQLite and Diesel 2.2 MB, `wgpu` and `naga` 4.1 MB, `egui` 1.4 MB, tokio 1 MB,
+  QuickJS 0.85 MB, `serde_json` 0.72 MB, `psl` 0.64 MB, no other crate above 0.6 MB; the
+  embedded assets 6.4 MB (Prettier 2.4 MB, Noto Emoji 1.9 MB, the request-script libraries
+  1.1 MB, the syntaxes 0.94 MB). A `wgpu` backend left out would save under 1 MB and lose a GPU.
+- **Memory at rest** (Windows 11, two GPUs, an empty profile at the gate, measured from outside
+  the process on a desktop of its own): eframe's setup holds 164 MB of private working set, 447 MB
+  committed and 253 MB of video memory; one API and small blocks (`app::renderer`, → "The
+  binary, its profile and its window") take it to 111 MB, 215 MB and 76 MB. The application's
+  own heap is about 25 MB of it; the rest is the drivers'. OpenGL alone would be 56 MB, but its
+  driver is the one wgpu tests least on Windows.
 - **Duplicates that stay**, each pulled by a dependency: `reqwest` 0.12 (the updater client),
-  `usvg` and `fontdb` (`merman`), `dirs` 5 and 6 (the updater, `auto-launch`), `calloop` and
-  `smithay-client-toolkit` (winit against the clipboard), and build-time crates.
+  `dirs` 5 and 6 (the updater, `auto-launch`), `calloop` and `smithay-client-toolkit` (winit
+  against the clipboard), and build-time crates.
 - **Never in a release**: `egui_inspection` (the `e2e` flavour), `puffin` and `puffin_http`
   (`profiling`). `lint-rust` fails if the default build of `app` links any of them.
 
