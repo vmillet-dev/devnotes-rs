@@ -216,7 +216,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     save_request::show(ui, state, &mut view.save_form, actions);
     save_as_note::show(ui, state, &mut view.note_form, actions);
     extract::show(ui, state, view.response.extracting(), actions);
-    if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
+    if let Some(width) = view.rail_width.rested(ui) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }
 }
