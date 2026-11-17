@@ -7,6 +7,7 @@
 mod arguments;
 mod desktop;
 mod logging;
+mod renderer;
 #[cfg(feature = "e2e")]
 mod unpainted;
 
@@ -31,7 +32,9 @@ use ui::services::preferences::Preferences;
 const DEVELOPMENT_RESOURCES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/resources");
 
 fn main() -> ExitCode {
-    // Before anything else: a script host opens no window and writes no log.
+    // First, for the script host too: it logs nothing there, and exits the same.
+    logging::install_panic_hook();
+    // A script host opens no window and writes no log.
     if std::env::args_os()
         .nth(1)
         .is_some_and(|arg| arg == engine::SCRIPT_HOST_ARG)
@@ -59,7 +62,6 @@ fn main() -> ExitCode {
         }
     };
     let _logger = logging::start(&locations.logs);
-    logging::install_panic_hook();
     #[cfg(feature = "profiling")]
     let _profiler = profiler();
 
@@ -87,6 +89,10 @@ fn hand_over(profile: &Path, action: Option<String>) -> ExitCode {
 fn run(locations: Locations, instance: Instance) -> eframe::Result {
     let restored = platform::window::read(&locations.window);
     let preferences = Preferences::read(&locations.profile.join(engine::layout::PREFERENCES));
+    let language = ui::services::settings::Settings::read(&preferences)
+        .locale
+        .language();
+    logging::tell_when_stopped(language, &locations.logs);
     let (inbox, waker, inputs) = ui::inputs::channel();
     let heard = inbox.clone();
     if let Err(error) =
@@ -157,44 +163,9 @@ fn options(restored: Option<Geometry>) -> eframe::NativeOptions {
         centered: restored.is_none(),
         persist_window: false,
         event_loop_builder: x11_when_possible(),
-        wgpu_options: wgpu_options(),
+        wgpu_options: renderer::options(),
         ..Default::default()
     }
-}
-
-/// The `e2e` flavour draws on the software adapter whatever the machine offers, as the runners
-/// do (WARP, lavapipe): eframe reads no variable to choose one. `DEVNOTES_E2E_GPU` leaves the
-/// choice to eframe, to measure what a person's window costs.
-#[cfg(feature = "e2e")]
-fn wgpu_options() -> eframe::egui_wgpu::WgpuConfiguration {
-    use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
-    use eframe::wgpu;
-
-    if std::env::var_os("DEVNOTES_E2E_GPU").is_some() {
-        return WgpuConfiguration::default();
-    }
-    let mut setup = WgpuSetupCreateNew::without_display_handle();
-    setup.native_adapter_selector = Some(std::sync::Arc::new(|adapters, surface| {
-        let draws_here = |adapter: &&wgpu::Adapter| {
-            surface.is_none_or(|surface| adapter.is_surface_supported(surface))
-        };
-        adapters
-            .iter()
-            .filter(draws_here)
-            .find(|adapter| adapter.get_info().device_type == wgpu::DeviceType::Cpu)
-            .or_else(|| adapters.iter().find(draws_here))
-            .cloned()
-            .ok_or_else(|| "no adapter draws on this window".to_string())
-    }));
-    WgpuConfiguration {
-        wgpu_setup: WgpuSetup::CreateNew(setup),
-        ..Default::default()
-    }
-}
-
-#[cfg(not(feature = "e2e"))]
-fn wgpu_options() -> eframe::egui_wgpu::WgpuConfiguration {
-    eframe::egui_wgpu::WgpuConfiguration::default()
 }
 
 /// D15: under native Wayland, winit 0.30 delivers no dropped file and cannot hide the window,

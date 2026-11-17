@@ -52,6 +52,15 @@ pub(super) fn system(
     Arc::new(System { on_missing })
 }
 
+pub(super) fn stopped(title: &str, words: &str) {
+    rfd::MessageDialog::new()
+        .set_level(rfd::MessageLevel::Error)
+        .set_title(title)
+        .set_description(words)
+        .set_buttons(rfd::MessageButtons::Ok)
+        .show();
+}
+
 /// Under Linux the dialog is the XDG portal's (D29), and without one `rfd` answers `None` like a
 /// cancel (S1): asked first, running or ready to be started by the bus.
 #[cfg(target_os = "linux")]

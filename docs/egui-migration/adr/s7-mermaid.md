@@ -1,6 +1,6 @@
 # S7 — Mermaid : `merman`, moteur natif tiers (D2)
 
-- **Statut** : accepté (2026-11-02)
+- **Statut** : accepté (2026-11-02), puis abandonné en 1.0.2 : la dépendance pesait 16,6 Mo du binaire (D2)
 - **Ticket** : #1142 · plan § 3.9.3, D2, E6
 - **Prototype** : jetable, non conservé dans le dépôt
 

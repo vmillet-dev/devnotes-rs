@@ -69,6 +69,7 @@ ui.workspace = true
 eframe.workspace = true
 egui = { workspace = true, features = ["default"] }
 flexi_logger.workspace = true
+i18n.workspace = true
 log.workspace = true
 profiling = { workspace = true, optional = true }
 puffin = { workspace = true, optional = true }
@@ -79,7 +80,6 @@ puffin_http = { workspace = true, optional = true }
 winit.workspace = true
 
 [dev-dependencies]
-i18n.workspace = true
 # `examples/icons.rs`, which draws the icons.
 resvg.workspace = true
 tempfile.workspace = true

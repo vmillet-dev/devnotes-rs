@@ -106,9 +106,6 @@ fn markdown(seed: usize) -> String {
         text.push_str("| hôte | rôle |\n| --- | --- |\n| db-1 | primaire |\n\n");
         let _ = write!(text, "```sql\n{}\n```\n\n", lines(seed, 3));
     }
-    if seed.is_multiple_of(20) {
-        text.push_str("```mermaid\nflowchart LR\n  api --> db\n```\n");
-    }
     text
 }
 

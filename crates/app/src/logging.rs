@@ -2,6 +2,8 @@
 
 use std::panic::PanicHookInfo;
 use std::path::Path;
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use flexi_logger::{Cleanup, Criterion, Duplicate, FileSpec, Logger, LoggerHandle, Naming};
 
@@ -29,10 +31,50 @@ pub(crate) fn start(directory: &Path) -> Option<LoggerHandle> {
         .ok()
 }
 
-/// Replaces the default hook, which prints the message: a panic slicing a string quotes the
-/// string, a note's text perhaps (D18).
+/// What a process that panicked exits with, as Rust's own runtime does.
+const PANICKED: i32 = 101;
+
+/// What the person is told when the application stops: set once the language is known.
+static NOTICE: OnceLock<(String, String)> = OnceLock::new();
+static STOPPING: AtomicBool = AtomicBool::new(false);
+
+/// A panic ends the process, on whatever thread (D18): the place is logged, never the message
+/// — a panic slicing a string quotes it, a note's text perhaps —, the person is told, and the
+/// process exits. What was written is in SQLite's journal; the next open checks it (the gate).
+/// ⚠️ It leaves by `exit`: the abort that would follow hands the process, the open library in
+/// its memory, to the system's crash reports.
 pub(crate) fn install_panic_hook() {
-    std::panic::set_hook(Box::new(|info| log::error!("{}", report(info))));
+    std::panic::set_hook(Box::new(|info| {
+        // A second panic, the dialog's say, ends at once.
+        if STOPPING.swap(true, Ordering::SeqCst) {
+            std::process::exit(PANICKED);
+        }
+        log::error!("{}", report(info));
+        log::logger().flush();
+        if let Some((title, words)) = NOTICE.get() {
+            platform::dialog::stopped(title, words);
+        }
+        std::process::exit(PANICKED);
+    }));
+}
+
+/// The window's process says why it stopped, in `language`, naming the folder of its log.
+pub(crate) fn tell_when_stopped(language: i18n::Language, logs: &Path) {
+    let _ = NOTICE.set(notice(language, logs));
+}
+
+fn notice(language: i18n::Language, logs: &Path) -> (String, String) {
+    use i18n::{Value, keys};
+
+    let app = || Value::from(engine::app_info::METADATA.name.to_owned());
+    let title = i18n::translate(language, keys::crash::TITLE, &[("app", app())]);
+    let folder = Value::from(logs.display().to_string());
+    let words = i18n::translate(
+        language,
+        keys::crash::BODY,
+        &[("app", app()), ("folder", folder)],
+    );
+    (title, words)
 }
 
 /// Where and on which thread, never the payload.
@@ -176,5 +218,55 @@ mod tests {
         assert_eq!(reports.len(), 1);
         assert!(reports[0].contains("logging.rs"), "{}", reports[0]);
         assert!(!reports[0].contains("hunter2"), "{}", reports[0]);
+    }
+
+    #[test]
+    fn the_person_is_told_where_the_log_is_in_their_language() {
+        let logs = Path::new("C:/profil/logs");
+
+        let (title, words) = notice(i18n::Language::Fr, logs);
+        let (_, english) = notice(i18n::Language::En, logs);
+
+        assert!(title.contains(engine::app_info::METADATA.name), "{title}");
+        assert!(words.contains("C:/profil/logs"), "{words}");
+        assert_ne!(words, english);
+        assert!(
+            !words.contains("{{") && !english.contains("{{"),
+            "{words} {english}"
+        );
+    }
+
+    /// Where the process that panics for the test below writes its log.
+    const PANIC_IN: &str = "DEVNOTES_TEST_PANIC_IN";
+
+    /// Run again as a process of its own, which the hook ends: its log is read from here.
+    #[test]
+    fn a_panic_ends_the_process_once_its_place_is_in_the_log() {
+        if let Some(directory) = std::env::var_os(PANIC_IN) {
+            let _logger = start(Path::new(&directory));
+            install_panic_hook();
+            panic!("psql -h prod -W hunter2");
+        }
+        let directory = tempfile::tempdir().unwrap();
+
+        let ended = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "logging::tests::a_panic_ends_the_process_once_its_place_is_in_the_log",
+            ])
+            .env(PANIC_IN, directory.path())
+            .output()
+            .unwrap();
+
+        let said = String::from_utf8_lossy(&ended.stdout);
+        assert_eq!(ended.status.code(), Some(PANICKED));
+        assert!(!said.contains("test result"), "the harness went on: {said}");
+        let written: String = std::fs::read_dir(directory.path())
+            .unwrap()
+            .map(|entry| std::fs::read_to_string(entry.unwrap().path()).unwrap())
+            .collect();
+        assert!(written.contains("Panicked at"), "{written}");
+        assert!(written.contains("logging.rs"), "{written}");
+        assert!(!written.contains("hunter2"), "{written}");
     }
 }

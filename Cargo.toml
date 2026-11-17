@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/engine", "crates/text", "crates/richtext", "crates/drawing", "crates/diagram", "crates/i18n", "crates/platform", "crates/ui", "crates/app", "e2e"]
+members = ["crates/engine", "crates/text", "crates/richtext", "crates/drawing", "crates/i18n", "crates/platform", "crates/ui", "crates/app", "e2e"]
 
 [workspace.package]
 version = "1.0.1"
@@ -13,7 +13,6 @@ repository = "https://github.com/vmillet-dev/devnotes-rs"
 license = "GPL-3.0-only"
 
 [workspace.dependencies]
-diagram = { path = "crates/diagram" }
 drawing = { path = "crates/drawing" }
 engine = { path = "crates/engine" }
 i18n = { path = "crates/i18n" }
@@ -56,7 +55,6 @@ ipnet = "2.12.2"
 libsqlite3-sys = { version = "0.40.0", features = ["bundled"] }
 log = "0.4.34"
 md-5 = "0.11.0"
-merman = { version = "=0.9.3", default-features = false, features = ["all-diagrams", "complete-svg", "native-fonts"] }
 notify-rust = "4.18.2"
 open = "5.4.5"
 percent-encoding = "2.3.2"
@@ -115,13 +113,14 @@ opt-level = 3
 [profile.dev.package.blake2]
 opt-level = 3
 
-# Speed first: "s" or 2 make the binary smaller (62.4 or 76.0 MB against 78.6) and the core
-# slower (a query over 8000 notes +37 % or +7 %), and per-crate levels do not reach Rust code
-# under fat LTO. The figures: architecture.md, "The release binary".
+# Speed first: "s" or 2 make the binary smaller and the core slower (a query over 8000 notes
+# +37 % or +7 %), and per-crate levels do not reach Rust code under fat LTO. No unwinding: a
+# panic ends the process from its hook (D18). The figures: architecture.md, "The release binary".
 [profile.release]
 lto = true
 codegen-units = 1
 strip = true
+panic = "abort"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

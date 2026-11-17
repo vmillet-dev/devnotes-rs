@@ -9,11 +9,9 @@ Ce qui change pour l’équipe, en trois parties.
 
 ## Le schéma
 
-```mermaid
-graph LR
-  Client --> API
-  API --> Base[(PostgreSQL)]
-  API --> File[File d’attente]
+```text
+Client → API → Base (PostgreSQL)
+         API → File d’attente
 ```
 
 ---

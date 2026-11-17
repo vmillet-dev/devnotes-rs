@@ -90,7 +90,7 @@ impl Library {
 /// so `None` here is a caller that jumped the queue, not a state to render.
 pub type Db = Mutex<Option<Library>>;
 
-/// A poisoned mutex means a command panicked while holding it.
+/// A panic ends the process (D18): no command finds the lock poisoned by another.
 ///
 /// ⚠️ On the db thread alone (`queue`), checked in debug builds; the crate's own unit tests
 /// lock their in-memory libraries on the test thread.
@@ -99,10 +99,7 @@ pub(crate) fn lock(db: &Db) -> Result<LibraryGuard<'_>, StorageError> {
         cfg!(test) || queue::on_db_thread(),
         "the library is locked off the db thread"
     );
-    let guard = match db.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => taken_back(db, poisoned.into_inner())?,
-    };
+    let guard = db.lock().map_err(|_| StorageError::Unavailable)?;
     if guard.is_none() {
         return Err(StorageError::Locked);
     }
@@ -110,34 +107,8 @@ pub(crate) fn lock(db: &Db) -> Result<LibraryGuard<'_>, StorageError> {
     Ok(LibraryGuard(guard))
 }
 
-/// The lock of a command that panicked: what it left open is rolled back and the database
-/// checked, or every command after it would answer `Unavailable` until a restart.
-fn taken_back<'a>(
-    db: &'a Db,
-    mut guard: MutexGuard<'a, Option<Library>>,
-) -> Result<MutexGuard<'a, Option<Library>>, StorageError> {
-    use diesel::connection::{AnsiTransactionManager, TransactionManager};
-
-    log::error!("A command panicked holding the library: rolled back and checked");
-    if let Some(library) = guard.as_mut() {
-        let connection = library.db();
-        while AnsiTransactionManager::transaction_manager_status_mut(connection)
-            .transaction_depth()
-            .map_err(|_| StorageError::Unavailable)?
-            .is_some()
-        {
-            AnsiTransactionManager::rollback_transaction(connection)
-                .map_err(|_| StorageError::Unavailable)?;
-        }
-        quick_check(connection).map_err(|_| StorageError::Unavailable)?;
-    }
-    db.clear_poison();
-    Ok(guard)
-}
-
 /// Runs `job` on the engine's db queue: one thread, in the order jobs arrive, so two writes sent
-/// in a row land in that order. A job that panics answers as the lock it would have poisoned.
-/// Every data function of the core is called through it.
+/// in a row land in that order. Every data function of the core is called through it.
 pub async fn run<T, F>(engine: Arc<Engine>, job: F) -> Result<T, AppError>
 where
     T: Send + 'static,
@@ -356,29 +327,6 @@ pub mod iso8601 {
 mod tests {
     use super::*;
     use diesel::sql_types::{BigInt, Integer};
-
-    /// A command that fell in the middle of a transaction: the next one finds the lock back,
-    /// and that transaction rolled back.
-    #[test]
-    fn a_command_that_panicked_under_the_lock_leaves_it_usable() {
-        use diesel::connection::{AnsiTransactionManager, TransactionManager};
-
-        let db: Db = Mutex::new(Some(open_in_memory().unwrap()));
-        let fell = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let mut guard = lock(&db).unwrap();
-            AnsiTransactionManager::begin_transaction(guard.db()).unwrap();
-            panic!("a command fell");
-        }));
-        assert!(fell.is_err());
-
-        let mut guard = lock(&db).expect("the lock taken back");
-        let depth = AnsiTransactionManager::transaction_manager_status_mut(guard.db())
-            .transaction_depth()
-            .unwrap();
-        assert_eq!(depth, None);
-        drop(guard);
-        assert!(!db.is_poisoned());
-    }
 
     fn in_memory() -> Db {
         Mutex::new(Some(open_in_memory().unwrap()))

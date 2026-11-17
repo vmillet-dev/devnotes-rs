@@ -167,8 +167,6 @@ fn stage(
     let language = state.language;
     let pictures = |id: &str| crate::notes::overlays::editor::embedded(state, id);
     let missing = i18n::translate(language, keys::drawing::MISSING, &[]);
-    let ctx = ui.ctx().clone();
-    let diagrams = |source: &str| state.caches.diagrams.get(&ctx, source);
     let mut slide_ui = ui.new_child(UiBuilder::new().max_rect(column));
     // Centred by the height it took last frame: a slide is laid out before it is measured.
     let measured = ui.unique_id().with(("presentation-slide", at));
@@ -183,7 +181,6 @@ fn stage(
                 RichView::new(slide)
                     .scale(scale)
                     .pictures(&pictures, &missing)
-                    .diagrams(&diagrams, language)
                     .show(ui)
             });
             let (painted, height) = (shown.inner, shown.response.rect.height());
@@ -196,9 +193,6 @@ fn stage(
         .inner;
     for id in painted.wanted {
         actions.push(Action::Notes(Asked::Picture(id)));
-    }
-    for sketch in painted.sketches {
-        actions.push(Action::Notes(Asked::Diagram(sketch.source)));
     }
     if let Some(url) = painted.link {
         actions.push(Action::Notes(Asked::Editor(Editing::OpenLink(url))));
