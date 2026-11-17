@@ -506,39 +506,34 @@ fn language_chip(
             p.text_2,
         )
     });
-    let counted = count.as_ref().map_or(0.0, |galley| galley.size().x + 9.0);
-    let corner = CornerRadius::same(radius::CONTROL);
+    let counted = count.as_ref().map_or(0.0, |galley| galley.size().x + 6.0);
+    // The other chips' frame, so the count reads inside it as theirs does.
+    let corner = CornerRadius::same(radius::R12);
     let response = interact(
         ui,
-        vec2(size.x + 4.0 + counted, size.y + 4.0),
+        vec2(10.0 + size.x + counted + 10.0, 24.0),
         Sense::click(),
         "language-chip",
         || WidgetInfo::selected(Role::Button, true, on, name),
         corner,
     );
     let rect = response.rect;
-    let edge = if on {
-        p.amber_edge
-    } else if response.hovered() {
-        p.line
-    } else {
-        Color32::TRANSPARENT
-    };
+    let lit = if on { 1.0 } else { hovered(ui, &response) };
     ui.painter().rect(
         rect,
         corner,
-        Color32::TRANSPARENT,
-        Stroke::new(1.0, edge),
+        p.bg_2,
+        Stroke::new(1.0, towards(p.line_soft, p.amber_dim, lit)),
         StrokeKind::Inside,
     );
     paint_lead(
         ui,
         &Lead::Badge(badge, hue),
-        rect.left() + 2.0,
+        rect.left() + 10.0,
         rect.center().y,
     );
     if let Some(count) = count {
-        paint(ui, rect.left() + 2.0 + size.x + 5.0, rect, count, p.text_2);
+        paint(ui, rect.left() + 10.0 + size.x + 6.0, rect, count, p.text_2);
     }
     response.clicked()
 }

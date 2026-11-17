@@ -249,7 +249,9 @@ impl<'a> SearchField<'a> {
         self
     }
 
-    pub fn show(self, ui: &mut Ui) -> Searched {
+    pub fn show(mut self, ui: &mut Ui) -> Searched {
+        /// The words typed keep this much room: the key only reminds, and gives way first.
+        const WORDS_KEEP: f32 = 200.0;
         let p = palette(ui.ctx());
         // By its name, not its place: a header that reflows as the text grows would take the
         // focus away mid-word.
@@ -257,6 +259,11 @@ impl<'a> SearchField<'a> {
         let focused = ui.memory(|memory| memory.has_focus(id.with("field")));
         let edge = if focused { p.amber_edge } else { p.line };
         let width = self.width.unwrap_or_else(|| ui.available_width());
+        // The frame's margins, the magnifier and its gap.
+        let around = 22.0 + 16.0 + ui.spacing().item_spacing.x;
+        if self.matched.is_none() && width - around - self.trailing_width(ui) < WORDS_KEEP {
+            self.key = None;
+        }
         egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, edge))
