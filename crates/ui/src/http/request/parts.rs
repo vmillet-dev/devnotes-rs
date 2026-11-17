@@ -38,23 +38,15 @@ struct Columns {
 impl Columns {
     fn of(frame: Rect) -> Self {
         let half = ((frame.width() - CHECK - KIND - REMOVE) / 2.0).max(60.0);
-        let column = |from: f32, width: f32| {
-            Rect::from_min_max(
-                pos2(frame.left() + from, frame.top()),
-                pos2(frame.left() + from + width, frame.bottom()),
-            )
-        };
+        let [check, key, kind, value, remove] =
+            table::columns(frame, [CHECK, half, KIND, half, REMOVE]);
         Self {
-            check: column(0.0, CHECK),
-            key: column(CHECK, half),
-            kind: column(CHECK + half, KIND),
-            value: column(CHECK + half + KIND, half),
-            remove: column(CHECK + 2.0 * half + KIND, REMOVE),
+            check,
+            key,
+            kind,
+            value,
+            remove,
         }
-    }
-
-    fn at(column: Rect, top: f32) -> Rect {
-        Rect::from_min_max(pos2(column.left(), top), pos2(column.right(), top + ROW))
     }
 }
 
@@ -69,7 +61,7 @@ pub(super) fn show(ui: &mut Ui, parts: &[FormPart], language: i18n::Language) ->
         (columns.kind, keys::http::body::PART_KIND),
         (columns.value, keys::http::table::VALUE),
     ] {
-        table::heading(ui, Columns::at(column, frame.top()), key, language);
+        table::heading(ui, table::slot(column, frame.top()), key, language);
     }
     let mut changed = None;
     for at in 0..=parts.len() {
@@ -115,7 +107,7 @@ fn row_of(
             keys::http::table::ENABLE,
             &[("key", part.key.as_str().into())],
         );
-        let rect = Columns::at(columns.check, top);
+        let rect = table::slot(columns.check, top);
         changed |= table::tick(ui, rect, &mut part.enabled, &label, "http-part-enabled");
     }
     let ink = if part.enabled || blank {
@@ -130,7 +122,7 @@ fn row_of(
     };
     changed |= table::text_cell(
         ui,
-        (Columns::at(columns.key, top), id.with("key")),
+        (table::slot(columns.key, top), id.with("key")),
         (&mut part.key, &tr(keys::http::table::KEY), "http-part-key"),
         (&hint, ink, true, false),
     )
@@ -140,7 +132,7 @@ fn row_of(
     } else {
         keys::http::body::PART_TEXT
     });
-    let rect = Columns::at(columns.kind, top);
+    let rect = table::slot(columns.kind, top);
     if cell_button(
         ui,
         rect,
@@ -152,7 +144,7 @@ fn row_of(
         part.value.clear();
         changed = true;
     }
-    let rect = Columns::at(columns.value, top);
+    let rect = table::slot(columns.value, top);
     if part.file {
         let chosen = if part.value.is_empty() {
             tr(keys::http::body::CHOOSE_FILE)
@@ -180,7 +172,7 @@ fn row_of(
         )
         .changed();
     }
-    let rect = Columns::at(columns.remove, top);
+    let rect = table::slot(columns.remove, top);
     if !blank && table::remove(ui, rect, (&part.key, "http-part-remove"), language) {
         return Some(Row::Removed);
     }

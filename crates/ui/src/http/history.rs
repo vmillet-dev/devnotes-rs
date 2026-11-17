@@ -3,8 +3,8 @@
 use crate::theme::tokens::{font, gap, radius};
 use chrono::{Days, Local, NaiveDate};
 use egui::{
-    Align, CornerRadius, FontFamily, Key, Layout, Modifiers, Rect, Role, Sense, Stroke, Ui,
-    UiBuilder, Vec2, WidgetInfo, pos2,
+    Align, CornerRadius, FontFamily, Key, Layout, Modifiers, Rect, Role, Sense, Ui, UiBuilder,
+    Vec2, WidgetInfo, pos2,
 };
 use engine::error::AppError;
 use engine::http::history::{HistoryDay, HistoryEntry, HistoryItem};
@@ -19,9 +19,8 @@ use crate::state::http::history::Asked as Ask;
 use crate::state::http::tree::Badge;
 use crate::theme::icons::Icon;
 use crate::theme::palette;
-use crate::widgets::{self, Button, IconButton, Kind, RailWidth, interact, virtual_list};
+use crate::widgets::{self, Button, IconButton, InPlace, Kind, RailWidth, interact, virtual_list};
 
-const HEAD: f32 = 56.0;
 const ROW: f32 = 48.0;
 
 /// What only the page's drawing sees.
@@ -56,17 +55,8 @@ pub(super) fn show(
     view: &mut PageView,
     actions: &mut Actions,
 ) {
-    let p = palette(ui.ctx());
-    ui.painter().rect_filled(region, CornerRadius::ZERO, p.bg_0);
-    let head_rect = Rect::from_min_size(region.min, Vec2::new(region.width(), HEAD));
-    let mut top = ui.new_child(UiBuilder::new().max_rect(head_rect.shrink2(Vec2::new(20.0, 0.0))));
+    let (mut top, body) = super::page(ui, region);
     head(&mut top, state, actions);
-    ui.painter().hline(
-        region.x_range(),
-        head_rect.bottom() - 0.5,
-        Stroke::new(1.0, p.line_soft),
-    );
-    let body = Rect::from_min_max(pos2(region.left(), head_rect.bottom()), region.max);
     let setting = (state.settings.history_list_width, HISTORY_LIST_WIDTH);
     let rest = view
         .list_width
@@ -103,40 +93,30 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         ui.add(egui::Label::new(kept));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;
-            let word = tr(keys::http::history::CLEAR);
-            let Some(count) = history.confirming() else {
-                if Button::new(&word, "http-history-clear")
-                    .enabled(!history.days().is_empty())
-                    .show(ui)
-                    .clicked()
-                {
-                    ask(actions, Ask::AskClear);
-                }
-                return;
-            };
-            if Button::new(&tr(keys::http::rail::CANCEL), "http-history-clear-cancel")
-                .show(ui)
-                .clicked()
-            {
-                ask(actions, Ask::CancelClear);
-            }
-            if Button::new(&word, "http-history-clear-confirm")
-                .kind(Kind::Destructive)
-                .show(ui)
-                .clicked()
-            {
-                ask(actions, Ask::Clear);
-            }
-            let question = i18n::translate(
-                language,
-                keys::http::history::CONFIRM,
-                &[("count", count.into())],
+            let question = history.confirming().map(|count| {
+                i18n::translate(
+                    language,
+                    keys::http::history::CONFIRM,
+                    &[("count", count.into())],
+                )
+            });
+            let words = (
+                &*tr(keys::http::history::CLEAR),
+                &*tr(keys::http::rail::CANCEL),
             );
-            let question = egui::RichText::new(question)
-                .size(font::BODY)
-                .color(p.text_1);
-            let said = ui.add(egui::Label::new(question));
-            widgets::address(ui, &said, "http-history-clear-count");
+            let pressed = widgets::ask_in_place(
+                ui,
+                words,
+                question.as_deref(),
+                !history.days().is_empty(),
+                "http-history-clear",
+            );
+            match pressed {
+                Some(InPlace::Ask) => ask(actions, Ask::AskClear),
+                Some(InPlace::Cancel) => ask(actions, Ask::CancelClear),
+                Some(InPlace::Confirm) => ask(actions, Ask::Clear),
+                None => {}
+            }
         });
     });
 }

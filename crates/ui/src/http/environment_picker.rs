@@ -139,6 +139,7 @@ fn panel(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         name: &tr(keys::http::environments::NONE),
         meta: &tr(keys::http::environments::NONE_META),
         hue: None,
+        dotted: true,
         on: environments.active().is_none(),
     };
     if entry(ui, &none).clicked() {
@@ -150,6 +151,7 @@ fn panel(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             name: &environment.name,
             meta: &meta,
             hue: Some(folder_hue(ui, environment.colour)),
+            dotted: true,
             on: environments.active_id() == Some(environment.id.as_str()),
         };
         if entry(ui, &shown).clicked() {
@@ -161,6 +163,7 @@ fn panel(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         name: &tr(keys::http::environments::MANAGE),
         meta: "",
         hue: None,
+        dotted: false,
         on: false,
     };
     if entry_of(ui, &manage, "http-environment-manage").clicked() {
@@ -190,6 +193,8 @@ struct Entry<'a> {
     name: &'a str,
     meta: &'a str,
     hue: Option<Color32>,
+    /// The colour dot, empty without a hue; « Manage » has none.
+    dotted: bool,
     on: bool,
 }
 
@@ -218,7 +223,7 @@ fn entry_of(ui: &mut Ui, shown: &Entry<'_>, author_id: &str) -> Response {
             egui::Rect::from_center_size(pos2(rect.left() + 14.0, middle), Vec2::splat(12.0));
         crate::theme::icons::paint(ui, tick, crate::theme::icons::Icon::Check, p.amber_text);
     }
-    if author_id != "http-environment-manage" {
+    if shown.dotted {
         dot(ui, pos2(rect.left() + 32.0, middle), shown.hue);
     }
     let name = widgets::text(

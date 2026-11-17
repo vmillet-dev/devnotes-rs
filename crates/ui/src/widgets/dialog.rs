@@ -213,6 +213,29 @@ pub fn framed_dialog<R>(
     Some(self::shown(shown))
 }
 
+/// A Notes panel's modal (a folder's name, a snippet's fields, the tags, the trash): the
+/// dialog's frame, padded evenly, over the dimmed backdrop. Its keys and its closing stay the
+/// caller's.
+pub fn modal_panel<R>(
+    ctx: &Context,
+    id: Id,
+    content: impl FnOnce(&mut egui::Ui) -> R,
+) -> ModalResponse<R> {
+    let p = palette(ctx);
+    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
+    let padding = spacing(ctx).canvas.round() as i8;
+    let frame = egui::Frame::new()
+        .fill(p.bg_1)
+        .stroke(Stroke::new(1.0, p.line))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
+        .shadow(p.shadow_overlay)
+        .inner_margin(Margin::same(padding));
+    egui::Modal::new(id)
+        .backdrop_color(p.backdrop.gamma_multiply(0.7))
+        .frame(frame)
+        .show(ctx, content)
+}
+
 /// A dialog's title: its words at the title's size, read as its heading, found by `author_id`.
 pub fn dialog_title(ui: &mut egui::Ui, words: &str, author_id: &str) -> egui::Response {
     let ink = palette(ui.ctx()).text_0;

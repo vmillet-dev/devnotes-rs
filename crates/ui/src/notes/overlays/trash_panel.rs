@@ -5,8 +5,8 @@
 use crate::theme::tokens::{font, gap, radius};
 use chrono::{DateTime, Utc};
 use egui::{
-    CornerRadius, FontFamily, Id, Margin, Rect, Role, Sense, Stroke, StrokeKind, Ui, UiBuilder,
-    WidgetInfo, pos2, vec2,
+    CornerRadius, FontFamily, Id, Rect, Role, Sense, Stroke, StrokeKind, Ui, UiBuilder, WidgetInfo,
+    pos2, vec2,
 };
 use engine::notes::kind::NoteKind;
 use engine::notes::trash::TrashedNote;
@@ -16,7 +16,7 @@ use crate::action::{Action, Actions};
 use crate::notes::{Action as Asked, Trash};
 use crate::state::AppState;
 use crate::theme::icons::Icon;
-use crate::theme::{palette, spacing};
+use crate::theme::palette;
 use crate::widgets::{self, Button, IconButton, Kind, TextField};
 
 const WIDTH: f32 = 560.0;
@@ -50,19 +50,10 @@ pub(in crate::notes) fn show(
         view.searching = searching;
         view.confirming_empty = false;
     }
-    let p = palette(ui.ctx());
-    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
-    let padding = spacing(ui.ctx()).canvas.round() as i8;
-    let frame = egui::Frame::new()
-        .fill(p.bg_1)
-        .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::DIALOG))
-        .shadow(p.shadow_overlay)
-        .inner_margin(Margin::same(padding));
-    let shown = egui::Modal::new(Id::unique("trash-panel"))
-        .backdrop_color(p.backdrop.gamma_multiply(0.7))
-        .frame(frame)
-        .show(ui.ctx(), |ui| panel(ui, state, view, actions));
+    let _p = palette(ui.ctx());
+    let shown = crate::widgets::modal_panel(ui.ctx(), Id::unique("trash-panel"), |ui| {
+        panel(ui, state, view, actions)
+    });
     if shown.inner || shown.should_close() {
         actions.push(Action::Notes(Asked::Trash(Trash::Close)));
     }

@@ -132,27 +132,33 @@ struct Columns {
 
 impl Columns {
     fn of(frame: Rect) -> Self {
-        let inner = (frame.width() - CHECK - REMOVE).max(90.0);
-        let third = inner / 3.0;
-        let x = |offset: f32| frame.left() + offset;
-        let column = |from: f32, width: f32| {
-            Rect::from_min_max(
-                pos2(x(from), frame.top()),
-                pos2(x(from + width), frame.bottom()),
-            )
-        };
+        let third = (frame.width() - CHECK - REMOVE).max(90.0) / 3.0;
+        let [check, key, value, description, remove] =
+            columns(frame, [CHECK, third, third, third, REMOVE]);
         Self {
-            check: column(0.0, CHECK),
-            key: column(CHECK, third),
-            value: column(CHECK + third, third),
-            description: column(CHECK + 2.0 * third, third),
-            remove: column(CHECK + 3.0 * third, REMOVE),
+            check,
+            key,
+            value,
+            description,
+            remove,
         }
     }
+}
 
-    fn at(column: Rect, top: f32) -> Rect {
-        Rect::from_min_max(pos2(column.left(), top), pos2(column.right(), top + ROW))
-    }
+/// The frame cut into columns of these widths, from its left edge.
+pub(super) fn columns<const N: usize>(frame: Rect, widths: [f32; N]) -> [Rect; N] {
+    let mut left = frame.left();
+    widths.map(|width| {
+        let column =
+            Rect::from_min_max(pos2(left, frame.top()), pos2(left + width, frame.bottom()));
+        left += width;
+        column
+    })
+}
+
+/// A row's cell in `column`, from `top`.
+pub(super) fn slot(column: Rect, top: f32) -> Rect {
+    Rect::from_min_max(pos2(column.left(), top), pos2(column.right(), top + ROW))
 }
 
 fn head(ui: &Ui, columns: &Columns, top: f32, language: i18n::Language) {
@@ -161,7 +167,7 @@ fn head(ui: &Ui, columns: &Columns, top: f32, language: i18n::Language) {
         (columns.value, keys::http::table::VALUE),
         (columns.description, keys::http::table::DESCRIPTION),
     ] {
-        heading(ui, Columns::at(column, top), key, language);
+        heading(ui, slot(column, top), key, language);
     }
 }
 
@@ -226,7 +232,7 @@ fn row_of(
     let tr = |key| i18n::translate(language, key, &[]);
     let mut changed = false;
     if !cell.blank {
-        let rect = Columns::at(columns.check, cell.top);
+        let rect = slot(columns.check, cell.top);
         let label = i18n::translate(
             language,
             keys::http::table::ENABLE,
@@ -254,10 +260,7 @@ fn row_of(
     };
     let key = text_cell(
         ui,
-        (
-            Columns::at(columns.key, cell.top),
-            cell.id.with(Field::Key as u8),
-        ),
+        (slot(columns.key, cell.top), cell.id.with(Field::Key as u8)),
         (&mut row.key, &tr(keys::http::table::KEY), "http-kv-key"),
         (&hint, key_ink, true, false),
     );
@@ -271,7 +274,7 @@ fn row_of(
     let value = text_cell(
         ui,
         (
-            Columns::at(columns.value, cell.top),
+            slot(columns.value, cell.top),
             cell.id.with(Field::Value as u8),
         ),
         (
@@ -290,7 +293,7 @@ fn row_of(
     let description = text_cell(
         ui,
         (
-            Columns::at(columns.description, cell.top),
+            slot(columns.description, cell.top),
             cell.id.with(Field::Description as u8),
         ),
         (
@@ -301,7 +304,7 @@ fn row_of(
         ("", ink, false, false),
     );
     changed |= description.changed();
-    let at = Columns::at(columns.remove, cell.top);
+    let at = slot(columns.remove, cell.top);
     if !cell.blank && remove(ui, at, (&row.key, "http-kv-remove"), language) {
         return Some(Changed::Removed);
     }
