@@ -70,6 +70,7 @@ mod tests {
             step: RunStep::Finished {
                 cancelled: false,
                 millis: 1,
+                capped: false,
             },
         })
     }

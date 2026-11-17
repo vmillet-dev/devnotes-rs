@@ -261,11 +261,23 @@ pub enum RunStep {
     Ended {
         result: Box<RunResult>,
     },
-    /// The run is over: ran to its end, stopped at a failure or by a script, or cancelled.
+    /// The run is over: ran to its end, stopped at a failure or by a script, cancelled, or
+    /// `capped` at [`MAX_STEPS`] in one iteration.
     Finished {
         cancelled: bool,
         millis: u32,
+        #[serde(default)]
+        capped: bool,
     },
+}
+
+/// Requests one iteration sends at most: a script that names its own request again would
+/// otherwise loop until « Cancel », keeping a result a step.
+pub const MAX_STEPS: u32 = 1_000;
+
+/// Whether the run stops here rather than send the next request it was pointed to.
+pub(crate) fn capped(steps: u32, next: Option<usize>) -> bool {
+    next.is_some() && steps >= MAX_STEPS
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -489,6 +501,18 @@ pub fn next_index(order: &[Placed], at: usize, next: Option<&Next>) -> Option<us
 
 #[cfg(test)]
 mod tests {
+    /// A script that names its own request again stops at the cap, not at « Cancel »
+    /// (#1477, N21).
+    #[test]
+    fn a_run_stops_at_its_cap_only_when_it_would_go_on() {
+        assert!(!capped(MAX_STEPS - 1, Some(0)));
+        assert!(capped(MAX_STEPS, Some(0)));
+        assert!(
+            !capped(MAX_STEPS, None),
+            "a run that ends there is not capped"
+        );
+    }
+
     use super::*;
 
     fn row(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {

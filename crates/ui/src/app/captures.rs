@@ -546,6 +546,7 @@ fn the_http_runner() {
         RunStep::Finished {
             cancelled: false,
             millis: 1_200,
+            capped: false,
         },
     ];
     for step in steps {
