@@ -64,7 +64,7 @@ fn ctrl_s_under_the_cookie_jar_saves_nothing_underneath() {
 
 fn focused(harness: &Harness<'_, DevNotesApp>) -> Option<String> {
     harness
-        .query_all_by(|node| node.is_focused())
+        .query_all_by(|node| node.is_focused() && node.author_id().is_some())
         .find_map(|node| node.accesskit_node().author_id().map(str::to_owned))
 }
 

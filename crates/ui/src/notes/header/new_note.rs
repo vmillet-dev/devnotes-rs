@@ -9,6 +9,7 @@ use engine::notes::kind::NoteKind;
 use i18n::{Key, keys};
 
 use crate::action::{Action, Actions};
+use crate::services::shortcuts::{self, Bindings};
 use crate::state::AppState;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
@@ -104,7 +105,8 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             let fresh = (!state.settings.note_kind_tried).then(|| tr(keys::notes::KIND_NEW));
             for (kind, name, line) in KINDS {
                 let badge = fresh.as_deref().filter(|_| kind == NoteKind::Note);
-                if kind_item(ui, kind, (&tr(name), &tr(line)), badge).clicked() {
+                let keys = shortcut(kind, &state.settings.bindings);
+                if kind_item(ui, kind, (&tr(name), &tr(line)), (keys, badge)).clicked() {
                     new_note(actions, Some(kind));
                 }
             }
@@ -200,13 +202,12 @@ fn kind_item(
     ui: &mut Ui,
     kind: NoteKind,
     (name, line): (&str, &str),
-    badge: Option<&str>,
+    (keys, badge): (&str, Option<&str>),
 ) -> Response {
     let p = palette(ui.ctx());
     let author_id = format!("new-note-{}", kind_id(kind));
     let corner = CornerRadius::same(radius::MENU);
     let width = ui.available_width();
-    let keys = shortcut(kind);
     let room = width - 2.0 * PADDING - TILE - 2.0 * GAP - key_caps_width(ui, keys);
     let text_size = egui::FontId::new(font::CONTROL, FontFamily::Proportional);
     let line = ui.fonts_mut(|fonts| fonts.layout(line.to_owned(), text_size, p.text_2, room));
@@ -313,15 +314,19 @@ fn key_caps(ui: &Ui, keys: &str, right: f32, middle: f32) {
     }
 }
 
-/// The canvas key each kind answers to (`canvas::shortcuts::CANVAS`).
-pub(crate) fn shortcut(kind: NoteKind) -> &'static str {
-    match kind {
-        NoteKind::Snippet => "Ctrl+N",
-        NoteKind::Note => "Ctrl+Shift+N",
-        NoteKind::Checklist => "Ctrl+Shift+L",
-        NoteKind::Calc => "Ctrl+Shift+M",
-        NoteKind::Drawing => "Ctrl+Shift+D",
-    }
+/// The keys each kind answers to on the canvas, as the person bound them.
+pub(crate) fn shortcut(kind: NoteKind, bindings: &Bindings) -> &str {
+    let id = match kind {
+        NoteKind::Snippet => "canvas.newSnippet",
+        NoteKind::Note => "canvas.newNote",
+        NoteKind::Checklist => "canvas.newChecklist",
+        NoteKind::Calc => "canvas.newCalc",
+        NoteKind::Drawing => "canvas.newDrawing",
+    };
+    shortcuts::ACTIONS
+        .iter()
+        .find(|action| action.id == id)
+        .map_or("", |action| bindings.of(*action))
 }
 
 fn kind_id(kind: NoteKind) -> &'static str {

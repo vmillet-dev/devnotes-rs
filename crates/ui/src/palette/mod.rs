@@ -690,7 +690,7 @@ fn side(ui: &mut Ui, state: &AppState, item: &Item, inner: Rect, on: bool) -> f3
     let p = palette(ui.ctx());
     let language = state.language;
     if let (false, Item::Command(command)) = (on, item) {
-        let caps = command.keys();
+        let caps = command.keys(&state.settings.bindings);
         if caps.is_empty() {
             return 0.0;
         }
