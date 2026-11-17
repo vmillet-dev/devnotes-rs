@@ -116,11 +116,7 @@ pub fn variable_counts(variables: &[Variable]) -> VariableCounts {
 /// asks before it opens, whatever it then says.
 #[must_use]
 pub fn asks_before_sending(kind: RequestKind, method: HttpMethod) -> bool {
-    kind == RequestKind::Websocket
-        || !matches!(
-            method,
-            HttpMethod::Get | HttpMethod::Head | HttpMethod::Options
-        )
+    kind == RequestKind::Websocket || !method.changes_nothing()
 }
 
 /// A field left out is untouched.
