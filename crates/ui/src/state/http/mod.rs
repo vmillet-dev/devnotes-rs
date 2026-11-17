@@ -1361,4 +1361,3 @@ mod tests {
         assert!(state.collapsed.is_empty());
     }
 }
-
