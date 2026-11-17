@@ -24,16 +24,25 @@ pub struct RunData {
     pub rows: Vec<BTreeMap<String, String>>,
 }
 
+/// The most a run's data file may weigh: past it, it is refused before it is read.
+pub const RUN_DATA_LIMIT: u64 = 50 * 1024 * 1024;
+
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DataFault {
     #[error("The file reads as neither a CSV with a header nor a JSON array of objects")]
     Unreadable,
     #[error("The file holds no row")]
     Empty,
+    #[error("The file is past the size a run reads")]
+    TooLarge,
 }
 
 /// The file at `path`, read where it lies.
 pub fn read_file(path: &str) -> Result<RunData, AppError> {
+    let size = std::fs::metadata(path).context(path)?.len();
+    if size > RUN_DATA_LIMIT {
+        return Err(DataFault::TooLarge.into());
+    }
     let text = std::fs::read_to_string(path).context(path)?;
     read_data(&text).map_err(AppError::from)
 }
@@ -501,6 +510,19 @@ pub fn next_index(order: &[Placed], at: usize, next: Option<&Next>) -> Option<us
 
 #[cfg(test)]
 mod tests {
+    /// A data file past the cap is refused before it is read whole (#1477, N28).
+    #[test]
+    fn a_data_file_past_the_cap_is_refused_unread() {
+        let folder = tempfile::tempdir().unwrap();
+        let path = folder.path().join("rows.csv");
+        let file = std::fs::File::create(&path).unwrap();
+        file.set_len(RUN_DATA_LIMIT + 1).unwrap();
+
+        let refused = read_file(path.to_str().unwrap()).unwrap_err();
+
+        assert_eq!(refused.params["fault"], "tooLarge");
+    }
+
     /// A script that names its own request again stops at the cap, not at « Cancel »
     /// (#1477, N21).
     #[test]

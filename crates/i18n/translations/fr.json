@@ -640,7 +640,8 @@
     "httpScriptFile": "Un script veut envoyer le fichier {{path}} sans votre accord : la requête n’est pas partie.",
     "httpRunData": {
       "unreadable": "Ce fichier ne se lit ni comme un CSV avec son en-tête, ni comme un tableau JSON d’objets.",
-      "empty": "Ce fichier ne contient aucune ligne de données."
+      "empty": "Ce fichier ne contient aucune ligne de données.",
+      "tooLarge": "Ce fichier dépasse 50 Mo : une exécution n’en lit pas davantage."
     },
     "noFileDialog": "Ce bureau n’a pas de dialogue de fichiers à afficher : xdg-desktop-portal est absent.",
     "updateRefused": "Cette mise à jour a été refusée : sa signature ne correspond pas. Rien n’a été installé.",
