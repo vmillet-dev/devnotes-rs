@@ -142,6 +142,7 @@ fn the_samples_arrive_in_one_space_with_their_folders() {
         seeded
             .display(&seeded.sections[0].cards[0])
             .folder
+            .as_ref()
             .unwrap()
             .name,
         "Notes"
