@@ -3,7 +3,10 @@
 //! The passphrase is never stored, anywhere: losing it loses the library, and an export is
 //! the only copy that does not depend on it.
 
-#![allow(clippy::needless_pass_by_value)]
+#![allow(
+    clippy::needless_pass_by_value,
+    reason = "a passphrase is taken whole, to be wiped when the service returns"
+)]
 
 pub mod file;
 pub(crate) mod gate;

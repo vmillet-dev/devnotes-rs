@@ -78,7 +78,7 @@ fn the_quick_filter_keeps_the_pinned_notes() {
         ..NotePatch::default()
     };
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, pinned, patch)
+        engine::notes::update_note(engine, &pinned, &patch)
     })
     .unwrap();
     let mut harness = area(backend, profile);

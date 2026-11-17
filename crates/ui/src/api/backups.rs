@@ -15,5 +15,5 @@ pub fn keep_launch_copies(backend: &Backend, wanted: bool) {
 
 /// Closes the library and puts the copy back: the folder the replaced one went to.
 pub fn restore(backend: &Backend, id: String) -> Pending<String> {
-    backend.db(move |engine| backup::restore_backup(engine, id))
+    backend.db(move |engine| backup::restore_backup(engine, &id))
 }

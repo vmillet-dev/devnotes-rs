@@ -432,7 +432,7 @@ mod tests {
             .map(|title| testing::note(&backend, title).id.clone())
             .collect();
         engine::db::run_here(backend.engine(), move |engine| {
-            engine::notes::delete_notes(engine, ids)
+            engine::notes::delete_notes(engine, &ids)
         })
         .unwrap();
         let mut harness = area(backend, profile);
@@ -526,7 +526,7 @@ mod tests {
                 ..testing::snippet(space, "Archi".to_owned())
             };
             let id = engine::notes::create_note(engine, draft)?.id.clone();
-            engine::notes::delete_notes(engine, vec![id])
+            engine::notes::delete_notes(engine, &[id])
         })
         .unwrap();
         let mut harness = area(backend, profile);

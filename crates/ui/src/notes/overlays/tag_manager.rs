@@ -346,7 +346,7 @@ mod tests {
                     tags: Some(tags.into_iter().map(str::to_owned).collect()),
                     ..NotePatch::default()
                 };
-                engine::notes::update_note(engine, id, patch)?;
+                engine::notes::update_note(engine, &id, &patch)?;
             }
             Ok::<(), engine::error::AppError>(())
         })

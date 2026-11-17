@@ -1147,7 +1147,7 @@ fn kinds(backend: &crate::backend::Backend) -> Vec<String> {
             pinned: Some(title == "psql prod"),
             ..NotePatch::default()
         };
-        let mut written = backend.db(move |engine| engine::notes::update_note(engine, id, patch));
+        let mut written = backend.db(move |engine| engine::notes::update_note(engine, &id, &patch));
         backend.settle();
         written.poll().unwrap().unwrap();
     }

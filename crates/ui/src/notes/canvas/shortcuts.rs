@@ -284,8 +284,8 @@ mod tests {
         engine::db::run_here(backend.engine(), move |engine| {
             engine::folders::file_notes(
                 engine,
-                vec![filed],
-                Some(into),
+                &[filed],
+                Some(&into),
                 engine::folders::board::PreviewLines::default(),
             )
         })

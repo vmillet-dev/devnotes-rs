@@ -54,15 +54,15 @@ pub fn trashed(mut note: Note, deleted_at: DateTime<Utc>) -> TrashedNote {
 
 /// The attachment file names are collected before the `DELETE`, which cascades the records
 /// that carried them away.
-pub fn purge(db: &Db, ids: Vec<String>) -> Result<usize, StorageError> {
+pub fn purge(db: &Db, ids: &[String]) -> Result<usize, StorageError> {
     if ids.is_empty() {
         return Ok(0);
     }
 
     let mut connection = lock(db)?;
     let directory = attachments::files::directory(&connection);
-    let files = attachments::store::stored_names_of(&mut connection, &ids)?;
-    let purged = store::trash::purge(&mut connection, &ids)?;
+    let files = attachments::store::stored_names_of(&mut connection, ids)?;
+    let purged = store::trash::purge(&mut connection, ids)?;
     drop(connection);
 
     attachments::files::remove_files(&directory, &files);
@@ -76,7 +76,7 @@ pub fn purge_expired(db: &Db) -> Result<(), StorageError> {
         store::trash::expired_ids(&mut connection, Utc::now())?
     };
 
-    purge(db, expired)?;
+    purge(db, &expired)?;
 
     Ok(())
 }
@@ -129,7 +129,7 @@ mod tests {
     fn purging_a_note_removes_the_files_of_its_attachments() {
         let (_scratch, db, id, file) = a_trashed_note_with_a_file();
 
-        assert_eq!(purge(&db, vec![id]).unwrap(), 1);
+        assert_eq!(purge(&db, &[id]).unwrap(), 1);
 
         assert!(!file.exists());
     }

@@ -892,7 +892,7 @@ mod tests {
             ..NotePatch::default()
         };
         engine::db::run_here(backend.engine(), move |engine| {
-            engine::notes::update_note(engine, reset, patch)
+            engine::notes::update_note(engine, &reset, &patch)
         })
         .unwrap();
         let mut harness = area(backend, profile);

@@ -126,9 +126,7 @@ pub(super) fn request(url: &str) -> SendRequest {
 #[test]
 fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_back() {
     let session = Session::open();
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let settings = ContainerSettings {
         auth: RequestAuth::Bearer {
             token: "s3cret".to_string(),
@@ -144,7 +142,7 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
         .call(|e| {
             save_http_settings(
                 e,
-                HttpItem {
+                &HttpItem {
                     kind: HttpItemKind::Collection,
                     id: api.id.clone(),
                 },
@@ -224,11 +222,9 @@ fn layered(session: &Session, port: u16) -> SendRequest {
         create_http_environment, create_http_folder, save_http_environment, save_http_globals,
     };
 
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let invoices = session
-        .call(|e| create_http_folder(e, api.id.clone(), None, "Factures".to_string()))
+        .call(|e| create_http_folder(e, &api.id, None, "Factures"))
         .unwrap();
     for (kind, id, variables) in [
         (
@@ -251,11 +247,11 @@ fn layered(session: &Session, port: u16) -> SendRequest {
             ..ContainerSettings::default()
         };
         session
-            .call(|e| save_http_settings(e, item, settings))
+            .call(|e| save_http_settings(e, &item, settings))
             .unwrap();
     }
     let staging = session
-        .call(|e| create_http_environment(e, "Staging".to_string()))
+        .call(|e| create_http_environment(e, "Staging"))
         .unwrap();
     let mut token = variable("token", "t0k3n");
     token.kind = VariableKind::Secret;
@@ -268,10 +264,10 @@ fn layered(session: &Session, port: u16) -> SendRequest {
         ..EnvironmentPatch::default()
     };
     session
-        .call(|e| save_http_environment(e, staging.id.clone(), patch))
+        .call(|e| save_http_environment(e, &staging.id, &patch))
         .unwrap();
     session
-        .call(|e| save_http_globals(e, vec![variable("baseUrl", "http://nowhere.invalid")]))
+        .call(|e| save_http_globals(e, &[variable("baseUrl", "http://nowhere.invalid")]))
         .unwrap();
 
     let mut sent = request("{{baseUrl}}/invoices?page={{page}}&size={{size}}");
@@ -381,9 +377,7 @@ fn a_secret_variable_shows_by_its_name_once_the_request_left() {
             .map(|sent| sent.name.as_str()),
         Some("Staging")
     );
-    let entry = session
-        .call(|e| http_history_entry(e, item.id.clone()))
-        .unwrap();
+    let entry = session.call(|e| http_history_entry(e, &item.id)).unwrap();
     let kept = format!("{entry:?}");
     assert!(!kept.contains("t0k3n"), "{kept}");
     assert!(kept.contains("{{token}}"));
@@ -483,7 +477,7 @@ fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_of
             ..ContainerSettings::default()
         };
         session
-            .call(|e| save_http_settings(e, item, settings))
+            .call(|e| save_http_settings(e, &item, settings))
             .unwrap();
     };
 
@@ -502,7 +496,7 @@ fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_of
             .any(|header| header.key == "User-Agent" && header.value == USER_AGENT)
     );
     let listed = session
-        .call(|e| implied_http_headers(e, RequestKind::Http, request(&url).document, None, None))
+        .call(|e| implied_http_headers(e, RequestKind::Http, &request(&url).document, None, None))
         .unwrap();
     assert_eq!(
         listed
@@ -521,9 +515,7 @@ fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_of
     }
 
     // Its collection names another, then the request its own over it.
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     hand_down(&api.id, vec![row("Equipe/1", true)]);
     let mut placed = request(&url);
     placed.collection_id = Some(api.id.clone());
@@ -536,7 +528,7 @@ fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_of
             implied_http_headers(
                 e,
                 RequestKind::Http,
-                placed.document.clone(),
+                &placed.document,
                 Some(api.id.clone()),
                 None,
             )
@@ -622,9 +614,7 @@ fn a_body_past_what_is_shown_is_cut_and_saved_whole_to_a_file() {
     assert_eq!(std::fs::read(&path).unwrap(), large);
     assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 1);
 
-    session
-        .call(|e| forget_http_response(e, "tab-1".to_string()))
-        .unwrap();
+    session.call(|e| forget_http_response(e, "tab-1")).unwrap();
     assert!(
         !session
             .wait(|e| save_http_response(e, "tab-1".to_string(), target))
@@ -777,14 +767,12 @@ fn a_timeout_and_a_redirect_too_many_say_the_value_in_force_and_who_set_it() {
     use engine::http::http_history;
 
     let session = Session::open();
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     session
         .call(|e| {
             save_http_settings(
                 e,
-                HttpItem {
+                &HttpItem {
                     kind: HttpItemKind::Collection,
                     id: api.id.clone(),
                 },
@@ -875,20 +863,13 @@ fn a_send_under_way_is_cancelled_by_its_id() {
         request(&format!("http://127.0.0.1:{port}/slow")),
     ));
     // Polled from the test's own thread: the send is under way once there is one to cancel.
-    while !session
-        .call(|e| cancel_http_send(e, "tab-1".to_string()))
-        .unwrap()
-    {
+    while !session.call(|e| cancel_http_send(e, "tab-1")).unwrap() {
         thread::sleep(Duration::from_millis(10));
     }
     let cancelled = session.runtime.block_on(sending).unwrap();
 
     assert_eq!(cancelled.unwrap_err().code, ErrorCode::HttpCancelled);
-    assert!(
-        !session
-            .call(|e| cancel_http_send(e, "tab-1".to_string()))
-            .unwrap()
-    );
+    assert!(!session.call(|e| cancel_http_send(e, "tab-1")).unwrap());
     drop(silent);
 }
 
@@ -944,7 +925,7 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
     );
 
     let entry = session
-        .call(|e| http_history_entry(e, items[1].id.clone()))
+        .call(|e| http_history_entry(e, &items[1].id.clone()))
         .unwrap();
     let response = entry.record.response.unwrap();
     assert_eq!(response.body, "pong");
@@ -958,7 +939,7 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
     );
 
     let draft = session
-        .call(|e| http_history_draft(e, items[1].id.clone()))
+        .call(|e| http_history_draft(e, &items[1].id.clone()))
         .unwrap();
     assert!(draft.document.url.ends_with("/ping"));
     assert!(draft.document.headers.is_empty());
@@ -980,9 +961,7 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
 
     let session = Session::open();
     let (port, _seen) = serve(2, |_, _| response("200 OK", &[], b"ok"));
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let token = KeyValue {
         key: "Authorization".to_string(),
         value: "Bearer t0ken".to_string(),
@@ -992,7 +971,7 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
         .call(|e| {
             create_http_request(
                 e,
-                HttpRequestDraft {
+                &HttpRequestDraft {
                     collection_id: api.id.clone(),
                     folder_id: None,
                     name: "ma req".to_string(),
@@ -1035,18 +1014,18 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
     );
 
     let removed = session
-        .call(|e| delete_http_history_entry(e, before[0].id.clone()))
+        .call(|e| delete_http_history_entry(e, &before[0].id.clone()))
         .unwrap();
     assert_eq!(listed(), before[1..]);
     session
-        .call(|e| restore_http_history_entry(e, removed))
+        .call(|e| restore_http_history_entry(e, &removed))
         .unwrap();
     assert_eq!(listed(), before);
 
     // Back onto its request: the send's URL, and the request's own secret where the record
     // holds a mask.
     let onto = session
-        .call(|e| http_history_onto_request(e, before[1].id.clone()))
+        .call(|e| http_history_onto_request(e, &before[1].id.clone()))
         .unwrap()
         .unwrap();
     assert_eq!(onto.name, "ma req");
@@ -1058,7 +1037,7 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
         .call(|e| {
             delete_http_item(
                 e,
-                HttpItem {
+                &HttpItem {
                     kind: HttpItemKind::Request,
                     id: held.id.clone(),
                 },
@@ -1067,7 +1046,7 @@ fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from(
         .unwrap();
     assert_eq!(
         session
-            .call(|e| http_history_onto_request(e, before[1].id.clone()))
+            .call(|e| http_history_onto_request(e, &before[1].id.clone()))
             .unwrap(),
         None
     );
@@ -1110,7 +1089,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
             .contains("\"operationName\":\"Me\"")
     );
 
-    let described = describe_graphql(document).unwrap();
+    let described = describe_graphql(&document).unwrap();
     assert_eq!(described.operations, ["Me", "Other"]);
     assert_eq!(described.query_problem, None);
 
@@ -1119,7 +1098,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
         query: "query Country($code: ID!) { country(code: $code) { name }".to_string(),
         ..GraphqlDocument::default()
     };
-    let described = describe_graphql(open.clone()).unwrap();
+    let described = describe_graphql(&open).unwrap();
     let problem = described.query_problem.unwrap();
     assert_eq!(
         (problem.fault, problem.line, problem.column),
@@ -1127,7 +1106,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
     );
     assert_eq!(described.missing, ["code"]);
     assert_eq!(
-        add_graphql_variables(open).unwrap(),
+        add_graphql_variables(&open).unwrap(),
         "{
   \"code\": null
 }"
@@ -1197,11 +1176,11 @@ fn an_answer_fills_the_jar_the_next_request_carries_it_and_the_manager_empties_i
     assert_eq!(domains[0].domain, "127.0.0.1");
     assert_eq!(domains[0].cookies.len(), 2);
     let id = domains[0].cookies[0].id.clone();
-    assert_eq!(session.call(|e| delete_http_cookie(e, id)).unwrap(), 1);
+    assert_eq!(session.call(|e| delete_http_cookie(e, &id)).unwrap(), 1);
     assert_eq!(session.call(count_http_cookies).unwrap(), 1);
     assert_eq!(
         session
-            .call(|e| delete_http_cookie_domain(e, "127.0.0.1".to_string()))
+            .call(|e| delete_http_cookie_domain(e, "127.0.0.1"))
             .unwrap(),
         1
     );
@@ -1414,10 +1393,7 @@ fn the_delay_is_the_whole_chain_s_and_a_cancel_ends_it_on_the_way() {
         request(&format!("http://127.0.0.1:{port}/first")),
     ));
     seen.recv().unwrap();
-    while !session
-        .call(|e| cancel_http_send(e, "tab-1".to_string()))
-        .unwrap()
-    {
+    while !session.call(|e| cancel_http_send(e, "tab-1")).unwrap() {
         thread::sleep(Duration::from_millis(10));
     }
     let cancelled = session.runtime.block_on(sending).unwrap();

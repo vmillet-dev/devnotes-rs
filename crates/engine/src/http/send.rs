@@ -1218,7 +1218,7 @@ pub struct Sending {
 }
 
 /// A task aborted was cancelled; one that panicked fell, which a cancel must not hide.
-fn ended(error: tokio::task::JoinError) -> SendError {
+fn ended(error: &tokio::task::JoinError) -> SendError {
     if error.is_panic() {
         SendError::Fell
     } else {
@@ -1253,12 +1253,15 @@ impl Sending {
         {
             running.remove(id);
         }
-        let answer = answer.map_err(ended).flatten().map(|received| {
-            if let Ok(mut bodies) = self.bodies.lock() {
-                bodies.insert(id.to_string(), Arc::new(received.kept));
-            }
-            received.response
-        });
+        let answer = answer
+            .map_err(|error| ended(&error))
+            .flatten()
+            .map(|received| {
+                if let Ok(mut bodies) = self.bodies.lock() {
+                    bodies.insert(id.to_string(), Arc::new(received.kept));
+                }
+                received.response
+            });
         let changes = changes
             .lock()
             .map(|mut set| std::mem::take(&mut *set))
@@ -1369,8 +1372,8 @@ mod tests {
             (fell.unwrap_err(), waiting.await.unwrap_err())
         });
 
-        assert!(matches!(ended(fell), SendError::Fell));
-        assert!(matches!(ended(aborted), SendError::Cancelled));
+        assert!(matches!(ended(&fell), SendError::Fell));
+        assert!(matches!(ended(&aborted), SendError::Cancelled));
     }
     use crate::http::model::{FormPart, HttpItemKind};
     use crate::http::settings::{HttpOrigin, InheritedHeader};

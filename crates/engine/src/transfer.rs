@@ -1,5 +1,3 @@
-#![allow(clippy::needless_pass_by_value)]
-
 pub mod bundle;
 pub mod file;
 pub mod model;
@@ -51,11 +49,11 @@ pub async fn export_notes(
 }
 
 /// How many notes an export would carry, asked before the save dialog: none is said at once.
-pub fn count_export(engine: &Engine, scope: ExportScope) -> Result<u32, AppError> {
+pub fn count_export(engine: &Engine, scope: &ExportScope) -> Result<u32, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(bundle::count(&mut connection, &scope)?)
+    Ok(bundle::count(&mut connection, scope)?)
 }
 
 /// The file is read and opened off the db queue: parsing a large export there would hold back
@@ -84,17 +82,17 @@ pub async fn import_notes(
 }
 
 /// Whether an import will want a phrase, so the interface can ask before it starts.
-pub fn export_is_protected(path: String) -> Result<bool, AppError> {
-    model::validate_path(&path)?;
+pub fn export_is_protected(path: &str) -> Result<bool, AppError> {
+    model::validate_path(path)?;
 
-    Ok(file::is_protected(&path)?)
+    Ok(file::is_protected(path)?)
 }
 
 /// Nothing is sent anywhere: "share" stops at the clipboard.
-pub fn share_notes(engine: &Engine, ids: Vec<String>) -> Result<String, AppError> {
+pub fn share_notes(engine: &Engine, ids: &[String]) -> Result<String, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
-    let selected = notes::by_ids(&mut connection, &ids)?;
+    let selected = notes::by_ids(&mut connection, ids)?;
     let names = bundle::space_names(&mut connection)?;
 
     Ok(model::to_markdown(&selected, &names))

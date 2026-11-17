@@ -564,8 +564,8 @@ mod tests {
             patch(None, Some(NoteKind::Note)),
         );
         engine::db::run_here(backend.engine(), move |engine| {
-            engine::notes::update_note(engine, tagged, ops)?;
-            engine::notes::update_note(engine, prose, note)
+            engine::notes::update_note(engine, &tagged, &ops)?;
+            engine::notes::update_note(engine, &prose, &note)
         })
         .unwrap();
         let mut harness = area(backend, profile);

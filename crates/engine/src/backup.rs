@@ -59,7 +59,6 @@ fn copy(db: &Db) {
 }
 
 /// The copies that exist, newest first, for the panel that lists them.
-#[allow(clippy::needless_pass_by_value)]
 pub fn list_backups(engine: &Engine) -> Result<Vec<Backup>, AppError> {
     let db = &engine.db;
     Ok(list(lock(db)?.directory()))
@@ -70,11 +69,10 @@ pub fn list_backups(engine: &Engine) -> Result<Vec<Backup>, AppError> {
 /// ⚠️ Closes the library first, under the lock every command takes: renaming a database out
 /// from under a live connection loses it. Every command then answers `Locked`, which sends
 /// the interface back to the gate to ask for the restored copy's phrase.
-#[allow(clippy::needless_pass_by_value)]
-pub fn restore_backup(engine: &Engine, id: String) -> Result<String, AppError> {
+pub fn restore_backup(engine: &Engine, id: &str) -> Result<String, AppError> {
     let db = &engine.db;
     engine.let_go_of_the_network();
-    let aside = restore(db, &id, Utc::now())?.to_string_lossy().to_string();
+    let aside = restore(db, id, Utc::now())?.to_string_lossy().to_string();
     engine.restored.keep(aside.clone());
 
     Ok(aside)

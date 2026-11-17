@@ -20,7 +20,7 @@ fn snippet(content: &str, language: Language) -> (Harness, String) {
     };
     let at = id.clone();
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, at, patch)
+        engine::notes::update_note(engine, &at, &patch)
     })
     .unwrap();
     let mut harness = expanded_area(backend, profile);
@@ -31,7 +31,7 @@ fn snippet(content: &str, language: Language) -> (Harness, String) {
 fn stored(harness: &Harness, id: &str) -> String {
     let id = id.to_owned();
     engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::notes::get_note(engine, id)
+        engine::notes::get_note(engine, &id)
     })
     .unwrap()
     .content

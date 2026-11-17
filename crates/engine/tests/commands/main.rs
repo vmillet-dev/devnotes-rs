@@ -94,7 +94,7 @@ impl Session {
             name: name.to_string(),
         };
 
-        self.call(|e| create_space(e, draft)).unwrap().id
+        self.call(|e| create_space(e, &draft)).unwrap().id
     }
 
     fn spaces(&self) -> Vec<String> {

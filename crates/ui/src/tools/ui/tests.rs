@@ -313,9 +313,9 @@ fn a_result_is_written_as_a_note_with_where_it_came_from() {
     let any = crate::tools::catalogue::find("case").unwrap().from_note[0].1;
     let asked = note_picker::query("Echoed".to_owned(), any, chrono::Utc::now());
     let note = engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        let view = engine::notes::query_notes(engine, asked)?;
+        let view = engine::notes::query_notes(engine, &asked)?;
         let id = view.sections[0].cards[0].note.note.id.clone();
-        engine::notes::get_note(engine, id)
+        engine::notes::get_note(engine, &id)
     })
     .unwrap();
     assert_eq!(note.content, "COMPUTED");

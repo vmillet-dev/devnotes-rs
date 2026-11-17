@@ -286,7 +286,7 @@ pub(crate) fn attach(engine: &engine::Engine, note_ids: &[String]) {
     for n in 0..ATTACHMENTS {
         let note = note_ids[(n * 13) % note_ids.len()].clone();
         engine::db::run_here(engine, |e| {
-            engine::attachments::attach_image(e, note, format!("capture-{n}"), (32, 32), &pixels)
+            engine::attachments::attach_image(e, note, &format!("capture-{n}"), (32, 32), &pixels)
         })
         .unwrap();
     }

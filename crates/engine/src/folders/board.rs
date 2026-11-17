@@ -528,7 +528,7 @@ pub fn build<S: std::hash::BuildHasher>(
     folders: &[Folder],
     frames: &HashMap<String, BoardFrame, S>,
     positions: &HashMap<String, BoardPoint, S>,
-    facets: Facets,
+    facets: &Facets,
     request: &BoardQuery,
 ) -> BoardView {
     // Nothing is dropped: every criterion decides what is dimmed, never what is drawn.

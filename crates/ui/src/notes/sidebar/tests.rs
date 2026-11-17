@@ -74,8 +74,8 @@ fn a_folder_chosen_shows_its_notes_in_its_space() {
     engine::db::run_here(backend.engine(), move |engine| {
         engine::folders::file_notes(
             engine,
-            vec![id],
-            Some(into),
+            &[id],
+            Some(&into),
             engine::folders::board::PreviewLines::default(),
         )
     })
@@ -199,7 +199,7 @@ fn a_folder_is_made_recoloured_nested_and_deleted_from_the_rail() {
     let folders = |harness: &Harness<'_, Bench>| {
         let id = home.id.clone();
         engine::db::run_here(harness.state().backend.engine(), move |engine| {
-            engine::folders::list_folders(engine, Some(id))
+            engine::folders::list_folders(engine, Some(&id))
         })
         .unwrap()
     };

@@ -41,7 +41,7 @@ fn note(backend: &Backend, title: &str, kind: NoteKind, content: &str) -> String
     };
     let at = id.clone();
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, at, patch)
+        engine::notes::update_note(engine, &at, &patch)
     })
     .unwrap();
     id
@@ -326,7 +326,7 @@ fn a_drawing_is_inserted_from_the_toolbar_of_a_note() {
     };
     let at = scene.clone();
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, at, patch)
+        engine::notes::update_note(engine, &at, &patch)
     })
     .unwrap();
     let mut harness = crate::notes::bench::expanded_area(backend, profile);
@@ -342,7 +342,7 @@ fn a_drawing_is_inserted_from_the_toolbar_of_a_note() {
 
     let backend = &harness.state().backend;
     let stored = engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::get_note(engine, written)
+        engine::notes::get_note(engine, &written)
     })
     .unwrap();
     assert!(

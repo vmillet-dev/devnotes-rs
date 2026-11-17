@@ -1,5 +1,3 @@
-#![allow(clippy::needless_pass_by_value)]
-
 //! The HTTP client's collections: they belong to the library, not to a space, and are sealed
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
@@ -52,20 +50,20 @@ pub fn http_tree(engine: &Engine) -> Result<HttpTree, AppError> {
 /// The palette's requests, ranked here: the URL is read from each sealed document.
 pub fn search_http_requests(
     engine: &Engine,
-    search: String,
+    search: &str,
 ) -> Result<Vec<search::RequestHit>, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
     Ok(search::rank(
         store::search_candidates(&mut connection)?,
-        &search,
+        search,
     ))
 }
 
-pub fn create_http_collection(engine: &Engine, name: String) -> Result<HttpCollection, AppError> {
+pub fn create_http_collection(engine: &Engine, name: &str) -> Result<HttpCollection, AppError> {
     let db = &engine.db;
-    let name = model::validated_name(&name)?;
+    let name = model::validated_name(name)?;
 
     let mut connection = lock(db)?;
 
@@ -79,19 +77,19 @@ pub fn create_http_collection(engine: &Engine, name: String) -> Result<HttpColle
 /// `parent_id` `None` puts it at the collection's root.
 pub fn create_http_folder(
     engine: &Engine,
-    collection_id: String,
-    parent_id: Option<String>,
-    name: String,
+    collection_id: &str,
+    parent_id: Option<&String>,
+    name: &str,
 ) -> Result<HttpFolder, AppError> {
     let db = &engine.db;
-    let name = model::validated_name(&name)?;
+    let name = model::validated_name(name)?;
 
     let mut connection = lock(db)?;
 
     Ok(store::create_folder(
         &mut connection,
-        &collection_id,
-        parent_id.as_deref(),
+        collection_id,
+        parent_id.map(std::string::String::as_str),
         &name,
         Utc::now(),
     )?)
@@ -99,7 +97,7 @@ pub fn create_http_folder(
 
 pub fn create_http_request(
     engine: &Engine,
-    draft: HttpRequestDraft,
+    draft: &HttpRequestDraft,
 ) -> Result<HttpRequest, AppError> {
     let db = &engine.db;
     let name = model::validated_name(&draft.name)?;
@@ -108,7 +106,7 @@ pub fn create_http_request(
 
     Ok(store::create_request(
         &mut connection,
-        &draft,
+        draft,
         &name,
         Utc::now(),
     )?)
@@ -118,8 +116,8 @@ pub fn create_http_request(
 /// with it, or nothing is. Every name is checked before anything is written.
 pub fn create_http_request_in(
     engine: &Engine,
-    draft: HttpRequestDraft,
-    create: NewPlace,
+    draft: &HttpRequestDraft,
+    create: &NewPlace,
 ) -> Result<HttpRequest, AppError> {
     let db = &engine.db;
     let name = model::validated_name(&draft.name)?;
@@ -138,7 +136,7 @@ pub fn create_http_request_in(
 
     Ok(store::create_request_in(
         &mut connection,
-        &draft,
+        draft,
         &name,
         collection.as_deref(),
         folder.as_deref(),
@@ -146,17 +144,17 @@ pub fn create_http_request_in(
     )?)
 }
 
-pub fn get_http_request(engine: &Engine, id: String) -> Result<HttpRequest, AppError> {
+pub fn get_http_request(engine: &Engine, id: &str) -> Result<HttpRequest, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(store::get_request(&mut connection, &id)?)
+    Ok(store::get_request(&mut connection, id)?)
 }
 
 pub fn save_http_request(
     engine: &Engine,
-    id: String,
-    patch: HttpRequestPatch,
+    id: &str,
+    patch: &HttpRequestPatch,
 ) -> Result<HttpRequest, AppError> {
     let db = &engine.db;
     let name = patch
@@ -169,71 +167,71 @@ pub fn save_http_request(
 
     Ok(store::save_request(
         &mut connection,
-        &id,
-        &patch,
+        id,
+        patch,
         name.as_deref(),
         Utc::now(),
     )?)
 }
 
-pub fn rename_http_item(engine: &Engine, item: HttpItem, name: String) -> Result<(), AppError> {
+pub fn rename_http_item(engine: &Engine, item: &HttpItem, name: &str) -> Result<(), AppError> {
     let db = &engine.db;
-    let name = model::validated_name(&name)?;
+    let name = model::validated_name(name)?;
 
     let mut connection = lock(db)?;
 
-    Ok(store::rename(&mut connection, &item, &name)?)
+    Ok(store::rename(&mut connection, item, &name)?)
 }
 
 /// What a deletion would take with it, for the confirmation that comes first.
-pub fn count_http_contents(engine: &Engine, item: HttpItem) -> Result<HttpContents, AppError> {
+pub fn count_http_contents(engine: &Engine, item: &HttpItem) -> Result<HttpContents, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(store::contents(&mut connection, &item)?)
+    Ok(store::contents(&mut connection, item)?)
 }
 
-pub fn delete_http_item(engine: &Engine, item: HttpItem) -> Result<(), AppError> {
+pub fn delete_http_item(engine: &Engine, item: &HttpItem) -> Result<(), AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(store::delete(&mut connection, &item)?)
+    Ok(store::delete(&mut connection, item)?)
 }
 
 /// The copy's name comes from the front: no user-visible word is Rust's.
 pub fn duplicate_http_item(
     engine: &Engine,
-    item: HttpItem,
-    name: String,
+    item: &HttpItem,
+    name: &str,
 ) -> Result<HttpItem, AppError> {
     let db = &engine.db;
-    let name = model::validated_name(&name)?;
+    let name = model::validated_name(name)?;
 
     let mut connection = lock(db)?;
 
-    Ok(store::duplicate(&mut connection, &item, &name, Utc::now())?)
+    Ok(store::duplicate(&mut connection, item, &name, Utc::now())?)
 }
 
-pub fn move_http_item(engine: &Engine, item: HttpItem, place: HttpPlace) -> Result<(), AppError> {
+pub fn move_http_item(engine: &Engine, item: &HttpItem, place: &HttpPlace) -> Result<(), AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(store::move_item(&mut connection, &item, &place)?)
+    Ok(store::move_item(&mut connection, item, place)?)
 }
 
 pub fn http_settings(
     engine: &Engine,
-    item: HttpItem,
+    item: &HttpItem,
 ) -> Result<model::ContainerSettings, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(store::settings(&mut connection, &item)?)
+    Ok(store::settings(&mut connection, item)?)
 }
 
 pub fn save_http_settings(
     engine: &Engine,
-    item: HttpItem,
+    item: &HttpItem,
     settings: model::ContainerSettings,
 ) -> Result<(), AppError> {
     // Refused where it is typed: stored, it failed every request under it, one by one.
@@ -255,38 +253,38 @@ pub fn save_http_settings(
     let mut connection = lock(db)?;
     // The dialog does not hold the run order: the one the runner left is kept.
     let settings = model::ContainerSettings {
-        run_order: store::settings(&mut connection, &item)?.run_order,
+        run_order: store::settings(&mut connection, item)?.run_order,
         ..settings
     };
 
-    Ok(store::save_settings(&mut connection, &item, &settings)?)
+    Ok(store::save_settings(&mut connection, item, &settings)?)
 }
 
 /// What a request placed there inherits, and from where: « héritée de la collection … ».
 pub fn inherited_http_settings(
     engine: &Engine,
-    collection_id: String,
-    folder_id: Option<String>,
+    collection_id: &str,
+    folder_id: Option<&String>,
 ) -> Result<settings::Inherited, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
     Ok(store::inherited(
         &mut connection,
-        &collection_id,
-        folder_id.as_deref(),
+        collection_id,
+        folder_id.map(std::string::String::as_str),
     )?)
 }
 
 /// What a body implies, whether a JSON one reads, and whether its method seldom carries one:
 /// the editor says the three as it is typed, and decides none of them.
 pub fn describe_http_body(
-    body: model::RequestBody,
+    body: &model::RequestBody,
     method: model::HttpMethod,
 ) -> Result<BodyAnswer, AppError> {
     Ok(BodyAnswer {
         unusual: body.is_unusual_on(method),
-        content_type: settings::implied_content_type(&body).map(str::to_string),
+        content_type: settings::implied_content_type(body).map(str::to_string),
         problem: match &body {
             model::RequestBody::Json { text } if !text.trim().is_empty() => {
                 crate::json::parse::parse(text).err()
@@ -307,14 +305,14 @@ pub struct BodyAnswer {
 /// Each header's fault by its rank, or none: the table marks the row and says why. The rule is
 /// the model's; the table holds none.
 pub fn check_http_headers(
-    rows: Vec<model::KeyValue>,
+    rows: &[model::KeyValue],
 ) -> Result<Vec<Option<model::HeaderFault>>, AppError> {
-    Ok(model::header_faults(&rows))
+    Ok(model::header_faults(rows))
 }
 
 /// `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows.
-pub fn read_http_headers(text: String) -> Result<Vec<model::KeyValue>, AppError> {
-    Ok(model::headers_from_text(&text))
+pub fn read_http_headers(text: &str) -> Result<Vec<model::KeyValue>, AppError> {
+    Ok(model::headers_from_text(text))
 }
 
 /// What a request sends without a row of its own — the body's type, what it inherits, the
@@ -323,35 +321,39 @@ pub fn read_http_headers(text: String) -> Result<Vec<model::KeyValue>, AppError>
 pub fn implied_http_headers(
     engine: &Engine,
     kind: model::RequestKind,
-    document: model::RequestDocument,
+    document: &model::RequestDocument,
     collection_id: Option<String>,
-    folder_id: Option<String>,
+    folder_id: Option<&String>,
 ) -> Result<Vec<send::ImpliedHeader>, AppError> {
     let db = &engine.db;
     let inherited = match collection_id {
         Some(collection_id) => {
             let mut connection = lock(db)?;
-            store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+            store::inherited(
+                &mut connection,
+                &collection_id,
+                folder_id.map(std::string::String::as_str),
+            )?
         }
         None => settings::inherit(&[]),
     };
-    Ok(send::implied(kind, &document, &inherited))
+    Ok(send::implied(kind, document, &inherited))
 }
 
 /// The edited side wins: the query string rewritten from the table, or the table from the URL.
 pub fn sync_http_query(
-    url: String,
-    params: Vec<model::KeyValue>,
+    url: &str,
+    params: &[model::KeyValue],
     edited: query::QuerySide,
 ) -> Result<query::SyncedQuery, AppError> {
-    Ok(query::sync(&url, &params, edited))
+    Ok(query::sync(url, params, edited))
 }
 
-pub fn reorder_http_collection(engine: &Engine, id: String, index: u32) -> Result<(), AppError> {
+pub fn reorder_http_collection(engine: &Engine, id: &str, index: u32) -> Result<(), AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(store::reorder_collection(&mut connection, &id, index)?)
+    Ok(store::reorder_collection(&mut connection, id, index)?)
 }
 
 /// What it inherits is read under the lock, its files outside it, and the send waits on nothing
@@ -514,32 +516,32 @@ pub struct VariablesRequest {
 
 /// The order a collection or a folder runs in: the one last arranged, the requests added since
 /// at its end.
-pub fn http_run_order(engine: &Engine, item: HttpItem) -> Result<Vec<model::RunEntry>, AppError> {
+pub fn http_run_order(engine: &Engine, item: &HttpItem) -> Result<Vec<model::RunEntry>, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
     let tree = store::tree(&mut connection)?;
-    let saved = store::settings(&mut connection, &item)?.run_order;
+    let saved = store::settings(&mut connection, item)?.run_order;
 
     Ok(runner::run_order(
         &saved,
-        &runner::placed_under(&tree, &item),
+        &runner::placed_under(&tree, item),
     ))
 }
 
 /// The order the runner was left in, kept with the collection's or the folder's settings.
 pub fn save_http_run_order(
     engine: &Engine,
-    item: HttpItem,
+    item: &HttpItem,
     order: Vec<model::RunEntry>,
 ) -> Result<(), AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
     let settings = model::ContainerSettings {
         run_order: order,
-        ..store::settings(&mut connection, &item)?
+        ..store::settings(&mut connection, item)?
     };
 
-    Ok(store::save_settings(&mut connection, &item, &settings)?)
+    Ok(store::save_settings(&mut connection, item, &settings)?)
 }
 
 /// A collection or a folder run, one request after the other, each sent as a send is — its
@@ -642,8 +644,8 @@ pub async fn run_http_collection(
 
 /// « Annuler » on a run: the request under way is cancelled with it. `false` when no run of that
 /// id was under way.
-pub fn cancel_http_run(engine: &Engine, id: String) -> Result<bool, AppError> {
-    let Some(at) = engine.runs.cancel(&id) else {
+pub fn cancel_http_run(engine: &Engine, id: &str) -> Result<bool, AppError> {
+    let Some(at) = engine.runs.cancel(id) else {
         return Ok(false);
     };
     if let Some(send) = at {
@@ -658,8 +660,8 @@ pub async fn read_http_run_data(path: String) -> Result<runner::RunData, AppErro
 }
 
 /// `false` when that send had already ended.
-pub fn cancel_http_send(engine: &Engine, id: String) -> Result<bool, AppError> {
-    Ok(engine.sending.cancel(&id))
+pub fn cancel_http_send(engine: &Engine, id: &str) -> Result<bool, AppError> {
+    Ok(engine.sending.cancel(id))
 }
 
 /// The whole body of the last answer to `id`, not the text shown: `false` when there is none.
@@ -675,8 +677,8 @@ pub async fn save_http_response(
 }
 
 /// A closed tab lets its last body go.
-pub fn forget_http_response(engine: &Engine, id: String) -> Result<(), AppError> {
-    engine.sending.forget(&id);
+pub fn forget_http_response(engine: &Engine, id: &str) -> Result<(), AppError> {
+    engine.sending.forget(id);
     Ok(())
 }
 
@@ -712,11 +714,11 @@ pub fn http_history(
     ))
 }
 
-pub fn http_history_entry(engine: &Engine, id: String) -> Result<history::HistoryEntry, AppError> {
+pub fn http_history_entry(engine: &Engine, id: &str) -> Result<history::HistoryEntry, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(history::store::entry(&mut connection, &id)?)
+    Ok(history::store::entry(&mut connection, id)?)
 }
 
 /// What « Vider l'historique » says it removes.
@@ -737,22 +739,22 @@ pub fn clear_http_history(engine: &Engine) -> Result<u32, AppError> {
 /// One entry gone, answered whole: its undo hands it back to `restore_http_history_entry`.
 pub fn delete_http_history_entry(
     engine: &Engine,
-    id: String,
+    id: &str,
 ) -> Result<history::HistoryEntry, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(history::store::delete(&mut connection, &id)?)
+    Ok(history::store::delete(&mut connection, id)?)
 }
 
 pub fn restore_http_history_entry(
     engine: &Engine,
-    entry: history::HistoryEntry,
+    entry: &history::HistoryEntry,
 ) -> Result<(), AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(history::store::restore(&mut connection, &entry)?)
+    Ok(history::store::restore(&mut connection, entry)?)
 }
 
 /// A send put back onto the request it came from, as changes to save or not, the request's own
@@ -760,11 +762,11 @@ pub fn restore_http_history_entry(
 /// from a draft: the front then opens one, as `http_history_draft` rebuilds it.
 pub fn http_history_onto_request(
     engine: &Engine,
-    id: String,
+    id: &str,
 ) -> Result<Option<history::HistoryDraft>, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
-    let entry = history::store::entry(&mut connection, &id)?;
+    let entry = history::store::entry(&mut connection, id)?;
     let Some(request_id) = entry.item.request_id.as_deref() else {
         return Ok(None);
     };
@@ -782,26 +784,26 @@ pub fn http_history_onto_request(
 }
 
 /// An entry rebuilt as a request to send again or save: its secrets are typed again.
-pub fn http_history_draft(engine: &Engine, id: String) -> Result<history::HistoryDraft, AppError> {
+pub fn http_history_draft(engine: &Engine, id: &str) -> Result<history::HistoryDraft, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
     Ok(history::draft_of(&history::store::entry(
         &mut connection,
-        &id,
+        id,
     )?))
 }
 
 /// The operations a GraphQL document names, and why its variables do not read.
 pub fn describe_graphql(
-    document: graphql::GraphqlDocument,
+    document: &graphql::GraphqlDocument,
 ) -> Result<graphql::GraphqlAnswer, AppError> {
-    Ok(graphql::describe(&document))
+    Ok(graphql::describe(document))
 }
 
 /// The variables with a `null` for each one the operation declares and they lack: « Ajouter ».
-pub fn add_graphql_variables(document: graphql::GraphqlDocument) -> Result<String, AppError> {
-    Ok(graphql::with_missing(&document))
+pub fn add_graphql_variables(document: &graphql::GraphqlDocument) -> Result<String, AppError> {
+    Ok(graphql::with_missing(document))
 }
 
 #[derive(Debug, Clone)]
@@ -868,12 +870,12 @@ pub async fn connect_websocket(
 }
 
 /// `false` when no socket is open under that id.
-pub fn send_websocket(engine: &Engine, id: String, text: String) -> Result<bool, AppError> {
-    Ok(engine.sockets.send(&id, text))
+pub fn send_websocket(engine: &Engine, id: &str, text: String) -> Result<bool, AppError> {
+    Ok(engine.sockets.send(id, text))
 }
 
-pub fn close_websocket(engine: &Engine, id: String) -> Result<bool, AppError> {
-    Ok(engine.sockets.close(&id))
+pub fn close_websocket(engine: &Engine, id: &str) -> Result<bool, AppError> {
+    Ok(engine.sockets.close(id))
 }
 
 /// The jar by domain, for the manager.
@@ -884,18 +886,18 @@ pub fn http_cookies(engine: &Engine) -> Result<Vec<cookies::store::CookieDomain>
     Ok(cookies::store::by_domain(&mut connection)?)
 }
 
-pub fn delete_http_cookie(engine: &Engine, id: String) -> Result<u32, AppError> {
+pub fn delete_http_cookie(engine: &Engine, id: &str) -> Result<u32, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(cookies::store::delete(&mut connection, &id)?)
+    Ok(cookies::store::delete(&mut connection, id)?)
 }
 
-pub fn delete_http_cookie_domain(engine: &Engine, domain: String) -> Result<u32, AppError> {
+pub fn delete_http_cookie_domain(engine: &Engine, domain: &str) -> Result<u32, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(cookies::store::delete_domain(&mut connection, &domain)?)
+    Ok(cookies::store::delete_domain(&mut connection, domain)?)
 }
 
 /// What « Vider le bocal » says it removes.
@@ -923,10 +925,10 @@ pub fn http_environments(engine: &Engine) -> Result<environments::HttpEnvironmen
 
 pub fn create_http_environment(
     engine: &Engine,
-    name: String,
+    name: &str,
 ) -> Result<environments::Environment, AppError> {
     let db = &engine.db;
-    let name = environments::validated_name(&name)?;
+    let name = environments::validated_name(name)?;
 
     let mut connection = lock(db)?;
 
@@ -939,8 +941,8 @@ pub fn create_http_environment(
 
 pub fn save_http_environment(
     engine: &Engine,
-    id: String,
-    patch: environments::EnvironmentPatch,
+    id: &str,
+    patch: &environments::EnvironmentPatch,
 ) -> Result<environments::Environment, AppError> {
     let db = &engine.db;
     let name = patch
@@ -953,22 +955,22 @@ pub fn save_http_environment(
 
     Ok(environments::store::save(
         &mut connection,
-        &id,
-        &patch,
+        id,
+        patch,
         name.as_deref(),
     )?)
 }
 
 pub fn save_http_globals(
     engine: &Engine,
-    variables: Vec<environments::Variable>,
+    variables: &[environments::Variable],
 ) -> Result<Vec<environments::Variable>, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
     Ok(environments::store::save_globals(
         &mut connection,
-        &variables,
+        variables,
         Utc::now(),
     )?)
 }
@@ -976,32 +978,32 @@ pub fn save_http_globals(
 /// The copy's name comes from the front: no user-visible word is Rust's.
 pub fn duplicate_http_environment(
     engine: &Engine,
-    id: String,
-    name: String,
+    id: &str,
+    name: &str,
 ) -> Result<environments::Environment, AppError> {
     let db = &engine.db;
-    let name = environments::validated_name(&name)?;
+    let name = environments::validated_name(name)?;
 
     let mut connection = lock(db)?;
 
     Ok(environments::store::duplicate(
         &mut connection,
-        &id,
+        id,
         &name,
         Utc::now(),
     )?)
 }
 
-pub fn delete_http_environment(engine: &Engine, id: String) -> Result<(), AppError> {
+pub fn delete_http_environment(engine: &Engine, id: &str) -> Result<(), AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(environments::store::delete(&mut connection, &id)?)
+    Ok(environments::store::delete(&mut connection, id)?)
 }
 
 /// Each variable's fault by its rank, or none: the table marks the row, the rule is the model's.
 pub fn check_http_variables(
-    variables: Vec<environments::Variable>,
+    variables: &[environments::Variable],
 ) -> Result<Vec<Option<environments::VariableFault>>, AppError> {
-    Ok(environments::variable_faults(&variables))
+    Ok(environments::variable_faults(variables))
 }

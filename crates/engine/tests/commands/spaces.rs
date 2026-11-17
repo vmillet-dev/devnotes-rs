@@ -25,9 +25,9 @@ fn a_space_is_renamed_and_pinned_to_the_head_of_the_list() {
     let id = session.space("Personal");
 
     let renamed = session
-        .call(|e| rename_space(e, id.clone(), named("Work")))
+        .call(|e| rename_space(e, &id, &named("Work")))
         .unwrap();
-    let pinned = session.call(|e| pin_space(e, id.clone(), true)).unwrap();
+    let pinned = session.call(|e| pin_space(e, &id, true)).unwrap();
     let listed = session.call(list_spaces).unwrap();
 
     assert_eq!(renamed.name, "Work");
@@ -41,7 +41,7 @@ fn a_second_space_of_the_same_name_is_refused() {
     session.space("Personal");
 
     assert!(matches!(
-        code(session.call(|e| create_space(e, named("personal")))),
+        code(session.call(|e| create_space(e, &named("personal")))),
         ErrorCode::DuplicateSpaceName
     ));
 }
@@ -51,7 +51,7 @@ fn a_space_without_a_readable_name_is_refused() {
     let session = Session::open();
 
     assert!(matches!(
-        code(session.call(|e| create_space(e, named(" ")))),
+        code(session.call(|e| create_space(e, &named(" ")))),
         ErrorCode::InvalidInput
     ));
 }
@@ -67,10 +67,8 @@ fn a_deleted_space_hands_its_notes_to_its_refuge() {
         .note
         .id;
 
-    session
-        .call(|e| delete_space(e, doomed.clone(), refuge.clone()))
-        .unwrap();
-    let moved = session.call(|e| get_note(e, note)).unwrap();
+    session.call(|e| delete_space(e, &doomed, &refuge)).unwrap();
+    let moved = session.call(|e| get_note(e, &note)).unwrap();
 
     assert_eq!(session.spaces(), ["Work"]);
     assert_eq!(moved.note.space_id, refuge);
@@ -83,7 +81,7 @@ fn a_space_cannot_be_its_own_refuge() {
     let id = session.space("Personal");
 
     assert!(matches!(
-        code(session.call(|e| delete_space(e, id.clone(), id))),
+        code(session.call(|e| delete_space(e, &id, &id))),
         ErrorCode::InvalidInput
     ));
     assert_eq!(session.spaces(), ["Personal"]);
@@ -99,7 +97,7 @@ fn a_space_counts_what_its_deletion_would_move_and_take() {
         .call(|e| {
             create_folder(
                 e,
-                FolderDraft {
+                &FolderDraft {
                     space_id: id.clone(),
                     parent_id: None,
                     name: "Perf".to_string(),
@@ -109,16 +107,14 @@ fn a_space_counts_what_its_deletion_would_move_and_take() {
         .unwrap();
 
     assert_eq!(
-        session
-            .call(|e| count_space_contents(e, id.clone()))
-            .unwrap(),
+        session.call(|e| count_space_contents(e, &id)).unwrap(),
         SpaceContents {
             notes: 1,
             folders: 1
         }
     );
     assert!(matches!(
-        code(session.call(|e| count_space_contents(e, "ghost".to_string()))),
+        code(session.call(|e| count_space_contents(e, "ghost"))),
         ErrorCode::SpaceNotFound
     ));
 }

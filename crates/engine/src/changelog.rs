@@ -12,9 +12,8 @@ pub fn app_changelog() -> Vec<ChangelogRelease> {
 }
 
 /// The notes the updater hands over, read with the same grammar as the file.
-#[allow(clippy::needless_pass_by_value)]
-pub fn release_notes(markdown: String) -> Vec<ChangelogSection> {
-    model::parse_section(&markdown)
+pub fn release_notes(markdown: &str) -> Vec<ChangelogSection> {
+    model::parse_section(markdown)
 }
 
 #[cfg(test)]
@@ -81,7 +80,7 @@ mod tests {
             .map_or(CHANGELOG.len(), |at| body_start + at);
 
         assert_eq!(
-            release_notes(CHANGELOG[body_start..body_end].to_string()),
+            release_notes(&CHANGELOG[body_start..body_end]),
             app_changelog().remove(0).sections
         );
     }

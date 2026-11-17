@@ -94,7 +94,7 @@ fn an_auth_inherited_says_what_it_is_and_from_where_its_secret_masked() {
             kind: HttpItemKind::Collection,
             id,
         };
-        engine::http::save_http_settings(engine, item, settings)
+        engine::http::save_http_settings(engine, &item, settings)
     })
     .unwrap();
     let mut harness = area_of(Area::Http, backend, profile);
@@ -237,7 +237,7 @@ fn a_rule_is_read_and_removed_under_the_scripts() {
 fn the_environment_chosen_is_the_library_s_and_a_deleted_one_is_none() {
     let (backend, profile) = testing::unlocked();
     let staging = engine::db::run_here(backend.engine(), |engine| {
-        engine::http::create_http_environment(engine, "Staging".to_owned())
+        engine::http::create_http_environment(engine, "Staging")
     })
     .unwrap();
     let api = collection(&backend, "Paiements");
