@@ -249,6 +249,12 @@ fn bar(
     row.spacing_mut().item_spacing.x = 12.0;
     let toggle = i18n::translate(state.language, keys::sidebar::TOGGLE, &[]);
     if widgets::SquareButton::new(Icon::Sidebar, &toggle, "tools-rail-toggle")
+        .keys(
+            state
+                .settings
+                .bindings
+                .of(crate::services::shortcuts::RAIL_ACTION),
+        )
         .pressed(state.settings.rail_shown)
         .show(&mut row)
         .clicked()

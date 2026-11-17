@@ -34,7 +34,9 @@ fn bench() -> Harness<'static, Bench> {
                 .armed(bench.armed)
                 .show(ui);
             Button::new("Plus tard", "later").enabled(false).show(ui);
-            IconButton::new(Icon::Trash, "Corbeille", "trash").show(ui);
+            IconButton::new(Icon::Trash, "Corbeille", "trash")
+                .keys("Suppr")
+                .show(ui);
             SplitButton::new("Exporter", "Autres formats", "export").show(ui);
             SquareButton::new(Icon::Sidebar, "Masquer le rail", "rail-toggle")
                 .pressed(true)
@@ -180,4 +182,42 @@ fn look() {
             .save(std::path::Path::new(&directory).join(format!("widgets-{name}.png")))
             .unwrap();
     }
+}
+
+/// What a tooltip says, wherever the window draws it.
+fn says(harness: &Harness<'_, Bench>, words: &str) -> bool {
+    harness
+        .query_all_by(|_| true)
+        .filter_map(|node| {
+            node.accesskit_node()
+                .label()
+                .or(node.accesskit_node().value())
+        })
+        .any(|said| said == words)
+}
+
+#[test]
+fn an_icon_alone_says_its_name_and_its_keys_on_hover() {
+    let mut harness = bench();
+    harness
+        .ctx
+        .all_styles_mut(|style| style.interaction.tooltip_delay = 0.0);
+    harness.run();
+    assert!(!says(&harness, "Corbeille · Suppr"));
+
+    harness
+        .get_by(|node| node.author_id() == Some("trash"))
+        .hover();
+    for _ in 0..10 {
+        harness.step();
+    }
+    assert!(says(&harness, "Corbeille · Suppr"));
+
+    harness
+        .get_by(|node| node.author_id() == Some("rail-toggle"))
+        .hover();
+    for _ in 0..10 {
+        harness.step();
+    }
+    assert!(says(&harness, "Masquer le rail"));
 }

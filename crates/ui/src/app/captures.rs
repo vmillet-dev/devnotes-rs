@@ -1168,3 +1168,44 @@ fn the_notes_rail_at_three_widths() {
         capture(&mut harness, &format!("notes-rail-{width}"));
     }
 }
+
+/// The editor's header with the pointer resting on an icon (#1488): the pointer is kept.
+#[test]
+fn the_editor_header_under_the_pointer() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1084.0, 681.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .ctx
+        .all_styles_mut(|style| style.interaction.tooltip_delay = 0.0);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .click();
+    settle(&mut harness);
+    for icon in ["editor-fullscreen", "editor-close"] {
+        harness
+            .get_by(|node| node.author_id() == Some(icon))
+            .hover();
+        for _ in 0..10 {
+            harness.step();
+        }
+        let image = harness
+            .render()
+            .expect("a software adapter draws the window");
+        if let Some(directory) = std::env::var_os("DEVNOTES_CAPTURES") {
+            std::fs::create_dir_all(&directory).unwrap();
+            image
+                .save(Path::new(&directory).join(format!("hover-{icon}.png")))
+                .unwrap();
+        }
+    }
+}

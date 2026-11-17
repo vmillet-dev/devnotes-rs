@@ -344,6 +344,7 @@
     "delete": "Delete",
     "deleteConfirm": "Confirm?",
     "close": "Close editor",
+    "closeKeys": "Esc",
     "header": {
       "title": "Header",
       "fold": "Fold the header",

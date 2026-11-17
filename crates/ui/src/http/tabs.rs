@@ -49,6 +49,12 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let mut toggle_ui = ui.new_child(egui::UiBuilder::new().max_rect(toggle_rect));
     let toggle = i18n::translate(language, keys::sidebar::TOGGLE, &[]);
     if widgets::SquareButton::new(Icon::Sidebar, &toggle, "http-rail-toggle")
+        .keys(
+            state
+                .settings
+                .bindings
+                .of(crate::services::shortcuts::RAIL_ACTION),
+        )
         .pressed(state.settings.rail_shown)
         .show(&mut toggle_ui)
         .clicked()

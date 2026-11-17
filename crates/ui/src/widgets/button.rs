@@ -281,12 +281,13 @@ impl<'a> Button<'a> {
     }
 }
 
-/// A control that is an icon alone: its label is its accessible name only.
+/// A control that is an icon alone: its label is its accessible name, and its tooltip.
 pub struct IconButton<'a> {
     icon: Icon,
     label: &'a str,
     author_id: &'a str,
     pressed: bool,
+    keys: Option<&'a str>,
 }
 
 impl<'a> IconButton<'a> {
@@ -296,7 +297,15 @@ impl<'a> IconButton<'a> {
             label,
             author_id,
             pressed: false,
+            keys: None,
         }
+    }
+
+    /// The keys that do the same, said after its name in the tooltip.
+    #[must_use]
+    pub fn keys(mut self, keys: &'a str) -> Self {
+        self.keys = Some(keys);
+        self
     }
 
     #[must_use]
@@ -333,7 +342,15 @@ impl<'a> IconButton<'a> {
         }
         let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(16.0));
         icons::paint(ui, glyph, self.icon, ink);
-        response
+        super::tooltip(response, &said(self.label, self.keys))
+    }
+}
+
+/// An icon's tooltip: its name, then its keys.
+fn said(label: &str, keys: Option<&str>) -> String {
+    match keys {
+        Some(keys) => format!("{label} · {keys}"),
+        None => label.to_owned(),
     }
 }
 
@@ -366,12 +383,14 @@ impl<'a> SplitButton<'a> {
     }
 }
 
-/// The 32 px square that hides and shows a rail; amber while the rail is out.
+/// The 32 px square that hides and shows a rail; amber while the rail is out. Its label is its
+/// tooltip, as an icon button's.
 pub struct SquareButton<'a> {
     icon: Icon,
     label: &'a str,
     author_id: &'a str,
     open: bool,
+    keys: Option<&'a str>,
 }
 
 impl<'a> SquareButton<'a> {
@@ -381,7 +400,15 @@ impl<'a> SquareButton<'a> {
             label,
             author_id,
             open: false,
+            keys: None,
         }
+    }
+
+    /// The keys that do the same, said after its name in the tooltip.
+    #[must_use]
+    pub fn keys(mut self, keys: &'a str) -> Self {
+        self.keys = Some(keys);
+        self
     }
 
     /// Amber while what it shows is shown.
@@ -414,6 +441,6 @@ impl<'a> SquareButton<'a> {
         );
         let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(16.0));
         icons::paint(ui, glyph, self.icon, towards(rest, p.text_0, hover));
-        response
+        super::tooltip(response, &said(self.label, self.keys))
     }
 }
