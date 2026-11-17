@@ -4,6 +4,7 @@
 //! keyboard twin is a cursor, the ground the one tab stop: the arrows walk a node's rows, into a
 //! child and back up, and Alt with an arrow moves the node.
 
+use crate::theme::tokens::{gap, radius};
 use egui::epaint::CubicBezierShape;
 use egui::{
     Color32, CornerRadius, CursorIcon, FontFamily, Key, Modifiers, Pos2, Rect, Response, Role,
@@ -25,7 +26,7 @@ const SCALES: [f32; 9] = [0.25, 0.4, 0.5, 0.67, 0.8, 1.0, 1.25, 1.5, 2.0];
 const START: Vec2 = vec2(16.0, 60.0);
 /// One press of Alt with an arrow: two columns across, one line down.
 const NUDGE: Vec2 = vec2(2.0, 1.0);
-const REVEAL_MARGIN: f32 = 24.0;
+const REVEAL_MARGIN: f32 = gap::G24;
 
 /// Where the cursor is: a header is `row: None`. Kept by path, an answer renumbers the nodes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -639,11 +640,11 @@ fn overlays(ui: &mut Ui, explorer: &mut Explorer, ground: Rect, language: Langua
             .max_rect(at)
             .layout(egui::Layout::right_to_left(egui::Align::Center)),
     );
-    corner.spacing_mut().item_spacing.x = 2.0;
+    corner.spacing_mut().item_spacing.x = gap::G2;
     let p = palette(ui.ctx());
     corner.painter().rect(
         at,
-        CornerRadius::same(8),
+        CornerRadius::same(radius::R8),
         p.bg_2,
         Stroke::new(1.0, p.line),
         StrokeKind::Inside,

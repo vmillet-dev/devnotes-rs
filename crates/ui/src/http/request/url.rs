@@ -1,6 +1,7 @@
 //! The URL, its `{{variables}}` lit in the colour of where each resolves from — red when nothing
 //! sets it. What a variable is, and where it stands, is the core's (`variables::spans`).
 
+use crate::theme::tokens::{gap, radius};
 use std::collections::HashMap;
 
 use egui::text::{LayoutJob, TextFormat};
@@ -54,8 +55,8 @@ pub(crate) fn show(ui: &mut Ui, url: &mut String, field: &UrlField<'_>, width: f
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::symmetric(11, 0));
+        .corner_radius(CornerRadius::same(radius::R8))
+        .inner_margin(gap::margin(gap::G11, 0.0));
     frame
         .show(ui, |ui| {
             let response = ui.add_sized(

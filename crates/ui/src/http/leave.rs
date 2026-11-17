@@ -1,6 +1,7 @@
 //! The question before the window goes with requests not saved in it. Drawn by the window, since
 //! any area can be the one on screen.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Align, FontFamily, Layout, Sense, Ui};
 use i18n::keys;
 
@@ -44,14 +45,21 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
         .map(|tab| tab.draft.name.as_str())
         .collect();
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::G10;
     let count = u32::try_from(names.len()).unwrap_or(u32::MAX);
     let title = i18n::translate(
         language,
         keys::http::leave::TITLE,
         &[("count", count.into())],
     );
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+    let words = widgets::text(
+        ui,
+        &title,
+        font::PT15,
+        600.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
     ui.painter().galley(rect.min, words, p.text_0);
     heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
@@ -74,10 +82,12 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
             keys::http::leave::discard::UPDATE,
         ),
     };
-    let hint = egui::RichText::new(tr(hint)).size(12.5).color(p.text_2);
+    let hint = egui::RichText::new(tr(hint))
+        .size(font::PT12_5)
+        .color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
     for name in names {
-        let words = egui::RichText::new(name).size(12.5).color(p.text_0);
+        let words = egui::RichText::new(name).size(font::PT12_5).color(p.text_0);
         let said = ui.add(egui::Label::new(words).truncate());
         widgets::address(ui, &said, "http-leave-name");
     }
@@ -88,13 +98,15 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
             keys::http::leave::CONNECTED,
             &[("count", connected.into())],
         );
-        let words = egui::RichText::new(words).size(12.5).color(p.text_2);
+        let words = egui::RichText::new(words)
+            .size(font::PT12_5)
+            .color(p.text_2);
         let said = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &said, "http-leave-connected");
     }
     let mut chosen = None;
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         if Button::new(&tr(keys::http::leave::SAVE_ALL), "http-leave-save")
             .kind(Kind::Filled)
             .enabled(!state.http.leave().is_saving())

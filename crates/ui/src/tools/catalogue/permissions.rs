@@ -1,5 +1,6 @@
 //! Three ways into one mode — octal, letters, boxes — each written back from Rust's answer.
 
+use crate::theme::tokens::gap;
 use egui::{Ui, Vec2};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::permissions::{
@@ -150,7 +151,7 @@ impl PermissionsTool {
     fn fields(&mut self, ui: &mut Ui, language: Language) {
         let tr = |key| i18n::translate(language, key, &[]);
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.spacing_mut().item_spacing.x = gap::G10;
             for (field, width, name, hint_key, id) in [
                 (
                     Field::Octal,
@@ -239,7 +240,7 @@ impl PermissionsTool {
                 Class::Others => classes::OTHERS,
             });
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 8.0;
+                ui.spacing_mut().item_spacing.x = gap::G8;
                 ui.allocate_ui(Vec2::new(84.0, 24.0), |ui| {
                     ui.set_width(84.0);
                     label(ui, &name);
@@ -285,7 +286,7 @@ impl PermissionsTool {
     fn umask_section(&mut self, ui: &mut Ui, language: Language) {
         let tr = |key| i18n::translate(language, key, &[]);
         let name = tr(keys::tools::permissions::UMASK);
-        ui.add_space(8.0);
+        ui.add_space(gap::G8);
         section_title(ui, &name);
         TextField::new(&mut self.umask, &name, "permissions-umask")
             .hint(&tr(keys::tools::permissions::UMASK_PLACEHOLDER))

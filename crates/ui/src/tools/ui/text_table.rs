@@ -1,5 +1,6 @@
 //! A small table of texts, its first column in the mono face. A row can be chosen.
 
+use crate::theme::tokens::{font, radius};
 use egui::{CornerRadius, FontFamily, Pos2, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 
 use crate::theme::palette;
@@ -32,7 +33,7 @@ pub fn text_table(
     let shown = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(10))
+        .corner_radius(CornerRadius::same(radius::R10))
         .show(ui, |ui| {
             let width = ui.available_width();
             ui.set_width(width);
@@ -56,7 +57,7 @@ fn head(ui: &mut Ui, columns: &[TextColumn], width: f32) {
     for column in columns {
         let words = column.label.to_uppercase();
         let room = width * column.share - 8.0;
-        let galley = widgets::one_line(ui, &words, (10.5, 600.0), p.text_2, room);
+        let galley = widgets::one_line(ui, &words, (font::PT10_5, 600.0), p.text_2, room);
         let at = Pos2::new(left, rect.center().y - galley.size().y / 2.0);
         ui.painter().galley(at, galley, p.text_2);
         left += width * column.share;
@@ -92,7 +93,7 @@ fn row(
     let mut left = rect.left() + 12.0;
     for (column, cell) in columns.iter().zip(cells) {
         let family = FontFamily::Monospace;
-        let galley = widgets::text(ui, cell, 12.0, 400.0, family, p.text_0);
+        let galley = widgets::text(ui, cell, font::PT12, 400.0, family, p.text_0);
         let at = Pos2::new(left, rect.center().y - galley.size().y / 2.0);
         ui.painter()
             .with_clip_rect(rect)

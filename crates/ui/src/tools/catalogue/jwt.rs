@@ -1,6 +1,7 @@
 //! A token decoded and verified in Rust; how long ago or how far off is the page's, so it ages.
 //! ⚠️ A token is a credential and a secret a secret: gone with the tool.
 
+use crate::theme::tokens::{font, gap, radius};
 use chrono::{DateTime, Utc};
 use egui::Ui;
 use engine::notes::language::Language as NoteLanguage;
@@ -87,12 +88,12 @@ fn json_block(ui: &mut Ui, text: &str, author_id: &str) {
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(egui::Stroke::new(1.0, p.line_soft))
-        .corner_radius(egui::CornerRadius::same(8))
-        .inner_margin(egui::Margin::symmetric(12, 10))
+        .corner_radius(egui::CornerRadius::same(radius::R8))
+        .inner_margin(gap::margin(gap::G12, gap::G10))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             let words = egui::RichText::new(text)
-                .font(egui::FontId::monospace(12.0))
+                .font(egui::FontId::monospace(font::PT12))
                 .color(p.text_0);
             let shown = ui.add(egui::Label::new(words).selectable(true));
             address(ui, &shown, author_id);

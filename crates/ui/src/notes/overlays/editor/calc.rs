@@ -3,6 +3,7 @@
 //! clicked is picked, Shift for a range, Ctrl for one more; the footer sums what is picked, or the
 //! lines a selection covers.
 
+use crate::theme::tokens::{font, gap};
 use std::collections::BTreeSet;
 
 use egui::{Color32, FontFamily, Rect, Sense, Stroke, Ui, Vec2};
@@ -435,7 +436,14 @@ fn value_cell(
 fn failure_cell(ui: &mut Ui, row: &Row, error: &CalcError, language: Language) {
     let p = palette(ui.ctx());
     let words = calc::error(error, language);
-    let galley = widgets::text(ui, &words, 12.0, 400.0, FontFamily::Proportional, p.red);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::PT12,
+        400.0,
+        FontFamily::Proportional,
+        p.red,
+    );
     let size = galley.size();
     let right = row.rect.right() - 8.0;
     let rect = Rect::from_min_size(
@@ -509,19 +517,19 @@ fn footer(
     );
     let summary = summary(ui, view, sheet, format);
     ui.horizontal_centered(|ui| {
-        ui.spacing_mut().item_spacing.x = 16.0;
+        ui.spacing_mut().item_spacing.x = gap::G16;
         let family = FontFamily::Monospace;
-        let galley = widgets::text(ui, &counts, 11.0, 400.0, family.clone(), p.text_2);
+        let galley = widgets::text(ui, &counts, font::PT11, 400.0, family.clone(), p.text_2);
         let response = ui.label(galley);
         widgets::address(ui, &response, "calc-counts");
         if let Some(summary) = summary {
-            let galley = widgets::text(ui, &summary, 11.0, 400.0, family, p.text_1);
+            let galley = widgets::text(ui, &summary, font::PT11, 400.0, family, p.text_1);
             let response = ui.label(galley);
             widgets::address(ui, &response, "calc-summary");
         }
         let right = egui::Layout::right_to_left(egui::Align::Center);
         ui.with_layout(right, |ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+            ui.spacing_mut().item_spacing.x = gap::G6;
             decimals(ui, state, actions);
         });
     });
@@ -549,7 +557,14 @@ fn decimals(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         )));
     }
     let family = FontFamily::Proportional;
-    ui.label(widgets::text(ui, &label, 11.5, 400.0, family, p.text_2));
+    ui.label(widgets::text(
+        ui,
+        &label,
+        font::PT11_5,
+        400.0,
+        family,
+        p.text_2,
+    ));
 }
 
 fn distinct_names(sheet: &CalcSheet) -> u32 {

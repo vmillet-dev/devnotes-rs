@@ -2,6 +2,7 @@
 //! values the note stores. An empty field shows its default as a suggestion and never copies
 //! it: the day the snippet's default changes, a stored copy would win.
 
+use crate::theme::tokens::{font, gap, radius};
 use std::collections::BTreeMap;
 
 use egui::{CornerRadius, FontFamily, Id, Margin, Sense, Stroke, Ui, vec2};
@@ -58,7 +59,7 @@ pub(in crate::notes) fn show(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
+        .corner_radius(CornerRadius::same(radius::R14))
         .shadow(p.shadow_overlay)
         .inner_margin(Margin::same(padding));
     let shown = egui::Modal::new(Id::unique("placeholder-form"))
@@ -77,9 +78,16 @@ fn form(ui: &mut Ui, state: &AppState, note: &DisplayNote, view: &mut FillView) 
     let tr = |key| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 12.0;
+    ui.spacing_mut().item_spacing.y = gap::G12;
     let title = tr(keys::placeholders::TITLE);
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+    let words = widgets::text(
+        ui,
+        &title,
+        font::PT15,
+        600.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let (rect, _) = ui.allocate_exact_size(words.size(), Sense::hover());
     ui.painter().galley(rect.min, words, p.text_0);
     // A Note holding a field was called a snippet.
@@ -90,8 +98,8 @@ fn form(ui: &mut Ui, state: &AppState, note: &DisplayNote, view: &mut FillView) 
     };
     let count = u32::try_from(note.placeholders.len()).unwrap_or(u32::MAX);
     let hint = i18n::translate(language, hint, &[("count", count.into())]);
-    let said =
-        ui.add(egui::Label::new(egui::RichText::new(hint).size(11.5).color(p.text_2)).wrap());
+    let said = ui
+        .add(egui::Label::new(egui::RichText::new(hint).size(font::PT11_5).color(p.text_2)).wrap());
     widgets::address(ui, &said, "placeholder-form-hint");
     let mut entered = false;
     // The first field still empty is where typing goes: Enter then copies what was typed.
@@ -112,7 +120,7 @@ fn form(ui: &mut Ui, state: &AppState, note: &DisplayNote, view: &mut FillView) 
         .hline(ui.max_rect().x_range(), top, Stroke::new(1.0, p.line_soft));
     let mut asked = None;
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         if Button::new(&tr(keys::placeholders::COPY), "placeholder-submit")
             .kind(Kind::Filled)
             .show(ui)
@@ -147,10 +155,17 @@ pub(in crate::notes) fn field_row(
 ) -> egui::Response {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::G10;
         // The braces tie the row to the token in the text; the field's name is its label.
         let name = format!("{{{{{}}}}}", field.name);
-        let galley = widgets::text(ui, &name, 12.0, 400.0, FontFamily::Monospace, p.amber_text);
+        let galley = widgets::text(
+            ui,
+            &name,
+            font::PT12,
+            400.0,
+            FontFamily::Monospace,
+            p.amber_text,
+        );
         let (rect, _) = ui.allocate_exact_size(vec2(NAME_WIDTH, 28.0), Sense::hover());
         let at_y = rect.center().y - galley.size().y / 2.0;
         ui.painter().with_clip_rect(rect).galley(

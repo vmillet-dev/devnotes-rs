@@ -1,5 +1,6 @@
 //! What every tool is drawn in: the breadcrumb, its star, Example and Clear.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{CornerRadius, Rect, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo};
 use i18n::keys;
 
@@ -14,7 +15,7 @@ use crate::theme::palette;
 use crate::widgets::{self, Button, Kind, address, hovered, interact, towards};
 
 /// The body's margin, on every side.
-const PADDING: f32 = 20.0;
+const PADDING: f32 = gap::G20;
 
 pub(super) fn show(
     ui: &mut Ui,
@@ -76,7 +77,7 @@ fn head(
         actions.push(Asked::Tools(Action::ToggleFavourite(entry.id)));
     }
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::G10;
         let tool = view.session(entry);
         if tool.keeps_result() {
             save_as_note(ui, entry, tool, language, actions);
@@ -147,7 +148,7 @@ fn crumb(ui: &mut Ui, words: &str) -> egui::Response {
     let galley = widgets::text(
         ui,
         &shown,
-        12.5,
+        font::PT12_5,
         400.0,
         egui::FontFamily::Proportional,
         p.text_2,
@@ -158,7 +159,7 @@ fn crumb(ui: &mut Ui, words: &str) -> egui::Response {
         Sense::click(),
         "tool-back",
         || WidgetInfo::labeled(Role::Button, true, words),
-        CornerRadius::same(4),
+        CornerRadius::same(radius::R4),
     );
     let ink = towards(p.text_2, p.text_0, hovered(ui, &response));
     let at = response.rect.left_center() - Vec2::new(0.0, galley.size().y / 2.0);

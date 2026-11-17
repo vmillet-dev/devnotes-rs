@@ -1,6 +1,7 @@
 //! A multipart body's fields: a text each, or a file by its path, read when the request is sent.
 //! One blank row at the end becomes a part as soon as something is typed or chosen in it.
 
+use crate::theme::tokens::font;
 use egui::{
     CornerRadius, FontFamily, Id, Rect, Role, Sense, Stroke, Ui, UiBuilder, Vec2, WidgetInfo, pos2,
 };
@@ -209,7 +210,7 @@ fn cell_button(
     } else {
         p.text_1
     };
-    let galley = widgets::text(ui, words, 12.0, 400.0, family, ink);
+    let galley = widgets::text(ui, words, font::PT12, 400.0, family, ink);
     let at = pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0);
     ui.painter_at(rect.shrink2(Vec2::new(8.0, 0.0)))
         .galley(at, galley, ink);

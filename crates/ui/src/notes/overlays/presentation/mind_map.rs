@@ -3,6 +3,7 @@
 //! Note under one heading has that heading in the middle. Placed in percent of the screen, so
 //! it reads wide; a heading pressed opens the slide it is on.
 
+use crate::theme::tokens::radius;
 use std::f64::consts::PI;
 
 use egui::text::{LayoutJob, TextWrapping};
@@ -193,7 +194,7 @@ fn heading(ui: &mut Ui, node: &Placed, centre: egui::Pos2) -> bool {
     };
     ui.painter().rect(
         rect,
-        CornerRadius::same(10),
+        CornerRadius::same(radius::R10),
         p.bg_2,
         Stroke::new(1.0, edge),
         StrokeKind::Inside,

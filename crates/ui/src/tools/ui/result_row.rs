@@ -1,6 +1,7 @@
 //! A row of a results card: the name, the value, and a copy icon at the end. A long value takes
 //! the width of the card under its name, held to a height it scrolls in.
 
+use crate::theme::tokens::{font, radius};
 use std::sync::Arc;
 
 use egui::{
@@ -134,11 +135,18 @@ impl<'a> ResultRow<'a> {
         let name_right = left + name.size().x;
         name.paint(ui, Pos2::new(left, head), ink);
         if let Some(tag) = self.tag {
-            let words = widgets::text(ui, tag, 10.5, 500.0, FontFamily::Proportional, p.text_2);
+            let words = widgets::text(
+                ui,
+                tag,
+                font::PT10_5,
+                500.0,
+                FontFamily::Proportional,
+                p.text_2,
+            );
             let size = words.size() + Vec2::new(10.0, 2.0);
             let chip = Rect::from_min_size(Pos2::new(name_right + 8.0, head + 1.0), size);
             ui.painter()
-                .rect_filled(chip, egui::CornerRadius::same(4), p.bg_3);
+                .rect_filled(chip, egui::CornerRadius::same(radius::R4), p.bg_3);
             ui.painter()
                 .galley(chip.center() - words.size() / 2.0, words, p.text_2);
         }
@@ -194,7 +202,7 @@ impl<'a> ResultRow<'a> {
 pub(super) fn value_galley(ui: &Ui, value: &str, width: f32) -> Arc<Galley> {
     let p = palette(ui.ctx());
     let text = RichText::new(value)
-        .font(FontId::new(12.5, FontFamily::Monospace))
+        .font(FontId::new(font::PT12_5, FontFamily::Monospace))
         .color(p.text_0);
     egui::WidgetText::from(text).into_galley(
         ui,

@@ -2,9 +2,9 @@
 //! every modal: shown while the editor is open, under its backdrop its first click would close
 //! the editor.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
-    Align2, CornerRadius, FontFamily, Margin, Order, Role, Sense, Stroke, StrokeKind, Ui,
-    WidgetInfo, vec2,
+    Align2, CornerRadius, FontFamily, Order, Role, Sense, Stroke, StrokeKind, Ui, WidgetInfo, vec2,
 };
 use engine::notes::kind::NoteKind;
 use i18n::{Key, keys};
@@ -29,16 +29,16 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(10))
+        .corner_radius(CornerRadius::same(radius::R10))
         .shadow(p.shadow_overlay)
-        .inner_margin(Margin::symmetric(12, 6));
+        .inner_margin(gap::margin(gap::G12, gap::G6));
     egui::Area::new(egui::Id::unique("undo-bar"))
         .order(Order::Tooltip)
         .anchor(Align2::CENTER_BOTTOM, vec2(0.0, -20.0))
         .show(ui.ctx(), |ui| {
             let bar = frame.show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 12.0;
+                    ui.spacing_mut().item_spacing.x = gap::G12;
                     message(ui, action, state.language);
                     restore(ui, state.language, actions);
                     let dismiss = i18n::translate(state.language, keys::undo::DISMISS, &[]);
@@ -68,7 +68,14 @@ fn message(ui: &mut Ui, action: &Reversible, language: i18n::Language) {
         }
         _ => i18n::translate(language, said(action), &[("count", count.into())]),
     };
-    let galley = widgets::text(ui, &words, 12.5, 400.0, FontFamily::Proportional, p.text_1);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::PT12_5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     widgets::address(ui, &response, "undo-text");
@@ -108,15 +115,15 @@ fn restore(ui: &mut Ui, language: i18n::Language, actions: &mut Actions) {
     let words = widgets::text(
         ui,
         &label,
-        12.0,
+        font::PT12,
         400.0,
         FontFamily::Proportional,
         p.amber_text,
     );
-    let key = widgets::text(ui, &cap, 10.0, 400.0, FontFamily::Monospace, p.text_2);
+    let key = widgets::text(ui, &cap, font::PT10, 400.0, FontFamily::Monospace, p.text_2);
     let cap_size = key.size() + vec2(10.0, 2.0);
     let wanted = vec2(words.size().x + 6.0 + cap_size.x, words.size().y) + vec2(20.0, 8.0);
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::R6);
     let response = widgets::interact(
         ui,
         wanted,
@@ -150,7 +157,7 @@ fn restore(ui: &mut Ui, language: i18n::Language, actions: &mut Actions) {
     painter.galley(words_at, words, p.amber_text);
     painter.rect_stroke(
         cap_rect,
-        CornerRadius::same(4),
+        CornerRadius::same(radius::R4),
         Stroke::new(1.0, p.line_soft),
         StrokeKind::Inside,
     );

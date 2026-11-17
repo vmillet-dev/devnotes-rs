@@ -1,6 +1,7 @@
 //! A time placed in the zones of a list kept with the application.
 
-use egui::{CornerRadius, FontFamily, Margin, Pos2, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{CornerRadius, FontFamily, Pos2, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::zones::{ZoneEntry, ZoneReading, ZoneTime, ZonesAnswer, ZonesRequest};
 use i18n::{Language, Message, keys};
@@ -52,7 +53,7 @@ impl ZonesTool {
         let name = tr(keys::tools::zones::INPUT_LABEL);
         section_title(ui, &name);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::G8;
             let room = ui.available_width() - 90.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -70,7 +71,7 @@ impl ZonesTool {
             }
         });
         self.reading(ui, language);
-        ui.add_space(8.0);
+        ui.add_space(gap::G8);
         let name = tr(keys::tools::zones::ADD);
         section_title(ui, &name);
         TextField::new(&mut self.query, &name, "zones-search")
@@ -215,7 +216,7 @@ impl ZonesTool {
 fn found_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let p = palette(ui.ctx());
     let width = ui.available_width();
-    let corner = CornerRadius::same(7);
+    let corner = CornerRadius::same(radius::R7);
     let response = interact(
         ui,
         Vec2::new(width, 30.0),
@@ -230,7 +231,7 @@ fn found_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let name = widgets::text(
         ui,
         &entry.zone,
-        12.5,
+        font::PT12_5,
         400.0,
         FontFamily::Proportional,
         p.text_0,
@@ -242,7 +243,14 @@ fn found_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
         entry.offset,
         entry.abbreviation.as_deref().unwrap_or_default()
     );
-    let offset = widgets::text(ui, &offset, 11.5, 400.0, FontFamily::Monospace, p.text_2);
+    let offset = widgets::text(
+        ui,
+        &offset,
+        font::PT11_5,
+        400.0,
+        FontFamily::Monospace,
+        p.text_2,
+    );
     let at = Pos2::new(
         rect.right() - 10.0 - offset.size().x,
         rect.center().y - offset.size().y / 2.0,
@@ -307,21 +315,21 @@ fn time_row(ui: &mut Ui, time: &ZoneTime, removable: bool, language: Language) -
     let shown = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, edge))
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::symmetric(14, 10))
+        .corner_radius(CornerRadius::same(radius::R10))
+        .inner_margin(gap::margin(gap::G14, gap::G10))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0;
+                ui.spacing_mut().item_spacing.x = gap::G10;
                 ui.vertical(|ui| {
-                    ui.spacing_mut().item_spacing.y = 2.0;
+                    ui.spacing_mut().item_spacing.y = gap::G2;
                     ui.set_width((ui.available_width() - 250.0).max(120.0));
                     let words = city_words(time, language);
                     crate::tools::ui::paragraph(ui, &words, (13.0, 600.0), p.text_0);
                     hint(ui, &identity(time, language));
                 });
                 ui.vertical(|ui| {
-                    ui.spacing_mut().item_spacing.y = 2.0;
+                    ui.spacing_mut().item_spacing.y = gap::G2;
                     let hour = crate::tools::ui::paragraph(ui, &time.time, (16.0, 600.0), p.text_0);
                     address(ui, &hour, "zones-time");
                     hint(ui, &date_words(time, language));

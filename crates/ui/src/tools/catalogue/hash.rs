@@ -1,10 +1,11 @@
 //! A text or a file hashed by every algorithm chosen, keyed or not, and a digest checked against
 //! them. ⚠️ The HMAC key dies with the tool, and nothing in the result carries it.
 
+use crate::theme::tokens::{font, gap, radius};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use egui::{CornerRadius, FontFamily, Margin, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
+use egui::{CornerRadius, FontFamily, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::hash::{
     DigestEncoding, DigestShape, DigestValue, DigestVerdict, HashAlgorithm, HashAnswer, HashInput,
@@ -206,7 +207,7 @@ impl HashTool {
     fn file(&mut self, ui: &mut Ui, language: Language) {
         let tr = |key| i18n::translate(language, key, &[]);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.spacing_mut().item_spacing.x = gap::G10;
             let words = tr(keys::tools::base64::PICK_FILE);
             if Button::new(&words, "hash-pick-file").show(ui).clicked() {
                 self.wants_file = true;
@@ -261,8 +262,8 @@ impl HashTool {
         egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, p.line_soft))
-            .corner_radius(CornerRadius::same(10))
-            .inner_margin(Margin::symmetric(14, 10))
+            .corner_radius(CornerRadius::same(radius::R10))
+            .inner_margin(gap::margin(gap::G14, gap::G10))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
@@ -314,7 +315,7 @@ impl HashTool {
                 // Over the field's own frame: what was pasted is what answered.
                 ui.painter().rect_stroke(
                     field.rect.expand2(Vec2::new(14.0, 12.0)),
-                    CornerRadius::same(10),
+                    CornerRadius::same(radius::R10),
                     Stroke::new(1.0, p.green),
                     egui::StrokeKind::Inside,
                 );
@@ -345,7 +346,7 @@ impl HashTool {
         let language = drawn.language;
         let tr = |key| i18n::translate(language, key, &[]);
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+            ui.spacing_mut().item_spacing = Vec2::splat(gap::G6);
             for algorithm in ALGORITHMS {
                 let on = self.chosen.contains(&algorithm);
                 if pill(ui, algorithm, on).clicked() {
@@ -429,8 +430,8 @@ fn pill(ui: &mut Ui, algorithm: HashAlgorithm, on: bool) -> egui::Response {
     let p = palette(ui.ctx());
     let name = algorithm_name(algorithm);
     let ink = if on { p.amber_text } else { p.text_2 };
-    let galley = widgets::text(ui, name, 11.5, 400.0, FontFamily::Monospace, ink);
-    let corner = CornerRadius::same(12);
+    let galley = widgets::text(ui, name, font::PT11_5, 400.0, FontFamily::Monospace, ink);
+    let corner = CornerRadius::same(radius::R12);
     let id = json!(algorithm);
     let id = id.as_str().unwrap_or_default();
     let response = interact(

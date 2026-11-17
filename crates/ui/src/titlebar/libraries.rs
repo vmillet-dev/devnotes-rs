@@ -2,6 +2,7 @@
 //! panel goes with the rest, a panel left over the gate would be asking about a library nobody
 //! has opened yet.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Align, FontFamily, Id, Key, Layout, Modifiers, RichText, Sense, Stroke, Ui, Vec2};
 use engine::libraries::registry::LibraryEntry;
 use i18n::{Key as Text, Language, Message, keys};
@@ -51,11 +52,11 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     let language = state.language;
     let tr = |key: Text| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
-    ui.spacing_mut().item_spacing.y = 6.0;
+    ui.spacing_mut().item_spacing.y = gap::G6;
     let title = widgets::text(
         ui,
         &tr(keys::libraries::TITLE),
-        15.0,
+        font::PT15,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -66,7 +67,7 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     ui.add(
         egui::Label::new(
             RichText::new(tr(keys::libraries::LEAD))
-                .size(11.5)
+                .size(font::PT11_5)
                 .color(p.text_2),
         )
         .wrap(),
@@ -80,7 +81,7 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     }
     rule(ui);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         creating(ui, state, view, actions);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if Button::new(&tr(keys::libraries::CLOSE), "libraries-close")
@@ -145,7 +146,7 @@ fn row(
     let open = state.libraries.is_open(&entry.id);
     let shown = ui.horizontal(|ui| {
         ui.set_min_height(38.0);
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         if view.renaming.as_deref() == Some(&entry.id) {
             renaming(ui, entry, language, view, actions);
         } else {
@@ -188,7 +189,7 @@ fn name(ui: &mut Ui, entry: &LibraryEntry, open: bool, language: Language) {
     let shown = entry.name.trim();
     let unnamed = i18n::translate(language, keys::libraries::UNNAMED, &[]);
     let shown = if shown.is_empty() { &unnamed } else { shown };
-    ui.label(RichText::new(shown).size(12.5).color(p.text_1));
+    ui.label(RichText::new(shown).size(font::PT12_5).color(p.text_1));
     if open {
         let words = i18n::translate(language, keys::libraries::OPEN, &[]);
         let badge = widgets::hue_badge(ui, &words, p.amber_text);
@@ -234,10 +235,10 @@ fn confirm(ui: &mut Ui, state: &AppState, entry: &LibraryEntry, actions: &mut Ac
     let said = Message::new(keys::libraries::CONFIRM_DELETE)
         .with("name", entry.name.as_str())
         .text(language);
-    let words = ui.add(egui::Label::new(RichText::new(said).size(12.0).color(p.red)).wrap());
+    let words = ui.add(egui::Label::new(RichText::new(said).size(font::PT12).color(p.red)).wrap());
     widgets::address(ui, &words, "library-confirm");
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         if Button::new(&tr(keys::libraries::CANCEL), "library-cancel-delete")
             .show(ui)
             .clicked()

@@ -1,5 +1,6 @@
 //! The width of the library rail, the handle between two panes, and the tooltip.
 
+use crate::theme::tokens::font;
 use egui::{
     CursorIcon, Key, Modifiers, Rect, Response, Role, Sense, Stroke, Ui, UiBuilder, Vec2,
     WidgetInfo,
@@ -137,7 +138,7 @@ const STEP: f32 = 16.0;
 pub fn tooltip(response: Response, words: &str) -> Response {
     response.on_hover_ui(|ui| {
         let p = palette(ui.ctx());
-        ui.label(egui::RichText::new(words).size(12.0).color(p.text_1));
+        ui.label(egui::RichText::new(words).size(font::PT12).color(p.text_1));
     })
 }
 

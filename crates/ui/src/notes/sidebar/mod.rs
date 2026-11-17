@@ -5,6 +5,7 @@
 mod row;
 mod tree;
 
+use crate::theme::tokens::{font, gap};
 use std::collections::HashSet;
 
 use egui::{FontFamily, Key, Margin, Modifiers, Pos2, Rect, Ui};
@@ -92,7 +93,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut SidebarView, actions: &mut
     };
     egui::Frame::new().inner_margin(margin).show(ui, |ui| {
         ui.set_min_height(ui.available_height());
-        ui.spacing_mut().item_spacing.y = 6.0;
+        ui.spacing_mut().item_spacing.y = gap::G6;
         crate::titlebar::area_switch::rail(ui, Area::Notes, state.language, actions);
         head(ui, view, state.language);
         let language = state.language;
@@ -136,9 +137,16 @@ fn push(actions: &mut Actions, action: crate::notes::Action) {
 fn head(ui: &mut Ui, view: &mut SidebarView, language: i18n::Language) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.add_space(4.0);
+        ui.add_space(gap::G4);
         let title = i18n::translate(language, keys::sidebar::LIBRARY, &[]).to_uppercase();
-        let galley = widgets::text(ui, &title, 10.5, 600.0, FontFamily::Proportional, p.text_2);
+        let galley = widgets::text(
+            ui,
+            &title,
+            font::PT10_5,
+            600.0,
+            FontFamily::Proportional,
+            p.text_2,
+        );
         let room = ui.available_width() - widgets::MIN_TARGET - ui.spacing().item_spacing.x;
         let (rect, _) = ui.allocate_exact_size(egui::vec2(room, 24.0), egui::Sense::hover());
         ui.painter().galley(
@@ -205,8 +213,14 @@ fn tree_rows(ui: &mut Ui, state: &AppState, view: &mut SidebarView, actions: &mu
                 ui.horizontal(|ui| {
                     ui.add_space(row::INDENT + 8.0);
                     let words = i18n::translate(language, keys::sidebar::NO_FOLDERS, &[]);
-                    let galley =
-                        widgets::text(ui, &words, 11.0, 400.0, FontFamily::Proportional, p.text_2);
+                    let galley = widgets::text(
+                        ui,
+                        &words,
+                        font::PT11,
+                        400.0,
+                        FontFamily::Proportional,
+                        p.text_2,
+                    );
                     let (rect, _) = ui.allocate_exact_size(
                         egui::vec2(galley.size().x, galley.size().y + 8.0),
                         egui::Sense::hover(),

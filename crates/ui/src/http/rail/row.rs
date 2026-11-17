@@ -3,6 +3,7 @@
 //! a twisty it does not have, nor at rest for its `⋯`, drawn over the end of the row once the
 //! pointer or the keyboard is on it.
 
+use crate::theme::tokens::{font, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
 };
@@ -113,7 +114,7 @@ fn twisty(ui: &mut Ui, row: &RailRow, language: i18n::Language) -> Response {
         Sense::click(),
         "http-node-twisty",
         || egui::WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(5),
+        CornerRadius::same(radius::R5),
     );
     let expanded = row.expanded;
     ui.ctx()
@@ -134,7 +135,7 @@ fn name_and_menu(
     (lit, language): (bool, i18n::Language),
 ) -> (Response, Response) {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::R6);
     let label = match row.badge {
         Some(badge) => format!("{} {}", badge.short(), row.name),
         None => row.name.clone(),
@@ -177,7 +178,14 @@ fn name_and_menu(
     let middle = rect.center().y;
     if let Some(badge) = row.badge {
         let hue = badge_hue(ui, badge);
-        let galley = widgets::text(ui, badge.short(), 10.0, 700.0, FontFamily::Monospace, hue);
+        let galley = widgets::text(
+            ui,
+            badge.short(),
+            font::PT10,
+            700.0,
+            FontFamily::Monospace,
+            hue,
+        );
         let width = galley.size().x;
         ui.painter().galley(
             egui::pos2(left, middle - galley.size().y / 2.0),
@@ -192,7 +200,7 @@ fn name_and_menu(
         rect.right() - 5.0
     };
     let weight = if collection { 600.0 } else { 400.0 };
-    let galley = widgets::one_line(ui, &row.name, (12.5, weight), ink, right - left);
+    let galley = widgets::one_line(ui, &row.name, (font::PT12_5, weight), ink, right - left);
     ui.painter().galley(
         egui::pos2(left, middle - galley.size().y / 2.0),
         galley,
@@ -202,7 +210,7 @@ fn name_and_menu(
         let glyph = Rect::from_center_size(menu_rect.center(), Vec2::splat(16.0));
         if menu.hovered() {
             ui.painter()
-                .rect_filled(menu_rect, CornerRadius::same(5), p.bg_3);
+                .rect_filled(menu_rect, CornerRadius::same(radius::R5), p.bg_3);
         }
         icons::paint(ui, glyph, Icon::Ellipsis, p.text_0);
     }
@@ -223,7 +231,7 @@ fn menu_button(ui: &mut Ui, rect: Rect, row: &RailRow, language: i18n::Language)
         Sense::click(),
         "http-node-menu",
         || egui::WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(5),
+        CornerRadius::same(radius::R5),
     )
 }
 
@@ -240,13 +248,13 @@ fn drop_mark(ui: &Ui, rest: Rect, zone: DropZone) {
             egui::pos2(rest.right() - 4.0, y + 1.0),
         );
         ui.painter()
-            .rect_filled(bar, CornerRadius::same(1), p.amber_text);
+            .rect_filled(bar, CornerRadius::same(radius::R1), p.amber_text);
     };
     match zone {
         DropZone::Before => line(rest.top()),
         DropZone::After => line(rest.bottom()),
         DropZone::Inside => {
-            let corner = CornerRadius::same(6);
+            let corner = CornerRadius::same(radius::R6);
             ui.painter()
                 .rect_filled(rest, corner, p.amber_text.gamma_multiply(0.08));
             ui.painter().rect_stroke(
@@ -266,7 +274,7 @@ fn moved_mark(ui: &Ui, rect: Rect, moved: Option<(Moved, f32)>) {
         return;
     };
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::R6);
     let painter = ui.painter();
     match moved {
         Moved::Row => {

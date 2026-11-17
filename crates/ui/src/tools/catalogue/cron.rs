@@ -2,8 +2,9 @@
 
 mod sentence;
 
+use crate::theme::tokens::{font, gap, radius};
 use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
-use egui::{CornerRadius, FontFamily, Margin, Pos2, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
+use egui::{CornerRadius, FontFamily, Pos2, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::cron::{
     CronAnswer, CronCheck, CronRequest, CronWindow, FieldReading, Run, WindowEnd,
@@ -107,7 +108,7 @@ fn run_row(ui: &mut Ui, run: &Run, now: DateTime<Utc>, language: Language) {
         ),
     ];
     for (share, words, family, ink) in cells {
-        let galley = widgets::text(ui, &words, 12.0, 400.0, family, ink);
+        let galley = widgets::text(ui, &words, font::PT12, 400.0, family, ink);
         let left = rect.left() + 12.0 + (width - 24.0) * share;
         let spot = Pos2::new(left, rect.center().y - galley.size().y / 2.0);
         ui.painter().galley(spot, galley, ink);
@@ -119,7 +120,7 @@ fn runs_card(ui: &mut Ui, draw: impl FnOnce(&mut Ui)) {
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(10))
+        .corner_radius(CornerRadius::same(radius::R10))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.spacing_mut().item_spacing = Vec2::ZERO;
@@ -131,22 +132,24 @@ fn runs_card(ui: &mut Ui, draw: impl FnOnce(&mut Ui)) {
 fn field_chips(ui: &mut Ui, fields: &[FieldReading], language: Language) {
     let p = palette(ui.ctx());
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        ui.spacing_mut().item_spacing = Vec2::splat(gap::G6);
         for field in fields {
             let name = named_field(field, language);
             let shown = egui::Frame::new()
                 .fill(p.bg_2)
                 .stroke(Stroke::new(1.0, p.line_soft))
-                .corner_radius(CornerRadius::same(7))
-                .inner_margin(Margin::symmetric(10, 5))
+                .corner_radius(CornerRadius::same(radius::R7))
+                .inner_margin(gap::margin(gap::G10, gap::G5))
                 .show(ui, |ui| {
                     ui.vertical(|ui| {
-                        ui.spacing_mut().item_spacing.y = 1.0;
+                        ui.spacing_mut().item_spacing.y = gap::G1;
                         let code = egui::RichText::new(&field.text)
-                            .font(egui::FontId::monospace(13.0))
+                            .font(egui::FontId::monospace(font::PT13))
                             .color(p.text_0);
                         ui.label(code);
-                        let under = egui::RichText::new(&name).size(10.5).color(p.text_2);
+                        let under = egui::RichText::new(&name)
+                            .size(font::PT10_5)
+                            .color(p.text_2);
                         ui.label(under);
                     });
                 });
@@ -188,7 +191,7 @@ fn window_problem(window: &CronWindow, language: Language) -> Option<String> {
 fn zone_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let p = palette(ui.ctx());
     let width = ui.available_width();
-    let corner = CornerRadius::same(7);
+    let corner = CornerRadius::same(radius::R7);
     let response = interact(
         ui,
         Vec2::new(width, 30.0),
@@ -203,7 +206,7 @@ fn zone_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let name = widgets::text(
         ui,
         &entry.zone,
-        12.5,
+        font::PT12_5,
         400.0,
         FontFamily::Proportional,
         p.text_0,
@@ -224,7 +227,7 @@ impl CronTool {
             .hint(&tr(keys::tools::cron::PLACEHOLDER))
             .show(ui);
         self.reading(ui, language);
-        ui.add_space(8.0);
+        ui.add_space(gap::G8);
         self.zone_picker(ui, language);
     }
 
@@ -312,7 +315,7 @@ impl CronTool {
         };
         let mut back = false;
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.spacing_mut().item_spacing.x = gap::G10;
             let said = label(ui, &shown);
             address(ui, &said, "cron-zone");
             if self.zone.is_some() {
@@ -348,7 +351,7 @@ impl CronTool {
         let tr = |key| i18n::translate(language, key, &[]);
         section_title(ui, &tr(keys::tools::cron::RUNS));
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.spacing_mut().item_spacing.x = gap::G10;
             let half = (ui.available_width() - 10.0) / 2.0;
             for (value, key, hint_key, id) in [
                 (
@@ -397,7 +400,7 @@ impl CronTool {
         };
         let mut picked = None;
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+            ui.spacing_mut().item_spacing.x = gap::G6;
             for shortcut in SHORTCUTS {
                 let words = say(language, &format!("tools.cron.shortcut.{shortcut}"));
                 let id = format!("cron-shortcut-{shortcut}");
@@ -473,13 +476,13 @@ impl CronTool {
                 let words = Message::new(keys::tools::cron::WINDOW_GAP)
                     .with("count", between)
                     .text(language);
-                ui.add_space(4.0);
+                ui.add_space(gap::G4);
                 ui.horizontal(|ui| {
-                    ui.add_space(12.0);
+                    ui.add_space(gap::G12);
                     let said = hint(ui, &words);
                     address(ui, &said, "cron-window-gap");
                 });
-                ui.add_space(4.0);
+                ui.add_space(gap::G4);
             }
             for run in last {
                 run_row(ui, run, now, language);

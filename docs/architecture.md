@@ -5977,9 +5977,16 @@ the widget rather than of each screen (plan § 3.12):
 Every colour, shadow, gap and duration of the interface is a token of `ui::theme`, copied one
 for one from the reference's `styles.scss` (`src/styles/` at the `angular-reference` tag): `tokens::DARK` and
 `tokens::LIGHT` (a `Palette` each), `tokens::COMFORTABLE` and `tokens::COMPACT` (a `Spacing`),
-`tokens::TITLEBAR_HEIGHT`, and the four durations of `theme::motion`. A widget reads them through
+`tokens::TITLEBAR_HEIGHT`, and the durations of `theme::motion`. A widget reads them through
 `theme::palette(ctx)` and `theme::spacing(ctx)`, never a literal. The CSS `--*-rgb` triplets are
 gone: a tint is the colour itself at an alpha.
+
+The reference had no scale for the rest, so the egui application wrote one from the values its
+screens draw: `tokens::font` (text sizes, `PT9_5` to `PT30`), `tokens::gap` (gaps and margins,
+`G1` to `G32`, `gap::margin` for a frame) and `tokens::radius` (`R1` to `R15`), each step named
+by its size. A widget picks its step once. `theme::literals` is a test that reads every source
+file and refuses a number where a gap, a radius or a text size is expected; `theme::motion`'s
+test does the same for durations, named ones included.
 
 `theme::apply(ctx, appearance, density)` sets egui's style for **both** themes at once
 (`set_style_of`), then the preference (`System`, `Dark`, `Light`): egui switches by itself when

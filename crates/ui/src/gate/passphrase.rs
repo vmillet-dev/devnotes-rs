@@ -2,9 +2,10 @@
 //! history of what is typed, in its memory; this field keeps nothing of its own: the text is a
 //! `Zeroizing<String>` the screen owns, typed at its end, wiped when it is taken.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
-    CornerRadius, Event, FontFamily, Key, Margin, Response, Role, Sense, Stroke, StrokeKind, Ui,
-    Vec2, WidgetInfo,
+    CornerRadius, Event, FontFamily, Key, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
+    WidgetInfo,
 };
 use zeroize::Zeroizing;
 
@@ -73,7 +74,7 @@ impl<'a> PassphraseField<'a> {
             },
             self.author_id,
             || WidgetInfo::labeled(Role::PasswordInput, true, name),
-            CornerRadius::same(8),
+            CornerRadius::same(radius::R8),
         );
         if response.clicked() {
             response.request_focus();
@@ -87,7 +88,7 @@ impl<'a> PassphraseField<'a> {
         let edge = if self.invalid { p.red } else { p.line };
         ui.painter().rect(
             response.rect,
-            CornerRadius::same(8),
+            CornerRadius::same(radius::R8),
             p.bg_1,
             Stroke::new(1.0, edge),
             StrokeKind::Inside,
@@ -98,8 +99,15 @@ impl<'a> PassphraseField<'a> {
         } else {
             Zeroizing::new("•".repeat(count))
         };
-        let galley = widgets::text(ui, &shown, 14.0, 400.0, FontFamily::Proportional, p.text_0);
-        let inner = response.rect - Margin::symmetric(11, 9);
+        let galley = widgets::text(
+            ui,
+            &shown,
+            font::PT14,
+            400.0,
+            FontFamily::Proportional,
+            p.text_0,
+        );
+        let inner = response.rect - gap::margin(gap::G11, gap::G9);
         let at = egui::pos2(inner.left(), inner.center().y - galley.size().y / 2.0);
         let caret_x = at.x + galley.size().x + 1.0;
         ui.painter()

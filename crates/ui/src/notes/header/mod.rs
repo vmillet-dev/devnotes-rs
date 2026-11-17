@@ -12,6 +12,7 @@ pub(crate) use new_note::shortcut;
 mod sort;
 mod switchers;
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Margin, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
     WidgetInfo,
@@ -77,7 +78,7 @@ pub(super) fn show(
     let shown = egui::Frame::new()
         .inner_margin(Margin::symmetric(canvas, grid))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing = Vec2::new(GAP, 8.0);
+            ui.spacing_mut().item_spacing = Vec2::new(GAP, gap::G8);
             let facets = (open, pressed);
             if plan.two_rows {
                 let _ = row(ui, |ui| {
@@ -135,7 +136,7 @@ pub(super) fn show(
     ui.painter()
         .hline(rect.x_range(), rect.bottom(), Stroke::new(1.0, p.line_soft));
     if open {
-        ui.add_space(1.0);
+        ui.add_space(gap::G1);
         ui.scope(|ui| {
             ui.spacing_mut().item_spacing.y = 0.0;
             facets::show(ui, state, actions);
@@ -232,14 +233,14 @@ fn facets_toggle(ui: &mut Ui, open: bool, pressed: usize, language: i18n::Langua
         widgets::text(
             ui,
             &pressed.to_string(),
-            10.5,
+            font::PT10_5,
             600.0,
             FontFamily::Proportional,
             p.amber_text,
         )
     });
     let counted = count.as_ref().map_or(0.0, |galley| galley.size().x + 4.0);
-    let corner = CornerRadius::same(7);
+    let corner = CornerRadius::same(radius::R7);
     let sense = if enabled {
         Sense::click()
     } else {
@@ -418,8 +419,8 @@ fn view_switch(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::same(3));
+        .corner_radius(CornerRadius::same(radius::R8))
+        .inner_margin(gap::margin(gap::G3, gap::G3));
     frame.show(ui, |ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
         ui.horizontal(|ui| {
@@ -456,8 +457,15 @@ fn view_switch(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
 
 fn option(ui: &mut Ui, label: &str, author_id: &str, on: bool, enabled: bool) -> Response {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, label, 12.0, 400.0, FontFamily::Proportional, p.text_2);
-    let corner = CornerRadius::same(6);
+    let galley = widgets::text(
+        ui,
+        label,
+        font::PT12,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
+    let corner = CornerRadius::same(radius::R6);
     let sense = if enabled {
         Sense::click()
     } else {
@@ -494,7 +502,7 @@ fn option(ui: &mut Ui, label: &str, author_id: &str, on: bool, enabled: bool) ->
         Stroke::NONE,
         StrokeKind::Inside,
     );
-    let galley = widgets::text(ui, label, 12.0, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, label, font::PT12, 400.0, FontFamily::Proportional, ink);
     ui.painter()
         .galley(response.rect.center() - galley.size() / 2.0, galley, ink);
     response

@@ -8,6 +8,7 @@ pub mod grid;
 pub mod rows;
 pub mod shortcuts;
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::emath::GuiRounding as _;
 use egui::text::{LayoutJob, TextFormat};
 use egui::{
@@ -117,7 +118,7 @@ const HINT_HEIGHT: f32 = 28.0;
 fn hint(ui: &mut Ui, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::notes::KEYBOARD_HINT, &[]);
-    let width = widgets::arrowed(ui, None, &words, 11.0, p.text_2);
+    let width = widgets::arrowed(ui, None, &words, font::PT11, p.text_2);
     let region = ui.max_rect();
     let band = Rect::from_min_max(
         pos2(region.left(), region.bottom() - HINT_HEIGHT),
@@ -136,7 +137,13 @@ fn hint(ui: &mut Ui, language: i18n::Language) {
     let response = band_ui.allocate_rect(rect, Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     address(&band_ui, &response, "canvas-keyboard-hint");
-    widgets::arrowed(&band_ui, Some(rect.left_center()), &words, 11.0, p.text_2);
+    widgets::arrowed(
+        &band_ui,
+        Some(rect.left_center()),
+        &words,
+        font::PT11,
+        p.text_2,
+    );
 }
 
 fn on_screen(view: &NotesView) -> Vec<&str> {
@@ -145,14 +152,21 @@ fn on_screen(view: &NotesView) -> Vec<&str> {
 
 pub(super) fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
     egui::Frame::new().inner_margin(padding).show(ui, |ui| {
-        ui.spacing_mut().item_spacing.y = 8.0;
+        ui.spacing_mut().item_spacing.y = gap::G8;
         draw(ui);
     });
 }
 
 pub(super) fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, words, 13.0, 400.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        words,
+        font::PT13,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, words));
     address(ui, &response, author_id);
@@ -275,7 +289,7 @@ fn heading(
         &title,
         0.0,
         TextFormat {
-            font_id: FontId::new(11.0, FontFamily::Proportional),
+            font_id: FontId::new(font::PT11, FontFamily::Proportional),
             color: p.text_2,
             extra_letter_spacing: 1.0,
             coords: egui::epaint::text::VariationCoords::new([(*b"wght", 700.0)]),
@@ -286,7 +300,7 @@ fn heading(
         &count,
         8.0,
         TextFormat {
-            font_id: FontId::new(11.0, FontFamily::Monospace),
+            font_id: FontId::new(font::PT11, FontFamily::Monospace),
             color: p.text_2,
             ..TextFormat::default()
         },
@@ -324,7 +338,7 @@ fn title(section: &NoteSection, language: i18n::Language) -> String {
 fn ghost(ui: &mut Ui, rect: Rect, language: i18n::Language, actions: &mut Actions) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::notes::CREATE_OR_PASTE, &[]);
-    let corner = CornerRadius::same(10);
+    let corner = CornerRadius::same(radius::R10);
     let response = interact(
         ui,
         rect.size(),
@@ -340,8 +354,8 @@ fn ghost(ui: &mut Ui, rect: Rect, language: i18n::Language, actions: &mut Action
         (p.line, p.text_2)
     };
     ui.painter().extend(dashed(rect, Stroke::new(1.0, edge)));
-    let plus = widgets::text(ui, "+", 20.0, 400.0, FontFamily::Proportional, ink);
-    let label = widgets::text(ui, &words, 12.0, 400.0, FontFamily::Proportional, ink);
+    let plus = widgets::text(ui, "+", font::PT20, 400.0, FontFamily::Proportional, ink);
+    let label = widgets::text(ui, &words, font::PT12, 400.0, FontFamily::Proportional, ink);
     let height = plus.size().y + 6.0 + label.size().y;
     let top = rect.center().y - height / 2.0;
     ui.painter().galley(

@@ -135,6 +135,79 @@ pub const COMPACT: Spacing = Spacing {
     canvas: 16.0,
 };
 
+/// The type scale, in points: the only sizes text is drawn at, named by their size. A step is a
+/// size, not a role: the role is the widget's, which picks its step once.
+pub mod font {
+    pub const PT9_5: f32 = 9.5;
+    pub const PT10: f32 = 10.0;
+    pub const PT10_5: f32 = 10.5;
+    pub const PT11: f32 = 11.0;
+    pub const PT11_5: f32 = 11.5;
+    pub const PT12: f32 = 12.0;
+    pub const PT12_5: f32 = 12.5;
+    pub const PT13: f32 = 13.0;
+    pub const PT13_5: f32 = 13.5;
+    pub const PT14: f32 = 14.0;
+    pub const PT15: f32 = 15.0;
+    pub const PT16: f32 = 16.0;
+    pub const PT17: f32 = 17.0;
+    pub const PT18: f32 = 18.0;
+    pub const PT20: f32 = 20.0;
+    pub const PT30: f32 = 30.0;
+}
+
+/// The gaps, in points: between controls, around them and inside them, named by their size.
+pub mod gap {
+    pub const G1: f32 = 1.0;
+    pub const G2: f32 = 2.0;
+    pub const G3: f32 = 3.0;
+    pub const G4: f32 = 4.0;
+    pub const G5: f32 = 5.0;
+    pub const G6: f32 = 6.0;
+    pub const G7: f32 = 7.0;
+    pub const G8: f32 = 8.0;
+    pub const G9: f32 = 9.0;
+    pub const G10: f32 = 10.0;
+    pub const G11: f32 = 11.0;
+    pub const G12: f32 = 12.0;
+    pub const G14: f32 = 14.0;
+    pub const G16: f32 = 16.0;
+    pub const G18: f32 = 18.0;
+    pub const G20: f32 = 20.0;
+    pub const G22: f32 = 22.0;
+    pub const G24: f32 = 24.0;
+    pub const G26: f32 = 26.0;
+    pub const G28: f32 = 28.0;
+    pub const G30: f32 = 30.0;
+    pub const G32: f32 = 32.0;
+
+    /// A frame's margin, from two steps of the scale (`0.0` for none).
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the scale's steps are whole and small"
+    )]
+    pub const fn margin(x: f32, y: f32) -> egui::Margin {
+        egui::Margin::symmetric(x as i8, y as i8)
+    }
+}
+
+/// The corner radii, in points, named by their size.
+pub mod radius {
+    pub const R1: u8 = 1;
+    pub const R2: u8 = 2;
+    pub const R3: u8 = 3;
+    pub const R4: u8 = 4;
+    pub const R5: u8 = 5;
+    pub const R6: u8 = 6;
+    pub const R7: u8 = 7;
+    pub const R8: u8 = 8;
+    pub const R9: u8 = 9;
+    pub const R10: u8 = 10;
+    pub const R12: u8 = 12;
+    pub const R14: u8 = 14;
+    pub const R15: u8 = 15;
+}
+
 /// A full-screen editor starts under it, so the title bar stays in reach.
 pub const TITLEBAR_HEIGHT: f32 = 38.0;
 

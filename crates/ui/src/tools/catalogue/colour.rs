@@ -1,7 +1,8 @@
 //! A colour in four notations and its contrast against another: everything is computed in Rust,
 //! the swatches are all the page paints.
 
-use egui::{Color32, CornerRadius, Margin, Response, Role, Sense, Ui, Vec2, WidgetInfo};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{Color32, CornerRadius, Response, Role, Sense, Ui, Vec2, WidgetInfo};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::colour::{
     ColourAnswer, ColourReading, ColourRequest, Contrast, ContrastFix, Notations, TextSizes,
@@ -98,8 +99,8 @@ fn level_row(ui: &mut Ui, name: &str, sizes: TextSizes, language: Language) {
     let said = |passes: bool| tr(if passes { words::PASS } else { words::FAIL });
     let ink = palette(ui.ctx()).text_2;
     ui.horizontal(|ui| {
-        ui.add_space(16.0);
-        ui.spacing_mut().item_spacing.x = 12.0;
+        ui.add_space(gap::G16);
+        ui.spacing_mut().item_spacing.x = gap::G12;
         paragraph(ui, name, (11.5, 700.0), ink);
         let normal = format!("{} · {}", tr(words::NORMAL_TEXT), said(sizes.normal));
         pill(ui, &normal, sizes.normal);
@@ -113,12 +114,12 @@ fn sample_box(ui: &mut Ui, (text, background): (Color32, Color32), language: Lan
     let words = i18n::translate(language, keys::tools::colour::SAMPLE_TEXT, &[]);
     let shown = egui::Frame::new()
         .fill(background)
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::symmetric(16, 14))
+        .corner_radius(CornerRadius::same(radius::R10))
+        .inner_margin(gap::margin(gap::G16, gap::G14))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 12.0;
+                ui.spacing_mut().item_spacing.x = gap::G12;
                 paragraph(ui, "Aa", (24.0, 700.0), text);
                 paragraph(ui, &words, (14.0, 400.0), text);
             });
@@ -139,7 +140,7 @@ impl ColourTool {
             .and_then(|it| read(&it.colour))
             .and_then(|(_, swatch, _)| swatch_of(swatch));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.spacing_mut().item_spacing.x = gap::G10;
             self.picker(ui, shown, &tr(words::PICK));
             TextField::new(&mut self.colour, &name, "colour-input")
                 .hint(&tr(words::PLACEHOLDER))
@@ -223,7 +224,7 @@ impl ColourTool {
             });
         };
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::G8;
             let placeholder = tr(words::PLACEHOLDER);
             field(
                 ui,
@@ -233,7 +234,7 @@ impl ColourTool {
                 &placeholder,
             );
             ui.vertical(|ui| {
-                ui.add_space(26.0);
+                ui.add_space(gap::G26);
                 let name = tr(words::SWAP);
                 let swap = IconButton::new(Icon::ArrowLeftRight, &name, "colour-swap").show(ui);
                 if tooltip(swap, &name).clicked() {
@@ -252,9 +253,9 @@ impl ColourTool {
         let tr = |key| i18n::translate(language, key, &[]);
         let ratio = i18n::format::fixed(contrast.ratio, 2, language);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 12.0;
+            ui.spacing_mut().item_spacing.x = gap::G12;
             let shown = egui::RichText::new(format!("{ratio}:1"))
-                .font(egui::FontId::monospace(30.0))
+                .font(egui::FontId::monospace(font::PT30))
                 .color(p.text_0);
             let said = ui.add(egui::Label::new(shown));
             address(ui, &said, "colour-ratio");
@@ -263,11 +264,11 @@ impl ColourTool {
             address(ui, &said, "colour-verdict");
         });
         card(ui, "colour-verdicts", |ui| {
-            ui.add_space(8.0);
+            ui.add_space(gap::G8);
             level_row(ui, "AA", contrast.aa, language);
-            ui.add_space(4.0);
+            ui.add_space(gap::G4);
             level_row(ui, "AAA", contrast.aaa, language);
-            ui.add_space(6.0);
+            ui.add_space(gap::G6);
         });
         hint(ui, &tr(words::WCAG));
         match &contrast.fix {

@@ -3,6 +3,7 @@
 //! or moved by Alt+↑/↓, which every drag has as its twin. Every change but typing is written at
 //! once; typing is written when the row is left.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::text::{CCursor, CCursorRange};
 use egui::text_edit::TextEditState;
 use egui::{
@@ -87,13 +88,13 @@ pub(super) fn show(
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     let mut changed = false;
-    ui.spacing_mut().item_spacing = Vec2::new(8.0, 2.0);
+    ui.spacing_mut().item_spacing = Vec2::new(gap::G8, gap::G2);
     let narrowing = filters.then_some(&mut view.shown);
     progress(ui, &view.items, language, narrowing);
     if !filters {
         view.shown = Shown::All;
     }
-    ui.add_space(10.0);
+    ui.add_space(gap::G10);
     let rows_top = ui.cursor().top();
     let shown: Vec<usize> = (0..view.items.len())
         .filter(|index| view.shown.keeps(&view.items[*index]))
@@ -119,7 +120,7 @@ pub(super) fn show(
         if dragged || row_ui.rect_contains_pointer(rect) {
             ui.painter().rect_filled(
                 rect,
-                CornerRadius::same(6),
+                CornerRadius::same(radius::R6),
                 if dragged { p.bg_3 } else { p.bg_2 },
             );
         }
@@ -152,7 +153,7 @@ pub(super) fn show(
             break;
         }
     }
-    ui.add_space(8.0);
+    ui.add_space(gap::G8);
     let add = tr(keys::editor::ADD_ITEM);
     if widgets::Button::new(&add, "checklist-add")
         .kind(widgets::Kind::Quiet)
@@ -232,7 +233,7 @@ fn row(
         Sense::click_and_drag(),
         "checklist-grip",
         || WidgetInfo::labeled(Role::Button, true, &grip_label),
-        CornerRadius::same(4),
+        CornerRadius::same(radius::R4),
     );
     let dots = egui::Rect::from_center_size(grip.rect.center(), Vec2::splat(12.0));
     icons::paint(ui, dots, Icon::Ellipsis, p.text_2);
@@ -267,7 +268,7 @@ fn row(
             .align(egui::Align2::LEFT_CENTER)
             .hint_text(hint)
             .text_color(if done { p.text_2 } else { p.text_0 })
-            .font(FontId::new(13.5, FontFamily::Proportional)),
+            .font(FontId::new(font::PT13_5, FontFamily::Proportional)),
     );
     ui.ctx()
         .accesskit_node_builder(field.id, |node| node.set_label(label.clone()));
@@ -302,7 +303,7 @@ fn tick(ui: &mut Ui, done: bool, label: &str) -> egui::Response {
         Sense::click(),
         "checklist-check",
         || WidgetInfo::selected(Role::CheckBox, true, done, label),
-        CornerRadius::same(4),
+        CornerRadius::same(radius::R4),
     );
     let (fill, edge) = if done {
         (p.amber_fill, p.amber_text)
@@ -312,7 +313,7 @@ fn tick(ui: &mut Ui, done: bool, label: &str) -> egui::Response {
     let tick = egui::Rect::from_center_size(check.rect.center(), Vec2::splat(14.0));
     ui.painter().rect(
         tick,
-        CornerRadius::same(3),
+        CornerRadius::same(radius::R3),
         fill,
         Stroke::new(1.2, edge),
         egui::StrokeKind::Inside,
@@ -326,7 +327,7 @@ fn tick(ui: &mut Ui, done: bool, label: &str) -> egui::Response {
 /// A done task's words, struck through.
 fn strike(ui: &Ui, field: &egui::Response, text: &str) {
     let p = palette(ui.ctx());
-    let font = FontId::new(13.5, FontFamily::Proportional);
+    let font = FontId::new(font::PT13_5, FontFamily::Proportional);
     let width = ui
         .fonts_mut(|fonts| fonts.layout_no_wrap(text.to_owned(), font, p.text_2))
         .size()
@@ -567,7 +568,14 @@ fn progress(
         .collect();
     let choice = Segmented::new(&options, "checklist-shown");
     ui.horizontal(|ui| {
-        let galley = widgets::text(ui, &words, 11.0, 400.0, FontFamily::Monospace, p.text_2);
+        let galley = widgets::text(
+            ui,
+            &words,
+            font::PT11,
+            400.0,
+            FontFamily::Monospace,
+            p.text_2,
+        );
         let choice_width = if narrowing.is_some() {
             choice.width(ui) + 10.0
         } else {
@@ -576,19 +584,19 @@ fn progress(
         let width = ui.available_width() - galley.size().x - 10.0 - choice_width;
         let (track, _) = ui.allocate_exact_size(Vec2::new(width.max(40.0), 6.0), Sense::hover());
         ui.painter()
-            .rect_filled(track, CornerRadius::same(3), p.bg_3);
+            .rect_filled(track, CornerRadius::same(radius::R3), p.bg_3);
         if total > 0 {
             #[expect(clippy::cast_precision_loss, reason = "a list's length")]
             let share = done as f32 / total as f32;
             let fill =
                 Rect::from_min_size(track.min, Vec2::new(track.width() * share, track.height()));
             ui.painter()
-                .rect_filled(fill, CornerRadius::same(3), p.amber_fill);
+                .rect_filled(fill, CornerRadius::same(radius::R3), p.amber_fill);
         }
         let response = ui.label(galley);
         address(ui, &response, "checklist-progress");
         if let Some(shown) = narrowing {
-            ui.add_space(4.0);
+            ui.add_space(gap::G4);
             choice.show(ui, shown);
         }
     });

@@ -10,6 +10,7 @@ pub mod live;
 mod rail;
 pub mod ui;
 
+use crate::theme::tokens::{gap, radius};
 use std::collections::HashMap;
 
 use egui::{CornerRadius, Rect, Response, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo};
@@ -246,7 +247,7 @@ fn bar(
             .max_rect(inner)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    row.spacing_mut().item_spacing.x = 12.0;
+    row.spacing_mut().item_spacing.x = gap::G12;
     let toggle = i18n::translate(state.language, keys::sidebar::TOGGLE, &[]);
     if widgets::SquareButton::new(Icon::Sidebar, &toggle, "tools-rail-toggle")
         .keys(
@@ -266,7 +267,7 @@ fn bar(
 
 /// The star of a tool: muted until it is on, the amber of what is chosen and a full shape.
 fn star(ui: &mut Ui, on: bool, label: &str, author_id: &str, hint: &str) -> Response {
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::R6);
     let response = interact(
         ui,
         Vec2::splat(28.0),

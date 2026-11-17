@@ -2,6 +2,7 @@
 //! how a tree and a dropdown drift apart — and the breadcrumb of the folder open, in their
 //! place. Each opens a menu; a row's ⋯ turns the menu into the panel the rail opens.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, Response, Role, Sense, Stroke,
     StrokeKind, Ui, Vec2, WidgetInfo, pos2,
@@ -57,7 +58,14 @@ pub(super) fn natural_widths(ui: &Ui, state: &AppState) -> [f32; 2] {
 
 fn switch_width(ui: &Ui, name: &str) -> f32 {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, name, 12.5, 400.0, FontFamily::Proportional, p.text_0);
+    let galley = widgets::text(
+        ui,
+        name,
+        font::PT12_5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     galley.size().x.min(NAME_WIDTH) + 44.0
 }
 
@@ -87,7 +95,7 @@ pub(super) fn space_switcher(
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
             ui.set_width(260.0);
-            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.spacing_mut().item_spacing.y = gap::G2;
             match menu {
                 Menu::Creating(draft) => {
                     let words = Words::new(
@@ -194,7 +202,7 @@ pub(super) fn folder_switcher(
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
             ui.set_width(260.0);
-            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.spacing_mut().item_spacing.y = gap::G2;
             match menu {
                 Menu::Creating(draft) => {
                     let words = Words::new(
@@ -353,7 +361,7 @@ pub(super) fn breadcrumb(
     let galley = widgets::text(
         ui,
         &folder.name,
-        12.5,
+        font::PT12_5,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -362,7 +370,8 @@ pub(super) fn breadcrumb(
     here.widget_info(|| WidgetInfo::labeled(Role::Label, true, &folder.name));
     widgets::address(ui, &here, "folder-breadcrumb-name");
     let swatch = Rect::from_center_size(pos2(rect.left() + 4.0, rect.center().y), Vec2::splat(8.0));
-    ui.painter().rect_filled(swatch, CornerRadius::same(2), hue);
+    ui.painter()
+        .rect_filled(swatch, CornerRadius::same(radius::R2), hue);
     ui.painter().galley(
         pos2(rect.left() + 14.0, rect.center().y - galley.size().y / 2.0),
         galley,
@@ -393,10 +402,17 @@ pub(super) fn breadcrumb(
 /// A switcher's button: its name cut to its room, and the chevron.
 fn switch(ui: &mut Ui, label: &str, name: &str, author_id: &str, widest: f32) -> Response {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, name, 12.5, 400.0, FontFamily::Proportional, p.text_0);
+    let galley = widgets::text(
+        ui,
+        name,
+        font::PT12_5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let width = switch_width(ui, name).min(widest);
     let room = width - 44.0;
-    let corner = CornerRadius::same(8);
+    let corner = CornerRadius::same(radius::R8);
     let response = interact(
         ui,
         Vec2::new(width, 32.0),
@@ -444,7 +460,10 @@ fn cut(ui: &Ui, words: &str, width: f32) -> std::sync::Arc<egui::Galley> {
     let p = palette(ui.ctx());
     let mut job = egui::text::LayoutJob::single_section(
         words.to_owned(),
-        egui::TextFormat::simple(egui::FontId::new(12.5, FontFamily::Proportional), p.text_0),
+        egui::TextFormat::simple(
+            egui::FontId::new(font::PT12_5, FontFamily::Proportional),
+            p.text_0,
+        ),
     );
     job.wrap = egui::text::TextWrapping {
         max_width: width,
@@ -477,7 +496,7 @@ fn row(
     on: bool,
 ) -> (Response, Response) {
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 2.0;
+        ui.spacing_mut().item_spacing.x = gap::G2;
         let width = ui.available_width() - MIN_TARGET - 2.0;
         let chosen = entry(ui, width, label, author_id, mark, on);
         let edit = widgets::IconButton::new(Icon::Ellipsis, options, options_id).show(ui);
@@ -495,7 +514,7 @@ fn entry(
     on: bool,
 ) -> Response {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::R6);
     let response = interact(
         ui,
         Vec2::new(width, 28.0),
@@ -527,7 +546,8 @@ fn entry(
         }
         Some(Mark::Swatch(hue)) => {
             let swatch = Rect::from_center_size(pos2(left + 4.0, middle), Vec2::splat(8.0));
-            ui.painter().rect_filled(swatch, CornerRadius::same(2), hue);
+            ui.painter()
+                .rect_filled(swatch, CornerRadius::same(radius::R2), hue);
             left += 14.0;
         }
         None => {}
@@ -541,9 +561,16 @@ fn entry(
 /// A step of the breadcrumb: a quiet button, its folder's hue before it.
 fn crumb(ui: &mut Ui, label: &str, author_id: &str, hue: Option<egui::Color32>) -> Response {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, label, 12.5, 400.0, FontFamily::Proportional, p.text_1);
+    let galley = widgets::text(
+        ui,
+        label,
+        font::PT12_5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     let swatch = if hue.is_some() { 14.0 } else { 0.0 };
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::R6);
     let response = interact(
         ui,
         galley.size() + Vec2::new(14.0 + swatch, 10.0),
@@ -562,9 +589,17 @@ fn crumb(ui: &mut Ui, label: &str, author_id: &str, hue: Option<egui::Color32>) 
     if let Some(hue) = hue {
         let at =
             Rect::from_center_size(pos2(rect.left() + 11.0, rect.center().y), Vec2::splat(8.0));
-        ui.painter().rect_filled(at, CornerRadius::same(2), hue);
+        ui.painter()
+            .rect_filled(at, CornerRadius::same(radius::R2), hue);
     }
-    let galley = widgets::text(ui, label, 12.5, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(
+        ui,
+        label,
+        font::PT12_5,
+        400.0,
+        FontFamily::Proportional,
+        ink,
+    );
     ui.painter().galley(
         pos2(
             rect.left() + 7.0 + swatch,
@@ -578,7 +613,14 @@ fn crumb(ui: &mut Ui, label: &str, author_id: &str, hue: Option<egui::Color32>) 
 
 fn separator(ui: &mut Ui, mark: &str) {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, mark, 12.5, 400.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        mark,
+        font::PT12_5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, _) = ui.allocate_exact_size(galley.size() + Vec2::new(4.0, 0.0), Sense::hover());
     ui.painter()
         .galley(rect.min + Vec2::new(2.0, 0.0), galley, p.text_2);
@@ -586,7 +628,14 @@ fn separator(ui: &mut Ui, mark: &str) {
 
 fn note(ui: &mut Ui, words: &str, author_id: &str) {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, words, 11.0, 400.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        words,
+        font::PT11,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, response) =
         ui.allocate_exact_size(galley.size() + Vec2::new(20.0, 10.0), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, words));

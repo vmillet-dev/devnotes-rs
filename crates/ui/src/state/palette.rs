@@ -10,7 +10,7 @@ use engine::http::search::RequestHit;
 use engine::notes::model::TagUsage;
 use engine::notes::view::{NoteFilter, NoteOrder, NotesQuery, NotesView};
 
-use super::notes_query::{DEBOUNCE, tz_offset_minutes};
+use super::notes_query::{debounce, tz_offset_minutes};
 use super::{QueryCell, Revision};
 use crate::api;
 use crate::backend::{Backend, Pending};
@@ -175,7 +175,7 @@ impl PaletteState {
 
     pub fn type_text(&mut self, text: String, now: f64) {
         self.text = text;
-        self.due = Some(now + DEBOUNCE);
+        self.due = Some(now + debounce());
     }
 
     /// The word that asked for it leaves the field. A second space takes the place of the first.

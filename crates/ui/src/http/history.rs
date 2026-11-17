@@ -1,5 +1,6 @@
 //! What was sent, by day, beside the entry chosen, read like an answer.
 
+use crate::theme::tokens::{font, gap, radius};
 use chrono::{Days, Local, NaiveDate};
 use egui::{
     Align, CornerRadius, FontFamily, Key, Layout, Modifiers, Rect, Role, Sense, Stroke, Ui,
@@ -85,7 +86,7 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let tr = |key| i18n::translate(language, key, &[]);
     let history = state.http.history();
     ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
+        ui.spacing_mut().item_spacing.x = gap::G12;
         let toggle = tr(keys::sidebar::TOGGLE);
         if widgets::SquareButton::new(Icon::Sidebar, &toggle, "http-rail-toggle")
             .pressed(state.settings.rail_shown)
@@ -95,17 +96,24 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             actions.push(Asked::App(AppAction::ToggleRail));
         }
         let title = tr(keys::http::history::TITLE);
-        let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+        let words = widgets::text(
+            ui,
+            &title,
+            font::PT15,
+            600.0,
+            FontFamily::Proportional,
+            p.text_0,
+        );
         let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
         ui.painter().galley(rect.min, words, p.text_0);
         heading.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &title));
         widgets::address(ui, &heading, "http-history");
         let kept = egui::RichText::new(tr(keys::http::history::KEPT))
-            .size(12.0)
+            .size(font::PT12)
             .color(p.text_2);
         ui.add(egui::Label::new(kept));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::G8;
             let word = tr(keys::http::history::CLEAR);
             let Some(count) = history.confirming() else {
                 if Button::new(&word, "http-history-clear")
@@ -135,7 +143,9 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
                 keys::http::history::CONFIRM,
                 &[("count", count.into())],
             );
-            let question = egui::RichText::new(question).size(12.5).color(p.text_1);
+            let question = egui::RichText::new(question)
+                .size(font::PT12_5)
+                .color(p.text_1);
             let said = ui.add(egui::Label::new(question));
             widgets::address(ui, &said, "http-history-clear-count");
         });
@@ -171,9 +181,11 @@ fn list(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         ui.set_min_height(room.y);
         if rows.is_empty() && history.is_loaded() {
             let words = i18n::translate(language, keys::http::history::EMPTY, &[]);
-            let words = egui::RichText::new(words).size(12.5).color(p.text_2);
+            let words = egui::RichText::new(words)
+                .size(font::PT12_5)
+                .color(p.text_2);
             egui::Frame::new()
-                .inner_margin(egui::Margin::same(20))
+                .inner_margin(gap::margin(gap::G20, gap::G20))
                 .show(ui, |ui| {
                     let said = ui.add(egui::Label::new(words).wrap());
                     widgets::address(ui, &said, "http-history-empty");
@@ -202,7 +214,7 @@ fn day_row(ui: &mut Ui, label: &str) {
     let mut over = ui.new_child(UiBuilder::new().max_rect(rect.shrink2(Vec2::new(12.0, 8.0))));
     over.with_layout(Layout::left_to_right(Align::Max), |ui| {
         let words = egui::RichText::new(label)
-            .size(12.0)
+            .size(font::PT12)
             .strong()
             .color(p.text_2);
         let said = ui.add(egui::Label::new(words));
@@ -232,19 +244,19 @@ fn item_row(ui: &mut Ui, state: &AppState, item: &HistoryItem, actions: &mut Act
         Sense::click(),
         "http-history-item",
         || WidgetInfo::selected(Role::Button, true, on, name),
-        CornerRadius::same(8),
+        CornerRadius::same(radius::R8),
     );
     let rect = response.rect;
     if on {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(8), p.bg_2);
+            .rect_filled(rect, CornerRadius::same(radius::R8), p.bg_2);
     } else if response.hovered() {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(8), p.bg_1);
+            .rect_filled(rect, CornerRadius::same(radius::R8), p.bg_1);
     }
     let method = item.method.as_str();
     let hue = badge_hue(ui, Badge::Method(item.method));
-    let badge = widgets::text(ui, method, 11.0, 700.0, FontFamily::Monospace, hue);
+    let badge = widgets::text(ui, method, font::PT11, 700.0, FontFamily::Monospace, hue);
     ui.painter()
         .galley(pos2(rect.left() + 10.0, rect.top() + 9.0), badge, hue);
     let right = rect.right() - 36.0;
@@ -253,7 +265,7 @@ fn item_row(ui: &mut Ui, state: &AppState, item: &HistoryItem, actions: &mut Act
         |status| status.to_string(),
     );
     let ink = status_hue(ui, item.status);
-    let galley = widgets::text(ui, &status, 12.0, 600.0, FontFamily::Monospace, ink);
+    let galley = widgets::text(ui, &status, font::PT12, 600.0, FontFamily::Monospace, ink);
     let at = pos2(right - galley.size().x, rect.top() + 8.0);
     let mut over = ui.new_child(UiBuilder::new().max_rect(Rect::from_min_size(at, galley.size())));
     let said = over.add(egui::Label::new(galley).selectable(false));
@@ -263,7 +275,14 @@ fn item_row(ui: &mut Ui, state: &AppState, item: &HistoryItem, actions: &mut Act
         .with_timezone(&Local)
         .format("%H:%M:%S")
         .to_string();
-    let galley = widgets::text(ui, &time, 11.0, 400.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &time,
+        font::PT11,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let at = pos2(right - galley.size().x, rect.top() + 27.0);
     ui.painter().galley(at, galley, p.text_2);
     let text_left = rect.left() + 64.0;
@@ -271,7 +290,14 @@ fn item_row(ui: &mut Ui, state: &AppState, item: &HistoryItem, actions: &mut Act
         pos2(text_left, rect.top()),
         pos2(right - 64.0, rect.bottom()),
     );
-    let name_ink = widgets::text(ui, name, 13.0, 500.0, FontFamily::Proportional, p.text_0);
+    let name_ink = widgets::text(
+        ui,
+        name,
+        font::PT13,
+        500.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let width = name_ink.size().x;
     ui.painter_at(clip)
         .galley(pos2(text_left, rect.top() + 7.0), name_ink, p.text_0);
@@ -282,7 +308,7 @@ fn item_row(ui: &mut Ui, state: &AppState, item: &HistoryItem, actions: &mut Act
         let words = widgets::text(
             ui,
             &environment.name,
-            11.0,
+            font::PT11,
             400.0,
             FontFamily::Proportional,
             p.text_2,
@@ -312,7 +338,7 @@ fn url(ui: &Ui, clip: Rect, item: &HistoryItem) {
     let tail = widgets::text(
         ui,
         &item.url_tail,
-        11.5,
+        font::PT11_5,
         400.0,
         FontFamily::Monospace,
         p.text_1,
@@ -320,7 +346,7 @@ fn url(ui: &Ui, clip: Rect, item: &HistoryItem) {
     let head = widgets::text(
         ui,
         &item.url_head,
-        11.5,
+        font::PT11_5,
         400.0,
         FontFamily::Monospace,
         p.text_2,
@@ -365,13 +391,13 @@ fn undo(ui: &mut Ui, removed: &HistoryEntry, language: i18n::Language, actions: 
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         let words = i18n::translate(
             language,
             keys::http::history::DELETED,
             &[("name", removed.item.summary.name.as_str().into())],
         );
-        let words = egui::RichText::new(words).size(12.0).color(p.text_1);
+        let words = egui::RichText::new(words).size(font::PT12).color(p.text_1);
         let said = ui.add(egui::Label::new(words).truncate());
         widgets::address(ui, &said, "http-history-undo");
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -401,24 +427,26 @@ fn detail(ui: &mut Ui, state: &AppState, view: &mut response::ResponseView, acti
     let history = state.http.history();
     let Some(entry) = history.entry() else {
         let words = i18n::translate(language, keys::http::history::CHOOSE, &[]);
-        let words = egui::RichText::new(words).size(12.5).color(p.text_2);
+        let words = egui::RichText::new(words)
+            .size(font::PT12_5)
+            .color(p.text_2);
         egui::Frame::new()
-            .inner_margin(egui::Margin::same(20))
+            .inner_margin(gap::margin(gap::G20, gap::G20))
             .show(ui, |ui| ui.add(egui::Label::new(words)));
         return;
     };
     egui::Frame::new()
-        .inner_margin(egui::Margin::symmetric(20, 12))
+        .inner_margin(gap::margin(gap::G20, gap::G12))
         .show(ui, |ui| {
             ui.set_min_size(ui.available_size());
-            ui.spacing_mut().item_spacing.y = 10.0;
+            ui.spacing_mut().item_spacing.y = gap::G10;
             entry_head(ui, state, entry, actions);
             if let Some(response) = &entry.record.response {
                 let id = entry.item.id.as_str();
                 response::recorded(ui, state, (id, response), view, actions);
             } else {
                 let words = egui::RichText::new(failure(&entry.item, language))
-                    .size(13.0)
+                    .size(font::PT13)
                     .color(p.red);
                 let said = ui.add(egui::Label::new(words).wrap());
                 widgets::address(ui, &said, "http-history-failure");
@@ -446,20 +474,20 @@ fn entry_head(ui: &mut Ui, state: &AppState, entry: &HistoryEntry, actions: &mut
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::G10;
         let method = entry.item.method;
         let words = egui::RichText::new(method.as_str())
             .monospace()
-            .size(12.0)
+            .size(font::PT12)
             .strong()
             .color(badge_hue(ui, Badge::Method(method)));
         ui.add(egui::Label::new(words));
         let url = egui::RichText::new(&entry.record.exchange.url)
             .monospace()
-            .size(12.5)
+            .size(font::PT12_5)
             .color(p.text_0);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::G8;
             if let Some(name) = state.http.history().replacing() {
                 if Button::new(&tr(keys::http::rail::CANCEL), "http-history-replace-cancel")
                     .show(ui)
@@ -480,7 +508,9 @@ fn entry_head(ui: &mut Ui, state: &AppState, entry: &HistoryEntry, actions: &mut
                     keys::http::history::REPLACE,
                     &[("name", name.into())],
                 );
-                let question = egui::RichText::new(question).size(12.5).color(p.text_1);
+                let question = egui::RichText::new(question)
+                    .size(font::PT12_5)
+                    .color(p.text_1);
                 let said = ui.add(egui::Label::new(question));
                 widgets::address(ui, &said, "http-history-replace");
             } else {

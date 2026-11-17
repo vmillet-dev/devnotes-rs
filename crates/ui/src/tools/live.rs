@@ -12,9 +12,6 @@ use crate::services::errors::ErrorNotifier;
 use crate::services::status::StatusNotifier;
 use crate::state::query::QueryCell;
 
-/// Long enough to let a word be typed, short enough to read as live.
-const DEBOUNCE: f64 = 0.150;
-
 /// What a tool has at hand once a frame, on screen.
 pub struct Turn<'a> {
     pub ctx: &'a egui::Context,
@@ -43,7 +40,7 @@ impl<P: PartialEq + Clone, T> Default for Live<P, T> {
             cell: QueryCell::default(),
             typed: None,
             due: None,
-            delay: DEBOUNCE,
+            delay: f64::from(crate::theme::motion::TYPING),
         }
     }
 }

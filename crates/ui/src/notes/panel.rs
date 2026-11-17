@@ -2,6 +2,7 @@
 //! place so the switcher and the rail cannot drift apart. A name is written when its field is
 //! left, or on Enter, which also closes the panel; Escape closes it.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{Color32, CornerRadius, FontFamily, Rect, Response, Role, Sense, Stroke, Ui, Vec2};
 use egui::{StrokeKind, WidgetInfo};
 use engine::folders::model::{Folder, FolderColour};
@@ -221,7 +222,7 @@ pub(super) fn space(
 /// The whole width, in the panel rather than the row: the row is the space's own click surface.
 fn pin_toggle(ui: &mut Ui, label: &str, on: bool) -> Response {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::R6);
     let response = interact(
         ui,
         Vec2::new(ui.available_width(), 24.0),
@@ -246,7 +247,7 @@ fn pin_toggle(ui: &mut Ui, label: &str, on: bool) -> Response {
         Vec2::splat(12.0),
     );
     icons::paint(ui, glyph, Icon::Pin, ink);
-    let galley = widgets::text(ui, label, 11.0, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, label, font::PT11, 400.0, FontFamily::Proportional, ink);
     ui.painter().galley(
         egui::pos2(rect.left() + 26.0, rect.center().y - galley.size().y / 2.0),
         galley,
@@ -488,7 +489,7 @@ fn colours(ui: &mut Ui, folder: &Folder, language: i18n::Language, actions: &mut
                 Sense::click(),
                 "folder-colour",
                 || WidgetInfo::selected(Role::RadioButton, true, on, &name),
-                CornerRadius::same(4),
+                CornerRadius::same(radius::R4),
             );
             swatch(ui, &response, folder_hue(ui, colour), on);
             if response.clicked() && !on {
@@ -511,12 +512,12 @@ fn swatch(ui: &Ui, response: &Response, hue: Color32, on: bool) {
     } else {
         hue.gamma_multiply(0.45)
     };
-    let corner = CornerRadius::same(4);
+    let corner = CornerRadius::same(radius::R4);
     ui.painter().rect_filled(rect, corner, shown);
     if on {
         ui.painter().rect_stroke(
             rect.expand(3.0),
-            CornerRadius::same(6),
+            CornerRadius::same(radius::R6),
             Stroke::new(1.0, hue),
             StrokeKind::Inside,
         );
@@ -543,7 +544,7 @@ fn frame(ui: &mut Ui, content: impl FnOnce(&mut Ui)) {
             bottom: 10,
         })
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 8.0;
+            ui.spacing_mut().item_spacing.y = gap::G8;
             content(ui);
         });
 }
@@ -551,7 +552,14 @@ fn frame(ui: &mut Ui, content: impl FnOnce(&mut Ui)) {
 fn title(ui: &mut Ui, name: &str) {
     let p = palette(ui.ctx());
     let upper = name.to_uppercase();
-    let galley = widgets::text(ui, &upper, 11.0, 600.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &upper,
+        font::PT11,
+        600.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, _) = ui.allocate_exact_size(galley.size(), Sense::hover());
     ui.painter().galley(rect.min, galley, p.text_2);
 }
@@ -561,7 +569,10 @@ fn note(ui: &mut Ui, words: &str, author_id: &str) {
     let p = palette(ui.ctx());
     let mut job = egui::text::LayoutJob::single_section(
         words.to_owned(),
-        egui::TextFormat::simple(egui::FontId::new(11.0, FontFamily::Proportional), p.text_2),
+        egui::TextFormat::simple(
+            egui::FontId::new(font::PT11, FontFamily::Proportional),
+            p.text_2,
+        ),
     );
     job.wrap.max_width = ui.available_width().max(1.0);
     let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));

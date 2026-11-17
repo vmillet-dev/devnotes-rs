@@ -2,6 +2,7 @@
 //! one rung per layer, the higher drawn over the lower and served first by Escape. A modal
 //! blocks what is under it, keeps Tab inside, and hands the focus back to what opened it.
 
+use crate::theme::tokens::radius;
 use egui::{Context, CornerRadius, Id, Margin, ModalResponse, Stroke};
 
 use crate::theme::{palette, spacing};
@@ -109,7 +110,7 @@ pub fn dialog<R>(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
+        .corner_radius(CornerRadius::same(radius::R14))
         .shadow(p.shadow_overlay)
         .inner_margin(padding);
     let shown = egui::Modal::new(id)
@@ -137,7 +138,7 @@ pub fn framed_dialog<R>(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
+        .corner_radius(CornerRadius::same(radius::R14))
         .shadow(p.shadow_overlay);
     let room = ctx.content_rect().size() * 0.9;
     let shown = egui::Modal::new(id)

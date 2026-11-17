@@ -4,10 +4,10 @@
 
 pub(crate) mod update_prompt;
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::accesskit::Live;
 use egui::{
-    CornerRadius, Margin, Rect, Role, Sense, Stroke, StrokeKind, Ui, UiBuilder, Vec2, WidgetInfo,
-    pos2,
+    CornerRadius, Rect, Role, Sense, Stroke, StrokeKind, Ui, UiBuilder, Vec2, WidgetInfo, pos2,
 };
 use i18n::{Language, Message, keys};
 
@@ -40,19 +40,19 @@ pub(crate) fn report(
     (language, widest): (Language, f32),
 ) -> bool {
     const DOT: f32 = 6.0;
-    const GAP: f32 = 8.0;
+    const GAP: f32 = gap::G8;
     const CLOSE: f32 = 24.0;
     let p = palette(ui.ctx());
     let words = status.text(language);
     let room = widest - 2.0 * GAP - DOT - GAP - CLOSE - 2.0;
-    let galley = widgets::one_line(ui, &words, (12.0, 400.0), p.text_0, room);
+    let galley = widgets::one_line(ui, &words, (font::PT12, 400.0), p.text_0, room);
     let cut = galley.elided;
     let width = GAP + DOT + GAP + galley.size().x + GAP + CLOSE + 2.0;
     let pill = Rect::from_center_size(ui.max_rect().center(), Vec2::new(width, 28.0));
     let hue = p.green;
     ui.painter().rect(
         pill,
-        CornerRadius::same(14),
+        CornerRadius::same(radius::R14),
         hue.gamma_multiply(0.12),
         Stroke::new(1.0, hue.gamma_multiply(0.35)),
         StrokeKind::Inside,
@@ -115,12 +115,15 @@ fn dismiss(ui: &mut Ui, hue: egui::Color32, language: Language) -> bool {
         Sense::click(),
         "status-dismiss",
         || WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(12),
+        CornerRadius::same(radius::R12),
     );
     let close = tooltip(close, &label);
     if close.hovered() {
-        ui.painter()
-            .rect_filled(close.rect, CornerRadius::same(12), hue.gamma_multiply(0.18));
+        ui.painter().rect_filled(
+            close.rect,
+            CornerRadius::same(radius::R12),
+            hue.gamma_multiply(0.18),
+        );
     }
     let ink = if close.hovered() { p.text_0 } else { p.text_1 };
     icons::paint(
@@ -143,20 +146,22 @@ struct Band {
 fn band(ui: &mut Ui, message: &Message, language: Language, band: Band) -> bool {
     let p = palette(ui.ctx());
     let said = message.text(language);
-    let vertical = if band.warns { 10 } else { 8 };
+    let vertical = if band.warns { gap::G10 } else { gap::G8 };
     let shown = egui::Frame::new()
         .fill(band.hue.gamma_multiply(0.12))
-        .inner_margin(Margin::symmetric(14, vertical))
+        .inner_margin(gap::margin(gap::G14, vertical))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0;
+                ui.spacing_mut().item_spacing.x = gap::G10;
                 if band.warns {
                     let (glyph, _) = ui.allocate_exact_size(Vec2::splat(14.0), Sense::hover());
                     icons::paint(ui, glyph, Icon::TriangleAlert, band.hue);
                 }
                 let dismiss_room = 34.0;
-                let text = egui::RichText::new(&said).size(12.5).color(p.text_0);
+                let text = egui::RichText::new(&said)
+                    .size(font::PT12_5)
+                    .color(p.text_0);
                 let words = ui
                     .allocate_ui_with_layout(
                         Vec2::new(ui.available_width() - dismiss_room, 18.0),
@@ -178,13 +183,13 @@ fn band(ui: &mut Ui, message: &Message, language: Language, band: Band) -> bool 
                         "status-dismiss"
                     },
                     || WidgetInfo::labeled(Role::Button, true, &label),
-                    CornerRadius::same(5),
+                    CornerRadius::same(radius::R5),
                 );
                 let close = tooltip(close, &label);
                 if close.hovered() {
                     ui.painter().rect_filled(
                         close.rect,
-                        CornerRadius::same(5),
+                        CornerRadius::same(radius::R5),
                         band.hue.gamma_multiply(0.18),
                     );
                 }

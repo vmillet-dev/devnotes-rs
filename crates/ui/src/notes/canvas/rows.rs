@@ -2,6 +2,7 @@
 //! row at a time — so that only the rows in the viewport are drawn (plan § 3.6). Cards are a
 //! fixed height in a grid of `repeat(auto-fill, minmax(220px, 1fr))`: the rows are uniform.
 
+use crate::theme::tokens::gap;
 use std::ops::Range;
 
 use engine::notes::view::NotesView;
@@ -9,7 +10,7 @@ use engine::notes::view::NotesView;
 const CARD_MIN_WIDTH: f32 = 220.0;
 /// A heading's line, 11 px uppercase, and the 12 px under it.
 pub const HEADING_HEIGHT: f32 = 15.0;
-const HEADING_GAP: f32 = 12.0;
+const HEADING_GAP: f32 = gap::G12;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Row {

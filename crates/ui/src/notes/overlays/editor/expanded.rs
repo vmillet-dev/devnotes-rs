@@ -2,7 +2,8 @@
 //! kind's own action, the body laid out for its kind, the details in a column beside it unless
 //! put away, and the status line along the foot.
 
-use egui::{Align, Layout, Margin, Rect, Stroke, Ui, UiBuilder, Vec2, pos2};
+use crate::theme::tokens::{font, gap};
+use egui::{Align, Layout, Rect, Stroke, Ui, UiBuilder, Vec2, pos2};
 use engine::notes::kind::NoteKind;
 use engine::notes::model::DisplayNote;
 use i18n::keys;
@@ -36,10 +37,10 @@ pub(super) fn show(
     actions: &mut Actions,
 ) -> bool {
     let whole = ui.max_rect();
-    band(ui, Margin::symmetric(20, 8), true, |ui| {
+    band(ui, gap::margin(gap::G20, gap::G8), true, |ui| {
         way_back(ui, state, note, actions);
     });
-    let closed = band(ui, Margin::symmetric(20, 12), true, |ui| {
+    let closed = band(ui, gap::margin(gap::G20, gap::G12), true, |ui| {
         toolbar(ui, state, (session, note), editing, actions)
     });
     // Too narrow for the column, the header's bands hold what it would.
@@ -123,7 +124,7 @@ fn main_column(
         json_view::band(ui, state, session, exploring, layout, whole.width() - 40.0);
     }
     if note.kind.has_language() {
-        band(ui, Margin::symmetric(20, 8), true, |ui| {
+        band(ui, gap::margin(gap::G20, gap::G8), true, |ui| {
             code_strip(ui, state, (session, note), editing, actions);
         });
     }
@@ -186,7 +187,7 @@ fn code_strip(
     actions: &mut Actions,
 ) {
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().item_spacing.x = gap::G6;
         language_menu(ui, state, note, actions);
         format::button(ui, state, (session, note), editing, true, actions);
     });
@@ -219,13 +220,13 @@ fn filled_below(
     let said = area.label(widgets::text(
         &area,
         &heading.to_uppercase(),
-        10.5,
+        font::PT10_5,
         600.0,
         egui::FontFamily::Proportional,
         p.text_2,
     ));
     widgets::address(&area, &said, "editor-filled");
-    area.add_space(8.0);
+    area.add_space(gap::G8);
     if let Some(filled) = state.fill.preview(session) {
         let lines: Vec<&str> = filled.lines().collect();
         widgets::code_viewer(&mut area, "editor-filled", &lines);
@@ -243,7 +244,7 @@ fn toolbar(
     // The band's margins are the panel's: the whole width, as `show` measures it.
     let width = ui.available_width() + 40.0;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             closed = close_button(ui, state);
             expand_button(ui, state, actions);
@@ -253,7 +254,7 @@ fn toolbar(
             pin(ui, state, note, false, actions);
             details_button(ui, state, fits_details(width), actions);
             primary(ui, state, (session, note), editing, actions);
-            ui.add_space(8.0);
+            ui.add_space(gap::G8);
             steps(ui, state, actions);
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                 crate::notes::ui::kind_icon(ui, note.kind, state.language);
@@ -286,7 +287,7 @@ fn primary(
     egui::Popup::menu(&trigger)
         .frame(widgets::menu_frame(ui.ctx()))
         .show(|ui| {
-            ui.spacing_mut().item_spacing.y = 4.0;
+            ui.spacing_mut().item_spacing.y = gap::G4;
             chosen = drawing::exports(ui, state.language);
         });
     if let Some(format) = chosen {
@@ -326,7 +327,7 @@ fn way_back(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut Act
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(state.language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::G10;
         let back = tr(keys::editor::BACK_TO_CARDS);
         if Button::new(&back, "editor-back-to-cards")
             .kind(Kind::Quiet)
@@ -337,13 +338,17 @@ fn way_back(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut Act
             actions.push(editor(Editing::Fullscreen(false)));
         }
         let place = place_of(state, note);
-        let shown = ui.label(egui::RichText::new(&place).size(12.5).color(p.text_2));
+        let shown = ui.label(
+            egui::RichText::new(&place)
+                .size(font::PT12_5)
+                .color(p.text_2),
+        );
         widgets::address(ui, &shown, "editor-breadcrumb");
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let hint = tr(keys::editor::STEP_HINT);
             ui.label(
                 egui::RichText::new(hint)
-                    .size(11.5)
+                    .size(font::PT11_5)
                     .family(egui::FontFamily::Monospace)
                     .color(p.text_2),
             );
@@ -400,7 +405,7 @@ fn steps(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     );
     let shown = ui.label(
         egui::RichText::new(position)
-            .size(12.0)
+            .size(font::PT12)
             .family(egui::FontFamily::Monospace)
             .color(palette(ui.ctx()).text_2),
     );

@@ -2,6 +2,7 @@
 //! or all that the search found, purged for good in two clicks. Ages without a round trip: the
 //! times are worded as it draws.
 
+use crate::theme::tokens::{font, gap, radius};
 use chrono::{DateTime, Utc};
 use egui::{
     CornerRadius, FontFamily, Id, Margin, Rect, Role, Sense, Stroke, StrokeKind, Ui, UiBuilder,
@@ -21,7 +22,7 @@ use crate::widgets::{self, Button, IconButton, Kind, TextField};
 const WIDTH: f32 = 560.0;
 /// Every row as tall: the list draws only those in view.
 const ROW: f32 = 84.0;
-const GAP: f32 = 6.0;
+const GAP: f32 = gap::G6;
 const SNIPPET_LINES: usize = 2;
 
 #[derive(Default)]
@@ -55,7 +56,7 @@ pub(in crate::notes) fn show(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
+        .corner_radius(CornerRadius::same(radius::R14))
         .shadow(p.shadow_overlay)
         .inner_margin(Margin::same(padding));
     let shown = egui::Modal::new(Id::unique("trash-panel"))
@@ -73,11 +74,18 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TrashView, actions: &mut Acti
     let tr = |key| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::G10;
     let closed = ui
         .horizontal(|ui| {
             let title = tr(keys::trash::TITLE);
-            let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+            let words = widgets::text(
+                ui,
+                &title,
+                font::PT15,
+                600.0,
+                FontFamily::Proportional,
+                p.text_0,
+            );
             let room = ui.available_width() - widgets::MIN_TARGET;
             let (rect, _) = ui.allocate_exact_size(vec2(room, words.size().y), Sense::hover());
             ui.painter().galley(rect.min, words, p.text_0);
@@ -121,8 +129,8 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TrashView, actions: &mut Acti
 /// A line of quiet text, read by its name.
 fn say(ui: &mut Ui, words: &str, author_id: &str) {
     let p = palette(ui.ctx());
-    let response =
-        ui.add(egui::Label::new(egui::RichText::new(words).size(12.0).color(p.text_2)).wrap());
+    let response = ui
+        .add(egui::Label::new(egui::RichText::new(words).size(font::PT12).color(p.text_2)).wrap());
     widgets::address(ui, &response, author_id);
 }
 
@@ -149,7 +157,7 @@ fn list(
                 row(ui, state, note, view, actions);
             }
         });
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::G10;
 }
 
 fn row(
@@ -171,7 +179,7 @@ fn row(
     };
     response.widget_info(|| WidgetInfo::labeled(Role::ListItem, true, &title));
     widgets::address(ui, &response, "trash-row");
-    let corner = CornerRadius::same(8);
+    let corner = CornerRadius::same(radius::R8);
     ui.painter().rect(
         rect,
         corner,
@@ -184,7 +192,7 @@ fn row(
     let text = Rect::from_min_max(inner.min, pos2(left - 12.0, inner.bottom()));
     let mut words = ui.new_child(UiBuilder::new().max_rect(text));
     words.set_clip_rect(text.intersect(ui.clip_rect()));
-    words.spacing_mut().item_spacing.y = 4.0;
+    words.spacing_mut().item_spacing.y = gap::G4;
     line(
         &mut words,
         &title,
@@ -241,7 +249,7 @@ fn buttons(
             .max_rect(inner)
             .layout(egui::Layout::right_to_left(egui::Align::Min)),
     );
-    buttons.spacing_mut().item_spacing.x = 6.0;
+    buttons.spacing_mut().item_spacing.x = gap::G6;
     let confirming = view.confirming_purge.as_deref() == Some(id);
     let purge = tr(if confirming {
         keys::trash::PURGE_CONFIRM
@@ -262,7 +270,7 @@ fn buttons(
         }
     }
     // Kept apart from the purge, which it must not look like.
-    buttons.add_space(8.0);
+    buttons.add_space(gap::G8);
     if Button::new(&tr(keys::trash::RESTORE), "trash-restore")
         .show(&mut buttons)
         .clicked()
@@ -344,10 +352,10 @@ fn footer(
     let top = ui.cursor().top();
     ui.painter()
         .hline(ui.max_rect().x_range(), top, Stroke::new(1.0, p.line_soft));
-    ui.add_space(4.0);
+    ui.add_space(gap::G4);
     let count = u32::try_from(count).unwrap_or(u32::MAX);
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         if view.confirming_empty {
             if Button::new(&tr(keys::trash::EMPTY_TRASH_CONFIRM), "trash-empty-confirm")
                 .kind(Kind::Destructive)
@@ -378,8 +386,12 @@ fn footer(
             ui.allocate_ui(vec2(room, 24.0), |ui| {
                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                     let response = ui.add(
-                        egui::Label::new(egui::RichText::new(&warning).size(11.5).color(p.red))
-                            .wrap(),
+                        egui::Label::new(
+                            egui::RichText::new(&warning)
+                                .size(font::PT11_5)
+                                .color(p.red),
+                        )
+                        .wrap(),
                     );
                     response.widget_info(|| WidgetInfo::labeled(Role::Alert, true, &warning));
                     widgets::address(ui, &response, "trash-empty-warning");

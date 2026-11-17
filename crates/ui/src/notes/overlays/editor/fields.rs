@@ -2,6 +2,7 @@
 //! value, how many are filled, and the body shown filled. It folds on its own, and only a note
 //! with fields has one. Values are a draft of the opening, written when a field is left.
 
+use crate::theme::tokens::{font, gap};
 use std::collections::BTreeMap;
 
 use egui::{FontFamily, Margin, Rect, Sense, Stroke, Ui, Vec2};
@@ -96,13 +97,13 @@ pub(super) fn show(
     }
     let open = state.settings.editor_fields_open;
     let values = editing.fields.values(note);
-    let changed = super::band(ui, Margin::symmetric(20, 7), !open, |ui| {
+    let changed = super::band(ui, gap::margin(gap::G20, gap::G7), !open, |ui| {
         let mut changed = false;
         // Sized: a layout of its own would take all the height left.
         let strip = Vec2::new(ui.available_width(), HEAD_HEIGHT);
         let layout = egui::Layout::right_to_left(egui::Align::Center);
         ui.allocate_ui_with_layout(strip, layout, |ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+            ui.spacing_mut().item_spacing.x = gap::G6;
             if open {
                 changed = head_actions(ui, state, (session, note), editing, actions);
             }
@@ -165,7 +166,7 @@ fn toggle(
     let square = Rect::from_center_size(egui::pos2(at + 6.0, middle), Vec2::splat(12.0));
     icons::paint(ui, square, caret, ink);
     let title = i18n::translate(language, keys::placeholders::PANEL_TITLE, &[]);
-    let words = widgets::text(ui, &title, 12.0, 600.0, FontFamily::Proportional, ink);
+    let words = widgets::text(ui, &title, font::PT12, 600.0, FontFamily::Proportional, ink);
     let title_at = egui::pos2(at + 20.0, middle - words.size().y / 2.0);
     let after_title = title_at.x + words.size().x + 8.0;
     ui.painter().galley(title_at, words, ink);
@@ -179,7 +180,14 @@ fn toggle(
         } else {
             p.text_2
         };
-        let words = widgets::text(ui, &verb, 11.0, 400.0, FontFamily::Proportional, colour);
+        let words = widgets::text(
+            ui,
+            &verb,
+            font::PT11,
+            400.0,
+            FontFamily::Proportional,
+            colour,
+        );
         let at = egui::pos2(
             rect.right() - 8.0 - words.size().x,
             middle - words.size().y / 2.0,
@@ -191,7 +199,14 @@ fn toggle(
     let line = summary(values, note, language);
     if let Some(right) = verb {
         let room = Rect::from_x_y_ranges(after_count + 8.0..=right - 8.0, rect.y_range());
-        let words = widgets::text(ui, &line, 11.0, 400.0, FontFamily::Monospace, p.text_2);
+        let words = widgets::text(
+            ui,
+            &line,
+            font::PT11,
+            400.0,
+            FontFamily::Monospace,
+            p.text_2,
+        );
         let at = egui::pos2(room.left(), middle - words.size().y / 2.0);
         ui.painter()
             .with_clip_rect(room)
@@ -226,7 +241,7 @@ fn count(ui: &Ui, (done, total): (usize, usize), left_middle: egui::Pos2) -> f32
     let ink = if complete { p.amber_text } else { p.text_2 };
     let line = if complete { p.amber_dim } else { p.line };
     let words = format!("{done}/{total}");
-    let words = widgets::text(ui, &words, 10.5, 400.0, FontFamily::Monospace, ink);
+    let words = widgets::text(ui, &words, font::PT10_5, 400.0, FontFamily::Monospace, ink);
     let size = words.size() + Vec2::new(16.0, 2.0);
     let pill = Rect::from_min_size(left_middle - Vec2::new(0.0, size.y / 2.0), size);
     let fill = if complete {
@@ -342,7 +357,7 @@ fn body(
         })
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
-            ui.spacing_mut().item_spacing.y = 6.0;
+            ui.spacing_mut().item_spacing.y = gap::G6;
             egui::ScrollArea::vertical()
                 .max_height(tallest)
                 .auto_shrink([false, true])
@@ -355,8 +370,10 @@ fn body(
                     }
                     let hint = i18n::translate(language, keys::placeholders::PANEL_HINT, &[]);
                     ui.add(
-                        egui::Label::new(egui::RichText::new(hint).size(10.5).color(p.text_2))
-                            .wrap(),
+                        egui::Label::new(
+                            egui::RichText::new(hint).size(font::PT10_5).color(p.text_2),
+                        )
+                        .wrap(),
                     );
                 });
         });

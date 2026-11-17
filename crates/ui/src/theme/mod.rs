@@ -5,6 +5,8 @@
 pub mod focus;
 pub mod fonts;
 pub mod icons;
+#[cfg(test)]
+mod literals;
 pub mod motion;
 pub mod tokens;
 

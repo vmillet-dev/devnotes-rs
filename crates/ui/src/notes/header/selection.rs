@@ -3,6 +3,7 @@
 //! not hold in the row waits under « … », the rarest first; its menus are commands, naming what
 //! they do rather than a value chosen.
 
+use crate::theme::tokens::{font, gap};
 use egui::{FontFamily, Role, Sense, Ui, WidgetInfo, vec2};
 use engine::notes::priority::Priority;
 use i18n::keys;
@@ -24,7 +25,7 @@ const LEVELS: [Priority; 5] = [
 
 /// No entry chosen: the menus name what they do.
 const NONE: usize = usize::MAX;
-const GAP: f32 = 8.0;
+const GAP: f32 = gap::G8;
 const TAG_WIDTH: f32 = 120.0;
 
 /// What only the row's drawing sees.
@@ -273,7 +274,7 @@ fn count(ui: &mut Ui, count: usize, language: i18n::Language) {
     let galley = widgets::text(
         ui,
         &words,
-        12.5,
+        font::PT12_5,
         600.0,
         FontFamily::Proportional,
         p.amber_text,

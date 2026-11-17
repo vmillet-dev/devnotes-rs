@@ -1,6 +1,7 @@
 //! A collection's or a folder's variables, auth, headers and transport: what every request under
 //! it inherits. The draft is the state's, written on « Save ».
 
+use crate::theme::tokens::{font, gap};
 use egui::{Align, FontFamily, Layout, Sense, Ui};
 use engine::http::model::{ContainerSettings, HttpItemKind};
 use engine::http::scripts::model::ScriptKind;
@@ -57,7 +58,7 @@ fn body(ui: &mut Ui, state: &AppState, form: &Form, view: &mut DialogView, actio
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::G10;
     let container = &form.container;
     let key = if container.item.kind == HttpItemKind::Folder {
         keys::http::settings::title::FOLDER
@@ -65,13 +66,20 @@ fn body(ui: &mut Ui, state: &AppState, form: &Form, view: &mut DialogView, actio
         keys::http::settings::title::COLLECTION
     };
     let title = i18n::translate(language, key, &[("name", container.name.as_str().into())]);
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+    let words = widgets::text(
+        ui,
+        &title,
+        font::PT15,
+        600.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
     ui.painter().galley(rect.min, words, p.text_0);
     heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
     widgets::address(ui, &heading, "http-settings-dialog");
     let hint = egui::RichText::new(tr(keys::http::settings::HINT))
-        .size(12.5)
+        .size(font::PT12_5)
         .color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
     if let Some(settings) = &form.settings {
@@ -81,14 +89,14 @@ fn body(ui: &mut Ui, state: &AppState, form: &Form, view: &mut DialogView, actio
             .max_height(height)
             .auto_shrink([false, true])
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 10.0;
+                ui.spacing_mut().item_spacing.y = gap::G10;
                 if let Some(settings) = fields(ui, form, settings, view, language) {
                     actions.push(Asked::Http(Action::EditSettings(Box::new(settings))));
                 }
             });
     }
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         if Button::new(&tr(keys::http::editor::SAVE), "http-settings-save")
             .kind(Kind::Filled)
             .enabled(form.settings.is_some())
@@ -110,13 +118,13 @@ fn heading(ui: &mut Ui, words: &str, hint: Option<String>) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
         let title = egui::RichText::new(words)
-            .size(12.5)
+            .size(font::PT12_5)
             .strong()
             .color(p.text_1);
         ui.add(egui::Label::new(title));
         if let Some(hint) = hint {
             let hint = format!("· {hint}");
-            let hint = egui::RichText::new(hint).size(12.0).color(p.text_2);
+            let hint = egui::RichText::new(hint).size(font::PT12).color(p.text_2);
             ui.add(egui::Label::new(hint));
         }
     });

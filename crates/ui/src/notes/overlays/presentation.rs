@@ -6,6 +6,7 @@ mod mind_map;
 #[cfg(test)]
 mod tests;
 
+use crate::theme::tokens::{font, gap};
 use egui::text::LayoutJob;
 use egui::{
     Align2, CornerRadius, FontId, Id, Key, Modifiers, Rect, Sense, TextFormat, Ui, UiBuilder, Vec2,
@@ -230,7 +231,7 @@ fn bar(
     if !bar_ui.rect_contains_pointer(room) {
         bar_ui.set_opacity(0.45);
     }
-    bar_ui.spacing_mut().item_spacing.x = 6.0;
+    bar_ui.spacing_mut().item_spacing.x = gap::G6;
     let closed = IconButton::new(
         Icon::X,
         &tr(keys::presentation::CLOSE),
@@ -265,7 +266,7 @@ fn bar(
         egui::Label::new(
             egui::RichText::new(words)
                 .monospace()
-                .size(12.5)
+                .size(font::PT12_5)
                 .color(p.text_1),
         ),
     );

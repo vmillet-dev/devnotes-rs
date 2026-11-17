@@ -2,6 +2,7 @@
 //! nothing beside one it does not. The note is copied in once: nothing ties the tool to it
 //! afterwards.
 
+use crate::theme::tokens::{font, radius};
 use egui::{CornerRadius, FontFamily, Pos2, Rect, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use i18n::keys;
 
@@ -27,8 +28,15 @@ pub fn note_import_into(
     }
     let p = palette(ui.ctx());
     let words = i18n::translate(drawn.language, keys::tools::from_note::OPEN, &[]);
-    let galley = widgets::text(ui, &words, 11.5, 400.0, FontFamily::Proportional, p.text_1);
-    let corner = CornerRadius::same(7);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::PT11_5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
+    let corner = CornerRadius::same(radius::R7);
     let response = interact(
         ui,
         Vec2::new(galley.size().x + 10.0 + 13.0 + 6.0 + 10.0, 26.0),

@@ -1,5 +1,6 @@
 //! Two texts compared line by line, word by word or character by character.
 
+use crate::theme::tokens::{font, gap};
 use egui::text::LayoutJob;
 use egui::{FontId, Pos2, Rect, Sense, TextFormat, Ui, Vec2};
 use engine::notes::language::Language as NoteLanguage;
@@ -8,7 +9,7 @@ use engine::tools::text_diff::{
 };
 use i18n::{Key, Language, Message, keys};
 
-use super::{Kind, Layout, Mode, ROW, Sides, cell_head, gap, pill, rows_box, split_head};
+use super::{Kind, Layout, Mode, ROW, Sides, absent_side, cell_head, pill, rows_box, split_head};
 use crate::api;
 use crate::theme::palette;
 use crate::tools::live::{Live, Turn};
@@ -31,9 +32,6 @@ const SAMPLE_B: &str = "server {
     ssl_certificate /etc/ssl/devnotes.pem;
 }
 ";
-
-/// Two whole texts: a keystroke is not worth comparing them again.
-const DEBOUNCE: f64 = 0.250;
 
 pub(super) fn fill_sample(sides: &mut Sides) {
     *sides = Sides {
@@ -63,7 +61,7 @@ impl Default for TextDiff {
             whitespace: false,
             case: false,
             endings: true,
-            answer: Live::slower(DEBOUNCE),
+            answer: Live::slower(f64::from(crate::theme::motion::TYPING_HEAVY)),
         }
     }
 }
@@ -158,7 +156,7 @@ impl TextDiff {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = 14.0;
+            ui.spacing_mut().item_spacing.x = gap::G14;
             Segmented::new(&options, "text-diff-granularity").show(ui, &mut self.granularity);
             for (value, key, id) in [
                 (
@@ -187,7 +185,7 @@ impl TextDiff {
 fn inputs(ui: &mut Ui, sides: &mut Sides, drawn: &mut Drawn<'_>) {
     let width = (ui.available_width() - 14.0) / 2.0;
     ui.horizontal_top(|ui| {
-        ui.spacing_mut().item_spacing.x = 14.0;
+        ui.spacing_mut().item_spacing.x = gap::G14;
         for slot in ["a", "b"] {
             ui.allocate_ui(Vec2::new(width, 0.0), |ui| {
                 ui.vertical(|ui| {
@@ -295,7 +293,7 @@ fn counts(
     ];
     let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
+        ui.spacing_mut().item_spacing.x = gap::G12;
         let added = Message::new(added_key(granularity))
             .with("count", answer.added)
             .text(language);
@@ -347,7 +345,7 @@ fn row(ui: &mut Ui, row: &TextDiffRow) {
     for (rect, line, is_right) in [(left, &row.left, false), (right, &row.right, true)] {
         match line {
             Some(line) => cell(ui, rect, kind, is_right, line),
-            None => gap(ui, rect),
+            None => absent_side(ui, rect),
         }
     }
     let p = palette(ui.ctx());
@@ -373,7 +371,7 @@ fn cell(ui: &Ui, rect: Rect, kind: Kind, right: bool, line: &TextDiffLine) {
         };
         let format = TextFormat {
             background,
-            ..TextFormat::simple(FontId::monospace(12.0), ink)
+            ..TextFormat::simple(FontId::monospace(font::PT12), ink)
         };
         job.append(&piece.text, 0.0, format);
     }
@@ -416,7 +414,7 @@ fn unified(ui: &mut Ui, text: &str) {
                 let (tint, ink) = unified_ink(lines[at], ui);
                 ui.painter().rect_filled(rect, 0.0, tint);
                 let family = egui::FontFamily::Monospace;
-                let galley = crate::widgets::text(ui, lines[at], 12.0, 400.0, family, ink);
+                let galley = crate::widgets::text(ui, lines[at], font::PT12, 400.0, family, ink);
                 let at = Pos2::new(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0);
                 ui.painter().with_clip_rect(rect).galley(at, galley, ink);
             });

@@ -2,6 +2,7 @@
 //! What does not pair in the query, and which variables have no value, are Rust's to read and are
 //! said above each box as it is typed: they warn, and stop nothing.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Align, Layout, Ui, Vec2};
 use engine::http::graphql::{GraphqlAnswer, GraphqlDocument, QueryFault, QueryProblem};
 use i18n::keys;
@@ -16,7 +17,7 @@ use crate::state::http::tabs::{DraftEdit, Tab};
 use crate::theme::palette;
 use crate::widgets::{self, Button, Checkbox, ChoiceMenu};
 
-const GAP: f32 = 16.0;
+const GAP: f32 = gap::G16;
 /// Two lines kept whether or not something is said: a line that comes and goes with each brace
 /// typed would push the text being typed.
 const NOTES: f32 = 36.0;
@@ -145,7 +146,7 @@ fn title(ui: &mut Ui, key: i18n::Key, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, key, &[]).to_uppercase();
     let words = egui::RichText::new(words)
-        .size(11.5)
+        .size(font::PT11_5)
         .strong()
         .color(p.text_2);
     ui.add(egui::Label::new(words));
@@ -174,7 +175,7 @@ fn query_head(
     let query = &tab.draft.document.graphql.query;
     let enabled = !query.trim().is_empty() && said.is_none_or(|said| said.query_problem.is_none());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::G10;
         title(ui, keys::http::graphql::QUERY, language);
         let operations = said.map_or(&[][..], |said| said.operations.as_slice());
         if operations.len() > 1 {
@@ -256,7 +257,7 @@ fn query_problem(ui: &mut Ui, problem: &QueryProblem, language: i18n::Language) 
         ),
         i18n::translate(language, fault, &[]),
     );
-    let words = egui::RichText::new(words).size(12.0).color(p.red);
+    let words = egui::RichText::new(words).size(font::PT12).color(p.red);
     let shown = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &shown, "http-graphql-query-problem");
 }
@@ -264,9 +265,9 @@ fn query_problem(ui: &mut Ui, problem: &QueryProblem, language: i18n::Language) 
 /// What is said of the variables; `true` when « Add » was pressed.
 fn variables_notes(ui: &mut Ui, said: Option<&GraphqlAnswer>, language: i18n::Language) -> bool {
     let p = palette(ui.ctx());
-    ui.spacing_mut().item_spacing.y = 4.0;
+    ui.spacing_mut().item_spacing.y = gap::G4;
     let hint = i18n::translate(language, keys::http::graphql::VARIABLES_HINT, &[]);
-    let hint = egui::RichText::new(hint).size(12.0).color(p.text_2);
+    let hint = egui::RichText::new(hint).size(font::PT12).color(p.text_2);
     let shown = ui.add(egui::Label::new(hint).wrap());
     widgets::address(ui, &shown, "http-graphql-variables-hint");
     let Some(said) = said else {
@@ -274,7 +275,7 @@ fn variables_notes(ui: &mut Ui, said: Option<&GraphqlAnswer>, language: i18n::La
     };
     if let Some(problem) = &said.variables_problem {
         let words = egui::RichText::new(invalid(problem, language))
-            .size(12.0)
+            .size(font::PT12)
             .color(p.red);
         let shown = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &shown, "http-graphql-problem");
@@ -305,16 +306,16 @@ fn named(
 ) {
     let p = palette(ui.ctx());
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::new(8.0, 6.0);
+        ui.spacing_mut().item_spacing = Vec2::new(gap::G8, gap::G6);
         let words = egui::RichText::new(i18n::translate(language, heading, &[]))
-            .size(12.0)
+            .size(font::PT12)
             .color(p.amber_text);
         let shown = ui.add(egui::Label::new(words));
         widgets::address(ui, &shown, author_id);
         for name in names {
             let words = egui::RichText::new(name)
                 .monospace()
-                .size(12.0)
+                .size(font::PT12)
                 .color(p.text_0);
             let shown = ui.add(egui::Label::new(words));
             widgets::address(ui, &shown, "http-graphql-variable");
@@ -328,7 +329,7 @@ fn as_get(ui: &mut Ui, tab: &Tab, language: i18n::Language, actions: &mut Action
     let document = &tab.draft.document.graphql;
     let label = i18n::translate(language, keys::http::graphql::AS_GET, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         let mut as_get = document.as_get;
         if Checkbox::new(&mut as_get, &label, "http-graphql-get")
             .show(ui)
@@ -340,7 +341,9 @@ fn as_get(ui: &mut Ui, tab: &Tab, language: i18n::Language, actions: &mut Action
             };
             edit(actions, tab, DraftEdit::Graphql(document));
         }
-        let words = egui::RichText::new(&label).size(12.5).color(p.text_1);
+        let words = egui::RichText::new(&label)
+            .size(font::PT12_5)
+            .color(p.text_1);
         ui.add(egui::Label::new(words));
     });
 }

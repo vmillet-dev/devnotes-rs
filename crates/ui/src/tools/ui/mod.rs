@@ -15,6 +15,7 @@ pub use reference_table::{Cell, Column, Group, ReferenceRow, ReferenceTable};
 pub use result_row::{ResultRow, result_rows};
 pub use text_table::{TextColumn, text_table};
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, FontId, Id, Key, Margin, Modifiers, Response, Role, Sense,
     Stroke, TextEdit, Ui, UiBuilder, Vec2, WidgetInfo,
@@ -28,7 +29,7 @@ use crate::widgets::{self, address};
 const NARROW: f32 = 960.0;
 /// A line of fields: as tall as they are.
 const LINE_HEIGHT: f32 = 34.0;
-const COLUMN_GAP: f32 = 18.0;
+const COLUMN_GAP: f32 = gap::G18;
 /// The results' share against the input's.
 const RESULTS_SHARE: f32 = 1.15;
 
@@ -63,7 +64,7 @@ pub fn columns<T>(
         egui::ScrollArea::vertical()
             .auto_shrink(false)
             .show(&mut column, |ui| {
-                ui.spacing_mut().item_spacing.y = 10.0;
+                ui.spacing_mut().item_spacing.y = gap::G10;
                 part(tool, ui, drawn);
             });
     }
@@ -73,7 +74,14 @@ pub fn columns<T>(
 pub fn section_title(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
     let shown = words.to_uppercase();
-    let galley = widgets::text(ui, &shown, 11.0, 700.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &shown,
+        font::PT11,
+        700.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Heading, true, words));
     ui.painter().galley(rect.min, galley, p.text_2);
@@ -111,7 +119,7 @@ pub fn line<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> R {
     let reading = egui::Layout::left_to_right(egui::Align::Center);
     ui.allocate_ui_with_layout(room, reading, |ui| {
         ui.set_min_height(LINE_HEIGHT);
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::G10;
         add(ui)
     })
     .inner
@@ -123,8 +131,8 @@ pub fn notice(ui: &mut Ui, words: &str, author_id: &str) -> Response {
     let shown = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.amber_edge.gamma_multiply(0.5)))
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::symmetric(14, 10))
+        .corner_radius(CornerRadius::same(radius::R10))
+        .inner_margin(gap::margin(gap::G14, gap::G10))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             paragraph(ui, words, (12.5, 400.0), p.text_1)
@@ -139,12 +147,12 @@ pub fn code_output(ui: &mut Ui, text: &str, author_id: &str) {
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::same(14))
+        .corner_radius(CornerRadius::same(radius::R10))
+        .inner_margin(gap::margin(gap::G14, gap::G14))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             let shown = egui::RichText::new(text)
-                .font(egui::FontId::monospace(12.5))
+                .font(egui::FontId::monospace(font::PT12_5))
                 .color(p.text_0);
             let output = ui.add(egui::Label::new(shown).selectable(true));
             address(ui, &output, author_id);
@@ -177,7 +185,14 @@ pub fn named(language: i18n::Language, prefix: &str, value: &serde_json::Value) 
 /// A checkbox and its label, in the accent.
 pub fn check(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Response {
     let p = palette(ui.ctx());
-    let label = widgets::text(ui, words, 12.0, 400.0, FontFamily::Proportional, p.text_1);
+    let label = widgets::text(
+        ui,
+        words,
+        font::PT12,
+        400.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     let on = *value;
     let response = widgets::interact(
         ui,
@@ -185,7 +200,7 @@ pub fn check(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Res
         Sense::click(),
         author_id,
         || WidgetInfo::selected(Role::CheckBox, true, on, words),
-        CornerRadius::same(4),
+        CornerRadius::same(radius::R4),
     );
     if response.clicked() {
         *value = !*value;
@@ -195,7 +210,7 @@ pub fn check(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Res
         egui::pos2(rect.left(), rect.center().y - 7.0),
         Vec2::splat(14.0),
     );
-    let corner = CornerRadius::same(3);
+    let corner = CornerRadius::same(radius::R3);
     if *value {
         ui.painter().rect_filled(tick, corner, p.amber_fill);
         crate::theme::icons::paint(
@@ -221,7 +236,7 @@ pub fn switch(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Re
     ui.label(widgets::text(
         ui,
         words,
-        12.0,
+        font::PT12,
         400.0,
         FontFamily::Proportional,
         p.text_1,
@@ -232,12 +247,22 @@ pub fn switch(ui: &mut Ui, value: &mut bool, words: &str, author_id: &str) -> Re
 /// A state, at a glance: its words on a tint of its hue.
 pub fn pill(ui: &mut Ui, words: &str, hue: Color32) -> Response {
     let p = palette(ui.ctx());
-    let shown = widgets::text(ui, words, 11.5, 600.0, FontFamily::Proportional, p.text_1);
+    let shown = widgets::text(
+        ui,
+        words,
+        font::PT11_5,
+        600.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     let (rect, response) =
         ui.allocate_exact_size(shown.size() + Vec2::new(16.0, 6.0), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, words));
-    ui.painter()
-        .rect_filled(rect, CornerRadius::same(9), hue.gamma_multiply(0.18));
+    ui.painter().rect_filled(
+        rect,
+        CornerRadius::same(radius::R9),
+        hue.gamma_multiply(0.18),
+    );
     ui.painter()
         .galley(rect.center() - shown.size() / 2.0, shown, p.text_1);
     response
@@ -269,8 +294,8 @@ pub fn text_area(
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, edge))
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::symmetric(14, 12))
+        .corner_radius(CornerRadius::same(radius::R10))
+        .inner_margin(gap::margin(gap::G14, gap::G12))
         .show(ui, |ui| {
             let response = ui.add(
                 TextEdit::multiline(value)
@@ -278,7 +303,7 @@ pub fn text_area(
                     .frame(egui::Frame::new())
                     .hint_text(hint)
                     .text_color(p.text_0)
-                    .font(FontId::new(12.5, FontFamily::Monospace))
+                    .font(FontId::new(font::PT12_5, FontFamily::Monospace))
                     .desired_rows(rows)
                     .desired_width(f32::INFINITY),
             );
@@ -296,7 +321,7 @@ pub fn card<R>(ui: &mut Ui, author_id: &str, rows: impl FnOnce(&mut Ui) -> R) ->
     let shown = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(10))
+        .corner_radius(CornerRadius::same(radius::R10))
         .inner_margin(Margin {
             bottom: 4,
             ..Margin::ZERO
@@ -313,12 +338,12 @@ pub fn card<R>(ui: &mut Ui, author_id: &str, rows: impl FnOnce(&mut Ui) -> R) ->
 /// « For code », « For text »: a label over the rows of a card.
 pub fn group_title(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    ui.add_space(12.0);
+    ui.add_space(gap::G12);
     ui.horizontal(|ui| {
-        ui.add_space(16.0);
+        ui.add_space(gap::G16);
         paragraph(ui, words, (11.5, 500.0), p.text_2);
     });
-    ui.add_space(6.0);
+    ui.add_space(gap::G6);
 }
 
 /// The arrows walk `results` in the order they are read, the first one up being `field`; egui

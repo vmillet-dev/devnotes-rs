@@ -1,5 +1,6 @@
 //! The library's cookie jar: what answers set, by domain, to read and to throw away.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Align, FontFamily, Grid, Layout, Sense, Ui, Vec2};
 use engine::http::cookies::JarCookie;
 use engine::http::cookies::store::{CookieDomain, StoredCookie};
@@ -36,10 +37,10 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::G10;
     head(ui, state, actions);
     let hint = egui::RichText::new(tr(keys::http::cookies::HINT))
-        .size(12.5)
+        .size(font::PT12_5)
         .color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
     let height = ui.ctx().content_rect().height() * 0.6;
@@ -54,7 +55,7 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             }
             if state.http.cookies().domains().is_some() && domains.is_empty() {
                 let words = egui::RichText::new(tr(keys::http::cookies::EMPTY))
-                    .size(12.5)
+                    .size(font::PT12_5)
                     .color(p.text_2);
                 let said = ui.add(egui::Label::new(words));
                 widgets::address(ui, &said, "http-cookies-empty");
@@ -76,13 +77,20 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
         let title = tr(keys::http::cookies::TITLE);
-        let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+        let words = widgets::text(
+            ui,
+            &title,
+            font::PT15,
+            600.0,
+            FontFamily::Proportional,
+            p.text_0,
+        );
         let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
         ui.painter().galley(rect.min, words, p.text_0);
         heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
         widgets::address(ui, &heading, "http-cookies-dialog");
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::G8;
             let word = tr(keys::http::cookies::CLEAR);
             let Some(count) = state.http.cookies().confirming() else {
                 let stored = state
@@ -117,7 +125,9 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
                 keys::http::cookies::CONFIRM,
                 &[("count", count.into())],
             );
-            let question = egui::RichText::new(question).size(12.5).color(p.text_1);
+            let question = egui::RichText::new(question)
+                .size(font::PT12_5)
+                .color(p.text_1);
             let said = ui.add(egui::Label::new(question));
             widgets::address(ui, &said, "http-cookies-clear-count");
         });
@@ -128,10 +138,10 @@ fn section(ui: &mut Ui, domain: &CookieDomain, language: i18n::Language, actions
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::G10;
         let name = egui::RichText::new(&domain.domain)
             .monospace()
-            .size(13.0)
+            .size(font::PT13)
             .color(p.text_0);
         let said = ui.add(egui::Label::new(name));
         widgets::address(ui, &said, "http-cookies-domain");
@@ -142,7 +152,7 @@ fn section(ui: &mut Ui, domain: &CookieDomain, language: i18n::Language, actions
             &[("count", count.into())],
         );
         ui.add(egui::Label::new(
-            egui::RichText::new(count).size(12.0).color(p.text_2),
+            egui::RichText::new(count).size(font::PT12).color(p.text_2),
         ));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let word = tr(keys::http::cookies::REMOVE_DOMAIN);
@@ -167,7 +177,7 @@ fn section(ui: &mut Ui, domain: &CookieDomain, language: i18n::Language, actions
                 keys::http::cookies::FLAGS,
             ] {
                 let words = egui::RichText::new(tr(key))
-                    .size(11.5)
+                    .size(font::PT11_5)
                     .strong()
                     .color(p.text_2);
                 ui.add(egui::Label::new(words));
@@ -177,14 +187,14 @@ fn section(ui: &mut Ui, domain: &CookieDomain, language: i18n::Language, actions
                 row(ui, stored, language, actions);
             }
         });
-    ui.add_space(6.0);
+    ui.add_space(gap::G6);
 }
 
 fn mono(ui: &mut Ui, words: &str, author_id: Option<&str>) {
     let p = palette(ui.ctx());
     let words = egui::RichText::new(words)
         .monospace()
-        .size(12.0)
+        .size(font::PT12)
         .color(p.text_0);
     let shown = ui.add(egui::Label::new(words).truncate());
     if let Some(author_id) = author_id {
@@ -202,11 +212,11 @@ fn row(ui: &mut Ui, stored: &StoredCookie, language: i18n::Language, actions: &m
     });
     mono(ui, &cookie.path, None);
     let expiry = egui::RichText::new(expiry(cookie, language))
-        .size(12.0)
+        .size(font::PT12)
         .color(p.text_1);
     ui.add(egui::Label::new(expiry));
     let flags = egui::RichText::new(flags(cookie, language))
-        .size(11.5)
+        .size(font::PT11_5)
         .color(p.text_2);
     ui.add(egui::Label::new(flags));
     let label = i18n::translate(

@@ -1,6 +1,7 @@
 //! Which environment a request is sent with, at the end of the tabs' strip; none means the
 //! globals alone. The choice is the library's.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Popup, PopupCloseBehavior, RectAlign, Response, Role, Sense,
     Stroke, Ui, Vec2, WidgetInfo, pos2,
@@ -38,7 +39,14 @@ fn dot(ui: &Ui, at: egui::Pos2, hue: Option<Color32>) {
 pub(super) fn width(ui: &Ui, state: &AppState) -> f32 {
     let p = palette(ui.ctx());
     let name = active_name(state);
-    let galley = widgets::text(ui, &name, 12.5, 400.0, FontFamily::Proportional, p.text_1);
+    let galley = widgets::text(
+        ui,
+        &name,
+        font::PT12_5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     galley.size().x + 44.0
 }
 
@@ -67,7 +75,7 @@ fn trigger(ui: &mut Ui, state: &AppState) -> Response {
         &[("name", name.as_str().into())],
     );
     let size = Vec2::new(width(ui, state), HEIGHT);
-    let corner = CornerRadius::same(7);
+    let corner = CornerRadius::same(radius::R7);
     let response = interact(
         ui,
         size,
@@ -90,7 +98,14 @@ fn trigger(ui: &mut Ui, state: &AppState) -> Response {
         .active()
         .map(|active| folder_hue(ui, active.colour));
     dot(ui, pos2(rect.left() + 14.0, rect.center().y), hue);
-    let galley = widgets::text(ui, &name, 12.5, 400.0, FontFamily::Proportional, p.text_1);
+    let galley = widgets::text(
+        ui,
+        &name,
+        font::PT12_5,
+        400.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     let at = pos2(rect.left() + 24.0, rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, p.text_1);
     let caret = egui::Rect::from_center_size(
@@ -106,9 +121,16 @@ fn panel(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(PANEL);
-    ui.spacing_mut().item_spacing.y = 2.0;
+    ui.spacing_mut().item_spacing.y = gap::G2;
     let title = tr(keys::http::environments::ACTIVE_TITLE).to_uppercase();
-    let galley = widgets::text(ui, &title, 10.5, 600.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &title,
+        font::PT10_5,
+        600.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, _) = ui.allocate_exact_size(Vec2::new(PANEL, 22.0), Sense::hover());
     ui.painter()
         .galley(pos2(rect.left() + 10.0, rect.top() + 6.0), galley, p.text_2);
@@ -183,12 +205,12 @@ fn entry_of(ui: &mut Ui, shown: &Entry<'_>, author_id: &str) -> Response {
         Sense::click(),
         author_id,
         || WidgetInfo::selected(Role::MenuItem, true, shown.on, shown.name),
-        CornerRadius::same(6),
+        CornerRadius::same(radius::R6),
     );
     let rect = response.rect;
     if response.hovered() {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(6), p.bg_3);
+            .rect_filled(rect, CornerRadius::same(radius::R6), p.bg_3);
     }
     let middle = rect.center().y;
     if shown.on {
@@ -202,7 +224,7 @@ fn entry_of(ui: &mut Ui, shown: &Entry<'_>, author_id: &str) -> Response {
     let name = widgets::text(
         ui,
         shown.name,
-        12.5,
+        font::PT12_5,
         400.0,
         FontFamily::Proportional,
         p.text_0,
@@ -212,7 +234,7 @@ fn entry_of(ui: &mut Ui, shown: &Entry<'_>, author_id: &str) -> Response {
     let meta = widgets::text(
         ui,
         shown.meta,
-        11.0,
+        font::PT11,
         400.0,
         FontFamily::Proportional,
         p.text_2,

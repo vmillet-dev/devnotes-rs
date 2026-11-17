@@ -16,11 +16,12 @@ mod settings_tests;
 #[cfg(test)]
 mod tests;
 
+use crate::theme::tokens::{font, gap, radius};
 use std::sync::Arc;
 
 use egui::{
-    CornerRadius, FontFamily, FontId, Galley, Margin, Rect, Role, Sense, Stroke, StrokeKind,
-    TextEdit, Ui, Vec2, WidgetInfo, pos2,
+    CornerRadius, FontFamily, FontId, Galley, Rect, Role, Sense, Stroke, StrokeKind, TextEdit, Ui,
+    Vec2, WidgetInfo, pos2,
 };
 use engine::http::model::{HttpMethod, RequestAuth, RequestKind};
 use engine::http::scripts::model::ScriptKind;
@@ -194,9 +195,9 @@ pub(crate) fn show(
         .auto_shrink([false, false])
         .show(ui, |ui| {
             egui::Frame::new()
-                .inner_margin(Margin::symmetric(20, 14))
+                .inner_margin(gap::margin(gap::G20, gap::G14))
                 .show(ui, |ui| {
-                    ui.spacing_mut().item_spacing.y = 12.0;
+                    ui.spacing_mut().item_spacing.y = gap::G12;
                     name(ui, tab, actions, language);
                     line(ui, state, tab, actions);
                     let used = state.http.used();
@@ -255,8 +256,8 @@ fn name(ui: &mut Ui, tab: &Tab, actions: &mut Actions, language: i18n::Language)
         TextEdit::singleline(&mut name)
             .id(ui.scope_id().with(("http-request-name", &tab.key)))
             .frame(egui::Frame::new())
-            .margin(Margin::symmetric(4, 2))
-            .font(FontId::new(16.0, FontFamily::Proportional))
+            .margin(gap::margin(gap::G4, gap::G2))
+            .font(FontId::new(font::PT16, FontFamily::Proportional))
             .text_color(p.text_0)
             .desired_width(f32::INFINITY),
     );
@@ -281,7 +282,7 @@ fn line(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::G10;
         if tab.draft.kind == RequestKind::Http {
             let options: Vec<(HttpMethod, &str)> = HttpMethod::ALL
                 .iter()
@@ -426,12 +427,19 @@ fn kind_badge(ui: &mut Ui, kind: RequestKind, language: i18n::Language) {
         RequestKind::Http | RequestKind::Websocket => keys::http::kinds::badge::WEBSOCKET,
     };
     let words = i18n::translate(language, key, &[]);
-    let galley = widgets::text(ui, &words, 12.0, 700.0, FontFamily::Monospace, p.text_1);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::PT12,
+        700.0,
+        FontFamily::Monospace,
+        p.text_1,
+    );
     let size = Vec2::new(galley.size().x + 24.0, url::HEIGHT);
     let (rect, response) = ui.allocate_exact_size(size, Sense::hover());
     ui.painter().rect(
         rect,
-        CornerRadius::same(8),
+        CornerRadius::same(radius::R8),
         p.bg_2,
         Stroke::new(1.0, p.line),
         StrokeKind::Inside,
@@ -448,12 +456,12 @@ fn chips(ui: &mut Ui, state: &AppState, used: &[UsedVariable], actions: &mut Act
     let p = palette(ui.ctx());
     let language = state.language;
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        ui.spacing_mut().item_spacing = Vec2::splat(gap::G6);
         for known in used {
             let scope = known.resolved.as_ref().map(|found| found.scope);
             let hue = url::hue(p, scope);
             let written = format!("{{{{{}}}}}", known.name);
-            let galley = widgets::text(ui, &written, 12.0, 400.0, FontFamily::Monospace, hue);
+            let galley = widgets::text(ui, &written, font::PT12, 400.0, FontFamily::Monospace, hue);
             let size = galley.size() + Vec2::new(16.0, 8.0);
             let response = interact(
                 ui,
@@ -461,11 +469,14 @@ fn chips(ui: &mut Ui, state: &AppState, used: &[UsedVariable], actions: &mut Act
                 Sense::click(),
                 "http-used-variable",
                 || WidgetInfo::labeled(Role::Label, true, &written),
-                CornerRadius::same(6),
+                CornerRadius::same(radius::R6),
             );
             let rect = response.rect;
-            ui.painter()
-                .rect_filled(rect, CornerRadius::same(6), hue.gamma_multiply(0.16));
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(radius::R6),
+                hue.gamma_multiply(0.16),
+            );
             ui.painter()
                 .galley(rect.center() - galley.size() / 2.0, galley, hue);
             let tip = match &known.resolved {
@@ -569,12 +580,14 @@ pub(super) fn protected_question(
     egui::Frame::new()
         .fill(p.red.gamma_multiply(0.12))
         .stroke(Stroke::new(1.0, p.red.gamma_multiply(0.5)))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::symmetric(12, 8))
+        .corner_radius(CornerRadius::same(radius::R8))
+        .inner_margin(gap::margin(gap::G12, gap::G8))
         .show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0;
-                let words = egui::RichText::new(question).size(12.5).color(p.text_0);
+                ui.spacing_mut().item_spacing.x = gap::G10;
+                let words = egui::RichText::new(question)
+                    .size(font::PT12_5)
+                    .color(p.text_0);
                 let said = ui.add(egui::Label::new(words));
                 widgets::address(ui, &said, said_id);
                 if Button::new(go, go_id)
@@ -604,7 +617,7 @@ fn section_tabs(ui: &mut Ui, state: &AppState, tab: &Tab, view: &mut EditorView)
         .collect();
     let (shown, hidden) = fitting(all, &widths, current, ui.available_width());
     let row = ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
+        ui.spacing_mut().item_spacing.x = gap::G4;
         for section in &shown {
             if section_tab(ui, state, tab, *section, *section == current) {
                 view.chosen = *section;
@@ -667,7 +680,7 @@ fn tab_width(ui: &Ui, state: &AppState, tab: &Tab, section: Section) -> f32 {
     let galley = widgets::text(
         ui,
         &words,
-        13.0,
+        font::PT13,
         500.0,
         FontFamily::Proportional,
         egui::Color32::WHITE,
@@ -681,7 +694,7 @@ fn section_tab(ui: &mut Ui, state: &AppState, tab: &Tab, section: Section, on: b
     let p = palette(ui.ctx());
     let words = i18n::translate(state.language, section.name(), &[]);
     let ink = if on { p.text_0 } else { p.text_1 };
-    let galley = widgets::text(ui, &words, 13.0, 500.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, &words, font::PT13, 500.0, FontFamily::Proportional, ink);
     let mark = mark(ui, state, tab, section);
     let extra = mark
         .as_ref()
@@ -773,7 +786,7 @@ fn mark(
     } else {
         return None;
     };
-    let galley = widgets::text(ui, &words, 11.0, 600.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, &words, font::PT11, 600.0, FontFamily::Proportional, ink);
     Some((galley, author_id))
 }
 
@@ -954,26 +967,28 @@ fn headers(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
 fn implied_list(ui: &mut Ui, implied: &[ImpliedHeader], language: i18n::Language) {
     let p = palette(ui.ctx());
     let title = i18n::translate(language, keys::http::headers::IMPLIED, &[]);
-    let words = egui::RichText::new(&title).size(11.5).color(p.text_2);
+    let words = egui::RichText::new(&title)
+        .size(font::PT11_5)
+        .color(p.text_2);
     ui.add(egui::Label::new(words));
     let list = ui.vertical(|ui| {
-        ui.spacing_mut().item_spacing.y = 4.0;
+        ui.spacing_mut().item_spacing.y = gap::G4;
         for header in implied {
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0;
+                ui.spacing_mut().item_spacing.x = gap::G10;
                 let name = egui::RichText::new(&header.name)
                     .monospace()
-                    .size(12.0)
+                    .size(font::PT12)
                     .color(p.text_1);
                 ui.add(egui::Label::new(name));
                 let value = egui::RichText::new(&header.value)
                     .monospace()
-                    .size(12.0)
+                    .size(font::PT12)
                     .color(p.text_0);
                 let said = ui.add(egui::Label::new(value).truncate());
                 widgets::address(ui, &said, "http-implied-value");
                 let from = egui::RichText::new(origin(header, language))
-                    .size(11.5)
+                    .size(font::PT11_5)
                     .color(p.text_2);
                 ui.add(egui::Label::new(from));
             });

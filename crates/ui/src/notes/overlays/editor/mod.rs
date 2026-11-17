@@ -20,6 +20,7 @@ mod revisions;
 mod rich;
 mod search_bar;
 
+use crate::theme::tokens::{font, gap};
 use std::sync::Arc;
 
 use egui::{Align, CornerRadius, Id, Layout, Margin, Rect, Stroke, Ui, UiBuilder, Vec2};
@@ -214,7 +215,7 @@ fn panel(
     if state.settings.editor_fullscreen {
         return expanded::show(ui, state, (session, note), (editing, layout), actions);
     }
-    let closed = band(ui, Margin::symmetric(20, 12), true, |ui| {
+    let closed = band(ui, gap::margin(gap::G20, gap::G12), true, |ui| {
         toolbar(ui, state, (session, note), editing, actions)
     });
     header(ui, state, (session, note), editing, actions);
@@ -263,7 +264,7 @@ fn header(
     actions: &mut Actions,
 ) {
     if state.settings.editor_header_folded {
-        band(ui, Margin::symmetric(20, 8), true, |ui| {
+        band(ui, gap::margin(gap::G20, gap::G8), true, |ui| {
             header::summary(ui, state, note, actions);
         });
     } else {
@@ -431,7 +432,7 @@ fn toolbar(
     }
     let mut closed = false;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::G8;
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             closed = close_button(ui, state);
             expand_button(ui, state, actions);
@@ -469,19 +470,19 @@ fn compact_toolbar(
 ) -> bool {
     let mut closed = false;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
+        ui.spacing_mut().item_spacing.x = gap::G4;
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             closed = close_button(ui, state);
             expand_button(ui, state, actions);
-            ui.add_space(6.0);
+            ui.add_space(gap::G6);
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                 title(ui, state, (session, note), editing, actions);
             });
         });
     });
-    ui.add_space(10.0);
+    ui.add_space(gap::G10);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().item_spacing.x = gap::G6;
         if note.kind.has_language() {
             language_menu(ui, state, note, actions);
             format::button(ui, state, (session, note), editing, false, actions);
@@ -575,7 +576,7 @@ fn more_menu(
         .frame(widgets::menu_frame(ui.ctx()))
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
-            ui.spacing_mut().item_spacing.y = 4.0;
+            ui.spacing_mut().item_spacing.y = gap::G4;
             if foldable {
                 fold_button(ui, state, (session, note), editing, actions, true);
             }
@@ -603,7 +604,10 @@ fn title(
             .margin(Margin::ZERO)
             .hint_text(untitled)
             .text_color(p.text_0)
-            .font(egui::FontId::new(16.0, egui::FontFamily::Proportional))
+            .font(egui::FontId::new(
+                font::PT16,
+                egui::FontFamily::Proportional,
+            ))
             .desired_width(ui.available_width().max(120.0)),
     );
     ui.ctx()
@@ -835,7 +839,7 @@ fn footer(ui: &mut Ui, state: &AppState, note: &DisplayNote, editing: &EditorVie
         let galley = widgets::text(
             ui,
             &counted,
-            11.0,
+            font::PT11,
             400.0,
             egui::FontFamily::Monospace,
             p.text_2,
@@ -847,7 +851,7 @@ fn footer(ui: &mut Ui, state: &AppState, note: &DisplayNote, editing: &EditorVie
                 let galley = widgets::text(
                     ui,
                     &modified,
-                    11.0,
+                    font::PT11,
                     400.0,
                     egui::FontFamily::Monospace,
                     p.text_2,

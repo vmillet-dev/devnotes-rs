@@ -1,6 +1,7 @@
 //! A text in every case, and its slug.
 
-use egui::{CornerRadius, Margin, Stroke, Ui};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{CornerRadius, Stroke, Ui};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::text::{
     CaseAnswer, CaseGroup, CaseRequest, SlugOptions, SlugSeparator, TextCase, TitleLanguage,
@@ -101,7 +102,7 @@ impl CaseTool {
             3,
         );
         self.words(ui, drawn.language);
-        ui.add_space(8.0);
+        ui.add_space(gap::G8);
         section_title(ui, &tr(keys::tools::case::OPTIONS));
         let words = tr(keys::tools::case::STRIP_ACCENTS);
         check(ui, &mut self.strip_accents, &words, "case-strip-accents");
@@ -129,16 +130,16 @@ impl CaseTool {
             &i18n::translate(language, keys::tools::case::WORDS, &[]),
         );
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = egui::Vec2::splat(6.0);
+            ui.spacing_mut().item_spacing = egui::Vec2::splat(gap::G6);
             for word in &answer.words {
                 egui::Frame::new()
                     .fill(p.bg_2)
                     .stroke(Stroke::new(1.0, p.line_soft))
-                    .corner_radius(CornerRadius::same(6))
-                    .inner_margin(Margin::symmetric(8, 2))
+                    .corner_radius(CornerRadius::same(radius::R6))
+                    .inner_margin(gap::margin(gap::G8, gap::G2))
                     .show(ui, |ui| {
                         let text = egui::RichText::new(word)
-                            .font(egui::FontId::monospace(11.5))
+                            .font(egui::FontId::monospace(font::PT11_5))
                             .color(p.text_0);
                         ui.label(text);
                     });
@@ -159,7 +160,7 @@ impl CaseTool {
         ];
         let separators = separators.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 12.0;
+            ui.spacing_mut().item_spacing.x = gap::G12;
             Segmented::new(&separators, "case-slug-separator").show(ui, &mut self.separator);
             let words = tr(keys::tools::case::LOWERCASE);
             check(ui, &mut self.lowercase, &words, "case-slug-lowercase");
@@ -205,8 +206,8 @@ fn acronyms(ui: &mut Ui, language: Language) {
     egui::Frame::new()
         .fill(p.amber_fill.gamma_multiply(0.06))
         .stroke(Stroke::new(1.0, p.amber_dim))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::symmetric(12, 10))
+        .corner_radius(CornerRadius::same(radius::R8))
+        .inner_margin(gap::margin(gap::G12, gap::G10))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             let words = format!(

@@ -1,6 +1,7 @@
 //! An instant in every form, the gap between two dates, an ISO 8601 duration. Every reading and
 //! every form is Rust's; how long ago is the page's, so it ages without a round trip.
 
+use crate::theme::tokens::gap;
 use chrono::{DateTime, Datelike, Local, NaiveDate, TimeZone, Utc};
 use egui::Ui;
 use engine::notes::language::Language as NoteLanguage;
@@ -261,7 +262,7 @@ impl DatesTool {
         let tr = |key| i18n::translate(language, key, &[]);
         let name = tr(keys::tools::dates::INPUT_LABEL);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::G8;
             let room = ui.available_width() - 90.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -359,12 +360,12 @@ impl DatesTool {
             .text(language);
         let groups = groups_of(forms, now, language);
         card(ui, "dates-forms", |ui| {
-            ui.add_space(12.0);
+            ui.add_space(gap::G12);
             ui.horizontal(|ui| {
-                ui.add_space(16.0);
+                ui.add_space(gap::G16);
                 let said = paragraph(ui, &heading, (14.0, 600.0), p.text_0);
                 address(ui, &said, "dates-heading");
-                ui.add_space(12.0);
+                ui.add_space(gap::G12);
                 paragraph(ui, &zone, (11.5, 400.0), p.text_2);
             });
             for (group, rows) in &groups {
@@ -402,7 +403,7 @@ impl DatesTool {
         let to = tr(keys::tools::dates::fields::TO);
         label(ui, &to);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::G8;
             let room = ui.available_width() - 90.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -478,13 +479,13 @@ impl DatesTool {
                     .collect();
                 let iso_name = said(language, "tools.dates.totals.iso", &[]);
                 card(ui, "dates-duration-read", |ui| {
-                    ui.add_space(12.0);
+                    ui.add_space(gap::G12);
                     ui.horizontal(|ui| {
-                        ui.add_space(16.0);
+                        ui.add_space(gap::G16);
                         let shown = paragraph(ui, &words, (14.0, 600.0), p.text_0);
                         address(ui, &shown, "dates-duration-words");
                     });
-                    ui.add_space(8.0);
+                    ui.add_space(gap::G8);
                     let mut rows = Vec::new();
                     if *from_words {
                         rows.push(ResultRow::new(&iso_name, iso));
@@ -641,9 +642,9 @@ fn measured(ui: &mut Ui, answer: &DurationsAnswer, language: Language) {
         .map(|(id, _)| said(language, &format!("tools.dates.elapsedRows.{id}"), &[]));
     let words = spell_calendar(calendar, *negative, language);
     card(ui, "dates-gap", |ui| {
-        ui.add_space(12.0);
+        ui.add_space(gap::G12);
         ui.horizontal(|ui| {
-            ui.add_space(16.0);
+            ui.add_space(gap::G16);
             let shown = paragraph(ui, &words, (14.0, 600.0), p.text_0);
             address(ui, &shown, "dates-gap-calendar");
         });
@@ -715,14 +716,14 @@ impl Tool for DatesTool {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         Segmented::new(&options, "dates-tab").show(ui, &mut self.tab);
-        ui.add_space(12.0);
+        ui.add_space(gap::G12);
         match self.tab {
             Tab::Convert => {
                 egui::ScrollArea::vertical()
                     .id_salt("dates-convert")
                     .auto_shrink(false)
                     .show(ui, |ui| {
-                        ui.spacing_mut().item_spacing.y = 10.0;
+                        ui.spacing_mut().item_spacing.y = gap::G10;
                         self.convert(ui, drawn);
                     });
             }

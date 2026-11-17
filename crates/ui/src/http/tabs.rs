@@ -1,6 +1,7 @@
 //! One tab an open request: its method and name, a dot while modified, a × to close. The bar ends
 //! with « New request », an HTTP request in one click and the other kinds in two.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, RectAlign, Response, Role,
     Sense, Stroke, Ui, Vec2, WidgetInfo, pos2,
@@ -97,7 +98,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
     new_request(&mut end_ui, actions, language);
-    end_ui.add_space(8.0);
+    end_ui.add_space(gap::G8);
     super::environment_picker::show(&mut end_ui, state, actions);
 }
 
@@ -109,7 +110,7 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
     let method = widgets::text(
         ui,
         badge.short(),
-        10.5,
+        font::PT10_5,
         700.0,
         FontFamily::Monospace,
         Color32::WHITE,
@@ -117,7 +118,7 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
     let words = widgets::text(
         ui,
         name,
-        13.0,
+        font::PT13,
         400.0,
         FontFamily::Proportional,
         Color32::WHITE,
@@ -146,7 +147,7 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
         &[("name", name.as_str().into())],
     );
     let close = close_button(ui, &close_label);
-    ui.add_space(6.0);
+    ui.add_space(gap::G6);
     let whole = open.rect.union(close.rect);
     let whole = Rect::from_min_max(whole.min, pos2(whole.max.x + 6.0, whole.max.y));
     if active {
@@ -166,14 +167,21 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
     let middle = open.rect.center().y;
     let mut left = open.rect.left() + 14.0;
     let hue = badge_hue(ui, badge);
-    let method = widgets::text(ui, badge.short(), 10.5, 700.0, FontFamily::Monospace, hue);
+    let method = widgets::text(
+        ui,
+        badge.short(),
+        font::PT10_5,
+        700.0,
+        FontFamily::Monospace,
+        hue,
+    );
     let method_width = method.size().x;
     ui.painter()
         .galley(pos2(left, middle - method.size().y / 2.0), method, hue);
     left += method_width + 8.0;
     let ink = if active { p.text_0 } else { p.text_1 };
     let room = open.rect.right() - 4.0 - dot - left;
-    let words = widgets::one_line(ui, name, (13.0, 400.0), ink, room);
+    let words = widgets::one_line(ui, name, (font::PT13, 400.0), ink, room);
     let words_width = words.size().x;
     ui.painter()
         .galley(pos2(left, middle - words.size().y / 2.0), words, ink);
@@ -206,7 +214,7 @@ fn close_button(ui: &mut Ui, label: &str) -> Response {
         Sense::click(),
         "http-tab-close",
         || WidgetInfo::labeled(Role::Button, true, label),
-        CornerRadius::same(5),
+        CornerRadius::same(radius::R5),
     )
 }
 
@@ -215,7 +223,7 @@ fn close_glyph(ui: &Ui, close: &Response) {
     let square = Rect::from_center_size(close.rect.center(), Vec2::splat(widgets::MIN_TARGET));
     let ink = if close.hovered() {
         ui.painter()
-            .rect_filled(square, CornerRadius::same(5), p.bg_3);
+            .rect_filled(square, CornerRadius::same(radius::R5), p.bg_3);
         p.text_0
     } else {
         p.text_2
@@ -249,10 +257,17 @@ fn new_request(ui: &mut Ui, actions: &mut Actions, language: i18n::Language) {
         .close_behavior(PopupCloseBehavior::CloseOnClick)
         .show(|ui| {
             ui.set_width(300.0);
-            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.spacing_mut().item_spacing.y = gap::G2;
             let p = palette(ui.ctx());
             let title = tr(keys::http::kinds::MENU_TITLE).to_uppercase();
-            let galley = widgets::text(ui, &title, 10.5, 600.0, FontFamily::Proportional, p.text_2);
+            let galley = widgets::text(
+                ui,
+                &title,
+                font::PT10_5,
+                600.0,
+                FontFamily::Proportional,
+                p.text_2,
+            );
             let (rect, _) =
                 ui.allocate_exact_size(Vec2::new(galley.size().x, 22.0), Sense::hover());
             ui.painter()
@@ -308,7 +323,7 @@ fn kind_item(ui: &mut Ui, kind: RequestKind, id: &str, language: i18n::Language)
     let line = i18n::Key::find(&format!("http.kinds.lines.{id}"))
         .map(|key| i18n::translate(language, key, &[]))
         .unwrap_or_default();
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::R6);
     let response = interact(
         ui,
         Vec2::new(ui.available_width(), 44.0),
@@ -327,20 +342,34 @@ fn kind_item(ui: &mut Ui, kind: RequestKind, id: &str, language: i18n::Language)
         RequestKind::Websocket => Badge::Websocket,
     };
     let hue = badge_hue(ui, badge);
-    let glyph = widgets::text(ui, badge.short(), 10.5, 700.0, FontFamily::Monospace, hue);
+    let glyph = widgets::text(
+        ui,
+        badge.short(),
+        font::PT10_5,
+        700.0,
+        FontFamily::Monospace,
+        hue,
+    );
     ui.painter().galley(
         pos2(rect.left() + 10.0, rect.center().y - glyph.size().y / 2.0),
         glyph,
         hue,
     );
     let left = rect.left() + 54.0;
-    let name = widgets::text(ui, &name, 12.5, 600.0, FontFamily::Proportional, p.text_0);
+    let name = widgets::text(
+        ui,
+        &name,
+        font::PT12_5,
+        600.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     ui.painter()
         .galley(pos2(left, rect.top() + 6.0), name, p.text_0);
     let line = widgets::one_line(
         ui,
         &line,
-        (11.0, 400.0),
+        (font::PT11, 400.0),
         p.text_2,
         rect.right() - 10.0 - left,
     );

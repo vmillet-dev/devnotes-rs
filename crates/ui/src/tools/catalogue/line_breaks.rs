@@ -2,12 +2,11 @@
 //! every CRLF of a paste into LF, the very thing this tool is asked about. A paste is read raw
 //! from the clipboard, and the text drawn with its endings.
 
+use crate::theme::tokens::{font, gap, radius};
 use std::sync::Arc;
 
 use egui::text::LayoutJob;
-use egui::{
-    CornerRadius, Event, FontId, Margin, Role, Sense, Stroke, TextFormat, Ui, Vec2, WidgetInfo,
-};
+use egui::{CornerRadius, Event, FontId, Role, Sense, Stroke, TextFormat, Ui, Vec2, WidgetInfo};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::text::{
     FinalNewline, FinalNewlineChange, LineBreaksAnswer, LineBreaksRequest, LineEnding,
@@ -125,7 +124,7 @@ fn line_view(ui: &mut Ui, text: &str, author_id: &str, language: Language) {
     let p = palette(ui.ctx());
     let (lines, hidden) = visible_lines(text);
     let mut job = LayoutJob::default();
-    let plain = TextFormat::simple(FontId::monospace(12.5), p.text_0);
+    let plain = TextFormat::simple(FontId::monospace(font::PT12_5), p.text_0);
     for line in &lines {
         job.append(line.content, 0.0, plain.clone());
         let blank = TextFormat {
@@ -139,7 +138,7 @@ fn line_view(ui: &mut Ui, text: &str, author_id: &str, language: Language) {
                 LineEnding::Crlf => p.blue,
                 LineEnding::Cr => p.purple,
             };
-            let mark = TextFormat::simple(FontId::monospace(10.0), ink);
+            let mark = TextFormat::simple(FontId::monospace(font::PT10), ink);
             job.append(ending_mark(ending), 3.0, mark);
         }
         job.append("\n", 0.0, plain.clone());
@@ -162,8 +161,8 @@ fn text_box(ui: &mut Ui, id: &str, content: impl FnOnce(&mut Ui)) {
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::symmetric(14, 12))
+        .corner_radius(CornerRadius::same(radius::R10))
+        .inner_margin(gap::margin(gap::G14, gap::G12))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.set_min_height(ZONE_MIN);
@@ -223,7 +222,7 @@ impl LineBreaksTool {
             Sense::click(),
             "line-breaks-input",
             || WidgetInfo::labeled(Role::TextInput, true, &name),
-            CornerRadius::same(10),
+            CornerRadius::same(radius::R10),
         );
         if zone.clicked() {
             zone.request_focus();
@@ -250,7 +249,7 @@ impl LineBreaksTool {
         let words = format!("LF {}   CRLF {}   CR {}", found.lf, found.crlf, found.cr);
         let kinds = [found.lf, found.crlf, found.cr];
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.spacing_mut().item_spacing.x = gap::G10;
             let said = hint(ui, &words);
             address(ui, &said, "line-breaks-found");
             if kinds.iter().filter(|count| **count > 0).count() > 1 {

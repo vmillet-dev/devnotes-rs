@@ -1,6 +1,7 @@
 //! What can run to thousands of rows: drawn only where the viewport is (plan § 3.6), over rows
 //! of one height. The code viewer is one of them, a line a row.
 
+use crate::theme::tokens::{font, radius};
 use egui::{Color32, FontFamily, Rect, Ui, Vec2};
 
 use super::text;
@@ -32,7 +33,7 @@ pub fn code_viewer(ui: &mut Ui, id: &str, lines: &[&str]) {
     let gutter = text(
         ui,
         &"8".repeat(digits as usize),
-        12.5,
+        font::PT12_5,
         400.0,
         FontFamily::Monospace,
         p.line_no,
@@ -41,7 +42,7 @@ pub fn code_viewer(ui: &mut Ui, id: &str, lines: &[&str]) {
     .x + 16.0;
     egui::Frame::new()
         .fill(p.bg_1)
-        .corner_radius(egui::CornerRadius::same(8))
+        .corner_radius(egui::CornerRadius::same(radius::R8))
         .show(ui, |ui| {
             virtual_list(ui, id, ROW, lines.len(), |ui, index| {
                 let (rect, _) = ui.allocate_exact_size(
@@ -51,7 +52,7 @@ pub fn code_viewer(ui: &mut Ui, id: &str, lines: &[&str]) {
                 let number = text(
                     ui,
                     &(index + 1).to_string(),
-                    12.5,
+                    font::PT12_5,
                     400.0,
                     FontFamily::Monospace,
                     p.line_no,
@@ -64,7 +65,7 @@ pub fn code_viewer(ui: &mut Ui, id: &str, lines: &[&str]) {
                 let code = text(
                     ui,
                     lines[index],
-                    12.5,
+                    font::PT12_5,
                     400.0,
                     FontFamily::Monospace,
                     p.text_0,
