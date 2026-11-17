@@ -417,12 +417,12 @@ pub fn describe_body(
     body: RequestBody,
     method: HttpMethod,
 ) -> Pending<BodyAnswer> {
-    backend.spawn(move |_| http::describe_http_body(body, method))
+    backend.compute(move |_| http::describe_http_body(body, method))
 }
 
 /// The operations a GraphQL document names, and what its variables lack.
 pub fn describe_graphql(backend: &Backend, document: GraphqlDocument) -> Pending<GraphqlAnswer> {
-    backend.spawn(move |_| http::describe_graphql(document))
+    backend.compute(move |_| http::describe_graphql(document))
 }
 
 /// The variables with a `null` for each one the operation declares and they lack.
@@ -430,7 +430,7 @@ pub fn add_graphql_variables(
     backend: &Backend,
     document: GraphqlDocument,
 ) -> Pending<Option<String>> {
-    backend.spawn(move |_| async move { http::add_graphql_variables(document).await.map(Some) })
+    backend.compute(move |_| http::add_graphql_variables(document).map(Some))
 }
 
 /// Prettier's, as for a snippet: JSON, or a GraphQL query. `None` when it changed nothing or

@@ -136,17 +136,14 @@ pub fn detect_language(content: String) -> Language {
 
 /// A Note cut into slides, with the mind map of its headings: what « Présenter » shows. The
 /// draft is sent rather than the stored body, so what is presented is what is on screen.
-pub async fn present_note(markdown: String) -> Result<model::Presentation, AppError> {
-    crate::tools::off_thread(move || markdown::present(&markdown)).await
+pub fn present_note(markdown: String) -> Result<model::Presentation, AppError> {
+    Ok(markdown::present(&markdown))
 }
 
 /// A Calcul note's sheet, every line computed, as it is typed: no lock, and nothing stored.
 /// `today` is the local day of the window, as the notes' sections reckon it.
-pub async fn evaluate_calc(
-    sheet: String,
-    today: chrono::NaiveDate,
-) -> Result<calc::CalcSheet, AppError> {
-    crate::tools::off_thread(move || calc::evaluate(&sheet, today)).await
+pub fn evaluate_calc(sheet: String, today: chrono::NaiveDate) -> Result<calc::CalcSheet, AppError> {
+    Ok(calc::evaluate(&sheet, today))
 }
 
 /// Where the fields of a text lie, for the code field to mark them: what a field is stays here.

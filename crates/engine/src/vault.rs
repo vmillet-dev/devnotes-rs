@@ -21,8 +21,8 @@ use key::Cost;
 /// to days on one GPU, not years. `u32` because it crosses as `MINIMUM_PASSPHRASE_LENGTH`.
 pub const MINIMUM_LENGTH: u32 = 12;
 
-/// Wipes a passphrase when it is dropped, a panic included. It arrives owned from the IPC
-/// payload and is wrapped at once, so the last copy is this one: freed memory ends up in crash
+/// Wipes a passphrase when it is dropped, a panic included. It arrives owned from the gate's
+/// field and is wrapped at once, so the last copy is this one: freed memory ends up in crash
 /// dumps.
 pub fn secret<S: Zeroize>(value: S) -> Zeroizing<S> {
     Zeroizing::new(value)

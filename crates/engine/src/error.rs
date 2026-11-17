@@ -114,8 +114,8 @@ impl<T, E: std::fmt::Display> FileContext<T> for Result<T, E> {
     }
 }
 
-/// ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
-/// (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
+/// A new variant does not compile until the interface's exhaustive `match`
+/// (`ui::services::errors`) and both locales have its key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ErrorCode {

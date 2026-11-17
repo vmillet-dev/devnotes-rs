@@ -286,18 +286,12 @@ fn key_caps(ui: &Ui, keys: &str, right: f32, middle: f32) {
 
 /// The canvas key each kind answers to (`canvas::shortcuts::CANVAS`).
 pub(crate) fn shortcut(kind: NoteKind) -> &'static str {
-    let mac = cfg!(target_os = "macos");
-    match (kind, mac) {
-        (NoteKind::Snippet, false) => "Ctrl+N",
-        (NoteKind::Note, false) => "Ctrl+Shift+N",
-        (NoteKind::Checklist, false) => "Ctrl+Shift+L",
-        (NoteKind::Calc, false) => "Ctrl+Shift+M",
-        (NoteKind::Drawing, false) => "Ctrl+Shift+D",
-        (NoteKind::Snippet, true) => "⌘N",
-        (NoteKind::Note, true) => "⌘⇧N",
-        (NoteKind::Checklist, true) => "⌘⇧L",
-        (NoteKind::Calc, true) => "⌘⇧M",
-        (NoteKind::Drawing, true) => "⌘⇧D",
+    match kind {
+        NoteKind::Snippet => "Ctrl+N",
+        NoteKind::Note => "Ctrl+Shift+N",
+        NoteKind::Checklist => "Ctrl+Shift+L",
+        NoteKind::Calc => "Ctrl+Shift+M",
+        NoteKind::Drawing => "Ctrl+Shift+D",
     }
 }
 

@@ -3,19 +3,12 @@
 
 use diesel::migration::MigrationSource;
 use diesel::prelude::*;
-use diesel::sql_types::Integer;
 use diesel::sqlite::Sqlite;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 
 use crate::error::StorageError;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
-
-#[derive(QueryableByName)]
-struct UserVersion {
-    #[diesel(sql_type = Integer)]
-    user_version: i32,
-}
 
 fn embedded_versions() -> Result<Vec<String>, StorageError> {
     let mut versions = MigrationSource::<Sqlite>::migrations(&MIGRATIONS)
@@ -28,27 +21,7 @@ fn embedded_versions() -> Result<Vec<String>, StorageError> {
     Ok(versions)
 }
 
-/// 0.1.0 versioned its schema with `PRAGMA user_version` rather than Diesel's table, and
-/// replaying the migrations over it would fail on the first `CREATE TABLE`. It is refused by
-/// name instead: 0.4 still adopts that history, and a library opened there once opens here.
-fn refuse_a_pre_diesel_schema(connection: &mut SqliteConnection) -> Result<(), StorageError> {
-    let legacy = diesel::sql_query("PRAGMA user_version")
-        .get_result::<UserVersion>(connection)?
-        .user_version;
-
-    if legacy > 0 {
-        return Err(StorageError::Migration(format!(
-            "schema version {legacy} was written by DevNotes 0.1.0: open this library with \
-             DevNotes 0.4 first"
-        )));
-    }
-
-    Ok(())
-}
-
 pub fn run(connection: &mut SqliteConnection) -> Result<(), StorageError> {
-    refuse_a_pre_diesel_schema(connection)?;
-
     let embedded = embedded_versions()?;
 
     // An applied migration we do not know signals a database written by a newer version.
@@ -72,10 +45,8 @@ pub fn run(connection: &mut SqliteConnection) -> Result<(), StorageError> {
 
 #[cfg(test)]
 mod tests {
-    use diesel::connection::SimpleConnection;
-
     use super::*;
-    use crate::db::{configure, open, open_in_memory};
+    use crate::db::{open, open_in_memory};
     use crate::error::StorageError;
     use crate::layout::DATABASE;
 
@@ -112,26 +83,6 @@ mod tests {
         connection.run_pending_migrations(MIGRATIONS).unwrap();
 
         assert!(!connection.has_pending_migration(MIGRATIONS).unwrap());
-    }
-
-    /// The schema 0.1.0 shipped, versioned the way it versioned it.
-    #[test]
-    fn a_schema_versioned_by_the_old_pragma_is_refused_rather_than_replayed() {
-        let mut connection = SqliteConnection::establish(":memory:").unwrap();
-        configure(&mut connection).unwrap();
-        connection
-            .batch_execute(include_str!(
-                "../../migrations/2026-07-25-000001_initial/up.sql"
-            ))
-            .unwrap();
-        connection.batch_execute("PRAGMA user_version = 1").unwrap();
-
-        let Err(error) = run(&mut connection) else {
-            panic!("a 0.1.0 schema was migrated as if it were empty");
-        };
-
-        assert!(matches!(error, StorageError::Migration(_)));
-        assert!(error.to_string().contains("0.4"), "{error}");
     }
 
     #[test]

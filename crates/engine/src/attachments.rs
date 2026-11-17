@@ -1,5 +1,4 @@
-//! The bytes cross the bridge only on read, as a `data:` URI: the CSP forbids loading a local
-//! file, and opening the `asset:` protocol for a screenshot would be a wide door.
+//! A note's files, sealed beside the library: written before their record, read back by id.
 
 #![allow(clippy::needless_pass_by_value)]
 

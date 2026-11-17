@@ -5701,9 +5701,6 @@ installed or shipped alongside the executable. The database file lives under the
   Evolving the model means adding a `YYYY-MM-DD-HHMMSS_name/` directory — never editing a
   shipped migration, it has already run on user machines. Each migration is atomic. A database
   carrying a migration this binary does not know is refused rather than misread.
-- **A schema versioned by `PRAGMA user_version` is refused by name.** That is 0.1.0's, before
-  the Diesel migrations; replaying them over it would fail on the first `CREATE TABLE`. The
-  error says to open the library with 0.4 first, which still adopts that history.
 - **The board geometry is columns nothing else reads.** `folders.x/y/w/h` are nullable and
   move together — `NULL` means "never laid out", which every folder made before the board
   existed is. `note_positions` is keyed on `note_id` alone and holds a row only for an

@@ -40,9 +40,8 @@ pub const BOARD_COLUMNS: usize = 3;
 pub const BOARD_MARGIN: i32 = 16;
 /// How many loose cards sit side by side under the zones.
 pub const LOOSE_COLUMNS: usize = 4;
-/// ⚠️ The zone body scrolls, and a scrollbar takes a slice of the row: at exactly two cards'
-/// width the second wraps, the wrap brings the scrollbar, and the scrollbar keeps it wrapped.
-/// Added to [`default_zone_width`] only, never taken off a count; generous on purpose.
+/// The room a zone keeps beyond its cards, so that two cards' width never wraps the second.
+/// Added to [`default_zone_width`] only, never taken off a count.
 pub const SCROLLBAR: i32 = 18;
 
 closed_enum! {

@@ -9,9 +9,6 @@ use std::path::Path;
 
 use serde_json::Value;
 
-/// What a library keeps for itself; every other key is the application's.
-pub const LIBRARY_PREFIX: &str = "devnotes.notes.";
-
 /// Every key the file held, those this version does not know included: they are written back
 /// as they were.
 #[derive(Debug, Clone, Default, PartialEq)]

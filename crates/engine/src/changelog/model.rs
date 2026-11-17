@@ -25,8 +25,8 @@ pub struct ChangelogSection {
 
 /// One bullet, cut into the runs it is drawn with.
 ///
-/// Runs and not a line of markdown: the panel renders them with a `switch` and three
-/// spans, so nothing has to be trusted, sanitised or handed to `innerHTML`.
+/// Runs and not a line of Markdown: the panel draws each run as it is, so nothing has to be
+/// trusted or sanitised.
 pub type ChangelogEntry = Vec<ChangelogSpan>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
