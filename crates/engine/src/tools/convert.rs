@@ -238,17 +238,25 @@ pub(crate) fn read_value(text: &str, format: DataFormat) -> Result<Value, (u32, 
             .parse::<toml::Table>()
             .map(|table| from_toml(toml::Value::Table(table)))
             .map_err(|error| position(text, error.span().map_or(0, |span| span.start))),
-        DataFormat::Yaml => YamlLoader::load_from_str(text)
-            .map(|documents| documents.into_iter().next().map_or(Value::Null, from_yaml))
-            .map_err(|error| {
-                let marker = error.marker();
-                (
-                    saturating_u32(marker.line()),
-                    saturating_u32(marker.col() + 1),
-                )
-            }),
+        // The visualiser's reader first: it stops aliases to aliases at its cap, which the
+        // loader, copying each alias, would multiply until the memory runs out.
+        DataFormat::Yaml => crate::json::yaml::read(text)
+            .map_err(|error| (error.line, error.column))
+            .and_then(|_| yaml(text)),
         DataFormat::Xml => xml::read(text).map_err(|offset| position(text, offset)),
     }
+}
+
+fn yaml(text: &str) -> Result<Value, (u32, u32)> {
+    YamlLoader::load_from_str(text)
+        .map(|documents| documents.into_iter().next().map_or(Value::Null, from_yaml))
+        .map_err(|error| {
+            let marker = error.marker();
+            (
+                saturating_u32(marker.line()),
+                saturating_u32(marker.col() + 1),
+            )
+        })
 }
 
 fn read(text: &str, format: DataFormat) -> Result<Value, ConvertAnswer> {
@@ -356,6 +364,30 @@ mod tests {
                 "{key}"
             );
         }
+    }
+
+    /// Aliases to aliases are copies: past the visualiser's cap the reading stops rather than
+    /// filling the memory (#1477, N47).
+    #[test]
+    fn yaml_aliases_past_the_cap_are_refused_at_once() {
+        let mut text = String::from(
+            "a: &a [x, x, x, x, x, x, x, x, x, x]
+",
+        );
+        for (level, letter) in "bcdefgh".chars().enumerate() {
+            let below = "abcdefgh".chars().nth(level).unwrap();
+            let line = format!("{letter}: &{letter} [*{below}, *{below}, *{below}, *{below}, *{below}, *{below}, *{below}, *{below}, *{below}, *{below}]
+");
+            text.push_str(&line);
+        }
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            done.send(read_value(&text, DataFormat::Yaml).is_err())
+                .unwrap();
+        });
+
+        let refused = finished.recv_timeout(std::time::Duration::from_secs(5));
+        assert_eq!(refused, Ok(true), "read whole, or never ended");
     }
 
     use super::*;
