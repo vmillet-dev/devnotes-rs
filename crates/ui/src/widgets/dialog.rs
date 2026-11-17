@@ -109,13 +109,16 @@ impl<R> Shown<R> {
 }
 
 /// The cross every modal closes by, top right, drawn over its content: `(label, author_id)`.
-pub(super) type Cross<'a> = (&'a str, &'a str);
+pub type Cross<'a> = (&'a str, &'a str);
 
-fn cross(ui: &mut egui::Ui, (label, author_id): Cross<'_>, inset: f32) -> bool {
-    let frame = ui.max_rect();
-    let size = egui::Vec2::splat(super::MIN_TARGET + 4.0);
+/// `margin`: the frame's, around the content. The cross sits in that margin's corner, so it covers
+/// none of what the content puts top right.
+pub(crate) fn cross(ui: &mut egui::Ui, (label, author_id): Cross<'_>, margin: f32) -> bool {
+    let content = ui.max_rect();
+    let size = egui::Vec2::splat(super::MIN_TARGET);
+    let corner = margin - gap::TIGHT;
     let at = egui::Rect::from_min_size(
-        egui::pos2(frame.right() - inset - size.x, frame.top() + inset),
+        egui::pos2(content.right() + corner - size.x, content.top() - corner),
         size,
     );
     let mut corner = ui.new_child(egui::UiBuilder::new().max_rect(at));
@@ -124,7 +127,7 @@ fn cross(ui: &mut egui::Ui, (label, author_id): Cross<'_>, inset: f32) -> bool {
         .clicked()
 }
 
-fn shown<R>(response: ModalResponse<(R, bool)>) -> Shown<R> {
+pub(crate) fn shown<R>(response: ModalResponse<(R, bool)>) -> Shown<R> {
     let ModalResponse {
         response,
         backdrop_response,
@@ -173,7 +176,7 @@ pub fn dialog<R>(
         .show(ctx, |ui| {
             ui.set_width(width.min(ctx.content_rect().width() * 0.9));
             let inner = content(ui);
-            (inner, cross(ui, close, 0.0))
+            (inner, cross(ui, close, gaps.canvas))
         });
     Some(self::shown(shown))
 }
@@ -204,7 +207,8 @@ pub fn framed_dialog<R>(
             ui.set_width(size.x.min(room.x));
             ui.set_height(size.y.min(room.y));
             let inner = content(ui);
-            (inner, cross(ui, close, gap::GROUPS))
+            // No margin: the cross stands inside the panel's own header.
+            (inner, cross(ui, close, -gap::CONTROLS))
         });
     Some(self::shown(shown))
 }

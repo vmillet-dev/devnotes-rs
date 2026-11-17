@@ -81,9 +81,19 @@ pub(super) fn show(ui: &Ui, state: &AppState, view: &mut CodeView, actions: &mut
     let Some(tab) = dialog.key().and_then(|key| state.http.tabs().tab(key)) else {
         return;
     };
-    let shown = modal(ui, "http-code-dialog", |ui| {
-        body(ui, state, (dialog, tab), view, actions);
-    });
+    let shown = modal(
+        ui,
+        (
+            "http-code-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-code-cross",
+            ),
+        ),
+        |ui| {
+            body(ui, state, (dialog, tab), view, actions);
+        },
+    );
     if shown.should_close() {
         ask(actions, Ask::Close);
     }

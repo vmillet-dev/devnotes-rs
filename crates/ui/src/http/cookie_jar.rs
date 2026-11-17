@@ -24,9 +24,19 @@ pub(super) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
     if !state.http.cookies().is_open() {
         return;
     }
-    let shown = modal(ui, "http-cookies-dialog", |ui| {
-        body(ui, state, actions);
-    });
+    let shown = modal(
+        ui,
+        (
+            "http-cookies-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-cookies-close",
+            ),
+        ),
+        |ui| {
+            body(ui, state, actions);
+        },
+    );
     if shown.should_close() {
         ask(actions, Ask::Close);
     }
@@ -61,14 +71,7 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
                 widgets::address(ui, &said, "http-cookies-empty");
             }
         });
-    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        if Button::new(&tr(keys::http::cookies::CLOSE), "http-cookies-close")
-            .show(ui)
-            .clicked()
-        {
-            ask(actions, Ask::Close);
-        }
-    });
+    ui.add_space(gap::LINE);
 }
 
 fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {

@@ -5,7 +5,7 @@
 
 mod badge;
 mod button;
-mod dialog;
+pub(crate) mod dialog;
 mod field;
 mod layout;
 mod list;
@@ -20,7 +20,7 @@ pub mod rich;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
 pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
-pub use dialog::{DialogStack, Layer, dialog, dialog_title, framed_dialog};
+pub use dialog::{Cross, DialogStack, Layer, Shown, dialog, dialog_title, framed_dialog};
 pub use field::{Checkbox, SearchField, Searched, TextField, switch};
 pub use layout::{RailWidth, area_room, split_handle, tooltip};
 pub use list::{code_viewer, virtual_list};

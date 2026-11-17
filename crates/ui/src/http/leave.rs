@@ -26,7 +26,17 @@ pub(crate) fn show(ui: &Ui, state: &AppState, view: &mut View, actions: &mut Act
         }
         return;
     }
-    let shown = modal(ui, "http-leave-dialog", |ui| body(ui, state));
+    let shown = modal(
+        ui,
+        (
+            "http-leave-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-leave-cross",
+            ),
+        ),
+        |ui| body(ui, state),
+    );
     let mut answer = |asked| actions.push(Asked::Http(Action::Leave(asked)));
     match shown.inner {
         Some(asked) => answer(asked),

@@ -46,9 +46,17 @@ pub(super) fn show(
     let Some(open) = form else {
         return;
     };
-    let shown = super::modal(ui, "http-extract-dialog", |ui| {
-        body(ui, open, (&tab.draft.name, state))
-    });
+    let shown = super::modal(
+        ui,
+        (
+            "http-extract-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-extract-cross",
+            ),
+        ),
+        |ui| body(ui, open, (&tab.draft.name, state)),
+    );
     match shown.inner {
         Some(true) => {
             let rule = Extraction {

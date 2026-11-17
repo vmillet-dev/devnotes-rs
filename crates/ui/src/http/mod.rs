@@ -226,12 +226,12 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     }
 }
 
-/// The area's dialogs: one frame, Escape and a click outside asking to close.
+/// The area's dialogs: one frame, a cross, Escape and a click outside asking to close.
 pub(crate) fn modal<T>(
     ui: &Ui,
-    id: &str,
+    (id, cross): (&str, widgets::Cross<'_>),
     content: impl FnOnce(&mut Ui) -> T,
-) -> egui::ModalResponse<T> {
+) -> widgets::Shown<T> {
     let p = palette(ui.ctx());
     #[expect(clippy::cast_possible_truncation, reason = "a few points")]
     let padding = spacing(ui.ctx()).canvas.round() as i8;
@@ -241,10 +241,14 @@ pub(crate) fn modal<T>(
         .corner_radius(egui::CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay)
         .inner_margin(egui::Margin::same(padding));
-    egui::Modal::new(egui::Id::unique(id))
+    let shown = egui::Modal::new(egui::Id::unique(id))
         .backdrop_color(p.backdrop.gamma_multiply(0.7))
         .frame(frame)
-        .show(ui.ctx(), content)
+        .show(ui.ctx(), |ui| {
+            let inner = content(ui);
+            (inner, widgets::dialog::cross(ui, cross, f32::from(padding)))
+        });
+    widgets::dialog::shown(shown)
 }
 
 /// The open requests under their tabs.
