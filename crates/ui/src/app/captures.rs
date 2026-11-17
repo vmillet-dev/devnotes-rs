@@ -1209,3 +1209,34 @@ fn the_editor_header_under_the_pointer() {
         }
     }
 }
+
+/// A request in the narrowest window (#1487): its URL, its actions and its tabs.
+#[test]
+fn the_http_request_in_a_narrow_window() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        use crate::state::http::tabs::DraftEdit;
+        draft.apply(DraftEdit::Url(
+            "{{base}}/sessions?user={{user}}&remember=true".to_owned(),
+        ));
+    });
+    for size in [
+        egui::vec2(640.0, 480.0),
+        egui::vec2(720.0, 480.0),
+        egui::vec2(800.0, 600.0),
+    ] {
+        harness.set_size(size);
+        settle(&mut harness);
+        capture(&mut harness, &format!("http-request-{}", size.x));
+    }
+}

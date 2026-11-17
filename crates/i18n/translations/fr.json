@@ -3400,6 +3400,7 @@
       "save": "Enregistrer",
       "saveHint": "Enregistrer (Ctrl+S)",
       "parts": "Parties de la requête",
+      "moreParts": "Autres parties de la requête",
       "sections": {
         "params": "Paramètres",
         "headers": "En-têtes",

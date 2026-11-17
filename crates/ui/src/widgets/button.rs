@@ -46,6 +46,8 @@ enum Size {
     Large,
     /// As high as a request's address.
     Tall,
+    /// As high as a request's address, and as wide: an icon alone.
+    TallIcon,
 }
 
 /// A request's actions, beside its 38 px address.
@@ -69,6 +71,16 @@ impl<'a> Button<'a> {
             keys: None,
             capped: false,
         }
+    }
+
+    /// A tall button's `icon` alone, square, where its words do not fit: they stay its name and
+    /// its tooltip.
+    #[must_use]
+    pub fn icon_only(mut self, icon: Icon) -> Self {
+        self.icon = Some(icon);
+        self.size = Size::TallIcon;
+        self.keys = None;
+        self
     }
 
     /// The key that does the same, on its cap after the label.
@@ -149,7 +161,9 @@ impl<'a> Button<'a> {
 
     pub fn show(self, ui: &mut Ui) -> Response {
         let (size, weight, padding, corner) = match (self.size, self.kind) {
-            (Size::Tall, _) => (TALL_SIZE, TALL_WEIGHT, Vec2::new(TALL_PADDING, 0.0), 8),
+            (Size::Tall | Size::TallIcon, _) => {
+                (TALL_SIZE, TALL_WEIGHT, Vec2::new(TALL_PADDING, 0.0), 8)
+            }
             (Size::Large, _) => (14.0, 600.0, Vec2::splat(10.0), 8),
             (Size::Regular, Kind::Quiet) => (12.0, 400.0, Vec2::new(6.0, 0.0), 6),
             (Size::Regular, _) => (12.0, 400.0, Vec2::new(12.0, 6.0), 6),
@@ -171,6 +185,7 @@ impl<'a> Button<'a> {
         match self.size {
             Size::Large => wanted.x = ui.available_width(),
             Size::Tall => wanted.y = TALL_HEIGHT,
+            Size::TallIcon => wanted = Vec2::splat(TALL_HEIGHT),
             Size::Regular => {}
         }
         let sense = if self.enabled {
@@ -203,6 +218,11 @@ impl<'a> Button<'a> {
             Stroke::new(1.0, edge),
             StrokeKind::Inside,
         );
+        if let (Size::TallIcon, Some(icon)) = (self.size, self.icon) {
+            let place = Rect::from_center_size(rect.center(), Vec2::splat(16.0));
+            icons::paint(ui, place, icon, ink);
+            return super::tooltip(response, self.label);
+        }
         let galley = text(ui, self.label, size, weight, FontFamily::Proportional, ink);
         let width = galley.size().x + icon_room + keys_room;
         let mut left = rect.center().x - width / 2.0;
