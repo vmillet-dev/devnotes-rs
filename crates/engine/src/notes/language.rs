@@ -319,8 +319,16 @@ pub fn detectable() -> impl Iterator<Item = Language> {
 /// The best-scoring language, or `txt` when nothing proved itself. Weights settle what an
 /// order would: `<?php` outweighs the `<` of a processing instruction, and Rust's `println!`
 /// outweighs JavaScript's `=>`.
+/// What detection reads: the start of a text tells its language, and a paste of megabytes
+/// would otherwise hold the window a frame or two.
+const READS_AT_MOST: usize = 64 * 1024;
+
 pub fn from_content(content: &str) -> Language {
-    let sample = Sample::of(content);
+    let mut end = content.len().min(READS_AT_MOST);
+    while !content.is_char_boundary(end) {
+        end -= 1;
+    }
+    let sample = Sample::of(&content[..end]);
     if sample.trimmed.is_empty() {
         return Language::default();
     }

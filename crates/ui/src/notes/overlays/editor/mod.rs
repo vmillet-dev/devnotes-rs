@@ -389,7 +389,10 @@ fn rich_body(
             },
         }));
     }
-    if let Some(markdown) = view.markdown().filter(|_| shown.changed) {
+    // Written only on a frame that changed it: the whole Note, a few ms past a few thousand lines.
+    if shown.changed
+        && let Some(markdown) = view.markdown()
+    {
         *body = markdown;
     }
     if let Some(url) = shown.link {
