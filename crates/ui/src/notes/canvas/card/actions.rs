@@ -197,8 +197,9 @@ fn first_entries(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, acti
         push(actions, Asked::OpenNote(id.clone()));
         ui.close();
     }
+    // What the entry does, not the state the note is in.
     let pin = tr(if note.pinned {
-        keys::editor::PINNED
+        keys::selection::UNPIN
     } else {
         keys::editor::PIN
     });

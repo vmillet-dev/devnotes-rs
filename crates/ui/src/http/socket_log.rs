@@ -76,7 +76,8 @@ fn bar(ui: &mut Ui, state: &AppState, (tab, view): (&Tab, &mut LogView), actions
         Phase::Connecting => (keys::http::socket::phases::CONNECTING, p.amber_text),
         Phase::Open => (keys::http::socket::phases::OPEN, p.green),
         Phase::Closing => (keys::http::socket::phases::CLOSING, p.amber_text),
-        Phase::Closed => (keys::http::socket::phases::CLOSED, p.red),
+        // Not an error: a socket at rest.
+        Phase::Closed => (keys::http::socket::phases::CLOSED, p.text_2),
     };
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = gap::GROUPS;

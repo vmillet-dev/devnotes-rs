@@ -396,10 +396,16 @@ fn empty_workspace(ui: &mut Ui, region: Rect, language: i18n::Language, actions:
     );
     buttons.spacing_mut().item_spacing.x = gap::CONTROLS;
     for ((kind, id), name) in tabs::KINDS.iter().zip(&names) {
-        if widgets::Button::new(name, &format!("http-workspace-new-{id}"))
-            .show(&mut buttons)
-            .clicked()
-        {
+        // The one primary action of an empty area, amber as « New note » is: a request.
+        let primary = *kind == RequestKind::Http;
+        let author_id = format!("http-workspace-new-{id}");
+        let button = widgets::Button::new(name, &author_id);
+        let button = if primary {
+            button.kind(widgets::Kind::Filled)
+        } else {
+            button
+        };
+        if button.show(&mut buttons).clicked() {
             actions.push(Asked::Http(Action::NewRequest(*kind)));
         }
     }

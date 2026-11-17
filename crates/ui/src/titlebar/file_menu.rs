@@ -109,7 +109,8 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
             .with("app", METADATA.name)
             .text(state.language)
     };
-    let row = super::menu_option(ui, &quit, "file-quit", Tone::Danger);
+    // Quitting loses nothing: plain, like the entries above it.
+    let row = super::menu_option(ui, &quit, "file-quit", Tone::Plain);
     ids.push(row.id);
     if row.clicked() {
         if view.confirming_quit {
