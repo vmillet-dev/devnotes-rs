@@ -4,7 +4,6 @@
 //! job never waits on another job of the queue, nor on the network: that would deadlock it.
 
 use std::cell::Cell;
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::mpsc;
 
 use tokio::sync::oneshot;
@@ -49,8 +48,7 @@ impl DbQueue {
         Self(sender)
     }
 
-    /// Waits for `job` without holding a thread. A job that panics answers as the lock it
-    /// would have poisoned, and the queue goes on with the next one.
+    /// Waits for `job` without holding a thread.
     pub(crate) async fn run<T, F>(&self, job: F) -> Result<T, AppError>
     where
         T: Send + 'static,
@@ -72,9 +70,7 @@ impl DbQueue {
     {
         let (answer, answered) = oneshot::channel();
         let job: Job = Box::new(move || {
-            let result = catch_unwind(AssertUnwindSafe(job))
-                .unwrap_or_else(|_| Err(StorageError::Unavailable.into()));
-            let _ = answer.send(result);
+            let _ = answer.send(job());
         });
         let queued = self.0.send(job).map_err(|_| StorageError::Unavailable);
 
@@ -90,7 +86,6 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use super::*;
-    use crate::error::ErrorCode;
 
     fn block_on<T>(future: impl Future<Output = T>) -> T {
         tokio::runtime::Builder::new_current_thread()
@@ -119,16 +114,5 @@ mod tests {
 
         assert_eq!(*order.lock().unwrap(), [(1, true), (2, true), (3, true)]);
         assert!(!on_db_thread());
-    }
-
-    #[test]
-    fn a_job_that_panics_answers_an_error_and_the_next_one_runs() {
-        let queue = DbQueue::start();
-
-        let panicked = block_on(queue.run(|| -> Result<(), AppError> { panic!("on purpose") }));
-        let next = block_on(queue.run(|| Ok(7)));
-
-        assert_eq!(panicked.unwrap_err().code, ErrorCode::StorageUnavailable);
-        assert_eq!(next.unwrap(), 7);
     }
 }

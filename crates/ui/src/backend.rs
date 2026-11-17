@@ -7,7 +7,6 @@
 //! - `compute`: pure work, on rayon's pool.
 //! - `spawn`: the network, on tokio.
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::mpsc::{self, Receiver, SyncSender, TryRecvError};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Instant;
@@ -87,14 +86,11 @@ impl Backend {
     ) -> Pending<T> {
         let (pending, answer) = self.pending();
         let engine = Arc::clone(&self.engine);
-        rayon::spawn(move || {
-            let result = catch_unwind(AssertUnwindSafe(|| job(&engine)));
-            answer.send(result.unwrap_or_else(|_| Err(panicked())));
-        });
+        rayon::spawn(move || answer.send(job(&engine)));
         pending
     }
 
-    /// The network, on tokio. A future that panics answers an error like the others.
+    /// The network, on tokio.
     pub fn spawn<T, F>(&self, job: impl FnOnce(Arc<Engine>) -> F + Send + 'static) -> Pending<T>
     where
         F: Future<Output = Result<T, AppError>> + Send + 'static,
@@ -105,7 +101,7 @@ impl Backend {
         let handle = self.runtime.handle().clone();
         self.runtime.spawn(async move {
             let result = handle.spawn(job(engine)).await;
-            answer.send(result.unwrap_or_else(|_| Err(panicked())));
+            answer.send(result.unwrap_or_else(|_| Err(unanswered())));
         });
         pending
     }
@@ -186,9 +182,8 @@ impl Drop for Background {
     }
 }
 
-/// What a panic answers: the same as a poisoned lock, `Unavailable` (D18). The panic hook
-/// has logged where it happened.
-fn panicked() -> AppError {
+/// What a worker gone without a word answers — a task dropped as the runtime stops.
+fn unanswered() -> AppError {
     StorageError::Unavailable.into()
 }
 
@@ -210,7 +205,7 @@ impl<T> Pending<T> {
             Ok(answer) => answer,
             Err(TryRecvError::Empty) => return None,
             // The worker is gone without a word: still an answer, never a silence.
-            Err(TryRecvError::Disconnected) => Err(panicked()),
+            Err(TryRecvError::Disconnected) => Err(unanswered()),
         };
         self.answered = true;
         Some(answer)
@@ -299,21 +294,15 @@ mod tests {
     }
 
     #[test]
-    fn a_job_that_panics_answers_an_error_on_every_queue() {
+    fn an_answer_dropped_without_a_word_is_still_an_answer() {
         let (backend, _profile) = testing::backend();
 
-        let mut read = backend.db::<()>(|_| panic!("in the db queue"));
-        let mut computed = backend.compute::<()>(|_| panic!("in the pool"));
-        let mut sent = backend.spawn::<(), _>(|_| async { panic!("in the runtime") });
-        backend.settle();
+        let (mut pending, answer) = backend.pending::<()>();
+        drop(answer);
 
-        for answer in [read.poll(), computed.poll(), sent.poll()] {
-            let error = answer.expect("no Pending is left unanswered").unwrap_err();
-            assert_eq!(error.code, ErrorCode::StorageUnavailable);
-        }
-        let mut next = backend.db(|_| Ok("the queue goes on"));
+        let error = pending.poll().expect("answered").unwrap_err();
+        assert_eq!(error.code, ErrorCode::StorageUnavailable);
         backend.settle();
-        assert_eq!(next.poll().unwrap().unwrap(), "the queue goes on");
     }
 
     #[test]

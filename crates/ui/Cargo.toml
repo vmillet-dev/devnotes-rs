@@ -13,7 +13,6 @@ publish = false
 engine.workspace = true
 text.workspace = true
 richtext.workspace = true
-diagram.workspace = true
 drawing.workspace = true
 platform.workspace = true
 eframe.workspace = true

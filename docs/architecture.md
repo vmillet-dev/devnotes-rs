@@ -42,7 +42,6 @@ crates/engine/      the core (migrations/, resources/, sandbox/, tests/, benches
 crates/text/        the editing core, egui-free: rope, undo, search, indent, highlighting, Prettier, {{…}} shield
 crates/richtext/    a Note's document: blocks and marks, read from Markdown and written back
 crates/drawing/     a Dessin, egui-free: the stored scene, its geometry, text lines, SVG and pictures
-crates/diagram/     a Note's Mermaid block, drawn in the theme's colours and the app's fonts
 crates/i18n/        the interface's strings (translations/fr.json, en.json), plurals, formats
 crates/platform/    what is asked of the operating system: paths, window, instance, tray,
                     shortcuts, clipboard, dialogs, notifications, autostart, updater
@@ -236,9 +235,9 @@ never what is stored (plan § 3.6):
   history, console and socket log, the runner's results, the diffs. 30 000 rows draw fewer than
   twenty.
 - **What is costly to lay out is kept**: a `LayoutJob` in egui's galley cache, a card's
-  highlighted lines in its frame cache, a Mermaid drawing or a Dessin's picture as a texture in
+  highlighted lines in its frame cache, a Dessin's picture as a texture in
   `LibraryCaches` (bounded, emptied with the library scope, D17).
-- **Nothing costly runs in the frame**: highlighting a long text, formatting, a diagram, a
+- **Nothing costly runs in the frame**: highlighting a long text, formatting, a
   picture, a Calcul sheet and a JSON document are computed on `compute` or a thread of their own,
   and the frame draws the last answer meanwhile.
 - **The window repaints when something changed**, not continuously: an answer wakes it (the
@@ -991,7 +990,7 @@ The notes are held by modules split by the question they answer:
 Beside them, one module per screen or job that is not the canvas: `trash` (loaded when its panel
 opens, not by a permanent query), `tags` (global management: nothing runs before the core has
 counted what it touches), `transfer` (import, export and share, each reporting), `palette`,
-`attachments`, `placeholder_fill`, `note_revisions`, `formatting`, `calc_sheets`, `diagrams`,
+`attachments`, `placeholder_fill`, `note_revisions`, `formatting`, `calc_sheets`,
 `drawing_pictures`, `explored`, `libraries`, `backups`, `security`, `help`, `tools`, `http/`.
 
 `notes_query` holds the **query** — search text, quick filter, tags, languages — and the
@@ -1409,27 +1408,13 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   highlighting"), its language as a label on the block, drawn plain until the grammars have
   loaded. Tab indents as the code does (`indent_unit`). A card and a search read its lines as
   they are (`notes::markdown::plain`).
-- **A `mermaid` block is drawn under its code** (`widgets::rich`, D2), offered first in the
-  block's language menu; a snippet has no Mermaid language. The `diagram` crate draws it:
-  `merman` writes the SVG through its `resvg_safe` pipeline (labels as `<text>`, which `resvg`
-  paints), measuring them with the embedded Inter (`native-fonts`; without it labels are cut),
-  in Mermaid's `base` theme with its variables from the tokens; `resvg` paints it at twice its
-  size. Built without ELK. A parse error names its line, from the byte span `merman` gives, and
-  shows its message; a source that draws nothing else is « type not supported » and stays code.
-  `LibraryCaches.diagrams` keeps the last 64 drawings, by theme and source, uploaded once, and
-  draws one at a time on `compute`. The view asks for a source it has no drawing of; the editor
-  asks at once when nothing stands in its place and once typing pauses (`REDRAW_AFTER_SECS`)
-  otherwise, the last drawing in that place (egui's memory, by the block's rank) shown
-  meanwhile. Away from the caret the code folds to its first line; a click on the drawing puts
-  the caret at the end of its code. The fence is stored as it was typed, and a card shows the
-  block's lines.
 - **« Présenter » shows the Note full screen, a slide at a time.** Rust cuts the draft on
   screen, not the stored body (`present_note`, `notes::markdown::present`): a slide starts at
   each `#` or `##` heading and after each `---` rule outside any list, quote or fence, each slide
   a slice of the body so it is drawn as written, empty ones dropped; the headings come back as a
   tree, each with the slide it is on. `overlays::presentation` puts the Note's title first as a
-  cover and draws each slide with `widgets::rich` read only and larger — the editor's own blocks,
-  colours and diagrams, a diagram without its code — centred by the height it took last frame.
+  cover and draws each slide with `widgets::rich` read only and larger — the editor's own blocks
+  and colours — centred by the height it took last frame.
   ← → (and the keys a clicker sends), Home/End, `M` for the map, Escape out: a modal over
   everything, the editor kept under it. `PresentationState` sends `ViewportCommand::Fullscreen`
   only when the window was not full screen already, and gives back only what it took — on
@@ -4110,9 +4095,9 @@ frame (`poll` answers once), and the worker that resolves it wakes the window.
 
 ⚠️ `Backend::db` **queues at the call** (`engine::db::submit`), on the UI thread: two writes sent
 one after the other run in that order. Handing the job to a task that queued it later let two
-of them swap. A job that panics answers `StorageUnavailable` on every queue and the queue goes
-on (D18); an `Answer` dropped without a word still answers, so **no `Pending` is ever left
-unanswered**. Dropping a `Pending` does not stop work begun on the database.
+of them swap. A panic ends the process (D18), so no queue answers for one; an `Answer`
+dropped without a word — a task dropped as the runtime stops — still answers `Unavailable`,
+so **no `Pending` is ever left unanswered**. Dropping a `Pending` does not stop work begun on the database.
 
 Creating or unlocking a library is a `spawn` that runs the vault's db job and then starts
 `index::fill`, which fills the index a slice a job behind the gate. What the core says unasked
@@ -5546,12 +5531,31 @@ package, or in `crates/engine/resources` for a binary run from `target/`.
 
 **One application per profile (D16).** Before the log, `platform::instance::claim` binds a local socket named after a digest of the canonical profile path (a named pipe on Windows, the abstract namespace on Linux). A second launch that cannot bind it connects, sends `reveal` — or `action <name>` from the `e2e` flavour, its way to press a global shortcut — and exits; the first hears it on a thread of its own and brings its window forward. ⚠️ Windows answers a pipe already taken with « access denied », not « address in use ». A claim that fails otherwise stops the launch: a second writer would leave the index silently wrong. Two profiles never collide, so a scenario never meets a development instance.
 
-The log (`flexi_logger`, `devnotes.log`, three files of 5 MB) starts before the window, and a
-panic hook replaces the default one: it logs where and on which thread, **never the message** —
-a panic slicing a string quotes it (D18). Then the input channel and its `Waker` are made, and
+**A panic ends the process (D18)**, on whatever thread. The hook is installed first in `main`,
+before the script host returns: it logs where and on which thread, **never the message** — a
+panic slicing a string quotes it —, flushes the log, tells the person in a system dialog (in
+their language, naming the log's folder; set once the preferences are read, never in the
+`e2e` flavour) and exits with 101. Nothing is caught and nothing carries on: a job that panicked
+halfway leaves state no one can vouch for, and SQLite's journal keeps what was committed, which
+the next open checks (`db::quick_check`, the gate). The release is `panic = "abort"`: no
+unwinding tables, and `exit` before the abort keeps the open library's memory out of the
+system's crash reports. A second panic, in the dialog, exits at once. One thread is the
+exception: under Linux the tray's (`platform::tray::THREAD`) opens the indicator library by a
+third-party load that panics where it is missing; the hook parks that thread for good and the
+application goes on without a tray, as it did when a panic stopped its thread alone. ⚠️ The parked
+thread holds the hook's lock: nothing sets or takes the hook after start-up.
+
+The log (`flexi_logger`, `devnotes.log`, three files of 5 MB) starts before the window. Then the input channel and its `Waker` are made, and
 eframe opens the window **hidden** at the geometry `platform::window` read back (size, place,
 maximised; never whether it was visible), with eframe's persistence off: it would write egui's
-state, text fields included, in clear on disk. The creation closure fills the `Waker` and
+state, text fields included, in clear on disk. **It draws through one graphics API**
+(`app::renderer`): eframe's own setup opens Vulkan, DX12 and OpenGL together, and each keeps
+every GPU's driver loaded for the life of the process (~55 MB of RAM on a machine with two
+GPUs). On Windows DX12 alone is opened when a GPU (not the software adapter) answers it, asked
+of a throwaway instance first; otherwise, and whenever `WGPU_BACKEND` is set, eframe chooses
+among them all, OpenGL before WARP. The device reserves memory by small blocks
+(`MemoryHints::MemoryUsage`, 8 MB of video memory and 4 MB of RAM a block against wgpu's 128
+and 64): a window of text fills neither. The creation closure fills the `Waker` and
 creates the tokio runtime and the `Engine` (D20); `App::logic`, which runs while the window is
 hidden, shows it on the first frame. Under Linux, X11 is taken whenever `DISPLAY` exists
 (D15). The geometry is written on exit, the size the window had unmaximised kept under a
@@ -5667,9 +5671,8 @@ installed or shipped alongside the executable. The database file lives under the
   than assumed: see "Who holds the lock" under Benchmarks.
 - **⚠️ Every data function runs on the engine's one db thread** (D11). `engine::db::submit`
   queues a job on it, which the interface does at the call (`Backend::db`), and `db::run_here`
-  is what a test or the queue itself calls. A job that panics answers
-  `StorageError::Unavailable`, and the queue goes on with the next one: the next `db::lock`
-  takes the poisoned lock back, rolls back what the job left open and runs a quick check.
+  is what a test or the queue itself calls. A job that panics ends the process (D18): no lock
+  is ever found poisoned.
 
   **One thread, in order.** The queue is one thread that runs its jobs in the order they
   arrive: two writes sent one after the other land in that order , and the `Mutex` is never contended. ⚠️ `db::lock` asserts
@@ -5876,7 +5879,7 @@ operating system is `platform`, one module per subject with a trait a test fakes
 - **`services::errors::ErrorNotifier`** and **`services::status::StatusNotifier`** — the banner's
   failure and the toast's report. On a desktop application the log is not an interface: a failed
   write has to be visible, or the window just looks unresponsive. A panic is logged without its
-  message (D18).
+  message, said in a dialog, and ends the process (D18).
 - **`platform::clipboard`** — what the clipboard holds beyond the text egui hands a field (a
   page's HTML, for a paste into a Note); a clipboard that cannot be opened answers `None`, and a
   copy that failed only withholds its acknowledgement. ⚠️ It reaches `AppState` through
@@ -6161,7 +6164,7 @@ release that replayed it would pay for it twice.
 ### The release binary
 
 **Speed first, then size.** The release profile is `opt-level = 3`, fat LTO, one codegen unit,
-stripped. Measured on Linux (same machine, same commit, `cargo bench -p engine` and the text
+stripped, no unwinding. Measured on Linux (same machine, same commit, `cargo bench -p engine` and the text
 crate's timings, 8000 notes of ~13 kB):
 
 | `opt-level`              | Binary  | `query_notes` | Cookie jar (500) | Argon2 unlock | Prettier 13 kB p95 | 1 MB of TS coloured |
@@ -6179,17 +6182,25 @@ crate's timings, 8000 notes of ~13 kB):
 - **Rejected: an `opt-level` per crate under `s`.** It reaches the C compiled by `cc` (QuickJS,
   onig, SQLite), whose speed came back, but **not Rust code under fat LTO**: Argon2 and BLAKE2
   left at 3 were still 35 % slower.
-- **Rejected: `panic = "abort"`** (no unwinding tables, ~5 MB): the db queue and the compute pool
-  catch a panic and answer `StorageUnavailable` (D18).
-- **Where the size is** (symbols of the release build): the Mermaid renderer and what it draws
-  with (`merman`, its own `usvg` 0.47 and fonts, the math layout of `ratex`) about 11 MB, the
-  interface 5.6 MB, the core 2.6 MB, D-Bus for the tray, notifications and the screen reader
-  3.2 MB, fonts and text shaping 1.9 MB, `wgpu` and `naga` 3 MB; the embedded assets about
-  6 MB (Prettier 2.4 MB, the fonts 2.4 MB, the request-script libraries 1.2 MB). Removing a
-  Mermaid feature or a `wgpu` backend would save under 1 MB each and lose a diagram or a GPU.
+- **`panic = "abort"`** (1.0.2): unwinding cost 20 MB on Windows — its cleanup code 11.7 MB and
+  its tables 8.4 MB, in the linker's map —, kept only so the db queue and the compute pool could
+  catch a panic and carry on; a panic now ends the process from its hook (D18).
+- **Mermaid removed** (1.0.2, D2): `merman` and the 51 crates only it pulled were 16.6 MB of
+  code, the first dependency by far. With both, the Windows binary went from 79.2 to 42.7 MB.
+- **Where the size is** (the linker's map of 1.0.1, Windows): the interface 8 MB, the core
+  4.3 MB, SQLite and Diesel 2.2 MB, `wgpu` and `naga` 4.1 MB, `egui` 1.4 MB, tokio 1 MB,
+  QuickJS 0.85 MB, `serde_json` 0.72 MB, `psl` 0.64 MB, no other crate above 0.6 MB; the
+  embedded assets 6.4 MB (Prettier 2.4 MB, Noto Emoji 1.9 MB, the request-script libraries
+  1.1 MB, the syntaxes 0.94 MB). A `wgpu` backend left out would save under 1 MB and lose a GPU.
+- **Memory at rest** (Windows 11, two GPUs, an empty profile at the gate, measured from outside
+  the process on a desktop of its own): eframe's setup holds 164 MB of private working set, 447 MB
+  committed and 253 MB of video memory; one API and small blocks (`app::renderer`, → "The
+  binary, its profile and its window") take it to 111 MB, 215 MB and 76 MB. The application's
+  own heap is about 25 MB of it; the rest is the drivers'. OpenGL alone would be 56 MB, but its
+  driver is the one wgpu tests least on Windows.
 - **Duplicates that stay**, each pulled by a dependency: `reqwest` 0.12 (the updater client),
-  `usvg` and `fontdb` (`merman`), `dirs` 5 and 6 (the updater, `auto-launch`), `calloop` and
-  `smithay-client-toolkit` (winit against the clipboard), and build-time crates.
+  `dirs` 5 and 6 (the updater, `auto-launch`), `calloop` and `smithay-client-toolkit` (winit
+  against the clipboard), and build-time crates.
 - **Never in a release**: `egui_inspection` (the `e2e` flavour), `puffin` and `puffin_http`
   (`profiling`). `lint-rust` fails if the default build of `app` links any of them.
 

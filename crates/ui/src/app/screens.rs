@@ -41,7 +41,7 @@ const TRASHED: &str = "Ancienne procédure";
 const NOTE_BODY: &str = "# Mise en production\n\nTrois étapes, **dans cet ordre** :\n\n\
 1. Geler la branche `dev`\n2. Lancer la [chaîne de publication](https://exemple.fr/ci)\n\
 3. Prévenir l’astreinte\n\n| Étape | Durée |\n| --- | --- |\n| Build | 12 min |\n\
-| Tests | 25 min |\n\n```mermaid\nflowchart LR\n  build --> tests --> publication\n```\n\n\
+| Tests | 25 min |\n\n```sh\ngit tag v1.4.0 && git push --tags\n```\n\n\
 > Ne jamais publier un vendredi.";
 
 fn output() -> Option<PathBuf> {

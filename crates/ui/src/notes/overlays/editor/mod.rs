@@ -378,9 +378,6 @@ fn rich_body(
     for id in shown.wanted {
         actions.push(Action::Notes(Asked::Picture(id)));
     }
-    for source in shown.diagrams {
-        actions.push(Action::Notes(Asked::Diagram(source)));
-    }
     if let Some(code) = shown.code_paste {
         actions.push(editor(Editing::Convert {
             session,

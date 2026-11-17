@@ -6,6 +6,10 @@ mod system;
 
 pub use system::system;
 
+/// The thread the icon lives on under Linux. The indicator library is opened by a load that
+/// panics where it is missing: that panic stops this thread alone, and the desktop has no tray.
+pub const THREAD: &str = "tray";
+
 /// What the icon and its menu ask.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Asked {

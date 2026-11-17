@@ -27,6 +27,15 @@ pub fn system(on_missing: impl Fn() + Send + Sync + 'static) -> Arc<dyn FileDial
     system::system(on_missing)
 }
 
+/// Says `words` under `title` until the person closes it: what a process about to end has left
+/// to say. Nothing in the `e2e` flavour, where no one would close it.
+pub fn stopped(title: &str, words: &str) {
+    if cfg!(feature = "e2e") {
+        return;
+    }
+    system::stopped(title, words);
+}
+
 /// Answers every question like a cancel: tests that ask none.
 pub struct NoDialog;
 

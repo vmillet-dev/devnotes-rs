@@ -36,7 +36,6 @@ const RUST: &str = "editor-language-6";
 const TYPESCRIPT: &str = "editor-language-3";
 
 const LITERAL: &str = "{{db_host}}\na -> b\n2 * 3 * 4\nsnake_case_name";
-const DIAGRAM: &str = "```mermaid\ngraph LR\n  Client --> API\n```\n";
 const SLIDES: &str = "# Un\n\ntexte\n\n## Deux\n\n### Reste ici\n\n---\n\nTrois";
 
 fn close_editor(app: &mut App) {
@@ -316,18 +315,6 @@ fn recette_a_formatted_note() {
             close_editor(&mut app);
             open_card(&mut app, "Littéral");
             app.capture("ric-09");
-            close_editor(&mut app);
-        },
-    );
-
-    step(
-        "RIC-16 a Mermaid block is drawn, a click goes to its code",
-        || {
-            a_note_of(&mut app, "Schéma", DIAGRAM);
-            app.wait_for("rich-diagram");
-            app.capture("ric-16-drawn");
-            app.click("rich-diagram");
-            app.capture("ric-16-code");
             close_editor(&mut app);
         },
     );

@@ -4,7 +4,6 @@ pub mod attachments;
 pub mod backups;
 pub mod board;
 pub mod calc_sheets;
-pub mod diagrams;
 pub mod drawing_exports;
 pub mod drawing_pictures;
 pub mod editor;
@@ -73,14 +72,13 @@ impl Revision {
     }
 }
 
-/// Every cache of a library's content — laid-out text, textures, memos, diagrams — and only
-/// they: one field, emptied when another library opens (D17). Not wiped byte by byte; the
-/// threat model says so.
+/// Every cache of a library's content — laid-out text, textures, memos — and only they: one
+/// field, emptied when another library opens (D17). Not wiped byte by byte; the threat model
+/// says so.
 pub struct LibraryCaches {
     pub thumbnails: drawing_pictures::Thumbnails,
     /// The large pictures Notes embed.
     pub pictures: drawing_pictures::Thumbnails,
-    pub diagrams: diagrams::Diagrams,
 }
 
 impl Default for LibraryCaches {
@@ -88,7 +86,6 @@ impl Default for LibraryCaches {
         Self {
             thumbnails: drawing_pictures::Thumbnails::default(),
             pictures: drawing_pictures::Thumbnails::large(),
-            diagrams: diagrams::Diagrams::default(),
         }
     }
 }
@@ -364,7 +361,6 @@ impl AppState {
         }
         self.caches.thumbnails.update(ctx, backend);
         self.caches.pictures.update(ctx, backend);
-        self.caches.diagrams.update(ctx, backend);
         let mut moved = self
             .spaces
             .update(backend, &mut self.revision, &mut self.errors);
@@ -1334,7 +1330,6 @@ impl AppState {
                 let stamp = drawing_pictures::Thumbnails::embedded(&id);
                 self.caches.pictures.ask(backend, stamp);
             }
-            Notes::Diagram(source) => self.caches.diagrams.ask(ctx, &source),
             place @ (Notes::ChooseSpace(_)
             | Notes::ChooseFolder(_)
             | Notes::CountSpace(_)

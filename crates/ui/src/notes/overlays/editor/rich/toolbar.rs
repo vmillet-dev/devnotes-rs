@@ -231,8 +231,6 @@ fn code_language(view: &RichEditor) -> Option<String> {
     }
 }
 
-/// The code block's language: first the diagram a Note draws (`None`), then the snippets' own;
-/// plain text writes a bare fence.
 /// By its id, under its title: the Note holds no picture, only where to ask for one.
 fn drawing_menu(ui: &mut Ui, view: &mut RichEditor, drawings: &[DrawingRef], language: Language) {
     let tr = |key| i18n::translate(language, key, &[]);
@@ -267,21 +265,18 @@ fn drawing_menu(ui: &mut Ui, view: &mut RichEditor, drawings: &[DrawingRef], lan
     view.refocus = true;
 }
 
+/// The code block's language, the snippets' own; plain text writes a bare fence.
 fn language_menu(ui: &mut Ui, view: &mut RichEditor, fence: &str, words: (&str, Language)) {
     let (label, language) = words;
-    let mut options: Vec<(Option<Code>, &str)> = vec![(None, "MERMAID")];
-    options.extend(
-        Code::ALL
-            .into_iter()
-            .map(|code| (Some(code), crate::notes::language::label(code))),
-    );
-    let mut hints = vec![""];
-    hints.extend(Code::ALL.into_iter().map(crate::notes::language::hint));
-    let mut chosen = if fence == diagram::MERMAID {
-        None
-    } else {
-        Some(fence.parse::<Code>().unwrap_or(Code::Txt))
-    };
+    let options: Vec<(Code, &str)> = Code::ALL
+        .into_iter()
+        .map(|code| (code, crate::notes::language::label(code)))
+        .collect();
+    let hints: Vec<&str> = Code::ALL
+        .into_iter()
+        .map(crate::notes::language::hint)
+        .collect();
+    let mut chosen = fence.parse::<Code>().unwrap_or(Code::Txt);
     if ChoiceMenu::new(label, "rich-code-language", &options)
         .hints(&hints)
         .language(language)
@@ -289,9 +284,8 @@ fn language_menu(ui: &mut Ui, view: &mut RichEditor, fence: &str, words: (&str, 
         .changed()
     {
         let fence = match chosen {
-            None => diagram::MERMAID.to_owned(),
-            Some(Code::Txt) => String::new(),
-            Some(code) => code.as_str().to_owned(),
+            Code::Txt => String::new(),
+            code => code.as_str().to_owned(),
         };
         view.record(Step::Other);
         edit::set_language(&mut view.document, &view.selection, fence);
