@@ -394,16 +394,6 @@ impl eframe::App for DevNotesApp {
                     }
                 });
         }
-        if let Some((_, status)) = self.state.status.latest() {
-            let status = status.clone();
-            egui::Panel::top("status-toast")
-                .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
-                .show(ui, |ui| {
-                    if banners::status_toast(ui, &status, language) {
-                        actions.push(Action::App(AppAction::DismissStatus));
-                    }
-                });
-        }
         // Flush with the window, as the reference: egui's 8 px margin cost the header its one row.
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
@@ -802,6 +792,40 @@ mod tests {
     }
 
     /// Through the gate, as a first launch does it.
+    fn top_of(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> f64 {
+        use egui_kittest::kittest::{NodeT, Queryable};
+        harness
+            .get_by(|node| node.author_id() == Some(author_id))
+            .accesskit_node()
+            .bounding_box()
+            .unwrap()
+            .y0
+    }
+
+    #[test]
+    fn a_report_moves_nothing_and_goes_by_itself() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let before = top_of(&harness, "search-input");
+
+        harness
+            .state_mut()
+            .state
+            .status
+            .report(i18n::Message::new(i18n::keys::attachments::SAVED));
+        settle(&mut harness);
+
+        assert!(present(&harness, "status-toast"));
+        assert!((top_of(&harness, "search-input") - before).abs() < 0.5);
+        let gone = f64::from(crate::theme::motion::REPORT) + 1.0;
+        let started = harness.ctx.input(|input| input.time);
+        while harness.ctx.input(|input| input.time) - started < gone {
+            harness.step();
+        }
+        settle(&mut harness);
+        assert!(!present(&harness, "status-toast"));
+    }
+
     pub(super) fn open_library(directory: &std::path::Path) -> Harness<'static, DevNotesApp> {
         let startup = startup(directory);
         let mut harness = Harness::builder()

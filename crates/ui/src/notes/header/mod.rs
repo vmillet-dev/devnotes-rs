@@ -1,12 +1,13 @@
 //! The top of the notes area: where one is — the rail, the trash, the space and folder, the
 //! list or the board — then how one looks at the notes — the search, the quick filter, the
 //! order, the facets — and the new note (`notes-header` in the reference). One row while it
-//! holds, two past that (`layout`). Each change is an action; the query state asks the core
-//! again.
+//! holds, two past that (`layout`). While cards are ticked, what acts on them stands where the
+//! search was (`selection`). Each change is an action; the query state asks the core again.
 
 mod facets;
 mod layout;
 mod new_note;
+mod selection;
 pub(crate) use new_note::shortcut;
 mod sort;
 mod switchers;
@@ -38,6 +39,10 @@ pub(super) struct HeaderView {
     fixed: layout::Fixed,
     /// Asked open; a chip pressed holds it open whatever this says.
     facets: bool,
+    selection: selection::SelectionView,
+    /// The search's row, as tall as last drawn: a selection in its place keeps the height, and
+    /// the cards stay put.
+    look_height: f32,
 }
 
 pub(super) fn show(
@@ -60,20 +65,48 @@ pub(super) fn show(
     let plan = layout::plan(width, view.fixed, &switchers, new_note);
     let pressed = state.notes_query.facets().count();
     let open = view.facets || pressed > 0;
-    let mut fixed = layout::Fixed::default();
+    let ticked = selection::ticked(state);
+    if ticked.is_empty() {
+        view.selection.reset();
+    } else if *focus_search {
+        // The search is asked for: the selection gives it its place back.
+        push(actions, crate::notes::Action::ClearSelection);
+    }
+    // What does not narrow is kept from the last time it was drawn.
+    let mut fixed = view.fixed;
     let shown = egui::Frame::new()
         .inner_margin(Margin::symmetric(canvas, grid))
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing = Vec2::new(GAP, 8.0);
             let facets = (open, pressed);
             if plan.two_rows {
-                row(ui, |ui| {
+                let _ = row(ui, |ui| {
                     fixed.place = group(ui, |ui| {
                         where_one_is(ui, state, view, plan.switcher, actions)
                     });
                     new_note_at_end(ui, state, new_note, actions);
                 });
-                row(ui, |ui| {
+                if ticked.is_empty() {
+                    view.look_height = row(ui, |ui| {
+                        fixed.look = group(ui, |ui| {
+                            how_one_looks(
+                                ui,
+                                state,
+                                (plan.search, facets),
+                                view,
+                                focus_search,
+                                actions,
+                            )
+                        });
+                    });
+                } else {
+                    selection_row(ui, state, (view, &ticked), actions);
+                }
+            } else if ticked.is_empty() {
+                view.look_height = row(ui, |ui| {
+                    fixed.place = group(ui, |ui| {
+                        where_one_is(ui, state, view, plan.switcher, actions)
+                    });
                     fixed.look = group(ui, |ui| {
                         how_one_looks(
                             ui,
@@ -84,24 +117,12 @@ pub(super) fn show(
                             actions,
                         )
                     });
+                    new_note_at_end(ui, state, new_note, actions);
                 });
             } else {
-                row(ui, |ui| {
-                    fixed.place = group(ui, |ui| {
-                        where_one_is(ui, state, view, plan.switcher, actions)
-                    });
-                    fixed.look = group(ui, |ui| {
-                        how_one_looks(
-                            ui,
-                            state,
-                            (plan.search, facets),
-                            view,
-                            focus_search,
-                            actions,
-                        )
-                    });
-                    new_note_at_end(ui, state, new_note, actions);
-                });
+                // One row: the selection takes it whole, the place and the new note come back
+                // with the search.
+                selection_row(ui, state, (view, &ticked), actions);
             }
         });
     // What does not narrow is the same in one row and two: once measured, the plan holds.
@@ -128,11 +149,15 @@ fn switchers_shown(state: &AppState) -> bool {
 }
 
 /// ⚠️ A row of the header's own height: `Ui::horizontal` centres on egui's small default height,
-/// and what is taller than that lands lower the deeper it is nested.
-fn row<R>(ui: &mut Ui, draw: impl FnOnce(&mut Ui) -> R) -> R {
+/// and what is taller than that lands lower the deeper it is nested. Answers the height drawn.
+#[must_use]
+fn row(ui: &mut Ui, draw: impl FnOnce(&mut Ui)) -> f32 {
     let size = Vec2::new(ui.available_width(), ROW_HEIGHT);
     let layout = egui::Layout::left_to_right(egui::Align::Center);
-    ui.allocate_ui_with_layout(size, layout, draw).inner
+    ui.allocate_ui_with_layout(size, layout, draw)
+        .response
+        .rect
+        .height()
 }
 
 /// A group of controls side by side; answers the width of what in it does not narrow.
@@ -141,6 +166,21 @@ fn group(ui: &mut Ui, draw: impl FnOnce(&mut Ui) -> f32) -> f32 {
     let layout = egui::Layout::left_to_right(egui::Align::Center);
     let shown = ui.allocate_ui_with_layout(size, layout, draw);
     shown.response.rect.width() - shown.inner
+}
+
+/// The whole width, as tall as the search's row was.
+fn selection_row(
+    ui: &mut Ui,
+    state: &AppState,
+    (view, ticked): (&mut HeaderView, &[String]),
+    actions: &mut Actions,
+) {
+    let size = Vec2::new(ui.available_width(), view.look_height.max(ROW_HEIGHT));
+    let layout = egui::Layout::left_to_right(egui::Align::Center);
+    ui.allocate_ui_with_layout(size, layout, |ui| {
+        ui.set_min_size(size);
+        selection::show(ui, state, (&mut view.selection, ticked), size.x, actions);
+    });
 }
 
 fn new_note_at_end(ui: &mut Ui, state: &AppState, width: f32, actions: &mut Actions) {

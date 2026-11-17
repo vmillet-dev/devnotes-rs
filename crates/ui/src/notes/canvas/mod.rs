@@ -6,7 +6,6 @@ mod board;
 mod card;
 pub mod grid;
 pub mod rows;
-mod selection_bar;
 pub mod shortcuts;
 
 use egui::emath::GuiRounding as _;
@@ -35,9 +34,6 @@ pub struct CanvasView {
     pub columns: usize,
     /// The card that had the focus the frame before: a `Shift`-click focuses what it clicks.
     pub anchor: Option<String>,
-    /// The selection bar's: a tag being typed, and a deletion waiting for its confirmation.
-    pub tag_draft: String,
-    pub confirm_delete: bool,
     board: board::BoardScreen,
     /// The rail's rows, handed over by the area each frame.
     pub(crate) rail: Vec<crate::notes::sidebar::RailRow>,
@@ -113,15 +109,6 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         .map(|folder| folder.name.as_str());
     sections(ui, (view, opened), &context, canvas_view, actions);
     hint(ui, language);
-    let shown: Vec<_> = view
-        .cards()
-        .map(|card| selection_bar::Shown {
-            id: &card.id,
-            pinned: card.pinned,
-            tags: &card.tags,
-        })
-        .collect();
-    selection_bar::show(ui, state, &shown, canvas_view, actions);
 }
 
 const HINT_HEIGHT: f32 = 28.0;

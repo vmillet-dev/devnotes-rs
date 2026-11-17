@@ -1241,3 +1241,49 @@ fn the_http_request_in_a_narrow_window() {
         capture(&mut harness, &format!("http-request-{}", size.x));
     }
 }
+
+/// Two cards ticked at three widths, then a report (#1486): where what acts on a selection
+/// stands, what it leaves in view, and where a report is said.
+#[test]
+fn a_selection_and_a_report_at_three_widths() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1084.0, 681.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    for _ in 0..2 {
+        harness.key_press(egui::Key::ArrowRight);
+        harness.key_press(egui::Key::X);
+    }
+    settle(&mut harness);
+    for width in [640.0, 1084.0, 1920.0] {
+        harness.set_size(egui::vec2(width, 681.0));
+        settle(&mut harness);
+        capture(&mut harness, &format!("selection-{width}"));
+    }
+    harness.set_size(egui::vec2(640.0, 681.0));
+    settle(&mut harness);
+    if harness
+        .query_by(|node| node.author_id() == Some("selection-more"))
+        .is_some()
+    {
+        click(&mut harness, "selection-more");
+        settle(&mut harness);
+        capture(&mut harness, "selection-more-640");
+        harness.key_press(egui::Key::Escape);
+    }
+    harness.key_press(egui::Key::Escape);
+    harness.set_size(egui::vec2(1084.0, 681.0));
+    settle(&mut harness);
+    harness
+        .state_mut()
+        .state
+        .status
+        .report(i18n::Message::new(i18n::keys::tools::SAMPLE_LOADED));
+    settle(&mut harness);
+    capture(&mut harness, "status");
+}

@@ -1329,7 +1329,7 @@ pour gagner du temps ; seules les limites techniques du § 5.3 s'écartent.
    aussi.
 5. Les mesures qui sont déjà des spécifications restent des tests : « la première carte dans la
    moitié haute à 1 100×720 », la barre d'en-tête qui ne déborde pas et passe sur deux rangées
-   selon les planchers (`FLOORS`), la barre de sélection qui flotte sans rien déplacer
+   selon les planchers (`FLOORS`), la sélection à la place de la recherche, sans rien déplacer
    (`06-search-and-filters`), la hauteur d'en-tête de zone (`19-board-gesture`).
 
 ### 5.3 Écarts assumés
@@ -1374,7 +1374,7 @@ référence par décision et non par limite technique, egui fait foi.
 | C15 | Champ de recherche à hauteur fixe                                                        | la barre ne bouge pas                       |
 | C16 | Menus d'espace et de dossier plus larges et sans pastille                                | noms entiers                                |
 | C17 | Indices de Mots de passe : abc, ABC, 123, !#$                                            | plus lisibles                               |
-| C18 | Barre de sélection sur une ligne tant qu'elle tient                                      | ne couvre pas les cartes                    |
+| C18 | Sélection dans l'en-tête, à la place de la recherche ; ce qui ne tient pas sous « … »    | ne couvre ni ne déplace les cartes          |
 | C19 | Tables de référence plus denses, Menus et préférences : boutons à la place des liens     | cohérence avec le reste                     |
 
 ---

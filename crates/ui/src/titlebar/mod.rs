@@ -1,6 +1,7 @@
 //! The application's bar: the window keeps the system's decorations, so this is a menu bar
 //! inside it — the menus on the left, the areas beside them while the rail is put away, the name
-//! in the middle, the theme on the right. 38 px on `bg-0`, a `line-soft` underline.
+//! in the middle, the theme on the right. 38 px on `bg-0`, a `line-soft` underline. What was
+//! just done takes the name's place a while: there it moves nothing and covers nothing.
 
 pub(crate) mod about_menu;
 pub(crate) mod area_switch;
@@ -125,19 +126,8 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
         Stroke::new(1.0, p.line_soft),
     );
 
-    // Centred on the window, not on what the two groups leave between them.
-    let title = widgets::text(
-        ui,
-        METADATA.name,
-        12.0,
-        400.0,
-        FontFamily::Proportional,
-        p.text_2,
-    );
-    let at = bar.center() - title.size() / 2.0;
-    ui.painter().galley(at, title, p.text_2);
-
     let inner = bar - Margin::symmetric(12, 0);
+    let mut sides = (inner.left(), inner.right());
     ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
         ui.horizontal_centered(|ui| {
             // Every entry of the menus acts on the library: none while it is locked.
@@ -149,11 +139,32 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
             if unlocked && !state.settings.rail_shown {
                 area_switch::bar(ui, state.settings.area, language, actions);
             }
+            sides.0 = ui.min_rect().right();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 theme_toggle(ui, language, actions);
+                sides.1 = ui.min_rect().left();
             });
         });
     });
+
+    // Centred on the window, not on what the two groups leave between them.
+    let half = (bar.center().x - sides.0).min(sides.1 - bar.center().x) - 16.0;
+    if let Some(latest) = state.status.latest() {
+        if crate::banners::report(ui, latest, (language, 2.0 * half)) {
+            actions.push(Asked::App(AppAction::DismissStatus));
+        }
+        return;
+    }
+    let title = widgets::text(
+        ui,
+        METADATA.name,
+        12.0,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
+    let at = bar.center() - title.size() / 2.0;
+    ui.painter().galley(at, title, p.text_2);
 }
 
 /// What the menus open, over everything else.
