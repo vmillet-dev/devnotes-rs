@@ -2,7 +2,7 @@
 //! written after each of its sends into the active environment.
 
 use crate::theme::tokens::{font, gap};
-use egui::{FontFamily, Sense, Ui};
+use egui::Ui;
 use engine::http::model::Extraction;
 use i18n::keys;
 
@@ -76,18 +76,7 @@ fn body(ui: &mut Ui, form: &mut Extracting, (request, state): (&str, &AppState))
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
     ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::http::extract::TITLE);
-    let words = widgets::text(
-        ui,
-        &title,
-        font::TITLE,
-        600.0,
-        FontFamily::Proportional,
-        p.text_0,
-    );
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "http-extract-dialog");
+    crate::widgets::dialog_title(ui, &title, "http-extract-dialog");
     caption(ui, &tr(keys::http::extract::PATH));
     let path = egui::RichText::new(&form.path)
         .monospace()

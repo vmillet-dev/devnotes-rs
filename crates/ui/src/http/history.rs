@@ -96,18 +96,7 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             actions.push(Asked::App(AppAction::ToggleRail));
         }
         let title = tr(keys::http::history::TITLE);
-        let words = widgets::text(
-            ui,
-            &title,
-            font::TITLE,
-            600.0,
-            FontFamily::Proportional,
-            p.text_0,
-        );
-        let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-        ui.painter().galley(rect.min, words, p.text_0);
-        heading.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &title));
-        widgets::address(ui, &heading, "http-history");
+        crate::widgets::dialog_title(ui, &title, "http-history");
         let kept = egui::RichText::new(tr(keys::http::history::KEPT))
             .size(font::LABEL)
             .color(p.text_2);

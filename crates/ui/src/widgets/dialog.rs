@@ -2,7 +2,7 @@
 //! one rung per layer, the higher drawn over the lower and served first by Escape. A modal
 //! blocks what is under it, keeps Tab inside, and hands the focus back to what opened it.
 
-use crate::theme::tokens::radius;
+use crate::theme::tokens::{font, radius};
 use egui::{Context, CornerRadius, Id, Margin, ModalResponse, Stroke};
 
 use crate::theme::{palette, spacing};
@@ -150,6 +150,24 @@ pub fn framed_dialog<R>(
             content(ui)
         });
     Some(shown)
+}
+
+/// A dialog's title: its words at the title's size, read as its heading, found by `author_id`.
+pub fn dialog_title(ui: &mut egui::Ui, words: &str, author_id: &str) -> egui::Response {
+    let ink = palette(ui.ctx()).text_0;
+    let galley = super::text(
+        ui,
+        words,
+        font::TITLE,
+        600.0,
+        egui::FontFamily::Proportional,
+        ink,
+    );
+    let (rect, heading) = ui.allocate_exact_size(galley.size(), egui::Sense::hover());
+    ui.painter().galley(rect.min, galley, ink);
+    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, words));
+    super::address(ui, &heading, author_id);
+    heading
 }
 
 #[cfg(test)]

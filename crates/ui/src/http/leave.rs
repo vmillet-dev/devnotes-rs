@@ -2,7 +2,7 @@
 //! any area can be the one on screen.
 
 use crate::theme::tokens::{font, gap};
-use egui::{Align, FontFamily, Layout, Sense, Ui};
+use egui::{Align, Layout, Ui};
 use i18n::keys;
 
 use super::{Action, View, modal, save_request};
@@ -52,18 +52,7 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
         keys::http::leave::TITLE,
         &[("count", count.into())],
     );
-    let words = widgets::text(
-        ui,
-        &title,
-        font::TITLE,
-        600.0,
-        FontFamily::Proportional,
-        p.text_0,
-    );
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "http-leave-dialog");
+    crate::widgets::dialog_title(ui, &title, "http-leave-dialog");
     let (hint, discard) = match state.http.leave().reason() {
         Reason::Quit => (
             keys::http::leave::hint::QUIT,

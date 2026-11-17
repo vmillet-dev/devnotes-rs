@@ -2,7 +2,7 @@
 //! it inherits. The draft is the state's, written on « Save ».
 
 use crate::theme::tokens::{font, gap};
-use egui::{Align, FontFamily, Layout, Sense, Ui};
+use egui::{Align, Layout, Ui};
 use engine::http::model::{ContainerSettings, HttpItemKind};
 use engine::http::scripts::model::ScriptKind;
 use engine::http::transport::Transport;
@@ -14,7 +14,7 @@ use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
 use crate::state::http::containers::Form;
 use crate::theme::palette;
-use crate::widgets::{self, Button, Kind};
+use crate::widgets::{Button, Kind};
 
 const WIDTH: f32 = 760.0;
 
@@ -66,18 +66,7 @@ fn body(ui: &mut Ui, state: &AppState, form: &Form, view: &mut DialogView, actio
         keys::http::settings::title::COLLECTION
     };
     let title = i18n::translate(language, key, &[("name", container.name.as_str().into())]);
-    let words = widgets::text(
-        ui,
-        &title,
-        font::TITLE,
-        600.0,
-        FontFamily::Proportional,
-        p.text_0,
-    );
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "http-settings-dialog");
+    crate::widgets::dialog_title(ui, &title, "http-settings-dialog");
     let hint = egui::RichText::new(tr(keys::http::settings::HINT))
         .size(font::BODY)
         .color(p.text_2);

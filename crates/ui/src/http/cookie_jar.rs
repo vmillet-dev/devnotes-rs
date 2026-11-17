@@ -1,7 +1,7 @@
 //! The library's cookie jar: what answers set, by domain, to read and to throw away.
 
 use crate::theme::tokens::{font, gap};
-use egui::{Align, FontFamily, Grid, Layout, Sense, Ui, Vec2};
+use egui::{Align, Grid, Layout, Ui, Vec2};
 use engine::http::cookies::JarCookie;
 use engine::http::cookies::store::{CookieDomain, StoredCookie};
 use i18n::keys;
@@ -77,18 +77,7 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
         let title = tr(keys::http::cookies::TITLE);
-        let words = widgets::text(
-            ui,
-            &title,
-            font::TITLE,
-            600.0,
-            FontFamily::Proportional,
-            p.text_0,
-        );
-        let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-        ui.painter().galley(rect.min, words, p.text_0);
-        heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-        widgets::address(ui, &heading, "http-cookies-dialog");
+        crate::widgets::dialog_title(ui, &title, "http-cookies-dialog");
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let word = tr(keys::http::cookies::CLEAR);

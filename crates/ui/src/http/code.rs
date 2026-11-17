@@ -126,18 +126,7 @@ fn head(ui: &mut Ui, state: &AppState, tab: &Tab) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = gap::GROUPS;
         let title = i18n::translate(language, keys::http::code::TITLE, &[]);
-        let words = widgets::text(
-            ui,
-            &title,
-            font::TITLE,
-            600.0,
-            FontFamily::Proportional,
-            p.text_0,
-        );
-        let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-        ui.painter().galley(rect.min, words, p.text_0);
-        heading.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &title));
-        widgets::address(ui, &heading, "http-code-dialog");
+        crate::widgets::dialog_title(ui, &title, "http-code-dialog");
         pill(ui, |ui| {
             let badge = match tab.draft.kind {
                 RequestKind::Http => Badge::Method(tab.draft.method),

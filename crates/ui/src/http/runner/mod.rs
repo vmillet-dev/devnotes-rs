@@ -6,10 +6,7 @@ mod order;
 mod results;
 
 use crate::theme::tokens::{font, gap};
-use egui::{
-    Align, CornerRadius, FontFamily, Layout, Rect, Role, Sense, Stroke, Ui, UiBuilder, Vec2,
-    WidgetInfo, pos2,
-};
+use egui::{Align, CornerRadius, Layout, Rect, Sense, Stroke, Ui, UiBuilder, Vec2, pos2};
 use i18n::keys;
 
 use super::{Action, CONSOLE_SHARE, console, response};
@@ -111,18 +108,7 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             .color(p.text_2);
         ui.add(egui::Label::new(crumb));
         let title = runner.target().map_or("", |target| target.name.as_str());
-        let words = widgets::text(
-            ui,
-            title,
-            font::TITLE,
-            600.0,
-            FontFamily::Proportional,
-            p.text_0,
-        );
-        let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-        ui.painter().galley(rect.min, words, p.text_0);
-        heading.widget_info(|| WidgetInfo::labeled(Role::Heading, true, title));
-        widgets::address(ui, &heading, "http-runner");
+        crate::widgets::dialog_title(ui, title, "http-runner");
         environment(ui, state);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;

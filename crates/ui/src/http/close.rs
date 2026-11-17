@@ -2,7 +2,7 @@
 //! saved. Escape and « Cancel » keep it open.
 
 use crate::theme::tokens::{font, gap};
-use egui::{FontFamily, Sense, Ui};
+use egui::Ui;
 use i18n::keys;
 
 use super::Action;
@@ -54,18 +54,7 @@ fn body(
         keys::http::close::CONNECTED_TITLE
     };
     let title = i18n::translate(language, title_key, &[("name", name.into())]);
-    let words = widgets::text(
-        ui,
-        &title,
-        font::TITLE,
-        600.0,
-        FontFamily::Proportional,
-        p.text_0,
-    );
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "http-close-dialog");
+    crate::widgets::dialog_title(ui, &title, "http-close-dialog");
     if modified {
         let hint = egui::RichText::new(tr(keys::http::close::HINT))
             .size(font::BODY)

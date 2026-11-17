@@ -2,7 +2,7 @@
 //! name. It creates what it lacks: the first request of a project needs no trip to the rail.
 
 use crate::theme::tokens::{font, gap};
-use egui::{Align, FontFamily, Layout, Sense, Ui};
+use egui::{Align, Layout, Ui};
 use i18n::keys;
 
 use super::{Action, modal};
@@ -116,18 +116,7 @@ fn body(
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
     ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::http::save::TITLE);
-    let words = widgets::text(
-        ui,
-        &title,
-        font::TITLE,
-        600.0,
-        FontFamily::Proportional,
-        p.text_0,
-    );
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "http-save-dialog");
+    crate::widgets::dialog_title(ui, &title, "http-save-dialog");
     let label = tr(keys::http::save::NAME);
     caption(ui, &label);
     TextField::new(&mut form.name, &label, "http-save-name").show(ui);

@@ -2,7 +2,7 @@
 //! called; what it holds, and in which language, the caller has already decided.
 
 use crate::theme::tokens::{font, gap};
-use egui::{Align, FontFamily, Layout, Sense, Ui};
+use egui::{Align, Layout, Ui};
 use i18n::keys;
 
 use super::{Action, modal};
@@ -100,18 +100,7 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
     ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::tools::save_as_note::TITLE);
-    let words = widgets::text(
-        ui,
-        &title,
-        font::TITLE,
-        600.0,
-        FontFamily::Proportional,
-        p.text_0,
-    );
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "save-as-note");
+    crate::widgets::dialog_title(ui, &title, "save-as-note");
     let what = i18n::translate(
         language,
         asked.what,
