@@ -13,7 +13,7 @@ pub fn list(backend: &Backend, note: String) -> Pending<Vec<Attachment>> {
 
 pub fn attach(backend: &Backend, note: String, path: &std::path::Path) -> Pending<Attachment> {
     let path = path.to_string_lossy().into_owned();
-    backend.db(move |engine| attachments::attach_file(engine, note, path))
+    backend.spawn(move |engine| attachments::attach_file(engine, note, path))
 }
 
 /// The pixels are the core's to encode and seal.

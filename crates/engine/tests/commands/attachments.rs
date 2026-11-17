@@ -25,7 +25,7 @@ fn a_file_is_attached_read_saved_and_deleted() {
     let saved = scratch.path().join("saved.png");
 
     let attachment = session
-        .call(|e| attach_file(e, note.clone(), source.to_string_lossy().to_string()))
+        .wait(|e| attach_file(e, note.clone(), source.to_string_lossy().to_string()))
         .unwrap();
     let listed = session.call(|e| list_attachments(e, note.clone())).unwrap();
     let uri = session
@@ -67,7 +67,7 @@ fn a_file_that_cannot_be_read_is_named_as_such() {
     let missing = scratch.path().join("gone.png");
 
     assert!(matches!(
-        code(session.call(|e| attach_file(
+        code(session.wait(|e| attach_file(
             e,
             "n-1".to_string(),
             missing.to_string_lossy().to_string()
@@ -86,7 +86,7 @@ fn a_file_past_the_limit_is_refused_by_its_name_and_the_limit() {
     std::fs::write(&huge, vec![0u8; limit + 1]).unwrap();
 
     let refused = session
-        .call(|e| attach_file(e, "n-1".to_string(), huge.to_string_lossy().to_string()))
+        .wait(|e| attach_file(e, "n-1".to_string(), huge.to_string_lossy().to_string()))
         .unwrap_err();
 
     assert!(matches!(refused.code, ErrorCode::FileTooLarge));
