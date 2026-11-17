@@ -23,10 +23,10 @@ fn an_export_is_imported_into_another_library() {
         .to_string();
 
     let exported = source
-        .call(|e| export_notes(e, path.clone(), ExportScope::Library, None))
+        .wait(|e| export_notes(e, path.clone(), ExportScope::Library, None))
         .unwrap();
     let protected = export_is_protected(path.clone()).unwrap();
-    let imported = target.call(|e| import_notes(e, path, None)).unwrap();
+    let imported = target.wait(|e| import_notes(e, path, None)).unwrap();
 
     assert_eq!((exported.notes, exported.protected), (1, false));
     assert!(!protected);
@@ -46,7 +46,7 @@ fn an_export_under_a_short_phrase_is_refused() {
         .to_string();
 
     assert!(matches!(
-        code(session.call(|e| export_notes(
+        code(session.wait(|e| export_notes(
             e,
             path,
             ExportScope::Library,
@@ -93,7 +93,7 @@ fn an_empty_scope_is_counted_as_such_and_exports_no_file() {
         })
         .unwrap();
     let report = session
-        .call(|e| {
+        .wait(|e| {
             export_notes(
                 e,
                 path.to_string_lossy().to_string(),

@@ -123,9 +123,11 @@ fn folders_attachments_and_global_values_are_read_again() {
     written(&session, |e| {
         move_folder(e, sql.id.clone(), Some(prod.id.clone()))
     });
-    let attachment = written(&session, |e| {
-        attach_file(e, note.clone(), file.to_string_lossy().to_string())
-    });
+    let path = file.to_string_lossy().to_string();
+    let attachment = session
+        .wait(|e| attach_file(e, note.clone(), path))
+        .unwrap();
+    session.call(Engine::index_matches_library).unwrap();
     written(&session, |e| delete_attachment(e, attachment.id));
     written(&session, |e| set_global_placeholders(e, globals));
     written(&session, |e| {

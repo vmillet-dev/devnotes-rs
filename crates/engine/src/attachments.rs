@@ -21,21 +21,33 @@ use files::{
 };
 use model::Attachment;
 
-/// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. With
-/// `read_attachment` this reads any file the account can read into the `WebView`, and what keeps
-/// that harmless is the CSP — `script-src 'self'`, nothing remote — not this function.
-pub fn attach_file(engine: &Engine, note_id: String, path: String) -> Result<Attachment, AppError> {
-    engine.write(|db| {
+/// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. The source is read
+/// off the db queue — up to 10 MiB, perhaps on a network share — and only what is stored waits
+/// in it.
+pub async fn attach_file(
+    engine: std::sync::Arc<Engine>,
+    note_id: String,
+    path: String,
+) -> Result<Attachment, AppError> {
+    let read = crate::tools::off_thread(move || -> Result<_, AppError> {
         let file_name = model::display_name(&path)?;
         let bytes = read_within_limit(&path)?;
         model::validate_size(bytes.len() as u64, &file_name)?;
-        let answer = store_new(note_id, file_name, &bytes, db)?;
-        let changed = Changed {
-            attachments: true,
-            ..Changed::default()
-        };
-        Ok((answer, changed))
+        Ok((file_name, bytes))
     })
+    .await?;
+    let (file_name, bytes) = read?;
+    crate::db::run(engine, move |engine| {
+        engine.write(|db| {
+            let answer = store_new(note_id, file_name, &bytes, db)?;
+            let changed = Changed {
+                attachments: true,
+                ..Changed::default()
+            };
+            Ok((answer, changed))
+        })
+    })
+    .await
 }
 
 pub fn list_attachments(engine: &Engine, note_id: String) -> Result<Vec<Attachment>, AppError> {

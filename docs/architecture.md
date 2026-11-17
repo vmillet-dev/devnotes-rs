@@ -3968,6 +3968,13 @@ asked for would only add noise.
   duplicating them, so a field added to `Note` is exported without anyone thinking about it.
   Only the spaces actually cited travel: exporting one space should not recreate a whole tree
   on the other side.
+- **The file is written and read off the db queue** (1.0.2): an export reads its rows there,
+  then opens, seals and zips every attachment on a blocking thread with the key alone
+  (`Library::shared_vault`); an import reads and opens the file there before it merges on the
+  queue; adding an attachment reads its source there. A large export held every other command
+  for its length (20 s for 160 MB in a debug build). `export_notes`, `import_notes` and
+  `attach_file` are therefore network-shaped (`Arc<Engine>`, `Backend::spawn`). The file is
+  staged then renamed, so a window closed in the middle leaves no half export.
 - **⚠️ An export can be sealed, and with a key of its own.** The library key is derived
   from the passphrase typed at launch and never leaves the machine; an export is the one
   file meant to reach another one, so `transfer/protect.rs` derives a second key from a

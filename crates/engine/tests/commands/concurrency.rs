@@ -186,3 +186,57 @@ fn the_index_fills_after_an_unlock_and_empties_when_another_library_opens() {
     session.call(|e| open_library(e, other.id)).unwrap();
     assert_eq!(session.engine.indexed(), 0);
 }
+
+/// An export of many attachments, and lists asked all along it: none waits for its file.
+#[test]
+fn a_large_export_holds_back_no_other_command() {
+    use engine::attachments::attach_file;
+    use engine::transfer::export_notes;
+    use engine::transfer::model::ExportScope;
+    use std::time::{Duration, Instant};
+
+    let scratch = tempfile::tempdir().unwrap();
+    let session = Session::on_disk(&scratch.path().join("library"));
+    let space = session.space("Personal");
+    let source = scratch.path().join("capture.bin");
+    let bytes: Vec<u8> = (0..4 * 1024 * 1024_u32)
+        .map(|at| at.wrapping_mul(2_654_435_761).to_le_bytes()[3])
+        .collect();
+    std::fs::write(&source, bytes).unwrap();
+    for _ in 0..12 {
+        let note = session
+            .call(|e| create_note(e, snippet(&space)))
+            .unwrap()
+            .note
+            .id;
+        let path = source.to_string_lossy().to_string();
+        session.wait(|e| attach_file(e, note, path)).unwrap();
+    }
+    let path = scratch
+        .path()
+        .join("all.devnotes")
+        .to_string_lossy()
+        .to_string();
+
+    let exporting = session.runtime.spawn(export_notes(
+        Arc::clone(&session.engine),
+        path,
+        ExportScope::Library,
+        None,
+    ));
+    let (mut slowest, mut asked) = (Duration::ZERO, 0);
+    while !exporting.is_finished() {
+        let started = Instant::now();
+        let listing = engine::db::submit(&session.engine, engine::spaces::list_spaces);
+        session.runtime.block_on(listing).unwrap();
+        slowest = slowest.max(started.elapsed());
+        asked += 1;
+    }
+    session.runtime.block_on(exporting).unwrap().unwrap();
+
+    assert!(asked > 1, "the export ended before a second list was asked");
+    assert!(
+        slowest < Duration::from_millis(500),
+        "a list waited {slowest:?} behind the export"
+    );
+}
