@@ -242,7 +242,7 @@ fn cards(
                 card::show(
                     &mut cell_ui,
                     rect,
-                    &view.display(shown_card),
+                    view.display(shown_card),
                     context,
                     (canvas_view, actions),
                 );

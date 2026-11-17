@@ -404,10 +404,7 @@ impl NoteIndex {
 /// The cards of `entries` that answer `needle`, in their order, each with the quote of a match
 /// found elsewhere than in its title. Searched in parallel; nothing is copied.
 pub(crate) fn search(entries: &[&Arc<IndexedNote>], needle: &str) -> Vec<Card> {
-    let card = |entry: &Arc<IndexedNote>, hit| Card {
-        note: Arc::clone(entry),
-        hit,
-    };
+    let card = |entry: &Arc<IndexedNote>, hit| Card::new(Arc::clone(entry), hit);
     if needle.is_empty() {
         return entries.iter().map(|entry| card(entry, None)).collect();
     }

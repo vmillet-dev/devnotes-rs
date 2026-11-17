@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
@@ -308,6 +308,18 @@ pub struct Card {
     pub note: Arc<IndexedNote>,
     /// `None` outside a search, and for a note found by its own title.
     pub hit: Option<SearchHit>,
+    /// What its card draws, cut once for this view: a Calcul sheet evaluated, a Note read whole.
+    preview: OnceLock<DisplayNote>,
+}
+
+impl Card {
+    pub fn new(note: Arc<IndexedNote>, hit: Option<SearchHit>) -> Self {
+        Self {
+            note,
+            hit,
+            preview: OnceLock::new(),
+        }
+    }
 }
 
 impl std::ops::Deref for Card {
@@ -442,8 +454,12 @@ fn keeps_chip(opened: Option<&str>, folder_id: Option<&str>) -> bool {
 
 impl NotesView {
     /// What `card`'s card draws: its footer, fields, chip and counter, and its body cut to a
-    /// preview. Computed for the cards shown only, from the shared entry.
-    pub fn display(&self, card: &Card) -> DisplayNote {
+    /// preview. Computed for the cards shown only, once for this view: a frame only reads it.
+    pub fn display<'a>(&self, card: &'a Card) -> &'a DisplayNote {
+        card.preview.get_or_init(|| self.cut(card))
+    }
+
+    fn cut(&self, card: &Card) -> DisplayNote {
         let mut note = model::decorate(card.note.note.clone(), self.now);
         note.search_hit.clone_from(&card.hit);
         if self.by_creation {
@@ -500,10 +516,7 @@ pub fn build(notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> NotesVie
             } else {
                 answers(&entry.note, &entry.folded, &needle)?
             };
-            Some(Card {
-                note: Arc::new(entry),
-                hit,
-            })
+            Some(Card::new(Arc::new(entry), hit))
         })
         .collect();
 
@@ -944,10 +957,7 @@ mod tests {
     use crate::notes::fixtures::{NOW, at, note as sample};
 
     fn card(note: Note) -> Card {
-        Card {
-            note: Arc::new(IndexedNote::of(note)),
-            hit: None,
-        }
+        Card::new(Arc::new(IndexedNote::of(note)), None)
     }
 
     /// [`super::build_sections`] over notes just read.
@@ -964,7 +974,7 @@ mod tests {
 
     /// What the first card of `view` draws.
     fn first_displayed(view: &NotesView) -> DisplayNote {
-        view.display(view.cards().next().unwrap())
+        view.display(view.cards().next().unwrap()).clone()
     }
 
     fn request() -> NotesQuery {
@@ -2278,5 +2288,19 @@ mod tests {
                 ..sample()
             }));
         }
+    }
+
+    #[test]
+    fn a_card_is_cut_once_for_its_view_and_a_frame_only_reads_it() {
+        let view = build(vec![note("a", "Un")], Facets::default(), &request());
+        let card = view.cards().next().unwrap();
+
+        let first: *const DisplayNote = view.display(card);
+        let second: *const DisplayNote = view.display(card);
+
+        assert!(
+            std::ptr::eq(first, second),
+            "the same preview, not cut again"
+        );
     }
 }

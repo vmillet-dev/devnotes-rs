@@ -134,7 +134,7 @@ fn found_notes(state: &AppState) -> Vec<Item> {
     };
     view.cards()
         .take(MAX_NOTES)
-        .map(|card| Item::Note(Box::new(view.display(card))))
+        .map(|card| Item::Note(Box::new(view.display(card).clone())))
         .collect()
 }
 

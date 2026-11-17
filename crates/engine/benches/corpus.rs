@@ -128,7 +128,7 @@ pub(crate) fn run_query(corpus: &mut Corpus, request: &NotesQuery) -> Vec<Displa
     built
         .cards()
         .take(SHOWN)
-        .map(|card| built.display(card))
+        .map(|card| built.display(card).clone())
         .collect()
 }
 
