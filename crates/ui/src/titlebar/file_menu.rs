@@ -46,9 +46,12 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
     let on_screen: Vec<&str> = on_screen.iter().map(String::as_str).collect();
     let checked = !state.selection.checked_in(&on_screen).is_empty();
     let space = state.spaces.active_space().is_some();
+    // What a greyed entry waits for, said under the pointer.
+    let space = (!space).then_some(keys::file::NEEDS_SPACE);
+    let checked = (!checked).then_some(keys::file::NEEDS_SELECTION);
     let rows = [
-        (keys::file::IMPORT, "import", true, Action::Import),
-        (keys::file::EXPORT_ALL, "exportAll", true, Action::ExportAll),
+        (keys::file::IMPORT, "import", None, Action::Import),
+        (keys::file::EXPORT_ALL, "exportAll", None, Action::ExportAll),
         (
             keys::file::EXPORT_SPACE,
             "exportSpace",
@@ -69,10 +72,14 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
         ),
     ];
     let mut ids = Vec::with_capacity(rows.len() + 3);
-    for (key, entry, enabled, action) in rows {
+    for (key, entry, waiting, action) in rows {
         let id = format!("file-option-{entry}");
+        let enabled = waiting.is_none();
         let tone = if enabled { Tone::Plain } else { Tone::Idle };
-        let row = super::menu_option(ui, &tr(key), &id, tone);
+        let mut row = super::menu_option(ui, &tr(key), &id, tone);
+        if let Some(reason) = waiting {
+            row = widgets::tooltip(row, &tr(reason));
+        }
         ids.push(row.id);
         if enabled && row.clicked() {
             actions.push(Asked::Menu(action));
