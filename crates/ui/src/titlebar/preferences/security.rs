@@ -62,12 +62,8 @@ pub(crate) fn change_id() -> Id {
     Id::unique("change-passphrase")
 }
 
-pub(super) fn page(
-    ui: &mut Ui,
-    state: &AppState,
-    (settings, reveal): (&mut Settings, &mut bool),
-    actions: &mut Actions,
-) {
+/// The passphrase: what opens the library.
+pub(super) fn page(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     use keys::settings::security;
     let language = state.language;
     let tr = |key: Key| i18n::translate(language, key, &[]);
@@ -82,6 +78,18 @@ pub(super) fn page(
     });
     note(ui, &tr(security::NOTE));
     note(ui, &tr(security::COPIES_NOTE));
+}
+
+/// The copies taken at launch, and putting one back.
+pub(super) fn backups(
+    ui: &mut Ui,
+    state: &AppState,
+    (settings, reveal): (&mut Settings, &mut bool),
+    actions: &mut Actions,
+) {
+    use keys::settings::security;
+    let language = state.language;
+    let tr = |key: Key| i18n::translate(language, key, &[]);
     group(ui, language, security::BACKUPS);
     switch_row(
         ui,

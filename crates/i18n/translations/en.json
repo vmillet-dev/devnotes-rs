@@ -1040,7 +1040,8 @@
       "general": "General",
       "variables": "Variables",
       "shortcuts": "Shortcuts",
-      "security": "Security"
+      "security": "Security",
+      "backups": "Backups"
     },
     "copied": "Copied to the clipboard.",
     "appearance": {
@@ -1127,7 +1128,7 @@
       "passphrase": "Passphrase",
       "change": "Change…",
       "changing": "Changing…",
-      "note": "It opens the library at every launch. Changing it re-encrypts nothing: your notes stay sealed with the same key, which is why it takes a second rather than a rewrite.",
+      "note": "It opens the library at every launch; changing it re-encrypts nothing, which is why it takes a second.",
       "dialogTitle": "Change the passphrase",
       "dialogLead": "The new one applies at the next launch. This session carries on as it is.",
       "current": "Current passphrase",
@@ -1135,13 +1136,13 @@
       "cancel": "Cancel",
       "changed": "Passphrase changed. The old one no longer opens the library, nor the copies kept beside it.",
       "automaticBackups": "Copy the library at launch",
-      "backupsNote": "At most one copy a day, the last three kept beside the library — enough for an emptied trash or an update gone wrong. Not a defence against a dead disk: export somewhere else for that.",
+      "backupsNote": "At most one copy a day, the last three kept beside the library; against a dead disk, export somewhere else.",
       "changedOneLeft": "Passphrase changed, but one copy could not be rewrapped: it still opens with the old phrase.",
       "changedSomeLeft": "Passphrase changed, but {{count}} copies could not be rewrapped: they still open with the old phrase.",
-      "copiesNote": "The copies kept beside the library are rewrapped with it. A key file you copied somewhere else will still open with the old phrase.",
+      "copiesNote": "The copies kept beside the library are rewrapped with it; a key file copied elsewhere keeps the old phrase.",
       "backups": "Backups",
       "access": "Access",
-      "backupsLimit": "A copy carries the notes, the key that opens them and the attached files. The files are linked rather than duplicated, shared with the library, so a copy costs little more than its notes."
+      "backupsLimit": "A copy carries the notes, their key and the attached files, linked rather than duplicated."
     },
     "notifications": {
       "title": "Notifications",

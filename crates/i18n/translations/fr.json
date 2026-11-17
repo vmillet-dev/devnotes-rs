@@ -1040,7 +1040,8 @@
       "general": "Général",
       "variables": "Variables",
       "shortcuts": "Raccourcis",
-      "security": "Sécurité"
+      "security": "Sécurité",
+      "backups": "Sauvegardes"
     },
     "copied": "Copié dans le presse-papier.",
     "appearance": {
@@ -1127,7 +1128,7 @@
       "passphrase": "Phrase de passe",
       "change": "Changer…",
       "changing": "Changement…",
-      "note": "Elle ouvre la bibliothèque à chaque lancement. La changer ne rechiffre rien : les notes restent scellées avec la même clé, d’où une seconde plutôt qu’une réécriture.",
+      "note": "Elle ouvre la bibliothèque à chaque lancement ; la changer ne rechiffre rien, d’où une seconde plutôt qu’une réécriture.",
       "dialogTitle": "Changer la phrase de passe",
       "dialogLead": "La nouvelle s’applique au prochain lancement. Cette session continue telle quelle.",
       "current": "Phrase actuelle",
@@ -1135,13 +1136,13 @@
       "cancel": "Annuler",
       "changed": "Phrase de passe changée. L’ancienne n’ouvre plus la bibliothèque ni les copies gardées à côté.",
       "automaticBackups": "Copier la bibliothèque au lancement",
-      "backupsNote": "Au plus une copie par jour, les trois dernières gardées à côté de la bibliothèque — de quoi couvrir une corbeille vidée ou une mise à jour ratée. Pas une protection contre un disque mort : pour ça, exportez ailleurs.",
+      "backupsNote": "Au plus une copie par jour, les trois dernières gardées à côté de la bibliothèque ; contre un disque mort, exportez ailleurs.",
       "changedOneLeft": "Phrase de passe changée, mais une copie n’a pas pu être réenveloppée : elle s’ouvre encore avec l’ancienne phrase.",
       "changedSomeLeft": "Phrase de passe changée, mais {{count}} copies n’ont pas pu être réenveloppées : elles s’ouvrent encore avec l’ancienne phrase.",
-      "copiesNote": "Les copies gardées à côté de la bibliothèque sont réenveloppées avec elle. Un fichier de clé que vous auriez copié ailleurs, lui, s’ouvrira toujours avec l’ancienne phrase.",
+      "copiesNote": "Les copies gardées à côté sont réenveloppées avec elle ; un fichier de clé copié ailleurs garde l’ancienne.",
       "backups": "Copies de sauvegarde",
       "access": "Accès",
-      "backupsLimit": "Une copie emporte les notes, la clé qui les ouvre et les pièces jointes. Celles-ci sont liées plutôt que dupliquées, partagées avec la bibliothèque : une copie ne coûte guère plus que ses notes."
+      "backupsLimit": "Une copie emporte les notes, leur clé et les pièces jointes, liées plutôt que dupliquées."
     },
     "notifications": {
       "title": "Notifications",

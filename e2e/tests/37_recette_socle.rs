@@ -24,8 +24,8 @@ fn preferences(app: &mut App) {
 
 fn security(app: &mut App) {
     preferences(app);
-    app.click("settings-page-security");
-    app.wait_for("setting-change-passphrase");
+    app.click("settings-page-backups");
+    app.wait_for("setting-automatic-backups");
 }
 
 fn close(app: &mut App) {

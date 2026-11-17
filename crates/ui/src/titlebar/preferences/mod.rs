@@ -56,13 +56,14 @@ enum Page {
     General,
     Shortcuts,
     Security,
+    Backups,
     Variables,
 }
 
 impl Page {
     /// The order on screen: what the application looks like, then the keys that reach it, then
-    /// what protects the library, then the corpus's own variables.
-    const ALL: [(Self, Key, &'static str); 4] = [
+    /// what protects the library and its copies, then the corpus's own variables.
+    const ALL: [(Self, Key, &'static str); 5] = [
         (Self::General, keys::settings::pages::GENERAL, "general"),
         (
             Self::Shortcuts,
@@ -70,6 +71,7 @@ impl Page {
             "shortcuts",
         ),
         (Self::Security, keys::settings::pages::SECURITY, "security"),
+        (Self::Backups, keys::settings::pages::BACKUPS, "backups"),
         (
             Self::Variables,
             keys::settings::pages::VARIABLES,
@@ -322,9 +324,10 @@ fn current_page(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Ac
             let lines = view.preview_lines.get_or_insert(state.preview_lines);
             general::show(ui, state, (draft, lines), actions);
         }
-        Page::Security => {
+        Page::Security => security::page(ui, state, actions),
+        Page::Backups => {
             let mut settings = draft.draft().clone();
-            security::page(ui, state, (&mut settings, &mut view.reveal_strip), actions);
+            security::backups(ui, state, (&mut settings, &mut view.reveal_strip), actions);
             draft.edit(|edited| *edited = settings);
         }
         Page::Shortcuts => {
