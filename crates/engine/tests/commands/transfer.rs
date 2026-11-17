@@ -130,7 +130,9 @@ fn an_attachment_that_cannot_be_opened_is_left_out_of_the_export_and_counted() {
     let source = scratch.path().join("capture.png");
     std::fs::write(&source, b"\x89PNG").unwrap();
     let attachment = session
-        .call(|e| engine::attachments::attach_file(e, note, source.to_string_lossy().to_string()))
+        .wait(|e| {
+            engine::attachments::attach_file(e, note.clone(), source.to_string_lossy().to_string())
+        })
         .unwrap();
     let stored = engine::attachments::files::directory(
         session.engine.db().lock().unwrap().as_ref().unwrap(),
@@ -144,7 +146,7 @@ fn an_attachment_that_cannot_be_opened_is_left_out_of_the_export_and_counted() {
         .to_string();
 
     let report = session
-        .call(|e| export_notes(e, path, ExportScope::Library, None))
+        .wait(|e| export_notes(e, path.clone(), ExportScope::Library, None))
         .unwrap();
 
     assert_eq!((report.notes, report.attachments), (1, 0));
