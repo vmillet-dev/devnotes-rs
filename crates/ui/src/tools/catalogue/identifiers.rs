@@ -12,6 +12,7 @@ use i18n::{Language, Message, keys};
 use serde_json::json;
 
 use crate::api;
+use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::tools::live::{Live, Turn};
 use crate::tools::ui::{
@@ -19,7 +20,7 @@ use crate::tools::ui::{
     section_title,
 };
 use crate::tools::{Drawn, Tool, ToolResult};
-use crate::widgets::{Button, Kind, Segmented, TextField, address, virtual_list};
+use crate::widgets::{Button, IconButton, Kind, Segmented, TextField, address, virtual_list};
 
 const KINDS: [(IdKind, &str); 7] = [
     (IdKind::UuidV4, "UUID v4"),
@@ -250,12 +251,20 @@ impl IdentifiersTool {
         }
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;
-            if Button::new("-", "identifiers-fewer").show(ui).clicked() {
+            let fewer = tr(words::FEWER);
+            if IconButton::new(Icon::Minus, &fewer, "identifiers-fewer")
+                .show(ui)
+                .clicked()
+            {
                 self.step(-1);
             }
             let name = tr(words::COUNT);
             number_field(ui, &mut self.count, &name, "identifiers-count");
-            if Button::new("+", "identifiers-more").show(ui).clicked() {
+            let more = tr(words::MORE);
+            if IconButton::new(Icon::Plus, &more, "identifiers-more")
+                .show(ui)
+                .clicked()
+            {
                 self.step(1);
             }
             if is_caseless(self.kind) {

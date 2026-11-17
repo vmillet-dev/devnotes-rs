@@ -153,7 +153,8 @@
     "fileInto": "File into",
     "noFolder": "No folder",
     "newCalc": "Calculation",
-    "newDrawing": "Drawing"
+    "newDrawing": "Drawing",
+    "cards": "The cards"
   },
   "filters": {
     "groupLabel": "Filter notes",
@@ -226,7 +227,8 @@
     "reorganise": "Reorganise {zones, plural, =0 {no folder} one {# folder} other {# folders}} and {cards, plural, =0 {no card} one {# card} other {# cards}}",
     "reorganiseHint": "Repositions and resizes the folders. Overwrites sizes chosen by hand; undoable.",
     "subFolders": "Sub-folders of {{name}}",
-    "subFoldersLabel": "Sub-folders"
+    "subFoldersLabel": "Sub-folders",
+    "surface": "Board surface"
   },
   "sort": {
     "label": "Sort and group",
@@ -2012,6 +2014,8 @@
         "paragraphs": "Paragraphs"
       },
       "count": "Count",
+      "fewer": "One fewer",
+      "more": "One more",
       "opening": "Start with “Lorem ipsum”",
       "again": "Regenerate",
       "noteTitle": "Lorem ipsum",
@@ -4262,7 +4266,8 @@
     "embed": "Insert a drawing",
     "embedNone": "No drawing to insert",
     "missing": "Drawing not found",
-    "noPicture": "No preview yet"
+    "noPicture": "No preview yet",
+    "preview": "Drawing preview"
   },
   "crash": {
     "title": "{{app}} stopped",

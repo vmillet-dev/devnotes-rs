@@ -16,10 +16,10 @@ use crate::theme::palette;
 #[derive(Debug, Default)]
 pub struct RailWidth(Option<(u16, f32)>);
 
-/// The whole room of an area, named: the three are found by it.
-pub fn area_room(ui: &mut Ui, author_id: &str) -> Rect {
+/// The whole room of an area, named `name` and found by `author_id`.
+pub fn area_room(ui: &mut Ui, author_id: &str, name: &str) -> Rect {
     let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Main, true, author_id));
+    response.widget_info(|| WidgetInfo::labeled(Role::Main, true, name));
     address(ui, &response, author_id);
     region
 }

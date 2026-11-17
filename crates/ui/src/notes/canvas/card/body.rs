@@ -443,7 +443,8 @@ fn drawing(
             let scale = (rect.width() / size.x).min(rect.height() / size.y).min(1.0);
             let shown = Rect::from_min_size(rect.min, size * scale);
             let response = ui.allocate_rect(shown, Sense::hover());
-            response.widget_info(|| WidgetInfo::labeled(Role::Image, true, ""));
+            let name = i18n::translate(context.language, keys::drawing::PREVIEW, &[]);
+            response.widget_info(|| WidgetInfo::labeled(Role::Image, true, &name));
             address(ui, &response, "note-card-drawing");
             egui::Image::new((texture.id(), shown.size()))
                 .corner_radius(4)

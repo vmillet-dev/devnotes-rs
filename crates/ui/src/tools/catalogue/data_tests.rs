@@ -314,3 +314,17 @@ fn the_separator_chosen_is_kept_with_the_application() {
         engine::tools::identity::CsvSeparator::Semicolon
     );
 }
+
+/// The count's two steps are named by what they do, not read out as signs.
+#[test]
+fn the_count_steps_are_named_in_words() {
+    let harness = opened("identifiers");
+    for step in ["identifiers-fewer", "identifiers-more"] {
+        let node = harness.get_by(|node| node.author_id() == Some(step));
+        let name = node.accesskit_node().label().unwrap_or_default();
+        assert!(
+            name.chars().any(char::is_alphabetic),
+            "{step} is read « {name} »"
+        );
+    }
+}

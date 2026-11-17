@@ -234,3 +234,20 @@ fn the_kind_menu_opens_a_draft_of_its_kind() {
     );
     harness.get_by(|node| node.author_id() == Some("editor-title"));
 }
+
+/// The menu and the palette write the keys the person bound, not the defaults.
+#[test]
+fn a_moved_new_note_key_is_the_one_shown() {
+    use crate::services::shortcuts::{ACTIONS, Bindings};
+    let action = *ACTIONS
+        .iter()
+        .find(|action| action.id == "canvas.newSnippet")
+        .unwrap();
+    let mut bindings = Bindings::default();
+    bindings.set(action, "Ctrl+Alt+N".to_owned());
+
+    assert_eq!(
+        crate::notes::header::shortcut(engine::notes::kind::NoteKind::Snippet, &bindings),
+        bindings.of(action)
+    );
+}

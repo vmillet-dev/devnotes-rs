@@ -414,6 +414,54 @@ impl AppState {
         let asking = self.transfer.prompt().is_some();
         let prompt = crate::gate::prompt::id();
         self.dialogs.follow(ctx, Layer::Passphrase, prompt, asking);
+        self.follow_modals(ctx);
+    }
+
+    /// The modals whose state lives in the screens', in the stack while they show: the keys of
+    /// what is under them stand aside, and the focus goes back to what opened them.
+    fn follow_modals(&mut self, ctx: &egui::Context) {
+        let http = &self.http;
+        let modals = [
+            (Layer::App, "trash-panel", self.trash.is_open()),
+            (Layer::App, "tag-manager", self.tags.is_open()),
+            (Layer::App, "folder-name-prompt", self.folders.naming()),
+            (Layer::Fields, "placeholder-form", self.fill.is_open()),
+            (Layer::Palette, "palette", self.palette.is_open()),
+            (
+                Layer::Zoom,
+                "image-lightbox",
+                self.attachments.zoomed().is_some(),
+            ),
+            (
+                Layer::Presentation,
+                "presentation",
+                self.presentation.shown().is_some(),
+            ),
+            (
+                Layer::App,
+                "http-close-dialog",
+                http.tabs().closing().is_some(),
+            ),
+            (Layer::App, "http-code-dialog", http.code().key().is_some()),
+            (
+                Layer::App,
+                "http-settings-dialog",
+                http.container().is_some(),
+            ),
+            (Layer::App, "http-cookies-dialog", http.cookies().is_open()),
+            (Layer::App, "http-leave-dialog", http.leave().is_asking()),
+            (Layer::App, "save-as-note", http.kept().asked().is_some()),
+            (
+                Layer::App,
+                "http-save-dialog",
+                http.tabs().asking_place().is_some(),
+            ),
+            (Layer::App, "note-picker", self.tools_view.is_picking()),
+        ];
+        for (layer, name, open) in modals {
+            self.dialogs
+                .follow(ctx, layer, egui::Id::unique(name), open);
+        }
     }
 
     /// The board, when it is what the canvas shows: the space's, or the open folder's when it

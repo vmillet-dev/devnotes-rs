@@ -511,7 +511,7 @@ mod tests {
         let (mut harness, _) = three();
         assert!(
             harness
-                .query_by(|node| node.author_id() == Some("selection-bar-count"))
+                .query_by(|node| node.author_id() == Some("selection-count"))
                 .is_none()
         );
 
