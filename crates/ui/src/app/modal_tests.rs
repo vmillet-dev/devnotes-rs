@@ -120,3 +120,43 @@ fn a_greyed_file_entry_says_what_it_waits_for() {
         "no « {waiting} » under the pointer"
     );
 }
+
+/// In a Note, `Ctrl+B` is bold: the rail's key, the same by default, stays with the editor while
+/// it writes.
+#[test]
+fn ctrl_b_in_a_note_writes_bold_and_leaves_the_rail() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut harness = open_library(directory.path());
+    // A Note of the test's own: the samples' titles follow the system's language.
+    let backend = harness.state().backend();
+    let space = crate::testing::note(backend, "seed").space_id.clone();
+    engine::db::run_here(backend.engine(), move |engine| {
+        let draft = engine::notes::model::NoteDraft {
+            kind: engine::notes::kind::NoteKind::Note,
+            language: engine::notes::language::Language::Txt,
+            content: "Ship it".to_owned(),
+            ..crate::testing::snippet(space, "Standup".to_owned())
+        };
+        engine::notes::create_note(engine, draft)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open") && node.label().as_deref() == Some("Standup")
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "editor-rich");
+    let rail = harness.state().state.settings.rail_shown;
+
+    harness.key_press_modifiers(Modifiers::COMMAND, Key::B);
+    settle(&mut harness);
+
+    assert_eq!(
+        harness.state().state.settings.rail_shown,
+        rail,
+        "the rail moved"
+    );
+}

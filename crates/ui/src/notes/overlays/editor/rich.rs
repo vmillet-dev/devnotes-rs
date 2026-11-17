@@ -502,6 +502,9 @@ fn keys(
 ) -> Option<String> {
     let events = ui.input(|input| input.events.clone());
     let mut code_paste = None;
+    // A shortcut the text ran is taken from the frame, or the area's keys would run it too:
+    // `Ctrl+B` is bold here and the rail's elsewhere (D14).
+    let mut ran = Vec::new();
     for event in events {
         match event {
             Event::Text(text) | Event::Ime(egui::ImeEvent::Commit(text)) => view.type_text(&text),
@@ -517,10 +520,20 @@ fn keys(
                 pressed: true,
                 modifiers,
                 ..
-            } => key_pressed(view, key, physical_key, modifiers),
+            } => {
+                let shortcut = key_pressed(view, key, physical_key, modifiers);
+                if shortcut {
+                    ran.push((modifiers, key));
+                }
+            }
             _ => {}
         }
     }
+    ui.input_mut(|input| {
+        for (modifiers, key) in ran {
+            input.consume_key(modifiers, key);
+        }
+    });
     code_paste
 }
 
@@ -557,10 +570,16 @@ fn copy(ui: &Ui, view: &RichEditor) {
     }
 }
 
-fn key_pressed(view: &mut RichEditor, key: Key, physical: Option<Key>, modifiers: Modifiers) {
+/// `true` when the key was one of the text's shortcuts.
+fn key_pressed(
+    view: &mut RichEditor,
+    key: Key,
+    physical: Option<Key>,
+    modifiers: Modifiers,
+) -> bool {
     if let Some(command) = shortcuts::find(key, physical, modifiers) {
         run_command(view, command);
-        return;
+        return true;
     }
     match key {
         Key::Enter => view.change(Step::Other, edit::split),
@@ -574,6 +593,7 @@ fn key_pressed(view: &mut RichEditor, key: Key, physical: Option<Key>, modifiers
         Key::Tab => tab(view, modifiers.shift),
         _ => {}
     }
+    false
 }
 
 fn run_command(view: &mut RichEditor, command: shortcuts::Command) {
