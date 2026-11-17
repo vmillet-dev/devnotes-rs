@@ -364,11 +364,12 @@ fn a_name_cut_in_the_rail_is_read_whole_on_hover_and_its_menu_stays_in_reach() {
 
     let said = harness
         .query_all_by(|node| node.author_id() != Some("folder-option"))
-        .filter_map(|node| node.accesskit_node().label().or(node.accesskit_node().value()))
+        .filter_map(|node| {
+            node.accesskit_node()
+                .label()
+                .or(node.accesskit_node().value())
+        })
         .any(|words| words == long);
-    assert!(
-        said,
-        "the full name in a tooltip"
-    );
+    assert!(said, "the full name in a tooltip");
     harness.get_by(|node| node.author_id() == Some("folder-edit"));
 }
