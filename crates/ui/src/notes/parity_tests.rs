@@ -114,14 +114,15 @@ fn a_search_that_finds_nothing_offers_to_clear_it() {
 }
 
 #[test]
-fn a_selection_is_copied_from_its_bar() {
+fn a_selection_is_copied_from_its_row() {
     let (backend, profile) = testing::unlocked();
     testing::note(&backend, "psql prod");
     let mut harness = area(backend, profile);
     hover_first_card(&mut harness);
     click_id(&mut harness, "note-card-check");
 
-    click_id(&mut harness, "selection-copy");
+    click_id(&mut harness, "selection-more");
+    click_id(&mut harness, "selection-more-copy");
     settle(&mut harness);
 
     assert!(present(&harness, "selection-count"));

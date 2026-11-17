@@ -14,6 +14,9 @@ pub const ENTER: f32 = 0.16;
 pub const TURN: f32 = 0.8;
 /// Not a motion: how long a mark left by an action takes to fade, so the eye can find it.
 pub const MARK: f32 = 2.0;
+/// Not a motion: how long a report stays before it goes by itself, counted away from the
+/// pointer.
+pub const REPORT: f32 = 6.0;
 
 /// Where an element comes from when it appears: a short rise or lift, or a fade — never a size.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

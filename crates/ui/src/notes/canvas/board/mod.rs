@@ -18,7 +18,6 @@ use egui::{
 use engine::folders::board::{BoardFrame, BoardNote, BoardPoint, BoardView, CARD_WIDTH, zone_at};
 use i18n::{Key, keys};
 
-use super::selection_bar::{self, Shown};
 use super::{CanvasView, card, padded, state_text};
 use crate::action::{Action, Actions};
 use crate::notes::BoardGesture;
@@ -175,15 +174,6 @@ pub(super) fn show(
         (canvas_view, actions),
     );
     canvas_view.board = screen;
-    let shown: Vec<_> = board
-        .cards()
-        .map(|entry| Shown {
-            id: &entry.note.id,
-            pinned: entry.note.pinned,
-            tags: &entry.note.tags,
-        })
-        .collect();
-    selection_bar::show(ui, state, &shown, canvas_view, actions);
 }
 
 /// The dotted ground, in its frame: the only thing that scrolls, both ways.

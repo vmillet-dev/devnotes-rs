@@ -1690,7 +1690,8 @@ itself. Four changes got it there:
   — still not in the File menu, for the reason it never was.
 - **The selection bar floats** over the canvas region rather than being inserted above it.
   ⚠️ It has to be a child of `.canvas-region`, which is the only positioned ancestor: left
-  where it was, it hung against the window and covered the search field.
+  where it was, it hung against the window and covered the search field. (The egui application
+  puts it in the header, in the search's place: see "The notes canvas".)
 
 ⚠️ **The measurement is the spec**, in `06-search-and-filters`: at 1100x720 with the rail
 open, every topbar control shares a row, the row does not overflow, the first card is in the
@@ -4260,8 +4261,10 @@ preferences panel does. Until the screens arrive, an area is an empty room addre
 `area-notes`, `area-tools` or `area-http`.
 
 `ui::banners` draws the `ErrorNotifier`'s failure (red, announced assertively, `error-banner`)
-and the `StatusNotifier`'s report (green, announced politely, `status-toast`) as top panels
-under the bar, one of each, each until its X is pressed (`DismissError`, `DismissStatus`).
+as a top panel under the bar, until its X is pressed (`DismissError`). The `StatusNotifier`'s
+report (green, announced politely, `status-toast`) takes the name's place in the middle of the
+title bar, cut to the room the menus leave: there it moves nothing and covers no control. It goes
+by its X or after `motion::REPORT` seconds away from the pointer (`DismissStatus`).
 
 ### The notes canvas
 
@@ -4421,10 +4424,13 @@ scrolled to first.
 
 Several notes are ticked at once (`state::selection`): `Ctrl`-click or the card's box toggles one,
 `Shift`-click ticks from the card that had the focus the frame before (a click focuses what it
-clicks) to this one, `X` toggles the focused card. While any is ticked, the selection bar floats
-over the canvas, never in its flow: the count, then commands — move to a space, file into a
-folder or out of every one, a priority, a tag added or removed, pin or unpin, delete in two
-clicks. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
+clicks) to this one, `X` toggles the focused card. While any is ticked, what acts on them stands
+in the header where the search was (`notes::header::selection`), as tall as that row, so the
+cards neither move nor hide under it; in a header of one row it takes the whole row. The count,
+then commands — move to a space, file into a folder or out of every one, a tag added, pin or
+unpin, delete in two clicks — and « … » for a priority, a tag removed, the copy, and whatever the
+width leaves out (the filing first, then the move, the pin, the tag field). Asking for the search
+(`Ctrl+K`) lets the selection go. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
 the selection go after disarming and before the search. ⚠️ The card's box is allocated on every
 frame, shown or not: a widget that comes and goes moved the ids of every widget after it, and the
 ⋯ lost its menu.
@@ -4488,7 +4494,7 @@ whatever the switch says. `state::board::BoardState` is a `QueryCell` over `boar
 the list's criteria (`notes_query::Criteria`) among its parameters: the board reads the whole
 space and dims, it never narrows. While it shows, the selection, the arrows (zone by zone, then
 the ground, one step at a time) and the search's count read the board's cards, dimmed ones
-included, and the selection bar takes them as `selection_bar::Shown`.
+included, and so does the header's selection.
 
 `notes::canvas::board` draws it: a dotted ground (`GRID_PX`) that pans both ways and never
 zooms, at least as large as what is seen, so past the content's edge it still takes the pointer;
