@@ -907,6 +907,7 @@
     "importedWithoutSomeAttachments": "{notes, plural, =0 {Aucune note importée} one {# note importée} other {# notes importées}} depuis {{path}}. ⚠️ {missing, plural, one {# pièce jointe annoncée} other {# pièces jointes annoncées}} par le fichier mais {missing, plural, one {absente} other {absentes}} : leur aperçu restera vide.",
     "exported": "{notes, plural, one {# note exportée} other {# notes exportées}} vers {{path}}.",
     "exportedWithAttachments": "{notes, plural, one {# note} other {# notes}} et {attachments, plural, one {# pièce jointe exportée} other {# pièces jointes exportées}} vers {{path}}.",
+    "exportedWithoutUnreadable": "{notes, plural, one {# note exportée} other {# notes exportées}} vers {{path}}. ⚠️ {unreadable, plural, one {# pièce jointe illisible laissée} other {# pièces jointes illisibles laissées}} de côté.",
     "exportedProtected": "{notes, plural, one {# note exportée} other {# notes exportées}} vers {{path}}, scellées avec la phrase de passe que vous lui avez donnée.",
     "exportedProtectedWithAttachments": "{notes, plural, one {# note} other {# notes}} et {attachments, plural, one {# pièce jointe exportée} other {# pièces jointes exportées}} vers {{path}}, scellées avec la phrase de passe que vous lui avez donnée.",
     "protectTitle": "Protéger cet export ?",

@@ -113,3 +113,40 @@ fn an_empty_scope_is_counted_as_such_and_exports_no_file() {
         1
     );
 }
+
+/// The export is the one copy that needs no passphrase: an attachment whose file cannot be
+/// opened is left out and counted, as a missing one is, rather than costing the whole file
+/// (#1478, N52).
+#[test]
+fn an_attachment_that_cannot_be_opened_is_left_out_of_the_export_and_counted() {
+    let scratch = tempfile::tempdir().unwrap();
+    let session = Session::on_disk(&scratch.path().join("library"));
+    let space = session.space("Personal");
+    let note = session
+        .call(|e| create_note(e, snippet(&space)))
+        .unwrap()
+        .note
+        .id;
+    let source = scratch.path().join("capture.png");
+    std::fs::write(&source, b"\x89PNG").unwrap();
+    let attachment = session
+        .call(|e| engine::attachments::attach_file(e, note, source.to_string_lossy().to_string()))
+        .unwrap();
+    let stored = engine::attachments::files::directory(
+        session.engine.db().lock().unwrap().as_ref().unwrap(),
+    )
+    .join(attachment.stored_name());
+    std::fs::write(&stored, b"not sealed").unwrap();
+    let path = scratch
+        .path()
+        .join("notes.devnotes")
+        .to_string_lossy()
+        .to_string();
+
+    let report = session
+        .call(|e| export_notes(e, path, ExportScope::Library, None))
+        .unwrap();
+
+    assert_eq!((report.notes, report.attachments), (1, 0));
+    assert_eq!(report.attachments_unreadable, 1);
+}

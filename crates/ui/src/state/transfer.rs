@@ -365,6 +365,12 @@ fn exported(report: &ExportReport, scope: &ExportScope, path: &str) -> Message {
     if report.notes == 0 {
         return Message::new(empty_key(scope));
     }
+    if report.attachments_unreadable > 0 {
+        return Message::new(keys::file::EXPORTED_WITHOUT_UNREADABLE)
+            .with("notes", report.notes)
+            .with("unreadable", report.attachments_unreadable)
+            .with("path", file_name(path));
+    }
     let key = match (report.protected, report.attachments > 0) {
         (true, true) => keys::file::EXPORTED_PROTECTED_WITH_ATTACHMENTS,
         (true, false) => keys::file::EXPORTED_PROTECTED,
@@ -612,5 +618,21 @@ mod tests {
         bench.transfer.import(&bench.backend, &bench.dialog);
 
         assert!(bench.transfer.prompt().is_some());
+    }
+
+    #[test]
+    fn an_export_that_left_attachments_out_says_how_many() {
+        let report = ExportReport {
+            notes: 2,
+            attachments_unreadable: 1,
+            ..ExportReport::nothing(false)
+        };
+
+        let said = exported(&report, &ExportScope::Library, "/tmp/notes.devnotes");
+
+        assert_eq!(
+            said.text(i18n::Language::En),
+            "2 notes exported to notes.devnotes. ⚠️ 1 attachment could not be read and was left out."
+        );
     }
 }

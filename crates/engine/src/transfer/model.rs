@@ -65,6 +65,8 @@ pub struct ExportReport {
     pub folders: u32,
     /// What went into the archive; a record whose file is missing is left out.
     pub attachments: u32,
+    /// Present but not opened under the library's key: left out, and said.
+    pub attachments_unreadable: u32,
     /// `false` means readable by anyone who has the file: the interface says which it wrote.
     pub protected: bool,
 }
@@ -77,6 +79,7 @@ impl ExportReport {
             spaces: 0,
             folders: 0,
             attachments: 0,
+            attachments_unreadable: 0,
             protected,
         }
     }

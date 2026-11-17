@@ -70,7 +70,7 @@ pub fn write(
     let protection = passphrase.map(protect::seal_with).transpose()?;
 
     let staged = staging_path(path);
-    let stored = match archive(
+    let (stored, unreadable) = match archive(
         &staged,
         &json,
         &bundle.attachments,
@@ -95,6 +95,7 @@ pub fn write(
         spaces: saturating_u32(bundle.spaces.len()),
         folders: saturating_u32(bundle.folders.len()),
         attachments: stored,
+        attachments_unreadable: unreadable,
         protected: passphrase.is_some(),
     })
 }
@@ -106,7 +107,7 @@ fn archive(
     source: &Path,
     library: &Vault,
     protection: Option<&(Vault, Recipe)>,
-) -> Result<u32, StorageError> {
+) -> Result<(u32, u32), StorageError> {
     let target = File::create(staged).context(staged.display().to_string())?;
     let mut writer = ZipWriter::new(target);
 
@@ -134,7 +135,7 @@ fn archive(
         writer.write_all(json.as_bytes()).context(BUNDLE_ENTRY)?;
     }
 
-    let mut stored = 0;
+    let (mut stored, mut unreadable) = (0, 0);
     for record in records {
         let name = record.stored_name();
 
@@ -144,7 +145,12 @@ fn archive(
             continue;
         };
 
-        let plain = library.open_bytes(&sealed)?;
+        // One that cannot be opened is left out and counted: the export is the one copy that
+        // needs no passphrase, and a damaged file must not cost it.
+        let Ok(plain) = library.open_bytes(&sealed) else {
+            unreadable += 1;
+            continue;
+        };
         let bytes = match protection {
             Some((vault, _)) => vault.seal_bytes(&plain)?,
             None => plain,
@@ -159,7 +165,7 @@ fn archive(
 
     writer.finish().map_err(|error| zip_error(&error))?;
 
-    Ok(stored)
+    Ok((stored, unreadable))
 }
 
 /// The bundle, and whatever carries the attachment bytes that belong with it. Answers

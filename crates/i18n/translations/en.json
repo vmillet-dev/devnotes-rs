@@ -907,6 +907,7 @@
     "importedWithoutSomeAttachments": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}}. ⚠️ {missing, plural, one {# attachment} other {# attachments}} named by the file but missing: their preview will stay empty.",
     "exported": "{notes, plural, one {# note} other {# notes}} exported to {{path}}.",
     "exportedWithAttachments": "{notes, plural, one {# note} other {# notes}} and {attachments, plural, one {# attachment} other {# attachments}} exported to {{path}}.",
+    "exportedWithoutUnreadable": "{notes, plural, one {# note} other {# notes}} exported to {{path}}. ⚠️ {unreadable, plural, one {# attachment} other {# attachments}} could not be read and {unreadable, plural, one {was} other {were}} left out.",
     "exportedProtected": "{notes, plural, one {# note} other {# notes}} exported to {{path}}, sealed with the passphrase you gave it.",
     "exportedProtectedWithAttachments": "{notes, plural, one {# note} other {# notes}} and {attachments, plural, one {# attachment} other {# attachments}} exported to {{path}}, sealed with the passphrase you gave it.",
     "protectTitle": "Protect this export?",
