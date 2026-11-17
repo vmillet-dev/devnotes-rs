@@ -328,7 +328,10 @@ fn in_the_narrowest_window_the_address_keeps_its_room_and_every_tab_is_in_reach(
     harness.set_size(egui::vec2(640.0, 480.0));
     settle(&mut harness);
 
-    assert!(width_of(&harness, "http-url") >= 150.0, "the address is read");
+    assert!(
+        width_of(&harness, "http-url") >= 150.0,
+        "the address is read"
+    );
     assert_eq!(
         harness
             .get_by(|node| node.author_id() == Some("http-save"))
@@ -342,8 +345,14 @@ fn in_the_narrowest_window_the_address_keeps_its_room_and_every_tab_is_in_reach(
     click_id(&mut harness, "http-section-more");
     click_id(&mut harness, "http-section-more-settings");
 
-    assert!(has(&harness, "http-section-settings"), "the tab chosen is drawn");
+    assert!(
+        has(&harness, "http-section-settings"),
+        "the tab chosen is drawn"
+    );
     harness.set_size(egui::vec2(1_400.0, 800.0));
     settle(&mut harness);
-    assert!(!has(&harness, "http-section-more"), "nothing left out when all fit");
+    assert!(
+        !has(&harness, "http-section-more"),
+        "nothing left out when all fit"
+    );
 }
