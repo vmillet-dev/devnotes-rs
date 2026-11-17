@@ -2571,7 +2571,7 @@ answers on its standard output.
 (`before`, `after`), sealed with the document or the settings that carry them. `Around::of`
 (`around.rs`) lists what one send runs: before it leaves the collection's script, each folder's,
 then the request's; once answered, the other way round; a blank one is not run.
-`send_http_request` is a `Flight` (`http.rs`), one host for both phases (`session.rs`):
+`send_http_request` is a `Flight` (`http/flight.rs`; a run's steps in `http/collection_run.rs`), one host for both phases (`session.rs`):
 
 - What it inherits, the levels it resolves from, the environment and a copy of the jar are read
   under the lock; the phase runs on a blocking thread, the lock free. « Annuler » kills the host
