@@ -131,17 +131,9 @@ pub enum JsonDiffAnswer {
 
 // --- Paths.
 
+/// A member's path, as the explorer writes it: one rule for every tool.
 fn child(path: &str, key: &str) -> String {
-    let mut chars = key.chars();
-    let plain = chars
-        .next()
-        .is_some_and(|first| first.is_alphabetic() || first == '_')
-        && chars.all(|c| c.is_alphanumeric() || c == '_');
-    if plain {
-        format!("{path}.{key}")
-    } else {
-        format!("{path}[{}]", serde_json::to_string(key).unwrap_or_default())
-    }
+    crate::json::model::member_path(path, key)
 }
 
 /// RFC 6901: `~` and `/` escaped, in that order.
@@ -1032,7 +1024,7 @@ mod tests {
                 modified: 1
             }
         );
-        assert_eq!(changes[0].path, r#"$.server["@port"]"#);
+        assert_eq!(changes[0].path, "$.server['@port']");
     }
 
     #[test]

@@ -224,11 +224,11 @@ mod tests {
         );
         assert_eq!(
             impossible(r#"{"a":{"1st":true}}"#),
-            (Crossing::XmlName, r#"$.a["1st"]"#.to_owned())
+            (Crossing::XmlName, "$.a['1st']".to_owned())
         );
         assert_eq!(
             impossible(r#"{"a":{"@b":[1]}}"#),
-            (Crossing::XmlAttribute, r#"$.a["@b"]"#.to_owned())
+            (Crossing::XmlAttribute, "$.a['@b']".to_owned())
         );
     }
 

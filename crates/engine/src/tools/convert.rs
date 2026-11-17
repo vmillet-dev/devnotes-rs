@@ -82,17 +82,9 @@ fn unreadable((line, column): (u32, u32)) -> ConvertAnswer {
     ConvertAnswer::Unreadable { line, column }
 }
 
+/// A member's path, as the explorer writes it: one rule for every tool.
 fn child(path: &str, key: &str) -> String {
-    let mut chars = key.chars();
-    let plain = chars
-        .next()
-        .is_some_and(|first| first.is_alphabetic() || first == '_')
-        && chars.all(|c| c.is_alphanumeric() || c == '_');
-    if plain {
-        format!("{path}.{key}")
-    } else {
-        format!("{path}[{}]", serde_json::to_string(key).unwrap_or_default())
-    }
+    crate::json::model::member_path(path, key)
 }
 
 // --- TOML.
@@ -354,6 +346,18 @@ pub fn convert(request: &ConvertRequest) -> ConvertAnswer {
 
 #[cfg(test)]
 mod tests {
+    /// A JSON path is written one way, whichever tool writes it (#1478, N78).
+    #[test]
+    fn a_member_s_path_is_written_as_the_explorer_writes_it() {
+        for key in ["name", "é", "a b", "$ref", "it's"] {
+            assert_eq!(
+                child("$", key),
+                crate::json::model::member_path("$", key),
+                "{key}"
+            );
+        }
+    }
+
     use super::*;
 
     fn converted(text: &str, from: DataFormat, to: DataFormat) -> String {
@@ -423,7 +427,7 @@ mod tests {
         ) else {
             panic!()
         };
-        assert_eq!(dropped, [r#"$.a["b key"]"#, "$.d"]);
+        assert_eq!(dropped, ["$.a['b key']", "$.d"]);
         assert!(text.contains("c = 1"), "{text}");
     }
 

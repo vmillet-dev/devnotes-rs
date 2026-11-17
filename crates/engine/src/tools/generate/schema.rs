@@ -140,17 +140,9 @@ const FORMATS: &[(&str, TextKind)] = &[
 /// Deep enough for any real document; a `$ref` that points back at itself stops here.
 const MAX_DEPTH: usize = 16;
 
+/// A member's path, as the explorer writes it: one rule for every tool.
 fn child(path: &str, key: &str) -> String {
-    let mut chars = key.chars();
-    let plain = chars
-        .next()
-        .is_some_and(|first| first.is_alphabetic() || first == '_')
-        && chars.all(|c| c.is_alphanumeric() || c == '_');
-    if plain {
-        format!("{path}.{key}")
-    } else {
-        format!("{path}[{}]", serde_json::to_string(key).unwrap_or_default())
-    }
+    crate::json::model::member_path(path, key)
 }
 
 pub(super) struct Generator<'a> {
