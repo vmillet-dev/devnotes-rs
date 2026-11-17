@@ -55,7 +55,17 @@ pub(crate) fn show(ui: &Ui, state: &AppState, form: &mut Option<NoteForm>, actio
         return;
     };
     let open = form.get_or_insert_with(|| NoteForm::of(asked, state));
-    let shown = modal(ui, "save-as-note", |ui| body(ui, state, asked, open));
+    let shown = modal(
+        ui,
+        (
+            "save-as-note",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "save-as-note-cross",
+            ),
+        ),
+        |ui| body(ui, state, asked, open),
+    );
     match shown.inner {
         Some(true) => {
             if let Some(placement) = placement(state, open) {

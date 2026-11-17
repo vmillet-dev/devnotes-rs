@@ -358,7 +358,7 @@ fn tools(ui: &mut Ui, view: &mut DrawingView, language: Language, gap: f32) {
             view.editor.redo();
         }
     });
-    if IconButton::new(Icon::Trash, &tr(keys::drawing::REMOVE), "drawing-delete")
+    if IconButton::new(Icon::Eraser, &tr(keys::drawing::REMOVE), "drawing-delete")
         .show(ui)
         .clicked()
     {

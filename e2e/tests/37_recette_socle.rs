@@ -24,8 +24,8 @@ fn preferences(app: &mut App) {
 
 fn security(app: &mut App) {
     preferences(app);
-    app.click("settings-page-security");
-    app.wait_for("setting-change-passphrase");
+    app.click("settings-page-backups");
+    app.wait_for("setting-automatic-backups");
 }
 
 fn close(app: &mut App) {
@@ -110,7 +110,7 @@ fn recette_security() {
     });
 
     step("SEC-05 a new phrase too short changes nothing", || {
-        app.scroll_top("settings-content");
+        app.click("settings-page-security");
         app.click("setting-change-passphrase");
         app.fill("change-passphrase-current", PASSPHRASE);
         app.fill("change-passphrase-next", "court-08");

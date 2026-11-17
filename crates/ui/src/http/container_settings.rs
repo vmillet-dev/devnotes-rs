@@ -45,9 +45,19 @@ pub(super) fn show(ui: &Ui, state: &AppState, view: &mut DialogView, actions: &m
             view.scripts.focus(phase, line);
         }
     }
-    let shown = modal(ui, "http-settings-dialog", |ui| {
-        body(ui, state, form, view, actions);
-    });
+    let shown = modal(
+        ui,
+        (
+            "http-settings-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-settings-cross",
+            ),
+        ),
+        |ui| {
+            body(ui, state, form, view, actions);
+        },
+    );
     if shown.should_close() {
         actions.push(Asked::Http(Action::CloseSettings));
     }

@@ -105,6 +105,8 @@ pub enum Icon {
     Brush,
     /// A request written down: « Save » where its words do not fit.
     Save,
+    /// What is drawn rubbed out, apart from the note's own bin.
+    Eraser,
 }
 
 impl Icon {
@@ -342,6 +344,10 @@ impl Icon {
                 "M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z",
                 "M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031",
             ],
+            Self::Eraser => &[
+                "M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.828 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21",
+                "m5.082 11.09 8.828 8.828",
+            ],
             Self::Maximize => &["M15 3h6v6", "M9 21H3v-6", "M21 3l-7 7", "M3 21l7-7"],
             Self::Minimize => &["M4 14h6v6", "M20 10h-6V4", "M14 10l7-7", "M3 21l7-7"],
             Self::Hourglass => &[
@@ -431,7 +437,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 77] = [
+    const ALL: [Icon; 78] = [
         Icon::ArrowLeftRight,
         Icon::MoveHorizontal,
         Icon::Sidebar,
@@ -509,6 +515,7 @@ mod tests {
         Icon::Sigma,
         Icon::Brush,
         Icon::Save,
+        Icon::Eraser,
     ];
 
     fn coverage(image: &ColorImage) -> usize {

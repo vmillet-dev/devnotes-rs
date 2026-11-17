@@ -2,7 +2,7 @@
 //! one rung per layer, the higher drawn over the lower and served first by Escape. A modal
 //! blocks what is under it, keeps Tab inside, and hands the focus back to what opened it.
 
-use crate::theme::tokens::{font, radius};
+use crate::theme::tokens::{font, gap, radius};
 use egui::{Context, CornerRadius, Id, Margin, ModalResponse, Stroke};
 
 use crate::theme::{palette, spacing};
@@ -94,14 +94,69 @@ impl DialogStack {
     }
 }
 
-/// A fitted modal: `bg-1`, 14 px corners, a `line` border, the overlay's shadow. Its scrim is solid, where the reference blurred (E7). `None` when `id` is not open.
+/// What a modal drew, and whether it asks to close: Escape, a click outside, or its cross.
+pub struct Shown<R> {
+    pub inner: R,
+    crossed: bool,
+    modal: ModalResponse<()>,
+}
+
+impl<R> Shown<R> {
+    /// ⚠️ Consumes Escape, as egui's own does: asked only by the screen that closes it.
+    pub fn should_close(&self) -> bool {
+        self.crossed || self.modal.should_close()
+    }
+}
+
+/// The cross every modal closes by, top right, drawn over its content: `(label, author_id)`.
+pub type Cross<'a> = (&'a str, &'a str);
+
+/// `margin`: the frame's, around the content. The cross sits in that margin's corner, so it covers
+/// none of what the content puts top right.
+pub(crate) fn cross(ui: &mut egui::Ui, (label, author_id): Cross<'_>, margin: f32) -> bool {
+    let content = ui.max_rect();
+    let size = egui::Vec2::splat(super::MIN_TARGET);
+    let corner = margin - gap::TIGHT;
+    let at = egui::Rect::from_min_size(
+        egui::pos2(content.right() + corner - size.x, content.top() - corner),
+        size,
+    );
+    let mut corner = ui.new_child(egui::UiBuilder::new().max_rect(at));
+    super::IconButton::new(crate::theme::icons::Icon::X, label, author_id)
+        .show(&mut corner)
+        .clicked()
+}
+
+pub(crate) fn shown<R>(response: ModalResponse<(R, bool)>) -> Shown<R> {
+    let ModalResponse {
+        response,
+        backdrop_response,
+        inner: (inner, crossed),
+        is_top_modal,
+        any_popup_open,
+    } = response;
+    Shown {
+        inner,
+        crossed,
+        modal: ModalResponse {
+            response,
+            backdrop_response,
+            inner: (),
+            is_top_modal,
+            any_popup_open,
+        },
+    }
+}
+
+/// A fitted modal: `bg-1`, 14 px corners, a `line` border, the overlay's shadow, a cross top
+/// right. Its scrim is solid, where the reference blurred (E7). `None` when `id` is not open.
 pub fn dialog<R>(
     ctx: &Context,
     stack: &DialogStack,
-    id: Id,
+    (id, close): (Id, Cross<'_>),
     width: f32,
     content: impl FnOnce(&mut egui::Ui) -> R,
-) -> Option<ModalResponse<R>> {
+) -> Option<Shown<R>> {
     if !stack.is_open(id) {
         return None;
     }
@@ -120,19 +175,21 @@ pub fn dialog<R>(
         .frame(frame)
         .show(ctx, |ui| {
             ui.set_width(width.min(ctx.content_rect().width() * 0.9));
-            content(ui)
+            let inner = content(ui);
+            (inner, cross(ui, close, gaps.canvas))
         });
-    Some(shown)
+    Some(self::shown(shown))
 }
 
-/// A framed modal: the same surface, its content edge to edge, for a panel with parts of its own.
+/// A framed modal: the same surface, its content edge to edge, for a panel with parts of its own;
+/// the same cross.
 pub fn framed_dialog<R>(
     ctx: &Context,
     stack: &DialogStack,
-    id: Id,
+    (id, close): (Id, Cross<'_>),
     size: egui::Vec2,
     content: impl FnOnce(&mut egui::Ui) -> R,
-) -> Option<ModalResponse<R>> {
+) -> Option<Shown<R>> {
     if !stack.is_open(id) {
         return None;
     }
@@ -149,9 +206,11 @@ pub fn framed_dialog<R>(
         .show(ctx, |ui| {
             ui.set_width(size.x.min(room.x));
             ui.set_height(size.y.min(room.y));
-            content(ui)
+            let inner = content(ui);
+            // No margin: the cross stands inside the panel's own header.
+            (inner, cross(ui, close, -gap::CONTROLS))
         });
-    Some(shown)
+    Some(self::shown(shown))
 }
 
 /// A dialog's title: its words at the title's size, read as its heading, found by `author_id`.
@@ -178,6 +237,7 @@ mod tests {
     use egui_kittest::kittest::{NodeT, Queryable};
 
     use super::*;
+
     use crate::keys::{self, Binding, Read};
     use crate::widgets::Button;
 
@@ -220,7 +280,7 @@ mod tests {
                     dialog(
                         ui.ctx(),
                         &screen.stack,
-                        Id::unique("settings"),
+                        (Id::unique("settings"), ("Fermer", "settings-cross")),
                         480.0,
                         |ui| {
                             Button::new("Un", "first").show(ui);
@@ -263,7 +323,7 @@ mod tests {
             harness.run();
             let now = focused(&harness);
             assert!(
-                matches!(now.as_deref(), Some("first" | "second")),
+                matches!(now.as_deref(), Some("first" | "second" | "settings-cross")),
                 "{now:?}"
             );
         }

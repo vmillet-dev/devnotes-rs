@@ -65,9 +65,14 @@ pub fn show(
     view: &mut PromptView,
     language: Language,
 ) -> Option<Answer> {
-    let shown = widgets::dialog(ctx, stack, id(), WIDTH, |ui| {
-        body(ui, request, view, language)
-    })?;
+    let cross = i18n::translate(language, i18n::keys::dialog::CLOSE, &[]);
+    let shown = widgets::dialog(
+        ctx,
+        stack,
+        (id(), (&cross, "passphrase-prompt-cross")),
+        WIDTH,
+        |ui| body(ui, request, view, language),
+    )?;
     let dismissed = shown.should_close() && !request.working;
     shown.inner.or(dismissed.then_some(Answer::Cancel))
 }

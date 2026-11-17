@@ -162,7 +162,8 @@ fn tags(
     }
 }
 
-/// « Never expires », or how long is left — red once it is close, as the core decided.
+/// « Never expires » in the neutral ink, or how long is left in amber — red once it is close, as
+/// the core decided.
 fn lifecycle_badge(ui: &mut Ui, state: &AppState, note: &DisplayNote) {
     let p = palette(ui.ctx());
     let (icon, words) = match note.lifecycle {
@@ -177,6 +178,8 @@ fn lifecycle_badge(ui: &mut Ui, state: &AppState, note: &DisplayNote) {
     };
     let hue = if note.expiring_soon {
         p.red
+    } else if note.lifecycle == NoteLifecycle::Permanent {
+        p.text_2
     } else {
         p.amber_text
     };

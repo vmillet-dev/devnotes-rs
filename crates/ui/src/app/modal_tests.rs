@@ -87,3 +87,36 @@ fn escape_closes_the_trash_and_gives_the_focus_back_to_its_button() {
     assert!(!present(&harness, "trash-close"));
     assert_eq!(focused(&harness).as_deref(), Some("trash-open"));
 }
+
+/// A greyed entry says what it waits for: nothing is ticked, so the selection's export waits
+/// for notes to be ticked.
+#[test]
+fn a_greyed_file_entry_says_what_it_waits_for() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut harness = open_library(directory.path());
+    harness
+        .ctx
+        .all_styles_mut(|style| style.interaction.tooltip_delay = 0.0);
+    click(&mut harness, "file-menu");
+    harness
+        .get_by(|node| node.author_id() == Some("file-option-exportSelection"))
+        .hover();
+    for _ in 0..10 {
+        harness.step();
+    }
+
+    let waiting = i18n::translate(
+        harness.state().state.language,
+        i18n::keys::file::NEEDS_SELECTION,
+        &[],
+    );
+    assert!(
+        harness
+            .query_by(|node| {
+                node.label().as_deref() == Some(waiting.as_str())
+                    || node.value().as_deref() == Some(waiting.as_str())
+            })
+            .is_some(),
+        "no « {waiting} » under the pointer"
+    );
+}

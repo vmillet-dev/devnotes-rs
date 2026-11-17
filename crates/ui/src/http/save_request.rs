@@ -89,9 +89,17 @@ pub(super) fn show(ui: &Ui, state: &AppState, form: &mut Option<SaveForm>, actio
         _ => form.insert(SaveForm::of(tab)),
     };
     let places = state.http.save_places();
-    let shown = modal(ui, "http-save-dialog", |ui| {
-        body(ui, open, &places, state.language)
-    });
+    let shown = modal(
+        ui,
+        (
+            "http-save-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-save-cross",
+            ),
+        ),
+        |ui| body(ui, open, &places, state.language),
+    );
     let key = tab.key.clone();
     match shown.inner {
         Some(true) => match open.target(&places) {

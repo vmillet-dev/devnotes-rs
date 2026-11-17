@@ -18,10 +18,20 @@ pub(super) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
         return;
     };
     let key = tab.key.clone();
-    let shown = super::modal(ui, "http-close-dialog", |ui| {
-        let live = state.http.sockets().is_live(&tab.key);
-        body(ui, &tab.draft.name, (tab.is_dirty(), live), state.language)
-    });
+    let shown = super::modal(
+        ui,
+        (
+            "http-close-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-close-cross",
+            ),
+        ),
+        |ui| {
+            let live = state.http.sockets().is_live(&tab.key);
+            body(ui, &tab.draft.name, (tab.is_dirty(), live), state.language)
+        },
+    );
     let mut close = |action| actions.push(Asked::Http(action));
     match shown.inner {
         Some(Choice::Discard) => close(Action::Close(key)),

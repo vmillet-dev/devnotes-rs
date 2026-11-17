@@ -184,6 +184,9 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     capture(&mut harness, "change-passphrase");
     click(&mut harness, "change-passphrase-cancel");
     settle(&mut harness);
+    click(&mut harness, "settings-page-backups");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-backups");
     click(&mut harness, "settings-page-variables");
     click(&mut harness, "variable-add");
     settle(&mut harness);

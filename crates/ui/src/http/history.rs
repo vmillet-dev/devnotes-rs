@@ -154,7 +154,7 @@ fn day_label(day: &str, today: NaiveDate, language: i18n::Language) -> String {
 }
 
 fn list(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
-    let p = palette(ui.ctx());
+    let _p = palette(ui.ctx());
     let language = state.language;
     let history = state.http.history();
     let today = state.clock.now().with_timezone(&Local).date_naive();
@@ -170,13 +170,8 @@ fn list(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         ui.set_min_height(room.y);
         if rows.is_empty() && history.is_loaded() {
             let words = i18n::translate(language, keys::http::history::EMPTY, &[]);
-            let words = egui::RichText::new(words).size(font::BODY).color(p.text_2);
-            egui::Frame::new()
-                .inner_margin(gap::margin(gap::PANEL, gap::PANEL))
-                .show(ui, |ui| {
-                    let said = ui.add(egui::Label::new(words).wrap());
-                    widgets::address(ui, &said, "http-history-empty");
-                });
+            let room = ui.max_rect();
+            widgets::empty_state(ui, room, (&words, "http-history-empty"), &[]);
             return;
         }
         virtual_list(

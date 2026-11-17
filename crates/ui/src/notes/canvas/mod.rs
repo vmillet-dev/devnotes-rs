@@ -77,29 +77,30 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         return;
     };
     if view.matched == 0 {
-        padded(ui, canvas, |ui| {
-            state_text(ui, &tr(keys::notes::NO_RESULTS), "canvas-no-results");
-            if query.has_user_filters() {
-                let words = tr(if query.facets().count() > 0 {
-                    keys::notes::CLEAR_FILTERS
-                } else {
-                    keys::notes::CLEAR_SEARCH
-                });
-                if Button::new(&words, "canvas-clear-filters")
-                    .show(ui)
-                    .clicked()
-                {
-                    actions.push(Action::Notes(super::Action::ClearFilters));
-                }
-            // The chapter that explains this screen, not the top of the guide.
-            } else if Button::new(&tr(keys::getting_started::OPEN_CHAPTER), "canvas-guide")
-                .show(ui)
-                .clicked()
-            {
+        let filtered = query.has_user_filters();
+        // The chapter that explains this screen, not the top of the guide.
+        let (label, author_id) = if !filtered {
+            (tr(keys::getting_started::OPEN_CHAPTER), "canvas-guide")
+        } else if query.facets().count() > 0 {
+            (tr(keys::notes::CLEAR_FILTERS), "canvas-clear-filters")
+        } else {
+            (tr(keys::notes::CLEAR_SEARCH), "canvas-clear-filters")
+        };
+        let action = widgets::EmptyAction {
+            label: &label,
+            author_id,
+            primary: false,
+        };
+        let words = tr(keys::notes::NO_RESULTS);
+        let room = ui.max_rect();
+        if widgets::empty_state(ui, room, (&words, "canvas-no-results"), &[action]).is_some() {
+            actions.push(if filtered {
+                Action::Notes(super::Action::ClearFilters)
+            } else {
                 let guide = Panel::Guide(crate::services::guide::NOTES);
-                actions.push(Action::Menu(crate::titlebar::Action::OpenHelp(guide)));
-            }
-        });
+                Action::Menu(crate::titlebar::Action::OpenHelp(guide))
+            });
+        }
         return;
     }
     let context = card::Context::of(state, &on_screen(view));

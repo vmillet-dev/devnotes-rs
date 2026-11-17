@@ -124,7 +124,17 @@ fn picked(note: &DisplayNote) -> PickedNote {
 }
 
 pub fn show(ui: &Ui, state: &AppState, picker: &mut Picker) {
-    let shown = crate::http::modal(ui, "note-picker", |ui| body(ui, state, picker));
+    let shown = crate::http::modal(
+        ui,
+        (
+            "note-picker",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "note-picker-cross",
+            ),
+        ),
+        |ui| body(ui, state, picker),
+    );
     if shown.should_close() {
         picker.closed = true;
     }

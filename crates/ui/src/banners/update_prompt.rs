@@ -46,9 +46,16 @@ pub(crate) fn show(
     let Some(update) = state.updates.offered() else {
         return;
     };
-    let shown = widgets::dialog(ctx, &state.dialogs, id(), WIDTH, |ui| {
-        body(ui, state, update, view, actions);
-    });
+    let cross = i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]);
+    let shown = widgets::dialog(
+        ctx,
+        &state.dialogs,
+        (id(), (&cross, "update-cross")),
+        WIDTH,
+        |ui| {
+            body(ui, state, update, view, actions);
+        },
+    );
     let busy = state.updates.is_busy();
     if shown.is_some_and(|shown| shown.should_close()) && !busy {
         let skip = view.skip;
