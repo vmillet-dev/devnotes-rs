@@ -103,6 +103,8 @@ pub enum Icon {
     SquareCheck,
     Sigma,
     Brush,
+    /// A request written down: « Save » where its words do not fit.
+    Save,
 }
 
 impl Icon {
@@ -187,6 +189,11 @@ impl Icon {
                 "M4 12h16",
             ],
             Self::Code => &["m16 18 6-6-6-6", "m8 6-6 6 6 6"],
+            Self::Save => &[
+                "M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+                "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7",
+                "M7 3v4a1 1 0 0 0 1 1h7",
+            ],
             Self::ListBullet => &[
                 "M3 12h.01",
                 "M3 18h.01",
@@ -424,7 +431,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 76] = [
+    const ALL: [Icon; 77] = [
         Icon::ArrowLeftRight,
         Icon::MoveHorizontal,
         Icon::Sidebar,
@@ -501,6 +508,7 @@ mod tests {
         Icon::SquareCheck,
         Icon::Sigma,
         Icon::Brush,
+        Icon::Save,
     ];
 
     fn coverage(image: &ColorImage) -> usize {

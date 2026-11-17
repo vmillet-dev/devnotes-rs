@@ -3400,6 +3400,7 @@
       "save": "Save",
       "saveHint": "Save (Ctrl+S)",
       "parts": "Parts of the request",
+      "moreParts": "Other parts of the request",
       "sections": {
         "params": "Params",
         "headers": "Headers",
