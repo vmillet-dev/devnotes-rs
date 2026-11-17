@@ -133,19 +133,15 @@ pub(super) fn show(
     view: &mut BodyView,
     actions: &mut Actions,
 ) {
-    let p = palette(ui.ctx());
     let language = state.language;
     if response.binary {
         image(ui, state, (id, response), actions);
         return;
     }
     if response.body.is_empty() {
-        let words =
-            egui::RichText::new(i18n::translate(language, keys::http::response::EMPTY, &[]))
-                .size(font::BODY)
-                .color(p.text_2);
-        let said = ui.add(egui::Label::new(words));
-        widgets::address(ui, &said, "http-response-empty");
+        let words = i18n::translate(language, keys::http::response::EMPTY, &[]);
+        let room = ui.available_rect_before_wrap();
+        widgets::empty_state(ui, room, (&words, "http-response-empty"), &[]);
         return;
     }
     let json = response.language == Language::Json;

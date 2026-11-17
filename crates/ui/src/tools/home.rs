@@ -661,22 +661,11 @@ fn tool_star(
 }
 
 fn no_match(ui: &mut Ui, language: Language, query: &str) {
-    let p = palette(ui.ctx());
     let words = Message::new(keys::tools::NO_MATCH)
         .with("query", query)
         .text(language);
-    ui.add_space(gap::BLOCKS);
-    let galley = widgets::wrapped(
-        ui,
-        &words,
-        (font::READING, 400.0),
-        p.text_1,
-        ui.available_width() - 32.0,
-    );
-    let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
-    address(ui, &response, "tools-no-match");
-    galley.paint(ui, rect.min + Vec2::new(16.0, 0.0), p.text_1);
+    let room = ui.available_rect_before_wrap();
+    widgets::empty_state(ui, room, (&words, "tools-no-match"), &[]);
 }
 
 /// egui has dropped the focus by the time the frame starts: the field empties and takes it back.

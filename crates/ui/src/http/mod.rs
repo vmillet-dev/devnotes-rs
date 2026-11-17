@@ -22,8 +22,8 @@ mod socket_log;
 mod tabs;
 mod variables_table;
 
-use crate::theme::tokens::{font, gap, radius};
-use egui::{Color32, Rect, Sense, Ui, UiBuilder, Vec2, pos2};
+use crate::theme::tokens::radius;
+use egui::{Color32, Rect, Ui, UiBuilder, Vec2};
 use engine::http::model::{HttpMethod, RequestKind};
 use i18n::keys;
 
@@ -32,7 +32,7 @@ use crate::state::AppState;
 use crate::state::http::Page;
 use crate::state::http::tree::Badge;
 use crate::theme::{palette, spacing};
-use crate::widgets::{self, address};
+use crate::widgets::{self};
 
 /// What the area's controls ask, applied at the end of the frame.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -359,59 +359,29 @@ fn share_at(upper: f32, total: f32) -> u16 {
 
 /// The first screen of the area says what it can do: the three kinds, as buttons.
 fn empty_workspace(ui: &mut Ui, region: Rect, language: i18n::Language, actions: &mut Actions) {
-    let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::http::workspace::EMPTY, &[]);
-    let names: Vec<String> = tabs::KINDS
+    let names: Vec<(String, String)> = tabs::KINDS
         .iter()
         .map(|(_, id)| {
-            i18n::Key::find(&format!("http.kinds.new.{id}"))
+            let name = i18n::Key::find(&format!("http.kinds.new.{id}"))
                 .map(|key| i18n::translate(language, key, &[]))
-                .unwrap_or_default()
+                .unwrap_or_default();
+            (name, format!("http-workspace-new-{id}"))
         })
         .collect();
-    let row: f32 = names
+    // The one primary action of an empty area, amber as « New note » is: a request.
+    let buttons: Vec<widgets::EmptyAction<'_>> = tabs::KINDS
         .iter()
-        .map(|name| widgets::Button::width(ui, name) + 8.0)
-        .sum::<f32>()
-        - 8.0;
-    let height = 13.0 * 1.6 + 14.0 + 30.0;
-    let top = region.center().y - height / 2.0;
-    let mut column = ui.new_child(
-        UiBuilder::new()
-            .max_rect(Rect::from_min_max(
-                pos2(region.left(), top),
-                pos2(region.right(), region.bottom()),
-            ))
-            .layout(egui::Layout::top_down(egui::Align::Center)),
-    );
-    column.spacing_mut().item_spacing.y = gap::BLOCKS;
-    let label = egui::Label::new(
-        egui::RichText::new(&words)
-            .size(font::READING)
-            .color(p.text_2),
-    );
-    let said = column.add(label);
-    address(&column, &said, "http-workspace-empty");
-    let (rect, _) = column.allocate_exact_size(Vec2::new(row, 30.0), Sense::hover());
-    let mut buttons = column.new_child(
-        UiBuilder::new()
-            .max_rect(rect)
-            .layout(egui::Layout::left_to_right(egui::Align::Center)),
-    );
-    buttons.spacing_mut().item_spacing.x = gap::CONTROLS;
-    for ((kind, id), name) in tabs::KINDS.iter().zip(&names) {
-        // The one primary action of an empty area, amber as « New note » is: a request.
-        let primary = *kind == RequestKind::Http;
-        let author_id = format!("http-workspace-new-{id}");
-        let button = widgets::Button::new(name, &author_id);
-        let button = if primary {
-            button.kind(widgets::Kind::Filled)
-        } else {
-            button
-        };
-        if button.show(&mut buttons).clicked() {
-            actions.push(Asked::Http(Action::NewRequest(*kind)));
-        }
+        .zip(&names)
+        .map(|((kind, _), (label, author_id))| widgets::EmptyAction {
+            label,
+            author_id,
+            primary: *kind == RequestKind::Http,
+        })
+        .collect();
+    let said = (words.as_str(), "http-workspace-empty");
+    if let Some(rank) = widgets::empty_state(ui, region, said, &buttons) {
+        actions.push(Asked::Http(Action::NewRequest(tabs::KINDS[rank].0)));
     }
 }
 
