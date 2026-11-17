@@ -40,6 +40,8 @@ const ZIP_MAGIC: [u8; 4] = [b'P', b'K', 0x03, 0x04];
 const MAX_EXPANSION: u64 = 100;
 /// A floor under that ratio, so a small entry is never refused over it.
 const MIN_CEILING: u64 = 64 * 1024 * 1024;
+/// A bundle written as plain JSON, outside an archive: as much as an archive's may expand to.
+const PLAIN_CEILING: u64 = MIN_CEILING * 4;
 
 fn zip_error(error: &zip::result::ZipError) -> StorageError {
     StorageError::File(error.to_string())
@@ -176,7 +178,14 @@ pub fn read(
     passphrase: Option<&str>,
 ) -> Result<(IncomingBundle, Payload), StorageError> {
     let Some(mut archive) = open_archive(path)? else {
-        let json = std::fs::read_to_string(path).context(path)?;
+        let file = File::open(path).context(path)?;
+        let raw = read_at_most(file, PLAIN_CEILING)
+            .context(path)?
+            .ok_or_else(|| {
+                StorageError::ImportFormat(format!("the file is past {PLAIN_CEILING} bytes"))
+            })?;
+        let json = String::from_utf8(raw)
+            .map_err(|_| StorageError::ImportFormat("the bundle is not text".to_string()))?;
         return Ok((super::model::read_bundle(&json)?, Payload::Empty));
     };
 
@@ -344,6 +353,23 @@ fn staging_path(path: &str) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    /// A bundle written as plain JSON, past what an archive may expand to, is refused before it
+    /// is read whole (#1477, N30).
+    #[test]
+    fn a_plain_bundle_past_the_ceiling_is_refused_unread() {
+        let folder = tempfile::tempdir().unwrap();
+        let path = folder.path().join("notes.json");
+        let file = std::fs::File::create(&path).unwrap();
+        file.set_len(PLAIN_CEILING + 1).unwrap();
+
+        let refused = read(path.to_str().unwrap(), None).err().unwrap();
+
+        assert!(
+            matches!(&refused, StorageError::ImportFormat(said) if said.contains("past")),
+            "{refused:?}"
+        );
+    }
+
     use super::*;
     use crate::notes::fixtures::note as sample;
     use crate::spaces::model::Space;

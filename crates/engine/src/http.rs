@@ -579,7 +579,7 @@ pub async fn run_http_collection(
     runs.start(&run.id);
     let started = std::time::Instant::now();
     let mut overlay = Vec::new();
-    let mut cancelled = false;
+    let (mut cancelled, mut capped) = (false, false);
     'run: for iteration in 0..iterations {
         let row = rows.get(iteration as usize).cloned().unwrap_or_default();
         let mut at = (!order.is_empty()).then_some(0);
@@ -620,6 +620,10 @@ pub async fn run_http_collection(
                 break 'run;
             }
             at = runner::next_index(&order, index, next.as_ref());
+            if runner::capped(steps, at) {
+                capped = true;
+                break 'run;
+            }
             if at.is_some() && !wait(runs, &run.id, run.delay_ms).await {
                 cancelled = true;
                 break 'run;
@@ -631,7 +635,11 @@ pub async fn run_http_collection(
     say_run(
         &engine,
         &run.id,
-        runner::RunStep::Finished { cancelled, millis },
+        runner::RunStep::Finished {
+            cancelled,
+            millis,
+            capped,
+        },
     );
     Ok(())
 }

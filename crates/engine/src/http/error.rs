@@ -95,6 +95,7 @@ impl From<DataFault> for AppError {
         let said = match fault {
             DataFault::Unreadable => "unreadable",
             DataFault::Empty => "empty",
+            DataFault::TooLarge => "tooLarge",
         };
         Self::with(ErrorCode::HttpRunData, detail, "fault", said)
     }

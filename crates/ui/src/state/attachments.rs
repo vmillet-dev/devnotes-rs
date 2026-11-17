@@ -405,13 +405,18 @@ pub(crate) fn decode(uri: &str) -> Option<ColorImage> {
     Some(ColorImage::from_rgba_unmultiplied(size, image.as_raw()))
 }
 
+/// The side past which an SVG is drawn smaller: the size it declares is its own word.
+const LARGEST_SIDE: f32 = 4096.0;
+
 fn decode_svg(bytes: &[u8]) -> Option<ColorImage> {
     let tree = resvg::usvg::Tree::from_data(bytes, &resvg::usvg::Options::default()).ok()?;
-    let size = tree.size().to_int_size();
+    let declared = tree.size();
+    let scale = (LARGEST_SIDE / declared.width().max(declared.height())).min(1.0);
+    let size = declared.scale_by(scale)?.to_int_size();
     let mut pixmap = resvg::tiny_skia::Pixmap::new(size.width(), size.height())?;
     resvg::render(
         &tree,
-        resvg::tiny_skia::Transform::default(),
+        resvg::tiny_skia::Transform::from_scale(scale, scale),
         &mut pixmap.as_mut(),
     );
     let size = [
@@ -423,6 +428,17 @@ fn decode_svg(bytes: &[u8]) -> Option<ColorImage> {
 
 #[cfg(test)]
 mod tests {
+    /// An SVG drawn at the size it declares could ask gigabytes: it is drawn within
+    /// `LARGEST_SIDE`, its proportions kept (#1477, N70).
+    #[test]
+    fn an_svg_that_declares_a_huge_size_is_drawn_within_the_largest_side() {
+        let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" width="9000" height="4500"><rect width="9000" height="4500" fill="red"/></svg>"#;
+
+        let image = decode_svg(svg).unwrap();
+
+        assert_eq!(image.size, [4096, 2048]);
+    }
+
     use super::*;
 
     const PNG: &str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";

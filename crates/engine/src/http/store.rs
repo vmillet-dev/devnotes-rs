@@ -677,15 +677,19 @@ fn descendants(
     connection: &mut SqliteConnection,
     folder_id: &str,
 ) -> Result<Vec<String>, StorageError> {
-    let mut found = Vec::new();
+    let mut found: Vec<String> = Vec::new();
     let mut frontier = vec![folder_id.to_string()];
     while !frontier.is_empty() {
         let next: Vec<String> = http_folders::table
             .filter(http_folders::parent_id.eq_any(&frontier))
             .select(http_folders::id)
             .load(connection)?;
-        found.extend(next.iter().cloned());
-        frontier = next;
+        // A damaged library may name a folder its own ancestor: what was met is not walked again.
+        frontier = next
+            .into_iter()
+            .filter(|id| id != folder_id && !found.contains(id))
+            .collect();
+        found.extend(frontier.iter().cloned());
     }
     Ok(found)
 }
@@ -1072,6 +1076,10 @@ pub fn inherited(
     let mut folders = Vec::new();
     let mut next = folder_id.map(str::to_string);
     while let Some(id) = next.take() {
+        // A cycle in a damaged library ends at the folder met twice.
+        if folders.iter().any(|met: &FolderRow| met.id == id) {
+            break;
+        }
         let folder = find_folder(connection, &id)?;
         next.clone_from(&folder.parent_id);
         folders.push(folder);
@@ -1102,6 +1110,36 @@ pub fn inherited(
 mod tests {
     use super::super::model::{HttpMethod, RequestDocument, RequestKind};
     use super::*;
+
+    /// A damaged library whose folders name each other as parents: every walk up or down ends
+    /// (#1477, N34).
+    #[test]
+    fn a_cycle_of_folders_ends_every_walk() {
+        let mut library = crate::db::open_in_memory().unwrap();
+        let now = chrono::Utc::now();
+        let collection = create_collection(&mut library, "API", now).unwrap();
+        let a = create_folder(&mut library, &collection.id, None, "a", now).unwrap();
+        let b = create_folder(&mut library, &collection.id, Some(&a.id), "b", now).unwrap();
+        diesel::update(http_folders::table.find(&a.id))
+            .set(http_folders::parent_id.eq(&b.id))
+            .execute(library.db())
+            .unwrap();
+
+        let (done, finished) = std::sync::mpsc::channel();
+        let (collection_id, b_id) = (collection.id.clone(), b.id.clone());
+        std::thread::spawn(move || {
+            let _ = inherited(&mut library, &collection_id, Some(&b_id));
+            let _ = descendants(library.db(), &b_id);
+            done.send(()).unwrap();
+        });
+
+        assert!(
+            finished
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .is_ok(),
+            "a walk never ended"
+        );
+    }
 
     #[test]
     fn a_position_out_of_range_reads_as_the_first() {

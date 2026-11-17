@@ -24,16 +24,25 @@ pub struct RunData {
     pub rows: Vec<BTreeMap<String, String>>,
 }
 
+/// The most a run's data file may weigh: past it, it is refused before it is read.
+pub const RUN_DATA_LIMIT: u64 = 50 * 1024 * 1024;
+
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DataFault {
     #[error("The file reads as neither a CSV with a header nor a JSON array of objects")]
     Unreadable,
     #[error("The file holds no row")]
     Empty,
+    #[error("The file is past the size a run reads")]
+    TooLarge,
 }
 
 /// The file at `path`, read where it lies.
 pub fn read_file(path: &str) -> Result<RunData, AppError> {
+    let size = std::fs::metadata(path).context(path)?.len();
+    if size > RUN_DATA_LIMIT {
+        return Err(DataFault::TooLarge.into());
+    }
     let text = std::fs::read_to_string(path).context(path)?;
     read_data(&text).map_err(AppError::from)
 }
@@ -261,11 +270,23 @@ pub enum RunStep {
     Ended {
         result: Box<RunResult>,
     },
-    /// The run is over: ran to its end, stopped at a failure or by a script, or cancelled.
+    /// The run is over: ran to its end, stopped at a failure or by a script, cancelled, or
+    /// `capped` at [`MAX_STEPS`] in one iteration.
     Finished {
         cancelled: bool,
         millis: u32,
+        #[serde(default)]
+        capped: bool,
     },
+}
+
+/// Requests one iteration sends at most: a script that names its own request again would
+/// otherwise loop until « Cancel », keeping a result a step.
+pub const MAX_STEPS: u32 = 1_000;
+
+/// Whether the run stops here rather than send the next request it was pointed to.
+pub(crate) fn capped(steps: u32, next: Option<usize>) -> bool {
+    next.is_some() && steps >= MAX_STEPS
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -489,6 +510,31 @@ pub fn next_index(order: &[Placed], at: usize, next: Option<&Next>) -> Option<us
 
 #[cfg(test)]
 mod tests {
+    /// A data file past the cap is refused before it is read whole (#1477, N28).
+    #[test]
+    fn a_data_file_past_the_cap_is_refused_unread() {
+        let folder = tempfile::tempdir().unwrap();
+        let path = folder.path().join("rows.csv");
+        let file = std::fs::File::create(&path).unwrap();
+        file.set_len(RUN_DATA_LIMIT + 1).unwrap();
+
+        let refused = read_file(path.to_str().unwrap()).unwrap_err();
+
+        assert_eq!(refused.params["fault"], "tooLarge");
+    }
+
+    /// A script that names its own request again stops at the cap, not at « Cancel »
+    /// (#1477, N21).
+    #[test]
+    fn a_run_stops_at_its_cap_only_when_it_would_go_on() {
+        assert!(!capped(MAX_STEPS - 1, Some(0)));
+        assert!(capped(MAX_STEPS, Some(0)));
+        assert!(
+            !capped(MAX_STEPS, None),
+            "a run that ends there is not capped"
+        );
+    }
+
     use super::*;
 
     fn row(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {

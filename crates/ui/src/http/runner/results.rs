@@ -149,6 +149,14 @@ fn summary(ui: &mut Ui, runner: &Runner, language: i18n::Language) {
             );
             pill(ui, &words, p.text_1, "http-runner-cancelled");
         }
+        if runner.ended().is_some_and(|ended| ended.capped) {
+            let words = i18n::translate(
+                language,
+                keys::http::runner::CAPPED,
+                &[("count", engine::http::runner::MAX_STEPS.into())],
+            );
+            pill(ui, &words, p.amber_text, "http-runner-capped");
+        }
         if said.failures > 0 {
             let words = i18n::translate(
                 language,

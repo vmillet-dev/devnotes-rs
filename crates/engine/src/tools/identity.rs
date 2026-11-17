@@ -325,10 +325,11 @@ fn person(lists: &Lists<'_>, request: &IdentityRequest, year: i32, draw: &mut Dr
     let slots = [(); 3].map(|()| draw.below(1 << 20));
     let mut given_names: Vec<String> = Vec::new();
     for slot in slots.into_iter().take(count) {
-        let mut at = slot % given.len();
-        while given_names.iter().any(|kept| kept == given[at]) {
-            at = (at + 1) % given.len();
-        }
+        // A list shorter than the names drawn runs out: the person wears fewer.
+        let free = (0..given.len())
+            .map(|step| (slot + step) % given.len())
+            .find(|&at| !given_names.iter().any(|kept| kept == given[at]));
+        let Some(at) = free else { break };
         given_names.push(given[at].to_owned());
     }
 
@@ -640,6 +641,64 @@ mod tests {
                 person(&lists, &asked_in(country, &seed), 2026, &mut draw)
             })
             .collect()
+    }
+
+    /// A list of fewer given names than a person may wear: a draw ends, each name once
+    /// (#1477, N50).
+    #[test]
+    fn a_short_list_of_given_names_ends_every_draw() {
+        let folder = tempfile::tempdir().unwrap();
+        for entry in walk(&data::shipped_folder()) {
+            let to = folder
+                .path()
+                .join(entry.strip_prefix(data::shipped_folder()).unwrap());
+            std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+            std::fs::copy(&entry, to).unwrap();
+        }
+        std::fs::write(
+            folder.path().join("names.txt"),
+            "f:Ana,Eva
+m:Jo,Al
+s:Ba
+",
+        )
+        .unwrap();
+        let library: &'static data::Library =
+            Box::leak(Box::new(data::read(folder.path()).unwrap()));
+
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let lists = Lists::of(library, Country::Fr);
+            for seed in 0..200 {
+                let seed = seed.to_string();
+                let mut draw = Draw::new(seed_number(&seed));
+                let person = person(&lists, &asked(&seed), 2026, &mut draw);
+                let mut names = person.given_names.clone();
+                names.dedup();
+                assert_eq!(names, person.given_names);
+            }
+            done.send(()).unwrap();
+        });
+
+        assert!(
+            finished
+                .recv_timeout(std::time::Duration::from_secs(10))
+                .is_ok(),
+            "a draw never ended"
+        );
+    }
+
+    fn walk(root: &std::path::Path) -> Vec<std::path::PathBuf> {
+        let mut found = Vec::new();
+        for entry in std::fs::read_dir(root).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                found.extend(walk(&path));
+            } else {
+                found.push(path);
+            }
+        }
+        found
     }
 
     /// The number of that kind, with nothing but its letters and digits.

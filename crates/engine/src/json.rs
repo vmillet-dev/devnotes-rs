@@ -9,7 +9,7 @@ mod position;
 pub mod read;
 mod toml;
 pub(crate) mod xml;
-mod yaml;
+pub(crate) mod yaml;
 
 use crate::error::{AppError, StorageError};
 use model::{JsonQuery, JsonView};

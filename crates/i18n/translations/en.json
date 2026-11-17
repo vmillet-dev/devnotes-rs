@@ -640,7 +640,8 @@
     "httpScriptFile": "A script wants to send the file {{path}} without your yes: the request did not leave.",
     "httpRunData": {
       "unreadable": "This file reads neither as a CSV with its header nor as a JSON array of objects.",
-      "empty": "This file holds no row of data."
+      "empty": "This file holds no row of data.",
+      "tooLarge": "This file is larger than 50 MB, the most a run reads."
     },
     "noFileDialog": "This desktop has no file dialog to show: xdg-desktop-portal is missing.",
     "updateRefused": "This update was refused: its signature does not match. Nothing was installed.",
@@ -3907,6 +3908,7 @@
       "failed": "The run could not go to its end.",
       "failures": "{count, plural, one {# failure} other {# failures}}",
       "cancelled": "Cancelled · {{done}} of {count, plural, one {# request} other {# requests}}",
+      "capped": "Stopped after {count, plural, one {# request} other {# requests}} in one iteration: a script sends the run round",
       "allPassed": "All pass",
       "requests": "{count, plural, one {# request} other {# requests}}",
       "iterationsCount": "{count, plural, one {# iteration} other {# iterations}}",

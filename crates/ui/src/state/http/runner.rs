@@ -59,6 +59,8 @@ pub struct Progress {
 pub struct Ended {
     pub cancelled: bool,
     pub millis: u32,
+    /// Stopped at `MAX_STEPS` in an iteration: a script sent the run round.
+    pub capped: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -470,8 +472,16 @@ impl Runner {
                 }
                 self.results.push(*result);
             }
-            RunStep::Finished { cancelled, millis } => {
-                self.ended = Some(Ended { cancelled, millis });
+            RunStep::Finished {
+                cancelled,
+                millis,
+                capped,
+            } => {
+                self.ended = Some(Ended {
+                    cancelled,
+                    millis,
+                    capped,
+                });
             }
         }
     }

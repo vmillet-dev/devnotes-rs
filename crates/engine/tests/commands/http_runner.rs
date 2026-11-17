@@ -370,3 +370,30 @@ fn the_order_arranged_is_kept_and_a_request_added_goes_at_its_end() {
         ]
     );
 }
+
+/// A request whose script names itself again: the run stops at the cap and says so, where it
+/// used to go on until « Cancel » (#1477, N21). Slow — a script host a step — so on demand:
+/// `cargo test -p engine --test commands a_run_that_loops -- --ignored`.
+#[test]
+#[ignore = "a thousand script hosts"]
+fn a_run_that_loops_on_one_request_stops_at_the_cap() {
+    let session = hosted();
+    let cap = engine::http::runner::MAX_STEPS as usize;
+    let (port, _seen) = serve(cap, |_, _| ok());
+    let again = RequestScripts {
+        after: "pm.execution.setNextRequest('Poll');".to_string(),
+        ..RequestScripts::default()
+    };
+    let (api, ids) = collection(&session, port, &[("Poll", "/poll", again)]);
+
+    session
+        .wait(|e| run_http_collection(e, run("run-loop", &api, ids)))
+        .unwrap();
+
+    let steps = steps(&session);
+    assert_eq!(ended(&steps).len(), cap);
+    assert!(matches!(
+        steps.last(),
+        Some(RunStep::Finished { capped: true, .. })
+    ));
+}
