@@ -2,8 +2,10 @@
 //! because a control was squeezed. Decided from floors, not from the widths drawn: those differ
 //! between one row and two, and an answer read off them would flip back and forth.
 
+use crate::theme::tokens::gap;
+
 /// Between two controls, and between the groups.
-pub(super) const GAP: f32 = 10.0;
+pub(super) const GAP: f32 = gap::INSET;
 /// The search stops growing there.
 pub(super) const SEARCH_WIDEST: f32 = 520.0;
 

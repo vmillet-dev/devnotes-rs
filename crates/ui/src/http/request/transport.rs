@@ -1,5 +1,6 @@
 //! How a request travels; each field left unset takes what is above it, shown beside it.
 
+use crate::theme::tokens::font;
 use std::collections::HashMap;
 
 use egui::{Grid, Ui, Vec2};
@@ -150,7 +151,7 @@ pub(crate) fn show(
 fn label(ui: &mut Ui, row: &Row<'_>, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, row.label, &[]);
-    let words = egui::RichText::new(words).size(12.5).color(p.text_1);
+    let words = egui::RichText::new(words).size(font::BODY).color(p.text_1);
     ui.add(egui::Label::new(words));
 }
 
@@ -158,7 +159,7 @@ fn label(ui: &mut Ui, row: &Row<'_>, language: i18n::Language) {
 fn from(ui: &mut Ui, row: &Row<'_>, set: bool) {
     let p = palette(ui.ctx());
     let words = if set { "" } else { row.above };
-    let words = egui::RichText::new(words).size(12.0).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     let shown = ui.add(egui::Label::new(words));
     widgets::address(ui, &shown, "http-transport-from");
     ui.end_row();
@@ -221,7 +222,9 @@ fn number(
 fn insecure(ui: &mut Ui, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::http::transport::INSECURE, &[]);
-    let words = egui::RichText::new(words).size(12.5).color(p.amber_text);
+    let words = egui::RichText::new(words)
+        .size(font::BODY)
+        .color(p.amber_text);
     let shown = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &shown, "http-transport-insecure");
 }

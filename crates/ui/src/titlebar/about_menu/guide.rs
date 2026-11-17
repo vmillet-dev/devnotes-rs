@@ -2,6 +2,7 @@
 //! sentences beside it, short enough to be read standing up. « Close » is on every chapter: a walk
 //! you can only leave by finishing it is a wall with extra steps.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{Align, Color32, CornerRadius, Layout, Rect, RichText, Role, Sense, Stroke, Ui, Vec2};
 use engine::app_info::METADATA;
 use i18n::{Key, Language, Message, keys};
@@ -60,22 +61,27 @@ fn body(ui: &mut Ui, state: &AppState, at: usize) -> Option<usize> {
     let p = palette(ui.ctx());
     let chapter = CHAPTERS[at];
     figure(ui, chapter);
-    ui.add_space(12.0);
+    ui.add_space(gap::GROUPS);
     let step = format!("{} / {}", at + 1, CHAPTERS.len());
-    ui.label(RichText::new(step).size(11.0).monospace().color(p.text_2));
+    ui.label(
+        RichText::new(step)
+            .size(font::META)
+            .monospace()
+            .color(p.text_2),
+    );
     if let Some((title, words)) = guide::words(chapter) {
         let heading = ui.label(
             RichText::new(i18n::translate(language, title, &[]))
-                .size(13.5)
+                .size(font::READING)
                 .variation(*b"wght", 600.0)
                 .color(p.text_0),
         );
         widgets::address(ui, &heading, "guide-chapter");
         let said = body_text(words, &state.settings.bindings, language);
-        let said = RichText::new(said).size(12.5).color(p.text_1);
+        let said = RichText::new(said).size(font::BODY).color(p.text_1);
         ui.add(egui::Label::new(said).wrap());
     }
-    ui.add_space(12.0);
+    ui.add_space(gap::GROUPS);
     dots(ui, language, at)
 }
 
@@ -102,7 +108,7 @@ fn figure(ui: &mut Ui, chapter: &str) {
     let scale = width / FIGURE.x;
     let (band, _) = ui.allocate_exact_size(Vec2::new(width, FIGURE.y * scale), Sense::hover());
     ui.painter()
-        .rect_filled(band, CornerRadius::same(8), p.bg_0);
+        .rect_filled(band, CornerRadius::same(radius::MENU), p.bg_0);
     let place = |x: f32, y: f32| band.min + Vec2::new(x, y) * scale;
     for shape in guide::figure(chapter) {
         let colour = ink(ui, shape);
@@ -152,7 +158,7 @@ fn dots(ui: &mut Ui, language: Language, at: usize) -> Option<usize> {
     let p = palette(ui.ctx());
     let mut chosen = None;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 2.0;
+        ui.spacing_mut().item_spacing.x = gap::LINE;
         ui.add_space(((ui.available_width() - DOTS) / 2.0).max(0.0));
         for (index, chapter) in CHAPTERS.into_iter().enumerate() {
             let name = guide::words(chapter).map_or_else(String::new, |(title, _)| {
@@ -165,7 +171,7 @@ fn dots(ui: &mut Ui, language: Language, at: usize) -> Option<usize> {
                 Sense::click(),
                 &format!("guide-dot-{chapter}"),
                 || egui::WidgetInfo::selected(Role::Tab, true, on, &name),
-                CornerRadius::same(12),
+                CornerRadius::same(radius::PANEL),
             );
             let response = widgets::tooltip(response, &name);
             let ink = if on { p.amber_fill } else { p.line };
@@ -192,7 +198,7 @@ fn footer(ui: &mut Ui, language: Language, at: usize) -> (Option<usize>, bool) {
     }
     let close = ui
         .with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             if at + 1 < CHAPTERS.len()
                 && Button::new(&tr(keys::getting_started::NEXT), "guide-next")
                     .kind(Kind::Filled)

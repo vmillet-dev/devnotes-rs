@@ -1,10 +1,11 @@
 //! A payload from a form, its code drawn by Rust. ⚠️ The Wi-Fi password dies with the tool, and a
 //! note keeping it is warned against.
 
+use crate::theme::tokens::{gap, radius};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use egui::{Color32, ColorImage, CornerRadius, Margin, TextureHandle, TextureOptions, Ui, Vec2};
+use egui::{Color32, ColorImage, CornerRadius, TextureHandle, TextureOptions, Ui, Vec2};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::qr::{
     QrAnswer, QrContent, QrCorrection, QrFormat, QrRequest, SavedCode, WifiSecurity,
@@ -222,7 +223,7 @@ impl QrTool {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 12.0;
+            ui.spacing_mut().item_spacing.x = gap::GROUPS;
             Segmented::new(&options, "qr-security").show(ui, &mut self.security);
             let words = tr(words::fields::HIDDEN);
             check(ui, &mut self.hidden, &words, "qr-hidden");
@@ -328,7 +329,7 @@ impl QrTool {
         let code = matches!(self.answered(), Some(QrAnswer::Code { .. }));
         self.plate(ui, code, language);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let mut button = |key, id, kind| {
                 let words = tr(key);
                 Button::new(&words, id)
@@ -355,8 +356,8 @@ impl QrTool {
         let fill = if code { Color32::WHITE } else { p.bg_1 };
         let shown = egui::Frame::new()
             .fill(fill)
-            .corner_radius(CornerRadius::same(10))
-            .inner_margin(Margin::same(12))
+            .corner_radius(CornerRadius::same(radius::CARD))
+            .inner_margin(gap::margin(gap::GROUPS, gap::GROUPS))
             .show(ui, |ui| {
                 let side = ui.available_width().min(PLATE);
                 if let Some((_, texture)) = self.texture.as_ref().filter(|_| code) {

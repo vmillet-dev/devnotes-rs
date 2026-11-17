@@ -1,5 +1,6 @@
 //! « Copy », beside a result, and what it says for a moment once done.
 
+use crate::theme::tokens::{font, radius};
 use egui::{
     CornerRadius, FontFamily, Id, Rect, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo,
 };
@@ -8,9 +9,6 @@ use i18n::{Key, Language, Message, keys};
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, hovered, interact, towards};
-
-/// How long « Copied » shows, in seconds.
-const FEEDBACK: f64 = 2.0;
 
 pub struct CopyValue<'a> {
     value: &'a str,
@@ -63,8 +61,8 @@ impl<'a> CopyValue<'a> {
         };
         if enabled && response.clicked() {
             ui.ctx().copy_text(self.value.to_owned());
-            ui.data_mut(|data| data.insert_temp(id, time + FEEDBACK));
-            let wait = std::time::Duration::from_secs_f64(FEEDBACK);
+            ui.data_mut(|data| data.insert_temp(id, time + f64::from(crate::theme::motion::MARK)));
+            let wait = std::time::Duration::from_secs_f64(f64::from(crate::theme::motion::MARK));
             ui.ctx().request_repaint_after(wait);
         }
         response
@@ -79,7 +77,7 @@ impl<'a> CopyValue<'a> {
     fn icon(&self, ui: &mut Ui, copied: bool, enabled: bool, word: &str) -> Response {
         let p = palette(ui.ctx());
         let name = self.accessible_name();
-        let corner = CornerRadius::same(7);
+        let corner = CornerRadius::same(radius::CONTROL);
         let response = interact(
             ui,
             Vec2::splat(28.0),
@@ -111,8 +109,15 @@ impl<'a> CopyValue<'a> {
     fn framed(&self, ui: &mut Ui, copied: bool, enabled: bool, word: &str) -> Response {
         let p = palette(ui.ctx());
         let name = self.accessible_name();
-        let galley = widgets::text(ui, word, 11.5, 400.0, FontFamily::Proportional, p.text_1);
-        let corner = CornerRadius::same(7);
+        let galley = widgets::text(
+            ui,
+            word,
+            font::CONTROL,
+            400.0,
+            FontFamily::Proportional,
+            p.text_1,
+        );
+        let corner = CornerRadius::same(radius::CONTROL);
         let response = interact(
             ui,
             Vec2::new(galley.size().x + 12.0 + 6.0 + 20.0, 28.0),

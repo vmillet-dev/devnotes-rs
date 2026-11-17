@@ -1,5 +1,6 @@
 //! Identifiers drawn in Rust, and one pasted read back: its kind, its instant, what is random.
 
+use crate::theme::tokens::{font, gap};
 use chrono::{DateTime, Local, Utc};
 use egui::text::LayoutJob;
 use egui::{Key, Modifiers, Role, Sense, TextFormat, Ui, Vec2, WidgetInfo};
@@ -93,7 +94,7 @@ fn uuid_job(ui: &Ui, id: &str) -> LayoutJob {
     let p = palette(ui.ctx());
     let version = if id.contains('-') { 14 } else { 12 };
     let mut job = LayoutJob::default();
-    let format = |ink| TextFormat::simple(egui::FontId::monospace(12.5), ink);
+    let format = |ink| TextFormat::simple(egui::FontId::monospace(font::BODY), ink);
     for (at, character) in id.char_indices() {
         let ink = match character {
             '-' => p.text_2,
@@ -133,7 +134,7 @@ fn id_row(ui: &mut Ui, id: &str, uuid: bool, language: Language) {
         uuid_job(&row, id)
     } else {
         let p = palette(row.ctx());
-        LayoutJob::simple_singleline(id.to_owned(), egui::FontId::monospace(12.5), p.text_0)
+        LayoutJob::simple_singleline(id.to_owned(), egui::FontId::monospace(font::BODY), p.text_0)
     };
     row.add(egui::Label::new(job).selectable(true));
     row.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -248,7 +249,7 @@ impl IdentifiersTool {
             self.nano(ui, language);
         }
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             if Button::new("-", "identifiers-fewer").show(ui).clicked() {
                 self.step(-1);
             }
@@ -295,7 +296,7 @@ impl IdentifiersTool {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.spacing_mut().item_spacing.x = gap::INSET;
             let name = tr(words::LENGTH);
             label(ui, &name);
             number_field(ui, &mut self.nano_length, &name, "identifiers-nano-length");
@@ -386,10 +387,10 @@ impl Tool for IdentifiersTool {
             .id_salt("identifiers")
             .auto_shrink(false)
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 10.0;
+                ui.spacing_mut().item_spacing.y = gap::INSET;
                 self.controls(ui, language);
                 self.list(ui, language);
-                ui.add_space(8.0);
+                ui.add_space(gap::CONTROLS);
                 self.check_side(ui, language);
             });
         // Never while typing: an `r` in a field is an `r`.

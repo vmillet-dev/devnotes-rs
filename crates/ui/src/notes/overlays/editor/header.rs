@@ -1,8 +1,9 @@
 //! The header under the toolbar: the context, the tags and the deadline on one band, what the note
 //! is and where it lives on the next — or, folded, one line saying what they hold.
 
+use crate::theme::tokens::{font, gap, radius};
 use chrono::{Local, NaiveTime, TimeZone, Utc};
-use egui::{Align, FontFamily, Layout, Margin, Rect, Ui, Vec2};
+use egui::{Align, FontFamily, Layout, Rect, Ui, Vec2};
 use engine::notes::kind::NoteKind;
 use engine::notes::model::{DisplayNote, NoteLifecycle};
 use i18n::keys;
@@ -28,9 +29,9 @@ pub(super) fn bands(
     editing: &mut EditorView,
     actions: &mut Actions,
 ) {
-    band(ui, Margin::symmetric(20, 8), true, |ui| {
+    band(ui, gap::margin(gap::PANEL, gap::CONTROLS), true, |ui| {
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = Vec2::new(8.0, 6.0);
+            ui.spacing_mut().item_spacing = Vec2::new(gap::CONTROLS, gap::SNUG);
             context(ui, state, (session, note), editing, actions);
             tags(ui, state, (session, note), editing, actions);
             // In a panel the tags wrap under the field: the deadline takes a line of its own.
@@ -43,10 +44,10 @@ pub(super) fn bands(
             });
         });
     });
-    band(ui, Margin::symmetric(20, 12), true, |ui| {
+    band(ui, gap::margin(gap::PANEL, gap::GROUPS), true, |ui| {
         placement(ui, state, (session, note), editing, actions);
     });
-    band(ui, Margin::symmetric(20, 8), true, |ui| {
+    band(ui, gap::margin(gap::PANEL, gap::CONTROLS), true, |ui| {
         super::attachments::show(ui, state, (&mut editing.removing, true), actions);
     });
 }
@@ -64,7 +65,7 @@ fn context(
     ui.label(widgets::text(
         ui,
         "·",
-        11.5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -87,7 +88,7 @@ fn context_field(
         egui::TextEdit::singleline(&mut editing.source)
             .hint_text(hint)
             .text_color(p.text_1)
-            .font(egui::FontId::new(11.5, FontFamily::Proportional))
+            .font(egui::FontId::new(font::CONTROL, FontFamily::Proportional))
             .desired_width(width),
     );
     ui.ctx()
@@ -111,7 +112,7 @@ fn tags(
     let language = state.language;
     for tag in &note.tags {
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 2.0;
+            ui.spacing_mut().item_spacing.x = gap::LINE;
             let label = format!("#{tag}");
             widgets::Chip::new(&label, "editor-tag", true).show(ui);
             let remove = i18n::translate(
@@ -145,7 +146,7 @@ fn tags(
         egui::TextEdit::singleline(&mut editing.tag)
             .hint_text(hint)
             .text_color(p.text_1)
-            .font(egui::FontId::new(11.5, FontFamily::Proportional))
+            .font(egui::FontId::new(font::CONTROL, FontFamily::Proportional))
             .desired_width(90.0),
     );
     ui.ctx()
@@ -180,11 +181,11 @@ fn lifecycle_badge(ui: &mut Ui, state: &AppState, note: &DisplayNote) {
         p.amber_text
     };
     // The reference's `tint-badge`: the hue at a tenth under, a quarter on the edge.
-    let galley = widgets::text(ui, &words, 11.0, 400.0, FontFamily::Proportional, hue);
+    let galley = widgets::text(ui, &words, font::META, 400.0, FontFamily::Proportional, hue);
     let size = galley.size() + Vec2::new(20.0 + 16.0, 6.0);
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &words));
-    let corner = egui::CornerRadius::same(12);
+    let corner = egui::CornerRadius::same(radius::PANEL);
     ui.painter().rect(
         rect,
         corner,
@@ -261,12 +262,12 @@ fn placement(
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::new(6.0, 6.0);
+        ui.spacing_mut().item_spacing = Vec2::new(gap::SNUG, gap::SNUG);
         let label = |ui: &mut Ui, words: &str| {
             ui.label(widgets::text(
                 ui,
                 words,
-                11.0,
+                font::META,
                 400.0,
                 FontFamily::Proportional,
                 p.text_2,
@@ -274,7 +275,7 @@ fn placement(
         };
         label(ui, &tr(keys::editor::kind::LABEL));
         kind_menu(ui, state, (session, note), editing, actions);
-        ui.add_space(14.0);
+        ui.add_space(gap::BLOCKS);
         label(ui, &tr(keys::editor::PLACEMENT_LABEL));
         space_menu(ui, state, note, actions);
         label(ui, "›");
@@ -297,7 +298,7 @@ fn kind_menu(
         let response = ui.label(widgets::text(
             ui,
             &current,
-            12.0,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             p.text_1,
@@ -350,10 +351,10 @@ pub(super) fn details(
         .auto_shrink(false)
         .show(&mut sections_ui, |ui| {
             egui::Frame::new()
-                .inner_margin(Margin::symmetric(18, 14))
+                .inner_margin(gap::margin(gap::BLOCKS, gap::BLOCKS))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.spacing_mut().item_spacing = Vec2::new(6.0, 6.0);
+                    ui.spacing_mut().item_spacing = Vec2::new(gap::SNUG, gap::SNUG);
                     detail_sections(ui, state, (session, note), editing, actions);
                 });
         });
@@ -378,7 +379,7 @@ fn detail_sections(
         ui.label(widgets::text(
             ui,
             "›",
-            11.0,
+            font::META,
             400.0,
             FontFamily::Proportional,
             palette(ui.ctx()).text_2,
@@ -414,13 +415,13 @@ fn section(ui: &mut Ui, state: &AppState, name: i18n::Key, content: impl FnOnce(
     ui.label(widgets::text(
         ui,
         &words,
-        10.5,
+        font::CAPTION,
         600.0,
         FontFamily::Proportional,
         p.text_2,
     ));
     ui.horizontal_wrapped(content);
-    ui.add_space(12.0);
+    ui.add_space(gap::GROUPS);
 }
 
 fn space_menu(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut Actions) {
@@ -518,7 +519,7 @@ pub(super) fn summary(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions
                 egui::Button::new(widgets::text(
                     ui,
                     &words,
-                    11.5,
+                    font::CONTROL,
                     400.0,
                     FontFamily::Proportional,
                     p.text_2,

@@ -2,6 +2,7 @@
 //! does not depend on a two-line release against a forty-line one, and « Install now » stays
 //! under the pointer. Once installing starts it cannot be dismissed: files are being replaced.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{Align, Id, Layout, RichText, Ui, Vec2};
 use engine::app_info::METADATA;
 use i18n::{Key, Message, keys};
@@ -65,10 +66,10 @@ fn body(
     let language = state.language;
     let p = palette(ui.ctx());
     let tr = |key: Key| i18n::translate(language, key, &[]);
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = ui.label(
         RichText::new(tr(keys::update::TITLE))
-            .size(15.0)
+            .size(font::TITLE)
             .variation(*b"wght", 600.0)
             .color(p.text_0),
     );
@@ -78,11 +79,11 @@ fn body(
         .with("version", update.version.as_str())
         .with("current", update.current_version.as_str())
         .text(language);
-    let summary = RichText::new(said).size(12.5).color(p.text_1);
+    let summary = RichText::new(said).size(font::BODY).color(p.text_1);
     ui.add(egui::Label::new(summary).wrap());
     if let Some(notes) = state.updates.notes() {
         let label = tr(keys::update::NOTES_LABEL).to_uppercase();
-        ui.label(RichText::new(label).size(11.0).color(p.text_2));
+        ui.label(RichText::new(label).size(font::META).color(p.text_2));
         let block = egui::ScrollArea::vertical()
             .id_salt("update-notes")
             .max_height(NOTES)
@@ -100,9 +101,9 @@ fn body(
         .with("version", update.version.as_str())
         .text(language);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().item_spacing.x = gap::SNUG;
         Checkbox::new(&mut view.skip, &skip, "update-skip").show(ui);
-        let words = RichText::new(&skip).size(12.0).color(p.text_1);
+        let words = RichText::new(&skip).size(font::LABEL).color(p.text_1);
         let label = ui.add(egui::Label::new(words).sense(egui::Sense::click()));
         widgets::address(ui, &label, "update-skip-label");
         if label.clicked() {
@@ -112,7 +113,7 @@ fn body(
     let skip = view.skip;
     let mut ask = |ask| actions.push(Asked::Menu(Action::Update(ask)));
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::update::INSTALL), "update-install")
             .kind(Kind::Filled)
             .show(ui)
@@ -142,13 +143,13 @@ fn progress(ui: &mut Ui, state: &AppState) {
             .text(language),
         _ => i18n::translate(language, keys::update::DOWNLOADING, &[]),
     };
-    let status = ui.label(RichText::new(said).size(12.0).color(p.text_1));
+    let status = ui.label(RichText::new(said).size(font::LABEL).color(p.text_1));
     widgets::address(ui, &status, "update-status");
     #[expect(clippy::cast_precision_loss, reason = "a percent")]
     let done = percent.map_or(0.0, |percent| percent as f32 / 100.0);
     let (rect, _) =
         ui.allocate_exact_size(Vec2::new(ui.available_width(), 6.0), egui::Sense::hover());
-    let corner = egui::CornerRadius::same(3);
+    let corner = egui::CornerRadius::same(radius::TAG);
     ui.painter().rect_filled(rect, corner, p.bg_3);
     let filled = egui::Rect::from_min_size(rect.min, Vec2::new(rect.width() * done, rect.height()));
     ui.painter().rect_filled(filled, corner, p.amber_fill);

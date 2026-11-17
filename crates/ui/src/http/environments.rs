@@ -2,6 +2,7 @@
 //! left, the set chosen on the right — its name, colour and protection, and its variables,
 //! written as they are typed.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Layout, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui,
     UiBuilder, Vec2, WidgetInfo, pos2,
@@ -75,7 +76,7 @@ pub(super) fn show(
         .id_salt("http-environment-main")
         .auto_shrink([false, false])
         .show(&mut main, |ui| {
-            ui.spacing_mut().item_spacing.y = 12.0;
+            ui.spacing_mut().item_spacing.y = gap::GROUPS;
             set(ui, state, view, actions);
         });
 }
@@ -85,7 +86,7 @@ fn head(ui: &mut Ui, state: &AppState, view: &mut PageView, actions: &mut Action
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.with_layout(Layout::left_to_right(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         let toggle = i18n::translate(language, keys::sidebar::TOGGLE, &[]);
         if widgets::SquareButton::new(Icon::Sidebar, &toggle, "http-rail-toggle")
             .pressed(state.settings.rail_shown)
@@ -95,17 +96,13 @@ fn head(ui: &mut Ui, state: &AppState, view: &mut PageView, actions: &mut Action
             actions.push(Asked::App(AppAction::ToggleRail));
         }
         let title = tr(keys::http::environments::TITLE);
-        let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
-        let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-        ui.painter().galley(rect.min, words, p.text_0);
-        heading.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &title));
-        widgets::address(ui, &heading, "http-environments");
+        crate::widgets::dialog_title(ui, &title, "http-environments");
         let order = egui::RichText::new(tr(keys::http::environments::ORDER))
-            .size(12.0)
+            .size(font::LABEL)
             .color(p.text_2);
         ui.add(egui::Label::new(order).truncate());
         ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             create(ui, language, view, actions);
         });
     });
@@ -192,7 +189,7 @@ fn list(ui: &mut Ui, state: &AppState, view: &mut PageView, actions: &mut Action
         .id_salt("http-environment-list")
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 4.0;
+            ui.spacing_mut().item_spacing.y = gap::TIGHT;
             let meta = i18n::translate(
                 language,
                 keys::http::environments::GLOBALS_META,
@@ -213,7 +210,7 @@ fn list(ui: &mut Ui, state: &AppState, view: &mut PageView, actions: &mut Action
             }
             let title = tr(keys::http::environments::LIST_TITLE).to_uppercase();
             let title = egui::RichText::new(title)
-                .size(10.5)
+                .size(font::CAPTION)
                 .strong()
                 .color(p.text_2);
             ui.add(egui::Label::new(title));
@@ -241,7 +238,7 @@ fn list(ui: &mut Ui, state: &AppState, view: &mut PageView, actions: &mut Action
             }
             if environments.is_loaded() && environments.all().is_empty() {
                 let words = egui::RichText::new(tr(keys::http::environments::EMPTY))
-                    .size(12.0)
+                    .size(font::LABEL)
                     .color(p.text_2);
                 let said = ui.add(egui::Label::new(words).wrap());
                 widgets::address(ui, &said, "http-environments-empty");
@@ -267,8 +264,8 @@ struct Entry<'a> {
 fn entry(ui: &mut Ui, shown: &Entry<'_>) -> Response {
     let p = palette(ui.ctx());
     let width = ui.available_width();
-    let corner = CornerRadius::same(8);
-    let font = egui::FontId::new(11.0, FontFamily::Proportional);
+    let corner = CornerRadius::same(radius::MENU);
+    let font = egui::FontId::new(font::META, FontFamily::Proportional);
     let meta = shown.meta.to_owned();
     let meta = ui.fonts_mut(|fonts| fonts.layout(meta, font, p.text_2, width - 36.0));
     let response = interact(
@@ -293,7 +290,7 @@ fn entry(ui: &mut Ui, shown: &Entry<'_>) -> Response {
     let name = widgets::text(
         ui,
         shown.name,
-        13.0,
+        font::READING,
         500.0,
         FontFamily::Proportional,
         p.text_0,
@@ -305,7 +302,7 @@ fn entry(ui: &mut Ui, shown: &Entry<'_>) -> Response {
         let badge = widgets::text(
             ui,
             badge,
-            10.5,
+            font::CAPTION,
             600.0,
             FontFamily::Proportional,
             p.amber_text,
@@ -332,7 +329,7 @@ fn set(ui: &mut Ui, state: &AppState, view: &mut PageView, actions: &mut Actions
             set_head(ui, state, shown, view, actions);
             if shown.protected {
                 let words = egui::RichText::new(tr(keys::http::environments::PROTECTED_NOTE))
-                    .size(12.0)
+                    .size(font::LABEL)
                     .color(p.amber_text);
                 let said = ui.add(egui::Label::new(words).wrap());
                 widgets::address(ui, &said, "http-environment-protected-note");
@@ -356,11 +353,11 @@ fn set(ui: &mut Ui, state: &AppState, view: &mut PageView, actions: &mut Actions
         None => {}
     }
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().item_spacing.x = gap::SNUG;
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(12.0), Sense::hover());
         icons::paint(ui, rect, Icon::Lock, p.text_2);
         let words = egui::RichText::new(tr(keys::http::environments::SECRETS_CAPTION))
-            .size(12.0)
+            .size(font::LABEL)
             .color(p.text_2);
         ui.add(egui::Label::new(words));
     });
@@ -370,14 +367,21 @@ fn globals_head(ui: &mut Ui, language: i18n::Language) {
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::INSET;
         let (dot, _) = ui.allocate_exact_size(Vec2::splat(10.0), Sense::hover());
         ui.painter().circle_filled(dot.center(), 5.0, p.pink);
         let words = tr(keys::http::environments::GLOBALS);
         let family = FontFamily::Proportional;
-        ui.label(widgets::text(ui, &words, 15.0, 600.0, family, p.text_0));
+        ui.label(widgets::text(
+            ui,
+            &words,
+            font::TITLE,
+            600.0,
+            family,
+            p.text_0,
+        ));
         let hint = egui::RichText::new(tr(keys::http::environments::GLOBALS_HINT))
-            .size(12.0)
+            .size(font::LABEL)
             .color(p.text_2);
         ui.add(egui::Label::new(hint));
     });
@@ -393,12 +397,12 @@ fn set_head(
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::INSET;
         name(ui, shown, view, actions, language);
         let active = state.http.environments().active_id() == Some(shown.id.as_str());
         if active {
             let words = egui::RichText::new(tr(keys::http::environments::ACTIVE))
-                .size(11.0)
+                .size(font::META)
                 .color(palette(ui.ctx()).amber_text);
             ui.add(egui::Label::new(words));
         } else if Button::new(&tr(keys::http::environments::USE), "http-environment-use")
@@ -409,7 +413,7 @@ fn set_head(
         }
     });
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         colours(ui, shown, language, actions);
         let label = tr(keys::http::environments::PROTECTED);
         let mut protect = shown.protected;
@@ -421,7 +425,7 @@ fn set_head(
             ask(actions, Ask::Protect { id, protect });
         }
         let words = egui::RichText::new(&label)
-            .size(12.5)
+            .size(font::BODY)
             .color(palette(ui.ctx()).text_1);
         ui.add(egui::Label::new(words));
         if Button::new(
@@ -497,7 +501,7 @@ fn colours(ui: &mut Ui, shown: &Environment, language: i18n::Language, actions: 
                 Sense::click(),
                 "http-environment-colour",
                 || WidgetInfo::selected(Role::RadioButton, true, on, &name),
-                CornerRadius::same(4),
+                CornerRadius::same(radius::TAG),
             );
             swatch(ui, &response, folder_hue(ui, colour), on);
             if response.clicked() && !on {
@@ -515,11 +519,12 @@ fn swatch(ui: &Ui, response: &Response, hue: Color32, on: bool) {
     } else {
         hue.gamma_multiply(0.45)
     };
-    ui.painter().rect_filled(rect, CornerRadius::same(4), shown);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(radius::TAG), shown);
     if on {
         ui.painter().rect_stroke(
             rect.expand(3.0),
-            CornerRadius::same(6),
+            CornerRadius::same(radius::CONTROL),
             Stroke::new(1.0, hue),
             StrokeKind::Inside,
         );
@@ -552,7 +557,9 @@ fn delete(
         keys::http::environments::CONFIRM_DELETE,
         &[("name", shown.name.as_str().into())],
     );
-    let question = egui::RichText::new(question).size(12.5).color(p.text_1);
+    let question = egui::RichText::new(question)
+        .size(font::BODY)
+        .color(p.text_1);
     let said = ui.add(egui::Label::new(question));
     widgets::address(ui, &said, "http-environment-delete-question");
     if Button::new(&word, "http-environment-delete-confirm")

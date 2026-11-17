@@ -3,6 +3,7 @@
 mod structured;
 mod text;
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{Color32, CornerRadius, FontFamily, Margin, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use i18n::{Language, keys};
 
@@ -108,13 +109,13 @@ impl Tool for DiffTool {
             (Mode::Structured, tr(keys::tools::diff::modes::STRUCTURED)),
         ];
         let modes = modes.each_ref().map(|(id, name)| (*id, name.as_str()));
-        ui.spacing_mut().item_spacing.y = 12.0;
+        ui.spacing_mut().item_spacing.y = gap::GROUPS;
         Segmented::new(&modes, "diff-mode").show(ui, &mut self.mode);
         egui::ScrollArea::vertical()
             .id_salt("diff-page")
             .auto_shrink(false)
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 12.0;
+                ui.spacing_mut().item_spacing.y = gap::GROUPS;
                 let asked = match self.mode {
                     Mode::Text => self.text.ui(ui, &mut self.sides, drawn),
                     Mode::Structured => self.structured.ui(ui, &mut self.sides, drawn),
@@ -223,7 +224,7 @@ fn mark_of(kind: Kind, right: bool) -> &'static str {
 }
 
 /// A side with no line: hatched, so the eye reads it as absent rather than blank.
-fn gap(ui: &Ui, rect: Rect) {
+fn absent_side(ui: &Ui, rect: Rect) {
     let p = palette(ui.ctx());
     ui.painter().rect_filled(rect, 0.0, p.bg_1);
     let painter = ui.painter().with_clip_rect(rect);
@@ -244,7 +245,7 @@ fn cell_head(ui: &Ui, rect: Rect, kind: Kind, right: bool, number: u32) -> Rect 
     let middle = rect.center().y;
     let mark = mark_of(kind, right);
     if !mark.is_empty() {
-        let mark = widgets::text(ui, mark, 12.0, 700.0, FontFamily::Monospace, ink);
+        let mark = widgets::text(ui, mark, font::LABEL, 700.0, FontFamily::Monospace, ink);
         let at = Pos2::new(
             rect.left() + 10.0 - mark.size().x / 2.0,
             middle - mark.size().y / 2.0,
@@ -252,7 +253,14 @@ fn cell_head(ui: &Ui, rect: Rect, kind: Kind, right: bool, number: u32) -> Rect 
         ui.painter().galley(at, mark, ink);
     }
     let number = number.to_string();
-    let number = widgets::text(ui, &number, 12.0, 400.0, FontFamily::Monospace, p.line_no);
+    let number = widgets::text(
+        ui,
+        &number,
+        font::LABEL,
+        400.0,
+        FontFamily::Monospace,
+        p.line_no,
+    );
     let at = Pos2::new(
         rect.left() + 44.0 - number.size().x,
         middle - number.size().y / 2.0,
@@ -267,7 +275,7 @@ fn rows_box(ui: &mut Ui, author_id: &str, height: f32, content: impl FnOnce(&mut
     let shown = egui::Frame::new()
         .fill(p.bg_0)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(10))
+        .corner_radius(CornerRadius::same(radius::CARD))
         .inner_margin(Margin::ZERO)
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
@@ -297,7 +305,13 @@ fn split_head(ui: &mut Ui, sides: &Sides, language: Language) {
         .vline(rect.center().x, rect.y_range(), (1.0, p.line_soft));
     for (side, left) in [("a", rect.left()), ("b", rect.center().x)] {
         let words = format!("{}  {}", side.to_uppercase(), sides.name_of(side, language));
-        let galley = widgets::one_line(ui, &words, (12.0, 400.0), p.text_0, width / 2.0 - 24.0);
+        let galley = widgets::one_line(
+            ui,
+            &words,
+            (font::LABEL, 400.0),
+            p.text_0,
+            width / 2.0 - 24.0,
+        );
         let at = Pos2::new(left + 12.0, rect.center().y - galley.size().y / 2.0);
         ui.painter().galley(at, galley, p.text_0);
     }
@@ -305,13 +319,16 @@ fn split_head(ui: &mut Ui, sides: &Sides, language: Language) {
 
 /// A count in its pill.
 fn pill(ui: &mut Ui, words: &str, hue: Color32, author_id: &str) {
-    let galley = widgets::text(ui, words, 11.5, 400.0, FontFamily::Monospace, hue);
+    let galley = widgets::text(ui, words, font::CONTROL, 400.0, FontFamily::Monospace, hue);
     let (rect, response) =
         ui.allocate_exact_size(galley.size() + Vec2::new(20.0, 8.0), Sense::hover());
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, words));
     widgets::address(ui, &response, author_id);
-    ui.painter()
-        .rect_filled(rect, CornerRadius::same(12), hue.gamma_multiply(0.14));
+    ui.painter().rect_filled(
+        rect,
+        CornerRadius::same(radius::PANEL),
+        hue.gamma_multiply(0.14),
+    );
     ui.painter()
         .galley(rect.min + Vec2::new(10.0, 4.0), galley, hue);
 }

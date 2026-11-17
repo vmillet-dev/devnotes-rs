@@ -1,7 +1,8 @@
 //! Where a request made from « New request » goes the first time it is saved, and under which
 //! name. It creates what it lacks: the first request of a project needs no trip to the rail.
 
-use egui::{Align, FontFamily, Layout, Sense, Ui};
+use crate::theme::tokens::{font, gap};
+use egui::{Align, Layout, Ui};
 use i18n::keys;
 
 use super::{Action, modal};
@@ -113,13 +114,9 @@ fn body(
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::http::save::TITLE);
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "http-save-dialog");
+    crate::widgets::dialog_title(ui, &title, "http-save-dialog");
     let label = tr(keys::http::save::NAME);
     caption(ui, &label);
     TextField::new(&mut form.name, &label, "http-save-name").show(ui);
@@ -131,13 +128,13 @@ fn body(
             Missing::Collection => keys::http::save::missing::COLLECTION,
             Missing::Folder => keys::http::save::missing::FOLDER,
         });
-        let words = egui::RichText::new(words).size(12.0).color(p.red);
+        let words = egui::RichText::new(words).size(font::LABEL).color(p.red);
         let said = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &said, "http-save-missing");
     }
     let mut chosen = None;
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::http::editor::SAVE), "http-save-submit")
             .kind(Kind::Filled)
             .show(ui)
@@ -157,7 +154,7 @@ fn body(
 
 fn caption(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    let words = egui::RichText::new(words).size(12.0).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(words));
 }
 

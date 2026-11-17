@@ -2,6 +2,7 @@
 //! the primary in amber, the destructive red **at rest**, the quiet text button of a field's
 //! head, the 32 px rail toggle.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Pos2, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui,
     Vec2, WidgetInfo,
@@ -52,11 +53,11 @@ enum Size {
 
 /// A request's actions, beside its 38 px address.
 const TALL_HEIGHT: f32 = 38.0;
-const TALL_PADDING: f32 = 16.0;
+const TALL_PADDING: f32 = gap::BLOCKS;
 const TALL_SIZE: f32 = 13.0;
 const TALL_WEIGHT: f32 = 600.0;
 /// Between a tall button's label and its keys.
-const KEYS_GAP: f32 = 8.0;
+const KEYS_GAP: f32 = gap::CONTROLS;
 
 impl<'a> Button<'a> {
     pub fn new(label: &'a str, author_id: &'a str) -> Self {
@@ -110,7 +111,7 @@ impl<'a> Button<'a> {
         let family = FontFamily::Proportional;
         let probe = text(ui, label, TALL_SIZE, TALL_WEIGHT, family, Color32::WHITE);
         let keys = keys.map_or(0.0, |keys| {
-            KEYS_GAP + super::arrowed(ui, None, keys, 10.5, Color32::WHITE)
+            KEYS_GAP + super::arrowed(ui, None, keys, font::CAPTION, Color32::WHITE)
         });
         probe.size().x + keys + 2.0 * TALL_PADDING
     }
@@ -151,7 +152,7 @@ impl<'a> Button<'a> {
         let probe = text(
             ui,
             label,
-            12.0,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             Color32::WHITE,
@@ -179,7 +180,7 @@ impl<'a> Button<'a> {
         let icon_room = if self.icon.is_some() { 16.0 + 6.0 } else { 0.0 };
         let cap_room = if self.capped { 12.0 } else { 0.0 };
         let keys_room = self.keys.map_or(0.0, |keys| {
-            KEYS_GAP + cap_room + super::arrowed(ui, None, keys, 10.5, Color32::WHITE)
+            KEYS_GAP + cap_room + super::arrowed(ui, None, keys, font::CAPTION, Color32::WHITE)
         });
         let mut wanted = probe.size() + 2.0 * padding + Vec2::new(icon_room + keys_room, 0.0);
         match self.size {
@@ -242,20 +243,20 @@ impl<'a> Button<'a> {
             let at = Pos2::new(after + cap_room / 2.0, rect.center().y);
             if self.capped {
                 let p = palette(ui.ctx());
-                let width = super::arrowed(ui, None, keys, 10.5, ink) + cap_room;
+                let width = super::arrowed(ui, None, keys, font::CAPTION, ink) + cap_room;
                 let cap = Rect::from_center_size(
                     Pos2::new(after + width / 2.0, rect.center().y),
                     Vec2::new(width, 16.0),
                 );
                 painter.rect(
                     cap,
-                    CornerRadius::same(4),
+                    CornerRadius::same(radius::TAG),
                     p.bg_3,
                     Stroke::new(1.0, p.line),
                     StrokeKind::Inside,
                 );
             }
-            super::arrowed(ui, Some(at), keys, 10.5, ink.gamma_multiply(0.7));
+            super::arrowed(ui, Some(at), keys, font::CAPTION, ink.gamma_multiply(0.7));
         }
         response
     }
@@ -335,7 +336,7 @@ impl<'a> IconButton<'a> {
     }
 
     pub fn show(self, ui: &mut Ui) -> Response {
-        let corner = CornerRadius::same(6);
+        let corner = CornerRadius::same(radius::CONTROL);
         let (label, pressed) = (self.label, self.pressed);
         let response = interact(
             ui,
@@ -439,7 +440,7 @@ impl<'a> SquareButton<'a> {
     }
 
     pub fn show(self, ui: &mut Ui) -> Response {
-        let corner = CornerRadius::same(8);
+        let corner = CornerRadius::same(radius::MENU);
         let (label, open) = (self.label, self.open);
         let response = interact(
             ui,

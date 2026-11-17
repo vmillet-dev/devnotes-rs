@@ -1,6 +1,7 @@
 //! One text, two tabs. Encoding: both fields are typed into, the one typed in last is the text and
 //! the other its translation. Analysing reads that same text.
 
+use crate::theme::tokens::gap;
 use egui::Ui;
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::encoding::{CodecDirection, UrlCodecAnswer, UrlCodecRequest, UrlScope};
@@ -116,7 +117,7 @@ impl UrlCodecTool {
         let options = [(Tab::Codec, tr(tabs::CODEC)), (Tab::Parse, tr(tabs::PARSE))];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 16.0;
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             Segmented::new(&options, "url-tab").show(ui, &mut self.tab);
             if self.tab == Tab::Codec {
                 let options = [
@@ -347,7 +348,7 @@ impl Tool for UrlCodecTool {
 
     fn ui(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
         self.bar(ui, drawn.language);
-        ui.add_space(12.0);
+        ui.add_space(gap::GROUPS);
         match self.tab {
             Tab::Codec => columns(ui, self, drawn, (Self::decoded, Self::encoded)),
             Tab::Parse => columns(ui, self, drawn, (Self::parse_input, Self::parse_output)),

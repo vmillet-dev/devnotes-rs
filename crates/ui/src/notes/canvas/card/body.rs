@@ -3,6 +3,7 @@
 //! task's row being taller), a sheet's last results, a drawing's picture — or the line a search
 //! found, when that is not code.
 
+use crate::theme::tokens::radius;
 use egui::{
     Color32, CornerRadius, Rect, Role, Sense, Stroke, Ui, UiBuilder, WidgetInfo, pos2, vec2,
 };
@@ -381,7 +382,7 @@ fn item(ui: &mut Ui, row: Rect, item: &ChecklistItem, language: i18n::Language) 
         Sense::click(),
         "note-card-item",
         || WidgetInfo::selected(Role::CheckBox, true, done, &name),
-        CornerRadius::same(4),
+        CornerRadius::same(radius::TAG),
     );
     let ink = if response.hovered() {
         p.text_1

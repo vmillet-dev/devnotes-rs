@@ -1,6 +1,7 @@
 //! Every key, by where it is live. A row that can be moved shows the key really bound, never the
 //! one that shipped.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Align, FontFamily, Layout, RichText, Sense, Ui, Vec2};
 use i18n::{Key, keys};
 
@@ -26,7 +27,7 @@ pub(super) fn show(ctx: &egui::Context, state: &AppState, _actions: &mut Actions
             |ui| {
                 let p = palette(ui.ctx());
                 let hint = RichText::new(tr(keys::shortcuts::EDIT_HINT))
-                    .size(11.5)
+                    .size(font::CONTROL)
                     .color(p.text_2);
                 ui.label(hint);
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -45,7 +46,14 @@ fn body(ui: &mut Ui, state: &AppState) {
     let p = palette(ui.ctx());
     for group in guide::sheet() {
         let title = i18n::translate(language, group.title(), &[]).to_uppercase();
-        let words = widgets::text(ui, &title, 11.0, 600.0, FontFamily::Proportional, p.text_2);
+        let words = widgets::text(
+            ui,
+            &title,
+            font::META,
+            600.0,
+            FontFamily::Proportional,
+            p.text_2,
+        );
         let (rect, heading) = ui.allocate_exact_size(
             Vec2::new(ui.available_width(), words.size().y + 8.0),
             Sense::hover(),
@@ -55,7 +63,7 @@ fn body(ui: &mut Ui, state: &AppState) {
         for row in &group.rows {
             line(ui, state, row);
         }
-        ui.add_space(12.0);
+        ui.add_space(gap::GROUPS);
     }
 }
 
@@ -71,15 +79,16 @@ fn line(ui: &mut Ui, state: &AppState, row: &SheetRow) {
             Layout::left_to_right(Align::Center),
             |ui| {
                 ui.add(
-                    egui::Label::new(RichText::new(label).size(12.5).color(p.text_1)).truncate(),
+                    egui::Label::new(RichText::new(label).size(font::BODY).color(p.text_1))
+                        .truncate(),
                 );
             },
         );
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 4.0;
+            ui.spacing_mut().item_spacing.x = gap::TIGHT;
             for (at, cap) in caps.iter().rev().enumerate() {
                 if at > 0 {
-                    ui.label(RichText::new("+").size(11.0).color(p.text_2));
+                    ui.label(RichText::new("+").size(font::META).color(p.text_2));
                 }
                 Kbd(cap).show(ui);
             }

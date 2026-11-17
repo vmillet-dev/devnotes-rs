@@ -6,6 +6,7 @@ mod actions;
 mod bands;
 mod body;
 
+use crate::theme::tokens::{gap, radius};
 use std::sync::Arc;
 
 use egui::text::{LayoutJob, TextFormat, TextWrapping};
@@ -69,7 +70,7 @@ impl<'a> Context<'a> {
 }
 
 /// Between the bands and the preview.
-const GAP: f32 = 6.0;
+const GAP: f32 = gap::SNUG;
 
 pub(super) fn show(
     ui: &mut Ui,
@@ -102,7 +103,7 @@ pub(super) fn show(
     );
     open.widget_info(|| WidgetInfo::labeled(Role::Button, true, &title));
     address(ui, &open, "note-card-open");
-    crate::theme::focus::ring(ui, &open, CornerRadius::same(10));
+    crate::theme::focus::ring(ui, &open, CornerRadius::same(radius::CARD));
     if canvas_view.request.as_deref() == Some(note.id.as_str()) {
         open.request_focus();
         canvas_view.request = None;
@@ -137,7 +138,7 @@ pub(super) fn show(
     };
     ui.painter().rect(
         rect,
-        CornerRadius::same(10),
+        CornerRadius::same(radius::CARD),
         fill,
         Stroke::new(1.0, edge),
         StrokeKind::Inside,
@@ -146,7 +147,7 @@ pub(super) fn show(
         let tint = p.amber_fill.gamma_multiply(0.08);
         ui.painter().rect(
             rect,
-            CornerRadius::same(10),
+            CornerRadius::same(radius::CARD),
             tint,
             Stroke::new(1.5, edge),
             StrokeKind::Inside,

@@ -1,6 +1,7 @@
 //! A request's auth. The secret half is masked until asked for, and an inherited one says what it
 //! is and where it was set.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Ui, Vec2};
 use engine::http::model::{KeyPlace, RequestAuth};
 use engine::http::settings::Inherited;
@@ -154,8 +155,8 @@ fn shown_auth<'a>(editor: &AuthField<'a>) -> &'a RequestAuth {
 fn field<T>(ui: &mut Ui, label: &str, content: impl FnOnce(&mut Ui) -> T) -> T {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
-        let words = egui::RichText::new(label).size(12.5).color(p.text_1);
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
+        let words = egui::RichText::new(label).size(font::BODY).color(p.text_1);
         let size = Vec2::new(LABEL, ui.spacing().interact_size.y);
         let layout = egui::Layout::left_to_right(egui::Align::Center);
         ui.allocate_ui_with_layout(size, layout, |ui| {
@@ -263,7 +264,7 @@ fn inherited(ui: &mut Ui, above: Option<&Inherited>, language: i18n::Language) {
         |above| inherited_words(above, language),
     );
     let p = palette(ui.ctx());
-    let shown = egui::RichText::new(words).size(12.5).color(p.text_1);
+    let shown = egui::RichText::new(words).size(font::BODY).color(p.text_1);
     let shown = ui.add(egui::Label::new(shown).wrap());
     widgets::address(ui, &shown, "http-auth-inherited");
 }
@@ -282,6 +283,6 @@ fn inherited_words(above: &Inherited, language: i18n::Language) -> String {
 
 fn hint(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    let words = egui::RichText::new(words).size(12.0).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(words).wrap());
 }

@@ -11,6 +11,7 @@ mod gesture;
 mod tidy;
 mod zone;
 
+use crate::theme::tokens::{font, radius};
 use egui::{
     CornerRadius, FontFamily, PointerButton, Pos2, Rect, Response, Role, Sense, Shape, Stroke,
     StrokeKind, Ui, UiBuilder, Vec2, WidgetInfo, pos2, vec2,
@@ -189,7 +190,7 @@ fn ground(
     let frame = Rect::from_min_max(region.min + vec2(24.0, 16.0), region.max - vec2(24.0, 24.0));
     ui.painter().rect(
         frame,
-        CornerRadius::same(10),
+        CornerRadius::same(radius::CARD),
         p.bg_0,
         Stroke::new(1.0, p.line_soft),
         StrokeKind::Inside,
@@ -584,9 +585,10 @@ fn ghost(ui: &mut Ui, board: &BoardState, context: &card::Context<'_>, hand: &Ha
     );
     ghost_ui.set_clip_rect(ui.clip_rect());
     let p = palette(ui.ctx());
-    ghost_ui
-        .painter()
-        .add(p.shadow_overlay.as_shape(rect, CornerRadius::same(10)));
+    ghost_ui.painter().add(
+        p.shadow_overlay
+            .as_shape(rect, CornerRadius::same(radius::CARD)),
+    );
     let mut idle = CanvasView::default();
     card::show(
         &mut ghost_ui,
@@ -607,7 +609,7 @@ fn bands(ui: &Ui, hand: &Hand<'_>) {
         Kind::DrawZone => {
             ui.painter().rect_filled(
                 rect,
-                CornerRadius::same(10),
+                CornerRadius::same(radius::CARD),
                 p.amber_fill.gamma_multiply(0.08),
             );
             ui.painter().extend(Shape::dashed_line(
@@ -626,7 +628,7 @@ fn bands(ui: &Ui, hand: &Hand<'_>) {
         Kind::SelectBand => {
             ui.painter().rect(
                 rect,
-                CornerRadius::same(4),
+                CornerRadius::same(radius::TAG),
                 p.amber_fill.gamma_multiply(0.12),
                 Stroke::new(1.0, p.amber_dim),
                 StrokeKind::Inside,
@@ -676,7 +678,7 @@ fn dots(ui: &Ui, origin: Pos2) {
         while x <= clip.right() {
             painter.rect_filled(
                 Rect::from_center_size(pos2(x, y), Vec2::splat(2.0)),
-                CornerRadius::same(1),
+                CornerRadius::same(radius::MARK),
                 p.bg_2,
             );
             x += step;
@@ -688,7 +690,14 @@ fn dots(ui: &Ui, origin: Pos2) {
 fn empty(ui: &mut Ui, seen: Rect, language: i18n::Language, actions: &mut Actions) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::board::EMPTY, &[]);
-    let galley = widgets::text(ui, &words, 12.5, 400.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::BODY,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let centre = pos2(seen.center().x, seen.top() + seen.height() * 0.4);
     let rect = Rect::from_center_size(centre, galley.size());
     let response = ui.allocate_rect(rect, Sense::hover());

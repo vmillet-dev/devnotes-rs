@@ -7,7 +7,7 @@ use engine::notes::trash::TrashedNote;
 use i18n::keys;
 
 use super::Revision;
-use super::notes_query::DEBOUNCE;
+use super::notes_query::debounce;
 use crate::api;
 use crate::backend::{Backend, Pending};
 use crate::notes::Trash;
@@ -52,7 +52,7 @@ impl TrashState {
             Trash::Close => self.close(),
             Trash::Search(typed) => {
                 self.search = typed;
-                self.due = Some(now + DEBOUNCE);
+                self.due = Some(now + debounce());
             }
             Trash::Restore(id) => self.writes.push(api::notes::restore(backend, vec![id])),
             Trash::Purge(id) => self.writes.push(api::notes::purge(backend, vec![id])),

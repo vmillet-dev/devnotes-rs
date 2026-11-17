@@ -1,6 +1,7 @@
 //! What the notes' screens share: a kind's icon, a snippet's format, a priority's pill and
 //! bars, a folder's hue.
 
+use crate::theme::tokens::{font, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Pos2, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui,
     Vec2, WidgetInfo,
@@ -105,7 +106,7 @@ pub fn format_label(
             language_hue(ui, language),
         )
     };
-    let galley = widgets::text(ui, &words, 10.0, 600.0, FontFamily::Monospace, hue);
+    let galley = widgets::text(ui, &words, font::CAPTION, 600.0, FontFamily::Monospace, hue);
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
     let name = languages::name(language);
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
@@ -153,8 +154,16 @@ pub fn priority_bars(ui: &mut Ui, priority: Priority, locale: i18n::Language) ->
         Priority::Urgent => (p.red, 3, keys::notes::priority::URGENT),
     };
     let name = i18n::translate(locale, key, &[]);
-    let word = (priority == Priority::Urgent)
-        .then(|| widgets::text(ui, &name, 10.0, 700.0, FontFamily::Proportional, ink));
+    let word = (priority == Priority::Urgent).then(|| {
+        widgets::text(
+            ui,
+            &name,
+            font::CAPTION,
+            700.0,
+            FontFamily::Proportional,
+            ink,
+        )
+    });
     let bars = 3.0 * 2.0 + 2.0;
     let width = bars + word.as_ref().map_or(0.0, |word| 4.0 + word.size().x);
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 12.0), Sense::hover());
@@ -174,7 +183,7 @@ pub fn priority_bars(ui: &mut Ui, priority: Priority, locale: i18n::Language) ->
             Pos2::new(left + 2.0, bottom),
         );
         ui.painter()
-            .rect_filled(shape, CornerRadius::same(1), colour);
+            .rect_filled(shape, CornerRadius::same(radius::MARK), colour);
     }
     if let Some(word) = word {
         let at = Pos2::new(
@@ -192,7 +201,7 @@ pub fn tick_box(ui: &Ui, rect: Rect, done: bool, colour: Color32) {
     let square = Rect::from_center_size(rect.center(), Vec2::splat(side)).shrink(1.0);
     ui.painter().rect(
         square,
-        CornerRadius::same(2),
+        CornerRadius::same(radius::MARK),
         Color32::TRANSPARENT,
         Stroke::new(1.0, colour),
         StrokeKind::Inside,

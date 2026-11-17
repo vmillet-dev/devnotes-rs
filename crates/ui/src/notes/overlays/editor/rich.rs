@@ -3,6 +3,7 @@
 //! goes through `richtext::edit` and its undo; the Markdown is written back only once the user
 //! changed something, so a Note opened and left keeps its stored body byte for byte.
 
+use crate::theme::tokens::gap;
 use egui::text::CCursor;
 use egui::{Event, Key, Modifiers, Pos2, Rect, Sense, Stroke, Ui, UiBuilder, pos2, vec2};
 use i18n::{Language, keys};
@@ -16,7 +17,7 @@ use crate::widgets;
 use crate::widgets::rich::{Embedded, Laid, RichView};
 
 const TOOLBAR_HEIGHT: f32 = 40.0;
-const PADDING: egui::Vec2 = egui::vec2(32.0, 20.0);
+const PADDING: egui::Vec2 = egui::vec2(gap::PAGE, gap::PANEL);
 
 /// What the last change was: typing in a row is undone as one step.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -384,7 +385,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
         .auto_shrink([false, false])
         .show(&mut body_ui, |ui| {
             egui::Frame::new()
-                .inner_margin(egui::Margin::symmetric(32, 20))
+                .inner_margin(gap::margin(gap::PAGE, gap::PANEL))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     let painted = RichView::new(&view.document)

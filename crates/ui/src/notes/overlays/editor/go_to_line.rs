@@ -1,7 +1,8 @@
 //! Go to a line of the code: Ctrl+Alt+G opens a field over it, Enter or the button goes there and
 //! gives the keys back to the code, Escape leaves. A line past the end is the last one.
 
-use egui::{Key, Margin, Modifiers, Stroke, Ui, Vec2};
+use crate::theme::tokens::{font, gap};
+use egui::{Key, Modifiers, Stroke, Ui, Vec2};
 use i18n::{Language, keys};
 
 use crate::theme::icons::Icon;
@@ -54,11 +55,15 @@ pub(super) fn show(ui: &mut Ui, bar: &mut GoToLine, editor: &mut Editor, languag
     let p = palette(ui.ctx());
     let label = tr(keys::editor::code::GO_TO_LINE);
     egui::Frame::new()
-        .inner_margin(Margin::symmetric(8, 6))
+        .inner_margin(gap::margin(gap::CONTROLS, gap::SNUG))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing = Vec2::new(6.0, 6.0);
+            ui.spacing_mut().item_spacing = Vec2::new(gap::SNUG, gap::SNUG);
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new(&label).size(12.0).color(p.text_1));
+                ui.label(
+                    egui::RichText::new(&label)
+                        .size(font::LABEL)
+                        .color(p.text_1),
+                );
                 let field = ui
                     .scope(|ui| {
                         ui.set_width(FIELD_WIDTH);

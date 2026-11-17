@@ -1,6 +1,7 @@
 //! A token decoded and verified in Rust; how long ago or how far off is the page's, so it ages.
 //! ⚠️ A token is a credential and a secret a secret: gone with the tool.
 
+use crate::theme::tokens::{font, gap, radius};
 use chrono::{DateTime, Utc};
 use egui::Ui;
 use engine::notes::language::Language as NoteLanguage;
@@ -87,12 +88,12 @@ fn json_block(ui: &mut Ui, text: &str, author_id: &str) {
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(egui::Stroke::new(1.0, p.line_soft))
-        .corner_radius(egui::CornerRadius::same(8))
-        .inner_margin(egui::Margin::symmetric(12, 10))
+        .corner_radius(egui::CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::GROUPS, gap::INSET))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             let words = egui::RichText::new(text)
-                .font(egui::FontId::monospace(12.0))
+                .font(egui::FontId::monospace(font::LABEL))
                 .color(p.text_0);
             let shown = ui.add(egui::Label::new(words).selectable(true));
             address(ui, &shown, author_id);
@@ -161,7 +162,7 @@ impl JwtTool {
         if let Some(span) = when.and_then(|it| span(it, now)) {
             words = format!("{words} · {}", span.text(language));
         }
-        let said = paragraph(ui, &words, (12.5, 600.0), p.text_0);
+        let said = paragraph(ui, &words, (font::BODY, 600.0), p.text_0);
         address(ui, &said, "jwt-state");
         let ink = match verification {
             Verification::Valid => p.green,
@@ -177,7 +178,7 @@ impl JwtTool {
                 .with("family", family_name.as_str())
                 .text(language)
         });
-        let said = paragraph(ui, &verdict, (12.5, 400.0), ink);
+        let said = paragraph(ui, &verdict, (font::BODY, 400.0), ink);
         address(ui, &said, "jwt-verification");
         let algorithm = format!("{} · {family_name}", algorithm.as_deref().unwrap_or("—"));
         let title = tr(keys::tools::jwt::ALGORITHM);

@@ -1,7 +1,8 @@
 //! An image at its size, over everything (the reference's `image-lightbox`). It reads nothing:
 //! the picture is the one the strip already holds.
 
-use egui::{Id, Margin, RichText, Sense, Ui, Vec2};
+use crate::theme::tokens::{font, gap};
+use egui::{Id, RichText, Sense, Ui, Vec2};
 use i18n::keys;
 
 use crate::action::{Action, Actions};
@@ -25,7 +26,7 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .corner_radius(10)
-        .inner_margin(Margin::same(10));
+        .inner_margin(gap::margin(gap::INSET, gap::INSET));
     let language = state.language;
     let shown = egui::Modal::new(Id::unique("image-lightbox"))
         .backdrop_color(p.backdrop)
@@ -35,7 +36,7 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
             ui.set_width(size.x.max(240.0));
             let closed = ui
                 .horizontal(|ui| {
-                    ui.label(RichText::new(name).size(12.0).color(p.text_1));
+                    ui.label(RichText::new(name).size(font::LABEL).color(p.text_1));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let close = i18n::translate(language, keys::attachments::CLOSE_ZOOM, &[]);
                         IconButton::new(Icon::X, &close, "lightbox-close")

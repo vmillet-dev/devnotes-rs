@@ -1,7 +1,8 @@
 //! A tab is closed after one question when closing it costs something: what was typed and not
 //! saved. Escape and « Cancel » keep it open.
 
-use egui::{FontFamily, Sense, Ui};
+use crate::theme::tokens::{font, gap};
+use egui::Ui;
 use i18n::keys;
 
 use super::Action;
@@ -46,35 +47,31 @@ fn body(
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title_key = if modified {
         keys::http::close::TITLE
     } else {
         keys::http::close::CONNECTED_TITLE
     };
     let title = i18n::translate(language, title_key, &[("name", name.into())]);
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "http-close-dialog");
+    crate::widgets::dialog_title(ui, &title, "http-close-dialog");
     if modified {
         let hint = egui::RichText::new(tr(keys::http::close::HINT))
-            .size(12.5)
+            .size(font::BODY)
             .color(p.text_2);
         let hint = ui.add(egui::Label::new(hint).wrap());
         widgets::address(ui, &hint, "http-close-modified");
     }
     if live {
         let hint = egui::RichText::new(tr(keys::http::close::CONNECTED))
-            .size(12.5)
+            .size(font::BODY)
             .color(p.text_2);
         let hint = ui.add(egui::Label::new(hint).wrap());
         widgets::address(ui, &hint, "http-close-connected");
     }
     let mut chosen = None;
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if modified
             && Button::new(&tr(keys::http::editor::SAVE), "http-close-save")
                 .kind(Kind::Filled)

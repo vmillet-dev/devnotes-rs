@@ -135,6 +135,86 @@ pub const COMPACT: Spacing = Spacing {
     canvas: 16.0,
 };
 
+/// The type scale: each size named by what it is for, defined once. A screen picks a role, never
+/// a number; changing a role's value changes every text that plays it.
+pub mod font {
+    /// Counts and monospace badges: a format's tag, a facet's total.
+    pub const BADGE: f32 = 9.5;
+    /// Keys, section titles in capitals, captions under a picture.
+    pub const CAPTION: f32 = 10.5;
+    /// What is said beside the content: dates, hints, secondary details.
+    pub const META: f32 = 11.0;
+    /// The words of a menu, a drop-down list or a chip.
+    pub const CONTROL: f32 = 11.5;
+    /// Buttons, field labels, table cells.
+    pub const LABEL: f32 = 12.0;
+    /// Running text: a card's title and preview, a paragraph.
+    pub const BODY: f32 = 12.5;
+    /// What is read or typed at length: a field's text, a list's content.
+    pub const READING: f32 = 13.0;
+    /// A subtitle under a title.
+    pub const SUBTITLE: f32 = 14.0;
+    /// A dialog's or a panel's title.
+    pub const TITLE: f32 = 15.0;
+    /// A page's title.
+    pub const HEADING: f32 = 16.0;
+    /// A value a tool shows large: a converted size, a time.
+    pub const DISPLAY: f32 = 24.0;
+    /// The largest values: a colour's code, a person's initials.
+    pub const HERO: f32 = 32.0;
+}
+
+/// The gaps, named by what they separate, defined once.
+pub mod gap {
+    /// A rule's width.
+    pub const HAIRLINE: f32 = 1.0;
+    /// Between two lines of one block: a title and its subtitle.
+    pub const LINE: f32 = 2.0;
+    /// An icon and its words; the inside of a chip.
+    pub const TIGHT: f32 = 4.0;
+    /// The items of a compact list or row.
+    pub const SNUG: f32 = 6.0;
+    /// Between the controls of a row.
+    pub const CONTROLS: f32 = 8.0;
+    /// The inside of a control; between two fields.
+    pub const INSET: f32 = 10.0;
+    /// Between two groups of controls.
+    pub const GROUPS: f32 = 12.0;
+    /// Between two blocks of a panel.
+    pub const BLOCKS: f32 = 16.0;
+    /// A panel's or a dialog's margin.
+    pub const PANEL: f32 = 20.0;
+    /// Between two sections of a page.
+    pub const PAGE: f32 = 28.0;
+
+    /// A frame's margin, from two gaps (`0.0` for none).
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the scale's steps are whole and small"
+    )]
+    pub const fn margin(x: f32, y: f32) -> egui::Margin {
+        egui::Margin::symmetric(x as i8, y as i8)
+    }
+}
+
+/// The corner radii, named by what they round, defined once.
+pub mod radius {
+    /// Bars and marks: a progress bar, a selection's edge.
+    pub const MARK: u8 = 2;
+    /// Tags and badges.
+    pub const TAG: u8 = 4;
+    /// Buttons and fields.
+    pub const CONTROL: u8 = 6;
+    /// Menus and tooltips.
+    pub const MENU: u8 = 8;
+    /// Cards.
+    pub const CARD: u8 = 10;
+    /// Panels.
+    pub const PANEL: u8 = 12;
+    /// Dialogs.
+    pub const DIALOG: u8 = 14;
+}
+
 /// A full-screen editor starts under it, so the title bar stays in reach.
 pub const TITLEBAR_HEIGHT: f32 = 38.0;
 

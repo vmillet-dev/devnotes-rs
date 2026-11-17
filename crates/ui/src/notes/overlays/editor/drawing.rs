@@ -3,6 +3,7 @@
 //! answers. The scene is saved once the hand pauses; its pictures go only when it is left, as
 //! taking two is dear.
 
+use crate::theme::tokens::{font, gap};
 use drawing::{Editor, Fill, Format, Frame, Grip, Hue, Mark, Point, Tool};
 use egui::epaint::{PathShape, PathStroke, TextShape};
 use egui::{
@@ -283,7 +284,7 @@ fn toolbar(
     let p = palette(ui.ctx());
     let mut export = None;
     let row = ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
+        ui.spacing_mut().item_spacing.x = gap::TIGHT;
         tools(ui, view, language, 14.0);
         if !exports {
             return;
@@ -300,7 +301,7 @@ fn toolbar(
         row.response.rect.bottom() + 8.0,
         Stroke::new(1.0, p.line_soft),
     );
-    ui.add_space(8.0);
+    ui.add_space(gap::CONTROLS);
     export
 }
 
@@ -314,7 +315,7 @@ fn palette_column(ui: &mut Ui, view: &mut DrawingView, language: Language) -> Re
             .max_rect(column)
             .layout(Layout::top_down(Align::Center)),
     );
-    column_ui.spacing_mut().item_spacing.y = 4.0;
+    column_ui.spacing_mut().item_spacing.y = gap::TIGHT;
     tools(&mut column_ui, view, language, 10.0);
     let edge = whole.left() + PALETTE_WIDTH + 8.0;
     ui.painter()
@@ -519,7 +520,7 @@ fn paint(ui: &Ui, view: &mut DrawingView, stage: Rect, language: Language) {
         let galley = widgets::text(
             ui,
             &words,
-            13.0,
+            font::READING,
             400.0,
             egui::FontFamily::Proportional,
             p.text_2,

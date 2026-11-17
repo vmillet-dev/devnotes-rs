@@ -2,6 +2,7 @@
 //! its name, value and kind; one blank row at the end becomes a row once typed in. A secret stays
 //! masked until asked for, and what cannot be used is said under the table.
 
+use crate::theme::tokens::font;
 use std::collections::HashSet;
 
 use egui::{Id, Rect, Stroke, Ui, UiBuilder, Vec2, pos2};
@@ -303,7 +304,7 @@ fn said(ui: &mut Ui, faults: &[Option<VariableFault>], language: i18n::Language)
             continue;
         }
         let words = egui::RichText::new(i18n::translate(language, key, &[]))
-            .size(12.0)
+            .size(font::LABEL)
             .color(p.red);
         let shown = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &shown, "http-variable-fault");

@@ -4,9 +4,10 @@
 //! As headers, a row that cannot be sent is marked with why, and `Name: value` typed or pasted in
 //! a name is split into its two cells. Both are Rust's to say: a parameter takes any character.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
-    Color32, CornerRadius, Event, FontFamily, FontId, Id, Margin, Rect, Role, Sense, Stroke,
-    StrokeKind, TextEdit, Ui, Vec2, WidgetInfo, pos2,
+    Color32, CornerRadius, Event, FontFamily, FontId, Id, Rect, Role, Sense, Stroke, StrokeKind,
+    TextEdit, Ui, Vec2, WidgetInfo, pos2,
 };
 use engine::http::model::{HeaderFault, KeyValue};
 use i18n::keys;
@@ -112,7 +113,7 @@ pub(crate) fn frame(ui: &mut Ui, rows: usize, label: &str, author_id: &str) -> R
     widgets::address(ui, &region, author_id);
     ui.painter().rect(
         frame,
-        CornerRadius::same(10),
+        CornerRadius::same(radius::CARD),
         p.bg_1,
         Stroke::new(1.0, p.line),
         StrokeKind::Inside,
@@ -168,7 +169,14 @@ fn head(ui: &Ui, columns: &Columns, top: f32, language: i18n::Language) {
 pub(crate) fn heading(ui: &Ui, rect: Rect, key: i18n::Key, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, key, &[]);
-    let galley = widgets::text(ui, &words, 11.5, 600.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::CONTROL,
+        600.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     ui.painter().galley(
         pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0),
         galley,
@@ -318,12 +326,12 @@ pub(crate) fn text_cell(
         TextEdit::singleline(text)
             .id(id)
             .frame(egui::Frame::new())
-            .margin(Margin::symmetric(8, 0))
+            .margin(gap::margin(gap::CONTROLS, 0.0))
             .align(egui::Align2::LEFT_CENTER)
-            .hint_text(egui::RichText::new(hint).font(FontId::new(12.5, family.clone())))
+            .hint_text(egui::RichText::new(hint).font(FontId::new(font::BODY, family.clone())))
             .password(masked)
             .text_color(ink)
-            .font(FontId::new(12.5, family)),
+            .font(FontId::new(font::BODY, family)),
     );
     ui.ctx()
         .accesskit_node_builder(response.id, |node| node.set_label(name.to_string()));
@@ -375,11 +383,11 @@ pub(crate) fn remove(
         Sense::click(),
         author_id,
         || WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(5),
+        CornerRadius::same(radius::CONTROL),
     );
     let ink = if response.hovered() {
         ui.painter()
-            .rect_filled(square, CornerRadius::same(5), p.bg_3);
+            .rect_filled(square, CornerRadius::same(radius::CONTROL), p.bg_3);
         p.text_0
     } else {
         p.text_2
@@ -404,7 +412,7 @@ fn said(ui: &mut Ui, faults: &[Option<HeaderFault>], language: i18n::Language) {
             continue;
         }
         let words = egui::RichText::new(i18n::translate(language, key, &[]))
-            .size(12.0)
+            .size(font::LABEL)
             .color(p.red);
         let response = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &response, "http-kv-fault");

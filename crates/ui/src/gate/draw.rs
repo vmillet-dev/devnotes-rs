@@ -1,7 +1,8 @@
 //! The gate as the reference drew it: one panel in the middle of the window — `surface`, 420 px,
 //! 28 px inside, 14 px between — naming its library, then asking what it needs.
 
-use egui::{Align, Layout, Margin, RichText, Stroke, Ui, Vec2};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{Align, Layout, RichText, Stroke, Ui, Vec2};
 use engine::vault::{MINIMUM_LENGTH, VaultState};
 use i18n::{Key, Language, Message, keys};
 
@@ -30,11 +31,11 @@ pub fn show(
         let shown = egui::Frame::new()
             .fill(p.bg_2)
             .stroke(Stroke::new(1.0, p.line_soft))
-            .corner_radius(egui::CornerRadius::same(8))
-            .inner_margin(Margin::same(28))
+            .corner_radius(egui::CornerRadius::same(radius::MENU))
+            .inner_margin(gap::margin(gap::PAGE, gap::PAGE))
             .show(ui, |ui| {
                 ui.set_width(width - 56.0);
-                ui.spacing_mut().item_spacing.y = 14.0;
+                ui.spacing_mut().item_spacing.y = gap::BLOCKS;
                 ui.with_layout(Layout::top_down(Align::Min), |ui| {
                     library(ui, gate, view, language, actions);
                     if gate.vault() == Some(VaultState::KeyMissing) {
@@ -118,7 +119,7 @@ fn library(
         } else {
             ui.label(
                 RichText::new(&names[open])
-                    .size(11.2)
+                    .size(font::META)
                     .variation(*b"wght", 600.0)
                     .color(p.text_0),
             );
@@ -165,7 +166,7 @@ fn form(
     }
 
     ui.vertical(|ui| {
-        ui.spacing_mut().item_spacing.y = 6.0;
+        ui.spacing_mut().item_spacing.y = gap::SNUG;
         let name = tr(keys::vault::PASSPHRASE);
         ui.horizontal(|ui| {
             ui.label(small(&name, p.text_2));
@@ -209,7 +210,7 @@ fn form(
 
     if creating {
         ui.vertical(|ui| {
-            ui.spacing_mut().item_spacing.y = 6.0;
+            ui.spacing_mut().item_spacing.y = gap::SNUG;
             let name = tr(keys::vault::CONFIRMATION);
             ui.label(small(&name, p.text_2));
             let (_, typed) =
@@ -250,7 +251,7 @@ fn submit(
         .unwrap_or_default();
     let shown = ui.add_sized(
         Vec2::new(ui.available_width(), 17.0),
-        egui::Label::new(RichText::new(said).size(11.9).color(p.red)),
+        egui::Label::new(RichText::new(said).size(font::LABEL).color(p.red)),
     );
     widgets::address(ui, &shown, "vault-problem");
     ui.ctx().accesskit_node_builder(shown.id, |node| {
@@ -357,16 +358,16 @@ fn title(ui: &mut Ui, words: &str) -> egui::Response {
     let p = palette(ui.ctx());
     ui.label(
         RichText::new(words)
-            .size(16.1)
+            .size(font::HEADING)
             .variation(*b"wght", 700.0)
             .color(p.text_0),
     )
 }
 
 fn lead(ui: &mut Ui, words: &str, colour: egui::Color32) {
-    ui.label(RichText::new(words).size(11.9).color(colour));
+    ui.label(RichText::new(words).size(font::LABEL).color(colour));
 }
 
 fn small(words: &str, colour: egui::Color32) -> RichText {
-    RichText::new(words).size(11.2).color(colour)
+    RichText::new(words).size(font::META).color(colour)
 }

@@ -6,6 +6,7 @@ mod guide;
 mod sheet;
 mod whats_new;
 
+use crate::theme::tokens::{font, gap};
 use egui::{
     Align, FontFamily, Id, Layout, Popup, PopupCloseBehavior, Rect, Sense, Stroke, Ui, Vec2,
 };
@@ -71,7 +72,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
 
 fn entries(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     ui.set_width(WIDTH);
-    ui.spacing_mut().item_spacing.y = 2.0;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     let tr = |key| i18n::translate(state.language, key, &[]);
     let about = Message::new(keys::about::OPEN_ABOUT)
         .with("app", METADATA.name)
@@ -149,7 +150,7 @@ fn check_entry(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> Id {
     };
     if let Some(said) = said {
         let words = egui::RichText::new(said.text(language))
-            .size(11.0)
+            .size(font::META)
             .monospace()
             .color(p.text_2);
         let status = ui.label(words);
@@ -189,7 +190,14 @@ fn framed(
     let whole = ui.max_rect();
     let line = Stroke::new(1.0, p.line_soft);
     let bottom = whole.bottom() - FOOTER;
-    let words = widgets::text(ui, title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+    let words = widgets::text(
+        ui,
+        title,
+        font::TITLE,
+        600.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let at = egui::pos2(whole.left() + 20.0, whole.top() + 16.0);
     let height = words.size().y;
     let heading = ui.allocate_rect(Rect::from_min_size(at, words.size()), Sense::hover());
@@ -197,7 +205,7 @@ fn framed(
     heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, title));
     let under = ui.painter().layout(
         subtitle.to_owned(),
-        egui::FontId::proportional(11.5),
+        egui::FontId::proportional(font::CONTROL),
         p.text_2,
         whole.width() - 40.0,
     );
@@ -221,7 +229,7 @@ fn framed(
         .auto_shrink(false)
         .show(&mut page, |ui| {
             egui::Frame::new()
-                .inner_margin(egui::Margin::symmetric(20, 14))
+                .inner_margin(gap::margin(gap::PANEL, gap::BLOCKS))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     body(ui);

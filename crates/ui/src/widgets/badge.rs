@@ -1,6 +1,7 @@
 //! What labels a thing rather than acts: a chip, a priority's dot, a hue's
 //! badge, a key cap, the spinner.
 
+use crate::theme::tokens::{font, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
     WidgetInfo,
@@ -31,7 +32,7 @@ impl<'a> Chip<'a> {
         let probe = text(
             ui,
             self.label,
-            12.0,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             p.text_1,
@@ -64,7 +65,14 @@ impl<'a> Chip<'a> {
             Stroke::new(1.0, edge),
             StrokeKind::Inside,
         );
-        let galley = text(ui, self.label, 12.0, 400.0, FontFamily::Proportional, ink);
+        let galley = text(
+            ui,
+            self.label,
+            font::LABEL,
+            400.0,
+            FontFamily::Proportional,
+            ink,
+        );
         let at = response.rect.center() - galley.size() / 2.0;
         ui.painter().galley(at, galley, ink);
         response
@@ -91,11 +99,11 @@ pub fn priority_dot(ui: &mut Ui, priority: Priority) -> Response {
 pub fn hue_badge(ui: &mut Ui, label: &str, hue: Color32) -> Response {
     let p = palette(ui.ctx());
     let words = label.to_uppercase();
-    let galley = text(ui, &words, 9.5, 700.0, FontFamily::Monospace, hue);
+    let galley = text(ui, &words, font::BADGE, 700.0, FontFamily::Monospace, hue);
     let (rect, response) =
         ui.allocate_exact_size(galley.size() + Vec2::new(12.0, 4.0), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, label));
-    let corner = CornerRadius::same(4);
+    let corner = CornerRadius::same(radius::TAG);
     ui.painter().rect(
         rect,
         corner,
@@ -114,13 +122,20 @@ pub struct Kbd<'a>(pub &'a str);
 impl Kbd<'_> {
     pub fn show(self, ui: &mut Ui) -> Response {
         let p = palette(ui.ctx());
-        let galley = text(ui, self.0, 10.5, 400.0, FontFamily::Monospace, p.text_1);
+        let galley = text(
+            ui,
+            self.0,
+            font::CAPTION,
+            400.0,
+            FontFamily::Monospace,
+            p.text_1,
+        );
         let (rect, response) =
             ui.allocate_exact_size(galley.size() + Vec2::new(12.0, 2.0), Sense::hover());
         response.widget_info(|| WidgetInfo::labeled(Role::Label, true, self.0));
         ui.painter().rect(
             rect,
-            CornerRadius::same(4),
+            CornerRadius::same(radius::TAG),
             p.bg_3,
             Stroke::new(1.0, p.line),
             StrokeKind::Inside,

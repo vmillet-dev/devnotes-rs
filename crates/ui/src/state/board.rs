@@ -23,10 +23,6 @@ use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 
-/// Three cards dragged in a row are one write, and a quit right after a drop still beats it; in
-/// egui's seconds.
-pub const LAYOUT_SAVE_DEBOUNCE: f64 = 0.4;
-
 /// One key per space, not one map: arranging one space must not move the switch on the others.
 fn view_key(space_id: &str) -> String {
     format!("devnotes.notes.view.{space_id}")
@@ -340,7 +336,7 @@ impl BoardState {
                 ..Staged::default()
             };
         }
-        self.staged.due = Some(now + LAYOUT_SAVE_DEBOUNCE);
+        self.staged.due = Some(now + f64::from(crate::theme::motion::LAYOUT_SAVE));
         &mut self.staged
     }
 

@@ -1,11 +1,12 @@
 //! A tab's console, under its answer: what left and came back, what the scripts said, what failed,
 //! in rows drawn only in view. Folded, it says how much it holds.
 
+use crate::theme::tokens::{font, gap};
 use chrono::Local;
 use egui::text::{LayoutJob, TextFormat};
 use egui::{
-    Align, Color32, CornerRadius, FontFamily, FontId, Layout, Margin, Rect, Role, Sense, Stroke,
-    Ui, Vec2, WidgetInfo, pos2,
+    Align, Color32, CornerRadius, FontFamily, FontId, Layout, Rect, Role, Sense, Stroke, Ui, Vec2,
+    WidgetInfo, pos2,
 };
 use engine::http::console::{ConsoleEvent, ConsoleLine, ConsoleOrigin, secret_segments};
 use i18n::keys;
@@ -137,15 +138,15 @@ fn unfolded(
     let p = palette(ui.ctx());
     let language = state.language;
     egui::Frame::new()
-        .inner_margin(Margin::symmetric(20, 8))
+        .inner_margin(gap::margin(gap::PANEL, gap::CONTROLS))
         .show(ui, |ui| {
             ui.set_min_size(ui.available_size());
-            ui.spacing_mut().item_spacing.y = 6.0;
+            ui.spacing_mut().item_spacing.y = gap::SNUG;
             head(ui, state, (of, view), actions);
             let rows = rows_of(state, of.key, view.filter);
             if rows.is_empty() {
                 let words = i18n::translate(language, keys::http::console::EMPTY, &[]);
-                let words = egui::RichText::new(words).size(12.5).color(p.text_2);
+                let words = egui::RichText::new(words).size(font::BODY).color(p.text_2);
                 ui.add(egui::Label::new(words));
                 return;
             }
@@ -181,9 +182,9 @@ fn head(
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let title = egui::RichText::new(tr(keys::http::console::TITLE))
-            .size(12.5)
+            .size(font::BODY)
             .strong()
             .color(p.text_1);
         let said = ui.add(egui::Label::new(title));
@@ -205,7 +206,7 @@ fn head(
             }
         }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let fold = tr(keys::http::console::FOLD);
             if widgets::IconButton::new(Icon::ChevronDown, &fold, "http-console-fold")
                 .show(ui)
@@ -220,7 +221,7 @@ fn head(
                 actions.push(Asked::Http(Action::ClearConsole(of.key.to_owned())));
             }
             let masked = egui::RichText::new(tr(keys::http::console::MASKED))
-                .size(11.5)
+                .size(font::CONTROL)
                 .color(p.text_2);
             ui.add(egui::Label::new(masked));
         });
@@ -405,7 +406,14 @@ fn row(ui: &mut Ui, (event, headers): (&ConsoleEvent, bool), of: Of<'_>, languag
             .with_timezone(&Local)
             .format("%H:%M:%S%.3f")
             .to_string();
-        let galley = widgets::text(ui, &time, 11.0, 400.0, FontFamily::Monospace, p.text_2);
+        let galley = widgets::text(
+            ui,
+            &time,
+            font::META,
+            400.0,
+            FontFamily::Monospace,
+            p.text_2,
+        );
         left += galley.size().x + 8.0;
         ui.painter().galley(
             pos2(rect.left(), middle - galley.size().y / 2.0),
@@ -419,7 +427,14 @@ fn row(ui: &mut Ui, (event, headers): (&ConsoleEvent, bool), of: Of<'_>, languag
     let mut right = rect.right();
     if !headers {
         let from = origin(event, of, language);
-        let galley = widgets::text(ui, &from, 11.0, 400.0, FontFamily::Proportional, p.text_2);
+        let galley = widgets::text(
+            ui,
+            &from,
+            font::META,
+            400.0,
+            FontFamily::Proportional,
+            p.text_2,
+        );
         right -= galley.size().x + 12.0;
         let at = pos2(
             rect.right() - galley.size().x,

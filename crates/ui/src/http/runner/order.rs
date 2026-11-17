@@ -1,5 +1,6 @@
 //! The run's order: dragged by its grip, or moved with Alt + ↑ ↓ on a row; Space leaves a row out.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     CornerRadius, FontFamily, Key, Modifiers, Rect, Role, Sense, Stroke, Ui, Vec2, WidgetInfo, pos2,
 };
@@ -47,7 +48,9 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut OrderView, actions:
             ),
         ],
     );
-    let caption = egui::RichText::new(caption).size(12.0).color(p.text_2);
+    let caption = egui::RichText::new(caption)
+        .size(font::LABEL)
+        .color(p.text_2);
     let said = ui.add(egui::Label::new(caption));
     widgets::address(ui, &said, "http-runner-order");
     let room = ui.available_rect_before_wrap();
@@ -78,7 +81,9 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut OrderView, actions:
     );
     ui.advance_cursor_after_rect(list);
     let hint = i18n::translate(language, keys::http::runner::ORDER_HINT, &[]);
-    let hint = egui::RichText::new(hint).size(11.5).color(p.text_2);
+    let hint = egui::RichText::new(hint)
+        .size(font::CONTROL)
+        .color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
 }
 
@@ -99,7 +104,7 @@ fn row(
         Sense::click(),
         "http-runner-row",
         || WidgetInfo::labeled(Role::ListItem, true, name),
-        CornerRadius::same(5),
+        CornerRadius::same(radius::CONTROL),
     );
     if response.clicked() {
         response.request_focus();
@@ -125,7 +130,7 @@ fn row(
             .max_rect(rect)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    inside.spacing_mut().item_spacing.x = 4.0;
+    inside.spacing_mut().item_spacing.x = gap::TIGHT;
     let label = i18n::translate(
         language,
         keys::http::runner::INCLUDE,
@@ -243,7 +248,14 @@ fn words(ui: &mut Ui, shown: &Row) {
     let ink = if shown.enabled { p.text_0 } else { p.text_2 };
     let badge = badge_of(shown.kind, shown.method);
     let hue = badge_hue(ui, badge);
-    let mark = widgets::text(ui, badge.short(), 11.0, 600.0, FontFamily::Monospace, hue);
+    let mark = widgets::text(
+        ui,
+        badge.short(),
+        font::META,
+        600.0,
+        FontFamily::Monospace,
+        hue,
+    );
     let (rect, _) = ui.allocate_exact_size(Vec2::new(32.0, mark.size().y), Sense::hover());
     ui.painter().galley(rect.min, mark, hue);
     let mut name = shown.path.iter().fold(String::new(), |mut name, folder| {
@@ -252,6 +264,6 @@ fn words(ui: &mut Ui, shown: &Row) {
         name
     });
     name.push_str(&shown.name);
-    let name = egui::RichText::new(name).size(12.5).color(ink);
+    let name = egui::RichText::new(name).size(font::BODY).color(ink);
     ui.add(egui::Label::new(name).truncate().selectable(false));
 }

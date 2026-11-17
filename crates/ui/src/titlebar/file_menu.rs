@@ -1,6 +1,7 @@
 //! The File menu: what leaves or enters the library, and quitting. It is there only while a
 //! library is open: every entry acts on it.
 
+use crate::theme::tokens::gap;
 use egui::{Popup, PopupCloseBehavior, Ui};
 use engine::app_info::METADATA;
 use i18n::{Message, keys};
@@ -39,7 +40,7 @@ pub(super) fn show(
 
 fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     ui.set_width(WIDTH);
-    ui.spacing_mut().item_spacing.y = 2.0;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     let tr = |key| i18n::translate(state.language, key, &[]);
     let on_screen = state.on_screen();
     let on_screen: Vec<&str> = on_screen.iter().map(String::as_str).collect();
