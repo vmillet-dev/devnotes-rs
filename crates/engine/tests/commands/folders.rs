@@ -36,6 +36,7 @@ fn board(space_id: &str) -> BoardQuery {
         kinds: Vec::new(),
         priorities: Vec::new(),
         now: Utc::now(),
+        tz_offset_minutes: 0,
         preview_lines: PreviewLines::default(),
     }
 }
@@ -274,4 +275,50 @@ fn a_folder_moved_into_another_comes_back_with_its_undo() {
     assert!(matches!(code(refused), ErrorCode::InvalidInput));
     assert!(back);
     assert_eq!(flat.zones.len(), 2);
+}
+
+/// A sheet's `aujourd'hui` is the local day on the board as in the list: at 00:30 at UTC+2,
+/// both read the same date (#1478, N16).
+#[test]
+fn the_board_reads_today_as_the_list_does() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let draft = engine::notes::model::NoteDraft {
+        kind: engine::notes::kind::NoteKind::Calc,
+        content: "jour = aujourd'hui".to_string(),
+        ..snippet(&space)
+    };
+    session.call(|e| create_note(e, draft)).unwrap();
+    let now = chrono::DateTime::parse_from_rfc3339("2026-07-25T22:30:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+
+    let listed = session
+        .call(|e| {
+            query_notes(
+                e,
+                NotesQuery {
+                    now,
+                    tz_offset_minutes: -120,
+                    ..notes_query(&space)
+                },
+            )
+        })
+        .unwrap();
+    let on_board = session
+        .call(|e| {
+            board_view(
+                e,
+                BoardQuery {
+                    now,
+                    tz_offset_minutes: -120,
+                    ..board(&space)
+                },
+            )
+        })
+        .unwrap();
+
+    let list_card = listed.display(listed.cards().next().unwrap()).calc.clone();
+    let board_card = on_board.loose[0].note.calc.clone();
+    assert_eq!(board_card, list_card);
 }

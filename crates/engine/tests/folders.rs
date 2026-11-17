@@ -494,6 +494,7 @@ mod board {
             kinds: Vec::new(),
             priorities: Vec::new(),
             now: t1(),
+            tz_offset_minutes: 0,
             preview_lines: PreviewLines::default(),
         }
     }
