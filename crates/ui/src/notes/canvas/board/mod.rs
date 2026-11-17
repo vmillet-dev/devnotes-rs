@@ -197,7 +197,8 @@ fn ground(
     );
     let inner = frame.shrink(1.0);
     let ground = widgets::region(ui, inner, "board-ground", Sense::hover());
-    ground.widget_info(|| WidgetInfo::labeled(Role::Region, true, "board"));
+    let name = i18n::translate(context.language, keys::board::BOARD_VIEW, &[]);
+    ground.widget_info(|| WidgetInfo::labeled(Role::Region, true, &name));
     address(ui, &ground, "board");
     let mut ground_ui = ui.new_child(UiBuilder::new().max_rect(inner).id_salt("board"));
     ground_ui.set_clip_rect(inner);
@@ -222,7 +223,8 @@ fn ground(
         let size = vec2(px(view.width), px(view.height)).max(viewport.size());
         let surface = Rect::from_min_size(ui.min_rect().min, size);
         let drawn = ui.allocate_rect(surface, Sense::drag());
-        drawn.widget_info(|| WidgetInfo::labeled(Role::Canvas, true, ""));
+        let surface_name = i18n::translate(context.language, keys::board::SURFACE, &[]);
+        drawn.widget_info(|| WidgetInfo::labeled(Role::Canvas, true, &surface_name));
         address(ui, &drawn, "board-surface");
         dots(ui, surface.min);
         let mut hand = Hand {

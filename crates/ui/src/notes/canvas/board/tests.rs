@@ -172,7 +172,7 @@ fn board_budget() {
     let mut harness = area(backend, profile);
     click(&mut harness, "space-option", "Corpus");
     click_id(&mut harness, "view-board");
-    let centre = rect_of(&harness, "board", "board").center();
+    let centre = rect_of(&harness, "board", "Board").center();
     harness.event(egui::Event::PointerMoved(centre));
     let mut frames = Vec::new();
     for _ in 0..200 {
@@ -489,7 +489,7 @@ fn the_grip_and_the_corner_answer_the_arrows_a_dot_at_a_time() {
 fn a_band_drawn_on_the_ground_becomes_the_folder_named_there() {
     let (mut harness, tableau) = tableau();
     click_id(&mut harness, "view-board");
-    let ground = rect_of(&harness, "board", "board");
+    let ground = rect_of(&harness, "board", "Board");
     let from = egui::pos2(ground.left() + 520.0, ground.top() + 420.0);
 
     drag(
@@ -519,7 +519,7 @@ fn a_band_drawn_on_the_ground_becomes_the_folder_named_there() {
 fn a_right_button_sweep_ticks_the_cards_it_crosses_zones_included() {
     let (mut harness, _) = tableau();
     click_id(&mut harness, "view-board");
-    let ground = rect_of(&harness, "board", "board");
+    let ground = rect_of(&harness, "board", "Board");
 
     drag(
         &mut harness,

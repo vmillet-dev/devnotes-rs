@@ -47,7 +47,8 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
     let language = state.language;
     let canvas = spacing(ui.ctx()).canvas;
     let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Region, true, "canvas"));
+    let name = i18n::translate(language, keys::notes::CARDS, &[]);
+    response.widget_info(|| WidgetInfo::labeled(Role::Region, true, &name));
     address(ui, &response, "canvas");
     let mut ui = ui.new_child(UiBuilder::new().max_rect(region));
     let ui = &mut ui;

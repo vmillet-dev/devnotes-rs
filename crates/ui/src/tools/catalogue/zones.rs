@@ -8,11 +8,12 @@ use i18n::{Language, Message, keys};
 
 use crate::api;
 use crate::backend::Pending;
+use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::tools::live::{Live, Turn};
 use crate::tools::ui::{CopyValue, check, columns, hint, problem, section_title};
 use crate::tools::{Action, Drawn, Tool, ToolResult};
-use crate::widgets::{self, Button, Kind, TextField, address, hovered, interact, towards};
+use crate::widgets::{self, Button, IconButton, TextField, address, hovered, interact, towards};
 
 pub(super) struct ZonesTool {
     text: String,
@@ -340,9 +341,13 @@ fn time_row(ui: &mut Ui, time: &ZoneTime, removable: bool, language: Language) -
                     hint(ui, &date_words(time, language));
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let remove = i18n::translate(
+                        language,
+                        keys::tools::zones::REMOVE,
+                        &[("zone", time.zone.as_str().into())],
+                    );
                     if removable
-                        && Button::new("×", &format!("zones-remove-{}", time.zone))
-                            .kind(Kind::Quiet)
+                        && IconButton::new(Icon::X, &remove, &format!("zones-remove-{}", time.zone))
                             .show(ui)
                             .clicked()
                     {
