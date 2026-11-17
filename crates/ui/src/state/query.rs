@@ -36,6 +36,12 @@ impl<P: PartialEq + Clone, T> QueryCell<P, T> {
         self.wanted = Some(params);
     }
 
+    /// Whether what is wanted already answers `is`: a caller that would copy a large parameter
+    /// at every frame compares it in place first.
+    pub fn wants(&self, is: impl FnOnce(&P) -> bool) -> bool {
+        self.wanted.as_ref().is_some_and(is)
+    }
+
     /// Once a frame: adopts the answer that arrived, unless newer parameters were wanted since
     /// — a stale search is dropped — then asks for what is wanted, if nothing is in flight.
     /// `true` when the value or the error changed.
