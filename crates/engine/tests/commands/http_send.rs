@@ -1110,7 +1110,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
             .contains("\"operationName\":\"Me\"")
     );
 
-    let described = session.wait(|_| describe_graphql(document)).unwrap();
+    let described = describe_graphql(document).unwrap();
     assert_eq!(described.operations, ["Me", "Other"]);
     assert_eq!(described.query_problem, None);
 
@@ -1119,7 +1119,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
         query: "query Country($code: ID!) { country(code: $code) { name }".to_string(),
         ..GraphqlDocument::default()
     };
-    let described = session.wait(|_| describe_graphql(open.clone())).unwrap();
+    let described = describe_graphql(open.clone()).unwrap();
     let problem = described.query_problem.unwrap();
     assert_eq!(
         (problem.fault, problem.line, problem.column),
@@ -1127,7 +1127,7 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
     );
     assert_eq!(described.missing, ["code"]);
     assert_eq!(
-        session.wait(|_| add_graphql_variables(open)).unwrap(),
+        add_graphql_variables(open).unwrap(),
         "{
   \"code\": null
 }"

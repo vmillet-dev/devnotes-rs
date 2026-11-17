@@ -280,11 +280,11 @@ pub fn inherited_http_settings(
 
 /// What a body implies, whether a JSON one reads, and whether its method seldom carries one:
 /// the editor says the three as it is typed, and decides none of them.
-pub async fn describe_http_body(
+pub fn describe_http_body(
     body: model::RequestBody,
     method: model::HttpMethod,
 ) -> Result<BodyAnswer, AppError> {
-    off_thread(move || BodyAnswer {
+    Ok(BodyAnswer {
         unusual: body.is_unusual_on(method),
         content_type: settings::implied_content_type(&body).map(str::to_string),
         problem: match &body {
@@ -294,7 +294,6 @@ pub async fn describe_http_body(
             _ => None,
         },
     })
-    .await
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -308,15 +307,15 @@ pub struct BodyAnswer {
 
 /// Each header's fault by its rank, or none: the table marks the row and says why. The rule is
 /// the model's; the table holds none.
-pub async fn check_http_headers(
+pub fn check_http_headers(
     rows: Vec<model::KeyValue>,
 ) -> Result<Vec<Option<model::HeaderFault>>, AppError> {
-    off_thread(move || model::header_faults(&rows)).await
+    Ok(model::header_faults(&rows))
 }
 
 /// `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows.
-pub async fn read_http_headers(text: String) -> Result<Vec<model::KeyValue>, AppError> {
-    off_thread(move || model::headers_from_text(&text)).await
+pub fn read_http_headers(text: String) -> Result<Vec<model::KeyValue>, AppError> {
+    Ok(model::headers_from_text(&text))
 }
 
 /// What a request sends without a row of its own — the body's type, what it inherits, the
@@ -341,12 +340,12 @@ pub fn implied_http_headers(
 }
 
 /// The edited side wins: the query string rewritten from the table, or the table from the URL.
-pub async fn sync_http_query(
+pub fn sync_http_query(
     url: String,
     params: Vec<model::KeyValue>,
     edited: query::QuerySide,
 ) -> Result<query::SyncedQuery, AppError> {
-    off_thread(move || query::sync(&url, &params, edited)).await
+    Ok(query::sync(&url, &params, edited))
 }
 
 pub fn reorder_http_collection(engine: &Engine, id: String, index: u32) -> Result<(), AppError> {
@@ -797,15 +796,15 @@ pub fn http_history_draft(engine: &Engine, id: String) -> Result<history::Histor
 }
 
 /// The operations a GraphQL document names, and why its variables do not read.
-pub async fn describe_graphql(
+pub fn describe_graphql(
     document: graphql::GraphqlDocument,
 ) -> Result<graphql::GraphqlAnswer, AppError> {
-    off_thread(move || graphql::describe(&document)).await
+    Ok(graphql::describe(&document))
 }
 
 /// The variables with a `null` for each one the operation declares and they lack: « Ajouter ».
-pub async fn add_graphql_variables(document: graphql::GraphqlDocument) -> Result<String, AppError> {
-    off_thread(move || graphql::with_missing(&document)).await
+pub fn add_graphql_variables(document: graphql::GraphqlDocument) -> Result<String, AppError> {
+    Ok(graphql::with_missing(&document))
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -1005,8 +1004,8 @@ pub fn delete_http_environment(engine: &Engine, id: String) -> Result<(), AppErr
 }
 
 /// Each variable's fault by its rank, or none: the table marks the row, the rule is the model's.
-pub async fn check_http_variables(
+pub fn check_http_variables(
     variables: Vec<environments::Variable>,
 ) -> Result<Vec<Option<environments::VariableFault>>, AppError> {
-    off_thread(move || environments::variable_faults(&variables)).await
+    Ok(environments::variable_faults(&variables))
 }

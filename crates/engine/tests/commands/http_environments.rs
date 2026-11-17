@@ -109,16 +109,12 @@ fn a_blank_name_a_name_held_twice_and_a_set_gone_each_answer_their_code() {
 
 #[test]
 fn the_variables_are_judged_row_by_row() {
-    let session = Session::open();
-    let faults = session
-        .wait(|_| {
-            check_http_variables(vec![
-                variable("baseUrl", "https://exemple.fr", VariableKind::Text),
-                variable("base url", "", VariableKind::Text),
-                variable("pageSize", "fifty", VariableKind::Number),
-            ])
-        })
-        .unwrap();
+    let faults = check_http_variables(vec![
+        variable("baseUrl", "https://exemple.fr", VariableKind::Text),
+        variable("base url", "", VariableKind::Text),
+        variable("pageSize", "fifty", VariableKind::Number),
+    ])
+    .unwrap();
     assert_eq!(
         faults,
         [None, Some(VariableFault::Name), Some(VariableFault::Number)]

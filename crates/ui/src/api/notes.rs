@@ -52,7 +52,7 @@ pub fn present_note(
     backend: &Backend,
     markdown: String,
 ) -> Pending<engine::notes::model::Presentation> {
-    backend.spawn(move |_| engine::notes::present_note(markdown))
+    backend.compute(move |_| engine::notes::present_note(markdown))
 }
 
 /// What became of an export.

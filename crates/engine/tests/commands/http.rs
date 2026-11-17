@@ -224,9 +224,7 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
     let json = || RequestBody::Json {
         text: "{\"a\":".to_string(),
     };
-    let broken = session
-        .wait(|_| describe_http_body(json(), HttpMethod::Post))
-        .unwrap();
+    let broken = describe_http_body(json(), HttpMethod::Post).unwrap();
     assert_eq!(broken.content_type.as_deref(), Some("application/json"));
     assert!(broken.problem.is_some());
     assert!(!broken.unusual);
@@ -237,14 +235,10 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
         (HttpMethod::Delete, false),
         (HttpMethod::Options, false),
     ] {
-        let said = session
-            .wait(|_| describe_http_body(json(), method))
-            .unwrap();
+        let said = describe_http_body(json(), method).unwrap();
         assert_eq!(said.unusual, unusual, "{method:?}");
     }
-    let none = session
-        .wait(|_| describe_http_body(RequestBody::None, HttpMethod::Get))
-        .unwrap();
+    let none = describe_http_body(RequestBody::None, HttpMethod::Get).unwrap();
     assert_eq!(
         (none.content_type, none.problem, none.unusual),
         (None, None, false)
@@ -312,22 +306,17 @@ fn a_header_that_cannot_be_sent_is_refused_in_the_settings_marked_and_read_from_
     .unwrap();
     assert_eq!(kept().len(), 3);
 
-    let faults = session
-        .wait(|_| {
-            check_http_headers(vec![
-                row("Accept", "*/*", true),
-                row("X Recette", "1", true),
-                row("X Recette", "1", false),
-            ])
-        })
-        .unwrap();
+    let faults = check_http_headers(vec![
+        row("Accept", "*/*", true),
+        row("X Recette", "1", true),
+        row("X Recette", "1", false),
+    ])
+    .unwrap();
     assert_eq!(faults, vec![None, Some(HeaderFault::Name), None]);
 
-    let read = session
-        .wait(|_| {
-            read_http_headers(":authority: api.exemple.fr\nX-Recette: 1\naccept: */*".to_string())
-        })
-        .unwrap();
+    let read =
+        read_http_headers(":authority: api.exemple.fr\nX-Recette: 1\naccept: */*".to_string())
+            .unwrap();
     assert_eq!(
         read,
         vec![row("X-Recette", "1", true), row("accept", "*/*", true)]
@@ -339,10 +328,7 @@ fn the_query_and_its_table_are_kept_in_step_through_the_command() {
     use engine::http::query::QuerySide;
     use engine::http::sync_http_query;
 
-    let session = Session::open();
-    let synced = session
-        .wait(|_| sync_http_query("/x?a=1".to_string(), Vec::new(), QuerySide::Url))
-        .unwrap();
+    let synced = sync_http_query("/x?a=1".to_string(), Vec::new(), QuerySide::Url).unwrap();
 
     assert_eq!(synced.params[0].key, "a");
 }
