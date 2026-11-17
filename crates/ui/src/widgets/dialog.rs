@@ -68,10 +68,12 @@ impl DialogStack {
         }
     }
 
-    /// Open as long as `open` says: a modal that follows an operation rather than a click.
+    /// Open as long as `open` says, a modal whose state lives elsewhere: what had the focus
+    /// when it opened gets it back when it closes.
     pub fn follow(&mut self, ctx: &Context, layer: Layer, id: Id, open: bool) {
         if open {
-            self.open(layer, id, None);
+            let opener = ctx.memory(egui::Memory::focused);
+            self.open(layer, id, opener);
         } else {
             self.close(ctx, id);
         }

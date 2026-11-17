@@ -284,11 +284,14 @@ impl DevNotesApp {
         let bindings = &self.state.settings.bindings;
         let canvas = notes::canvas::shortcuts::bound_to(bindings);
         let rail = [keys::rail(bindings)];
-        // A modal over the canvas takes its keys: the canvas's stand aside.
-        let levels: &[&[keys::Binding]] = if self.state.dialogs.top().is_some() {
-            &[]
-        } else if self.state.palette.is_open() {
+        // A modal takes the keys: what is under it hears none. The palette lets the
+        // application's through; a modal the stack does not know of yet (one held in a view)
+        // is seen in egui's memory.
+        let modal = ctx.memory(egui::Memory::top_modal_layer).is_some();
+        let levels: &[&[keys::Binding]] = if self.state.palette.is_open() {
             &[&keys::APPLICATION]
+        } else if self.state.dialogs.top().is_some() || modal {
+            &[]
         } else if notes_shown && !self.state.modal_open() {
             &[&keys::NOTES, &rail, &canvas, &keys::APPLICATION]
         } else if notes_shown && !self.state.overlay_open() {
@@ -469,6 +472,8 @@ impl eframe::App for DevNotesApp {
 
 #[cfg(test)]
 mod captures;
+#[cfg(test)]
+mod modal_tests;
 
 #[cfg(test)]
 mod perf;
