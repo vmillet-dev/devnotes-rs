@@ -2,7 +2,7 @@
 //! there is no Markdown to render here.
 
 use crate::theme::tokens::{font, gap};
-use egui::{Align, Layout, RichText, Ui, Vec2};
+use egui::{RichText, Ui, Vec2};
 use engine::app_info::METADATA;
 use engine::changelog::model::ChangelogRelease;
 use i18n::{Key, Language, keys};
@@ -21,17 +21,23 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(super) fn show(ctx: &egui::Context, state: &AppState, actions: &mut Actions) -> bool {
     let language = state.language;
     let tr = |key: Key| i18n::translate(language, key, &[]);
-    let mut close = false;
-    let shown = widgets::framed_dialog(ctx, &state.dialogs, super::id(), SIZE, |ui| {
-        let (title, subtitle) = (tr(keys::whats_new::TITLE), tr(keys::whats_new::SUBTITLE));
-        framed(
-            ui,
-            (&title, &subtitle),
-            |ui| body(ui, state),
-            |ui| footer(ui, language, actions, &mut close),
-        );
-    });
-    close || shown.is_some_and(|shown| shown.should_close())
+    let cross = tr(keys::whats_new::CLOSE);
+    let shown = widgets::framed_dialog(
+        ctx,
+        &state.dialogs,
+        (super::id(), (&cross, "news-close")),
+        SIZE,
+        |ui| {
+            let (title, subtitle) = (tr(keys::whats_new::TITLE), tr(keys::whats_new::SUBTITLE));
+            framed(
+                ui,
+                (&title, &subtitle),
+                |ui| body(ui, state),
+                |ui| footer(ui, actions),
+            );
+        },
+    );
+    shown.is_some_and(|shown| shown.should_close())
 }
 
 fn body(ui: &mut Ui, state: &AppState) {
@@ -83,7 +89,7 @@ fn release(ui: &mut Ui, release: &ChangelogRelease, language: Language) {
     widgets::release_notes(ui, release);
 }
 
-fn footer(ui: &mut Ui, language: Language, actions: &mut Actions, close: &mut bool) {
+fn footer(ui: &mut Ui, actions: &mut Actions) {
     let url = format!("{}/releases", METADATA.repository);
     let label = url.trim_start_matches("https://");
     if Button::new(label, "news-releases")
@@ -93,8 +99,4 @@ fn footer(ui: &mut Ui, language: Language, actions: &mut Actions, close: &mut bo
     {
         actions.push(Asked::Menu(Action::OpenLink(url.clone())));
     }
-    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        let words = i18n::translate(language, keys::whats_new::CLOSE, &[]);
-        *close = Button::new(&words, "news-close").show(ui).clicked();
-    });
 }

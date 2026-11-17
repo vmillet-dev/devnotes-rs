@@ -39,9 +39,16 @@ pub(crate) fn id() -> Id {
 }
 
 pub(super) fn show(ctx: &egui::Context, state: &AppState, view: &mut View, actions: &mut Actions) {
-    let shown = widgets::dialog(ctx, &state.dialogs, id(), WIDTH, |ui| {
-        body(ui, state, view, actions);
-    });
+    let cross = i18n::translate(state.language, keys::libraries::CLOSE, &[]);
+    let shown = widgets::dialog(
+        ctx,
+        &state.dialogs,
+        (id(), (&cross, "libraries-close")),
+        WIDTH,
+        |ui| {
+            body(ui, state, view, actions);
+        },
+    );
     // Escape takes back a name being typed before it closes anything.
     if shown.is_some_and(|shown| shown.should_close()) && view.renaming.take().is_none() {
         actions.push(Asked::Menu(Action::Libraries(Ask::Close)));
@@ -83,14 +90,6 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         creating(ui, state, view, actions);
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if Button::new(&tr(keys::libraries::CLOSE), "libraries-close")
-                .show(ui)
-                .clicked()
-            {
-                actions.push(Asked::Menu(Action::Libraries(Ask::Close)));
-            }
-        });
     });
 }
 

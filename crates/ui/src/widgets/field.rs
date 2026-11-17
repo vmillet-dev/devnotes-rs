@@ -260,7 +260,8 @@ impl<'a> SearchField<'a> {
         let edge = if focused { p.amber_edge } else { p.line };
         let width = self.width.unwrap_or_else(|| ui.available_width());
         // The frame's margins, the magnifier and its gap.
-        let around = 22.0 + 16.0 + ui.spacing().item_spacing.x;
+        let spaced = ui.spacing().item_spacing.x;
+        let around = 22.0 + 16.0 + spaced;
         if self.matched.is_none() && width - around - self.trailing_width(ui) < WORDS_KEEP {
             self.key = None;
         }

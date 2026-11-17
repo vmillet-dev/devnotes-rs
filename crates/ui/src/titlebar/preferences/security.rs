@@ -229,9 +229,16 @@ pub(super) fn dialog(
     actions: &mut Actions,
 ) {
     let working = state.security.is_changing();
-    let shown = widgets::dialog(ctx, &state.dialogs, change_id(), WIDTH, |ui| {
-        body(ui, state, &mut view.change, actions);
-    });
+    let cross = i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]);
+    let shown = widgets::dialog(
+        ctx,
+        &state.dialogs,
+        (change_id(), (&cross, "change-passphrase-cross")),
+        WIDTH,
+        |ui| {
+            body(ui, state, &mut view.change, actions);
+        },
+    );
     if shown.is_some_and(|shown| shown.should_close()) && !working {
         actions.push(Asked::Menu(Action::Preferences(Ask::KeepPassphrase)));
     }

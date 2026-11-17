@@ -10,35 +10,36 @@ use crate::action::Actions;
 use crate::services::guide::{self, SheetRow};
 use crate::state::AppState;
 use crate::theme::palette;
-use crate::widgets::{self, Button, Kbd};
+use crate::widgets::{self, Kbd};
 
 const SIZE: Vec2 = Vec2::new(640.0, 560.0);
 
 pub(super) fn show(ctx: &egui::Context, state: &AppState, _actions: &mut Actions) -> bool {
     let language = state.language;
     let tr = |key: Key| i18n::translate(language, key, &[]);
-    let mut close = false;
-    let shown = widgets::framed_dialog(ctx, &state.dialogs, super::id(), SIZE, |ui| {
-        let (title, subtitle) = (tr(keys::shortcuts::TITLE), tr(keys::shortcuts::SUBTITLE));
-        framed(
-            ui,
-            (&title, &subtitle),
-            |ui| body(ui, state),
-            |ui| {
-                let p = palette(ui.ctx());
-                let hint = RichText::new(tr(keys::shortcuts::EDIT_HINT))
-                    .size(font::CONTROL)
-                    .color(p.text_2);
-                ui.label(hint);
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    close = Button::new(&tr(keys::shortcuts::CLOSE), "sheet-close")
-                        .show(ui)
-                        .clicked();
-                });
-            },
-        );
-    });
-    close || shown.is_some_and(|shown| shown.should_close())
+    let cross = tr(keys::shortcuts::CLOSE);
+    let shown = widgets::framed_dialog(
+        ctx,
+        &state.dialogs,
+        (super::id(), (&cross, "sheet-close")),
+        SIZE,
+        |ui| {
+            let (title, subtitle) = (tr(keys::shortcuts::TITLE), tr(keys::shortcuts::SUBTITLE));
+            framed(
+                ui,
+                (&title, &subtitle),
+                |ui| body(ui, state),
+                |ui| {
+                    let p = palette(ui.ctx());
+                    let hint = RichText::new(tr(keys::shortcuts::EDIT_HINT))
+                        .size(font::CONTROL)
+                        .color(p.text_2);
+                    ui.label(hint);
+                },
+            );
+        },
+    );
+    shown.is_some_and(|shown| shown.should_close())
 }
 
 fn body(ui: &mut Ui, state: &AppState) {

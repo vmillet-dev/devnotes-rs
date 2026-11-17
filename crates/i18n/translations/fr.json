@@ -4273,5 +4273,8 @@
   "crash": {
     "title": "{{app}} s’est arrêté",
     "body": "Une erreur interne a fermé {{app}}. Tout ce qui était enregistré est intact ; le détail est dans le journal :\n{{folder}}"
+  },
+  "dialog": {
+    "close": "Fermer"
   }
 }

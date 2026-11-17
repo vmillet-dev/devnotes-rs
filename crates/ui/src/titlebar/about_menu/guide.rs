@@ -31,28 +31,34 @@ pub(super) fn show(
 ) -> bool {
     let language = state.language;
     let tr = |key: Key| i18n::translate(language, key, &[]);
-    let mut close = false;
     let (mut dot, mut step) = (None, None);
-    let shown = widgets::framed_dialog(ctx, &state.dialogs, super::id(), SIZE, |ui| {
-        let title = tr(keys::getting_started::TITLE);
-        let subtitle = Message::new(keys::getting_started::SUBTITLE)
-            .with("app", METADATA.name)
-            .text(language);
-        framed(
-            ui,
-            (&title, &subtitle),
-            |ui| {
-                dot = body(ui, state, chapter);
-            },
-            |ui| {
-                (step, close) = footer(ui, language, chapter);
-            },
-        );
-    });
+    let cross = tr(keys::getting_started::CLOSE);
+    let shown = widgets::framed_dialog(
+        ctx,
+        &state.dialogs,
+        (super::id(), (&cross, "guide-close")),
+        SIZE,
+        |ui| {
+            let title = tr(keys::getting_started::TITLE);
+            let subtitle = Message::new(keys::getting_started::SUBTITLE)
+                .with("app", METADATA.name)
+                .text(language);
+            framed(
+                ui,
+                (&title, &subtitle),
+                |ui| {
+                    dot = body(ui, state, chapter);
+                },
+                |ui| {
+                    step = footer(ui, language, chapter);
+                },
+            );
+        },
+    );
     if let Some(chapter) = dot.or(step) {
         *panel = Some(Panel::Guide(chapter));
     }
-    close || shown.is_some_and(|shown| shown.should_close())
+    shown.is_some_and(|shown| shown.should_close())
 }
 
 /// The chapter a dot asked for.
@@ -185,8 +191,8 @@ fn dots(ui: &mut Ui, language: Language, at: usize) -> Option<usize> {
     chosen
 }
 
-/// Where the arrows go, and whether « Close » was pressed.
-fn footer(ui: &mut Ui, language: Language, at: usize) -> (Option<usize>, bool) {
+/// Where the arrows go.
+fn footer(ui: &mut Ui, language: Language, at: usize) -> Option<usize> {
     let tr = |key: Key| i18n::translate(language, key, &[]);
     let mut to = None;
     if Button::new(&tr(keys::getting_started::PREVIOUS), "guide-previous")
@@ -196,21 +202,16 @@ fn footer(ui: &mut Ui, language: Language, at: usize) -> (Option<usize>, bool) {
     {
         to = at.checked_sub(1);
     }
-    let close = ui
-        .with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
-            if at + 1 < CHAPTERS.len()
-                && Button::new(&tr(keys::getting_started::NEXT), "guide-next")
-                    .kind(Kind::Filled)
-                    .show(ui)
-                    .clicked()
-            {
-                to = Some(at + 1);
-            }
-            Button::new(&tr(keys::getting_started::CLOSE), "guide-close")
+    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
+        if at + 1 < CHAPTERS.len()
+            && Button::new(&tr(keys::getting_started::NEXT), "guide-next")
+                .kind(Kind::Filled)
                 .show(ui)
                 .clicked()
-        })
-        .inner;
-    (to, close)
+        {
+            to = Some(at + 1);
+        }
+    });
+    to
 }

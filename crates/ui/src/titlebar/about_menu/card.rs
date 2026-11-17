@@ -1,7 +1,7 @@
 //! Purely informative: the application, its version and who made it.
 
 use crate::theme::tokens::{font, gap};
-use egui::{Align, FontFamily, Layout, RichText, Sense, Ui};
+use egui::{FontFamily, RichText, Sense, Ui};
 use engine::app_info::METADATA;
 use i18n::{Key, Message, keys};
 
@@ -17,10 +17,15 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// `true` when it asks to close.
 pub(super) fn show(ctx: &egui::Context, state: &AppState, actions: &mut Actions) -> bool {
-    let shown = widgets::dialog(ctx, &state.dialogs, super::id(), WIDTH, |ui| {
-        body(ui, state, actions)
-    });
-    shown.is_some_and(|shown| shown.inner || shown.should_close())
+    let close = i18n::translate(state.language, keys::about::CLOSE, &[]);
+    let shown = widgets::dialog(
+        ctx,
+        &state.dialogs,
+        (super::id(), (&close, "about-close")),
+        WIDTH,
+        |ui| body(ui, state, actions),
+    );
+    shown.is_some_and(|shown| shown.should_close())
 }
 
 /// The version the lock file holds: nothing else knows it at compile time.
@@ -30,7 +35,7 @@ fn egui_version() -> Option<&'static str> {
     after.split('"').next()
 }
 
-fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> bool {
+fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     let p = palette(ui.ctx());
     let tr = |key: Key| i18n::translate(language, key, &[]);
@@ -87,13 +92,6 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> bool {
     fact(ui, &tr(keys::about::BUILT_WITH), |ui| {
         ui.label(RichText::new(stack).size(font::LABEL).color(p.text_1));
     });
-    ui.add_space(gap::SNUG);
-    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        Button::new(&tr(keys::about::CLOSE), "about-close")
-            .show(ui)
-            .clicked()
-    })
-    .inner
 }
 
 fn fact(ui: &mut Ui, name: &str, value: impl FnOnce(&mut Ui)) {

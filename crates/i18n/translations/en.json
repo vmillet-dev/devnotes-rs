@@ -4273,5 +4273,8 @@
   "crash": {
     "title": "{{app}} stopped",
     "body": "An internal error closed {{app}}. Everything saved is intact; the details are in the log:\n{{folder}}"
+  },
+  "dialog": {
+    "close": "Close"
   }
 }

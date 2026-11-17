@@ -144,9 +144,16 @@ pub(crate) fn id() -> Id {
 
 pub(super) fn show(ctx: &egui::Context, state: &AppState, view: &mut View, actions: &mut Actions) {
     view.shortcuts.listens_for_a_global_key = false;
-    let shown = widgets::framed_dialog(ctx, &state.dialogs, id(), SIZE, |ui| {
-        body(ui, state, view, actions);
-    });
+    let cross = i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]);
+    let shown = widgets::framed_dialog(
+        ctx,
+        &state.dialogs,
+        (id(), (&cross, "settings-cross")),
+        SIZE,
+        |ui| {
+            body(ui, state, view, actions);
+        },
+    );
     security::dialog(ctx, state, view, actions);
     if !shown.is_some_and(|shown| shown.should_close()) {
         return;
