@@ -188,7 +188,11 @@ fn look() {
 fn says(harness: &Harness<'_, Bench>, words: &str) -> bool {
     harness
         .query_all_by(|_| true)
-        .filter_map(|node| node.accesskit_node().label().or(node.accesskit_node().value()))
+        .filter_map(|node| {
+            node.accesskit_node()
+                .label()
+                .or(node.accesskit_node().value())
+        })
         .any(|said| said == words)
 }
 
