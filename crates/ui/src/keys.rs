@@ -131,6 +131,35 @@ const fn area(key: Key, area: Area) -> Binding {
 
 /// The first binding of `levels`, top level first, that a key pressed this frame and left by
 /// the widgets matches. The key is consumed.
+/// Who reads what the widgets left of the keys, on what is on screen: the one answer the window
+/// and the tests' bench both ask. A modal takes the keys, and what is under it hears none; the
+/// palette lets the application's through. A modal the stack does not know of (one held in a
+/// view) is seen in egui's memory.
+pub fn read(state: &crate::state::AppState, ctx: &Context) -> Option<Action> {
+    let unlocked = state.gate.is_open();
+    let bindings = &state.settings.bindings;
+    let canvas = crate::notes::canvas::shortcuts::bound_to(bindings);
+    let rail = [rail(bindings)];
+    let modal =
+        state.dialogs.top().is_some() || ctx.memory(egui::Memory::top_modal_layer).is_some();
+    let levels: &[&[Binding]] = if state.palette.is_open() {
+        &[&APPLICATION]
+    } else if modal {
+        &[]
+    } else if !unlocked {
+        &[&APPLICATION]
+    } else {
+        match state.settings.area {
+            Area::Notes if !state.modal_open() => &[&NOTES, &rail, &canvas, &APPLICATION],
+            Area::Notes if !state.overlay_open() => &[&NOTES, &rail, &EDITOR, &APPLICATION],
+            Area::Notes => &[&NOTES, &rail, &APPLICATION],
+            Area::Http => &[&HTTP, &rail, &APPLICATION],
+            Area::Tools => &[&TOOLS, &rail, &APPLICATION],
+        }
+    };
+    dispatch(ctx, levels)
+}
+
 pub fn dispatch(ctx: &Context, levels: &[&[Binding]]) -> Option<Action> {
     if composing(ctx) {
         return None;

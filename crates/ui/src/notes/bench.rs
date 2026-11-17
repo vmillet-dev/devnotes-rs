@@ -61,16 +61,7 @@ pub(crate) fn area_of(
                     crate::http::show(ui, &bench.state, &mut view, &mut actions);
                     crate::http::leave::show(ui, &bench.state, &mut view, &mut actions);
                     bench.state.http_view = view;
-                    if let Some(action) = crate::keys::dispatch(
-                        &ctx,
-                        &[
-                            &crate::keys::HTTP,
-                            &[crate::keys::rail(
-                                &crate::services::shortcuts::Bindings::default(),
-                            )],
-                            &crate::keys::APPLICATION,
-                        ],
-                    ) {
+                    if let Some(action) = crate::keys::read(&bench.state, &ctx) {
                         actions.push(action);
                     }
                     for action in actions.drain().collect::<Vec<_>>() {
@@ -82,16 +73,7 @@ pub(crate) fn area_of(
                     let mut view = std::mem::take(&mut bench.state.tools_view);
                     crate::tools::show(ui, &bench.state, &mut view, &mut actions);
                     bench.state.tools_view = view;
-                    if let Some(action) = crate::keys::dispatch(
-                        &ctx,
-                        &[
-                            &crate::keys::TOOLS,
-                            &[crate::keys::rail(
-                                &crate::services::shortcuts::Bindings::default(),
-                            )],
-                            &crate::keys::APPLICATION,
-                        ],
-                    ) {
+                    if let Some(action) = crate::keys::read(&bench.state, &ctx) {
                         actions.push(action);
                     }
                     for action in actions.drain().collect::<Vec<_>>() {
@@ -106,25 +88,7 @@ pub(crate) fn area_of(
                 bench.state.palette_view = palette;
                 crate::notes::fill_form(ui, &bench.state, &mut view, &mut actions);
                 bench.state.notes_view = view;
-                // As the window reads them.
-                let levels: &[&[crate::keys::Binding]] = if bench.state.palette.is_open() {
-                    &[&crate::keys::APPLICATION]
-                } else if bench.state.overlay_open() {
-                    &[&crate::keys::NOTES, &crate::keys::APPLICATION]
-                } else if bench.state.modal_open() {
-                    &[
-                        &crate::keys::NOTES,
-                        &crate::keys::EDITOR,
-                        &crate::keys::APPLICATION,
-                    ]
-                } else {
-                    &[
-                        &crate::keys::NOTES,
-                        &crate::notes::canvas::shortcuts::CANVAS,
-                        &crate::keys::APPLICATION,
-                    ]
-                };
-                if let Some(action) = crate::keys::dispatch(&ctx, levels) {
+                if let Some(action) = crate::keys::read(&bench.state, &ctx) {
                     actions.push(action);
                 }
                 for action in actions.drain().collect::<Vec<_>>() {

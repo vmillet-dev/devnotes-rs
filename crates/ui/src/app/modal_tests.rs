@@ -120,3 +120,29 @@ fn a_greyed_file_entry_says_what_it_waits_for() {
         "no « {waiting} » under the pointer"
     );
 }
+
+/// In a Note, `Ctrl+B` is bold: the rail's key, the same by default, stays with the editor while
+/// it writes.
+#[test]
+fn ctrl_b_in_a_note_writes_bold_and_leaves_the_rail() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut harness = open_library(directory.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("Bienvenue dans DevNotes")
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "editor-rich");
+    let rail = harness.state().state.settings.rail_shown;
+
+    harness.key_press_modifiers(Modifiers::COMMAND, Key::B);
+    settle(&mut harness);
+
+    assert_eq!(
+        harness.state().state.settings.rail_shown,
+        rail,
+        "the rail moved"
+    );
+}

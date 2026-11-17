@@ -547,6 +547,8 @@ mod tests {
 #[cfg(test)]
 pub(crate) mod bench;
 #[cfg(test)]
+mod bench_keys_tests;
+#[cfg(test)]
 mod bench_name_tests;
 
 #[cfg(test)]
