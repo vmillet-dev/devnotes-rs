@@ -393,7 +393,7 @@ pub fn move_notes(
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        let answer = store::move_many(&mut connection, &ids, &space_id, Utc::now())?;
+        let answer = store::move_many(&mut connection, &ids, &space_id)?;
         let changed = Changed::notes(ids.clone());
         Ok((answer, changed))
     })
@@ -424,7 +424,7 @@ pub fn tag_notes(
 
         let mut connection = lock(db)?;
 
-        let answer = store::tag_many(&mut connection, &ids, &normalized, Utc::now())?;
+        let answer = store::tag_many(&mut connection, &ids, &normalized)?;
         let changed = Changed::notes(ids.clone());
         Ok((answer, changed))
     })
@@ -454,7 +454,7 @@ pub fn remove_tag(
 
         let mut connection = lock(db)?;
 
-        let answer = store::remove_tag(&mut connection, &ids, &tag, Utc::now())?;
+        let answer = store::remove_tag(&mut connection, &ids, &tag)?;
         let changed = Changed::notes(ids.clone());
         Ok((answer, changed))
     })

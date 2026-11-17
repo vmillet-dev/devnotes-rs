@@ -419,7 +419,6 @@ pub fn file_many(
     connection: &mut Library,
     ids: &[String],
     folder_id: Option<&str>,
-    now: DateTime<Utc>,
     card: i32,
 ) -> Result<Vec<NoteFiling>, StorageError> {
     if ids.is_empty() {
@@ -454,10 +453,7 @@ pub fn file_many(
         board::forget_positions(connection, &touched)?;
 
         diesel::update(notes::table.filter(notes::id.eq_any(&touched)))
-            .set((
-                notes::folder_id.eq(folder_id),
-                notes::updated_at.eq(iso8601::format(now)),
-            ))
+            .set(notes::folder_id.eq(folder_id))
             .execute(connection)?;
 
         // The gesture that filled the zone is the one that should make room in it.

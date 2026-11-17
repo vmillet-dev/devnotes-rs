@@ -498,7 +498,6 @@ mod folders_travelling {
             &mut connection,
             std::slice::from_ref(&filed.id),
             Some(&perf.id),
-            t0(),
             140,
         )
         .unwrap();
@@ -506,7 +505,6 @@ mod folders_travelling {
             &mut connection,
             std::slice::from_ref(&elsewhere.id),
             Some(&migrations.id),
-            t0(),
             140,
         )
         .unwrap();
@@ -781,7 +779,6 @@ mod folders_travelling {
             &mut connection,
             std::slice::from_ref(&filed.id),
             Some(&perf.id),
-            t0(),
             140,
         )
         .unwrap();

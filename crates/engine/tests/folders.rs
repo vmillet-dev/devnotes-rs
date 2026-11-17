@@ -209,7 +209,6 @@ fn filing_a_note_answers_where_it_came_from() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -234,19 +233,11 @@ fn filing_with_no_folder_takes_a_note_back_out() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
 
-    let unfiled = file_many(
-        &mut connection,
-        std::slice::from_ref(&note.id),
-        None,
-        t1(),
-        CARD,
-    )
-    .unwrap();
+    let unfiled = file_many(&mut connection, std::slice::from_ref(&note.id), None, CARD).unwrap();
 
     assert_eq!(unfiled[0].folder_id, Some(perf.id));
     assert_eq!(folder_of(&mut connection, &note.id), None);
@@ -265,7 +256,6 @@ fn a_note_already_in_the_folder_is_not_reported_as_filed() {
         &mut connection,
         std::slice::from_ref(&already.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -274,7 +264,6 @@ fn a_note_already_in_the_folder_is_not_reported_as_filed() {
         &mut connection,
         &[already.id.clone(), moving.id.clone()],
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -297,7 +286,6 @@ fn a_note_of_another_space_is_left_where_it_is() {
         &mut connection,
         std::slice::from_ref(&elsewhere.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -318,7 +306,6 @@ fn undoing_a_filing_puts_every_note_back_where_it_was() {
         &mut connection,
         std::slice::from_ref(&filed.id),
         Some(&migrations.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -327,7 +314,6 @@ fn undoing_a_filing_puts_every_note_back_where_it_was() {
         &mut connection,
         &[loose.id.clone(), filed.id.clone()],
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -337,9 +323,9 @@ fn undoing_a_filing_puts_every_note_back_where_it_was() {
     assert_eq!(folder_of(&mut connection, &filed.id), Some(migrations.id));
 }
 
-/// Undoing is not editing, and the canvas sorts on that column.
+/// Filing is not editing, nor is its undo, and the canvas sorts on that column.
 #[test]
-fn undoing_a_filing_leaves_the_instant_alone() {
+fn filing_and_its_undo_leave_the_instant_alone() {
     let mut connection = open_in_memory().unwrap();
     let sql = space(&mut connection, "SQL");
     let perf = create(&mut connection, &sql, None, "Perf", t0()).unwrap();
@@ -349,15 +335,18 @@ fn undoing_a_filing_leaves_the_instant_alone() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
+    assert_eq!(
+        updated_at_of(&mut connection, &note.id),
+        iso8601::format(t0())
+    );
     restore_filings(&mut connection, &batch, CARD).unwrap();
 
     assert_eq!(
         updated_at_of(&mut connection, &note.id),
-        iso8601::format(t1())
+        iso8601::format(t0())
     );
 }
 
@@ -372,7 +361,6 @@ fn deleting_a_folder_leaves_its_notes_loose_rather_than_deleting_them() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -406,7 +394,6 @@ fn deleting_a_space_takes_its_folders_and_unfiles_the_notes_it_hands_over() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -429,7 +416,6 @@ fn moving_a_note_to_another_space_takes_it_out_of_its_folder() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -454,7 +440,6 @@ fn a_patch_that_says_nothing_about_the_space_leaves_the_folder_alone() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&perf.id),
-        t1(),
         CARD,
     )
     .unwrap();
@@ -583,7 +568,6 @@ mod board {
             &mut connection,
             std::slice::from_ref(&filed.id),
             Some(&migrations.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -615,7 +599,6 @@ mod board {
             &mut connection,
             std::slice::from_ref(&filed.id),
             Some(&perf.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -642,7 +625,6 @@ mod board {
             &mut connection,
             std::slice::from_ref(&filed.id),
             Some(&perf.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -691,7 +673,7 @@ mod board {
             .iter()
             .map(|title| titled(&mut connection, &sql, title).id)
             .collect();
-        file_many(&mut connection, &filled, Some(&perf.id), t1(), CARD).unwrap();
+        file_many(&mut connection, &filled, Some(&perf.id), CARD).unwrap();
         let before = view(&mut connection, &request(&sql)).zones[0].frame;
 
         let extra = titled(&mut connection, &sql, "c");
@@ -699,7 +681,6 @@ mod board {
             &mut connection,
             std::slice::from_ref(&extra.id),
             Some(&perf.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -736,7 +717,7 @@ mod board {
             .iter()
             .map(|title| titled(&mut connection, &sql, title).id)
             .collect();
-        file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
+        file_many(&mut connection, &notes, Some(&perf.id), CARD).unwrap();
 
         let after = view(&mut connection, &request(&sql)).zones[0].frame;
         assert_eq!(after.width, shaved.width, "the width must not move");
@@ -771,7 +752,6 @@ mod board {
             &mut connection,
             std::slice::from_ref(&note.id),
             Some(&perf.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -792,10 +772,10 @@ mod board {
             .iter()
             .map(|title| titled(&mut connection, &sql, title).id)
             .collect();
-        file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
+        file_many(&mut connection, &notes, Some(&perf.id), CARD).unwrap();
         let grown = view(&mut connection, &request(&sql)).zones[0].frame;
 
-        file_many(&mut connection, &notes[..1], None, t1(), CARD).unwrap();
+        file_many(&mut connection, &notes[..1], None, CARD).unwrap();
 
         assert_eq!(view(&mut connection, &request(&sql)).zones[0].frame, grown);
     }
@@ -810,7 +790,7 @@ mod board {
             .iter()
             .map(|title| titled(&mut connection, &sql, title).id)
             .collect();
-        file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
+        file_many(&mut connection, &notes, Some(&perf.id), CARD).unwrap();
         let grown = view(&mut connection, &request(&sql)).zones[0].frame;
 
         // Squashed back down behind the zone's back, as a resize would.
@@ -826,7 +806,7 @@ mod board {
                 )
             })
             .unwrap();
-        let left = file_many(&mut connection, &notes[..1], None, t1(), CARD).unwrap();
+        let left = file_many(&mut connection, &notes[..1], None, CARD).unwrap();
         restore_filings(&mut connection, &left, CARD).unwrap();
 
         assert_eq!(
@@ -882,7 +862,6 @@ mod board {
             &mut connection,
             std::slice::from_ref(&wanted.id),
             Some(&perf.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -1097,7 +1076,6 @@ mod board {
             &mut connection,
             std::slice::from_ref(&note.id),
             Some(&perf.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -1329,7 +1307,6 @@ mod gesture {
             &mut connection,
             std::slice::from_ref(&note.id),
             Some(&perf.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -1532,7 +1509,7 @@ mod gesture {
             let sql = space(&mut connection, "SQL");
             let perf = create(&mut connection, &sql, None, "Perf", t0()).unwrap();
             let notes: Vec<String> = (0..5).map(|_| note_in(&mut connection, &sql).id).collect();
-            file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
+            file_many(&mut connection, &notes, Some(&perf.id), CARD).unwrap();
 
             geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD).unwrap();
 
@@ -1546,7 +1523,7 @@ mod gesture {
             let sql = space(&mut connection, "SQL");
             let perf = create(&mut connection, &sql, None, "Perf", t0()).unwrap();
             let filed = note_in(&mut connection, &sql).id;
-            file_many(&mut connection, &[filed], Some(&perf.id), t1(), CARD).unwrap();
+            file_many(&mut connection, &[filed], Some(&perf.id), CARD).unwrap();
             let loose = note_in(&mut connection, &sql).id;
 
             geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD).unwrap();
@@ -1661,7 +1638,7 @@ mod gesture {
             let sql = space(&mut connection, "SQL");
             let perf = create(&mut connection, &sql, None, "Perf", t0()).unwrap();
             let notes: Vec<String> = (0..4).map(|_| note_in(&mut connection, &sql).id).collect();
-            file_many(&mut connection, &notes, Some(&perf.id), t1(), CARD).unwrap();
+            file_many(&mut connection, &notes, Some(&perf.id), CARD).unwrap();
             trash_many(&mut connection, &notes[..3], t1()).unwrap();
 
             geometry::arrange(&mut connection, &sql, None, BoardScope::Everything, CARD).unwrap();
@@ -1720,7 +1697,6 @@ mod nesting {
             connection,
             std::slice::from_ref(&note.id),
             Some(&folder.id),
-            t1(),
             CARD,
         )
         .unwrap();
@@ -1995,7 +1971,7 @@ mod nesting {
         let notes: Vec<String> = (0..5)
             .map(|index| titled(&mut connection, &tree.space, &format!("n{index}")).id)
             .collect();
-        file_many(&mut connection, &notes, Some(&tree.index.id), t1(), CARD).unwrap();
+        file_many(&mut connection, &notes, Some(&tree.index.id), CARD).unwrap();
 
         assert!(frame_of(&mut connection, &tree.sql.id).unwrap().height > top.height);
     }
@@ -2034,7 +2010,6 @@ mod nesting {
             &mut connection,
             std::slice::from_ref(&note.id),
             Some(&tree.perf.id),
-            t1(),
             CARD,
         )
         .unwrap();
