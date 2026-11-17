@@ -500,7 +500,9 @@ fn compact_toolbar(
 
 fn close_button(ui: &mut Ui, state: &AppState) -> bool {
     let close = i18n::translate(state.language, keys::editor::CLOSE, &[]);
+    let keys = i18n::translate(state.language, keys::editor::CLOSE_KEYS, &[]);
     IconButton::new(Icon::X, &close, "editor-close")
+        .keys(&keys)
         .show(ui)
         .clicked()
 }
@@ -633,7 +635,12 @@ fn present(
     } else {
         IconButton::new(Icon::Play, &words, "editor-present").show(ui)
     };
-    if widgets::tooltip(clicked, &hint).clicked() {
+    let clicked = if labelled {
+        widgets::tooltip(clicked, &hint)
+    } else {
+        clicked
+    };
+    if clicked.clicked() {
         actions.push(editor(Editing::Present {
             title: editing.title.clone(),
             markdown: editing.body.clone(),

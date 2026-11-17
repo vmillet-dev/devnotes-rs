@@ -268,6 +268,12 @@ fn where_one_is(
     let label = i18n::translate(state.language, keys::sidebar::TOGGLE, &[]);
     let shown = state.settings.rail_shown;
     if widgets::SquareButton::new(Icon::Sidebar, &label, "library-rail-toggle")
+        .keys(
+            state
+                .settings
+                .bindings
+                .of(crate::services::shortcuts::RAIL_ACTION),
+        )
         .pressed(shown)
         .show(ui)
         .clicked()

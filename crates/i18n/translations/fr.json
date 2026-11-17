@@ -344,6 +344,7 @@
     "delete": "Supprimer",
     "deleteConfirm": "Confirmer ?",
     "close": "Fermer l’éditeur",
+    "closeKeys": "Échap",
     "header": {
       "title": "En-tête",
       "fold": "Replier l’en-tête",
