@@ -110,7 +110,7 @@ fn recette_security() {
     });
 
     step("SEC-05 a new phrase too short changes nothing", || {
-        app.scroll_top("settings-content");
+        app.click("settings-page-security");
         app.click("setting-change-passphrase");
         app.fill("change-passphrase-current", PASSPHRASE);
         app.fill("change-passphrase-next", "court-08");
