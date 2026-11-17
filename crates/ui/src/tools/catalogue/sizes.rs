@@ -424,7 +424,7 @@ impl SizesTool {
             .with("efficiency", *efficiency)
             .text(language);
         hint(ui, &at);
-        let said = paragraph(ui, &time(estimate, language), (22.0, 700.0), p.text_0);
+        let said = paragraph(ui, &time(estimate, language), (font::PT22, 700.0), p.text_0);
         address(ui, &said, "transfer-time");
         let words = Message::new(keys::tools::sizes::THEORETICAL)
             .with("time", time(theoretical, language))

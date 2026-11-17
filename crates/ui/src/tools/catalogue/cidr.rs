@@ -373,11 +373,11 @@ impl CidrTool {
                 let words = Message::new(words::INSIDE)
                     .with("host", grouped(host, language))
                     .text(language);
-                let said = paragraph(ui, &words, (12.5, 500.0), p.green);
+                let said = paragraph(ui, &words, (font::PT12_5, 500.0), p.green);
                 address(ui, &said, "cidr-membership");
             }
             Some(CidrMembership::Outside) => {
-                let said = paragraph(ui, &tr(words::OUTSIDE), (12.5, 500.0), p.text_1);
+                let said = paragraph(ui, &tr(words::OUTSIDE), (font::PT12_5, 500.0), p.text_1);
                 address(ui, &said, "cidr-membership");
             }
             Some(CidrMembership::Unreadable) => {

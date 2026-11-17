@@ -377,7 +377,13 @@ impl ReferenceTable<'_> {
 
 fn card_head(ui: &mut Ui, group: &Group, count: usize) {
     let p = palette(ui.ctx());
-    let title = widgets::wrapped(ui, &group.label, (12.5, 600.0), p.text_0, f32::INFINITY);
+    let title = widgets::wrapped(
+        ui,
+        &group.label,
+        (font::PT12_5, 600.0),
+        p.text_0,
+        f32::INFINITY,
+    );
     let number = count.to_string();
     let family = FontFamily::Proportional;
     let number = widgets::text(ui, &number, font::PT12_5, 400.0, family, p.text_2);
@@ -480,7 +486,7 @@ fn laid_cell(ui: &Ui, cell: &Cell, width: f32) -> LaidCell {
     let below = cell
         .below
         .as_deref()
-        .map(|words| widgets::wrapped(ui, words, (11.5, 400.0), p.text_2, width));
+        .map(|words| widgets::wrapped(ui, words, (font::PT11_5, 400.0), p.text_2, width));
     LaidCell {
         text,
         ink,

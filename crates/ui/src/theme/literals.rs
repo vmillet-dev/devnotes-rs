@@ -28,7 +28,7 @@ fn no_gap_radius_or_text_size_is_written_outside_the_theme() {
         }
         let text = std::fs::read_to_string(&file).unwrap();
         for (number, line) in text.lines().enumerate() {
-            if writes_a_spacing(line) {
+            if writes_a_spacing(line) || writes_a_size_and_weight(line) {
                 offenders.push(format!("{}:{}", file.display(), number + 1));
             }
         }
@@ -64,6 +64,23 @@ fn writes_a_spacing(line: &str) -> bool {
         } else {
             number != 0.0
         }
+    })
+}
+
+/// A text's `(size, weight)` with the size typed: `(12.5, 600.0)`, handed to a helper that
+/// draws text. A call's parenthesis (`vec2(12.0, 400.0)`) is a size on screen, not this.
+fn writes_a_size_and_weight(line: &str) -> bool {
+    const WEIGHTS: [&str; 7] = [
+        "300.0", "400.0", "500.0", "600.0", "650.0", "700.0", "800.0",
+    ];
+    line.match_indices('(').any(|(at, _)| {
+        let called = line[..at]
+            .chars()
+            .next_back()
+            .is_some_and(|before| before.is_alphanumeric() || "_)]".contains(before));
+        let inside = line[at + 1..].split(')').next().unwrap_or_default();
+        let parts: Vec<&str> = inside.split(',').map(str::trim).collect();
+        !called && parts.len() == 2 && parse(parts[0]).is_some() && WEIGHTS.contains(&parts[1])
     })
 }
 
@@ -152,5 +169,12 @@ fn the_sweep_sees_a_typed_gap_radius_or_size() {
         1
     );
     assert!(literal_calls("CornerRadius::same(radius::R6)").is_empty());
+    assert!(writes_a_size_and_weight(
+        "paragraph(ui, &words, (13.0, 600.0), ink);"
+    ));
+    assert!(!writes_a_size_and_weight(
+        "paragraph(ui, &words, (font::PT13, 600.0), ink);"
+    ));
+    assert!(!writes_a_size_and_weight("let size = vec2(12.0, 400.0);"));
     assert!(literal_calls("widgets::text(ui, &words, font::PT12_5, 400.0, f, ink)").is_empty());
 }

@@ -153,7 +153,10 @@ pub mod font {
     pub const PT17: f32 = 17.0;
     pub const PT18: f32 = 18.0;
     pub const PT20: f32 = 20.0;
+    pub const PT22: f32 = 22.0;
+    pub const PT24: f32 = 24.0;
     pub const PT30: f32 = 30.0;
+    pub const PT38: f32 = 38.0;
 }
 
 /// The gaps, in points: between controls, around them and inside them, named by their size.

@@ -93,10 +93,10 @@ fn count_cell(
     let width = ui.available_width();
     let name = i18n::translate(language, name, &[]);
     let figure = figure.to_string();
-    let label = widgets::wrapped(ui, &name, (12.0, 400.0), p.text_2, width * 0.6);
+    let label = widgets::wrapped(ui, &name, (font::PT12, 400.0), p.text_2, width * 0.6);
     let under = under.map(|key| {
         let words = i18n::translate(language, key, &[]);
-        widgets::wrapped(ui, &words, (10.5, 400.0), p.text_2, width * 0.6)
+        widgets::wrapped(ui, &words, (font::PT10_5, 400.0), p.text_2, width * 0.6)
     });
     let number = widgets::text(
         ui,

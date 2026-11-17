@@ -162,7 +162,7 @@ impl JwtTool {
         if let Some(span) = when.and_then(|it| span(it, now)) {
             words = format!("{words} · {}", span.text(language));
         }
-        let said = paragraph(ui, &words, (12.5, 600.0), p.text_0);
+        let said = paragraph(ui, &words, (font::PT12_5, 600.0), p.text_0);
         address(ui, &said, "jwt-state");
         let ink = match verification {
             Verification::Valid => p.green,
@@ -178,7 +178,7 @@ impl JwtTool {
                 .with("family", family_name.as_str())
                 .text(language)
         });
-        let said = paragraph(ui, &verdict, (12.5, 400.0), ink);
+        let said = paragraph(ui, &verdict, (font::PT12_5, 400.0), ink);
         address(ui, &said, "jwt-verification");
         let algorithm = format!("{} · {family_name}", algorithm.as_deref().unwrap_or("—"));
         let title = tr(keys::tools::jwt::ALGORITHM);

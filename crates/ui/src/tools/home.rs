@@ -343,7 +343,7 @@ fn chip(
 ) -> Response {
     let p = palette(ui.ctx());
     let name = tool.name(language);
-    let galley = widgets::wrapped(ui, &name, (12.5, 400.0), p.text_0, f32::INFINITY);
+    let galley = widgets::wrapped(ui, &name, (font::PT12_5, 400.0), p.text_0, f32::INFINITY);
     let when = when.map(|when| {
         widgets::text(
             ui,
@@ -553,8 +553,14 @@ fn tool_row(
     let width = ui.available_width();
     let name = tool.name(language);
     let room = width - 14.0 - 44.0;
-    let title = widgets::wrapped(ui, &name, (13.0, 600.0), p.text_0, room);
-    let line = widgets::wrapped(ui, &tool.line(language), (11.5, 400.0), p.text_2, room);
+    let title = widgets::wrapped(ui, &name, (font::PT13, 600.0), p.text_0, room);
+    let line = widgets::wrapped(
+        ui,
+        &tool.line(language),
+        (font::PT11_5, 400.0),
+        p.text_2,
+        room,
+    );
     let height = 10.0 + title.size().y + 3.0 + line.size().y + 10.0;
     let corner = if place.last {
         CornerRadius {
@@ -663,7 +669,7 @@ fn no_match(ui: &mut Ui, language: Language, query: &str) {
     let galley = widgets::wrapped(
         ui,
         &words,
-        (13.0, 400.0),
+        (font::PT13, 400.0),
         p.text_1,
         ui.available_width() - 32.0,
     );

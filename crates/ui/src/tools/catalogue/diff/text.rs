@@ -242,7 +242,7 @@ fn offer(ui: &mut Ui, answer: &TextDiffAnswer, language: Language) -> Option<Mod
         let said = paragraph(
             ui,
             &tr(keys::tools::diff::text::BOTH_JSON),
-            (12.5, 400.0),
+            (font::PT12_5, 400.0),
             p.text_1,
         );
         address(ui, &said, "text-diff-json");

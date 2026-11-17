@@ -1,7 +1,7 @@
 //! Luhn and IBAN are Rust's; the page names the country in the language on screen. ⚠️ A card
 //! number is a secret: gone with the tool, and nothing is ever kept as a note.
 
-use crate::theme::tokens::gap;
+use crate::theme::tokens::{font, gap};
 use egui::Ui;
 use engine::tools::checks::{CardNetwork, CheckAnswer, CheckKind, CheckRequest, IbanVerdict};
 use i18n::{Language, Message, keys};
@@ -44,7 +44,7 @@ fn head(ui: &mut Ui, title: &str, valid: bool, reason: Option<String>, language:
     ui.horizontal(|ui| {
         ui.add_space(gap::G16);
         ui.spacing_mut().item_spacing.x = gap::G10;
-        let said = paragraph(ui, title, (14.0, 600.0), p.text_0);
+        let said = paragraph(ui, title, (font::PT14, 600.0), p.text_0);
         address(ui, &said, "checks-reading");
         let said = crate::tools::ui::pill(ui, &verdict, ink);
         address(ui, &said, "checks-verdict");
@@ -53,7 +53,7 @@ fn head(ui: &mut Ui, title: &str, valid: bool, reason: Option<String>, language:
         ui.add_space(gap::G4);
         ui.horizontal(|ui| {
             ui.add_space(gap::G16);
-            paragraph(ui, &reason, (12.0, 400.0), p.text_1);
+            paragraph(ui, &reason, (font::PT12, 400.0), p.text_1);
         });
     }
 }

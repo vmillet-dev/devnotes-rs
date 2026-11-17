@@ -96,9 +96,9 @@ impl<'a> ResultRow<'a> {
             (inner * 0.32).max(96.0)
         };
         let ink = if self.matched { p.green } else { p.text_0 };
-        let name = widgets::wrapped(ui, self.name, (12.5, 500.0), ink, name_room);
+        let name = widgets::wrapped(ui, self.name, (font::PT12_5, 500.0), ink, name_room);
         let meta = (!self.meta.is_empty())
-            .then(|| widgets::wrapped(ui, self.meta, (11.0, 400.0), p.text_2, name_room));
+            .then(|| widgets::wrapped(ui, self.meta, (font::PT11, 400.0), p.text_2, name_room));
         let label_height = name.size().y + meta.as_ref().map_or(0.0, |it| it.size().y + 2.0);
         let value_room = if long {
             inner

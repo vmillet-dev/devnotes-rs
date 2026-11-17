@@ -104,13 +104,13 @@ pub fn section_head(ui: &mut Ui, words: &str, end: impl FnOnce(&mut Ui)) {
 /// A label over a control: « Detected words ».
 pub fn label(ui: &mut Ui, words: &str) -> Response {
     let ink = palette(ui.ctx()).text_2;
-    paragraph(ui, words, (11.5, 500.0), ink)
+    paragraph(ui, words, (font::PT11_5, 500.0), ink)
 }
 
 /// A hint under a control.
 pub fn hint(ui: &mut Ui, words: &str) -> Response {
     let ink = palette(ui.ctx()).text_2;
-    paragraph(ui, words, (11.0, 400.0), ink)
+    paragraph(ui, words, (font::PT11, 400.0), ink)
 }
 
 /// Fields and their names on one line, the names at mid-height.
@@ -135,7 +135,7 @@ pub fn notice(ui: &mut Ui, words: &str, author_id: &str) -> Response {
         .inner_margin(gap::margin(gap::G14, gap::G10))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
-            paragraph(ui, words, (12.5, 400.0), p.text_1)
+            paragraph(ui, words, (font::PT12_5, 400.0), p.text_1)
         });
     address(ui, &shown.inner, author_id);
     shown.inner
@@ -162,7 +162,7 @@ pub fn code_output(ui: &mut Ui, text: &str, author_id: &str) {
 /// What went wrong with an input, drawn where the answer would be.
 pub fn problem(ui: &mut Ui, words: &str, author_id: &str) -> Response {
     let ink = palette(ui.ctx()).red;
-    let said = paragraph(ui, words, (12.0, 400.0), ink);
+    let said = paragraph(ui, words, (font::PT12, 400.0), ink);
     address(ui, &said, author_id);
     said
 }
@@ -341,7 +341,7 @@ pub fn group_title(ui: &mut Ui, words: &str) {
     ui.add_space(gap::G12);
     ui.horizontal(|ui| {
         ui.add_space(gap::G16);
-        paragraph(ui, words, (11.5, 500.0), p.text_2);
+        paragraph(ui, words, (font::PT11_5, 500.0), p.text_2);
     });
     ui.add_space(gap::G6);
 }

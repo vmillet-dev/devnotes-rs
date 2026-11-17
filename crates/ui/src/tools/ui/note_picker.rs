@@ -137,12 +137,12 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
     ui.spacing_mut().item_spacing.y = gap::G10;
     let title = tr(keys::tools::from_note::TITLE);
-    let heading = super::paragraph(ui, &title, (15.0, 600.0), p.text_0);
+    let heading = super::paragraph(ui, &title, (font::PT15, 600.0), p.text_0);
     address(ui, &heading, "note-picker");
     let accepted = super::paragraph(
         ui,
         &accepted(picker.accepts, language),
-        (12.0, 400.0),
+        (font::PT12, 400.0),
         p.text_2,
     );
     address(ui, &accepted, "note-picker-accepted");
@@ -183,7 +183,7 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
                 } else {
                     keys::tools::from_note::NONE_FOUND
                 };
-                let none = super::paragraph(ui, &tr(key), (12.5, 400.0), p.text_2);
+                let none = super::paragraph(ui, &tr(key), (font::PT12_5, 400.0), p.text_2);
                 address(ui, &none, "note-picker-none");
             }
         });

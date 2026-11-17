@@ -66,7 +66,7 @@ fn head(
     }
     let p = palette(ui.ctx());
     let name = entry.name(language);
-    let galley = widgets::wrapped(ui, &name, (16.0, 700.0), p.text_0, f32::INFINITY);
+    let galley = widgets::wrapped(ui, &name, (font::PT16, 700.0), p.text_0, f32::INFINITY);
     let (rect, title) = ui.allocate_exact_size(galley.size(), Sense::hover());
     title.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &name));
     address(ui, &title, "tool-title");

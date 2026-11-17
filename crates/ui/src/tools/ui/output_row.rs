@@ -70,7 +70,7 @@ impl<'a> OutputRow<'a> {
                 ui.spacing_mut().item_spacing.y = gap::G6;
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    super::paragraph(ui, self.name, (12.5, 600.0), ink);
+                    super::paragraph(ui, self.name, (font::PT12_5, 600.0), ink);
                     if !self.meta.is_empty() {
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let family = egui::FontFamily::Monospace;

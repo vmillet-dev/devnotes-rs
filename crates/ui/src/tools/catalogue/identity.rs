@@ -270,9 +270,9 @@ fn fact_name(ui: &mut Ui, name: &str, mark: Option<&str>) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = gap::G8;
-        paragraph(ui, &name.to_uppercase(), (10.5, 500.0), p.text_2);
+        paragraph(ui, &name.to_uppercase(), (font::PT10_5, 500.0), p.text_2);
         if let Some(mark) = mark {
-            paragraph(ui, mark, (10.5, 500.0), p.amber_text);
+            paragraph(ui, mark, (font::PT10_5, 500.0), p.amber_text);
         }
     });
 }
@@ -329,7 +329,7 @@ fn draw_monogram(ui: &mut Ui, letters: &str) {
     let edge = Stroke::new(1.0, p.line);
     ui.painter()
         .rect(rect, corner, p.bg_2, edge, egui::StrokeKind::Inside);
-    let shown = widgets::wrapped(ui, letters, (38.0, 700.0), p.text_2, MONOGRAM);
+    let shown = widgets::wrapped(ui, letters, (font::PT38, 700.0), p.text_2, MONOGRAM);
     let at = rect.center() - shown.size() / 2.0;
     shown.paint(ui, at, p.text_2);
     address(ui, &response, "identity-monogram");
@@ -349,10 +349,10 @@ fn card_head(ui: &mut Ui, person: &Identity, language: Language) {
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.set_width(ui.available_width());
-                paragraph(ui, &kind.to_uppercase(), (11.0, 700.0), p.amber_text);
+                paragraph(ui, &kind.to_uppercase(), (font::PT11, 700.0), p.amber_text);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let name = country_name(language, person.country);
-                    let said = paragraph(ui, &name, (12.0, 400.0), p.text_1);
+                    let said = paragraph(ui, &name, (font::PT12, 400.0), p.text_1);
                     address(ui, &said, "identity-card-country");
                 });
             });
@@ -370,7 +370,7 @@ fn card_facts(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language: 
     fact(
         ui,
         surname,
-        (22.0, 700.0),
+        (font::PT22, 700.0),
         Some(&person.surname),
         "identity-surname",
         language,
@@ -380,7 +380,7 @@ fn card_facts(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language: 
     fact(
         ui,
         names,
-        (16.0, 600.0),
+        (font::PT16, 600.0),
         Some(&copied),
         "identity-given",
         language,
@@ -401,7 +401,7 @@ fn card_facts(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language: 
             format!("{} {aged}", i18n::format::date_long(birth, language))
         },
     );
-    let short = (13.0, 500.0);
+    let short = (font::PT13, 500.0);
     ui.columns(2, |halves| {
         let name = tr(words::SEX);
         fact(

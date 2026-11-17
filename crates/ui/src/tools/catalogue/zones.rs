@@ -325,12 +325,13 @@ fn time_row(ui: &mut Ui, time: &ZoneTime, removable: bool, language: Language) -
                     ui.spacing_mut().item_spacing.y = gap::G2;
                     ui.set_width((ui.available_width() - 250.0).max(120.0));
                     let words = city_words(time, language);
-                    crate::tools::ui::paragraph(ui, &words, (13.0, 600.0), p.text_0);
+                    crate::tools::ui::paragraph(ui, &words, (font::PT13, 600.0), p.text_0);
                     hint(ui, &identity(time, language));
                 });
                 ui.vertical(|ui| {
                     ui.spacing_mut().item_spacing.y = gap::G2;
-                    let hour = crate::tools::ui::paragraph(ui, &time.time, (16.0, 600.0), p.text_0);
+                    let hour =
+                        crate::tools::ui::paragraph(ui, &time.time, (font::PT16, 600.0), p.text_0);
                     address(ui, &hour, "zones-time");
                     hint(ui, &date_words(time, language));
                 });

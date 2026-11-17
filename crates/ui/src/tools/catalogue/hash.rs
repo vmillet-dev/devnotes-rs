@@ -327,7 +327,7 @@ impl HashTool {
                 ..
             }) => {
                 let words = tr(keys::tools::hash::NO_MATCH);
-                let said = crate::tools::ui::paragraph(ui, &words, (12.5, 500.0), p.red);
+                let said = crate::tools::ui::paragraph(ui, &words, (font::PT12_5, 500.0), p.red);
                 address(ui, &said, "hash-verdict");
                 let said = hint(ui, &shape_words(shape, language));
                 address(ui, &said, "hash-shape");

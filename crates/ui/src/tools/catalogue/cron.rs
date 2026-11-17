@@ -250,7 +250,7 @@ impl CronTool {
                 }
                 field_chips(ui, fields, language);
                 let words = sentence::of(fields, language);
-                let said = paragraph(ui, &words, (13.5, 500.0), p.text_0);
+                let said = paragraph(ui, &words, (font::PT13_5, 500.0), p.text_0);
                 address(ui, &said, "cron-sentence");
                 if *both_days {
                     let said = hint(ui, &tr(keys::tools::cron::EITHER_DAY));
@@ -512,7 +512,7 @@ impl CronTool {
                 } else {
                     (keys::tools::cron::NOT_MATCHES, p.text_1)
                 };
-                let said = paragraph(ui, &at_message(key, at), (12.5, 500.0), ink);
+                let said = paragraph(ui, &at_message(key, at), (font::PT12_5, 500.0), ink);
                 address(ui, &said, "cron-verdict");
                 if *matches {
                     return;

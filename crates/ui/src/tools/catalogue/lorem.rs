@@ -124,7 +124,7 @@ impl LoremTool {
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    let said = paragraph(ui, &words, (12.5, 600.0), p.text_2);
+                    let said = paragraph(ui, &words, (font::PT12_5, 600.0), p.text_2);
                     address(ui, &said, "lorem-counted");
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         CopyValue::new(&answer.text, "Lorem ipsum", language).show(ui);

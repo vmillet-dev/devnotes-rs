@@ -214,9 +214,9 @@ fn acronyms(ui: &mut Ui, language: Language) {
                 "{} parseURL → parse_url, HTTPServer → http_server.",
                 tr(keys::tools::case::ACRONYMS)
             );
-            paragraph(ui, &words, (12.0, 400.0), p.text_1);
+            paragraph(ui, &words, (font::PT12, 400.0), p.text_1);
             let words = format!("{} v2Api.", tr(keys::tools::case::ACRONYMS_DIGITS));
-            paragraph(ui, &words, (12.0, 400.0), p.text_1);
+            paragraph(ui, &words, (font::PT12, 400.0), p.text_1);
         });
 }
 

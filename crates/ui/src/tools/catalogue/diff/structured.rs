@@ -271,7 +271,7 @@ impl StructuredDiff {
             Some(JsonDiffAnswer::NotStructured { sides }) if sides.contains(&side) => {
                 let p = palette(ui.ctx());
                 let words = tr(keys::tools::diff::structured::NOT_STRUCTURED);
-                let said = paragraph(ui, &words, (12.5, 400.0), p.text_1);
+                let said = paragraph(ui, &words, (font::PT12_5, 400.0), p.text_1);
                 address(ui, &said, &format!("structured-diff-not-structured-{slot}"));
                 let id = format!("structured-diff-as-text-{slot}");
                 Button::new(&tr(keys::tools::diff::structured::AS_TEXT), &id)
@@ -423,7 +423,7 @@ impl StructuredDiff {
         let words = Message::new(keys::tools::diff::structured::CHANGES_COUNT)
             .with("count", count)
             .text(language);
-        paragraph(ui, &words, (12.0, 600.0), p.text_2);
+        paragraph(ui, &words, (font::PT12, 600.0), p.text_2);
         egui::ScrollArea::vertical()
             .id_salt("structured-diff-changes")
             .max_height(super::ROWS_MAX)
@@ -527,8 +527,8 @@ fn change_row(ui: &mut Ui, change: &JsonChange, on: bool, language: Language) ->
     let width = ui.available_width();
     let path = format!("{} {}", change_mark(change.kind), change.path);
     let detail = change_detail(change, language);
-    let top = widgets::wrapped(ui, &path, (12.0, 500.0), p.text_0, width - 20.0);
-    let under = widgets::wrapped(ui, &detail, (11.5, 400.0), p.text_2, width - 20.0);
+    let top = widgets::wrapped(ui, &path, (font::PT12, 500.0), p.text_0, width - 20.0);
+    let under = widgets::wrapped(ui, &detail, (font::PT11_5, 400.0), p.text_2, width - 20.0);
     let corner = CornerRadius::same(radius::R7);
     let response = interact(
         ui,

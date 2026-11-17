@@ -1,7 +1,7 @@
 //! An instant in every form, the gap between two dates, an ISO 8601 duration. Every reading and
 //! every form is Rust's; how long ago is the page's, so it ages without a round trip.
 
-use crate::theme::tokens::gap;
+use crate::theme::tokens::{font, gap};
 use chrono::{DateTime, Datelike, Local, NaiveDate, TimeZone, Utc};
 use egui::Ui;
 use engine::notes::language::Language as NoteLanguage;
@@ -363,10 +363,10 @@ impl DatesTool {
             ui.add_space(gap::G12);
             ui.horizontal(|ui| {
                 ui.add_space(gap::G16);
-                let said = paragraph(ui, &heading, (14.0, 600.0), p.text_0);
+                let said = paragraph(ui, &heading, (font::PT14, 600.0), p.text_0);
                 address(ui, &said, "dates-heading");
                 ui.add_space(gap::G12);
-                paragraph(ui, &zone, (11.5, 400.0), p.text_2);
+                paragraph(ui, &zone, (font::PT11_5, 400.0), p.text_2);
             });
             for (group, rows) in &groups {
                 group_title(
@@ -482,7 +482,7 @@ impl DatesTool {
                     ui.add_space(gap::G12);
                     ui.horizontal(|ui| {
                         ui.add_space(gap::G16);
-                        let shown = paragraph(ui, &words, (14.0, 600.0), p.text_0);
+                        let shown = paragraph(ui, &words, (font::PT14, 600.0), p.text_0);
                         address(ui, &shown, "dates-duration-words");
                     });
                     ui.add_space(gap::G8);
@@ -645,7 +645,7 @@ fn measured(ui: &mut Ui, answer: &DurationsAnswer, language: Language) {
         ui.add_space(gap::G12);
         ui.horizontal(|ui| {
             ui.add_space(gap::G16);
-            let shown = paragraph(ui, &words, (14.0, 600.0), p.text_0);
+            let shown = paragraph(ui, &words, (font::PT14, 600.0), p.text_0);
             address(ui, &shown, "dates-gap-calendar");
         });
         group_title(ui, &tr(keys::tools::dates::ELAPSED_TITLE));

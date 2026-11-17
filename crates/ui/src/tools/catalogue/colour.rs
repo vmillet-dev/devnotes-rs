@@ -81,7 +81,7 @@ fn verdict(contrast: &Contrast, language: Language) -> String {
 fn pill(ui: &mut Ui, words: &str, passes: bool) -> Response {
     let p = palette(ui.ctx());
     let ink = if passes { p.green } else { p.red };
-    let shown = widgets::wrapped(ui, words, (12.0, 400.0), p.text_1, f32::INFINITY);
+    let shown = widgets::wrapped(ui, words, (font::PT12, 400.0), p.text_1, f32::INFINITY);
     let padding = Vec2::new(10.0, 3.0);
     let (rect, response) = ui.allocate_exact_size(shown.size() + padding * 2.0, Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, words));
@@ -101,7 +101,7 @@ fn level_row(ui: &mut Ui, name: &str, sizes: TextSizes, language: Language) {
     ui.horizontal(|ui| {
         ui.add_space(gap::G16);
         ui.spacing_mut().item_spacing.x = gap::G12;
-        paragraph(ui, name, (11.5, 700.0), ink);
+        paragraph(ui, name, (font::PT11_5, 700.0), ink);
         let normal = format!("{} · {}", tr(words::NORMAL_TEXT), said(sizes.normal));
         pill(ui, &normal, sizes.normal);
         let large = format!("{} · {}", tr(words::LARGE_TEXT), said(sizes.large));
@@ -120,8 +120,8 @@ fn sample_box(ui: &mut Ui, (text, background): (Color32, Color32), language: Lan
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = gap::G12;
-                paragraph(ui, "Aa", (24.0, 700.0), text);
-                paragraph(ui, &words, (14.0, 400.0), text);
+                paragraph(ui, "Aa", (font::PT24, 700.0), text);
+                paragraph(ui, &words, (font::PT14, 400.0), text);
             });
         });
     address(ui, &shown.response, "colour-sample");

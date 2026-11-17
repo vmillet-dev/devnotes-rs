@@ -1,6 +1,6 @@
 //! Three ways into one mode — octal, letters, boxes — each written back from Rust's answer.
 
-use crate::theme::tokens::gap;
+use crate::theme::tokens::{font, gap};
 use egui::{Ui, Vec2};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::permissions::{
@@ -278,7 +278,7 @@ impl PermissionsTool {
         };
         for warning in warnings {
             let words = named(language, "tools.permissions.warnings", &json!(warning));
-            let said = paragraph(ui, &words, (12.0, 400.0), p.amber_text);
+            let said = paragraph(ui, &words, (font::PT12, 400.0), p.amber_text);
             address(ui, &said, "permissions-warning");
         }
     }
