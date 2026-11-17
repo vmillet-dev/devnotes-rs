@@ -420,3 +420,32 @@ fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_fille
     assert_eq!(refresh.value, "kept");
     assert_eq!(refresh.filled_by, None);
 }
+
+/// What a send writes after its answer — its history here — cannot be kept: the answer still
+/// comes, and the window is told, not only the log (#1478, N22).
+#[test]
+fn a_history_that_cannot_be_written_is_said_beside_the_answer() {
+    use diesel::prelude::*;
+
+    let session = hosted();
+    {
+        let mut library = session.engine.db().lock().unwrap();
+        let connection = library.as_mut().unwrap().db();
+        diesel::sql_query("DROP TABLE http_history")
+            .execute(connection)
+            .unwrap();
+    }
+    let (port, _seen) = serve(1, |_, _| ok());
+
+    let answer =
+        session.wait(|e| send_http_request(e, request(&format!("http://127.0.0.1:{port}/"))));
+
+    assert!(answer.is_ok(), "{answer:?}");
+    assert!(
+        session
+            .heard
+            .events()
+            .iter()
+            .any(|event| matches!(event, EngineEvent::SendNotKept))
+    );
+}

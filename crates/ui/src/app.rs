@@ -350,6 +350,10 @@ impl eframe::App for DevNotesApp {
                     self.state.http.receive_console(event);
                 }
                 Input::Engine(EngineEvent::Run(event)) => self.state.http.receive_run(event),
+                Input::Engine(EngineEvent::SendNotKept) => {
+                    let said = i18n::Message::new(i18n::keys::errors::SEND_NOT_KEPT);
+                    self.state.errors.notify(said);
+                }
             }
         }
         self.state.update(ctx, &self.backend);

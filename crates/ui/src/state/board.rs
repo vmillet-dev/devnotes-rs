@@ -492,6 +492,7 @@ fn query(params: Params, now: DateTime<Utc>) -> BoardQuery {
         kinds: facets.kinds.into_iter().collect(),
         priorities: facets.priorities.into_iter().collect(),
         now,
+        tz_offset_minutes: super::notes_query::tz_offset_minutes(now),
         preview_lines: params.lines,
     }
 }

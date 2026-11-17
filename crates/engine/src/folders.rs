@@ -200,7 +200,6 @@ pub fn file_notes(
             &mut connection,
             &ids,
             folder_id.as_deref(),
-            Utc::now(),
             lines.card_height(),
         )?;
         let changed = Changed::notes(ids.clone());

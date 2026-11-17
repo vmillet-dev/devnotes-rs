@@ -598,7 +598,10 @@ impl Flight {
         .await;
         match kept {
             Ok(wrote) => self.wrote |= wrote,
-            Err(error) => log::warn!("What a script wrote was not kept: {}", error.for_log()),
+            Err(error) => {
+                log::warn!("What a script wrote was not kept: {}", error.for_log());
+                self.engine.emit(EngineEvent::SendNotKept);
+            }
         }
     }
 
@@ -614,7 +617,7 @@ impl Flight {
         if sent.is_none() && changes.is_empty() {
             return;
         }
-        let kept = db::run(engine, move |engine| {
+        let kept = db::run(Arc::clone(&engine), move |engine| {
             let db = &engine.db;
             let now = Utc::now();
             let Some(mut connection) = lock_library(db, library)? else {
@@ -640,6 +643,7 @@ impl Flight {
                 "A send's history or cookies were not kept: {}",
                 error.for_log()
             );
+            engine.emit(EngineEvent::SendNotKept);
         }
     }
 }

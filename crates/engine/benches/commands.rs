@@ -165,7 +165,7 @@ fn bulk(c: &mut Criterion) {
     group.bench_function("tag_notes", |b| {
         b.iter(|| {
             black_box(
-                store::tag_many(&mut corpus.connection, &ids, &["bulk".to_string()], now())
+                store::tag_many(&mut corpus.connection, &ids, &["bulk".to_string()])
                     .expect("a batch"),
             );
         });
@@ -176,9 +176,7 @@ fn bulk(c: &mut Criterion) {
         b.iter(|| {
             at += 1;
             let target = &corpus.space_ids[at % corpus.space_ids.len()];
-            black_box(
-                store::move_many(&mut corpus.connection, &ids, target, now()).expect("a batch"),
-            );
+            black_box(store::move_many(&mut corpus.connection, &ids, target).expect("a batch"));
         });
     });
 

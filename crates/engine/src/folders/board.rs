@@ -91,6 +91,9 @@ pub struct BoardQuery {
     pub kinds: Vec<NoteKind>,
     pub priorities: Vec<Priority>,
     pub now: DateTime<Utc>,
+    /// Minutes from local time to UTC, as the list's: a sheet's `aujourd'hui` is the local day.
+    #[serde(default)]
+    pub tz_offset_minutes: i32,
     /// Sizes the first layout of zones and loose cards.
     #[serde(default)]
     pub preview_lines: PreviewLines,
@@ -112,7 +115,7 @@ impl BoardQuery {
             grouping: Grouping::default(),
             ranked: false,
             now: self.now,
-            tz_offset_minutes: 0,
+            tz_offset_minutes: self.tz_offset_minutes,
             pinned_first: true,
         }
     }
@@ -653,8 +656,8 @@ pub fn build<S: std::hash::BuildHasher>(
         width,
         height,
     };
-    // The board knows no time zone: a sheet's `aujourd'hui` is the UTC day on its cards.
-    let today = request.now.date_naive();
+    let offset = crate::notes::view::offset_from_minutes(request.tz_offset_minutes);
+    let today = request.now.with_timezone(&offset).date_naive();
     view.notes_mut().for_each(|note| note.cut_to_preview(today));
 
     view
@@ -774,6 +777,7 @@ mod tests {
             kinds: vec![NoteKind::Note],
             priorities: Vec::new(),
             now: at(NOW),
+            tz_offset_minutes: 0,
             preview_lines: PreviewLines::default(),
         };
 

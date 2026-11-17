@@ -362,7 +362,7 @@ fn cut(text: &str) -> String {
 }
 
 /// `$.data.lines`, or `$['a key']` for a key that is no identifier.
-fn member_path(parent: &str, key: &str) -> String {
+pub(crate) fn member_path(parent: &str, key: &str) -> String {
     let identifier = key
         .chars()
         .next()
