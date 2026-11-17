@@ -1,4 +1,4 @@
-//! A request sent by Rust: the `WebView` reaches no network, and will not. What it inherits is read
+//! A request sent by the core, the only part that reaches the network. What it inherits is read
 //! under the lock; the request is composed and sent without it, so a slow server stalls nothing.
 
 use std::collections::HashMap;

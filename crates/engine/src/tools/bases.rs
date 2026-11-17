@@ -233,8 +233,7 @@ pub struct DecodeRequest {
     rename_all_fields = "camelCase"
 )]
 pub enum ImagePreview {
-    /// ⚠️ A `data:` URL for an `<img>`: what the CSP already lets a picture be, and where
-    /// nothing an SVG holds can run. Never inlined as markup.
+    /// A `data:` URL the interface decodes into pixels: nothing an SVG holds can run.
     Shown {
         data_url: String,
     },
