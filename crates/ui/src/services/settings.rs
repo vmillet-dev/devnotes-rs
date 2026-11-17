@@ -496,6 +496,21 @@ mod tests {
         assert_eq!(Settings::read(&preferences), chosen);
     }
 
+    /// A missing or unreadable value must not switch a safety net off.
+    #[test]
+    fn only_a_plain_false_turns_the_launch_copies_off() {
+        let read = |value: Option<&str>| {
+            let mut preferences = Preferences::default();
+            if let Some(value) = value {
+                preferences.set("devnotes.automaticBackups", value);
+            }
+            Settings::read(&preferences).automatic_backups
+        };
+
+        assert!(read(None) && read(Some("true")) && read(Some("")) && read(Some("False")));
+        assert!(!read(Some("false")));
+    }
+
     #[test]
     fn an_unknown_value_is_the_default() {
         let mut preferences = Preferences::default();

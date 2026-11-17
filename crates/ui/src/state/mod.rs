@@ -971,6 +971,7 @@ impl AppState {
             self.language = self.settings.locale.language();
             self.apply_look(ctx);
             self.save_settings(backend);
+            crate::api::backups::keep_launch_copies(backend, self.settings.automatic_backups);
         }
         if let Some(lines) = self.titlebar_view.adopt_preview_lines(self.preview_lines) {
             self.set_preview_lines(lines, backend);

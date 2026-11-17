@@ -37,6 +37,8 @@ pub struct Engine {
     /// Behind its own lock, always taken after the library's.
     pub(crate) index: Mutex<index::NoteIndex>,
     pub(crate) restored: backup::Restored,
+    /// Whether the unlock takes the day's copy: the person's setting, which the shell reads.
+    pub(crate) launch_copies: std::sync::atomic::AtomicBool,
     pub(crate) sending: http::send::Sending,
     pub(crate) runs: http::runner::Runs,
     pub(crate) sockets: http::websocket::Sockets,
@@ -54,6 +56,7 @@ impl Engine {
             db: db::Db::new(None),
             index: Mutex::new(index::NoteIndex::default()),
             restored: backup::Restored::default(),
+            launch_copies: std::sync::atomic::AtomicBool::new(true),
             sending: http::send::Sending::default(),
             runs: http::runner::Runs::default(),
             sockets: http::websocket::Sockets::default(),
@@ -61,6 +64,12 @@ impl Engine {
             events,
             runtime,
         }
+    }
+
+    /// Whether the next unlock takes the day's copy; it does until told otherwise.
+    pub fn keep_launch_copies(&self, wanted: bool) {
+        self.launch_copies
+            .store(wanted, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// For the tests, which open a library of their own.
@@ -141,7 +150,10 @@ pub(crate) fn sweep(engine: &Engine) {
     let db = &engine.db;
 
     // ⚠️ The copy before the sweeps: it is worth most holding what retention will purge.
-    backup::take(&engine.paths, db);
+    let wanted = engine
+        .launch_copies
+        .load(std::sync::atomic::Ordering::Relaxed);
+    backup::take(wanted, db);
 
     notes::trash::sweep_at_startup(db);
     http::history::sweep_at_startup(db);

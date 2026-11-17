@@ -12,11 +12,9 @@ use std::sync::Mutex;
 use chrono::{DateTime, Utc};
 
 use crate::Engine;
-use crate::Paths;
 use crate::db::{Db, lock};
 use crate::error::{AppError, StorageError};
-use crate::layout;
-use copies::{Backup, list, replace, rotate, wanted};
+use copies::{Backup, list, replace, rotate};
 
 /// Where the library the last restore replaced went, kept for the page the restore reloads:
 /// nothing in the page survives the reload on every platform.
@@ -35,29 +33,10 @@ impl Restored {
     }
 }
 
-/// The key the front end writes this setting under, in the application's preferences.
-pub const AUTOMATIC_BACKUPS_KEY: &str = "devnotes.automaticBackups";
-
-/// Read from the application's `preferences.json` itself, as the front's store writes it: the copy
-/// is taken at unlock, before the front end has booted far enough to say anything. A file
-/// missing or unreadable leaves the default, which takes the copy.
-fn wanted_by_preference(paths: &Paths) -> bool {
-    let stored = std::fs::read_to_string(paths.profile.join(layout::PREFERENCES))
-        .ok()
-        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-        .and_then(|preferences| {
-            preferences
-                .get(AUTOMATIC_BACKUPS_KEY)?
-                .as_str()
-                .map(str::to_owned)
-        });
-
-    wanted(stored.as_deref())
-}
-
-/// The launch copy. Never fatal: a library that cannot be copied still has to open.
-pub(crate) fn take(paths: &Paths, db: &Db) {
-    if wanted_by_preference(paths) {
+/// The launch copy, when the person wants them. Never fatal: a library that cannot be copied
+/// still has to open.
+pub(crate) fn take(wanted: bool, db: &Db) {
+    if wanted {
         copy(db);
     }
 }
@@ -125,26 +104,6 @@ mod tests {
     use copies::tests::{at, library};
 
     #[test]
-    fn the_launch_copy_follows_the_application_preference() {
-        let profile = tempfile::tempdir().unwrap();
-        let paths = Paths {
-            profile: profile.path().to_path_buf(),
-            resources: profile.path().to_path_buf(),
-        };
-        assert!(wanted_by_preference(&paths), "no file: the copy is taken");
-
-        let file = profile.path().join(layout::PREFERENCES);
-        std::fs::write(&file, r#"{ "devnotes.automaticBackups": "false" }"#).unwrap();
-        assert!(!wanted_by_preference(&paths));
-
-        std::fs::write(&file, r#"{ "devnotes.automaticBackups": "true" }"#).unwrap();
-        assert!(wanted_by_preference(&paths));
-
-        std::fs::write(&file, "not json").unwrap();
-        assert!(wanted_by_preference(&paths), "unreadable: the default");
-    }
-
-    #[test]
     fn where_a_restore_set_the_library_aside_is_told_once() {
         let restored = Restored::default();
         assert_eq!(restored.take(), None);
@@ -184,7 +143,7 @@ mod tests {
         let aside = restore(&db, &id, at(1)).unwrap();
 
         assert!(db.lock().unwrap().is_none());
-        assert!(aside.join(layout::DATABASE).exists());
+        assert!(aside.join(crate::layout::DATABASE).exists());
         assert!(matches!(
             restore(&db, &id, at(2)),
             Err(StorageError::Locked)

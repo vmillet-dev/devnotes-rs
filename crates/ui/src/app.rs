@@ -114,6 +114,7 @@ impl DevNotesApp {
             ctx.request_repaint();
         });
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
+        api::backups::keep_launch_copies(&backend, state.settings.automatic_backups);
         // A crash reaches no exit: what it left goes before anyone unlocks anything.
         drop(api::attachments::sweep_copies(&backend));
         state.gate.ask(&backend);

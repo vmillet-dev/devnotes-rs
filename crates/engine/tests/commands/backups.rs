@@ -47,3 +47,27 @@ fn a_restore_keeps_where_the_library_went_for_the_page_it_reloads() {
     assert_eq!(session.call(take_restored_aside), Some(aside));
     assert_eq!(session.call(take_restored_aside), None);
 }
+
+/// The person's setting reaches the core as a flag: off, the unlock takes no copy.
+#[test]
+fn the_launch_copy_is_taken_only_while_the_setting_wants_it() {
+    let passphrase = || engine::vault::secret("correct horse battery staple".to_owned());
+    let session = Session::locked();
+    session.engine.keep_launch_copies(false);
+
+    session
+        .call(|e| engine::vault::create_vault(e, passphrase()))
+        .unwrap();
+
+    assert!(
+        session
+            .call(engine::backup::list_backups)
+            .unwrap()
+            .is_empty()
+    );
+    let other = Session::locked();
+    other
+        .call(|e| engine::vault::create_vault(e, passphrase()))
+        .unwrap();
+    assert_eq!(other.call(engine::backup::list_backups).unwrap().len(), 1);
+}
