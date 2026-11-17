@@ -109,6 +109,9 @@ struct Question {
 /// An image answer: its `data:` URL on its way, then its texture; `None` when it is none.
 enum Image {
     Asked(Pending<Option<String>>),
+    /// Off the window's thread: a picture of a few thousand pixels a side takes a tenth of a
+    /// second to decode.
+    Decoding(Pending<Option<egui::ColorImage>>),
     Shown(Option<egui::TextureHandle>),
 }
 
@@ -276,7 +279,7 @@ impl HttpState {
         errors: &mut ErrorNotifier,
     ) {
         self.explored.update(backend);
-        self.adopt_images(ctx);
+        self.adopt_images(ctx, backend);
         self.adopt_rewrites(errors);
         self.cookies_removed = self.cookies.update(backend, errors);
         self.adopt_container(errors);
@@ -1062,30 +1065,37 @@ impl HttpState {
     pub fn response_image(&self, send_id: &str) -> Option<&egui::TextureHandle> {
         match self.images.get(send_id)? {
             Image::Shown(texture) => texture.as_ref(),
-            Image::Asked(_) => None,
+            Image::Asked(_) | Image::Decoding(_) => None,
         }
     }
 
-    fn adopt_images(&mut self, ctx: &egui::Context) {
+    fn adopt_images(&mut self, ctx: &egui::Context, backend: &Backend) {
         for (id, image) in &mut self.images {
-            let Image::Asked(pending) = image else {
-                continue;
-            };
-            let Some(answer) = pending.poll() else {
-                continue;
-            };
-            let texture = answer
-                .ok()
-                .flatten()
-                .and_then(|url| decoded(&url))
-                .map(|picture| {
-                    ctx.load_texture(
-                        format!("http-image-{id}"),
-                        picture,
-                        egui::TextureOptions::LINEAR,
-                    )
-                });
-            *image = Image::Shown(texture);
+            match image {
+                Image::Asked(pending) => {
+                    let Some(answer) = pending.poll() else {
+                        continue;
+                    };
+                    *image = match answer.ok().flatten() {
+                        Some(url) => Image::Decoding(backend.compute(move |_| Ok(decoded(&url)))),
+                        None => Image::Shown(None),
+                    };
+                }
+                Image::Decoding(pending) => {
+                    let Some(answer) = pending.poll() else {
+                        continue;
+                    };
+                    let texture = answer.ok().flatten().map(|picture| {
+                        ctx.load_texture(
+                            format!("http-image-{id}"),
+                            picture,
+                            egui::TextureOptions::LINEAR,
+                        )
+                    });
+                    *image = Image::Shown(texture);
+                }
+                Image::Shown(_) => {}
+            }
         }
         let held: Vec<String> = self.sends.ids().map(str::to_owned).collect();
         self.images.retain(|id, _| held.contains(id));
