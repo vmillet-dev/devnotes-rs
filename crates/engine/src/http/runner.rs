@@ -14,8 +14,6 @@ use super::scripts::model::{ScriptStop, TestResult};
 use super::send::SentResponse;
 use crate::error::{AppError, ErrorCode, FileContext};
 
-pub const HTTP_RUN_EVENT: &str = "http-run";
-
 /// The rows of a data file, each an iteration; its columns are `pm.iterationData`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

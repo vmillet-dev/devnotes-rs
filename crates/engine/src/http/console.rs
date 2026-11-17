@@ -18,8 +18,6 @@ use super::send::{Exchange, SentResponse};
 use super::variables;
 use crate::error::{AppError, ErrorCode};
 
-pub const HTTP_CONSOLE_EVENT: &str = "http-console";
-
 /// The script a line comes from: its kind, and the request, folder or collection that holds it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

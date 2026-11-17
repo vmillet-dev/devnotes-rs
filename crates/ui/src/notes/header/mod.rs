@@ -340,11 +340,7 @@ fn search(
         tr(keys::notes::SEARCH_PLACEHOLDER),
         tr(keys::notes::CLEAR_SEARCH),
     );
-    let key = if cfg!(target_os = "macos") {
-        "⌘K"
-    } else {
-        "Ctrl+K"
-    };
+    let key = "Ctrl+K";
     let searched = SearchField::new(&mut typed, &label, "search-input")
         .hint(&hint)
         .key(key)

@@ -29,7 +29,6 @@ use super::transport::Limit;
 use crate::error::{AppError, ErrorCode};
 use crate::{EngineEvent, EventSink};
 
-pub const WEBSOCKET_EVENT: &str = "devnotes://websocket";
 /// A message longer than this crosses cut: the log shows, it does not archive.
 pub const MESSAGE_SHOWN: usize = 64 * 1024;
 const CLOSE_GRACE: Duration = Duration::from_secs(3);
