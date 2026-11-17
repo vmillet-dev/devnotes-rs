@@ -1149,3 +1149,22 @@ fn kinds(backend: &crate::backend::Backend) -> Vec<String> {
     }
     ids
 }
+
+/// The rail of the samples at the narrowest, the default and a wide window (#1484).
+#[test]
+fn the_notes_rail_at_three_widths() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    for width in [640.0, 1084.0, 1920.0] {
+        harness.set_size(egui::vec2(width, SIZE.y));
+        settle(&mut harness);
+        capture(&mut harness, &format!("notes-rail-{width}"));
+    }
+}

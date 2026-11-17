@@ -6,6 +6,7 @@ use egui::{
 };
 
 use super::{address, hovered, towards};
+use crate::services::settings::{RAIL_DEFAULT, RAIL_WIDTH};
 use crate::theme::palette;
 
 /// The library rail's width: the setting's, or where its edge is while it moves, with the
@@ -24,6 +25,22 @@ pub fn area_room(ui: &mut Ui, author_id: &str) -> Rect {
 
 /// The edge between the rail and what is beside it.
 const EDGE: f32 = 8.0;
+/// The most of the area the default rail takes: a narrow window keeps its cards and its header.
+const DEFAULT_SHARE: f32 = 0.25;
+
+/// The default width fits the window; a width the person chose is theirs.
+fn fitted(setting: u16, region: Rect) -> u16 {
+    if setting != RAIL_DEFAULT {
+        return setting;
+    }
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "a window's width"
+    )]
+    let share = (region.width() * DEFAULT_SHARE) as u16;
+    setting.min(share).max(RAIL_WIDTH.0)
+}
 
 impl RailWidth {
     /// The rail at the left of `region`, `content` drawn in it, its edge after it: the region
@@ -66,19 +83,20 @@ impl RailWidth {
         if !shown {
             return region;
         }
-        let setting = (setting, crate::services::settings::RAIL_WIDTH);
+        let setting = (fitted(setting, region), RAIL_WIDTH);
         self.show(ui, region, setting, edge_id, content)
     }
 
-    /// The width to write, once the edge rests somewhere else than `setting`.
-    pub fn rested(&self, ui: &Ui, setting: u16) -> Option<u16> {
+    /// The width to write, once the edge rests somewhere else than where it was taken from.
+    pub fn rested(&self, ui: &Ui) -> Option<u16> {
+        let (from, width) = self.0?;
         #[expect(
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss,
             reason = "within RAIL_WIDTH"
         )]
-        let rested = self.0?.1.round() as u16;
-        (rested != setting && !ui.input(|input| input.pointer.any_down())).then_some(rested)
+        let rested = width.round() as u16;
+        (rested != from && !ui.input(|input| input.pointer.any_down())).then_some(rested)
     }
 }
 
@@ -157,5 +175,41 @@ mod tests {
         }
         harness.run();
         assert_eq!(harness.state().0, Some((160, 520.0)));
+    }
+
+    #[test]
+    fn the_default_rail_fits_a_narrow_window_and_a_chosen_width_stays() {
+        let narrow = Rect::from_min_size(egui::Pos2::ZERO, Vec2::new(640.0, 400.0));
+        let wide = Rect::from_min_size(egui::Pos2::ZERO, Vec2::new(1084.0, 400.0));
+
+        assert_eq!(fitted(RAIL_DEFAULT, narrow), RAIL_WIDTH.0);
+        assert_eq!(fitted(RAIL_DEFAULT, wide), RAIL_DEFAULT);
+        assert_eq!(fitted(300, narrow), 300);
+    }
+
+    #[test]
+    fn a_rail_drawn_narrower_than_its_setting_writes_nothing_until_moved() {
+        let mut harness = crate::testing::harness()
+            .with_size(egui::vec2(640.0, 400.0))
+            .build_ui_state(
+                |ui, (width, rested): &mut (RailWidth, Option<u16>)| {
+                    let region = ui.max_rect();
+                    width.beside(ui, region, (true, RAIL_DEFAULT), "rail-edge", |ui| {
+                        ui.label("Bibliothèque");
+                    });
+                    *rested = width.rested(ui);
+                },
+                (RailWidth::default(), None),
+            );
+        harness.run();
+        assert_eq!(harness.state().1, None);
+
+        harness
+            .get_by(|node| node.author_id() == Some("rail-edge"))
+            .focus();
+        harness.run();
+        harness.key_press(Key::ArrowRight);
+        harness.run();
+        assert_eq!(harness.state().1, Some(RAIL_WIDTH.0 + 16));
     }
 }

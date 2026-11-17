@@ -1,5 +1,6 @@
 //! One row of the rail: what opens it, its name, and the ⋯ that opens its panel. A name longer
-//! than the rail is cut, never wrapped: a wrapped row breaks the levels.
+//! than the rail is cut, never wrapped — a wrapped row breaks the levels — and read whole in its
+//! tooltip. The ⋯ sits over the end of the name: the name gives it room only when it shows.
 
 use egui::{
     Color32, CornerRadius, Rect, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo, pos2, vec2,
@@ -68,15 +69,24 @@ pub(super) fn show(
         let row = Rect::from_min_size(ui.cursor().min, vec2(ui.available_width(), HEIGHT));
         let lit = ui.rect_contains_pointer(row);
         let twisty = lead_column(ui, lead);
-        let room = ui.available_width()
-            - if menu.is_some() {
-                MIN_TARGET + 2.0
-            } else {
-                0.0
-            };
-        let name = name_button(ui, room, name);
-        let menu = menu.map(|(label, author_id)| menu_button(ui, label, author_id, lit));
-        Drawn { twisty, name, menu }
+        let menu_room = MIN_TARGET + 2.0;
+        let shown = menu.is_some() && (lit || name.active);
+        let name_response = name_button(ui, ui.available_width(), shown.then_some(menu_room), name);
+        let menu = menu.map(|(label, author_id)| {
+            let place = Rect::from_min_size(
+                pos2(name_response.rect.right() - MIN_TARGET, row.top()),
+                vec2(MIN_TARGET, HEIGHT),
+            );
+            ui.scope_builder(egui::UiBuilder::new().max_rect(place), |ui| {
+                menu_button(ui, label, author_id, lit)
+            })
+            .inner
+        });
+        Drawn {
+            twisty,
+            name: name_response,
+            menu,
+        }
     })
     .inner
 }
@@ -120,7 +130,8 @@ fn lead_column(ui: &mut Ui, lead: &Lead) -> Option<Response> {
     }
 }
 
-fn name_button(ui: &mut Ui, width: f32, name: &Name) -> Response {
+/// `kept`: the room at its end the ⋯ shows in, which the text leaves free.
+fn name_button(ui: &mut Ui, width: f32, kept: Option<f32>, name: &Name) -> Response {
     let p = palette(ui.ctx());
     let corner = CornerRadius::same(6);
     let (label, active) = (name.label.as_str(), name.active);
@@ -181,13 +192,17 @@ fn name_button(ui: &mut Ui, width: f32, name: &Name) -> Response {
         &name.label,
         (size, 400.0),
         ink,
-        rect.right() - 8.0 - left,
+        rect.right() - 8.0 - left - kept.unwrap_or(0.0),
     );
+    let cut = galley.elided;
     ui.painter().galley(
         pos2(left, middle - galley.size().y / 2.0),
         galley,
         Color32::TRANSPARENT,
     );
+    if cut {
+        return widgets::tooltip(response, &name.label);
+    }
     response
 }
 

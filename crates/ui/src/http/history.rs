@@ -72,10 +72,7 @@ pub(super) fn show(
         .show(ui, body, setting, "http-history-edge", |ui| {
             list(ui, state, actions);
         });
-    if let Some(width) = view
-        .list_width
-        .rested(ui, state.settings.history_list_width)
-    {
+    if let Some(width) = view.list_width.rested(ui) {
         actions.push(Asked::App(AppAction::SetHistoryWidth(width)));
     }
     let mut detail_ui = ui.new_child(UiBuilder::new().max_rect(rest));

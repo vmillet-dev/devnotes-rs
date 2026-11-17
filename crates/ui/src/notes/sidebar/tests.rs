@@ -343,3 +343,32 @@ fn alt_and_the_arrows_move_a_folder_in_and_out_saying_what_they_refuse() {
         Some(i18n::keys::sidebar::moved::refused::NO_FOLDER_ABOVE)
     );
 }
+
+#[test]
+fn a_name_cut_in_the_rail_is_read_whole_on_hover_and_its_menu_stays_in_reach() {
+    let (backend, profile) = testing::unlocked();
+    let home = space(&backend, "Home");
+    let long = "Runbooks de la production et de la préproduction";
+    folder(&backend, &home, None, long);
+    let mut harness = area(backend, profile);
+    harness
+        .ctx
+        .all_styles_mut(|style| style.interaction.tooltip_delay = 0.0);
+
+    harness
+        .get_by(|node| node.author_id() == Some("folder-option"))
+        .hover();
+    for _ in 0..10 {
+        harness.step();
+    }
+
+    let said = harness
+        .query_all_by(|node| node.author_id() != Some("folder-option"))
+        .filter_map(|node| node.accesskit_node().label().or(node.accesskit_node().value()))
+        .any(|words| words == long);
+    assert!(
+        said,
+        "the full name in a tooltip"
+    );
+    harness.get_by(|node| node.author_id() == Some("folder-edit"));
+}

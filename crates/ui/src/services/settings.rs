@@ -116,6 +116,8 @@ pub struct Settings {
 
 /// The reference's `RAIL_WIDTH`.
 pub const RAIL_WIDTH: (u16, u16) = (160, 520);
+/// Where the rail starts: a space's name and its folder's read whole at the first level.
+pub const RAIL_DEFAULT: u16 = 200;
 /// The reference's `HISTORY_LIST_WIDTH`.
 pub const HISTORY_LIST_WIDTH: (u16, u16) = (280, 760);
 
@@ -126,7 +128,7 @@ impl Default for Settings {
             theme: Appearance::default(),
             density: Density::default(),
             area: Area::default(),
-            rail_width: RAIL_WIDTH.0,
+            rail_width: RAIL_DEFAULT,
             rail_shown: true,
             editor_fullscreen: false,
             editor_panel_width: 0,
@@ -201,7 +203,7 @@ impl Settings {
             rail_width: preferences
                 .get(RAIL)
                 .and_then(|width| width.parse::<u16>().ok())
-                .map_or(RAIL_WIDTH.0, |width| {
+                .map_or(RAIL_DEFAULT, |width| {
                     width.clamp(RAIL_WIDTH.0, RAIL_WIDTH.1)
                 }),
             rail_shown: preferences.get(RAIL_SHOWN) != Some("false"),
