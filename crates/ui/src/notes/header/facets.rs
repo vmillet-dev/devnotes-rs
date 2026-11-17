@@ -508,7 +508,7 @@ fn language_chip(
     });
     let counted = count.as_ref().map_or(0.0, |galley| galley.size().x + 6.0);
     // The other chips' frame, so the count reads inside it as theirs does.
-    let corner = CornerRadius::same(radius::R12);
+    let corner = CornerRadius::same(radius::PANEL);
     let response = interact(
         ui,
         vec2(10.0 + size.x + counted + 10.0, 24.0),
