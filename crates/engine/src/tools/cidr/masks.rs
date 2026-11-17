@@ -1,7 +1,5 @@
 //! Every prefix of the family beside its mask and its size: the table a block is read against.
 
-use serde::Serialize;
-
 use super::{IpFamily, Net, address, count, usable};
 
 /// IPv6's prefixes as they are handed out: by the nibble down to a LAN's `/64`, then the few below.
@@ -9,8 +7,7 @@ const V6_PREFIXES: [u8; 21] = [
     16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 80, 96, 112, 120, 124, 126, 127, 128,
 ];
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MaskRow {
     pub prefix: u8,
     pub host_bits: u8,

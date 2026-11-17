@@ -384,7 +384,7 @@ fn a_secret_variable_shows_by_its_name_once_the_request_left() {
     let entry = session
         .call(|e| http_history_entry(e, item.id.clone()))
         .unwrap();
-    let kept = serde_json::to_string(&entry).unwrap();
+    let kept = format!("{entry:?}");
     assert!(!kept.contains("t0k3n"), "{kept}");
     assert!(kept.contains("{{token}}"));
 }

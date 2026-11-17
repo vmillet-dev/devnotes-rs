@@ -67,8 +67,7 @@ pub struct HistoryRecord {
     pub response: Option<SentResponse>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HistoryItem {
     pub id: String,
     pub sent_at: DateTime<Utc>,
@@ -78,9 +77,7 @@ pub struct HistoryItem {
     pub summary: HistorySummary,
     /// The URL in two parts for a list (`url_parts`): the host, which a narrow row cuts, and
     /// what follows it, which it keeps.
-    #[serde(default)]
     pub url_head: String,
-    #[serde(default)]
     pub url_tail: String,
 }
 
@@ -100,8 +97,7 @@ pub fn url_parts(url: &str) -> (String, String) {
     (host.to_string(), tail.to_string())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HistoryDay {
     /// `2026-10-07`, the local day.
     pub day: String,
@@ -109,8 +105,7 @@ pub struct HistoryDay {
 }
 
 /// Read to be shown; and handed back as it was read to undo its deletion.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HistoryEntry {
     pub item: HistoryItem,
     pub record: HistoryRecord,
@@ -464,8 +459,7 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
 }
 
 /// An entry sent again: what it was called, and the request it rebuilds.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HistoryDraft {
     pub name: String,
     /// The kind of what was sent: a draft is created of it, as any request is of its own.

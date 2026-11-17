@@ -449,16 +449,17 @@ fn a_request_is_created_of_its_kind_and_keeps_it_through_an_update_and_a_copy() 
     let created = session.call(|e| create_http_request(e, asked)).unwrap();
     assert_eq!(created.kind, RequestKind::Graphql);
 
-    // An update has no kind to carry: one written on the wire all the same is not read.
-    let mut patch: HttpRequestPatch =
-        serde_json::from_str(r#"{"kind":"websocket","method":"POST"}"#).unwrap();
-    patch.document = Some(RequestDocument {
-        graphql: GraphqlDocument {
-            query: "{ products { id } }".to_string(),
-            ..GraphqlDocument::default()
-        },
-        ..RequestDocument::default()
-    });
+    let patch = HttpRequestPatch {
+        method: Some(HttpMethod::Post),
+        document: Some(RequestDocument {
+            graphql: GraphqlDocument {
+                query: "{ products { id } }".to_string(),
+                ..GraphqlDocument::default()
+            },
+            ..RequestDocument::default()
+        }),
+        ..HttpRequestPatch::default()
+    };
     let saved = session
         .call(|e| save_http_request(e, created.id.clone(), patch))
         .unwrap();

@@ -1,5 +1,4 @@
 use chrono::{DateTime, TimeDelta, Utc};
-use serde::Serialize;
 
 use super::model::Note;
 use super::store;
@@ -10,11 +9,9 @@ use crate::error::StorageError;
 /// Single threshold: the panel shows the deadline the purge applies.
 pub const RETENTION: TimeDelta = TimeDelta::days(30);
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct TrashedNote {
     /// Without its body: the row shows `preview`.
-    #[serde(flatten)]
     pub note: Note,
     /// The first lines of the text the note shows, never its Markdown or a drawing's scene.
     pub preview: String,

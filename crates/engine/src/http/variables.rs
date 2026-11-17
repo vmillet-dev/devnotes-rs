@@ -5,8 +5,6 @@
 
 use std::collections::HashMap;
 
-use serde::Serialize;
-
 use super::environments::{Variable, VariableKind, is_variable_name, variable_faults};
 use super::graphql::GraphqlDocument;
 use super::model::{FormPart, KeyValue, RequestAuth, RequestBody, RequestDocument, RequestKind};
@@ -38,8 +36,7 @@ pub struct VariableLayer {
 
 /// A variable as a request resolves it: the value the nearest level gives it, and the
 /// levels further away it hides.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScopedVariable {
     pub name: String,
     /// With every `{{name}}` it holds filled, as it is sent.
@@ -52,8 +49,7 @@ pub struct ScopedVariable {
 }
 
 /// A `{{name}}` a request holds, and what it resolves to — nothing, when no level sets it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UsedVariable {
     pub name: String,
     pub resolved: Option<ScopedVariable>,

@@ -41,8 +41,7 @@ impl Magnitude {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InstantRequest {
     pub text: String,
     /// A number read in this unit rather than by its magnitude.
@@ -59,8 +58,7 @@ pub enum ReadAs {
     Rfc2822,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InstantForms {
     pub unix_seconds: String,
     pub unix_milliseconds: String,
@@ -82,12 +80,7 @@ pub struct InstantForms {
     pub epoch_milliseconds: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum InstantAnswer {
     Read {
         read_as: ReadAs,

@@ -269,36 +269,40 @@ impl World {
 
 /// Everything the screen draws of `view`: its sections, each card as it is displayed, and the
 /// rails.
-fn drawn(view: &NotesView) -> serde_json::Value {
-    let sections: Vec<serde_json::Value> = view
+fn drawn(view: &NotesView) -> String {
+    let sections: Vec<_> = view
         .sections
         .iter()
         .map(|section| {
-            serde_json::json!({
-                "key": section.key,
-                "id": section.id,
-                "group": section.group,
-                "expiring": section.has_expiring_notes,
-                "ghost": section.show_create_ghost,
-                "cards": section
-                    .cards
-                    .iter()
-                    .map(|card| view.display(card))
-                    .collect::<Vec<_>>(),
-            })
+            let cards: Vec<_> = section
+                .cards
+                .iter()
+                .map(|card| view.display(card))
+                .collect();
+            (
+                &section.key,
+                &section.id,
+                &section.group,
+                section.has_expiring_notes,
+                section.show_create_ghost,
+                cards,
+            )
         })
         .collect();
-    serde_json::json!({
-        "sections": sections,
-        "tags": view.available_tags,
-        "languages": view.available_languages,
-        "kinds": view.kind_counts,
-        "priorities": view.priority_counts,
-        "tagCounts": view.tag_counts,
-        "languageCounts": view.language_counts,
-        "filtering": view.is_filtering,
-        "matched": view.matched,
-    })
+    format!(
+        "{:#?}",
+        (
+            sections,
+            &view.available_tags,
+            &view.available_languages,
+            &view.kind_counts,
+            &view.priority_counts,
+            &view.tag_counts,
+            &view.language_counts,
+            view.is_filtering,
+            view.matched,
+        )
+    )
 }
 
 #[test]

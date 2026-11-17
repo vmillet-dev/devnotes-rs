@@ -4859,8 +4859,9 @@ from a closed list, not typed, and `notes::language` compares it exactly.
 
 **The JSON shape that is still written** — the export bundle, the stored preferences, a
 request's document — is pinned by tests in the models (`notes/model.rs`, `spaces/model.rs`,
-`tests/ipc_contract.rs`): camelCase keys, a lifecycle as `{"kind":"expires","at":…}`, an error
-code as `"noteNotFound"`. A serde attribute deleted by accident fails `cargo test`.
+`tests/formats.rs`): camelCase keys, a lifecycle as `{"kind":"expires","at":…}`. A serde
+attribute deleted by accident fails `cargo test`. Only what is written derives serde: a type the
+interface receives as a Rust value has no JSON shape.
 
 ### Input validation
 

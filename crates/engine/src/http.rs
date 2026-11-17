@@ -296,8 +296,7 @@ pub fn describe_http_body(
     })
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct BodyAnswer {
     pub content_type: Option<String>,
     pub problem: Option<crate::json::parse::JsonError>,
@@ -463,8 +462,7 @@ pub fn generate_http_code(
     ))
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct CodeRequestOf {
     pub target: codegen::CodeTarget,
     pub options: codegen::CodeOptions,
@@ -505,8 +503,7 @@ pub fn http_variables(
     Ok(resolver.used(&variables::texts(kind, &document, &inherited)))
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct VariablesRequest {
     pub kind: model::RequestKind,
     pub document: model::RequestDocument,
@@ -807,8 +804,7 @@ pub fn add_graphql_variables(document: graphql::GraphqlDocument) -> Result<Strin
     Ok(graphql::with_missing(&document))
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct WebsocketRequest {
     /// Chosen by the front: what it sends on and closes, and what each event names.
     pub id: String,

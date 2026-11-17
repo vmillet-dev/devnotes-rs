@@ -25,12 +25,10 @@ use crate::spaces::model::Space;
 pub const FORMAT_VERSION: u32 = 1;
 
 /// What an export takes.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub enum ExportScope {
     Library,
     Space {
-        #[serde(rename = "spaceId")]
         space_id: String,
     },
     /// A selection: the ids the canvas had ticked.
@@ -57,8 +55,7 @@ pub struct Bundle {
     pub attachments: Vec<Attachment>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy)]
 pub struct ExportReport {
     pub notes: u32,
     pub spaces: u32,
@@ -86,8 +83,7 @@ impl ExportReport {
 }
 
 /// `skipped`: notes already present or whose space is missing, so an import can be replayed.
-#[derive(Debug, Clone, Copy, Default, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ImportReport {
     pub spaces_created: u32,
     /// Matched by name inside the destination space, created when absent.

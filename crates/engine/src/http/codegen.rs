@@ -24,8 +24,6 @@ pub mod swift;
 pub mod undici;
 pub mod wget;
 
-use serde::{Deserialize, Serialize};
-
 use super::environments::VariableKind;
 use super::graphql;
 use super::model::{HttpMethod, KeyPlace, RequestAuth, RequestBody, RequestDocument, RequestKind};
@@ -94,8 +92,7 @@ impl CodeTarget {
 
 /// The dialog's four switches, each its own.
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CodeOptions {
     /// Off, every `{{name}}` is written as typed.
     pub resolve_variables: bool,
@@ -108,14 +105,12 @@ pub struct CodeOptions {
 
 /// What a target could not write, said by the front: wget, Java's client and `URLSession`
 /// build no multipart body.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CodeNotice {
     MultipartUnsupported,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeneratedCode {
     pub code: String,
     pub language: Language,

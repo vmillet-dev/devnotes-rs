@@ -153,14 +153,6 @@ fn an_export_scope_is_counted_before_anything_is_asked() {
     );
 }
 
-/// The shape the front end sends, `kind` and camelCase included.
-#[test]
-fn an_export_scope_reads_the_way_the_bindings_write_it() {
-    let scope: ExportScope = serde_json::from_str(r#"{"kind":"space","spaceId":"s-1"}"#).unwrap();
-
-    assert!(matches!(scope, ExportScope::Space { space_id } if space_id == "s-1"));
-}
-
 #[test]
 fn importing_the_same_file_twice_adds_nothing_the_second_time() {
     let mut source = library();

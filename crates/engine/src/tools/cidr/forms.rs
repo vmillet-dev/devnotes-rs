@@ -1,15 +1,8 @@
 //! The network address written otherwise: as one integer, in full, and in the reverse DNS tree.
 
-use serde::Serialize;
-
 use super::{IpFamily, Net};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReverseDns {
     /// One address: the name its PTR record goes under.
     Record { name: String },
@@ -23,8 +16,7 @@ pub enum ReverseDns {
     Classless { zone: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CidrForms {
     pub integer: String,
     /// IPv4 in hexadecimal, IPv6 with every zero written out.

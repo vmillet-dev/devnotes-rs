@@ -2,13 +2,10 @@
 
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
-
 const OPEN: &str = "{{";
 const CLOSE: &str = "}}";
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Placeholder {
     pub name: String,
     pub default_value: String,
@@ -165,8 +162,7 @@ pub fn fill(content: &str, values: &BTreeMap<String, String>) -> String {
 }
 
 /// Where a field lies in a text, in UTF-16 code units — the editor's offsets.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldSpan {
     /// The whole token, braces included.
     pub from: u32,

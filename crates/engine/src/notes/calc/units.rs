@@ -544,8 +544,7 @@ pub fn table() -> Vec<UnitDef> {
 
 /// A unit and what it measures: the editor proposes, after `en` or `à`, the units of the kind
 /// the line holds. Their symbols are the front's, in the language on screen.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct UnitEntry {
     pub id: UnitId,
     pub dimension: Dimension,

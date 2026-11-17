@@ -1,19 +1,15 @@
 //! A request's query string and its parameters table, kept in step both ways. Nothing is
 //! decoded or encoded: `{{page}}` and `%20` read back exactly as they were typed.
 
-use serde::{Deserialize, Serialize};
-
 use super::model::KeyValue;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QuerySide {
     Url,
     Params,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SyncedQuery {
     pub url: String,
     pub params: Vec<KeyValue>,

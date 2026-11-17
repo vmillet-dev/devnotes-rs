@@ -2,8 +2,6 @@
 //! decoding that is a picture is shown, not only offered as a file. No decoder: a signature and
 //! a header say enough, and nothing here draws a pixel.
 
-use serde::Serialize;
-
 use crate::closed_enum::closed_enum;
 
 closed_enum! {
@@ -33,8 +31,7 @@ impl ImageFormat {
 }
 
 /// `None` for a size its header does not state: an SVG drawn to whatever box it is given.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Recognised {
     pub format: ImageFormat,
     pub width: Option<u32>,

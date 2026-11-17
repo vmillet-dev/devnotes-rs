@@ -63,8 +63,7 @@ pub enum DigestEncoding {
     Base64,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub enum HashInput {
     Text {
         text: String,
@@ -75,8 +74,7 @@ pub enum HashInput {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HashRequest {
     /// `None` to read a pasted digest's shape alone.
     pub input: Option<HashInput>,
@@ -88,8 +86,7 @@ pub struct HashRequest {
     pub expected: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DigestValue {
     pub algorithm: HashAlgorithm,
     pub bits: u32,
@@ -97,8 +94,7 @@ pub struct DigestValue {
 }
 
 /// What a digest is from its length alone: an HMAC has the shape of the hash it uses.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DigestShape {
     Hex {
         characters: u32,
@@ -113,8 +109,7 @@ pub enum DigestShape {
     Unknown,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DigestVerdict {
     Matches {
         algorithm: HashAlgorithm,
@@ -125,12 +120,7 @@ pub enum DigestVerdict {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HashAnswer {
     Hashed {
         bytes: u32,

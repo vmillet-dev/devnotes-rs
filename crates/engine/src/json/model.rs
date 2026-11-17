@@ -2,8 +2,6 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use serde::{Deserialize, Serialize};
-
 use super::parse::{JsonError, Node, Span, Value};
 use super::read::{JsonNotice, StructureFormat, read};
 use crate::notes::view::fold;
@@ -27,8 +25,7 @@ const NODE_GAP: u32 = 1;
 const MIN_WIDTH: u32 = 16;
 const MAX_WIDTH: u32 = 48;
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum JsonOpening {
     /// Whole when small, its first level otherwise.
     Initial,
@@ -38,13 +35,11 @@ pub enum JsonOpening {
     /// never has to take a path apart.
     Paths {
         paths: Vec<String>,
-        #[serde(default)]
         reveal: Option<String>,
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JsonQuery {
     pub text: String,
     pub format: StructureFormat,
@@ -52,8 +47,7 @@ pub struct JsonQuery {
     pub opening: JsonOpening,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JsonKind {
     Object,
     Array,
@@ -64,8 +58,7 @@ pub enum JsonKind {
     Datetime,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JsonRow {
     /// `id`, or `[0]` in an array.
     pub key: String,
@@ -85,8 +78,7 @@ pub struct JsonRow {
     pub hit: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JsonNode {
     pub id: u32,
     pub parent: Option<u32>,
@@ -108,8 +100,7 @@ pub struct JsonNode {
     pub hit: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JsonGraph {
     pub nodes: Vec<JsonNode>,
     pub width: u32,
@@ -118,8 +109,7 @@ pub struct JsonGraph {
     pub folded: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JsonLine {
     pub depth: u32,
     pub key: String,
@@ -134,8 +124,7 @@ pub struct JsonLine {
     pub hit: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct JsonStats {
     pub keys: u32,
     /// Container levels below the root: `{"a": {"b": 1}}` is 1.
@@ -143,8 +132,7 @@ pub struct JsonStats {
     pub bytes: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JsonView {
     /// `None` is "JSON valide"; the rest is then empty.
     pub error: Option<JsonError>,

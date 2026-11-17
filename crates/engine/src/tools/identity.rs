@@ -15,7 +15,7 @@ mod profile;
 use std::path::Path;
 
 use chrono::{Datelike, NaiveDate};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use self::data::{Land, Library, Place};
 pub use self::data::{ListProblem, UnreadableList};
@@ -100,8 +100,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IdentityRequest {
     pub country: Country,
     /// `None` draws it.
@@ -180,8 +179,7 @@ pub struct Identity {
     pub company: Company,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IdentityAnswer {
     /// The seed that was used: the one given, or the one drawn.
     pub seed: String,
@@ -220,8 +218,7 @@ impl CsvSeparator {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PeopleExport {
     Written {
         people: u32,
@@ -236,8 +233,7 @@ pub enum PeopleExport {
 }
 
 /// A person, or the list that kept one from being drawn.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IdentityOutcome {
     Drawn { answer: Box<IdentityAnswer> },
     Unreadable { list: UnreadableList },
@@ -549,8 +545,7 @@ fn exported(
 }
 
 /// What a batch is made of, beside the person asked for.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PeopleBatch {
     /// The countries that take their turn after the request's own; none is that one alone.
     pub countries: Vec<Country>,

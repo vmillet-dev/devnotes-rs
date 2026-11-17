@@ -1,6 +1,6 @@
 //! Passwords, drawn from the operating system's generator: never a seeded one.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::count::saturating_u32;
 
@@ -20,8 +20,7 @@ pub const MIN_LENGTH: u32 = 4;
 pub const MAX_LENGTH: u32 = 256;
 pub const MAX_PASSWORDS: u32 = 50;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CharacterSet {
     Lowercase,
     Uppercase,
@@ -40,8 +39,7 @@ impl CharacterSet {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PasswordRequest {
     pub length: u32,
     /// Each chosen set is in every password drawn.
@@ -73,12 +71,7 @@ impl Strength {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PasswordAnswer {
     Generated {
         passwords: Vec<String>,

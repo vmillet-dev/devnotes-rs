@@ -46,8 +46,7 @@ pub const KEPT_LIMIT: usize = 64 * 1024 * 1024;
 /// What a file sent as a body or a part may weigh, in megabytes: checked before it is read.
 pub const SENT_FILE_MEGABYTES: u64 = 64;
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct SendRequest {
     /// Chosen by the front, so it can cancel the send it started and save what came back.
     pub id: String,
@@ -64,10 +63,8 @@ pub struct SendRequest {
     /// globals alone.
     pub environment_id: Option<String>,
     /// The user said yes to what a protected environment asks: a script may then change it.
-    #[serde(default)]
     pub confirmed: bool,
     /// The files a script asked to send that the user said yes to, path by path.
-    #[serde(default)]
     pub files: Vec<String>,
 }
 
@@ -199,8 +196,7 @@ pub enum SendError {
 }
 
 /// Who put a header on a request that no row of its own wrote.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ImpliedSource {
     Body,
     /// A folder or the collection, named in `from`.
@@ -212,8 +208,7 @@ pub enum ImpliedSource {
 }
 
 /// A header sent without a row of the request's own: the editor lists them under its table.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImpliedHeader {
     pub name: String,
     pub value: String,
@@ -806,8 +801,7 @@ struct Kept {
 }
 
 /// An answer's text as a note keeps it, and whether a secret was masked in it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoteText {
     pub text: String,
     pub masked: bool,

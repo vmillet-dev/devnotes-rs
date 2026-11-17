@@ -3,15 +3,13 @@
 
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::count::saturating_u32;
 
 pub const MAX_FREQUENCIES: usize = 300;
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StatsRequest {
     pub text: String,
     /// `A` and `a` counted as one.
@@ -20,8 +18,7 @@ pub struct StatsRequest {
 }
 
 /// What a reader cannot see, or would take for something else.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invisible {
     Space,
     Tab,
@@ -65,8 +62,7 @@ impl Invisible {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Frequency {
     pub character: String,
     /// `U+0065 U+0301`: every code point of a character written with several.
@@ -77,8 +73,7 @@ pub struct Frequency {
     pub share: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TextStats {
     /// As a reader counts them: `é` written as `e` and an accent is one, and so is a flag.
     pub characters: u32,
