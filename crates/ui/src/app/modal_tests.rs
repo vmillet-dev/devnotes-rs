@@ -127,10 +127,24 @@ fn a_greyed_file_entry_says_what_it_waits_for() {
 fn ctrl_b_in_a_note_writes_bold_and_leaves_the_rail() {
     let directory = tempfile::tempdir().unwrap();
     let mut harness = open_library(directory.path());
+    // A Note of the test's own: the samples' titles follow the system's language.
+    let backend = harness.state().backend();
+    let space = crate::testing::note(backend, "seed").space_id.clone();
+    engine::db::run_here(backend.engine(), move |engine| {
+        let draft = engine::notes::model::NoteDraft {
+            kind: engine::notes::kind::NoteKind::Note,
+            language: engine::notes::language::Language::Txt,
+            content: "Ship it".to_owned(),
+            ..crate::testing::snippet(space, "Standup".to_owned())
+        };
+        engine::notes::create_note(engine, draft)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
     harness
         .get_by(|node| {
-            node.author_id() == Some("note-card-open")
-                && node.label().as_deref() == Some("Bienvenue dans DevNotes")
+            node.author_id() == Some("note-card-open") && node.label().as_deref() == Some("Standup")
         })
         .click();
     settle(&mut harness);
