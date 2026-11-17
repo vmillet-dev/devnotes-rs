@@ -86,10 +86,10 @@ fn body(
     } else {
         (keys::file::UNLOCK_TITLE, keys::file::UNLOCK_LEAD)
     };
-    ui.spacing_mut().item_spacing.y = gap::G12;
+    ui.spacing_mut().item_spacing.y = gap::GROUPS;
     let heading = ui.label(
         RichText::new(tr(title))
-            .size(font::PT14)
+            .size(font::SUBTITLE)
             .variation(*b"wght", 600.0)
             .color(p.text_0),
     );
@@ -97,16 +97,16 @@ fn body(
     let said = Message::new(lead)
         .with("path", request.file_name.as_str())
         .text(language);
-    ui.label(RichText::new(said).size(font::PT12).color(p.text_2));
+    ui.label(RichText::new(said).size(font::LABEL).color(p.text_2));
     if protecting {
         ui.label(
             RichText::new(tr(keys::file::PROTECT_WARNING))
-                .size(font::PT12)
+                .size(font::LABEL)
                 .color(p.amber_text),
         );
     }
     let name = tr(keys::vault::PASSPHRASE);
-    ui.label(RichText::new(&name).size(font::PT11).color(p.text_2));
+    ui.label(RichText::new(&name).size(font::META).color(p.text_2));
     let (field, typed) =
         PassphraseField::new(&mut view.passphrase, &name, "passphrase-prompt-field")
             .invalid(request.refused)
@@ -120,7 +120,7 @@ fn body(
         let confirmation = tr(keys::vault::CONFIRMATION);
         ui.label(
             RichText::new(&confirmation)
-                .size(font::PT11)
+                .size(font::META)
                 .color(p.text_2),
         );
         submitted |= PassphraseField::new(
@@ -141,7 +141,7 @@ fn body(
     } else {
         String::new()
     };
-    let shown = ui.label(RichText::new(problem).size(font::PT12).color(p.red));
+    let shown = ui.label(RichText::new(problem).size(font::LABEL).color(p.red));
     widgets::address(ui, &shown, "passphrase-prompt-problem");
 
     let mut answer = None;

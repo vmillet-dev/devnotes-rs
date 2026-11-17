@@ -53,7 +53,7 @@ impl ZonesTool {
         let name = tr(keys::tools::zones::INPUT_LABEL);
         section_title(ui, &name);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let room = ui.available_width() - 90.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -71,7 +71,7 @@ impl ZonesTool {
             }
         });
         self.reading(ui, language);
-        ui.add_space(gap::G8);
+        ui.add_space(gap::CONTROLS);
         let name = tr(keys::tools::zones::ADD);
         section_title(ui, &name);
         TextField::new(&mut self.query, &name, "zones-search")
@@ -216,7 +216,7 @@ impl ZonesTool {
 fn found_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let p = palette(ui.ctx());
     let width = ui.available_width();
-    let corner = CornerRadius::same(radius::R7);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(width, 30.0),
@@ -231,7 +231,7 @@ fn found_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let name = widgets::text(
         ui,
         &entry.zone,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_0,
@@ -246,7 +246,7 @@ fn found_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let offset = widgets::text(
         ui,
         &offset,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Monospace,
         p.text_2,
@@ -315,23 +315,27 @@ fn time_row(ui: &mut Ui, time: &ZoneTime, removable: bool, language: Language) -
     let shown = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, edge))
-        .corner_radius(CornerRadius::same(radius::R10))
-        .inner_margin(gap::margin(gap::G14, gap::G10))
+        .corner_radius(CornerRadius::same(radius::CARD))
+        .inner_margin(gap::margin(gap::BLOCKS, gap::INSET))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = gap::G10;
+                ui.spacing_mut().item_spacing.x = gap::INSET;
                 ui.vertical(|ui| {
-                    ui.spacing_mut().item_spacing.y = gap::G2;
+                    ui.spacing_mut().item_spacing.y = gap::LINE;
                     ui.set_width((ui.available_width() - 250.0).max(120.0));
                     let words = city_words(time, language);
-                    crate::tools::ui::paragraph(ui, &words, (font::PT13, 600.0), p.text_0);
+                    crate::tools::ui::paragraph(ui, &words, (font::READING, 600.0), p.text_0);
                     hint(ui, &identity(time, language));
                 });
                 ui.vertical(|ui| {
-                    ui.spacing_mut().item_spacing.y = gap::G2;
-                    let hour =
-                        crate::tools::ui::paragraph(ui, &time.time, (font::PT16, 600.0), p.text_0);
+                    ui.spacing_mut().item_spacing.y = gap::LINE;
+                    let hour = crate::tools::ui::paragraph(
+                        ui,
+                        &time.time,
+                        (font::HEADING, 600.0),
+                        p.text_0,
+                    );
                     address(ui, &hour, "zones-time");
                     hint(ui, &date_words(time, language));
                 });

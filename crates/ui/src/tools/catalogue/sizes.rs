@@ -238,7 +238,7 @@ impl SizesTool {
         section_title(ui, &tr(keys::tools::sizes::VALUE));
         let name = tr(keys::tools::sizes::INPUT_LABEL);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let room = ui.available_width() - 170.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -250,7 +250,7 @@ impl SizesTool {
         });
         let name = tr(keys::tools::sizes::DECIMALS);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G10;
+            ui.spacing_mut().item_spacing.x = gap::INSET;
             label(ui, &name);
             number_field(ui, &mut self.decimals, &name, "sizes-decimals");
         });
@@ -271,14 +271,20 @@ impl SizesTool {
                 egui::Frame::new()
                     .fill(p.bg_1)
                     .stroke(egui::Stroke::new(1.0, p.line_soft))
-                    .corner_radius(egui::CornerRadius::same(radius::R10))
-                    .inner_margin(gap::margin(gap::G16, gap::G14))
+                    .corner_radius(egui::CornerRadius::same(radius::CARD))
+                    .inner_margin(gap::margin(gap::BLOCKS, gap::BLOCKS))
                     .show(ui, |ui| {
                         ui.set_width(ui.available_width());
-                        ui.spacing_mut().item_spacing.y = gap::G8;
+                        ui.spacing_mut().item_spacing.y = gap::CONTROLS;
                         let family = egui::FontFamily::Monospace;
-                        let shown =
-                            crate::widgets::text(ui, &words, font::PT18, 400.0, family, p.text_0);
+                        let shown = crate::widgets::text(
+                            ui,
+                            &words,
+                            font::HEADING,
+                            400.0,
+                            family,
+                            p.text_0,
+                        );
                         let said = ui.label(shown);
                         address(ui, &said, "sizes-gap");
                         hint(ui, &tr(keys::tools::sizes::CONVENTIONS));
@@ -341,7 +347,7 @@ impl SizesTool {
         let name = tr(keys::tools::sizes::TRANSFER_SIZE);
         section_title(ui, &name);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let room = ui.available_width() - 170.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -361,7 +367,7 @@ impl SizesTool {
             rates.iter().map(|(id, it)| (*id, it.as_str())).collect();
         let unit_name = tr(keys::tools::sizes::RATE_UNIT);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let room = ui.available_width() - 170.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -424,7 +430,12 @@ impl SizesTool {
             .with("efficiency", *efficiency)
             .text(language);
         hint(ui, &at);
-        let said = paragraph(ui, &time(estimate, language), (font::PT22, 700.0), p.text_0);
+        let said = paragraph(
+            ui,
+            &time(estimate, language),
+            (font::DISPLAY, 700.0),
+            p.text_0,
+        );
         address(ui, &said, "transfer-time");
         let words = Message::new(keys::tools::sizes::THEORETICAL)
             .with("time", time(theoretical, language))
@@ -523,7 +534,7 @@ impl Tool for SizesTool {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         Segmented::new(&options, "sizes-tab").show(ui, &mut self.tab);
-        ui.add_space(gap::G12);
+        ui.add_space(gap::GROUPS);
         match self.tab {
             Tab::Conversion => columns(ui, self, drawn, (Self::value_input, Self::converted)),
             Tab::Transfer => columns(ui, self, drawn, (Self::transfer_input, Self::estimate)),

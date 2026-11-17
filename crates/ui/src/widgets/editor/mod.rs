@@ -23,7 +23,7 @@ pub use bubbles::Completion;
 pub use geometry::Lines;
 
 /// How far the text sits from the gutter, and the gutter from its numbers.
-const PADDING: f32 = gap::G10;
+const PADDING: f32 = gap::INSET;
 /// Past this many characters, the node's value is not the text: an accessibility tree is not
 /// where a 1 MB snippet is read.
 const VALUE_UP_TO: usize = 64 * 1024;
@@ -182,7 +182,7 @@ impl<'a> EditorView<'a> {
             wrap: false,
             gutter: true,
             read_only: false,
-            font: FontId::new(font::PT13, FontFamily::Monospace),
+            font: FontId::new(font::READING, FontFamily::Monospace),
             decorations: &[],
             marked_lines: &[],
             lit_lines: 0..0,

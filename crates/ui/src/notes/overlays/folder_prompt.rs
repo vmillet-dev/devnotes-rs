@@ -30,7 +30,7 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, name: &mut String, actio
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay)
         .inner_margin(Margin::same(padding));
     let shown = egui::Modal::new(Id::unique("folder-name-prompt"))
@@ -62,12 +62,12 @@ fn prompt(ui: &mut Ui, state: &AppState, name: &mut String) -> Option<()> {
     let tr = |key| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G12;
+    ui.spacing_mut().item_spacing.y = gap::GROUPS;
     let title = tr(keys::board::NAME_THE_ZONE);
     let words = widgets::text(
         ui,
         &title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -77,7 +77,7 @@ fn prompt(ui: &mut Ui, state: &AppState, name: &mut String) -> Option<()> {
     let hint = ui.add(
         egui::Label::new(
             egui::RichText::new(tr(keys::board::NAME_THE_ZONE_HINT))
-                .size(font::PT11_5)
+                .size(font::CONTROL)
                 .color(p.text_2),
         )
         .wrap(),
@@ -96,7 +96,7 @@ fn prompt(ui: &mut Ui, state: &AppState, name: &mut String) -> Option<()> {
     let entered = field.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter));
     let mut done = None;
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::folders::NEW_FOLDER_SUBMIT), "folder-name-submit")
             .kind(Kind::Filled)
             .show(ui)

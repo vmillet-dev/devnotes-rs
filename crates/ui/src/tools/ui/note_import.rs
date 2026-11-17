@@ -31,12 +31,12 @@ pub fn note_import_into(
     let galley = widgets::text(
         ui,
         &words,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_1,
     );
-    let corner = CornerRadius::same(radius::R7);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(galley.size().x + 10.0 + 13.0 + 6.0 + 10.0, 26.0),

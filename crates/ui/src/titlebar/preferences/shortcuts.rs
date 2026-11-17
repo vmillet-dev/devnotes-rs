@@ -76,7 +76,7 @@ fn held_elsewhere(ui: &mut Ui, state: &AppState, action: Rebindable, settings: &
         .with("accelerator", accelerator)
         .text(state.language);
     let words = RichText::new(said)
-        .size(font::PT11_5)
+        .size(font::CONTROL)
         .color(palette(ui.ctx()).red);
     let shown = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &shown, &format!("shortcut-held-{}", action.id));
@@ -92,7 +92,7 @@ fn conflict(ui: &mut Ui, language: Language, accelerator: &str, actions: &[Rebin
         .with("actions", names.join(", "))
         .text(language);
     let words = RichText::new(said)
-        .size(font::PT12)
+        .size(font::LABEL)
         .color(palette(ui.ctx()).red);
     let shown = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &shown, "shortcut-conflict");
@@ -108,7 +108,7 @@ fn line(
     let label = i18n::translate(language, action.label, &[]);
     let reset = i18n::translate(language, keys::settings::shortcuts::RESET, &[]);
     row(ui, &label, |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G6;
+        ui.spacing_mut().item_spacing.x = gap::SNUG;
         let id = format!("shortcut-reset-{}", action.id);
         let moved = !settings.bindings.is_default(action);
         if Button::new(&reset, &id).enabled(moved).show(ui).clicked() {
@@ -121,7 +121,7 @@ fn line(
     if let Some((_, refused)) = refused {
         let said = explain(refused, language);
         let words = RichText::new(said)
-            .size(font::PT11_5)
+            .size(font::CONTROL)
             .color(palette(ui.ctx()).red);
         let shown = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &shown, &format!("shortcut-error-{}", action.id));
@@ -132,7 +132,7 @@ fn line(
 fn field(ui: &mut Ui, label: &str, action: Rebindable, bindings: &mut Bindings, view: &mut View) {
     let p = palette(ui.ctx());
     let shown = bindings.of(action).to_owned();
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = widgets::interact(
         ui,
         FIELD,
@@ -175,7 +175,7 @@ fn field(ui: &mut Ui, label: &str, action: Rebindable, bindings: &mut Bindings, 
     let words = widgets::text(
         ui,
         text,
-        font::PT11_5,
+        font::CONTROL,
         600.0,
         FontFamily::Monospace,
         p.amber_text,

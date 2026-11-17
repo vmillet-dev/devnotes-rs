@@ -77,7 +77,7 @@ impl<'a> CopyValue<'a> {
     fn icon(&self, ui: &mut Ui, copied: bool, enabled: bool, word: &str) -> Response {
         let p = palette(ui.ctx());
         let name = self.accessible_name();
-        let corner = CornerRadius::same(radius::R7);
+        let corner = CornerRadius::same(radius::CONTROL);
         let response = interact(
             ui,
             Vec2::splat(28.0),
@@ -112,12 +112,12 @@ impl<'a> CopyValue<'a> {
         let galley = widgets::text(
             ui,
             word,
-            font::PT11_5,
+            font::CONTROL,
             400.0,
             FontFamily::Proportional,
             p.text_1,
         );
-        let corner = CornerRadius::same(radius::R7);
+        let corner = CornerRadius::same(radius::CONTROL);
         let response = interact(
             ui,
             Vec2::new(galley.size().x + 12.0 + 6.0 + 20.0, 28.0),

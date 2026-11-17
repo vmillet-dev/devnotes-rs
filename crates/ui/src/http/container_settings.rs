@@ -58,7 +58,7 @@ fn body(ui: &mut Ui, state: &AppState, form: &Form, view: &mut DialogView, actio
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let container = &form.container;
     let key = if container.item.kind == HttpItemKind::Folder {
         keys::http::settings::title::FOLDER
@@ -69,7 +69,7 @@ fn body(ui: &mut Ui, state: &AppState, form: &Form, view: &mut DialogView, actio
     let words = widgets::text(
         ui,
         &title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -79,7 +79,7 @@ fn body(ui: &mut Ui, state: &AppState, form: &Form, view: &mut DialogView, actio
     heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
     widgets::address(ui, &heading, "http-settings-dialog");
     let hint = egui::RichText::new(tr(keys::http::settings::HINT))
-        .size(font::PT12_5)
+        .size(font::BODY)
         .color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
     if let Some(settings) = &form.settings {
@@ -89,14 +89,14 @@ fn body(ui: &mut Ui, state: &AppState, form: &Form, view: &mut DialogView, actio
             .max_height(height)
             .auto_shrink([false, true])
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = gap::G10;
+                ui.spacing_mut().item_spacing.y = gap::INSET;
                 if let Some(settings) = fields(ui, form, settings, view, language) {
                     actions.push(Asked::Http(Action::EditSettings(Box::new(settings))));
                 }
             });
     }
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::http::editor::SAVE), "http-settings-save")
             .kind(Kind::Filled)
             .enabled(form.settings.is_some())
@@ -118,13 +118,13 @@ fn heading(ui: &mut Ui, words: &str, hint: Option<String>) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
         let title = egui::RichText::new(words)
-            .size(font::PT12_5)
+            .size(font::BODY)
             .strong()
             .color(p.text_1);
         ui.add(egui::Label::new(title));
         if let Some(hint) = hint {
             let hint = format!("· {hint}");
-            let hint = egui::RichText::new(hint).size(font::PT12).color(p.text_2);
+            let hint = egui::RichText::new(hint).size(font::LABEL).color(p.text_2);
             ui.add(egui::Label::new(hint));
         }
     });

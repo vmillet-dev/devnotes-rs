@@ -274,7 +274,7 @@ pub(super) fn notice(ui: &mut Ui, state: &AppState, body: Rect, editing: &mut Ed
     let galley = widgets::text(
         ui,
         &words,
-        font::PT12_5,
+        font::BODY,
         400.0,
         egui::FontFamily::Proportional,
         p.text_0,
@@ -296,11 +296,11 @@ pub(super) fn notice(ui: &mut Ui, state: &AppState, body: Rect, editing: &mut Ed
     };
     ui.painter().add(
         p.shadow_overlay
-            .as_shape(rect, CornerRadius::same(radius::R10)),
+            .as_shape(rect, CornerRadius::same(radius::CARD)),
     );
     ui.painter().rect(
         rect,
-        CornerRadius::same(radius::R10),
+        CornerRadius::same(radius::CARD),
         p.bg_3,
         Stroke::new(1.0, edge),
         StrokeKind::Inside,
@@ -311,7 +311,7 @@ pub(super) fn notice(ui: &mut Ui, state: &AppState, body: Rect, editing: &mut Ed
             .max_rect(rect.shrink2(vec2(14.0, 4.0)))
             .layout(Layout::left_to_right(Align::Center)),
     );
-    inner.spacing_mut().item_spacing.x = gap::G12;
+    inner.spacing_mut().item_spacing.x = gap::GROUPS;
     let said = inner.label(galley);
     widgets::address(&inner, &said, "editor-format-notice");
     let kind = notice.kind();
@@ -340,12 +340,12 @@ fn panel(ui: &mut Ui, state: &AppState, width: &mut Option<String>, actions: &mu
     let now = state.prettier;
     let mut next = now;
     ui.set_width(300.0);
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Prettier").strong().color(p.text_0));
         ui.label(
             egui::RichText::new(tr(keys::editor::format::SCOPE))
-                .size(font::PT11_5)
+                .size(font::CONTROL)
                 .color(p.text_2),
         );
     });
@@ -435,11 +435,7 @@ fn indentation_key(indentation: Indentation) -> i18n::Key {
 fn setting(ui: &mut Ui, label: &str, control: impl FnOnce(&mut Ui)) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.label(
-            egui::RichText::new(label)
-                .size(font::PT12_5)
-                .color(p.text_1),
-        );
+        ui.label(egui::RichText::new(label).size(font::BODY).color(p.text_1));
         ui.with_layout(Layout::right_to_left(Align::Center), control);
     });
 }
@@ -447,7 +443,7 @@ fn setting(ui: &mut Ui, label: &str, control: impl FnOnce(&mut Ui)) {
 fn note(ui: &mut Ui, title: &str, words: &str) {
     let p = palette(ui.ctx());
     let mut job = egui::text::LayoutJob::default();
-    let font = egui::FontId::proportional(font::PT11_5);
+    let font = egui::FontId::proportional(font::CONTROL);
     job.append(
         &format!("{title} "),
         0.0,

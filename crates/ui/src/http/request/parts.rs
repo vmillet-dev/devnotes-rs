@@ -210,7 +210,7 @@ fn cell_button(
     } else {
         p.text_1
     };
-    let galley = widgets::text(ui, words, font::PT12, 400.0, family, ink);
+    let galley = widgets::text(ui, words, font::LABEL, 400.0, family, ink);
     let at = pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0);
     ui.painter_at(rect.shrink2(Vec2::new(8.0, 0.0)))
         .galley(at, galley, ink);

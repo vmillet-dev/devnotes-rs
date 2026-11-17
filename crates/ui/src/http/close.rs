@@ -47,7 +47,7 @@ fn body(
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title_key = if modified {
         keys::http::close::TITLE
     } else {
@@ -57,7 +57,7 @@ fn body(
     let words = widgets::text(
         ui,
         &title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -68,21 +68,21 @@ fn body(
     widgets::address(ui, &heading, "http-close-dialog");
     if modified {
         let hint = egui::RichText::new(tr(keys::http::close::HINT))
-            .size(font::PT12_5)
+            .size(font::BODY)
             .color(p.text_2);
         let hint = ui.add(egui::Label::new(hint).wrap());
         widgets::address(ui, &hint, "http-close-modified");
     }
     if live {
         let hint = egui::RichText::new(tr(keys::http::close::CONNECTED))
-            .size(font::PT12_5)
+            .size(font::BODY)
             .color(p.text_2);
         let hint = ui.add(egui::Label::new(hint).wrap());
         widgets::address(ui, &hint, "http-close-connected");
     }
     let mut chosen = None;
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if modified
             && Button::new(&tr(keys::http::editor::SAVE), "http-close-save")
                 .kind(Kind::Filled)

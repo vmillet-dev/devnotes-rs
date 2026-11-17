@@ -93,7 +93,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut SidebarView, actions: &mut
     };
     egui::Frame::new().inner_margin(margin).show(ui, |ui| {
         ui.set_min_height(ui.available_height());
-        ui.spacing_mut().item_spacing.y = gap::G6;
+        ui.spacing_mut().item_spacing.y = gap::SNUG;
         crate::titlebar::area_switch::rail(ui, Area::Notes, state.language, actions);
         head(ui, view, state.language);
         let language = state.language;
@@ -137,12 +137,12 @@ fn push(actions: &mut Actions, action: crate::notes::Action) {
 fn head(ui: &mut Ui, view: &mut SidebarView, language: i18n::Language) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.add_space(gap::G4);
+        ui.add_space(gap::TIGHT);
         let title = i18n::translate(language, keys::sidebar::LIBRARY, &[]).to_uppercase();
         let galley = widgets::text(
             ui,
             &title,
-            font::PT10_5,
+            font::CAPTION,
             600.0,
             FontFamily::Proportional,
             p.text_2,
@@ -216,7 +216,7 @@ fn tree_rows(ui: &mut Ui, state: &AppState, view: &mut SidebarView, actions: &mu
                     let galley = widgets::text(
                         ui,
                         &words,
-                        font::PT11,
+                        font::META,
                         400.0,
                         FontFamily::Proportional,
                         p.text_2,

@@ -55,8 +55,8 @@ pub(crate) fn show(ui: &mut Ui, url: &mut String, field: &UrlField<'_>, width: f
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R8))
-        .inner_margin(gap::margin(gap::G11, 0.0));
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::INSET, 0.0));
     frame
         .show(ui, |ui| {
             let response = ui.add_sized(

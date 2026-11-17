@@ -296,7 +296,7 @@ fn notifications(ui: &mut Ui, language: Language, settings: &mut Settings) {
     ui.horizontal(|ui| {
         let words = ui.label(
             RichText::new(said)
-                .size(font::PT11_5)
+                .size(font::CONTROL)
                 .color(palette(ui.ctx()).text_2),
         );
         widgets::address(ui, &words, "setting-skipped-update");
@@ -311,12 +311,12 @@ fn notifications(ui: &mut Ui, language: Language, settings: &mut Settings) {
 
 pub(super) fn group(ui: &mut Ui, language: Language, title: Key) {
     let p = palette(ui.ctx());
-    ui.add_space(gap::G10);
+    ui.add_space(gap::INSET);
     let title = i18n::translate(language, title, &[]).to_uppercase();
     let words = widgets::text(
         ui,
         &title,
-        font::PT11,
+        font::META,
         600.0,
         FontFamily::Proportional,
         p.text_2,
@@ -336,7 +336,7 @@ pub(super) fn row(ui: &mut Ui, label: &str, control: impl FnOnce(&mut Ui)) {
         Layout::left_to_right(Align::Center),
         |ui| {
             ui.set_min_size(Vec2::new(ui.available_width(), ROW));
-            ui.label(RichText::new(label).size(font::PT12_5).color(p.text_1));
+            ui.label(RichText::new(label).size(font::BODY).color(p.text_1));
             // A segmented control grows down from where it starts: the row places it, not the
             // layout's centre.
             let room = ui.max_rect().shrink2(Vec2::new(0.0, (ROW - CONTROL) / 2.0));
@@ -369,11 +369,11 @@ pub(super) fn switch_row(
 }
 
 pub(super) fn note(ui: &mut Ui, said: &str) {
-    ui.add_space(gap::G6);
+    ui.add_space(gap::SNUG);
     ui.add(
         egui::Label::new(
             RichText::new(said)
-                .size(font::PT11_5)
+                .size(font::CONTROL)
                 .color(palette(ui.ctx()).text_2),
         )
         .wrap(),

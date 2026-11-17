@@ -108,7 +108,7 @@ fn run_row(ui: &mut Ui, run: &Run, now: DateTime<Utc>, language: Language) {
         ),
     ];
     for (share, words, family, ink) in cells {
-        let galley = widgets::text(ui, &words, font::PT12, 400.0, family, ink);
+        let galley = widgets::text(ui, &words, font::LABEL, 400.0, family, ink);
         let left = rect.left() + 12.0 + (width - 24.0) * share;
         let spot = Pos2::new(left, rect.center().y - galley.size().y / 2.0);
         ui.painter().galley(spot, galley, ink);
@@ -120,7 +120,7 @@ fn runs_card(ui: &mut Ui, draw: impl FnOnce(&mut Ui)) {
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(radius::R10))
+        .corner_radius(CornerRadius::same(radius::CARD))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.spacing_mut().item_spacing = Vec2::ZERO;
@@ -132,23 +132,23 @@ fn runs_card(ui: &mut Ui, draw: impl FnOnce(&mut Ui)) {
 fn field_chips(ui: &mut Ui, fields: &[FieldReading], language: Language) {
     let p = palette(ui.ctx());
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(gap::G6);
+        ui.spacing_mut().item_spacing = Vec2::splat(gap::SNUG);
         for field in fields {
             let name = named_field(field, language);
             let shown = egui::Frame::new()
                 .fill(p.bg_2)
                 .stroke(Stroke::new(1.0, p.line_soft))
-                .corner_radius(CornerRadius::same(radius::R7))
-                .inner_margin(gap::margin(gap::G10, gap::G5))
+                .corner_radius(CornerRadius::same(radius::CONTROL))
+                .inner_margin(gap::margin(gap::INSET, gap::TIGHT))
                 .show(ui, |ui| {
                     ui.vertical(|ui| {
-                        ui.spacing_mut().item_spacing.y = gap::G1;
+                        ui.spacing_mut().item_spacing.y = gap::HAIRLINE;
                         let code = egui::RichText::new(&field.text)
-                            .font(egui::FontId::monospace(font::PT13))
+                            .font(egui::FontId::monospace(font::READING))
                             .color(p.text_0);
                         ui.label(code);
                         let under = egui::RichText::new(&name)
-                            .size(font::PT10_5)
+                            .size(font::CAPTION)
                             .color(p.text_2);
                         ui.label(under);
                     });
@@ -191,7 +191,7 @@ fn window_problem(window: &CronWindow, language: Language) -> Option<String> {
 fn zone_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let p = palette(ui.ctx());
     let width = ui.available_width();
-    let corner = CornerRadius::same(radius::R7);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(width, 30.0),
@@ -206,7 +206,7 @@ fn zone_entry(ui: &mut Ui, entry: &ZoneEntry) -> egui::Response {
     let name = widgets::text(
         ui,
         &entry.zone,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_0,
@@ -227,7 +227,7 @@ impl CronTool {
             .hint(&tr(keys::tools::cron::PLACEHOLDER))
             .show(ui);
         self.reading(ui, language);
-        ui.add_space(gap::G8);
+        ui.add_space(gap::CONTROLS);
         self.zone_picker(ui, language);
     }
 
@@ -250,7 +250,7 @@ impl CronTool {
                 }
                 field_chips(ui, fields, language);
                 let words = sentence::of(fields, language);
-                let said = paragraph(ui, &words, (font::PT13_5, 500.0), p.text_0);
+                let said = paragraph(ui, &words, (font::READING, 500.0), p.text_0);
                 address(ui, &said, "cron-sentence");
                 if *both_days {
                     let said = hint(ui, &tr(keys::tools::cron::EITHER_DAY));
@@ -315,7 +315,7 @@ impl CronTool {
         };
         let mut back = false;
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G10;
+            ui.spacing_mut().item_spacing.x = gap::INSET;
             let said = label(ui, &shown);
             address(ui, &said, "cron-zone");
             if self.zone.is_some() {
@@ -351,7 +351,7 @@ impl CronTool {
         let tr = |key| i18n::translate(language, key, &[]);
         section_title(ui, &tr(keys::tools::cron::RUNS));
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G10;
+            ui.spacing_mut().item_spacing.x = gap::INSET;
             let half = (ui.available_width() - 10.0) / 2.0;
             for (value, key, hint_key, id) in [
                 (
@@ -400,7 +400,7 @@ impl CronTool {
         };
         let mut picked = None;
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G6;
+            ui.spacing_mut().item_spacing.x = gap::SNUG;
             for shortcut in SHORTCUTS {
                 let words = say(language, &format!("tools.cron.shortcut.{shortcut}"));
                 let id = format!("cron-shortcut-{shortcut}");
@@ -476,13 +476,13 @@ impl CronTool {
                 let words = Message::new(keys::tools::cron::WINDOW_GAP)
                     .with("count", between)
                     .text(language);
-                ui.add_space(gap::G4);
+                ui.add_space(gap::TIGHT);
                 ui.horizontal(|ui| {
-                    ui.add_space(gap::G12);
+                    ui.add_space(gap::GROUPS);
                     let said = hint(ui, &words);
                     address(ui, &said, "cron-window-gap");
                 });
-                ui.add_space(gap::G4);
+                ui.add_space(gap::TIGHT);
             }
             for run in last {
                 run_row(ui, run, now, language);
@@ -512,7 +512,7 @@ impl CronTool {
                 } else {
                     (keys::tools::cron::NOT_MATCHES, p.text_1)
                 };
-                let said = paragraph(ui, &at_message(key, at), (font::PT12_5, 500.0), ink);
+                let said = paragraph(ui, &at_message(key, at), (font::BODY, 500.0), ink);
                 address(ui, &said, "cron-verdict");
                 if *matches {
                     return;

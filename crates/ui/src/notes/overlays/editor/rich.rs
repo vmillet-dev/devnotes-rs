@@ -17,7 +17,7 @@ use crate::widgets;
 use crate::widgets::rich::{Embedded, Laid, RichView};
 
 const TOOLBAR_HEIGHT: f32 = 40.0;
-const PADDING: egui::Vec2 = egui::vec2(gap::G32, gap::G20);
+const PADDING: egui::Vec2 = egui::vec2(gap::PAGE, gap::PANEL);
 
 /// What the last change was: typing in a row is undone as one step.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -385,7 +385,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
         .auto_shrink([false, false])
         .show(&mut body_ui, |ui| {
             egui::Frame::new()
-                .inner_margin(gap::margin(gap::G32, gap::G20))
+                .inner_margin(gap::margin(gap::PAGE, gap::PANEL))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     let painted = RichView::new(&view.document)

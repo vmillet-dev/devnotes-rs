@@ -64,18 +64,24 @@ impl<'a> OutputRow<'a> {
         let shown = egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, edge))
-            .corner_radius(CornerRadius::same(radius::R10))
-            .inner_margin(gap::margin(gap::G14, gap::G12))
+            .corner_radius(CornerRadius::same(radius::CARD))
+            .inner_margin(gap::margin(gap::BLOCKS, gap::GROUPS))
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = gap::G6;
+                ui.spacing_mut().item_spacing.y = gap::SNUG;
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    super::paragraph(ui, self.name, (font::PT12_5, 600.0), ink);
+                    super::paragraph(ui, self.name, (font::BODY, 600.0), ink);
                     if !self.meta.is_empty() {
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let family = egui::FontFamily::Monospace;
-                            let meta =
-                                widgets::text(ui, self.meta, font::PT10_5, 400.0, family, p.text_2);
+                            let meta = widgets::text(
+                                ui,
+                                self.meta,
+                                font::CAPTION,
+                                400.0,
+                                family,
+                                p.text_2,
+                            );
                             let (rect, _) =
                                 ui.allocate_exact_size(meta.size(), egui::Sense::hover());
                             ui.painter().galley(rect.min, meta, p.text_2);
@@ -94,7 +100,7 @@ impl<'a> OutputRow<'a> {
         let width = ui.available_width();
         let copy = CopyValue::new(self.copied.unwrap_or(self.value), self.name, language);
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G10;
+            ui.spacing_mut().item_spacing.x = gap::INSET;
             let room = width - 96.0;
             let galley = value_galley(ui, self.value, room);
             let height = galley.size().y.min(MAX_HEIGHT);

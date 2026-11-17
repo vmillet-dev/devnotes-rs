@@ -90,7 +90,7 @@ impl PasswordTool {
         let name = tr(keys::tools::password::LENGTH);
         label(ui, &name);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G12;
+            ui.spacing_mut().item_spacing.x = gap::GROUPS;
             let mut length: u32 = self.length.trim().parse().unwrap_or(LENGTH.0);
             let range = LENGTH.0..=LENGTH.1;
             let p = palette(ui.ctx());
@@ -127,7 +127,7 @@ impl PasswordTool {
         );
         let name = tr(keys::tools::password::COUNT);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G12;
+            ui.spacing_mut().item_spacing.x = gap::GROUPS;
             label(ui, &name);
             number_field(ui, &mut self.count, &name, "password-count");
             let words = tr(keys::tools::password::GENERATE);
@@ -183,7 +183,7 @@ fn strength_bar(ui: &mut Ui, bits: f64, strength: Strength, language: Language) 
             Rect::from_min_size(egui::pos2(left, rect.top()), Vec2::new(step, rect.height()));
         let fill = if at < level { hue } else { p.bg_3 };
         ui.painter()
-            .rect_filled(piece, CornerRadius::same(radius::R2), fill);
+            .rect_filled(piece, CornerRadius::same(radius::MARK), fill);
     }
     #[expect(clippy::cast_possible_truncation, reason = "a few hundred bits")]
     let bits = bits.round() as i32;

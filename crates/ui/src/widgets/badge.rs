@@ -32,7 +32,7 @@ impl<'a> Chip<'a> {
         let probe = text(
             ui,
             self.label,
-            font::PT12,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             p.text_1,
@@ -68,7 +68,7 @@ impl<'a> Chip<'a> {
         let galley = text(
             ui,
             self.label,
-            font::PT12,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             ink,
@@ -99,11 +99,11 @@ pub fn priority_dot(ui: &mut Ui, priority: Priority) -> Response {
 pub fn hue_badge(ui: &mut Ui, label: &str, hue: Color32) -> Response {
     let p = palette(ui.ctx());
     let words = label.to_uppercase();
-    let galley = text(ui, &words, font::PT9_5, 700.0, FontFamily::Monospace, hue);
+    let galley = text(ui, &words, font::BADGE, 700.0, FontFamily::Monospace, hue);
     let (rect, response) =
         ui.allocate_exact_size(galley.size() + Vec2::new(12.0, 4.0), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, label));
-    let corner = CornerRadius::same(radius::R4);
+    let corner = CornerRadius::same(radius::TAG);
     ui.painter().rect(
         rect,
         corner,
@@ -125,7 +125,7 @@ impl Kbd<'_> {
         let galley = text(
             ui,
             self.0,
-            font::PT10_5,
+            font::CAPTION,
             400.0,
             FontFamily::Monospace,
             p.text_1,
@@ -135,7 +135,7 @@ impl Kbd<'_> {
         response.widget_info(|| WidgetInfo::labeled(Role::Label, true, self.0));
         ui.painter().rect(
             rect,
-            CornerRadius::same(radius::R4),
+            CornerRadius::same(radius::TAG),
             p.bg_3,
             Stroke::new(1.0, p.line),
             StrokeKind::Inside,

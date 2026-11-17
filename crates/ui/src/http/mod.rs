@@ -234,7 +234,7 @@ pub(crate) fn modal<T>(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(egui::Stroke::new(1.0, p.line))
-        .corner_radius(egui::CornerRadius::same(radius::R14))
+        .corner_radius(egui::CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay)
         .inner_margin(egui::Margin::same(padding));
     egui::Modal::new(egui::Id::unique(id))
@@ -376,8 +376,12 @@ fn empty_workspace(ui: &mut Ui, region: Rect, language: i18n::Language, actions:
             ))
             .layout(egui::Layout::top_down(egui::Align::Center)),
     );
-    column.spacing_mut().item_spacing.y = gap::G14;
-    let label = egui::Label::new(egui::RichText::new(&words).size(font::PT13).color(p.text_2));
+    column.spacing_mut().item_spacing.y = gap::BLOCKS;
+    let label = egui::Label::new(
+        egui::RichText::new(&words)
+            .size(font::READING)
+            .color(p.text_2),
+    );
     let said = column.add(label);
     address(&column, &said, "http-workspace-empty");
     let (rect, _) = column.allocate_exact_size(Vec2::new(row, 30.0), Sense::hover());
@@ -386,7 +390,7 @@ fn empty_workspace(ui: &mut Ui, region: Rect, language: i18n::Language, actions:
             .max_rect(rect)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    buttons.spacing_mut().item_spacing.x = gap::G8;
+    buttons.spacing_mut().item_spacing.x = gap::CONTROLS;
     for ((kind, id), name) in tabs::KINDS.iter().zip(&names) {
         if widgets::Button::new(name, &format!("http-workspace-new-{id}"))
             .show(&mut buttons)

@@ -22,7 +22,7 @@ use crate::widgets::{self, Button, IconButton, Kind, TextField};
 const WIDTH: f32 = 560.0;
 /// Every row as tall: the list draws only those in view.
 const ROW: f32 = 84.0;
-const GAP: f32 = gap::G6;
+const GAP: f32 = gap::SNUG;
 const SNIPPET_LINES: usize = 2;
 
 #[derive(Default)]
@@ -56,7 +56,7 @@ pub(in crate::notes) fn show(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay)
         .inner_margin(Margin::same(padding));
     let shown = egui::Modal::new(Id::unique("trash-panel"))
@@ -74,14 +74,14 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TrashView, actions: &mut Acti
     let tr = |key| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let closed = ui
         .horizontal(|ui| {
             let title = tr(keys::trash::TITLE);
             let words = widgets::text(
                 ui,
                 &title,
-                font::PT15,
+                font::TITLE,
                 600.0,
                 FontFamily::Proportional,
                 p.text_0,
@@ -130,7 +130,7 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TrashView, actions: &mut Acti
 fn say(ui: &mut Ui, words: &str, author_id: &str) {
     let p = palette(ui.ctx());
     let response = ui
-        .add(egui::Label::new(egui::RichText::new(words).size(font::PT12).color(p.text_2)).wrap());
+        .add(egui::Label::new(egui::RichText::new(words).size(font::LABEL).color(p.text_2)).wrap());
     widgets::address(ui, &response, author_id);
 }
 
@@ -157,7 +157,7 @@ fn list(
                 row(ui, state, note, view, actions);
             }
         });
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
 }
 
 fn row(
@@ -179,7 +179,7 @@ fn row(
     };
     response.widget_info(|| WidgetInfo::labeled(Role::ListItem, true, &title));
     widgets::address(ui, &response, "trash-row");
-    let corner = CornerRadius::same(radius::R8);
+    let corner = CornerRadius::same(radius::MENU);
     ui.painter().rect(
         rect,
         corner,
@@ -192,7 +192,7 @@ fn row(
     let text = Rect::from_min_max(inner.min, pos2(left - 12.0, inner.bottom()));
     let mut words = ui.new_child(UiBuilder::new().max_rect(text));
     words.set_clip_rect(text.intersect(ui.clip_rect()));
-    words.spacing_mut().item_spacing.y = gap::G4;
+    words.spacing_mut().item_spacing.y = gap::TIGHT;
     line(
         &mut words,
         &title,
@@ -249,7 +249,7 @@ fn buttons(
             .max_rect(inner)
             .layout(egui::Layout::right_to_left(egui::Align::Min)),
     );
-    buttons.spacing_mut().item_spacing.x = gap::G6;
+    buttons.spacing_mut().item_spacing.x = gap::SNUG;
     let confirming = view.confirming_purge.as_deref() == Some(id);
     let purge = tr(if confirming {
         keys::trash::PURGE_CONFIRM
@@ -270,7 +270,7 @@ fn buttons(
         }
     }
     // Kept apart from the purge, which it must not look like.
-    buttons.add_space(gap::G8);
+    buttons.add_space(gap::CONTROLS);
     if Button::new(&tr(keys::trash::RESTORE), "trash-restore")
         .show(&mut buttons)
         .clicked()
@@ -352,10 +352,10 @@ fn footer(
     let top = ui.cursor().top();
     ui.painter()
         .hline(ui.max_rect().x_range(), top, Stroke::new(1.0, p.line_soft));
-    ui.add_space(gap::G4);
+    ui.add_space(gap::TIGHT);
     let count = u32::try_from(count).unwrap_or(u32::MAX);
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if view.confirming_empty {
             if Button::new(&tr(keys::trash::EMPTY_TRASH_CONFIRM), "trash-empty-confirm")
                 .kind(Kind::Destructive)
@@ -388,7 +388,7 @@ fn footer(
                     let response = ui.add(
                         egui::Label::new(
                             egui::RichText::new(&warning)
-                                .size(font::PT11_5)
+                                .size(font::CONTROL)
                                 .color(p.red),
                         )
                         .wrap(),

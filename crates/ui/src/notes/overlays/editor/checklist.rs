@@ -88,13 +88,13 @@ pub(super) fn show(
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     let mut changed = false;
-    ui.spacing_mut().item_spacing = Vec2::new(gap::G8, gap::G2);
+    ui.spacing_mut().item_spacing = Vec2::new(gap::CONTROLS, gap::LINE);
     let narrowing = filters.then_some(&mut view.shown);
     progress(ui, &view.items, language, narrowing);
     if !filters {
         view.shown = Shown::All;
     }
-    ui.add_space(gap::G10);
+    ui.add_space(gap::INSET);
     let rows_top = ui.cursor().top();
     let shown: Vec<usize> = (0..view.items.len())
         .filter(|index| view.shown.keeps(&view.items[*index]))
@@ -120,7 +120,7 @@ pub(super) fn show(
         if dragged || row_ui.rect_contains_pointer(rect) {
             ui.painter().rect_filled(
                 rect,
-                CornerRadius::same(radius::R6),
+                CornerRadius::same(radius::CONTROL),
                 if dragged { p.bg_3 } else { p.bg_2 },
             );
         }
@@ -153,7 +153,7 @@ pub(super) fn show(
             break;
         }
     }
-    ui.add_space(gap::G8);
+    ui.add_space(gap::CONTROLS);
     let add = tr(keys::editor::ADD_ITEM);
     if widgets::Button::new(&add, "checklist-add")
         .kind(widgets::Kind::Quiet)
@@ -233,7 +233,7 @@ fn row(
         Sense::click_and_drag(),
         "checklist-grip",
         || WidgetInfo::labeled(Role::Button, true, &grip_label),
-        CornerRadius::same(radius::R4),
+        CornerRadius::same(radius::TAG),
     );
     let dots = egui::Rect::from_center_size(grip.rect.center(), Vec2::splat(12.0));
     icons::paint(ui, dots, Icon::Ellipsis, p.text_2);
@@ -268,7 +268,7 @@ fn row(
             .align(egui::Align2::LEFT_CENTER)
             .hint_text(hint)
             .text_color(if done { p.text_2 } else { p.text_0 })
-            .font(FontId::new(font::PT13_5, FontFamily::Proportional)),
+            .font(FontId::new(font::READING, FontFamily::Proportional)),
     );
     ui.ctx()
         .accesskit_node_builder(field.id, |node| node.set_label(label.clone()));
@@ -303,7 +303,7 @@ fn tick(ui: &mut Ui, done: bool, label: &str) -> egui::Response {
         Sense::click(),
         "checklist-check",
         || WidgetInfo::selected(Role::CheckBox, true, done, label),
-        CornerRadius::same(radius::R4),
+        CornerRadius::same(radius::TAG),
     );
     let (fill, edge) = if done {
         (p.amber_fill, p.amber_text)
@@ -313,7 +313,7 @@ fn tick(ui: &mut Ui, done: bool, label: &str) -> egui::Response {
     let tick = egui::Rect::from_center_size(check.rect.center(), Vec2::splat(14.0));
     ui.painter().rect(
         tick,
-        CornerRadius::same(radius::R3),
+        CornerRadius::same(radius::TAG),
         fill,
         Stroke::new(1.2, edge),
         egui::StrokeKind::Inside,
@@ -327,7 +327,7 @@ fn tick(ui: &mut Ui, done: bool, label: &str) -> egui::Response {
 /// A done task's words, struck through.
 fn strike(ui: &Ui, field: &egui::Response, text: &str) {
     let p = palette(ui.ctx());
-    let font = FontId::new(font::PT13_5, FontFamily::Proportional);
+    let font = FontId::new(font::READING, FontFamily::Proportional);
     let width = ui
         .fonts_mut(|fonts| fonts.layout_no_wrap(text.to_owned(), font, p.text_2))
         .size()
@@ -571,7 +571,7 @@ fn progress(
         let galley = widgets::text(
             ui,
             &words,
-            font::PT11,
+            font::META,
             400.0,
             FontFamily::Monospace,
             p.text_2,
@@ -584,19 +584,19 @@ fn progress(
         let width = ui.available_width() - galley.size().x - 10.0 - choice_width;
         let (track, _) = ui.allocate_exact_size(Vec2::new(width.max(40.0), 6.0), Sense::hover());
         ui.painter()
-            .rect_filled(track, CornerRadius::same(radius::R3), p.bg_3);
+            .rect_filled(track, CornerRadius::same(radius::TAG), p.bg_3);
         if total > 0 {
             #[expect(clippy::cast_precision_loss, reason = "a list's length")]
             let share = done as f32 / total as f32;
             let fill =
                 Rect::from_min_size(track.min, Vec2::new(track.width() * share, track.height()));
             ui.painter()
-                .rect_filled(fill, CornerRadius::same(radius::R3), p.amber_fill);
+                .rect_filled(fill, CornerRadius::same(radius::TAG), p.amber_fill);
         }
         let response = ui.label(galley);
         address(ui, &response, "checklist-progress");
         if let Some(shown) = narrowing {
-            ui.add_space(gap::G4);
+            ui.add_space(gap::TIGHT);
             choice.show(ui, shown);
         }
     });

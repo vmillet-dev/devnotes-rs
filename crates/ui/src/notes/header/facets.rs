@@ -57,7 +57,7 @@ fn rail(ui: &mut Ui, draw: impl FnOnce(&mut Ui)) {
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = gap::G7;
+                ui.spacing_mut().item_spacing.x = gap::SNUG;
                 draw(ui);
             });
         });
@@ -71,7 +71,7 @@ fn label(ui: &mut Ui, words: &str) {
     let galley = widgets::text(
         ui,
         words,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -105,10 +105,10 @@ impl Chip<'_> {
     fn show(self, ui: &mut Ui, author_id: &str) -> bool {
         let p = palette(ui.ctx());
         let mono = FontFamily::Monospace;
-        let words = widgets::text(ui, self.words, font::PT11, 400.0, mono.clone(), p.text_1);
+        let words = widgets::text(ui, self.words, font::META, 400.0, mono.clone(), p.text_1);
         let count = self
             .count
-            .map(|count| widgets::text(ui, &count.to_string(), font::PT11, 400.0, mono, p.text_2));
+            .map(|count| widgets::text(ui, &count.to_string(), font::META, 400.0, mono, p.text_2));
         let lead = lead_width(ui, &self.lead);
         let counted = count.as_ref().map_or(0.0, |galley| galley.size().x + 6.0);
         let size = vec2(lead + words.size().x + counted + 20.0, 24.0);
@@ -118,7 +118,7 @@ impl Chip<'_> {
         } else {
             Sense::hover()
         };
-        let corner = CornerRadius::same(radius::R12);
+        let corner = CornerRadius::same(radius::PANEL);
         let response = interact(
             ui,
             size,
@@ -157,7 +157,7 @@ impl Chip<'_> {
         let words = widgets::text(
             ui,
             self.words,
-            font::PT11,
+            font::META,
             400.0,
             FontFamily::Monospace,
             ink,
@@ -180,7 +180,7 @@ fn count_at(ui: &Ui, words: &str) -> f32 {
     widgets::text(
         ui,
         words,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Monospace,
         Color32::WHITE,
@@ -206,7 +206,7 @@ fn badge_size(ui: &Ui, words: &str) -> Vec2 {
     let galley = widgets::text(
         ui,
         words,
-        font::PT9_5,
+        font::BADGE,
         700.0,
         FontFamily::Monospace,
         Color32::WHITE,
@@ -227,12 +227,12 @@ fn paint_lead(ui: &Ui, lead: &Lead, left: f32, middle: f32) {
             let rect = Rect::from_min_size(pos2(left, middle - size.y / 2.0), size);
             ui.painter().rect(
                 rect,
-                CornerRadius::same(radius::R4),
+                CornerRadius::same(radius::TAG),
                 p.bg_3,
                 Stroke::new(1.0, hue.gamma_multiply(0.4)),
                 StrokeKind::Inside,
             );
-            let galley = widgets::text(ui, words, font::PT9_5, 700.0, FontFamily::Monospace, *hue);
+            let galley = widgets::text(ui, words, font::BADGE, 700.0, FontFamily::Monospace, *hue);
             ui.painter().galley(
                 pos2(left + 6.0, middle - galley.size().y / 2.0),
                 galley,
@@ -389,7 +389,7 @@ fn tag_pills(ui: &mut Ui, view: &NotesView, facets: &Facets, actions: &mut Actio
         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = gap::G7;
+                ui.spacing_mut().item_spacing.x = gap::SNUG;
                 for tag in &view.available_tags {
                     let count = view
                         .tag_counts
@@ -416,7 +416,7 @@ fn manage_width(ui: &Ui, words: &str) -> f32 {
     let galley = widgets::text(
         ui,
         words,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Proportional,
         Color32::WHITE,
@@ -445,7 +445,7 @@ fn manage_button(ui: &mut Ui, words: &str) -> bool {
         StrokeKind::Inside,
     );
     let ink = towards(p.text_2, p.amber_text, lit);
-    let galley = widgets::text(ui, words, font::PT11, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, words, font::META, 400.0, FontFamily::Proportional, ink);
     ui.painter()
         .galley(response.rect.center() - galley.size() / 2.0, galley, ink);
     response.clicked()
@@ -500,14 +500,14 @@ fn language_chip(
         widgets::text(
             ui,
             &count.to_string(),
-            font::PT11,
+            font::META,
             400.0,
             FontFamily::Monospace,
             p.text_2,
         )
     });
     let counted = count.as_ref().map_or(0.0, |galley| galley.size().x + 9.0);
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         vec2(size.x + 4.0 + counted, size.y + 4.0),

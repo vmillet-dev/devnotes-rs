@@ -29,9 +29,9 @@ pub(super) fn bands(
     editing: &mut EditorView,
     actions: &mut Actions,
 ) {
-    band(ui, gap::margin(gap::G20, gap::G8), true, |ui| {
+    band(ui, gap::margin(gap::PANEL, gap::CONTROLS), true, |ui| {
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = Vec2::new(gap::G8, gap::G6);
+            ui.spacing_mut().item_spacing = Vec2::new(gap::CONTROLS, gap::SNUG);
             context(ui, state, (session, note), editing, actions);
             tags(ui, state, (session, note), editing, actions);
             // In a panel the tags wrap under the field: the deadline takes a line of its own.
@@ -44,10 +44,10 @@ pub(super) fn bands(
             });
         });
     });
-    band(ui, gap::margin(gap::G20, gap::G12), true, |ui| {
+    band(ui, gap::margin(gap::PANEL, gap::GROUPS), true, |ui| {
         placement(ui, state, (session, note), editing, actions);
     });
-    band(ui, gap::margin(gap::G20, gap::G8), true, |ui| {
+    band(ui, gap::margin(gap::PANEL, gap::CONTROLS), true, |ui| {
         super::attachments::show(ui, state, (&mut editing.removing, true), actions);
     });
 }
@@ -65,7 +65,7 @@ fn context(
     ui.label(widgets::text(
         ui,
         "·",
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -88,7 +88,7 @@ fn context_field(
         egui::TextEdit::singleline(&mut editing.source)
             .hint_text(hint)
             .text_color(p.text_1)
-            .font(egui::FontId::new(font::PT11_5, FontFamily::Proportional))
+            .font(egui::FontId::new(font::CONTROL, FontFamily::Proportional))
             .desired_width(width),
     );
     ui.ctx()
@@ -112,7 +112,7 @@ fn tags(
     let language = state.language;
     for tag in &note.tags {
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G2;
+            ui.spacing_mut().item_spacing.x = gap::LINE;
             let label = format!("#{tag}");
             widgets::Chip::new(&label, "editor-tag", true).show(ui);
             let remove = i18n::translate(
@@ -146,7 +146,7 @@ fn tags(
         egui::TextEdit::singleline(&mut editing.tag)
             .hint_text(hint)
             .text_color(p.text_1)
-            .font(egui::FontId::new(font::PT11_5, FontFamily::Proportional))
+            .font(egui::FontId::new(font::CONTROL, FontFamily::Proportional))
             .desired_width(90.0),
     );
     ui.ctx()
@@ -181,11 +181,11 @@ fn lifecycle_badge(ui: &mut Ui, state: &AppState, note: &DisplayNote) {
         p.amber_text
     };
     // The reference's `tint-badge`: the hue at a tenth under, a quarter on the edge.
-    let galley = widgets::text(ui, &words, font::PT11, 400.0, FontFamily::Proportional, hue);
+    let galley = widgets::text(ui, &words, font::META, 400.0, FontFamily::Proportional, hue);
     let size = galley.size() + Vec2::new(20.0 + 16.0, 6.0);
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &words));
-    let corner = egui::CornerRadius::same(radius::R12);
+    let corner = egui::CornerRadius::same(radius::PANEL);
     ui.painter().rect(
         rect,
         corner,
@@ -262,12 +262,12 @@ fn placement(
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::new(gap::G6, gap::G6);
+        ui.spacing_mut().item_spacing = Vec2::new(gap::SNUG, gap::SNUG);
         let label = |ui: &mut Ui, words: &str| {
             ui.label(widgets::text(
                 ui,
                 words,
-                font::PT11,
+                font::META,
                 400.0,
                 FontFamily::Proportional,
                 p.text_2,
@@ -275,7 +275,7 @@ fn placement(
         };
         label(ui, &tr(keys::editor::kind::LABEL));
         kind_menu(ui, state, (session, note), editing, actions);
-        ui.add_space(gap::G14);
+        ui.add_space(gap::BLOCKS);
         label(ui, &tr(keys::editor::PLACEMENT_LABEL));
         space_menu(ui, state, note, actions);
         label(ui, "›");
@@ -298,7 +298,7 @@ fn kind_menu(
         let response = ui.label(widgets::text(
             ui,
             &current,
-            font::PT12,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             p.text_1,
@@ -351,10 +351,10 @@ pub(super) fn details(
         .auto_shrink(false)
         .show(&mut sections_ui, |ui| {
             egui::Frame::new()
-                .inner_margin(gap::margin(gap::G18, gap::G14))
+                .inner_margin(gap::margin(gap::BLOCKS, gap::BLOCKS))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.spacing_mut().item_spacing = Vec2::new(gap::G6, gap::G6);
+                    ui.spacing_mut().item_spacing = Vec2::new(gap::SNUG, gap::SNUG);
                     detail_sections(ui, state, (session, note), editing, actions);
                 });
         });
@@ -379,7 +379,7 @@ fn detail_sections(
         ui.label(widgets::text(
             ui,
             "›",
-            font::PT11,
+            font::META,
             400.0,
             FontFamily::Proportional,
             palette(ui.ctx()).text_2,
@@ -415,13 +415,13 @@ fn section(ui: &mut Ui, state: &AppState, name: i18n::Key, content: impl FnOnce(
     ui.label(widgets::text(
         ui,
         &words,
-        font::PT10_5,
+        font::CAPTION,
         600.0,
         FontFamily::Proportional,
         p.text_2,
     ));
     ui.horizontal_wrapped(content);
-    ui.add_space(gap::G12);
+    ui.add_space(gap::GROUPS);
 }
 
 fn space_menu(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions: &mut Actions) {
@@ -519,7 +519,7 @@ pub(super) fn summary(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions
                 egui::Button::new(widgets::text(
                     ui,
                     &words,
-                    font::PT11_5,
+                    font::CONTROL,
                     400.0,
                     FontFamily::Proportional,
                     p.text_2,

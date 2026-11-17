@@ -64,7 +64,7 @@ pub(super) fn show(
     menu: Option<(&str, &'static str)>,
 ) -> Drawn {
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G2;
+        ui.spacing_mut().item_spacing.x = gap::LINE;
         #[expect(clippy::cast_precision_loss, reason = "a few levels")]
         ui.add_space(depth as f32 * INDENT);
         let row = Rect::from_min_size(ui.cursor().min, vec2(ui.available_width(), HEIGHT));
@@ -118,7 +118,7 @@ fn lead_column(ui: &mut Ui, lead: &Lead) -> Option<Response> {
                     info.selected = Some(open);
                     info
                 },
-                CornerRadius::same(radius::R5),
+                CornerRadius::same(radius::CONTROL),
             );
             let ink = if response.hovered() {
                 p.text_0
@@ -134,7 +134,7 @@ fn lead_column(ui: &mut Ui, lead: &Lead) -> Option<Response> {
 /// `kept`: the room at its end the ⋯ shows in, which the text leaves free.
 fn name_button(ui: &mut Ui, width: f32, kept: Option<f32>, name: &Name) -> Response {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let (label, active) = (name.label.as_str(), name.active);
     let response = interact(
         ui,
@@ -175,7 +175,7 @@ fn name_button(ui: &mut Ui, width: f32, kept: Option<f32>, name: &Name) -> Respo
             let swatch = Rect::from_center_size(pos2(left + 4.0, middle), Vec2::splat(8.0));
             ui.painter().rect_filled(
                 swatch,
-                CornerRadius::same(radius::R2),
+                CornerRadius::same(radius::MARK),
                 folder_hue(ui, colour),
             );
             left += 8.0 + 6.0;
@@ -213,7 +213,7 @@ fn name_button(ui: &mut Ui, width: f32, kept: Option<f32>, name: &Name) -> Respo
 /// Quiet at rest but never hidden: a control taken away would leave the keyboard's order too.
 fn menu_button(ui: &mut Ui, label: &str, author_id: &str, lit: bool) -> Response {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(radius::R5);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::splat(MIN_TARGET),

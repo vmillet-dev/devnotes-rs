@@ -22,16 +22,16 @@ pub(super) fn page(ui: &mut Ui, state: &AppState, rows: &mut Option<Vec<Variable
         rows.clone_from(&state.security.variables().map(<[Variable]>::to_vec));
     }
     let intro = RichText::new(tr(variables::INTRO))
-        .size(font::PT12)
+        .size(font::LABEL)
         .color(p.text_2);
     ui.add(egui::Label::new(intro).wrap());
-    ui.add_space(gap::G10);
+    ui.add_space(gap::INSET);
     let Some(rows) = rows else {
         return;
     };
     if rows.is_empty() {
         let none = RichText::new(tr(variables::EMPTY))
-            .size(font::PT12)
+            .size(font::LABEL)
             .color(p.text_2);
         ui.label(none);
     }
@@ -45,7 +45,7 @@ pub(super) fn page(ui: &mut Ui, state: &AppState, rows: &mut Option<Vec<Variable
                 removed = Some(at);
             }
         });
-        ui.add_space(gap::G6);
+        ui.add_space(gap::SNUG);
     }
     if let Some(at) = removed {
         rows.remove(at);
@@ -54,9 +54,9 @@ pub(super) fn page(ui: &mut Ui, state: &AppState, rows: &mut Option<Vec<Variable
         let said = Message::new(variables::DUPLICATE)
             .with("names", twice.join(", "))
             .text(language);
-        ui.label(RichText::new(said).size(font::PT11_5).color(p.red));
+        ui.label(RichText::new(said).size(font::CONTROL).color(p.red));
     }
-    ui.add_space(gap::G4);
+    ui.add_space(gap::TIGHT);
     if Button::new(&tr(variables::ADD), "variable-add")
         .icon(Icon::Plus)
         .show(ui)
@@ -64,9 +64,9 @@ pub(super) fn page(ui: &mut Ui, state: &AppState, rows: &mut Option<Vec<Variable
     {
         rows.push(Variable::default());
     }
-    ui.add_space(gap::G8);
+    ui.add_space(gap::CONTROLS);
     let rule = RichText::new(tr(variables::NAME_RULE))
-        .size(font::PT11_5)
+        .size(font::CONTROL)
         .color(p.text_2);
     ui.add(egui::Label::new(rule).wrap());
 }
@@ -78,10 +78,10 @@ fn line(ui: &mut Ui, state: &AppState, row: &mut Variable, rejected: bool) -> bo
     let tr = |key: Key| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
     let shown = ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G6;
+        ui.spacing_mut().item_spacing.x = gap::SNUG;
         let brace = |text: &str| {
             RichText::new(text)
-                .size(font::PT12_5)
+                .size(font::BODY)
                 .monospace()
                 .color(p.text_2)
         };

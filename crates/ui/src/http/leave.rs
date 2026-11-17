@@ -45,7 +45,7 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
         .map(|tab| tab.draft.name.as_str())
         .collect();
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let count = u32::try_from(names.len()).unwrap_or(u32::MAX);
     let title = i18n::translate(
         language,
@@ -55,7 +55,7 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
     let words = widgets::text(
         ui,
         &title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -83,11 +83,11 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
         ),
     };
     let hint = egui::RichText::new(tr(hint))
-        .size(font::PT12_5)
+        .size(font::BODY)
         .color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
     for name in names {
-        let words = egui::RichText::new(name).size(font::PT12_5).color(p.text_0);
+        let words = egui::RichText::new(name).size(font::BODY).color(p.text_0);
         let said = ui.add(egui::Label::new(words).truncate());
         widgets::address(ui, &said, "http-leave-name");
     }
@@ -98,15 +98,13 @@ fn body(ui: &mut Ui, state: &AppState) -> Option<Ask> {
             keys::http::leave::CONNECTED,
             &[("count", connected.into())],
         );
-        let words = egui::RichText::new(words)
-            .size(font::PT12_5)
-            .color(p.text_2);
+        let words = egui::RichText::new(words).size(font::BODY).color(p.text_2);
         let said = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &said, "http-leave-connected");
     }
     let mut chosen = None;
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::http::leave::SAVE_ALL), "http-leave-save")
             .kind(Kind::Filled)
             .enabled(!state.http.leave().is_saving())

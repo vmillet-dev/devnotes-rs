@@ -102,7 +102,7 @@ impl CaseTool {
             3,
         );
         self.words(ui, drawn.language);
-        ui.add_space(gap::G8);
+        ui.add_space(gap::CONTROLS);
         section_title(ui, &tr(keys::tools::case::OPTIONS));
         let words = tr(keys::tools::case::STRIP_ACCENTS);
         check(ui, &mut self.strip_accents, &words, "case-strip-accents");
@@ -130,16 +130,16 @@ impl CaseTool {
             &i18n::translate(language, keys::tools::case::WORDS, &[]),
         );
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = egui::Vec2::splat(gap::G6);
+            ui.spacing_mut().item_spacing = egui::Vec2::splat(gap::SNUG);
             for word in &answer.words {
                 egui::Frame::new()
                     .fill(p.bg_2)
                     .stroke(Stroke::new(1.0, p.line_soft))
-                    .corner_radius(CornerRadius::same(radius::R6))
-                    .inner_margin(gap::margin(gap::G8, gap::G2))
+                    .corner_radius(CornerRadius::same(radius::CONTROL))
+                    .inner_margin(gap::margin(gap::CONTROLS, gap::LINE))
                     .show(ui, |ui| {
                         let text = egui::RichText::new(word)
-                            .font(egui::FontId::monospace(font::PT11_5))
+                            .font(egui::FontId::monospace(font::CONTROL))
                             .color(p.text_0);
                         ui.label(text);
                     });
@@ -160,7 +160,7 @@ impl CaseTool {
         ];
         let separators = separators.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G12;
+            ui.spacing_mut().item_spacing.x = gap::GROUPS;
             Segmented::new(&separators, "case-slug-separator").show(ui, &mut self.separator);
             let words = tr(keys::tools::case::LOWERCASE);
             check(ui, &mut self.lowercase, &words, "case-slug-lowercase");
@@ -206,17 +206,17 @@ fn acronyms(ui: &mut Ui, language: Language) {
     egui::Frame::new()
         .fill(p.amber_fill.gamma_multiply(0.06))
         .stroke(Stroke::new(1.0, p.amber_dim))
-        .corner_radius(CornerRadius::same(radius::R8))
-        .inner_margin(gap::margin(gap::G12, gap::G10))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::GROUPS, gap::INSET))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             let words = format!(
                 "{} parseURL → parse_url, HTTPServer → http_server.",
                 tr(keys::tools::case::ACRONYMS)
             );
-            paragraph(ui, &words, (font::PT12, 400.0), p.text_1);
+            paragraph(ui, &words, (font::LABEL, 400.0), p.text_1);
             let words = format!("{} v2Api.", tr(keys::tools::case::ACRONYMS_DIGITS));
-            paragraph(ui, &words, (font::PT12, 400.0), p.text_1);
+            paragraph(ui, &words, (font::LABEL, 400.0), p.text_1);
         });
 }
 

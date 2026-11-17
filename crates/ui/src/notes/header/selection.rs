@@ -25,7 +25,7 @@ const LEVELS: [Priority; 5] = [
 
 /// No entry chosen: the menus name what they do.
 const NONE: usize = usize::MAX;
-const GAP: f32 = gap::G8;
+const GAP: f32 = gap::CONTROLS;
 const TAG_WIDTH: f32 = 120.0;
 
 /// What only the row's drawing sees.
@@ -274,7 +274,7 @@ fn count(ui: &mut Ui, count: usize, language: i18n::Language) {
     let galley = widgets::text(
         ui,
         &words,
-        font::PT12_5,
+        font::BODY,
         600.0,
         FontFamily::Proportional,
         p.amber_text,

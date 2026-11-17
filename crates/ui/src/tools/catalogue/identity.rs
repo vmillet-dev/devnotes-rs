@@ -39,7 +39,7 @@ const SAMPLE_SEED: &str = "devnotes";
 const MONOGRAM: f32 = 104.0;
 /// A compact copy button and the gap before it.
 const COPY_ROOM: f32 = 36.0;
-const FACT_GAP: f32 = gap::G10;
+const FACT_GAP: f32 = gap::INSET;
 
 /// The request, and which draw of it: a new draw with the same options is a new request.
 type Asked = (IdentityRequest, u32);
@@ -269,10 +269,10 @@ fn block(ui: &mut Ui, id: &str, title: i18n::Key, rows: &[Row], language: Langua
 fn fact_name(ui: &mut Ui, name: &str, mark: Option<&str>) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
-        paragraph(ui, &name.to_uppercase(), (font::PT10_5, 500.0), p.text_2);
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
+        paragraph(ui, &name.to_uppercase(), (font::CAPTION, 500.0), p.text_2);
         if let Some(mark) = mark {
-            paragraph(ui, mark, (font::PT10_5, 500.0), p.amber_text);
+            paragraph(ui, mark, (font::CAPTION, 500.0), p.amber_text);
         }
     });
 }
@@ -289,7 +289,7 @@ fn fact(
     fact_name(ui, name, None);
     let ink = palette(ui.ctx()).text_0;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let copy_room = if copied.is_some() { COPY_ROOM } else { 0.0 };
         let room = ui.available_width() - copy_room;
         ui.allocate_ui(Vec2::new(room, 0.0), |ui| {
@@ -308,9 +308,9 @@ fn number(ui: &mut Ui, row: &Row, author_id: &str, language: Language) {
     let mark = row.mark.map(|it| i18n::translate(language, it.word(), &[]));
     fact_name(ui, &row.name, mark.as_deref());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let shown = egui::RichText::new(&row.value)
-            .font(FontId::monospace(font::PT13))
+            .font(FontId::monospace(font::READING))
             .color(palette(ui.ctx()).text_0);
         let said = ui.add(egui::Label::new(shown).selectable(true));
         address(ui, &said, author_id);
@@ -325,11 +325,11 @@ fn draw_monogram(ui: &mut Ui, letters: &str) {
     let p = palette(ui.ctx());
     let side = Vec2::new(MONOGRAM, MONOGRAM * 1.25);
     let (rect, response) = ui.allocate_exact_size(side, Sense::hover());
-    let corner = CornerRadius::same(radius::R10);
+    let corner = CornerRadius::same(radius::CARD);
     let edge = Stroke::new(1.0, p.line);
     ui.painter()
         .rect(rect, corner, p.bg_2, edge, egui::StrokeKind::Inside);
-    let shown = widgets::wrapped(ui, letters, (font::PT38, 700.0), p.text_2, MONOGRAM);
+    let shown = widgets::wrapped(ui, letters, (font::HERO, 700.0), p.text_2, MONOGRAM);
     let at = rect.center() - shown.size() / 2.0;
     shown.paint(ui, at, p.text_2);
     address(ui, &response, "identity-monogram");
@@ -345,14 +345,14 @@ fn card_head(ui: &mut Ui, person: &Identity, language: Language) {
             ne: 14,
             ..CornerRadius::ZERO
         })
-        .inner_margin(gap::margin(gap::G18, gap::G10))
+        .inner_margin(gap::margin(gap::BLOCKS, gap::INSET))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.set_width(ui.available_width());
-                paragraph(ui, &kind.to_uppercase(), (font::PT11, 700.0), p.amber_text);
+                paragraph(ui, &kind.to_uppercase(), (font::META, 700.0), p.amber_text);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let name = country_name(language, person.country);
-                    let said = paragraph(ui, &name, (font::PT12, 400.0), p.text_1);
+                    let said = paragraph(ui, &name, (font::LABEL, 400.0), p.text_1);
                     address(ui, &said, "identity-card-country");
                 });
             });
@@ -362,7 +362,7 @@ fn card_head(ui: &mut Ui, person: &Identity, language: Language) {
 fn card_facts(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language: Language) {
     use keys::tools::identity as words;
     let tr = |key| i18n::translate(language, key, &[]);
-    ui.spacing_mut().item_spacing.y = gap::G2;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     let person = &answer.person;
     let (given, copied) = (person.given_names.join(", "), person.given_names.join(" "));
     let (name, shown) = (tr(words::fields::SURNAME), person.surname.to_uppercase());
@@ -370,7 +370,7 @@ fn card_facts(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language: 
     fact(
         ui,
         surname,
-        (font::PT22, 700.0),
+        (font::DISPLAY, 700.0),
         Some(&person.surname),
         "identity-surname",
         language,
@@ -380,7 +380,7 @@ fn card_facts(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language: 
     fact(
         ui,
         names,
-        (font::PT16, 600.0),
+        (font::HEADING, 600.0),
         Some(&copied),
         "identity-given",
         language,
@@ -401,7 +401,7 @@ fn card_facts(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language: 
             format!("{} {aged}", i18n::format::date_long(birth, language))
         },
     );
-    let short = (font::PT13, 500.0);
+    let short = (font::READING, 500.0);
     ui.columns(2, |halves| {
         let name = tr(words::SEX);
         fact(
@@ -454,15 +454,15 @@ fn person_card(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language:
     let shown = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             card_head(ui, &answer.person, language);
             egui::Frame::new()
-                .inner_margin(gap::margin(gap::G18, gap::G18))
+                .inner_margin(gap::margin(gap::BLOCKS, gap::BLOCKS))
                 .show(ui, |ui| {
                     ui.horizontal_top(|ui| {
-                        ui.spacing_mut().item_spacing.x = gap::G18;
+                        ui.spacing_mut().item_spacing.x = gap::BLOCKS;
                         draw_monogram(ui, &monogram(&answer.person));
                         ui.vertical(|ui| card_facts(ui, answer, today, language));
                     });
@@ -547,7 +547,7 @@ impl IdentityTool {
         let pinned = !self.seed.trim().is_empty();
         label(ui, &name);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             ui.scope(|ui| {
                 ui.set_max_width(160.0);
                 TextField::new(&mut self.seed, &name, "identity-seed")
@@ -590,7 +590,7 @@ impl IdentityTool {
         use keys::tools::identity as words;
         let language = drawn.language;
         let tr = |key| i18n::translate(language, key, &[]);
-        ui.add_space(gap::G8);
+        ui.add_space(gap::CONTROLS);
         section_title(ui, &tr(words::BATCH));
         let formats = [
             (PeopleFormat::Json, tr(words::formats::JSON)),
@@ -614,7 +614,7 @@ impl IdentityTool {
         }
         label(ui, &tr(words::BATCH_COUNTRIES));
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = Vec2::splat(gap::G6);
+            ui.spacing_mut().item_spacing = Vec2::splat(gap::SNUG);
             for code in Country::ALL {
                 self.batch_chip(ui, code, language);
             }

@@ -26,7 +26,7 @@ const SCALES: [f32; 9] = [0.25, 0.4, 0.5, 0.67, 0.8, 1.0, 1.25, 1.5, 2.0];
 const START: Vec2 = vec2(16.0, 60.0);
 /// One press of Alt with an arrow: two columns across, one line down.
 const NUDGE: Vec2 = vec2(2.0, 1.0);
-const REVEAL_MARGIN: f32 = gap::G24;
+const REVEAL_MARGIN: f32 = gap::PANEL;
 
 /// Where the cursor is: a header is `row: None`. Kept by path, an answer renumbers the nodes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -640,11 +640,11 @@ fn overlays(ui: &mut Ui, explorer: &mut Explorer, ground: Rect, language: Langua
             .max_rect(at)
             .layout(egui::Layout::right_to_left(egui::Align::Center)),
     );
-    corner.spacing_mut().item_spacing.x = gap::G2;
+    corner.spacing_mut().item_spacing.x = gap::LINE;
     let p = palette(ui.ctx());
     corner.painter().rect(
         at,
-        CornerRadius::same(radius::R8),
+        CornerRadius::same(radius::MENU),
         p.bg_2,
         Stroke::new(1.0, p.line),
         StrokeKind::Inside,

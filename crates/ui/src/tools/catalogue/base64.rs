@@ -238,7 +238,7 @@ impl Base64Tool {
             address(ui, &said, "base64-facts");
         }
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G14;
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             let words = tr(keys::tools::base64::SPACED);
             check(ui, &mut self.spaced, &words, "base64-spaced");
             let words = tr(keys::tools::base64::UPPERCASE);
@@ -345,7 +345,7 @@ impl Base64Tool {
                 section_head(ui, &name, |ui| {
                     CopyValue::new(text, &tr(keys::tools::RESULT), language).show(ui);
                 });
-                let shown = egui::RichText::new(text).font(egui::FontId::monospace(font::PT12_5));
+                let shown = egui::RichText::new(text).font(egui::FontId::monospace(font::BODY));
                 let label = ui.add(egui::Label::new(shown).selectable(true));
                 address(ui, &label, "base64-output");
             }
@@ -355,7 +355,7 @@ impl Base64Tool {
                     .text(language);
                 let said = hint(ui, &words);
                 address(ui, &said, "base64-binary");
-                let shown = egui::RichText::new(preview).font(egui::FontId::monospace(font::PT12));
+                let shown = egui::RichText::new(preview).font(egui::FontId::monospace(font::LABEL));
                 ui.add(egui::Label::new(shown).selectable(true));
                 let words = tr(keys::tools::base64::SAVE_FILE);
                 if Button::new(&words, "base64-save-file").show(ui).clicked() {

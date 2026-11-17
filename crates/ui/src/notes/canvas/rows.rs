@@ -10,7 +10,7 @@ use engine::notes::view::NotesView;
 const CARD_MIN_WIDTH: f32 = 220.0;
 /// A heading's line, 11 px uppercase, and the 12 px under it.
 pub const HEADING_HEIGHT: f32 = 15.0;
-const HEADING_GAP: f32 = gap::G12;
+const HEADING_GAP: f32 = gap::GROUPS;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Row {

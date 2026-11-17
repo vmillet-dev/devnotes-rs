@@ -60,7 +60,7 @@ pub(super) fn text_box_of(
     let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
     ui.painter().rect(
         rect,
-        CornerRadius::same(radius::R8),
+        CornerRadius::same(radius::MENU),
         p.bg_1,
         Stroke::new(1.0, p.line),
         StrokeKind::Inside,
@@ -76,7 +76,7 @@ pub(super) fn text_box_of(
         .language(language)
         .gutter(false)
         .wrap(true)
-        .font(FontId::new(font::PT12_5, FontFamily::Monospace))
+        .font(FontId::new(font::BODY, FontFamily::Monospace))
         .show(&mut inside);
     (output.changed.map(|_| editor.text()), output.response)
 }
@@ -165,7 +165,7 @@ fn head(
         .map(|(kind, name)| (*kind, name.as_str()))
         .collect();
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G16;
+        ui.spacing_mut().item_spacing.x = gap::BLOCKS;
         let mut kind = BodyKind::of(&tab.draft.document.body);
         if Segmented::new(&options, "http-body-kind")
             .show(ui, &mut kind)
@@ -181,7 +181,7 @@ fn head(
             );
             let words = egui::RichText::new(words)
                 .monospace()
-                .size(font::PT12)
+                .size(font::LABEL)
                 .color(p.text_2);
             let shown = ui.add(egui::Label::new(words));
             widgets::address(ui, &shown, "http-body-type");
@@ -193,14 +193,14 @@ fn head(
 fn unusual(ui: &mut Ui, tab: &Tab, language: i18n::Language, actions: &mut Actions) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G12;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         let words = i18n::translate(
             language,
             keys::http::body::UNUSUAL,
             &[("method", tab.draft.method.as_str().into())],
         );
         let words = egui::RichText::new(words)
-            .size(font::PT12_5)
+            .size(font::BODY)
             .color(p.amber_text);
         let shown = ui.add(egui::Label::new(words));
         widgets::address(ui, &shown, "http-body-unusual");
@@ -269,7 +269,7 @@ fn status(
     let problem = said.and_then(|said| said.problem.as_ref());
     let blank = text.trim().is_empty();
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G12;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         let format = i18n::translate(language, keys::http::body::FORMAT, &[]);
         if Button::new(&format, "http-body-format")
             .enabled(problem.is_none() && !blank)
@@ -284,14 +284,14 @@ fn status(
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             if let Some(problem) = problem {
                 let words = egui::RichText::new(invalid(problem, language))
-                    .size(font::PT12)
+                    .size(font::LABEL)
                     .color(p.red);
                 let shown = ui.add(egui::Label::new(words).wrap());
                 widgets::address(ui, &shown, "http-body-problem");
             } else if !blank {
                 let words =
                     i18n::translate(language, keys::json::VALID, &[("format", "JSON".into())]);
-                let words = egui::RichText::new(words).size(font::PT12).color(p.green);
+                let words = egui::RichText::new(words).size(font::LABEL).color(p.green);
                 let shown = ui.add(egui::Label::new(words));
                 widgets::address(ui, &shown, "http-body-valid");
             }
@@ -303,7 +303,7 @@ fn file(ui: &mut Ui, tab: &Tab, path: &str, language: i18n::Language, actions: &
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G12;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         if Button::new(&tr(keys::http::body::CHOOSE_FILE), "http-body-choose")
             .show(ui)
             .clicked()
@@ -318,7 +318,7 @@ fn file(ui: &mut Ui, tab: &Tab, path: &str, language: i18n::Language, actions: &
             };
             let words = egui::RichText::new(words)
                 .monospace()
-                .size(font::PT12_5)
+                .size(font::BODY)
                 .color(p.text_1);
             let shown = ui.add(egui::Label::new(words).truncate());
             widgets::address(ui, &shown, "http-body-path");
@@ -330,7 +330,7 @@ fn file(ui: &mut Ui, tab: &Tab, path: &str, language: i18n::Language, actions: &
 fn hint(ui: &mut Ui, key: i18n::Key, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = egui::RichText::new(i18n::translate(language, key, &[]))
-        .size(font::PT12)
+        .size(font::LABEL)
         .color(p.text_2);
     ui.add(egui::Label::new(words).wrap());
 }

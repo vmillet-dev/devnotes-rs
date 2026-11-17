@@ -122,9 +122,9 @@ pub(super) fn band(
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let fits = body_width >= SIDE_BY_SIDE_FROM;
-    super::band(ui, gap::margin(gap::G20, gap::G8), true, |ui| {
+    super::band(ui, gap::margin(gap::PANEL, gap::CONTROLS), true, |ui| {
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G4;
+            ui.spacing_mut().item_spacing.x = gap::TIGHT;
             for (tab, key, author_id) in [
                 (Tab::Code, keys::json::tabs::CODE, "editor-view-code"),
                 (Tab::Graph, keys::json::tabs::GRAPH, "editor-view-graph"),
@@ -141,7 +141,7 @@ pub(super) fn band(
                     exploring.tab = tab;
                 }
             }
-            ui.add_space(gap::G12);
+            ui.add_space(gap::GROUPS);
             let hint = if fits {
                 keys::json::side_by_side::HINT
             } else {
@@ -172,7 +172,7 @@ pub(super) fn band(
                 let p = palette(ui.ctx());
                 let said = ui.label(
                     egui::RichText::new(tr(keys::json::side_by_side::NARROW))
-                        .size(font::PT11_5)
+                        .size(font::CONTROL)
                         .color(p.text_2),
                 );
                 widgets::address(ui, &said, "editor-side-by-side-narrow");
@@ -206,7 +206,7 @@ fn validity(ui: &mut Ui, view: &JsonView, format: StructureFormat, language: Lan
             p.red,
         ),
     };
-    let said = ui.label(egui::RichText::new(words).size(font::PT11_5).color(colour));
+    let said = ui.label(egui::RichText::new(words).size(font::CONTROL).color(colour));
     let (glyph, _) = ui.allocate_exact_size(egui::Vec2::splat(14.0), egui::Sense::hover());
     icons::paint(ui, glyph, mark, colour);
     let invalid = view.error.is_some();

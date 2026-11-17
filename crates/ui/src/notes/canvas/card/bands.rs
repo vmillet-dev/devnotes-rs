@@ -23,9 +23,9 @@ use crate::widgets::{MIN_TARGET, address};
 pub(super) const TOP_HEIGHT: f32 = 28.0;
 pub(super) const BOTTOM_HEIGHT: f32 = 22.0;
 /// From the band's edges to what it holds; the kind's tile sits closer, as a window's icon.
-const INSET: f32 = gap::G10;
-const TILE_INSET: f32 = gap::G6;
-const GAP: f32 = gap::G6;
+const INSET: f32 = gap::INSET;
+const TILE_INSET: f32 = gap::SNUG;
+const GAP: f32 = gap::SNUG;
 
 /// No fill but under the pointer; a hairline between each band and the rest of the card.
 pub(super) fn frame(ui: &Ui, (top, bottom): (Rect, Rect), hovered: bool, armed: bool) {
@@ -80,7 +80,7 @@ pub(super) fn top(
             .max_rect(Rect::from_min_max(band.min, pos2(right_end, band.bottom())))
             .layout(egui::Layout::right_to_left(egui::Align::Center)),
     );
-    right.spacing_mut().item_spacing.x = gap::G7;
+    right.spacing_mut().item_spacing.x = gap::SNUG;
     if note.pinned {
         pin(&mut right, language);
     }
@@ -191,7 +191,7 @@ fn tick(
     }
     response.widget_info(|| WidgetInfo::selected(Role::CheckBox, true, checked, &label));
     address(ui, &response, "note-card-check");
-    crate::theme::focus::ring(ui, &response, CornerRadius::same(radius::R4));
+    crate::theme::focus::ring(ui, &response, CornerRadius::same(radius::TAG));
     let colour = if checked { p.amber_text } else { p.text_2 };
     let square = Rect::from_center_size(target.center(), egui::Vec2::splat(13.0));
     tick_box(ui, square, checked, colour);
@@ -208,7 +208,7 @@ pub(super) fn bottom(ui: &mut Ui, band: Rect, note: &DisplayNote, context: &Cont
             .max_rect(inner)
             .layout(egui::Layout::right_to_left(egui::Align::Center)),
     );
-    right.spacing_mut().item_spacing.x = gap::G8;
+    right.spacing_mut().item_spacing.x = gap::CONTROLS;
     date(&mut right, note, context);
     if note.attachment_count > 0 {
         let count = note.attachment_count;
@@ -377,7 +377,7 @@ fn draw_place(ui: &mut Ui, place: &Place, left_middle: egui::Pos2, room: f32) ->
     if let Some(hue) = place.hue {
         let swatch = Rect::from_center_size(pos2(left + 3.5, middle), vec2(7.0, 7.0));
         ui.painter()
-            .rect_filled(swatch, CornerRadius::same(radius::R2), hue);
+            .rect_filled(swatch, CornerRadius::same(radius::MARK), hue);
         left = swatch.right() + 5.0;
     }
     let width = (room - (left - left_middle.x)).max(1.0);

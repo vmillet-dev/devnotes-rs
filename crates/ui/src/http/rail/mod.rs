@@ -93,7 +93,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: 
     let language = state.language;
     egui::Frame::new().inner_margin(margin).show(ui, |ui| {
         ui.set_min_height(ui.available_height());
-        ui.spacing_mut().item_spacing.y = gap::G6;
+        ui.spacing_mut().item_spacing.y = gap::SNUG;
         crate::titlebar::area_switch::rail(ui, Area::Http, language, actions);
         head(ui, view, actions, language);
         if view.creating_under(None).is_some() {
@@ -119,7 +119,7 @@ const FOOT: f32 = 116.0;
 /// The pages that take the place of the requests, and the jar.
 fn foot(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let tr = |key| i18n::translate(state.language, key, &[]);
-    ui.spacing_mut().item_spacing.y = gap::G2;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     let on = state.http.page() == Page::History;
     let words = tr(keys::http::history::TITLE);
     if foot_item(ui, &words, "http-history-open", on).clicked() {
@@ -148,15 +148,22 @@ fn foot_item(ui: &mut Ui, words: &str, author_id: &str, on: bool) -> egui::Respo
         Sense::click(),
         author_id,
         || WidgetInfo::selected(Role::Button, true, on, words),
-        CornerRadius::same(radius::R8),
+        CornerRadius::same(radius::MENU),
     );
     let rect = response.rect;
     if on || response.hovered() {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(radius::R8), p.bg_2);
+            .rect_filled(rect, CornerRadius::same(radius::MENU), p.bg_2);
     }
     let ink = if on { p.amber_text } else { p.text_1 };
-    let galley = widgets::text(ui, words, font::PT13, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(
+        ui,
+        words,
+        font::READING,
+        400.0,
+        FontFamily::Proportional,
+        ink,
+    );
     let at = pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, ink);
     response
@@ -195,7 +202,7 @@ fn head(ui: &mut Ui, view: &mut RailView, actions: &mut Actions, language: i18n:
         let galley = widgets::text(
             ui,
             &title,
-            font::PT10_5,
+            font::CAPTION,
             600.0,
             FontFamily::Proportional,
             p.text_2,
@@ -247,11 +254,11 @@ fn empty(ui: &mut Ui, view: &mut RailView, actions: &mut Actions, language: i18n
     let words = i18n::translate(language, keys::http::rail::EMPTY, &[]);
     let new = i18n::translate(language, keys::http::rail::NEW_COLLECTION, &[]);
     egui::Frame::new()
-        .inner_margin(gap::margin(gap::G10, gap::G4))
+        .inner_margin(gap::margin(gap::INSET, gap::TIGHT))
         .show(ui, |ui| {
             let label = egui::Label::new(
                 egui::RichText::new(&words)
-                    .size(font::PT11_5)
+                    .size(font::CONTROL)
                     .color(p.text_2),
             )
             .wrap();

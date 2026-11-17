@@ -190,7 +190,7 @@ fn ground(
     let frame = Rect::from_min_max(region.min + vec2(24.0, 16.0), region.max - vec2(24.0, 24.0));
     ui.painter().rect(
         frame,
-        CornerRadius::same(radius::R10),
+        CornerRadius::same(radius::CARD),
         p.bg_0,
         Stroke::new(1.0, p.line_soft),
         StrokeKind::Inside,
@@ -587,7 +587,7 @@ fn ghost(ui: &mut Ui, board: &BoardState, context: &card::Context<'_>, hand: &Ha
     let p = palette(ui.ctx());
     ghost_ui.painter().add(
         p.shadow_overlay
-            .as_shape(rect, CornerRadius::same(radius::R10)),
+            .as_shape(rect, CornerRadius::same(radius::CARD)),
     );
     let mut idle = CanvasView::default();
     card::show(
@@ -609,7 +609,7 @@ fn bands(ui: &Ui, hand: &Hand<'_>) {
         Kind::DrawZone => {
             ui.painter().rect_filled(
                 rect,
-                CornerRadius::same(radius::R10),
+                CornerRadius::same(radius::CARD),
                 p.amber_fill.gamma_multiply(0.08),
             );
             ui.painter().extend(Shape::dashed_line(
@@ -628,7 +628,7 @@ fn bands(ui: &Ui, hand: &Hand<'_>) {
         Kind::SelectBand => {
             ui.painter().rect(
                 rect,
-                CornerRadius::same(radius::R4),
+                CornerRadius::same(radius::TAG),
                 p.amber_fill.gamma_multiply(0.12),
                 Stroke::new(1.0, p.amber_dim),
                 StrokeKind::Inside,
@@ -678,7 +678,7 @@ fn dots(ui: &Ui, origin: Pos2) {
         while x <= clip.right() {
             painter.rect_filled(
                 Rect::from_center_size(pos2(x, y), Vec2::splat(2.0)),
-                CornerRadius::same(radius::R1),
+                CornerRadius::same(radius::MARK),
                 p.bg_2,
             );
             x += step;
@@ -693,7 +693,7 @@ fn empty(ui: &mut Ui, seen: Rect, language: i18n::Language, actions: &mut Action
     let galley = widgets::text(
         ui,
         &words,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_2,

@@ -138,17 +138,15 @@ fn unfolded(
     let p = palette(ui.ctx());
     let language = state.language;
     egui::Frame::new()
-        .inner_margin(gap::margin(gap::G20, gap::G8))
+        .inner_margin(gap::margin(gap::PANEL, gap::CONTROLS))
         .show(ui, |ui| {
             ui.set_min_size(ui.available_size());
-            ui.spacing_mut().item_spacing.y = gap::G6;
+            ui.spacing_mut().item_spacing.y = gap::SNUG;
             head(ui, state, (of, view), actions);
             let rows = rows_of(state, of.key, view.filter);
             if rows.is_empty() {
                 let words = i18n::translate(language, keys::http::console::EMPTY, &[]);
-                let words = egui::RichText::new(words)
-                    .size(font::PT12_5)
-                    .color(p.text_2);
+                let words = egui::RichText::new(words).size(font::BODY).color(p.text_2);
                 ui.add(egui::Label::new(words));
                 return;
             }
@@ -184,9 +182,9 @@ fn head(
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let title = egui::RichText::new(tr(keys::http::console::TITLE))
-            .size(font::PT12_5)
+            .size(font::BODY)
             .strong()
             .color(p.text_1);
         let said = ui.add(egui::Label::new(title));
@@ -208,7 +206,7 @@ fn head(
             }
         }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let fold = tr(keys::http::console::FOLD);
             if widgets::IconButton::new(Icon::ChevronDown, &fold, "http-console-fold")
                 .show(ui)
@@ -223,7 +221,7 @@ fn head(
                 actions.push(Asked::Http(Action::ClearConsole(of.key.to_owned())));
             }
             let masked = egui::RichText::new(tr(keys::http::console::MASKED))
-                .size(font::PT11_5)
+                .size(font::CONTROL)
                 .color(p.text_2);
             ui.add(egui::Label::new(masked));
         });
@@ -411,7 +409,7 @@ fn row(ui: &mut Ui, (event, headers): (&ConsoleEvent, bool), of: Of<'_>, languag
         let galley = widgets::text(
             ui,
             &time,
-            font::PT11,
+            font::META,
             400.0,
             FontFamily::Monospace,
             p.text_2,
@@ -432,7 +430,7 @@ fn row(ui: &mut Ui, (event, headers): (&ConsoleEvent, bool), of: Of<'_>, languag
         let galley = widgets::text(
             ui,
             &from,
-            font::PT11,
+            font::META,
             400.0,
             FontFamily::Proportional,
             p.text_2,

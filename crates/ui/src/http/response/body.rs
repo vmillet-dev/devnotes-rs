@@ -142,7 +142,7 @@ pub(super) fn show(
     if response.body.is_empty() {
         let words =
             egui::RichText::new(i18n::translate(language, keys::http::response::EMPTY, &[]))
-                .size(font::PT12_5)
+                .size(font::BODY)
                 .color(p.text_2);
         let said = ui.add(egui::Label::new(words));
         widgets::address(ui, &said, "http-response-empty");
@@ -185,7 +185,7 @@ fn views(
         offered.push((View::Tree, tr(keys::http::response::views::TREE)));
     }
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G10;
+        ui.spacing_mut().item_spacing.x = gap::INSET;
         let options: Vec<(View, &str)> = offered
             .iter()
             .map(|(view, name)| (*view, name.as_str()))
@@ -198,7 +198,7 @@ fn views(
                 keys::http::response::CUT
             };
             let words = egui::RichText::new(tr(key))
-                .size(font::PT11_5)
+                .size(font::CONTROL)
                 .color(p.text_2);
             let said = ui.add(egui::Label::new(words));
             widgets::address(ui, &said, "http-response-cut");
@@ -377,9 +377,7 @@ fn image(
         &[("type", kind.into())],
     );
     let said = ui.add(egui::Label::new(
-        egui::RichText::new(words)
-            .size(font::PT12_5)
-            .color(p.text_2),
+        egui::RichText::new(words).size(font::BODY).color(p.text_2),
     ));
     widgets::address(ui, &said, "http-response-binary");
 }

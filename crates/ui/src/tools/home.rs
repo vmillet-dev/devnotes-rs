@@ -22,8 +22,8 @@ use crate::theme::{palette, spacing};
 use crate::widgets::{self, SearchField, address, hovered, interact, towards};
 
 const PANEL_MIN_WIDTH: f32 = 260.0;
-const PANEL_GAP: f32 = gap::G14;
-const SECTION_GAP: f32 = gap::G22;
+const PANEL_GAP: f32 = gap::BLOCKS;
+const SECTION_GAP: f32 = gap::PANEL;
 
 /// What only the home's drawing sees: what is typed, and the results as last drawn.
 #[derive(Default)]
@@ -147,7 +147,7 @@ fn head(ui: &mut Ui, state: &AppState, view: &mut HomeView, actions: &mut Action
     let galley = widgets::text(
         ui,
         &title,
-        font::PT17,
+        font::HEADING,
         700.0,
         FontFamily::Proportional,
         p.text_0,
@@ -202,7 +202,7 @@ fn subtitle(ui: &mut Ui, language: Language, room: f32) {
     let words = Message::new(keys::tools::COUNT)
         .with("count", count)
         .text(language);
-    let galley = widgets::one_line(ui, &words, (font::PT12, 400.0), p.text_2, room);
+    let galley = widgets::one_line(ui, &words, (font::LABEL, 400.0), p.text_2, room);
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     address(ui, &response, "tools-count");
@@ -224,7 +224,7 @@ fn filtered(ui: &mut Ui, filter: Filter, language: Language, actions: &mut Actio
     let galley = widgets::text(
         ui,
         &words,
-        font::PT14,
+        font::SUBTITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -237,7 +237,7 @@ fn filtered(ui: &mut Ui, filter: Filter, language: Language, actions: &mut Actio
     let back = widgets::text(
         ui,
         &all,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -248,7 +248,7 @@ fn filtered(ui: &mut Ui, filter: Filter, language: Language, actions: &mut Actio
         Sense::click(),
         "tools-category-clear",
         || WidgetInfo::labeled(Role::Button, true, &all),
-        CornerRadius::same(radius::R4),
+        CornerRadius::same(radius::TAG),
     );
     let ink = towards(p.text_2, p.text_0, hovered(ui, &response));
     let at = response.rect.center() - back.size() / 2.0;
@@ -281,7 +281,7 @@ fn sections(
 
 fn section_title(ui: &mut Ui, words: &str) {
     super::ui::section_title(ui, words);
-    ui.add_space(gap::G10);
+    ui.add_space(gap::INSET);
 }
 
 fn favourites(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
@@ -295,7 +295,7 @@ fn favourites(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         &i18n::translate(language, keys::tools::favourites::TITLE, &[]),
     );
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(gap::G8);
+        ui.spacing_mut().item_spacing = Vec2::splat(gap::CONTROLS);
         for tool in tools {
             let id = format!("tools-favourite-{}", tool.id);
             if chip(ui, tool, language, None, &id).clicked() {
@@ -320,7 +320,7 @@ fn recents(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     section_title(ui, &i18n::translate(language, keys::tools::RECENTS, &[]));
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(gap::G8);
+        ui.spacing_mut().item_spacing = Vec2::splat(gap::CONTROLS);
         for (tool, at) in shown {
             let (when, change) = time::relative(at, state.clock.as_ref());
             ui.ctx().request_repaint_after(change);
@@ -343,19 +343,19 @@ fn chip(
 ) -> Response {
     let p = palette(ui.ctx());
     let name = tool.name(language);
-    let galley = widgets::wrapped(ui, &name, (font::PT12_5, 400.0), p.text_0, f32::INFINITY);
+    let galley = widgets::wrapped(ui, &name, (font::BODY, 400.0), p.text_0, f32::INFINITY);
     let when = when.map(|when| {
         widgets::text(
             ui,
             when,
-            font::PT11,
+            font::META,
             400.0,
             FontFamily::Proportional,
             p.text_2,
         )
     });
     let room = when.as_ref().map_or(0.0, |when| when.size().x + 8.0);
-    let corner = CornerRadius::same(radius::R8);
+    let corner = CornerRadius::same(radius::MENU);
     let response = interact(
         ui,
         Vec2::new(
@@ -379,7 +379,7 @@ fn chip(
     let middle = rect.center().y;
     let dot = Rect::from_center_size(Pos2::new(rect.left() + 14.0, middle), Vec2::splat(8.0));
     ui.painter()
-        .rect_filled(dot, CornerRadius::same(radius::R2), tool.category.hue(p));
+        .rect_filled(dot, CornerRadius::same(radius::MARK), tool.category.hue(p));
     let left = rect.left() + 26.0;
     let width = galley.size().x;
     let at = Pos2::new(left, middle - galley.size().y / 2.0);
@@ -474,7 +474,7 @@ fn panel_of(
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(radius::R12))
+        .corner_radius(CornerRadius::same(radius::PANEL))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.spacing_mut().item_spacing = Vec2::ZERO;
@@ -501,7 +501,7 @@ fn panel_head(ui: &mut Ui, panel: &Panel, language: Language) {
     let tile = Rect::from_min_size(rect.min + Vec2::new(14.0, 12.0), Vec2::splat(28.0));
     ui.painter().rect_filled(
         tile,
-        CornerRadius::same(radius::R7),
+        CornerRadius::same(radius::CONTROL),
         hue.gamma_multiply(0.15),
     );
     let glyph = Rect::from_center_size(tile.center(), Vec2::splat(15.0));
@@ -510,7 +510,7 @@ fn panel_head(ui: &mut Ui, panel: &Panel, language: Language) {
     let galley = widgets::text(
         ui,
         &name,
-        font::PT13,
+        font::READING,
         700.0,
         FontFamily::Proportional,
         p.text_0,
@@ -521,7 +521,7 @@ fn panel_head(ui: &mut Ui, panel: &Panel, language: Language) {
     let galley = widgets::text(
         ui,
         &count,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Monospace,
         p.text_2,
@@ -553,11 +553,11 @@ fn tool_row(
     let width = ui.available_width();
     let name = tool.name(language);
     let room = width - 14.0 - 44.0;
-    let title = widgets::wrapped(ui, &name, (font::PT13, 600.0), p.text_0, room);
+    let title = widgets::wrapped(ui, &name, (font::READING, 600.0), p.text_0, room);
     let line = widgets::wrapped(
         ui,
         &tool.line(language),
-        (font::PT11_5, 400.0),
+        (font::CONTROL, 400.0),
         p.text_2,
         room,
     );
@@ -617,7 +617,7 @@ fn enter_mark(ui: &mut Ui, at: Pos2, language: Language) {
     widgets::tooltip(response, &hint);
     layer.painter().rect(
         cap,
-        CornerRadius::same(radius::R4),
+        CornerRadius::same(radius::TAG),
         p.bg_3,
         Stroke::new(1.0, p.line),
         egui::StrokeKind::Inside,
@@ -665,11 +665,11 @@ fn no_match(ui: &mut Ui, language: Language, query: &str) {
     let words = Message::new(keys::tools::NO_MATCH)
         .with("query", query)
         .text(language);
-    ui.add_space(gap::G16);
+    ui.add_space(gap::BLOCKS);
     let galley = widgets::wrapped(
         ui,
         &words,
-        (font::PT13, 400.0),
+        (font::READING, 400.0),
         p.text_1,
         ui.available_width() - 32.0,
     );

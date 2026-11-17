@@ -125,7 +125,7 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
         Stroke::new(1.0, p.line_soft),
     );
 
-    let inner = bar - gap::margin(gap::G12, 0.0);
+    let inner = bar - gap::margin(gap::GROUPS, 0.0);
     let mut sides = (inner.left(), inner.right());
     ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
         ui.horizontal_centered(|ui| {
@@ -157,7 +157,7 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
     let title = widgets::text(
         ui,
         METADATA.name,
-        font::PT12,
+        font::LABEL,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -200,12 +200,12 @@ fn menu_trigger(ui: &mut Ui, label: &str, author_id: &str) -> egui::Response {
     let probe = widgets::text(
         ui,
         label,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_2,
     );
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let size = Vec2::new(probe.size().x + 29.0, 24.0);
     let response = widgets::interact(
         ui,
@@ -224,7 +224,7 @@ fn menu_trigger(ui: &mut Ui, label: &str, author_id: &str) -> egui::Response {
     let words = widgets::text(
         ui,
         label,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         ink,
@@ -254,7 +254,7 @@ enum Tone {
 /// A line of the bar's menus: 7 × 10, 6 px, 12.5 px; `bg-3` under the pointer.
 fn menu_option(ui: &mut Ui, label: &str, author_id: &str, tone: Tone) -> egui::Response {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = widgets::interact(
         ui,
         Vec2::new(ui.available_width(), 29.0),
@@ -273,14 +273,7 @@ fn menu_option(ui: &mut Ui, label: &str, author_id: &str, tone: Tone) -> egui::R
         Tone::Plain if lit => p.text_0,
         Tone::Plain => p.text_1,
     };
-    let words = widgets::text(
-        ui,
-        label,
-        font::PT12_5,
-        400.0,
-        FontFamily::Proportional,
-        ink,
-    );
+    let words = widgets::text(ui, label, font::BODY, 400.0, FontFamily::Proportional, ink);
     let at = egui::pos2(
         response.rect.left() + 10.0,
         response.rect.center().y - words.size().y / 2.0,
@@ -308,7 +301,7 @@ fn theme_toggle(ui: &mut Ui, language: Language, actions: &mut Actions) {
         _ => (Icon::Sun, keys::settings::theme::TO_LIGHT),
     };
     let label = i18n::translate(language, label, &[]);
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = widgets::interact(
         ui,
         Vec2::new(27.0, 24.0),

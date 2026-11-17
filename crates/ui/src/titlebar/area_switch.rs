@@ -23,7 +23,7 @@ const AREAS: [(Area, Icon, Key, &str); 3] = [
 /// What the rail's switch takes in height, its frame included.
 const RAIL_OPTION: f32 = 46.0;
 /// Below the rail's switch, on top of what the rail keeps between its parts.
-const RAIL_GAP: f32 = gap::G4;
+const RAIL_GAP: f32 = gap::TIGHT;
 
 /// One area's control, its tooltip naming the key; the click is taken here.
 fn option(
@@ -40,7 +40,7 @@ fn option(
         Sense::click(),
         &format!("area-option-{id}"),
         || WidgetInfo::selected(Role::Tab, true, on, name),
-        CornerRadius::same(radius::R6),
+        CornerRadius::same(radius::CONTROL),
     );
     let hint = Message::new(keys::areas::HINT)
         .with("area", name)
@@ -50,7 +50,7 @@ fn option(
     if on {
         let fill = palette(ui.ctx()).bg_3;
         ui.painter()
-            .rect_filled(response.rect, CornerRadius::same(radius::R6), fill);
+            .rect_filled(response.rect, CornerRadius::same(radius::CONTROL), fill);
     }
     if response.clicked() && !on {
         actions.push(Asked::App(AppAction::ShowArea(area)));
@@ -75,10 +75,10 @@ pub(super) fn bar(ui: &mut Ui, current: Area, language: Language, actions: &mut 
     let group = egui::Frame::new()
         .fill(p.bg_2)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(radius::R7))
-        .inner_margin(gap::margin(gap::G2, gap::G2))
+        .corner_radius(CornerRadius::same(radius::CONTROL))
+        .inner_margin(gap::margin(gap::LINE, gap::LINE))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.x = gap::G4;
+            ui.spacing_mut().item_spacing.x = gap::TIGHT;
             ui.horizontal(|ui| {
                 for (rank, (area, icon, name, id)) in AREAS.into_iter().enumerate() {
                     let name = i18n::translate(language, name, &[]);
@@ -99,10 +99,10 @@ pub(crate) fn rail(ui: &mut Ui, current: Area, language: Language, actions: &mut
     let group = egui::Frame::new()
         .fill(p.bg_2)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(radius::R9))
-        .inner_margin(gap::margin(gap::G3, gap::G3))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::LINE, gap::LINE))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.x = gap::G4;
+            ui.spacing_mut().item_spacing.x = gap::TIGHT;
             let width = (ui.available_width() - 8.0) / 3.0;
             ui.horizontal(|ui| {
                 for (rank, (area, icon, name, id)) in AREAS.into_iter().enumerate() {
@@ -122,7 +122,7 @@ pub(crate) fn rail(ui: &mut Ui, current: Area, language: Language, actions: &mut
                     let words = widgets::text(
                         ui,
                         &name,
-                        font::PT11,
+                        font::META,
                         weight,
                         FontFamily::Proportional,
                         colour,

@@ -117,7 +117,7 @@ impl UrlCodecTool {
         let options = [(Tab::Codec, tr(tabs::CODEC)), (Tab::Parse, tr(tabs::PARSE))];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G16;
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             Segmented::new(&options, "url-tab").show(ui, &mut self.tab);
             if self.tab == Tab::Codec {
                 let options = [
@@ -348,7 +348,7 @@ impl Tool for UrlCodecTool {
 
     fn ui(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
         self.bar(ui, drawn.language);
-        ui.add_space(gap::G12);
+        ui.add_space(gap::GROUPS);
         match self.tab {
             Tab::Codec => columns(ui, self, drawn, (Self::decoded, Self::encoded)),
             Tab::Parse => columns(ui, self, drawn, (Self::parse_input, Self::parse_output)),

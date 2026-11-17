@@ -15,7 +15,7 @@ use crate::theme::palette;
 use crate::widgets::{self, Button, Kind, address, hovered, interact, towards};
 
 /// The body's margin, on every side.
-const PADDING: f32 = gap::G20;
+const PADDING: f32 = gap::PANEL;
 
 pub(super) fn show(
     ui: &mut Ui,
@@ -66,7 +66,7 @@ fn head(
     }
     let p = palette(ui.ctx());
     let name = entry.name(language);
-    let galley = widgets::wrapped(ui, &name, (font::PT16, 700.0), p.text_0, f32::INFINITY);
+    let galley = widgets::wrapped(ui, &name, (font::HEADING, 700.0), p.text_0, f32::INFINITY);
     let (rect, title) = ui.allocate_exact_size(galley.size(), Sense::hover());
     title.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &name));
     address(ui, &title, "tool-title");
@@ -77,7 +77,7 @@ fn head(
         actions.push(Asked::Tools(Action::ToggleFavourite(entry.id)));
     }
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G10;
+        ui.spacing_mut().item_spacing.x = gap::INSET;
         let tool = view.session(entry);
         if tool.keeps_result() {
             save_as_note(ui, entry, tool, language, actions);
@@ -148,7 +148,7 @@ fn crumb(ui: &mut Ui, words: &str) -> egui::Response {
     let galley = widgets::text(
         ui,
         &shown,
-        font::PT12_5,
+        font::BODY,
         400.0,
         egui::FontFamily::Proportional,
         p.text_2,
@@ -159,7 +159,7 @@ fn crumb(ui: &mut Ui, words: &str) -> egui::Response {
         Sense::click(),
         "tool-back",
         || WidgetInfo::labeled(Role::Button, true, words),
-        CornerRadius::same(radius::R4),
+        CornerRadius::same(radius::TAG),
     );
     let ink = towards(p.text_2, p.text_0, hovered(ui, &response));
     let at = response.rect.left_center() - Vec2::new(0.0, galley.size().y / 2.0);

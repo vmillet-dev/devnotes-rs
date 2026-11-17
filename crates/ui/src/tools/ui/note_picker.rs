@@ -135,14 +135,14 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::tools::from_note::TITLE);
-    let heading = super::paragraph(ui, &title, (font::PT15, 600.0), p.text_0);
+    let heading = super::paragraph(ui, &title, (font::TITLE, 600.0), p.text_0);
     address(ui, &heading, "note-picker");
     let accepted = super::paragraph(
         ui,
         &accepted(picker.accepts, language),
-        (font::PT12, 400.0),
+        (font::LABEL, 400.0),
         p.text_2,
     );
     address(ui, &accepted, "note-picker-accepted");
@@ -169,7 +169,7 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
         .max_height(320.0)
         .auto_shrink([false, true])
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = gap::G2;
+            ui.spacing_mut().item_spacing.y = gap::LINE;
             for card in &notes {
                 let row = option(ui, state, card);
                 results.push(row.id);
@@ -183,7 +183,7 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
                 } else {
                     keys::tools::from_note::NONE_FOUND
                 };
-                let none = super::paragraph(ui, &tr(key), (font::PT12_5, 400.0), p.text_2);
+                let none = super::paragraph(ui, &tr(key), (font::BODY, 400.0), p.text_2);
                 address(ui, &none, "note-picker-none");
             }
         });
@@ -235,7 +235,7 @@ fn option(ui: &mut Ui, state: &AppState, card: &engine::notes::view::Card) -> eg
     } else {
         note.title.clone()
     };
-    let corner = CornerRadius::same(radius::R7);
+    let corner = CornerRadius::same(radius::CONTROL);
     let width = ui.available_width();
     let response = interact(
         ui,
@@ -248,24 +248,24 @@ fn option(ui: &mut Ui, state: &AppState, card: &engine::notes::view::Card) -> eg
     let rect = response.rect;
     let fill = towards(egui::Color32::TRANSPARENT, p.bg_2, hovered(ui, &response));
     ui.painter().rect_filled(rect, corner, fill);
-    let inner = rect - gap::margin(gap::G8, 0.0);
+    let inner = rect - gap::margin(gap::CONTROLS, 0.0);
     let mut row = ui.new_child(
         egui::UiBuilder::new()
             .max_rect(inner)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    row.spacing_mut().item_spacing.x = gap::G8;
+    row.spacing_mut().item_spacing.x = gap::CONTROLS;
     let badge = kind_mark(&mut row, note.kind, note.language, locale);
     let place = where_of(state, card);
     let tail = widgets::one_line(
         &row,
         &place,
-        (font::PT11_5, 400.0),
+        (font::CONTROL, 400.0),
         p.text_2,
         inner.width() * 0.35,
     );
     let room = inner.right() - badge.rect.right() - tail.size().x - 24.0;
-    let name = widgets::one_line(&row, &title, (font::PT13, 400.0), p.text_0, room);
+    let name = widgets::one_line(&row, &title, (font::READING, 400.0), p.text_0, room);
     let (at, _) = row.allocate_exact_size(name.size(), Sense::hover());
     row.painter().galley(at.min, name, p.text_0);
     let right = egui::pos2(

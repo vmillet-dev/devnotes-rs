@@ -93,15 +93,15 @@ fn count_cell(
     let width = ui.available_width();
     let name = i18n::translate(language, name, &[]);
     let figure = figure.to_string();
-    let label = widgets::wrapped(ui, &name, (font::PT12, 400.0), p.text_2, width * 0.6);
+    let label = widgets::wrapped(ui, &name, (font::LABEL, 400.0), p.text_2, width * 0.6);
     let under = under.map(|key| {
         let words = i18n::translate(language, key, &[]);
-        widgets::wrapped(ui, &words, (font::PT10_5, 400.0), p.text_2, width * 0.6)
+        widgets::wrapped(ui, &words, (font::CAPTION, 400.0), p.text_2, width * 0.6)
     });
     let number = widgets::text(
         ui,
         &figure,
-        font::PT16,
+        font::HEADING,
         400.0,
         FontFamily::Monospace,
         p.text_0,
@@ -134,8 +134,8 @@ fn count_card(ui: &mut Ui, stats: &TextStats, language: Language) {
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(radius::R10))
-        .inner_margin(gap::margin(gap::G14, gap::G2))
+        .corner_radius(CornerRadius::same(radius::CARD))
+        .inner_margin(gap::margin(gap::BLOCKS, gap::LINE))
         .show(ui, |ui| {
             let width = ui.available_width();
             ui.set_width(width);
@@ -147,7 +147,7 @@ fn count_card(ui: &mut Ui, stats: &TextStats, language: Language) {
             let across = (((width + 24.0) / (COUNT_MIN + 24.0)).floor() as usize).max(1);
             #[expect(clippy::cast_precision_loss, reason = "a few columns")]
             let each = (width - 24.0 * (across - 1) as f32) / across as f32;
-            ui.spacing_mut().item_spacing = Vec2::new(gap::G24, 0.0);
+            ui.spacing_mut().item_spacing = Vec2::new(gap::PANEL, 0.0);
             for line in counts(stats).chunks(across) {
                 ui.horizontal_top(|ui| {
                     for count in line {
@@ -173,7 +173,7 @@ fn frequency_head(ui: &mut Ui, language: Language) {
     let middle = rect.center().y;
     let column = |key, left: f32, right: bool| {
         let family = FontFamily::Proportional;
-        let shown = widgets::text(ui, &tr(key), font::PT11, 500.0, family, p.text_2);
+        let shown = widgets::text(ui, &tr(key), font::META, 500.0, family, p.text_2);
         let x = rect.left() + left - if right { shown.size().x } else { 0.0 };
         let at = Pos2::new(x, middle - shown.size().y / 2.0);
         ui.painter().galley(at, shown, p.text_2);
@@ -206,7 +206,7 @@ fn frequency_row(ui: &mut Ui, frequency: &Frequency, most: u32, language: Langua
         move |ui: &Ui, words: &str, size: f32| widgets::text(ui, words, size, 400.0, family, ink)
     };
     let name = if frequency.invisible.is_some() {
-        widgets::one_line(ui, &label, (font::PT11, 400.0), p.teal, width * 0.3)
+        widgets::one_line(ui, &label, (font::META, 400.0), p.teal, width * 0.3)
     } else {
         cell(p.text_0)(ui, &label, 13.0)
     };
@@ -230,7 +230,7 @@ fn frequency_row(ui: &mut Ui, frequency: &Frequency, most: u32, language: Langua
     let bar = Rect::from_min_size(share.min, Vec2::new(share.width() * filled, share.height()));
     ui.painter().rect_filled(
         bar,
-        CornerRadius::same(radius::R2),
+        CornerRadius::same(radius::MARK),
         p.amber_fill.gamma_multiply(0.25),
     );
     let percent = format!("{:.1} %", frequency.share);
@@ -286,7 +286,7 @@ impl TextStatsTool {
             address(ui, &said, "text-stats-distinct");
         });
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G14;
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             let words = tr(keys::tools::text_stats::FOLD_CASE);
             check(ui, &mut self.fold_case, &words, "text-stats-fold");
             let words = tr(keys::tools::text_stats::COUNT_WHITESPACE);
@@ -310,7 +310,7 @@ impl TextStatsTool {
         egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, p.line))
-            .corner_radius(CornerRadius::same(radius::R10))
+            .corner_radius(CornerRadius::same(radius::CARD))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.spacing_mut().item_spacing = Vec2::ZERO;

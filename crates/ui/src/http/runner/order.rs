@@ -49,7 +49,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut OrderView, actions:
         ],
     );
     let caption = egui::RichText::new(caption)
-        .size(font::PT12)
+        .size(font::LABEL)
         .color(p.text_2);
     let said = ui.add(egui::Label::new(caption));
     widgets::address(ui, &said, "http-runner-order");
@@ -81,7 +81,9 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut OrderView, actions:
     );
     ui.advance_cursor_after_rect(list);
     let hint = i18n::translate(language, keys::http::runner::ORDER_HINT, &[]);
-    let hint = egui::RichText::new(hint).size(font::PT11_5).color(p.text_2);
+    let hint = egui::RichText::new(hint)
+        .size(font::CONTROL)
+        .color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
 }
 
@@ -102,7 +104,7 @@ fn row(
         Sense::click(),
         "http-runner-row",
         || WidgetInfo::labeled(Role::ListItem, true, name),
-        CornerRadius::same(radius::R5),
+        CornerRadius::same(radius::CONTROL),
     );
     if response.clicked() {
         response.request_focus();
@@ -128,7 +130,7 @@ fn row(
             .max_rect(rect)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    inside.spacing_mut().item_spacing.x = gap::G4;
+    inside.spacing_mut().item_spacing.x = gap::TIGHT;
     let label = i18n::translate(
         language,
         keys::http::runner::INCLUDE,
@@ -249,7 +251,7 @@ fn words(ui: &mut Ui, shown: &Row) {
     let mark = widgets::text(
         ui,
         badge.short(),
-        font::PT11,
+        font::META,
         600.0,
         FontFamily::Monospace,
         hue,
@@ -262,6 +264,6 @@ fn words(ui: &mut Ui, shown: &Row) {
         name
     });
     name.push_str(&shown.name);
-    let name = egui::RichText::new(name).size(font::PT12_5).color(ink);
+    let name = egui::RichText::new(name).size(font::BODY).color(ink);
     ui.add(egui::Label::new(name).truncate().selectable(false));
 }

@@ -36,7 +36,7 @@ pub(super) fn show<'a>(
         .id_salt("http-response-tests")
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = gap::G6;
+            ui.spacing_mut().item_spacing.y = gap::SNUG;
             let mut group = None;
             for test in tests {
                 let holder = (test.level, test.owner.as_deref());
@@ -56,7 +56,7 @@ fn summary(ui: &mut Ui, passed: u32, failed: u32, language: i18n::Language) {
     let p = palette(ui.ctx());
     let total = passed + failed;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G10;
+        ui.spacing_mut().item_spacing.x = gap::INSET;
         let (words, hue, author_id) = if failed > 0 {
             let words = i18n::translate(
                 language,
@@ -69,7 +69,7 @@ fn summary(ui: &mut Ui, passed: u32, failed: u32, language: i18n::Language) {
             (words, p.green, "http-tests-passed")
         };
         let words = egui::RichText::new(words)
-            .size(font::PT12_5)
+            .size(font::BODY)
             .strong()
             .color(hue);
         let said = ui.add(egui::Label::new(words));
@@ -79,14 +79,14 @@ fn summary(ui: &mut Ui, passed: u32, failed: u32, language: i18n::Language) {
             keys::http::tests::RATIO,
             &[("passed", passed.into()), ("total", total.into())],
         );
-        let ratio = egui::RichText::new(ratio).size(font::PT12).color(p.text_2);
+        let ratio = egui::RichText::new(ratio).size(font::LABEL).color(p.text_2);
         let said = ui.add(egui::Label::new(ratio));
         widgets::address(ui, &said, "http-tests-ratio");
     });
     let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), BAR), Sense::hover());
     ui.painter().rect_filled(
         rect,
-        CornerRadius::same(radius::R3),
+        CornerRadius::same(radius::TAG),
         p.red.gamma_multiply(0.5),
     );
     if total > 0 {
@@ -95,7 +95,7 @@ fn summary(ui: &mut Ui, passed: u32, failed: u32, language: i18n::Language) {
         let right = rect.left() + rect.width() * share;
         let done = Rect::from_min_max(rect.min, pos2(right, rect.bottom()));
         ui.painter()
-            .rect_filled(done, CornerRadius::same(radius::R3), p.green);
+            .rect_filled(done, CornerRadius::same(radius::TAG), p.green);
     }
 }
 
@@ -109,7 +109,7 @@ fn heading(ui: &mut Ui, test: &TestResult, request: &str, language: i18n::Langua
     };
     let words = i18n::translate(language, key, &[("name", name.into())]);
     let words = egui::RichText::new(words)
-        .size(font::PT12)
+        .size(font::LABEL)
         .strong()
         .color(p.text_2);
     let said = ui.add(egui::Label::new(words));
@@ -121,7 +121,7 @@ fn row(ui: &mut Ui, test: &TestResult, openable: bool, language: i18n::Language)
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(14.0), Sense::hover());
         if test.skipped {
             let mark = Rect::from_center_size(rect.center(), Vec2::new(8.0, 1.5));
@@ -132,9 +132,7 @@ fn row(ui: &mut Ui, test: &TestResult, openable: bool, language: i18n::Language)
             icons::paint(ui, rect, Icon::X, p.red);
         }
         let ink = if test.skipped { p.text_2 } else { p.text_0 };
-        let words = egui::RichText::new(&test.name)
-            .size(font::PT12_5)
-            .color(ink);
+        let words = egui::RichText::new(&test.name).size(font::BODY).color(ink);
         let said = ui.add(egui::Label::new(words));
         widgets::address(ui, &said, "http-test");
     });
@@ -153,22 +151,22 @@ fn row(ui: &mut Ui, test: &TestResult, openable: bool, language: i18n::Language)
             );
             let words = egui::RichText::new(words)
                 .monospace()
-                .size(font::PT12)
+                .size(font::LABEL)
                 .color(p.text_1);
             let said = ui.add(egui::Label::new(words).wrap());
             widgets::address(ui, &said, "http-test-versus");
         } else if let Some(message) = &test.message {
-            let words = egui::RichText::new(message).size(font::PT12).color(p.red);
+            let words = egui::RichText::new(message).size(font::LABEL).color(p.red);
             let said = ui.add(egui::Label::new(words).wrap());
             widgets::address(ui, &said, "http-test-message");
         }
         let mut opened = false;
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             if let Some(code) = &test.code {
                 let words = egui::RichText::new(code)
                     .monospace()
-                    .size(font::PT12)
+                    .size(font::LABEL)
                     .color(p.text_2);
                 let said = ui.add(egui::Label::new(words).truncate());
                 widgets::address(ui, &said, "http-test-code");

@@ -110,7 +110,7 @@ pub fn dialog<R>(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay)
         .inner_margin(padding);
     let shown = egui::Modal::new(id)
@@ -138,7 +138,7 @@ pub fn framed_dialog<R>(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay);
     let room = ctx.content_rect().size() * 0.9;
     let shown = egui::Modal::new(id)

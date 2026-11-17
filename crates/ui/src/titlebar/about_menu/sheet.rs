@@ -27,7 +27,7 @@ pub(super) fn show(ctx: &egui::Context, state: &AppState, _actions: &mut Actions
             |ui| {
                 let p = palette(ui.ctx());
                 let hint = RichText::new(tr(keys::shortcuts::EDIT_HINT))
-                    .size(font::PT11_5)
+                    .size(font::CONTROL)
                     .color(p.text_2);
                 ui.label(hint);
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -49,7 +49,7 @@ fn body(ui: &mut Ui, state: &AppState) {
         let words = widgets::text(
             ui,
             &title,
-            font::PT11,
+            font::META,
             600.0,
             FontFamily::Proportional,
             p.text_2,
@@ -63,7 +63,7 @@ fn body(ui: &mut Ui, state: &AppState) {
         for row in &group.rows {
             line(ui, state, row);
         }
-        ui.add_space(gap::G12);
+        ui.add_space(gap::GROUPS);
     }
 }
 
@@ -79,16 +79,16 @@ fn line(ui: &mut Ui, state: &AppState, row: &SheetRow) {
             Layout::left_to_right(Align::Center),
             |ui| {
                 ui.add(
-                    egui::Label::new(RichText::new(label).size(font::PT12_5).color(p.text_1))
+                    egui::Label::new(RichText::new(label).size(font::BODY).color(p.text_1))
                         .truncate(),
                 );
             },
         );
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = gap::G4;
+            ui.spacing_mut().item_spacing.x = gap::TIGHT;
             for (at, cap) in caps.iter().rev().enumerate() {
                 if at > 0 {
-                    ui.label(RichText::new("+").size(font::PT11).color(p.text_2));
+                    ui.label(RichText::new("+").size(font::META).color(p.text_2));
                 }
                 Kbd(cap).show(ui);
             }

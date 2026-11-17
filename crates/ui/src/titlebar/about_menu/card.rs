@@ -34,7 +34,7 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> bool {
     let language = state.language;
     let p = palette(ui.ctx());
     let tr = |key: Key| i18n::translate(language, key, &[]);
-    ui.spacing_mut().item_spacing.y = gap::G8;
+    ui.spacing_mut().item_spacing.y = gap::CONTROLS;
     let name = Message::new(keys::about::TITLE)
         .with("app", METADATA.name)
         .text(language);
@@ -42,7 +42,7 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> bool {
         let words = widgets::text(
             ui,
             &name,
-            font::PT17,
+            font::HEADING,
             700.0,
             FontFamily::Proportional,
             p.text_0,
@@ -52,20 +52,20 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> bool {
         widgets::address(ui, &title, "about-dialog");
         let version = ui.label(
             RichText::new(format!("v{VERSION}"))
-                .size(font::PT11_5)
+                .size(font::CONTROL)
                 .monospace()
                 .color(p.text_2),
         );
         widgets::address(ui, &version, "about-version");
     });
     let description = RichText::new(tr(keys::about::DESCRIPTION))
-        .size(font::PT12_5)
+        .size(font::BODY)
         .color(p.text_1);
     ui.add(egui::Label::new(description).wrap());
-    ui.add_space(gap::G4);
+    ui.add_space(gap::TIGHT);
     let developer = format!("{} ({})", METADATA.author, METADATA.author_handle);
     fact(ui, &tr(keys::about::DEVELOPED_BY), |ui| {
-        ui.label(RichText::new(developer).size(font::PT12).color(p.text_1));
+        ui.label(RichText::new(developer).size(font::LABEL).color(p.text_1));
     });
     fact(ui, &tr(keys::about::REPOSITORY), |ui| {
         let label = METADATA.repository.trim_start_matches("https://");
@@ -85,9 +85,9 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> bool {
         METADATA.rust_version
     );
     fact(ui, &tr(keys::about::BUILT_WITH), |ui| {
-        ui.label(RichText::new(stack).size(font::PT12).color(p.text_1));
+        ui.label(RichText::new(stack).size(font::LABEL).color(p.text_1));
     });
-    ui.add_space(gap::G6);
+    ui.add_space(gap::SNUG);
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
         Button::new(&tr(keys::about::CLOSE), "about-close")
             .show(ui)
@@ -103,7 +103,7 @@ fn fact(ui: &mut Ui, name: &str, value: impl FnOnce(&mut Ui)) {
         let words = widgets::text(
             ui,
             name,
-            font::PT11_5,
+            font::CONTROL,
             400.0,
             FontFamily::Proportional,
             p.text_2,

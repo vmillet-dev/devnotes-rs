@@ -262,7 +262,7 @@ impl DatesTool {
         let tr = |key| i18n::translate(language, key, &[]);
         let name = tr(keys::tools::dates::INPUT_LABEL);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let room = ui.available_width() - 90.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -360,13 +360,13 @@ impl DatesTool {
             .text(language);
         let groups = groups_of(forms, now, language);
         card(ui, "dates-forms", |ui| {
-            ui.add_space(gap::G12);
+            ui.add_space(gap::GROUPS);
             ui.horizontal(|ui| {
-                ui.add_space(gap::G16);
-                let said = paragraph(ui, &heading, (font::PT14, 600.0), p.text_0);
+                ui.add_space(gap::BLOCKS);
+                let said = paragraph(ui, &heading, (font::SUBTITLE, 600.0), p.text_0);
                 address(ui, &said, "dates-heading");
-                ui.add_space(gap::G12);
-                paragraph(ui, &zone, (font::PT11_5, 400.0), p.text_2);
+                ui.add_space(gap::GROUPS);
+                paragraph(ui, &zone, (font::CONTROL, 400.0), p.text_2);
             });
             for (group, rows) in &groups {
                 group_title(
@@ -403,7 +403,7 @@ impl DatesTool {
         let to = tr(keys::tools::dates::fields::TO);
         label(ui, &to);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let room = ui.available_width() - 90.0;
             ui.scope(|ui| {
                 ui.set_max_width(room);
@@ -479,13 +479,13 @@ impl DatesTool {
                     .collect();
                 let iso_name = said(language, "tools.dates.totals.iso", &[]);
                 card(ui, "dates-duration-read", |ui| {
-                    ui.add_space(gap::G12);
+                    ui.add_space(gap::GROUPS);
                     ui.horizontal(|ui| {
-                        ui.add_space(gap::G16);
-                        let shown = paragraph(ui, &words, (font::PT14, 600.0), p.text_0);
+                        ui.add_space(gap::BLOCKS);
+                        let shown = paragraph(ui, &words, (font::SUBTITLE, 600.0), p.text_0);
                         address(ui, &shown, "dates-duration-words");
                     });
-                    ui.add_space(gap::G8);
+                    ui.add_space(gap::CONTROLS);
                     let mut rows = Vec::new();
                     if *from_words {
                         rows.push(ResultRow::new(&iso_name, iso));
@@ -642,10 +642,10 @@ fn measured(ui: &mut Ui, answer: &DurationsAnswer, language: Language) {
         .map(|(id, _)| said(language, &format!("tools.dates.elapsedRows.{id}"), &[]));
     let words = spell_calendar(calendar, *negative, language);
     card(ui, "dates-gap", |ui| {
-        ui.add_space(gap::G12);
+        ui.add_space(gap::GROUPS);
         ui.horizontal(|ui| {
-            ui.add_space(gap::G16);
-            let shown = paragraph(ui, &words, (font::PT14, 600.0), p.text_0);
+            ui.add_space(gap::BLOCKS);
+            let shown = paragraph(ui, &words, (font::SUBTITLE, 600.0), p.text_0);
             address(ui, &shown, "dates-gap-calendar");
         });
         group_title(ui, &tr(keys::tools::dates::ELAPSED_TITLE));
@@ -716,14 +716,14 @@ impl Tool for DatesTool {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         Segmented::new(&options, "dates-tab").show(ui, &mut self.tab);
-        ui.add_space(gap::G12);
+        ui.add_space(gap::GROUPS);
         match self.tab {
             Tab::Convert => {
                 egui::ScrollArea::vertical()
                     .id_salt("dates-convert")
                     .auto_shrink(false)
                     .show(ui, |ui| {
-                        ui.spacing_mut().item_spacing.y = gap::G10;
+                        ui.spacing_mut().item_spacing.y = gap::INSET;
                         self.convert(ui, drawn);
                     });
             }

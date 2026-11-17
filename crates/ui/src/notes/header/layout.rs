@@ -5,7 +5,7 @@
 use crate::theme::tokens::gap;
 
 /// Between two controls, and between the groups.
-pub(super) const GAP: f32 = gap::G10;
+pub(super) const GAP: f32 = gap::INSET;
 /// The search stops growing there.
 pub(super) const SEARCH_WIDEST: f32 = 520.0;
 

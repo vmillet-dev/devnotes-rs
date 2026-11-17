@@ -166,7 +166,7 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     let words = widgets::text(
         ui,
         &title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -251,11 +251,11 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
 
 fn pages_rail(ui: &mut Ui, state: &AppState, view: &mut View) {
     let p = palette(ui.ctx());
-    ui.spacing_mut().item_spacing.y = gap::G2;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     for (page, name, id) in Page::ALL {
         let name = i18n::translate(state.language, name, &[]);
         let on = view.page == page;
-        let corner = CornerRadius::same(radius::R6);
+        let corner = CornerRadius::same(radius::CONTROL);
         let response = widgets::interact(
             ui,
             Vec2::new(ui.available_width(), 31.0),
@@ -277,14 +277,7 @@ fn pages_rail(ui: &mut Ui, state: &AppState, view: &mut View) {
         } else {
             p.text_1
         };
-        let words = widgets::text(
-            ui,
-            &name,
-            font::PT12_5,
-            400.0,
-            FontFamily::Proportional,
-            ink,
-        );
+        let words = widgets::text(ui, &name, font::BODY, 400.0, FontFamily::Proportional, ink);
         let at = egui::pos2(
             response.rect.left() + 10.0,
             response.rect.center().y - words.size().y / 2.0,
@@ -306,14 +299,14 @@ fn current_page(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Ac
     let words = widgets::text(
         ui,
         &name,
-        font::PT13,
+        font::READING,
         600.0,
         FontFamily::Proportional,
         p.text_0,
     );
     let (rect, _) = ui.allocate_exact_size(words.size(), Sense::hover());
     ui.painter().galley(rect.min, words, p.text_0);
-    ui.add_space(gap::G14);
+    ui.add_space(gap::BLOCKS);
     let Some(draft) = &mut view.draft else {
         return;
     };
@@ -342,7 +335,7 @@ fn buttons(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions) {
     let tr = |key| i18n::translate(language, key, &[]);
     if view.page == Page::General {
         let hint = egui::RichText::new(tr(keys::settings::PREVIEW_HINT))
-            .size(font::PT11_5)
+            .size(font::CONTROL)
             .color(p.text_2);
         let room = Vec2::new(ui.available_width() - BUTTONS, FOOTER);
         ui.allocate_ui_with_layout(room, Layout::left_to_right(Align::Center), |ui| {
@@ -350,7 +343,7 @@ fn buttons(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions) {
         });
     }
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let mut ask = |ask| actions.push(Asked::Menu(Action::Preferences(ask)));
         if Button::new(&tr(keys::settings::OK), "settings-close")
             .kind(Kind::Filled)
@@ -382,10 +375,10 @@ fn confirming(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions)
     let said = Message::new(keys::settings::UNAPPLIED)
         .with("count", view.pending(state))
         .text(language);
-    let warning = ui.label(egui::RichText::new(said).size(font::PT12).color(p.red));
+    let warning = ui.label(egui::RichText::new(said).size(font::LABEL).color(p.red));
     widgets::address(ui, &warning, "settings-unapplied");
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let mut ask = |ask| actions.push(Asked::Menu(Action::Preferences(ask)));
         if Button::new(&tr(keys::settings::APPLY_AND_CLOSE), "settings-apply-close")
             .kind(Kind::Filled)

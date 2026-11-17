@@ -98,12 +98,12 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::tools::save_as_note::TITLE);
     let words = widgets::text(
         ui,
         &title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -117,7 +117,7 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
         asked.what,
         &[("language", asked.language.as_str().into())],
     );
-    let what = egui::RichText::new(what).size(font::PT12_5).color(p.text_2);
+    let what = egui::RichText::new(what).size(font::BODY).color(p.text_2);
     let said = ui.add(egui::Label::new(what).wrap());
     widgets::address(ui, &said, "save-as-note-what");
     let label = tr(keys::tools::save_as_note::NOTE_TITLE);
@@ -131,7 +131,7 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
         .show(ui);
     if let Some(warning) = asked.warning {
         let warning = egui::RichText::new(tr(warning))
-            .size(font::PT12_5)
+            .size(font::BODY)
             .color(p.red);
         let said = ui.add(egui::Label::new(warning).wrap());
         widgets::address(ui, &said, "save-as-note-warning");
@@ -139,7 +139,7 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
     let mut chosen = None;
     let can_save = !form.title.trim().is_empty() && !state.spaces.spaces().is_empty();
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let submit = if asked.warning.is_some() {
             keys::tools::save_as_note::SUBMIT_ANYWAY
         } else {
@@ -165,7 +165,7 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
 
 fn caption(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    let words = egui::RichText::new(words).size(font::PT12).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(words));
 }
 

@@ -151,9 +151,7 @@ pub(crate) fn show(
 fn label(ui: &mut Ui, row: &Row<'_>, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, row.label, &[]);
-    let words = egui::RichText::new(words)
-        .size(font::PT12_5)
-        .color(p.text_1);
+    let words = egui::RichText::new(words).size(font::BODY).color(p.text_1);
     ui.add(egui::Label::new(words));
 }
 
@@ -161,7 +159,7 @@ fn label(ui: &mut Ui, row: &Row<'_>, language: i18n::Language) {
 fn from(ui: &mut Ui, row: &Row<'_>, set: bool) {
     let p = palette(ui.ctx());
     let words = if set { "" } else { row.above };
-    let words = egui::RichText::new(words).size(font::PT12).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     let shown = ui.add(egui::Label::new(words));
     widgets::address(ui, &shown, "http-transport-from");
     ui.end_row();
@@ -225,7 +223,7 @@ fn insecure(ui: &mut Ui, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::http::transport::INSECURE, &[]);
     let words = egui::RichText::new(words)
-        .size(font::PT12_5)
+        .size(font::BODY)
         .color(p.amber_text);
     let shown = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &shown, "http-transport-insecure");

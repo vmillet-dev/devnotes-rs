@@ -81,7 +81,7 @@ impl LoremTool {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G16;
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             Segmented::new(&options, "lorem-unit").show(ui, &mut self.unit);
             let words = tr(keys::tools::lorem::COUNT);
             label(ui, &words);
@@ -119,12 +119,12 @@ impl LoremTool {
         egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, p.line_soft))
-            .corner_radius(CornerRadius::same(radius::R10))
-            .inner_margin(gap::margin(gap::G20, gap::G12))
+            .corner_radius(CornerRadius::same(radius::CARD))
+            .inner_margin(gap::margin(gap::PANEL, gap::GROUPS))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    let said = paragraph(ui, &words, (font::PT12_5, 600.0), p.text_2);
+                    let said = paragraph(ui, &words, (font::BODY, 600.0), p.text_2);
                     address(ui, &said, "lorem-counted");
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         CopyValue::new(&answer.text, "Lorem ipsum", language).show(ui);
@@ -134,13 +134,13 @@ impl LoremTool {
                             .clicked();
                     });
                 });
-                ui.add_space(gap::G4);
+                ui.add_space(gap::TIGHT);
                 egui::ScrollArea::vertical()
                     .id_salt("lorem-text")
                     .auto_shrink(false)
                     .show(ui, |ui| {
                         let text = egui::RichText::new(&answer.text)
-                            .size(font::PT13_5)
+                            .size(font::READING)
                             .color(p.text_0);
                         let shown = ui.add(egui::Label::new(text).wrap());
                         address(ui, &shown, "lorem-output");
@@ -163,7 +163,7 @@ impl Tool for LoremTool {
     fn ui(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
         let width = ui.available_width().min(MAX_WIDTH);
         ui.set_max_width(width);
-        ui.spacing_mut().item_spacing.y = gap::G16;
+        ui.spacing_mut().item_spacing.y = gap::BLOCKS;
         self.options(ui, drawn.language);
         self.held(ui, drawn.language);
         self.card(ui, drawn.language);

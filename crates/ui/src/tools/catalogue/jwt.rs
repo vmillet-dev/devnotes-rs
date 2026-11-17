@@ -88,12 +88,12 @@ fn json_block(ui: &mut Ui, text: &str, author_id: &str) {
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(egui::Stroke::new(1.0, p.line_soft))
-        .corner_radius(egui::CornerRadius::same(radius::R8))
-        .inner_margin(gap::margin(gap::G12, gap::G10))
+        .corner_radius(egui::CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::GROUPS, gap::INSET))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             let words = egui::RichText::new(text)
-                .font(egui::FontId::monospace(font::PT12))
+                .font(egui::FontId::monospace(font::LABEL))
                 .color(p.text_0);
             let shown = ui.add(egui::Label::new(words).selectable(true));
             address(ui, &shown, author_id);
@@ -162,7 +162,7 @@ impl JwtTool {
         if let Some(span) = when.and_then(|it| span(it, now)) {
             words = format!("{words} · {}", span.text(language));
         }
-        let said = paragraph(ui, &words, (font::PT12_5, 600.0), p.text_0);
+        let said = paragraph(ui, &words, (font::BODY, 600.0), p.text_0);
         address(ui, &said, "jwt-state");
         let ink = match verification {
             Verification::Valid => p.green,
@@ -178,7 +178,7 @@ impl JwtTool {
                 .with("family", family_name.as_str())
                 .text(language)
         });
-        let said = paragraph(ui, &verdict, (font::PT12_5, 400.0), ink);
+        let said = paragraph(ui, &verdict, (font::BODY, 400.0), ink);
         address(ui, &said, "jwt-verification");
         let algorithm = format!("{} · {family_name}", algorithm.as_deref().unwrap_or("—"));
         let title = tr(keys::tools::jwt::ALGORITHM);

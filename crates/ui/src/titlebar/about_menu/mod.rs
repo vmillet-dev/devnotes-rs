@@ -72,7 +72,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
 
 fn entries(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     ui.set_width(WIDTH);
-    ui.spacing_mut().item_spacing.y = gap::G2;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     let tr = |key| i18n::translate(state.language, key, &[]);
     let about = Message::new(keys::about::OPEN_ABOUT)
         .with("app", METADATA.name)
@@ -150,7 +150,7 @@ fn check_entry(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> Id {
     };
     if let Some(said) = said {
         let words = egui::RichText::new(said.text(language))
-            .size(font::PT11)
+            .size(font::META)
             .monospace()
             .color(p.text_2);
         let status = ui.label(words);
@@ -193,7 +193,7 @@ fn framed(
     let words = widgets::text(
         ui,
         title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -205,7 +205,7 @@ fn framed(
     heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, title));
     let under = ui.painter().layout(
         subtitle.to_owned(),
-        egui::FontId::proportional(font::PT11_5),
+        egui::FontId::proportional(font::CONTROL),
         p.text_2,
         whole.width() - 40.0,
     );
@@ -229,7 +229,7 @@ fn framed(
         .auto_shrink(false)
         .show(&mut page, |ui| {
             egui::Frame::new()
-                .inner_margin(gap::margin(gap::G20, gap::G14))
+                .inner_margin(gap::margin(gap::PANEL, gap::BLOCKS))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     body(ui);

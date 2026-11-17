@@ -304,7 +304,7 @@ fn said(ui: &mut Ui, faults: &[Option<VariableFault>], language: i18n::Language)
             continue;
         }
         let words = egui::RichText::new(i18n::translate(language, key, &[]))
-            .size(font::PT12)
+            .size(font::LABEL)
             .color(p.red);
         let shown = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &shown, "http-variable-fault");

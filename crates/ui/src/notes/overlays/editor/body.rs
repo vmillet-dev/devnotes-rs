@@ -36,11 +36,11 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, note: &DisplayNote, body: &mut
     let language = state.language;
     let (font, hint) = match note.kind {
         NoteKind::Note => (
-            FontId::new(font::PT14, FontFamily::Proportional),
+            FontId::new(font::SUBTITLE, FontFamily::Proportional),
             keys::editor::EMPTY_RICH,
         ),
         _ => (
-            FontId::new(font::PT13, FontFamily::Monospace),
+            FontId::new(font::READING, FontFamily::Monospace),
             keys::editor::EMPTY_BODY,
         ),
     };

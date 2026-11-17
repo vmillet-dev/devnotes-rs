@@ -87,27 +87,27 @@ pub(super) fn show(
     egui::Frame::new()
         .fill(p.red.gamma_multiply(0.1))
         .stroke(Stroke::new(1.0, p.red.gamma_multiply(0.4)))
-        .corner_radius(CornerRadius::same(radius::R8))
-        .inner_margin(gap::margin(gap::G12, gap::G10))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::GROUPS, gap::INSET))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = gap::G6;
+            ui.spacing_mut().item_spacing.y = gap::SNUG;
             let words = egui::RichText::new(title)
-                .size(font::PT13)
+                .size(font::READING)
                 .strong()
                 .color(p.text_0);
             let said = ui.add(egui::Label::new(words).wrap());
             widgets::address(ui, &said, "http-script-stop");
             let words = egui::RichText::new(message(stop, language))
                 .monospace()
-                .size(font::PT12)
+                .size(font::LABEL)
                 .color(p.red);
             let said = ui.add(egui::Label::new(words).wrap());
             widgets::address(ui, &said, "http-script-stop-message");
             let mut opened = false;
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = gap::G10;
+                ui.spacing_mut().item_spacing.x = gap::INSET;
                 if let Some(at) = where_words(stop, language) {
-                    let words = egui::RichText::new(at).size(font::PT12).color(p.text_2);
+                    let words = egui::RichText::new(at).size(font::LABEL).color(p.text_2);
                     let said = ui.add(egui::Label::new(words));
                     widgets::address(ui, &said, "http-script-stop-where");
                 }

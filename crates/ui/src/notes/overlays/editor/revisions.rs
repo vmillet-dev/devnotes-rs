@@ -51,7 +51,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     ui.painter()
         .hline(rect.x_range(), rect.top(), Stroke::new(1.0, p.line_soft));
     egui::Frame::new()
-        .inner_margin(gap::margin(gap::G20, gap::G6))
+        .inner_margin(gap::margin(gap::PANEL, gap::SNUG))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             toggle(ui, state, kept.len(), actions);
@@ -79,7 +79,7 @@ fn toggle(ui: &mut Ui, state: &AppState, count: usize, actions: &mut Actions) {
     let galley = widgets::text(
         ui,
         &words,
-        font::PT12,
+        font::LABEL,
         400.0,
         FontFamily::Proportional,
         p.text_1,
@@ -90,7 +90,7 @@ fn toggle(ui: &mut Ui, state: &AppState, count: usize, actions: &mut Actions) {
         Sense::click(),
         "revisions-toggle",
         || egui::WidgetInfo::labeled(egui::Role::Button, true, &words),
-        egui::CornerRadius::same(radius::R5),
+        egui::CornerRadius::same(radius::CONTROL),
     );
     let chevron = egui::Rect::from_center_size(
         egui::pos2(response.rect.left() + 7.0, response.rect.center().y),
@@ -132,7 +132,7 @@ fn list(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             let row = widgets::text(
                 ui,
                 &words,
-                font::PT12,
+                font::LABEL,
                 400.0,
                 FontFamily::Proportional,
                 p.text_1,
@@ -149,7 +149,7 @@ fn list(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         });
     }
     let note = i18n::translate(language, keys::revisions::NOTE, &[]);
-    let font = egui::FontId::new(font::PT11, FontFamily::Proportional);
+    let font = egui::FontId::new(font::META, FontFamily::Proportional);
     let width = ui.available_width();
     let note = ui.fonts_mut(|fonts| fonts.layout(note, font, p.text_2, width));
     ui.label(note);
@@ -169,7 +169,7 @@ fn preview_of(ui: &mut Ui, state: &AppState, preview: &Preview, actions: &mut Ac
     ui.label(widgets::text(
         ui,
         &head,
-        font::PT12,
+        font::LABEL,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -178,7 +178,7 @@ fn preview_of(ui: &mut Ui, state: &AppState, preview: &Preview, actions: &mut Ac
         let same = ui.label(widgets::text(
             ui,
             &tr(keys::revisions::IDENTICAL),
-            font::PT12,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             p.text_1,
@@ -196,7 +196,7 @@ fn preview_of(ui: &mut Ui, state: &AppState, preview: &Preview, actions: &mut Ac
     let note = ui.label(widgets::text(
         ui,
         &warning,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.amber_text,
@@ -225,8 +225,8 @@ fn diff(ui: &mut Ui, lines: &[DiffLine], language: Language) {
     let p = palette(ui.ctx());
     let response = egui::Frame::new()
         .fill(p.bg_1)
-        .corner_radius(egui::CornerRadius::same(radius::R6))
-        .inner_margin(gap::margin(gap::G8, gap::G6))
+        .corner_radius(egui::CornerRadius::same(radius::CONTROL))
+        .inner_margin(gap::margin(gap::CONTROLS, gap::SNUG))
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 0.0;
             for line in lines {
@@ -249,7 +249,7 @@ fn diff(ui: &mut Ui, lines: &[DiffLine], language: Language) {
                 let shown = ui.label(widgets::text(
                     ui,
                     &words,
-                    font::PT12,
+                    font::LABEL,
                     400.0,
                     FontFamily::Monospace,
                     ink,

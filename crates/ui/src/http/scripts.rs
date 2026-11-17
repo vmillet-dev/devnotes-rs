@@ -201,7 +201,7 @@ pub(crate) fn show(
         "{NAMES} · {}",
         i18n::translate(language, keys::http::scripts::HINT, &[])
     );
-    let hint = egui::RichText::new(hint).size(font::PT12).color(p.text_2);
+    let hint = egui::RichText::new(hint).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(hint).wrap());
     changed
 }
@@ -296,16 +296,16 @@ fn order(
     }
     let mut opened = None;
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let words = egui::RichText::new(tr(order_words(phase)))
-            .size(font::PT12)
+            .size(font::LABEL)
             .color(p.text_2);
         let said = ui.add(egui::Label::new(words));
         widgets::address(ui, &said, "http-script-order-label");
         for (at, level) in levels.iter().enumerate() {
             if at > 0 {
                 ui.add(egui::Label::new(
-                    egui::RichText::new("›").size(font::PT12).color(p.text_2),
+                    egui::RichText::new("›").size(font::LABEL).color(p.text_2),
                 ));
             }
             let Some(level) = level else {
@@ -314,7 +314,7 @@ fn order(
                     tr(keys::http::scripts::levels::REQUEST),
                     field.request_name
                 );
-                let words = egui::RichText::new(here).size(font::PT12).color(p.text_0);
+                let words = egui::RichText::new(here).size(font::LABEL).color(p.text_0);
                 let said = ui.add(egui::Label::new(words));
                 widgets::address(ui, &said, "http-script-level");
                 continue;
@@ -376,7 +376,7 @@ fn code(
     let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
     ui.painter().rect(
         rect,
-        CornerRadius::same(radius::R8),
+        CornerRadius::same(radius::MENU),
         p.bg_1,
         Stroke::new(1.0, p.line),
         StrokeKind::Inside,
@@ -409,7 +409,7 @@ fn code(
         .language(language)
         .indent_unit("  ")
         .comment(Some("//"))
-        .font(FontId::new(font::PT12_5, FontFamily::Monospace))
+        .font(FontId::new(font::BODY, FontFamily::Monospace))
         .marked_lines(&marked)
         .colours(&colours)
         .show(&mut inside);

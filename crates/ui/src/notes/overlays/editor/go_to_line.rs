@@ -55,11 +55,15 @@ pub(super) fn show(ui: &mut Ui, bar: &mut GoToLine, editor: &mut Editor, languag
     let p = palette(ui.ctx());
     let label = tr(keys::editor::code::GO_TO_LINE);
     egui::Frame::new()
-        .inner_margin(gap::margin(gap::G8, gap::G6))
+        .inner_margin(gap::margin(gap::CONTROLS, gap::SNUG))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing = Vec2::new(gap::G6, gap::G6);
+            ui.spacing_mut().item_spacing = Vec2::new(gap::SNUG, gap::SNUG);
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new(&label).size(font::PT12).color(p.text_1));
+                ui.label(
+                    egui::RichText::new(&label)
+                        .size(font::LABEL)
+                        .color(p.text_1),
+                );
                 let field = ui
                     .scope(|ui| {
                         ui.set_width(FIELD_WIDTH);

@@ -439,7 +439,7 @@ fn failure_cell(ui: &mut Ui, row: &Row, error: &CalcError, language: Language) {
     let galley = widgets::text(
         ui,
         &words,
-        font::PT12,
+        font::LABEL,
         400.0,
         FontFamily::Proportional,
         p.red,
@@ -517,19 +517,19 @@ fn footer(
     );
     let summary = summary(ui, view, sheet, format);
     ui.horizontal_centered(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G16;
+        ui.spacing_mut().item_spacing.x = gap::BLOCKS;
         let family = FontFamily::Monospace;
-        let galley = widgets::text(ui, &counts, font::PT11, 400.0, family.clone(), p.text_2);
+        let galley = widgets::text(ui, &counts, font::META, 400.0, family.clone(), p.text_2);
         let response = ui.label(galley);
         widgets::address(ui, &response, "calc-counts");
         if let Some(summary) = summary {
-            let galley = widgets::text(ui, &summary, font::PT11, 400.0, family, p.text_1);
+            let galley = widgets::text(ui, &summary, font::META, 400.0, family, p.text_1);
             let response = ui.label(galley);
             widgets::address(ui, &response, "calc-summary");
         }
         let right = egui::Layout::right_to_left(egui::Align::Center);
         ui.with_layout(right, |ui| {
-            ui.spacing_mut().item_spacing.x = gap::G6;
+            ui.spacing_mut().item_spacing.x = gap::SNUG;
             decimals(ui, state, actions);
         });
     });
@@ -560,7 +560,7 @@ fn decimals(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     ui.label(widgets::text(
         ui,
         &label,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         family,
         p.text_2,

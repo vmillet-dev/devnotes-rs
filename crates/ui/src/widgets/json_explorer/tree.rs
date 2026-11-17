@@ -86,7 +86,7 @@ pub(super) fn show(
                     let note = i18n::translate(language, keys::json::TREE_TRUNCATED, &[]);
                     ui.label(
                         egui::RichText::new(note)
-                            .size(font::PT12)
+                            .size(font::LABEL)
                             .italics()
                             .color(p.text_2),
                     );

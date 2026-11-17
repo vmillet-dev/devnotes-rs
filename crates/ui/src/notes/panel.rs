@@ -222,7 +222,7 @@ pub(super) fn space(
 /// The whole width, in the panel rather than the row: the row is the space's own click surface.
 fn pin_toggle(ui: &mut Ui, label: &str, on: bool) -> Response {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(ui.available_width(), 24.0),
@@ -247,7 +247,7 @@ fn pin_toggle(ui: &mut Ui, label: &str, on: bool) -> Response {
         Vec2::splat(12.0),
     );
     icons::paint(ui, glyph, Icon::Pin, ink);
-    let galley = widgets::text(ui, label, font::PT11, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, label, font::META, 400.0, FontFamily::Proportional, ink);
     ui.painter().galley(
         egui::pos2(rect.left() + 26.0, rect.center().y - galley.size().y / 2.0),
         galley,
@@ -489,7 +489,7 @@ fn colours(ui: &mut Ui, folder: &Folder, language: i18n::Language, actions: &mut
                 Sense::click(),
                 "folder-colour",
                 || WidgetInfo::selected(Role::RadioButton, true, on, &name),
-                CornerRadius::same(radius::R4),
+                CornerRadius::same(radius::TAG),
             );
             swatch(ui, &response, folder_hue(ui, colour), on);
             if response.clicked() && !on {
@@ -512,12 +512,12 @@ fn swatch(ui: &Ui, response: &Response, hue: Color32, on: bool) {
     } else {
         hue.gamma_multiply(0.45)
     };
-    let corner = CornerRadius::same(radius::R4);
+    let corner = CornerRadius::same(radius::TAG);
     ui.painter().rect_filled(rect, corner, shown);
     if on {
         ui.painter().rect_stroke(
             rect.expand(3.0),
-            CornerRadius::same(radius::R6),
+            CornerRadius::same(radius::CONTROL),
             Stroke::new(1.0, hue),
             StrokeKind::Inside,
         );
@@ -544,7 +544,7 @@ fn frame(ui: &mut Ui, content: impl FnOnce(&mut Ui)) {
             bottom: 10,
         })
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = gap::G8;
+            ui.spacing_mut().item_spacing.y = gap::CONTROLS;
             content(ui);
         });
 }
@@ -555,7 +555,7 @@ fn title(ui: &mut Ui, name: &str) {
     let galley = widgets::text(
         ui,
         &upper,
-        font::PT11,
+        font::META,
         600.0,
         FontFamily::Proportional,
         p.text_2,
@@ -570,7 +570,7 @@ fn note(ui: &mut Ui, words: &str, author_id: &str) {
     let mut job = egui::text::LayoutJob::single_section(
         words.to_owned(),
         egui::TextFormat::simple(
-            egui::FontId::new(font::PT11, FontFamily::Proportional),
+            egui::FontId::new(font::META, FontFamily::Proportional),
             p.text_2,
         ),
     );

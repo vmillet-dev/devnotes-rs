@@ -61,7 +61,7 @@ pub(super) fn inline_form(
     ids: (&str, &str),
 ) -> Typed {
     let button = Button::width(ui, &words.submit);
-    ui.spacing_mut().item_spacing.x = gap::G4;
+    ui.spacing_mut().item_spacing.x = gap::TIGHT;
     let room = ui.available_width() - button - 4.0;
     let field = ui
         .allocate_ui(egui::vec2(room.max(48.0), ui.available_height()), |ui| {
@@ -111,8 +111,8 @@ pub(super) fn confirm_delete(
     let frame = egui::Frame::new()
         .fill(p.bg_2)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R8))
-        .inner_margin(gap::margin(gap::G10, gap::G8))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::INSET, gap::CONTROLS))
         .outer_margin(Margin {
             left: 4,
             right: 4,
@@ -121,19 +121,19 @@ pub(super) fn confirm_delete(
         });
     let response = frame
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = gap::G8;
+            ui.spacing_mut().item_spacing.y = gap::CONTROLS;
             let question = i18n::translate(
                 language,
                 keys::http::rail::CONFIRM,
                 &[("name", row.name.as_str().into())],
             );
             let label = egui::RichText::new(&question)
-                .size(font::PT12)
+                .size(font::LABEL)
                 .color(p.text_0);
             ui.add(egui::Label::new(label).wrap());
             if contents.folders + contents.requests > 0 {
                 let count = egui::RichText::new(noun(contents, language))
-                    .size(font::PT12)
+                    .size(font::LABEL)
                     .color(p.text_2);
                 let response = ui.add(egui::Label::new(count).wrap());
                 crate::widgets::address(ui, &response, "http-delete-count");
@@ -142,7 +142,7 @@ pub(super) fn confirm_delete(
                 lost(ui, row, unsaved, language);
             }
             ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = gap::G6;
+                ui.spacing_mut().item_spacing.x = gap::SNUG;
                 let delete = i18n::translate(language, keys::http::rail::actions::DELETE, &[]);
                 if Button::new(&delete, "http-delete-submit")
                     .kind(Kind::Destructive)
@@ -183,18 +183,18 @@ fn lost(ui: &mut Ui, row: &RailRow, unsaved: &[String], language: i18n::Language
     let p = palette(ui.ctx());
     let frame = egui::Frame::new()
         .fill(p.amber_text.gamma_multiply(0.08))
-        .corner_radius(CornerRadius::same(radius::R6))
-        .inner_margin(gap::margin(gap::G8, gap::G6));
+        .corner_radius(CornerRadius::same(radius::CONTROL))
+        .inner_margin(gap::margin(gap::CONTROLS, gap::SNUG));
     let response = frame
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = gap::G2;
+            ui.spacing_mut().item_spacing.y = gap::LINE;
             let caption = if row.kind == engine::http::model::HttpItemKind::Request {
                 keys::http::rail::unsaved::SELF
             } else {
                 keys::http::rail::unsaved::INSIDE
             };
             let words = egui::RichText::new(i18n::translate(language, caption, &[]))
-                .size(font::PT11_5)
+                .size(font::CONTROL)
                 .color(p.text_1);
             ui.add(egui::Label::new(words).wrap());
             if row.kind == engine::http::model::HttpItemKind::Request {
@@ -202,12 +202,14 @@ fn lost(ui: &mut Ui, row: &RailRow, unsaved: &[String], language: i18n::Language
             }
             for name in unsaved {
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = gap::G5;
+                    ui.spacing_mut().item_spacing.x = gap::TIGHT;
                     // The dot a modified tab wears, drawn: no embedded face has it.
                     let (dot, _) =
                         ui.allocate_exact_size(egui::vec2(6.0, 12.0), egui::Sense::hover());
                     ui.painter().circle_filled(dot.center(), 3.0, p.amber_text);
-                    let line = egui::RichText::new(name).size(font::PT11_5).color(p.text_0);
+                    let line = egui::RichText::new(name)
+                        .size(font::CONTROL)
+                        .color(p.text_0);
                     let said = ui.add(egui::Label::new(line).truncate());
                     crate::widgets::address(ui, &said, "http-delete-unsaved-name");
                 });

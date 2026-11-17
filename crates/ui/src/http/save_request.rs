@@ -114,12 +114,12 @@ fn body(
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::http::save::TITLE);
     let words = widgets::text(
         ui,
         &title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -139,13 +139,13 @@ fn body(
             Missing::Collection => keys::http::save::missing::COLLECTION,
             Missing::Folder => keys::http::save::missing::FOLDER,
         });
-        let words = egui::RichText::new(words).size(font::PT12).color(p.red);
+        let words = egui::RichText::new(words).size(font::LABEL).color(p.red);
         let said = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &said, "http-save-missing");
     }
     let mut chosen = None;
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::http::editor::SAVE), "http-save-submit")
             .kind(Kind::Filled)
             .show(ui)
@@ -165,7 +165,7 @@ fn body(
 
 fn caption(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    let words = egui::RichText::new(words).size(font::PT12).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(words));
 }
 

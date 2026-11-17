@@ -109,13 +109,13 @@ impl Tool for DiffTool {
             (Mode::Structured, tr(keys::tools::diff::modes::STRUCTURED)),
         ];
         let modes = modes.each_ref().map(|(id, name)| (*id, name.as_str()));
-        ui.spacing_mut().item_spacing.y = gap::G12;
+        ui.spacing_mut().item_spacing.y = gap::GROUPS;
         Segmented::new(&modes, "diff-mode").show(ui, &mut self.mode);
         egui::ScrollArea::vertical()
             .id_salt("diff-page")
             .auto_shrink(false)
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = gap::G12;
+                ui.spacing_mut().item_spacing.y = gap::GROUPS;
                 let asked = match self.mode {
                     Mode::Text => self.text.ui(ui, &mut self.sides, drawn),
                     Mode::Structured => self.structured.ui(ui, &mut self.sides, drawn),
@@ -245,7 +245,7 @@ fn cell_head(ui: &Ui, rect: Rect, kind: Kind, right: bool, number: u32) -> Rect 
     let middle = rect.center().y;
     let mark = mark_of(kind, right);
     if !mark.is_empty() {
-        let mark = widgets::text(ui, mark, font::PT12, 700.0, FontFamily::Monospace, ink);
+        let mark = widgets::text(ui, mark, font::LABEL, 700.0, FontFamily::Monospace, ink);
         let at = Pos2::new(
             rect.left() + 10.0 - mark.size().x / 2.0,
             middle - mark.size().y / 2.0,
@@ -256,7 +256,7 @@ fn cell_head(ui: &Ui, rect: Rect, kind: Kind, right: bool, number: u32) -> Rect 
     let number = widgets::text(
         ui,
         &number,
-        font::PT12,
+        font::LABEL,
         400.0,
         FontFamily::Monospace,
         p.line_no,
@@ -275,7 +275,7 @@ fn rows_box(ui: &mut Ui, author_id: &str, height: f32, content: impl FnOnce(&mut
     let shown = egui::Frame::new()
         .fill(p.bg_0)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(radius::R10))
+        .corner_radius(CornerRadius::same(radius::CARD))
         .inner_margin(Margin::ZERO)
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
@@ -308,7 +308,7 @@ fn split_head(ui: &mut Ui, sides: &Sides, language: Language) {
         let galley = widgets::one_line(
             ui,
             &words,
-            (font::PT12, 400.0),
+            (font::LABEL, 400.0),
             p.text_0,
             width / 2.0 - 24.0,
         );
@@ -319,14 +319,14 @@ fn split_head(ui: &mut Ui, sides: &Sides, language: Language) {
 
 /// A count in its pill.
 fn pill(ui: &mut Ui, words: &str, hue: Color32, author_id: &str) {
-    let galley = widgets::text(ui, words, font::PT11_5, 400.0, FontFamily::Monospace, hue);
+    let galley = widgets::text(ui, words, font::CONTROL, 400.0, FontFamily::Monospace, hue);
     let (rect, response) =
         ui.allocate_exact_size(galley.size() + Vec2::new(20.0, 8.0), Sense::hover());
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, words));
     widgets::address(ui, &response, author_id);
     ui.painter().rect_filled(
         rect,
-        CornerRadius::same(radius::R12),
+        CornerRadius::same(radius::PANEL),
         hue.gamma_multiply(0.14),
     );
     ui.painter()

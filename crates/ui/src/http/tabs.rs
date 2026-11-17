@@ -98,7 +98,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
     new_request(&mut end_ui, actions, language);
-    end_ui.add_space(gap::G8);
+    end_ui.add_space(gap::CONTROLS);
     super::environment_picker::show(&mut end_ui, state, actions);
 }
 
@@ -110,7 +110,7 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
     let method = widgets::text(
         ui,
         badge.short(),
-        font::PT10_5,
+        font::CAPTION,
         700.0,
         FontFamily::Monospace,
         Color32::WHITE,
@@ -118,7 +118,7 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
     let words = widgets::text(
         ui,
         name,
-        font::PT13,
+        font::READING,
         400.0,
         FontFamily::Proportional,
         Color32::WHITE,
@@ -147,7 +147,7 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
         &[("name", name.as_str().into())],
     );
     let close = close_button(ui, &close_label);
-    ui.add_space(gap::G6);
+    ui.add_space(gap::SNUG);
     let whole = open.rect.union(close.rect);
     let whole = Rect::from_min_max(whole.min, pos2(whole.max.x + 6.0, whole.max.y));
     if active {
@@ -170,7 +170,7 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
     let method = widgets::text(
         ui,
         badge.short(),
-        font::PT10_5,
+        font::CAPTION,
         700.0,
         FontFamily::Monospace,
         hue,
@@ -181,7 +181,7 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
     left += method_width + 8.0;
     let ink = if active { p.text_0 } else { p.text_1 };
     let room = open.rect.right() - 4.0 - dot - left;
-    let words = widgets::one_line(ui, name, (font::PT13, 400.0), ink, room);
+    let words = widgets::one_line(ui, name, (font::READING, 400.0), ink, room);
     let words_width = words.size().x;
     ui.painter()
         .galley(pos2(left, middle - words.size().y / 2.0), words, ink);
@@ -214,7 +214,7 @@ fn close_button(ui: &mut Ui, label: &str) -> Response {
         Sense::click(),
         "http-tab-close",
         || WidgetInfo::labeled(Role::Button, true, label),
-        CornerRadius::same(radius::R5),
+        CornerRadius::same(radius::CONTROL),
     )
 }
 
@@ -223,7 +223,7 @@ fn close_glyph(ui: &Ui, close: &Response) {
     let square = Rect::from_center_size(close.rect.center(), Vec2::splat(widgets::MIN_TARGET));
     let ink = if close.hovered() {
         ui.painter()
-            .rect_filled(square, CornerRadius::same(radius::R5), p.bg_3);
+            .rect_filled(square, CornerRadius::same(radius::CONTROL), p.bg_3);
         p.text_0
     } else {
         p.text_2
@@ -257,13 +257,13 @@ fn new_request(ui: &mut Ui, actions: &mut Actions, language: i18n::Language) {
         .close_behavior(PopupCloseBehavior::CloseOnClick)
         .show(|ui| {
             ui.set_width(300.0);
-            ui.spacing_mut().item_spacing.y = gap::G2;
+            ui.spacing_mut().item_spacing.y = gap::LINE;
             let p = palette(ui.ctx());
             let title = tr(keys::http::kinds::MENU_TITLE).to_uppercase();
             let galley = widgets::text(
                 ui,
                 &title,
-                font::PT10_5,
+                font::CAPTION,
                 600.0,
                 FontFamily::Proportional,
                 p.text_2,
@@ -323,7 +323,7 @@ fn kind_item(ui: &mut Ui, kind: RequestKind, id: &str, language: i18n::Language)
     let line = i18n::Key::find(&format!("http.kinds.lines.{id}"))
         .map(|key| i18n::translate(language, key, &[]))
         .unwrap_or_default();
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(ui.available_width(), 44.0),
@@ -345,7 +345,7 @@ fn kind_item(ui: &mut Ui, kind: RequestKind, id: &str, language: i18n::Language)
     let glyph = widgets::text(
         ui,
         badge.short(),
-        font::PT10_5,
+        font::CAPTION,
         700.0,
         FontFamily::Monospace,
         hue,
@@ -359,7 +359,7 @@ fn kind_item(ui: &mut Ui, kind: RequestKind, id: &str, language: i18n::Language)
     let name = widgets::text(
         ui,
         &name,
-        font::PT12_5,
+        font::BODY,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -369,7 +369,7 @@ fn kind_item(ui: &mut Ui, kind: RequestKind, id: &str, language: i18n::Language)
     let line = widgets::one_line(
         ui,
         &line,
-        (font::PT11, 400.0),
+        (font::META, 400.0),
         p.text_2,
         rect.right() - 10.0 - left,
     );

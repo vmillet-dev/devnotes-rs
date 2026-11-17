@@ -223,7 +223,7 @@ impl QrTool {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G12;
+            ui.spacing_mut().item_spacing.x = gap::GROUPS;
             Segmented::new(&options, "qr-security").show(ui, &mut self.security);
             let words = tr(words::fields::HIDDEN);
             check(ui, &mut self.hidden, &words, "qr-hidden");
@@ -329,7 +329,7 @@ impl QrTool {
         let code = matches!(self.answered(), Some(QrAnswer::Code { .. }));
         self.plate(ui, code, language);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let mut button = |key, id, kind| {
                 let words = tr(key);
                 Button::new(&words, id)
@@ -356,8 +356,8 @@ impl QrTool {
         let fill = if code { Color32::WHITE } else { p.bg_1 };
         let shown = egui::Frame::new()
             .fill(fill)
-            .corner_radius(CornerRadius::same(radius::R10))
-            .inner_margin(gap::margin(gap::G12, gap::G12))
+            .corner_radius(CornerRadius::same(radius::CARD))
+            .inner_margin(gap::margin(gap::GROUPS, gap::GROUPS))
             .show(ui, |ui| {
                 let side = ui.available_width().min(PLATE);
                 if let Some((_, texture)) = self.texture.as_ref().filter(|_| code) {

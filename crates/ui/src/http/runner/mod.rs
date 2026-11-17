@@ -97,7 +97,7 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let tr = |key| i18n::translate(language, key, &[]);
     let runner = state.http.runner();
     ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G10;
+        ui.spacing_mut().item_spacing.x = gap::INSET;
         let toggle = tr(keys::sidebar::TOGGLE);
         if widgets::SquareButton::new(Icon::Sidebar, &toggle, "http-rail-toggle")
             .pressed(state.settings.rail_shown)
@@ -107,14 +107,14 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             actions.push(Asked::App(AppAction::ToggleRail));
         }
         let crumb = egui::RichText::new(tr(keys::http::runner::CRUMB))
-            .size(font::PT12_5)
+            .size(font::BODY)
             .color(p.text_2);
         ui.add(egui::Label::new(crumb));
         let title = runner.target().map_or("", |target| target.name.as_str());
         let words = widgets::text(
             ui,
             title,
-            font::PT15,
+            font::TITLE,
             600.0,
             FontFamily::Proportional,
             p.text_0,
@@ -125,7 +125,7 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         widgets::address(ui, &heading, "http-runner");
         environment(ui, state);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             head_actions(ui, state, actions);
         });
     });
@@ -138,7 +138,7 @@ fn environment(ui: &mut Ui, state: &AppState) {
     let (dot, _) = ui.allocate_exact_size(Vec2::splat(8.0), Sense::hover());
     ui.painter().circle_filled(dot.center(), 4.0, hue);
     let words = egui::RichText::new(environment_name(state))
-        .size(font::PT12_5)
+        .size(font::BODY)
         .color(p.text_1);
     let said = ui.add(egui::Label::new(words));
     widgets::address(ui, &said, "http-runner-environment");
@@ -183,9 +183,7 @@ fn head_actions(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
                 ("name", progress.name.as_str().into()),
             ],
         );
-        let words = egui::RichText::new(words)
-            .size(font::PT12_5)
-            .color(p.text_1);
+        let words = egui::RichText::new(words).size(font::BODY).color(p.text_1);
         let said = ui.add(egui::Label::new(words).truncate());
         widgets::address(ui, &said, "http-runner-progress");
         widgets::spinner(ui, 14.0, &tr(keys::http::runner::CANCEL));
@@ -200,7 +198,7 @@ fn number(
     typed: &mut Option<String>,
 ) -> Option<u32> {
     let p = palette(ui.ctx());
-    let words = egui::RichText::new(label).size(font::PT12).color(p.text_2);
+    let words = egui::RichText::new(label).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(words));
     let mut text = typed.clone().unwrap_or_else(|| value.to_string());
     let response = ui
@@ -226,7 +224,7 @@ fn side(ui: &mut Ui, state: &AppState, view: &mut RunnerView, actions: &mut Acti
     let tr = |key| i18n::translate(language, key, &[]);
     let runner = state.http.runner();
     let running = runner.is_running();
-    ui.spacing_mut().item_spacing.y = gap::G8;
+    ui.spacing_mut().item_spacing.y = gap::CONTROLS;
     ui.columns(2, |columns| {
         let iterations = (tr(keys::http::runner::ITERATIONS), "http-runner-iterations");
         let free = !running && runner.data().is_none();
@@ -273,23 +271,21 @@ fn side(ui: &mut Ui, state: &AppState, view: &mut RunnerView, actions: &mut Acti
         let mut on = on;
         let label = tr(key);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G4;
+            ui.spacing_mut().item_spacing.x = gap::TIGHT;
             let shown = Checkbox::new(&mut on, &label, author_id)
                 .enabled(!running)
                 .show(ui);
             if shown.changed() {
                 ask(actions, asked(on));
             }
-            let words = egui::RichText::new(&label)
-                .size(font::PT12_5)
-                .color(p.text_1);
+            let words = egui::RichText::new(&label).size(font::BODY).color(p.text_1);
             ui.add(egui::Label::new(words));
         });
     }
     let line = ui.available_rect_before_wrap();
     ui.painter()
         .hline(line.x_range(), line.top(), Stroke::new(1.0, p.line_soft));
-    ui.add_space(gap::G8);
+    ui.add_space(gap::CONTROLS);
     order::show(ui, state, &mut view.order, actions);
 }
 
@@ -324,11 +320,9 @@ fn data(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         &[("count", count(file.data.columns.len()).into())],
     );
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let words = format!("{} · {rows} · {columns}", file.name);
-        let words = egui::RichText::new(words)
-            .size(font::PT12_5)
-            .color(p.text_1);
+        let words = egui::RichText::new(words).size(font::BODY).color(p.text_1);
         let width = (ui.available_width() - widgets::MIN_TARGET - 8.0).max(0.0);
         let said = ui.add_sized(
             Vec2::new(width, widgets::MIN_TARGET),
@@ -374,7 +368,7 @@ fn report(ui: &mut Ui, rect: Rect, state: &AppState, view: &mut RunnerView, acti
             .max_rect(above.shrink2(Vec2::new(20.0, 12.0))),
     );
     body.set_clip_rect(above);
-    body.spacing_mut().item_spacing.y = gap::G10;
+    body.spacing_mut().item_spacing.y = gap::INSET;
     if runner.phase() == Phase::Asking {
         asking(&mut body, state, actions);
     }
@@ -443,7 +437,9 @@ fn empty(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     );
     ui.vertical_centered(|ui| {
         ui.add_space((ui.available_height() / 2.0 - 40.0).max(0.0));
-        let words = egui::RichText::new(ready).size(font::PT13).color(p.text_1);
+        let words = egui::RichText::new(ready)
+            .size(font::READING)
+            .color(p.text_1);
         let said = ui.add(egui::Label::new(words));
         widgets::address(ui, &said, "http-runner-ready");
         let word = i18n::translate(language, keys::http::runner::START, &[]);

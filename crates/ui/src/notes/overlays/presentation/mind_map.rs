@@ -194,7 +194,7 @@ fn heading(ui: &mut Ui, node: &Placed, centre: egui::Pos2) -> bool {
     };
     ui.painter().rect(
         rect,
-        CornerRadius::same(radius::R10),
+        CornerRadius::same(radius::CARD),
         p.bg_2,
         Stroke::new(1.0, edge),
         StrokeKind::Inside,

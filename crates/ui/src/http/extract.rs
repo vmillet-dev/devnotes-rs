@@ -74,12 +74,12 @@ fn body(ui: &mut Ui, form: &mut Extracting, (request, state): (&str, &AppState))
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::http::extract::TITLE);
     let words = widgets::text(
         ui,
         &title,
-        font::PT15,
+        font::TITLE,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -91,7 +91,7 @@ fn body(ui: &mut Ui, form: &mut Extracting, (request, state): (&str, &AppState))
     caption(ui, &tr(keys::http::extract::PATH));
     let path = egui::RichText::new(&form.path)
         .monospace()
-        .size(font::PT12_5)
+        .size(font::BODY)
         .color(p.text_0);
     let path = ui.add(egui::Label::new(path).truncate());
     widgets::address(ui, &path, "http-extract-path");
@@ -100,20 +100,20 @@ fn body(ui: &mut Ui, form: &mut Extracting, (request, state): (&str, &AppState))
     TextField::new(&mut form.name, &label, "http-extract-name").show(ui);
     let secret = tr(keys::http::extract::SECRET);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         Checkbox::new(&mut form.secret, &secret, "http-extract-secret").show(ui);
         let words = egui::RichText::new(&secret)
-            .size(font::PT12_5)
+            .size(font::BODY)
             .color(p.text_1);
         ui.add(egui::Label::new(words));
     });
     let into = into_words(request, state);
-    let into = egui::RichText::new(into).size(font::PT12).color(p.text_2);
+    let into = egui::RichText::new(into).size(font::LABEL).color(p.text_2);
     let into = ui.add(egui::Label::new(into).wrap());
     widgets::address(ui, &into, "http-extract-into");
     let mut chosen = None;
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::http::extract::SUBMIT), "http-extract-submit")
             .kind(Kind::Filled)
             .enabled(!form.name.trim().is_empty())
@@ -134,7 +134,7 @@ fn body(ui: &mut Ui, form: &mut Extracting, (request, state): (&str, &AppState))
 
 fn caption(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    let words = egui::RichText::new(words).size(font::PT12).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(words));
 }
 

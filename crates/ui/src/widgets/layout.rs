@@ -138,7 +138,7 @@ const STEP: f32 = 16.0;
 pub fn tooltip(response: Response, words: &str) -> Response {
     response.on_hover_ui(|ui| {
         let p = palette(ui.ctx());
-        ui.label(egui::RichText::new(words).size(font::PT12).color(p.text_1));
+        ui.label(egui::RichText::new(words).size(font::LABEL).color(p.text_1));
     })
 }
 

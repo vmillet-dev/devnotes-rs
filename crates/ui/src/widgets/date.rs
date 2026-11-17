@@ -63,8 +63,8 @@ impl<'a> DateField<'a> {
         } else {
             p.text_2
         };
-        let probe = text(ui, &shown, font::PT11_5, 400.0, FontFamily::Monospace, ink);
-        let corner = CornerRadius::same(radius::R6);
+        let probe = text(ui, &shown, font::CONTROL, 400.0, FontFamily::Monospace, ink);
+        let corner = CornerRadius::same(radius::CONTROL);
         let name = self.name;
         // ⚠️ Taken before the control is drawn: a focused button clicks on Enter, and egui's
         // arrow navigation would carry the focus into the month's buttons.
@@ -178,7 +178,7 @@ fn month(
     let tr = |key| i18n::translate(language, key, &[]);
     let mut cursor = shifted(cursor, keys.by);
     let mut picked = keys.enter.then_some(Picked::Day(cursor));
-    ui.spacing_mut().item_spacing = Vec2::splat(gap::G2);
+    ui.spacing_mut().item_spacing = Vec2::splat(gap::LINE);
     ui.horizontal(|ui| {
         let previous = tr(keys::editor::date::PREVIOUS);
         if super::IconButton::new(Icon::ArrowLeft, &previous, "date-previous")
@@ -198,7 +198,7 @@ fn month(
         let galley = text(
             ui,
             &title,
-            font::PT12_5,
+            font::BODY,
             600.0,
             FontFamily::Proportional,
             p.text_0,
@@ -225,7 +225,7 @@ fn month(
                 let galley = text(
                     ui,
                     &initial,
-                    font::PT10_5,
+                    font::CAPTION,
                     500.0,
                     FontFamily::Proportional,
                     p.text_2,
@@ -255,7 +255,7 @@ fn month(
 fn day_cell(ui: &mut Ui, day: NaiveDate, cursor: NaiveDate, field: &DateField<'_>) -> Response {
     let p = palette(ui.ctx());
     let label = i18n::format::date_long(day, field.language);
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let selected = field.value == Some(day);
     let response = interact(
         ui,
@@ -292,7 +292,7 @@ fn day_cell(ui: &mut Ui, day: NaiveDate, cursor: NaiveDate, field: &DateField<'_
     let galley = text(
         ui,
         &day.day().to_string(),
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         ink,

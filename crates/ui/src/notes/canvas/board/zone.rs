@@ -52,7 +52,7 @@ pub(super) fn show(
     );
     zone_ui.set_clip_rect(rect.intersect(ui.clip_rect()));
     let ui = &mut zone_ui;
-    let corner = CornerRadius::same(radius::R10);
+    let corner = CornerRadius::same(radius::CARD);
     let moving = hand.moving().is_some_and(
         |moving| matches!(&moving.kind, Kind::MoveZone(id) | Kind::ResizeZone(id) if *id == folder.id),
     );
@@ -134,7 +134,7 @@ fn header(
     let mut left = grip_room.right() + 4.0;
     let swatch = Rect::from_min_size(pos2(left, middle - 4.5), Vec2::splat(9.0));
     ui.painter()
-        .rect_filled(swatch, CornerRadius::same(radius::R2), hue);
+        .rect_filled(swatch, CornerRadius::same(radius::MARK), hue);
     left = swatch.right() + 9.0;
 
     let menu_room = Rect::from_center_size(
@@ -145,7 +145,7 @@ fn header(
     let count_galley = widgets::text(
         ui,
         &count,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -154,7 +154,7 @@ fn header(
     let name = widgets::text(
         ui,
         &folder.name,
-        font::PT13,
+        font::READING,
         500.0,
         FontFamily::Proportional,
         p.text_0,
@@ -171,7 +171,7 @@ fn header(
         Sense::click(),
         "board-zone-open",
         || WidgetInfo::labeled(Role::Button, true, &folder.name),
-        CornerRadius::same(radius::R3),
+        CornerRadius::same(radius::TAG),
     );
     let at = pos2(left, middle - name.size().y / 2.0);
     let clip = Rect::from_min_size(at, name_size);
@@ -214,7 +214,7 @@ fn drop_here(ui: &mut Ui, head: Rect, hue: egui::Color32, language: i18n::Langua
     let galley = widgets::text(
         ui,
         &words,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         hue,
@@ -253,7 +253,7 @@ fn grip(
         Sense::click_and_drag(),
         "board-zone-grip",
         || WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(radius::R4),
+        CornerRadius::same(radius::TAG),
     );
     let response = widgets::tooltip(response, &label);
     let kind = Kind::MoveZone(zone.folder.id.clone());
@@ -295,7 +295,7 @@ fn resize_corner(
         Sense::click_and_drag(),
         "board-zone-resize",
         || WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(radius::R3),
+        CornerRadius::same(radius::TAG),
     );
     let response = widgets::tooltip(response, &label);
     let kind = Kind::ResizeZone(zone.folder.id.clone());
@@ -424,7 +424,7 @@ fn children(
     let galley = widgets::text(
         ui,
         &caption,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -442,7 +442,7 @@ fn children(
         .id_salt(("board-zone-children", &zone.folder.id))
         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
         .show(&mut list_ui, |ui| {
-            ui.spacing_mut().item_spacing.x = gap::G6;
+            ui.spacing_mut().item_spacing.x = gap::SNUG;
             ui.horizontal_centered(|ui| {
                 for child in &zone.children {
                     if chip(ui, child).clicked() {
@@ -462,7 +462,7 @@ fn chip(ui: &mut Ui, child: &BoardChild) -> egui::Response {
     let name = widgets::text(
         ui,
         &child.name,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_1,
@@ -471,13 +471,13 @@ fn chip(ui: &mut Ui, child: &BoardChild) -> egui::Response {
     let counted = widgets::text(
         ui,
         &count,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_2,
     );
     let width = 8.0 + 7.0 + 6.0 + name.size().x + 6.0 + counted.size().x + 9.0;
-    let corner = CornerRadius::same(radius::R12);
+    let corner = CornerRadius::same(radius::PANEL);
     let response = interact(
         ui,
         vec2(width, widgets::MIN_TARGET),
@@ -498,7 +498,7 @@ fn chip(ui: &mut Ui, child: &BoardChild) -> egui::Response {
     let middle = rect.center().y;
     let swatch = Rect::from_min_size(pos2(rect.left() + 8.0, middle - 3.5), Vec2::splat(7.0));
     ui.painter()
-        .rect_filled(swatch, CornerRadius::same(radius::R2), hue);
+        .rect_filled(swatch, CornerRadius::same(radius::MARK), hue);
     let ink = if response.hovered() {
         p.text_0
     } else {
@@ -531,7 +531,7 @@ fn flow(
         let galley = widgets::text(
             ui,
             &words,
-            font::PT11_5,
+            font::CONTROL,
             400.0,
             FontFamily::Proportional,
             p.text_2,

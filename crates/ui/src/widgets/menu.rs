@@ -63,8 +63,8 @@ pub fn frame(ctx: &egui::Context) -> egui::Frame {
     egui::Frame::new()
         .fill(p.bg_2)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(radius::R8))
-        .inner_margin(gap::margin(gap::G4, gap::G4))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::TIGHT, gap::TIGHT))
         .shadow(p.shadow_dropdown)
 }
 
@@ -174,12 +174,12 @@ fn drawn(
     let probe = text(
         ui,
         label,
-        font::PT12,
+        font::LABEL,
         400.0,
         FontFamily::Proportional,
         p.text_1,
     );
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(width, probe.size().y + 10.0),
@@ -210,7 +210,7 @@ fn drawn(
         crate::theme::icons::paint(ui, glyph, icon, colour.unwrap_or(ink));
         left += 22.0;
     }
-    let galley = text(ui, label, font::PT12, 400.0, FontFamily::Proportional, ink);
+    let galley = text(ui, label, font::LABEL, 400.0, FontFamily::Proportional, ink);
     let at = egui::pos2(left, response.rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, Color32::TRANSPARENT);
     if opens {
@@ -306,12 +306,12 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
         let probe = text(
             ui,
             shown,
-            font::PT11_5,
+            font::CONTROL,
             400.0,
             FontFamily::Proportional,
             p.text_1,
         );
-        let corner = CornerRadius::same(radius::R7);
+        let corner = CornerRadius::same(radius::CONTROL);
         let label = self.label;
         let mut response = interact(
             ui,
@@ -337,7 +337,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
         let galley = text(
             ui,
             shown,
-            font::PT11_5,
+            font::CONTROL,
             400.0,
             FontFamily::Proportional,
             ink,
@@ -396,7 +396,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
     /// the one walked to, Escape empties the field before it closes the menu.
     fn filtered(&self, ui: &mut Ui, query_id: Id, current: Option<&str>) -> Option<T> {
         ui.set_width(FILTERED_WIDTH);
-        ui.spacing_mut().item_spacing.y = gap::G4;
+        ui.spacing_mut().item_spacing.y = gap::TIGHT;
         let walked_id = query_id.with("walked");
         let mut query: String = ui.data(|data| data.get_temp(query_id)).unwrap_or_default();
         let emptied = !query.is_empty()
@@ -426,7 +426,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
         if shown.is_empty() {
             let none = self.words(keys::choice_menu::NO_RESULTS);
             let ink = palette(ui.ctx()).text_2;
-            ui.label(egui::RichText::new(none).size(font::PT12).color(ink));
+            ui.label(egui::RichText::new(none).size(font::LABEL).color(ink));
         }
         let picked = egui::ScrollArea::vertical()
             .max_height(FILTERED_HEIGHT - field.rect.height() - 4.0)
@@ -526,7 +526,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             return;
         }
         let ink = palette(ui.ctx()).text_2;
-        let galley = text(ui, hint, font::PT11, 400.0, FontFamily::Proportional, ink);
+        let galley = text(ui, hint, font::META, 400.0, FontFamily::Proportional, ink);
         let at = egui::pos2(
             row.right() - 8.0 - galley.size().x,
             row.center().y - galley.size().y / 2.0,
@@ -539,7 +539,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
 fn walked_ring(ui: &Ui, row: egui::Rect) {
     ui.painter().rect_stroke(
         row,
-        CornerRadius::same(radius::R6),
+        CornerRadius::same(radius::CONTROL),
         Stroke::new(1.0, palette(ui.ctx()).amber_edge),
         egui::StrokeKind::Inside,
     );

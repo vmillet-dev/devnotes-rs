@@ -61,7 +61,7 @@ fn switch_width(ui: &Ui, name: &str) -> f32 {
     let galley = widgets::text(
         ui,
         name,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_0,
@@ -95,7 +95,7 @@ pub(super) fn space_switcher(
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
             ui.set_width(260.0);
-            ui.spacing_mut().item_spacing.y = gap::G2;
+            ui.spacing_mut().item_spacing.y = gap::LINE;
             match menu {
                 Menu::Creating(draft) => {
                     let words = Words::new(
@@ -202,7 +202,7 @@ pub(super) fn folder_switcher(
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
             ui.set_width(260.0);
-            ui.spacing_mut().item_spacing.y = gap::G2;
+            ui.spacing_mut().item_spacing.y = gap::LINE;
             match menu {
                 Menu::Creating(draft) => {
                     let words = Words::new(
@@ -361,7 +361,7 @@ pub(super) fn breadcrumb(
     let galley = widgets::text(
         ui,
         &folder.name,
-        font::PT12_5,
+        font::BODY,
         600.0,
         FontFamily::Proportional,
         p.text_0,
@@ -371,7 +371,7 @@ pub(super) fn breadcrumb(
     widgets::address(ui, &here, "folder-breadcrumb-name");
     let swatch = Rect::from_center_size(pos2(rect.left() + 4.0, rect.center().y), Vec2::splat(8.0));
     ui.painter()
-        .rect_filled(swatch, CornerRadius::same(radius::R2), hue);
+        .rect_filled(swatch, CornerRadius::same(radius::MARK), hue);
     ui.painter().galley(
         pos2(rect.left() + 14.0, rect.center().y - galley.size().y / 2.0),
         galley,
@@ -405,14 +405,14 @@ fn switch(ui: &mut Ui, label: &str, name: &str, author_id: &str, widest: f32) ->
     let galley = widgets::text(
         ui,
         name,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_0,
     );
     let width = switch_width(ui, name).min(widest);
     let room = width - 44.0;
-    let corner = CornerRadius::same(radius::R8);
+    let corner = CornerRadius::same(radius::MENU);
     let response = interact(
         ui,
         Vec2::new(width, 32.0),
@@ -461,7 +461,7 @@ fn cut(ui: &Ui, words: &str, width: f32) -> std::sync::Arc<egui::Galley> {
     let mut job = egui::text::LayoutJob::single_section(
         words.to_owned(),
         egui::TextFormat::simple(
-            egui::FontId::new(font::PT12_5, FontFamily::Proportional),
+            egui::FontId::new(font::BODY, FontFamily::Proportional),
             p.text_0,
         ),
     );
@@ -496,7 +496,7 @@ fn row(
     on: bool,
 ) -> (Response, Response) {
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G2;
+        ui.spacing_mut().item_spacing.x = gap::LINE;
         let width = ui.available_width() - MIN_TARGET - 2.0;
         let chosen = entry(ui, width, label, author_id, mark, on);
         let edit = widgets::IconButton::new(Icon::Ellipsis, options, options_id).show(ui);
@@ -514,7 +514,7 @@ fn entry(
     on: bool,
 ) -> Response {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(width, 28.0),
@@ -547,7 +547,7 @@ fn entry(
         Some(Mark::Swatch(hue)) => {
             let swatch = Rect::from_center_size(pos2(left + 4.0, middle), Vec2::splat(8.0));
             ui.painter()
-                .rect_filled(swatch, CornerRadius::same(radius::R2), hue);
+                .rect_filled(swatch, CornerRadius::same(radius::MARK), hue);
             left += 14.0;
         }
         None => {}
@@ -564,13 +564,13 @@ fn crumb(ui: &mut Ui, label: &str, author_id: &str, hue: Option<egui::Color32>) 
     let galley = widgets::text(
         ui,
         label,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_1,
     );
     let swatch = if hue.is_some() { 14.0 } else { 0.0 };
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         galley.size() + Vec2::new(14.0 + swatch, 10.0),
@@ -590,16 +590,9 @@ fn crumb(ui: &mut Ui, label: &str, author_id: &str, hue: Option<egui::Color32>) 
         let at =
             Rect::from_center_size(pos2(rect.left() + 11.0, rect.center().y), Vec2::splat(8.0));
         ui.painter()
-            .rect_filled(at, CornerRadius::same(radius::R2), hue);
+            .rect_filled(at, CornerRadius::same(radius::MARK), hue);
     }
-    let galley = widgets::text(
-        ui,
-        label,
-        font::PT12_5,
-        400.0,
-        FontFamily::Proportional,
-        ink,
-    );
+    let galley = widgets::text(ui, label, font::BODY, 400.0, FontFamily::Proportional, ink);
     ui.painter().galley(
         pos2(
             rect.left() + 7.0 + swatch,
@@ -616,7 +609,7 @@ fn separator(ui: &mut Ui, mark: &str) {
     let galley = widgets::text(
         ui,
         mark,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -631,7 +624,7 @@ fn note(ui: &mut Ui, words: &str, author_id: &str) {
     let galley = widgets::text(
         ui,
         words,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Proportional,
         p.text_2,

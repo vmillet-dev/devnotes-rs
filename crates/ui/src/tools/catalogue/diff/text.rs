@@ -156,7 +156,7 @@ impl TextDiff {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G14;
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             Segmented::new(&options, "text-diff-granularity").show(ui, &mut self.granularity);
             for (value, key, id) in [
                 (
@@ -185,7 +185,7 @@ impl TextDiff {
 fn inputs(ui: &mut Ui, sides: &mut Sides, drawn: &mut Drawn<'_>) {
     let width = (ui.available_width() - 14.0) / 2.0;
     ui.horizontal_top(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G14;
+        ui.spacing_mut().item_spacing.x = gap::BLOCKS;
         for slot in ["a", "b"] {
             ui.allocate_ui(Vec2::new(width, 0.0), |ui| {
                 ui.vertical(|ui| {
@@ -242,7 +242,7 @@ fn offer(ui: &mut Ui, answer: &TextDiffAnswer, language: Language) -> Option<Mod
         let said = paragraph(
             ui,
             &tr(keys::tools::diff::text::BOTH_JSON),
-            (font::PT12_5, 400.0),
+            (font::BODY, 400.0),
             p.text_1,
         );
         address(ui, &said, "text-diff-json");
@@ -293,7 +293,7 @@ fn counts(
     ];
     let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G12;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         let added = Message::new(added_key(granularity))
             .with("count", answer.added)
             .text(language);
@@ -371,7 +371,7 @@ fn cell(ui: &Ui, rect: Rect, kind: Kind, right: bool, line: &TextDiffLine) {
         };
         let format = TextFormat {
             background,
-            ..TextFormat::simple(FontId::monospace(font::PT12), ink)
+            ..TextFormat::simple(FontId::monospace(font::LABEL), ink)
         };
         job.append(&piece.text, 0.0, format);
     }
@@ -414,7 +414,7 @@ fn unified(ui: &mut Ui, text: &str) {
                 let (tint, ink) = unified_ink(lines[at], ui);
                 ui.painter().rect_filled(rect, 0.0, tint);
                 let family = egui::FontFamily::Monospace;
-                let galley = crate::widgets::text(ui, lines[at], font::PT12, 400.0, family, ink);
+                let galley = crate::widgets::text(ui, lines[at], font::LABEL, 400.0, family, ink);
                 let at = Pos2::new(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0);
                 ui.painter().with_clip_rect(rect).galley(at, galley, ink);
             });

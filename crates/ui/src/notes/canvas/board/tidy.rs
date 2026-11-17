@@ -40,7 +40,7 @@ pub(super) fn show(
     let words = widgets::text(
         ui,
         &align,
-        font::PT12,
+        font::LABEL,
         400.0,
         FontFamily::Proportional,
         p.text_1,
@@ -56,7 +56,7 @@ pub(super) fn show(
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
     pill_ui.spacing_mut().item_spacing.x = 0.0;
-    let round = CornerRadius::same(radius::R15);
+    let round = CornerRadius::same(radius::DIALOG);
     ui.painter().add(p.shadow_dropdown.as_shape(pill, round));
     ui.painter().rect(
         pill,
@@ -148,7 +148,7 @@ fn menu(
             let mut job = egui::text::LayoutJob::single_section(
                 note,
                 egui::TextFormat::simple(
-                    egui::FontId::new(font::PT11, FontFamily::Proportional),
+                    egui::FontId::new(font::META, FontFamily::Proportional),
                     p.text_2,
                 ),
             );

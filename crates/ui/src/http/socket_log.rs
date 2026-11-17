@@ -49,10 +49,10 @@ pub(super) fn show(
     region.widget_info(|| WidgetInfo::labeled(Role::Region, true, &label));
     widgets::address(ui, &region, "http-socket-log");
     egui::Frame::new()
-        .inner_margin(gap::margin(gap::G20, gap::G12))
+        .inner_margin(gap::margin(gap::PANEL, gap::GROUPS))
         .show(ui, |ui| {
             ui.set_min_size(ui.available_size());
-            ui.spacing_mut().item_spacing.y = gap::G10;
+            ui.spacing_mut().item_spacing.y = gap::INSET;
             bar(ui, state, (tab, view), actions);
             if let Some(notice) = state
                 .http
@@ -79,18 +79,18 @@ fn bar(ui: &mut Ui, state: &AppState, (tab, view): (&Tab, &mut LogView), actions
         Phase::Closed => (keys::http::socket::phases::CLOSED, p.red),
     };
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G12;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         if phase == Phase::Connecting {
             widgets::spinner(ui, 14.0, &tr(key));
         }
         let words = egui::RichText::new(tr(key))
-            .size(font::PT12)
+            .size(font::LABEL)
             .strong()
             .color(p.text_1);
         let said = egui::Frame::new()
             .fill(hue.gamma_multiply(0.15))
-            .corner_radius(egui::CornerRadius::same(radius::R6))
-            .inner_margin(gap::margin(gap::G10, gap::G3))
+            .corner_radius(egui::CornerRadius::same(radius::CONTROL))
+            .inner_margin(gap::margin(gap::INSET, gap::LINE))
             .show(ui, |ui| ui.add(egui::Label::new(words)))
             .inner;
         widgets::address(ui, &said, "http-socket-phase");
@@ -100,11 +100,11 @@ fn bar(ui: &mut Ui, state: &AppState, (tab, view): (&Tab, &mut LogView), actions
                 keys::http::socket::PROTOCOL,
                 &[("protocol", protocol.into())],
             );
-            let words = egui::RichText::new(words).size(font::PT12).color(p.text_2);
+            let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
             ui.add(egui::Label::new(words));
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let logged = socket.is_some_and(|socket| !socket.log.is_empty());
             if Button::new(&tr(keys::http::socket::CLEAR), "http-socket-clear")
                 .enabled(logged)
@@ -139,14 +139,14 @@ fn failure(
     let message = crate::services::errors::message_of(notice)
         .unwrap_or_else(|| i18n::Message::new(keys::http::socket::FAILED));
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let words = egui::RichText::new(message.text(language))
-            .size(font::PT12_5)
+            .size(font::BODY)
             .color(p.red);
         let said = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &said, "http-socket-failure");
         if let Some(cause) = notice.params.get("cause") {
-            let words = egui::RichText::new(cause).size(font::PT12).color(p.text_2);
+            let words = egui::RichText::new(cause).size(font::LABEL).color(p.text_2);
             let said = ui.add(egui::Label::new(words));
             widgets::address(ui, &said, "http-socket-cause");
         }
@@ -180,9 +180,7 @@ fn entries(ui: &mut Ui, state: &AppState, tab: &Tab, view: &LogView) {
         .collect();
     if shown.is_empty() {
         let words = i18n::translate(language, keys::http::socket::EMPTY, &[]);
-        let words = egui::RichText::new(words)
-            .size(font::PT12_5)
-            .color(p.text_2);
+        let words = egui::RichText::new(words).size(font::BODY).color(p.text_2);
         let said = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &said, "http-socket-empty");
         return;
@@ -243,7 +241,7 @@ fn row(ui: &mut Ui, entry: &SocketEntry, language: i18n::Language) {
     let galley = widgets::text(
         ui,
         &time,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Monospace,
         p.text_2,
@@ -268,7 +266,7 @@ fn row(ui: &mut Ui, entry: &SocketEntry, language: i18n::Language) {
             let galley = widgets::text(
                 ui,
                 words,
-                font::PT11,
+                font::META,
                 400.0,
                 FontFamily::Proportional,
                 p.text_2,
@@ -285,7 +283,7 @@ fn row(ui: &mut Ui, entry: &SocketEntry, language: i18n::Language) {
     } else {
         p.text_0
     };
-    let galley = widgets::text(ui, &line, font::PT12, 400.0, FontFamily::Monospace, ink);
+    let galley = widgets::text(ui, &line, font::LABEL, 400.0, FontFamily::Monospace, ink);
     let clip = Rect::from_min_max(pos2(left, rect.top()), pos2(right, rect.bottom()));
     let at = pos2(left, middle - galley.size().y / 2.0);
     ui.painter_at(clip).galley(at, galley, ink);

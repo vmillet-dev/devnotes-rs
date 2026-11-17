@@ -74,7 +74,7 @@ impl<'a> PassphraseField<'a> {
             },
             self.author_id,
             || WidgetInfo::labeled(Role::PasswordInput, true, name),
-            CornerRadius::same(radius::R8),
+            CornerRadius::same(radius::MENU),
         );
         if response.clicked() {
             response.request_focus();
@@ -88,7 +88,7 @@ impl<'a> PassphraseField<'a> {
         let edge = if self.invalid { p.red } else { p.line };
         ui.painter().rect(
             response.rect,
-            CornerRadius::same(radius::R8),
+            CornerRadius::same(radius::MENU),
             p.bg_1,
             Stroke::new(1.0, edge),
             StrokeKind::Inside,
@@ -102,12 +102,12 @@ impl<'a> PassphraseField<'a> {
         let galley = widgets::text(
             ui,
             &shown,
-            font::PT14,
+            font::SUBTITLE,
             400.0,
             FontFamily::Proportional,
             p.text_0,
         );
-        let inner = response.rect - gap::margin(gap::G11, gap::G9);
+        let inner = response.rect - gap::margin(gap::INSET, gap::CONTROLS);
         let at = egui::pos2(inner.left(), inner.center().y - galley.size().y / 2.0);
         let caret_x = at.x + galley.size().x + 1.0;
         ui.painter()

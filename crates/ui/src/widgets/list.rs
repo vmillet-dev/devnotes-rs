@@ -33,7 +33,7 @@ pub fn code_viewer(ui: &mut Ui, id: &str, lines: &[&str]) {
     let gutter = text(
         ui,
         &"8".repeat(digits as usize),
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Monospace,
         p.line_no,
@@ -42,7 +42,7 @@ pub fn code_viewer(ui: &mut Ui, id: &str, lines: &[&str]) {
     .x + 16.0;
     egui::Frame::new()
         .fill(p.bg_1)
-        .corner_radius(egui::CornerRadius::same(radius::R8))
+        .corner_radius(egui::CornerRadius::same(radius::MENU))
         .show(ui, |ui| {
             virtual_list(ui, id, ROW, lines.len(), |ui, index| {
                 let (rect, _) = ui.allocate_exact_size(
@@ -52,7 +52,7 @@ pub fn code_viewer(ui: &mut Ui, id: &str, lines: &[&str]) {
                 let number = text(
                     ui,
                     &(index + 1).to_string(),
-                    font::PT12_5,
+                    font::BODY,
                     400.0,
                     FontFamily::Monospace,
                     p.line_no,
@@ -65,7 +65,7 @@ pub fn code_viewer(ui: &mut Ui, id: &str, lines: &[&str]) {
                 let code = text(
                     ui,
                     lines[index],
-                    font::PT12_5,
+                    font::BODY,
                     400.0,
                     FontFamily::Monospace,
                     p.text_0,

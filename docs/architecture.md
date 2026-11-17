@@ -5981,10 +5981,13 @@ for one from the reference's `styles.scss` (`src/styles/` at the `angular-refere
 `theme::palette(ctx)` and `theme::spacing(ctx)`, never a literal. The CSS `--*-rgb` triplets are
 gone: a tint is the colour itself at an alpha.
 
-The reference had no scale for the rest, so the egui application wrote one from the values its
-screens draw: `tokens::font` (text sizes, `PT9_5` to `PT30`), `tokens::gap` (gaps and margins,
-`G1` to `G32`, `gap::margin` for a frame) and `tokens::radius` (`R1` to `R15`), each step named
-by its size. A widget picks its step once. `theme::literals` is a test that reads every source
+The reference had no scale for the rest, so the egui application defines one by role:
+`tokens::font` (`BADGE`, `CAPTION`, `META`, `CONTROL`, `LABEL`, `BODY`, `READING`, `SUBTITLE`,
+`TITLE`, `HEADING`, `DISPLAY`, `HERO`), `tokens::gap` (`HAIRLINE`, `LINE`, `TIGHT`, `SNUG`,
+`CONTROLS`, `INSET`, `GROUPS`, `BLOCKS`, `PANEL`, `PAGE`; `gap::margin` for a frame) and
+`tokens::radius` (`MARK`, `TAG`, `CONTROL`, `MENU`, `CARD`, `PANEL`, `DIALOG`). Each role is
+defined once, its use written beside it; a screen names the role, so changing « the body text »
+is one line. `theme::literals` is a test that reads every source
 file and refuses a number where a gap, a radius or a text size is expected; `theme::motion`'s
 test does the same for durations, named ones included.
 

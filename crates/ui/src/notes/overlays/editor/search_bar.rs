@@ -126,9 +126,9 @@ pub(super) fn show(
     let mut edited = None;
     let count = editor.count(&bar.query);
     egui::Frame::new()
-        .inner_margin(gap::margin(gap::G8, gap::G6))
+        .inner_margin(gap::margin(gap::CONTROLS, gap::SNUG))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing = Vec2::new(gap::G6, gap::G6);
+            ui.spacing_mut().item_spacing = Vec2::new(gap::SNUG, gap::SNUG);
             ui.horizontal(|ui| find_row(ui, bar, editor, (count, language)));
             if bar.replacing {
                 ui.horizontal(|ui| replace_row(ui, bar, editor, language, &mut edited));
@@ -238,7 +238,7 @@ fn replace_row(
     edited: &mut Option<usize>,
 ) {
     let tr = |key| i18n::translate(language, key, &[]);
-    ui.add_space(gap::G30);
+    ui.add_space(gap::PAGE);
     let replaced = field(
         ui,
         &mut bar.query.replace,
@@ -293,8 +293,8 @@ fn field(
     egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, edge))
-        .corner_radius(egui::CornerRadius::same(radius::R7))
-        .inner_margin(gap::margin(gap::G9, gap::G5))
+        .corner_radius(egui::CornerRadius::same(radius::CONTROL))
+        .inner_margin(gap::margin(gap::CONTROLS, gap::TIGHT))
         .show(ui, |ui| {
             let response = ui.add(
                 TextEdit::singleline(value)
@@ -331,7 +331,7 @@ fn count_label(ui: &mut Ui, count: Count, language: Language) {
     let galley = widgets::text(
         ui,
         &words,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Monospace,
         p.text_2,
@@ -348,14 +348,17 @@ fn toggle(ui: &mut Ui, on: &mut bool, glyph: &str, name: &str, author_id: &str) 
         egui::Sense::click(),
         author_id,
         || egui::WidgetInfo::selected(egui::Role::Button, true, *on, name),
-        egui::CornerRadius::same(radius::R6),
+        egui::CornerRadius::same(radius::CONTROL),
     );
     if *on {
-        ui.painter()
-            .rect_filled(response.rect, egui::CornerRadius::same(radius::R6), p.bg_3);
+        ui.painter().rect_filled(
+            response.rect,
+            egui::CornerRadius::same(radius::CONTROL),
+            p.bg_3,
+        );
     }
     let ink = if *on { p.amber_text } else { p.text_1 };
-    let galley = widgets::text(ui, glyph, font::PT11_5, 600.0, FontFamily::Monospace, ink);
+    let galley = widgets::text(ui, glyph, font::CONTROL, 600.0, FontFamily::Monospace, ink);
     ui.painter()
         .galley(response.rect.center() - galley.size() / 2.0, galley, ink);
     if response.clicked() {

@@ -42,7 +42,7 @@ pub(super) fn width(ui: &Ui, state: &AppState) -> f32 {
     let galley = widgets::text(
         ui,
         &name,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_1,
@@ -75,7 +75,7 @@ fn trigger(ui: &mut Ui, state: &AppState) -> Response {
         &[("name", name.as_str().into())],
     );
     let size = Vec2::new(width(ui, state), HEIGHT);
-    let corner = CornerRadius::same(radius::R7);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         size,
@@ -101,7 +101,7 @@ fn trigger(ui: &mut Ui, state: &AppState) -> Response {
     let galley = widgets::text(
         ui,
         &name,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_1,
@@ -121,12 +121,12 @@ fn panel(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(PANEL);
-    ui.spacing_mut().item_spacing.y = gap::G2;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     let title = tr(keys::http::environments::ACTIVE_TITLE).to_uppercase();
     let galley = widgets::text(
         ui,
         &title,
-        font::PT10_5,
+        font::CAPTION,
         600.0,
         FontFamily::Proportional,
         p.text_2,
@@ -205,12 +205,12 @@ fn entry_of(ui: &mut Ui, shown: &Entry<'_>, author_id: &str) -> Response {
         Sense::click(),
         author_id,
         || WidgetInfo::selected(Role::MenuItem, true, shown.on, shown.name),
-        CornerRadius::same(radius::R6),
+        CornerRadius::same(radius::CONTROL),
     );
     let rect = response.rect;
     if response.hovered() {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(radius::R6), p.bg_3);
+            .rect_filled(rect, CornerRadius::same(radius::CONTROL), p.bg_3);
     }
     let middle = rect.center().y;
     if shown.on {
@@ -224,7 +224,7 @@ fn entry_of(ui: &mut Ui, shown: &Entry<'_>, author_id: &str) -> Response {
     let name = widgets::text(
         ui,
         shown.name,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_0,
@@ -234,7 +234,7 @@ fn entry_of(ui: &mut Ui, shown: &Entry<'_>, author_id: &str) -> Response {
     let meta = widgets::text(
         ui,
         shown.meta,
-        font::PT11,
+        font::META,
         400.0,
         FontFamily::Proportional,
         p.text_2,

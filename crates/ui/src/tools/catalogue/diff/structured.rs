@@ -177,7 +177,7 @@ impl StructuredDiff {
         let width = (ui.available_width() - 14.0) / 2.0;
         let mut asked = None;
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G14;
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             for (slot, side) in [("a", JsonDiffSide::A), ("b", JsonDiffSide::B)] {
                 ui.allocate_ui(Vec2::new(width, 0.0), |ui| {
                     ui.vertical(|ui| {
@@ -271,7 +271,7 @@ impl StructuredDiff {
             Some(JsonDiffAnswer::NotStructured { sides }) if sides.contains(&side) => {
                 let p = palette(ui.ctx());
                 let words = tr(keys::tools::diff::structured::NOT_STRUCTURED);
-                let said = paragraph(ui, &words, (font::PT12_5, 400.0), p.text_1);
+                let said = paragraph(ui, &words, (font::BODY, 400.0), p.text_1);
                 address(ui, &said, &format!("structured-diff-not-structured-{slot}"));
                 let id = format!("structured-diff-as-text-{slot}");
                 Button::new(&tr(keys::tools::diff::structured::AS_TEXT), &id)
@@ -323,7 +323,7 @@ impl StructuredDiff {
             let width = ui.available_width();
             let left = (width - CHANGES_WIDTH - 14.0).max(width * 0.5);
             ui.horizontal_top(|ui| {
-                ui.spacing_mut().item_spacing.x = gap::G14;
+                ui.spacing_mut().item_spacing.x = gap::BLOCKS;
                 ui.allocate_ui(Vec2::new(left, 0.0), |ui| {
                     ui.vertical(|ui| {
                         ui.set_width(left);
@@ -359,7 +359,7 @@ impl StructuredDiff {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G12;
+            ui.spacing_mut().item_spacing.x = gap::GROUPS;
             pill(
                 ui,
                 &count(words::ADDED, counts.added),
@@ -423,12 +423,12 @@ impl StructuredDiff {
         let words = Message::new(keys::tools::diff::structured::CHANGES_COUNT)
             .with("count", count)
             .text(language);
-        paragraph(ui, &words, (font::PT12, 600.0), p.text_2);
+        paragraph(ui, &words, (font::LABEL, 600.0), p.text_2);
         egui::ScrollArea::vertical()
             .id_salt("structured-diff-changes")
             .max_height(super::ROWS_MAX)
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = gap::G2;
+                ui.spacing_mut().item_spacing.y = gap::LINE;
                 for change in changes {
                     let on = self.selected.as_deref() == Some(change.path.as_str());
                     if change_row(ui, change, on, language).clicked() {
@@ -483,7 +483,7 @@ fn cell(ui: &Ui, rect: Rect, kind: Kind, right: bool, line: &JsonDiffLine) {
     let galley = widgets::text(
         ui,
         &line.text,
-        font::PT12,
+        font::LABEL,
         400.0,
         FontFamily::Monospace,
         ink,
@@ -527,9 +527,9 @@ fn change_row(ui: &mut Ui, change: &JsonChange, on: bool, language: Language) ->
     let width = ui.available_width();
     let path = format!("{} {}", change_mark(change.kind), change.path);
     let detail = change_detail(change, language);
-    let top = widgets::wrapped(ui, &path, (font::PT12, 500.0), p.text_0, width - 20.0);
-    let under = widgets::wrapped(ui, &detail, (font::PT11_5, 400.0), p.text_2, width - 20.0);
-    let corner = CornerRadius::same(radius::R7);
+    let top = widgets::wrapped(ui, &path, (font::LABEL, 500.0), p.text_0, width - 20.0);
+    let under = widgets::wrapped(ui, &detail, (font::CONTROL, 400.0), p.text_2, width - 20.0);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(width, top.size().y + under.size().y + 14.0),

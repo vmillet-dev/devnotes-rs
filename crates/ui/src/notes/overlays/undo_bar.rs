@@ -29,16 +29,16 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R10))
+        .corner_radius(CornerRadius::same(radius::CARD))
         .shadow(p.shadow_overlay)
-        .inner_margin(gap::margin(gap::G12, gap::G6));
+        .inner_margin(gap::margin(gap::GROUPS, gap::SNUG));
     egui::Area::new(egui::Id::unique("undo-bar"))
         .order(Order::Tooltip)
         .anchor(Align2::CENTER_BOTTOM, vec2(0.0, -20.0))
         .show(ui.ctx(), |ui| {
             let bar = frame.show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = gap::G12;
+                    ui.spacing_mut().item_spacing.x = gap::GROUPS;
                     message(ui, action, state.language);
                     restore(ui, state.language, actions);
                     let dismiss = i18n::translate(state.language, keys::undo::DISMISS, &[]);
@@ -71,7 +71,7 @@ fn message(ui: &mut Ui, action: &Reversible, language: i18n::Language) {
     let galley = widgets::text(
         ui,
         &words,
-        font::PT12_5,
+        font::BODY,
         400.0,
         FontFamily::Proportional,
         p.text_1,
@@ -115,15 +115,22 @@ fn restore(ui: &mut Ui, language: i18n::Language, actions: &mut Actions) {
     let words = widgets::text(
         ui,
         &label,
-        font::PT12,
+        font::LABEL,
         400.0,
         FontFamily::Proportional,
         p.amber_text,
     );
-    let key = widgets::text(ui, &cap, font::PT10, 400.0, FontFamily::Monospace, p.text_2);
+    let key = widgets::text(
+        ui,
+        &cap,
+        font::CAPTION,
+        400.0,
+        FontFamily::Monospace,
+        p.text_2,
+    );
     let cap_size = key.size() + vec2(10.0, 2.0);
     let wanted = vec2(words.size().x + 6.0 + cap_size.x, words.size().y) + vec2(20.0, 8.0);
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = widgets::interact(
         ui,
         wanted,
@@ -157,7 +164,7 @@ fn restore(ui: &mut Ui, language: i18n::Language, actions: &mut Actions) {
     painter.galley(words_at, words, p.amber_text);
     painter.rect_stroke(
         cap_rect,
-        CornerRadius::same(radius::R4),
+        CornerRadius::same(radius::TAG),
         Stroke::new(1.0, p.line_soft),
         StrokeKind::Inside,
     );

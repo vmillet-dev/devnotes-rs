@@ -30,9 +30,9 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         .auto_shrink(false)
         .show(ui, |ui| {
             egui::Frame::new().inner_margin(margin).show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = gap::G6;
+                ui.spacing_mut().item_spacing.y = gap::SNUG;
                 crate::titlebar::area_switch::rail(ui, Area::Tools, state.language, actions);
-                ui.spacing_mut().item_spacing.y = gap::G2;
+                ui.spacing_mut().item_spacing.y = gap::LINE;
                 links(ui, state, actions);
             });
         });
@@ -59,7 +59,7 @@ fn links(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     if all.show(ui).clicked() {
         actions.push(Asked::Tools(Action::Home(None)));
     }
-    ui.add_space(gap::G6);
+    ui.add_space(gap::SNUG);
     match open {
         Some(tool) => around_a_tool(ui, state, tool, actions),
         None => categories(ui, state, filter, actions),
@@ -111,7 +111,7 @@ fn around_a_tool(ui: &mut Ui, state: &AppState, tool: &ToolEntry, actions: &mut 
     if recents.is_empty() {
         return;
     }
-    ui.add_space(gap::G12);
+    ui.add_space(gap::GROUPS);
     let p = palette(ui.ctx());
     let (line, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
     ui.painter().hline(
@@ -132,11 +132,11 @@ fn around_a_tool(ui: &mut Ui, state: &AppState, tool: &ToolEntry, actions: &mut 
 /// A label over its rows, not one of them: small, muted, with air above.
 fn heading(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    ui.add_space(gap::G14);
+    ui.add_space(gap::BLOCKS);
     let galley = widgets::text(
         ui,
         words,
-        font::PT11_5,
+        font::CONTROL,
         500.0,
         FontFamily::Proportional,
         p.text_2,
@@ -195,7 +195,7 @@ impl<'a> Link<'a> {
             widgets::text(
                 ui,
                 &count.to_string(),
-                font::PT11,
+                font::META,
                 400.0,
                 FontFamily::Monospace,
                 ink,
@@ -209,7 +209,7 @@ impl<'a> Link<'a> {
         let room = width - 20.0 - lead - count.as_ref().map_or(0.0, |it| it.size().x + 9.0);
         let label = widgets::wrapped(ui, self.words, (13.0, weight), ink, room);
         let (words, on) = (self.words, self.on);
-        let corner = CornerRadius::same(radius::R7);
+        let corner = CornerRadius::same(radius::CONTROL);
         let response = interact(
             ui,
             Vec2::new(width, label.size().y + 14.0),
@@ -237,7 +237,7 @@ impl<'a> Link<'a> {
             Lead::Hue(hue) => {
                 let dot = Rect::from_center_size(Pos2::new(left + 4.0, middle), Vec2::splat(8.0));
                 ui.painter()
-                    .rect_filled(dot, CornerRadius::same(radius::R2), hue);
+                    .rect_filled(dot, CornerRadius::same(radius::MARK), hue);
             }
         }
         let top = middle - label.size().y / 2.0;

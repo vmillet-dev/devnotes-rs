@@ -80,9 +80,9 @@ impl<'a> TextField<'a> {
         let p = palette(ui.ctx());
         let edge = if self.invalid { p.red } else { p.line };
         let (size, corner, margin) = if self.compact {
-            (12.5, 6, gap::margin(gap::G7, gap::G5))
+            (12.5, 6, gap::margin(gap::SNUG, gap::TIGHT))
         } else {
-            (14.0, 8, gap::margin(gap::G11, gap::G9))
+            (14.0, 8, gap::margin(gap::INSET, gap::CONTROLS))
         };
         let family = if self.mono {
             FontFamily::Monospace
@@ -142,7 +142,7 @@ pub fn switch(ui: &mut Ui, label: &str, author_id: &str, on: &mut bool, enabled:
         sense,
         author_id,
         || WidgetInfo::selected(Role::CheckBox, enabled, *on, label),
-        CornerRadius::same(radius::R9),
+        CornerRadius::same(radius::MENU),
     );
     if response.clicked() {
         *on = !*on;
@@ -157,7 +157,7 @@ pub fn switch(ui: &mut Ui, label: &str, author_id: &str, on: &mut bool, enabled:
     let (fill, knob) = (super::dimmed(fill, enabled), super::dimmed(knob, enabled));
     ui.painter().rect(
         track,
-        CornerRadius::same(radius::R9),
+        CornerRadius::same(radius::MENU),
         fill,
         Stroke::new(1.0, p.line_soft),
         StrokeKind::Inside,
@@ -260,12 +260,12 @@ impl<'a> SearchField<'a> {
         egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, edge))
-            .corner_radius(CornerRadius::same(radius::R8))
-            .inner_margin(gap::margin(gap::G10, gap::G4))
+            .corner_radius(CornerRadius::same(radius::MENU))
+            .inner_margin(gap::margin(gap::INSET, gap::TIGHT))
             .show(ui, |ui| {
                 ui.set_width(width - 22.0);
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = gap::G8;
+                    ui.spacing_mut().item_spacing.x = gap::CONTROLS;
                     let (glyph, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
                     icons::paint(ui, glyph, Icon::Search, p.text_2);
                     let trailing = self.trailing_width(ui);
@@ -273,10 +273,10 @@ impl<'a> SearchField<'a> {
                         TextEdit::singleline(self.value)
                             .id(id.with("field"))
                             .frame(egui::Frame::new())
-                            .margin(gap::margin(0.0, gap::G4))
+                            .margin(gap::margin(0.0, gap::TIGHT))
                             .hint_text(self.hint)
                             .text_color(p.text_0)
-                            .font(FontId::new(font::PT13, FontFamily::Proportional))
+                            .font(FontId::new(font::READING, FontFamily::Proportional))
                             .desired_width((ui.available_width() - trailing).max(24.0)),
                     );
                     name(ui, &response, self.name);
@@ -293,7 +293,7 @@ impl<'a> SearchField<'a> {
                         let galley = super::text(
                             ui,
                             matched,
-                            font::PT11,
+                            font::META,
                             400.0,
                             FontFamily::Proportional,
                             p.text_2,
@@ -332,7 +332,7 @@ impl<'a> SearchField<'a> {
         let after = if words.is_empty() {
             0.0
         } else {
-            super::text(ui, words, font::PT11, 400.0, family, Color32::WHITE)
+            super::text(ui, words, font::META, 400.0, family, Color32::WHITE)
                 .size()
                 .x
                 + gap
@@ -384,7 +384,7 @@ impl<'a> Checkbox<'a> {
             },
             self.author_id,
             || WidgetInfo::selected(Role::CheckBox, enabled, checked, label),
-            CornerRadius::same(radius::R4),
+            CornerRadius::same(radius::TAG),
         );
         if response.clicked() {
             *self.checked = !*self.checked;
@@ -399,7 +399,7 @@ impl<'a> Checkbox<'a> {
         };
         ui.painter().rect(
             tick,
-            CornerRadius::same(radius::R4),
+            CornerRadius::same(radius::TAG),
             fill,
             Stroke::new(1.0, edge),
             StrokeKind::Inside,

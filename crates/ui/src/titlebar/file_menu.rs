@@ -40,7 +40,7 @@ pub(super) fn show(
 
 fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     ui.set_width(WIDTH);
-    ui.spacing_mut().item_spacing.y = gap::G2;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     let tr = |key| i18n::translate(state.language, key, &[]);
     let on_screen = state.on_screen();
     let on_screen: Vec<&str> = on_screen.iter().map(String::as_str).collect();

@@ -12,10 +12,10 @@ pub fn release_notes(ui: &mut Ui, release: &ChangelogRelease) {
     let p = palette(ui.ctx());
     for section in &release.sections {
         if !section.title.is_empty() {
-            ui.add_space(gap::G8);
+            ui.add_space(gap::CONTROLS);
             ui.label(
                 egui::RichText::new(section.title.to_uppercase())
-                    .size(font::PT11)
+                    .size(font::META)
                     .variation(*b"wght", 600.0)
                     .color(p.text_2),
             );

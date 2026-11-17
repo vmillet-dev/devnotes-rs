@@ -231,7 +231,7 @@ fn bar(
     if !bar_ui.rect_contains_pointer(room) {
         bar_ui.set_opacity(0.45);
     }
-    bar_ui.spacing_mut().item_spacing.x = gap::G6;
+    bar_ui.spacing_mut().item_spacing.x = gap::SNUG;
     let closed = IconButton::new(
         Icon::X,
         &tr(keys::presentation::CLOSE),
@@ -266,7 +266,7 @@ fn bar(
         egui::Label::new(
             egui::RichText::new(words)
                 .monospace()
-                .size(font::PT12_5)
+                .size(font::BODY)
                 .color(p.text_1),
         ),
     );

@@ -17,10 +17,10 @@ use crate::widgets::{self, SearchField, address};
 
 const SEARCH_MAX: f32 = 480.0;
 const COPY_COLUMN: f32 = 44.0;
-const CARD_GAP: f32 = gap::G16;
+const CARD_GAP: f32 = gap::BLOCKS;
 const CHECK: f32 = 14.0;
 const CHIP_HEIGHT: f32 = 17.0;
-const CHIP_PADDING: f32 = gap::G10;
+const CHIP_PADDING: f32 = gap::INSET;
 
 pub struct Group {
     pub id: String,
@@ -171,7 +171,7 @@ pub struct ReferenceTable<'a> {
 impl ReferenceTable<'_> {
     /// `query` is the tool's: a reference found again is searched as it was.
     pub fn show(&self, ui: &mut Ui, query: &mut String, language: Language) -> Response {
-        ui.spacing_mut().item_spacing.y = gap::G12;
+        ui.spacing_mut().item_spacing.y = gap::GROUPS;
         let field = self.head(ui, query, language);
         let folded = api::tools::fold(query.trim());
         let shown: Vec<&ReferenceRow> = self
@@ -276,7 +276,7 @@ impl ReferenceTable<'_> {
         let shown = egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, p.line_soft))
-            .corner_radius(CornerRadius::same(radius::R10))
+            .corner_radius(CornerRadius::same(radius::CARD))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.spacing_mut().item_spacing = Vec2::ZERO;
@@ -317,7 +317,7 @@ impl ReferenceTable<'_> {
         for (column, width) in self.columns.iter().zip(widths) {
             let words = column.label.to_uppercase();
             let galley =
-                widgets::one_line(ui, &words, (font::PT10_5, 600.0), p.text_2, width - 24.0);
+                widgets::one_line(ui, &words, (font::CAPTION, 600.0), p.text_2, width - 24.0);
             let at = Pos2::new(left + 12.0, rect.center().y - galley.size().y / 2.0);
             ui.painter().galley(at, galley, p.text_2);
             left += width;
@@ -380,13 +380,13 @@ fn card_head(ui: &mut Ui, group: &Group, count: usize) {
     let title = widgets::wrapped(
         ui,
         &group.label,
-        (font::PT12_5, 600.0),
+        (font::BODY, 600.0),
         p.text_0,
         f32::INFINITY,
     );
     let number = count.to_string();
     let family = FontFamily::Proportional;
-    let number = widgets::text(ui, &number, font::PT12_5, 400.0, family, p.text_2);
+    let number = widgets::text(ui, &number, font::BODY, 400.0, family, p.text_2);
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, title.size().y + 16.0), Sense::hover());
     let title_width = title.size().x;
@@ -409,11 +409,11 @@ struct LaidCell {
 /// A value on its chip; answers where it ends.
 fn chip(ui: &Ui, at: Pos2, words: &str, family: FontFamily) -> f32 {
     let p = palette(ui.ctx());
-    let shown = widgets::text(ui, words, font::PT11, 400.0, family, p.text_1);
+    let shown = widgets::text(ui, words, font::META, 400.0, family, p.text_1);
     let size = shown.size() + Vec2::new(CHIP_PADDING, 2.0);
     let rect = Rect::from_min_size(at, size);
     ui.painter()
-        .rect_filled(rect, CornerRadius::same(radius::R4), p.bg_3);
+        .rect_filled(rect, CornerRadius::same(radius::TAG), p.bg_3);
     ui.painter()
         .galley(rect.center() - shown.size() / 2.0, shown, p.text_1);
     rect.right()
@@ -475,7 +475,7 @@ fn laid_cell(ui: &Ui, cell: &Cell, width: f32) -> LaidCell {
         FontFamily::Proportional
     };
     let text = RichText::new(&cell.text)
-        .font(FontId::new(font::PT12_5, family))
+        .font(FontId::new(font::BODY, family))
         .color(ink);
     let text = egui::WidgetText::from(text).into_galley(
         ui,
@@ -486,7 +486,7 @@ fn laid_cell(ui: &Ui, cell: &Cell, width: f32) -> LaidCell {
     let below = cell
         .below
         .as_deref()
-        .map(|words| widgets::wrapped(ui, words, (font::PT11_5, 400.0), p.text_2, width));
+        .map(|words| widgets::wrapped(ui, words, (font::CONTROL, 400.0), p.text_2, width));
     LaidCell {
         text,
         ink,

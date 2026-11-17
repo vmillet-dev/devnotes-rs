@@ -382,7 +382,7 @@ fn item(ui: &mut Ui, row: Rect, item: &ChecklistItem, language: i18n::Language) 
         Sense::click(),
         "note-card-item",
         || WidgetInfo::selected(Role::CheckBox, true, done, &name),
-        CornerRadius::same(radius::R4),
+        CornerRadius::same(radius::TAG),
     );
     let ink = if response.hovered() {
         p.text_1

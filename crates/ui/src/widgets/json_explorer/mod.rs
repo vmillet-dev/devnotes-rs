@@ -476,10 +476,14 @@ impl<'a> ExplorerView<'a> {
                 .layout(Layout::top_down(Align::Center)),
         );
         inner.add_space((rect.height() / 2.0 - 40.0).max(0.0));
-        let label = inner.label(egui::RichText::new(&said).size(font::PT13).color(p.text_1));
+        let label = inner.label(
+            egui::RichText::new(&said)
+                .size(font::READING)
+                .color(p.text_1),
+        );
         label.widget_info(|| WidgetInfo::labeled(Role::Status, true, &said));
         address(&inner, &label, "json-invalid");
-        inner.add_space(gap::G12);
+        inner.add_space(gap::GROUPS);
         if self.with_code
             && Button::new(&self.tr(keys::json::SHOW_IN_CODE), "json-error-show")
                 .show(&mut inner)
@@ -505,7 +509,7 @@ impl<'a> ExplorerView<'a> {
                 .layout(Layout::left_to_right(Align::Center).with_main_wrap(true)),
         );
         row.set_clip_rect(surface);
-        row.spacing_mut().item_spacing = vec2(gap::G8, gap::G8);
+        row.spacing_mut().item_spacing = vec2(gap::CONTROLS, gap::CONTROLS);
         let name = self.tr(keys::json::SEARCH);
         let hint = self.tr(keys::json::SEARCH_PLACEHOLDER);
         let count = self.view.match_count;
@@ -587,7 +591,7 @@ impl<'a> ExplorerView<'a> {
         let width = text(
             ui,
             &words,
-            font::PT12,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             p.text_1,
@@ -601,7 +605,7 @@ impl<'a> ExplorerView<'a> {
         );
         ui.painter().rect(
             at,
-            CornerRadius::same(radius::R10),
+            CornerRadius::same(radius::CARD),
             p.bg_3,
             Stroke::new(1.0, p.line),
             StrokeKind::Inside,
@@ -612,8 +616,12 @@ impl<'a> ExplorerView<'a> {
                 .max_rect(at.shrink2(vec2(14.0, 4.0)))
                 .layout(Layout::left_to_right(Align::Center)),
         );
-        inner.spacing_mut().item_spacing.x = gap::G12;
-        let said = inner.label(egui::RichText::new(&words).size(font::PT12).color(p.text_1));
+        inner.spacing_mut().item_spacing.x = gap::GROUPS;
+        let said = inner.label(
+            egui::RichText::new(&words)
+                .size(font::LABEL)
+                .color(p.text_1),
+        );
         address(&inner, &said, "json-folded");
         if Button::new(&show, "json-show-tree")
             .show(&mut inner)
@@ -649,7 +657,7 @@ impl<'a> ExplorerView<'a> {
                 .max_rect(bar.shrink2(vec2(16.0, 0.0)))
                 .layout(Layout::left_to_right(Align::Center)),
         );
-        row.spacing_mut().item_spacing.x = gap::G6;
+        row.spacing_mut().item_spacing.x = gap::SNUG;
         let response = super::region(&mut row, bar, "json-crumbs", Sense::hover());
         let all: Vec<&str> = chain.iter().map(|(label, _)| *label).collect();
         let named = all.join(" › ");
@@ -662,7 +670,7 @@ impl<'a> ExplorerView<'a> {
             } else {
                 p.text_2
             };
-            let galley = text(&row, label, font::PT12, 400.0, FontFamily::Monospace, ink);
+            let galley = text(&row, label, font::LABEL, 400.0, FontFamily::Monospace, ink);
             let (rect, crumb) = row.allocate_exact_size(
                 galley.size().max(vec2(0.0, super::MIN_TARGET)),
                 Sense::click(),
@@ -679,7 +687,7 @@ impl<'a> ExplorerView<'a> {
                 output.chosen = Some((*path).to_owned());
             }
             if index != last {
-                row.label(egui::RichText::new("›").size(font::PT12).color(p.line_no));
+                row.label(egui::RichText::new("›").size(font::LABEL).color(p.line_no));
             }
         }
     }
@@ -708,7 +716,7 @@ impl<'a> ExplorerView<'a> {
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(&mut inner, |ui| {
-                ui.spacing_mut().item_spacing.y = gap::G10;
+                ui.spacing_mut().item_spacing.y = gap::INSET;
                 if let Some(selected) = selected {
                     self.selected(ui, wide, selected, output);
                 }
@@ -726,14 +734,17 @@ impl<'a> ExplorerView<'a> {
         egui::Frame::new()
             .fill(p.bg_0)
             .stroke(Stroke::new(1.0, p.line))
-            .corner_radius(CornerRadius::same(radius::R7))
-            .inner_margin(gap::margin(gap::G10, if wide { gap::G8 } else { gap::G6 }))
+            .corner_radius(CornerRadius::same(radius::CONTROL))
+            .inner_margin(gap::margin(
+                gap::INSET,
+                if wide { gap::CONTROLS } else { gap::SNUG },
+            ))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 let path = ui.add(
                     egui::Label::new(
                         egui::RichText::new(&selected.path)
-                            .size(font::PT12)
+                            .size(font::LABEL)
                             .family(FontFamily::Monospace)
                             .color(p.amber_text),
                     )
@@ -757,12 +768,12 @@ impl<'a> ExplorerView<'a> {
                 kind_words(selected.kind),
                 &[("count", selected.size.into())],
             );
-            let said = ui.label(egui::RichText::new(kind).size(font::PT12_5).color(p.text_1));
+            let said = ui.label(egui::RichText::new(kind).size(font::BODY).color(p.text_1));
             address(ui, &said, "json-selected-kind");
             let previewed = ui.add(
                 egui::Label::new(
                     egui::RichText::new(&selected.preview)
-                        .size(font::PT12)
+                        .size(font::LABEL)
                         .family(FontFamily::Monospace)
                         .color(p.text_1),
                 )
@@ -771,7 +782,7 @@ impl<'a> ExplorerView<'a> {
             address(ui, &previewed, "json-selected-preview");
         }
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = vec2(gap::G6, gap::G6);
+            ui.spacing_mut().item_spacing = vec2(gap::SNUG, gap::SNUG);
             if !wide
                 && Button::new(&copy_path, "json-copy-path")
                     .kind(super::Kind::Filled)
@@ -802,7 +813,7 @@ impl<'a> ExplorerView<'a> {
             }
         });
         if wide {
-            ui.add_space(gap::G4);
+            ui.add_space(gap::TIGHT);
             ui.painter().hline(
                 ui.max_rect().x_range(),
                 ui.cursor().top(),
@@ -822,14 +833,14 @@ impl<'a> ExplorerView<'a> {
             (self.tr(keys::json::SIZE), size),
         ];
         let figures = ui.vertical(|ui| {
-            ui.spacing_mut().item_spacing.y = gap::G4;
+            ui.spacing_mut().item_spacing.y = gap::TIGHT;
             for (name, value) in &rows {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(name).size(font::PT12_5).color(p.text_2));
+                    ui.label(egui::RichText::new(name).size(font::BODY).color(p.text_2));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.label(
                             egui::RichText::new(value)
-                                .size(font::PT12_5)
+                                .size(font::BODY)
                                 .family(FontFamily::Monospace)
                                 .color(p.text_0),
                         );
@@ -874,7 +885,7 @@ fn title(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
     ui.label(
         egui::RichText::new(words.to_uppercase())
-            .size(font::PT11)
+            .size(font::META)
             .strong()
             .extra_letter_spacing(1.0)
             .color(p.text_2),
@@ -883,7 +894,7 @@ fn title(ui: &mut Ui, words: &str) {
 
 fn note(ui: &mut Ui, words: &str, colour: Color32, author_id: &str) {
     let said =
-        ui.add(egui::Label::new(egui::RichText::new(words).size(font::PT12).color(colour)).wrap());
+        ui.add(egui::Label::new(egui::RichText::new(words).size(font::LABEL).color(colour)).wrap());
     address(ui, &said, author_id);
 }
 

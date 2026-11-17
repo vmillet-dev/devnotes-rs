@@ -238,7 +238,7 @@ fn wrapped_rows_hang_under_their_line_s_indent() {
     harness.run();
     let ctx = harness.ctx.clone();
     let frame = geometry::Frame {
-        font: FontId::new(font::PT13, FontFamily::Monospace),
+        font: FontId::new(font::READING, FontFamily::Monospace),
         row_height: 16.0,
         char_width: 8.0,
         wrap: Some(300.0),

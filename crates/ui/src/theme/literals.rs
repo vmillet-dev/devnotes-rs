@@ -158,7 +158,7 @@ fn the_sweep_sees_a_typed_gap_radius_or_size() {
     assert!(writes_a_spacing("ui.spacing_mut().item_spacing.x = 8.0;"));
     assert!(writes_a_spacing("const GAP: f32 = 10.0;"));
     assert!(!writes_a_spacing("ui.spacing_mut().item_spacing.y = 0.0;"));
-    assert!(!writes_a_spacing("const GAP: f32 = gap::G10;"));
+    assert!(!writes_a_spacing("const GAP: f32 = gap::INSET;"));
     assert_eq!(literal_calls("CornerRadius::same(6)").len(), 1);
     assert_eq!(
         literal_calls("widgets::text(ui, &words, 12.5, 400.0, family, ink)").len(),
@@ -168,13 +168,13 @@ fn the_sweep_sees_a_typed_gap_radius_or_size() {
         literal_calls("widgets::one_line(ui, &words, (12.5, 400.0), ink, 80.0)").len(),
         1
     );
-    assert!(literal_calls("CornerRadius::same(radius::R6)").is_empty());
+    assert!(literal_calls("CornerRadius::same(radius::CONTROL)").is_empty());
     assert!(writes_a_size_and_weight(
         "paragraph(ui, &words, (13.0, 600.0), ink);"
     ));
     assert!(!writes_a_size_and_weight(
-        "paragraph(ui, &words, (font::PT13, 600.0), ink);"
+        "paragraph(ui, &words, (font::READING, 600.0), ink);"
     ));
     assert!(!writes_a_size_and_weight("let size = vec2(12.0, 400.0);"));
-    assert!(literal_calls("widgets::text(ui, &words, font::PT12_5, 400.0, f, ink)").is_empty());
+    assert!(literal_calls("widgets::text(ui, &words, font::BODY, 400.0, f, ink)").is_empty());
 }

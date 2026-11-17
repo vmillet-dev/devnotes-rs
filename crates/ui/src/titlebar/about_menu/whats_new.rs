@@ -38,7 +38,7 @@ fn body(ui: &mut Ui, state: &AppState) {
     let language = state.language;
     let said = |ui: &mut Ui, key| {
         let words = RichText::new(i18n::translate(language, key, &[]))
-            .size(font::PT12_5)
+            .size(font::BODY)
             .color(palette(ui.ctx()).text_2);
         ui.label(words);
     };
@@ -51,17 +51,17 @@ fn body(ui: &mut Ui, state: &AppState) {
     }
     for release in state.help.releases() {
         ui.push_id(&release.version, |ui| self::release(ui, release, language));
-        ui.add_space(gap::G14);
+        ui.add_space(gap::BLOCKS);
     }
 }
 
 fn release(ui: &mut Ui, release: &ChangelogRelease, language: Language) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let version = ui.label(
             RichText::new(&release.version)
-                .size(font::PT13)
+                .size(font::READING)
                 .variation(*b"wght", 600.0)
                 .color(p.text_0),
         );
@@ -69,7 +69,7 @@ fn release(ui: &mut Ui, release: &ChangelogRelease, language: Language) {
         if let Some(date) = &release.date {
             ui.label(
                 RichText::new(date)
-                    .size(font::PT11_5)
+                    .size(font::CONTROL)
                     .monospace()
                     .color(p.text_2),
             );

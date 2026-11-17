@@ -41,7 +41,7 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
                 text(
                     ui,
                     label,
-                    font::PT11_5,
+                    font::CONTROL,
                     400.0,
                     FontFamily::Proportional,
                     p.text_2,
@@ -65,7 +65,7 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
             ui.allocate_exact_size(Vec2::new(width, super::MIN_TARGET + 2.0), Sense::hover());
         ui.painter().rect(
             rect,
-            CornerRadius::same(radius::R7),
+            CornerRadius::same(radius::CONTROL),
             p.bg_2,
             Stroke::new(1.0, p.line_soft),
             egui::StrokeKind::Inside,
@@ -105,12 +105,12 @@ fn segment(ui: &mut Ui, label: &str, author_id: &str, (on, open): (bool, bool)) 
     let probe = text(
         ui,
         label,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_2,
     );
-    let corner = CornerRadius::same(radius::R6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         probe.size() + Vec2::new(20.0, 8.0),
@@ -132,7 +132,7 @@ fn segment(ui: &mut Ui, label: &str, author_id: &str, (on, open): (bool, bool)) 
     let galley = text(
         ui,
         label,
-        font::PT11_5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         ink,

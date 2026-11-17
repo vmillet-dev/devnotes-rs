@@ -463,7 +463,7 @@ fn checkbox(ui: &Ui, marker: Rect, checked: bool, size: f32) -> Rect {
         pos2(marker.left(), marker.center().y - edge / 2.0),
         Vec2::splat(edge),
     );
-    let corner = CornerRadius::same(radius::R3);
+    let corner = CornerRadius::same(radius::TAG);
     if checked {
         ui.painter().rect_filled(rect, corner, p.amber_fill);
         let tick = [
@@ -488,7 +488,7 @@ fn quote(ui: &mut Ui, inner: &[Block], path: &mut Vec<usize>, frame: &mut Frame<
         ui.add_space(14.0 + 3.0);
         ui.vertical(|ui| {
             ui.spacing_mut().item_spacing = Vec2::ZERO;
-            ui.add_space(gap::G2);
+            ui.add_space(gap::LINE);
             for (at, block) in inner.iter().enumerate() {
                 if at > 0 {
                     ui.add_space(GAP * size);
@@ -506,7 +506,7 @@ fn quote(ui: &mut Ui, inner: &[Block], path: &mut Vec<usize>, frame: &mut Frame<
                 }
                 path.pop();
             }
-            ui.add_space(gap::G2);
+            ui.add_space(gap::LINE);
         });
     });
     let bottom = ui.cursor().top();
@@ -541,7 +541,7 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
     }
     ui.painter().rect(
         rect,
-        CornerRadius::same(radius::R8),
+        CornerRadius::same(radius::MENU),
         p.bg_1,
         Stroke::new(1.0, p.line_soft),
         StrokeKind::Inside,
@@ -551,7 +551,7 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
             pos2(rect.right() - 10.0, rect.top() + 6.0),
             Align2::RIGHT_TOP,
             language,
-            FontId::monospace(font::PT10),
+            FontId::monospace(font::CAPTION),
             p.text_2,
         );
     }
@@ -680,7 +680,7 @@ fn placeholder(ui: &mut Ui, words: &str, size: f32) {
     crate::widgets::address(ui, &response, "rich-embed");
     ui.painter().rect(
         rect,
-        CornerRadius::same(radius::R8),
+        CornerRadius::same(radius::MENU),
         p.bg_1,
         Stroke::new(1.0, p.line_soft),
         StrokeKind::Inside,
@@ -689,7 +689,7 @@ fn placeholder(ui: &mut Ui, words: &str, size: f32) {
         rect.center(),
         Align2::CENTER_CENTER,
         words,
-        FontId::proportional(font::PT12),
+        FontId::proportional(font::LABEL),
         p.text_2,
     );
 }

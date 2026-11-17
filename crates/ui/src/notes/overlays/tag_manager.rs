@@ -46,7 +46,7 @@ pub(in crate::notes) fn show(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::R14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay)
         .inner_margin(Margin::same(padding));
     let shown = egui::Modal::new(Id::unique("tag-manager"))
@@ -64,14 +64,14 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut
     let tr = |key| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = gap::G10;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let closed = ui
         .horizontal(|ui| {
             let title = tr(keys::tag_manager::TITLE);
             let words = widgets::text(
                 ui,
                 &title,
-                font::PT15,
+                font::TITLE,
                 600.0,
                 FontFamily::Proportional,
                 p.text_0,
@@ -110,7 +110,7 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut
         return closed;
     }
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = vec2(gap::G6, gap::G6);
+        ui.spacing_mut().item_spacing = vec2(gap::SNUG, gap::SNUG);
         for usage in tags.tags() {
             if item(ui, usage, tags.is_selected(&usage.tag), language) {
                 ask(actions, Tags::Toggle(usage.tag.clone()));
@@ -127,7 +127,7 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut
 
 fn say(ui: &mut Ui, words: &str, colour: Color32, author_id: &str) {
     let response = ui
-        .add(egui::Label::new(egui::RichText::new(words).size(font::PT11_5).color(colour)).wrap());
+        .add(egui::Label::new(egui::RichText::new(words).size(font::CONTROL).color(colour)).wrap());
     widgets::address(ui, &response, author_id);
 }
 
@@ -141,11 +141,11 @@ fn item(ui: &mut Ui, usage: &TagUsage, on: bool, language: i18n::Language) -> bo
         &[("count", usage.note_count.into())],
     );
     let mono = FontFamily::Monospace;
-    let words = widgets::text(ui, &name, font::PT11_5, 400.0, mono.clone(), p.text_1);
+    let words = widgets::text(ui, &name, font::CONTROL, 400.0, mono.clone(), p.text_1);
     let counted = widgets::text(
         ui,
         &count,
-        font::PT10_5,
+        font::CAPTION,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -186,7 +186,7 @@ fn item(ui: &mut Ui, usage: &TagUsage, on: bool, language: i18n::Language) -> bo
         Stroke::new(1.0, edge),
         StrokeKind::Inside,
     );
-    let words = widgets::text(ui, &name, font::PT11_5, 400.0, mono, ink);
+    let words = widgets::text(ui, &name, font::CONTROL, 400.0, mono, ink);
     let left = rect.left() + 10.0;
     let width = words.size().x;
     ui.painter().galley(
@@ -221,7 +221,7 @@ fn form(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut 
     let top = ui.cursor().top();
     ui.painter()
         .hline(ui.max_rect().x_range(), top, Stroke::new(1.0, p.line_soft));
-    ui.add_space(gap::G4);
+    ui.add_space(gap::TIGHT);
     let ticked = state.tags.selected() > 0;
     let apply = tr(if state.tags.selected() > 1 {
         keys::tag_manager::MERGE
@@ -230,7 +230,7 @@ fn form(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut 
     });
     let delete = tr(keys::tag_manager::DELETE);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::G8;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let buttons = 2.0 * 8.0 + Button::width(ui, &apply) + Button::width(ui, &delete);
         let (label, hint) = (
             tr(keys::tag_manager::TARGET_LABEL),
@@ -294,17 +294,22 @@ fn confirmation(
     let frame = egui::Frame::new()
         .fill(p.amber_fill.gamma_multiply(0.08))
         .stroke(Stroke::new(1.0, p.amber_edge))
-        .corner_radius(CornerRadius::same(radius::R6))
-        .inner_margin(gap::margin(gap::G12, gap::G12));
+        .corner_radius(CornerRadius::same(radius::CONTROL))
+        .inner_margin(gap::margin(gap::GROUPS, gap::GROUPS));
     let shown = frame.show(ui, |ui| {
         ui.set_width(ui.available_width());
-        ui.spacing_mut().item_spacing.y = gap::G10;
+        ui.spacing_mut().item_spacing.y = gap::INSET;
         let text = ui.add(
-            egui::Label::new(egui::RichText::new(&words).size(font::PT13).color(p.text_0)).wrap(),
+            egui::Label::new(
+                egui::RichText::new(&words)
+                    .size(font::READING)
+                    .color(p.text_0),
+            )
+            .wrap(),
         );
         widgets::address(ui, &text, "tag-confirm-text");
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap::G8;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             if Button::new(&tr(keys::tag_manager::CONFIRM_ACTION), "tag-confirm-apply")
                 .kind(Kind::Destructive)
                 .show(ui)
