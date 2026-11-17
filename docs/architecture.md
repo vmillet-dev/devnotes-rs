@@ -5539,7 +5539,11 @@ their language, naming the log's folder; set once the preferences are read, neve
 halfway leaves state no one can vouch for, and SQLite's journal keeps what was committed, which
 the next open checks (`db::quick_check`, the gate). The release is `panic = "abort"`: no
 unwinding tables, and `exit` before the abort keeps the open library's memory out of the
-system's crash reports. A second panic, in the dialog, exits at once.
+system's crash reports. A second panic, in the dialog, exits at once. One thread is the
+exception: under Linux the tray's (`platform::tray::THREAD`) opens the indicator library by a
+third-party load that panics where it is missing; the hook parks that thread for good and the
+application goes on without a tray, as it did when a panic stopped its thread alone. ⚠️ The parked
+thread holds the hook's lock: nothing sets or takes the hook after start-up.
 
 The log (`flexi_logger`, `devnotes.log`, three files of 5 MB) starts before the window. Then the input channel and its `Waker` are made, and
 eframe opens the window **hidden** at the geometry `platform::window` read back (size, place,

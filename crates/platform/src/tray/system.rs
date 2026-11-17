@@ -160,7 +160,7 @@ mod native {
         let (messages, inbox) = mpsc::channel();
         let shown = Arc::clone(&exists);
         let started = std::thread::Builder::new()
-            .name("tray".to_owned())
+            .name(super::super::THREAD.to_owned())
             .spawn(move || serve(picture, &labels, inbox, &shown));
         if let Err(error) = started {
             log::warn!("No system tray: {error}");

@@ -43,19 +43,33 @@ static STOPPING: AtomicBool = AtomicBool::new(false);
 /// process exits. What was written is in SQLite's journal; the next open checks it (the gate).
 /// ⚠️ It leaves by `exit`: the abort that would follow hands the process, the open library in
 /// its memory, to the system's crash reports.
+/// The one exception is the tray's thread (`platform::tray::THREAD`), which a third-party load
+/// makes panic on a desktop without an indicator: that thread is parked for good — returning
+/// would let the abort follow — and the application goes on without a tray. ⚠️ It holds the
+/// hook's lock: nothing may set or take the hook after.
 pub(crate) fn install_panic_hook() {
     std::panic::set_hook(Box::new(|info| {
+        log::error!("{}", report(info));
+        log::logger().flush();
+        if contained(std::thread::current().name()) {
+            loop {
+                std::thread::park();
+            }
+        }
         // A second panic, the dialog's say, ends at once.
         if STOPPING.swap(true, Ordering::SeqCst) {
             std::process::exit(PANICKED);
         }
-        log::error!("{}", report(info));
-        log::logger().flush();
         if let Some((title, words)) = NOTICE.get() {
             platform::dialog::stopped(title, words);
         }
         std::process::exit(PANICKED);
     }));
+}
+
+/// Whether a panic on the thread named `name` stops that thread alone.
+fn contained(name: Option<&str>) -> bool {
+    name == Some(platform::tray::THREAD)
 }
 
 /// The window's process says why it stopped, in `language`, naming the folder of its log.
@@ -236,6 +250,14 @@ mod tests {
         );
     }
 
+    #[test]
+    fn only_the_tray_s_thread_is_stopped_alone() {
+        assert!(contained(Some(platform::tray::THREAD)));
+        assert!(!contained(Some("db")));
+        assert!(!contained(Some("main")));
+        assert!(!contained(None));
+    }
+
     /// Where the process that panics for the test below writes its log.
     const PANIC_IN: &str = "DEVNOTES_TEST_PANIC_IN";
 
@@ -268,5 +290,53 @@ mod tests {
         assert!(written.contains("Panicked at"), "{written}");
         assert!(written.contains("logging.rs"), "{written}");
         assert!(!written.contains("hunter2"), "{written}");
+    }
+
+    /// Where the process whose tray panics, for the test below, writes its log.
+    const TRAY_PANIC_IN: &str = "DEVNOTES_TEST_TRAY_PANIC_IN";
+
+    #[test]
+    fn a_panic_on_the_tray_s_thread_leaves_the_application_running() {
+        if let Some(directory) = std::env::var_os(TRAY_PANIC_IN) {
+            let _logger = start(Path::new(&directory));
+            install_panic_hook();
+            let (fell, fallen) = std::sync::mpsc::channel::<()>();
+            std::thread::Builder::new()
+                .name(platform::tray::THREAD.to_owned())
+                .spawn(move || {
+                    let _told = fell;
+                    panic!("Failed to load ayatana-appindicator3");
+                })
+                .unwrap();
+            // The tray's thread parks: its sender is never dropped, and the wait times out.
+            let parked = fallen
+                .recv_timeout(std::time::Duration::from_secs(2))
+                .is_err();
+            log::warn!("still running, tray parked: {parked}");
+            log::logger().flush();
+            // The parked thread holds the hook's lock, which the harness would wait for.
+            std::process::exit(0);
+        }
+        let directory = tempfile::tempdir().unwrap();
+
+        let ended = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "logging::tests::a_panic_on_the_tray_s_thread_leaves_the_application_running",
+            ])
+            .env(TRAY_PANIC_IN, directory.path())
+            .output()
+            .unwrap();
+
+        assert!(ended.status.success(), "{ended:?}");
+        let written: String = std::fs::read_dir(directory.path())
+            .unwrap()
+            .map(|entry| std::fs::read_to_string(entry.unwrap().path()).unwrap())
+            .collect();
+        assert!(written.contains("on thread tray"), "{written}");
+        assert!(
+            written.contains("still running, tray parked: true"),
+            "{written}"
+        );
     }
 }
