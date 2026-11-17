@@ -282,8 +282,16 @@ impl<'a> Generator<'a> {
         draw: &mut Draw,
         depth: usize,
     ) -> Value {
-        let low = bound(map, "minItems").unwrap_or(1);
-        let high = bound(map, "maxItems").unwrap_or(low + 2).min(low + 10);
+        let cap = i64::try_from(MAX_ITEMS).unwrap_or(i64::MAX);
+        let asked = bound(map, "minItems").unwrap_or(1);
+        if asked > cap {
+            self.note(format!("minItems: {MAX_ITEMS}"), path);
+        }
+        let low = asked.min(cap);
+        let high = bound(map, "maxItems")
+            .unwrap_or(low + 2)
+            .min(low + 10)
+            .min(cap);
         let items = map.get("items");
         let length = draw.between(low, high.max(low));
         Value::Array(
@@ -312,10 +320,17 @@ impl<'a> Generator<'a> {
         };
         let mut drawn = text(draw, kind, 2);
         if kind == TextKind::Words {
-            let low = usize::try_from(bound(map, "minLength").unwrap_or(0)).unwrap_or(0);
-            while drawn.chars().count() < low {
+            let asked = usize::try_from(bound(map, "minLength").unwrap_or(0)).unwrap_or(0);
+            if asked > MAX_LENGTH {
+                self.note(format!("minLength: {MAX_LENGTH}"), path);
+            }
+            let low = asked.min(MAX_LENGTH);
+            let mut length = drawn.chars().count();
+            while length < low {
+                let word = text(draw, TextKind::Words, 1);
+                length += 1 + word.chars().count();
                 drawn.push(' ');
-                drawn.push_str(&text(draw, TextKind::Words, 1));
+                drawn.push_str(&word);
             }
             if let Some(high) = bound(map, "maxLength").and_then(|high| usize::try_from(high).ok())
             {
@@ -328,6 +343,11 @@ impl<'a> Generator<'a> {
         Value::String(drawn)
     }
 }
+
+/// The most items an array is drawn with, whatever its `minItems`.
+const MAX_ITEMS: usize = 100;
+/// The most characters a text is drawn with, whatever its `minLength`.
+const MAX_LENGTH: usize = 10_000;
 
 fn bound(map: &Map<String, Value>, keyword: &str) -> Option<i64> {
     map.get(keyword).and_then(Value::as_f64).map(|value| {
@@ -406,6 +426,40 @@ mod tests {
             value.as_array().cloned().unwrap_or_else(|| vec![value]),
             unsupported,
         )
+    }
+
+    /// A schema's bounds are its author's word, not this machine's: an array or a text past
+    /// the generator's caps is drawn at them, and the cap is said (#1477, N49).
+    #[test]
+    fn huge_bounds_are_drawn_at_the_caps_and_said() {
+        let schema = r#"{"type": "object", "required": ["many", "long"], "properties": {
+            "many": {"type": "array", "minItems": 100000, "items": {"type": "integer"}},
+            "long": {"type": "string", "minLength": 1000000}
+        }}"#;
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let answer = generate(&GenerateRequest {
+                source: JsonSource::Schema,
+                text: schema.to_owned(),
+                count: 1,
+                seed: Some("1".to_owned()),
+            });
+            done.send(answer).unwrap();
+        });
+
+        let answer = finished
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("the generation ended");
+        let GenerateAnswer::Generated {
+            text, unsupported, ..
+        } = answer
+        else {
+            panic!("{answer:?}")
+        };
+        let value: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(value["many"].as_array().unwrap().len(), MAX_ITEMS);
+        assert!(value["long"].as_str().unwrap().chars().count() <= MAX_LENGTH + 20);
+        assert_eq!(unsupported.len(), 2, "{unsupported:?}");
     }
 
     #[test]
