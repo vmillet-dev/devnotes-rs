@@ -250,7 +250,9 @@ impl<'a> SearchField<'a> {
 
     pub fn show(self, ui: &mut Ui) -> Searched {
         let p = palette(ui.ctx());
-        let id = ui.next_auto_id();
+        // By its name, not its place: a header that reflows as the text grows would take the
+        // focus away mid-word.
+        let id = egui::Id::unique(("search-field", self.author_id));
         let focused = ui.memory(|memory| memory.has_focus(id.with("field")));
         let edge = if focused { p.amber_edge } else { p.line };
         let width = self.width.unwrap_or_else(|| ui.available_width());

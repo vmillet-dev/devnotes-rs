@@ -116,8 +116,9 @@ pub struct Settings {
 
 /// The reference's `RAIL_WIDTH`.
 pub const RAIL_WIDTH: (u16, u16) = (160, 520);
-/// Where the rail starts: a space's name and its folder's read whole at the first level.
-pub const RAIL_DEFAULT: u16 = 200;
+/// Where the rail starts: a space's name and its folder's read whole at the first level, and
+/// the notes' header still on one row in the default window (1 100 px).
+pub const RAIL_DEFAULT: u16 = 184;
 /// The reference's `HISTORY_LIST_WIDTH`.
 pub const HISTORY_LIST_WIDTH: (u16, u16) = (280, 760);
 
