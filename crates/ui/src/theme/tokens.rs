@@ -218,6 +218,14 @@ pub mod radius {
 /// A full-screen editor starts under it, so the title bar stays in reach.
 pub const TITLEBAR_HEIGHT: f32 = 38.0;
 
+/// The bar at the top of every area and page — the notes header's first row, the tools', the
+/// HTTP tabs and pages' —, and the sidebar's toggle at `BAR_INSET` from its left: the toggle
+/// never moves from one to the next, whatever the density.
+pub const BAR_HEIGHT: f32 = 56.0;
+pub const BAR_INSET: f32 = gap::PANEL;
+/// The toggle's side, centred in the bar.
+pub const BAR_TOGGLE: f32 = 32.0;
+
 const fn hex(rgb: u32) -> Color32 {
     let [_, r, g, b] = rgb.to_be_bytes();
     Color32::from_rgb(r, g, b)

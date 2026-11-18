@@ -230,12 +230,12 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
 /// A page of the area (environments, history): its background, a head band ruled under, and
 /// the body below. Answers the head's `Ui` and the body's rect.
 pub(super) fn page(ui: &mut Ui, region: Rect) -> (Ui, Rect) {
-    const HEAD: f32 = 56.0;
+    use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET};
     let p = palette(ui.ctx());
     ui.painter()
         .rect_filled(region, egui::CornerRadius::ZERO, p.bg_0);
-    let head = Rect::from_min_size(region.min, egui::Vec2::new(region.width(), HEAD));
-    let inset = head.shrink2(egui::Vec2::new(crate::theme::tokens::gap::PANEL, 0.0));
+    let head = Rect::from_min_size(region.min, egui::Vec2::new(region.width(), BAR_HEIGHT));
+    let inset = head.shrink2(egui::Vec2::new(BAR_INSET, 0.0));
     let top = ui.new_child(egui::UiBuilder::new().max_rect(inset));
     ui.painter().hline(
         region.x_range(),

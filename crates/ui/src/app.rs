@@ -449,6 +449,8 @@ mod area_switch_tests;
 mod library_panel_tests;
 
 #[cfg(test)]
+mod rail_toggle_tests;
+#[cfg(test)]
 mod update_prompt_tests;
 
 #[cfg(test)]

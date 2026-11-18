@@ -38,6 +38,46 @@ fn value_of(app: &mut App, author_id: &str) -> String {
         .to_owned()
 }
 
+/// The sidebar toggle's box in the area shown, once it holds still.
+fn toggle_box(app: &mut App, author_id: &str) -> (f64, f64, f64, f64) {
+    app.at_rest(author_id);
+    let tree = app.tree();
+    let bounds = tree
+        .find(author_id)
+        .and_then(egui::accesskit::Node::bounds)
+        .expect("the toggle is drawn");
+    (bounds.x0, bounds.y0, bounds.x1, bounds.y1)
+}
+
+/// The toggle stands at one place in the three areas.
+fn one_toggle_place(app: &mut App) {
+    let same = |a: (f64, f64, f64, f64), b: (f64, f64, f64, f64)| {
+        [a.0 - b.0, a.1 - b.1, a.2 - b.2, a.3 - b.3]
+            .iter()
+            .all(|gap| gap.abs() < 0.5)
+    };
+    step(
+        "the sidebar toggle stands at one place in every area",
+        || {
+            let notes = toggle_box(app, "library-rail-toggle");
+            app.click("area-option-tools");
+            let tools = toggle_box(app, "tools-rail-toggle");
+            assert!(
+                same(tools, notes),
+                "{tools:?} in the tools, {notes:?} in the notes"
+            );
+            app.click("area-option-http");
+            let http = toggle_box(app, "http-rail-toggle");
+            assert!(
+                same(http, notes),
+                "{http:?} in HTTP, {notes:?} in the notes"
+            );
+            app.click("area-option-notes");
+            app.wait_for("area-notes");
+        },
+    );
+}
+
 #[test]
 fn areas() {
     let profile = tempfile::tempdir().unwrap();
@@ -52,6 +92,8 @@ fn areas() {
         app.click("area-option-notes");
         app.wait_for("area-notes");
     });
+
+    one_toggle_place(&mut app);
 
     step(
         "the keys go there too, and the notes keep their search",
