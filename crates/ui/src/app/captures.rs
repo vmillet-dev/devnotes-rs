@@ -132,6 +132,8 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
 
     click(&mut harness, "about-open");
     capture(&mut harness, "about-menu");
+    click(&mut harness, "about-check-updates");
+    capture(&mut harness, "about-menu-not-here");
     click(&mut harness, "about-about");
     settle(&mut harness);
     capture(&mut harness, "about-card");

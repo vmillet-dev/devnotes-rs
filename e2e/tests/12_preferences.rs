@@ -71,6 +71,20 @@ fn file_word(app: &mut App) -> String {
     app.tree().text("file-menu").unwrap_or_default()
 }
 
+/// A build run from `target/` has no updater: the entry is there and answers so.
+fn not_updated_here(app: &mut App) {
+    step("« Check for updates » is always listed", || {
+        app.click("about-open");
+        app.click("about-check-updates");
+        app.eventually("the answer is under the entry", |tree| {
+            tree.text("about-check-status")
+                .is_some_and(|said| said.contains("package manager"))
+        });
+        app.click("about-open");
+        app.eventually("the menu closed", |tree| !tree.has("about-check-updates"));
+    });
+}
+
 #[test]
 fn preferences() {
     let profile = tempfile::tempdir().unwrap();
@@ -137,6 +151,8 @@ fn preferences() {
         app.press(Key::Escape, Modifiers::NONE);
         closed(&mut app);
     });
+
+    not_updated_here(&mut app);
 
     step("« New note » opens the kind the preference says", || {
         open(&mut app);

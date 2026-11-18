@@ -33,6 +33,8 @@ pub enum CheckState {
     Checking,
     UpToDate,
     Failed,
+    /// Asked of an installation that does not update itself: a package manager, or a hand, does.
+    NotHere,
 }
 
 type Checked = Result<Option<AvailableUpdate>, String>;
@@ -112,7 +114,13 @@ impl UpdateState {
 
     /// `silent` at launch; asked from the menu it speaks, « nothing » included.
     pub fn check(&mut self, backend: &Backend, silent: bool) {
-        if !self.can_check() || self.status != Status::Idle || self.asked.is_some() {
+        if self.status != Status::Idle || self.asked.is_some() {
+            return;
+        }
+        if !self.can_check() {
+            if !silent {
+                self.check = CheckState::NotHere;
+            }
             return;
         }
         self.check = CheckState::Checking;
@@ -325,14 +333,16 @@ mod tests {
     }
 
     #[test]
-    fn with_no_updater_nothing_is_checked() {
+    fn with_no_updater_nothing_is_checked_and_asking_says_so() {
         let (backend, _profile) = testing::backend();
         let mut updates = UpdateState::default();
 
-        updates.check(&backend, false);
-
+        updates.check(&backend, true);
         assert!(!updates.can_check());
         assert_eq!(updates.check_state(), CheckState::Idle);
+
+        updates.check(&backend, false);
+        assert_eq!(updates.check_state(), CheckState::NotHere);
     }
 
     #[test]

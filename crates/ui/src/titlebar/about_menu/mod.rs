@@ -78,10 +78,8 @@ fn entries(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         .with("app", METADATA.name)
         .text(state.language);
     let mut ids = Vec::with_capacity(5);
-    if state.updates.can_check() {
-        ids.push(check_entry(ui, state, actions));
-        super::separator(ui);
-    }
+    ids.push(check_entry(ui, state, actions));
+    super::separator(ui);
     let mut entry = |ui: &mut Ui, label: &str, id: &str, panel| {
         let row = super::menu_option(ui, label, id, Tone::Plain);
         ids.push(row.id);
@@ -147,13 +145,23 @@ fn check_entry(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> Id {
             Some(Message::new(keys::about::UP_TO_DATE).with("app", METADATA.name))
         }
         CheckState::Failed => Some(Message::new(keys::about::CHECK_FAILED)),
+        CheckState::NotHere => Some(Message::new(keys::about::NOT_UPDATED_HERE)),
     };
     if let Some(said) = said {
         let words = egui::RichText::new(said.text(language))
             .size(font::META)
             .monospace()
             .color(p.text_2);
-        let status = ui.label(words);
+        // At the entries' inset, ragged: the menu's justified layout would spread a wrapped line.
+        let status = egui::Frame::NONE
+            .inner_margin(gap::margin(gap::INSET, 0.0))
+            .show(ui, |ui| {
+                ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                    ui.label(words)
+                })
+                .inner
+            })
+            .inner;
         widgets::address(ui, &status, "about-check-status");
     }
     row.id

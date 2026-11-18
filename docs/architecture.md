@@ -6074,8 +6074,9 @@ key can produce an installable update. It is the key the Tauri releases were sig
   path that downloads. A silent update would restart the application mid-keystroke.
 - **What updates itself**: only an `AppImage` (`$APPIMAGE`, replaced in place) or a folder holding
   the NSIS uninstaller (the installer run passive, `/P /R`). A binary run from `target/`, a
-  `.deb` or an `.rpm` offers no check at all: system packages are updated by their package
-  manager, by design.
+  standalone executable, a `.deb` or an `.rpm` checks nothing: system packages are updated by
+  their package manager, by design. The About menu still lists « Check for updates », and asked
+  there it answers that this copy is updated by its package manager or by hand.
 - **The file is checked before it is kept**: downloaded whole, verified against the signature and
   the compiled key, and refused otherwise (`DownloadError::Refused`) — nothing is installed.
 - ⚠️ **Installing is the very last thing the process does.** Under Windows the client launches the

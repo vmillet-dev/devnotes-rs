@@ -26,14 +26,19 @@ fn stored(directory: &std::path::Path) -> Settings {
 }
 
 #[test]
-fn with_no_updater_the_menu_offers_no_check() {
+fn with_no_updater_the_check_says_this_copy_is_not_updated_here() {
     let directory = tempfile::tempdir().unwrap();
     let mut harness = open_library(directory.path());
 
     click(&mut harness, "about-open");
+    click(&mut harness, "about-check-updates");
 
-    assert!(present(&harness, "about-whats-new"));
-    assert!(!present(&harness, "about-check-updates"));
+    assert!(present(&harness, "about-whats-new"), "the menu stays open");
+    assert!(
+        harness
+            .query_by_label_contains("gestionnaire de paquets")
+            .is_some()
+    );
 }
 
 #[test]
