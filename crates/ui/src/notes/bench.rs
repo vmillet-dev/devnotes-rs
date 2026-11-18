@@ -31,6 +31,8 @@ pub(crate) fn expanded_area(
 ) -> Harness<'static, Bench> {
     let mut harness = area(backend, profile);
     harness.state_mut().state.settings.editor_fullscreen = true;
+    // The header stays above an expanded note: the room it takes is given back below.
+    harness.set_size(egui::vec2(1_100.0, 800.0));
     harness
 }
 

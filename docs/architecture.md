@@ -4370,7 +4370,9 @@ toolbar takes two lines: the title with expand and close, then the language, the
 priority on the left and copy, pin and ⋯ on the right; folding the header, presenting and deleting
 (two clicks, the menu staying open between them) wait in ⋯. ⚠️ The split between the cards and the
 panel is on a whole point: on a fraction the header's measure of itself drifted by thousandths of
-a point each frame and never settled. **Expanded, each kind has its layout**
+a point each frame and never settled. Expanded, the note takes the cards' zone and no more: the
+notes header stays above it, so the sidebar's toggle, the search and « New note » stay in reach.
+**Expanded, each kind has its layout**
 (`notes::overlays::editor::expanded`): the toolbar holds the kind's icon, a snippet's format, the
 title, ‹ `n / total` ›, the kind's own action (copy, filled for a snippet with fields; « Export ▾ »
 for a Dessin), « Details », pin, ⋯ (presenting a Note, deleting), back from full screen and close.

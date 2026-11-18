@@ -383,9 +383,16 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
             sidebar::show(ui, state, &mut view.sidebar, actions);
         });
     let (cards, editor) = beside_the_cards(rest, state, view.panel_width);
-    if let Some(cards) = cards {
-        cards_and_header(ui, cards, state, view, actions);
-    }
+    let editor = match (cards, editor) {
+        (Some(cards), editor) => {
+            cards_and_header(ui, cards, state, view, actions);
+            editor
+        }
+        // Expanded, the note takes the cards' zone: the header stays above it, its sidebar
+        // toggle in reach.
+        (None, Some(zone)) => Some(header_above(ui, zone, state, view, actions)),
+        (None, None) => None,
+    };
     overlays::editor::show(
         ui,
         editor,
@@ -478,17 +485,7 @@ fn cards_and_header(
     view: &mut View,
     actions: &mut Actions,
 ) {
-    let mut header_ui = ui.new_child(UiBuilder::new().max_rect(room));
-    header::show(
-        &mut header_ui,
-        state,
-        (&mut view.header, &mut view.focus_search),
-        actions,
-    );
-    let below = Rect::from_min_max(
-        egui::pos2(room.left(), header_ui.min_rect().bottom()),
-        room.max,
-    );
+    let below = header_above(ui, room, state, view, actions);
     let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
     // A card dragged on the board can be let go of over a row of the rail, which lights.
     view.canvas.rail = if state.settings.rail_shown {
@@ -498,6 +495,27 @@ fn cards_and_header(
     };
     canvas::show(&mut canvas_ui, state, &mut view.canvas, actions);
     view.sidebar.card_over = view.canvas.over_rail.take();
+}
+
+/// The header at the top of `room`: what is left under it.
+fn header_above(
+    ui: &mut Ui,
+    room: Rect,
+    state: &AppState,
+    view: &mut View,
+    actions: &mut Actions,
+) -> Rect {
+    let mut header_ui = ui.new_child(UiBuilder::new().max_rect(room));
+    header::show(
+        &mut header_ui,
+        state,
+        (&mut view.header, &mut view.focus_search),
+        actions,
+    );
+    Rect::from_min_max(
+        egui::pos2(room.left(), header_ui.min_rect().bottom()),
+        room.max,
+    )
 }
 
 /// « Snippets », the heading of a kind's section.

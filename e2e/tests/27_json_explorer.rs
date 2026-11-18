@@ -30,6 +30,8 @@ fn json_explorer() {
     let mut app = App::launch("27_json_explorer", profile.path());
     app.create_library();
     app.wait_for("note-card");
+    // The notes header stays above an expanded note: the graph is given its height back.
+    app.resize(1_100, 900);
     app.fill("search-input", "p95Ms");
     app.eventually("the JSON sample, alone", |tree| {
         tree.count("note-card") == 1
@@ -139,7 +141,7 @@ fn side_by_side(app: &mut App) {
             app.resize(720, 700);
             app.wait_for("editor-side-by-side-narrow");
             assert!(!app.has("side-by-side"), "too narrow, it is not squeezed");
-            app.resize(1_100, 720);
+            app.resize(1_100, 900);
             app.wait_for("side-by-side");
             app.click("editor-side-by-side");
             app.eventually("one at a time again", |tree| !tree.has("side-by-side"));
