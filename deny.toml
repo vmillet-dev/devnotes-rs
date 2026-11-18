@@ -11,6 +11,8 @@ unmaintained = "workspace"
 unsound = "all"
 ignore = [
     { id = "RUSTSEC-2024-0429", reason = "glib 0.18, held by tray-icon's GTK 3 on Linux; VariantStrIter is never called" },
+    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained: its replacement is #1564, in the backlog" },
+    { id = "RUSTSEC-2026-0555", reason = "chrono-tz unmaintained: its replacement is #1564, in the backlog" },
 ]
 
 # What the application may ship under GPL-3.0-only: the licences the tree holds today. A new one
