@@ -196,6 +196,66 @@ fn a_note_shows_its_outline() {
     assert_eq!(label(&harness, "kind-icon"), "Note");
 }
 
+/// A list's progress: a bar in the accent filled to the share done, the figure at its right.
+#[test]
+fn a_task_lists_card_shows_a_bar_filled_to_its_share_done() {
+    let (backend, profile) = testing::unlocked();
+    let items: Vec<ChecklistItem> = (0..6)
+        .map(|at| ChecklistItem {
+            text: format!("task {at}"),
+            done: at < 5,
+        })
+        .collect();
+    write(&backend, move |draft| {
+        draft.kind = NoteKind::Checklist;
+        draft.title = "almost".into();
+        draft.items = items;
+    });
+    let harness = canvas(backend, profile);
+
+    assert_eq!(label(&harness, "note-card-progress"), "5/6");
+    let figure = node(&harness, "note-card-progress").rect();
+    let p = crate::theme::palette(&harness.ctx);
+    let bars: Vec<egui::Rect> = harness
+        .output()
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            egui::Shape::Rect(shape)
+                if (shape.rect.center().y - figure.center().y).abs() < 2.0
+                    && shape.rect.right() < figure.left() =>
+            {
+                Some((shape.fill, shape.rect))
+            }
+            _ => None,
+        })
+        .filter(|(fill, _)| *fill == p.bg_3 || *fill == p.amber_fill)
+        .map(|(_, rect)| rect)
+        .collect();
+    let [track, filled] = bars[..] else {
+        panic!("a track and its fill: {bars:?}");
+    };
+    let share = filled.width() / track.width();
+    assert!((share - 5.0 / 6.0).abs() < 0.02, "{share}");
+}
+
+#[test]
+fn an_empty_task_list_draws_no_bar() {
+    let (backend, profile) = testing::unlocked();
+    write(&backend, |draft| {
+        draft.kind = NoteKind::Checklist;
+        draft.title = "nothing yet".into();
+        draft.items = Vec::new();
+    });
+    let harness = canvas(backend, profile);
+
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("note-card-progress"))
+            .is_none()
+    );
+}
+
 #[test]
 fn an_item_ticked_on_its_card_is_written_and_shown_done() {
     let (backend, profile) = testing::unlocked();
@@ -210,9 +270,10 @@ fn an_item_ticked_on_its_card_is_written_and_shown_done() {
     });
     let mut harness = canvas(backend, profile);
     assert_eq!(label(&harness, "note-card-progress"), "0/3");
-    // Four lines, a task fewer: the three of them.
+    // Four lines: the progress strip, then two tasks of 24 px, the third said by « +1 ».
     let shown = harness.query_all_by(|node| node.author_id() == Some("note-card-item"));
-    assert_eq!(shown.count(), 3);
+    assert_eq!(shown.count(), 2);
+    assert_eq!(label(&harness, "note-card-more"), "+1 more");
 
     harness
         .get_all_by(|node| node.author_id() == Some("note-card-item"))

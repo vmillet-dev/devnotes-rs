@@ -7,8 +7,6 @@ use crate::theme::tokens::{gap, radius};
 use egui::{
     Color32, CornerRadius, Rect, Role, Sense, Stroke, Ui, UiBuilder, WidgetInfo, pos2, vec2,
 };
-use engine::notes::checklist::ChecklistItem;
-use engine::notes::kind::NoteKind;
 use engine::notes::model::{DisplayNote, NoteFooter};
 use i18n::{Message, keys};
 
@@ -79,9 +77,6 @@ pub(super) fn top(
         pin(&mut right, language);
     }
     priority_bars(&mut right, note.priority, language);
-    if note.kind == NoteKind::Checklist {
-        progress(&mut right, &note.items, language);
-    }
     let title_end = right.min_rect().left() - GAP;
 
     let icon = Rect::from_min_size(pos2(box_end, band.center().y - 9.0), vec2(18.0, 18.0));
@@ -104,25 +99,6 @@ pub(super) fn top(
         text_at(ui, at, shown, &note.title, "note-card-title");
     }
     ticked
-}
-
-/// A list's « 1/4 », after its title.
-pub(super) fn progress(ui: &mut Ui, items: &[ChecklistItem], language: i18n::Language) {
-    let p = palette(ui.ctx());
-    let done = items.iter().filter(|item| item.done).count();
-    let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX).into();
-    let words = i18n::translate(
-        language,
-        keys::notes::CHECKLIST_PROGRESS,
-        &[("done", count(done)), ("total", count(items.len()))],
-    );
-    let font = Font {
-        weight: 600.0,
-        ..Font::mono(10.0, 1.2)
-    };
-    let shown = galley(ui, &words, &font, p.text_2, f32::INFINITY, 1);
-    let (rect, _) = ui.allocate_exact_size(shown.size(), Sense::hover());
-    text_at(ui, rect.min, shown, &words, "note-card-progress");
 }
 
 /// An icon and its count, named by what they count.

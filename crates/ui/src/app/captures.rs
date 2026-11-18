@@ -1489,3 +1489,18 @@ fn a_variable_pointed_at() {
         }
     }
 }
+
+/// The task lists' cards, a list longer than its card among them (#1461).
+#[test]
+fn the_task_lists_and_their_progress() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    capture(&mut harness, "task-lists");
+}
