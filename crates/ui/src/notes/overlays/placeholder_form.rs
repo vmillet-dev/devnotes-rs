@@ -2,10 +2,10 @@
 //! values the note stores. An empty field shows its default as a suggestion and never copies
 //! it: the day the snippet's default changes, a stored copy would win.
 
-use crate::theme::tokens::{font, gap, radius};
+use crate::theme::tokens::{font, gap};
 use std::collections::BTreeMap;
 
-use egui::{CornerRadius, FontFamily, Id, Margin, Sense, Stroke, Ui, vec2};
+use egui::{FontFamily, Id, Sense, Stroke, Ui, vec2};
 use engine::notes::kind::NoteKind;
 use engine::notes::model::DisplayNote;
 use engine::notes::placeholder::Placeholder;
@@ -14,7 +14,7 @@ use i18n::{Language, keys};
 use crate::action::{Action, Actions};
 use crate::notes::{Action as Asked, Fill};
 use crate::state::AppState;
-use crate::theme::{palette, spacing};
+use crate::theme::palette;
 use crate::widgets::{self, Button, Kind, TextField};
 
 const WIDTH: f32 = 420.0;
@@ -53,19 +53,10 @@ pub(in crate::notes) fn show(
             focus: true,
         };
     }
-    let p = palette(ui.ctx());
-    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
-    let padding = spacing(ui.ctx()).canvas.round() as i8;
-    let frame = egui::Frame::new()
-        .fill(p.bg_1)
-        .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::DIALOG))
-        .shadow(p.shadow_overlay)
-        .inner_margin(Margin::same(padding));
-    let shown = egui::Modal::new(Id::unique("placeholder-form"))
-        .backdrop_color(p.backdrop.gamma_multiply(0.7))
-        .frame(frame)
-        .show(ui.ctx(), |ui| form(ui, state, note, view));
+    let _p = palette(ui.ctx());
+    let shown = crate::widgets::modal_panel(ui.ctx(), Id::unique("placeholder-form"), |ui| {
+        form(ui, state, note, view)
+    });
     let closing = shown.should_close().then_some(Fill::Cancel);
     let asked = shown.inner.or(closing);
     if let Some(asked) = asked {

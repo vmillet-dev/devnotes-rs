@@ -4,8 +4,8 @@
 
 use crate::theme::tokens::{font, gap, radius};
 use egui::{
-    Color32, CornerRadius, FontFamily, Id, Margin, Role, Sense, Stroke, StrokeKind, Ui, WidgetInfo,
-    pos2, vec2,
+    Color32, CornerRadius, FontFamily, Id, Role, Sense, Stroke, StrokeKind, Ui, WidgetInfo, pos2,
+    vec2,
 };
 use engine::notes::model::TagUsage;
 use i18n::keys;
@@ -15,7 +15,7 @@ use crate::notes::{Action as Asked, Tags};
 use crate::state::AppState;
 use crate::state::tags::{ChangeKind, TagChange};
 use crate::theme::icons::Icon;
-use crate::theme::{palette, spacing};
+use crate::theme::palette;
 use crate::widgets::{self, Button, IconButton, Kind, TextField};
 
 const WIDTH: f32 = 480.0;
@@ -40,19 +40,10 @@ pub(in crate::notes) fn show(
         view.target.clear();
         return;
     }
-    let p = palette(ui.ctx());
-    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
-    let padding = spacing(ui.ctx()).canvas.round() as i8;
-    let frame = egui::Frame::new()
-        .fill(p.bg_1)
-        .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::DIALOG))
-        .shadow(p.shadow_overlay)
-        .inner_margin(Margin::same(padding));
-    let shown = egui::Modal::new(Id::unique("tag-manager"))
-        .backdrop_color(p.backdrop.gamma_multiply(0.7))
-        .frame(frame)
-        .show(ui.ctx(), |ui| panel(ui, state, view, actions));
+    let _p = palette(ui.ctx());
+    let shown = crate::widgets::modal_panel(ui.ctx(), Id::unique("tag-manager"), |ui| {
+        panel(ui, state, view, actions)
+    });
     if shown.inner || shown.should_close() {
         ask(actions, Tags::Close);
     }

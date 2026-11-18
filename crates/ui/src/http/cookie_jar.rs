@@ -12,7 +12,7 @@ use crate::state::AppState;
 use crate::state::http::cookies::Asked as Ask;
 use crate::theme::icons::Icon;
 use crate::theme::palette;
-use crate::widgets::{self, Button, IconButton, Kind};
+use crate::widgets::{self, Button, IconButton, InPlace, Kind};
 
 const WIDTH: f32 = 720.0;
 
@@ -75,7 +75,6 @@ fn body(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
 }
 
 fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
-    let p = palette(ui.ctx());
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal(|ui| {
@@ -83,45 +82,27 @@ fn head(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         crate::widgets::dialog_title(ui, &title, "http-cookies-dialog");
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;
-            let word = tr(keys::http::cookies::CLEAR);
-            let Some(count) = state.http.cookies().confirming() else {
-                let stored = state
-                    .http
-                    .cookies()
-                    .domains()
-                    .is_some_and(|it| !it.is_empty());
-                if Button::new(&word, "http-cookies-clear")
-                    .enabled(stored)
-                    .show(ui)
-                    .clicked()
-                {
-                    ask(actions, Ask::AskClear);
-                }
-                return;
-            };
-            if Button::new(&tr(keys::http::rail::CANCEL), "http-cookies-clear-cancel")
-                .show(ui)
-                .clicked()
-            {
-                ask(actions, Ask::CancelClear);
-            }
-            if Button::new(&word, "http-cookies-clear-confirm")
-                .kind(Kind::Destructive)
-                .show(ui)
-                .clicked()
-            {
-                ask(actions, Ask::Clear);
-            }
-            let question = i18n::translate(
-                language,
-                keys::http::cookies::CONFIRM,
-                &[("count", count.into())],
+            let cookies = state.http.cookies();
+            let question = cookies.confirming().map(|count| {
+                i18n::translate(
+                    language,
+                    keys::http::cookies::CONFIRM,
+                    &[("count", count.into())],
+                )
+            });
+            let stored = cookies.domains().is_some_and(|it| !it.is_empty());
+            let words = (
+                &*tr(keys::http::cookies::CLEAR),
+                &*tr(keys::http::rail::CANCEL),
             );
-            let question = egui::RichText::new(question)
-                .size(font::BODY)
-                .color(p.text_1);
-            let said = ui.add(egui::Label::new(question));
-            widgets::address(ui, &said, "http-cookies-clear-count");
+            let pressed =
+                widgets::ask_in_place(ui, words, question.as_deref(), stored, "http-cookies-clear");
+            match pressed {
+                Some(InPlace::Ask) => ask(actions, Ask::AskClear),
+                Some(InPlace::Cancel) => ask(actions, Ask::CancelClear),
+                Some(InPlace::Confirm) => ask(actions, Ask::Clear),
+                None => {}
+            }
         });
     });
 }

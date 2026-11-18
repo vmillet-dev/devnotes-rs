@@ -2,14 +2,14 @@
 //! a band drawn on the board, which becomes a folder where it was drawn. Its uniqueness is the
 //! core's to check, which alone sees the database.
 
-use crate::theme::tokens::{font, gap, radius};
-use egui::{CornerRadius, FontFamily, Id, Margin, Sense, Stroke, Ui};
+use crate::theme::tokens::{font, gap};
+use egui::{FontFamily, Id, Sense, Ui};
 use i18n::keys;
 
 use crate::action::{Action, Actions};
 use crate::notes::Action as Asked;
 use crate::state::AppState;
-use crate::theme::{palette, spacing};
+use crate::theme::palette;
 use crate::widgets::{self, Button, Kind, TextField};
 
 const WIDTH: f32 = 380.0;
@@ -24,19 +24,10 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, name: &mut String, actio
         name.clear();
         return;
     };
-    let p = palette(ui.ctx());
-    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
-    let padding = spacing(ui.ctx()).canvas.round() as i8;
-    let frame = egui::Frame::new()
-        .fill(p.bg_1)
-        .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(radius::DIALOG))
-        .shadow(p.shadow_overlay)
-        .inner_margin(Margin::same(padding));
-    let shown = egui::Modal::new(Id::unique("folder-name-prompt"))
-        .backdrop_color(p.backdrop.gamma_multiply(0.7))
-        .frame(frame)
-        .show(ui.ctx(), |ui| prompt(ui, state, name));
+    let _p = palette(ui.ctx());
+    let shown = crate::widgets::modal_panel(ui.ctx(), Id::unique("folder-name-prompt"), |ui| {
+        prompt(ui, state, name)
+    });
     let named = shown.inner.filter(|()| !name.trim().is_empty());
     if let Some(()) = named {
         let name = name.trim().to_owned();

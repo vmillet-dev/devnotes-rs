@@ -23,7 +23,6 @@ use crate::widgets::{self, Button, Checkbox, Kind, TextField, interact};
 /// The list's share of the page, within its bounds.
 const LIST_SHARE: f32 = 0.22;
 const LIST: (f32, f32) = (180.0, 240.0);
-const HEAD: f32 = 56.0;
 const ENTRY: f32 = 52.0;
 
 /// What only the page's drawing sees.
@@ -50,17 +49,9 @@ pub(super) fn show(
     view: &mut PageView,
     actions: &mut Actions,
 ) {
+    let (mut top, body) = super::page(ui, region);
     let p = palette(ui.ctx());
-    ui.painter().rect_filled(region, CornerRadius::ZERO, p.bg_0);
-    let head_rect = Rect::from_min_size(region.min, Vec2::new(region.width(), HEAD));
-    let mut top = ui.new_child(UiBuilder::new().max_rect(head_rect.shrink2(Vec2::new(20.0, 0.0))));
     head(&mut top, state, view, actions);
-    ui.painter().hline(
-        region.x_range(),
-        head_rect.bottom() - 0.5,
-        Stroke::new(1.0, p.line_soft),
-    );
-    let body = Rect::from_min_max(pos2(region.left(), head_rect.bottom()), region.max);
     let list_width = (region.width() * LIST_SHARE).clamp(LIST.0, LIST.1);
     let list_rect = Rect::from_min_size(body.min, Vec2::new(list_width, body.height()));
     let mut list_ui = ui.new_child(UiBuilder::new().max_rect(list_rect.shrink(10.0)));
