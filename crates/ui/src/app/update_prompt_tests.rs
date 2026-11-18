@@ -34,11 +34,9 @@ fn with_no_updater_the_check_says_this_copy_is_not_updated_here() {
     click(&mut harness, "about-check-updates");
 
     assert!(present(&harness, "about-whats-new"), "the menu stays open");
-    assert!(
-        harness
-            .query_by_label_contains("gestionnaire de paquets")
-            .is_some()
-    );
+    let language = harness.state().state.language;
+    let said = i18n::translate(language, i18n::keys::about::NOT_UPDATED_HERE, &[]);
+    assert!(harness.query_by_label_contains(&said).is_some());
 }
 
 #[test]
