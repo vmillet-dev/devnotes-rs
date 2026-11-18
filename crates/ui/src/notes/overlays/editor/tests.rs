@@ -422,6 +422,30 @@ fn copying_from_the_editor_writes_first_and_full_screen_is_remembered() {
     assert!(!harness.state().state.settings.editor_fullscreen);
 }
 
+#[test]
+fn expanded_the_note_leaves_the_header_and_its_sidebar_toggle_in_reach() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql");
+    let mut harness = area(backend, profile);
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-fullscreen");
+
+    let toggle = harness
+        .get_by(|node| node.author_id() == Some("library-rail-toggle"))
+        .rect();
+    let expand = harness
+        .get_by(|node| node.author_id() == Some("editor-fullscreen"))
+        .rect();
+    assert!(
+        toggle.bottom() < expand.top(),
+        "{toggle:?} above {expand:?}"
+    );
+    click_id(&mut harness, "library-rail-toggle");
+
+    assert!(!harness.state().state.settings.rail_shown);
+    assert!(is_open(&harness) && harness.state().state.settings.editor_fullscreen);
+}
+
 /// Wide enough for the panel beside two columns of cards.
 fn wide(
     mut harness: egui_kittest::Harness<'static, Bench>,
