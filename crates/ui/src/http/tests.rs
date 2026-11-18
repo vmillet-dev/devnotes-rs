@@ -755,6 +755,56 @@ fn a_header_typed_with_its_value_is_split_and_a_bad_name_is_said() {
     );
 }
 
+/// The headers sent unasked stand in their own block above the table: their values in one
+/// column, where each comes from at the block's right edge.
+#[test]
+fn the_headers_sent_unasked_are_a_block_of_two_columns_above_the_table() {
+    let mut harness = editing();
+    click_id(&mut harness, "http-section-headers");
+    let tab = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active_key()
+        .unwrap()
+        .to_owned();
+    harness
+        .state_mut()
+        .state
+        .http
+        .tabs_mut()
+        .edit(&tab, |draft| {
+            draft.apply(crate::state::http::tabs::DraftEdit::Body(
+                engine::http::model::RequestBody::Json {
+                    text: "{}".to_owned(),
+                },
+            ));
+        });
+    settle(&mut harness);
+    click_id(&mut harness, "http-section-headers");
+
+    let block = harness
+        .get_by(|node| node.author_id() == Some("http-implied-headers"))
+        .rect();
+    let values: Vec<egui::Rect> = harness
+        .query_all_by(|node| node.author_id() == Some("http-implied-value"))
+        .map(|node| node.rect())
+        .collect();
+    assert!(values.len() >= 2, "{values:?}");
+    assert!(
+        values
+            .iter()
+            .all(|value| (value.left() - values[0].left()).abs() < 0.5)
+    );
+    let table = harness
+        .get_all_by(|node| node.author_id() == Some("http-kv-key"))
+        .next()
+        .unwrap()
+        .rect();
+    assert!(block.bottom() <= table.top());
+}
+
 #[test]
 fn lines_pasted_in_a_name_fill_a_row_each() {
     let mut harness = editing();
