@@ -168,11 +168,14 @@ fn open_title(tree: &Tree) -> Option<&str> {
 /// rather than a click: the panel may cover the next card.
 fn panel_kept(app: &mut App) {
     app.click_where("note-card-open", named(FILED));
-    app.eventually("the first note is open", |tree| {
-        open_title(tree) == Some(FILED)
+    // Escape before the title holds the focus would close the note instead.
+    app.eventually("the first note is open, its title focused", |tree| {
+        open_title(tree) == Some(FILED) && tree.focused().starts_with("editor-title")
     });
-    // Out of the title, which the click gave the focus: J is then the editor's key.
     app.press(Key::Escape, Modifiers::NONE);
+    app.eventually("out of the title, the note still open", |tree| {
+        open_title(tree) == Some(FILED) && !tree.focused().starts_with("editor-title")
+    });
     let beside = frames(&app.tree());
     app.press(Key::J, Modifiers::NONE);
     app.eventually("the next is open, the zones where they were", |tree| {
