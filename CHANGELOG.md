@@ -12,6 +12,31 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [1.0.3] - 2026-11-18
+
+### ✨ Added
+
+- HTTP tabs: tabs can be reordered by drag, middle click closes one (#1560)
+
+### 🔧 Changed
+
+- Folders: dragging a folder onto another space moves it with its notes (#1563)
+- HTTP: Headers tab lists default headers and own headers as a table (#1557)
+- Sidebar: folders indented by less per level (#1549)
+
+### 🐛 Fixed
+
+- Identity tool: lists are built into the executable (#1561)
+- Cards: a task list's preview shows a progress bar and done/total (#1552)
+- Board: the editor panel stays open while the next note loads (#1555)
+- Sidebar toggle: same place in every area and page (#1559)
+- Mouse pointer: hand over controls, I-beam over text, grab over what moves (#1558)
+- HTTP: hovering a variable shows its value (#1556)
+- Note editor: the body is no longer drawn over the header while editing (#1554)
+- Editor: expanded note stays in the notes zone, under the top bar (#1553)
+- Cards: selection checkbox stays in place, its tick is amber (#1551)
+- Menus: a dropdown is as wide as its longest entry (#1550)
+
 ## [1.0.2] - 2026-11-18
 
 ### ✨ Added
