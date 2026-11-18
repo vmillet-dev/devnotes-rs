@@ -185,6 +185,7 @@ fn heading(ui: &mut Ui, node: &Placed, centre: egui::Pos2) -> bool {
     let response = crate::widgets::region(ui, rect, ("map-node", &node.key), Sense::click());
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &node.text));
     crate::widgets::address(ui, &response, "presentation-map-node");
+    crate::widgets::pointer(ui, &response);
     let hovered = response.hovered() || response.has_focus();
     let ink = if hovered { p.amber_text } else { colour };
     let edge = if node.depth == 0 || hovered {

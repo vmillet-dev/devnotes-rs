@@ -5957,7 +5957,10 @@ the widget rather than of each screen (plan § 3.12):
   its role and its name, sets its `author_id`, paints the focus ring and allocates at least
   **24 × 24 px** for anything clickable (WCAG 2.5.8). `egui::Ui::interact` is refused elsewhere by
   `disallowed-methods` (`crates/ui/clippy.toml`), and kittest refuses a control without an
-  accessible name (its check, on by default and left on).
+  accessible name (its check, on by default and left on). It also sets the mouse pointer from
+  what the control senses (`widgets::pointer`): a hand where it clicks, an open hand where it
+  drags and a closed one while it moves, the arrow over a disabled one; text surfaces ask for the
+  I-beam, handles for their resize arrows, after it.
 - **An icon-only control draws an icon** (`theme::icons`, stroked in the text's colour), never a
   glyph from the system's emoji font, which looks different on every machine and follows no
   theme; the control names itself, and a decorative picture says nothing.

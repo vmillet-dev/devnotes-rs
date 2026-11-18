@@ -381,6 +381,7 @@ pub(super) fn exports(ui: &mut Ui, language: Language) -> Option<Format> {
 fn swatch(ui: &mut Ui, view: &mut DrawingView, hue: Hue, language: Language) {
     let p = palette(ui.ctx());
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(24.0), Sense::click());
+    crate::widgets::pointer(ui, &response);
     let on = view.editor.hue() == hue;
     let name = i18n::translate(language, colour_key(hue), &[]);
     response.widget_info(|| {

@@ -552,6 +552,10 @@ fn seated(
         context,
         (canvas_view, actions),
     );
+    // Over the card's own layer, which opens it: the hand that carries it says so.
+    if hand.moving().is_some() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+    }
 }
 
 /// The card a drag took out of a zone, at the pointer, above everything: a filed card flows and

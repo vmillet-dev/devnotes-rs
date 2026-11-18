@@ -373,6 +373,10 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
     let body = Rect::from_min_max(pos2(whole.left(), top + 1.0), whole.max);
     let mut body_ui = ui.new_child(UiBuilder::new().id_salt("rich-body").max_rect(body));
     let surface = widgets::region(&mut body_ui, body, "editor-rich", Sense::click_and_drag());
+    // Before the body is drawn: a link under the pointer says it is one.
+    if surface.hovered() || surface.dragged() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
+    }
     widgets::address(ui, &surface, "editor-rich");
     describe(ui, &surface, view, language);
     let reveal = std::mem::take(&mut view.reveal);
