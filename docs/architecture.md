@@ -1536,7 +1536,7 @@ instead of a floating layer of their own.
 
 **A card reads like a small editor window: a title bar, a preview, a status line**. The
 title bar (28 px, `card::bands::top`) holds the kind's icon in an 18 px tile tinted with its hue,
-a snippet's format (« TS », « Texte » in grey for plain text), the title on one line with an ellipsis, then on the right a list's « 1/4 », the priority as three
+a snippet's format (« TS », « Texte » in grey for plain text), the title on one line with an ellipsis, then on the right the priority as three
 bars (« Urgent » written out in red beside them, the others named in the tooltip), the pin, and
 — while cards are ticked — the selection box, last, so nothing on its left moves but the pin,
 which steps over for it. The status line (22 px, `card::bands::bottom`) is passive: where the
@@ -1546,7 +1546,10 @@ fields to fill, 📎 and the attachments, and the short date (« 4 h »,
 « hier », « dans 2 h » in red for a near expiry; the long label is the node's name). Neither
 band is ever empty, both have no fill but under the pointer (`bg_3`) and a `line_soft` rule
 toward the preview. A card shows no tag: a search that found one says so in the preview. An
-armed deletion turns the status line red with its two keys.
+armed deletion turns the status line red with its two keys. A list's preview opens on its
+progress, as the reference's: a bar in the accent filled to the share done, « 5/6 » at its right
+and « +4 more » for the tasks the card has no row for. The list takes the gaps beside the bands
+(a task's 24 px row carries its own air), so the strip costs no row of tasks.
 
 ⚠️ **The title bar was chosen over a band of marks** (2026-11-09). The first version put the
 kind, the format and the counts in a band above a title line, as the mockup
