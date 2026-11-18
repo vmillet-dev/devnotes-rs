@@ -1375,3 +1375,58 @@ fn the_dropdowns_at_their_width() {
     click(&mut harness, "http-auth-kind");
     capture(&mut harness, "menu-http-auth-kind");
 }
+
+/// A long Note holding a code block, open beside the cards and scrolled down (#1464).
+#[test]
+fn a_long_note_with_code_scrolled_in_the_panel() {
+    use engine::notes::kind::NoteKind;
+    use engine::notes::language::Language;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    let space = crate::testing::note(backend, "seed").space_id.clone();
+    let code = (0..60)
+        .map(|n| format!("SELECT * FROM orders WHERE id = {n};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let content = format!("# Requêtes\n\nCe qu'on lance le lundi.\n\n```sql\n{code}\n```\n");
+    engine::db::run_here(backend.engine(), move |engine| {
+        let draft = engine::notes::model::NoteDraft {
+            kind: NoteKind::Note,
+            language: Language::Txt,
+            content,
+            ..crate::testing::snippet(space, "Requêtes du lundi".to_owned())
+        };
+        engine::notes::create_note(engine, draft)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("Requêtes du lundi")
+        })
+        .click();
+    settle(&mut harness);
+    let body = harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .rect();
+    harness.event(egui::Event::PointerMoved(body.center()));
+    for _ in 0..6 {
+        harness.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, -120.0),
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Unknown,
+            modifiers: egui::Modifiers::NONE,
+        });
+        harness.step();
+    }
+    settle(&mut harness);
+    capture(&mut harness, "note-code-scrolled");
+}
