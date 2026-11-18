@@ -57,6 +57,15 @@ fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &st
 
 /// Draws the window as it stands, then again in the other theme, and gives the first one back.
 fn capture(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
+    shoot(harness, name, true);
+}
+
+/// As `capture`, the pointer still pressed where it is: what a drag shows on its way.
+fn capture_holding(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
+    shoot(harness, name, false);
+}
+
+fn shoot(harness: &mut Harness<'_, DevNotesApp>, name: &str, pointer_gone: bool) {
     let directory = std::env::var_os("DEVNOTES_CAPTURES");
     for _ in 0..2 {
         let theme = match harness.ctx.theme() {
@@ -64,7 +73,9 @@ fn capture(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
             egui::Theme::Light => "light",
         };
         // kittest draws its pointer, and where a click left it.
-        harness.event(egui::Event::PointerGone);
+        if pointer_gone {
+            harness.event(egui::Event::PointerGone);
+        }
         settle(harness);
         let image = harness
             .render()
@@ -1488,6 +1499,57 @@ fn a_variable_pointed_at() {
             image.save(Path::new(&directory).join(file)).unwrap();
         }
     }
+}
+
+/// Four tabs, the first held between the last two, then let go there (#1506).
+#[test]
+fn an_http_tab_dragged_along_the_strip() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    for name in ["Login", "Session", "Factures", "Flux"] {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some("http-node-name")
+                    && node.label().is_some_and(|label| label.ends_with(name))
+            })
+            .click();
+        settle(&mut harness);
+    }
+    let tab = |harness: &Harness<'_, DevNotesApp>, name: &str| {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some("http-tab-open")
+                    && node.label().is_some_and(|label| label.ends_with(name))
+            })
+            .rect()
+    };
+    let from = tab(&harness, "Login").center();
+    let to = tab(&harness, "Flux").left_center() + egui::vec2(4.0, 0.0);
+    let press = |pressed| egui::Event::PointerButton {
+        pos: to,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    harness.event(egui::Event::PointerMoved(from));
+    harness.event(egui::Event::PointerButton {
+        pos: from,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    harness.step();
+    for step in 1..=10_u8 {
+        harness.event(egui::Event::PointerMoved(
+            from + (to - from) * (f32::from(step) / 10.0),
+        ));
+        harness.step();
+    }
+    capture_holding(&mut harness, "http-tab-dragging");
+    harness.event(press(false));
+    harness.event(egui::Event::PointerMoved(egui::pos2(700.0, 500.0)));
+    settle(&mut harness);
+    capture(&mut harness, "http-tab-moved");
 }
 
 /// The task lists' cards, a list longer than its card among them (#1461).

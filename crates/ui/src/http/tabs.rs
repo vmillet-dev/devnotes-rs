@@ -1,10 +1,11 @@
-//! One tab an open request: its method and name, a dot while modified, a × to close. The bar ends
-//! with « New request », an HTTP request in one click and the other kinds in two.
+//! One tab an open request: its method and name, a dot while modified, a × to close. A tab is
+//! dragged along the strip, or moved by `Alt` and an arrow. The bar ends with « New request », an
+//! HTTP request in one click and the other kinds in two.
 
 use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET, BAR_TOGGLE, font, gap, radius};
 use egui::{
-    Color32, CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, RectAlign, Response, Role,
-    Sense, Stroke, Ui, Vec2, WidgetInfo, pos2,
+    Color32, CornerRadius, FontFamily, Key, Modifiers, PointerButton, Popup, PopupCloseBehavior,
+    Rect, RectAlign, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo, pos2, vec2,
 };
 use engine::http::model::{HttpMethod, RequestKind};
 use i18n::keys;
@@ -28,11 +29,21 @@ pub(super) const KINDS: [(RequestKind, &str); 3] = [
     (RequestKind::Websocket, "websocket"),
 ];
 
+/// Held this close to an end of the strip, a dragged tab scrolls it, by this much a frame.
+const EDGE: f32 = 32.0;
+const EDGE_STEP: f32 = 8.0;
+
+/// What only the strip's drawing sees: the tab being dragged.
+#[derive(Default)]
+pub(super) struct TabsView {
+    dragging: Option<String>,
+}
+
 fn push(actions: &mut Actions, action: Action) {
     actions.push(Asked::Http(action));
 }
 
-pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut TabsView, actions: &mut Actions) {
     let p = palette(ui.ctx());
     let language = state.language;
     let region = ui.max_rect();
@@ -78,10 +89,26 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         .show(&mut strip, |ui| {
             ui.spacing_mut().item_spacing = Vec2::ZERO;
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                let mut drawn = Vec::new();
                 for tab in tabs.tabs() {
                     let active = tabs.active_key() == Some(tab.key.as_str());
-                    tab_of(ui, tab, active, actions, language);
+                    // Under the tab's key: the focus stays on a tab the keys move.
+                    let id = ui.scope_id().with(("http-tab", &tab.key));
+                    let (open, whole) = ui
+                        .scope_builder(egui::UiBuilder::new().scope_id(id), |ui| {
+                            tab_of(ui, tab, active, actions, language)
+                        })
+                        .inner;
+                    if open.drag_started_by(PointerButton::Primary) {
+                        view.dragging = Some(tab.key.clone());
+                    }
+                    drawn.push(whole);
                 }
+                let at = tabs
+                    .tabs()
+                    .iter()
+                    .position(|tab| view.dragging.as_ref() == Some(&tab.key));
+                drop_dragged(ui, view, (&drawn, at), actions);
             });
         });
     let label = i18n::translate(language, keys::http::tabs::LABEL, &[]);
@@ -102,7 +129,14 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     super::environment_picker::show(&mut end_ui, state, actions);
 }
 
-fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language: i18n::Language) {
+/// The tab and its ×: what answers for the tab itself, and the room both take.
+fn tab_of(
+    ui: &mut Ui,
+    tab: &Tab,
+    active: bool,
+    actions: &mut Actions,
+    language: i18n::Language,
+) -> (Response, Rect) {
     let p = palette(ui.ctx());
     let badge = badge_of(tab);
     let dirty = tab.is_dirty();
@@ -136,7 +170,8 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
     let open = interact(
         ui,
         Vec2::new(width, HEIGHT),
-        Sense::click(),
+        // Dragged along the strip; a press that never travels is its click.
+        Sense::click_and_drag(),
         "http-tab-open",
         || WidgetInfo::selected(Role::Tab, true, active, &label),
         CornerRadius::ZERO,
@@ -190,13 +225,89 @@ fn tab_of(ui: &mut Ui, tab: &Tab, active: bool, actions: &mut Actions, language:
         ui.painter().circle_filled(centre, 3.5, p.amber_text);
     }
     close_glyph(ui, &close);
+    asked(ui, tab, (&open, &close), actions);
+    (open, whole)
+}
+
+/// What the pointer and the keys ask of a tab: in front, closed, moved one place.
+fn asked(ui: &Ui, tab: &Tab, (open, close): (&Response, &Response), actions: &mut Actions) {
+    // What is clicked takes the keys: `Alt` and an arrow move it.
     if open.clicked() {
+        open.request_focus();
         push(actions, Action::Activate(tab.key.clone()));
     }
-    // The middle button closes a tab, as in a browser.
-    if open.clicked_by(egui::PointerButton::Middle) || close.clicked() {
+    // The middle button closes a tab, as in a browser: a press that moved too, let go on it.
+    let middle = open.clicked_by(PointerButton::Middle)
+        || (open.drag_stopped_by(PointerButton::Middle) && open.contains_pointer());
+    if middle || close.clicked() {
         push(actions, Action::AskClose(tab.key.clone()));
     }
+    if widgets::takes_keys(ui, open) {
+        for (key, right) in [(Key::ArrowLeft, false), (Key::ArrowRight, true)] {
+            if ui.input_mut(|input| input.consume_key(Modifiers::ALT, key)) {
+                let key = tab.key.clone();
+                push(actions, Action::NudgeTab { key, right });
+            }
+        }
+    }
+}
+
+/// Where the dragged tab would land, marked by a bar between two tabs; let go, it is moved
+/// there. Held at an end of the strip, the strip scrolls toward the tabs it hides.
+fn drop_dragged(
+    ui: &mut Ui,
+    view: &mut TabsView,
+    (drawn, at): (&[Rect], Option<usize>),
+    actions: &mut Actions,
+) {
+    let (Some(key), Some(from)) = (view.dragging.clone(), at) else {
+        view.dragging = None;
+        return;
+    };
+    let (down, at) = ui.input(|input| (input.pointer.primary_down(), input.pointer.latest_pos()));
+    let Some(at) = at else {
+        view.dragging = None;
+        return;
+    };
+    let gap = drawn.iter().filter(|rect| rect.center().x < at.x).count();
+    // Either side of the tab itself is where it already is.
+    let moves = gap != from && gap != from + 1;
+    if down {
+        if moves {
+            mark_gap(ui, drawn, gap);
+        }
+        let seen = ui.clip_rect();
+        let step = if at.x < seen.left() + EDGE {
+            EDGE_STEP
+        } else if at.x > seen.right() - EDGE {
+            -EDGE_STEP
+        } else {
+            return;
+        };
+        ui.scroll_with_delta(vec2(step, 0.0));
+        // The pointer may rest there: the strip goes on scrolling without it moving.
+        ui.ctx().request_repaint();
+        return;
+    }
+    view.dragging = None;
+    if moves {
+        push(actions, Action::MoveTab { key, gap });
+    }
+}
+
+/// The rail's drop bar, upright: in the accent, before the tab at `gap` or after the last one.
+fn mark_gap(ui: &Ui, drawn: &[Rect], gap: usize) {
+    let (Some(first), Some(last)) = (drawn.first(), drawn.last()) else {
+        return;
+    };
+    let x = drawn.get(gap).map_or(last.right(), Rect::left);
+    let p = palette(ui.ctx());
+    let bar = Rect::from_min_max(
+        pos2(x - 1.0, first.top() + gap::SNUG),
+        pos2(x + 1.0, first.bottom() - gap::SNUG),
+    );
+    ui.painter()
+        .rect_filled(bar, CornerRadius::same(radius::MARK), p.amber_text);
 }
 
 fn badge_of(tab: &Tab) -> Badge {

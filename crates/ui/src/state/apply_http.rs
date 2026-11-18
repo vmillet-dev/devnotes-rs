@@ -28,6 +28,8 @@ impl AppState {
                 self.http.tabs_mut().new_request(kind, name);
             }
             Http::Activate(key) => self.http.tabs_mut().activate(&key),
+            Http::MoveTab { key, gap } => self.http.tabs_mut().move_to(&key, gap),
+            Http::NudgeTab { key, right } => self.http.tabs_mut().nudge(&key, right),
             Http::AskClose(key) => self.http.ask_close(&key),
             Http::Close(key) => self.http.tabs_mut().close(&key),
             Http::CancelClose => self.http.tabs_mut().cancel_close(),
