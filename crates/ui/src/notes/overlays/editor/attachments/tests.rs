@@ -41,7 +41,7 @@ fn opened() -> (Harness, String, tempfile::TempDir) {
 fn files(harness: &Harness, id: &str) -> Vec<Attachment> {
     let id = id.to_owned();
     engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::attachments::list_attachments(engine, id)
+        engine::attachments::list_attachments(engine, &id)
     })
     .unwrap()
 }

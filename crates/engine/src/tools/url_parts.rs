@@ -4,16 +4,14 @@ use percent_encoding::percent_decode_str;
 use serde::Serialize;
 use url::{ParseError, Url};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryParameter {
     pub name: String,
     pub value: String,
 }
 
 /// The user and the password decoded, the path as written, the query both ways.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UrlParts {
     pub scheme: String,
     pub username: Option<String>,
@@ -41,8 +39,7 @@ pub enum UrlProblem {
     Other,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UrlAnswer {
     Parsed { parts: UrlParts },
     Invalid { problem: UrlProblem },
@@ -178,11 +175,11 @@ mod tests {
 
     #[test]
     fn an_answer_says_its_kind() {
-        let json = serde_json::to_value(parse_url("nope")).unwrap();
-
         assert_eq!(
-            json,
-            serde_json::json!({ "kind": "invalid", "problem": "noScheme" })
+            parse_url("nope"),
+            UrlAnswer::Invalid {
+                problem: UrlProblem::NoScheme
+            }
         );
     }
 }

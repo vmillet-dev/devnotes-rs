@@ -20,8 +20,7 @@ pub enum DataFormat {
     Yaml,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConvertRequest {
     pub text: String,
     pub from: DataFormat,
@@ -43,8 +42,7 @@ pub enum Crossing {
     XmlAttribute,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConvertAnswer {
     Converted {
         text: String,

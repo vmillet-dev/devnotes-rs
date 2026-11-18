@@ -1,7 +1,5 @@
 //! Lorem ipsum: words, sentences or paragraphs, from the classic vocabulary.
 
-use serde::{Deserialize, Serialize};
-
 use super::{Draw, seed_or_draw};
 
 const OPENING: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit";
@@ -124,16 +122,14 @@ fn paragraph(draw: &mut Draw, opening: bool) -> String {
         .join(" ")
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoremUnit {
     Words,
     Sentences,
     Paragraphs,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LoremRequest {
     pub unit: LoremUnit,
     pub count: u32,
@@ -142,8 +138,7 @@ pub struct LoremRequest {
     pub seed: Option<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoremAnswer {
     pub text: String,
     pub seed: u32,

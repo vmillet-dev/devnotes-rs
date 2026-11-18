@@ -33,8 +33,7 @@ pub enum IdKind {
     Ksuid,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NanoAlphabet {
     /// `A-Za-z0-9_-`, `NanoID`'s own.
     UrlSafe,
@@ -54,8 +53,7 @@ impl NanoAlphabet {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IdentifiersRequest {
     pub kind: IdKind,
     pub count: u32,

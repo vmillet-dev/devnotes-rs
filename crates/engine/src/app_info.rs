@@ -2,11 +2,7 @@
 //! `rust-toolchain.toml`, read by `build.rs`: Cargo does not pass `[package.metadata]` to the
 //! crate. No version here: the front asks the running binary, which cannot go stale.
 
-use serde::Serialize;
-
 /// A constant rather than a command: the titlebar reads the name synchronously.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct AppMetadata {
     /// What the user is shown, which is not the crate name (`devnotes`).
     pub name: &'static str,

@@ -5,8 +5,6 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Mutex;
 
-use serde::{Deserialize, Serialize};
-
 use super::model::{
     HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpRequest, HttpTree, RequestKind, RunEntry,
 };
@@ -15,8 +13,7 @@ use super::send::SentResponse;
 use crate::error::{AppError, ErrorCode, FileContext};
 
 /// The rows of a data file, each an iteration; its columns are `pm.iterationData`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RunData {
     pub columns: Vec<String>,
     pub rows: Vec<BTreeMap<String, String>>,
@@ -152,8 +149,7 @@ fn from_csv(text: &str) -> Result<RunData, DataFault> {
 
 /// What a run is asked to do: its switches are the runner's checkboxes, each its own.
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct RunRequest {
     /// Chosen by the front: what its events and « Annuler » name it by.
     pub id: String,
@@ -176,16 +172,14 @@ pub struct RunRequest {
 }
 
 /// An error as its code and the values its sentence states.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunError {
     pub code: ErrorCode,
     pub params: BTreeMap<String, String>,
 }
 
 /// One request of one iteration, once it ended.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunResult {
     pub iteration: u32,
     pub request_id: String,
@@ -252,12 +246,7 @@ pub fn run_of(send_id: &str) -> Option<&str> {
     send_id.strip_prefix("run:")?.split('#').next()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunStep {
     /// A request is about to leave: the progress line says which.
     Started {
@@ -273,7 +262,6 @@ pub enum RunStep {
     Finished {
         cancelled: bool,
         millis: u32,
-        #[serde(default)]
         capped: bool,
     },
 }
@@ -287,8 +275,7 @@ pub(crate) fn capped(steps: u32, next: Option<usize>) -> bool {
     next.is_some() && steps >= MAX_STEPS
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunEvent {
     pub id: String,
     pub step: RunStep,

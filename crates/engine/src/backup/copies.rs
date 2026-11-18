@@ -117,8 +117,7 @@ fn link_files(from: &Path, to: &Path) -> std::io::Result<()> {
 }
 
 /// One copy, as the interface lists it.
-#[derive(Debug, Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct Backup {
     /// The folder's name, which is its stamp, and what a restore asks for.
     pub id: String,

@@ -10,5 +10,5 @@ pub fn changelog(backend: &Backend) -> Pending<Vec<ChangelogRelease>> {
 
 /// What the updater hands over, read with the file's grammar: a release's few lines, on the frame.
 pub fn release_notes(markdown: &str) -> Vec<ChangelogSection> {
-    changelog::release_notes(markdown.to_owned())
+    changelog::release_notes(markdown)
 }

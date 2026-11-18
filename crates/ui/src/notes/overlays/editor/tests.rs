@@ -8,7 +8,7 @@ use crate::testing;
 fn stored(harness: &egui_kittest::Harness<'_, Bench>, id: &str) -> DisplayNote {
     let id = id.to_owned();
     engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::notes::get_note(engine, id)
+        engine::notes::get_note(engine, &id)
     })
     .unwrap()
 }
@@ -584,7 +584,7 @@ fn beside_the_cards_the_seldom_used_wait_in_the_menu() {
 
     assert!(!is_open(&harness));
     let gone = engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::notes::get_note(engine, id)
+        engine::notes::get_note(engine, &id)
     });
     assert!(gone.is_err(), "in the trash");
 }

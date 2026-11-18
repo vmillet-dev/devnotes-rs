@@ -46,8 +46,7 @@ pub const KEPT_LIMIT: usize = 64 * 1024 * 1024;
 /// What a file sent as a body or a part may weigh, in megabytes: checked before it is read.
 pub const SENT_FILE_MEGABYTES: u64 = 64;
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct SendRequest {
     /// Chosen by the front, so it can cancel the send it started and save what came back.
     pub id: String,
@@ -64,10 +63,8 @@ pub struct SendRequest {
     /// globals alone.
     pub environment_id: Option<String>,
     /// The user said yes to what a protected environment asks: a script may then change it.
-    #[serde(default)]
     pub confirmed: bool,
     /// The files a script asked to send that the user said yes to, path by path.
-    #[serde(default)]
     pub files: Vec<String>,
 }
 
@@ -199,8 +196,7 @@ pub enum SendError {
 }
 
 /// Who put a header on a request that no row of its own wrote.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ImpliedSource {
     Body,
     /// A folder or the collection, named in `from`.
@@ -212,8 +208,7 @@ pub enum ImpliedSource {
 }
 
 /// A header sent without a row of the request's own: the editor lists them under its table.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImpliedHeader {
     pub name: String,
     pub value: String,
@@ -806,8 +801,7 @@ struct Kept {
 }
 
 /// An answer's text as a note keeps it, and whether a secret was masked in it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoteText {
     pub text: String,
     pub masked: bool,
@@ -1224,7 +1218,7 @@ pub struct Sending {
 }
 
 /// A task aborted was cancelled; one that panicked fell, which a cancel must not hide.
-fn ended(error: tokio::task::JoinError) -> SendError {
+fn ended(error: &tokio::task::JoinError) -> SendError {
     if error.is_panic() {
         SendError::Fell
     } else {
@@ -1259,12 +1253,15 @@ impl Sending {
         {
             running.remove(id);
         }
-        let answer = answer.map_err(ended).flatten().map(|received| {
-            if let Ok(mut bodies) = self.bodies.lock() {
-                bodies.insert(id.to_string(), Arc::new(received.kept));
-            }
-            received.response
-        });
+        let answer = answer
+            .map_err(|error| ended(&error))
+            .flatten()
+            .map(|received| {
+                if let Ok(mut bodies) = self.bodies.lock() {
+                    bodies.insert(id.to_string(), Arc::new(received.kept));
+                }
+                received.response
+            });
         let changes = changes
             .lock()
             .map(|mut set| std::mem::take(&mut *set))
@@ -1375,8 +1372,8 @@ mod tests {
             (fell.unwrap_err(), waiting.await.unwrap_err())
         });
 
-        assert!(matches!(ended(fell), SendError::Fell));
-        assert!(matches!(ended(aborted), SendError::Cancelled));
+        assert!(matches!(ended(&fell), SendError::Fell));
+        assert!(matches!(ended(&aborted), SendError::Cancelled));
     }
     use crate::http::model::{FormPart, HttpItemKind};
     use crate::http::settings::{HttpOrigin, InheritedHeader};

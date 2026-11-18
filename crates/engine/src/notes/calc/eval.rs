@@ -435,7 +435,7 @@ impl<'a> Parser<'a> {
                     return Err(self.unreadable());
                 };
                 let whole = self.additive()?;
-                value = share_of(value, whole, share).map_err(|error| self.blame(error))?;
+                value = share_of(value, &whole, share).map_err(|error| self.blame(error))?;
             } else if self.eat(CalcWord::IsTo) {
                 value = self.proportion(value)?;
             } else if self.duration_after(CalcWord::After) || self.duration_after(CalcWord::During)
@@ -636,7 +636,7 @@ impl<'a> Parser<'a> {
                 true
             });
         if percent {
-            return change(from.clone(), to.clone())
+            return change(from, to)
                 .map(Some)
                 .map_err(|error| self.blame(error));
         }
@@ -724,7 +724,7 @@ impl<'a> Parser<'a> {
             && let Some(share) = self.share_after_percent()
         {
             let whole = self.additive()?;
-            return share_of(value, whole, share).map_err(|error| self.blame(error));
+            return share_of(value, &whole, share).map_err(|error| self.blame(error));
         }
         for (word, notation) in NOTATIONS {
             if self.eat(word) {
@@ -763,8 +763,8 @@ impl<'a> Parser<'a> {
         convert(value, shown, dim).map_err(|error| self.blame(error))
     }
 
-    fn bits(&mut self, left: Value, right: Value, operation: Bits) -> Answer {
-        let both = plain(&left).and_then(|a| Ok((a, plain(&right)?)));
+    fn bits(&mut self, left: &Value, right: &Value, operation: Bits) -> Answer {
+        let both = plain(left).and_then(|a| Ok((a, plain(right)?)));
         both.and_then(|(a, b)| maths::bits(a, b, operation))
             .map(Value::number)
             .map_err(|error| self.blame(error))
@@ -776,7 +776,7 @@ impl<'a> Parser<'a> {
         while self.peek_symbol(&['|']).is_some() {
             self.take(TokenKind::Operator);
             let right = self.bits_xor()?;
-            left = self.bits(left, right, Bits::Or)?;
+            left = self.bits(&left, &right, Bits::Or)?;
         }
         Ok(left)
     }
@@ -785,7 +785,7 @@ impl<'a> Parser<'a> {
         let mut left = self.bits_and()?;
         while self.eat_as(CalcWord::Xor, TokenKind::Operator) {
             let right = self.bits_and()?;
-            left = self.bits(left, right, Bits::Xor)?;
+            left = self.bits(&left, &right, Bits::Xor)?;
         }
         Ok(left)
     }
@@ -795,7 +795,7 @@ impl<'a> Parser<'a> {
         while self.peek_symbol(&['&']).is_some() {
             self.take(TokenKind::Operator);
             let right = self.shift()?;
-            left = self.bits(left, right, Bits::And)?;
+            left = self.bits(&left, &right, Bits::And)?;
         }
         Ok(left)
     }
@@ -817,7 +817,7 @@ impl<'a> Parser<'a> {
             self.take(TokenKind::Operator);
             self.take(TokenKind::Operator);
             let right = self.additive()?;
-            left = self.bits(left, right, operation)?;
+            left = self.bits(&left, &right, operation)?;
         }
         Ok(left)
     }
@@ -895,7 +895,7 @@ impl<'a> Parser<'a> {
                 .map_err(|error| self.blame(error))?;
             } else if !self.no_over && self.eat(CalcWord::Over) {
                 let right = self.power()?;
-                left = ratio(left, right).map_err(|error| self.blame(error))?;
+                left = ratio(&left, &right).map_err(|error| self.blame(error))?;
             } else {
                 return Ok(left);
             }
@@ -1137,7 +1137,7 @@ impl<'a> Parser<'a> {
                 return Err(self.unreadable());
             }
             let to = self.additive()?;
-            return change(from, to).map_err(|error| self.blame(error));
+            return change(&from, &to).map_err(|error| self.blame(error));
         }
         let at = self.tokens[self.at].start;
         self.kinds[self.at] = Some(TokenKind::Error);
@@ -1675,11 +1675,11 @@ fn solve(ratio: Decimal, share: Share, result: Value) -> Answer {
 }
 
 /// `50 en % de 100` is 50 %; `70 en % de plus que 20` 250 %; `20 en % de moins que 70` 71,43 %.
-fn share_of(part: Value, whole: Value, share: Share) -> Answer {
+fn share_of(part: Value, whole: &Value, share: Share) -> Answer {
     match share {
-        Share::Of => ratio(part, whole),
-        Share::On => ratio(add(part, whole.clone(), false)?, whole),
-        Share::Off => ratio(add(whole.clone(), part, false)?, whole),
+        Share::Of => ratio(&part, whole),
+        Share::On => ratio(&add(part, whole.clone(), false)?, whole),
+        Share::Off => ratio(&add(whole.clone(), part, false)?, whole),
     }
 }
 
@@ -1722,7 +1722,7 @@ fn excluding(left: Value, right: Value) -> Answer {
 }
 
 /// `30 sur 120` is 25 %.
-fn ratio(left: Value, right: Value) -> Answer {
+fn ratio(left: &Value, right: &Value) -> Answer {
     match (&left, &right) {
         (Value::Quantity(a), Value::Quantity(b)) if a.dim == b.dim => {
             if b.amount.is_zero() {
@@ -1738,12 +1738,12 @@ fn ratio(left: Value, right: Value) -> Answer {
                 signed: false,
             })
         }
-        _ => Err(mismatch(&left, &right)),
+        _ => Err(mismatch(left, right)),
     }
 }
 
 /// `de 80 à 100` is +25 %.
-fn change(from: Value, to: Value) -> Answer {
+fn change(from: &Value, to: &Value) -> Answer {
     match (&from, &to) {
         (Value::Quantity(a), Value::Quantity(b)) if a.dim == b.dim => {
             if a.amount.is_zero() {
@@ -1757,7 +1757,7 @@ fn change(from: Value, to: Value) -> Answer {
                 signed: true,
             })
         }
-        _ => Err(mismatch(&from, &to)),
+        _ => Err(mismatch(from, to)),
     }
 }
 

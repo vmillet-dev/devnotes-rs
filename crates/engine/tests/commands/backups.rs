@@ -30,9 +30,7 @@ fn a_restore_keeps_where_the_library_went_for_the_page_it_reloads() {
     session.wait(engine::index::fill);
     assert_eq!(session.engine.indexed(), 1);
 
-    let aside = session
-        .call(|e| restore_backup(e, COPY.to_string()))
-        .unwrap();
+    let aside = session.call(|e| restore_backup(e, COPY)).unwrap();
 
     assert!(
         directory

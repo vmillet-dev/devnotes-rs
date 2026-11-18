@@ -184,7 +184,7 @@ fn archiving_a_forgotten_library_says_where_and_starts_a_new_one() {
 fn opening_another_library_asks_for_its_own_phrase() {
     let profile = testing::locked();
     let backend = testing::backend_on(profile.path());
-    let other = engine::libraries::create_library(backend.engine(), "Travail".to_string())
+    let other = engine::libraries::create_library(backend.engine(), "Travail")
         .unwrap()
         .id;
     let mut harness = screen(backend, profile);

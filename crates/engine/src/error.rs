@@ -190,8 +190,7 @@ pub enum ErrorCode {
     HttpRunData,
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct AppError {
     pub code: ErrorCode,
     /// Values to interpolate into the translated message, e.g. `{ "name": "Personal" }`.

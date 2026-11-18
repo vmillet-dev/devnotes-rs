@@ -112,7 +112,7 @@ pub(crate) fn settle(harness: &mut Harness<'_, Bench>) {
 pub(crate) fn space(backend: &Backend, name: &str) -> Space {
     let draft = SpaceDraft { name: name.into() };
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::spaces::create_space(engine, draft)
+        engine::spaces::create_space(engine, &draft)
     })
     .unwrap()
 }
@@ -129,7 +129,7 @@ pub(crate) fn folder(
         parent_id: parent.map(|parent| parent.id.clone()),
     };
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::folders::create_folder(engine, draft)
+        engine::folders::create_folder(engine, &draft)
     })
     .unwrap()
 }

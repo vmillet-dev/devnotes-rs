@@ -12,8 +12,6 @@
 use std::path::Path;
 use std::sync::Mutex;
 
-use serde::Serialize;
-
 use super::Country;
 use crate::closed_enum::closed_enum;
 
@@ -32,8 +30,7 @@ closed_enum! {
 }
 
 /// A list that could not be used: which one, and where it was looked for.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnreadableList {
     pub problem: ListProblem,
     /// As it is named under the folder: `names.txt`, `places/fr.txt`.

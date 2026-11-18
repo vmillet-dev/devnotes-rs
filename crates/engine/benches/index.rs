@@ -110,7 +110,11 @@ fn index_query(c: &mut Criterion) {
             ("search folding accents", "etape"),
         ] {
             group.bench_function(name, |b| {
-                b.iter(|| black_box(run_here(engine, |e| query_notes(e, query(search)).unwrap())));
+                b.iter(|| {
+                    black_box(run_here(engine, |e| {
+                        query_notes(e, &query(search)).unwrap()
+                    }))
+                });
             });
         }
         let space = bench.corpus.space_ids[0].clone();
@@ -120,7 +124,7 @@ fn index_query(c: &mut Criterion) {
                 asked.space_id = Some(space.clone());
                 asked.tags = vec!["tag-7".to_string()];
                 asked.filter = NoteFilter::Pinned;
-                black_box(run_here(engine, |e| query_notes(e, asked).unwrap()))
+                black_box(run_here(engine, |e| query_notes(e, &asked).unwrap()))
             });
         });
         group.bench_function("list_tags", |b| {
@@ -146,16 +150,14 @@ fn index_refresh(c: &mut Criterion) {
                     title: Some(format!("Retitrée {n}")),
                     ..NotePatch::default()
                 };
-                black_box(run_here(engine, |e| {
-                    update_note(e, id.clone(), patch).unwrap()
-                }))
+                black_box(run_here(engine, |e| update_note(e, &id, &patch).unwrap()))
             });
         });
         group.bench_function("tag_notes then untag_notes, 100", |b| {
             b.iter(|| {
                 run_here(engine, |e| {
-                    let tagged = tag_notes(e, batch.clone(), vec!["banc".to_string()]).unwrap();
-                    untag_notes(e, tagged).unwrap()
+                    let tagged = tag_notes(e, &batch, &["banc".to_string()]).unwrap();
+                    untag_notes(e, &tagged).unwrap()
                 })
             });
         });

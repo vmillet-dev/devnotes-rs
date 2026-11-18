@@ -38,7 +38,7 @@ fn two_edits_sent_in_a_row_land_in_that_order() {
     let edit = |title: &'static str| {
         let id = id.clone();
         engine::db::run(Arc::clone(&session.engine), move |e| {
-            update_note(e, id, titled(title))
+            update_note(e, &id, &titled(title))
         })
     };
     let (first, second) = session
@@ -47,7 +47,7 @@ fn two_edits_sent_in_a_row_land_in_that_order() {
     first.unwrap();
     second.unwrap();
 
-    let read = session.call(|e| get_note(e, id.clone())).unwrap();
+    let read = session.call(|e| get_note(e, &id)).unwrap();
     assert_eq!(read.note.title, "second");
 }
 
@@ -147,16 +147,14 @@ fn the_library_is_never_locked_off_the_db_thread() {
 fn opening_another_library_cancels_the_send_under_way() {
     let session = Session::open();
     let (port, arrived, _release) = held();
-    let other = session
-        .call(|e| create_library(e, "Other".to_string()))
-        .unwrap();
+    let other = session.call(|e| create_library(e, "Other")).unwrap();
 
     let sending = session.runtime.spawn(send_http_request(
         Arc::clone(&session.engine),
         request(&format!("http://127.0.0.1:{port}/")),
     ));
     arrived.recv().unwrap();
-    session.call(|e| open_library(e, other.id)).unwrap();
+    session.call(|e| open_library(e, &other.id)).unwrap();
 
     let answer = session.runtime.block_on(sending).unwrap();
     assert_eq!(answer.unwrap_err().code, ErrorCode::HttpCancelled);
@@ -169,9 +167,7 @@ fn the_index_fills_after_an_unlock_and_empties_when_another_library_opens() {
     for _ in 0..3 {
         session.call(|e| create_note(e, snippet(&space))).unwrap();
     }
-    let other = session
-        .call(|e| create_library(e, "Other".to_string()))
-        .unwrap();
+    let other = session.call(|e| create_library(e, "Other")).unwrap();
 
     session.wait(engine::index::fill);
     assert_eq!(session.engine.indexed(), 3);
@@ -183,7 +179,7 @@ fn the_index_fills_after_an_unlock_and_empties_when_another_library_opens() {
             .any(|event| matches!(event, engine::EngineEvent::IndexReady))
     );
 
-    session.call(|e| open_library(e, other.id)).unwrap();
+    session.call(|e| open_library(e, &other.id)).unwrap();
     assert_eq!(session.engine.indexed(), 0);
 }
 

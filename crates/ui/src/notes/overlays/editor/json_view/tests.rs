@@ -30,7 +30,7 @@ fn snippet(content: &str, language: Language) -> Harness<'static> {
         ..NotePatch::default()
     };
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, id, patch)
+        engine::notes::update_note(engine, &id, &patch)
     })
     .unwrap();
     let mut harness = expanded_area(backend, profile);

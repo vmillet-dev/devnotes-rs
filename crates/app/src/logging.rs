@@ -162,7 +162,7 @@ mod tests {
         };
 
         let failed = engine::db::run_here(&closed, |engine| {
-            engine::notes::update_note(engine, "note-id".to_owned(), patch)
+            engine::notes::update_note(engine, "note-id", &patch)
         });
         ui::services::errors::ErrorNotifier::default()
             .report(i18n::keys::errors::NOTE_GONE, &failed.unwrap_err());
@@ -190,8 +190,8 @@ mod tests {
         let duplicate = engine::db::run_here(&engine, |engine| {
             let phrase = engine::vault::secret("correct horse battery staple".to_owned());
             engine::vault::create_vault(engine, phrase)?;
-            engine::spaces::create_space(engine, draft())?;
-            engine::spaces::create_space(engine, draft())
+            engine::spaces::create_space(engine, &draft())?;
+            engine::spaces::create_space(engine, &draft())
         })
         .unwrap_err();
         let too_large = engine::error::StorageError::TooLarge {

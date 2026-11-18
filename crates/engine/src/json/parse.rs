@@ -1,10 +1,8 @@
 //! A JSON parser that keeps where each value sits, which `serde_json` does not.
 
-use serde::Serialize;
-
 /// Offsets in UTF-16 code units: the front's strings count in them, and "Voir dans le code"
 /// puts a caret with one.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     pub start: u32,
     pub end: u32,
@@ -29,8 +27,7 @@ pub(crate) struct Node {
     pub(crate) span: Span,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JsonErrorReason {
     UnexpectedEnd,
     UnexpectedCharacter,
@@ -46,7 +43,7 @@ pub enum JsonErrorReason {
 }
 
 /// One-based line and column, the column in UTF-16 units like the offset.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct JsonError {
     pub reason: JsonErrorReason,
     pub line: u32,

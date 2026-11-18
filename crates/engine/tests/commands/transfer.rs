@@ -25,7 +25,7 @@ fn an_export_is_imported_into_another_library() {
     let exported = source
         .wait(|e| export_notes(e, path.clone(), ExportScope::Library, None))
         .unwrap();
-    let protected = export_is_protected(path.clone()).unwrap();
+    let protected = export_is_protected(&path).unwrap();
     let imported = target.wait(|e| import_notes(e, path, None)).unwrap();
 
     assert_eq!((exported.notes, exported.protected), (1, false));
@@ -66,7 +66,7 @@ fn a_shared_selection_reads_as_markdown() {
         .note
         .id;
 
-    let markdown = session.call(|e| share_notes(e, vec![id])).unwrap();
+    let markdown = session.call(|e| share_notes(e, &[id])).unwrap();
 
     assert!(markdown.contains("Titre"));
     assert!(markdown.contains("Contenu"));
@@ -86,7 +86,7 @@ fn an_empty_scope_is_counted_as_such_and_exports_no_file() {
         .call(|e| {
             count_export(
                 e,
-                ExportScope::Space {
+                &ExportScope::Space {
                     space_id: empty.clone(),
                 },
             )
@@ -108,7 +108,7 @@ fn an_empty_scope_is_counted_as_such_and_exports_no_file() {
     assert!(!path.exists());
     assert_eq!(
         session
-            .call(|e| count_export(e, ExportScope::Library))
+            .call(|e| count_export(e, &ExportScope::Library))
             .unwrap(),
         1
     );

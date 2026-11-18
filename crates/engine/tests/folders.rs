@@ -539,7 +539,7 @@ mod board {
         )
         .unwrap();
 
-        board::build(notes, &folders, &frames, &positions, facets, query)
+        board::build(notes, &folders, &frames, &positions, &facets, query)
     }
 
     pub(super) fn titled(connection: &mut Library, space_id: &str, title: &str) -> Note {

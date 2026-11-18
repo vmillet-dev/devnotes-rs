@@ -65,7 +65,7 @@ fn runner_on(port: u16, path: &str) -> Harness<'static, Bench> {
             },
         };
         engine::db::run_here(backend.engine(), move |engine| {
-            engine::http::create_http_request(engine, draft)
+            engine::http::create_http_request(engine, &draft)
         })
         .unwrap();
     }

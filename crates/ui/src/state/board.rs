@@ -520,7 +520,7 @@ mod tests {
             parent_id: None,
         };
         let folder = engine::db::run_here(backend.engine(), move |engine| {
-            engine::folders::create_folder(engine, draft)
+            engine::folders::create_folder(engine, &draft)
         })
         .unwrap();
         let place = Place {
@@ -633,7 +633,7 @@ mod tests {
                     folder_id: folder,
                     frame: far,
                 };
-                engine::folders::save_board_layout(engine, None, vec![zone], Vec::new())
+                engine::folders::save_board_layout(engine, None, &[zone], &Vec::new())
             }
         })
         .unwrap();

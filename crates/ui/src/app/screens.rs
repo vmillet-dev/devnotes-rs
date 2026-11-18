@@ -173,13 +173,13 @@ fn seed(window: &Window) {
         let home = engine::spaces::list_spaces(engine)?.remove(0).id;
         let work = engine::spaces::create_space(
             engine,
-            SpaceDraft {
+            &SpaceDraft {
                 name: "Projets".to_string(),
             },
         )?;
         let ops = engine::folders::create_folder(
             engine,
-            FolderDraft {
+            &FolderDraft {
                 space_id: work.id.clone(),
                 name: "Exploitation".to_string(),
                 parent_id: None,
@@ -187,13 +187,13 @@ fn seed(window: &Window) {
         )?;
         let releases = engine::folders::create_folder(
             engine,
-            FolderDraft {
+            &FolderDraft {
                 space_id: work.id.clone(),
                 name: "Livraisons".to_string(),
                 parent_id: Some(ops.id.clone()),
             },
         )?;
-        engine::folders::recolour_folder(engine, releases.id.clone(), FolderColour::Amber)?;
+        engine::folders::recolour_folder(engine, &releases.id, FolderColour::Amber)?;
 
         let draft = |space: &str, title: &str, kind, content: &str| NoteDraft {
             space_id: space.to_string(),
@@ -283,8 +283,8 @@ fn seed(window: &Window) {
         )?;
         engine::notes::update_note(
             engine,
-            snippet.id.clone(),
-            NotePatch {
+            &snippet.id,
+            &NotePatch {
                 content: Some(format!(
                     "{}\nkubectl get pods -n {{{{namespace}}}}",
                     snippet.content
@@ -292,14 +292,14 @@ fn seed(window: &Window) {
                 ..NotePatch::default()
             },
         )?;
-        engine::notes::delete_note(engine, trashed.id.clone())?;
+        engine::notes::delete_note(engine, &trashed.id)?;
 
-        let api = engine::http::create_http_collection(engine, "API Facturation".to_string())?;
+        let api = engine::http::create_http_collection(engine, "API Facturation")?;
         let auth = engine::http::create_http_folder(
             engine,
-            api.id.clone(),
+            &api.id,
             None,
-            "Authentification".to_string(),
+            "Authentification",
         )?;
         let request = |folder_id: Option<String>, name: &str, method| HttpRequestDraft {
             collection_id: api.id.clone(),
@@ -317,13 +317,13 @@ fn seed(window: &Window) {
         };
         engine::http::create_http_request(
             engine,
-            request(Some(auth.id.clone()), "Connexion", HttpMethod::Post),
+            &request(Some(auth.id.clone()), "Connexion", HttpMethod::Post),
         )?;
         engine::http::create_http_request(
             engine,
-            request(None, "Lister les factures", HttpMethod::Get),
+            &request(None, "Lister les factures", HttpMethod::Get),
         )?;
-        engine::http::create_http_environment(engine, "Recette".to_string())?;
+        engine::http::create_http_environment(engine, "Recette")?;
         Ok::<_, engine::error::AppError>(())
     })
     .unwrap();

@@ -5,7 +5,6 @@ mod lorem;
 mod schema;
 
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
-use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 
 use crate::count::saturating_u32;
@@ -215,15 +214,13 @@ fn like_number(number: &Number, draw: &mut Draw) -> Value {
 
 // --- The command's shape.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JsonSource {
     Schema,
     Example,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GenerateRequest {
     pub source: JsonSource,
     pub text: String,
@@ -232,16 +229,14 @@ pub struct GenerateRequest {
     pub seed: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unsupported {
     pub keyword: String,
     /// A `JSONPath` into the schema.
     pub path: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GenerateAnswer {
     Generated {
         text: String,

@@ -3,13 +3,14 @@
 //! The passphrase is never stored, anywhere: losing it loses the library, and an export is
 //! the only copy that does not depend on it.
 
-#![allow(clippy::needless_pass_by_value)]
+#![allow(
+    clippy::needless_pass_by_value,
+    reason = "a passphrase is taken whole, to be wiped when the service returns"
+)]
 
 pub mod file;
 pub(crate) mod gate;
 pub mod key;
-
-use serde::Serialize;
 
 use zeroize::{Zeroize, Zeroizing};
 
@@ -29,8 +30,7 @@ pub fn secret<S: Zeroize>(value: S) -> Zeroizing<S> {
 }
 
 /// What the front end renders before it renders anything else.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VaultState {
     /// A library that has never been encrypted: the first launch asks for a passphrase
     /// twice and creates one.
@@ -82,8 +82,7 @@ pub fn unlock_vault(engine: &Engine, passphrase: Zeroizing<String>) -> Result<()
 
 /// What a change reached. `backupsLeft` is the honest half: a key file copied somewhere else
 /// still opens with the retired phrase.
-#[derive(Debug, Clone, Copy, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy)]
 pub struct PassphraseChange {
     pub backups_rewrapped: u32,
     pub backups_left: u32,

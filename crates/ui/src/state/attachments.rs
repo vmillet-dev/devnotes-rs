@@ -62,7 +62,7 @@ enum Saving {
 }
 
 enum Image {
-    Reading(Pending<String>),
+    Reading(Pending<(String, Vec<u8>)>),
     Decoding(Pending<Option<ColorImage>>),
     Shown(TextureHandle),
 }
@@ -365,8 +365,9 @@ impl AttachmentsState {
         match &mut preview.image {
             Image::Reading(pending) => match pending.poll() {
                 None => {}
-                Some(Ok(uri)) => {
-                    preview.image = Image::Decoding(backend.compute(move |_| Ok(decode(&uri))));
+                Some(Ok((mime, bytes))) => {
+                    let decoding = backend.compute(move |_| Ok(picture(&mime, &bytes)));
+                    preview.image = Image::Decoding(decoding);
                 }
                 Some(Err(error)) => {
                     reports
@@ -390,14 +391,19 @@ impl AttachmentsState {
     }
 }
 
-/// An image in the closed list, as pixels; `None` for anything else.
+/// An image in the closed list, written as a `data:` URI, as pixels; `None` for anything else.
 pub(crate) fn decode(uri: &str) -> Option<ColorImage> {
     let (head, payload) = uri.split_once(";base64,")?;
     let bytes = BASE64.decode(payload).ok()?;
-    if head == "data:image/svg+xml" {
-        return decode_svg(&bytes);
+    picture(head.strip_prefix("data:")?, &bytes)
+}
+
+/// The bytes of an image of type `mime`, as pixels; `None` for anything else.
+fn picture(mime: &str, bytes: &[u8]) -> Option<ColorImage> {
+    if mime == "image/svg+xml" {
+        return decode_svg(bytes);
     }
-    let image = image::load_from_memory(&bytes).ok()?.into_rgba8();
+    let image = image::load_from_memory(bytes).ok()?.into_rgba8();
     let size = [
         usize::try_from(image.width()).ok()?,
         usize::try_from(image.height()).ok()?,

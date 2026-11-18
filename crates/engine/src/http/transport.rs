@@ -18,8 +18,7 @@ pub struct TransportSettings {
 }
 
 /// The settings resolved, every field decided.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Transport {
     pub timeout_ms: u32,
     pub follow_redirects: bool,

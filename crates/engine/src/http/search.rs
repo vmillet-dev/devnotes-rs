@@ -2,7 +2,6 @@
 //! Ranked here, as the notes are searched here: the front draws the order it is given.
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
 
 use super::model::{HttpMethod, RequestKind};
 use crate::notes::view::fold;
@@ -11,8 +10,7 @@ use crate::notes::view::fold;
 pub const MAX_HITS: usize = 8;
 
 /// A request as the palette shows it: its URL as typed, `{{baseUrl}}` and all.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RequestHit {
     pub id: String,
     pub name: String,

@@ -19,8 +19,7 @@ pub struct GraphqlDocument {
     pub as_get: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GraphqlAnswer {
     /// The named operations, in the order written.
     pub operations: Vec<String>,
@@ -34,8 +33,7 @@ pub struct GraphqlAnswer {
     pub unknown: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueryFault {
     UnclosedBrace,
     UnclosedParenthesis,
@@ -46,8 +44,7 @@ pub enum QueryFault {
 }
 
 /// Where a query stops reading: the sign at fault, by its line and column from 1.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct QueryProblem {
     pub fault: QueryFault,
     pub line: u32,

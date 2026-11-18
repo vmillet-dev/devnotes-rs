@@ -1,5 +1,3 @@
-#![allow(clippy::needless_pass_by_value)]
-
 pub mod board;
 pub mod model;
 pub mod store;
@@ -22,7 +20,7 @@ use model::{Folder, FolderColour, FolderDraft, FolderMove, Lineage, NoteFiling};
 /// each gathering what is under it, and what is filed in the root itself free beside them. It
 /// reads the whole space and marks what matches rather than narrowing. A card names its folder
 /// only when it comes from below its zone — a chip naming the zone it sits in is noise.
-pub fn board_view(engine: &Engine, query: BoardQuery) -> Result<BoardView, AppError> {
+pub fn board_view(engine: &Engine, query: &BoardQuery) -> Result<BoardView, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
@@ -51,7 +49,7 @@ pub fn board_view(engine: &Engine, query: BoardQuery) -> Result<BoardView, AppEr
 
     drop(connection);
 
-    let mut view = board::build(notes, &folders, &frames, &positions, facets, &query);
+    let mut view = board::build(notes, &folders, &frames, &positions, &facets, query);
     decorations.apply(view.notes_mut());
     view.keep_chips_from_below();
 
@@ -63,30 +61,33 @@ pub fn board_view(engine: &Engine, query: BoardQuery) -> Result<BoardView, AppEr
 /// also the undo of [`arrange_board`], with the layout that one answered.
 pub fn save_board_layout(
     engine: &Engine,
-    root_id: Option<String>,
-    zones: Vec<ZonePlacement>,
-    cards: Vec<CardPlacement>,
+    root_id: Option<&String>,
+    zones: &[ZonePlacement],
+    cards: &[CardPlacement],
 ) -> Result<(), AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
     Ok(store::board::save_layout(
         &mut connection,
-        root_id.as_deref(),
-        &zones,
-        &cards,
+        root_id.map(std::string::String::as_str),
+        zones,
+        cards,
     )?)
 }
 
 /// `None` = every space, like [`crate::notes::view::NotesQuery::space_id`].
-pub fn list_folders(engine: &Engine, space_id: Option<String>) -> Result<Vec<Folder>, AppError> {
+pub fn list_folders(engine: &Engine, space_id: Option<&String>) -> Result<Vec<Folder>, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(store::list(&mut connection, space_id.as_deref())?)
+    Ok(store::list(
+        &mut connection,
+        space_id.map(std::string::String::as_str),
+    )?)
 }
 
-pub fn create_folder(engine: &Engine, draft: FolderDraft) -> Result<Folder, AppError> {
+pub fn create_folder(engine: &Engine, draft: &FolderDraft) -> Result<Folder, AppError> {
     engine.write(|db| {
         let name = draft.validated_name()?;
 
@@ -107,13 +108,13 @@ pub fn create_folder(engine: &Engine, draft: FolderDraft) -> Result<Folder, AppE
     })
 }
 
-pub fn rename_folder(engine: &Engine, id: String, name: String) -> Result<Folder, AppError> {
+pub fn rename_folder(engine: &Engine, id: &str, name: &str) -> Result<Folder, AppError> {
     engine.write(|db| {
-        let name = model::validated_name(&name)?;
+        let name = model::validated_name(name)?;
 
         let mut connection = lock(db)?;
 
-        let answer = store::rename(&mut connection, &id, &name)?;
+        let answer = store::rename(&mut connection, id, &name)?;
         let changed = Changed {
             folders: true,
             ..Changed::default()
@@ -124,13 +125,13 @@ pub fn rename_folder(engine: &Engine, id: String, name: String) -> Result<Folder
 
 pub fn recolour_folder(
     engine: &Engine,
-    id: String,
+    id: &str,
     colour: FolderColour,
 ) -> Result<Folder, AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        let answer = store::recolour(&mut connection, &id, colour)?;
+        let answer = store::recolour(&mut connection, id, colour)?;
         let changed = Changed {
             folders: true,
             ..Changed::default()
@@ -143,13 +144,17 @@ pub fn recolour_folder(
 /// is where it was: what [`move_folder_back`] puts back.
 pub fn move_folder(
     engine: &Engine,
-    id: String,
-    parent_id: Option<String>,
+    id: &str,
+    parent_id: Option<&String>,
 ) -> Result<FolderMove, AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        let answer = store::move_to(&mut connection, &id, parent_id.as_deref())?;
+        let answer = store::move_to(
+            &mut connection,
+            id,
+            parent_id.map(std::string::String::as_str),
+        )?;
         let changed = Changed {
             folders: true,
             ..Changed::default()
@@ -159,11 +164,11 @@ pub fn move_folder(
 }
 
 /// The undo of [`move_folder`]; `false` when its old parent is gone or no longer a place for it.
-pub fn move_folder_back(engine: &Engine, was: FolderMove) -> Result<bool, AppError> {
+pub fn move_folder_back(engine: &Engine, was: &FolderMove) -> Result<bool, AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        let answer = store::move_back(&mut connection, &was)?;
+        let answer = store::move_back(&mut connection, was)?;
         let changed = Changed {
             folders: true,
             ..Changed::default()
@@ -174,11 +179,11 @@ pub fn move_folder_back(engine: &Engine, was: FolderMove) -> Result<bool, AppErr
 
 /// No refuge, unlike [`crate::spaces::delete_space`]: what it held goes to its parent, or
 /// loose at the top of the space. `lines` sizes the rows the parent's zone grows by.
-pub fn delete_folder(engine: &Engine, id: String, lines: PreviewLines) -> Result<(), AppError> {
+pub fn delete_folder(engine: &Engine, id: &str, lines: PreviewLines) -> Result<(), AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        store::delete(&mut connection, &id, lines.card_height())?;
+        store::delete(&mut connection, id, lines.card_height())?;
         let changed = Changed::everything();
         Ok(((), changed))
     })
@@ -189,8 +194,8 @@ pub fn delete_folder(engine: &Engine, id: String, lines: PreviewLines) -> Result
 /// rows a zone grows by to show what was filed into it.
 pub fn file_notes(
     engine: &Engine,
-    ids: Vec<String>,
-    folder_id: Option<String>,
+    ids: &[String],
+    folder_id: Option<&String>,
     lines: PreviewLines,
 ) -> Result<Vec<NoteFiling>, AppError> {
     engine.write(|db| {
@@ -198,11 +203,11 @@ pub fn file_notes(
 
         let answer = store::file_many(
             &mut connection,
-            &ids,
-            folder_id.as_deref(),
+            ids,
+            folder_id.map(std::string::String::as_str),
             lines.card_height(),
         )?;
-        let changed = Changed::notes(ids.clone());
+        let changed = Changed::notes(ids.to_vec());
         Ok((answer, changed))
     })
 }
@@ -210,7 +215,7 @@ pub fn file_notes(
 /// The undo of [`file_notes`]: each note goes back to the folder it left, or to loose.
 pub fn file_notes_back(
     engine: &Engine,
-    filings: Vec<NoteFiling>,
+    filings: &[NoteFiling],
     lines: PreviewLines,
 ) -> Result<u32, AppError> {
     engine.write(|db| {
@@ -218,7 +223,7 @@ pub fn file_notes_back(
 
         let answer = count(store::restore_filings(
             &mut connection,
-            &filings,
+            filings,
             lines.card_height(),
         )?);
         let changed = Changed::notes(filings.iter().map(|one| one.note_id.clone()));
@@ -231,8 +236,8 @@ pub fn file_notes_back(
 /// undo.
 pub fn arrange_board(
     engine: &Engine,
-    space_id: String,
-    root_id: Option<String>,
+    space_id: &str,
+    root_id: Option<&String>,
     scope: BoardScope,
     lines: PreviewLines,
 ) -> Result<BoardArrangement, AppError> {
@@ -241,8 +246,8 @@ pub fn arrange_board(
 
     Ok(store::board::arrange(
         &mut connection,
-        &space_id,
-        root_id.as_deref(),
+        space_id,
+        root_id.map(std::string::String::as_str),
         scope,
         lines.card_height(),
     )?)

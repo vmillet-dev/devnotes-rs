@@ -130,7 +130,7 @@ fn a_socket_opens_echoes_and_closes_each_step_an_event() {
 
     assert!(
         session
-            .call(|e| send_websocket(e, "socket-1".to_string(), "hello".to_string()))
+            .call(|e| send_websocket(e, "socket-1", "hello".to_string()))
             .unwrap()
     );
     assert_eq!(
@@ -150,15 +150,11 @@ fn a_socket_opens_echoes_and_closes_each_step_an_event() {
         }
     );
 
-    assert!(
-        session
-            .call(|e| close_websocket(e, "socket-1".to_string()))
-            .unwrap()
-    );
+    assert!(session.call(|e| close_websocket(e, "socket-1")).unwrap());
     assert!(matches!(next(), SocketEvent::Closed { .. }));
     assert!(
         !session
-            .call(|e| send_websocket(e, "socket-1".to_string(), "late".to_string()))
+            .call(|e| send_websocket(e, "socket-1", "late".to_string()))
             .unwrap()
     );
 }

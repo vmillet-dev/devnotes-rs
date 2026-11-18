@@ -179,7 +179,7 @@ mod tests {
             let name = name.to_owned();
             let mut made = self
                 .backend
-                .db(move |engine| engine::libraries::create_library(engine, name));
+                .db(move |engine| engine::libraries::create_library(engine, &name));
             self.backend.settle();
             let id = made.poll().unwrap().unwrap().id;
             self.libraries.load(&self.backend);

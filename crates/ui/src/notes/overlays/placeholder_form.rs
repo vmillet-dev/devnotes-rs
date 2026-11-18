@@ -213,7 +213,7 @@ mod tests {
         };
         let edited = id.clone();
         engine::db::run_here(backend.engine(), move |engine| {
-            engine::notes::update_note(engine, edited, patch)
+            engine::notes::update_note(engine, &edited, &patch)
         })
         .unwrap();
         let mut harness = area(backend, profile);
@@ -252,7 +252,7 @@ mod tests {
     fn stored(harness: &Harness<'_, Bench>, id: &str) -> Vec<(String, String)> {
         let id = id.to_owned();
         let note = engine::db::run_here(harness.state().backend.engine(), move |engine| {
-            engine::notes::get_note(engine, id)
+            engine::notes::get_note(engine, &id)
         })
         .unwrap();
         note.placeholders
