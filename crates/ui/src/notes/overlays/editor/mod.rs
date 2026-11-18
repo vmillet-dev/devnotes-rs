@@ -136,6 +136,9 @@ pub(crate) fn show(
     let opened = state.editor.opened();
     let Some((open, note, room)) = opened.and_then(|open| Some((open, open.note()?, room?))) else {
         *view = None;
+        if let (Some(_), Some(room)) = (opened, room) {
+            empty_panel(ui, room);
+        }
         // Still being read: nothing typed yet to write, so what was asked next opens now.
         if opened.is_some() && state.editor_next.is_some() {
             actions.push(editor(Editing::Close));
@@ -150,7 +153,6 @@ pub(crate) fn show(
     }
     let Some(editing) = view else { return };
     let ctx = ui.ctx().clone();
-    let p = palette(&ctx);
     // Escape first leaves the field being typed in; only a second one steps back. egui drops
     // the focus before the frame is drawn, so the field is the one that had it at the last frame.
     let typing_id = Id::unique("note-editor.typing");
@@ -160,9 +162,7 @@ pub(crate) fn show(
         || state.attachments.zoomed().is_some()
         || state.presentation.shown().is_some()
         || egui::Popup::is_any_open(&ctx);
-    ui.painter().rect_filled(room, CornerRadius::ZERO, p.bg_1);
-    ui.painter()
-        .vline(room.left(), room.y_range(), Stroke::new(1.0, p.line));
+    empty_panel(ui, room);
     let mut panel_ui = ui.new_child(
         UiBuilder::new()
             .max_rect(room)
@@ -195,6 +195,14 @@ pub(crate) fn show(
         missing_pictures(ui, open.session, note, editing, actions);
         close(open.session, note, editing, actions);
     }
+}
+
+/// The panel's ground and edge, with no note in it yet: the cards beside do not move.
+fn empty_panel(ui: &Ui, room: Rect) {
+    let p = palette(ui.ctx());
+    ui.painter().rect_filled(room, CornerRadius::ZERO, p.bg_1);
+    ui.painter()
+        .vline(room.left(), room.y_range(), Stroke::new(1.0, p.line));
 }
 
 /// The editor's column: toolbar, header, body, footer. `true` once the close button is clicked.

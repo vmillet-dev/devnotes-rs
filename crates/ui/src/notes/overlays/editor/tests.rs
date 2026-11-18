@@ -491,6 +491,46 @@ fn a_note_opens_beside_the_cards_and_expands_over_them() {
     assert!(is_open(&harness));
 }
 
+/// From one open note to another: on every frame until the second is read, the panel keeps its
+/// place and the cards beside it their width.
+#[test]
+fn moving_to_another_note_keeps_the_panel_in_place() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "first");
+    testing::note(&backend, "second");
+    let mut harness = wide(area(backend, profile));
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open") && node.label().as_deref() == Some("first")
+        })
+        .click();
+    settle(&mut harness);
+    let header = rect_of(&harness, "new-note");
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open") && node.label().as_deref() == Some("second")
+        })
+        .click();
+    for frame in 0..500 {
+        harness.step();
+        let now = rect_of(&harness, "new-note");
+        assert_eq!(now, header, "the cards' width moved at frame {frame}");
+        let read = harness
+            .state()
+            .state
+            .editor
+            .opened()
+            .and_then(|open| open.note());
+        if read.is_some_and(|note| note.title == "second") {
+            return;
+        }
+    }
+    settle(&mut harness);
+    assert_eq!(title_of_open(&harness), "second");
+    assert_eq!(rect_of(&harness, "new-note"), header);
+}
+
 /// A card clicked while a note is open: what was typed in the first is written on the way.
 #[test]
 fn another_card_opens_once_the_note_open_wrote_its_title() {

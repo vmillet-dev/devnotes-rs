@@ -138,6 +138,10 @@ fn on_the_board(app: &mut App) {
         app.eventually("the bar is gone", |tree| !tree.has("selection-count"));
     });
 
+    step("from one open note to the next, the panel stays", || {
+        panel_kept(app);
+    });
+
     step(
         "the arrows walk the cards as the board lays them out",
         || {
@@ -154,6 +158,26 @@ fn on_the_board(app: &mut App) {
             app.press(Key::Escape, Modifiers::NONE);
         },
     );
+}
+
+fn open_title(tree: &Tree) -> Option<&str> {
+    tree.find("editor-title").and_then(Node::value)
+}
+
+/// One note open, then another card clicked: the zones never move while the second is read.
+fn panel_kept(app: &mut App) {
+    app.click_where("note-card-open", named(FILED));
+    app.eventually("the first note is open", |tree| {
+        open_title(tree) == Some(FILED)
+    });
+    let beside = frames(&app.tree());
+    app.click_where("note-card-open", named(LOOSE));
+    app.eventually("the second is open, the zones where they were", |tree| {
+        assert_eq!(frames(tree), beside, "the board moved");
+        open_title(tree) == Some(LOOSE)
+    });
+    app.click("editor-close");
+    app.eventually("the editor closed", |tree| !tree.has("editor-title"));
 }
 
 /// Whether the card titled `title` is drawn lit: a dimmed one keeps its seat, disabled.

@@ -429,10 +429,8 @@ fn beside_the_cards(
     state: &AppState,
     moving: Option<f32>,
 ) -> (Option<Rect>, Option<Rect>) {
-    let editing = state
-        .editor
-        .opened()
-        .is_some_and(|open| open.note().is_some());
+    // Open, read or still being read: the panel keeps its place while the next note is read.
+    let editing = state.editor.is_open();
     if !editing {
         return (Some(rest), None);
     }
