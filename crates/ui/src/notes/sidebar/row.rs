@@ -13,8 +13,8 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, MIN_TARGET, interact};
 
-/// One level of folders: the level is what says where you are.
-pub(super) const INDENT: f32 = 16.0;
+/// One level of folders: the level is what says where you are, and the rail is narrow.
+pub(super) const INDENT: f32 = 10.0;
 const HEIGHT: f32 = 26.0;
 
 /// The column before the name, sized once so that every level lines up.
