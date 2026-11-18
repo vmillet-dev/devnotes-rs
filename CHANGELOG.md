@@ -12,6 +12,45 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [1.0.2] - 2026-11-18
+
+### ✨ Added
+
+- Icon buttons: name and shortcut shown on hover (#1527)
+
+### 🔧 Changed
+
+- Rendering: socket log filtered once per change, board lookups by set (#1547)
+- Rendering: per-frame copies and searches done once per change (#1542)
+- Interface: one way to close, colours in their role (#1540)
+- Layout: status and selection bar no longer cover or shift content (#1529)
+- HTTP: request URL and tabs usable in a narrow window (#1528)
+- Cards: previews computed by the core, not while drawing (#1533)
+- Notes rail: full names readable, width adjustable (#1526)
+
+### 🐛 Fixed
+
+- App state: one answer to who has the keyboard (#1541)
+- Interface: modals in the dialog stack, accessible names translated (#1539)
+- Limits: tools, runs and attachments bounded in size and time (#1535)
+- Core: bulk undo restores dates; failures shown; rules defined once (#1534)
+- Library lock: attachments and exports read files outside it (#1531)
+
+### 🗑️ Removed
+
+- Application: lighter binary and memory; Mermaid blocks shown as code (#1525)
+
+### 🧰 Under the hood
+
+- App state: actions applied in a file per area (#1545)
+- Engine: serde only on what is written; services borrow what they read (#1543)
+- Interface: one confirmation in place, one page shell, one panel modal (#1544)
+- Structure: backups setting read by the shell, language tables merged (#1532)
+- Theme: spacing, text sizes and radii become tokens (#1538)
+- Engine: IPC-era shape and dead code removed (#1537)
+- E2E: a control is clicked once its place holds in two reads (#1536)
+- HTTP engine: send and run orchestration in their own files (#1530)
+
 ## [1.0.1] - 2026-11-13
 
 ### 🐛 Fixed
