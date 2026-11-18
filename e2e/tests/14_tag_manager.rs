@@ -8,16 +8,8 @@ use egui::{Key, Modifiers};
 const CARDS: usize = 6;
 
 /// The cards at `positions` ticked from their boxes, then given `tag` from the selection bar.
-/// The first is ticked by the box its hover shows; the others by their place, below the bar
-/// that floats over the first row once one is ticked.
 fn tag(app: &mut App, positions: &[usize], tag: &str) {
-    let (first, rest) = positions.split_first().expect("a card to tag");
-    app.hover_nth("note-card-open", *first);
-    app.click("note-card-check");
-    app.eventually("the cards show their boxes", |tree| {
-        tree.count("note-card-check") > 2
-    });
-    for at in rest {
+    for at in positions {
         app.click_nth("note-card-check", *at);
     }
     app.eventually("the cards are ticked", |tree| {

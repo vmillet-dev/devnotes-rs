@@ -36,15 +36,15 @@ pub(super) fn show(
     ui: &mut Ui,
     card: Rect,
     note: &DisplayNote,
-    (context, ticking): (&Context<'_>, bool),
+    context: &Context<'_>,
     actions: &mut Actions,
 ) {
     let ctx = ui.ctx().clone();
     let here = Id::unique("note-card-actions").with(&note.id);
     let (drawn, open) = ctx.data(|data| data.get_temp::<(Rect, bool)>(here)).unzip();
-    // Its box, unless the card already shows it; copy, but for a drawing; the ⋯.
+    // Copy, but for a drawing; the ⋯. The card's box is in its top band.
     let copies = note.kind != NoteKind::Drawing;
-    let buttons = 1.0 + f32::from(u8::from(!ticking)) + f32::from(u8::from(copies));
+    let buttons = 1.0 + f32::from(u8::from(copies));
     let width = buttons * MIN_TARGET + (buttons - 1.0) * 6.0 + 10.0;
     // Over the bottom edge, ending short of the next row.
     let pill = Rect::from_min_size(
@@ -75,9 +75,6 @@ pub(super) fn show(
         .show(&mut ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = gap::SNUG;
-                if !ticking && tick(ui, &title, language) {
-                    push(actions, Asked::Check(note.id.clone()));
-                }
                 // A note with fields asks for them before it is copied.
                 let (icon, key, author_id) = if note.placeholders.is_empty() {
                     (Icon::Copy, keys::notes::COPY_CONTENT, "note-card-copy")
@@ -105,27 +102,6 @@ pub(super) fn show(
     let open = shown.inner;
     let drawn = shown.response.rect;
     ctx.data_mut(|data| data.insert_temp(here, (drawn, open)));
-}
-
-/// The card's box in the pill: nothing on the card moves for it.
-fn tick(ui: &mut Ui, title: &str, language: i18n::Language) -> bool {
-    let p = palette(ui.ctx());
-    let label = i18n::translate(
-        language,
-        keys::notes::SELECT_NOTE,
-        &[("title", title.into())],
-    );
-    let response = widgets::interact(
-        ui,
-        Vec2::splat(MIN_TARGET),
-        egui::Sense::click(),
-        "note-card-check",
-        || egui::WidgetInfo::selected(egui::Role::CheckBox, true, false, &label),
-        CornerRadius::same(radius::TAG),
-    );
-    let square = Rect::from_center_size(response.rect.center(), Vec2::splat(14.0));
-    crate::notes::ui::tick_box(ui, square, false, p.text_1);
-    response.clicked()
 }
 
 fn menu(

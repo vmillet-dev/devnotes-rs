@@ -1,6 +1,6 @@
-//! A card's two bands, as a small window's: the top one is its title bar — the kind's icon, a
-//! snippet's format and the title, then on the right the priority, the pin and, while cards are
-//! ticked, the box. The bottom one is its status line — where the note is on the left; on the
+//! A card's two bands, as a small window's: the top one is its title bar — the card's box, the
+//! kind's icon, a snippet's format and the title, then on the right the priority and the pin.
+//! The bottom one is its status line — where the note is on the left; on the
 //! right its fields to fill, its attachments, and when it changed. Neither is ever empty.
 
 use crate::theme::tokens::{gap, radius};
@@ -22,9 +22,8 @@ use crate::widgets::{MIN_TARGET, address};
 /// The title bar: a little taller than the status line, for a title at 13 px.
 pub(super) const TOP_HEIGHT: f32 = 28.0;
 pub(super) const BOTTOM_HEIGHT: f32 = 22.0;
-/// From the band's edges to what it holds; the kind's tile sits closer, as a window's icon.
+/// From the band's edges to what it holds.
 const INSET: f32 = gap::INSET;
-const TILE_INSET: f32 = gap::SNUG;
 const GAP: f32 = gap::SNUG;
 
 /// No fill but under the pointer; a hairline between each band and the rest of the card.
@@ -65,16 +64,11 @@ pub(super) fn top(
     band: Rect,
     (note, title): (&DisplayNote, &str),
     context: &Context<'_>,
-    (checked, ticking): (bool, bool),
+    (checked, lit): (bool, bool),
 ) -> bool {
     let language = context.language;
-    let ticked = tick(ui, band, title, (checked, ticking), language);
-    // The box takes the right end; the pin moves over for it.
-    let right_end = if ticking {
-        band.right() - MIN_TARGET - 2.0
-    } else {
-        band.right() - INSET
-    };
+    let (box_end, ticked) = tick(ui, band, title, (checked, lit), language);
+    let right_end = band.right() - INSET;
     let mut right = ui.new_child(
         UiBuilder::new()
             .max_rect(Rect::from_min_max(band.min, pos2(right_end, band.bottom())))
@@ -90,10 +84,7 @@ pub(super) fn top(
     }
     let title_end = right.min_rect().left() - GAP;
 
-    let icon = Rect::from_min_size(
-        pos2(band.left() + TILE_INSET, band.center().y - 9.0),
-        vec2(18.0, 18.0),
-    );
+    let icon = Rect::from_min_size(pos2(box_end, band.center().y - 9.0), vec2(18.0, 18.0));
     let room = Rect::from_min_max(icon.min, pos2(title_end.max(icon.right()), icon.bottom()));
     let mut left = ui.new_child(
         UiBuilder::new()
@@ -160,42 +151,50 @@ fn pin(ui: &mut Ui, language: i18n::Language) {
     icons::paint(ui, rect, Icon::PinFilled, palette(ui.ctx()).amber_text);
 }
 
-/// The card's box, last in the top band while cards are ticked: nothing on its left moves.
-/// ⚠️ Allocated on every frame, shown or not: a widget that comes and goes moves the ids of
-/// every one after it, and the ⋯'s menu lost its own.
+/// The card's box, first in the top band whether the card is pointed at, ticked or neither, as
+/// the reference's: dim at rest, plain under the pointer or while cards are ticked, amber once
+/// ticked like every box of the application. Where the box ends, and whether it was clicked.
 fn tick(
     ui: &mut Ui,
     band: Rect,
     title: &str,
-    (checked, shown): (bool, bool),
+    (checked, lit): (bool, bool),
     language: i18n::Language,
-) -> bool {
+) -> (f32, bool) {
     let p = palette(ui.ctx());
     let label = i18n::translate(
         language,
         keys::notes::SELECT_NOTE,
         &[("title", title.into())],
     );
-    let target = Rect::from_center_size(
-        pos2(band.right() - MIN_TARGET / 2.0 - 1.0, band.center().y),
+    let target = Rect::from_min_size(
+        pos2(band.left() + gap::LINE, band.center().y - MIN_TARGET / 2.0),
         egui::Vec2::splat(MIN_TARGET),
     );
-    let sense = if shown {
-        Sense::click()
-    } else {
-        Sense::hover()
-    };
-    let response = ui.allocate_rect(target, sense);
-    if !shown {
-        return false;
-    }
+    let response = ui.allocate_rect(target, Sense::click());
     response.widget_info(|| WidgetInfo::selected(Role::CheckBox, true, checked, &label));
     address(ui, &response, "note-card-check");
     crate::theme::focus::ring(ui, &response, CornerRadius::same(radius::TAG));
-    let colour = if checked { p.amber_text } else { p.text_2 };
-    let square = Rect::from_center_size(target.center(), egui::Vec2::splat(13.0));
-    tick_box(ui, square, checked, colour);
-    response.clicked()
+    let square = Rect::from_center_size(target.center(), egui::Vec2::splat(14.0));
+    let corner = CornerRadius::same(radius::TAG);
+    if checked {
+        ui.painter().rect(
+            square,
+            corner,
+            p.amber_fill,
+            Stroke::new(1.0, p.amber_edge),
+            egui::StrokeKind::Inside,
+        );
+        icons::paint(ui, square.shrink(2.0), Icon::Check, p.amber_ink);
+    } else {
+        let edge = if lit || response.hovered() {
+            p.text_2
+        } else {
+            p.text_2.gamma_multiply(0.55)
+        };
+        tick_box(ui, square, false, edge);
+    }
+    (target.right(), response.clicked())
 }
 
 /// The bottom band: where, on the left; what the note holds and when it changed, on the right.

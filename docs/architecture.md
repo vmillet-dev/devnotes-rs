@@ -4287,8 +4287,9 @@ found (`matched == 0`, `canvas-no-results`) or a failure with its retry (`canvas
 bumps the revision) instead of the sections.
 
 A card (`canvas::card`) draws the core's `DisplayNote` and decides nothing about it, in three
-bands (→ "A card is two layers"): the title bar (the kind's icon, `notes::ui::kind_icon`; a
-snippet's format, `notes::ui::format_label`; the title; the priority's bars, the pin, the box), the preview by kind — a snippet's first lines in
+bands (→ "A card is two layers"): the title bar (the card's box; the kind's icon,
+`notes::ui::kind_icon`; a snippet's format, `notes::ui::format_label`; the title; the priority's
+bars, the pin), the preview by kind — a snippet's first lines in
 the mono face, a Note's outline, a list's open tasks (ticking one writes it through
 `state::notes`, not optimistically), a sheet's last results, a drawing's picture — and the status
 line (the place; the fields, the attachments, the short date). Previews are monochrome until syntax colouring arrives with
@@ -4431,9 +4432,9 @@ then commands — move to a space, file into a folder or out of every one, a tag
 unpin, delete in two clicks — and « … » for a priority, a tag removed, the copy, and whatever the
 width leaves out (the filing first, then the move, the pin, the tag field). Asking for the search
 (`Ctrl+K`) lets the selection go. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
-the selection go after disarming and before the search. ⚠️ The card's box is allocated on every
-frame, shown or not: a widget that comes and goes moved the ids of every widget after it, and the
-⋯ lost its menu.
+the selection go after disarming and before the search. The card's box is always first in its
+title bar, as the reference's: dim at rest, plain under the pointer or while cards are ticked,
+filled amber once ticked — it never moves, so the pointer finds it where it saw it.
 
 Every write of the card, the keys and the selection bar answers what it changed as an
 `api::undo::Reversible` — the core's own answer, as on the front — and `state::undo::UndoState`
