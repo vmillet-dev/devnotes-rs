@@ -562,6 +562,178 @@ fn a_modified_tab_asks_before_closing_and_a_clean_one_does_not() {
     );
 }
 
+fn middle_click_named(harness: &mut Harness<'_, Bench>, author_id: &str, name: &str) {
+    let at = harness
+        .get_by(|node| node.author_id() == Some(author_id) && node.label().as_deref() == Some(name))
+        .rect()
+        .center();
+    harness.event(egui::Event::PointerMoved(at));
+    for pressed in [true, false] {
+        harness.event(egui::Event::PointerButton {
+            pos: at,
+            button: egui::PointerButton::Middle,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        });
+        harness.step();
+    }
+    settle(harness);
+}
+
+#[test]
+fn the_middle_button_closes_a_clean_tab_and_asks_for_a_modified_one() {
+    let mut harness = paiements();
+    click_named(&mut harness, "http-node-name", "POST Login");
+    click_named(&mut harness, "http-node-name", "WS Socket");
+    crate::notes::bench::until(&mut harness, "two tabs", |harness| {
+        tab_names(harness).len() == 2
+    });
+
+    middle_click_named(&mut harness, "http-tab-open", "WS Socket");
+    assert_eq!(tab_names(&harness), ["POST Login"]);
+
+    let key = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .active_key()
+        .unwrap()
+        .to_owned();
+    harness
+        .state_mut()
+        .state
+        .http
+        .tabs_mut()
+        .edit(&key, |draft| draft.method = HttpMethod::Put);
+    settle(&mut harness);
+    middle_click_named(&mut harness, "http-tab-open", "PUT Login, modified");
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("http-close-dialog"))
+            .is_some()
+    );
+    assert_eq!(tab_names(&harness), ["PUT Login, modified"]);
+    click_id(&mut harness, "http-close-discard");
+    assert!(tab_names(&harness).is_empty());
+}
+
+fn two_tabs() -> Harness<'static, Bench> {
+    let mut harness = paiements();
+    click_named(&mut harness, "http-node-name", "POST Login");
+    click_named(&mut harness, "http-node-name", "WS Socket");
+    crate::notes::bench::until(&mut harness, "two tabs", |harness| {
+        tab_names(harness).len() == 2
+    });
+    harness
+}
+
+fn tab_rect(harness: &Harness<'_, Bench>, name: &str) -> egui::Rect {
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-tab-open") && node.label().as_deref() == Some(name)
+        })
+        .rect()
+}
+
+/// A press, the pointer moved there in ten steps, a release.
+fn drag(
+    harness: &mut Harness<'_, Bench>,
+    button: egui::PointerButton,
+    from: egui::Pos2,
+    to: egui::Pos2,
+) {
+    let press = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    harness.event(egui::Event::PointerMoved(from));
+    harness.event(press(from, true));
+    harness.step();
+    for step in 1..=10_u8 {
+        harness.event(egui::Event::PointerMoved(
+            from + (to - from) * (f32::from(step) / 10.0),
+        ));
+        harness.step();
+    }
+    harness.event(press(to, false));
+    settle(harness);
+}
+
+#[test]
+fn a_tab_dragged_past_another_takes_its_place_and_is_remembered() {
+    let mut harness = two_tabs();
+    let from = tab_rect(&harness, "POST Login").center();
+    let to = tab_rect(&harness, "WS Socket").right_center();
+
+    drag(&mut harness, egui::PointerButton::Primary, from, to);
+
+    assert_eq!(tab_names(&harness), ["WS Socket", "POST Login"]);
+    assert_eq!(
+        harness
+            .state()
+            .state
+            .http
+            .tabs()
+            .active()
+            .unwrap()
+            .draft
+            .name,
+        "Socket"
+    );
+    let ids: Vec<String> = harness
+        .state()
+        .state
+        .http
+        .tabs()
+        .tabs()
+        .iter()
+        .filter_map(|tab| tab.request_id.clone())
+        .collect();
+    let written = format!(r#""open":["{}","{}"]"#, ids[0], ids[1]);
+    crate::notes::bench::until(&mut harness, "the order is written", |harness| {
+        remembered(harness, crate::state::http::tabs::TABS_KEY)
+            .is_some_and(|stored| stored.contains(&written))
+    });
+}
+
+#[test]
+fn alt_and_an_arrow_move_the_tab_that_has_the_keys() {
+    let mut harness = two_tabs();
+    click_named(&mut harness, "http-tab-open", "WS Socket");
+
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowLeft);
+    settle(&mut harness);
+    assert_eq!(tab_names(&harness), ["WS Socket", "POST Login"]);
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowLeft);
+    settle(&mut harness);
+    assert_eq!(tab_names(&harness), ["WS Socket", "POST Login"]);
+    harness.key_press_modifiers(egui::Modifiers::ALT, egui::Key::ArrowRight);
+    settle(&mut harness);
+    assert_eq!(tab_names(&harness), ["POST Login", "WS Socket"]);
+    let focused = harness
+        .query_by(|node| node.is_focused() && node.author_id() == Some("http-tab-open"))
+        .map(|node| node.accesskit_node().label());
+    assert_eq!(focused, Some(Some("WS Socket".to_owned())));
+}
+
+#[test]
+fn a_middle_press_that_moves_still_closes_the_tab_and_drags_nothing() {
+    let mut harness = two_tabs();
+    let rect = tab_rect(&harness, "POST Login");
+
+    drag(
+        &mut harness,
+        egui::PointerButton::Middle,
+        rect.left_center() + egui::vec2(12.0, 0.0),
+        rect.center(),
+    );
+
+    assert_eq!(tab_names(&harness), ["WS Socket"]);
+}
+
 #[test]
 fn ctrl_s_saves_the_tab_in_front_and_the_rail_reads_it_back() {
     let mut harness = paiements();

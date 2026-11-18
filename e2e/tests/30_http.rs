@@ -1,7 +1,8 @@
 //! The HTTP area: a collection begun from the empty rail, a folder and requests made from a row's
 //! menu, a request moved with the keys, renamed in place, a fold kept across a relaunch, and the
 //! collection deleted once the rail has said what goes with it. A request opens in its tab,
-//! reopened at the next launch; a draft asks before it is closed. A body is read as it is typed,
+//! reopened at the next launch in the order the tabs were dragged to; a draft asks before it is
+//! closed, by its × or the middle button. A body is read as it is typed,
 //! and a GraphQL draft names the variables it lacks.
 //!
 //! Rows are read by their names, which the scenario types: the window speaks the system's
@@ -9,7 +10,7 @@
 
 use e2e::{App, Tree, step};
 use egui::accesskit::Node;
-use egui::{Key, Modifiers};
+use egui::{Key, Modifiers, PointerButton, Pos2};
 
 const API: &str = "API Paiements";
 
@@ -132,6 +133,51 @@ fn in_tabs(app: &mut App) {
             });
         },
     );
+}
+
+/// The first tab dragged past the second, kept so after the relaunch; the middle button closes a
+/// tab, asking first when it holds a draft. The order is answered by name: what was typed in a
+/// tab is not reopened.
+fn tabs_moved(app: &mut App) -> Vec<String> {
+    let mut order = Vec::new();
+    step("a tab dragged past the other takes its place", || {
+        let tree = app.tree();
+        let before = tabs(&tree);
+        let bounds: Vec<_> = tree
+            .all("http-tab-open")
+            .into_iter()
+            .filter_map(Node::bounds)
+            .collect();
+        let [first, second, ..] = bounds[..] else {
+            panic!("two tabs at least: {before:?}");
+        };
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let at = |x: f64, rect: &egui::accesskit::Rect| {
+            Pos2::new(x as f32, f64::midpoint(rect.y0, rect.y1) as f32)
+        };
+        let (from, to) = (at(first.x0 + 20.0, &first), at(second.x1, &second));
+        app.drag(from, to, PointerButton::Primary);
+        order = before;
+        order.swap(0, 1);
+        app.eventually("the first two swapped", |tree| tabs(tree) == order);
+    });
+    step("the middle button on a draft asks, then closes it", || {
+        app.click("http-tab-new");
+        app.eventually("a draft opens beside them", |tree| {
+            tabs(tree).len() == order.len() + 1
+        });
+        let draft = app.tree().texts("http-tab-open")[order.len()].clone();
+        app.click_with("http-tab-open", PointerButton::Middle, named(&draft));
+        app.wait_for("http-close-dialog");
+        app.click("http-close-discard");
+        app.eventually("the draft is gone", |tree| {
+            tabs(tree) == order && !tree.has("http-close-dialog")
+        });
+    });
+    order
+        .iter()
+        .map(|tab| tab.split(',').next().unwrap_or_default().to_owned())
+        .collect()
 }
 
 /// What the fields wearing `author_id` hold, top to bottom.
@@ -315,7 +361,7 @@ fn socket(app: &mut App) {
     );
 }
 
-fn fold_kept(app: App) -> App {
+fn fold_kept(app: App, order: &[String]) -> App {
     let mut app = app;
     step("a folder folded, still folded after a relaunch", || {
         app.click_where("http-node-twisty", ends("Auth"));
@@ -329,8 +375,7 @@ fn fold_kept(app: App) -> App {
         app.click("vault-submit");
         app.wait_for("area-http");
         app.eventually("the fold and the tab are kept", |tree| {
-            rows(tree) == [API, "Auth", "WS Flux live"]
-                && open(tree) == ["GET Login", "WS Flux live"]
+            rows(tree) == [API, "Auth", "WS Flux live"] && tabs(tree) == order
         });
     });
     app
@@ -368,7 +413,8 @@ fn http() {
     send(&mut app);
     bodies(&mut app);
     socket(&mut app);
-    let mut app = fold_kept(app);
+    let order = tabs_moved(&mut app);
+    let mut app = fold_kept(app, &order);
     delete(&mut app);
     app.quit();
 }

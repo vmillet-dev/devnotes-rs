@@ -4587,12 +4587,16 @@ or a WebSocket, or the empty workspace's three buttons — is a draft alone (`dr
 nowhere until saved. `Ctrl+S` (`keys::HTTP`) writes the draft in front whole
 (`save_http_request`); typing during the write keeps what was typed. Closing a modified tab asks
 first (`http::close`: cancel, close without saving, save — save waits for the first save's
-dialog on a draft); the middle button closes a tab as in a browser. ⚠️ A tab follows every tree
+dialog on a draft); the middle button closes a tab as in a browser, a press that moved too when
+it is let go on the tab. A tab is dragged along the strip (`Tabs::move_to`, a gap between two
+tabs), an amber bar where it would land, the rail's drop bar upright; held at an end, the strip
+scrolls. Its keyboard twin is `Alt` and ← or → on the tab with the keys (`Tabs::nudge`); each
+tab is drawn under a scope id of its key, so the keys stay on it as it moves. ⚠️ A tab follows every tree
 that is read: a request deleted closes its tab, one moved takes its new place, one renamed takes
 the name in what is saved and in what is edited, so the next save does not write the old one
 back. The rail lights the request in front, and its deletion question names the open tabs it
 would close with changes (`tree::requests_under`, `Tabs::unsaved_among`): Rust counts what is
-deleted, only the interface what is typed. Which requests were open and which was in front is the
+deleted, only the interface what is typed. Which requests were open, in the strip's order, and which was in front is the
 library's (`devnotes.notes.http.tabs`), read once the area is shown and written, with the folds,
 whenever either changes (`HttpState::remember`).
 
