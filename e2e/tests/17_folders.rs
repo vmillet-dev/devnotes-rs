@@ -1,8 +1,8 @@
 //! Folders: made from the rail, refused twice under one name, a selection filed and taken back
 //! out, the chip a card wears, a note filed from its card, the notes left standing when the
 //! folder goes — then folders inside folders: dragged onto another in the rail and offered back,
-//! the list of an opened folder gathering its sub-tree, its own board one level down, and a
-//! sub-folder made from its panel.
+//! the list of an opened folder gathering its sub-tree, its own board one level down, a
+//! sub-folder made from its panel, and the folder dragged onto another space with its notes.
 //!
 //! A space of its own, made here: the samples are in the system's language.
 
@@ -292,6 +292,40 @@ fn nested(app: &mut App) {
     });
 }
 
+/// « Bases », holding « Index » and its note, dropped onto the samples' space: the note is found
+/// there, and the undo bar brings everything back.
+fn to_another_space(app: &mut App) {
+    step(
+        "a folder dragged onto another space goes there with its notes, offered back",
+        || {
+            let tree = app.tree();
+            let samples = tree
+                .texts("space-option")
+                .into_iter()
+                .find(|name| name != SPACE)
+                .expect("the samples' space");
+            let at = |author_id: &str, name: &str| {
+                tree.all(author_id)
+                    .into_iter()
+                    .find(|node| node.label() == Some(name))
+                    .map_or_else(|| panic!("no row {name}"), centre)
+            };
+            let (bases, other) = (at("folder-option", "Bases"), at("space-option", &samples));
+            app.drag(bases, other, PointerButton::Primary);
+            app.wait_for("undo-restore");
+            app.click_where("space-option", named(&samples));
+            app.eventually("the note of « Index » is in the samples' space", |tree| {
+                titles(tree).contains(&NESTED.to_owned())
+            });
+            app.click("undo-restore");
+            app.click_where("space-option", named(SPACE));
+            app.eventually("back in its space, with its note", |tree| {
+                titles(tree).contains(&NESTED.to_owned())
+            });
+        },
+    );
+}
+
 #[test]
 fn folders() {
     let profile = tempfile::tempdir().unwrap();
@@ -302,5 +336,6 @@ fn folders() {
     space_of_its_own(&mut app);
     filing(&mut app);
     nested(&mut app);
+    to_another_space(&mut app);
     app.quit();
 }

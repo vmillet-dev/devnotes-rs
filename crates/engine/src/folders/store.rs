@@ -290,58 +290,103 @@ pub fn recolour(
 pub fn move_to(
     connection: &mut Library,
     id: &str,
-    parent_id: Option<&str>,
+    (space_id, parent_id): (&str, Option<&str>),
 ) -> Result<FolderMove, StorageError> {
     connection.transaction(|connection, vault| {
         let folder = find(connection, vault, id)?;
-        let was = FolderMove {
+        let mut was = FolderMove {
             folder_id: folder.id.clone(),
+            space_id: folder.space_id.clone(),
             parent_id: folder.parent_id.clone(),
             frame: board::frame_of(connection, id)?,
+            notes: Vec::new(),
         };
-        if folder.parent_id.as_deref() == parent_id {
+        if folder.space_id == space_id && folder.parent_id.as_deref() == parent_id {
             return Ok(was);
         }
 
-        lineage(connection, &folder.space_id)?.check_move(id, parent_id)?;
+        let from = lineage(connection, &folder.space_id)?;
+        if folder.space_id == space_id {
+            from.check_move(id, parent_id)?;
+        } else {
+            lineage(connection, space_id)?.check_arrival(parent_id, from.height(id).max(1))?;
+        }
         ensure_unique_name(
             connection,
             vault,
-            &folder.space_id,
+            space_id,
             parent_id,
             &folder.name,
             Some(id),
         )?;
+        if folder.space_id != space_id {
+            was.notes = cross(connection, &from.subtree(id), space_id)?;
+        }
         place(connection, id, parent_id, None)?;
 
         Ok(was)
     })
 }
 
-/// The undo of [`move_to`]: back under the parent it left, in the frame it had. A parent
-/// deleted since, or one it now holds, leaves it where it is.
-pub fn move_back(connection: &mut Library, was: &FolderMove) -> Result<bool, StorageError> {
+/// The undo of [`move_to`]: back under the parent it left, in its space and in the frame it
+/// had; `None` when a parent deleted since, or one it now holds, leaves it where it is. The
+/// notes that went back: every note filed in it, none left in a folder of another space.
+pub fn move_back(
+    connection: &mut Library,
+    was: &FolderMove,
+) -> Result<Option<Vec<String>>, StorageError> {
     connection.transaction(|connection, vault| {
         let folder = find(connection, vault, &was.folder_id)?;
-        let lineage = lineage(connection, &folder.space_id)?;
+        let here = lineage(connection, &folder.space_id)?;
         let parent = was.parent_id.as_deref();
-        if lineage.check_move(&folder.id, parent).is_err()
-            || ensure_unique_name(
-                connection,
-                vault,
-                &folder.space_id,
-                parent,
-                &folder.name,
-                Some(&folder.id),
-            )
-            .is_err()
-        {
-            return Ok(false);
+        let room = if folder.space_id == was.space_id {
+            here.check_move(&folder.id, parent)
+        } else {
+            lineage(connection, &was.space_id)?
+                .check_arrival(parent, here.height(&folder.id).max(1))
+        };
+        let named = ensure_unique_name(
+            connection,
+            vault,
+            &was.space_id,
+            parent,
+            &folder.name,
+            Some(&folder.id),
+        );
+        if room.is_err() || named.is_err() {
+            return Ok(None);
         }
 
+        let mut went = Vec::new();
+        if folder.space_id != was.space_id {
+            went = cross(connection, &here.subtree(&folder.id), &was.space_id)?;
+        }
         place(connection, &folder.id, parent, was.frame)?;
-        Ok(true)
+        Ok(Some(went))
     })
+}
+
+/// A sub-tree into another space: its folders, and every note filed in them, trashed ones
+/// included. `updated_at` is not touched: moving a folder is not editing its notes. The notes
+/// that went.
+fn cross(
+    connection: &mut SqliteConnection,
+    subtree: &[String],
+    space_id: &str,
+) -> Result<Vec<String>, StorageError> {
+    diesel::update(folders::table.filter(folders::id.eq_any(subtree)))
+        .set(folders::space_id.eq(space_id))
+        .execute(connection)?;
+    let filed: Vec<String> = notes::table
+        .filter(notes::folder_id.eq_any(subtree))
+        .select(notes::id)
+        .load(connection)?;
+    for chunk in filed.chunks(crate::notes::store::related::BIND_AT_MOST) {
+        diesel::update(notes::table.filter(notes::id.eq_any(chunk)))
+            .set(notes::space_id.eq(space_id))
+            .execute(connection)?;
+    }
+    Ok(filed)
 }
 
 /// A frame is a place on one parent's board: it never follows the folder to another.

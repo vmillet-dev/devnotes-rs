@@ -112,7 +112,9 @@ fn folders_attachments_and_global_values_are_read_again() {
         )
     });
     written(&session, |e| rename_folder(e, &sql.id, "Postgres"));
-    written(&session, |e| move_folder(e, &sql.id, Some(&prod.id)));
+    written(&session, |e| {
+        move_folder(e, &sql.id, (&space, Some(&prod.id)))
+    });
     let path = file.to_string_lossy().to_string();
     let attachment = session
         .wait(|e| attach_file(e, note.clone(), path))

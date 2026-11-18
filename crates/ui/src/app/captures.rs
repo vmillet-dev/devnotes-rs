@@ -1549,3 +1549,50 @@ fn the_task_lists_and_their_progress() {
     settle(&mut harness);
     capture(&mut harness, "task-lists");
 }
+
+/// The samples' « Snippets » folder dropped onto another space (#1503).
+#[test]
+fn a_folder_dropped_onto_another_space() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let draft = engine::spaces::model::SpaceDraft {
+        name: "Archives".into(),
+    };
+    engine::db::run_here(harness.state().backend().engine(), move |engine| {
+        engine::spaces::create_space(engine, &draft)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    let at = |harness: &Harness<'_, DevNotesApp>, author_id: &str, name: &str| {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some(author_id) && node.label().as_deref() == Some(name)
+            })
+            .rect()
+            .center()
+    };
+    let from = at(&harness, "folder-option", "Snippets");
+    let to = at(&harness, "space-option", "Archives");
+    let press = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    harness.event(egui::Event::PointerMoved(from));
+    harness.step();
+    harness.event(press(from, true));
+    harness.step();
+    for step in [0.25, 0.5, 0.75, 1.0] {
+        harness.event(egui::Event::PointerMoved(from + (to - from) * step));
+        harness.step();
+    }
+    harness.event(press(to, false));
+    settle(&mut harness);
+    capture(&mut harness, "folder-to-space");
+}

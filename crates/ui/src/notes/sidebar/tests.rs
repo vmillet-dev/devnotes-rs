@@ -300,6 +300,79 @@ fn a_folder_dragged_onto_another_goes_inside_it_and_the_undo_bar_puts_it_back() 
     assert_eq!(parent_of(&harness, "Index"), None);
 }
 
+fn space_of(harness: &Harness<'_, Bench>, name: &str) -> String {
+    harness
+        .state()
+        .state
+        .folders
+        .list()
+        .iter()
+        .find(|folder| folder.name == name)
+        .map(|folder| folder.space_id.clone())
+        .unwrap_or_default()
+}
+
+fn latest(harness: &Harness<'_, Bench>) -> Option<i18n::Key> {
+    harness
+        .state()
+        .state
+        .status
+        .latest()
+        .map(|(_, message)| message.key)
+}
+
+#[test]
+fn a_folder_dragged_onto_another_space_goes_there_and_the_undo_bar_brings_it_back() {
+    let (backend, profile) = testing::unlocked();
+    let home = space(&backend, "Home");
+    let work = space(&backend, "Work");
+    let sql = folder(&backend, &home, None, "SQL");
+    folder(&backend, &home, Some(&sql), "Perf");
+    folder(&backend, &work, None, "Reports");
+    let mut harness = area(backend, profile);
+    click(&mut harness, "space-option", "Home");
+
+    // Onto its own space, where it already is: said, and nothing sent.
+    let from = row(&harness, "folder-option", "SQL").center();
+    let to = row(&harness, "space-option", "Home").center();
+    drag(&mut harness, from, to);
+    assert_eq!(latest(&harness), Some(i18n::keys::sidebar::moved::ALREADY));
+
+    let from = row(&harness, "folder-option", "SQL").center();
+    let to = row(&harness, "space-option", "Work").center();
+    drag(&mut harness, from, to);
+    assert_eq!(space_of(&harness, "SQL"), work.id);
+    assert_eq!(space_of(&harness, "Perf"), work.id);
+    let said = harness
+        .get_by(|node| node.author_id() == Some("undo-text"))
+        .accesskit_node()
+        .value()
+        .unwrap_or_default();
+    assert!(said.contains("SQL") && said.contains("Work"), "{said}");
+
+    click_id(&mut harness, "undo-restore");
+    assert_eq!(space_of(&harness, "SQL"), home.id);
+    assert_eq!(space_of(&harness, "Perf"), home.id);
+}
+
+#[test]
+fn a_folder_dragged_onto_a_folder_of_another_space_goes_inside_it() {
+    let (backend, profile) = testing::unlocked();
+    let home = space(&backend, "Home");
+    let work = space(&backend, "Work");
+    folder(&backend, &home, None, "SQL");
+    folder(&backend, &work, None, "Reports");
+    let mut harness = area(backend, profile);
+    click(&mut harness, "space-option", "Home");
+
+    let from = row(&harness, "folder-option", "SQL").center();
+    let to = row(&harness, "folder-option", "Reports").center();
+    drag(&mut harness, from, to);
+
+    assert_eq!(space_of(&harness, "SQL"), work.id);
+    assert_eq!(parent_of(&harness, "SQL").as_deref(), Some("Reports"));
+}
+
 #[test]
 fn alt_and_the_arrows_move_a_folder_in_and_out_saying_what_they_refuse() {
     let (backend, profile) = testing::unlocked();

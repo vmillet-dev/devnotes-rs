@@ -202,6 +202,7 @@
     "moved": {
       "into": "« {{name}} » est maintenant dans {{other}}.",
       "top": "« {{name}} » est maintenant en haut de {{other}}.",
+      "already": "« {{name}} » est déjà là.",
       "refused": {
         "atTop": "« {{name}} » est déjà en haut de son espace.",
         "noFolderAbove": "Aucun dossier au-dessus de « {{name}} » pour l’y ranger.",
@@ -896,6 +897,7 @@
       "drawing": "Convertie en dessin"
     },
     "folderMoved": "« {{name}} » est maintenant dans {{into}}",
+    "folderMovedWithNotes": "« {{name}} » est maintenant dans {{into}}, avec {count, plural, one {# note} other {# notes}}",
     "folderMovedTop": "« {{name}} » est maintenant en haut de l’espace"
   },
   "file": {

@@ -1768,28 +1768,44 @@ mod nesting {
         ));
         let at_top = create(&mut connection, &tree.space, None, "Perf", t0()).unwrap();
         assert!(matches!(
-            move_to(&mut connection, &at_top.id, Some(&tree.sql.id)),
+            move_to(
+                &mut connection,
+                &at_top.id,
+                (&tree.space, Some(&tree.sql.id))
+            ),
             Err(StorageError::DuplicateFolderName(_))
         ));
     }
 
     #[test]
-    fn a_folder_never_moves_into_itself_nor_across_spaces() {
+    fn a_folder_never_moves_into_itself_nor_under_a_folder_outside_the_space_named() {
         let mut connection = open_in_memory().unwrap();
         let tree = tree(&mut connection);
         let other = space(&mut connection, "Ailleurs");
         let elsewhere = create(&mut connection, &other, None, "Ops", t0()).unwrap();
 
         assert!(matches!(
-            move_to(&mut connection, &tree.sql.id, Some(&tree.index.id)),
+            move_to(
+                &mut connection,
+                &tree.sql.id,
+                (&tree.space, Some(&tree.index.id))
+            ),
             Err(StorageError::Invalid(_))
         ));
         assert!(matches!(
-            move_to(&mut connection, &tree.sql.id, Some(&tree.sql.id)),
+            move_to(
+                &mut connection,
+                &tree.sql.id,
+                (&tree.space, Some(&tree.sql.id))
+            ),
             Err(StorageError::Invalid(_))
         ));
         assert!(matches!(
-            move_to(&mut connection, &tree.perf.id, Some(&elsewhere.id)),
+            move_to(
+                &mut connection,
+                &tree.perf.id,
+                (&tree.space, Some(&elsewhere.id))
+            ),
             Err(StorageError::Invalid(_))
         ));
         assert!(matches!(
@@ -1817,7 +1833,12 @@ mod nesting {
         view(&mut connection, &inside);
         let before = frame_of(&mut connection, &tree.perf.id).unwrap();
 
-        let was = move_to(&mut connection, &tree.perf.id, Some(&tree.angular.id)).unwrap();
+        let was = move_to(
+            &mut connection,
+            &tree.perf.id,
+            (&tree.space, Some(&tree.angular.id)),
+        )
+        .unwrap();
 
         assert_eq!(was.parent_id.as_deref(), Some(tree.sql.id.as_str()));
         assert_eq!(was.frame, Some(before));
@@ -1835,7 +1856,7 @@ mod nesting {
             Some(tree.index.id.clone())
         );
 
-        assert!(move_back(&mut connection, &was).unwrap());
+        assert!(move_back(&mut connection, &was).unwrap().is_some());
         assert_eq!(
             parent_of(&mut connection, &tree.perf.id),
             Some(tree.sql.id.clone())
@@ -1847,10 +1868,10 @@ mod nesting {
     fn an_undo_whose_parent_is_gone_leaves_the_folder_where_it_is() {
         let mut connection = open_in_memory().unwrap();
         let tree = tree(&mut connection);
-        let was = move_to(&mut connection, &tree.migrations.id, None).unwrap();
+        let was = move_to(&mut connection, &tree.migrations.id, (&tree.space, None)).unwrap();
         delete(&mut connection, &tree.sql.id, CARD).unwrap();
 
-        assert!(!move_back(&mut connection, &was).unwrap());
+        assert!(move_back(&mut connection, &was).unwrap().is_none());
         assert_eq!(parent_of(&mut connection, &tree.migrations.id), None);
     }
 

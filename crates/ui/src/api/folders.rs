@@ -42,8 +42,12 @@ pub fn delete(backend: &Backend, id: String, lines: PreviewLines) -> Pending<()>
 }
 
 /// Under `parent_id`, or at the top of its space, with what it holds: answers where it was.
-pub fn move_to(backend: &Backend, id: String, parent_id: Option<String>) -> Pending<FolderMove> {
-    backend.db(move |engine| folders::move_folder(engine, &id, parent_id.as_ref()))
+pub fn move_to(
+    backend: &Backend,
+    id: String,
+    (space_id, parent_id): (String, Option<String>),
+) -> Pending<FolderMove> {
+    backend.db(move |engine| folders::move_folder(engine, &id, (&space_id, parent_id.as_ref())))
 }
 
 /// What siblings are ordered by: their name, case and accents aside. Pure, under a

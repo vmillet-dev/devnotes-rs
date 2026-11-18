@@ -140,12 +140,13 @@ pub fn recolour_folder(
     })
 }
 
-/// Under another folder of its space, `None` at its top, with everything it holds. The answer
-/// is where it was: what [`move_folder_back`] puts back.
+/// Under a folder of `space_id`, `None` at its top, with everything it holds: into another
+/// space its sub-tree and the notes filed in it go along. The answer is where it was: what
+/// [`move_folder_back`] puts back.
 pub fn move_folder(
     engine: &Engine,
     id: &str,
-    parent_id: Option<&String>,
+    (space_id, parent_id): (&str, Option<&String>),
 ) -> Result<FolderMove, AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
@@ -153,11 +154,11 @@ pub fn move_folder(
         let answer = store::move_to(
             &mut connection,
             id,
-            parent_id.map(std::string::String::as_str),
+            (space_id, parent_id.map(std::string::String::as_str)),
         )?;
         let changed = Changed {
             folders: true,
-            ..Changed::default()
+            ..Changed::notes(answer.notes.clone())
         };
         Ok((answer, changed))
     })
@@ -168,12 +169,12 @@ pub fn move_folder_back(engine: &Engine, was: &FolderMove) -> Result<bool, AppEr
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        let answer = store::move_back(&mut connection, was)?;
+        let went = store::move_back(&mut connection, was)?;
         let changed = Changed {
             folders: true,
-            ..Changed::default()
+            ..Changed::notes(went.clone().unwrap_or_default())
         };
-        Ok((answer, changed))
+        Ok((went.is_some(), changed))
     })
 }
 
