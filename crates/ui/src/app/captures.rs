@@ -1389,10 +1389,11 @@ fn a_long_note_with_code_scrolled_in_the_panel() {
     settle(&mut harness);
     let backend = &harness.state().backend;
     let space = crate::testing::note(backend, "seed").space_id.clone();
-    let code: String = (0..60)
-        .map(|n| format!("SELECT * FROM orders WHERE id = {n};\n"))
-        .collect();
-    let content = format!("# Requêtes\n\nCe qu'on lance le lundi.\n\n```sql\n{code}```\n");
+    let code = (0..60)
+        .map(|n| format!("SELECT * FROM orders WHERE id = {n};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let content = format!("# Requêtes\n\nCe qu'on lance le lundi.\n\n```sql\n{code}\n```\n");
     engine::db::run_here(backend.engine(), move |engine| {
         let draft = engine::notes::model::NoteDraft {
             kind: NoteKind::Note,

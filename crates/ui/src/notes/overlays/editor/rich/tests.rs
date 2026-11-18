@@ -478,8 +478,11 @@ fn a_fence_in_a_language_the_editor_does_not_know_stays_code_and_keeps_its_word(
 /// the toolbar and the header.
 #[test]
 fn a_long_code_block_scrolled_down_paints_nothing_above_the_body() {
-    let code: String = (0..80).map(|n| format!("let line_{n} = {n};\n")).collect();
-    let (mut harness, _) = note(&format!("# Notes\n\nIntro.\n\n```rust\n{code}```\n"));
+    let code = (0..80)
+        .map(|n| format!("let line_{n} = {n};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let (mut harness, _) = note(&format!("# Notes\n\nIntro.\n\n```rust\n{code}\n```\n"));
     let body = harness
         .get_by(|node| node.author_id() == Some("editor-rich"))
         .rect();
