@@ -151,7 +151,6 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let paths = engine::Paths {
             profile: profile.path().to_path_buf(),
-            resources: profile.path().to_path_buf(),
         };
         let sink = Arc::new(engine::RecordingSink::default());
         let closed = engine::Engine::new(paths, sink, runtime.handle().clone());
@@ -180,7 +179,6 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let paths = engine::Paths {
             profile: profile.path().to_path_buf(),
-            resources: profile.path().to_path_buf(),
         };
         let sink = Arc::new(engine::RecordingSink::default());
         let engine = engine::Engine::new(paths, sink, runtime.handle().clone());

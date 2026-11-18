@@ -116,8 +116,8 @@ reads, written by `scripts/latest-json.mjs`. Neither package needs WebView2 or W
 more; the Linux ones depend on GTK (the tray alone), xkbcommon, Vulkan and the indicator
 library.
 
-Each package is checked to hold the application alone (one binary, and the identity tool's
-lists where `Paths::resources` looks for them) before anything is uploaded.
+Each package is checked to hold the application alone (one binary; the identity tool's lists are
+compiled into it) before anything is uploaded.
 
 **Signatures.** `cargo-packager` signs every package it writes with the minisign key, and the
 `.rpm` is signed by `cargo packager signer sign`. The key and its password are the release

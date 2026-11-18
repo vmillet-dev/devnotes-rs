@@ -13,8 +13,6 @@ use crate::http::websocket::WebsocketEvent;
 pub struct Paths {
     /// The registry, `libraries/`, the application's `preferences.json`.
     pub profile: PathBuf,
-    /// What ships beside the binary: the identity tool's lists.
-    pub resources: PathBuf,
 }
 
 /// What the core says unasked: a socket's traffic, a script's console, a run's steps.

@@ -1999,12 +1999,7 @@
         "bank": "Banque",
         "company": "Entreprise"
       },
-      "noFirmNumber": "Aucun identifiant d’entreprise à clé dans ce pays.",
-      "lists": {
-        "missing": "Liste introuvable : {{file}}.",
-        "damaged": "Liste illisible : {{file}}.",
-        "where": "Les listes sont lues dans {{folder}}"
-      }
+      "noFirmNumber": "Aucun identifiant d’entreprise à clé dans ce pays."
     },
     "lorem": {
       "name": "Lorem ipsum",

@@ -72,21 +72,17 @@ runs:
           scratch="$RUNNER_TEMP/nsis-check"
           pwsh -NoProfile -Command "Start-Process '$(cygpath -w "$installer")' -ArgumentList '/S','/D=$(cygpath -w "$scratch")' -Wait"
           check NSIS "$(find "$scratch" -maxdepth 1 -name '*.exe' -printf '%f\n')" 'devnotes.exe uninstall.exe'
-          test -f "$scratch/identity/names.txt" || { echo "::error::NSIS: no identity lists beside the executable"; exit 1; }
           pwsh -NoProfile -Command "Start-Process '$(cygpath -w "$scratch/uninstall.exe")' -ArgumentList '/S' -Wait"
           # The uninstaller leaves the remembered folder behind; a later install would reuse it.
           reg delete 'HKCU\Software\vmillet-dev\DevNotes' //f > /dev/null 2>&1 || true
         else
           deb=$(ls "$packages"/*.deb)
           check deb "$(dpkg-deb -c "$deb" | awk '$6 ~ /^\.?\/?usr\/bin\/[^\/]+$/ { n = split($6, p, "/"); print p[n] }')" devnotes
-          dpkg-deb -c "$deb" | grep -q 'usr/lib/devnotes/identity/names.txt' || { echo "::error::deb: no identity lists"; exit 1; }
           rpm=$(ls "$packages"/*.rpm)
           check rpm "$(rpm -qlp "$rpm" | grep '^/usr/bin/' | xargs -n1 basename)" devnotes
-          rpm -qlp "$rpm" | grep -q '^/usr/lib/devnotes/identity/names.txt$' || { echo "::error::rpm: no identity lists"; exit 1; }
           image=$(ls "$packages"/*.AppImage)
           (cd "$RUNNER_TEMP" && rm -rf squashfs-root && "$image" --appimage-extract > /dev/null)
           check AppImage "$(ls "$RUNNER_TEMP/squashfs-root/usr/bin")" devnotes
-          test -f "$RUNNER_TEMP/squashfs-root/usr/lib/devnotes/identity/names.txt" || { echo "::error::AppImage: no identity lists"; exit 1; }
         fi
 
     # The packages, their signatures, and the standalone executable, renamed so that the two

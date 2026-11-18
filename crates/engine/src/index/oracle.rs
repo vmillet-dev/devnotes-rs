@@ -56,7 +56,6 @@ impl World {
             .unwrap();
         let paths = Paths {
             profile: std::env::temp_dir(),
-            resources: std::env::temp_dir(),
         };
         let engine = Arc::new(Engine::new(
             paths,

@@ -11,8 +11,7 @@ use egui::{CornerRadius, FontId, Sense, Stroke, Ui, Vec2};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::identity::{
     AGES, Country, CsvSeparator, Identifier, IdentifierKind, Identity, IdentityAnswer,
-    IdentityOutcome, IdentityRequest, MAX_PEOPLE, PeopleBatch, PeopleExport, PeopleFormat, Sex,
-    UnreadableList,
+    IdentityRequest, MAX_PEOPLE, PeopleBatch, PeopleExport, PeopleFormat, Sex,
 };
 use i18n::{Language, Message, keys};
 use serde_json::json;
@@ -24,7 +23,7 @@ use crate::theme::palette;
 use crate::tools::live::{Live, Turn};
 use crate::tools::ui::{
     CopyValue, ResultRow, card, columns, group_title, hint, label, line, named, number_field,
-    paragraph, problem, result_rows, section_head, section_title,
+    paragraph, result_rows, section_head, section_title,
 };
 use crate::tools::{Action, Drawn, Tool, ToolAction, ToolResult};
 use crate::widgets::{
@@ -109,7 +108,7 @@ pub(super) struct IdentityTool {
     /// What a batch adds to the card's own country, which is always in it.
     batch: Vec<Country>,
     draw: u32,
-    answer: Live<Asked, IdentityOutcome>,
+    answer: Live<Asked, IdentityAnswer>,
     wants_export: bool,
     exporting: Option<Exporting>,
 }
@@ -158,23 +157,6 @@ fn monogram(person: &Identity) -> String {
 
 fn country_name(language: Language, country: Country) -> String {
     named(language, "tools.identity.countries", &json!(country))
-}
-
-fn list_problem(language: Language, list: &UnreadableList) -> Option<String> {
-    let path = format!("tools.identity.lists.{}", json!(list.problem).as_str()?);
-    let said = Message::new(i18n::Key::find(&path)?).with("file", list.file.as_str());
-    Some(said.text(language))
-}
-
-/// ⚠️ The lists are files beside the application: one that cannot be read is said, in place of a
-/// card.
-fn unreadable(ui: &mut Ui, list: &UnreadableList, language: Language) {
-    if let Some(said) = list_problem(language, list) {
-        problem(ui, &said, "identity-unreadable");
-    }
-    let said =
-        Message::new(keys::tools::identity::lists::WHERE).with("folder", list.folder.as_str());
-    hint(ui, &said.text(language));
 }
 
 fn identifier_rows(
@@ -491,10 +473,7 @@ impl IdentityTool {
     }
 
     fn drawn(&self) -> Option<&IdentityAnswer> {
-        match self.answer.value()? {
-            IdentityOutcome::Drawn { answer } => Some(answer),
-            IdentityOutcome::Unreadable { .. } => None,
-        }
+        self.answer.value()
     }
 
     fn options(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
@@ -662,9 +641,6 @@ impl IdentityTool {
                 .label(words::COPY_JSON)
                 .show(ui);
         });
-        if let Some(IdentityOutcome::Unreadable { list }) = self.answer.value() {
-            unreadable(ui, list, language);
-        }
         let Some(answer) = self.drawn() else { return };
         let today = drawn.now.with_timezone(&Local).date_naive();
         person_card(ui, answer, today, language);
@@ -737,16 +713,6 @@ impl IdentityTool {
                         let path = format!("tools.files.{}", json!(reason).as_str().unwrap_or(""));
                         if let Some(key) = i18n::Key::find(&path) {
                             turn.errors.notify(Message::new(key));
-                        }
-                    }
-                    Ok(PeopleExport::Unreadable { list }) => {
-                        let path = format!(
-                            "tools.identity.lists.{}",
-                            json!(list.problem).as_str().unwrap_or("")
-                        );
-                        if let Some(key) = i18n::Key::find(&path) {
-                            let said = Message::new(key).with("file", list.file.as_str());
-                            turn.errors.notify(said);
                         }
                     }
                     Err(error) => turn.errors.report(keys::errors::TOOL_FAILED, &error),
@@ -834,46 +800,11 @@ impl IdentityTool {
 
 #[cfg(test)]
 mod tests {
-    use egui_kittest::kittest::{NodeT, Queryable};
-    use engine::tools::identity::ListProblem;
 
     use super::*;
-    use crate::testing;
 
     fn date(text: &str) -> NaiveDate {
         text.parse().unwrap()
-    }
-
-    #[test]
-    fn a_list_that_cannot_be_read_is_named_with_where_it_was_looked_for() {
-        for (problem, word) in [
-            (ListProblem::Missing, "not found"),
-            (ListProblem::Damaged, "unreadable"),
-        ] {
-            let list = UnreadableList {
-                problem,
-                file: "names.txt".to_owned(),
-                folder: "identity/".to_owned(),
-            };
-            let harness =
-                testing::harness().build_ui(move |ui| unreadable(ui, &list, Language::En));
-
-            let words = |node: &egui_kittest::Node<'_>| {
-                let node = node.accesskit_node();
-                node.value().or_else(|| node.label()).unwrap_or_default()
-            };
-            let said = harness.get_by(|node| node.author_id() == Some("identity-unreadable"));
-            let said = words(&said);
-            assert!(
-                said.contains("names.txt") && said.to_lowercase().contains(word),
-                "{said}"
-            );
-            let folder = harness.query_all_by(|node| {
-                let node = node.value().or_else(|| node.label()).unwrap_or_default();
-                node.contains("identity/")
-            });
-            assert_eq!(folder.count(), 1);
-        }
     }
 
     #[test]

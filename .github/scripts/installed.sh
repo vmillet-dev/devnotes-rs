@@ -29,7 +29,7 @@ entry() {
 for _ in $(seq 1 120); do
   found=$(entry DisplayVersion)
   folder=$(entry InstallLocation)
-  if [ "$found" = "$expected" ] && [ -f "$folder/devnotes.exe" ] && [ -f "$folder/identity/names.txt" ]; then
+  if [ "$found" = "$expected" ] && [ -f "$folder/devnotes.exe" ]; then
     echo "installed: $expected in $folder"
     exit 0
   fi

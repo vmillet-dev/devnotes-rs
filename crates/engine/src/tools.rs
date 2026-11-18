@@ -35,7 +35,6 @@ pub mod transfer;
 pub mod url_parts;
 pub mod zones;
 
-use crate::Paths;
 use crate::error::{AppError, StorageError};
 
 /// Off the window's thread even for what answers in a microsecond: a large paste does not.
@@ -47,24 +46,17 @@ pub(crate) async fn off_thread<T: Send + 'static>(
         .map_err(|_| StorageError::Unavailable.into())
 }
 
-/// The identity tool reads its lists from the application's resources, `identity/`.
-pub fn generate_identity(
-    paths: &Paths,
-    request: &identity::IdentityRequest,
-) -> identity::IdentityOutcome {
-    let lists = paths.resources.join("identity");
-    identity::generate(request, chrono::Local::now().date_naive(), &lists)
+pub fn generate_identity(request: &identity::IdentityRequest) -> identity::IdentityAnswer {
+    identity::generate(request, chrono::Local::now().date_naive())
 }
 
 pub fn export_identities(
-    paths: &Paths,
     request: &identity::IdentityRequest,
     batch: &identity::PeopleBatch,
     path: &str,
 ) -> identity::PeopleExport {
-    let lists = paths.resources.join("identity");
     let today = chrono::Local::now().date_naive();
-    identity::export(request, batch, path, today, &lists)
+    identity::export(request, batch, path, today)
 }
 
 /// Bytes written where the user chose: never a note.

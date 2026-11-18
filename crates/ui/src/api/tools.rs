@@ -16,7 +16,7 @@ use engine::tools::encoding::{self, UrlCodecAnswer, UrlCodecRequest};
 use engine::tools::generate::{self, GenerateAnswer, GenerateRequest, LoremAnswer, LoremRequest};
 use engine::tools::hash::{self, HashAnswer, HashRequest};
 use engine::tools::identifiers::{self, IdInspection, IdentifiersRequest};
-use engine::tools::identity::{IdentityOutcome, IdentityRequest, PeopleBatch, PeopleExport};
+use engine::tools::identity::{IdentityAnswer, IdentityRequest, PeopleBatch, PeopleExport};
 use engine::tools::jwt::{JwtAnswer, JwtRequest};
 use engine::tools::permissions::{self, PermissionsAnswer, PermissionsRequest};
 use engine::tools::qr::{self, QrAnswer, QrFormat, QrRequest, SavedCode};
@@ -188,8 +188,8 @@ pub fn save_qr_code(
     backend.compute(move |_| Ok(qr::save(&request, format, &path)))
 }
 
-pub fn generate_identity(backend: &Backend, request: IdentityRequest) -> Pending<IdentityOutcome> {
-    backend.compute(move |engine| Ok(tools::generate_identity(engine.paths(), &request)))
+pub fn generate_identity(backend: &Backend, request: IdentityRequest) -> Pending<IdentityAnswer> {
+    backend.compute(move |_| Ok(tools::generate_identity(&request)))
 }
 
 pub fn export_identities(
@@ -198,12 +198,5 @@ pub fn export_identities(
     batch: PeopleBatch,
     path: String,
 ) -> Pending<PeopleExport> {
-    backend.compute(move |engine| {
-        Ok(tools::export_identities(
-            engine.paths(),
-            &request,
-            &batch,
-            &path,
-        ))
-    })
+    backend.compute(move |_| Ok(tools::export_identities(&request, &batch, &path)))
 }
