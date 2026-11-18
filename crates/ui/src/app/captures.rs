@@ -1324,3 +1324,54 @@ fn the_folders_four_levels_deep() {
     settle(&mut harness);
     capture(&mut harness, "folders-four-deep");
 }
+
+// Dropdowns of short entries and of long ones, at the width they open (#1459).
+#[test]
+fn the_dropdowns_at_their_width() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    click(&mut harness, "file-menu");
+    capture(&mut harness, "menu-file");
+    click(&mut harness, "file-menu");
+    click(&mut harness, "sort-trigger");
+    capture(&mut harness, "menu-sort");
+    click(&mut harness, "sort-trigger");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .click();
+    settle(&mut harness);
+    for menu in ["editor-kind", "editor-priority", "editor-language"] {
+        click(&mut harness, menu);
+        capture(&mut harness, &format!("menu-{menu}"));
+        harness.key_press(egui::Key::Escape);
+        settle(&mut harness);
+    }
+    drop(harness);
+
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-method");
+    capture(&mut harness, "menu-http-method");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    click(&mut harness, "http-section-auth");
+    click(&mut harness, "http-auth-kind");
+    capture(&mut harness, "menu-http-auth-kind");
+}

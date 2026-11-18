@@ -11,8 +11,6 @@ use crate::action::{Action as Asked, Actions};
 use crate::state::AppState;
 use crate::widgets;
 
-const WIDTH: f32 = 210.0;
-
 #[derive(Default)]
 pub(super) struct View {
     /// Quitting closes the application for good: a second click confirms it.
@@ -31,7 +29,11 @@ pub(super) fn show(
     let shown = Popup::menu(&anchor)
         .frame(widgets::menu_frame(ui.ctx()))
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| entries(ui, state, view, actions));
+        .show(|ui| {
+            widgets::fitted_menu(ui, anchor.rect.width(), |ui| {
+                entries(ui, state, view, actions);
+            });
+        });
     if shown.is_none() {
         view.confirming_quit = false;
     }
@@ -39,7 +41,6 @@ pub(super) fn show(
 }
 
 fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
-    ui.set_width(WIDTH);
     ui.spacing_mut().item_spacing.y = gap::LINE;
     let tr = |key| i18n::translate(state.language, key, &[]);
     let on_screen = state.on_screen();

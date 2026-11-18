@@ -53,8 +53,57 @@ pub fn menu<'a>(anchor: &Response, items: &'a [MenuItem<'a>]) -> Option<&'a str>
     Popup::menu(anchor)
         .frame(frame(&anchor.ctx))
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| entries(ui, items))
+        .show(|ui| fitted(ui, anchor.rect.width(), |ui| entries(ui, items)))
         .and_then(|shown| shown.inner)
+}
+
+/// A dropdown is never wider than this; a filtered one keeps `FILTERED_WIDTH`.
+const MAX_WIDTH: f32 = 360.0;
+/// The menu whose entries are being drawn, for them to say what they need.
+const MEASURING: &str = "menu-measuring";
+
+/// One rule for the width of every dropdown: its widest entry, never narrower than what opened
+/// it (`trigger`), never wider than `MAX_WIDTH`. Each entry says what it needs as it is drawn
+/// (`needs`); the menu takes the widest on the next frame — egui draws a popup's first frame
+/// unseen, to size it.
+pub fn fitted<R>(ui: &mut Ui, trigger: f32, content: impl FnOnce(&mut Ui) -> R) -> R {
+    let key = ui.scope_id().with("fitted");
+    let widest: f32 = ui.data(|data| data.get_temp(key)).unwrap_or(0.0);
+    ui.set_width(widest.max(trigger).min(MAX_WIDTH));
+    let measuring = Id::unique(MEASURING);
+    let outer: Option<Id> = ui.data(|data| data.get_temp(measuring));
+    ui.data_mut(|data| {
+        data.insert_temp(measuring, key);
+        data.insert_temp(key.with("next"), 0.0_f32);
+    });
+    let inner = content(ui);
+    let next: f32 = ui
+        .data(|data| data.get_temp(key.with("next")))
+        .unwrap_or(0.0);
+    ui.data_mut(|data| {
+        data.insert_temp(key, next);
+        if let Some(outer) = outer {
+            data.insert_temp(measuring, outer);
+        } else {
+            data.remove::<Id>(measuring);
+        }
+    });
+    if (next - widest).abs() > 0.5 {
+        ui.ctx().request_repaint();
+    }
+    inner
+}
+
+/// What an entry of the menu being drawn needs, its insets included.
+pub fn needs(ui: &Ui, width: f32) {
+    let Some(key) = ui.data(|data| data.get_temp::<Id>(Id::unique(MEASURING))) else {
+        return;
+    };
+    let next = key.with("next");
+    ui.data_mut(|data| {
+        let widest: f32 = data.get_temp(next).unwrap_or(0.0);
+        data.insert_temp(next, widest.max(width));
+    });
 }
 
 /// The surface a menu is drawn on: `bg-2`, 8 px, 4 px inside, the dropdown's shadow.
@@ -69,7 +118,6 @@ pub fn frame(ctx: &egui::Context) -> egui::Frame {
 }
 
 fn entries<'a>(ui: &mut Ui, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
-    ui.set_width(180.0);
     ui.spacing_mut().item_spacing.y = 0.0;
     let mut picked = None;
     let mut ids = Vec::with_capacity(items.len());
@@ -103,7 +151,7 @@ fn entries<'a>(ui: &mut Ui, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
             .frame(frame(ui.ctx()))
             .open_bool(&mut open)
             .show(|ui| {
-                let inner = entries(ui, item.children);
+                let inner = fitted(ui, 0.0, |ui| entries(ui, item.children));
                 let back = ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowLeft));
                 (inner, back)
             });
@@ -170,7 +218,6 @@ fn drawn(
     (destructive, on, opens): (bool, bool, bool),
 ) -> Response {
     let p = palette(ui.ctx());
-    let width = ui.available_width().max(172.0);
     let probe = text(
         ui,
         label,
@@ -179,10 +226,13 @@ fn drawn(
         FontFamily::Proportional,
         p.text_1,
     );
+    let lead_room = if lead.is_some() { 22.0 } else { 0.0 };
+    let chevron_room = if opens { 20.0 } else { 0.0 };
+    needs(ui, 16.0 + lead_room + probe.size().x + chevron_room);
     let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
-        Vec2::new(width, probe.size().y + 10.0),
+        Vec2::new(ui.available_width(), probe.size().y + 10.0),
         Sense::click(),
         author_id,
         || WidgetInfo::labeled(Role::MenuItem, true, label),
@@ -355,6 +405,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
 
         let query_id = response.id.with("query");
         let filtering = self.options.len() >= FILTER_FROM;
+        let trigger = response.rect.width();
         let picked = Popup::menu(&response)
             .frame(frame(ui.ctx()))
             .close_behavior(PopupCloseBehavior::CloseOnClick)
@@ -362,7 +413,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
                 if filtering {
                     self.filtered(ui, query_id, current)
                 } else {
-                    self.plain(ui, current)
+                    fitted(ui, trigger, |ui| self.plain(ui, current))
                 }
             })
             .and_then(|shown| shown.inner);
@@ -377,7 +428,6 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
     }
 
     fn plain(&self, ui: &mut Ui, current: Option<&str>) -> Option<T> {
-        ui.set_min_width(180.0);
         let mut picked = None;
         let mut ids = Vec::new();
         for (index, (value, name)) in self.options.iter().enumerate() {
@@ -582,6 +632,53 @@ mod tests {
             .get_by(|node| node.author_id() == Some("actions"))
             .click();
         harness.run();
+    }
+
+    /// A choice menu over `options`, its control showing `label`: the control's width, and its
+    /// entries'.
+    fn choice_width(options: &'static [(u8, &'static str)], label: &'static str) -> (f32, f32) {
+        let mut harness = crate::testing::harness()
+            .with_size(egui::vec2(900.0, 500.0))
+            .build_ui_state(
+                move |ui, chosen: &mut u8| {
+                    ChoiceMenu::new(label, "choice", options)
+                        .naming(Naming::Label)
+                        .show(ui, chosen);
+                },
+                0,
+            );
+        harness.run();
+        harness
+            .get_by(|node| node.author_id() == Some("choice"))
+            .click();
+        harness.run();
+        let control = harness
+            .get_by(|node| node.author_id() == Some("choice"))
+            .rect()
+            .width();
+        let entry = harness
+            .get_by(|node| node.author_id() == Some("choice-0"))
+            .rect()
+            .width();
+        (control, entry)
+    }
+
+    #[test]
+    fn a_menu_is_as_wide_as_its_longest_entry_within_its_bounds() {
+        const SHORT: [(u8, &str); 3] = [(0, "GET"), (1, "PUT"), (2, "HEAD")];
+        const LONG: [(u8, &str); 2] = [(0, "Convertir en liste de tâches"), (1, "Note")];
+        const ENDLESS: [(u8, &str); 1] = [(
+            0,
+            "Une entrée bien plus longue que tout ce qu'un menu déroulant devrait jamais montrer",
+        )];
+
+        let (_, short) = choice_width(&SHORT, "Verb");
+        assert!(short < 100.0, "{short}");
+        let (_, long) = choice_width(&LONG, "Kind");
+        assert!(long > short && long < 260.0, "{long}");
+        assert!(choice_width(&ENDLESS, "Kind").1 <= MAX_WIDTH);
+        let (control, floored) = choice_width(&SHORT, "A control wider than its entries");
+        assert!(floored >= control - 1.0, "{floored} under {control}");
     }
 
     #[test]

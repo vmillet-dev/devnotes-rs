@@ -20,7 +20,6 @@ use crate::state::AppState;
 use crate::theme::palette;
 use crate::widgets;
 
-const WIDTH: f32 = 210.0;
 const FOOTER: f32 = 56.0;
 
 /// What the menu opens.
@@ -67,11 +66,10 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
     Popup::menu(&anchor)
         .frame(widgets::menu_frame(ui.ctx()))
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| entries(ui, state, actions));
+        .show(|ui| widgets::fitted_menu(ui, anchor.rect.width(), |ui| entries(ui, state, actions)));
 }
 
 fn entries(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
-    ui.set_width(WIDTH);
     ui.spacing_mut().item_spacing.y = gap::LINE;
     let tr = |key| i18n::translate(state.language, key, &[]);
     let about = Message::new(keys::about::OPEN_ABOUT)
