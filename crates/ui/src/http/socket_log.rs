@@ -23,6 +23,15 @@ const ROW: f32 = 26.0;
 #[derive(Default)]
 pub(crate) struct LogView {
     filter: String,
+    kept: Kept,
+}
+
+/// The entries the filter keeps, by place in the log: lowering every message each frame cost
+/// 4 ms for 500 messages of 4 KiB, 69 ms at the 64 KiB a message is cut to.
+#[derive(Default)]
+struct Kept {
+    of: (String, u64, String),
+    places: Vec<usize>,
 }
 
 /// The words a row reads, and the filter looks in.
@@ -62,7 +71,7 @@ pub(super) fn show(
             {
                 failure(ui, tab, notice, state.language, actions);
             }
-            entries(ui, state, tab, view);
+            entries(ui, state, tab, (&view.filter, &mut view.kept));
         });
 }
 
@@ -167,18 +176,28 @@ fn failure(
     });
 }
 
-fn entries(ui: &mut Ui, state: &AppState, tab: &Tab, view: &LogView) {
+fn entries(ui: &mut Ui, state: &AppState, tab: &Tab, (filter, kept): (&str, &mut Kept)) {
     let p = palette(ui.ctx());
     let language = state.language;
-    let wanted = view.filter.trim().to_lowercase();
-    let shown: Vec<&SocketEntry> = state
-        .http
-        .sockets()
-        .of(&tab.key)
-        .into_iter()
-        .flat_map(|socket| socket.log.iter())
-        .filter(|entry| wanted.is_empty() || text_of(entry).to_lowercase().contains(&wanted))
-        .collect();
+    let socket = state.http.sockets().of(&tab.key);
+    let log = socket.map(|socket| &socket.log);
+    let wanted = filter.trim().to_lowercase();
+    let of = socket.map_or_else(Default::default, |socket| {
+        (socket.socket_id().to_owned(), socket.moves, wanted.clone())
+    });
+    if kept.of != of {
+        let places = log.into_iter().flatten().enumerate();
+        kept.places = places
+            .filter(|(_, entry)| {
+                wanted.is_empty() || text_of(entry).to_lowercase().contains(&wanted)
+            })
+            .map(|(at, _)| at)
+            .collect();
+        kept.of = of;
+    }
+    let shown: Vec<&SocketEntry> = log
+        .map(|log| kept.places.iter().filter_map(|&at| log.get(at)).collect())
+        .unwrap_or_default();
     if shown.is_empty() {
         let words = i18n::translate(language, keys::http::socket::EMPTY, &[]);
         let words = egui::RichText::new(words).size(font::BODY).color(p.text_2);
