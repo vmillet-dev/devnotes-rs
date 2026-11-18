@@ -13,8 +13,8 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, MIN_TARGET, interact};
 
-/// One level of folders: the level is what says where you are.
-pub(super) const INDENT: f32 = 16.0;
+/// One level of folders: the level is what says where you are, and the rail is narrow.
+pub(super) const INDENT: f32 = 10.0;
 const HEIGHT: f32 = 26.0;
 
 /// The column before the name, sized once so that every level lines up.
@@ -65,6 +65,7 @@ pub(super) fn show(
 ) -> Drawn {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = gap::LINE;
+        level_lines(ui, ui.cursor().min, depth);
         #[expect(clippy::cast_precision_loss, reason = "a few levels")]
         ui.add_space(depth as f32 * INDENT);
         let row = Rect::from_min_size(ui.cursor().min, vec2(ui.available_width(), HEIGHT));
@@ -90,6 +91,20 @@ pub(super) fn show(
         }
     })
     .inner
+}
+
+/// A line under each level's twisty, as the HTTP rail draws its own: the level is read at rest,
+/// whatever the indent. Through the gap between rows, so the lines join.
+fn level_lines(ui: &Ui, start: egui::Pos2, depth: usize) {
+    let p = palette(ui.ctx());
+    let gap = ui.spacing().item_spacing.y;
+    let rows = (start.y - gap / 2.0)..=(start.y + HEIGHT + gap / 2.0);
+    for level in 0..depth {
+        #[expect(clippy::cast_precision_loss, reason = "a few levels")]
+        let x = start.x + level as f32 * INDENT + MIN_TARGET / 2.0;
+        ui.painter()
+            .vline(x.round() + 0.5, rows.clone(), Stroke::new(1.0, p.line));
+    }
 }
 
 fn lead_column(ui: &mut Ui, lead: &Lead) -> Option<Response> {

@@ -1290,3 +1290,37 @@ fn a_selection_and_a_report_at_three_widths() {
     settle(&mut harness);
     capture(&mut harness, "status");
 }
+
+/// The samples' tree with a chain of folders four levels deep, at the default rail (#1463).
+#[test]
+fn the_folders_four_levels_deep() {
+    use engine::folders::model::FolderDraft;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1084.0, 681.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    engine::db::run_here(backend.engine(), |engine| {
+        let folders = engine::folders::list_folders(engine, None)?;
+        let snippets = folders
+            .iter()
+            .find(|folder| folder.name == "Snippets")
+            .unwrap();
+        let mut parent = snippets.id.clone();
+        for name in ["Requêtes SQL", "Exploitation", "Lecture seule", "Rapports"] {
+            let draft = FolderDraft {
+                space_id: snippets.space_id.clone(),
+                name: name.to_owned(),
+                parent_id: Some(parent),
+            };
+            parent = engine::folders::create_folder(engine, &draft)?.id;
+        }
+        Ok::<_, engine::error::AppError>(())
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    capture(&mut harness, "folders-four-deep");
+}

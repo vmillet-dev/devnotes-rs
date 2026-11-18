@@ -344,6 +344,40 @@ fn alt_and_the_arrows_move_a_folder_in_and_out_saying_what_they_refuse() {
     );
 }
 
+/// A folder in each of five levels, `Level 0` at the top: the names, from the top.
+fn five_levels(backend: &crate::backend::Backend) -> Vec<String> {
+    let home = space(backend, "Home");
+    let mut parent = None;
+    let mut names = Vec::new();
+    for depth in 0..5 {
+        let name = format!("Level {depth}");
+        parent = Some(folder(backend, &home, parent.as_ref(), &name));
+        names.push(name);
+    }
+    names
+}
+
+#[test]
+fn each_level_of_folders_is_one_indent_further() {
+    let (backend, profile) = testing::unlocked();
+    let names = five_levels(&backend);
+    let harness = area(backend, profile);
+
+    let lefts: Vec<f32> = names
+        .iter()
+        .map(|name| row(&harness, "folder-option", name).left())
+        .collect();
+    for pair in lefts.windows(2) {
+        assert!(
+            (pair[1] - pair[0] - super::row::INDENT).abs() < 0.5,
+            "{lefts:?}"
+        );
+    }
+    // Twelve letters at 12.5 px, the swatch and the name's insets: « Exploitation ».
+    let two_down = row(&harness, "folder-option", &names[2]).width();
+    assert!(two_down >= 100.0, "{two_down}");
+}
+
 #[test]
 fn a_name_cut_in_the_rail_is_read_whole_on_hover_and_its_menu_stays_in_reach() {
     let (backend, profile) = testing::unlocked();
