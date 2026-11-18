@@ -2,6 +2,7 @@
 //! modifier alone is a combination still being typed, Tab goes on to the next field, and a first
 //! Escape stops the listening without closing the panel, which the next one does.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     CornerRadius, Event, EventFilter, FontFamily, Key, RichText, Role, Sense, Stroke, Ui, Vec2,
 };
@@ -74,7 +75,9 @@ fn held_elsewhere(ui: &mut Ui, state: &AppState, action: Rebindable, settings: &
     let said = Message::new(keys::settings::shortcuts::HELD_ELSEWHERE)
         .with("accelerator", accelerator)
         .text(state.language);
-    let words = RichText::new(said).size(11.5).color(palette(ui.ctx()).red);
+    let words = RichText::new(said)
+        .size(font::CONTROL)
+        .color(palette(ui.ctx()).red);
     let shown = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &shown, &format!("shortcut-held-{}", action.id));
 }
@@ -88,7 +91,9 @@ fn conflict(ui: &mut Ui, language: Language, accelerator: &str, actions: &[Rebin
         .with("accelerator", accelerator)
         .with("actions", names.join(", "))
         .text(language);
-    let words = RichText::new(said).size(12.0).color(palette(ui.ctx()).red);
+    let words = RichText::new(said)
+        .size(font::LABEL)
+        .color(palette(ui.ctx()).red);
     let shown = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &shown, "shortcut-conflict");
 }
@@ -103,7 +108,7 @@ fn line(
     let label = i18n::translate(language, action.label, &[]);
     let reset = i18n::translate(language, keys::settings::shortcuts::RESET, &[]);
     row(ui, &label, |ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().item_spacing.x = gap::SNUG;
         let id = format!("shortcut-reset-{}", action.id);
         let moved = !settings.bindings.is_default(action);
         if Button::new(&reset, &id).enabled(moved).show(ui).clicked() {
@@ -115,7 +120,9 @@ fn line(
     let refused = view.refusal.as_ref().filter(|(id, _)| *id == action.id);
     if let Some((_, refused)) = refused {
         let said = explain(refused, language);
-        let words = RichText::new(said).size(11.5).color(palette(ui.ctx()).red);
+        let words = RichText::new(said)
+            .size(font::CONTROL)
+            .color(palette(ui.ctx()).red);
         let shown = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &shown, &format!("shortcut-error-{}", action.id));
     }
@@ -125,7 +132,7 @@ fn line(
 fn field(ui: &mut Ui, label: &str, action: Rebindable, bindings: &mut Bindings, view: &mut View) {
     let p = palette(ui.ctx());
     let shown = bindings.of(action).to_owned();
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = widgets::interact(
         ui,
         FIELD,
@@ -165,7 +172,14 @@ fn field(ui: &mut Ui, label: &str, action: Rebindable, bindings: &mut Bindings, 
         egui::StrokeKind::Inside,
     );
     let text = bindings.of(action);
-    let words = widgets::text(ui, text, 11.5, 600.0, FontFamily::Monospace, p.amber_text);
+    let words = widgets::text(
+        ui,
+        text,
+        font::CONTROL,
+        600.0,
+        FontFamily::Monospace,
+        p.amber_text,
+    );
     let at = response.rect.center() - words.size() / 2.0;
     ui.painter().galley(at, words, p.amber_text);
 }

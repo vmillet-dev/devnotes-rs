@@ -2,13 +2,14 @@
 //! a band drawn on the board, which becomes a folder where it was drawn. Its uniqueness is the
 //! core's to check, which alone sees the database.
 
-use egui::{CornerRadius, FontFamily, Id, Margin, Sense, Stroke, Ui};
+use crate::theme::tokens::{font, gap};
+use egui::{FontFamily, Id, Sense, Ui};
 use i18n::keys;
 
 use crate::action::{Action, Actions};
 use crate::notes::Action as Asked;
 use crate::state::AppState;
-use crate::theme::{palette, spacing};
+use crate::theme::palette;
 use crate::widgets::{self, Button, Kind, TextField};
 
 const WIDTH: f32 = 380.0;
@@ -23,19 +24,10 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, name: &mut String, actio
         name.clear();
         return;
     };
-    let p = palette(ui.ctx());
-    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
-    let padding = spacing(ui.ctx()).canvas.round() as i8;
-    let frame = egui::Frame::new()
-        .fill(p.bg_1)
-        .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
-        .shadow(p.shadow_overlay)
-        .inner_margin(Margin::same(padding));
-    let shown = egui::Modal::new(Id::unique("folder-name-prompt"))
-        .backdrop_color(p.backdrop.gamma_multiply(0.7))
-        .frame(frame)
-        .show(ui.ctx(), |ui| prompt(ui, state, name));
+    let _p = palette(ui.ctx());
+    let shown = crate::widgets::modal_panel(ui.ctx(), Id::unique("folder-name-prompt"), |ui| {
+        prompt(ui, state, name)
+    });
     let named = shown.inner.filter(|()| !name.trim().is_empty());
     if let Some(()) = named {
         let name = name.trim().to_owned();
@@ -61,15 +53,22 @@ fn prompt(ui: &mut Ui, state: &AppState, name: &mut String) -> Option<()> {
     let tr = |key| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 12.0;
+    ui.spacing_mut().item_spacing.y = gap::GROUPS;
     let title = tr(keys::board::NAME_THE_ZONE);
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+    let words = widgets::text(
+        ui,
+        &title,
+        font::TITLE,
+        600.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let (rect, _) = ui.allocate_exact_size(words.size(), Sense::hover());
     ui.painter().galley(rect.min, words, p.text_0);
     let hint = ui.add(
         egui::Label::new(
             egui::RichText::new(tr(keys::board::NAME_THE_ZONE_HINT))
-                .size(11.5)
+                .size(font::CONTROL)
                 .color(p.text_2),
         )
         .wrap(),
@@ -88,7 +87,7 @@ fn prompt(ui: &mut Ui, state: &AppState, name: &mut String) -> Option<()> {
     let entered = field.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter));
     let mut done = None;
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::folders::NEW_FOLDER_SUBMIT), "folder-name-submit")
             .kind(Kind::Filled)
             .show(ui)

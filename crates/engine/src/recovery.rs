@@ -3,8 +3,6 @@
 //! The other half of the integrity check: without a way out, a library that will not open
 //! leaves deleting a file by hand as the only move.
 
-#![allow(clippy::needless_pass_by_value)]
-
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};

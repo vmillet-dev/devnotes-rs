@@ -2,6 +2,7 @@
 //! one rung per layer, the higher drawn over the lower and served first by Escape. A modal
 //! blocks what is under it, keeps Tab inside, and hands the focus back to what opened it.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{Context, CornerRadius, Id, Margin, ModalResponse, Stroke};
 
 use crate::theme::{palette, spacing};
@@ -67,10 +68,12 @@ impl DialogStack {
         }
     }
 
-    /// Open as long as `open` says: a modal that follows an operation rather than a click.
+    /// Open as long as `open` says, a modal whose state lives elsewhere: what had the focus
+    /// when it opened gets it back when it closes.
     pub fn follow(&mut self, ctx: &Context, layer: Layer, id: Id, open: bool) {
         if open {
-            self.open(layer, id, None);
+            let opener = ctx.memory(egui::Memory::focused);
+            self.open(layer, id, opener);
         } else {
             self.close(ctx, id);
         }
@@ -91,14 +94,69 @@ impl DialogStack {
     }
 }
 
-/// A fitted modal: `bg-1`, 14 px corners, a `line` border, the overlay's shadow. Its scrim is solid, where the reference blurred (E7). `None` when `id` is not open.
+/// What a modal drew, and whether it asks to close: Escape, a click outside, or its cross.
+pub struct Shown<R> {
+    pub inner: R,
+    crossed: bool,
+    modal: ModalResponse<()>,
+}
+
+impl<R> Shown<R> {
+    /// ⚠️ Consumes Escape, as egui's own does: asked only by the screen that closes it.
+    pub fn should_close(&self) -> bool {
+        self.crossed || self.modal.should_close()
+    }
+}
+
+/// The cross every modal closes by, top right, drawn over its content: `(label, author_id)`.
+pub type Cross<'a> = (&'a str, &'a str);
+
+/// `margin`: the frame's, around the content. The cross sits in that margin's corner, so it covers
+/// none of what the content puts top right.
+pub(crate) fn cross(ui: &mut egui::Ui, (label, author_id): Cross<'_>, margin: f32) -> bool {
+    let content = ui.max_rect();
+    let size = egui::Vec2::splat(super::MIN_TARGET);
+    let corner = margin - gap::TIGHT;
+    let at = egui::Rect::from_min_size(
+        egui::pos2(content.right() + corner - size.x, content.top() - corner),
+        size,
+    );
+    let mut corner = ui.new_child(egui::UiBuilder::new().max_rect(at));
+    super::IconButton::new(crate::theme::icons::Icon::X, label, author_id)
+        .show(&mut corner)
+        .clicked()
+}
+
+pub(crate) fn shown<R>(response: ModalResponse<(R, bool)>) -> Shown<R> {
+    let ModalResponse {
+        response,
+        backdrop_response,
+        inner: (inner, crossed),
+        is_top_modal,
+        any_popup_open,
+    } = response;
+    Shown {
+        inner,
+        crossed,
+        modal: ModalResponse {
+            response,
+            backdrop_response,
+            inner: (),
+            is_top_modal,
+            any_popup_open,
+        },
+    }
+}
+
+/// A fitted modal: `bg-1`, 14 px corners, a `line` border, the overlay's shadow, a cross top
+/// right. Its scrim is solid, where the reference blurred (E7). `None` when `id` is not open.
 pub fn dialog<R>(
     ctx: &Context,
     stack: &DialogStack,
-    id: Id,
+    (id, close): (Id, Cross<'_>),
     width: f32,
     content: impl FnOnce(&mut egui::Ui) -> R,
-) -> Option<ModalResponse<R>> {
+) -> Option<Shown<R>> {
     if !stack.is_open(id) {
         return None;
     }
@@ -109,7 +167,7 @@ pub fn dialog<R>(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay)
         .inner_margin(padding);
     let shown = egui::Modal::new(id)
@@ -117,19 +175,21 @@ pub fn dialog<R>(
         .frame(frame)
         .show(ctx, |ui| {
             ui.set_width(width.min(ctx.content_rect().width() * 0.9));
-            content(ui)
+            let inner = content(ui);
+            (inner, cross(ui, close, gaps.canvas))
         });
-    Some(shown)
+    Some(self::shown(shown))
 }
 
-/// A framed modal: the same surface, its content edge to edge, for a panel with parts of its own.
+/// A framed modal: the same surface, its content edge to edge, for a panel with parts of its own;
+/// the same cross.
 pub fn framed_dialog<R>(
     ctx: &Context,
     stack: &DialogStack,
-    id: Id,
+    (id, close): (Id, Cross<'_>),
     size: egui::Vec2,
     content: impl FnOnce(&mut egui::Ui) -> R,
-) -> Option<ModalResponse<R>> {
+) -> Option<Shown<R>> {
     if !stack.is_open(id) {
         return None;
     }
@@ -137,7 +197,7 @@ pub fn framed_dialog<R>(
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay);
     let room = ctx.content_rect().size() * 0.9;
     let shown = egui::Modal::new(id)
@@ -146,9 +206,52 @@ pub fn framed_dialog<R>(
         .show(ctx, |ui| {
             ui.set_width(size.x.min(room.x));
             ui.set_height(size.y.min(room.y));
-            content(ui)
+            let inner = content(ui);
+            // No margin: the cross stands inside the panel's own header.
+            (inner, cross(ui, close, -gap::CONTROLS))
         });
-    Some(shown)
+    Some(self::shown(shown))
+}
+
+/// A Notes panel's modal (a folder's name, a snippet's fields, the tags, the trash): the
+/// dialog's frame, padded evenly, over the dimmed backdrop. Its keys and its closing stay the
+/// caller's.
+pub fn modal_panel<R>(
+    ctx: &Context,
+    id: Id,
+    content: impl FnOnce(&mut egui::Ui) -> R,
+) -> ModalResponse<R> {
+    let p = palette(ctx);
+    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
+    let padding = spacing(ctx).canvas.round() as i8;
+    let frame = egui::Frame::new()
+        .fill(p.bg_1)
+        .stroke(Stroke::new(1.0, p.line))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
+        .shadow(p.shadow_overlay)
+        .inner_margin(Margin::same(padding));
+    egui::Modal::new(id)
+        .backdrop_color(p.backdrop.gamma_multiply(0.7))
+        .frame(frame)
+        .show(ctx, content)
+}
+
+/// A dialog's title: its words at the title's size, read as its heading, found by `author_id`.
+pub fn dialog_title(ui: &mut egui::Ui, words: &str, author_id: &str) -> egui::Response {
+    let ink = palette(ui.ctx()).text_0;
+    let galley = super::text(
+        ui,
+        words,
+        font::TITLE,
+        600.0,
+        egui::FontFamily::Proportional,
+        ink,
+    );
+    let (rect, heading) = ui.allocate_exact_size(galley.size(), egui::Sense::hover());
+    ui.painter().galley(rect.min, galley, ink);
+    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, words));
+    super::address(ui, &heading, author_id);
+    heading
 }
 
 #[cfg(test)]
@@ -157,6 +260,7 @@ mod tests {
     use egui_kittest::kittest::{NodeT, Queryable};
 
     use super::*;
+
     use crate::keys::{self, Binding, Read};
     use crate::widgets::Button;
 
@@ -199,7 +303,7 @@ mod tests {
                     dialog(
                         ui.ctx(),
                         &screen.stack,
-                        Id::unique("settings"),
+                        (Id::unique("settings"), ("Fermer", "settings-cross")),
                         480.0,
                         |ui| {
                             Button::new("Un", "first").show(ui);
@@ -242,7 +346,7 @@ mod tests {
             harness.run();
             let now = focused(&harness);
             assert!(
-                matches!(now.as_deref(), Some("first" | "second")),
+                matches!(now.as_deref(), Some("first" | "second" | "settings-cross")),
                 "{now:?}"
             );
         }

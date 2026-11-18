@@ -2,6 +2,7 @@
 //! whether a copy is taken at each launch — and the dialog that changes the phrase. A phrase is
 //! typed in a `PassphraseField` and leaves the view for the core by `take`, never by an `Action`.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Id, Layout, RichText, Ui};
 use engine::backup::copies::Backup;
 use engine::vault::MINIMUM_LENGTH;
@@ -61,12 +62,8 @@ pub(crate) fn change_id() -> Id {
     Id::unique("change-passphrase")
 }
 
-pub(super) fn page(
-    ui: &mut Ui,
-    state: &AppState,
-    (settings, reveal): (&mut Settings, &mut bool),
-    actions: &mut Actions,
-) {
+/// The passphrase: what opens the library.
+pub(super) fn page(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     use keys::settings::security;
     let language = state.language;
     let tr = |key: Key| i18n::translate(language, key, &[]);
@@ -81,6 +78,18 @@ pub(super) fn page(
     });
     note(ui, &tr(security::NOTE));
     note(ui, &tr(security::COPIES_NOTE));
+}
+
+/// The copies taken at launch, and putting one back.
+pub(super) fn backups(
+    ui: &mut Ui,
+    state: &AppState,
+    (settings, reveal): (&mut Settings, &mut bool),
+    actions: &mut Actions,
+) {
+    use keys::settings::security;
+    let language = state.language;
+    let tr = |key: Key| i18n::translate(language, key, &[]);
     group(ui, language, security::BACKUPS);
     switch_row(
         ui,
@@ -97,7 +106,7 @@ pub(super) fn page(
 fn copies(ui: &mut Ui, state: &AppState, reveal: &mut bool, actions: &mut Actions) {
     let language = state.language;
     let tr = |key: Key| i18n::translate(language, key, &[]);
-    ui.add_space(6.0);
+    ui.add_space(gap::SNUG);
     if state.backups.is_loading() {
         note(ui, &tr(keys::backups::LOADING));
         return;
@@ -105,7 +114,7 @@ fn copies(ui: &mut Ui, state: &AppState, reveal: &mut bool, actions: &mut Action
     if state.backups.copies().is_empty() {
         let none = ui.label(
             RichText::new(tr(keys::backups::NONE))
-                .size(11.5)
+                .size(font::CONTROL)
                 .color(palette(ui.ctx()).text_2),
         );
         widgets::address(ui, &none, "backup-empty");
@@ -134,13 +143,18 @@ fn copy_row(
     let detail = format!("{} · {}", copy.id, human_size(copy.bytes, language));
     let shown = ui.horizontal(|ui| {
         ui.set_min_height(36.0);
-        ui.label(RichText::new(when).size(12.5).color(p.text_1));
-        let words = ui.label(RichText::new(detail).size(11.0).monospace().color(p.text_2));
+        ui.label(RichText::new(when).size(font::BODY).color(p.text_1));
+        let words = ui.label(
+            RichText::new(detail)
+                .size(font::META)
+                .monospace()
+                .color(p.text_2),
+        );
         widgets::address(ui, &words, "backup-detail");
         ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
             if !copy.openable {
                 let said = i18n::translate(language, keys::backups::UNOPENABLE, &[]);
-                ui.label(RichText::new(said).size(11.5).color(p.red));
+                ui.label(RichText::new(said).size(font::CONTROL).color(p.red));
             } else if state.backups.pending() != Some(copy.id.as_str()) {
                 let label = i18n::translate(language, keys::backups::RESTORE, &[]);
                 if Button::new(&label, "backup-restore").show(ui).clicked() {
@@ -168,11 +182,11 @@ fn confirm_restore(
     let said = Message::new(keys::backups::CONFIRM)
         .with("when", copy.id.as_str())
         .text(language);
-    let words = ui.add(egui::Label::new(RichText::new(said).size(12.0).color(p.red)).wrap());
+    let words = ui.add(egui::Label::new(RichText::new(said).size(font::LABEL).color(p.red)).wrap());
     widgets::address(ui, &words, "backup-confirm");
     let working = state.gate.is_working();
     let answers = ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let mut ask = |ask| actions.push(Asked::Menu(Action::Preferences(ask)));
         if Button::new(&tr(keys::backups::CANCEL), "backup-cancel")
             .show(ui)
@@ -223,9 +237,16 @@ pub(super) fn dialog(
     actions: &mut Actions,
 ) {
     let working = state.security.is_changing();
-    let shown = widgets::dialog(ctx, &state.dialogs, change_id(), WIDTH, |ui| {
-        body(ui, state, &mut view.change, actions);
-    });
+    let cross = i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]);
+    let shown = widgets::dialog(
+        ctx,
+        &state.dialogs,
+        (change_id(), (&cross, "change-passphrase-cross")),
+        WIDTH,
+        |ui| {
+            body(ui, state, &mut view.change, actions);
+        },
+    );
     if shown.is_some_and(|shown| shown.should_close()) && !working {
         actions.push(Asked::Menu(Action::Preferences(Ask::KeepPassphrase)));
     }
@@ -237,10 +258,10 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut ChangeView, actions: &mut Acti
     let p = palette(ui.ctx());
     let tr = |key: Key| i18n::translate(language, key, &[]);
     let working = state.security.is_changing();
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let heading = ui.label(
         RichText::new(tr(security::DIALOG_TITLE))
-            .size(15.0)
+            .size(font::TITLE)
             .variation(*b"wght", 600.0)
             .color(p.text_0),
     );
@@ -248,7 +269,7 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut ChangeView, actions: &mut Acti
     ui.add(
         egui::Label::new(
             RichText::new(tr(security::DIALOG_LEAD))
-                .size(12.0)
+                .size(font::LABEL)
                 .color(p.text_2),
         )
         .wrap(),
@@ -256,7 +277,7 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut ChangeView, actions: &mut Acti
     let copies = ui.add(
         egui::Label::new(
             RichText::new(tr(security::COPIES_NOTE))
-                .size(11.5)
+                .size(font::CONTROL)
                 .color(p.text_2),
         )
         .wrap(),
@@ -294,12 +315,12 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut ChangeView, actions: &mut Acti
     );
     submitted |= typed.submitted;
     let problem = problem(state, view, language);
-    let said = ui.label(RichText::new(problem).size(11.9).color(p.red));
+    let said = ui.label(RichText::new(problem).size(font::LABEL).color(p.red));
     widgets::address(ui, &said, "change-passphrase-problem");
     let ready = view.can_submit() && !working;
     let mut ask = |ask| actions.push(Asked::Menu(Action::Preferences(ask)));
     ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let action = if working {
             security::CHANGING
         } else {
@@ -329,7 +350,7 @@ fn phrase_field(
     (invalid, working): (bool, bool),
 ) -> (egui::Response, passphrase::Typed) {
     let p = palette(ui.ctx());
-    ui.label(RichText::new(name).size(11.2).color(p.text_2));
+    ui.label(RichText::new(name).size(font::META).color(p.text_2));
     PassphraseField::new(value, name, author_id)
         .invalid(invalid)
         .enabled(!working)

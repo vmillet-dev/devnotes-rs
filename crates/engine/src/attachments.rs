@@ -1,15 +1,9 @@
-//! The bytes cross the bridge only on read, as a `data:` URI: the CSP forbids loading a local
-//! file, and opening the `asset:` protocol for a screenshot would be a wide door.
-
-#![allow(clippy::needless_pass_by_value)]
+//! A note's files, sealed beside the library: written before their record, read back by id.
 
 pub mod files;
 pub mod model;
 pub mod sealed;
 pub mod store;
-
-use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD;
 
 use crate::Engine;
 use crate::db::{Db, lock};
@@ -21,39 +15,47 @@ use files::{
 };
 use model::Attachment;
 
-/// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. With
-/// `read_attachment` this reads any file the account can read into the `WebView`, and what keeps
-/// that harmless is the CSP — `script-src 'self'`, nothing remote — not this function.
-pub fn attach_file(engine: &Engine, note_id: String, path: String) -> Result<Attachment, AppError> {
-    engine.write(|db| {
+/// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. The source is read
+/// off the db queue — up to 10 MiB, perhaps on a network share — and only what is stored waits
+/// in it.
+pub async fn attach_file(
+    engine: std::sync::Arc<Engine>,
+    note_id: String,
+    path: String,
+) -> Result<Attachment, AppError> {
+    let read = crate::tools::off_thread(move || -> Result<_, AppError> {
         let file_name = model::display_name(&path)?;
         let bytes = read_within_limit(&path)?;
         model::validate_size(bytes.len() as u64, &file_name)?;
-        let answer = store_new(note_id, file_name, &bytes, db)?;
-        let changed = Changed {
-            attachments: true,
-            ..Changed::default()
-        };
-        Ok((answer, changed))
+        Ok((file_name, bytes))
     })
+    .await?;
+    let (file_name, bytes) = read?;
+    crate::db::run(engine, move |engine| {
+        engine.write(|db| {
+            let answer = store_new(note_id, file_name, &bytes, db)?;
+            let changed = Changed {
+                attachments: true,
+                ..Changed::default()
+            };
+            Ok((answer, changed))
+        })
+    })
+    .await
 }
 
-pub fn list_attachments(engine: &Engine, note_id: String) -> Result<Vec<Attachment>, AppError> {
+pub fn list_attachments(engine: &Engine, note_id: &str) -> Result<Vec<Attachment>, AppError> {
     let db = &engine.db;
     let mut connection = lock(db)?;
 
-    Ok(store::list(&mut connection, &note_id)?)
+    Ok(store::list(&mut connection, note_id)?)
 }
 
-pub fn read_attachment(engine: &Engine, id: String) -> Result<String, AppError> {
-    let db = &engine.db;
-    let (attachment, bytes) = read_outside_lock(db, &id)?;
+/// The file's type and its bytes.
+pub fn read_attachment(engine: &Engine, id: &str) -> Result<(String, Vec<u8>), AppError> {
+    let (attachment, bytes) = read_outside_lock(&engine.db, id)?;
 
-    Ok(format!(
-        "data:{};base64,{}",
-        attachment.mime_type,
-        STANDARD.encode(bytes)
-    ))
+    Ok((attachment.mime_type, bytes))
 }
 
 /// The decrypted copy of an attachment, for the desktop to open: the shell opens the path it
@@ -62,8 +64,8 @@ pub fn read_attachment(engine: &Engine, id: String) -> Result<String, AppError> 
 /// ⚠️ The one place a decrypted copy reaches the disk: the program the desktop picks reads a
 /// path. It goes under the profile's `open/` ([`sealed::plaintext_directory`]) and is swept
 /// on exit and at the next launch, since that program may still hold it on close.
-pub fn decrypted_copy(engine: &Engine, id: String) -> Result<std::path::PathBuf, AppError> {
-    let (attachment, bytes) = read_outside_lock(&engine.db, &id)?;
+pub fn decrypted_copy(engine: &Engine, id: &str) -> Result<std::path::PathBuf, AppError> {
+    let (attachment, bytes) = read_outside_lock(&engine.db, id)?;
     let directory = sealed::plaintext_directory(&engine.paths);
 
     Ok(write_plaintext_copy(&directory, &attachment, &bytes)?)
@@ -76,25 +78,25 @@ pub fn sweep_copies(engine: &Engine) -> Result<(), AppError> {
 }
 
 /// The path comes from a native picker; the write stays here.
-pub fn save_attachment(engine: &Engine, id: String, path: String) -> Result<(), AppError> {
+pub fn save_attachment(engine: &Engine, id: &str, path: &str) -> Result<(), AppError> {
     let db = &engine.db;
-    let (_, bytes) = read_outside_lock(db, &id)?;
+    let (_, bytes) = read_outside_lock(db, id)?;
 
-    Ok(write_plain(&path, &bytes)?)
+    Ok(write_plain(path, &bytes)?)
 }
 
 /// An image the interface read, as raw RGBA, stored as a PNG.
 pub fn attach_image(
     engine: &Engine,
     note_id: String,
-    file_name: String,
+    file_name: &str,
     (width, height): (u32, u32),
     rgba: &[u8],
 ) -> Result<Attachment, AppError> {
     engine.write(|db| {
         let png = model::encode_png(width, height, rgba)?;
-        model::validate_size(png.len() as u64, &model::png_name(&file_name))?;
-        let answer = store_new(note_id, model::png_name(&file_name), &png, db)?;
+        model::validate_size(png.len() as u64, &model::png_name(file_name))?;
+        let answer = store_new(note_id, model::png_name(file_name), &png, db)?;
         let changed = Changed {
             attachments: true,
             ..Changed::default()
@@ -103,9 +105,9 @@ pub fn attach_image(
     })
 }
 
-pub fn delete_attachment(engine: &Engine, id: String) -> Result<(), AppError> {
+pub fn delete_attachment(engine: &Engine, id: &str) -> Result<(), AppError> {
     engine.write(|db| {
-        delete(db, &id)?;
+        delete(db, id)?;
         let changed = Changed {
             attachments: true,
             ..Changed::default()

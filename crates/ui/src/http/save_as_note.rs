@@ -1,7 +1,8 @@
 //! One dialog for an answer and for generated code: it asks where the note goes and what it is
 //! called; what it holds, and in which language, the caller has already decided.
 
-use egui::{Align, FontFamily, Layout, Sense, Ui};
+use crate::theme::tokens::{font, gap};
+use egui::{Align, Layout, Ui};
 use i18n::keys;
 
 use super::{Action, modal};
@@ -54,7 +55,17 @@ pub(crate) fn show(ui: &Ui, state: &AppState, form: &mut Option<NoteForm>, actio
         return;
     };
     let open = form.get_or_insert_with(|| NoteForm::of(asked, state));
-    let shown = modal(ui, "save-as-note", |ui| body(ui, state, asked, open));
+    let shown = modal(
+        ui,
+        (
+            "save-as-note",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "save-as-note-cross",
+            ),
+        ),
+        |ui| body(ui, state, asked, open),
+    );
     match shown.inner {
         Some(true) => {
             if let Some(placement) = placement(state, open) {
@@ -97,19 +108,15 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::tools::save_as_note::TITLE);
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "save-as-note");
+    crate::widgets::dialog_title(ui, &title, "save-as-note");
     let what = i18n::translate(
         language,
         asked.what,
         &[("language", asked.language.as_str().into())],
     );
-    let what = egui::RichText::new(what).size(12.5).color(p.text_2);
+    let what = egui::RichText::new(what).size(font::BODY).color(p.text_2);
     let said = ui.add(egui::Label::new(what).wrap());
     widgets::address(ui, &said, "save-as-note-what");
     let label = tr(keys::tools::save_as_note::NOTE_TITLE);
@@ -122,14 +129,16 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
         .hint(&tr(keys::tools::save_as_note::TAGS_PLACEHOLDER))
         .show(ui);
     if let Some(warning) = asked.warning {
-        let warning = egui::RichText::new(tr(warning)).size(12.5).color(p.red);
+        let warning = egui::RichText::new(tr(warning))
+            .size(font::BODY)
+            .color(p.red);
         let said = ui.add(egui::Label::new(warning).wrap());
         widgets::address(ui, &said, "save-as-note-warning");
     }
     let mut chosen = None;
     let can_save = !form.title.trim().is_empty() && !state.spaces.spaces().is_empty();
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let submit = if asked.warning.is_some() {
             keys::tools::save_as_note::SUBMIT_ANYWAY
         } else {
@@ -155,7 +164,7 @@ fn body(ui: &mut Ui, state: &AppState, asked: &NoteAsked, form: &mut NoteForm) -
 
 fn caption(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    let words = egui::RichText::new(words).size(12.0).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(words));
 }
 

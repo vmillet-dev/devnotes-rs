@@ -68,23 +68,25 @@ impl Reversible {
 /// `lines` sizes the rows a zone grows by when notes are filed back into it.
 pub fn revert(backend: &Backend, action: Reversible, lines: PreviewLines) -> Pending<u32> {
     backend.db(move |engine| match action {
-        Reversible::Deletion { ids, .. } => notes::restore_notes(engine, ids),
-        Reversible::Move(previous) => notes::move_notes_back(engine, previous),
-        Reversible::Tag(added) => notes::untag_notes(engine, added),
-        Reversible::Untag(removed) => notes::restore_tags(engine, removed),
+        Reversible::Deletion { ids, .. } => notes::restore_notes(engine, &ids),
+        Reversible::Move(previous) => notes::move_notes_back(engine, &previous),
+        Reversible::Tag(added) => notes::untag_notes(engine, &added),
+        Reversible::Untag(removed) => notes::restore_tags(engine, &removed),
         Reversible::Pin { ids, pinned } => {
-            notes::set_pinned(engine, ids, !pinned).map(|ids| count(ids.len()))
+            notes::set_pinned(engine, &ids, !pinned).map(|ids| count(ids.len()))
         }
-        Reversible::Priority(previous) => notes::restore_priorities(engine, previous),
-        Reversible::File(previous) => folders::file_notes_back(engine, previous, lines),
+        Reversible::Priority(previous) => notes::restore_priorities(engine, &previous),
+        Reversible::File(previous) => folders::file_notes_back(engine, &previous, lines),
         Reversible::Arrangement {
             root_id, previous, ..
         } => {
             let count = previous.zones.len() + previous.cards.len();
-            folders::save_board_layout(engine, root_id, previous.zones, previous.cards)
+            folders::save_board_layout(engine, root_id.as_ref(), &previous.zones, &previous.cards)
                 .map(|()| self::count(count))
         }
-        Reversible::FolderMove { was, .. } => folders::move_folder_back(engine, was).map(u32::from),
+        Reversible::FolderMove { was, .. } => {
+            folders::move_folder_back(engine, &was).map(u32::from)
+        }
         Reversible::Convert { id, previous, .. } => {
             let patch = notes::model::NotePatch {
                 kind: Some(previous.kind),
@@ -93,7 +95,7 @@ pub fn revert(backend: &Backend, action: Reversible, lines: PreviewLines) -> Pen
                 items: Some(previous.items),
                 ..notes::model::NotePatch::default()
             };
-            notes::update_note(engine, id, patch).map(|_| 1)
+            notes::update_note(engine, &id, &patch).map(|_| 1)
         }
     })
 }

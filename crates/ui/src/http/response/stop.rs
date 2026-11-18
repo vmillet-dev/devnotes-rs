@@ -1,7 +1,8 @@
 //! A script that stopped: whose it was, what it said, on which line. Before the send it stands in
 //! place of the answer; after it, above the answer that came.
 
-use egui::{CornerRadius, Margin, Stroke, Ui};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{CornerRadius, Stroke, Ui};
 use engine::http::scripts::model::{FailureKind, ScriptKind, ScriptLevel, ScriptStop};
 use i18n::keys;
 
@@ -86,27 +87,27 @@ pub(super) fn show(
     egui::Frame::new()
         .fill(p.red.gamma_multiply(0.1))
         .stroke(Stroke::new(1.0, p.red.gamma_multiply(0.4)))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::symmetric(12, 10))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::GROUPS, gap::INSET))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 6.0;
+            ui.spacing_mut().item_spacing.y = gap::SNUG;
             let words = egui::RichText::new(title)
-                .size(13.0)
+                .size(font::READING)
                 .strong()
                 .color(p.text_0);
             let said = ui.add(egui::Label::new(words).wrap());
             widgets::address(ui, &said, "http-script-stop");
             let words = egui::RichText::new(message(stop, language))
                 .monospace()
-                .size(12.0)
+                .size(font::LABEL)
                 .color(p.red);
             let said = ui.add(egui::Label::new(words).wrap());
             widgets::address(ui, &said, "http-script-stop-message");
             let mut opened = false;
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0;
+                ui.spacing_mut().item_spacing.x = gap::INSET;
                 if let Some(at) = where_words(stop, language) {
-                    let words = egui::RichText::new(at).size(12.0).color(p.text_2);
+                    let words = egui::RichText::new(at).size(font::LABEL).color(p.text_2);
                     let said = ui.add(egui::Label::new(words));
                     widgets::address(ui, &said, "http-script-stop-where");
                 }

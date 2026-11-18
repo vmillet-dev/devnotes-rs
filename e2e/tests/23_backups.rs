@@ -9,7 +9,7 @@ const LATER: &str = "Written after the copy";
 fn security(app: &mut App) {
     app.click("file-menu");
     app.click("file-preferences");
-    app.click("settings-page-security");
+    app.click("settings-page-backups");
     app.scroll_to("settings-content", "backup-row");
 }
 

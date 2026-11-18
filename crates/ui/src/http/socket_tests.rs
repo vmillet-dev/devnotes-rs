@@ -165,6 +165,20 @@ fn what_went_each_way_is_logged_and_filtered() {
         .type_text("pong");
     settle(&mut harness);
     assert_eq!(rows(&harness), 1);
+
+    // What arrives under a typed filter is sorted as it comes.
+    let http = &mut harness.state_mut().state.http;
+    for text in ["ping again", "PONG again"] {
+        let received = SocketEvent::Received {
+            text: text.to_owned(),
+            size: 10,
+            binary: false,
+            cut: false,
+        };
+        http.receive_socket(event(&id, received));
+    }
+    settle(&mut harness);
+    assert_eq!(rows(&harness), 2);
 }
 
 #[test]

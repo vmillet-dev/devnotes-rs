@@ -1,7 +1,8 @@
 //! « Extract to a variable »: the value at a path of the answer becomes a rule of the request,
 //! written after each of its sends into the active environment.
 
-use egui::{FontFamily, Sense, Ui};
+use crate::theme::tokens::{font, gap};
+use egui::Ui;
 use engine::http::model::Extraction;
 use i18n::keys;
 
@@ -45,9 +46,17 @@ pub(super) fn show(
     let Some(open) = form else {
         return;
     };
-    let shown = super::modal(ui, "http-extract-dialog", |ui| {
-        body(ui, open, (&tab.draft.name, state))
-    });
+    let shown = super::modal(
+        ui,
+        (
+            "http-extract-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-extract-cross",
+            ),
+        ),
+        |ui| body(ui, open, (&tab.draft.name, state)),
+    );
     match shown.inner {
         Some(true) => {
             let rule = Extraction {
@@ -73,17 +82,13 @@ fn body(ui: &mut Ui, form: &mut Extracting, (request, state): (&str, &AppState))
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::http::extract::TITLE);
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
-    let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-    ui.painter().galley(rect.min, words, p.text_0);
-    heading.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Heading, true, &title));
-    widgets::address(ui, &heading, "http-extract-dialog");
+    crate::widgets::dialog_title(ui, &title, "http-extract-dialog");
     caption(ui, &tr(keys::http::extract::PATH));
     let path = egui::RichText::new(&form.path)
         .monospace()
-        .size(12.5)
+        .size(font::BODY)
         .color(p.text_0);
     let path = ui.add(egui::Label::new(path).truncate());
     widgets::address(ui, &path, "http-extract-path");
@@ -92,18 +97,20 @@ fn body(ui: &mut Ui, form: &mut Extracting, (request, state): (&str, &AppState))
     TextField::new(&mut form.name, &label, "http-extract-name").show(ui);
     let secret = tr(keys::http::extract::SECRET);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         Checkbox::new(&mut form.secret, &secret, "http-extract-secret").show(ui);
-        let words = egui::RichText::new(&secret).size(12.5).color(p.text_1);
+        let words = egui::RichText::new(&secret)
+            .size(font::BODY)
+            .color(p.text_1);
         ui.add(egui::Label::new(words));
     });
     let into = into_words(request, state);
-    let into = egui::RichText::new(into).size(12.0).color(p.text_2);
+    let into = egui::RichText::new(into).size(font::LABEL).color(p.text_2);
     let into = ui.add(egui::Label::new(into).wrap());
     widgets::address(ui, &into, "http-extract-into");
     let mut chosen = None;
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::http::extract::SUBMIT), "http-extract-submit")
             .kind(Kind::Filled)
             .enabled(!form.name.trim().is_empty())
@@ -124,7 +131,7 @@ fn body(ui: &mut Ui, form: &mut Extracting, (request, state): (&str, &AppState))
 
 fn caption(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
-    let words = egui::RichText::new(words).size(12.0).color(p.text_2);
+    let words = egui::RichText::new(words).size(font::LABEL).color(p.text_2);
     ui.add(egui::Label::new(words));
 }
 

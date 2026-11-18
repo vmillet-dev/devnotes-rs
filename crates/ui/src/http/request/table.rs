@@ -4,9 +4,10 @@
 //! As headers, a row that cannot be sent is marked with why, and `Name: value` typed or pasted in
 //! a name is split into its two cells. Both are Rust's to say: a parameter takes any character.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
-    Color32, CornerRadius, Event, FontFamily, FontId, Id, Margin, Rect, Role, Sense, Stroke,
-    StrokeKind, TextEdit, Ui, Vec2, WidgetInfo, pos2,
+    Color32, CornerRadius, Event, FontFamily, FontId, Id, Rect, Role, Sense, Stroke, StrokeKind,
+    TextEdit, Ui, Vec2, WidgetInfo, pos2,
 };
 use engine::http::model::{HeaderFault, KeyValue};
 use i18n::keys;
@@ -112,7 +113,7 @@ pub(crate) fn frame(ui: &mut Ui, rows: usize, label: &str, author_id: &str) -> R
     widgets::address(ui, &region, author_id);
     ui.painter().rect(
         frame,
-        CornerRadius::same(10),
+        CornerRadius::same(radius::CARD),
         p.bg_1,
         Stroke::new(1.0, p.line),
         StrokeKind::Inside,
@@ -131,27 +132,33 @@ struct Columns {
 
 impl Columns {
     fn of(frame: Rect) -> Self {
-        let inner = (frame.width() - CHECK - REMOVE).max(90.0);
-        let third = inner / 3.0;
-        let x = |offset: f32| frame.left() + offset;
-        let column = |from: f32, width: f32| {
-            Rect::from_min_max(
-                pos2(x(from), frame.top()),
-                pos2(x(from + width), frame.bottom()),
-            )
-        };
+        let third = (frame.width() - CHECK - REMOVE).max(90.0) / 3.0;
+        let [check, key, value, description, remove] =
+            columns(frame, [CHECK, third, third, third, REMOVE]);
         Self {
-            check: column(0.0, CHECK),
-            key: column(CHECK, third),
-            value: column(CHECK + third, third),
-            description: column(CHECK + 2.0 * third, third),
-            remove: column(CHECK + 3.0 * third, REMOVE),
+            check,
+            key,
+            value,
+            description,
+            remove,
         }
     }
+}
 
-    fn at(column: Rect, top: f32) -> Rect {
-        Rect::from_min_max(pos2(column.left(), top), pos2(column.right(), top + ROW))
-    }
+/// The frame cut into columns of these widths, from its left edge.
+pub(super) fn columns<const N: usize>(frame: Rect, widths: [f32; N]) -> [Rect; N] {
+    let mut left = frame.left();
+    widths.map(|width| {
+        let column =
+            Rect::from_min_max(pos2(left, frame.top()), pos2(left + width, frame.bottom()));
+        left += width;
+        column
+    })
+}
+
+/// A row's cell in `column`, from `top`.
+pub(super) fn slot(column: Rect, top: f32) -> Rect {
+    Rect::from_min_max(pos2(column.left(), top), pos2(column.right(), top + ROW))
 }
 
 fn head(ui: &Ui, columns: &Columns, top: f32, language: i18n::Language) {
@@ -160,7 +167,7 @@ fn head(ui: &Ui, columns: &Columns, top: f32, language: i18n::Language) {
         (columns.value, keys::http::table::VALUE),
         (columns.description, keys::http::table::DESCRIPTION),
     ] {
-        heading(ui, Columns::at(column, top), key, language);
+        heading(ui, slot(column, top), key, language);
     }
 }
 
@@ -168,7 +175,14 @@ fn head(ui: &Ui, columns: &Columns, top: f32, language: i18n::Language) {
 pub(crate) fn heading(ui: &Ui, rect: Rect, key: i18n::Key, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, key, &[]);
-    let galley = widgets::text(ui, &words, 11.5, 600.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::CONTROL,
+        600.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     ui.painter().galley(
         pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0),
         galley,
@@ -218,7 +232,7 @@ fn row_of(
     let tr = |key| i18n::translate(language, key, &[]);
     let mut changed = false;
     if !cell.blank {
-        let rect = Columns::at(columns.check, cell.top);
+        let rect = slot(columns.check, cell.top);
         let label = i18n::translate(
             language,
             keys::http::table::ENABLE,
@@ -246,10 +260,7 @@ fn row_of(
     };
     let key = text_cell(
         ui,
-        (
-            Columns::at(columns.key, cell.top),
-            cell.id.with(Field::Key as u8),
-        ),
+        (slot(columns.key, cell.top), cell.id.with(Field::Key as u8)),
         (&mut row.key, &tr(keys::http::table::KEY), "http-kv-key"),
         (&hint, key_ink, true, false),
     );
@@ -263,7 +274,7 @@ fn row_of(
     let value = text_cell(
         ui,
         (
-            Columns::at(columns.value, cell.top),
+            slot(columns.value, cell.top),
             cell.id.with(Field::Value as u8),
         ),
         (
@@ -282,7 +293,7 @@ fn row_of(
     let description = text_cell(
         ui,
         (
-            Columns::at(columns.description, cell.top),
+            slot(columns.description, cell.top),
             cell.id.with(Field::Description as u8),
         ),
         (
@@ -293,7 +304,7 @@ fn row_of(
         ("", ink, false, false),
     );
     changed |= description.changed();
-    let at = Columns::at(columns.remove, cell.top);
+    let at = slot(columns.remove, cell.top);
     if !cell.blank && remove(ui, at, (&row.key, "http-kv-remove"), language) {
         return Some(Changed::Removed);
     }
@@ -318,12 +329,12 @@ pub(crate) fn text_cell(
         TextEdit::singleline(text)
             .id(id)
             .frame(egui::Frame::new())
-            .margin(Margin::symmetric(8, 0))
+            .margin(gap::margin(gap::CONTROLS, 0.0))
             .align(egui::Align2::LEFT_CENTER)
-            .hint_text(egui::RichText::new(hint).font(FontId::new(12.5, family.clone())))
+            .hint_text(egui::RichText::new(hint).font(FontId::new(font::BODY, family.clone())))
             .password(masked)
             .text_color(ink)
-            .font(FontId::new(12.5, family)),
+            .font(FontId::new(font::BODY, family)),
     );
     ui.ctx()
         .accesskit_node_builder(response.id, |node| node.set_label(name.to_string()));
@@ -375,11 +386,11 @@ pub(crate) fn remove(
         Sense::click(),
         author_id,
         || WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(5),
+        CornerRadius::same(radius::CONTROL),
     );
     let ink = if response.hovered() {
         ui.painter()
-            .rect_filled(square, CornerRadius::same(5), p.bg_3);
+            .rect_filled(square, CornerRadius::same(radius::CONTROL), p.bg_3);
         p.text_0
     } else {
         p.text_2
@@ -404,7 +415,7 @@ fn said(ui: &mut Ui, faults: &[Option<HeaderFault>], language: i18n::Language) {
             continue;
         }
         let words = egui::RichText::new(i18n::translate(language, key, &[]))
-            .size(12.0)
+            .size(font::LABEL)
             .color(p.red);
         let response = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &response, "http-kv-fault");

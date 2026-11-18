@@ -46,7 +46,7 @@ fn collection(
     requests: &[(&str, &str, RequestScripts)],
 ) -> (String, Vec<String>) {
     let api = session
-        .call(|e| create_http_collection(e, "Run".to_string()))
+        .call(|e| create_http_collection(e, "Run"))
         .unwrap()
         .id;
     let ids = requests
@@ -64,7 +64,7 @@ fn collection(
                     ..RequestDocument::default()
                 },
             };
-            session.call(|e| create_http_request(e, draft)).unwrap().id
+            session.call(|e| create_http_request(e, &draft)).unwrap().id
         })
         .collect();
     (api, ids)
@@ -109,7 +109,7 @@ fn ok() -> Vec<u8> {
 fn a_run_sends_its_requests_over_the_rows_of_its_data_and_writes_no_history() {
     let session = hosted();
     let staging = session
-        .call(|e| create_http_environment(e, "Staging".to_string()))
+        .call(|e| create_http_environment(e, "Staging"))
         .unwrap()
         .id;
     let (port, seen) = serve(4, |_, _| ok());
@@ -271,11 +271,7 @@ fn a_run_is_cancelled_between_two_requests() {
         std::thread::sleep(Duration::from_millis(20));
     }
 
-    assert!(
-        session
-            .call(|e| cancel_http_run(e, "run-4".to_string()))
-            .unwrap()
-    );
+    assert!(session.call(|e| cancel_http_run(e, "run-4")).unwrap());
     running.join().unwrap().unwrap();
 
     assert_eq!(ended(&steps(&session)).len(), 1);
@@ -286,11 +282,7 @@ fn a_run_is_cancelled_between_two_requests() {
             ..
         })
     ));
-    assert!(
-        !session
-            .call(|e| cancel_http_run(e, "run-4".to_string()))
-            .unwrap()
-    );
+    assert!(!session.call(|e| cancel_http_run(e, "run-4")).unwrap());
 }
 
 fn block_on<F: std::future::Future>(future: F) -> F::Output {
@@ -338,13 +330,19 @@ fn the_order_arranged_is_kept_and_a_request_added_goes_at_its_end() {
         enabled,
     };
     session
-        .call(|e| save_http_run_order(e, item(), vec![entry(&ids[1], true), entry(&ids[0], false)]))
+        .call(|e| {
+            save_http_run_order(
+                e,
+                &item(),
+                vec![entry(&ids[1], true), entry(&ids[0], false)],
+            )
+        })
         .unwrap();
     let added = session
         .call(|e| {
             create_http_request(
                 e,
-                HttpRequestDraft {
+                &HttpRequestDraft {
                     collection_id: api.clone(),
                     folder_id: None,
                     name: "C".to_string(),
@@ -358,15 +356,42 @@ fn the_order_arranged_is_kept_and_a_request_added_goes_at_its_end() {
         .id;
     // The settings dialog saves what it holds, which has no run order.
     session
-        .call(|e| save_http_settings(e, item(), ContainerSettings::default()))
+        .call(|e| save_http_settings(e, &item(), ContainerSettings::default()))
         .unwrap();
 
     assert_eq!(
-        session.call(|e| http_run_order(e, item())).unwrap(),
+        session.call(|e| http_run_order(e, &item())).unwrap(),
         [
             entry(&ids[1], true),
             entry(&ids[0], false),
             entry(&added, true)
         ]
     );
+}
+
+/// A request whose script names itself again: the run stops at the cap and says so, where it
+/// used to go on until « Cancel » (#1477, N21). Slow — a script host a step — so on demand:
+/// `cargo test -p engine --test commands a_run_that_loops -- --ignored`.
+#[test]
+#[ignore = "a thousand script hosts"]
+fn a_run_that_loops_on_one_request_stops_at_the_cap() {
+    let session = hosted();
+    let cap = engine::http::runner::MAX_STEPS as usize;
+    let (port, _seen) = serve(cap, |_, _| ok());
+    let again = RequestScripts {
+        after: "pm.execution.setNextRequest('Poll');".to_string(),
+        ..RequestScripts::default()
+    };
+    let (api, ids) = collection(&session, port, &[("Poll", "/poll", again)]);
+
+    session
+        .wait(|e| run_http_collection(e, run("run-loop", &api, ids)))
+        .unwrap();
+
+    let steps = steps(&session);
+    assert_eq!(ended(&steps).len(), cap);
+    assert!(matches!(
+        steps.last(),
+        Some(RunStep::Finished { capped: true, .. })
+    ));
 }

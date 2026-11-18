@@ -1,14 +1,11 @@
 //! The seam between a format and the visualiser: one reader per format, one tree out. A new
 //! format is a reader that answers a `Node` whose spans are UTF-16 offsets into its own text.
 
-use serde::{Deserialize, Serialize};
-
 use super::parse::{JsonError, Node, parse};
 use super::{toml, xml, yaml};
 use crate::notes::language::Language;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StructureFormat {
     Json,
     Yaml,
@@ -17,8 +14,7 @@ pub enum StructureFormat {
 }
 
 /// What the tree leaves out of the text, said rather than hidden.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JsonNotice {
     /// A stream of several YAML documents: the first one is explored.
     FirstDocumentOnly,

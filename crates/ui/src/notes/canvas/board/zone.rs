@@ -4,6 +4,7 @@
 //! header's grip and resizes by its corner, by the pointer or by the arrows once either has the
 //! focus: the keyboard twin of each drag.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     CornerRadius, FontFamily, Key, Popup, PopupCloseBehavior, Rect, Response, Role, Sense, Stroke,
     StrokeKind, Ui, UiBuilder, Vec2, WidgetInfo, pos2, vec2,
@@ -51,7 +52,7 @@ pub(super) fn show(
     );
     zone_ui.set_clip_rect(rect.intersect(ui.clip_rect()));
     let ui = &mut zone_ui;
-    let corner = CornerRadius::same(10);
+    let corner = CornerRadius::same(radius::CARD);
     let moving = hand.moving().is_some_and(
         |moving| matches!(&moving.kind, Kind::MoveZone(id) | Kind::ResizeZone(id) if *id == folder.id),
     );
@@ -132,7 +133,8 @@ fn header(
     grip(ui, grip_room, (zone, drawn.frame), language, hand, actions);
     let mut left = grip_room.right() + 4.0;
     let swatch = Rect::from_min_size(pos2(left, middle - 4.5), Vec2::splat(9.0));
-    ui.painter().rect_filled(swatch, CornerRadius::same(2), hue);
+    ui.painter()
+        .rect_filled(swatch, CornerRadius::same(radius::MARK), hue);
     left = swatch.right() + 9.0;
 
     let menu_room = Rect::from_center_size(
@@ -140,12 +142,19 @@ fn header(
         Vec2::splat(widgets::MIN_TARGET),
     );
     let count = drawn.notes.len().to_string();
-    let count_galley = widgets::text(ui, &count, 11.5, 400.0, FontFamily::Proportional, p.text_2);
+    let count_galley = widgets::text(
+        ui,
+        &count,
+        font::CONTROL,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let name_room = (menu_room.left() - 9.0 - count_galley.size().x - 9.0 - left).max(0.0);
     let name = widgets::text(
         ui,
         &folder.name,
-        13.0,
+        font::READING,
         500.0,
         FontFamily::Proportional,
         p.text_0,
@@ -162,7 +171,7 @@ fn header(
         Sense::click(),
         "board-zone-open",
         || WidgetInfo::labeled(Role::Button, true, &folder.name),
-        CornerRadius::same(3),
+        CornerRadius::same(radius::TAG),
     );
     let at = pos2(left, middle - name.size().y / 2.0);
     let clip = Rect::from_min_size(at, name_size);
@@ -202,7 +211,14 @@ fn header(
 /// « Drop here », said before the pointer lifts, where the ⋯ was.
 fn drop_here(ui: &mut Ui, head: Rect, hue: egui::Color32, language: i18n::Language) {
     let words = i18n::translate(language, keys::board::DROP_HERE, &[]);
-    let galley = widgets::text(ui, &words, 11.5, 400.0, FontFamily::Proportional, hue);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::CONTROL,
+        400.0,
+        FontFamily::Proportional,
+        hue,
+    );
     let at = pos2(
         head.right() - 12.0 - galley.size().x,
         head.center().y - galley.size().y / 2.0,
@@ -237,7 +253,7 @@ fn grip(
         Sense::click_and_drag(),
         "board-zone-grip",
         || WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(4),
+        CornerRadius::same(radius::TAG),
     );
     let response = widgets::tooltip(response, &label);
     let kind = Kind::MoveZone(zone.folder.id.clone());
@@ -279,7 +295,7 @@ fn resize_corner(
         Sense::click_and_drag(),
         "board-zone-resize",
         || WidgetInfo::labeled(Role::Button, true, &label),
-        CornerRadius::same(3),
+        CornerRadius::same(radius::TAG),
     );
     let response = widgets::tooltip(response, &label);
     let kind = Kind::ResizeZone(zone.folder.id.clone());
@@ -408,7 +424,7 @@ fn children(
     let galley = widgets::text(
         ui,
         &caption,
-        11.0,
+        font::META,
         400.0,
         FontFamily::Proportional,
         p.text_2,
@@ -426,7 +442,7 @@ fn children(
         .id_salt(("board-zone-children", &zone.folder.id))
         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
         .show(&mut list_ui, |ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+            ui.spacing_mut().item_spacing.x = gap::SNUG;
             ui.horizontal_centered(|ui| {
                 for child in &zone.children {
                     if chip(ui, child).clicked() {
@@ -446,15 +462,22 @@ fn chip(ui: &mut Ui, child: &BoardChild) -> egui::Response {
     let name = widgets::text(
         ui,
         &child.name,
-        11.5,
+        font::CONTROL,
         400.0,
         FontFamily::Proportional,
         p.text_1,
     );
     let count = child.count.to_string();
-    let counted = widgets::text(ui, &count, 11.5, 400.0, FontFamily::Proportional, p.text_2);
+    let counted = widgets::text(
+        ui,
+        &count,
+        font::CONTROL,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let width = 8.0 + 7.0 + 6.0 + name.size().x + 6.0 + counted.size().x + 9.0;
-    let corner = CornerRadius::same(12);
+    let corner = CornerRadius::same(radius::PANEL);
     let response = interact(
         ui,
         vec2(width, widgets::MIN_TARGET),
@@ -474,7 +497,8 @@ fn chip(ui: &mut Ui, child: &BoardChild) -> egui::Response {
     );
     let middle = rect.center().y;
     let swatch = Rect::from_min_size(pos2(rect.left() + 8.0, middle - 3.5), Vec2::splat(7.0));
-    ui.painter().rect_filled(swatch, CornerRadius::same(2), hue);
+    ui.painter()
+        .rect_filled(swatch, CornerRadius::same(radius::MARK), hue);
     let ink = if response.hovered() {
         p.text_0
     } else {
@@ -504,7 +528,14 @@ fn flow(
     if notes.is_empty() {
         let p = palette(ui.ctx());
         let words = i18n::translate(context.language, keys::board::EMPTY_ZONE, &[]);
-        let galley = widgets::text(ui, &words, 11.5, 400.0, FontFamily::Proportional, p.text_2);
+        let galley = widgets::text(
+            ui,
+            &words,
+            font::CONTROL,
+            400.0,
+            FontFamily::Proportional,
+            p.text_2,
+        );
         let rect = Rect::from_min_size(body.min + Vec2::splat(padding), galley.size());
         let response = ui.allocate_rect(rect, Sense::hover());
         response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));

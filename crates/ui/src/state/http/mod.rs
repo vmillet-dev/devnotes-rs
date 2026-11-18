@@ -109,6 +109,9 @@ struct Question {
 /// An image answer: its `data:` URL on its way, then its texture; `None` when it is none.
 enum Image {
     Asked(Pending<Option<String>>),
+    /// Off the window's thread: a picture of a few thousand pixels a side takes a tenth of a
+    /// second to decode.
+    Decoding(Pending<Option<egui::ColorImage>>),
     Shown(Option<egui::TextureHandle>),
 }
 
@@ -276,7 +279,7 @@ impl HttpState {
         errors: &mut ErrorNotifier,
     ) {
         self.explored.update(backend);
-        self.adopt_images(ctx);
+        self.adopt_images(ctx, backend);
         self.adopt_rewrites(errors);
         self.cookies_removed = self.cookies.update(backend, errors);
         self.adopt_container(errors);
@@ -400,28 +403,50 @@ impl HttpState {
                 api::http::inherited(backend, place.collection_id, place.folder_id)
             });
         }
-        self.body
-            .want((tab.draft.document.body.clone(), tab.draft.method));
+        // Copied only when they changed: a body of megabytes, copied four times a frame, cost
+        // milliseconds of every frame while its request was open.
+        let draft = &tab.draft;
+        if !self
+            .body
+            .wants(|(body, method)| *body == draft.document.body && *method == draft.method)
+        {
+            self.body.want((draft.document.body.clone(), draft.method));
+        }
         self.body
             .update(|(body, method)| api::http::describe_body(backend, body, method));
-        self.graphql.want(tab.draft.document.graphql.clone());
+        if !self
+            .graphql
+            .wants(|graphql| *graphql == draft.document.graphql)
+        {
+            self.graphql.want(draft.document.graphql.clone());
+        }
         self.graphql
             .update(|document| api::http::describe_graphql(backend, document));
-        let question = Question {
-            kind: tab.draft.kind,
-            document: tab.draft.document.clone(),
-            place: tab.place.clone(),
-            environment: self.environments.active_id().map(str::to_owned),
-            revision: self.revision,
-        };
-        self.implied.want(question.clone());
+        let environment = self.environments.active_id();
+        let asked = self.implied.wants(|question| {
+            question.kind == draft.kind
+                && question.revision == self.revision
+                && question.environment.as_deref() == environment
+                && question.place == tab.place
+                && question.document == draft.document
+        });
+        if !asked {
+            let question = Question {
+                kind: draft.kind,
+                document: draft.document.clone(),
+                place: tab.place.clone(),
+                environment: environment.map(str::to_owned),
+                revision: self.revision,
+            };
+            self.implied.want(question.clone());
+            self.used.want(question);
+        }
         self.implied.update(|question| {
             let place = question.place.map_or((None, None), |place| {
                 (Some(place.collection_id), place.folder_id)
             });
             api::http::implied_headers(backend, (question.kind, question.document), place)
         });
-        self.used.want(question);
         self.used.update(|question| {
             let place = question.place;
             let request = VariablesRequest {
@@ -1062,30 +1087,37 @@ impl HttpState {
     pub fn response_image(&self, send_id: &str) -> Option<&egui::TextureHandle> {
         match self.images.get(send_id)? {
             Image::Shown(texture) => texture.as_ref(),
-            Image::Asked(_) => None,
+            Image::Asked(_) | Image::Decoding(_) => None,
         }
     }
 
-    fn adopt_images(&mut self, ctx: &egui::Context) {
+    fn adopt_images(&mut self, ctx: &egui::Context, backend: &Backend) {
         for (id, image) in &mut self.images {
-            let Image::Asked(pending) = image else {
-                continue;
-            };
-            let Some(answer) = pending.poll() else {
-                continue;
-            };
-            let texture = answer
-                .ok()
-                .flatten()
-                .and_then(|url| decoded(&url))
-                .map(|picture| {
-                    ctx.load_texture(
-                        format!("http-image-{id}"),
-                        picture,
-                        egui::TextureOptions::LINEAR,
-                    )
-                });
-            *image = Image::Shown(texture);
+            match image {
+                Image::Asked(pending) => {
+                    let Some(answer) = pending.poll() else {
+                        continue;
+                    };
+                    *image = match answer.ok().flatten() {
+                        Some(url) => Image::Decoding(backend.compute(move |_| Ok(decoded(&url)))),
+                        None => Image::Shown(None),
+                    };
+                }
+                Image::Decoding(pending) => {
+                    let Some(answer) = pending.poll() else {
+                        continue;
+                    };
+                    let texture = answer.ok().flatten().map(|picture| {
+                        ctx.load_texture(
+                            format!("http-image-{id}"),
+                            picture,
+                            egui::TextureOptions::LINEAR,
+                        )
+                    });
+                    *image = Image::Shown(texture);
+                }
+                Image::Shown(_) => {}
+            }
         }
         let held: Vec<String> = self.sends.ids().map(str::to_owned).collect();
         self.images.retain(|id, _| held.contains(id));

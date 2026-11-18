@@ -153,7 +153,8 @@
     "fileInto": "Ranger dans",
     "noFolder": "Aucun dossier",
     "newCalc": "Calcul",
-    "newDrawing": "Dessin"
+    "newDrawing": "Dessin",
+    "cards": "Les cartes"
   },
   "filters": {
     "groupLabel": "Filtrer les notes",
@@ -226,7 +227,8 @@
     "reorganise": "Réorganiser {zones, plural, =0 {aucun dossier} one {# dossier} other {# dossiers}} et {cards, plural, =0 {aucune carte} one {# carte} other {# cartes}}",
     "reorganiseHint": "Replace et redimensionne les dossiers. Écrase les tailles choisies à la main ; annulable.",
     "subFolders": "Sous-dossiers de {{name}}",
-    "subFoldersLabel": "Sous-dossiers"
+    "subFoldersLabel": "Sous-dossiers",
+    "surface": "Surface du tableau"
   },
   "sort": {
     "label": "Trier et regrouper",
@@ -344,6 +346,7 @@
     "delete": "Supprimer",
     "deleteConfirm": "Confirmer ?",
     "close": "Fermer l’éditeur",
+    "closeKeys": "Échap",
     "header": {
       "title": "En-tête",
       "fold": "Replier l’en-tête",
@@ -610,6 +613,7 @@
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
     "httpFileTooLarge": "Le fichier {{path}} dépasse {{limit}} Mo : une requête n’en envoie pas de plus lourd.",
     "httpCancelled": "Envoi annulé.",
+    "sendNotKept": "La réponse est arrivée, mais son historique, ses cookies ou les variables écrites par ses scripts n’ont pas pu être enregistrés.",
     "httpFell": "L’envoi s’est arrêté sur une erreur interne.",
     "httpNetwork": "Erreur réseau.",
     "httpWebsocketScheme": "Un WebSocket s’ouvre sur ws:// ou wss://.",
@@ -638,7 +642,8 @@
     "httpScriptFile": "Un script veut envoyer le fichier {{path}} sans votre accord : la requête n’est pas partie.",
     "httpRunData": {
       "unreadable": "Ce fichier ne se lit ni comme un CSV avec son en-tête, ni comme un tableau JSON d’objets.",
-      "empty": "Ce fichier ne contient aucune ligne de données."
+      "empty": "Ce fichier ne contient aucune ligne de données.",
+      "tooLarge": "Ce fichier dépasse 50 Mo : une exécution n’en lit pas davantage."
     },
     "noFileDialog": "Ce bureau n’a pas de dialogue de fichiers à afficher : xdg-desktop-portal est absent.",
     "updateRefused": "Cette mise à jour a été refusée : sa signature ne correspond pas. Rien n’a été installé.",
@@ -743,6 +748,9 @@
     "addTagLabel": "Ajouter un tag à la sélection",
     "addTagPlaceholder": "+ tag",
     "removeTag": "Retirer un tag",
+    "addTag": "Ajouter un tag",
+    "more": "Autres actions sur la sélection",
+    "copyMarkdown": "Copier en Markdown",
     "pin": "Épingler",
     "unpin": "Désépingler",
     "delete": "Mettre à la corbeille",
@@ -906,6 +914,7 @@
     "importedWithoutSomeAttachments": "{notes, plural, =0 {Aucune note importée} one {# note importée} other {# notes importées}} depuis {{path}}. ⚠️ {missing, plural, one {# pièce jointe annoncée} other {# pièces jointes annoncées}} par le fichier mais {missing, plural, one {absente} other {absentes}} : leur aperçu restera vide.",
     "exported": "{notes, plural, one {# note exportée} other {# notes exportées}} vers {{path}}.",
     "exportedWithAttachments": "{notes, plural, one {# note} other {# notes}} et {attachments, plural, one {# pièce jointe exportée} other {# pièces jointes exportées}} vers {{path}}.",
+    "exportedWithoutUnreadable": "{notes, plural, one {# note exportée} other {# notes exportées}} vers {{path}}. ⚠️ {unreadable, plural, one {# pièce jointe illisible laissée} other {# pièces jointes illisibles laissées}} de côté.",
     "exportedProtected": "{notes, plural, one {# note exportée} other {# notes exportées}} vers {{path}}, scellées avec la phrase de passe que vous lui avez donnée.",
     "exportedProtectedWithAttachments": "{notes, plural, one {# note} other {# notes}} et {attachments, plural, one {# pièce jointe exportée} other {# pièces jointes exportées}} vers {{path}}, scellées avec la phrase de passe que vous lui avez donnée.",
     "protectTitle": "Protéger cet export ?",
@@ -919,11 +928,12 @@
     "cancel": "Annuler",
     "working": "En cours…",
     "copied": "{notes, plural, one {# note copiée} other {# notes copiées}} en Markdown dans le presse-papier.",
-    "needsSelection": "Sélectionnez au moins une note.",
+    "needsSelection": "Cochez d’abord des notes",
     "emptyLibrary": "Rien à exporter : cette bibliothèque n’a aucune note.",
     "emptySpace": "Rien à exporter : cet espace n’a aucune note.",
     "preferences": "Préférences…",
-    "importedIntoFolders": "{notes, plural, =0 {Aucune note importée} one {# note importée} other {# notes importées}} depuis {{path}} dans {folders, plural, one {# nouveau dossier} other {# nouveaux dossiers}}, {skipped, plural, one {# ignorée} other {# ignorées}}."
+    "importedIntoFolders": "{notes, plural, =0 {Aucune note importée} one {# note importée} other {# notes importées}} depuis {{path}} dans {folders, plural, one {# nouveau dossier} other {# nouveaux dossiers}}, {skipped, plural, one {# ignorée} other {# ignorées}}.",
+    "needsSpace": "Choisissez d’abord un espace"
   },
   "shortcuts": {
     "unavailable": "{count, plural, one {Raccourci global indisponible} other {Raccourcis globaux indisponibles}} : {{list}}. Une autre application {count, plural, one {l’utilise} other {les utilise}} déjà.",
@@ -1030,7 +1040,8 @@
       "general": "Général",
       "variables": "Variables",
       "shortcuts": "Raccourcis",
-      "security": "Sécurité"
+      "security": "Sécurité",
+      "backups": "Sauvegardes"
     },
     "copied": "Copié dans le presse-papier.",
     "appearance": {
@@ -1117,7 +1128,7 @@
       "passphrase": "Phrase de passe",
       "change": "Changer…",
       "changing": "Changement…",
-      "note": "Elle ouvre la bibliothèque à chaque lancement. La changer ne rechiffre rien : les notes restent scellées avec la même clé, d’où une seconde plutôt qu’une réécriture.",
+      "note": "Elle ouvre la bibliothèque à chaque lancement ; la changer ne rechiffre rien, d’où une seconde plutôt qu’une réécriture.",
       "dialogTitle": "Changer la phrase de passe",
       "dialogLead": "La nouvelle s’applique au prochain lancement. Cette session continue telle quelle.",
       "current": "Phrase actuelle",
@@ -1125,13 +1136,13 @@
       "cancel": "Annuler",
       "changed": "Phrase de passe changée. L’ancienne n’ouvre plus la bibliothèque ni les copies gardées à côté.",
       "automaticBackups": "Copier la bibliothèque au lancement",
-      "backupsNote": "Au plus une copie par jour, les trois dernières gardées à côté de la bibliothèque — de quoi couvrir une corbeille vidée ou une mise à jour ratée. Pas une protection contre un disque mort : pour ça, exportez ailleurs.",
+      "backupsNote": "Au plus une copie par jour, les trois dernières gardées à côté de la bibliothèque ; contre un disque mort, exportez ailleurs.",
       "changedOneLeft": "Phrase de passe changée, mais une copie n’a pas pu être réenveloppée : elle s’ouvre encore avec l’ancienne phrase.",
       "changedSomeLeft": "Phrase de passe changée, mais {{count}} copies n’ont pas pu être réenveloppées : elles s’ouvrent encore avec l’ancienne phrase.",
-      "copiesNote": "Les copies gardées à côté de la bibliothèque sont réenveloppées avec elle. Un fichier de clé que vous auriez copié ailleurs, lui, s’ouvrira toujours avec l’ancienne phrase.",
+      "copiesNote": "Les copies gardées à côté sont réenveloppées avec elle ; un fichier de clé copié ailleurs garde l’ancienne.",
       "backups": "Copies de sauvegarde",
       "access": "Accès",
-      "backupsLimit": "Une copie emporte les notes, la clé qui les ouvre et les pièces jointes. Celles-ci sont liées plutôt que dupliquées, partagées avec la bibliothèque : une copie ne coûte guère plus que ses notes."
+      "backupsLimit": "Une copie emporte les notes, leur clé et les pièces jointes, liées plutôt que dupliquées."
     },
     "notifications": {
       "title": "Notifications",
@@ -2005,6 +2016,8 @@
         "paragraphs": "Paragraphes"
       },
       "count": "Nombre",
+      "fewer": "Un de moins",
+      "more": "Un de plus",
       "opening": "Commencer par « Lorem ipsum »",
       "again": "Régénérer",
       "noteTitle": "Lorem ipsum",
@@ -3399,6 +3412,7 @@
       "save": "Enregistrer",
       "saveHint": "Enregistrer (Ctrl+S)",
       "parts": "Parties de la requête",
+      "moreParts": "Autres parties de la requête",
       "sections": {
         "params": "Paramètres",
         "headers": "En-têtes",
@@ -3903,6 +3917,7 @@
       "failed": "Le run n’a pas pu aller au bout.",
       "failures": "{count, plural, one {# échec} other {# échecs}}",
       "cancelled": "Annulé · {{done}} sur {count, plural, one {# requête} other {# requêtes}}",
+      "capped": "Arrêtée après {count, plural, one {# requête} other {# requêtes}} dans une itération : un script relance l’exécution en boucle",
       "allPassed": "Tout passe",
       "requests": "{count, plural, one {# requête} other {# requêtes}}",
       "iterationsCount": "{count, plural, one {# itération} other {# itérations}}",
@@ -4253,10 +4268,14 @@
     "embed": "Insérer un dessin",
     "embedNone": "Aucun dessin à insérer",
     "missing": "Dessin introuvable",
-    "noPicture": "Pas encore d’aperçu"
+    "noPicture": "Pas encore d’aperçu",
+    "preview": "Aperçu du dessin"
   },
   "crash": {
     "title": "{{app}} s’est arrêté",
     "body": "Une erreur interne a fermé {{app}}. Tout ce qui était enregistré est intact ; le détail est dans le journal :\n{{folder}}"
+  },
+  "dialog": {
+    "close": "Fermer"
   }
 }

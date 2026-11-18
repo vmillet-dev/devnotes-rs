@@ -16,7 +16,7 @@ use crate::testing;
 pub(crate) fn collection(backend: &Backend, name: &str) -> HttpCollection {
     let name = name.to_owned();
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::http::create_http_collection(engine, name)
+        engine::http::create_http_collection(engine, &name)
     })
     .unwrap()
 }
@@ -24,7 +24,7 @@ pub(crate) fn collection(backend: &Backend, name: &str) -> HttpCollection {
 pub(crate) fn folder(backend: &Backend, collection: &HttpCollection, name: &str) -> HttpFolder {
     let (id, name) = (collection.id.clone(), name.to_owned());
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::http::create_http_folder(engine, id, None, name)
+        engine::http::create_http_folder(engine, &id, None, &name)
     })
     .unwrap()
 }
@@ -47,7 +47,7 @@ pub(crate) fn request(
         },
     };
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::http::create_http_request(engine, draft)
+        engine::http::create_http_request(engine, &draft)
     })
     .unwrap()
 }
@@ -840,7 +840,7 @@ pub(crate) fn sending_to(path: &str) -> Harness<'static, Bench> {
         },
     };
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::http::create_http_request(engine, draft)
+        engine::http::create_http_request(engine, &draft)
     })
     .unwrap();
     let mut harness = area_of(Area::Http, backend, profile);

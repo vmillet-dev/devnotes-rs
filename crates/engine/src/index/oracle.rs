@@ -75,7 +75,7 @@ impl World {
             let draft = SpaceDraft {
                 name: name.to_string(),
             };
-            let id = spaces::create_space(&world.engine, draft).unwrap().id;
+            let id = spaces::create_space(&world.engine, &draft).unwrap().id;
             world.spaces.push(id);
         }
         for (name, space) in [("SQL", 0), ("Prod", 0), ("Infra", 1)] {
@@ -93,7 +93,7 @@ impl World {
             name: name.to_string(),
             parent_id: None,
         };
-        let id = folders::create_folder(&self.engine, draft).unwrap().id;
+        let id = folders::create_folder(&self.engine, &draft).unwrap().id;
         self.folders.push(id);
     }
 
@@ -168,43 +168,39 @@ impl World {
                     content: Some(self.text()),
                     ..NotePatch::default()
                 };
-                let _ = notes::update_note(&engine, id, patch);
+                let _ = notes::update_note(&engine, &id, &patch);
             }
-            2 => drop(notes::tag_notes(&engine, one, vec![tag])),
-            3 => drop(notes::remove_tag(&engine, one, tag)),
-            4 => drop(notes::set_pinned(&engine, one, self.dice.roll(2) == 0)),
+            2 => drop(notes::tag_notes(&engine, &one, &[tag])),
+            3 => drop(notes::remove_tag(&engine, &one, tag)),
+            4 => drop(notes::set_pinned(&engine, &one, self.dice.roll(2) == 0)),
             5 => drop(notes::set_priority(
                 &engine,
-                one,
+                &one,
                 *self.dice.pick(&Priority::ALL),
             )),
-            6 => drop(notes::delete_notes(&engine, one)),
+            6 => drop(notes::delete_notes(&engine, &one)),
             7 => {
                 let space = self.dice.pick(&self.spaces).clone();
-                drop(notes::move_notes(&engine, one, space));
+                drop(notes::move_notes(&engine, &one, &space));
             }
             8 => {
                 let folder = self.dice.pick(&self.folders).clone();
                 drop(folders::file_notes(
                     &engine,
-                    one,
-                    Some(folder),
+                    &one,
+                    Some(&folder),
                     crate::folders::board::PreviewLines::default(),
                 ));
             }
             9 => {
                 let values = BTreeMap::from([("host".to_string(), self.text())]);
-                drop(notes::set_placeholder_values(&engine, id, values));
+                drop(notes::set_placeholder_values(&engine, &id, values));
             }
             10 => {
                 let values = BTreeMap::from([("host".to_string(), self.text())]);
                 drop(notes::set_global_placeholders(&engine, values));
             }
-            _ => drop(notes::rename_tags(
-                &engine,
-                vec![tag],
-                (*self.dice.pick(&TAGS)).to_string(),
-            )),
+            _ => drop(notes::rename_tags(&engine, &[tag], self.dice.pick(&TAGS))),
         }
     }
 
@@ -269,36 +265,40 @@ impl World {
 
 /// Everything the screen draws of `view`: its sections, each card as it is displayed, and the
 /// rails.
-fn drawn(view: &NotesView) -> serde_json::Value {
-    let sections: Vec<serde_json::Value> = view
+fn drawn(view: &NotesView) -> String {
+    let sections: Vec<_> = view
         .sections
         .iter()
         .map(|section| {
-            serde_json::json!({
-                "key": section.key,
-                "id": section.id,
-                "group": section.group,
-                "expiring": section.has_expiring_notes,
-                "ghost": section.show_create_ghost,
-                "cards": section
-                    .cards
-                    .iter()
-                    .map(|card| view.display(card))
-                    .collect::<Vec<_>>(),
-            })
+            let cards: Vec<_> = section
+                .cards
+                .iter()
+                .map(|card| view.display(card))
+                .collect();
+            (
+                &section.key,
+                &section.id,
+                &section.group,
+                section.has_expiring_notes,
+                section.show_create_ghost,
+                cards,
+            )
         })
         .collect();
-    serde_json::json!({
-        "sections": sections,
-        "tags": view.available_tags,
-        "languages": view.available_languages,
-        "kinds": view.kind_counts,
-        "priorities": view.priority_counts,
-        "tagCounts": view.tag_counts,
-        "languageCounts": view.language_counts,
-        "filtering": view.is_filtering,
-        "matched": view.matched,
-    })
+    format!(
+        "{:#?}",
+        (
+            sections,
+            &view.available_tags,
+            &view.available_languages,
+            &view.kind_counts,
+            &view.priority_counts,
+            &view.tag_counts,
+            &view.language_counts,
+            view.is_filtering,
+            view.matched,
+        )
+    )
 }
 
 #[test]
@@ -309,7 +309,7 @@ fn every_query_answers_what_the_database_answers_through_random_writes() {
             world.write();
             for _ in 0..4 {
                 let query = world.query();
-                let from_index = notes::query_notes(&world.engine, query.clone()).unwrap();
+                let from_index = notes::query_notes(&world.engine, &query).unwrap();
                 let from_database =
                     notes::query_notes_from_database(&world.engine, &query).unwrap();
                 assert_eq!(
@@ -361,7 +361,7 @@ fn a_query_landing_between_two_slices_sees_every_note() {
         pinned_first: false,
     };
 
-    let view = notes::query_notes(&world.engine, everything).unwrap();
+    let view = notes::query_notes(&world.engine, &everything).unwrap();
 
     assert_eq!(view.matched, 12);
     assert!(world.engine.index().unwrap().is_complete());

@@ -2,8 +2,6 @@
 //! French and in English. Both languages are read whatever the language on screen, so a sheet
 //! keeps its meaning for everyone; the front proposes the spelling of the one on screen.
 
-use serde::Serialize;
-
 use super::lexer::{Tok, Token};
 use crate::closed_enum::closed_enum;
 
@@ -117,8 +115,7 @@ closed_enum! {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WordClass {
     /// Reserved: `en = 5` is an error on its line, never a name.
     Syntax,
@@ -394,8 +391,7 @@ pub(super) fn scale_at(tokens: &[Token], at: usize) -> Option<(u64, usize)> {
 }
 
 /// A concept and its spellings, as the front's completion reads them.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct WordEntry {
     pub word: CalcWord,
     pub class: WordClass,

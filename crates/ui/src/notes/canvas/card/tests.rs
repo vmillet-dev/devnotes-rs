@@ -24,7 +24,7 @@ fn write(backend: &Backend, shape: impl FnOnce(&mut NoteDraft) + Send + 'static)
         ..NotePatch::default()
     };
     let at = id.clone();
-    let mut written = backend.db(move |engine| engine::notes::update_note(engine, at, patch));
+    let mut written = backend.db(move |engine| engine::notes::update_note(engine, &at, &patch));
     backend.settle();
     written.poll().unwrap().unwrap();
     id
@@ -223,7 +223,7 @@ fn an_item_ticked_on_its_card_is_written_and_shown_done() {
 
     assert_eq!(label(&harness, "note-card-progress"), "1/3");
     let note = engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::notes::get_note(engine, id)
+        engine::notes::get_note(engine, &id)
     })
     .unwrap();
     assert!(note.items[0].done);
@@ -274,7 +274,7 @@ fn a_priority_is_its_bars_in_the_top_band() {
     let (backend, profile) = testing::unlocked();
     let id = write(&backend, |draft| draft.title = "urgent fix".into());
     let mut set =
-        backend.db(move |engine| engine::notes::set_priority(engine, vec![id], Priority::Urgent));
+        backend.db(move |engine| engine::notes::set_priority(engine, &[id], Priority::Urgent));
     backend.settle();
     set.poll().unwrap().unwrap();
 
@@ -363,7 +363,7 @@ fn a_drawing_shows_its_picture_once_decoded() {
         }),
         ..NotePatch::default()
     };
-    let mut written = backend.db(move |engine| engine::notes::update_note(engine, id, patch));
+    let mut written = backend.db(move |engine| engine::notes::update_note(engine, &id, &patch));
     backend.settle();
     written.poll().unwrap().unwrap();
 

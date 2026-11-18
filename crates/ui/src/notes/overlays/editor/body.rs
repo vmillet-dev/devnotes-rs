@@ -1,5 +1,6 @@
 //! The body under the header, by kind, and what the footer counts of it.
 
+use crate::theme::tokens::font;
 use egui::{FontFamily, FontId, TextEdit, Ui};
 use engine::notes::checklist::ChecklistItem;
 use engine::notes::kind::NoteKind;
@@ -35,11 +36,11 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, note: &DisplayNote, body: &mut
     let language = state.language;
     let (font, hint) = match note.kind {
         NoteKind::Note => (
-            FontId::new(14.0, FontFamily::Proportional),
+            FontId::new(font::SUBTITLE, FontFamily::Proportional),
             keys::editor::EMPTY_RICH,
         ),
         _ => (
-            FontId::new(13.0, FontFamily::Monospace),
+            FontId::new(font::READING, FontFamily::Monospace),
             keys::editor::EMPTY_BODY,
         ),
     };

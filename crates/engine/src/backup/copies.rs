@@ -117,8 +117,7 @@ fn link_files(from: &Path, to: &Path) -> std::io::Result<()> {
 }
 
 /// One copy, as the interface lists it.
-#[derive(Debug, Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct Backup {
     /// The folder's name, which is its stamp, and what a restore asks for.
     pub id: String,
@@ -261,12 +260,6 @@ pub(crate) fn rewrap(library: &Path, vault: &Vault, passphrase: &str, cost: Cost
     }
 
     tally
-}
-
-/// Anything but a plain `"false"` keeps the copies: a missing or unreadable preference must
-/// not switch a safety net off.
-pub(crate) fn wanted(stored: Option<&str>) -> bool {
-    stored != Some("false")
 }
 
 #[cfg(test)]
@@ -468,16 +461,6 @@ pub(crate) mod tests {
         assert_eq!(kept.len(), KEEP);
         // The newest survive, not the first ones taken.
         assert_eq!(taken_at(&kept[0]).unwrap(), at(5 * 25));
-    }
-
-    #[test]
-    fn only_a_preference_turning_them_off_turns_them_off() {
-        assert!(wanted(Some("true")));
-        assert!(wanted(None), "a missing preference keeps the copies");
-        assert!(wanted(Some("")), "a truncated value keeps them too");
-        assert!(wanted(Some("False")), "and anything this build cannot read");
-
-        assert!(!wanted(Some("false")));
     }
 
     /// Changing the phrase is what somebody does when they believe the old one leaked, and each

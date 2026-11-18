@@ -2,10 +2,7 @@
 //! opens a release, `### ` a category, `- ` an entry, and an indented line continues the
 //! one above. Reshaping the file past that empties "Nouveautés".
 
-use serde::Serialize;
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangelogRelease {
     /// `0.1.1`, or whatever the heading names. Square brackets are dropped.
     pub version: String,
@@ -15,8 +12,7 @@ pub struct ChangelogRelease {
 }
 
 /// One `### ` heading, or the anonymous one a release with no category gets.       
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangelogSection {
     /// Empty for that anonymous category: the front then renders no heading.
     pub title: String,
@@ -25,20 +21,18 @@ pub struct ChangelogSection {
 
 /// One bullet, cut into the runs it is drawn with.
 ///
-/// Runs and not a line of markdown: the panel renders them with a `switch` and three
-/// spans, so nothing has to be trusted, sanitised or handed to `innerHTML`.
+/// Runs and not a line of Markdown: the panel draws each run as it is, so nothing has to be
+/// trusted or sanitised.
 pub type ChangelogEntry = Vec<ChangelogSpan>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpanKind {
     Plain,
     Strong,
     Code,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangelogSpan {
     pub kind: SpanKind,
     pub text: String,

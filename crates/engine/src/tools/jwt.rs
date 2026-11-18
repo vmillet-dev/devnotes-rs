@@ -6,7 +6,7 @@ use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use chrono::{DateTime, SecondsFormat, Utc};
 use hmac::{KeyInit, Mac, SimpleHmac};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::{Map, Value};
 use zeroize::Zeroize;
 
@@ -56,8 +56,7 @@ impl AlgorithmFamily {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DatedClaim {
     pub name: String,
     pub iso: String,
@@ -89,8 +88,7 @@ pub enum Verification {
     UnreadableSecret,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JwtProblem {
     /// Not three segments; five is an encrypted token (JWE), not decoded here.
     SegmentCount,
@@ -100,8 +98,7 @@ pub enum JwtProblem {
     NotObject,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JwtRequest {
     pub token: String,
     /// Empty asks for no verification. Zeroed once used.
@@ -109,12 +106,7 @@ pub struct JwtRequest {
     pub secret_is_base64: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum JwtAnswer {
     Decoded {
         header: String,

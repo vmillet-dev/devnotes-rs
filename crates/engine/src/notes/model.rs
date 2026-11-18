@@ -59,12 +59,10 @@ pub enum NoteLifecycle {
     Expires { at: DateTime<Utc> },
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct NoteDraft {
     pub space_id: String,
     /// Set by the two places that file a new note: the board and the inside of a folder.
-    #[serde(default)]
     pub folder_id: Option<String>,
     pub title: String,
     pub language: Language,
@@ -73,11 +71,8 @@ pub struct NoteDraft {
     pub tags: Vec<String>,
     pub pinned: bool,
     pub lifecycle: NoteLifecycle,
-    #[serde(default)]
     pub kind: NoteKind,
-    #[serde(default)]
     pub priority: Priority,
-    #[serde(default)]
     pub items: Vec<ChecklistItem>,
 }
 
@@ -85,17 +80,14 @@ pub struct NoteDraft {
 ///
 /// An index into the folders the same command creates, which have no id yet. `None` stays
 /// loose, which the first launch shows on purpose.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct SampleNote {
-    #[serde(default)]
     pub folder: Option<u32>,
     pub draft: NoteDraft,
 }
 
 /// A field set to `None` stays unchanged.
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default)]
 pub struct NotePatch {
     pub space_id: Option<String>,
     pub title: Option<String>,
@@ -209,8 +201,7 @@ const EXPIRING_SOON: TimeDelta = TimeDelta::days(3);
 
 /// The decision, not the rendering: the dated variants carry a date and not a label,
 /// so "4 min ago" ages on screen without a round trip.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NoteFooter {
     Source {
         value: String,
@@ -229,10 +220,8 @@ pub enum NoteFooter {
 }
 
 /// `flatten`: the front end has a single note type.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct DisplayNote {
-    #[serde(flatten)]
     pub note: Note,
     pub footer: NoteFooter,
     pub expiring_soon: bool,
@@ -260,8 +249,7 @@ pub struct DisplayNote {
 }
 
 /// One line of a Note as a card draws it, read from its Markdown by `notes::markdown`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OutlineLine {
     Heading {
         text: String,
@@ -315,8 +303,7 @@ impl OutlineLine {
 }
 
 /// A Note shown a slide at a time, as `notes::markdown::present` cuts it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Presentation {
     /// Each slide's Markdown, as the body holds it: the slide is drawn by the rich editor.
     pub slides: Vec<String>,
@@ -325,8 +312,7 @@ pub struct Presentation {
 }
 
 /// A heading of the Note in its mind map, with the slide it is on and the headings under it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapNode {
     pub text: String,
     pub slide: u32,
@@ -554,19 +540,16 @@ pub(crate) fn expires_soon(note: &Note, now: DateTime<Utc>) -> bool {
 }
 
 /// Where a note sat before a batch moved it — the only thing that can put it back.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct NotePlacement {
     pub note_id: String,
     pub space_id: String,
     /// The folder the move took it out of, which the undo puts it back into while it exists.
-    #[serde(default)]
     pub folder_id: Option<String>,
 }
 
 /// A note's priority before a batch moved it: its undo puts back each note's own.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NotePriority {
     pub note_id: String,
     pub priority: Priority,
@@ -574,15 +557,13 @@ pub struct NotePriority {
 
 /// One tag on one note: a batch answers pair by pair, so its undo cannot strip a tag the note
 /// already carried.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct NoteTag {
     pub note_id: String,
     pub tag: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct TagUsage {
     pub tag: String,
     pub note_count: u32,

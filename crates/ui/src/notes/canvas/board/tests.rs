@@ -25,8 +25,8 @@ fn note_in(
         if folder.is_some() {
             engine::folders::file_notes(
                 engine,
-                vec![note.id.clone()],
-                folder,
+                std::slice::from_ref(&note.id),
+                folder.as_ref(),
                 engine::folders::board::PreviewLines::default(),
             )?;
         }
@@ -172,7 +172,7 @@ fn board_budget() {
     let mut harness = area(backend, profile);
     click(&mut harness, "space-option", "Corpus");
     click_id(&mut harness, "view-board");
-    let centre = rect_of(&harness, "board", "board").center();
+    let centre = rect_of(&harness, "board", "Board").center();
     harness.event(egui::Event::PointerMoved(centre));
     let mut frames = Vec::new();
     for _ in 0..200 {
@@ -239,7 +239,7 @@ fn far_off(harness: &Harness<'_, Bench>, space: &Space, name: &str) {
     let space_id = space.id.clone();
     let name = name.to_owned();
     engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        let folder = engine::folders::list_folders(engine, Some(space_id))?
+        let folder = engine::folders::list_folders(engine, Some(&space_id))?
             .into_iter()
             .find(|folder| folder.name == name)
             .unwrap();
@@ -252,7 +252,7 @@ fn far_off(harness: &Harness<'_, Bench>, space: &Space, name: &str) {
                 height: 220,
             },
         };
-        engine::folders::save_board_layout(engine, None, vec![zone], Vec::new())
+        engine::folders::save_board_layout(engine, None, &[zone], &Vec::new())
     })
     .unwrap();
 }
@@ -338,7 +338,7 @@ fn filed_in(harness: &Harness<'_, Bench>, title: &str) -> Option<String> {
 fn folder_named(harness: &Harness<'_, Bench>, space: &Space, name: &str) -> Folder {
     let space_id = space.id.clone();
     engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::folders::list_folders(engine, Some(space_id))
+        engine::folders::list_folders(engine, Some(&space_id))
     })
     .unwrap()
     .into_iter()
@@ -489,7 +489,7 @@ fn the_grip_and_the_corner_answer_the_arrows_a_dot_at_a_time() {
 fn a_band_drawn_on_the_ground_becomes_the_folder_named_there() {
     let (mut harness, tableau) = tableau();
     click_id(&mut harness, "view-board");
-    let ground = rect_of(&harness, "board", "board");
+    let ground = rect_of(&harness, "board", "Board");
     let from = egui::pos2(ground.left() + 520.0, ground.top() + 420.0);
 
     drag(
@@ -519,7 +519,7 @@ fn a_band_drawn_on_the_ground_becomes_the_folder_named_there() {
 fn a_right_button_sweep_ticks_the_cards_it_crosses_zones_included() {
     let (mut harness, _) = tableau();
     click_id(&mut harness, "view-board");
-    let ground = rect_of(&harness, "board", "board");
+    let ground = rect_of(&harness, "board", "Board");
 
     drag(
         &mut harness,

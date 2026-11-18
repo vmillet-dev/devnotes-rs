@@ -22,7 +22,7 @@ fn folder(session: &Session, space_id: &str, name: &str) -> String {
         name: name.to_string(),
     };
 
-    session.call(|e| create_folder(e, draft)).unwrap().id
+    session.call(|e| create_folder(e, &draft)).unwrap().id
 }
 
 fn board(space_id: &str) -> BoardQuery {
@@ -36,6 +36,7 @@ fn board(space_id: &str) -> BoardQuery {
         kinds: Vec::new(),
         priorities: Vec::new(),
         now: Utc::now(),
+        tz_offset_minutes: 0,
         preview_lines: PreviewLines::default(),
     }
 }
@@ -46,17 +47,13 @@ fn a_folder_is_created_renamed_recoloured_and_deleted() {
     let space = session.space("Personal");
     let id = folder(&session, &space, "Scripts");
 
-    let renamed = session
-        .call(|e| rename_folder(e, id.clone(), "Shell".to_string()))
-        .unwrap();
+    let renamed = session.call(|e| rename_folder(e, &id, "Shell")).unwrap();
     let recoloured = session
-        .call(|e| recolour_folder(e, id.clone(), FolderColour::Amber))
+        .call(|e| recolour_folder(e, &id, FolderColour::Amber))
         .unwrap();
-    let listed = session
-        .call(|e| list_folders(e, Some(space.clone())))
-        .unwrap();
+    let listed = session.call(|e| list_folders(e, Some(&space))).unwrap();
     session
-        .call(|e| delete_folder(e, id.clone(), PreviewLines::default()))
+        .call(|e| delete_folder(e, &id, PreviewLines::default()))
         .unwrap();
 
     assert_eq!(renamed.name, "Shell");
@@ -77,7 +74,7 @@ fn a_folder_without_a_readable_name_is_refused() {
     };
 
     assert!(matches!(
-        code(session.call(|e| create_folder(e, draft))),
+        code(session.call(|e| create_folder(e, &draft))),
         ErrorCode::InvalidInput
     ));
 }
@@ -87,7 +84,7 @@ fn a_folder_that_does_not_exist_is_named_as_such() {
     let session = Session::open();
 
     assert!(matches!(
-        code(session.call(|e| rename_folder(e, "missing".to_string(), "Shell".to_string()))),
+        code(session.call(|e| rename_folder(e, "missing", "Shell"))),
         ErrorCode::FolderNotFound
     ));
 }
@@ -107,17 +104,17 @@ fn a_filing_is_undone_by_the_filings_it_answered() {
         .call(|e| {
             file_notes(
                 e,
-                vec![note.clone()],
-                Some(zone.clone()),
+                std::slice::from_ref(&note),
+                Some(&zone),
                 PreviewLines::default(),
             )
         })
         .unwrap();
-    let filed = session.call(|e| board_view(e, board(&space))).unwrap();
+    let filed = session.call(|e| board_view(e, &board(&space))).unwrap();
     let undone = session
-        .call(|e| file_notes_back(e, filings, PreviewLines::default()))
+        .call(|e| file_notes_back(e, &filings, PreviewLines::default()))
         .unwrap();
-    let unfiled = session.call(|e| board_view(e, board(&space))).unwrap();
+    let unfiled = session.call(|e| board_view(e, &board(&space))).unwrap();
 
     assert_eq!(filed.zones[0].notes.len(), 1);
     assert!(filed.loose.is_empty());
@@ -144,14 +141,14 @@ fn a_saved_layout_is_what_a_tidy_up_hands_back() {
     };
 
     session
-        .call(|e| save_board_layout(e, None, vec![placement], Vec::new()))
+        .call(|e| save_board_layout(e, None, &[placement], &Vec::new()))
         .unwrap();
-    let saved = session.call(|e| board_view(e, board(&space))).unwrap();
+    let saved = session.call(|e| board_view(e, &board(&space))).unwrap();
     let arranged = session
         .call(|e| {
             arrange_board(
                 e,
-                space.clone(),
+                &space,
                 None,
                 BoardScope::Everything,
                 PreviewLines::default(),
@@ -190,7 +187,7 @@ fn sub_folder(session: &Session, space_id: &str, parent: &str, name: &str) -> St
         name: name.to_string(),
     };
 
-    session.call(|e| create_folder(e, draft)).unwrap().id
+    session.call(|e| create_folder(e, &draft)).unwrap().id
 }
 
 fn filed_note(session: &Session, space_id: &str, folder_id: &str) -> String {
@@ -203,8 +200,8 @@ fn filed_note(session: &Session, space_id: &str, folder_id: &str) -> String {
         .call(|e| {
             file_notes(
                 e,
-                vec![id.clone()],
-                Some(folder_id.to_string()),
+                std::slice::from_ref(&id),
+                Some(&folder_id.to_string()),
                 PreviewLines::default(),
             )
         })
@@ -223,7 +220,7 @@ fn a_card_names_the_sub_folder_it_comes_from_and_no_other() {
     let own = filed_note(&session, &space, &sql);
     let deeper = filed_note(&session, &space, &perf);
 
-    let board = session.call(|e| board_view(e, board(&space))).unwrap();
+    let board = session.call(|e| board_view(e, &board(&space))).unwrap();
     let chip = |id: &str| {
         board.zones[0]
             .notes
@@ -239,11 +236,16 @@ fn a_card_names_the_sub_folder_it_comes_from_and_no_other() {
 
     let mut inside = notes_query(&space);
     inside.folder_id = Some(sql.clone());
-    let view = session.call(|e| query_notes(e, inside)).unwrap();
+    let view = session.call(|e| query_notes(e, &inside)).unwrap();
     let chips: Vec<Option<String>> = view.sections[0]
         .cards
         .iter()
-        .map(|card| view.display(card).folder.map(|folder| folder.name))
+        .map(|card| {
+            view.display(card)
+                .folder
+                .as_ref()
+                .map(|folder| folder.name.clone())
+        })
         .collect();
     assert_eq!(chips.len(), 2);
     assert!(chips.contains(&None) && chips.contains(&Some("Perf".to_string())));
@@ -256,17 +258,61 @@ fn a_folder_moved_into_another_comes_back_with_its_undo() {
     let sql = folder(&session, &space, "SQL");
     let perf = folder(&session, &space, "Perf");
 
-    let was = session
-        .call(|e| move_folder(e, perf.clone(), Some(sql.clone())))
-        .unwrap();
-    let nested = session.call(|e| board_view(e, board(&space))).unwrap();
-    let refused = session.call(|e| move_folder(e, sql.clone(), Some(perf.clone())));
-    let back = session.call(|e| move_folder_back(e, was)).unwrap();
-    let flat = session.call(|e| board_view(e, board(&space))).unwrap();
+    let was = session.call(|e| move_folder(e, &perf, Some(&sql))).unwrap();
+    let nested = session.call(|e| board_view(e, &board(&space))).unwrap();
+    let refused = session.call(|e| move_folder(e, &sql, Some(&perf)));
+    let back = session.call(|e| move_folder_back(e, &was)).unwrap();
+    let flat = session.call(|e| board_view(e, &board(&space))).unwrap();
 
     assert_eq!(nested.zones.len(), 1);
     assert_eq!(nested.zones[0].children[0].id, perf);
     assert!(matches!(code(refused), ErrorCode::InvalidInput));
     assert!(back);
     assert_eq!(flat.zones.len(), 2);
+}
+
+/// A sheet's `aujourd'hui` is the local day on the board as in the list: at 00:30 at UTC+2,
+/// both read the same date (#1478, N16).
+#[test]
+fn the_board_reads_today_as_the_list_does() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let draft = engine::notes::model::NoteDraft {
+        kind: engine::notes::kind::NoteKind::Calc,
+        content: "jour = aujourd'hui".to_string(),
+        ..snippet(&space)
+    };
+    session.call(|e| create_note(e, draft)).unwrap();
+    let now = chrono::DateTime::parse_from_rfc3339("2026-07-25T22:30:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+
+    let listed = session
+        .call(|e| {
+            query_notes(
+                e,
+                &NotesQuery {
+                    now,
+                    tz_offset_minutes: -120,
+                    ..notes_query(&space)
+                },
+            )
+        })
+        .unwrap();
+    let on_board = session
+        .call(|e| {
+            board_view(
+                e,
+                &BoardQuery {
+                    now,
+                    tz_offset_minutes: -120,
+                    ..board(&space)
+                },
+            )
+        })
+        .unwrap();
+
+    let list_card = listed.display(listed.cards().next().unwrap()).calc.clone();
+    let board_card = on_board.loose[0].note.calc.clone();
+    assert_eq!(board_card, list_card);
 }

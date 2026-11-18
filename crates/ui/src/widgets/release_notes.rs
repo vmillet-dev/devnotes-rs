@@ -1,6 +1,7 @@
 //! A release's notes, as the core cut them: sections, then bullets of plain, strong and code
 //! runs — drawn, never interpreted.
 
+use crate::theme::tokens::{font, gap};
 use egui::text::LayoutJob;
 use egui::{Color32, FontFamily, FontId, TextFormat, Ui};
 use engine::changelog::model::{ChangelogRelease, SpanKind};
@@ -11,10 +12,10 @@ pub fn release_notes(ui: &mut Ui, release: &ChangelogRelease) {
     let p = palette(ui.ctx());
     for section in &release.sections {
         if !section.title.is_empty() {
-            ui.add_space(8.0);
+            ui.add_space(gap::CONTROLS);
             ui.label(
                 egui::RichText::new(section.title.to_uppercase())
-                    .size(11.0)
+                    .size(font::META)
                     .variation(*b"wght", 600.0)
                     .color(p.text_2),
             );

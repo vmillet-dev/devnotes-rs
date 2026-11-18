@@ -20,8 +20,7 @@ pub enum DataFormat {
     Yaml,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConvertRequest {
     pub text: String,
     pub from: DataFormat,
@@ -43,8 +42,7 @@ pub enum Crossing {
     XmlAttribute,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConvertAnswer {
     Converted {
         text: String,
@@ -82,17 +80,9 @@ fn unreadable((line, column): (u32, u32)) -> ConvertAnswer {
     ConvertAnswer::Unreadable { line, column }
 }
 
+/// A member's path, as the explorer writes it: one rule for every tool.
 fn child(path: &str, key: &str) -> String {
-    let mut chars = key.chars();
-    let plain = chars
-        .next()
-        .is_some_and(|first| first.is_alphabetic() || first == '_')
-        && chars.all(|c| c.is_alphanumeric() || c == '_');
-    if plain {
-        format!("{path}.{key}")
-    } else {
-        format!("{path}[{}]", serde_json::to_string(key).unwrap_or_default())
-    }
+    crate::json::model::member_path(path, key)
 }
 
 // --- TOML.
@@ -246,17 +236,25 @@ pub(crate) fn read_value(text: &str, format: DataFormat) -> Result<Value, (u32, 
             .parse::<toml::Table>()
             .map(|table| from_toml(toml::Value::Table(table)))
             .map_err(|error| position(text, error.span().map_or(0, |span| span.start))),
-        DataFormat::Yaml => YamlLoader::load_from_str(text)
-            .map(|documents| documents.into_iter().next().map_or(Value::Null, from_yaml))
-            .map_err(|error| {
-                let marker = error.marker();
-                (
-                    saturating_u32(marker.line()),
-                    saturating_u32(marker.col() + 1),
-                )
-            }),
+        // The visualiser's reader first: it stops aliases to aliases at its cap, which the
+        // loader, copying each alias, would multiply until the memory runs out.
+        DataFormat::Yaml => crate::json::yaml::read(text)
+            .map_err(|error| (error.line, error.column))
+            .and_then(|_| yaml(text)),
         DataFormat::Xml => xml::read(text).map_err(|offset| position(text, offset)),
     }
+}
+
+fn yaml(text: &str) -> Result<Value, (u32, u32)> {
+    YamlLoader::load_from_str(text)
+        .map(|documents| documents.into_iter().next().map_or(Value::Null, from_yaml))
+        .map_err(|error| {
+            let marker = error.marker();
+            (
+                saturating_u32(marker.line()),
+                saturating_u32(marker.col() + 1),
+            )
+        })
 }
 
 fn read(text: &str, format: DataFormat) -> Result<Value, ConvertAnswer> {
@@ -354,6 +352,42 @@ pub fn convert(request: &ConvertRequest) -> ConvertAnswer {
 
 #[cfg(test)]
 mod tests {
+    /// A JSON path is written one way, whichever tool writes it (#1478, N78).
+    #[test]
+    fn a_member_s_path_is_written_as_the_explorer_writes_it() {
+        for key in ["name", "é", "a b", "$ref", "it's"] {
+            assert_eq!(
+                child("$", key),
+                crate::json::model::member_path("$", key),
+                "{key}"
+            );
+        }
+    }
+
+    /// Aliases to aliases are copies: past the visualiser's cap the reading stops rather than
+    /// filling the memory (#1477, N47).
+    #[test]
+    fn yaml_aliases_past_the_cap_are_refused_at_once() {
+        let mut text = String::from(
+            "a: &a [x, x, x, x, x, x, x, x, x, x]
+",
+        );
+        for (level, letter) in "bcdefgh".chars().enumerate() {
+            let below = "abcdefgh".chars().nth(level).unwrap();
+            let line = format!("{letter}: &{letter} [*{below}, *{below}, *{below}, *{below}, *{below}, *{below}, *{below}, *{below}, *{below}, *{below}]
+");
+            text.push_str(&line);
+        }
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            done.send(read_value(&text, DataFormat::Yaml).is_err())
+                .unwrap();
+        });
+
+        let refused = finished.recv_timeout(std::time::Duration::from_secs(5));
+        assert_eq!(refused, Ok(true), "read whole, or never ended");
+    }
+
     use super::*;
 
     fn converted(text: &str, from: DataFormat, to: DataFormat) -> String {
@@ -423,7 +457,7 @@ mod tests {
         ) else {
             panic!()
         };
-        assert_eq!(dropped, [r#"$.a["b key"]"#, "$.d"]);
+        assert_eq!(dropped, ["$.a['b key']", "$.d"]);
         assert!(text.contains("c = 1"), "{text}");
     }
 

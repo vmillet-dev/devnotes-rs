@@ -1,6 +1,7 @@
 //! One result of a tool: its name, what it measures, the value itself and its copy button.
 
-use egui::{CornerRadius, Margin, Response, Role, Stroke, Ui, Vec2, WidgetInfo};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{CornerRadius, Response, Role, Stroke, Ui, Vec2, WidgetInfo};
 use i18n::Language;
 
 use super::CopyValue;
@@ -63,17 +64,24 @@ impl<'a> OutputRow<'a> {
         let shown = egui::Frame::new()
             .fill(p.bg_1)
             .stroke(Stroke::new(1.0, edge))
-            .corner_radius(CornerRadius::same(10))
-            .inner_margin(Margin::symmetric(14, 12))
+            .corner_radius(CornerRadius::same(radius::CARD))
+            .inner_margin(gap::margin(gap::BLOCKS, gap::GROUPS))
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 6.0;
+                ui.spacing_mut().item_spacing.y = gap::SNUG;
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    super::paragraph(ui, self.name, (12.5, 600.0), ink);
+                    super::paragraph(ui, self.name, (font::BODY, 600.0), ink);
                     if !self.meta.is_empty() {
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let family = egui::FontFamily::Monospace;
-                            let meta = widgets::text(ui, self.meta, 10.5, 400.0, family, p.text_2);
+                            let meta = widgets::text(
+                                ui,
+                                self.meta,
+                                font::CAPTION,
+                                400.0,
+                                family,
+                                p.text_2,
+                            );
                             let (rect, _) =
                                 ui.allocate_exact_size(meta.size(), egui::Sense::hover());
                             ui.painter().galley(rect.min, meta, p.text_2);
@@ -92,7 +100,7 @@ impl<'a> OutputRow<'a> {
         let width = ui.available_width();
         let copy = CopyValue::new(self.copied.unwrap_or(self.value), self.name, language);
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.spacing_mut().item_spacing.x = gap::INSET;
             let room = width - 96.0;
             let galley = value_galley(ui, self.value, room);
             let height = galley.size().y.min(MAX_HEIGHT);

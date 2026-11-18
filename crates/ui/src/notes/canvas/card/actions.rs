@@ -2,6 +2,7 @@
 //! copy, duplicate, file into a folder of its space, move to another space, delete in two
 //! steps. A pill over the card's bottom edge, clear of its footer and costing it no room.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     CornerRadius, Id, Popup, PopupCloseBehavior, Rect, RectAlign, Response, Stroke, Ui, Vec2, pos2,
 };
@@ -72,11 +73,11 @@ pub(super) fn show(
     let shown = egui::Frame::new()
         .fill(p.bg_2)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(egui::Margin::same(4))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::TIGHT, gap::TIGHT))
         .show(&mut ui, |ui| {
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 6.0;
+                ui.spacing_mut().item_spacing.x = gap::SNUG;
                 if !ticking && tick(ui, &title, language) {
                     push(actions, Asked::Check(note.id.clone()));
                 }
@@ -123,7 +124,7 @@ fn tick(ui: &mut Ui, title: &str, language: i18n::Language) -> bool {
         egui::Sense::click(),
         "note-card-check",
         || egui::WidgetInfo::selected(egui::Role::CheckBox, true, false, &label),
-        CornerRadius::same(4),
+        CornerRadius::same(radius::TAG),
     );
     let square = Rect::from_center_size(response.rect.center(), Vec2::splat(14.0));
     crate::notes::ui::tick_box(ui, square, false, p.text_1);
@@ -196,8 +197,9 @@ fn first_entries(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, acti
         push(actions, Asked::OpenNote(id.clone()));
         ui.close();
     }
+    // What the entry does, not the state the note is in.
     let pin = tr(if note.pinned {
-        keys::editor::PINNED
+        keys::selection::UNPIN
     } else {
         keys::editor::PIN
     });
@@ -408,7 +410,7 @@ fn title(ui: &mut Ui, words: &str) {
     let galley = widgets::text(
         ui,
         &upper,
-        10.5,
+        font::CAPTION,
         600.0,
         egui::FontFamily::Proportional,
         p.text_2,
@@ -434,7 +436,7 @@ mod tests {
     fn stored(harness: &Harness<'_, Bench>, id: &str) -> DisplayNote {
         let id = id.to_owned();
         engine::db::run_here(harness.state().backend.engine(), move |engine| {
-            engine::notes::get_note(engine, id)
+            engine::notes::get_note(engine, &id)
         })
         .unwrap()
     }

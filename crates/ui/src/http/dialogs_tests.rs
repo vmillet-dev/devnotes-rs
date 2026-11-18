@@ -68,7 +68,7 @@ fn emptying_the_jar_says_how_many_go_and_cancel_keeps_them() {
 fn settings_of(harness: &Harness<'_, Bench>, kind: HttpItemKind, id: String) -> RequestAuth {
     let item = HttpItem { kind, id };
     engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::http::http_settings(engine, item)
+        engine::http::http_settings(engine, &item)
     })
     .unwrap()
     .auth

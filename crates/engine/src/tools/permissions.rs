@@ -1,7 +1,7 @@
 //! A Unix mode read from its octal digits or from the string `ls -l` prints, written back in
 //! both, with the `chmod` commands that set it and what a umask leaves a new file.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::count::saturating_u32;
 
@@ -36,8 +36,7 @@ impl FileType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Class {
     Owner,
     Group,
@@ -75,8 +74,7 @@ impl Class {
 
 /// A row of the grid: its four boxes are four booleans, not a state machine.
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClassRights {
     pub class: Class,
     pub read: bool,
@@ -86,8 +84,7 @@ pub struct ClassRights {
     pub special: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Mode {
     /// The twelve bits, `0o7777` at most.
     pub bits: u32,
@@ -152,12 +149,7 @@ fn warnings(bits: u32) -> Vec<ModeWarning> {
     .collect()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModeReading {
     Empty,
     Read {
@@ -173,12 +165,7 @@ pub enum ModeReading {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UmaskReading {
     Empty,
     Read {
@@ -191,16 +178,14 @@ pub enum UmaskReading {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PermissionsRequest {
     /// `755`, `0644`, `4755`, `rwxr-xr-x`, `drwxr-xr-x`.
     pub mode: String,
     pub umask: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PermissionsAnswer {
     pub mode: ModeReading,
     pub umask: UmaskReading,

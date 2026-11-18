@@ -1,7 +1,8 @@
 //! The notes of every space an input accepts, searched like the canvas searches; the one chosen
 //! read whole.
 
-use egui::{CornerRadius, Id, Key, Margin, Modifiers, Role, Sense, Ui, Vec2, WidgetInfo};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{CornerRadius, Id, Key, Modifiers, Role, Sense, Ui, Vec2, WidgetInfo};
 use engine::notes::kind::NoteKind;
 use engine::notes::language::Language;
 use engine::notes::model::DisplayNote;
@@ -123,7 +124,17 @@ fn picked(note: &DisplayNote) -> PickedNote {
 }
 
 pub fn show(ui: &Ui, state: &AppState, picker: &mut Picker) {
-    let shown = crate::http::modal(ui, "note-picker", |ui| body(ui, state, picker));
+    let shown = crate::http::modal(
+        ui,
+        (
+            "note-picker",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "note-picker-cross",
+            ),
+        ),
+        |ui| body(ui, state, picker),
+    );
     if shown.should_close() {
         picker.closed = true;
     }
@@ -134,14 +145,14 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.9));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     let title = tr(keys::tools::from_note::TITLE);
-    let heading = super::paragraph(ui, &title, (15.0, 600.0), p.text_0);
+    let heading = super::paragraph(ui, &title, (font::TITLE, 600.0), p.text_0);
     address(ui, &heading, "note-picker");
     let accepted = super::paragraph(
         ui,
         &accepted(picker.accepts, language),
-        (12.0, 400.0),
+        (font::LABEL, 400.0),
         p.text_2,
     );
     address(ui, &accepted, "note-picker-accepted");
@@ -168,7 +179,7 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
         .max_height(320.0)
         .auto_shrink([false, true])
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.spacing_mut().item_spacing.y = gap::LINE;
             for card in &notes {
                 let row = option(ui, state, card);
                 results.push(row.id);
@@ -182,7 +193,7 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
                 } else {
                     keys::tools::from_note::NONE_FOUND
                 };
-                let none = super::paragraph(ui, &tr(key), (12.5, 400.0), p.text_2);
+                let none = super::paragraph(ui, &tr(key), (font::BODY, 400.0), p.text_2);
                 address(ui, &none, "note-picker-none");
             }
         });
@@ -234,7 +245,7 @@ fn option(ui: &mut Ui, state: &AppState, card: &engine::notes::view::Card) -> eg
     } else {
         note.title.clone()
     };
-    let corner = CornerRadius::same(7);
+    let corner = CornerRadius::same(radius::CONTROL);
     let width = ui.available_width();
     let response = interact(
         ui,
@@ -247,18 +258,24 @@ fn option(ui: &mut Ui, state: &AppState, card: &engine::notes::view::Card) -> eg
     let rect = response.rect;
     let fill = towards(egui::Color32::TRANSPARENT, p.bg_2, hovered(ui, &response));
     ui.painter().rect_filled(rect, corner, fill);
-    let inner = rect - Margin::symmetric(8, 0);
+    let inner = rect - gap::margin(gap::CONTROLS, 0.0);
     let mut row = ui.new_child(
         egui::UiBuilder::new()
             .max_rect(inner)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    row.spacing_mut().item_spacing.x = 8.0;
+    row.spacing_mut().item_spacing.x = gap::CONTROLS;
     let badge = kind_mark(&mut row, note.kind, note.language, locale);
     let place = where_of(state, card);
-    let tail = widgets::one_line(&row, &place, (11.5, 400.0), p.text_2, inner.width() * 0.35);
+    let tail = widgets::one_line(
+        &row,
+        &place,
+        (font::CONTROL, 400.0),
+        p.text_2,
+        inner.width() * 0.35,
+    );
     let room = inner.right() - badge.rect.right() - tail.size().x - 24.0;
-    let name = widgets::one_line(&row, &title, (13.0, 400.0), p.text_0, room);
+    let name = widgets::one_line(&row, &title, (font::READING, 400.0), p.text_0, room);
     let (at, _) = row.allocate_exact_size(name.size(), Sense::hover());
     row.painter().galley(at.min, name, p.text_0);
     let right = egui::pos2(

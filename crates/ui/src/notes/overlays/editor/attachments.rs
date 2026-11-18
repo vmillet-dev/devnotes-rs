@@ -1,7 +1,8 @@
 //! The note's files (the reference's `attachment-strip`): each with its name and size, what can
 //! be done with it, and under them the one image shown. The first click on a cross arms it.
 
-use egui::{CornerRadius, Margin, Rect, RichText, Sense, Stroke, Ui, Vec2};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{CornerRadius, Rect, RichText, Sense, Stroke, Ui, Vec2};
 use engine::attachments::model::Attachment;
 use i18n::{Language, keys};
 
@@ -35,10 +36,10 @@ pub(super) fn show(
     let p = palette(ui.ctx());
     let attachments = &state.attachments;
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        ui.spacing_mut().item_spacing = Vec2::splat(gap::SNUG);
         if titled {
             let title = i18n::translate(language, keys::attachments::TITLE, &[]);
-            ui.label(RichText::new(title).size(11.0).color(p.text_2));
+            ui.label(RichText::new(title).size(font::META).color(p.text_2));
         }
         for attachment in attachments.list() {
             item(ui, state, attachment, confirming, actions);
@@ -49,7 +50,7 @@ pub(super) fn show(
                 keys::attachments::DROP_HINT,
                 &[("limit", MAX_MEGABYTES.into())],
             );
-            let response = ui.label(RichText::new(hint).size(11.0).color(p.text_2));
+            let response = ui.label(RichText::new(hint).size(font::META).color(p.text_2));
             widgets::address(ui, &response, "attachment-empty");
         }
         let key = if attachments.is_busy() {
@@ -83,11 +84,11 @@ fn item(
     egui::Frame::new()
         .fill(p.bg_2)
         .stroke(Stroke::new(1.0, edge))
-        .corner_radius(CornerRadius::same(12))
-        .inner_margin(Margin::symmetric(6, 1))
+        .corner_radius(CornerRadius::same(radius::PANEL))
+        .inner_margin(gap::margin(gap::SNUG, gap::HAIRLINE))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 4.0;
+                ui.spacing_mut().item_spacing.x = gap::TIGHT;
                 if name_button(ui, state, attachment).clicked() {
                     ask(actions, Asked::Open(id.clone()));
                 }
@@ -136,7 +137,7 @@ fn name_button(ui: &mut Ui, state: &AppState, attachment: &Attachment) -> egui::
     ui.scope(|ui| {
         ui.set_max_width(NAME_WIDTH);
         let response = ui.add(
-            egui::Label::new(RichText::new(words).size(11.0).color(p.text_1))
+            egui::Label::new(RichText::new(words).size(font::META).color(p.text_1))
                 .truncate()
                 .sense(Sense::click()),
         );
@@ -162,7 +163,7 @@ fn preview(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         return;
     };
     let language = state.language;
-    ui.add_space(6.0);
+    ui.add_space(gap::SNUG);
     if let Some(texture) = attachments.preview_image() {
         let size = fitted(texture.size_vec2(), ui.available_width(), PREVIEW_HEIGHT);
         let (rect, response) = ui.allocate_exact_size(size, Sense::click());

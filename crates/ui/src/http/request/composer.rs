@@ -1,5 +1,6 @@
 //! The message to send on an open socket, and those kept to send again.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Key, Modifiers, Ui, Vec2};
 use engine::http::websocket::{SavedMessage, WebsocketDocument};
 use i18n::keys;
@@ -17,7 +18,7 @@ use crate::widgets::{self, Button, IconButton, Kind, TextField};
 /// Eight lines, as the reference's.
 const MESSAGE_HEIGHT: f32 = 160.0;
 
-const COLUMN_GAP: f32 = 16.0;
+const COLUMN_GAP: f32 = gap::BLOCKS;
 
 /// A kept message is named after its first line, cut: the name is a label, not a field.
 const NAME_LENGTH: usize = 40;
@@ -93,13 +94,13 @@ fn compose(ui: &mut Ui, state: &AppState, tab: &Tab, boxes: &mut TextBoxes, acti
     }
     if boxes.refused && !open {
         let words = egui::RichText::new(tr(keys::http::socket::NOT_OPEN))
-            .size(12.0)
+            .size(font::LABEL)
             .color(p.amber_text);
         let said = ui.add(egui::Label::new(words));
         widgets::address(ui, &said, "http-socket-not-open");
     }
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::http::socket::SEND), "http-socket-send")
             .kind(Kind::Filled)
             .enabled(open && !blank)
@@ -135,20 +136,20 @@ fn saved(
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     let words = egui::RichText::new(tr(keys::http::socket::SAVED).to_uppercase())
-        .size(11.0)
+        .size(font::META)
         .strong()
         .color(p.text_2);
     ui.add(egui::Label::new(words));
     let messages = &tab.draft.document.websocket.messages;
     if messages.is_empty() {
         let words = egui::RichText::new(tr(keys::http::socket::NONE_SAVED))
-            .size(12.0)
+            .size(font::LABEL)
             .color(p.text_2);
         ui.add(egui::Label::new(words));
     }
     for (at, message) in messages.iter().enumerate() {
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             if Button::new(&message.name, "http-socket-saved")
                 .show(ui)
                 .clicked()
@@ -194,7 +195,7 @@ pub(super) fn protocols(
         .clone()
         .unwrap_or_else(|| document.protocols.join(", "));
     let label = tr(keys::http::socket::PROTOCOLS);
-    let words = egui::RichText::new(&label).size(12.5).color(p.text_1);
+    let words = egui::RichText::new(&label).size(font::BODY).color(p.text_1);
     ui.add(egui::Label::new(words));
     let field = TextField::new(&mut text, &label, "http-socket-protocols")
         .hint("chat, json")
@@ -216,7 +217,7 @@ pub(super) fn protocols(
         edit(actions, tab, DraftEdit::Websocket(websocket));
     }
     let hint = egui::RichText::new(tr(keys::http::socket::PROTOCOLS_HINT))
-        .size(12.0)
+        .size(font::LABEL)
         .color(p.text_2);
     ui.add(egui::Label::new(hint));
 }

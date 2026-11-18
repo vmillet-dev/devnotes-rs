@@ -1,5 +1,6 @@
 //! A block read and described by Rust; the page groups its digits in the reader's language.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Ui, Vec2};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::cidr::forms::ReverseDns;
@@ -154,7 +155,7 @@ fn binary_card(ui: &mut Ui, block: &CidrBlock, language: Language) {
         .text(language);
     hint(ui, &words);
     let mut job = egui::text::LayoutJob::default();
-    let format = |ink| egui::TextFormat::simple(egui::FontId::monospace(12.0), ink);
+    let format = |ink| egui::TextFormat::simple(egui::FontId::monospace(font::LABEL), ink);
     job.append(&block.binary_network, 0.0, format(p.amber_text));
     job.append(&block.binary_host, 0.0, format(p.text_2));
     job.wrap.max_width = ui.available_width();
@@ -372,11 +373,11 @@ impl CidrTool {
                 let words = Message::new(words::INSIDE)
                     .with("host", grouped(host, language))
                     .text(language);
-                let said = paragraph(ui, &words, (12.5, 500.0), p.green);
+                let said = paragraph(ui, &words, (font::BODY, 500.0), p.green);
                 address(ui, &said, "cidr-membership");
             }
             Some(CidrMembership::Outside) => {
-                let said = paragraph(ui, &tr(words::OUTSIDE), (12.5, 500.0), p.text_1);
+                let said = paragraph(ui, &tr(words::OUTSIDE), (font::BODY, 500.0), p.text_1);
                 address(ui, &said, "cidr-membership");
             }
             Some(CidrMembership::Unreadable) => {
@@ -429,7 +430,7 @@ impl CidrTool {
         );
         let mut chosen = None;
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+            ui.spacing_mut().item_spacing = Vec2::splat(gap::SNUG);
             for prefix in &answer.split_choices {
                 let words = format!("/{prefix}");
                 let id = format!("cidr-split-choice-{prefix}");

@@ -114,6 +114,7 @@ impl DevNotesApp {
             ctx.request_repaint();
         });
         let backend = Backend::start(startup.paths, Arc::new(startup.inbox), startup.waker)?;
+        api::backups::keep_launch_copies(&backend, state.settings.automatic_backups);
         // A crash reaches no exit: what it left goes before anyone unlocks anything.
         drop(api::attachments::sweep_copies(&backend));
         state.gate.ask(&backend);
@@ -277,43 +278,6 @@ impl DevNotesApp {
     }
 }
 
-impl DevNotesApp {
-    /// Who reads what the widgets left of the keys, on what is on screen.
-    fn dispatch_keys(&self, ctx: &egui::Context) -> Option<Action> {
-        let notes_shown = self.state.gate.is_open() && self.state.settings.area == Area::Notes;
-        let bindings = &self.state.settings.bindings;
-        let canvas = notes::canvas::shortcuts::bound_to(bindings);
-        let rail = [keys::rail(bindings)];
-        // A modal over the canvas takes its keys: the canvas's stand aside.
-        let levels: &[&[keys::Binding]] = if self.state.dialogs.top().is_some() {
-            &[]
-        } else if self.state.palette.is_open() {
-            &[&keys::APPLICATION]
-        } else if notes_shown && !self.state.modal_open() {
-            &[&keys::NOTES, &rail, &canvas, &keys::APPLICATION]
-        } else if notes_shown && !self.state.overlay_open() {
-            &[&keys::NOTES, &rail, &keys::EDITOR, &keys::APPLICATION]
-        } else if notes_shown {
-            &[&keys::NOTES, &rail, &keys::APPLICATION]
-        } else if self.state.gate.is_open()
-            && self.state.settings.area == Area::Http
-            && self.state.http.tabs().closing().is_none()
-            && !self.state.http.leave().is_asking()
-        {
-            &[&keys::HTTP, &rail, &keys::APPLICATION]
-        } else if self.state.gate.is_open()
-            && self.state.settings.area == Area::Tools
-            && !self.state.tools_view.is_picking()
-            && self.state.http.kept().asked().is_none()
-        {
-            &[&keys::TOOLS, &rail, &keys::APPLICATION]
-        } else {
-            &[&keys::APPLICATION]
-        };
-        keys::dispatch(ctx, levels)
-    }
-}
-
 impl eframe::App for DevNotesApp {
     /// Runs while the window is hidden too: eframe draws nothing then, so the window is shown
     /// from here, once it exists at its restored geometry.
@@ -350,6 +314,10 @@ impl eframe::App for DevNotesApp {
                     self.state.http.receive_console(event);
                 }
                 Input::Engine(EngineEvent::Run(event)) => self.state.http.receive_run(event),
+                Input::Engine(EngineEvent::SendNotKept) => {
+                    let said = i18n::Message::new(i18n::keys::errors::SEND_NOT_KEPT);
+                    self.state.errors.notify(said);
+                }
             }
         }
         self.state.update(ctx, &self.backend);
@@ -387,16 +355,6 @@ impl eframe::App for DevNotesApp {
                 .show(ui, |ui| {
                     if banners::error_banner(ui, &notice, language) {
                         actions.push(Action::App(AppAction::DismissError));
-                    }
-                });
-        }
-        if let Some((_, status)) = self.state.status.latest() {
-            let status = status.clone();
-            egui::Panel::top("status-toast")
-                .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
-                .show(ui, |ui| {
-                    if banners::status_toast(ui, &status, language) {
-                        actions.push(Action::App(AppAction::DismissStatus));
                     }
                 });
         }
@@ -443,7 +401,7 @@ impl eframe::App for DevNotesApp {
         let mut view = std::mem::take(&mut self.state.titlebar_view);
         titlebar::dialogs(ui.ctx(), &self.state, &mut view, &mut actions);
         self.state.titlebar_view = view;
-        if let Some(action) = self.dispatch_keys(ui.ctx()) {
+        if let Some(action) = keys::read(&self.state, ui.ctx()) {
             actions.push(action);
         }
         for action in actions.drain() {
@@ -475,6 +433,8 @@ impl eframe::App for DevNotesApp {
 
 #[cfg(test)]
 mod captures;
+#[cfg(test)]
+mod modal_tests;
 
 #[cfg(test)]
 mod perf;
@@ -798,6 +758,40 @@ mod tests {
     }
 
     /// Through the gate, as a first launch does it.
+    fn top_of(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> f64 {
+        use egui_kittest::kittest::{NodeT, Queryable};
+        harness
+            .get_by(|node| node.author_id() == Some(author_id))
+            .accesskit_node()
+            .bounding_box()
+            .unwrap()
+            .y0
+    }
+
+    #[test]
+    fn a_report_moves_nothing_and_goes_by_itself() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let before = top_of(&harness, "search-input");
+
+        harness
+            .state_mut()
+            .state
+            .status
+            .report(i18n::Message::new(i18n::keys::attachments::SAVED));
+        settle(&mut harness);
+
+        assert!(present(&harness, "status-toast"));
+        assert!((top_of(&harness, "search-input") - before).abs() < 0.5);
+        let gone = f64::from(crate::theme::motion::REPORT) + 1.0;
+        let started = harness.ctx.input(|input| input.time);
+        while harness.ctx.input(|input| input.time) - started < gone {
+            harness.step();
+        }
+        settle(&mut harness);
+        assert!(!present(&harness, "status-toast"));
+    }
+
     pub(super) fn open_library(directory: &std::path::Path) -> Harness<'static, DevNotesApp> {
         let startup = startup(directory);
         let mut harness = Harness::builder()

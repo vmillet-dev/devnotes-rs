@@ -1,6 +1,7 @@
 //! What is left once the keys and the library's protection have pages of their own: how the
 //! application looks, how it behaves, and what it says. Everything here edits the draft.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Align, FontFamily, Layout, RichText, Sense, Stroke, Ui, Vec2};
 use engine::app_info::METADATA;
 use engine::folders::board::PreviewLines;
@@ -295,7 +296,7 @@ fn notifications(ui: &mut Ui, language: Language, settings: &mut Settings) {
     ui.horizontal(|ui| {
         let words = ui.label(
             RichText::new(said)
-                .size(11.5)
+                .size(font::CONTROL)
                 .color(palette(ui.ctx()).text_2),
         );
         widgets::address(ui, &words, "setting-skipped-update");
@@ -310,9 +311,16 @@ fn notifications(ui: &mut Ui, language: Language, settings: &mut Settings) {
 
 pub(super) fn group(ui: &mut Ui, language: Language, title: Key) {
     let p = palette(ui.ctx());
-    ui.add_space(10.0);
+    ui.add_space(gap::INSET);
     let title = i18n::translate(language, title, &[]).to_uppercase();
-    let words = widgets::text(ui, &title, 11.0, 600.0, FontFamily::Proportional, p.text_2);
+    let words = widgets::text(
+        ui,
+        &title,
+        font::META,
+        600.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, _) = ui.allocate_exact_size(
         Vec2::new(ui.available_width(), words.size().y + 8.0),
         Sense::hover(),
@@ -328,7 +336,7 @@ pub(super) fn row(ui: &mut Ui, label: &str, control: impl FnOnce(&mut Ui)) {
         Layout::left_to_right(Align::Center),
         |ui| {
             ui.set_min_size(Vec2::new(ui.available_width(), ROW));
-            ui.label(RichText::new(label).size(12.5).color(p.text_1));
+            ui.label(RichText::new(label).size(font::BODY).color(p.text_1));
             // A segmented control grows down from where it starts: the row places it, not the
             // layout's centre.
             let room = ui.max_rect().shrink2(Vec2::new(0.0, (ROW - CONTROL) / 2.0));
@@ -361,11 +369,11 @@ pub(super) fn switch_row(
 }
 
 pub(super) fn note(ui: &mut Ui, said: &str) {
-    ui.add_space(6.0);
+    ui.add_space(gap::SNUG);
     ui.add(
         egui::Label::new(
             RichText::new(said)
-                .size(11.5)
+                .size(font::CONTROL)
                 .color(palette(ui.ctx()).text_2),
         )
         .wrap(),

@@ -63,7 +63,7 @@ fn scripts(before: &str, after: &str) -> RequestScripts {
 /// An environment holding `token`, a secret.
 fn environment(session: &Session, name: &str, protected: bool) -> String {
     let id = session
-        .call(|e| create_http_environment(e, name.to_string()))
+        .call(|e| create_http_environment(e, name))
         .unwrap()
         .id;
     let patch = EnvironmentPatch {
@@ -77,7 +77,7 @@ fn environment(session: &Session, name: &str, protected: bool) -> String {
         ..EnvironmentPatch::default()
     };
     session
-        .call(|e| save_http_environment(e, id.clone(), patch))
+        .call(|e| save_http_environment(e, &id, &patch))
         .unwrap();
     id
 }
@@ -144,9 +144,7 @@ fn a_script_before_changes_what_leaves_and_what_the_scripts_write_is_kept() {
 #[test]
 fn a_script_that_throws_before_the_send_keeps_the_request_in_and_says_whose_it_is() {
     let session = hosted();
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let settings = ContainerSettings {
         scripts: scripts("const a = 1;\nthrow new Error('no token');", ""),
         ..ContainerSettings::default()
@@ -156,7 +154,7 @@ fn a_script_that_throws_before_the_send_keeps_the_request_in_and_says_whose_it_i
         id: api.id.clone(),
     };
     session
-        .call(|e| save_http_settings(e, item, settings))
+        .call(|e| save_http_settings(e, &item, settings))
         .unwrap();
     let (port, seen) = serve(1, |_, _| ok());
     let mut sent = request(&format!("http://127.0.0.1:{port}/"));
@@ -177,9 +175,7 @@ fn a_script_that_throws_before_the_send_keeps_the_request_in_and_says_whose_it_i
 #[test]
 fn a_script_after_the_answer_that_fails_leaves_the_answer_shown() {
     let session = hosted();
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let (port, _seen) = serve(1, |_, _| ok());
     let mut sent = request(&format!("http://127.0.0.1:{port}/"));
     sent.collection_id = Some(api.id.clone());
@@ -201,7 +197,7 @@ fn a_script_after_the_answer_that_fails_leaves_the_answer_shown() {
         kind: HttpItemKind::Collection,
         id: api.id,
     };
-    let held = session.call(|e| http_settings(e, item)).unwrap();
+    let held = session.call(|e| http_settings(e, &item)).unwrap();
     assert_eq!(held.variables[0].name, "lastId");
     assert_eq!(held.variables[0].value, "7");
 }
@@ -261,9 +257,7 @@ fn with_no_environment_chosen_a_script_writes_the_globals() {
 fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
     let session = hosted();
     let staging = environment(&session, "Staging", false);
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let settings = ContainerSettings {
         scripts: RequestScripts {
             tests:
@@ -278,7 +272,7 @@ fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
         id: api.id.clone(),
     };
     session
-        .call(|e| save_http_settings(e, item, settings))
+        .call(|e| save_http_settings(e, &item, settings))
         .unwrap();
     let (port, _seen) = serve(1, |_, _| ok());
     let mut sent = request(&format!("http://127.0.0.1:{port}/"));
@@ -328,7 +322,7 @@ fn the_tests_run_after_the_scripts_and_say_what_was_expected_and_what_came() {
     // Kept with the history entry.
     let day = &session.call(|e| http_history(e, 0)).unwrap()[0];
     let entry = session
-        .call(|e| http_history_entry(e, day.items[0].id.clone()))
+        .call(|e| http_history_entry(e, &day.items[0].id.clone()))
         .unwrap();
     let kept = entry.record.response.unwrap().scripts.tests;
     assert_eq!(kept.len(), 4);
@@ -355,7 +349,7 @@ fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_fille
         ..EnvironmentPatch::default()
     };
     session
-        .call(|e| save_http_environment(e, staging.clone(), patch))
+        .call(|e| save_http_environment(e, &staging, &patch))
         .unwrap();
     let (port, _seen) = serve(1, |_, _| {
         response(
@@ -419,4 +413,33 @@ fn an_extraction_writes_the_value_after_the_scripts_and_says_which_request_fille
     let refresh = rows.iter().find(|row| row.name == "refresh").unwrap();
     assert_eq!(refresh.value, "kept");
     assert_eq!(refresh.filled_by, None);
+}
+
+/// What a send writes after its answer — its history here — cannot be kept: the answer still
+/// comes, and the window is told, not only the log (#1478, N22).
+#[test]
+fn a_history_that_cannot_be_written_is_said_beside_the_answer() {
+    use diesel::prelude::*;
+
+    let session = hosted();
+    {
+        let mut library = session.engine.db().lock().unwrap();
+        let connection = library.as_mut().unwrap().db();
+        diesel::sql_query("DROP TABLE http_history")
+            .execute(connection)
+            .unwrap();
+    }
+    let (port, _seen) = serve(1, |_, _| ok());
+
+    let answer =
+        session.wait(|e| send_http_request(e, request(&format!("http://127.0.0.1:{port}/"))));
+
+    assert!(answer.is_ok(), "{answer:?}");
+    assert!(
+        session
+            .heard
+            .events()
+            .iter()
+            .any(|event| matches!(event, EngineEvent::SendNotKept))
+    );
 }

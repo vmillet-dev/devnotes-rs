@@ -25,37 +25,31 @@ fn a_file_is_attached_read_saved_and_deleted() {
     let saved = scratch.path().join("saved.png");
 
     let attachment = session
-        .call(|e| attach_file(e, note.clone(), source.to_string_lossy().to_string()))
+        .wait(|e| attach_file(e, note.clone(), source.to_string_lossy().to_string()))
         .unwrap();
-    let listed = session.call(|e| list_attachments(e, note.clone())).unwrap();
-    let uri = session
-        .call(|e| read_attachment(e, attachment.id.clone()))
-        .unwrap();
-    session
-        .call(|e| {
-            save_attachment(
-                e,
-                attachment.id.clone(),
-                saved.to_string_lossy().to_string(),
-            )
-        })
+    let listed = session.call(|e| list_attachments(e, &note)).unwrap();
+    let read = session
+        .call(|e| read_attachment(e, &attachment.id))
         .unwrap();
     session
-        .call(|e| delete_attachment(e, attachment.id.clone()))
+        .call(|e| save_attachment(e, &attachment.id, saved.to_string_lossy().as_ref()))
+        .unwrap();
+    session
+        .call(|e| delete_attachment(e, &attachment.id))
         .unwrap();
 
     assert_eq!(attachment.file_name, "capture.png");
     assert_eq!(listed.len(), 1);
-    assert_eq!(uri, "data:image/png;base64,iVBORw==");
+    assert_eq!(read, ("image/png".to_string(), b"\x89PNG".to_vec()));
     assert_eq!(std::fs::read(&saved).unwrap(), b"\x89PNG");
     assert!(
         session
-            .call(|e| list_attachments(e, note))
+            .call(|e| list_attachments(e, &note))
             .unwrap()
             .is_empty()
     );
     assert!(matches!(
-        code(session.call(|e| read_attachment(e, attachment.id))),
+        code(session.call(|e| read_attachment(e, &attachment.id))),
         ErrorCode::AttachmentNotFound
     ));
 }
@@ -67,7 +61,7 @@ fn a_file_that_cannot_be_read_is_named_as_such() {
     let missing = scratch.path().join("gone.png");
 
     assert!(matches!(
-        code(session.call(|e| attach_file(
+        code(session.wait(|e| attach_file(
             e,
             "n-1".to_string(),
             missing.to_string_lossy().to_string()
@@ -86,7 +80,7 @@ fn a_file_past_the_limit_is_refused_by_its_name_and_the_limit() {
     std::fs::write(&huge, vec![0u8; limit + 1]).unwrap();
 
     let refused = session
-        .call(|e| attach_file(e, "n-1".to_string(), huge.to_string_lossy().to_string()))
+        .wait(|e| attach_file(e, "n-1".to_string(), huge.to_string_lossy().to_string()))
         .unwrap_err();
 
     assert!(matches!(refused.code, ErrorCode::FileTooLarge));
@@ -111,11 +105,9 @@ fn an_image_read_by_the_shell_is_stored_as_a_png_and_opened_from_a_decrypted_cop
     let red = [255, 0, 0, 255].repeat(4);
 
     let attachment = session
-        .call(|e| attach_image(e, note, "capture".to_string(), (2, 2), &red))
+        .call(|e| attach_image(e, note, "capture", (2, 2), &red))
         .unwrap();
-    let copy = session
-        .call(|e| decrypted_copy(e, attachment.id.clone()))
-        .unwrap();
+    let copy = session.call(|e| decrypted_copy(e, &attachment.id)).unwrap();
 
     assert_eq!(attachment.file_name, "capture.png");
     assert!(copy.starts_with(session.engine.paths().profile.join("open")));

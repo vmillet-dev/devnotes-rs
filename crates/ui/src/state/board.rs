@@ -23,10 +23,6 @@ use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 
-/// Three cards dragged in a row are one write, and a quit right after a drop still beats it; in
-/// egui's seconds.
-pub const LAYOUT_SAVE_DEBOUNCE: f64 = 0.4;
-
 /// One key per space, not one map: arranging one space must not move the switch on the others.
 fn view_key(space_id: &str) -> String {
     format!("devnotes.notes.view.{space_id}")
@@ -340,7 +336,7 @@ impl BoardState {
                 ..Staged::default()
             };
         }
-        self.staged.due = Some(now + LAYOUT_SAVE_DEBOUNCE);
+        self.staged.due = Some(now + f64::from(crate::theme::motion::LAYOUT_SAVE));
         &mut self.staged
     }
 
@@ -492,6 +488,7 @@ fn query(params: Params, now: DateTime<Utc>) -> BoardQuery {
         kinds: facets.kinds.into_iter().collect(),
         priorities: facets.priorities.into_iter().collect(),
         now,
+        tz_offset_minutes: super::notes_query::tz_offset_minutes(now),
         preview_lines: params.lines,
     }
 }
@@ -523,7 +520,7 @@ mod tests {
             parent_id: None,
         };
         let folder = engine::db::run_here(backend.engine(), move |engine| {
-            engine::folders::create_folder(engine, draft)
+            engine::folders::create_folder(engine, &draft)
         })
         .unwrap();
         let place = Place {
@@ -636,7 +633,7 @@ mod tests {
                     folder_id: folder,
                     frame: far,
                 };
-                engine::folders::save_board_layout(engine, None, vec![zone], Vec::new())
+                engine::folders::save_board_layout(engine, None, &[zone], &Vec::new())
             }
         })
         .unwrap();

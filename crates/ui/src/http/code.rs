@@ -1,6 +1,7 @@
 //! « Generate code »: the target and the switches chosen here, the code written by Rust, and what
 //! was left as a variable said under it.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{Align, CornerRadius, FontFamily, Layout, Role, Sense, Ui, Vec2, WidgetInfo, pos2};
 use engine::http::codegen::{CodeNotice, CodeTarget, GeneratedCode};
 use engine::http::model::RequestKind;
@@ -21,7 +22,7 @@ use crate::widgets::{self, Button, Kind, SearchField, interact};
 
 const WIDTH: f32 = 926.0;
 const LIST: f32 = 240.0;
-const GAP: f32 = 14.0;
+const GAP: f32 = gap::BLOCKS;
 const HEIGHT: f32 = 430.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,9 +81,19 @@ pub(super) fn show(ui: &Ui, state: &AppState, view: &mut CodeView, actions: &mut
     let Some(tab) = dialog.key().and_then(|key| state.http.tabs().tab(key)) else {
         return;
     };
-    let shown = modal(ui, "http-code-dialog", |ui| {
-        body(ui, state, (dialog, tab), view, actions);
-    });
+    let shown = modal(
+        ui,
+        (
+            "http-code-dialog",
+            (
+                &i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]),
+                "http-code-cross",
+            ),
+        ),
+        |ui| {
+            body(ui, state, (dialog, tab), view, actions);
+        },
+    );
     if shown.should_close() {
         ask(actions, Ask::Close);
     }
@@ -97,7 +108,7 @@ fn body(
 ) {
     let language = state.language;
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.92));
-    ui.spacing_mut().item_spacing.y = 10.0;
+    ui.spacing_mut().item_spacing.y = gap::INSET;
     head(ui, state, tab);
     let room = ui.available_width() - LIST - GAP;
     ui.horizontal_top(|ui| {
@@ -110,7 +121,7 @@ fn body(
         ui.allocate_ui(Vec2::new(room, HEIGHT), |ui| {
             ui.set_width(room);
             ui.vertical(|ui| {
-                ui.spacing_mut().item_spacing.y = 8.0;
+                ui.spacing_mut().item_spacing.y = gap::CONTROLS;
                 switches(ui, dialog, language, actions);
                 output(ui, dialog, view, language);
             });
@@ -123,13 +134,9 @@ fn head(ui: &mut Ui, state: &AppState, tab: &Tab) {
     let p = palette(ui.ctx());
     let language = state.language;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         let title = i18n::translate(language, keys::http::code::TITLE, &[]);
-        let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
-        let (rect, heading) = ui.allocate_exact_size(words.size(), Sense::hover());
-        ui.painter().galley(rect.min, words, p.text_0);
-        heading.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &title));
-        widgets::address(ui, &heading, "http-code-dialog");
+        crate::widgets::dialog_title(ui, &title, "http-code-dialog");
         pill(ui, |ui| {
             let badge = match tab.draft.kind {
                 RequestKind::Http => Badge::Method(tab.draft.method),
@@ -137,10 +144,17 @@ fn head(ui: &mut Ui, state: &AppState, tab: &Tab) {
                 RequestKind::Websocket => Badge::Websocket,
             };
             let hue = super::badge_hue(ui, badge);
-            let method = widgets::text(ui, badge.short(), 11.0, 700.0, FontFamily::Monospace, hue);
+            let method = widgets::text(
+                ui,
+                badge.short(),
+                font::META,
+                700.0,
+                FontFamily::Monospace,
+                hue,
+            );
             ui.label(method);
             let name = egui::RichText::new(&tab.draft.name)
-                .size(12.0)
+                .size(font::LABEL)
                 .color(p.text_1);
             ui.add(egui::Label::new(name));
         });
@@ -156,7 +170,9 @@ fn head(ui: &mut Ui, state: &AppState, tab: &Tab) {
             let (rect, _) = ui.allocate_exact_size(Vec2::splat(8.0), Sense::hover());
             ui.painter()
                 .circle_stroke(rect.center(), 3.5, egui::Stroke::new(1.5, dot));
-            let words = egui::RichText::new(environment).size(12.0).color(p.text_1);
+            let words = egui::RichText::new(environment)
+                .size(font::LABEL)
+                .color(p.text_1);
             ui.add(egui::Label::new(words));
         });
         widgets::address(ui, &shown, "http-code-environment");
@@ -168,10 +184,10 @@ fn pill(ui: &mut Ui, draw: impl FnOnce(&mut Ui)) -> egui::Response {
     let p = palette(ui.ctx());
     egui::Frame::new()
         .stroke(egui::Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(egui::Margin::symmetric(10, 5))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::INSET, gap::TIGHT))
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             ui.horizontal(draw);
         })
         .response
@@ -202,7 +218,7 @@ fn targets(
         .id_salt("http-code-targets")
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.spacing_mut().item_spacing.y = gap::LINE;
             for (group, key) in [
                 (Group::Shell, keys::http::code::groups::SHELL),
                 (Group::Javascript, keys::http::code::groups::JAVASCRIPT),
@@ -218,7 +234,7 @@ fn targets(
                 any = true;
                 let title = tr(key).to_uppercase();
                 let title = egui::RichText::new(title)
-                    .size(10.5)
+                    .size(font::CAPTION)
                     .strong()
                     .color(p.text_2);
                 ui.add(egui::Label::new(title));
@@ -230,7 +246,7 @@ fn targets(
             }
             if !any {
                 let words = egui::RichText::new(tr(keys::http::code::NO_TARGET))
-                    .size(12.0)
+                    .size(font::LABEL)
                     .color(p.text_2);
                 ui.add(egui::Label::new(words));
             }
@@ -247,26 +263,27 @@ fn target_row(ui: &mut Ui, target: CodeTarget, on: bool) -> bool {
         Sense::click(),
         "http-code-target",
         || WidgetInfo::selected(Role::ListBoxOption, true, on, &words),
-        CornerRadius::same(6),
+        CornerRadius::same(radius::CONTROL),
     );
     let rect = response.rect;
     if on {
         let tint = p.amber_fill.gamma_multiply(0.15);
-        ui.painter().rect_filled(rect, CornerRadius::same(6), tint);
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(radius::CONTROL), tint);
     } else if response.hovered() {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(6), p.bg_2);
+            .rect_filled(rect, CornerRadius::same(radius::CONTROL), p.bg_2);
     }
     let (name, library, _) = entry(target);
     let ink = if on { p.amber_text } else { p.text_0 };
     let family = FontFamily::Proportional;
-    let galley = widgets::text(ui, name, 12.5, 600.0, family.clone(), ink);
+    let galley = widgets::text(ui, name, font::BODY, 600.0, family.clone(), ink);
     let at = pos2(rect.left() + 8.0, rect.center().y - galley.size().y / 2.0);
     let after = at.x + galley.size().x;
     ui.painter_at(rect).galley(at, galley, ink);
     if let Some(library) = library {
         let library = format!(" · {library}");
-        let galley = widgets::text(ui, &library, 12.0, 400.0, family, p.text_2);
+        let galley = widgets::text(ui, &library, font::LABEL, 400.0, family, p.text_2);
         let at = pos2(after, rect.center().y - galley.size().y / 2.0);
         ui.painter_at(rect).galley(at, galley, p.text_2);
     }
@@ -280,7 +297,7 @@ fn switch(ui: &mut Ui, (on, enabled): (bool, bool), label: &str, author_id: &str
     let changed = widgets::switch(ui, label, author_id, &mut checked, enabled).changed();
     let ink = if enabled { p.text_1 } else { p.text_2 };
     ui.add(egui::Label::new(
-        egui::RichText::new(label).size(12.5).color(ink),
+        egui::RichText::new(label).size(font::BODY).color(ink),
     ));
     changed
 }
@@ -290,7 +307,7 @@ fn switches(ui: &mut Ui, dialog: &CodeDialog, language: i18n::Language, actions:
     let options = dialog.options();
     let shell = entry(dialog.target()).2 == Group::Shell;
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().item_spacing.x = gap::SNUG;
         let on = (options.resolve_variables, true);
         if switch(ui, on, &tr(keys::http::code::RESOLVE), "http-code-resolve") {
             ask(actions, Ask::Toggle(Switch::Resolve));
@@ -322,9 +339,9 @@ fn secrets_question(ui: &mut Ui, language: i18n::Language, actions: &mut Actions
     let p = palette(ui.ctx());
     let tr = |key| i18n::translate(language, key, &[]);
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let words = egui::RichText::new(tr(keys::http::code::ASK_SECRETS))
-            .size(12.5)
+            .size(font::BODY)
             .color(p.amber_text);
         let said = ui.add(egui::Label::new(words).wrap());
         widgets::address(ui, &said, "http-code-secrets-ask");
@@ -361,7 +378,7 @@ fn output(ui: &mut Ui, dialog: &CodeDialog, view: &mut CodeView, language: i18n:
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, HEIGHT - 110.0), Sense::hover());
     let p = palette(ui.ctx());
     ui.painter()
-        .rect_filled(rect, CornerRadius::same(8), p.bg_0);
+        .rect_filled(rect, CornerRadius::same(radius::MENU), p.bg_0);
     if let Some((_, lines)) = &mut view.shown {
         let mut inside = ui.new_child(egui::UiBuilder::new().max_rect(rect.shrink(6.0)));
         lines.show(&mut inside, "http-code-output", true);
@@ -376,7 +393,7 @@ fn named(names: &[String]) -> String {
 }
 
 fn note(ui: &mut Ui, words: String, ink: egui::Color32, author_id: &str) {
-    let words = egui::RichText::new(words).size(12.0).color(ink);
+    let words = egui::RichText::new(words).size(font::LABEL).color(ink);
     let said = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &said, author_id);
 }
@@ -432,7 +449,7 @@ fn foot(
     let tr = |key| i18n::translate(language, key, &[]);
     let p = palette(ui.ctx());
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         if Button::new(&tr(keys::http::code::COPY), "http-code-copy")
             .kind(Kind::Filled)
             .icon(Icon::Copy)
@@ -471,7 +488,7 @@ fn foot(
         }
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             let words = egui::RichText::new(tr(keys::http::code::WHERE))
-                .size(12.0)
+                .size(font::LABEL)
                 .color(p.text_2);
             ui.add(egui::Label::new(words));
         });

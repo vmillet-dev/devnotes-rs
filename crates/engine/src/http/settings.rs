@@ -1,7 +1,6 @@
 //! What a request takes from the folders and the collection above it, and what its body implies.
 
 use super::transport::{self, Limits, SetBy, Transport, TransportSettings};
-use serde::Serialize;
 
 use super::model::{
     ContainerSettings, HttpItemKind, KeyValue, RequestAuth, RequestBody, RequestScripts,
@@ -9,31 +8,27 @@ use super::model::{
 use super::variables::{VariableLayer, VariableScope};
 
 /// Where an inherited value was set: what the request says it comes from.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HttpOrigin {
     pub kind: HttpItemKind,
     pub id: String,
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InheritedHeader {
     pub header: KeyValue,
     pub from: HttpOrigin,
 }
 
 /// A folder's or the collection's scripts, and whose they are.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InheritedScripts {
     pub from: HttpOrigin,
     pub scripts: RequestScripts,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Inherited {
     /// Never `Inherit`: what a request inheriting gets, `None` when nothing above sets one.
     pub auth: RequestAuth,
@@ -43,15 +38,12 @@ pub struct Inherited {
     /// Resolved from the collection down; a request's own settings go over it.
     pub transport: Transport,
     /// Which level set the timeout and the redirects: Rust's, for the failure that names it.
-    #[serde(skip)]
     pub limits: Limits,
     /// A level holds a `User-Agent` row switched off: the application's own is not sent in
     /// its place.
-    #[serde(skip)]
     pub user_agent_off: bool,
     /// The folders' variables, the nearest first, then the collection's: the front asks for
     /// them resolved, never as layers.
-    #[serde(skip)]
     pub variables: Vec<VariableLayer>,
     /// The collection's, then each folder's down to the request's: the order they run in
     /// before the send, the other way after it.

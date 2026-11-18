@@ -12,17 +12,17 @@ use crate::services::samples::Samples;
 
 /// Reads the index, not the database: still the db queue, which owns both (D11).
 pub fn query(backend: &Backend, query: NotesQuery) -> Pending<NotesView> {
-    backend.db(move |engine| notes::query_notes(engine, query))
+    backend.db(move |engine| notes::query_notes(engine, &query))
 }
 
 /// A Dessin's small picture as a PNG data URI; `None` when it has none.
 pub fn drawing_thumbnail(backend: &Backend, id: String) -> Pending<Option<String>> {
-    backend.db(move |engine| notes::drawing_thumbnail(engine, id))
+    backend.db(move |engine| notes::drawing_thumbnail(engine, &id))
 }
 
 /// A Dessin's large picture as a PNG data URI, for a Note that embeds it; `None` when it has none.
 pub fn drawing_picture(backend: &Backend, id: String) -> Pending<Option<String>> {
-    backend.db(move |engine| notes::drawing_picture(engine, id))
+    backend.db(move |engine| notes::drawing_picture(engine, &id))
 }
 
 /// A drawing's two pictures, taken off the frame; both empty for a scene with nothing on it.
@@ -52,7 +52,7 @@ pub fn present_note(
     backend: &Backend,
     markdown: String,
 ) -> Pending<engine::notes::model::Presentation> {
-    backend.spawn(move |_| engine::notes::present_note(markdown))
+    backend.compute(move |_| engine::notes::present_note(&markdown))
 }
 
 /// What became of an export.
@@ -149,7 +149,7 @@ pub fn convert(
     into: engine::notes::kind::NoteKind,
 ) -> Pending<Reversible> {
     backend.db(move |engine| {
-        let converted = notes::convert_note(engine, id.clone(), into)?;
+        let converted = notes::convert_note(engine, &id, into)?;
         Ok(Reversible::Convert {
             id,
             into,
@@ -186,7 +186,7 @@ pub fn list_revisions(
     backend: &Backend,
     id: String,
 ) -> Pending<Vec<engine::notes::revision::Revision>> {
-    backend.db(move |engine| notes::list_revisions(engine, id))
+    backend.db(move |engine| notes::list_revisions(engine, &id))
 }
 
 /// What going back to a kept body would change, against the current text.
@@ -195,17 +195,17 @@ pub fn revision_diff(
     id: String,
     revision: String,
 ) -> Pending<Vec<engine::notes::revision::DiffLine>> {
-    backend.db(move |engine| notes::revision_diff(engine, id, revision))
+    backend.db(move |engine| notes::revision_diff(engine, &id, revision))
 }
 
 /// Back to a kept body, dropping it and every one kept after it; `updated_at` stays.
 pub fn restore_revision(backend: &Backend, id: String, revision: String) -> Pending<DisplayNote> {
-    backend.db(move |engine| notes::restore_revision(engine, id, revision))
+    backend.db(move |engine| notes::restore_revision(engine, &id, &revision))
 }
 
 /// A field set to `None` is left as it is.
 pub fn update(backend: &Backend, id: String, patch: NotePatch) -> Pending<DisplayNote> {
-    backend.db(move |engine| notes::update_note(engine, id, patch))
+    backend.db(move |engine| notes::update_note(engine, &id, &patch))
 }
 
 /// The first launch's samples, unless the library already has a space (a library emptied of
@@ -215,14 +215,14 @@ pub fn seed_samples(backend: &Backend, samples: Samples) -> Pending<bool> {
         if !spaces::list_spaces(engine)?.is_empty() {
             return Ok(false);
         }
-        notes::seed_samples(engine, samples.space, samples.folders, samples.notes)?;
+        notes::seed_samples(engine, samples.space, &samples.folders, samples.notes)?;
         Ok(true)
     })
 }
 
 /// The whole note, body included: opening one never starts from a preview.
 pub fn get(backend: &Backend, id: String) -> Pending<DisplayNote> {
-    backend.db(move |engine| notes::get_note(engine, id))
+    backend.db(move |engine| notes::get_note(engine, &id))
 }
 
 /// A new note, once it is worth keeping.
@@ -232,46 +232,46 @@ pub fn create(backend: &Backend, draft: NoteDraft) -> Pending<DisplayNote> {
 
 pub fn pin(backend: &Backend, ids: Vec<String>, pinned: bool) -> Pending<Reversible> {
     backend.db(move |engine| {
-        notes::set_pinned(engine, ids, pinned).map(|ids| Reversible::Pin { ids, pinned })
+        notes::set_pinned(engine, &ids, pinned).map(|ids| Reversible::Pin { ids, pinned })
     })
 }
 
 /// Triaging is not editing: `updated_at` stays where it was.
 pub fn prioritise(backend: &Backend, ids: Vec<String>, priority: Priority) -> Pending<Reversible> {
-    backend.db(move |engine| notes::set_priority(engine, ids, priority).map(Reversible::Priority))
+    backend.db(move |engine| notes::set_priority(engine, &ids, priority).map(Reversible::Priority))
 }
 
 /// Out of their folders, into another space.
 pub fn move_to(backend: &Backend, ids: Vec<String>, space_id: String) -> Pending<Reversible> {
-    backend.db(move |engine| notes::move_notes(engine, ids, space_id).map(Reversible::Move))
+    backend.db(move |engine| notes::move_notes(engine, &ids, &space_id).map(Reversible::Move))
 }
 
 /// Into the trash, which keeps them thirty days.
 pub fn delete(backend: &Backend, ids: Vec<String>) -> Pending<Reversible> {
     backend.db(move |engine| {
-        let count = notes::delete_notes(engine, ids.clone())?;
+        let count = notes::delete_notes(engine, &ids)?;
         Ok(Reversible::Deletion { ids, count })
     })
 }
 
 /// What the search matches, as `view::fold` reads it; the expired purged first.
 pub fn list_trash(backend: &Backend, search: String) -> Pending<Vec<TrashedNote>> {
-    backend.db(move |engine| notes::list_trash(engine, search))
+    backend.db(move |engine| notes::list_trash(engine, &search))
 }
 
 /// `updated_at` stays where it was: putting back is not editing.
 pub fn restore(backend: &Backend, ids: Vec<String>) -> Pending<u32> {
-    backend.db(move |engine| notes::restore_notes(engine, ids))
+    backend.db(move |engine| notes::restore_notes(engine, &ids))
 }
 
 /// What the same search finds, or the whole trash.
 pub fn restore_trash(backend: &Backend, search: String) -> Pending<u32> {
-    backend.db(move |engine| notes::restore_trash(engine, search))
+    backend.db(move |engine| notes::restore_trash(engine, &search))
 }
 
 /// Only notes already in the trash: nothing shortens the retention.
 pub fn purge(backend: &Backend, ids: Vec<String>) -> Pending<u32> {
-    backend.db(move |engine| notes::purge_notes(engine, ids))
+    backend.db(move |engine| notes::purge_notes(engine, &ids))
 }
 
 pub fn empty_trash(backend: &Backend) -> Pending<u32> {
@@ -285,7 +285,7 @@ pub fn fill(
     content: String,
     values: std::collections::BTreeMap<String, String>,
 ) -> Pending<String> {
-    backend.db(move |engine| notes::fill_placeholders(engine, content, values))
+    backend.db(move |engine| notes::fill_placeholders(engine, &content, &values))
 }
 
 /// What was typed into a note's fields, kept; `updated_at` stays: filling is not editing.
@@ -294,7 +294,7 @@ pub fn set_field_values(
     id: String,
     values: std::collections::BTreeMap<String, String>,
 ) -> Pending<DisplayNote> {
-    backend.db(move |engine| notes::set_placeholder_values(engine, id, values))
+    backend.db(move |engine| notes::set_placeholder_values(engine, &id, values))
 }
 
 /// Case and accents folded, as the core's search reads text. Pure, under a microsecond (D12).
@@ -309,30 +309,30 @@ pub fn list_tags(backend: &Backend) -> Pending<Vec<TagUsage>> {
 
 /// The notes carrying any of `tags`, each once: what a change would touch.
 pub fn count_tagged(backend: &Backend, tags: Vec<String>) -> Pending<u32> {
-    backend.db(move |engine| notes::count_notes_tagged(engine, tags))
+    backend.db(move |engine| notes::count_notes_tagged(engine, &tags))
 }
 
 /// Onto an existing tag, a merge. `updated_at` stays: a retag is aimed at no note.
 pub fn rename_tags(backend: &Backend, tags: Vec<String>, into: String) -> Pending<u32> {
-    backend.db(move |engine| notes::rename_tags(engine, tags, into))
+    backend.db(move |engine| notes::rename_tags(engine, &tags, &into))
 }
 
 pub fn delete_tags(backend: &Backend, tags: Vec<String>) -> Pending<u32> {
-    backend.db(move |engine| notes::delete_tags(engine, tags))
+    backend.db(move |engine| notes::delete_tags(engine, &tags))
 }
 
 /// The copy, under the title the interface words.
 pub fn duplicate(backend: &Backend, id: String, title: String) -> Pending<DisplayNote> {
-    backend.db(move |engine| notes::duplicate_note(engine, id, title))
+    backend.db(move |engine| notes::duplicate_note(engine, &id, title))
 }
 
 /// Through `normalize_tags`, the one keeper of what a tag is.
 pub fn tag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<Reversible> {
-    backend.db(move |engine| notes::tag_notes(engine, ids, vec![tag]).map(Reversible::Tag))
+    backend.db(move |engine| notes::tag_notes(engine, &ids, &[tag]).map(Reversible::Tag))
 }
 
 pub fn untag(backend: &Backend, ids: Vec<String>, tag: String) -> Pending<Reversible> {
-    backend.db(move |engine| notes::remove_tag(engine, ids, tag).map(Reversible::Untag))
+    backend.db(move |engine| notes::remove_tag(engine, &ids, tag).map(Reversible::Untag))
 }
 
 pub fn global_variables(backend: &Backend) -> Pending<std::collections::BTreeMap<String, String>> {

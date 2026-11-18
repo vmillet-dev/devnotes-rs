@@ -55,8 +55,7 @@ const CONNECTIONS: [(Connection, u64); 3] = [
     (Connection::Adsl, 10_000_000),
 ];
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TransferRequest {
     /// A quantity, with its unit or without one.
     pub size: String,
@@ -69,8 +68,7 @@ pub struct TransferRequest {
 }
 
 /// A length of time to the nearest second, for the front to spell. Past a year it stays in days.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TransferTime {
     pub days: u32,
     pub hours: u32,
@@ -80,8 +78,7 @@ pub struct TransferTime {
     pub under_a_second: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConnectionEstimate {
     /// `None` for the rate typed.
     pub connection: Option<Connection>,
@@ -97,12 +94,7 @@ pub enum TransferField {
     Rate,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TransferAnswer {
     Estimated {
         /// At the rate typed, slowed by the efficiency.

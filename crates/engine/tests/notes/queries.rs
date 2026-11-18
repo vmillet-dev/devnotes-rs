@@ -741,7 +741,7 @@ fn only_note(view: &NotesView) -> DisplayNote {
     let card = cards.next().expect("a note");
     assert!(cards.next().is_none(), "one note only");
 
-    view.display(card)
+    view.display(card).clone()
 }
 
 /// A list sends the head of a long body; the editor reads the rest with `get`.

@@ -1,5 +1,6 @@
 //! Under the tools that match: what the search finds inside the references, a row an entry.
 
+use crate::theme::tokens::{font, radius};
 use egui::{CornerRadius, Pos2, Role, Sense, Ui, Vec2, WidgetInfo};
 use i18n::{Language, Message, keys};
 
@@ -144,10 +145,10 @@ fn hit_row(
 ) -> egui::Response {
     let p = palette(ui.ctx());
     let width = ui.available_width();
-    let where_ = widgets::wrapped(ui, place, (11.5, 400.0), p.text_2, width * 0.3);
+    let where_ = widgets::wrapped(ui, place, (font::CONTROL, 400.0), p.text_2, width * 0.3);
     let room = width - 28.0 - where_.size().x - 16.0;
-    let title = widgets::wrapped(ui, &hit.title, (13.0, 600.0), p.text_0, room);
-    let line = widgets::wrapped(ui, &hit.line, (11.5, 400.0), p.text_2, room);
+    let title = widgets::wrapped(ui, &hit.title, (font::READING, 600.0), p.text_0, room);
+    let line = widgets::wrapped(ui, &hit.line, (font::CONTROL, 400.0), p.text_2, room);
     let height = 8.0 + title.size().y + 2.0 + line.size().y + 8.0;
     let name = format!("{} {} {place}", hit.title, hit.line);
     let response = interact(
@@ -156,12 +157,13 @@ fn hit_row(
         Sense::click(),
         "tools-reference-hit",
         || WidgetInfo::labeled(Role::Button, true, &name),
-        CornerRadius::same(8),
+        CornerRadius::same(radius::MENU),
     );
     view.results.push(response.id);
     let rect = response.rect;
     let fill = towards(egui::Color32::TRANSPARENT, p.bg_2, hovered(ui, &response));
-    ui.painter().rect_filled(rect, CornerRadius::same(8), fill);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(radius::MENU), fill);
     let left = rect.left() + 14.0;
     let title_size = title.size();
     title.paint(ui, Pos2::new(left, rect.top() + 8.0), p.text_0);
@@ -192,19 +194,20 @@ fn more_row(
         .with("name", place)
         .text(language);
     let width = ui.available_width();
-    let shown = widgets::wrapped(ui, &words, (12.0, 500.0), p.amber_text, width - 28.0);
+    let shown = widgets::wrapped(ui, &words, (font::LABEL, 500.0), p.amber_text, width - 28.0);
     let response = interact(
         ui,
         Vec2::new(width, shown.size().y + 12.0),
         Sense::click(),
         "tools-reference-more",
         || WidgetInfo::labeled(Role::Button, true, &words),
-        CornerRadius::same(8),
+        CornerRadius::same(radius::MENU),
     );
     view.results.push(response.id);
     let rect = response.rect;
     let fill = towards(egui::Color32::TRANSPARENT, p.bg_2, hovered(ui, &response));
-    ui.painter().rect_filled(rect, CornerRadius::same(8), fill);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(radius::MENU), fill);
     shown.paint(ui, rect.min + Vec2::new(14.0, 6.0), p.amber_text);
     response
 }

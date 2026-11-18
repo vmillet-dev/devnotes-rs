@@ -24,24 +24,18 @@ fn names(session: &Session) -> Vec<String> {
 #[test]
 fn a_library_is_added_renamed_opened_and_another_deleted() {
     let session = Session::open();
-    let work = session
-        .call(|e| create_library(e, "Work".to_string()))
-        .unwrap();
-    let old = session
-        .call(|e| create_library(e, "Old".to_string()))
-        .unwrap();
+    let work = session.call(|e| create_library(e, "Work")).unwrap();
+    let old = session.call(|e| create_library(e, "Old")).unwrap();
     assert!(names(&session).contains(&"Work".to_string()));
 
     let id = work.id.clone();
-    session
-        .call(|e| rename_library(e, id, "Archive".to_string()))
-        .unwrap();
+    session.call(|e| rename_library(e, &id, "Archive")).unwrap();
     assert!(names(&session).contains(&"Archive".to_string()));
 
-    session.call(|e| open_library(e, work.id)).unwrap();
+    session.call(|e| open_library(e, &work.id)).unwrap();
     assert_eq!(session.call(vault_state).unwrap(), VaultState::Absent);
 
-    session.call(|e| delete_library(e, old.id)).unwrap();
+    session.call(|e| delete_library(e, &old.id)).unwrap();
     assert!(!names(&session).contains(&"Old".to_string()));
 }
 

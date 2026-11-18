@@ -1690,7 +1690,8 @@ itself. Four changes got it there:
   — still not in the File menu, for the reason it never was.
 - **The selection bar floats** over the canvas region rather than being inserted above it.
   ⚠️ It has to be a child of `.canvas-region`, which is the only positioned ancestor: left
-  where it was, it hung against the window and covered the search field.
+  where it was, it hung against the window and covered the search field. (The egui application
+  puts it in the header, in the search's place: see "The notes canvas".)
 
 ⚠️ **The measurement is the spec**, in `06-search-and-filters`: at 1100x720 with the rail
 open, every topbar control shares a row, the row does not overflow, the first card is in the
@@ -2571,7 +2572,7 @@ answers on its standard output.
 (`before`, `after`), sealed with the document or the settings that carry them. `Around::of`
 (`around.rs`) lists what one send runs: before it leaves the collection's script, each folder's,
 then the request's; once answered, the other way round; a blank one is not run.
-`send_http_request` is a `Flight` (`http.rs`), one host for both phases (`session.rs`):
+`send_http_request` is a `Flight` (`http/flight.rs`; a run's steps in `http/collection_run.rs`), one host for both phases (`session.rs`):
 
 - What it inherits, the levels it resolves from, the environment and a copy of the jar are read
   under the lock; the phase runs on a blocking thread, the lock free. « Annuler » kills the host
@@ -3968,6 +3969,13 @@ asked for would only add noise.
   duplicating them, so a field added to `Note` is exported without anyone thinking about it.
   Only the spaces actually cited travel: exporting one space should not recreate a whole tree
   on the other side.
+- **The file is written and read off the db queue** (1.0.2): an export reads its rows there,
+  then opens, seals and zips every attachment on a blocking thread with the key alone
+  (`Library::shared_vault`); an import reads and opens the file there before it merges on the
+  queue; adding an attachment reads its source there. A large export held every other command
+  for its length (20 s for 160 MB in a debug build). `export_notes`, `import_notes` and
+  `attach_file` are therefore network-shaped (`Arc<Engine>`, `Backend::spawn`). The file is
+  staged then renamed, so a window closed in the middle leaves no half export.
 - **⚠️ An export can be sealed, and with a key of its own.** The library key is derived
   from the passphrase typed at launch and never leaves the machine; an export is the one
   file meant to reach another one, so `transfer/protect.rs` derives a second key from a
@@ -4151,7 +4159,7 @@ egui's focus navigation.
 ### Preferences, settings and the notifiers
 
 The two `preferences.json` keep the reference's format — one flat object of `devnotes.*` keys,
-each a string — so the core still reads `automaticBackups` from the application's file itself.
+each a string.
 `services::preferences::Preferences` keeps every key it read, those this version does not know
 included, and is written staged then renamed. The application's file is read by `main` before
 the window exists; the open library's (`devnotes.notes.*`) is read again on the db queue each
@@ -4253,8 +4261,10 @@ preferences panel does. Until the screens arrive, an area is an empty room addre
 `area-notes`, `area-tools` or `area-http`.
 
 `ui::banners` draws the `ErrorNotifier`'s failure (red, announced assertively, `error-banner`)
-and the `StatusNotifier`'s report (green, announced politely, `status-toast`) as top panels
-under the bar, one of each, each until its X is pressed (`DismissError`, `DismissStatus`).
+as a top panel under the bar, until its X is pressed (`DismissError`). The `StatusNotifier`'s
+report (green, announced politely, `status-toast`) takes the name's place in the middle of the
+title bar, cut to the room the menus leave: there it moves nothing and covers no control. It goes
+by its X or after `motion::REPORT` seconds away from the pointer (`DismissStatus`).
 
 ### The notes canvas
 
@@ -4414,10 +4424,13 @@ scrolled to first.
 
 Several notes are ticked at once (`state::selection`): `Ctrl`-click or the card's box toggles one,
 `Shift`-click ticks from the card that had the focus the frame before (a click focuses what it
-clicks) to this one, `X` toggles the focused card. While any is ticked, the selection bar floats
-over the canvas, never in its flow: the count, then commands — move to a space, file into a
-folder or out of every one, a priority, a tag added or removed, pin or unpin, delete in two
-clicks. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
+clicks) to this one, `X` toggles the focused card. While any is ticked, what acts on them stands
+in the header where the search was (`notes::header::selection`), as tall as that row, so the
+cards neither move nor hide under it; in a header of one row it takes the whole row. The count,
+then commands — move to a space, file into a folder or out of every one, a tag added, pin or
+unpin, delete in two clicks — and « … » for a priority, a tag removed, the copy, and whatever the
+width leaves out (the filing first, then the move, the pin, the tag field). Asking for the search
+(`Ctrl+K`) lets the selection go. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
 the selection go after disarming and before the search. ⚠️ The card's box is allocated on every
 frame, shown or not: a widget that comes and goes moved the ids of every widget after it, and the
 ⋯ lost its menu.
@@ -4481,7 +4494,7 @@ whatever the switch says. `state::board::BoardState` is a `QueryCell` over `boar
 the list's criteria (`notes_query::Criteria`) among its parameters: the board reads the whole
 space and dims, it never narrows. While it shows, the selection, the arrows (zone by zone, then
 the ground, one step at a time) and the search's count read the board's cards, dimmed ones
-included, and the selection bar takes them as `selection_bar::Shown`.
+included, and so does the header's selection.
 
 `notes::canvas::board` draws it: a dotted ground (`GRID_PX`) that pans both ways and never
 zooms, at least as large as what is seen, so past the content's edge it still takes the pointer;
@@ -4846,8 +4859,9 @@ from a closed list, not typed, and `notes::language` compares it exactly.
 
 **The JSON shape that is still written** — the export bundle, the stored preferences, a
 request's document — is pinned by tests in the models (`notes/model.rs`, `spaces/model.rs`,
-`tests/ipc_contract.rs`): camelCase keys, a lifecycle as `{"kind":"expires","at":…}`, an error
-code as `"noteNotFound"`. A serde attribute deleted by accident fails `cargo test`.
+`tests/formats.rs`): camelCase keys, a lifecycle as `{"kind":"expires","at":…}`. A serde
+attribute deleted by accident fails `cargo test`. Only what is written derives serde: a type the
+interface receives as a Rust value has no JSON shape.
 
 ### Input validation
 
@@ -5299,10 +5313,9 @@ space or a folder gone since falls back on « Tous les espaces » or every note 
 first launch's own pick of the seeded space is shown, not remembered: nothing was chosen yet.
 
 ⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
-launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
-out of that file before the front end has booted (`backup::copies::wanted`). Rust reads the
-JSON file itself (`backup::wanted_by_preference`), not through `tauri-plugin-store`: the core
-knows no plugin.
+launch" is a habit rather than a property of one corpus. The interface reads it with the
+others and hands the core a plain flag (`Engine::keep_launch_copies`) at start and at each
+apply, before any unlock reads it: the core reads no file whose format is the interface's.
 
 ⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
 opened once. A space id means nothing in another library, and a samples marker carried
@@ -5694,9 +5707,6 @@ installed or shipped alongside the executable. The database file lives under the
   Evolving the model means adding a `YYYY-MM-DD-HHMMSS_name/` directory — never editing a
   shipped migration, it has already run on user machines. Each migration is atomic. A database
   carrying a migration this binary does not know is refused rather than misread.
-- **A schema versioned by `PRAGMA user_version` is refused by name.** That is 0.1.0's, before
-  the Diesel migrations; replaying them over it would fail on the first `CREATE TABLE`. The
-  error says to open the library with 0.4 first, which still adopts that history.
 - **The board geometry is columns nothing else reads.** `folders.x/y/w/h` are nullable and
   move together — `NULL` means "never laid out", which every folder made before the board
   existed is. `note_positions` is keyed on `note_id` alone and holds a row only for an
@@ -5967,9 +5977,19 @@ the widget rather than of each screen (plan § 3.12):
 Every colour, shadow, gap and duration of the interface is a token of `ui::theme`, copied one
 for one from the reference's `styles.scss` (`src/styles/` at the `angular-reference` tag): `tokens::DARK` and
 `tokens::LIGHT` (a `Palette` each), `tokens::COMFORTABLE` and `tokens::COMPACT` (a `Spacing`),
-`tokens::TITLEBAR_HEIGHT`, and the four durations of `theme::motion`. A widget reads them through
+`tokens::TITLEBAR_HEIGHT`, and the durations of `theme::motion`. A widget reads them through
 `theme::palette(ctx)` and `theme::spacing(ctx)`, never a literal. The CSS `--*-rgb` triplets are
 gone: a tint is the colour itself at an alpha.
+
+The reference had no scale for the rest, so the egui application defines one by role:
+`tokens::font` (`BADGE`, `CAPTION`, `META`, `CONTROL`, `LABEL`, `BODY`, `READING`, `SUBTITLE`,
+`TITLE`, `HEADING`, `DISPLAY`, `HERO`), `tokens::gap` (`HAIRLINE`, `LINE`, `TIGHT`, `SNUG`,
+`CONTROLS`, `INSET`, `GROUPS`, `BLOCKS`, `PANEL`, `PAGE`; `gap::margin` for a frame) and
+`tokens::radius` (`MARK`, `TAG`, `CONTROL`, `MENU`, `CARD`, `PANEL`, `DIALOG`). Each role is
+defined once, its use written beside it; a screen names the role, so changing « the body text »
+is one line. `theme::literals` is a test that reads every source
+file and refuses a number where a gap, a radius or a text size is expected; `theme::motion`'s
+test does the same for durations, named ones included.
 
 `theme::apply(ctx, appearance, density)` sets egui's style for **both** themes at once
 (`set_style_of`), then the preference (`System`, `Dark`, `Light`): egui switches by itself when

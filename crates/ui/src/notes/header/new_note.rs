@@ -1,5 +1,6 @@
 //! « + New note », split: the note of the preferred kind in one click, any kind in two.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, RectAlign, Response, Role,
     Sense, Stroke, Ui, Vec2, WidgetInfo, pos2,
@@ -8,6 +9,7 @@ use engine::notes::kind::NoteKind;
 use i18n::{Key, keys};
 
 use crate::action::{Action, Actions};
+use crate::services::shortcuts::{self, Bindings};
 use crate::state::AppState;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
@@ -43,9 +45,9 @@ const KINDS: [(NoteKind, Key, Key); 5] = [
 ];
 
 const MENU_WIDTH: f32 = 340.0;
-const PADDING: f32 = 10.0;
+const PADDING: f32 = gap::INSET;
 const TILE: f32 = 30.0;
-const GAP: f32 = 12.0;
+const GAP: f32 = gap::GROUPS;
 const NAME_HEIGHT: f32 = 17.0;
 
 /// How wide it is drawn, for the row that lays out what comes before it.
@@ -54,7 +56,7 @@ pub(super) fn width(ui: &Ui, language: i18n::Language) -> f32 {
     widgets::text(
         ui,
         &label,
-        13.0,
+        font::READING,
         700.0,
         FontFamily::Proportional,
         Color32::WHITE,
@@ -85,10 +87,17 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
         .close_behavior(PopupCloseBehavior::CloseOnClick)
         .show(|ui| {
             ui.set_width(MENU_WIDTH);
-            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.spacing_mut().item_spacing.y = gap::LINE;
             let p = palette(ui.ctx());
             let title = tr(keys::notes::CREATE_MENU_TITLE).to_uppercase();
-            let galley = widgets::text(ui, &title, 10.5, 600.0, FontFamily::Proportional, p.text_2);
+            let galley = widgets::text(
+                ui,
+                &title,
+                font::CAPTION,
+                600.0,
+                FontFamily::Proportional,
+                p.text_2,
+            );
             let (rect, _) =
                 ui.allocate_exact_size(Vec2::new(galley.size().x, 22.0), Sense::hover());
             ui.painter()
@@ -96,7 +105,8 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
             let fresh = (!state.settings.note_kind_tried).then(|| tr(keys::notes::KIND_NEW));
             for (kind, name, line) in KINDS {
                 let badge = fresh.as_deref().filter(|_| kind == NoteKind::Note);
-                if kind_item(ui, kind, (&tr(name), &tr(line)), badge).clicked() {
+                let keys = shortcut(kind, &state.settings.bindings);
+                if kind_item(ui, kind, (&tr(name), &tr(line)), (keys, badge)).clicked() {
                     new_note(actions, Some(kind));
                 }
             }
@@ -121,7 +131,7 @@ fn part(ui: &mut Ui, label: &str, author_id: &str, part: Part) -> Response {
             let galley = widgets::text(
                 ui,
                 label,
-                13.0,
+                font::READING,
                 700.0,
                 FontFamily::Proportional,
                 p.amber_ink,
@@ -166,7 +176,7 @@ fn part(ui: &mut Ui, label: &str, author_id: &str, part: Part) -> Response {
             let galley = widgets::text(
                 ui,
                 label,
-                13.0,
+                font::READING,
                 700.0,
                 FontFamily::Proportional,
                 p.amber_ink,
@@ -192,15 +202,14 @@ fn kind_item(
     ui: &mut Ui,
     kind: NoteKind,
     (name, line): (&str, &str),
-    badge: Option<&str>,
+    (keys, badge): (&str, Option<&str>),
 ) -> Response {
     let p = palette(ui.ctx());
     let author_id = format!("new-note-{}", kind_id(kind));
-    let corner = CornerRadius::same(8);
+    let corner = CornerRadius::same(radius::MENU);
     let width = ui.available_width();
-    let keys = shortcut(kind);
     let room = width - 2.0 * PADDING - TILE - 2.0 * GAP - key_caps_width(ui, keys);
-    let text_size = egui::FontId::new(11.5, FontFamily::Proportional);
+    let text_size = egui::FontId::new(font::CONTROL, FontFamily::Proportional);
     let line = ui.fonts_mut(|fonts| fonts.layout(line.to_owned(), text_size, p.text_2, room));
     let height = 2.0 * PADDING + NAME_HEIGHT + 3.0 + line.size().y;
     let response = interact(
@@ -218,7 +227,14 @@ fn kind_item(
     tile(ui, rect.min + Vec2::splat(PADDING), kind);
     let left = rect.left() + PADDING + TILE + GAP;
     let top = rect.top() + PADDING;
-    let name = widgets::text(ui, name, 13.0, 600.0, FontFamily::Proportional, p.text_1);
+    let name = widgets::text(
+        ui,
+        name,
+        font::READING,
+        600.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     let after_name = left + name.size().x + 8.0;
     ui.painter().galley(pos2(left, top), name, p.text_1);
     if let Some(words) = badge {
@@ -240,12 +256,19 @@ fn tile(ui: &Ui, at: egui::Pos2, kind: NoteKind) {
 /// « New », until a note of that kind was made.
 fn new_badge(ui: &Ui, left_middle: egui::Pos2, words: &str) {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, words, 10.0, 700.0, FontFamily::Proportional, p.text_1);
+    let galley = widgets::text(
+        ui,
+        words,
+        font::CAPTION,
+        700.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     let size = galley.size() + Vec2::new(12.0, 2.0);
     let rect = Rect::from_min_size(left_middle - Vec2::new(0.0, size.y / 2.0), size);
     ui.painter().rect_filled(
         rect,
-        CornerRadius::same(9),
+        CornerRadius::same(radius::MENU),
         p.amber_fill.gamma_multiply(0.15),
     );
     ui.painter()
@@ -254,7 +277,14 @@ fn new_badge(ui: &Ui, left_middle: egui::Pos2, words: &str) {
 
 fn key_cap_text(ui: &Ui, word: &str) -> std::sync::Arc<egui::Galley> {
     let colour = palette(ui.ctx()).text_1;
-    widgets::text(ui, word, 10.5, 400.0, FontFamily::Monospace, colour)
+    widgets::text(
+        ui,
+        word,
+        font::CAPTION,
+        400.0,
+        FontFamily::Monospace,
+        colour,
+    )
 }
 
 fn key_caps_width(ui: &Ui, keys: &str) -> f32 {
@@ -273,7 +303,7 @@ fn key_caps(ui: &Ui, keys: &str, right: f32, middle: f32) {
         let rect = Rect::from_min_size(pos2(right - size.x, middle - size.y / 2.0), size);
         ui.painter().rect(
             rect,
-            CornerRadius::same(4),
+            CornerRadius::same(radius::TAG),
             p.bg_3,
             Stroke::new(1.0, p.line),
             egui::StrokeKind::Inside,
@@ -284,21 +314,19 @@ fn key_caps(ui: &Ui, keys: &str, right: f32, middle: f32) {
     }
 }
 
-/// The canvas key each kind answers to (`canvas::shortcuts::CANVAS`).
-pub(crate) fn shortcut(kind: NoteKind) -> &'static str {
-    let mac = cfg!(target_os = "macos");
-    match (kind, mac) {
-        (NoteKind::Snippet, false) => "Ctrl+N",
-        (NoteKind::Note, false) => "Ctrl+Shift+N",
-        (NoteKind::Checklist, false) => "Ctrl+Shift+L",
-        (NoteKind::Calc, false) => "Ctrl+Shift+M",
-        (NoteKind::Drawing, false) => "Ctrl+Shift+D",
-        (NoteKind::Snippet, true) => "⌘N",
-        (NoteKind::Note, true) => "⌘⇧N",
-        (NoteKind::Checklist, true) => "⌘⇧L",
-        (NoteKind::Calc, true) => "⌘⇧M",
-        (NoteKind::Drawing, true) => "⌘⇧D",
-    }
+/// The keys each kind answers to on the canvas, as the person bound them.
+pub(crate) fn shortcut(kind: NoteKind, bindings: &Bindings) -> &str {
+    let id = match kind {
+        NoteKind::Snippet => "canvas.newSnippet",
+        NoteKind::Note => "canvas.newNote",
+        NoteKind::Checklist => "canvas.newChecklist",
+        NoteKind::Calc => "canvas.newCalc",
+        NoteKind::Drawing => "canvas.newDrawing",
+    };
+    shortcuts::ACTIONS
+        .iter()
+        .find(|action| action.id == id)
+        .map_or("", |action| bindings.of(*action))
 }
 
 fn kind_id(kind: NoteKind) -> &'static str {

@@ -4,6 +4,7 @@
 use engine::notes::kind::NoteKind;
 use i18n::{Key, keys};
 
+use crate::services::shortcuts::Bindings;
 use crate::state::Area;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,10 +51,10 @@ impl Command {
         }
     }
 
-    /// Its keys, one cap each.
-    pub fn keys(self) -> Vec<&'static str> {
+    /// Its keys as the person bound them, one cap each.
+    pub fn keys(self, bindings: &Bindings) -> Vec<&str> {
         let shortcut = match self {
-            Self::Create(kind) => crate::notes::header::shortcut(kind),
+            Self::Create(kind) => crate::notes::header::shortcut(kind, bindings),
             Self::Request | Self::Folder | Self::Preferences | Self::Shortcuts => {
                 return Vec::new();
             }

@@ -312,3 +312,47 @@ fn the_operation_sent_is_chosen_when_there_are_several_and_a_get_is_ticked() {
     click_id(&mut harness, "http-graphql-get");
     assert!(graphql_of(&harness).as_get);
 }
+
+fn width_of(harness: &Harness<'_, Bench>, author_id: &str) -> f64 {
+    let bounds = harness
+        .get_by(|node| node.author_id() == Some(author_id))
+        .accesskit_node()
+        .bounding_box()
+        .unwrap();
+    bounds.x1 - bounds.x0
+}
+
+#[test]
+fn in_the_narrowest_window_the_address_keeps_its_room_and_every_tab_is_in_reach() {
+    let mut harness = editing();
+    harness.set_size(egui::vec2(640.0, 480.0));
+    settle(&mut harness);
+
+    assert!(
+        width_of(&harness, "http-url") >= 150.0,
+        "the address is read"
+    );
+    assert_eq!(
+        harness
+            .get_by(|node| node.author_id() == Some("http-save"))
+            .accesskit_node()
+            .label()
+            .as_deref(),
+        Some("Save"),
+        "an icon keeps its name"
+    );
+    assert!(!has(&harness, "http-section-settings"));
+    click_id(&mut harness, "http-section-more");
+    click_id(&mut harness, "http-section-more-settings");
+
+    assert!(
+        has(&harness, "http-section-settings"),
+        "the tab chosen is drawn"
+    );
+    harness.set_size(egui::vec2(1_400.0, 800.0));
+    settle(&mut harness);
+    assert!(
+        !has(&harness, "http-section-more"),
+        "nothing left out when all fit"
+    );
+}

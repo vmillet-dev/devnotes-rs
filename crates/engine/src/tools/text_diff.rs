@@ -4,7 +4,6 @@
 
 use std::fmt::Write;
 
-use serde::{Deserialize, Serialize};
 use similar::{Algorithm, ChangeTag, DiffOp, TextDiff, capture_diff_slices, group_diff_ops};
 
 use super::diff::MAX_ROWS;
@@ -13,16 +12,14 @@ use crate::count::saturating_u32;
 /// The lines of context around each hunk of the unified diff, as `diff -u` keeps.
 const CONTEXT: usize = 3;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Granularity {
     Lines,
     Words,
     Characters,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct TextDiffRequest {
     pub a: String,
@@ -36,23 +33,20 @@ pub struct TextDiffRequest {
 }
 
 /// A piece of a line, marked when it is what changed.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextPiece {
     pub text: String,
     pub changed: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextDiffLine {
     /// One-based, in that side's own text.
     pub number: u32,
     pub pieces: Vec<TextPiece>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextRowKind {
     Same,
     Added,
@@ -61,16 +55,14 @@ pub enum TextRowKind {
 }
 
 /// One row of the side-by-side view: a side without a line is a gap.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextDiffRow {
     pub kind: TextRowKind,
     pub left: Option<TextDiffLine>,
     pub right: Option<TextDiffLine>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextDiffAnswer {
     /// In the unit asked: lines, words or characters.
     pub added: u32,

@@ -5,8 +5,6 @@
 //! registry is moved once by `gather` into `libraries/<id>/`, so every library has the same
 //! shape; the registry sits beside them and belongs to none.
 
-#![allow(clippy::needless_pass_by_value)]
-
 pub mod registry;
 
 use std::path::PathBuf;
@@ -33,40 +31,40 @@ pub fn list_libraries(engine: &Engine) -> Registry {
 }
 
 /// Adds one, and leaves it closed: opening it is a second, deliberate gesture.
-pub fn create_library(engine: &Engine, name: String) -> Result<LibraryEntry, AppError> {
-    Ok(create_in(&engine.paths.profile, &name)?)
+pub fn create_library(engine: &Engine, name: &str) -> Result<LibraryEntry, AppError> {
+    Ok(create_in(&engine.paths.profile, name)?)
 }
 
 /// Closes whatever is open and points the registry at another one.
 ///
 /// ⚠️ The connection `Mutex` is emptied under the lock every command takes: they all answer
 /// `Locked` afterwards, which sends the interface back to the gate for the other passphrase.
-pub fn open_library(engine: &Engine, id: String) -> Result<(), AppError> {
+pub fn open_library(engine: &Engine, id: &str) -> Result<(), AppError> {
     let db = &engine.db;
     let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
     *open = None;
     engine.let_go_of_the_network();
 
-    Ok(point_at(&engine.paths.profile, &id)?)
+    Ok(point_at(&engine.paths.profile, id)?)
 }
 
-pub fn rename_library(engine: &Engine, id: String, name: String) -> Result<(), AppError> {
-    Ok(rename_in(&engine.paths.profile, &id, &name)?)
+pub fn rename_library(engine: &Engine, id: &str, name: &str) -> Result<(), AppError> {
+    Ok(rename_in(&engine.paths.profile, id, name)?)
 }
 
 /// Erases a library and everything in it.
 ///
 /// Refused on the open one: deleting files under a live connection takes the process down.
-pub fn delete_library(engine: &Engine, id: String) -> Result<(), AppError> {
+pub fn delete_library(engine: &Engine, id: &str) -> Result<(), AppError> {
     let db = &engine.db;
     let profile = &engine.paths.profile;
-    if registry_in(profile).open.as_deref() == Some(id.as_str())
+    if registry_in(profile).open.as_deref() == Some(id)
         && db.lock().map_err(|_| StorageError::Unavailable)?.is_some()
     {
         return Err(StorageError::LibraryOpen.into());
     }
 
-    Ok(delete_in(profile, &id)?)
+    Ok(delete_in(profile, id)?)
 }
 
 /// Where the open, unlocked library lives: its own `preferences.json` sits there. `Locked`

@@ -2,6 +2,7 @@
 //! the primary in amber, the destructive red **at rest**, the quiet text button of a field's
 //! head, the 32 px rail toggle.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Pos2, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui,
     Vec2, WidgetInfo,
@@ -46,15 +47,17 @@ enum Size {
     Large,
     /// As high as a request's address.
     Tall,
+    /// As high as a request's address, and as wide: an icon alone.
+    TallIcon,
 }
 
 /// A request's actions, beside its 38 px address.
 const TALL_HEIGHT: f32 = 38.0;
-const TALL_PADDING: f32 = 16.0;
+const TALL_PADDING: f32 = gap::BLOCKS;
 const TALL_SIZE: f32 = 13.0;
 const TALL_WEIGHT: f32 = 600.0;
 /// Between a tall button's label and its keys.
-const KEYS_GAP: f32 = 8.0;
+const KEYS_GAP: f32 = gap::CONTROLS;
 
 impl<'a> Button<'a> {
     pub fn new(label: &'a str, author_id: &'a str) -> Self {
@@ -69,6 +72,16 @@ impl<'a> Button<'a> {
             keys: None,
             capped: false,
         }
+    }
+
+    /// A tall button's `icon` alone, square, where its words do not fit: they stay its name and
+    /// its tooltip.
+    #[must_use]
+    pub fn icon_only(mut self, icon: Icon) -> Self {
+        self.icon = Some(icon);
+        self.size = Size::TallIcon;
+        self.keys = None;
+        self
     }
 
     /// The key that does the same, on its cap after the label.
@@ -98,7 +111,7 @@ impl<'a> Button<'a> {
         let family = FontFamily::Proportional;
         let probe = text(ui, label, TALL_SIZE, TALL_WEIGHT, family, Color32::WHITE);
         let keys = keys.map_or(0.0, |keys| {
-            KEYS_GAP + super::arrowed(ui, None, keys, 10.5, Color32::WHITE)
+            KEYS_GAP + super::arrowed(ui, None, keys, font::CAPTION, Color32::WHITE)
         });
         probe.size().x + keys + 2.0 * TALL_PADDING
     }
@@ -139,7 +152,7 @@ impl<'a> Button<'a> {
         let probe = text(
             ui,
             label,
-            12.0,
+            font::LABEL,
             400.0,
             FontFamily::Proportional,
             Color32::WHITE,
@@ -149,7 +162,9 @@ impl<'a> Button<'a> {
 
     pub fn show(self, ui: &mut Ui) -> Response {
         let (size, weight, padding, corner) = match (self.size, self.kind) {
-            (Size::Tall, _) => (TALL_SIZE, TALL_WEIGHT, Vec2::new(TALL_PADDING, 0.0), 8),
+            (Size::Tall | Size::TallIcon, _) => {
+                (TALL_SIZE, TALL_WEIGHT, Vec2::new(TALL_PADDING, 0.0), 8)
+            }
             (Size::Large, _) => (14.0, 600.0, Vec2::splat(10.0), 8),
             (Size::Regular, Kind::Quiet) => (12.0, 400.0, Vec2::new(6.0, 0.0), 6),
             (Size::Regular, _) => (12.0, 400.0, Vec2::new(12.0, 6.0), 6),
@@ -165,12 +180,13 @@ impl<'a> Button<'a> {
         let icon_room = if self.icon.is_some() { 16.0 + 6.0 } else { 0.0 };
         let cap_room = if self.capped { 12.0 } else { 0.0 };
         let keys_room = self.keys.map_or(0.0, |keys| {
-            KEYS_GAP + cap_room + super::arrowed(ui, None, keys, 10.5, Color32::WHITE)
+            KEYS_GAP + cap_room + super::arrowed(ui, None, keys, font::CAPTION, Color32::WHITE)
         });
         let mut wanted = probe.size() + 2.0 * padding + Vec2::new(icon_room + keys_room, 0.0);
         match self.size {
             Size::Large => wanted.x = ui.available_width(),
             Size::Tall => wanted.y = TALL_HEIGHT,
+            Size::TallIcon => wanted = Vec2::splat(TALL_HEIGHT),
             Size::Regular => {}
         }
         let sense = if self.enabled {
@@ -203,6 +219,11 @@ impl<'a> Button<'a> {
             Stroke::new(1.0, edge),
             StrokeKind::Inside,
         );
+        if let (Size::TallIcon, Some(icon)) = (self.size, self.icon) {
+            let place = Rect::from_center_size(rect.center(), Vec2::splat(16.0));
+            icons::paint(ui, place, icon, ink);
+            return super::tooltip(response, self.label);
+        }
         let galley = text(ui, self.label, size, weight, FontFamily::Proportional, ink);
         let width = galley.size().x + icon_room + keys_room;
         let mut left = rect.center().x - width / 2.0;
@@ -222,20 +243,20 @@ impl<'a> Button<'a> {
             let at = Pos2::new(after + cap_room / 2.0, rect.center().y);
             if self.capped {
                 let p = palette(ui.ctx());
-                let width = super::arrowed(ui, None, keys, 10.5, ink) + cap_room;
+                let width = super::arrowed(ui, None, keys, font::CAPTION, ink) + cap_room;
                 let cap = Rect::from_center_size(
                     Pos2::new(after + width / 2.0, rect.center().y),
                     Vec2::new(width, 16.0),
                 );
                 painter.rect(
                     cap,
-                    CornerRadius::same(4),
+                    CornerRadius::same(radius::TAG),
                     p.bg_3,
                     Stroke::new(1.0, p.line),
                     StrokeKind::Inside,
                 );
             }
-            super::arrowed(ui, Some(at), keys, 10.5, ink.gamma_multiply(0.7));
+            super::arrowed(ui, Some(at), keys, font::CAPTION, ink.gamma_multiply(0.7));
         }
         response
     }
@@ -281,12 +302,13 @@ impl<'a> Button<'a> {
     }
 }
 
-/// A control that is an icon alone: its label is its accessible name only.
+/// A control that is an icon alone: its label is its accessible name, and its tooltip.
 pub struct IconButton<'a> {
     icon: Icon,
     label: &'a str,
     author_id: &'a str,
     pressed: bool,
+    keys: Option<&'a str>,
 }
 
 impl<'a> IconButton<'a> {
@@ -296,7 +318,15 @@ impl<'a> IconButton<'a> {
             label,
             author_id,
             pressed: false,
+            keys: None,
         }
+    }
+
+    /// The keys that do the same, said after its name in the tooltip.
+    #[must_use]
+    pub fn keys(mut self, keys: &'a str) -> Self {
+        self.keys = Some(keys);
+        self
     }
 
     #[must_use]
@@ -306,7 +336,7 @@ impl<'a> IconButton<'a> {
     }
 
     pub fn show(self, ui: &mut Ui) -> Response {
-        let corner = CornerRadius::same(6);
+        let corner = CornerRadius::same(radius::CONTROL);
         let (label, pressed) = (self.label, self.pressed);
         let response = interact(
             ui,
@@ -333,7 +363,15 @@ impl<'a> IconButton<'a> {
         }
         let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(16.0));
         icons::paint(ui, glyph, self.icon, ink);
-        response
+        super::tooltip(response, &said(self.label, self.keys))
+    }
+}
+
+/// An icon's tooltip: its name, then its keys.
+fn said(label: &str, keys: Option<&str>) -> String {
+    match keys {
+        Some(keys) => format!("{label} · {keys}"),
+        None => label.to_owned(),
     }
 }
 
@@ -366,12 +404,14 @@ impl<'a> SplitButton<'a> {
     }
 }
 
-/// The 32 px square that hides and shows a rail; amber while the rail is out.
+/// The 32 px square that hides and shows a rail; amber while the rail is out. Its label is its
+/// tooltip, as an icon button's.
 pub struct SquareButton<'a> {
     icon: Icon,
     label: &'a str,
     author_id: &'a str,
     open: bool,
+    keys: Option<&'a str>,
 }
 
 impl<'a> SquareButton<'a> {
@@ -381,7 +421,15 @@ impl<'a> SquareButton<'a> {
             label,
             author_id,
             open: false,
+            keys: None,
         }
+    }
+
+    /// The keys that do the same, said after its name in the tooltip.
+    #[must_use]
+    pub fn keys(mut self, keys: &'a str) -> Self {
+        self.keys = Some(keys);
+        self
     }
 
     /// Amber while what it shows is shown.
@@ -392,7 +440,7 @@ impl<'a> SquareButton<'a> {
     }
 
     pub fn show(self, ui: &mut Ui) -> Response {
-        let corner = CornerRadius::same(8);
+        let corner = CornerRadius::same(radius::MENU);
         let (label, open) = (self.label, self.open);
         let response = interact(
             ui,
@@ -414,6 +462,6 @@ impl<'a> SquareButton<'a> {
         );
         let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(16.0));
         icons::paint(ui, glyph, self.icon, towards(rest, p.text_0, hover));
-        response
+        super::tooltip(response, &said(self.label, self.keys))
     }
 }

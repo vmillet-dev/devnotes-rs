@@ -2,6 +2,7 @@
 //! filled and its label goes bright — an amber label on an amber tint is the trade the badges
 //! refuse, and this one is read at 11.5 px.
 
+use crate::theme::tokens::{font, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo,
 };
@@ -37,10 +38,17 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
         self.options
             .iter()
             .map(|(_, label)| {
-                text(ui, label, 11.5, 400.0, FontFamily::Proportional, p.text_2)
-                    .size()
-                    .x
-                    .max(super::MIN_TARGET - 20.0)
+                text(
+                    ui,
+                    label,
+                    font::CONTROL,
+                    400.0,
+                    FontFamily::Proportional,
+                    p.text_2,
+                )
+                .size()
+                .x
+                .max(super::MIN_TARGET - 20.0)
                     + 20.0
             })
             .sum::<f32>()
@@ -57,7 +65,7 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
             ui.allocate_exact_size(Vec2::new(width, super::MIN_TARGET + 2.0), Sense::hover());
         ui.painter().rect(
             rect,
-            CornerRadius::same(7),
+            CornerRadius::same(radius::CONTROL),
             p.bg_2,
             Stroke::new(1.0, p.line_soft),
             egui::StrokeKind::Inside,
@@ -94,8 +102,15 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
 
 fn segment(ui: &mut Ui, label: &str, author_id: &str, (on, open): (bool, bool)) -> Response {
     let p = palette(ui.ctx());
-    let probe = text(ui, label, 11.5, 400.0, FontFamily::Proportional, p.text_2);
-    let corner = CornerRadius::same(6);
+    let probe = text(
+        ui,
+        label,
+        font::CONTROL,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         probe.size() + Vec2::new(20.0, 8.0),
@@ -114,7 +129,14 @@ fn segment(ui: &mut Ui, label: &str, author_id: &str, (on, open): (bool, bool)) 
     if on {
         ui.painter().rect_filled(response.rect, corner, p.bg_3);
     }
-    let galley = text(ui, label, 11.5, 400.0, FontFamily::Proportional, ink);
+    let galley = text(
+        ui,
+        label,
+        font::CONTROL,
+        400.0,
+        FontFamily::Proportional,
+        ink,
+    );
     ui.painter().galley(
         response.rect.center() - galley.size() / 2.0,
         galley,

@@ -65,7 +65,7 @@ fn runner_on(port: u16, path: &str) -> Harness<'static, Bench> {
             },
         };
         engine::db::run_here(backend.engine(), move |engine| {
-            engine::http::create_http_request(engine, draft)
+            engine::http::create_http_request(engine, &draft)
         })
         .unwrap();
     }
@@ -273,6 +273,7 @@ fn the_report_sums_the_run_up_and_a_failure_opens_on_its_assertion() {
         RunStep::Finished {
             cancelled: false,
             millis: 1_200,
+            capped: false,
         },
     );
 
@@ -375,8 +376,22 @@ fn a_run_cancelled_says_how_far_it_went() {
     say(
         &mut harness,
         RunStep::Finished {
+            cancelled: false,
+            millis: 40,
+            capped: true,
+        },
+    );
+    let capped = said_by(&harness, "http-runner-capped").unwrap();
+    assert!(
+        capped.contains("1,000") || capped.contains("1000") || capped.contains("1 000"),
+        "{capped}"
+    );
+    say(
+        &mut harness,
+        RunStep::Finished {
             cancelled: true,
             millis: 40,
+            capped: false,
         },
     );
     let said = said_by(&harness, "http-runner-cancelled").unwrap();

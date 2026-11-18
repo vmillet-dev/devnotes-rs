@@ -2,6 +2,7 @@
 //! stays open on a choice — order, direction and grouping are set together — and a new sort key
 //! starts the way it reads first.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, Response, Role, Sense, Stroke,
     StrokeKind, Ui, Vec2, WidgetInfo, pos2,
@@ -48,11 +49,11 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
 fn trigger(ui: &mut Ui, label: &str, now: &str, words: bool) -> Response {
     let p = palette(ui.ctx());
     let width = if words {
-        widgets::arrowed(ui, None, now, 12.0, p.text_1) + 14.0
+        widgets::arrowed(ui, None, now, font::LABEL, p.text_1) + 14.0
     } else {
         32.0
     };
-    let corner = CornerRadius::same(7);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(width, 32.0),
@@ -81,7 +82,7 @@ fn trigger(ui: &mut Ui, label: &str, now: &str, words: bool) -> Response {
             ui,
             Some(pos2(rect.left() + 7.0, rect.center().y)),
             now,
-            12.0,
+            font::LABEL,
             ink,
         );
     } else {
@@ -141,7 +142,7 @@ fn menu(ui: &mut Ui, now: Arrangement, language: i18n::Language) -> Option<Arran
             chosen = Some(Arrangement { grouping, ..now });
         }
     }
-    ui.add_space(4.0);
+    ui.add_space(gap::TIGHT);
     let pinned = tr(keys::sort::PINNED_FIRST);
     if item(ui, &pinned, None, "sort-pinned-first", now.pinned_first) {
         chosen = Some(Arrangement {
@@ -155,7 +156,14 @@ fn menu(ui: &mut Ui, now: Arrangement, language: i18n::Language) -> Option<Arran
 fn title(ui: &mut Ui, words: &str) {
     let p = palette(ui.ctx());
     let upper = words.to_uppercase();
-    let galley = widgets::text(ui, &upper, 10.5, 600.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &upper,
+        font::CAPTION,
+        600.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, _) = ui.allocate_exact_size(Vec2::new(galley.size().x, 22.0), Sense::hover());
     ui.painter().galley(
         pos2(rect.left() + 8.0, rect.bottom() - galley.size().y - 4.0),
@@ -167,7 +175,7 @@ fn title(ui: &mut Ui, words: &str) {
 /// A choice of the menu, ticked when it is the one in force. `true` when clicked.
 fn item(ui: &mut Ui, label: &str, hint: Option<&str>, author_id: &str, on: bool) -> bool {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let role = if author_id == "sort-pinned-first" {
         Role::MenuItemCheckBox
     } else {
@@ -195,13 +203,13 @@ fn item(ui: &mut Ui, label: &str, hint: Option<&str>, author_id: &str, on: bool)
         ui,
         Some(pos2(rect.left() + 28.0, rect.center().y)),
         label,
-        12.5,
+        font::BODY,
         ink,
     );
     if let Some(hint) = hint {
-        let width = widgets::arrowed(ui, None, hint, 11.0, p.text_2);
+        let width = widgets::arrowed(ui, None, hint, font::META, p.text_2);
         let at = pos2(rect.right() - 8.0 - width, rect.center().y);
-        widgets::arrowed(ui, Some(at), hint, 11.0, p.text_2);
+        widgets::arrowed(ui, Some(at), hint, font::META, p.text_2);
     }
     response.clicked()
 }

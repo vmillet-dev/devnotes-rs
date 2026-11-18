@@ -7,7 +7,7 @@ use std::str::FromStr;
 use chrono::{DateTime, Datelike, Days, LocalResult, NaiveDate, NaiveTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use croner::parser::{CronParser, Seconds, Year};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use super::dates::{self, Parsed, Refusal};
 use crate::count::saturating_u32;
@@ -62,12 +62,7 @@ impl CronField {
 }
 
 /// One item of a field's list. A day of the week is 0 (Sunday) to 7 (Sunday again).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Piece {
     Every,
     Value {
@@ -103,8 +98,7 @@ pub enum Piece {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldReading {
     pub field: CronField,
     pub text: String,
@@ -131,8 +125,7 @@ pub enum CronProblem {
     Refused,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Run {
     pub date: String,
     pub time: String,
@@ -142,12 +135,7 @@ pub struct Run {
     pub epoch_milliseconds: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CronCheck {
     /// `before` and `after` are the nearest runs around a moment that is none: what a « no »
     /// leaves one asking.
@@ -173,12 +161,7 @@ pub enum WindowEnd {
 /// The runs between two moments: « will this run on Friday afternoon? ».
 // One answer is built a request and sent: nothing stores these for a `Box` to make smaller.
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CronWindow {
     /// ⚠️ `total` is counted, never the length of a list: a window of a year at every minute
     /// holds half a million runs, and ten of them cross the bridge. `last` is empty when
@@ -205,8 +188,7 @@ pub enum CronWindow {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CronRequest {
     pub expression: String,
     /// `None` is the machine's zone.
@@ -214,20 +196,13 @@ pub struct CronRequest {
     /// A date to test against the expression, read in `zone`; empty asks nothing.
     pub check: String,
     /// Where the runs are listed from, read in `zone`; empty is now.
-    #[serde(default)]
     pub from: String,
     /// Where they stop; empty lists the next ten.
-    #[serde(default)]
     pub until: String,
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CronAnswer {
     Read {
         /// What a macro stands for: `@daily` is `0 0 * * *`.

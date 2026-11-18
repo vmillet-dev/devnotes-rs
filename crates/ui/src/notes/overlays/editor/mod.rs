@@ -20,6 +20,7 @@ mod revisions;
 mod rich;
 mod search_bar;
 
+use crate::theme::tokens::{font, gap};
 use std::sync::Arc;
 
 use egui::{Align, CornerRadius, Id, Layout, Margin, Rect, Stroke, Ui, UiBuilder, Vec2};
@@ -214,7 +215,7 @@ fn panel(
     if state.settings.editor_fullscreen {
         return expanded::show(ui, state, (session, note), (editing, layout), actions);
     }
-    let closed = band(ui, Margin::symmetric(20, 12), true, |ui| {
+    let closed = band(ui, gap::margin(gap::PANEL, gap::GROUPS), true, |ui| {
         toolbar(ui, state, (session, note), editing, actions)
     });
     header(ui, state, (session, note), editing, actions);
@@ -263,7 +264,7 @@ fn header(
     actions: &mut Actions,
 ) {
     if state.settings.editor_header_folded {
-        band(ui, Margin::symmetric(20, 8), true, |ui| {
+        band(ui, gap::margin(gap::PANEL, gap::CONTROLS), true, |ui| {
             header::summary(ui, state, note, actions);
         });
     } else {
@@ -388,7 +389,10 @@ fn rich_body(
             },
         }));
     }
-    if let Some(markdown) = view.markdown().filter(|_| shown.changed) {
+    // Written only on a frame that changed it: the whole Note, a few ms past a few thousand lines.
+    if shown.changed
+        && let Some(markdown) = view.markdown()
+    {
         *body = markdown;
     }
     if let Some(url) = shown.link {
@@ -431,7 +435,7 @@ fn toolbar(
     }
     let mut closed = false;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             closed = close_button(ui, state);
             expand_button(ui, state, actions);
@@ -469,19 +473,19 @@ fn compact_toolbar(
 ) -> bool {
     let mut closed = false;
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
+        ui.spacing_mut().item_spacing.x = gap::TIGHT;
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             closed = close_button(ui, state);
             expand_button(ui, state, actions);
-            ui.add_space(6.0);
+            ui.add_space(gap::SNUG);
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                 title(ui, state, (session, note), editing, actions);
             });
         });
     });
-    ui.add_space(10.0);
+    ui.add_space(gap::INSET);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().item_spacing.x = gap::SNUG;
         if note.kind.has_language() {
             language_menu(ui, state, note, actions);
             format::button(ui, state, (session, note), editing, false, actions);
@@ -500,7 +504,9 @@ fn compact_toolbar(
 
 fn close_button(ui: &mut Ui, state: &AppState) -> bool {
     let close = i18n::translate(state.language, keys::editor::CLOSE, &[]);
+    let keys = i18n::translate(state.language, keys::editor::CLOSE_KEYS, &[]);
     IconButton::new(Icon::X, &close, "editor-close")
+        .keys(&keys)
         .show(ui)
         .clicked()
 }
@@ -573,7 +579,7 @@ fn more_menu(
         .frame(widgets::menu_frame(ui.ctx()))
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
-            ui.spacing_mut().item_spacing.y = 4.0;
+            ui.spacing_mut().item_spacing.y = gap::TIGHT;
             if foldable {
                 fold_button(ui, state, (session, note), editing, actions, true);
             }
@@ -601,7 +607,10 @@ fn title(
             .margin(Margin::ZERO)
             .hint_text(untitled)
             .text_color(p.text_0)
-            .font(egui::FontId::new(16.0, egui::FontFamily::Proportional))
+            .font(egui::FontId::new(
+                font::HEADING,
+                egui::FontFamily::Proportional,
+            ))
             .desired_width(ui.available_width().max(120.0)),
     );
     ui.ctx()
@@ -633,7 +642,12 @@ fn present(
     } else {
         IconButton::new(Icon::Play, &words, "editor-present").show(ui)
     };
-    if widgets::tooltip(clicked, &hint).clicked() {
+    let clicked = if labelled {
+        widgets::tooltip(clicked, &hint)
+    } else {
+        clicked
+    };
+    if clicked.clicked() {
         actions.push(editor(Editing::Present {
             title: editing.title.clone(),
             markdown: editing.body.clone(),
@@ -828,7 +842,7 @@ fn footer(ui: &mut Ui, state: &AppState, note: &DisplayNote, editing: &EditorVie
         let galley = widgets::text(
             ui,
             &counted,
-            11.0,
+            font::META,
             400.0,
             egui::FontFamily::Monospace,
             p.text_2,
@@ -840,7 +854,7 @@ fn footer(ui: &mut Ui, state: &AppState, note: &DisplayNote, editing: &EditorVie
                 let galley = widgets::text(
                     ui,
                     &modified,
-                    11.0,
+                    font::META,
                     400.0,
                     egui::FontFamily::Monospace,
                     p.text_2,

@@ -2,6 +2,7 @@
 //! body up to a megabyte is drawn by lines — the lines in view alone, coloured window by window
 //! on the parser's thread — so a long answer costs what a screenful does.
 
+use crate::theme::tokens::{font, gap};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -132,19 +133,15 @@ pub(super) fn show(
     view: &mut BodyView,
     actions: &mut Actions,
 ) {
-    let p = palette(ui.ctx());
     let language = state.language;
     if response.binary {
         image(ui, state, (id, response), actions);
         return;
     }
     if response.body.is_empty() {
-        let words =
-            egui::RichText::new(i18n::translate(language, keys::http::response::EMPTY, &[]))
-                .size(12.5)
-                .color(p.text_2);
-        let said = ui.add(egui::Label::new(words));
-        widgets::address(ui, &said, "http-response-empty");
+        let words = i18n::translate(language, keys::http::response::EMPTY, &[]);
+        let room = ui.available_rect_before_wrap();
+        widgets::empty_state(ui, room, (&words, "http-response-empty"), &[]);
         return;
     }
     let json = response.language == Language::Json;
@@ -184,7 +181,7 @@ fn views(
         offered.push((View::Tree, tr(keys::http::response::views::TREE)));
     }
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::INSET;
         let options: Vec<(View, &str)> = offered
             .iter()
             .map(|(view, name)| (*view, name.as_str()))
@@ -196,7 +193,9 @@ fn views(
             } else {
                 keys::http::response::CUT
             };
-            let words = egui::RichText::new(tr(key)).size(11.5).color(p.text_2);
+            let words = egui::RichText::new(tr(key))
+                .size(font::CONTROL)
+                .color(p.text_2);
             let said = ui.add(egui::Label::new(words));
             widgets::address(ui, &said, "http-response-cut");
         }
@@ -374,7 +373,7 @@ fn image(
         &[("type", kind.into())],
     );
     let said = ui.add(egui::Label::new(
-        egui::RichText::new(words).size(12.5).color(p.text_2),
+        egui::RichText::new(words).size(font::BODY).color(p.text_2),
     ));
     widgets::address(ui, &said, "http-response-binary");
 }

@@ -36,6 +36,8 @@ pub struct SocketState {
     /// Why it would not open, or why it broke.
     pub notice: Option<AppError>,
     pub log: VecDeque<SocketEntry>,
+    /// How many times the log moved: what is worked out of it is kept until this changes.
+    pub moves: u64,
 }
 
 #[derive(Default)]
@@ -45,6 +47,12 @@ pub struct Sockets {
     connecting: Vec<(String, Pending<()>)>,
     /// A send and a close answer only whether a socket was there: nothing to say of it.
     asked: Vec<Pending<bool>>,
+}
+
+impl SocketState {
+    pub fn socket_id(&self) -> &str {
+        &self.socket_id
+    }
 }
 
 impl Sockets {
@@ -113,6 +121,7 @@ impl Sockets {
                 protocol: None,
                 notice: None,
                 log,
+                moves: 0,
             },
         );
         let request = WebsocketRequest {
@@ -149,6 +158,7 @@ impl Sockets {
     pub fn clear_log(&mut self, key: &str) {
         if let Some(state) = self.by_tab.get_mut(key) {
             state.log.clear();
+            state.moves += 1;
         }
     }
 
@@ -203,5 +213,6 @@ impl Sockets {
         if state.log.len() > LOG_KEPT {
             state.log.pop_front();
         }
+        state.moves += 1;
     }
 }

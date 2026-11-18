@@ -3,6 +3,7 @@
 //! redo; a zone placed and sized by hand is the only manual work a board holds, so the click that
 //! repairs the cheap half must not destroy the expensive one.
 
+use crate::theme::tokens::{font, radius};
 use egui::{
     CornerRadius, FontFamily, Popup, PopupCloseBehavior, Pos2, RectAlign, Role, Sense, Stroke,
     StrokeKind, Ui, UiBuilder, WidgetInfo, pos2, vec2,
@@ -36,7 +37,14 @@ pub(super) fn show(
     let align = i18n::translate(language, keys::board::ALIGN, &[]);
     let hint = i18n::translate(language, keys::board::ALIGN_HINT, &counts);
     let more = i18n::translate(language, keys::board::TIDY_MORE_LABEL, &[]);
-    let words = widgets::text(ui, &align, 12.0, 400.0, FontFamily::Proportional, p.text_1);
+    let words = widgets::text(
+        ui,
+        &align,
+        font::LABEL,
+        400.0,
+        FontFamily::Proportional,
+        p.text_1,
+    );
     let height = 30.0;
     let left_width = 13.0 + 14.0 + 6.0 + words.size().x + 13.0;
     let right_width = 10.0 + 14.0 + 10.0;
@@ -48,7 +56,7 @@ pub(super) fn show(
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
     pill_ui.spacing_mut().item_spacing.x = 0.0;
-    let round = CornerRadius::same(15);
+    let round = CornerRadius::same(radius::DIALOG);
     ui.painter().add(p.shadow_dropdown.as_shape(pill, round));
     ui.painter().rect(
         pill,
@@ -140,7 +148,7 @@ fn menu(
             let mut job = egui::text::LayoutJob::single_section(
                 note,
                 egui::TextFormat::simple(
-                    egui::FontId::new(11.0, FontFamily::Proportional),
+                    egui::FontId::new(font::META, FontFamily::Proportional),
                     p.text_2,
                 ),
             );

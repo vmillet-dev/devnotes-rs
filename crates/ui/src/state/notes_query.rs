@@ -24,7 +24,9 @@ pub const ARRANGEMENT_KEY: &str = "devnotes.notes.arrangement";
 
 /// How long the search waits after the last key, in egui's seconds: barely needed with the
 /// index in memory, kept so a burst of keys asks once.
-pub(super) const DEBOUNCE: f64 = 0.150;
+pub(super) fn debounce() -> f64 {
+    f64::from(crate::theme::motion::TYPING)
+}
 
 pub const SORT_KEYS: [SortKey; 5] = [
     SortKey::Modified,
@@ -272,7 +274,7 @@ impl NotesQueryState {
 
     /// What was typed, the moment it is typed; asked of the core once the keys rest.
     pub fn type_search(&mut self, ctx: &egui::Context, typed: String) {
-        self.due = Some(ctx.input(|input| input.time) + DEBOUNCE);
+        self.due = Some(ctx.input(|input| input.time) + debounce());
         self.typed = typed;
     }
 

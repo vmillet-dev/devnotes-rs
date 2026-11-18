@@ -14,6 +14,17 @@ pub const ENTER: f32 = 0.16;
 pub const TURN: f32 = 0.8;
 /// Not a motion: how long a mark left by an action takes to fade, so the eye can find it.
 pub const MARK: f32 = 2.0;
+/// Not a motion: how long a report stays before it goes by itself, counted away from the
+/// pointer.
+pub const REPORT: f32 = 6.0;
+/// Not a motion: how long a search or a live tool waits after the last key, so a burst of keys
+/// asks once.
+pub const TYPING: f32 = 0.15;
+/// Not a motion: the same for work on two whole texts, which a keystroke is not worth redoing.
+pub const TYPING_HEAVY: f32 = 0.25;
+/// Not a motion: three cards dragged in a row are one write, and a quit right after a drop still
+/// beats it.
+pub const LAYOUT_SAVE: f32 = 0.4;
 
 /// Where an element comes from when it appears: a short rise or lift, or a fade — never a size.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -195,7 +206,7 @@ mod tests {
             }
             let text = std::fs::read_to_string(&file).unwrap();
             for (number, line) in text.lines().enumerate() {
-                if writes_a_duration(line) {
+                if writes_a_duration(line) || names_a_duration(line) {
                     offenders.push(format!("{}:{}", file.display(), number + 1));
                 }
             }
@@ -226,6 +237,29 @@ mod tests {
         })
     }
 
+    /// A constant named for a wait and set to a number: the escape the calls' check left open.
+    fn names_a_duration(line: &str) -> bool {
+        const WAITS: [&str; 6] = [
+            "DEBOUNCE", "DELAY", "FEEDBACK", "TIMEOUT", "DURATION", "LINGER",
+        ];
+        let line = line.trim();
+        let Some((name, value)) = line
+            .split_once("const ")
+            .and_then(|(_, rest)| rest.split_once('='))
+        else {
+            return false;
+        };
+        let seconds = name.contains(": f32") || name.contains(": f64");
+        seconds
+            && WAITS.iter().any(|word| name.contains(word))
+            && value
+                .trim()
+                .trim_end_matches(';')
+                .trim_end_matches("_f32")
+                .parse::<f64>()
+                .is_ok()
+    }
+
     fn rust_files(directory: &Path) -> Vec<std::path::PathBuf> {
         let mut files = Vec::new();
         for entry in std::fs::read_dir(directory).unwrap() {
@@ -248,5 +282,8 @@ mod tests {
         assert!(!writes_a_duration(
             "ctx.animate_bool_with_time(id, on, motion::FAST)"
         ));
+        assert!(names_a_duration("const DEBOUNCE: f64 = 0.250;"));
+        assert!(!names_a_duration("const DEBOUNCE: f32 = motion::TYPING;"));
+        assert!(!names_a_duration("const SHORTEST_TIMEOUT: u32 = 100;"));
     }
 }

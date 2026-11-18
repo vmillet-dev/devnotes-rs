@@ -10,6 +10,7 @@ pub mod live;
 mod rail;
 pub mod ui;
 
+use crate::theme::tokens::{gap, radius};
 use std::collections::HashMap;
 
 use egui::{CornerRadius, Rect, Response, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo};
@@ -188,7 +189,11 @@ impl View {
 }
 
 pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
-    let region = widgets::area_room(ui, "area-tools");
+    let region = widgets::area_room(
+        ui,
+        "area-tools",
+        &i18n::translate(state.language, i18n::keys::areas::TOOLS, &[]),
+    );
     let rail = (state.settings.rail_shown, state.settings.rail_width);
     let rest = view
         .rail_width
@@ -212,7 +217,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         }
     }
     save_as_note::show(ui, state, &mut view.note_form, actions);
-    if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
+    if let Some(width) = view.rail_width.rested(ui) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }
 }
@@ -246,9 +251,15 @@ fn bar(
             .max_rect(inner)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    row.spacing_mut().item_spacing.x = 12.0;
+    row.spacing_mut().item_spacing.x = gap::GROUPS;
     let toggle = i18n::translate(state.language, keys::sidebar::TOGGLE, &[]);
     if widgets::SquareButton::new(Icon::Sidebar, &toggle, "tools-rail-toggle")
+        .keys(
+            state
+                .settings
+                .bindings
+                .of(crate::services::shortcuts::RAIL_ACTION),
+        )
         .pressed(state.settings.rail_shown)
         .show(&mut row)
         .clicked()
@@ -260,7 +271,7 @@ fn bar(
 
 /// The star of a tool: muted until it is on, the amber of what is chosen and a full shape.
 fn star(ui: &mut Ui, on: bool, label: &str, author_id: &str, hint: &str) -> Response {
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::splat(28.0),

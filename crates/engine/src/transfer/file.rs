@@ -40,6 +40,8 @@ const ZIP_MAGIC: [u8; 4] = [b'P', b'K', 0x03, 0x04];
 const MAX_EXPANSION: u64 = 100;
 /// A floor under that ratio, so a small entry is never refused over it.
 const MIN_CEILING: u64 = 64 * 1024 * 1024;
+/// A bundle written as plain JSON, outside an archive: as much as an archive's may expand to.
+const PLAIN_CEILING: u64 = MIN_CEILING * 4;
 
 fn zip_error(error: &zip::result::ZipError) -> StorageError {
     StorageError::File(error.to_string())
@@ -70,7 +72,7 @@ pub fn write(
     let protection = passphrase.map(protect::seal_with).transpose()?;
 
     let staged = staging_path(path);
-    let stored = match archive(
+    let (stored, unreadable) = match archive(
         &staged,
         &json,
         &bundle.attachments,
@@ -95,6 +97,7 @@ pub fn write(
         spaces: saturating_u32(bundle.spaces.len()),
         folders: saturating_u32(bundle.folders.len()),
         attachments: stored,
+        attachments_unreadable: unreadable,
         protected: passphrase.is_some(),
     })
 }
@@ -106,7 +109,7 @@ fn archive(
     source: &Path,
     library: &Vault,
     protection: Option<&(Vault, Recipe)>,
-) -> Result<u32, StorageError> {
+) -> Result<(u32, u32), StorageError> {
     let target = File::create(staged).context(staged.display().to_string())?;
     let mut writer = ZipWriter::new(target);
 
@@ -134,7 +137,7 @@ fn archive(
         writer.write_all(json.as_bytes()).context(BUNDLE_ENTRY)?;
     }
 
-    let mut stored = 0;
+    let (mut stored, mut unreadable) = (0, 0);
     for record in records {
         let name = record.stored_name();
 
@@ -144,7 +147,12 @@ fn archive(
             continue;
         };
 
-        let plain = library.open_bytes(&sealed)?;
+        // One that cannot be opened is left out and counted: the export is the one copy that
+        // needs no passphrase, and a damaged file must not cost it.
+        let Ok(plain) = library.open_bytes(&sealed) else {
+            unreadable += 1;
+            continue;
+        };
         let bytes = match protection {
             Some((vault, _)) => vault.seal_bytes(&plain)?,
             None => plain,
@@ -159,7 +167,7 @@ fn archive(
 
     writer.finish().map_err(|error| zip_error(&error))?;
 
-    Ok(stored)
+    Ok((stored, unreadable))
 }
 
 /// The bundle, and whatever carries the attachment bytes that belong with it. Answers
@@ -170,7 +178,14 @@ pub fn read(
     passphrase: Option<&str>,
 ) -> Result<(IncomingBundle, Payload), StorageError> {
     let Some(mut archive) = open_archive(path)? else {
-        let json = std::fs::read_to_string(path).context(path)?;
+        let file = File::open(path).context(path)?;
+        let raw = read_at_most(file, PLAIN_CEILING)
+            .context(path)?
+            .ok_or_else(|| {
+                StorageError::ImportFormat(format!("the file is past {PLAIN_CEILING} bytes"))
+            })?;
+        let json = String::from_utf8(raw)
+            .map_err(|_| StorageError::ImportFormat("the bundle is not text".to_string()))?;
         return Ok((super::model::read_bundle(&json)?, Payload::Empty));
     };
 
@@ -338,6 +353,23 @@ fn staging_path(path: &str) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    /// A bundle written as plain JSON, past what an archive may expand to, is refused before it
+    /// is read whole (#1477, N30).
+    #[test]
+    fn a_plain_bundle_past_the_ceiling_is_refused_unread() {
+        let folder = tempfile::tempdir().unwrap();
+        let path = folder.path().join("notes.json");
+        let file = std::fs::File::create(&path).unwrap();
+        file.set_len(PLAIN_CEILING + 1).unwrap();
+
+        let refused = read(path.to_str().unwrap(), None).err().unwrap();
+
+        assert!(
+            matches!(&refused, StorageError::ImportFormat(said) if said.contains("past")),
+            "{refused:?}"
+        );
+    }
+
     use super::*;
     use crate::notes::fixtures::note as sample;
     use crate::spaces::model::Space;

@@ -5,7 +5,6 @@ use std::str::FromStr;
 
 use chrono::{DateTime, Datelike, Duration, LocalResult, NaiveDateTime, Offset, TimeZone, Utc};
 use chrono_tz::{OffsetComponents, OffsetName, TZ_VARIANTS, Tz};
-use serde::{Deserialize, Serialize};
 
 use super::dates::{self, Parsed, Refusal};
 use crate::count::saturating_u32;
@@ -26,8 +25,7 @@ const NOT_A_PLACE: [&str; 9] = [
     "Factory",
 ];
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZoneEntry {
     pub zone: String,
     pub city: String,
@@ -35,8 +33,7 @@ pub struct ZoneEntry {
     pub abbreviation: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ZonesRequest {
     /// A date and time on the wall clock of `from`, or an instant that carries its offset.
     pub text: String,
@@ -47,8 +44,7 @@ pub struct ZonesRequest {
     pub later: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZoneTime {
     pub zone: String,
     pub city: String,
@@ -65,20 +61,14 @@ pub struct ZoneTime {
     pub day_shift: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZoneReading {
     pub offset: String,
     pub abbreviation: Option<String>,
     pub iso_utc: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ZonesAnswer {
     Placed {
         from: String,

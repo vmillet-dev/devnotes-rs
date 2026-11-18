@@ -9,6 +9,7 @@ mod variables;
 
 pub(crate) use security::change_id;
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{Align, CornerRadius, FontFamily, Id, Layout, Rect, Role, Sense, Stroke, Ui, Vec2};
 use engine::folders::board::PreviewLines;
 use i18n::{Key, Message, keys};
@@ -55,13 +56,14 @@ enum Page {
     General,
     Shortcuts,
     Security,
+    Backups,
     Variables,
 }
 
 impl Page {
     /// The order on screen: what the application looks like, then the keys that reach it, then
-    /// what protects the library, then the corpus's own variables.
-    const ALL: [(Self, Key, &'static str); 4] = [
+    /// what protects the library and its copies, then the corpus's own variables.
+    const ALL: [(Self, Key, &'static str); 5] = [
         (Self::General, keys::settings::pages::GENERAL, "general"),
         (
             Self::Shortcuts,
@@ -69,6 +71,7 @@ impl Page {
             "shortcuts",
         ),
         (Self::Security, keys::settings::pages::SECURITY, "security"),
+        (Self::Backups, keys::settings::pages::BACKUPS, "backups"),
         (
             Self::Variables,
             keys::settings::pages::VARIABLES,
@@ -143,9 +146,16 @@ pub(crate) fn id() -> Id {
 
 pub(super) fn show(ctx: &egui::Context, state: &AppState, view: &mut View, actions: &mut Actions) {
     view.shortcuts.listens_for_a_global_key = false;
-    let shown = widgets::framed_dialog(ctx, &state.dialogs, id(), SIZE, |ui| {
-        body(ui, state, view, actions);
-    });
+    let cross = i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]);
+    let shown = widgets::framed_dialog(
+        ctx,
+        &state.dialogs,
+        (id(), (&cross, "settings-cross")),
+        SIZE,
+        |ui| {
+            body(ui, state, view, actions);
+        },
+    );
     security::dialog(ctx, state, view, actions);
     if !shown.is_some_and(|shown| shown.should_close()) {
         return;
@@ -162,7 +172,14 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
     let whole = ui.max_rect();
     let language = state.language;
     let title = i18n::translate(language, keys::settings::TITLE, &[]);
-    let words = widgets::text(ui, &title, 15.0, 600.0, FontFamily::Proportional, p.text_0);
+    let words = widgets::text(
+        ui,
+        &title,
+        font::TITLE,
+        600.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let at = egui::pos2(
         whole.left() + 20.0,
         whole.top() + (HEADER - words.size().y) / 2.0,
@@ -243,11 +260,11 @@ fn body(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
 
 fn pages_rail(ui: &mut Ui, state: &AppState, view: &mut View) {
     let p = palette(ui.ctx());
-    ui.spacing_mut().item_spacing.y = 2.0;
+    ui.spacing_mut().item_spacing.y = gap::LINE;
     for (page, name, id) in Page::ALL {
         let name = i18n::translate(state.language, name, &[]);
         let on = view.page == page;
-        let corner = CornerRadius::same(6);
+        let corner = CornerRadius::same(radius::CONTROL);
         let response = widgets::interact(
             ui,
             Vec2::new(ui.available_width(), 31.0),
@@ -269,7 +286,7 @@ fn pages_rail(ui: &mut Ui, state: &AppState, view: &mut View) {
         } else {
             p.text_1
         };
-        let words = widgets::text(ui, &name, 12.5, 400.0, FontFamily::Proportional, ink);
+        let words = widgets::text(ui, &name, font::BODY, 400.0, FontFamily::Proportional, ink);
         let at = egui::pos2(
             response.rect.left() + 10.0,
             response.rect.center().y - words.size().y / 2.0,
@@ -288,10 +305,17 @@ fn current_page(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Ac
         .find(|(page, ..)| *page == view.page)
         .unwrap_or(Page::ALL[0]);
     let name = i18n::translate(state.language, name, &[]);
-    let words = widgets::text(ui, &name, 13.0, 600.0, FontFamily::Proportional, p.text_0);
+    let words = widgets::text(
+        ui,
+        &name,
+        font::READING,
+        600.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let (rect, _) = ui.allocate_exact_size(words.size(), Sense::hover());
     ui.painter().galley(rect.min, words, p.text_0);
-    ui.add_space(14.0);
+    ui.add_space(gap::BLOCKS);
     let Some(draft) = &mut view.draft else {
         return;
     };
@@ -300,9 +324,10 @@ fn current_page(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Ac
             let lines = view.preview_lines.get_or_insert(state.preview_lines);
             general::show(ui, state, (draft, lines), actions);
         }
-        Page::Security => {
+        Page::Security => security::page(ui, state, actions),
+        Page::Backups => {
             let mut settings = draft.draft().clone();
-            security::page(ui, state, (&mut settings, &mut view.reveal_strip), actions);
+            security::backups(ui, state, (&mut settings, &mut view.reveal_strip), actions);
             draft.edit(|edited| *edited = settings);
         }
         Page::Shortcuts => {
@@ -320,7 +345,7 @@ fn buttons(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions) {
     let tr = |key| i18n::translate(language, key, &[]);
     if view.page == Page::General {
         let hint = egui::RichText::new(tr(keys::settings::PREVIEW_HINT))
-            .size(11.5)
+            .size(font::CONTROL)
             .color(p.text_2);
         let room = Vec2::new(ui.available_width() - BUTTONS, FOOTER);
         ui.allocate_ui_with_layout(room, Layout::left_to_right(Align::Center), |ui| {
@@ -328,7 +353,7 @@ fn buttons(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions) {
         });
     }
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let mut ask = |ask| actions.push(Asked::Menu(Action::Preferences(ask)));
         if Button::new(&tr(keys::settings::OK), "settings-close")
             .kind(Kind::Filled)
@@ -360,10 +385,10 @@ fn confirming(ui: &mut Ui, state: &AppState, view: &View, actions: &mut Actions)
     let said = Message::new(keys::settings::UNAPPLIED)
         .with("count", view.pending(state))
         .text(language);
-    let warning = ui.label(egui::RichText::new(said).size(12.0).color(p.red));
+    let warning = ui.label(egui::RichText::new(said).size(font::LABEL).color(p.red));
     widgets::address(ui, &warning, "settings-unapplied");
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let mut ask = |ask| actions.push(Asked::Menu(Action::Preferences(ask)));
         if Button::new(&tr(keys::settings::APPLY_AND_CLOSE), "settings-apply-close")
             .kind(Kind::Filled)

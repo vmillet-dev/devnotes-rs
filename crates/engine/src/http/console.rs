@@ -6,7 +6,6 @@
 use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 
 use super::history;
 use super::model::KeyValue;
@@ -18,11 +17,8 @@ use super::send::{Exchange, SentResponse};
 use super::variables;
 use crate::error::{AppError, ErrorCode};
 
-pub const HTTP_CONSOLE_EVENT: &str = "http-console";
-
 /// The script a line comes from: its kind, and the request, folder or collection that holds it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConsoleOrigin {
     pub kind: ScriptKind,
     pub level: ScriptLevel,
@@ -43,12 +39,7 @@ impl ConsoleOrigin {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConsoleLine {
     /// A request leaving: the send's own, or one a script sent (`by`).
     Out {
@@ -93,8 +84,7 @@ pub enum ConsoleLine {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConsoleEvent {
     /// The send it belongs to, under the id the front sent it with.
     pub id: String,

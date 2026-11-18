@@ -9,7 +9,7 @@ type Harness = egui_kittest::Harness<'static, Bench>;
 fn stored(harness: &Harness, id: &str) -> DisplayNote {
     let id = id.to_owned();
     engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::notes::get_note(engine, id)
+        engine::notes::get_note(engine, &id)
     })
     .unwrap()
 }
@@ -24,7 +24,7 @@ fn edited() -> (Harness, String) {
     };
     let at = id.clone();
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, at, patch)
+        engine::notes::update_note(engine, &at, &patch)
     })
     .unwrap();
     let mut harness = expanded_area(backend, profile);

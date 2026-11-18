@@ -1,7 +1,5 @@
 //! A note changing kind: what its text becomes, decided here and nowhere else.
 
-use serde::{Deserialize, Serialize};
-
 use super::checklist::{self, ChecklistItem};
 use super::drawing;
 use super::kind::NoteKind;
@@ -10,8 +8,7 @@ use super::model::{DisplayNote, Note};
 
 /// What a note holds that a change of kind rewrites: the answer a conversion gives, so its undo
 /// puts back exactly that.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoteBody {
     pub kind: NoteKind,
     pub language: Language,
@@ -117,8 +114,7 @@ fn without_box(line: &str) -> (bool, &str) {
 
 /// What a conversion answers: the note as it now is, and the body it had, which its undo puts
 /// back.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct NoteConversion {
     pub note: DisplayNote,
     pub previous: NoteBody,

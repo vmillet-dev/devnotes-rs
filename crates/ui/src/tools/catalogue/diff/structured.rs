@@ -1,5 +1,6 @@
 //! Two documents compared by their values, whatever their format.
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::{CornerRadius, FontFamily, Pos2, Rect, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use engine::notes::language::Language as NoteLanguage;
 use engine::tools::convert::DataFormat;
@@ -9,7 +10,7 @@ use engine::tools::diff::{
 };
 use i18n::{Language, Message, keys};
 
-use super::{Kind, Layout, Mode, ROW, Sides, cell_head, gap, pill, rows_box, split_head};
+use super::{Kind, Layout, Mode, ROW, Sides, absent_side, cell_head, pill, rows_box, split_head};
 use crate::api;
 use crate::theme::palette;
 use crate::tools::live::{Live, Turn};
@@ -36,7 +37,6 @@ const SAMPLE_B: &str = "{
   \"window\": { \"width\": 1280, \"height\": 800 }
 }";
 
-const DEBOUNCE: f64 = 0.250;
 const CHANGES_WIDTH: f32 = 300.0;
 
 fn format_name(format: DataFormat) -> &'static str {
@@ -67,7 +67,7 @@ impl Default for StructuredDiff {
             ignore_whitespace: true,
             layout: Layout::Split,
             selected: None,
-            answer: Live::slower(DEBOUNCE),
+            answer: Live::slower(f64::from(crate::theme::motion::TYPING_HEAVY)),
         }
     }
 }
@@ -177,7 +177,7 @@ impl StructuredDiff {
         let width = (ui.available_width() - 14.0) / 2.0;
         let mut asked = None;
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = 14.0;
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             for (slot, side) in [("a", JsonDiffSide::A), ("b", JsonDiffSide::B)] {
                 ui.allocate_ui(Vec2::new(width, 0.0), |ui| {
                     ui.vertical(|ui| {
@@ -271,7 +271,7 @@ impl StructuredDiff {
             Some(JsonDiffAnswer::NotStructured { sides }) if sides.contains(&side) => {
                 let p = palette(ui.ctx());
                 let words = tr(keys::tools::diff::structured::NOT_STRUCTURED);
-                let said = paragraph(ui, &words, (12.5, 400.0), p.text_1);
+                let said = paragraph(ui, &words, (font::BODY, 400.0), p.text_1);
                 address(ui, &said, &format!("structured-diff-not-structured-{slot}"));
                 let id = format!("structured-diff-as-text-{slot}");
                 Button::new(&tr(keys::tools::diff::structured::AS_TEXT), &id)
@@ -323,7 +323,7 @@ impl StructuredDiff {
             let width = ui.available_width();
             let left = (width - CHANGES_WIDTH - 14.0).max(width * 0.5);
             ui.horizontal_top(|ui| {
-                ui.spacing_mut().item_spacing.x = 14.0;
+                ui.spacing_mut().item_spacing.x = gap::BLOCKS;
                 ui.allocate_ui(Vec2::new(left, 0.0), |ui| {
                     ui.vertical(|ui| {
                         ui.set_width(left);
@@ -359,7 +359,7 @@ impl StructuredDiff {
         ];
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = 12.0;
+            ui.spacing_mut().item_spacing.x = gap::GROUPS;
             pill(
                 ui,
                 &count(words::ADDED, counts.added),
@@ -423,12 +423,12 @@ impl StructuredDiff {
         let words = Message::new(keys::tools::diff::structured::CHANGES_COUNT)
             .with("count", count)
             .text(language);
-        paragraph(ui, &words, (12.0, 600.0), p.text_2);
+        paragraph(ui, &words, (font::LABEL, 600.0), p.text_2);
         egui::ScrollArea::vertical()
             .id_salt("structured-diff-changes")
             .max_height(super::ROWS_MAX)
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 2.0;
+                ui.spacing_mut().item_spacing.y = gap::LINE;
                 for change in changes {
                     let on = self.selected.as_deref() == Some(change.path.as_str());
                     if change_row(ui, change, on, language).clicked() {
@@ -452,7 +452,7 @@ fn row(ui: &mut Ui, row: &JsonDiffRow, selected: Option<&str>) {
     for (rect, line, is_right) in [(left, &row.left, false), (right, &row.right, true)] {
         match line {
             Some(line) => cell(ui, rect, kind, is_right, line),
-            None => gap(ui, rect),
+            None => absent_side(ui, rect),
         }
     }
     ui.painter()
@@ -480,7 +480,14 @@ fn cell(ui: &Ui, rect: Rect, kind: Kind, right: bool, line: &JsonDiffLine) {
     } else {
         p.text_0
     };
-    let galley = widgets::text(ui, &line.text, 12.0, 400.0, FontFamily::Monospace, ink);
+    let galley = widgets::text(
+        ui,
+        &line.text,
+        font::LABEL,
+        400.0,
+        FontFamily::Monospace,
+        ink,
+    );
     let at = Pos2::new(code.left(), code.center().y - galley.size().y / 2.0);
     ui.painter().with_clip_rect(code).galley(at, galley, ink);
 }
@@ -520,9 +527,9 @@ fn change_row(ui: &mut Ui, change: &JsonChange, on: bool, language: Language) ->
     let width = ui.available_width();
     let path = format!("{} {}", change_mark(change.kind), change.path);
     let detail = change_detail(change, language);
-    let top = widgets::wrapped(ui, &path, (12.0, 500.0), p.text_0, width - 20.0);
-    let under = widgets::wrapped(ui, &detail, (11.5, 400.0), p.text_2, width - 20.0);
-    let corner = CornerRadius::same(7);
+    let top = widgets::wrapped(ui, &path, (font::LABEL, 500.0), p.text_0, width - 20.0);
+    let under = widgets::wrapped(ui, &detail, (font::CONTROL, 400.0), p.text_2, width - 20.0);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = interact(
         ui,
         Vec2::new(width, top.size().y + under.size().y + 14.0),

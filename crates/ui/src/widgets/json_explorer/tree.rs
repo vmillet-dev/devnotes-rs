@@ -2,6 +2,7 @@
 //! one, a line per value, open or not by the same set as the graph's nodes. The list is the one
 //! tab stop; the arrows walk it, → and ← open and close.
 
+use crate::theme::tokens::font;
 use egui::{
     CornerRadius, FontFamily, Key, Modifiers, Role, Sense, Ui, Vec2, WidgetInfo, pos2, vec2,
 };
@@ -85,7 +86,7 @@ pub(super) fn show(
                     let note = i18n::translate(language, keys::json::TREE_TRUNCATED, &[]);
                     ui.label(
                         egui::RichText::new(note)
-                            .size(12.0)
+                            .size(font::LABEL)
                             .italics()
                             .color(p.text_2),
                     );

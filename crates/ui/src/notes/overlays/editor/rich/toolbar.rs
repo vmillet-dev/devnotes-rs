@@ -2,6 +2,7 @@
 //! the quote, the code block and the table; while the caret is in a code block, its language;
 //! in a table, its tools. After a tool the text takes the keys back.
 
+use crate::theme::tokens::gap;
 use egui::{Key, Sense, Ui, UiBuilder, vec2};
 use engine::notes::drawing::DrawingRef;
 use engine::notes::language::Language as Code;
@@ -162,13 +163,13 @@ pub(super) fn show(
             .max_rect(ui.max_rect().shrink2(vec2(24.0, 6.0)))
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    inner.spacing_mut().item_spacing.x = 2.0;
+    inner.spacing_mut().item_spacing.x = gap::LINE;
     let group = widgets::region(&mut inner, ui.max_rect(), "rich-toolbar", Sense::hover());
     let label = tr(keys::editor::rich::TOOLBAR);
     group.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Toolbar, true, &label));
     for (at, tools) in GROUPS.iter().enumerate() {
         if at > 0 {
-            inner.add_space(10.0);
+            inner.add_space(gap::INSET);
         }
         for (tool, author_id, face, key) in *tools {
             let name = tr(*key);
@@ -178,10 +179,10 @@ pub(super) fn show(
             }
         }
     }
-    inner.add_space(10.0);
+    inner.add_space(gap::INSET);
     drawing_menu(&mut inner, view, drawings, language);
     if let Some(fence) = code_language(view) {
-        inner.add_space(10.0);
+        inner.add_space(gap::INSET);
         language_menu(
             &mut inner,
             view,
@@ -190,7 +191,7 @@ pub(super) fn show(
         );
     }
     if table::cell_of(&view.document, &view.selection.head.path).is_some() {
-        inner.add_space(10.0);
+        inner.add_space(gap::INSET);
         for (tool, author_id, key) in TABLE_TOOLS {
             let clicked = Button::new(&tr(key), author_id)
                 .kind(Kind::Quiet)
@@ -370,7 +371,7 @@ pub(super) fn link_form(ui: &mut Ui, view: &mut RichEditor, language: Language) 
             .max_rect(ui.max_rect().shrink2(vec2(24.0, 4.0)))
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    inner.spacing_mut().item_spacing.x = 8.0;
+    inner.spacing_mut().item_spacing.x = gap::CONTROLS;
     let text_name = tr(words::LINK_TEXT);
     let address_name = tr(words::LINK_ADDRESS);
     inner.scope(|ui| {

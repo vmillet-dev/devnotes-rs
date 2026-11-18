@@ -371,7 +371,11 @@ pub fn fill_form(ui: &Ui, state: &AppState, view: &mut View, actions: &mut Actio
 
 /// The rail on the left, as wide as the setting says, and the canvas beside it.
 pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions) {
-    let region = crate::widgets::area_room(ui, "area-notes");
+    let region = crate::widgets::area_room(
+        ui,
+        "area-notes",
+        &i18n::translate(state.language, i18n::keys::areas::NOTES, &[]),
+    );
     let rail = (state.settings.rail_shown, state.settings.rail_width);
     let rest = view
         .rail_width
@@ -398,7 +402,7 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
     overlays::image_lightbox::show(ui, state, actions);
     overlays::presentation::show(ui, state, &mut view.presentation, actions);
     overlays::undo_bar::show(ui, state, actions);
-    if let Some(width) = view.rail_width.rested(ui, state.settings.rail_width) {
+    if let Some(width) = view.rail_width.rested(ui) {
         actions.push(Asked::App(AppAction::SetRailWidth(width)));
     }
 }
@@ -542,6 +546,10 @@ mod tests {
 
 #[cfg(test)]
 pub(crate) mod bench;
+#[cfg(test)]
+mod bench_keys_tests;
+#[cfg(test)]
+mod bench_name_tests;
 
 #[cfg(test)]
 mod parity_tests;

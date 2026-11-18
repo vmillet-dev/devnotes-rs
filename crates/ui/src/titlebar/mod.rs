@@ -1,6 +1,7 @@
 //! The application's bar: the window keeps the system's decorations, so this is a menu bar
 //! inside it — the menus on the left, the areas beside them while the rail is put away, the name
-//! in the middle, the theme on the right. 38 px on `bg-0`, a `line-soft` underline.
+//! in the middle, the theme on the right. 38 px on `bg-0`, a `line-soft` underline. What was
+//! just done takes the name's place a while: there it moves nothing and covers nothing.
 
 pub(crate) mod about_menu;
 pub(crate) mod area_switch;
@@ -8,9 +9,8 @@ mod file_menu;
 pub(crate) mod libraries;
 pub(crate) mod preferences;
 
-use egui::{
-    CornerRadius, FontFamily, Margin, Rect, Role, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo,
-};
+use crate::theme::tokens::{font, gap, radius};
+use egui::{CornerRadius, FontFamily, Rect, Role, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo};
 use engine::app_info::METADATA;
 use engine::folders::board::PreviewLines;
 use i18n::{Language, keys};
@@ -125,19 +125,8 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
         Stroke::new(1.0, p.line_soft),
     );
 
-    // Centred on the window, not on what the two groups leave between them.
-    let title = widgets::text(
-        ui,
-        METADATA.name,
-        12.0,
-        400.0,
-        FontFamily::Proportional,
-        p.text_2,
-    );
-    let at = bar.center() - title.size() / 2.0;
-    ui.painter().galley(at, title, p.text_2);
-
-    let inner = bar - Margin::symmetric(12, 0);
+    let inner = bar - gap::margin(gap::GROUPS, 0.0);
+    let mut sides = (inner.left(), inner.right());
     ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
         ui.horizontal_centered(|ui| {
             // Every entry of the menus acts on the library: none while it is locked.
@@ -149,11 +138,32 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
             if unlocked && !state.settings.rail_shown {
                 area_switch::bar(ui, state.settings.area, language, actions);
             }
+            sides.0 = ui.min_rect().right();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 theme_toggle(ui, language, actions);
+                sides.1 = ui.min_rect().left();
             });
         });
     });
+
+    // Centred on the window, not on what the two groups leave between them.
+    let half = (bar.center().x - sides.0).min(sides.1 - bar.center().x) - 16.0;
+    if let Some(latest) = state.status.latest() {
+        if crate::banners::report(ui, latest, (language, 2.0 * half)) {
+            actions.push(Asked::App(AppAction::DismissStatus));
+        }
+        return;
+    }
+    let title = widgets::text(
+        ui,
+        METADATA.name,
+        font::LABEL,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
+    let at = bar.center() - title.size() / 2.0;
+    ui.painter().galley(at, title, p.text_2);
 }
 
 /// What the menus open, over everything else.
@@ -187,8 +197,15 @@ pub(crate) fn dialogs(
 /// A menu's control: its name and a chevron, `bg-2` under the pointer or while it is open.
 fn menu_trigger(ui: &mut Ui, label: &str, author_id: &str) -> egui::Response {
     let p = palette(ui.ctx());
-    let probe = widgets::text(ui, label, 11.5, 400.0, FontFamily::Proportional, p.text_2);
-    let corner = CornerRadius::same(6);
+    let probe = widgets::text(
+        ui,
+        label,
+        font::CONTROL,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
+    let corner = CornerRadius::same(radius::CONTROL);
     let size = Vec2::new(probe.size().x + 29.0, 24.0);
     let response = widgets::interact(
         ui,
@@ -204,7 +221,14 @@ fn menu_trigger(ui: &mut Ui, label: &str, author_id: &str) -> egui::Response {
         ui.painter().rect_filled(response.rect, corner, p.bg_2);
     }
     let ink = if lit { p.text_0 } else { p.text_2 };
-    let words = widgets::text(ui, label, 11.5, 400.0, FontFamily::Proportional, ink);
+    let words = widgets::text(
+        ui,
+        label,
+        font::CONTROL,
+        400.0,
+        FontFamily::Proportional,
+        ink,
+    );
     let at = egui::pos2(
         response.rect.left() + 8.0,
         response.rect.center().y - words.size().y / 2.0,
@@ -223,14 +247,12 @@ enum Tone {
     Plain,
     /// Nothing to act on: it stays where it is, muted, and a click does nothing.
     Idle,
-    /// Red at rest, like every destructive control.
-    Danger,
 }
 
 /// A line of the bar's menus: 7 × 10, 6 px, 12.5 px; `bg-3` under the pointer.
 fn menu_option(ui: &mut Ui, label: &str, author_id: &str, tone: Tone) -> egui::Response {
     let p = palette(ui.ctx());
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = widgets::interact(
         ui,
         Vec2::new(ui.available_width(), 29.0),
@@ -244,12 +266,11 @@ fn menu_option(ui: &mut Ui, label: &str, author_id: &str, tone: Tone) -> egui::R
         ui.painter().rect_filled(response.rect, corner, p.bg_3);
     }
     let ink = match tone {
-        Tone::Danger => p.red,
         Tone::Idle => p.text_2,
         Tone::Plain if lit => p.text_0,
         Tone::Plain => p.text_1,
     };
-    let words = widgets::text(ui, label, 12.5, 400.0, FontFamily::Proportional, ink);
+    let words = widgets::text(ui, label, font::BODY, 400.0, FontFamily::Proportional, ink);
     let at = egui::pos2(
         response.rect.left() + 10.0,
         response.rect.center().y - words.size().y / 2.0,
@@ -277,7 +298,7 @@ fn theme_toggle(ui: &mut Ui, language: Language, actions: &mut Actions) {
         _ => (Icon::Sun, keys::settings::theme::TO_LIGHT),
     };
     let label = i18n::translate(language, label, &[]);
-    let corner = CornerRadius::same(6);
+    let corner = CornerRadius::same(radius::CONTROL);
     let response = widgets::interact(
         ui,
         Vec2::new(27.0, 24.0),

@@ -115,8 +115,7 @@ impl SizeUnit {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SizesRequest {
     /// A number, with its unit or without one.
     pub text: String,
@@ -126,8 +125,7 @@ pub struct SizesRequest {
     pub decimals: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SizeRow {
     pub unit: SizeUnit,
     pub exact: String,
@@ -135,8 +133,7 @@ pub struct SizeRow {
 }
 
 /// What one decimal unit is in the binary unit of the same rank: `1 GB = 0.931 GiB`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SizeGap {
     pub decimal: SizeUnit,
     pub binary: SizeUnit,
@@ -144,12 +141,7 @@ pub struct SizeGap {
     pub rounded: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SizesAnswer {
     Converted {
         unit: SizeUnit,

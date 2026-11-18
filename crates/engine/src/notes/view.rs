@@ -1,8 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, TimeDelta, Utc};
-use serde::{Deserialize, Serialize};
 use unicode_normalization::char::{decompose_canonical, is_combining_mark};
 
 use super::kind::NoteKind;
@@ -13,14 +12,12 @@ use crate::count::saturating_u32;
 use crate::folders::model::NoteFolder;
 use crate::index::IndexedNote;
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct NotesQuery {
     /// `None` = every space: a choice, not an absence of one.
     pub space_id: Option<String>,
     /// `None` = every folder, filed or not. No "unfiled" filter: the absence of a chip already
     /// says it.
-    #[serde(default)]
     pub folder_id: Option<String>,
     pub search: String,
     pub filter: NoteFilter,
@@ -30,12 +27,9 @@ pub struct NotesQuery {
     pub kinds: Vec<NoteKind>,
     pub priorities: Vec<Priority>,
     /// Left out by the palette: the modification date, newest first.
-    #[serde(default)]
     pub order: NoteOrder,
-    #[serde(default)]
     pub grouping: Grouping,
     /// The palette's order: how the title answers the search, the last edit breaking ties.
-    #[serde(default)]
     pub ranked: bool,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
@@ -46,15 +40,13 @@ pub struct NotesQuery {
 }
 
 /// What the list view is ordered by. The board keeps the places its cards were given.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct NoteOrder {
     pub key: SortKey,
     pub direction: SortDirection,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SortKey {
     #[default]
     Modified,
@@ -66,8 +58,7 @@ pub enum SortKey {
 }
 
 /// How the list view gathers its cards. A search or a facet still makes one flat list.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Grouping {
     #[default]
     Date,
@@ -76,8 +67,7 @@ pub enum Grouping {
     None,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SortDirection {
     #[default]
     Descending,
@@ -85,8 +75,7 @@ pub enum SortDirection {
 }
 
 /// `Untriaged` = notes with a deadline, those whose fate is not decided.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NoteFilter {
     All,
     Pinned,
@@ -205,8 +194,7 @@ impl Facets {
 }
 
 /// How many of the space's notes carry a value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FacetCount<T> {
     pub value: T,
     pub count: u32,
@@ -308,6 +296,18 @@ pub struct Card {
     pub note: Arc<IndexedNote>,
     /// `None` outside a search, and for a note found by its own title.
     pub hit: Option<SearchHit>,
+    /// What its card draws, cut once for this view: a Calcul sheet evaluated, a Note read whole.
+    preview: OnceLock<DisplayNote>,
+}
+
+impl Card {
+    pub fn new(note: Arc<IndexedNote>, hit: Option<SearchHit>) -> Self {
+        Self {
+            note,
+            hit,
+            preview: OnceLock::new(),
+        }
+    }
 }
 
 impl std::ops::Deref for Card {
@@ -320,8 +320,7 @@ impl std::ops::Deref for Card {
 
 /// No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
 /// biggest thing on the card. That case is `SearchMatch::Title`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SearchField {
     Tag,
     Body,
@@ -331,8 +330,7 @@ pub enum SearchField {
 }
 
 /// What made a note match, and where.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct SearchHit {
     pub field: SearchField,
     /// The matching line, not the whole body: a card has room for one.
@@ -352,8 +350,7 @@ pub struct NoteSection {
 }
 
 /// A translation key on the front-end side: no readable label crosses the bridge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NoteSectionKey {
     Pinned,
     Today,
@@ -381,8 +378,7 @@ impl NoteSectionKey {
 }
 
 /// Declared in the order the format sections run: snippets by language, then the other kinds.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-#[serde(tag = "group", rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SectionGroup {
     Language {
         language: Language,
@@ -442,8 +438,12 @@ fn keeps_chip(opened: Option<&str>, folder_id: Option<&str>) -> bool {
 
 impl NotesView {
     /// What `card`'s card draws: its footer, fields, chip and counter, and its body cut to a
-    /// preview. Computed for the cards shown only, from the shared entry.
-    pub fn display(&self, card: &Card) -> DisplayNote {
+    /// preview. Computed for the cards shown only, once for this view: a frame only reads it.
+    pub fn display<'a>(&self, card: &'a Card) -> &'a DisplayNote {
+        card.preview.get_or_init(|| self.cut(card))
+    }
+
+    fn cut(&self, card: &Card) -> DisplayNote {
         let mut note = model::decorate(card.note.note.clone(), self.now);
         note.search_hit.clone_from(&card.hit);
         if self.by_creation {
@@ -500,10 +500,7 @@ pub fn build(notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> NotesVie
             } else {
                 answers(&entry.note, &entry.folded, &needle)?
             };
-            Some(Card {
-                note: Arc::new(entry),
-                hit,
-            })
+            Some(Card::new(Arc::new(entry), hit))
         })
         .collect();
 
@@ -944,10 +941,7 @@ mod tests {
     use crate::notes::fixtures::{NOW, at, note as sample};
 
     fn card(note: Note) -> Card {
-        Card {
-            note: Arc::new(IndexedNote::of(note)),
-            hit: None,
-        }
+        Card::new(Arc::new(IndexedNote::of(note)), None)
     }
 
     /// [`super::build_sections`] over notes just read.
@@ -964,7 +958,7 @@ mod tests {
 
     /// What the first card of `view` draws.
     fn first_displayed(view: &NotesView) -> DisplayNote {
-        view.display(view.cards().next().unwrap())
+        view.display(view.cards().next().unwrap()).clone()
     }
 
     fn request() -> NotesQuery {
@@ -2278,5 +2272,19 @@ mod tests {
                 ..sample()
             }));
         }
+    }
+
+    #[test]
+    fn a_card_is_cut_once_for_its_view_and_a_frame_only_reads_it() {
+        let view = build(vec![note("a", "Un")], Facets::default(), &request());
+        let card = view.cards().next().unwrap();
+
+        let first: *const DisplayNote = view.display(card);
+        let second: *const DisplayNote = view.display(card);
+
+        assert!(
+            std::ptr::eq(first, second),
+            "the same preview, not cut again"
+        );
     }
 }

@@ -136,12 +136,7 @@ pub enum CalcError {
     Unsupported,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CalcLine {
     /// Ends a block, as a heading does.
     Blank,
@@ -166,8 +161,7 @@ pub enum CalcLine {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Number,
     Unit,
@@ -181,16 +175,14 @@ pub enum TokenKind {
 }
 
 /// What the editor colours, in UTF-16 units from the start of the line.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CalcSpan {
     pub start: u32,
     pub end: u32,
     pub kind: TokenKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalcRow {
     pub line: CalcLine,
     pub spans: Vec<CalcSpan>,
@@ -200,8 +192,7 @@ pub struct CalcRow {
 
 /// A name, the line it was given on, its value there and the lines that read it before it
 /// was given another. Zero-based lines.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalcVariable {
     pub name: String,
     pub line: u32,
@@ -209,16 +200,14 @@ pub struct CalcVariable {
     pub uses: Vec<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalcSheet {
     pub rows: Vec<CalcRow>,
     pub variables: Vec<CalcVariable>,
 }
 
 /// One of the last lines a card shows: what was written, and what it gave.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalcCardLine {
     pub expression: String,
     pub value: CalcValue,

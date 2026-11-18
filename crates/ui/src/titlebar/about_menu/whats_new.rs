@@ -1,7 +1,8 @@
 //! The changelog shipped with the application: the core cuts it into releases and entries, so
 //! there is no Markdown to render here.
 
-use egui::{Align, Layout, RichText, Ui, Vec2};
+use crate::theme::tokens::{font, gap};
+use egui::{RichText, Ui, Vec2};
 use engine::app_info::METADATA;
 use engine::changelog::model::ChangelogRelease;
 use i18n::{Key, Language, keys};
@@ -20,24 +21,30 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(super) fn show(ctx: &egui::Context, state: &AppState, actions: &mut Actions) -> bool {
     let language = state.language;
     let tr = |key: Key| i18n::translate(language, key, &[]);
-    let mut close = false;
-    let shown = widgets::framed_dialog(ctx, &state.dialogs, super::id(), SIZE, |ui| {
-        let (title, subtitle) = (tr(keys::whats_new::TITLE), tr(keys::whats_new::SUBTITLE));
-        framed(
-            ui,
-            (&title, &subtitle),
-            |ui| body(ui, state),
-            |ui| footer(ui, language, actions, &mut close),
-        );
-    });
-    close || shown.is_some_and(|shown| shown.should_close())
+    let cross = tr(keys::whats_new::CLOSE);
+    let shown = widgets::framed_dialog(
+        ctx,
+        &state.dialogs,
+        (super::id(), (&cross, "news-close")),
+        SIZE,
+        |ui| {
+            let (title, subtitle) = (tr(keys::whats_new::TITLE), tr(keys::whats_new::SUBTITLE));
+            framed(
+                ui,
+                (&title, &subtitle),
+                |ui| body(ui, state),
+                |ui| footer(ui, actions),
+            );
+        },
+    );
+    shown.is_some_and(|shown| shown.should_close())
 }
 
 fn body(ui: &mut Ui, state: &AppState) {
     let language = state.language;
     let said = |ui: &mut Ui, key| {
         let words = RichText::new(i18n::translate(language, key, &[]))
-            .size(12.5)
+            .size(font::BODY)
             .color(palette(ui.ctx()).text_2);
         ui.label(words);
     };
@@ -50,23 +57,28 @@ fn body(ui: &mut Ui, state: &AppState) {
     }
     for release in state.help.releases() {
         ui.push_id(&release.version, |ui| self::release(ui, release, language));
-        ui.add_space(14.0);
+        ui.add_space(gap::BLOCKS);
     }
 }
 
 fn release(ui: &mut Ui, release: &ChangelogRelease, language: Language) {
     let p = palette(ui.ctx());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let version = ui.label(
             RichText::new(&release.version)
-                .size(13.0)
+                .size(font::READING)
                 .variation(*b"wght", 600.0)
                 .color(p.text_0),
         );
         widgets::address(ui, &version, "news-version");
         if let Some(date) = &release.date {
-            ui.label(RichText::new(date).size(11.5).monospace().color(p.text_2));
+            ui.label(
+                RichText::new(date)
+                    .size(font::CONTROL)
+                    .monospace()
+                    .color(p.text_2),
+            );
         }
         if release.version == VERSION {
             let installed = i18n::translate(language, keys::whats_new::INSTALLED, &[]);
@@ -77,7 +89,7 @@ fn release(ui: &mut Ui, release: &ChangelogRelease, language: Language) {
     widgets::release_notes(ui, release);
 }
 
-fn footer(ui: &mut Ui, language: Language, actions: &mut Actions, close: &mut bool) {
+fn footer(ui: &mut Ui, actions: &mut Actions) {
     let url = format!("{}/releases", METADATA.repository);
     let label = url.trim_start_matches("https://");
     if Button::new(label, "news-releases")
@@ -87,8 +99,4 @@ fn footer(ui: &mut Ui, language: Language, actions: &mut Actions, close: &mut bo
     {
         actions.push(Asked::Menu(Action::OpenLink(url.clone())));
     }
-    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-        let words = i18n::translate(language, keys::whats_new::CLOSE, &[]);
-        *close = Button::new(&words, "news-close").show(ui).clicked();
-    });
 }

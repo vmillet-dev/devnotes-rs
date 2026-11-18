@@ -56,16 +56,16 @@ fn names(session: &Session) -> Vec<String> {
 fn a_collection_is_built_edited_moved_copied_counted_and_deleted() {
     let session = Session::open();
     let api = session
-        .call(|e| create_http_collection(e, "  API  ".to_string()))
+        .call(|e| create_http_collection(e, "  API  "))
         .unwrap();
     let other = session
-        .call(|e| create_http_collection(e, "Autre".to_string()))
+        .call(|e| create_http_collection(e, "Autre"))
         .unwrap();
     let auth = session
-        .call(|e| create_http_folder(e, api.id.clone(), None, "Auth".to_string()))
+        .call(|e| create_http_folder(e, &api.id, None, "Auth"))
         .unwrap();
     let login = session
-        .call(|e| create_http_request(e, draft(&api.id, Some(&auth.id), "Login")))
+        .call(|e| create_http_request(e, &draft(&api.id, Some(&auth.id), "Login")))
         .unwrap();
     assert_eq!(names(&session), vec!["API", "Auth", "Login", "Autre"]);
 
@@ -75,32 +75,24 @@ fn a_collection_is_built_edited_moved_copied_counted_and_deleted() {
         ..HttpRequestPatch::default()
     };
     let saved = session
-        .call(|e| save_http_request(e, login.id.clone(), patch))
+        .call(|e| save_http_request(e, &login.id, &patch))
         .unwrap();
     assert_eq!(
         (saved.name.as_str(), saved.method),
         ("Se connecter", HttpMethod::Post)
     );
-    let read = session
-        .call(|e| get_http_request(e, login.id.clone()))
-        .unwrap();
+    let read = session.call(|e| get_http_request(e, &login.id)).unwrap();
     assert_eq!(read.document.url, "https://api.exemple.fr");
 
     session
-        .call(|e| {
-            rename_http_item(
-                e,
-                item(HttpItemKind::Folder, &auth.id),
-                "Jetons".to_string(),
-            )
-        })
+        .call(|e| rename_http_item(e, &item(HttpItemKind::Folder, &auth.id), "Jetons"))
         .unwrap();
     let copy = session
         .call(|e| {
             duplicate_http_item(
                 e,
-                item(HttpItemKind::Request, &login.id),
-                "Se connecter (copie)".to_string(),
+                &item(HttpItemKind::Request, &login.id),
+                "Se connecter (copie)",
             )
         })
         .unwrap();
@@ -108,8 +100,8 @@ fn a_collection_is_built_edited_moved_copied_counted_and_deleted() {
         .call(|e| {
             move_http_item(
                 e,
-                copy.clone(),
-                HttpPlace {
+                &copy,
+                &HttpPlace {
                     collection_id: other.id.clone(),
                     folder_id: None,
                     index: 0,
@@ -118,7 +110,7 @@ fn a_collection_is_built_edited_moved_copied_counted_and_deleted() {
         })
         .unwrap();
     session
-        .call(|e| reorder_http_collection(e, other.id.clone(), 0))
+        .call(|e| reorder_http_collection(e, &other.id, 0))
         .unwrap();
     assert_eq!(
         names(&session),
@@ -132,11 +124,11 @@ fn a_collection_is_built_edited_moved_copied_counted_and_deleted() {
     );
 
     let contents = session
-        .call(|e| count_http_contents(e, item(HttpItemKind::Collection, &api.id)))
+        .call(|e| count_http_contents(e, &item(HttpItemKind::Collection, &api.id)))
         .unwrap();
     assert_eq!((contents.folders, contents.requests), (1, 1));
     session
-        .call(|e| delete_http_item(e, item(HttpItemKind::Collection, &api.id)))
+        .call(|e| delete_http_item(e, &item(HttpItemKind::Collection, &api.id)))
         .unwrap();
     assert_eq!(names(&session), vec!["Autre", "Se connecter (copie)"]);
 }
@@ -145,26 +137,22 @@ fn a_collection_is_built_edited_moved_copied_counted_and_deleted() {
 fn a_blank_name_a_missing_item_and_a_locked_library_are_refused_by_code() {
     let session = Session::open();
     assert_eq!(
-        code(session.call(|e| create_http_collection(e, "   ".to_string()))),
+        code(session.call(|e| create_http_collection(e, "   "))),
         ErrorCode::InvalidInput
     );
     assert_eq!(
-        code(session.call(|e| get_http_request(e, "absent".to_string()))),
+        code(session.call(|e| get_http_request(e, "absent"))),
         ErrorCode::HttpItemNotFound
     );
     assert_eq!(
-        code(session.call(|e| rename_http_item(
-            e,
-            item(HttpItemKind::Request, "absent"),
-            "x".to_string()
-        ))),
+        code(session.call(|e| rename_http_item(e, &item(HttpItemKind::Request, "absent"), "x"))),
         ErrorCode::HttpItemNotFound
     );
     assert_eq!(
         code(session.call(|e| move_http_item(
             e,
-            item(HttpItemKind::Collection, "c"),
-            HttpPlace {
+            &item(HttpItemKind::Collection, "c"),
+            &HttpPlace {
                 collection_id: "absent".to_string(),
                 folder_id: None,
                 index: 0,
@@ -184,11 +172,9 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
     };
 
     let session = Session::open();
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let factures = session
-        .call(|e| create_http_folder(e, api.id.clone(), None, "Factures".to_string()))
+        .call(|e| create_http_folder(e, &api.id, None, "Factures"))
         .unwrap();
     let bearer = RequestAuth::Bearer {
         token: "{{accessToken}}".to_string(),
@@ -202,31 +188,29 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
         .call(|e| {
             save_http_settings(
                 e,
-                item(HttpItemKind::Folder, &factures.id),
+                &item(HttpItemKind::Folder, &factures.id),
                 settings.clone(),
             )
         })
         .unwrap();
 
     let read = session
-        .call(|e| http_settings(e, item(HttpItemKind::Folder, &factures.id)))
+        .call(|e| http_settings(e, &item(HttpItemKind::Folder, &factures.id)))
         .unwrap();
     assert_eq!(read, settings);
     let inherited = session
-        .call(|e| inherited_http_settings(e, api.id.clone(), Some(factures.id.clone())))
+        .call(|e| inherited_http_settings(e, &api.id, Some(&factures.id)))
         .unwrap();
     assert_eq!(inherited.auth, bearer);
     assert_eq!(
-        code(session.call(|e| http_settings(e, item(HttpItemKind::Request, "r")))),
+        code(session.call(|e| http_settings(e, &item(HttpItemKind::Request, "r")))),
         ErrorCode::InvalidInput
     );
 
     let json = || RequestBody::Json {
         text: "{\"a\":".to_string(),
     };
-    let broken = session
-        .wait(|_| describe_http_body(json(), HttpMethod::Post))
-        .unwrap();
+    let broken = describe_http_body(&json(), HttpMethod::Post).unwrap();
     assert_eq!(broken.content_type.as_deref(), Some("application/json"));
     assert!(broken.problem.is_some());
     assert!(!broken.unusual);
@@ -237,14 +221,10 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
         (HttpMethod::Delete, false),
         (HttpMethod::Options, false),
     ] {
-        let said = session
-            .wait(|_| describe_http_body(json(), method))
-            .unwrap();
+        let said = describe_http_body(&json(), method).unwrap();
         assert_eq!(said.unusual, unusual, "{method:?}");
     }
-    let none = session
-        .wait(|_| describe_http_body(RequestBody::None, HttpMethod::Get))
-        .unwrap();
+    let none = describe_http_body(&RequestBody::None, HttpMethod::Get).unwrap();
     assert_eq!(
         (none.content_type, none.problem, none.unusual),
         (None, None, false)
@@ -259,11 +239,9 @@ fn a_header_that_cannot_be_sent_is_refused_in_the_settings_marked_and_read_from_
     use engine::http::{check_http_headers, http_settings, read_http_headers, save_http_settings};
 
     let session = Session::open();
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let recette = session
-        .call(|e| create_http_folder(e, api.id.clone(), None, "Recette".to_string()))
+        .call(|e| create_http_folder(e, &api.id, None, "Recette"))
         .unwrap();
     let row = |key: &str, value: &str, enabled: bool| KeyValue {
         enabled,
@@ -276,11 +254,11 @@ fn a_header_that_cannot_be_sent_is_refused_in_the_settings_marked_and_read_from_
             headers,
             ..ContainerSettings::default()
         };
-        session.call(|e| save_http_settings(e, item(HttpItemKind::Folder, &recette.id), settings))
+        session.call(|e| save_http_settings(e, &item(HttpItemKind::Folder, &recette.id), settings))
     };
     let kept = || {
         session
-            .call(|e| http_settings(e, item(HttpItemKind::Folder, &recette.id)))
+            .call(|e| http_settings(e, &item(HttpItemKind::Folder, &recette.id)))
             .unwrap()
             .headers
     };
@@ -312,22 +290,15 @@ fn a_header_that_cannot_be_sent_is_refused_in_the_settings_marked_and_read_from_
     .unwrap();
     assert_eq!(kept().len(), 3);
 
-    let faults = session
-        .wait(|_| {
-            check_http_headers(vec![
-                row("Accept", "*/*", true),
-                row("X Recette", "1", true),
-                row("X Recette", "1", false),
-            ])
-        })
-        .unwrap();
+    let faults = check_http_headers(&[
+        row("Accept", "*/*", true),
+        row("X Recette", "1", true),
+        row("X Recette", "1", false),
+    ])
+    .unwrap();
     assert_eq!(faults, vec![None, Some(HeaderFault::Name), None]);
 
-    let read = session
-        .wait(|_| {
-            read_http_headers(":authority: api.exemple.fr\nX-Recette: 1\naccept: */*".to_string())
-        })
-        .unwrap();
+    let read = read_http_headers(":authority: api.exemple.fr\nX-Recette: 1\naccept: */*").unwrap();
     assert_eq!(
         read,
         vec![row("X-Recette", "1", true), row("accept", "*/*", true)]
@@ -339,10 +310,7 @@ fn the_query_and_its_table_are_kept_in_step_through_the_command() {
     use engine::http::query::QuerySide;
     use engine::http::sync_http_query;
 
-    let session = Session::open();
-    let synced = session
-        .wait(|_| sync_http_query("/x?a=1".to_string(), Vec::new(), QuerySide::Url))
-        .unwrap();
+    let synced = sync_http_query("/x?a=1", &Vec::new(), QuerySide::Url).unwrap();
 
     assert_eq!(synced.params[0].key, "a");
 }
@@ -363,8 +331,8 @@ fn a_first_save_creates_the_collection_or_the_folder_it_lacks_or_nothing_at_all(
         .call(|e| {
             create_http_request_in(
                 e,
-                draft("nowhere", Some("nowhere"), "Santé"),
-                new(Some("  Boutique  "), None),
+                &draft("nowhere", Some("nowhere"), "Santé"),
+                &new(Some("  Boutique  "), None),
             )
         })
         .unwrap();
@@ -376,8 +344,8 @@ fn a_first_save_creates_the_collection_or_the_folder_it_lacks_or_nothing_at_all(
         .call(|e| {
             create_http_request_in(
                 e,
-                draft(&first.collection_id, None, "Lister"),
-                new(None, Some("Commandes")),
+                &draft(&first.collection_id, None, "Lister"),
+                &new(None, Some("Commandes")),
             )
         })
         .unwrap();
@@ -386,8 +354,8 @@ fn a_first_save_creates_the_collection_or_the_folder_it_lacks_or_nothing_at_all(
         .call(|e| {
             create_http_request_in(
                 e,
-                draft(&first.collection_id, Some(&commandes), "Anciennes"),
-                new(None, Some("Archives")),
+                &draft(&first.collection_id, Some(&commandes), "Anciennes"),
+                &new(None, Some("Archives")),
             )
         })
         .unwrap();
@@ -408,8 +376,8 @@ fn a_first_save_creates_the_collection_or_the_folder_it_lacks_or_nothing_at_all(
         .call(|e| {
             create_http_request_in(
                 e,
-                draft(&first.collection_id, Some(&commandes), "Chercher"),
-                new(Some("Catalogue"), Some("Produits")),
+                &draft(&first.collection_id, Some(&commandes), "Chercher"),
+                &new(Some("Catalogue"), Some("Produits")),
             )
         })
         .unwrap();
@@ -431,15 +399,15 @@ fn a_first_save_creates_the_collection_or_the_folder_it_lacks_or_nothing_at_all(
         (draft("nowhere", None, "Seule"), new(Some(" "), None)),
     ] {
         assert_eq!(
-            code(session.call(|e| create_http_request_in(e, request, place))),
+            code(session.call(|e| create_http_request_in(e, &request, &place))),
             ErrorCode::InvalidInput
         );
     }
     assert_eq!(
         code(session.call(|e| create_http_request_in(
             e,
-            draft("absent", None, "Seule"),
-            new(None, Some("Dossier"))
+            &draft("absent", None, "Seule"),
+            &new(None, Some("Dossier"))
         ))),
         ErrorCode::HttpItemNotFound
     );
@@ -453,36 +421,33 @@ fn a_request_is_created_of_its_kind_and_keeps_it_through_an_update_and_a_copy() 
     use engine::http::graphql::GraphqlDocument;
 
     let session = Session::open();
-    let api = session
-        .call(|e| create_http_collection(e, "API".to_string()))
-        .unwrap();
+    let api = session.call(|e| create_http_collection(e, "API")).unwrap();
     let asked = HttpRequestDraft {
         kind: RequestKind::Graphql,
         ..draft(&api.id, None, "Produits")
     };
-    let created = session.call(|e| create_http_request(e, asked)).unwrap();
+    let created = session.call(|e| create_http_request(e, &asked)).unwrap();
     assert_eq!(created.kind, RequestKind::Graphql);
 
-    // An update has no kind to carry: one written on the wire all the same is not read.
-    let mut patch: HttpRequestPatch =
-        serde_json::from_str(r#"{"kind":"websocket","method":"POST"}"#).unwrap();
-    patch.document = Some(RequestDocument {
-        graphql: GraphqlDocument {
-            query: "{ products { id } }".to_string(),
-            ..GraphqlDocument::default()
-        },
-        ..RequestDocument::default()
-    });
+    let patch = HttpRequestPatch {
+        method: Some(HttpMethod::Post),
+        document: Some(RequestDocument {
+            graphql: GraphqlDocument {
+                query: "{ products { id } }".to_string(),
+                ..GraphqlDocument::default()
+            },
+            ..RequestDocument::default()
+        }),
+        ..HttpRequestPatch::default()
+    };
     let saved = session
-        .call(|e| save_http_request(e, created.id.clone(), patch))
+        .call(|e| save_http_request(e, &created.id, &patch))
         .unwrap();
     assert_eq!(
         (saved.kind, saved.method),
         (RequestKind::Graphql, HttpMethod::Post)
     );
-    let read = session
-        .call(|e| get_http_request(e, created.id.clone()))
-        .unwrap();
+    let read = session.call(|e| get_http_request(e, &created.id)).unwrap();
     assert_eq!(read.kind, RequestKind::Graphql);
     assert_eq!(read.document.graphql.query, "{ products { id } }");
 
@@ -490,14 +455,12 @@ fn a_request_is_created_of_its_kind_and_keeps_it_through_an_update_and_a_copy() 
         .call(|e| {
             duplicate_http_item(
                 e,
-                item(HttpItemKind::Request, &created.id),
-                "Produits (copie)".to_string(),
+                &item(HttpItemKind::Request, &created.id),
+                "Produits (copie)",
             )
         })
         .unwrap();
-    let copied = session
-        .call(|e| get_http_request(e, copy.id.clone()))
-        .unwrap();
+    let copied = session.call(|e| get_http_request(e, &copy.id)).unwrap();
     assert_eq!(copied.kind, RequestKind::Graphql);
     assert_eq!(copied.document.graphql.query, "{ products { id } }");
 }

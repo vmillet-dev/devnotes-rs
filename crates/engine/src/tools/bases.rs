@@ -55,8 +55,7 @@ fn base64_engine(url: bool) -> GeneralPurpose {
     )
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EncodeRequest {
     pub text: String,
     /// Hexadecimal and binary, a space between bytes. Decimal always has one.
@@ -65,15 +64,13 @@ pub struct EncodeRequest {
 }
 
 /// The first character UTF-8 writes in more than one byte: « é » takes 2.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WideCharacter {
     pub character: String,
     pub bytes: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Encodings {
     pub characters: u32,
     pub bytes: u32,
@@ -149,12 +146,7 @@ pub fn encode(request: &EncodeRequest) -> Encodings {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Base64FileAnswer {
     /// A file keeps the two Base64 alone: the other encodings of a megabyte are noise.
     Encoded {
@@ -194,12 +186,7 @@ pub enum DecodeProblem {
     TooLarge,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodedBytes {
     Text {
         text: String,
@@ -218,23 +205,16 @@ pub enum DecodedBytes {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DecodeRequest {
     pub text: String,
     /// `None` reads it by its shape.
     pub reading: Option<ByteEncoding>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImagePreview {
-    /// ⚠️ A `data:` URL for an `<img>`: what the CSP already lets a picture be, and where
-    /// nothing an SVG holds can run. Never inlined as markup.
+    /// A `data:` URL the interface decodes into pixels: nothing an SVG holds can run.
     Shown {
         data_url: String,
     },
@@ -244,8 +224,7 @@ pub enum ImagePreview {
 }
 
 /// The decoded bytes are a picture: which kind, how large when its header says, and itself.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecodedImage {
     pub format: ImageFormat,
     pub width: Option<u32>,
@@ -253,8 +232,7 @@ pub struct DecodedImage {
     pub preview: ImagePreview,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecodeAnswer {
     pub read_as: ByteEncoding,
     /// Read by its shape rather than as asked.
@@ -593,8 +571,7 @@ pub fn decode(request: &DecodeRequest) -> DecodeAnswer {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SavedBytes {
     Saved { bytes: u32 },
     Invalid,

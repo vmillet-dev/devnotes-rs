@@ -12,7 +12,6 @@ fn moving_a_selection_leaves_the_notes_already_there_untouched() {
         &mut connection,
         &[moved.id.clone(), settled.id.clone()],
         &target,
-        t1(),
     )
     .unwrap();
 
@@ -31,13 +30,7 @@ fn moving_to_an_unknown_space_is_refused_for_the_whole_batch() {
     let space_id = space(&mut connection, "Personal");
     let note = create(&mut connection, draft(&space_id), t0()).unwrap();
 
-    let error = move_many(
-        &mut connection,
-        std::slice::from_ref(&note.id),
-        "ghost",
-        t1(),
-    )
-    .unwrap_err();
+    let error = move_many(&mut connection, std::slice::from_ref(&note.id), "ghost").unwrap_err();
 
     assert!(matches!(error, StorageError::SpaceNotFound(_)));
     assert_eq!(list(&mut connection).unwrap()[0].space_id, space_id);
@@ -121,7 +114,6 @@ fn tagging_a_selection_adds_without_replacing() {
         &mut connection,
         std::slice::from_ref(&note.id),
         &["urgent".to_string()],
-        t1(),
     )
     .unwrap();
 
@@ -146,7 +138,6 @@ fn tagging_twice_does_not_duplicate_the_tag_nor_claim_to_have_added_it() {
         &mut connection,
         std::slice::from_ref(&note.id),
         &["Auth".to_string()],
-        t1(),
     )
     .unwrap();
 
@@ -177,7 +168,6 @@ fn undoing_a_tagging_leaves_the_tag_on_the_note_that_already_carried_it() {
         &mut connection,
         &[carried.id.clone(), plain.id.clone()],
         &["auth".to_string()],
-        t1(),
     )
     .unwrap();
     untag_many(&mut connection, &added).unwrap();
@@ -203,7 +193,6 @@ fn a_move_goes_back_to_the_space_each_note_left() {
         &mut connection,
         &[from_personal.id.clone(), from_work.id.clone()],
         &target,
-        t1(),
     )
     .unwrap();
     let restored = restore_placements(&mut connection, &previous).unwrap();
@@ -218,26 +207,6 @@ fn a_move_goes_back_to_the_space_each_note_left() {
 
     assert_eq!(one.space_id, personal);
     assert_eq!(other.space_id, work);
-}
-
-/// Like restoring from the trash: undoing is not editing, and the canvas sorts on it.
-#[test]
-fn putting_a_move_back_does_not_refresh_updated_at() {
-    let mut connection = open_in_memory().unwrap();
-    let source = space(&mut connection, "Personal");
-    let target = space(&mut connection, "Boulot");
-    let note = create(&mut connection, draft(&source), t0()).unwrap();
-
-    let previous = move_many(
-        &mut connection,
-        std::slice::from_ref(&note.id),
-        &target,
-        t1(),
-    )
-    .unwrap();
-    restore_placements(&mut connection, &previous).unwrap();
-
-    assert_eq!(list(&mut connection).unwrap()[0].updated_at, t1());
 }
 
 /// A space dropped between the move and the undo takes its notes with it; the rest of
@@ -255,7 +224,6 @@ fn a_space_gone_since_the_move_does_not_take_the_rest_of_the_undo_with_it() {
         &mut connection,
         &[orphan.id.clone(), survivor.id.clone()],
         &target,
-        t1(),
     )
     .unwrap();
     spaces::delete(&mut connection, &doomed, &target).unwrap();
@@ -288,18 +256,11 @@ fn putting_a_move_back_files_the_note_into_its_folder_again() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&folder.id),
-        t0(),
         crate::CARD,
     )
     .unwrap();
 
-    let previous = move_many(
-        &mut connection,
-        std::slice::from_ref(&note.id),
-        &target,
-        t1(),
-    )
-    .unwrap();
+    let previous = move_many(&mut connection, std::slice::from_ref(&note.id), &target).unwrap();
     assert_eq!(previous[0].folder_id.as_deref(), Some(folder.id.as_str()));
     assert_eq!(list(&mut connection).unwrap()[0].folder_id, None);
 
@@ -324,17 +285,10 @@ fn a_folder_gone_since_the_move_leaves_the_note_loose() {
         &mut connection,
         std::slice::from_ref(&note.id),
         Some(&folder.id),
-        t0(),
         crate::CARD,
     )
     .unwrap();
-    let previous = move_many(
-        &mut connection,
-        std::slice::from_ref(&note.id),
-        &target,
-        t1(),
-    )
-    .unwrap();
+    let previous = move_many(&mut connection, std::slice::from_ref(&note.id), &target).unwrap();
     folders::delete(&mut connection, &folder.id, crate::CARD).unwrap();
 
     assert_eq!(restore_placements(&mut connection, &previous).unwrap(), 1);
@@ -342,4 +296,36 @@ fn a_folder_gone_since_the_move_leaves_the_note_loose() {
     let back = &list(&mut connection).unwrap()[0];
     assert_eq!(back.space_id, source);
     assert_eq!(back.folder_id, None);
+}
+
+/// Moving, tagging and untagging a selection is not editing it, and « Undo » after any of them
+/// leaves the list as it was: the date that orders it never moved (#1478, N17).
+#[test]
+fn moves_and_tags_in_a_batch_leave_updated_at_alone_through_their_undo() {
+    let mut connection = open_in_memory().unwrap();
+    let source = space(&mut connection, "Personal");
+    let target = space(&mut connection, "Boulot");
+    let note = create(&mut connection, draft(&source), t0()).unwrap();
+    let ids = std::slice::from_ref(&note.id);
+    let dated = |connection: &mut Library| {
+        list(connection)
+            .unwrap()
+            .into_iter()
+            .find(|listed| listed.id == note.id)
+            .unwrap()
+            .updated_at
+    };
+
+    let moved = move_many(&mut connection, ids, &target).unwrap();
+    assert_eq!(dated(&mut connection), t0(), "moved");
+    restore_placements(&mut connection, &moved).unwrap();
+    let tagged = tag_many(&mut connection, ids, &["ops".to_owned()]).unwrap();
+    assert_eq!(dated(&mut connection), t0(), "tagged");
+    untag_many(&mut connection, &tagged).unwrap();
+    tag_many(&mut connection, ids, &["ops".to_owned()]).unwrap();
+    let removed = engine::notes::store::remove_tag(&mut connection, ids, "ops").unwrap();
+    assert_eq!(dated(&mut connection), t0(), "untagged");
+    engine::notes::store::restore_tags(&mut connection, &removed).unwrap();
+
+    assert_eq!(dated(&mut connection), t0());
 }

@@ -9,14 +9,4 @@ mod position;
 pub mod read;
 mod toml;
 pub(crate) mod xml;
-mod yaml;
-
-use crate::error::{AppError, StorageError};
-use model::{JsonQuery, JsonView};
-
-/// No lock, but off the window's thread: a document of a few megabytes takes a while.
-pub async fn explore_json(query: JsonQuery) -> Result<JsonView, AppError> {
-    tokio::task::spawn_blocking(move || model::explore(&query))
-        .await
-        .map_err(|_| StorageError::Unavailable.into())
-}
+pub(crate) mod yaml;

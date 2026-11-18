@@ -1,6 +1,7 @@
 //! Luhn and IBAN are Rust's; the page names the country in the language on screen. ⚠️ A card
 //! number is a secret: gone with the tool, and nothing is ever kept as a note.
 
+use crate::theme::tokens::{font, gap};
 use egui::Ui;
 use engine::tools::checks::{CardNetwork, CheckAnswer, CheckKind, CheckRequest, IbanVerdict};
 use i18n::{Language, Message, keys};
@@ -39,20 +40,20 @@ fn head(ui: &mut Ui, title: &str, valid: bool, reason: Option<String>, language:
     };
     let verdict = i18n::translate(language, verdict, &[]);
     let ink = if valid { p.green } else { p.red };
-    ui.add_space(12.0);
+    ui.add_space(gap::GROUPS);
     ui.horizontal(|ui| {
-        ui.add_space(16.0);
-        ui.spacing_mut().item_spacing.x = 10.0;
-        let said = paragraph(ui, title, (14.0, 600.0), p.text_0);
+        ui.add_space(gap::BLOCKS);
+        ui.spacing_mut().item_spacing.x = gap::INSET;
+        let said = paragraph(ui, title, (font::SUBTITLE, 600.0), p.text_0);
         address(ui, &said, "checks-reading");
         let said = crate::tools::ui::pill(ui, &verdict, ink);
         address(ui, &said, "checks-verdict");
     });
     if let Some(reason) = reason {
-        ui.add_space(4.0);
+        ui.add_space(gap::TIGHT);
         ui.horizontal(|ui| {
-            ui.add_space(16.0);
-            paragraph(ui, &reason, (12.0, 400.0), p.text_1);
+            ui.add_space(gap::BLOCKS);
+            paragraph(ui, &reason, (font::LABEL, 400.0), p.text_1);
         });
     }
 }
@@ -350,7 +351,7 @@ impl Tool for ChecksTool {
             .id_salt("checks")
             .auto_shrink(false)
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 10.0;
+                ui.spacing_mut().item_spacing.y = gap::INSET;
                 self.intro(ui, language);
                 self.answer_of(ui, language);
                 hint(

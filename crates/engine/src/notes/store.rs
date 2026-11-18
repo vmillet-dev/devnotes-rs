@@ -698,7 +698,6 @@ pub fn move_many(
     connection: &mut Library,
     ids: &[String],
     space_id: &str,
-    now: DateTime<Utc>,
 ) -> Result<Vec<NotePlacement>, StorageError> {
     if ids.is_empty() {
         return Ok(Vec::new());
@@ -730,7 +729,6 @@ pub fn move_many(
                 notes::space_id.eq(space_id),
                 // The folder stays behind with its space, as it does through a patch.
                 notes::folder_id.eq(None::<String>),
-                notes::updated_at.eq(iso8601::format(now)),
             ))
             .execute(connection)?;
 
@@ -791,7 +789,6 @@ pub fn tag_many(
     connection: &mut Library,
     ids: &[String],
     tags: &[String],
-    now: DateTime<Utc>,
 ) -> Result<Vec<NoteTag>, StorageError> {
     if ids.is_empty() || tags.is_empty() {
         return Ok(Vec::new());
@@ -847,12 +844,6 @@ pub fn tag_many(
             .values(rows)
             .execute(connection)?;
 
-        // Only what gained something moves up the canvas.
-        let touched: Vec<&String> = added.iter().map(|pair| &pair.note_id).collect();
-        diesel::update(notes::table.filter(notes::id.eq_any(touched)))
-            .set(notes::updated_at.eq(iso8601::format(now)))
-            .execute(connection)?;
-
         Ok(added)
     })
 }
@@ -889,7 +880,6 @@ pub fn remove_tag(
     connection: &mut Library,
     ids: &[String],
     tag: &str,
-    now: DateTime<Utc>,
 ) -> Result<Vec<NoteTag>, StorageError> {
     if ids.is_empty() {
         return Ok(Vec::new());
@@ -915,9 +905,6 @@ pub fn remove_tag(
                 .filter(note_tags::note_id.eq_any(&touched)),
         )
         .execute(connection)?;
-        diesel::update(notes::table.filter(notes::id.eq_any(&touched)))
-            .set(notes::updated_at.eq(iso8601::format(now)))
-            .execute(connection)?;
 
         Ok(removed)
     })

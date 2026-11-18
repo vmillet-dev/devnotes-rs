@@ -5,7 +5,6 @@ use std::fmt::Write as _;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use qrcode::bits::Bits;
 use qrcode::{Color, EcLevel, QrCode, Version};
-use serde::{Deserialize, Serialize};
 
 use super::files::{self, FileProblem};
 use crate::count::saturating_u32;
@@ -23,8 +22,7 @@ const MAILTO: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'.')
     .remove(b'~');
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QrCorrection {
     Low,
     Medium,
@@ -53,20 +51,14 @@ impl QrCorrection {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WifiSecurity {
     Wpa,
     Wep,
     Open,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum QrContent {
     Text {
         text: String,
@@ -93,20 +85,14 @@ pub enum QrContent {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct QrRequest {
     pub content: QrContent,
     pub correction: QrCorrection,
     pub margin: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum QrAnswer {
     Empty,
     TooLong {
@@ -129,19 +115,13 @@ pub enum QrAnswer {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QrFormat {
     Svg,
     Png,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SavedCode {
     Saved { bytes: u32 },
     Nothing,

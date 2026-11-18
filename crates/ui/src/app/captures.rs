@@ -184,6 +184,9 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     capture(&mut harness, "change-passphrase");
     click(&mut harness, "change-passphrase-cancel");
     settle(&mut harness);
+    click(&mut harness, "settings-page-backups");
+    settle(&mut harness);
+    capture(&mut harness, "preferences-backups");
     click(&mut harness, "settings-page-variables");
     click(&mut harness, "variable-add");
     settle(&mut harness);
@@ -546,6 +549,7 @@ fn the_http_runner() {
         RunStep::Finished {
             cancelled: false,
             millis: 1_200,
+            capped: false,
         },
     ];
     for step in steps {
@@ -1143,9 +1147,146 @@ fn kinds(backend: &crate::backend::Backend) -> Vec<String> {
             pinned: Some(title == "psql prod"),
             ..NotePatch::default()
         };
-        let mut written = backend.db(move |engine| engine::notes::update_note(engine, id, patch));
+        let mut written = backend.db(move |engine| engine::notes::update_note(engine, &id, &patch));
         backend.settle();
         written.poll().unwrap().unwrap();
     }
     ids
+}
+
+/// The rail of the samples at the narrowest, the default and a wide window (#1484).
+#[test]
+fn the_notes_rail_at_three_widths() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    for width in [640.0, 1084.0, 1920.0] {
+        harness.set_size(egui::vec2(width, SIZE.y));
+        settle(&mut harness);
+        capture(&mut harness, &format!("notes-rail-{width}"));
+    }
+}
+
+/// The editor's header with the pointer resting on an icon (#1488): the pointer is kept.
+#[test]
+fn the_editor_header_under_the_pointer() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1084.0, 681.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .ctx
+        .all_styles_mut(|style| style.interaction.tooltip_delay = 0.0);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .click();
+    settle(&mut harness);
+    for icon in ["editor-fullscreen", "editor-close"] {
+        harness
+            .get_by(|node| node.author_id() == Some(icon))
+            .hover();
+        for _ in 0..10 {
+            harness.step();
+        }
+        let image = harness
+            .render()
+            .expect("a software adapter draws the window");
+        if let Some(directory) = std::env::var_os("DEVNOTES_CAPTURES") {
+            std::fs::create_dir_all(&directory).unwrap();
+            image
+                .save(Path::new(&directory).join(format!("hover-{icon}.png")))
+                .unwrap();
+        }
+    }
+}
+
+/// A request in the narrowest window (#1487): its URL, its actions and its tabs.
+#[test]
+fn the_http_request_in_a_narrow_window() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        use crate::state::http::tabs::DraftEdit;
+        draft.apply(DraftEdit::Url(
+            "{{base}}/sessions?user={{user}}&remember=true".to_owned(),
+        ));
+    });
+    for size in [
+        egui::vec2(640.0, 480.0),
+        egui::vec2(720.0, 480.0),
+        egui::vec2(800.0, 600.0),
+    ] {
+        harness.set_size(size);
+        settle(&mut harness);
+        capture(&mut harness, &format!("http-request-{}", size.x));
+    }
+}
+
+/// Two cards ticked at three widths, then a report (#1486): where what acts on a selection
+/// stands, what it leaves in view, and where a report is said.
+#[test]
+fn a_selection_and_a_report_at_three_widths() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1084.0, 681.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    for _ in 0..2 {
+        harness.key_press(egui::Key::ArrowRight);
+        harness.key_press(egui::Key::X);
+    }
+    settle(&mut harness);
+    for width in [640.0, 1084.0, 1920.0] {
+        harness.set_size(egui::vec2(width, 681.0));
+        settle(&mut harness);
+        capture(&mut harness, &format!("selection-{width}"));
+    }
+    harness.set_size(egui::vec2(640.0, 681.0));
+    settle(&mut harness);
+    if harness
+        .query_by(|node| node.author_id() == Some("selection-more"))
+        .is_some()
+    {
+        click(&mut harness, "selection-more");
+        settle(&mut harness);
+        capture(&mut harness, "selection-more-640");
+        harness.key_press(egui::Key::Escape);
+    }
+    harness.key_press(egui::Key::Escape);
+    harness.set_size(egui::vec2(1084.0, 681.0));
+    settle(&mut harness);
+    harness
+        .state_mut()
+        .state
+        .status
+        .report(i18n::Message::new(i18n::keys::tools::SAMPLE_LOADED));
+    settle(&mut harness);
+    capture(&mut harness, "status");
 }

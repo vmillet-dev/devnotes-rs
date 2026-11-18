@@ -78,7 +78,7 @@ fn the_quick_filter_keeps_the_pinned_notes() {
         ..NotePatch::default()
     };
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, pinned, patch)
+        engine::notes::update_note(engine, &pinned, &patch)
     })
     .unwrap();
     let mut harness = area(backend, profile);
@@ -233,4 +233,21 @@ fn the_kind_menu_opens_a_draft_of_its_kind() {
         engine::notes::kind::NoteKind::Checklist
     );
     harness.get_by(|node| node.author_id() == Some("editor-title"));
+}
+
+/// The menu and the palette write the keys the person bound, not the defaults.
+#[test]
+fn a_moved_new_note_key_is_the_one_shown() {
+    use crate::services::shortcuts::{ACTIONS, Bindings};
+    let action = *ACTIONS
+        .iter()
+        .find(|action| action.id == "canvas.newSnippet")
+        .unwrap();
+    let mut bindings = Bindings::default();
+    bindings.set(action, "Ctrl+Alt+N".to_owned());
+
+    assert_eq!(
+        crate::notes::header::shortcut(engine::notes::kind::NoteKind::Snippet, &bindings),
+        bindings.of(action)
+    );
 }

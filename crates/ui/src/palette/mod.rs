@@ -5,6 +5,7 @@
 pub mod commands;
 pub mod options;
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::text::{LayoutJob, TextFormat};
 use egui::{
     Align2, Color32, CornerRadius, FontFamily, FontId, Id, Key, Margin, Modifiers, Rect, Role,
@@ -87,9 +88,9 @@ pub fn show(ctx: &egui::Context, state: &AppState, view: &mut PaletteView, actio
     let frame = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line))
-        .corner_radius(CornerRadius::same(14))
+        .corner_radius(CornerRadius::same(radius::DIALOG))
         .shadow(p.shadow_overlay)
-        .inner_margin(Margin::same(12));
+        .inner_margin(gap::margin(gap::GROUPS, gap::GROUPS));
     // Near the top rather than centred: the list grows downwards, and a centred panel would
     // slide under the pointer as it fills.
     let area =
@@ -168,7 +169,7 @@ fn panel(
 ) {
     let language = state.language;
     ui.set_width(WIDTH.min(ui.ctx().content_rect().width() * 0.92));
-    ui.spacing_mut().item_spacing.y = 8.0;
+    ui.spacing_mut().item_spacing.y = gap::CONTROLS;
     field(ui, state, actions);
     let tallest = ui.ctx().content_rect().height() * 0.52;
     egui::ScrollArea::vertical()
@@ -176,12 +177,12 @@ fn panel(
         .max_height(tallest)
         .auto_shrink([false, true])
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 1.0;
+            ui.spacing_mut().item_spacing.y = gap::HAIRLINE;
             if let Some(empty) = options::empty(state, groups) {
                 let words = empty.text(language);
                 let said = ui.add(egui::Label::new(
                     egui::RichText::new(&words)
-                        .size(12.5)
+                        .size(font::BODY)
                         .color(palette(ui.ctx()).text_2),
                 ));
                 widgets::address(ui, &said, "palette-empty");
@@ -221,11 +222,11 @@ fn field(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let frame = egui::Frame::new()
         .fill(p.bg_2)
         .stroke(Stroke::new(1.0, p.amber_edge))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::symmetric(10, 4));
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::INSET, gap::TIGHT));
     frame.show(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+            ui.spacing_mut().item_spacing.x = gap::SNUG;
             for (at, chip) in state.palette.chips().iter().enumerate() {
                 if chip_shown(ui, chip, language) {
                     ask(actions, Asked::Unchip(at));
@@ -242,7 +243,7 @@ fn field(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
                     .id(field_id())
                     .frame(egui::Frame::NONE)
                     .hint_text(hint)
-                    .font(FontId::new(13.5, FontFamily::Proportional))
+                    .font(FontId::new(font::READING, FontFamily::Proportional))
                     .text_color(p.text_0)
                     .align(egui::Align2::LEFT_CENTER)
                     .desired_width(f32::INFINITY)
@@ -288,10 +289,17 @@ fn chip_shown(ui: &mut Ui, chip: &Chip, language: i18n::Language) -> bool {
         Chip::Tag(_) => p.pink,
     };
     let label = chip_label(chip, language);
-    let words = widgets::text(ui, &label, 12.0, 600.0, FontFamily::Proportional, hue);
+    let words = widgets::text(
+        ui,
+        &label,
+        font::LABEL,
+        600.0,
+        FontFamily::Proportional,
+        hue,
+    );
     let shown = egui::Frame::new()
         .fill(p.bg_3)
-        .corner_radius(CornerRadius::same(6))
+        .corner_radius(CornerRadius::same(radius::CONTROL))
         .inner_margin(Margin {
             left: 8,
             right: 2,
@@ -300,7 +308,7 @@ fn chip_shown(ui: &mut Ui, chip: &Chip, language: i18n::Language) -> bool {
         })
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 2.0;
+                ui.spacing_mut().item_spacing.x = gap::LINE;
                 let (rect, _) = ui.allocate_exact_size(vec2(words.size().x, 24.0), Sense::hover());
                 ui.painter().galley(
                     pos2(rect.left(), rect.center().y - words.size().y / 2.0),
@@ -325,11 +333,18 @@ fn chip_shown(ui: &mut Ui, chip: &Chip, language: i18n::Language) -> bool {
 fn heading_row(ui: &mut Ui, heading: i18n::Key, count: Option<usize>, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, heading, &[]).to_uppercase();
-    ui.add_space(6.0);
+    ui.add_space(gap::SNUG);
     ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.spacing_mut().item_spacing.x = 8.0;
-        let galley = widgets::text(ui, &words, 10.5, 600.0, FontFamily::Proportional, p.text_2);
+        ui.add_space(gap::INSET);
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
+        let galley = widgets::text(
+            ui,
+            &words,
+            font::CAPTION,
+            600.0,
+            FontFamily::Proportional,
+            p.text_2,
+        );
         let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
         response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
         widgets::address(ui, &response, "palette-group");
@@ -338,7 +353,7 @@ fn heading_row(ui: &mut Ui, heading: i18n::Key, count: Option<usize>, language: 
             let counted = widgets::text(
                 ui,
                 &count.to_string(),
-                10.5,
+                font::CAPTION,
                 400.0,
                 FontFamily::Monospace,
                 p.text_2,
@@ -365,7 +380,7 @@ fn row(ui: &mut Ui, state: &AppState, item: &Item, on: bool) -> (bool, bool, boo
         "palette-option"
     };
     let width = ui.available_width();
-    let corner = CornerRadius::same(8);
+    let corner = CornerRadius::same(radius::MENU);
     let response = widgets::interact(
         ui,
         vec2(width, height),
@@ -443,14 +458,14 @@ fn mark(ui: &mut Ui, item: &Item, inner: Rect, language: i18n::Language) -> f32 
         pos2(inner.left(), inner.center().y - 13.0),
         vec2(26.0, 26.0),
     );
-    let corner = CornerRadius::same(7);
+    let corner = CornerRadius::same(radius::CONTROL);
     match item {
         Item::Note(note) => {
             let place =
                 Rect::from_min_size(pos2(inner.left(), inner.center().y - 9.0), vec2(90.0, 18.0));
             let row = egui::Layout::left_to_right(egui::Align::Center);
             let mut child = ui.new_child(UiBuilder::new().max_rect(place).layout(row));
-            child.spacing_mut().item_spacing.x = 6.0;
+            child.spacing_mut().item_spacing.x = gap::SNUG;
             let mark = crate::notes::ui::kind_mark(&mut child, note.kind, note.language, language);
             mark.rect.right().max(inner.left() + 26.0) + 10.0
         }
@@ -461,7 +476,14 @@ fn mark(ui: &mut Ui, item: &Item, inner: Rect, language: i18n::Language) -> f32 
                 RequestKind::Websocket => Badge::Websocket,
             };
             let hue = crate::http::badge_hue(ui, badge);
-            let word = widgets::text(ui, badge.short(), 11.0, 700.0, FontFamily::Monospace, hue);
+            let word = widgets::text(
+                ui,
+                badge.short(),
+                font::META,
+                700.0,
+                FontFamily::Monospace,
+                hue,
+            );
             let at = pos2(inner.left(), inner.center().y - word.size().y / 2.0);
             let right = at.x + word.size().x;
             ui.painter().galley(at, word, hue);
@@ -501,7 +523,7 @@ fn mark(ui: &mut Ui, item: &Item, inner: Rect, language: i18n::Language) -> f32 
                 _ => (">", p.text_1),
             };
             ui.painter().rect_filled(tile, corner, p.bg_3);
-            let galley = widgets::text(ui, glyph, 13.0, 600.0, FontFamily::Monospace, hue);
+            let galley = widgets::text(ui, glyph, font::READING, 600.0, FontFamily::Monospace, hue);
             ui.painter()
                 .galley(tile.center() - galley.size() / 2.0, galley, hue);
             tile.right() + 10.0
@@ -529,8 +551,10 @@ fn main_text(ui: &Ui, state: &AppState, item: &Item, title: &str, rect: Rect) {
             keys::notes::PLACEHOLDERS_COUNT,
             &[("count", count.into())],
         );
-        let mut format =
-            TextFormat::simple(FontId::new(10.5, FontFamily::Proportional), p.amber_text);
+        let mut format = TextFormat::simple(
+            FontId::new(font::CAPTION, FontFamily::Proportional),
+            p.amber_text,
+        );
         format.coords.push(*b"wght", 500.0);
         job.append(&fields, 8.0, format);
     }
@@ -590,8 +614,9 @@ fn term_of(state: &AppState) -> String {
 
 /// What was typed, lit in the title, when folding keeps the title's length.
 fn lit(title: &str, term: &str, width: f32, hit: Color32) -> LayoutJob {
-    let format =
-        |colour: Color32| TextFormat::simple(FontId::new(13.0, FontFamily::Proportional), colour);
+    let format = |colour: Color32| {
+        TextFormat::simple(FontId::new(font::READING, FontFamily::Proportional), colour)
+    };
     let mut job = LayoutJob::default();
     job.wrap.max_width = width;
     job.wrap.max_rows = 1;
@@ -665,7 +690,7 @@ fn side(ui: &mut Ui, state: &AppState, item: &Item, inner: Rect, on: bool) -> f3
     let p = palette(ui.ctx());
     let language = state.language;
     if let (false, Item::Command(command)) = (on, item) {
-        let caps = command.keys();
+        let caps = command.keys(&state.settings.bindings);
         if caps.is_empty() {
             return 0.0;
         }
@@ -679,7 +704,7 @@ fn side(ui: &mut Ui, state: &AppState, item: &Item, inner: Rect, on: bool) -> f3
                 .max_rect(place)
                 .layout(egui::Layout::left_to_right(egui::Align::Center)),
         );
-        child.spacing_mut().item_spacing.x = 3.0;
+        child.spacing_mut().item_spacing.x = gap::LINE;
         for word in caps {
             cap(&mut child, word);
         }
@@ -725,14 +750,14 @@ fn side(ui: &mut Ui, state: &AppState, item: &Item, inner: Rect, on: bool) -> f3
         return 0.0;
     }
     let ink = if on { p.text_1 } else { p.text_2 };
-    let width = widgets::arrowed(ui, None, &words, 11.5, ink).min(inner.width() * 0.4);
+    let width = widgets::arrowed(ui, None, &words, font::CONTROL, ink).min(inner.width() * 0.4);
     let at = pos2(inner.right() - width, inner.center().y);
-    widgets::arrowed(ui, Some(at), &words, 11.5, ink);
+    widgets::arrowed(ui, Some(at), &words, font::CONTROL, ink);
     width
 }
 
 fn cap_width(ui: &Ui, word: &str) -> f32 {
-    widgets::arrowed(ui, None, word, 10.5, Color32::PLACEHOLDER) + 12.0
+    widgets::arrowed(ui, None, word, font::CAPTION, Color32::PLACEHOLDER) + 12.0
 }
 
 /// A key cap; its glyph painted when no face has it (↑ ↓ ↵ ⌫).
@@ -742,7 +767,7 @@ fn cap(ui: &mut Ui, word: &str) {
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, word));
     ui.painter().rect(
         rect,
-        CornerRadius::same(4),
+        CornerRadius::same(radius::TAG),
         p.bg_3,
         Stroke::new(1.0, p.line),
         egui::StrokeKind::Inside,
@@ -751,7 +776,7 @@ fn cap(ui: &mut Ui, word: &str) {
         ui,
         Some(pos2(rect.left() + 6.0, rect.center().y)),
         word,
-        10.5,
+        font::CAPTION,
         p.text_1,
     );
 }
@@ -759,11 +784,11 @@ fn cap(ui: &mut Ui, word: &str) {
 /// What `@`, `#` and `>` do, under the empty field's recent notes.
 fn prefixes(ui: &mut Ui, language: i18n::Language) {
     let p = palette(ui.ctx());
-    ui.add_space(6.0);
+    ui.add_space(gap::SNUG);
     let response = ui
         .horizontal_wrapped(|ui| {
-            ui.add_space(10.0);
-            ui.spacing_mut().item_spacing.x = 14.0;
+            ui.add_space(gap::INSET);
+            ui.spacing_mut().item_spacing.x = gap::BLOCKS;
             for (code, key) in [
                 ("@", keys::palette::prefixes::AT),
                 ("#", keys::palette::prefixes::HASH),
@@ -773,12 +798,15 @@ fn prefixes(ui: &mut Ui, language: i18n::Language) {
                 job.append(
                     code,
                     0.0,
-                    TextFormat::simple(FontId::new(11.5, FontFamily::Monospace), p.text_0),
+                    TextFormat::simple(FontId::new(font::CONTROL, FontFamily::Monospace), p.text_0),
                 );
                 job.append(
                     &format!(" {}", i18n::translate(language, key, &[])),
                     0.0,
-                    TextFormat::simple(FontId::new(11.5, FontFamily::Proportional), p.text_2),
+                    TextFormat::simple(
+                        FontId::new(font::CONTROL, FontFamily::Proportional),
+                        p.text_2,
+                    ),
                 );
                 ui.label(job);
             }
@@ -812,18 +840,24 @@ fn hints(ui: &mut Ui, state: &AppState, current: Option<&Item>) {
     let top = ui.cursor().top();
     ui.painter()
         .hline(ui.max_rect().x_range(), top, Stroke::new(1.0, p.line_soft));
-    ui.add_space(4.0);
+    ui.add_space(gap::TIGHT);
     let response = ui
         .horizontal_wrapped(|ui| {
-            ui.add_space(10.0);
-            ui.spacing_mut().item_spacing = vec2(4.0, 4.0);
+            ui.add_space(gap::INSET);
+            ui.spacing_mut().item_spacing = vec2(gap::TIGHT, gap::TIGHT);
             for (caps, key) in hints {
                 for word in caps {
                     cap(ui, word);
                 }
                 let words = i18n::translate(language, key, &[]);
-                let galley =
-                    widgets::text(ui, &words, 11.0, 400.0, FontFamily::Proportional, p.text_2);
+                let galley = widgets::text(
+                    ui,
+                    &words,
+                    font::META,
+                    400.0,
+                    FontFamily::Proportional,
+                    p.text_2,
+                );
                 let (rect, _) =
                     ui.allocate_exact_size(galley.size() + vec2(10.0, 0.0), Sense::hover());
                 ui.painter().galley(rect.min, galley, p.text_2);
@@ -858,7 +892,7 @@ mod tests {
             ..NotePatch::default()
         };
         engine::db::run_here(backend.engine(), move |engine| {
-            engine::notes::update_note(engine, reset, patch)
+            engine::notes::update_note(engine, &reset, &patch)
         })
         .unwrap();
         let mut harness = area(backend, profile);

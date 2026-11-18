@@ -103,6 +103,10 @@ pub enum Icon {
     SquareCheck,
     Sigma,
     Brush,
+    /// A request written down: « Save » where its words do not fit.
+    Save,
+    /// What is drawn rubbed out, apart from the note's own bin.
+    Eraser,
 }
 
 impl Icon {
@@ -187,6 +191,11 @@ impl Icon {
                 "M4 12h16",
             ],
             Self::Code => &["m16 18 6-6-6-6", "m8 6-6 6 6 6"],
+            Self::Save => &[
+                "M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+                "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7",
+                "M7 3v4a1 1 0 0 0 1 1h7",
+            ],
             Self::ListBullet => &[
                 "M3 12h.01",
                 "M3 18h.01",
@@ -335,6 +344,10 @@ impl Icon {
                 "M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z",
                 "M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031",
             ],
+            Self::Eraser => &[
+                "M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.828 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21",
+                "m5.082 11.09 8.828 8.828",
+            ],
             Self::Maximize => &["M15 3h6v6", "M9 21H3v-6", "M21 3l-7 7", "M3 21l7-7"],
             Self::Minimize => &["M4 14h6v6", "M20 10h-6V4", "M14 10l7-7", "M3 21l7-7"],
             Self::Hourglass => &[
@@ -424,7 +437,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 76] = [
+    const ALL: [Icon; 78] = [
         Icon::ArrowLeftRight,
         Icon::MoveHorizontal,
         Icon::Sidebar,
@@ -501,6 +514,8 @@ mod tests {
         Icon::SquareCheck,
         Icon::Sigma,
         Icon::Brush,
+        Icon::Save,
+        Icon::Eraser,
     ];
 
     fn coverage(image: &ColorImage) -> usize {

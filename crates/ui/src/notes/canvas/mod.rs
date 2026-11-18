@@ -6,9 +6,9 @@ mod board;
 mod card;
 pub mod grid;
 pub mod rows;
-mod selection_bar;
 pub mod shortcuts;
 
+use crate::theme::tokens::{font, gap, radius};
 use egui::emath::GuiRounding as _;
 use egui::text::{LayoutJob, TextFormat};
 use egui::{
@@ -35,9 +35,6 @@ pub struct CanvasView {
     pub columns: usize,
     /// The card that had the focus the frame before: a `Shift`-click focuses what it clicks.
     pub anchor: Option<String>,
-    /// The selection bar's: a tag being typed, and a deletion waiting for its confirmation.
-    pub tag_draft: String,
-    pub confirm_delete: bool,
     board: board::BoardScreen,
     /// The rail's rows, handed over by the area each frame.
     pub(crate) rail: Vec<crate::notes::sidebar::RailRow>,
@@ -50,7 +47,8 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
     let language = state.language;
     let canvas = spacing(ui.ctx()).canvas;
     let (region, response) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Region, true, "canvas"));
+    let name = i18n::translate(language, keys::notes::CARDS, &[]);
+    response.widget_info(|| WidgetInfo::labeled(Role::Region, true, &name));
     address(ui, &response, "canvas");
     let mut ui = ui.new_child(UiBuilder::new().max_rect(region));
     let ui = &mut ui;
@@ -79,29 +77,30 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         return;
     };
     if view.matched == 0 {
-        padded(ui, canvas, |ui| {
-            state_text(ui, &tr(keys::notes::NO_RESULTS), "canvas-no-results");
-            if query.has_user_filters() {
-                let words = tr(if query.facets().count() > 0 {
-                    keys::notes::CLEAR_FILTERS
-                } else {
-                    keys::notes::CLEAR_SEARCH
-                });
-                if Button::new(&words, "canvas-clear-filters")
-                    .show(ui)
-                    .clicked()
-                {
-                    actions.push(Action::Notes(super::Action::ClearFilters));
-                }
-            // The chapter that explains this screen, not the top of the guide.
-            } else if Button::new(&tr(keys::getting_started::OPEN_CHAPTER), "canvas-guide")
-                .show(ui)
-                .clicked()
-            {
+        let filtered = query.has_user_filters();
+        // The chapter that explains this screen, not the top of the guide.
+        let (label, author_id) = if !filtered {
+            (tr(keys::getting_started::OPEN_CHAPTER), "canvas-guide")
+        } else if query.facets().count() > 0 {
+            (tr(keys::notes::CLEAR_FILTERS), "canvas-clear-filters")
+        } else {
+            (tr(keys::notes::CLEAR_SEARCH), "canvas-clear-filters")
+        };
+        let action = widgets::EmptyAction {
+            label: &label,
+            author_id,
+            primary: false,
+        };
+        let words = tr(keys::notes::NO_RESULTS);
+        let room = ui.max_rect();
+        if widgets::empty_state(ui, room, (&words, "canvas-no-results"), &[action]).is_some() {
+            actions.push(if filtered {
+                Action::Notes(super::Action::ClearFilters)
+            } else {
                 let guide = Panel::Guide(crate::services::guide::NOTES);
-                actions.push(Action::Menu(crate::titlebar::Action::OpenHelp(guide)));
-            }
-        });
+                Action::Menu(crate::titlebar::Action::OpenHelp(guide))
+            });
+        }
         return;
     }
     let context = card::Context::of(state, &on_screen(view));
@@ -113,15 +112,6 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         .map(|folder| folder.name.as_str());
     sections(ui, (view, opened), &context, canvas_view, actions);
     hint(ui, language);
-    let shown: Vec<_> = view
-        .cards()
-        .map(|card| selection_bar::Shown {
-            id: &card.id,
-            pinned: card.pinned,
-            tags: &card.tags,
-        })
-        .collect();
-    selection_bar::show(ui, state, &shown, canvas_view, actions);
 }
 
 const HINT_HEIGHT: f32 = 28.0;
@@ -130,7 +120,7 @@ const HINT_HEIGHT: f32 = 28.0;
 fn hint(ui: &mut Ui, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::notes::KEYBOARD_HINT, &[]);
-    let width = widgets::arrowed(ui, None, &words, 11.0, p.text_2);
+    let width = widgets::arrowed(ui, None, &words, font::META, p.text_2);
     let region = ui.max_rect();
     let band = Rect::from_min_max(
         pos2(region.left(), region.bottom() - HINT_HEIGHT),
@@ -149,7 +139,13 @@ fn hint(ui: &mut Ui, language: i18n::Language) {
     let response = band_ui.allocate_rect(rect, Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     address(&band_ui, &response, "canvas-keyboard-hint");
-    widgets::arrowed(&band_ui, Some(rect.left_center()), &words, 11.0, p.text_2);
+    widgets::arrowed(
+        &band_ui,
+        Some(rect.left_center()),
+        &words,
+        font::META,
+        p.text_2,
+    );
 }
 
 fn on_screen(view: &NotesView) -> Vec<&str> {
@@ -158,14 +154,21 @@ fn on_screen(view: &NotesView) -> Vec<&str> {
 
 pub(super) fn padded(ui: &mut Ui, padding: f32, draw: impl FnOnce(&mut Ui)) {
     egui::Frame::new().inner_margin(padding).show(ui, |ui| {
-        ui.spacing_mut().item_spacing.y = 8.0;
+        ui.spacing_mut().item_spacing.y = gap::CONTROLS;
         draw(ui);
     });
 }
 
 pub(super) fn state_text(ui: &mut Ui, words: &str, author_id: &str) {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, words, 13.0, 400.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        words,
+        font::READING,
+        400.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, words));
     address(ui, &response, author_id);
@@ -242,7 +245,7 @@ fn cards(
                 card::show(
                     &mut cell_ui,
                     rect,
-                    &view.display(shown_card),
+                    view.display(shown_card),
                     context,
                     (canvas_view, actions),
                 );
@@ -288,7 +291,7 @@ fn heading(
         &title,
         0.0,
         TextFormat {
-            font_id: FontId::new(11.0, FontFamily::Proportional),
+            font_id: FontId::new(font::META, FontFamily::Proportional),
             color: p.text_2,
             extra_letter_spacing: 1.0,
             coords: egui::epaint::text::VariationCoords::new([(*b"wght", 700.0)]),
@@ -299,7 +302,7 @@ fn heading(
         &count,
         8.0,
         TextFormat {
-            font_id: FontId::new(11.0, FontFamily::Monospace),
+            font_id: FontId::new(font::META, FontFamily::Monospace),
             color: p.text_2,
             ..TextFormat::default()
         },
@@ -337,7 +340,7 @@ fn title(section: &NoteSection, language: i18n::Language) -> String {
 fn ghost(ui: &mut Ui, rect: Rect, language: i18n::Language, actions: &mut Actions) {
     let p = palette(ui.ctx());
     let words = i18n::translate(language, keys::notes::CREATE_OR_PASTE, &[]);
-    let corner = CornerRadius::same(10);
+    let corner = CornerRadius::same(radius::CARD);
     let response = interact(
         ui,
         rect.size(),
@@ -353,8 +356,15 @@ fn ghost(ui: &mut Ui, rect: Rect, language: i18n::Language, actions: &mut Action
         (p.line, p.text_2)
     };
     ui.painter().extend(dashed(rect, Stroke::new(1.0, edge)));
-    let plus = widgets::text(ui, "+", 20.0, 400.0, FontFamily::Proportional, ink);
-    let label = widgets::text(ui, &words, 12.0, 400.0, FontFamily::Proportional, ink);
+    let plus = widgets::text(ui, "+", font::DISPLAY, 400.0, FontFamily::Proportional, ink);
+    let label = widgets::text(
+        ui,
+        &words,
+        font::LABEL,
+        400.0,
+        FontFamily::Proportional,
+        ink,
+    );
     let height = plus.size().y + 6.0 + label.size().y;
     let top = rect.center().y - height / 2.0;
     ui.painter().galley(

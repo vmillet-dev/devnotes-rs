@@ -43,7 +43,7 @@ fn note(content: &str) -> (Harness<'static>, String) {
 fn stored(harness: &Harness<'_>, id: &str) -> String {
     let id = id.to_owned();
     engine::db::run_here(harness.state().backend.engine(), move |engine| {
-        engine::notes::get_note(engine, id)
+        engine::notes::get_note(engine, &id)
     })
     .unwrap()
     .content
@@ -336,7 +336,7 @@ fn code_pasted_into_an_empty_note_makes_it_a_snippet_and_text_pastes_as_text() {
     crate::notes::bench::until(&mut harness, "a JSON snippet", |harness| {
         let id = id.clone();
         let note = engine::db::run_here(harness.state().backend.engine(), move |engine| {
-            engine::notes::get_note(engine, id)
+            engine::notes::get_note(engine, &id)
         })
         .unwrap();
         note.kind == NoteKind::Snippet && note.language == Language::Json
@@ -425,7 +425,7 @@ fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
             pictures: Some(pictures),
             ..engine::notes::model::NotePatch::default()
         };
-        engine::notes::update_note(engine, id.clone(), patch)?;
+        engine::notes::update_note(engine, &id, &patch)?;
         Ok::<_, engine::error::AppError>(id)
     })
     .unwrap();

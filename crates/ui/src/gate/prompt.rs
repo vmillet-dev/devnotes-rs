@@ -2,6 +2,7 @@
 //! the floor applies), or when a sealed file is imported (« unlock », any length). A modal on the
 //! highest rung, up while the key is derived.
 
+use crate::theme::tokens::{font, gap};
 use egui::{Id, RichText, Ui};
 use i18n::{Key, Language, Message, keys};
 use zeroize::Zeroizing;
@@ -64,9 +65,14 @@ pub fn show(
     view: &mut PromptView,
     language: Language,
 ) -> Option<Answer> {
-    let shown = widgets::dialog(ctx, stack, id(), WIDTH, |ui| {
-        body(ui, request, view, language)
-    })?;
+    let cross = i18n::translate(language, i18n::keys::dialog::CLOSE, &[]);
+    let shown = widgets::dialog(
+        ctx,
+        stack,
+        (id(), (&cross, "passphrase-prompt-cross")),
+        WIDTH,
+        |ui| body(ui, request, view, language),
+    )?;
     let dismissed = shown.should_close() && !request.working;
     shown.inner.or(dismissed.then_some(Answer::Cancel))
 }
@@ -85,10 +91,10 @@ fn body(
     } else {
         (keys::file::UNLOCK_TITLE, keys::file::UNLOCK_LEAD)
     };
-    ui.spacing_mut().item_spacing.y = 12.0;
+    ui.spacing_mut().item_spacing.y = gap::GROUPS;
     let heading = ui.label(
         RichText::new(tr(title))
-            .size(14.0)
+            .size(font::SUBTITLE)
             .variation(*b"wght", 600.0)
             .color(p.text_0),
     );
@@ -96,16 +102,16 @@ fn body(
     let said = Message::new(lead)
         .with("path", request.file_name.as_str())
         .text(language);
-    ui.label(RichText::new(said).size(12.0).color(p.text_2));
+    ui.label(RichText::new(said).size(font::LABEL).color(p.text_2));
     if protecting {
         ui.label(
             RichText::new(tr(keys::file::PROTECT_WARNING))
-                .size(12.0)
+                .size(font::LABEL)
                 .color(p.amber_text),
         );
     }
     let name = tr(keys::vault::PASSPHRASE);
-    ui.label(RichText::new(&name).size(11.2).color(p.text_2));
+    ui.label(RichText::new(&name).size(font::META).color(p.text_2));
     let (field, typed) =
         PassphraseField::new(&mut view.passphrase, &name, "passphrase-prompt-field")
             .invalid(request.refused)
@@ -117,7 +123,11 @@ fn body(
     let mut submitted = typed.submitted;
     if protecting {
         let confirmation = tr(keys::vault::CONFIRMATION);
-        ui.label(RichText::new(&confirmation).size(11.2).color(p.text_2));
+        ui.label(
+            RichText::new(&confirmation)
+                .size(font::META)
+                .color(p.text_2),
+        );
         submitted |= PassphraseField::new(
             &mut view.confirmation,
             &confirmation,
@@ -136,7 +146,7 @@ fn body(
     } else {
         String::new()
     };
-    let shown = ui.label(RichText::new(problem).size(11.9).color(p.red));
+    let shown = ui.label(RichText::new(problem).size(font::LABEL).color(p.red));
     widgets::address(ui, &shown, "passphrase-prompt-problem");
 
     let mut answer = None;

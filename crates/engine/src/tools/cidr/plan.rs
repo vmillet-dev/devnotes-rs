@@ -1,16 +1,9 @@
 //! An address plan: needs of so many hosts each, placed in the block the largest first, so that
 //! every subnet starts on its own boundary and nothing is lost between two of them.
 
-use serde::Serialize;
-
 use super::{IpFamily, Net, address, blocks_between, usable, usable_count};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlanLine {
     Placed {
         name: String,
@@ -26,8 +19,7 @@ pub enum PlanLine {
     Unreadable { text: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CidrPlan {
     /// In address order, which is the largest need first; the unreadable lines last.
     pub lines: Vec<PlanLine>,

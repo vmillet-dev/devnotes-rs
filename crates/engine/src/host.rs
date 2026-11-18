@@ -29,6 +29,9 @@ pub enum EngineEvent {
         total: u32,
     },
     IndexReady,
+    /// A send answered, but what it writes after — its history, its cookies, what its scripts
+    /// set — could not be kept: the answer alone would let it pass unseen.
+    SendNotKept,
 }
 
 pub trait EventSink: Send + Sync {
@@ -67,6 +70,7 @@ mod tests {
             step: RunStep::Finished {
                 cancelled: false,
                 millis: 1,
+                capped: false,
             },
         })
     }

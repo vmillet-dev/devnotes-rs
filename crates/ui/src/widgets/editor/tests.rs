@@ -1,3 +1,4 @@
+use crate::theme::tokens::font;
 use egui::{Event, ImeEvent, Key, Modifiers};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
@@ -237,7 +238,7 @@ fn wrapped_rows_hang_under_their_line_s_indent() {
     harness.run();
     let ctx = harness.ctx.clone();
     let frame = geometry::Frame {
-        font: FontId::new(13.0, FontFamily::Monospace),
+        font: FontId::new(font::READING, FontFamily::Monospace),
         row_height: 16.0,
         char_width: 8.0,
         wrap: Some(300.0),

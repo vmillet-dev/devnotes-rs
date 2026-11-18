@@ -107,7 +107,7 @@ pub(crate) fn note(
             Some(space) => space,
             None => engine::spaces::create_space(
                 engine,
-                engine::spaces::model::SpaceDraft {
+                &engine::spaces::model::SpaceDraft {
                     name: "Home".to_string(),
                 },
             )?,
@@ -127,7 +127,7 @@ pub(crate) fn corpus(backend: &crate::backend::Backend, count: usize) {
         })
         .collect();
     let mut seeded = backend.db(move |engine| {
-        engine::notes::seed_samples(engine, "Corpus".to_string(), Vec::new(), notes)
+        engine::notes::seed_samples(engine, "Corpus".to_string(), &Vec::new(), notes)
     });
     backend.settle();
     seeded.poll().unwrap().unwrap();
@@ -147,7 +147,7 @@ pub(crate) fn close_library(backend: &crate::backend::Backend) {
     let open = engine::libraries::list_libraries(backend.engine())
         .open
         .expect("a library is open");
-    let mut closed = backend.db(move |engine| engine::libraries::open_library(engine, open));
+    let mut closed = backend.db(move |engine| engine::libraries::open_library(engine, &open));
     backend.settle();
     closed.poll().unwrap().unwrap();
 }

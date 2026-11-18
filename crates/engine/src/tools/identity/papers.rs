@@ -39,12 +39,17 @@ fn one(kind: IdentifierKind, value: String) -> Identifier {
     Identifier { kind, value }
 }
 
-/// `text` cut in groups of these sizes, a separator between them; what is left stays whole.
+/// `text` cut in groups of these many characters, a separator between them; what is left stays
+/// whole.
 fn grouped(text: &str, sizes: &[usize], separator: &str) -> String {
     let mut rest = text;
     let mut groups = Vec::new();
     for size in sizes {
-        let (group, after) = rest.split_at((*size).min(rest.len()));
+        let at = rest
+            .char_indices()
+            .nth(*size)
+            .map_or(rest.len(), |(at, _)| at);
+        let (group, after) = rest.split_at(at);
         groups.push(group);
         rest = after;
     }
@@ -607,4 +612,16 @@ pub(super) fn bank(country: Country, draw: &mut Draw) -> Bank {
         bic: Some(bic.to_owned()).filter(|bic| !bic.is_empty()),
         local: local(country, code, &bban, draw),
     }
+}
+
+#[cfg(test)]
+mod tests {
+    /// A code read from a file is cut by its characters, never inside one (#1477, N50).
+    #[test]
+    fn a_code_is_grouped_by_its_characters() {
+        assert_eq!(grouped("ÉÉÉÉÉ", &[2, 2], " "), "ÉÉ ÉÉ É");
+        assert_eq!(grouped("AB", &[3], "-"), "AB");
+    }
+
+    use super::*;
 }

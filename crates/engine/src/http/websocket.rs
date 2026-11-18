@@ -29,7 +29,6 @@ use super::transport::Limit;
 use crate::error::{AppError, ErrorCode};
 use crate::{EngineEvent, EventSink};
 
-pub const WEBSOCKET_EVENT: &str = "devnotes://websocket";
 /// A message longer than this crosses cut: the log shows, it does not archive.
 pub const MESSAGE_SHOWN: usize = 64 * 1024;
 const CLOSE_GRACE: Duration = Duration::from_secs(3);
@@ -50,8 +49,7 @@ pub struct SavedMessage {
     pub text: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WebsocketEvent {
     /// The id the front connected under.
     pub id: String,
@@ -59,12 +57,7 @@ pub struct WebsocketEvent {
     pub event: SocketEvent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SocketEvent {
     Opened {
         url: String,
@@ -90,7 +83,6 @@ pub enum SocketEvent {
     Failed {
         code: ErrorCode,
         /// What its sentence interpolates, as an error answered by a command carries them.
-        #[serde(default)]
         params: std::collections::BTreeMap<String, String>,
         detail: String,
     },

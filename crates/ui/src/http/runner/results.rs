@@ -1,11 +1,11 @@
 //! A run's report: what failed, how many tests passed, each iteration's requests. Each line one
 //! height, so that a long run stays a list drawn in view alone; a kept answer reads under it.
 
+use crate::theme::tokens::{font, gap, radius};
 use std::fmt::Write as _;
 
 use egui::{
-    Color32, CornerRadius, FontFamily, Margin, Rect, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo,
-    pos2,
+    Color32, CornerRadius, FontFamily, Rect, Role, Sense, Ui, UiBuilder, Vec2, WidgetInfo, pos2,
 };
 use engine::error::AppError;
 use engine::http::runner::{RunError, RunResult};
@@ -123,10 +123,13 @@ pub(super) fn show(
 fn pill(ui: &mut Ui, words: &str, hue: Color32, author_id: &str) {
     egui::Frame::new()
         .fill(hue.gamma_multiply(0.15))
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::symmetric(8, 2))
+        .corner_radius(CornerRadius::same(radius::CARD))
+        .inner_margin(gap::margin(gap::CONTROLS, gap::LINE))
         .show(ui, |ui| {
-            let words = egui::RichText::new(words).size(12.0).strong().color(hue);
+            let words = egui::RichText::new(words)
+                .size(font::LABEL)
+                .strong()
+                .color(hue);
             let said = ui.add(egui::Label::new(words));
             widgets::address(ui, &said, author_id);
         });
@@ -137,7 +140,7 @@ fn summary(ui: &mut Ui, runner: &Runner, language: i18n::Language) {
     let said = runner.summary();
     let cancelled = runner.ended().is_some_and(|ended| ended.cancelled);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 10.0;
+        ui.spacing_mut().item_spacing.x = gap::INSET;
         if cancelled {
             let words = i18n::translate(
                 language,
@@ -148,6 +151,14 @@ fn summary(ui: &mut Ui, runner: &Runner, language: i18n::Language) {
                 ],
             );
             pill(ui, &words, p.text_1, "http-runner-cancelled");
+        }
+        if runner.ended().is_some_and(|ended| ended.capped) {
+            let words = i18n::translate(
+                language,
+                keys::http::runner::CAPPED,
+                &[("count", engine::http::runner::MAX_STEPS.into())],
+            );
+            pill(ui, &words, p.amber_text, "http-runner-capped");
         }
         if said.failures > 0 {
             let words = i18n::translate(
@@ -175,7 +186,9 @@ fn summary(ui: &mut Ui, runner: &Runner, language: i18n::Language) {
             let seconds = i18n::format::at_most(f64::from(ended.millis) / 1000.0, 1, language);
             let _ = write!(figures, " · {seconds} s");
         }
-        let figures = egui::RichText::new(figures).size(12.5).color(p.text_1);
+        let figures = egui::RichText::new(figures)
+            .size(font::BODY)
+            .color(p.text_1);
         let shown = ui.add(egui::Label::new(figures));
         widgets::address(ui, &shown, "http-runner-figures");
     });
@@ -183,20 +196,23 @@ fn summary(ui: &mut Ui, runner: &Runner, language: i18n::Language) {
         return;
     }
     let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), BAR), Sense::hover());
-    ui.painter()
-        .rect_filled(rect, CornerRadius::same(3), p.red.gamma_multiply(0.5));
+    ui.painter().rect_filled(
+        rect,
+        CornerRadius::same(radius::TAG),
+        p.red.gamma_multiply(0.5),
+    );
     let share = f64::from(said.passed) / f64::from(said.tests);
     #[expect(clippy::cast_possible_truncation, reason = "a share of a width")]
     let right = rect.left() + rect.width() * share as f32;
     let done = Rect::from_min_max(rect.min, pos2(right, rect.bottom()));
     ui.painter()
-        .rect_filled(done, CornerRadius::same(3), p.green);
+        .rect_filled(done, CornerRadius::same(radius::TAG), p.green);
 }
 
 fn filters(ui: &mut Ui, runner: &Runner, language: i18n::Language, actions: &mut Actions) {
     let results = runner.results();
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
+        ui.spacing_mut().item_spacing.x = gap::TIGHT;
         for filter in Filter::ALL {
             let (key, id) = match filter {
                 Filter::All => (keys::http::runner::filters::ALL, "http-runner-filter-all"),
@@ -234,7 +250,14 @@ fn line(ui: &mut Ui, line: &Line<'_>, state: &AppState, actions: &mut Actions) {
             let (rect, _) =
                 ui.allocate_exact_size(Vec2::new(ui.available_width(), ROW), Sense::hover());
             let at = pos2(rect.left() + INDENT + 18.0, rect.center().y);
-            let galley = widgets::text(ui, code, 12.0, 400.0, FontFamily::Monospace, p.text_2);
+            let galley = widgets::text(
+                ui,
+                code,
+                font::LABEL,
+                400.0,
+                FontFamily::Monospace,
+                p.text_2,
+            );
             let at = pos2(at.x, at.y - galley.size().y / 2.0);
             ui.painter_at(rect).galley(at, galley, p.text_2);
         }
@@ -246,7 +269,7 @@ fn text_line(ui: &mut Ui, words: &str, ink: Color32, author_id: &str) {
         ui.allocate_exact_size(Vec2::new(ui.available_width(), ROW), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, words));
     widgets::address(ui, &response, author_id);
-    let galley = widgets::text(ui, words, 12.5, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, words, font::BODY, 400.0, FontFamily::Proportional, ink);
     let at = pos2(
         rect.left() + INDENT,
         rect.center().y - galley.size().y / 2.0,
@@ -278,7 +301,14 @@ fn iteration_line(ui: &mut Ui, iteration: u32, state: &AppState) {
         ui.allocate_exact_size(Vec2::new(ui.available_width(), ROW), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Heading, true, &words));
     widgets::address(ui, &response, "http-runner-iteration");
-    let galley = widgets::text(ui, &words, 12.0, 600.0, FontFamily::Proportional, p.text_2);
+    let galley = widgets::text(
+        ui,
+        &words,
+        font::LABEL,
+        600.0,
+        FontFamily::Proportional,
+        p.text_2,
+    );
     let left = rect.left() + galley.size().x + 12.0;
     let middle = rect.center().y;
     ui.painter().galley(
@@ -289,7 +319,7 @@ fn iteration_line(ui: &mut Ui, iteration: u32, state: &AppState) {
     let row = widgets::text(
         ui,
         &values.join(" · "),
-        12.0,
+        font::LABEL,
         400.0,
         FontFamily::Monospace,
         p.text_2,
@@ -336,7 +366,7 @@ fn result_line(
         Sense::click(),
         author_id,
         || WidgetInfo::labeled(Role::Button, true, &name),
-        CornerRadius::same(5),
+        CornerRadius::same(radius::CONTROL),
     );
     let open = state.http.runner().is_open(at);
     ui.ctx()
@@ -346,11 +376,14 @@ fn result_line(
     }
     let rect = response.rect;
     if failed {
-        ui.painter()
-            .rect_filled(rect, CornerRadius::same(5), p.red.gamma_multiply(0.08));
+        ui.painter().rect_filled(
+            rect,
+            CornerRadius::same(radius::CONTROL),
+            p.red.gamma_multiply(0.08),
+        );
     } else if response.hovered() {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(5), p.bg_1);
+            .rect_filled(rect, CornerRadius::same(radius::CONTROL), p.bg_1);
     }
     let glyph =
         Rect::from_center_size(pos2(rect.left() + 12.0, rect.center().y), Vec2::splat(14.0));
@@ -358,14 +391,28 @@ fn result_line(
     let badge = badge_of(result.kind, result.method);
     let hue = badge_hue(ui, badge);
     let mut left = rect.left() + INDENT;
-    let galley = widgets::text(ui, badge.short(), 11.0, 600.0, FontFamily::Monospace, hue);
+    let galley = widgets::text(
+        ui,
+        badge.short(),
+        font::META,
+        600.0,
+        FontFamily::Monospace,
+        hue,
+    );
     let middle = rect.center().y;
     ui.painter()
         .galley(pos2(left, middle - galley.size().y / 2.0), galley, hue);
     left += 38.0;
     let figures = figures_of(result, language);
     let right = figures_at(ui, rect, &figures);
-    let galley = widgets::text(ui, &name, 12.5, 400.0, FontFamily::Proportional, p.text_0);
+    let galley = widgets::text(
+        ui,
+        &name,
+        font::BODY,
+        400.0,
+        FontFamily::Proportional,
+        p.text_0,
+    );
     let clip = Rect::from_min_max(pos2(left, rect.top()), pos2(right - 12.0, rect.bottom()));
     let at = pos2(left, middle - galley.size().y / 2.0);
     ui.painter_at(clip).galley(at, galley, p.text_0);
@@ -389,7 +436,14 @@ fn figures_of(result: &RunResult, language: i18n::Language) -> String {
 
 fn figures_at(ui: &Ui, rect: Rect, figures: &str) -> f32 {
     let p = palette(ui.ctx());
-    let galley = widgets::text(ui, figures, 12.0, 400.0, FontFamily::Monospace, p.text_2);
+    let galley = widgets::text(
+        ui,
+        figures,
+        font::LABEL,
+        400.0,
+        FontFamily::Monospace,
+        p.text_2,
+    );
     let left = rect.right() - galley.size().x - 8.0;
     let at = pos2(left, rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, p.text_2);
@@ -436,7 +490,7 @@ fn test_line(ui: &mut Ui, test: &TestResult, language: i18n::Language) {
     );
     mark(ui, glyph, test.skipped, test.passed);
     let ink = if bad { p.red } else { p.text_1 };
-    let galley = widgets::text(ui, &words, 12.5, 400.0, FontFamily::Proportional, ink);
+    let galley = widgets::text(ui, &words, font::BODY, 400.0, FontFamily::Proportional, ink);
     let at = pos2(
         rect.left() + INDENT + 18.0,
         rect.center().y - galley.size().y / 2.0,

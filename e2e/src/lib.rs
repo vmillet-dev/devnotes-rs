@@ -314,20 +314,31 @@ impl App {
     }
 
     /// Clicks the first `author_id` that `which` picks, once it is shown: a row of a list, by
-    /// what the user named it. ⚠️ Shown means placed too: a node joins the tree a frame before
-    /// it has bounds, and a card just written was clicked in that frame.
+    /// what the user named it. ⚠️ Shown means placed, and still: a node joins the tree a frame
+    /// before it has bounds, and a card just written was clicked in that frame; one still moving
+    /// (a menu opening, a list settling) was clicked where it no longer was. So the place is the
+    /// same in two reads in a row.
     pub fn click_where(&mut self, author_id: &str, which: impl Fn(&Node) -> bool) {
-        self.eventually(&format!("{author_id} is shown"), |tree| {
-            tree.all(author_id)
+        let until = Instant::now() + PATIENCE;
+        let mut last = None;
+        let bounds = loop {
+            let tree = self.tree();
+            let placed = tree
+                .all(author_id)
                 .into_iter()
-                .any(|node| which(node) && node.bounds().is_some())
-        });
-        let bounds = self
-            .tree()
-            .all(author_id)
-            .into_iter()
-            .find_map(|node| node.bounds().filter(|_| which(node)))
-            .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
+                .find_map(|node| node.bounds().filter(|_| which(node)));
+            if let Some(bounds) = placed
+                && last == Some(bounds)
+            {
+                break bounds;
+            }
+            last = placed;
+            assert!(
+                Instant::now() < until,
+                "{author_id} is shown: still not true after {PATIENCE:?}; the focus is on {}",
+                tree.focused()
+            );
+        };
         #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
         let pos = Pos2::new(
             f64::midpoint(bounds.x0, bounds.x1) as f32,

@@ -6,11 +6,12 @@ pub(crate) mod body;
 mod stop;
 mod tests_view;
 
+use crate::theme::tokens::{font, gap, radius};
 use engine::error::{AppError, ErrorCode};
 use engine::http::scripts::model::{FailureKind, ScriptKind, ScriptStop, TestResult};
 use std::sync::Arc;
 
-use egui::{CornerRadius, FontFamily, Margin, Rect, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
+use egui::{CornerRadius, FontFamily, Rect, Role, Sense, Stroke, Ui, Vec2, WidgetInfo};
 use engine::http::send::{SentBody, SentResponse};
 use i18n::keys;
 
@@ -93,10 +94,10 @@ pub(crate) fn show(
     region.widget_info(|| WidgetInfo::labeled(Role::Region, true, &label));
     widgets::address(ui, &region, "http-response");
     egui::Frame::new()
-        .inner_margin(Margin::symmetric(20, 12))
+        .inner_margin(gap::margin(gap::PANEL, gap::GROUPS))
         .show(ui, |ui| {
             ui.set_min_size(ui.available_size());
-            ui.spacing_mut().item_spacing.y = 10.0;
+            ui.spacing_mut().item_spacing.y = gap::INSET;
             match state.http.sends().of(&tab.key) {
                 None => placeholder(
                     ui,
@@ -143,7 +144,7 @@ pub(crate) fn show(
                     let message = crate::services::errors::message_of(error)
                         .unwrap_or_else(|| i18n::Message::new(keys::http::send::FAILED));
                     let words = egui::RichText::new(message.text(language))
-                        .size(13.0)
+                        .size(font::READING)
                         .color(p.red);
                     let said = ui.add(egui::Label::new(words).wrap());
                     widgets::address(ui, &said, "http-response-failure");
@@ -161,7 +162,7 @@ pub(crate) fn show(
 fn placeholder(ui: &mut Ui, key: i18n::Key, author_id: &str, language: i18n::Language) {
     let p = palette(ui.ctx());
     let words = egui::RichText::new(i18n::translate(language, key, &[]))
-        .size(13.0)
+        .size(font::READING)
         .color(p.text_2);
     let said = ui.add(egui::Label::new(words).wrap());
     widgets::address(ui, &said, author_id);
@@ -172,18 +173,20 @@ fn sending(ui: &mut Ui, started: f64, language: i18n::Language) {
     let p = palette(ui.ctx());
     let now = ui.input(|input| input.time);
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 8.0;
+        ui.spacing_mut().item_spacing.x = gap::CONTROLS;
         let words = i18n::translate(language, keys::http::response::SENDING, &[]);
         widgets::spinner(ui, 14.0, &words);
         let said = ui.add(egui::Label::new(
-            egui::RichText::new(&words).size(13.0).color(p.text_2),
+            egui::RichText::new(&words)
+                .size(font::READING)
+                .color(p.text_2),
         ));
         widgets::address(ui, &said, "http-response-sending");
         let elapsed = format!("{:.1} s", (now - started).max(0.0));
         let ticking = ui.add(egui::Label::new(
             egui::RichText::new(elapsed)
                 .monospace()
-                .size(12.0)
+                .size(font::LABEL)
                 .color(p.text_2),
         ));
         widgets::address(ui, &ticking, "http-response-elapsed");
@@ -327,7 +330,7 @@ fn bar(
 ) {
     let language = state.language;
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
+        ui.spacing_mut().item_spacing.x = gap::GROUPS;
         figures(ui, response, language);
         section_tabs(ui, response, view, language);
         ends(ui, (tab, send_id, response), actions, language);
@@ -346,12 +349,12 @@ fn figures(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
         )],
     );
     let time = ui.add(egui::Label::new(
-        egui::RichText::new(millis).size(12.5).color(p.text_1),
+        egui::RichText::new(millis).size(font::BODY).color(p.text_1),
     ));
     widgets::address(ui, &time, "http-response-time");
     let size = ui.add(egui::Label::new(
         egui::RichText::new(size_of(response.size, language))
-            .size(12.5)
+            .size(font::BODY)
             .color(p.text_1),
     ));
     widgets::address(ui, &size, "http-response-size");
@@ -510,7 +513,7 @@ fn status(ui: &mut Ui, response: &SentResponse) {
     let words = format!("{} {}", response.status, response.reason)
         .trim()
         .to_owned();
-    let galley = widgets::text(ui, &words, 12.5, 700.0, FontFamily::Monospace, hue);
+    let galley = widgets::text(ui, &words, font::BODY, 700.0, FontFamily::Monospace, hue);
     let size = galley.size() + Vec2::new(16.0, 8.0);
     let response = interact(
         ui,
@@ -518,11 +521,11 @@ fn status(ui: &mut Ui, response: &SentResponse) {
         Sense::hover(),
         "http-response-status",
         || WidgetInfo::labeled(Role::Label, true, &words),
-        CornerRadius::same(6),
+        CornerRadius::same(radius::CONTROL),
     );
     ui.painter().rect_filled(
         response.rect,
-        CornerRadius::same(6),
+        CornerRadius::same(radius::CONTROL),
         hue.gamma_multiply(0.16),
     );
     ui.painter()
@@ -558,14 +561,14 @@ fn rows<'a>(ui: &mut Ui, author_id: &str, rows: impl Iterator<Item = (&'a str, &
                         ui.label(
                             egui::RichText::new(key)
                                 .monospace()
-                                .size(12.5)
+                                .size(font::BODY)
                                 .color(p.text_1),
                         );
                         ui.add(
                             egui::Label::new(
                                 egui::RichText::new(value)
                                     .monospace()
-                                    .size(12.5)
+                                    .size(font::BODY)
                                     .color(p.text_0),
                             )
                             .wrap(),
@@ -603,7 +606,7 @@ fn cookies(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
             ] {
                 ui.label(
                     egui::RichText::new(tr(key))
-                        .size(11.5)
+                        .size(font::CONTROL)
                         .strong()
                         .color(p.text_2),
                 );
@@ -613,24 +616,24 @@ fn cookies(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
                 let name = ui.label(
                     egui::RichText::new(&each.name)
                         .monospace()
-                        .size(12.5)
+                        .size(font::BODY)
                         .color(p.text_0),
                 );
                 widgets::address(ui, &name, "http-response-cookie");
                 ui.label(
                     egui::RichText::new(&each.value)
                         .monospace()
-                        .size(12.5)
+                        .size(font::BODY)
                         .color(p.text_1),
                 );
                 ui.label(
                     egui::RichText::new(each.domain.as_deref().unwrap_or_default())
-                        .size(12.0)
+                        .size(font::LABEL)
                         .color(p.text_1),
                 );
                 ui.label(
                     egui::RichText::new(each.path.as_deref().unwrap_or_default())
-                        .size(12.0)
+                        .size(font::LABEL)
                         .color(p.text_1),
                 );
                 ui.end_row();
@@ -649,7 +652,7 @@ fn timeline(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
             let heading = |ui: &mut Ui, key| {
                 ui.label(
                     egui::RichText::new(tr(key))
-                        .size(12.0)
+                        .size(font::LABEL)
                         .strong()
                         .color(p.text_2),
                 );
@@ -661,7 +664,7 @@ fn timeline(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
                     let shown = ui.label(
                         egui::RichText::new(line)
                             .monospace()
-                            .size(12.5)
+                            .size(font::BODY)
                             .color(p.text_0),
                     );
                     widgets::address(ui, &shown, "http-response-redirect");
@@ -686,7 +689,7 @@ fn timeline(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
                         keys::http::response::timeline::BYTES,
                         &[("size", (*size).into())],
                     );
-                    ui.label(egui::RichText::new(words).size(12.0).color(p.text_2));
+                    ui.label(egui::RichText::new(words).size(font::LABEL).color(p.text_2));
                 }
                 SentBody::Multipart { fields } => {
                     let words = i18n::translate(
@@ -694,7 +697,7 @@ fn timeline(ui: &mut Ui, response: &SentResponse, language: i18n::Language) {
                         keys::http::response::timeline::MULTIPART,
                         &[("fields", fields.join(", ").into())],
                     );
-                    ui.label(egui::RichText::new(words).size(12.0).color(p.text_2));
+                    ui.label(egui::RichText::new(words).size(font::LABEL).color(p.text_2));
                 }
             }
             heading(ui, keys::http::response::timeline::RESPONSE);
@@ -718,15 +721,15 @@ fn exchange_text(ui: &mut Ui, text: &str, author_id: &str) {
     let shown = egui::Frame::new()
         .fill(p.bg_1)
         .stroke(Stroke::new(1.0, p.line_soft))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::same(10))
+        .corner_radius(CornerRadius::same(radius::MENU))
+        .inner_margin(gap::margin(gap::INSET, gap::INSET))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.add(
                 egui::Label::new(
                     egui::RichText::new(text)
                         .monospace()
-                        .size(12.0)
+                        .size(font::LABEL)
                         .color(p.text_0),
                 )
                 .wrap(),

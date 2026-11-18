@@ -30,7 +30,7 @@ pub fn choose_destination(
 }
 
 pub fn count(backend: &Backend, scope: ExportScope) -> Pending<u32> {
-    backend.db(move |engine| transfer::count_export(engine, scope))
+    backend.db(move |engine| transfer::count_export(engine, &scope))
 }
 
 pub fn export(
@@ -39,11 +39,11 @@ pub fn export(
     scope: ExportScope,
     passphrase: Option<String>,
 ) -> Pending<ExportReport> {
-    backend.db(move |engine| transfer::export_notes(engine, path, scope, passphrase))
+    backend.spawn(move |engine| transfer::export_notes(engine, path, scope, passphrase))
 }
 
 pub fn is_protected(backend: &Backend, path: String) -> Pending<bool> {
-    backend.compute(move |_| transfer::export_is_protected(path))
+    backend.compute(move |_| transfer::export_is_protected(&path))
 }
 
 pub fn import(
@@ -51,9 +51,9 @@ pub fn import(
     path: String,
     passphrase: Option<String>,
 ) -> Pending<ImportReport> {
-    backend.db(move |engine| transfer::import_notes(engine, path, passphrase))
+    backend.spawn(move |engine| transfer::import_notes(engine, path, passphrase))
 }
 
 pub fn share(backend: &Backend, ids: Vec<String>) -> Pending<String> {
-    backend.db(move |engine| transfer::share_notes(engine, ids))
+    backend.db(move |engine| transfer::share_notes(engine, &ids))
 }

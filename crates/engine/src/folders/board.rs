@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 
 use super::model::{Folder, FolderColour, Lineage, Seat};
 use crate::closed_enum::closed_enum;
@@ -40,9 +39,8 @@ pub const BOARD_COLUMNS: usize = 3;
 pub const BOARD_MARGIN: i32 = 16;
 /// How many loose cards sit side by side under the zones.
 pub const LOOSE_COLUMNS: usize = 4;
-/// ⚠️ The zone body scrolls, and a scrollbar takes a slice of the row: at exactly two cards'
-/// width the second wraps, the wrap brings the scrollbar, and the scrollbar keeps it wrapped.
-/// Added to [`default_zone_width`] only, never taken off a count; generous on purpose.
+/// The room a zone keeps beyond its cards, so that two cards' width never wraps the second.
+/// Added to [`default_zone_width`] only, never taken off a count.
 pub const SCROLLBAR: i32 = 18;
 
 closed_enum! {
@@ -76,13 +74,11 @@ impl PreviewLines {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct BoardQuery {
     /// Required, unlike `NotesQuery::space_id`: a board across every space has no zones.
     pub space_id: String,
     /// The folder whose board this is, `None` for the space's: its sub-folders are the zones.
-    #[serde(default)]
     pub root_id: Option<String>,
     pub search: String,
     pub filter: NoteFilter,
@@ -91,8 +87,9 @@ pub struct BoardQuery {
     pub kinds: Vec<NoteKind>,
     pub priorities: Vec<Priority>,
     pub now: DateTime<Utc>,
+    /// Minutes from local time to UTC, as the list's: a sheet's `aujourd'hui` is the local day.
+    pub tz_offset_minutes: i32,
     /// Sizes the first layout of zones and loose cards.
-    #[serde(default)]
     pub preview_lines: PreviewLines,
 }
 
@@ -112,7 +109,7 @@ impl BoardQuery {
             grouping: Grouping::default(),
             ranked: false,
             now: self.now,
-            tz_offset_minutes: 0,
+            tz_offset_minutes: self.tz_offset_minutes,
             pinned_first: true,
         }
     }
@@ -148,8 +145,7 @@ pub struct ZoneContents {
     pub nested: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BoardFrame {
     pub x: i32,
     pub y: i32,
@@ -157,18 +153,15 @@ pub struct BoardFrame {
     pub height: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BoardPoint {
     pub x: i32,
     pub y: i32,
 }
 
 /// `flatten`: the front end draws this with the same card component the canvas uses.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct BoardNote {
-    #[serde(flatten)]
     pub note: DisplayNote,
     /// Dimmed in place rather than reflowed: spatial memory is what the board has that the
     /// list view does not.
@@ -178,8 +171,7 @@ pub struct BoardNote {
 }
 
 /// A sub-folder named under a zone's title, opened by a click: the board draws one level.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct BoardChild {
     pub id: String,
     pub name: String,
@@ -188,8 +180,7 @@ pub struct BoardChild {
     pub count: u32,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct BoardZone {
     pub folder: Folder,
     pub frame: BoardFrame,
@@ -198,8 +189,7 @@ pub struct BoardZone {
     pub children: Vec<BoardChild>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct BoardView {
     pub zones: Vec<BoardZone>,
     pub loose: Vec<BoardNote>,
@@ -240,8 +230,7 @@ impl BoardView {
 }
 
 /// One zone that moved. A batch of these is what a gesture eventually writes.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZonePlacement {
     pub folder_id: String,
     pub frame: BoardFrame,
@@ -249,8 +238,7 @@ pub struct ZonePlacement {
 
 /// One loose card that moved. Filing is not here: it goes through `file_notes`, whose answer
 /// the undo puts back. A position has no undo of its own.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CardPlacement {
     pub note_id: String,
     pub position: BoardPoint,
@@ -540,7 +528,7 @@ pub fn build<S: std::hash::BuildHasher>(
     folders: &[Folder],
     frames: &HashMap<String, BoardFrame, S>,
     positions: &HashMap<String, BoardPoint, S>,
-    facets: Facets,
+    facets: &Facets,
     request: &BoardQuery,
 ) -> BoardView {
     // Nothing is dropped: every criterion decides what is dimmed, never what is drawn.
@@ -653,8 +641,8 @@ pub fn build<S: std::hash::BuildHasher>(
         width,
         height,
     };
-    // The board knows no time zone: a sheet's `aujourd'hui` is the UTC day on its cards.
-    let today = request.now.date_naive();
+    let offset = crate::notes::view::offset_from_minutes(request.tz_offset_minutes);
+    let today = request.now.with_timezone(&offset).date_naive();
     view.notes_mut().for_each(|note| note.cut_to_preview(today));
 
     view
@@ -662,8 +650,7 @@ pub fn build<S: std::hash::BuildHasher>(
 
 /// A whole board's geometry: every zone's frame and every loose card's place. What a tidy-up
 /// writes, and, read back first, what its undo puts back.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BoardLayout {
     pub zones: Vec<ZonePlacement>,
     pub cards: Vec<CardPlacement>,
@@ -673,8 +660,7 @@ pub struct BoardLayout {
 ///
 /// Two scopes rather than one with a warning: what goes to pieces is the loose cards, and a
 /// zone placed and sized by hand is the only manual work the board holds.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BoardScope {
     /// The loose cards alone, flowed under the zones as they stand.
     LooseCards,
@@ -684,8 +670,7 @@ pub enum BoardScope {
 }
 
 /// What a tidy-up did, and what it takes to walk it back.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct BoardArrangement {
     /// What actually moved: a board already in order moves nothing, and opens no undo.
     pub moved: u32,
@@ -774,6 +759,7 @@ mod tests {
             kinds: vec![NoteKind::Note],
             priorities: Vec::new(),
             now: at(NOW),
+            tz_offset_minutes: 0,
             preview_lines: PreviewLines::default(),
         };
 

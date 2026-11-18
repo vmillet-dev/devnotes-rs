@@ -116,6 +116,9 @@ pub struct Settings {
 
 /// The reference's `RAIL_WIDTH`.
 pub const RAIL_WIDTH: (u16, u16) = (160, 520);
+/// Where the rail starts: a space's name and its folder's read whole at the first level, and
+/// the notes' header still on one row in the default window (1 100 px).
+pub const RAIL_DEFAULT: u16 = 184;
 /// The reference's `HISTORY_LIST_WIDTH`.
 pub const HISTORY_LIST_WIDTH: (u16, u16) = (280, 760);
 
@@ -126,7 +129,7 @@ impl Default for Settings {
             theme: Appearance::default(),
             density: Density::default(),
             area: Area::default(),
-            rail_width: RAIL_WIDTH.0,
+            rail_width: RAIL_DEFAULT,
             rail_shown: true,
             editor_fullscreen: false,
             editor_panel_width: 0,
@@ -201,7 +204,7 @@ impl Settings {
             rail_width: preferences
                 .get(RAIL)
                 .and_then(|width| width.parse::<u16>().ok())
-                .map_or(RAIL_WIDTH.0, |width| {
+                .map_or(RAIL_DEFAULT, |width| {
                     width.clamp(RAIL_WIDTH.0, RAIL_WIDTH.1)
                 }),
             rail_shown: preferences.get(RAIL_SHOWN) != Some("false"),
@@ -491,6 +494,21 @@ mod tests {
         assert_eq!(preferences.get("devnotes.shortcut.canvas.pin"), Some("J"));
         assert_eq!(preferences.get("devnotes.shortcut.canvas.copy"), None);
         assert_eq!(Settings::read(&preferences), chosen);
+    }
+
+    /// A missing or unreadable value must not switch a safety net off.
+    #[test]
+    fn only_a_plain_false_turns_the_launch_copies_off() {
+        let read = |value: Option<&str>| {
+            let mut preferences = Preferences::default();
+            if let Some(value) = value {
+                preferences.set("devnotes.automaticBackups", value);
+            }
+            Settings::read(&preferences).automatic_backups
+        };
+
+        assert!(read(None) && read(Some("true")) && read(Some("")) && read(Some("False")));
+        assert!(!read(Some("false")));
     }
 
     #[test]

@@ -364,7 +364,7 @@ fn large_snippet(window: &mut Window, title: &str, lines: usize) {
     close_editor(window);
     let id = made.id.clone();
     let kept = run_here(window.state().backend().engine(), move |engine| {
-        engine::notes::get_note(engine, id)
+        engine::notes::get_note(engine, &id)
     })
     .unwrap();
     assert_eq!(
@@ -374,7 +374,7 @@ fn large_snippet(window: &mut Window, title: &str, lines: usize) {
     );
     window.state_mut().state.notes_query.clear_search();
     run_here(window.state().backend().engine(), |engine| {
-        engine::notes::delete_note(engine, made.id.clone())
+        engine::notes::delete_note(engine, &made.id)
     })
     .unwrap();
     settle(window);
@@ -457,7 +457,7 @@ fn http(window: &mut Window) {
     let mut found = Samples::default();
     for term in ["états", "Lister", "ressources 19", "zzzz", "GET"] {
         found.0.push(engine_time(window, |engine| {
-            engine::http::search_http_requests(engine, term.to_owned())
+            engine::http::search_http_requests(engine, term)
         }));
     }
     found.report("requests searched");

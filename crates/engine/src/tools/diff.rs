@@ -2,7 +2,6 @@
 //! XML, each side in its own: the changes by their `JSONPath`, the two values laid side by side
 //! in their JSON form on aligned rows, and the RFC 6902 patch that turns the first into the second.
 
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use similar::{Algorithm, DiffOp, capture_diff_slices};
 
@@ -14,8 +13,7 @@ pub(crate) const MAX_ROWS: usize = 20_000;
 /// A value in the list of changes is cut to this many characters.
 const SUMMARY_CHARS: usize = 40;
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JsonDiffRequest {
     pub a: String,
     pub b: String,
@@ -28,15 +26,13 @@ pub struct JsonDiffRequest {
     pub ignore_whitespace: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JsonDiffSide {
     A,
     B,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JsonChangeKind {
     Added,
     Removed,
@@ -46,16 +42,14 @@ pub enum JsonChangeKind {
 }
 
 /// What a value was, as the list of changes shows it: itself when short, its size otherwise.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValueSummary {
     Scalar { text: String },
     Object { keys: u32 },
     Array { items: u32 },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JsonChange {
     pub kind: JsonChangeKind,
     pub path: String,
@@ -63,24 +57,21 @@ pub struct JsonChange {
     pub after: Option<ValueSummary>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct JsonDiffCounts {
     pub added: u32,
     pub removed: u32,
     pub modified: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JsonDiffLine {
     /// One-based, in that side's own text.
     pub number: u32,
     pub text: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JsonDiffRowKind {
     Same,
     Added,
@@ -89,8 +80,7 @@ pub enum JsonDiffRowKind {
 }
 
 /// One row of the side-by-side view: a side without a line is a gap.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JsonDiffRow {
     pub kind: JsonDiffRowKind,
     pub left: Option<JsonDiffLine>,
@@ -99,12 +89,7 @@ pub struct JsonDiffRow {
     pub path: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(
-    tag = "kind",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum JsonDiffAnswer {
     Compared {
         changes: Vec<JsonChange>,
@@ -131,17 +116,9 @@ pub enum JsonDiffAnswer {
 
 // --- Paths.
 
+/// A member's path, as the explorer writes it: one rule for every tool.
 fn child(path: &str, key: &str) -> String {
-    let mut chars = key.chars();
-    let plain = chars
-        .next()
-        .is_some_and(|first| first.is_alphabetic() || first == '_')
-        && chars.all(|c| c.is_alphanumeric() || c == '_');
-    if plain {
-        format!("{path}.{key}")
-    } else {
-        format!("{path}[{}]", serde_json::to_string(key).unwrap_or_default())
-    }
+    crate::json::model::member_path(path, key)
 }
 
 /// RFC 6901: `~` and `/` escaped, in that order.
@@ -1032,7 +1009,7 @@ mod tests {
                 modified: 1
             }
         );
-        assert_eq!(changes[0].path, r#"$.server["@port"]"#);
+        assert_eq!(changes[0].path, "$.server['@port']");
     }
 
     #[test]

@@ -41,7 +41,7 @@ fn note(backend: &Backend, title: &str, kind: NoteKind, content: &str) -> String
     };
     let at = id.clone();
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, at, patch)
+        engine::notes::update_note(engine, &at, &patch)
     })
     .unwrap();
     id
@@ -114,14 +114,15 @@ fn a_search_that_finds_nothing_offers_to_clear_it() {
 }
 
 #[test]
-fn a_selection_is_copied_from_its_bar() {
+fn a_selection_is_copied_from_its_row() {
     let (backend, profile) = testing::unlocked();
     testing::note(&backend, "psql prod");
     let mut harness = area(backend, profile);
     hover_first_card(&mut harness);
     click_id(&mut harness, "note-card-check");
 
-    click_id(&mut harness, "selection-copy");
+    click_id(&mut harness, "selection-more");
+    click_id(&mut harness, "selection-more-copy");
     settle(&mut harness);
 
     assert!(present(&harness, "selection-count"));
@@ -325,7 +326,7 @@ fn a_drawing_is_inserted_from_the_toolbar_of_a_note() {
     };
     let at = scene.clone();
     engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::update_note(engine, at, patch)
+        engine::notes::update_note(engine, &at, &patch)
     })
     .unwrap();
     let mut harness = crate::notes::bench::expanded_area(backend, profile);
@@ -341,7 +342,7 @@ fn a_drawing_is_inserted_from_the_toolbar_of_a_note() {
 
     let backend = &harness.state().backend;
     let stored = engine::db::run_here(backend.engine(), move |engine| {
-        engine::notes::get_note(engine, written)
+        engine::notes::get_note(engine, &written)
     })
     .unwrap();
     assert!(

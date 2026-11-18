@@ -153,7 +153,8 @@
     "fileInto": "File into",
     "noFolder": "No folder",
     "newCalc": "Calculation",
-    "newDrawing": "Drawing"
+    "newDrawing": "Drawing",
+    "cards": "The cards"
   },
   "filters": {
     "groupLabel": "Filter notes",
@@ -226,7 +227,8 @@
     "reorganise": "Reorganise {zones, plural, =0 {no folder} one {# folder} other {# folders}} and {cards, plural, =0 {no card} one {# card} other {# cards}}",
     "reorganiseHint": "Repositions and resizes the folders. Overwrites sizes chosen by hand; undoable.",
     "subFolders": "Sub-folders of {{name}}",
-    "subFoldersLabel": "Sub-folders"
+    "subFoldersLabel": "Sub-folders",
+    "surface": "Board surface"
   },
   "sort": {
     "label": "Sort and group",
@@ -344,6 +346,7 @@
     "delete": "Delete",
     "deleteConfirm": "Confirm?",
     "close": "Close editor",
+    "closeKeys": "Esc",
     "header": {
       "title": "Header",
       "fold": "Fold the header",
@@ -610,6 +613,7 @@
     "httpFileUnreadable": "The file {{path}} cannot be read.",
     "httpFileTooLarge": "The file {{path}} is over {{limit}} MB: a request sends none heavier.",
     "httpCancelled": "Send cancelled.",
+    "sendNotKept": "The answer arrived, but its history, its cookies or the variables its scripts set could not be saved.",
     "httpFell": "The send stopped on an internal error.",
     "httpNetwork": "Network error.",
     "httpWebsocketScheme": "A WebSocket opens on ws:// or wss://.",
@@ -638,7 +642,8 @@
     "httpScriptFile": "A script wants to send the file {{path}} without your yes: the request did not leave.",
     "httpRunData": {
       "unreadable": "This file reads neither as a CSV with its header nor as a JSON array of objects.",
-      "empty": "This file holds no row of data."
+      "empty": "This file holds no row of data.",
+      "tooLarge": "This file is larger than 50 MB, the most a run reads."
     },
     "noFileDialog": "This desktop has no file dialog to show: xdg-desktop-portal is missing.",
     "updateRefused": "This update was refused: its signature does not match. Nothing was installed.",
@@ -743,6 +748,9 @@
     "addTagLabel": "Add a tag to the selection",
     "addTagPlaceholder": "+ tag",
     "removeTag": "Remove a tag",
+    "addTag": "Add a tag",
+    "more": "More actions on the selection",
+    "copyMarkdown": "Copy as Markdown",
     "pin": "Pin",
     "unpin": "Unpin",
     "delete": "Move to trash",
@@ -906,6 +914,7 @@
     "importedWithoutSomeAttachments": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}}. ⚠️ {missing, plural, one {# attachment} other {# attachments}} named by the file but missing: their preview will stay empty.",
     "exported": "{notes, plural, one {# note} other {# notes}} exported to {{path}}.",
     "exportedWithAttachments": "{notes, plural, one {# note} other {# notes}} and {attachments, plural, one {# attachment} other {# attachments}} exported to {{path}}.",
+    "exportedWithoutUnreadable": "{notes, plural, one {# note} other {# notes}} exported to {{path}}. ⚠️ {unreadable, plural, one {# attachment} other {# attachments}} could not be read and {unreadable, plural, one {was} other {were}} left out.",
     "exportedProtected": "{notes, plural, one {# note} other {# notes}} exported to {{path}}, sealed with the passphrase you gave it.",
     "exportedProtectedWithAttachments": "{notes, plural, one {# note} other {# notes}} and {attachments, plural, one {# attachment} other {# attachments}} exported to {{path}}, sealed with the passphrase you gave it.",
     "protectTitle": "Protect this export?",
@@ -919,11 +928,12 @@
     "cancel": "Cancel",
     "working": "Working…",
     "copied": "{notes, plural, one {# note} other {# notes}} copied as Markdown to the clipboard.",
-    "needsSelection": "Select at least one note.",
+    "needsSelection": "Tick some notes first",
     "emptyLibrary": "Nothing to export: this library has no notes.",
     "emptySpace": "Nothing to export: this space has no notes.",
     "preferences": "Preferences…",
-    "importedIntoFolders": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}} into {folders, plural, one {# new folder} other {# new folders}}, {skipped, plural, one {# skipped} other {# skipped}}."
+    "importedIntoFolders": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}} into {folders, plural, one {# new folder} other {# new folders}}, {skipped, plural, one {# skipped} other {# skipped}}.",
+    "needsSpace": "Choose a space first"
   },
   "shortcuts": {
     "unavailable": "{count, plural, one {Global shortcut unavailable} other {Global shortcuts unavailable}}: {{list}}. Another application already holds {count, plural, one {it} other {them}}.",
@@ -1030,7 +1040,8 @@
       "general": "General",
       "variables": "Variables",
       "shortcuts": "Shortcuts",
-      "security": "Security"
+      "security": "Security",
+      "backups": "Backups"
     },
     "copied": "Copied to the clipboard.",
     "appearance": {
@@ -1117,7 +1128,7 @@
       "passphrase": "Passphrase",
       "change": "Change…",
       "changing": "Changing…",
-      "note": "It opens the library at every launch. Changing it re-encrypts nothing: your notes stay sealed with the same key, which is why it takes a second rather than a rewrite.",
+      "note": "It opens the library at every launch; changing it re-encrypts nothing, which is why it takes a second.",
       "dialogTitle": "Change the passphrase",
       "dialogLead": "The new one applies at the next launch. This session carries on as it is.",
       "current": "Current passphrase",
@@ -1125,13 +1136,13 @@
       "cancel": "Cancel",
       "changed": "Passphrase changed. The old one no longer opens the library, nor the copies kept beside it.",
       "automaticBackups": "Copy the library at launch",
-      "backupsNote": "At most one copy a day, the last three kept beside the library — enough for an emptied trash or an update gone wrong. Not a defence against a dead disk: export somewhere else for that.",
+      "backupsNote": "At most one copy a day, the last three kept beside the library; against a dead disk, export somewhere else.",
       "changedOneLeft": "Passphrase changed, but one copy could not be rewrapped: it still opens with the old phrase.",
       "changedSomeLeft": "Passphrase changed, but {{count}} copies could not be rewrapped: they still open with the old phrase.",
-      "copiesNote": "The copies kept beside the library are rewrapped with it. A key file you copied somewhere else will still open with the old phrase.",
+      "copiesNote": "The copies kept beside the library are rewrapped with it; a key file copied elsewhere keeps the old phrase.",
       "backups": "Backups",
       "access": "Access",
-      "backupsLimit": "A copy carries the notes, the key that opens them and the attached files. The files are linked rather than duplicated, shared with the library, so a copy costs little more than its notes."
+      "backupsLimit": "A copy carries the notes, their key and the attached files, linked rather than duplicated."
     },
     "notifications": {
       "title": "Notifications",
@@ -2005,6 +2016,8 @@
         "paragraphs": "Paragraphs"
       },
       "count": "Count",
+      "fewer": "One fewer",
+      "more": "One more",
       "opening": "Start with “Lorem ipsum”",
       "again": "Regenerate",
       "noteTitle": "Lorem ipsum",
@@ -3399,6 +3412,7 @@
       "save": "Save",
       "saveHint": "Save (Ctrl+S)",
       "parts": "Parts of the request",
+      "moreParts": "Other parts of the request",
       "sections": {
         "params": "Params",
         "headers": "Headers",
@@ -3903,6 +3917,7 @@
       "failed": "The run could not go to its end.",
       "failures": "{count, plural, one {# failure} other {# failures}}",
       "cancelled": "Cancelled · {{done}} of {count, plural, one {# request} other {# requests}}",
+      "capped": "Stopped after {count, plural, one {# request} other {# requests}} in one iteration: a script sends the run round",
       "allPassed": "All pass",
       "requests": "{count, plural, one {# request} other {# requests}}",
       "iterationsCount": "{count, plural, one {# iteration} other {# iterations}}",
@@ -4253,10 +4268,14 @@
     "embed": "Insert a drawing",
     "embedNone": "No drawing to insert",
     "missing": "Drawing not found",
-    "noPicture": "No preview yet"
+    "noPicture": "No preview yet",
+    "preview": "Drawing preview"
   },
   "crash": {
     "title": "{{app}} stopped",
     "body": "An internal error closed {{app}}. Everything saved is intact; the details are in the log:\n{{folder}}"
+  },
+  "dialog": {
+    "close": "Close"
   }
 }

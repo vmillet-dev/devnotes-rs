@@ -54,8 +54,7 @@ impl Default for Variable {
 }
 
 /// What a set's table marks on a row: it is kept as typed, and left out when resolving.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VariableFault {
     /// Not a name a `{{…}}` can hold.
     Name,
@@ -75,8 +74,7 @@ pub struct EnvironmentDocument {
     pub variables: Vec<Variable>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Environment {
     pub id: String,
     pub name: String,
@@ -88,8 +86,7 @@ pub struct Environment {
     pub position: u32,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct HttpEnvironments {
     pub globals: Vec<Variable>,
     pub environments: Vec<Environment>,
@@ -116,16 +113,11 @@ pub fn variable_counts(variables: &[Variable]) -> VariableCounts {
 /// asks before it opens, whatever it then says.
 #[must_use]
 pub fn asks_before_sending(kind: RequestKind, method: HttpMethod) -> bool {
-    kind == RequestKind::Websocket
-        || !matches!(
-            method,
-            HttpMethod::Get | HttpMethod::Head | HttpMethod::Options
-        )
+    kind == RequestKind::Websocket || !method.changes_nothing()
 }
 
 /// A field left out is untouched.
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default)]
 pub struct EnvironmentPatch {
     pub name: Option<String>,
     pub colour: Option<FolderColour>,
