@@ -356,3 +356,81 @@ fn in_the_narrowest_window_the_address_keeps_its_room_and_every_tab_is_in_reach(
         "nothing left out when all fit"
     );
 }
+
+/// The request's URL naming a global, a secret global and a name nothing sets; `name`'s chip
+/// pointed at, its card open.
+fn pointed_at(name: &str) -> Harness<'static, Bench> {
+    use engine::http::environments::{Variable, VariableKind};
+    let mut harness = crate::http::tests::editing();
+    let global = |name: &str, value: &str, kind| Variable {
+        enabled: true,
+        name: name.to_owned(),
+        value: value.to_owned(),
+        kind,
+        filled_by: None,
+    };
+    let globals = [
+        global("base", "https://api.example.test", VariableKind::Text),
+        global("token", "s3cr3t", VariableKind::Secret),
+    ];
+    engine::db::run_here(harness.state().backend.engine(), |engine| {
+        engine::http::save_http_globals(engine, &globals)
+    })
+    .unwrap();
+    edit(
+        &mut harness,
+        DraftEdit::Url("{{base}}/s/{{token}}?u={{user}}".to_owned()),
+    );
+    until(&mut harness, "the three chips", |harness| {
+        harness
+            .query_all_by(|node| node.author_id() == Some("http-used-variable"))
+            .count()
+            == 3
+    });
+    let written = format!("{{{{{name}}}}}");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-used-variable")
+                && node.label().or_else(|| node.value()).as_deref() == Some(written.as_str())
+        })
+        .hover();
+    harness.run();
+    harness
+}
+
+/// What the open card says: where from, then the value.
+fn card(harness: &Harness<'_, Bench>) -> Vec<String> {
+    ["http-used-variable-from", "http-used-variable-value"]
+        .into_iter()
+        .filter_map(|id| harness.query_by(|node| node.author_id() == Some(id)))
+        .map(|node| {
+            let node = node.accesskit_node();
+            node.label().or_else(|| node.value()).unwrap_or_default()
+        })
+        .collect()
+}
+
+#[test]
+fn a_variable_pointed_at_says_where_it_comes_from_and_its_value() {
+    let harness = pointed_at("base");
+    assert_eq!(card(&harness), ["globals", "https://api.example.test"]);
+}
+
+#[test]
+fn a_secret_variable_shows_its_mask_and_the_card_stays_for_its_button() {
+    let mut harness = pointed_at("token");
+    assert_eq!(card(&harness), ["globals · secret", "••••••••"]);
+
+    harness
+        .get_by(|node| node.author_id() == Some("http-used-variable-reveal"))
+        .click();
+    harness.run();
+
+    assert_eq!(card(&harness), ["globals · secret", "s3cr3t"]);
+}
+
+#[test]
+fn a_name_set_nowhere_says_so() {
+    let harness = pointed_at("user");
+    assert_eq!(card(&harness), ["not found"]);
+}

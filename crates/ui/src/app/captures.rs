@@ -1430,3 +1430,62 @@ fn a_long_note_with_code_scrolled_in_the_panel() {
     settle(&mut harness);
     capture(&mut harness, "note-code-scrolled");
 }
+
+/// The request's variables under its URL, one pointed at: a value, a secret, one set nowhere
+/// (#1457).
+#[test]
+fn a_variable_pointed_at() {
+    use engine::http::environments::{Variable, VariableKind};
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    let global = |name: &str, value: &str, kind| Variable {
+        enabled: true,
+        name: name.to_owned(),
+        value: value.to_owned(),
+        kind,
+        filled_by: None,
+    };
+    let globals = [
+        global("base", "https://api.example.test", VariableKind::Text),
+        global("token", "s3cr3t-t0k3n", VariableKind::Secret),
+    ];
+    engine::db::run_here(harness.state().backend.engine(), |engine| {
+        engine::http::save_http_globals(engine, &globals)
+    })
+    .unwrap();
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        use crate::state::http::tabs::DraftEdit;
+        draft.apply(DraftEdit::Url(
+            "{{base}}/sessions/{{token}}?user={{user}}".to_owned(),
+        ));
+    });
+    settle(&mut harness);
+    for (at, name) in ["base", "token", "user"].into_iter().enumerate() {
+        let chip = harness
+            .get_all_by(|node| node.author_id() == Some("http-used-variable"))
+            .nth(at)
+            .unwrap()
+            .rect();
+        harness.event(egui::Event::PointerMoved(chip.center()));
+        for _ in 0..60 {
+            harness.step();
+        }
+        let image = harness
+            .render()
+            .expect("a software adapter draws the window");
+        if let Some(directory) = std::env::var_os("DEVNOTES_CAPTURES") {
+            std::fs::create_dir_all(&directory).unwrap();
+            let file = format!("variable-{name}.png");
+            image.save(Path::new(&directory).join(file)).unwrap();
+        }
+    }
+}
