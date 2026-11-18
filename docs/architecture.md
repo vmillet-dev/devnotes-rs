@@ -2454,8 +2454,8 @@ is left out; a value naming another is filled again, eight times at most.
 - **The editor asks Rust what each name resolves to** (`http_variables`, the same layers and
   texts as a send): a chip a name under the URL, in the colour of its level — the request
   green, a folder teal, the collection blue, the environment amber, the globals pink, red when
-  nothing sets it — and the URL's copy in the same hues. Pointed at or focused, a chip says
-  from where, the value (a secret's masked until « Afficher », masked again once left) and the
+  nothing sets it — and the URL's copy in the same hues. Pointed at or focused, a chip opens its
+  card (`http::request::chips`, kept open while the pointer is on it), which says from where, the value (a secret's masked until « Afficher », masked again once left) and the
   levels it hides; a name nothing sets offers « Définir dans … », which opens the environment
   — the globals with none — on a row of that name. The answer is asked again when the request,
   its place, the environment or a set changes, the last one kept while the next is read.

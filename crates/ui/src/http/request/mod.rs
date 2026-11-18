@@ -3,6 +3,7 @@
 
 pub(crate) mod auth;
 mod body;
+mod chips;
 mod composer;
 mod extractions;
 mod graphql;
@@ -26,7 +27,6 @@ use egui::{
 use engine::http::model::{HttpMethod, RequestAuth, RequestKind};
 use engine::http::scripts::model::ScriptKind;
 use engine::http::send::{ImpliedHeader, ImpliedSource};
-use engine::http::variables::UsedVariable;
 use i18n::keys;
 
 use super::{Action, scripts, variables_table};
@@ -202,7 +202,7 @@ pub(crate) fn show(
                     line(ui, state, tab, actions);
                     let used = state.http.used();
                     if !used.is_empty() {
-                        chips(ui, state, used, actions);
+                        chips::show(ui, state, used, actions);
                     }
                     if state.http.environments().asking() == Some(tab.key.as_str()) {
                         protected(ui, state, tab, actions);
@@ -448,82 +448,6 @@ fn kind_badge(ui: &mut Ui, kind: RequestKind, language: i18n::Language) {
         .galley(rect.center() - galley.size() / 2.0, galley, p.text_1);
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     widgets::address(ui, &response, "http-kind-badge");
-}
-
-/// Each `{{name}}` the request holds, in the colour of where it resolves from; the tooltip says
-/// from where, or that nothing sets it.
-fn chips(ui: &mut Ui, state: &AppState, used: &[UsedVariable], actions: &mut Actions) {
-    let p = palette(ui.ctx());
-    let language = state.language;
-    ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(gap::SNUG);
-        for known in used {
-            let scope = known.resolved.as_ref().map(|found| found.scope);
-            let hue = url::hue(p, scope);
-            let written = format!("{{{{{}}}}}", known.name);
-            let galley =
-                widgets::text(ui, &written, font::LABEL, 400.0, FontFamily::Monospace, hue);
-            let size = galley.size() + Vec2::new(16.0, 8.0);
-            let response = interact(
-                ui,
-                size,
-                Sense::click(),
-                "http-used-variable",
-                || WidgetInfo::labeled(Role::Label, true, &written),
-                CornerRadius::same(radius::CONTROL),
-            );
-            let rect = response.rect;
-            ui.painter().rect_filled(
-                rect,
-                CornerRadius::same(radius::CONTROL),
-                hue.gamma_multiply(0.16),
-            );
-            ui.painter()
-                .galley(rect.center() - galley.size() / 2.0, galley, hue);
-            let tip = match &known.resolved {
-                Some(found) => {
-                    let key = i18n::Key::find(&format!(
-                        "http.variables.used.from.{}",
-                        found.scope.as_str()
-                    ));
-                    let from = key.map_or_else(String::new, |key| {
-                        i18n::translate(
-                            language,
-                            key,
-                            &[("name", found.from.clone().unwrap_or_default().into())],
-                        )
-                    });
-                    format!("{} · {from}", known.name)
-                }
-                None => format!(
-                    "{} · {} · {}",
-                    known.name,
-                    i18n::translate(language, keys::http::variables::used::NONE, &[]),
-                    define_words(state),
-                ),
-            };
-            let response = widgets::tooltip(response, &tip);
-            if response.clicked() && known.resolved.is_none() {
-                actions.push(Asked::Http(Action::Define(known.name.clone())));
-            }
-        }
-    });
-}
-
-/// « Set in Staging », or in the globals with no environment.
-fn define_words(state: &AppState) -> String {
-    match state.http.environments().active() {
-        Some(active) => i18n::translate(
-            state.language,
-            keys::http::variables::used::DEFINE,
-            &[("name", active.name.as_str().into())],
-        ),
-        None => i18n::translate(
-            state.language,
-            keys::http::variables::used::DEFINE_GLOBALS,
-            &[],
-        ),
-    }
 }
 
 /// Under a protected environment, what could change something waits for this yes.
