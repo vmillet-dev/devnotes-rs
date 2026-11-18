@@ -138,6 +138,10 @@ fn on_the_board(app: &mut App) {
         app.eventually("the bar is gone", |tree| !tree.has("selection-count"));
     });
 
+    step("from one open note to the next, the panel stays", || {
+        panel_kept(app);
+    });
+
     step(
         "the arrows walk the cards as the board lays them out",
         || {
@@ -154,6 +158,32 @@ fn on_the_board(app: &mut App) {
             app.press(Key::Escape, Modifiers::NONE);
         },
     );
+}
+
+fn open_title(tree: &Tree) -> Option<&str> {
+    tree.find("editor-title").and_then(Node::value)
+}
+
+/// One note open, then the next one by J: the zones never move while the second is read. J
+/// rather than a click: the panel may cover the next card.
+fn panel_kept(app: &mut App) {
+    app.click_where("note-card-open", named(FILED));
+    // Out of the title by a click beside it: Escape, a frame early, closes the note instead.
+    app.eventually("the first note is open, its title focused", |tree| {
+        open_title(tree) == Some(FILED) && tree.focused().starts_with("editor-title")
+    });
+    app.click("editor-stats");
+    app.eventually("out of the title, the note still open", |tree| {
+        open_title(tree) == Some(FILED) && !tree.focused().starts_with("editor-title")
+    });
+    let beside = frames(&app.tree());
+    app.press(Key::J, Modifiers::NONE);
+    app.eventually("the next is open, the zones where they were", |tree| {
+        assert_eq!(frames(tree), beside, "the board moved");
+        open_title(tree).is_some_and(|title| title != FILED)
+    });
+    app.click("editor-close");
+    app.eventually("the editor closed", |tree| !tree.has("editor-title"));
 }
 
 /// Whether the card titled `title` is drawn lit: a dimmed one keeps its seat, disabled.
