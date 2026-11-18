@@ -148,6 +148,7 @@ fn toggle(
     let p = palette(ui.ctx());
     let size = Vec2::new(ui.available_width(), HEAD_HEIGHT);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    crate::widgets::pointer(ui, &response);
     if response.hovered() {
         ui.painter().rect_filled(rect, 7.0, p.bg_2);
     }

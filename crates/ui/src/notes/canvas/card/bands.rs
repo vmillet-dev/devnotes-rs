@@ -175,6 +175,7 @@ fn tick(
     response.widget_info(|| WidgetInfo::selected(Role::CheckBox, true, checked, &label));
     address(ui, &response, "note-card-check");
     crate::theme::focus::ring(ui, &response, CornerRadius::same(radius::TAG));
+    crate::widgets::pointer(ui, &response);
     let square = Rect::from_center_size(target.center(), egui::Vec2::splat(14.0));
     let corner = CornerRadius::same(radius::TAG);
     if checked {

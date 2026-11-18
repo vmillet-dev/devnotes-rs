@@ -129,7 +129,11 @@ fn text_surface(ui: &Ui, visible: Rect, id: Id) -> Response {
         clippy::disallowed_methods,
         reason = "named and addressed by the view, as the text"
     )]
-    ui.interact(visible, id.with("text"), Sense::click_and_drag())
+    let surface = ui.interact(visible, id.with("text"), Sense::click_and_drag());
+    if surface.hovered() || surface.dragged() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
+    }
+    surface
 }
 
 /// A line on screen and its first row.

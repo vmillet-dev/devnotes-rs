@@ -104,6 +104,7 @@ pub(super) fn show(
     open.widget_info(|| WidgetInfo::labeled(Role::Button, true, &title));
     address(ui, &open, "note-card-open");
     crate::theme::focus::ring(ui, &open, CornerRadius::same(radius::CARD));
+    crate::widgets::pointer(ui, &open);
     if canvas_view.request.as_deref() == Some(note.id.as_str()) {
         open.request_focus();
         canvas_view.request = None;

@@ -571,3 +571,5 @@ mod bench_name_tests;
 
 #[cfg(test)]
 mod parity_tests;
+#[cfg(test)]
+mod pointer_tests;
