@@ -161,9 +161,8 @@ pub(super) fn show(
         inner.max,
     );
     bands::frame(ui, (top, bottom), hovered, armed);
-    // Not under the pointer alone: the box would come and go as the pointer crosses the card.
-    let ticking = checked || context.selecting;
-    if bands::top(ui, top, (note, &title), context, (checked, ticking)) {
+    let lit = hovered || context.selecting;
+    if bands::top(ui, top, (note, &title), context, (checked, lit)) {
         actions.push(crate::action::Action::Notes(crate::notes::Action::Check(
             note.id.clone(),
         )));
@@ -179,7 +178,7 @@ pub(super) fn show(
     } else {
         bands::bottom(ui, bottom, note, context);
     }
-    actions::show(ui, rect, note, (context, ticking), actions);
+    actions::show(ui, rect, note, context, actions);
 }
 
 /// Opened by a click; ticked with Ctrl, or as far as the anchor with Shift.

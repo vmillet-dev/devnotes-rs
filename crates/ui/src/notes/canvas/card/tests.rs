@@ -291,28 +291,36 @@ fn a_priority_is_its_bars_in_the_top_band() {
     assert!(title.right() <= bars.left());
 }
 
-/// While a card is ticked its box ends the title bar; the pin moves over for it.
+/// A card's box starts its title bar and stays there, ticked or not; once ticked it is filled
+/// in the accent, as every box of the application.
 #[test]
-fn a_ticked_cards_box_ends_its_title_bar() {
+fn a_cards_box_starts_its_title_bar_and_stays_there_ticked_in_amber() {
     let (backend, profile) = testing::unlocked();
     let id = write(&backend, |draft| {
         draft.title = "pick me".into();
         draft.pinned = true;
     });
     let mut harness = canvas(backend, profile);
+    let card = node(&harness, "note-card").rect();
+    let tick = node(&harness, "note-card-check").rect();
     let icon = node(&harness, "kind-icon").rect();
     let pin = node(&harness, "note-card-pin").rect();
+    assert!(tick.left() - card.left() < 4.0, "{tick:?} in {card:?}");
+    assert!(tick.right() <= icon.left());
+    assert!((tick.center().y - icon.center().y).abs() < 1.0);
 
     harness.state_mut().state.selection.toggle(&id);
     harness.run();
 
-    let card = node(&harness, "note-card").rect();
-    let tick = node(&harness, "note-card-check").rect();
-    assert!(card.right() - tick.right() < 4.0, "{tick:?} in {card:?}");
-    assert!((tick.center().y - icon.center().y).abs() < 1.0);
-    let moved = node(&harness, "note-card-pin").rect();
-    assert!(moved.right() <= tick.left() && moved.left() < pin.left());
+    assert_eq!(node(&harness, "note-card-check").rect(), tick);
     assert_eq!(node(&harness, "kind-icon").rect(), icon);
+    assert_eq!(node(&harness, "note-card-pin").rect(), pin);
+    let amber = crate::theme::palette(&harness.ctx).amber_fill;
+    let filled = harness.output().shapes.iter().any(|clipped| {
+        matches!(&clipped.shape, egui::Shape::Rect(shape)
+            if shape.fill == amber && tick.contains_rect(shape.rect))
+    });
+    assert!(filled, "the ticked box is filled in the accent");
 }
 
 /// A first Delete turns the bottom band into its two keys.

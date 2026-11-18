@@ -80,6 +80,11 @@ fn write(app: &mut App, title: &str) {
 }
 
 /// The selection bar's « File into », on the entry named `name`.
+/// The box of the card the steps file and take back.
+fn filed(node: &Node) -> bool {
+    node.label().is_some_and(|label| label.contains(FILED))
+}
+
 fn file_into(app: &mut App, name: &str) {
     app.click("selection-file");
     app.eventually("the folders are offered", |tree| {
@@ -180,8 +185,7 @@ fn cards(app: &mut App) {
     step(
         "the keyboard files with no pointer, from the selection bar",
         || {
-            app.hover("board-zone-card");
-            app.click("note-card-check");
+            app.click_where("note-card-check", filed);
             app.wait_for("selection-count");
             file_into(app, "Migrations");
             app.eventually("the note is in the other zone", |tree| {
@@ -190,8 +194,7 @@ fn cards(app: &mut App) {
             // While the bar offers the filing back, Escape would take it back.
             app.click("undo-dismiss");
             app.press(Key::Escape, Modifiers::NONE);
-            app.hover("board-zone-card");
-            app.click("note-card-check");
+            app.click_where("note-card-check", filed);
             file_into(app, "Perf");
             app.eventually("and back", |tree| titles_in(tree, "Perf") == [FILED]);
             // While the bar offers the filing back, Escape would take it back.
