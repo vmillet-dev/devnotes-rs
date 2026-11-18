@@ -556,7 +556,12 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
         );
     }
     let mut clipped = ui.new_child(egui::UiBuilder::new().max_rect(rect));
-    clipped.set_clip_rect(rect.shrink2(vec2(0.0, padding.y - 2.0)));
+    // ⚠️ Within the scroll area's clip, never instead of it: a block scrolled under the top of
+    // the body was painted over the editor's header.
+    clipped.set_clip_rect(
+        rect.shrink2(vec2(0.0, padding.y - 2.0))
+            .intersect(ui.clip_rect()),
+    );
     paint_leaf(&clipped, path, rect.min + padding, galley, p.text_0, frame);
 }
 
