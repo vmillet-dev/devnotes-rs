@@ -1,5 +1,6 @@
-//! The header under the toolbar: the context, the tags and the deadline on one band, what the note
-//! is and where it lives on the next — or, folded, one line saying what they hold.
+//! The header under the toolbar: the context, the tags and the deadline on one band; the details —
+//! what the note is, where it lives, its files — on the next, folded in a short window — or the
+//! whole header folded, one line saying what it holds.
 
 use crate::theme::tokens::{font, gap, radius};
 use chrono::{Local, NaiveTime, TimeZone, Utc};
@@ -15,12 +16,14 @@ use crate::state::AppState;
 use crate::state::editor::Edit;
 use crate::theme::icons::Icon;
 use crate::theme::palette;
-use crate::widgets::{self, ChoiceMenu, IconButton, Naming, date};
+use crate::widgets::{self, Button, ChoiceMenu, IconButton, Kind, Naming, date};
 
 /// The lifecycle's badge and the date, side by side.
 const DEADLINE_WIDTH: f32 = 240.0;
 /// Under it the deadline never shares the line of the tags.
 const OWN_ROW_UNDER: f32 = 640.0;
+/// A window shorter than this opens a note with its details folded: the body keeps its lines.
+const DETAILS_OPEN_FROM: f32 = 600.0;
 
 pub(super) fn bands(
     ui: &mut Ui,
@@ -44,12 +47,112 @@ pub(super) fn bands(
             });
         });
     });
-    band(ui, gap::margin(gap::PANEL, gap::GROUPS), true, |ui| {
-        placement(ui, state, (session, note), editing, actions);
-    });
+    let tall = ui.ctx().content_rect().height() >= DETAILS_OPEN_FROM;
+    // A file dragged over opens them: the drop is said where it lands.
+    let dragging = ui.ctx().input(|input| !input.raw.hovered_files.is_empty());
+    let open = dragging || *editing.details.get_or_insert(tall);
     band(ui, gap::margin(gap::PANEL, gap::CONTROLS), true, |ui| {
-        super::attachments::show(ui, state, (&mut editing.removing, true), actions);
+        let asked = details_line(ui, state, (session, note), (editing, open), actions);
+        match asked {
+            Some(DetailsAsked::Toggle) => editing.details = Some(!open),
+            Some(DetailsAsked::Files) => editing.details = Some(true),
+            None => {}
+        }
+        if open && super::attachments::has_strip(ui, state) {
+            ui.add_space(gap::SNUG);
+            super::attachments::show(ui, state, (&mut editing.removing, false), actions);
+        }
     });
+}
+
+enum DetailsAsked {
+    Toggle,
+    Files,
+}
+
+/// The details on one line: their twisty, then the kind and the place with « + File » at the end;
+/// folded, what they hold and the files' paperclip with their count, which opens them.
+fn details_line(
+    ui: &mut Ui,
+    state: &AppState,
+    (session, note): (u64, &DisplayNote),
+    (editing, open): (&EditorView, bool),
+    actions: &mut Actions,
+) -> Option<DetailsAsked> {
+    let p = palette(ui.ctx());
+    let language = state.language;
+    let tr = |key| i18n::translate(language, key, &[]);
+    let mut asked = None;
+    ui.horizontal(|ui| {
+        let icon = if open {
+            Icon::ChevronDown
+        } else {
+            Icon::ChevronRight
+        };
+        let twisty = Button::new(&tr(keys::editor::details::SHOW), "editor-details-band")
+            .kind(Kind::Quiet)
+            .icon(icon)
+            .show(ui);
+        ui.ctx()
+            .accesskit_node_builder(twisty.id, |node| node.set_expanded(open));
+        if twisty.clicked() {
+            asked = Some(DetailsAsked::Toggle);
+        }
+        ui.add_space(gap::BLOCKS);
+        if open {
+            placement(ui, state, (session, note), editing, actions);
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                super::attachments::add(ui, state, actions);
+            });
+            return;
+        }
+        let held = format!("{} · {}", tr(kind_name(note.kind)), place(state, note));
+        let room = ui.available_width() - widgets::MIN_TARGET * 3.0;
+        let held = widgets::one_line(ui, &held, (font::META, 400.0), p.text_2, room);
+        let response = ui.label(held);
+        widgets::address(ui, &response, "editor-details-summary");
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            if paperclip(ui, language, note.attachment_count).clicked() {
+                asked = Some(DetailsAsked::Files);
+            }
+        });
+    });
+    asked
+}
+
+/// The files: a paperclip and how many, named in full for the screen reader.
+fn paperclip(ui: &mut Ui, language: i18n::Language, files: u32) -> egui::Response {
+    let name = if files == 0 {
+        i18n::translate(language, keys::attachments::TITLE, &[])
+    } else {
+        let files = usize::try_from(files).unwrap_or(usize::MAX);
+        count(language, keys::editor::header::ATTACHMENTS, files)
+    };
+    let shown = files.to_string();
+    let button = if files == 0 {
+        Button::new(&name, "editor-attachments").icon_only(Icon::Paperclip)
+    } else {
+        Button::new(&shown, "editor-attachments").icon(Icon::Paperclip)
+    };
+    let response = button.kind(Kind::Quiet).show(ui);
+    ui.ctx()
+        .accesskit_node_builder(response.id, |node| node.set_label(name.clone()));
+    widgets::tooltip(response, &name)
+}
+
+/// Where the note lives: its space, then its folder or « No folder ».
+fn place(state: &AppState, note: &DisplayNote) -> String {
+    let space = state
+        .spaces
+        .spaces()
+        .iter()
+        .find(|space| space.id == note.space_id)
+        .map_or_else(String::new, |space| space.name.clone());
+    let folder = note.folder.as_ref().map_or_else(
+        || i18n::translate(state.language, keys::notes::NO_FOLDER, &[]),
+        |folder| folder.name.clone(),
+    );
+    format!("{space} › {folder}")
 }
 
 /// The free-form breadcrumb a pinned card shows instead of its age, and a dot before the tags.
@@ -407,7 +510,7 @@ fn detail_sections(
         deadline(ui, state, at, actions);
     });
     section(ui, state, details::ATTACHMENTS, |ui| {
-        super::attachments::show(ui, state, (&mut editing.removing, false), actions);
+        super::attachments::show(ui, state, (&mut editing.removing, true), actions);
     });
 }
 
@@ -490,17 +593,7 @@ pub(super) fn summary(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions
     if !note.source.trim().is_empty() {
         parts.push(note.source.clone());
     }
-    let space = state
-        .spaces
-        .spaces()
-        .iter()
-        .find(|space| space.id == note.space_id)
-        .map_or_else(String::new, |space| space.name.clone());
-    let folder = note
-        .folder
-        .as_ref()
-        .map_or_else(|| tr(keys::notes::NO_FOLDER), |folder| folder.name.clone());
-    parts.push(format!("{space} › {folder}"));
+    parts.push(place(state, note));
     if !note.tags.is_empty() {
         parts.push(count(language, keys::editor::header::TAGS, note.tags.len()));
     }

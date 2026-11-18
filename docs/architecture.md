@@ -3224,7 +3224,13 @@ snippet with `{{fields}}` (`fields.rs`) keeps its own fold, so the code can have
 the values stay in sight. The editor never folds them by itself: folding at the first keystroke
 would move the line being read. Folding commits what the bands hold in hand.
 
-Where the note lives — its space, then its folder — is a band of its own; the two stay together,
+**The details fold on their own.** What the note is, where it lives and its files share one band
+(`header::details_line`): open, the twisty, the kind, the space and the folder on one line with
+« + File » at its end, the files listed under it only when there are any; folded, one line saying
+what they hold and a paperclip with the files' count, which opens them. A window under 600 pixels
+tall opens a note with them folded (`DETAILS_OPEN_FROM`), so the body keeps its lines; the twisty
+decides after that, for the note open. The drop sentence (« Drop a file… ») shows only while a
+file is dragged over, which also opens the band. The space and the folder stay together,
 because moving the space clears the folder (`NotePatch::apply`). The attachments
 (`attachments.rs`, `state::attachments`) have their own write cycle and follow the open note:
 they do **not** travel inside `Note`, which would reload the whole note on every add.

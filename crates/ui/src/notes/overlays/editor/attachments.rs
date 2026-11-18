@@ -25,11 +25,11 @@ fn ask(actions: &mut Actions, asked: Asked) {
     actions.push(super::editor(Editing::Attachment(asked)));
 }
 
-/// `titled`: the band says what it is; the details column names it above instead.
+/// `with_add`: « + File » closes the strip; the editor's band holds it on its line instead.
 pub(super) fn show(
     ui: &mut Ui,
     state: &AppState,
-    (confirming, titled): (&mut Option<String>, bool),
+    (confirming, with_add): (&mut Option<String>, bool),
     actions: &mut Actions,
 ) {
     let language = state.language;
@@ -37,14 +37,11 @@ pub(super) fn show(
     let attachments = &state.attachments;
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = Vec2::splat(gap::SNUG);
-        if titled {
-            let title = i18n::translate(language, keys::attachments::TITLE, &[]);
-            ui.label(RichText::new(title).size(font::META).color(p.text_2));
-        }
         for attachment in attachments.list() {
             item(ui, state, attachment, confirming, actions);
         }
-        if attachments.list().is_empty() {
+        // Said only while a file is dragged over: at rest the paperclip says there is none.
+        if attachments.list().is_empty() && has_strip(ui, state) {
             let hint = i18n::translate(
                 language,
                 keys::attachments::DROP_HINT,
@@ -53,18 +50,32 @@ pub(super) fn show(
             let response = ui.label(RichText::new(hint).size(font::META).color(p.text_2));
             widgets::address(ui, &response, "attachment-empty");
         }
-        let key = if attachments.is_busy() {
-            keys::attachments::ADDING
-        } else {
-            keys::attachments::ADD
-        };
-        let words = i18n::translate(language, key, &[]);
-        let add = Button::new(&words, "attachment-add").enabled(!attachments.is_busy());
-        if add.kind(Kind::Outline).show(ui).clicked() {
-            ask(actions, Asked::Pick);
+        if with_add {
+            add(ui, state, actions);
         }
     });
     preview(ui, state, actions);
+}
+
+/// Whether the strip has anything to show: a file, or the drop a file dragged over will make.
+pub(super) fn has_strip(ui: &Ui, state: &AppState) -> bool {
+    !state.attachments.list().is_empty()
+        || ui.ctx().input(|input| !input.raw.hovered_files.is_empty())
+}
+
+/// « + File », or « Adding… » while one is.
+pub(super) fn add(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+    let attachments = &state.attachments;
+    let key = if attachments.is_busy() {
+        keys::attachments::ADDING
+    } else {
+        keys::attachments::ADD
+    };
+    let words = i18n::translate(state.language, key, &[]);
+    let add = Button::new(&words, "attachment-add").enabled(!attachments.is_busy());
+    if add.kind(Kind::Outline).show(ui).clicked() {
+        ask(actions, Asked::Pick);
+    }
 }
 
 fn item(

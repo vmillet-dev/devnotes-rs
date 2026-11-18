@@ -1,4 +1,4 @@
-//! Attachments: an empty strip that says so, a file chosen and kept under its name, an image shown
+//! Attachments: no file and no sentence, « + File » on the details' line, a file chosen and kept under its name, an image shown
 //! at once and grown in the lightbox, the card counting them, two files of one name, a removal
 //! on the second click, a file over the limit refused, and the plain copies swept. The system's
 //! dialog is the one step no driver reaches: the scenario answers it.
@@ -37,16 +37,21 @@ fn attachments() {
     app.create_library();
     app.wait_for("note-card");
 
-    step("the strip says it is empty", || {
-        app.click("new-note");
-        app.fill("editor-title", TITLE);
-        app.click("editor-body");
-        app.type_text("step one");
-        close(&mut app);
-        open(&mut app);
-        app.wait_for("attachment-empty");
-        app.wait_for("attachment-add");
-    });
+    step(
+        "no file yet: the details offer « + File », and say nothing more",
+        || {
+            app.click("new-note");
+            app.fill("editor-title", TITLE);
+            app.click("editor-body");
+            app.type_text("step one");
+            close(&mut app);
+            open(&mut app);
+            app.wait_for("attachment-add");
+            let tree = app.tree();
+            assert_eq!(files(&tree), 0);
+            assert!(!tree.has("attachment-empty"));
+        },
+    );
 
     step("a file is kept, and an image shown at once", || {
         app.click("attachment-add");

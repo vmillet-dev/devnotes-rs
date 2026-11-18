@@ -5,7 +5,7 @@ use egui::{ColorImage, Event};
 use egui_kittest::kittest::Queryable;
 use engine::attachments::model::Attachment;
 
-use crate::notes::bench::{Bench, click_id, expanded_area, settle};
+use crate::notes::bench::{Bench, area, click_id, expanded_area, settle};
 use crate::testing;
 
 type Harness = egui_kittest::Harness<'static, Bench>;
@@ -98,7 +98,7 @@ fn image_file(folder: &Path) -> PathBuf {
 #[test]
 fn the_strip_says_it_is_empty_until_a_file_is_chosen_and_names_it() {
     let (mut harness, id, folder) = opened();
-    assert!(has(&harness, "attachment-empty"));
+    assert!(!has(&harness, "attachment-open"));
     answering(&mut harness, &text_file(folder.path()));
 
     click_id(&mut harness, "attachment-add");
@@ -186,6 +186,49 @@ fn a_file_that_calls_itself_an_image_and_is_none_shows_nothing() {
     assert!(!has(&harness, "attachment-zoom"));
 }
 
+/// The note open beside the cards, in a window `height` tall.
+fn beside(height: f32) -> Harness {
+    let (backend, profile) = testing::unlocked();
+    let id = testing::note(&backend, "with files").id.clone();
+    let mut harness = area(backend, profile);
+    harness.set_size(egui::vec2(1_100.0, height));
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    harness
+}
+
+#[test]
+fn in_a_short_window_the_details_open_folded_and_the_paperclip_unfolds_them() {
+    let mut harness = beside(500.0);
+    assert!(has(&harness, "editor-details-summary"));
+    assert!(!has(&harness, "attachment-add"));
+
+    click_id(&mut harness, "editor-attachments");
+    settle(&mut harness);
+
+    assert!(!has(&harness, "editor-details-summary"));
+    assert!(has(&harness, "attachment-add"));
+    click_id(&mut harness, "editor-details-band");
+    settle(&mut harness);
+    assert!(has(&harness, "editor-details-summary"));
+}
+
+#[test]
+fn in_a_tall_window_the_details_open_on_one_line_without_a_sentence() {
+    let mut harness = beside(700.0);
+    assert!(has(&harness, "attachment-add"));
+    assert!(!has(&harness, "editor-details-summary"));
+    assert!(!has(&harness, "attachment-empty"));
+
+    // A file dragged over says where it lands; the window repaints while it is held.
+    harness
+        .input_mut()
+        .hovered_files
+        .push(egui::HoveredFile::default());
+    harness.step();
+    assert!(has(&harness, "attachment-empty"));
+}
+
 #[test]
 fn the_first_click_arms_the_cross_and_the_second_removes() {
     let (mut harness, id, folder) = opened();
@@ -198,7 +241,7 @@ fn the_first_click_arms_the_cross_and_the_second_removes() {
     click_id(&mut harness, "attachment-remove");
     settle(&mut harness);
     assert!(files(&harness, &id).is_empty());
-    assert!(has(&harness, "attachment-empty"));
+    assert!(!has(&harness, "attachment-open"));
 }
 
 #[test]
@@ -285,7 +328,7 @@ fn another_note_shows_its_own_files() {
     harness.state_mut().state.editor.open(other);
     settle(&mut harness);
 
-    assert!(has(&harness, "attachment-empty"));
+    assert!(!has(&harness, "attachment-open"));
     assert!(!has(&harness, "attachment-zoom"));
     harness.state_mut().state.editor.open(id);
     settle(&mut harness);

@@ -65,6 +65,9 @@ pub(crate) struct EditorView {
     format: format::FormatView,
     /// The attachment whose cross was clicked once.
     removing: Option<String>,
+    /// Kind, place and files shown: decided by the window's height as the note opens, then by
+    /// the twisty.
+    details: Option<bool>,
     tag: String,
     /// The title takes the focus once, as the editor opens.
     focus: bool,
@@ -91,6 +94,7 @@ impl EditorView {
             fields: fields::FieldsView::of(note),
             format: format::FormatView::default(),
             removing: None,
+            details: None,
             tag: String::new(),
             focus: !open.stepped,
             confirming_delete: false,
