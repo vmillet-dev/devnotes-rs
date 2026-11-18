@@ -1548,7 +1548,8 @@ band is ever empty, both have no fill but under the pointer (`bg_3`) and a `line
 toward the preview. A card shows no tag: a search that found one says so in the preview. An
 armed deletion turns the status line red with its two keys. A list's preview opens on its
 progress, as the reference's: a bar in the accent filled to the share done, « 5/6 » at its right
-and « +4 more » for the tasks the card has no row for; it costs the card one row of tasks.
+and « +4 more » for the tasks the card has no row for. The list takes the gaps beside the bands
+(a task's 24 px row carries its own air), so the strip costs no row of tasks.
 
 ⚠️ **The title bar was chosen over a band of marks** (2026-11-09). The first version put the
 kind, the format and the counts in a band above a title line, as the mockup

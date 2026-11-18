@@ -70,7 +70,7 @@ impl<'a> Context<'a> {
 }
 
 /// Between the bands and the preview.
-const GAP: f32 = gap::SNUG;
+pub(super) const GAP: f32 = gap::SNUG;
 
 pub(super) fn show(
     ui: &mut Ui,

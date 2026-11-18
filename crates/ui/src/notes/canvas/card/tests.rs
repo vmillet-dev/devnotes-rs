@@ -214,6 +214,7 @@ fn a_task_lists_card_shows_a_bar_filled_to_its_share_done() {
     let harness = canvas(backend, profile);
 
     assert_eq!(label(&harness, "note-card-progress"), "5/6");
+    assert_eq!(label(&harness, "note-card-more"), "+3 more");
     let figure = node(&harness, "note-card-progress").rect();
     let p = crate::theme::palette(&harness.ctx);
     let bars: Vec<egui::Rect> = harness
@@ -270,10 +271,14 @@ fn an_item_ticked_on_its_card_is_written_and_shown_done() {
     });
     let mut harness = canvas(backend, profile);
     assert_eq!(label(&harness, "note-card-progress"), "0/3");
-    // Four lines: the progress strip, then two tasks of 24 px, the third said by « +1 ».
+    // Four lines: the progress strip, then the three tasks, as many as before the strip.
     let shown = harness.query_all_by(|node| node.author_id() == Some("note-card-item"));
-    assert_eq!(shown.count(), 2);
-    assert_eq!(label(&harness, "note-card-more"), "+1 more");
+    assert_eq!(shown.count(), 3);
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("note-card-more"))
+            .is_none()
+    );
 
     harness
         .get_all_by(|node| node.author_id() == Some("note-card-item"))

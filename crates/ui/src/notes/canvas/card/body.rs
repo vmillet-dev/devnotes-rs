@@ -25,7 +25,7 @@ use crate::widgets::{address, interact};
 /// A task's row: a box to tick needs it.
 const ITEM_HEIGHT: f32 = 24.0;
 /// The strip over a list's tasks: its bar, « 5/6 » and « +4 more ».
-const PROGRESS_HEIGHT: f32 = 16.0;
+const PROGRESS_HEIGHT: f32 = 12.0;
 const TRACK_HEIGHT: f32 = 5.0;
 /// A task's marks, as the screen reader is told them; drawn as boxes.
 const TICKED: &str = "☑";
@@ -319,6 +319,9 @@ fn checklist(
     if items.is_empty() {
         return;
     }
+    // A task's row carries its own air around its 24 px box: the list takes the gaps by the bands,
+    // and keeps as many tasks as before it had a progress strip.
+    let rect = rect.expand2(vec2(0.0, super::GAP));
     let strip = Rect::from_min_size(rect.min, vec2(rect.width(), PROGRESS_HEIGHT));
     #[expect(
         clippy::cast_possible_truncation,
