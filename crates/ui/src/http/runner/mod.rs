@@ -5,7 +5,7 @@
 mod order;
 mod results;
 
-use crate::theme::tokens::{font, gap};
+use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET, font, gap};
 use egui::{Align, CornerRadius, Layout, Rect, Sense, Stroke, Ui, UiBuilder, Vec2, pos2};
 use i18n::keys;
 
@@ -19,7 +19,6 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, Button, Checkbox, Kind, TextField};
 
-const HEAD: f32 = 56.0;
 const SIDE: f32 = 300.0;
 
 /// What only the page's drawing sees.
@@ -65,8 +64,9 @@ pub(super) fn show(
 ) {
     let p = palette(ui.ctx());
     ui.painter().rect_filled(region, CornerRadius::ZERO, p.bg_0);
-    let head_rect = Rect::from_min_size(region.min, Vec2::new(region.width(), HEAD));
-    let mut top = ui.new_child(UiBuilder::new().max_rect(head_rect.shrink2(Vec2::new(20.0, 0.0))));
+    let head_rect = Rect::from_min_size(region.min, Vec2::new(region.width(), BAR_HEIGHT));
+    let inset = head_rect.shrink2(Vec2::new(BAR_INSET, 0.0));
+    let mut top = ui.new_child(UiBuilder::new().max_rect(inset));
     head(&mut top, state, actions);
     let soft = Stroke::new(1.0, p.line_soft);
     ui.painter()

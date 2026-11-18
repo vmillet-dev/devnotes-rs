@@ -65,8 +65,7 @@ pub(super) fn show(
     view: &mut HomeView,
     actions: &mut Actions,
 ) {
-    let margin = spacing(ui.ctx()).canvas;
-    let (mut row, body) = bar(ui, rest, margin, state, actions);
+    let (mut row, body) = bar(ui, rest, state, actions);
     empty_on_escape(ui, view);
     let field = head(&mut row, state, view, actions);
     view.typing = widgets::takes_keys(ui, &field);

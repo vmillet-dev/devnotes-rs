@@ -1,7 +1,7 @@
 //! One tab an open request: its method and name, a dot while modified, a × to close. The bar ends
 //! with « New request », an HTTP request in one click and the other kinds in two.
 
-use crate::theme::tokens::{font, gap, radius};
+use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET, BAR_TOGGLE, font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, RectAlign, Response, Role,
     Sense, Stroke, Ui, Vec2, WidgetInfo, pos2,
@@ -19,7 +19,7 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
 use crate::widgets::{self, interact};
 
-pub(super) const HEIGHT: f32 = 40.0;
+pub(super) const HEIGHT: f32 = BAR_HEIGHT;
 
 /// The three a request is created as, in the order they are offered: HTTP first.
 pub(super) const KINDS: [(RequestKind, &str); 3] = [
@@ -44,8 +44,8 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     );
     let end_width = end_width(ui, state);
     let toggle_rect = Rect::from_center_size(
-        pos2(bar.left() + 8.0 + 16.0, bar.center().y),
-        Vec2::splat(32.0),
+        pos2(bar.left() + BAR_INSET + BAR_TOGGLE / 2.0, bar.center().y),
+        Vec2::splat(BAR_TOGGLE),
     );
     let mut toggle_ui = ui.new_child(egui::UiBuilder::new().max_rect(toggle_rect));
     let toggle = i18n::translate(language, keys::sidebar::TOGGLE, &[]);

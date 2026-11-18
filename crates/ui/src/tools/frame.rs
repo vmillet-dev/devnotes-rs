@@ -24,7 +24,7 @@ pub(super) fn show(
     (entry, view): (&'static ToolEntry, &mut View),
     actions: &mut Actions,
 ) {
-    let (mut row, body) = bar(ui, rest, PADDING, state, actions);
+    let (mut row, body) = bar(ui, rest, state, actions);
     head(&mut row, state, (entry, view), actions);
     let (_, response) = ui.allocate_exact_size(Vec2::ZERO, Sense::hover());
     let label = entry.id;

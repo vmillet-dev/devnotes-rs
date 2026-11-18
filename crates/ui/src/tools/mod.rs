@@ -230,22 +230,14 @@ fn said_imported(note: &PickedNote) -> i18n::Message {
     }
 }
 
-/// How high the bar over the home and over a tool stands.
-const BAR: f32 = 57.0;
-
 /// The bar over the page: its hairline, the button of the rail, and what follows it.
-fn bar(
-    ui: &mut Ui,
-    rest: Rect,
-    margin: f32,
-    state: &AppState,
-    actions: &mut Actions,
-) -> (Ui, Rect) {
+fn bar(ui: &mut Ui, rest: Rect, state: &AppState, actions: &mut Actions) -> (Ui, Rect) {
+    use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET};
     let p = palette(ui.ctx());
-    let (bar, body) = rest.split_top_bottom_at_y(rest.top() + BAR);
+    let (bar, body) = rest.split_top_bottom_at_y(rest.top() + BAR_HEIGHT);
     ui.painter()
         .hline(bar.x_range(), bar.bottom() - 0.5, (1.0, p.line_soft));
-    let inner = bar.shrink2(Vec2::new(margin, 0.0));
+    let inner = bar.shrink2(Vec2::new(BAR_INSET, 0.0));
     let mut row = ui.new_child(
         UiBuilder::new()
             .max_rect(inner)
