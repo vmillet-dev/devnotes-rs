@@ -1,0 +1,512 @@
+[
+  { "language": "json", "label": "JSON", "name": "JSON", "hue": "blue", "syntax": "JSON" },
+  {
+    "language": "js",
+    "label": "JS",
+    "name": "JavaScript",
+    "hue": "amber",
+    "syntax": "JavaScript",
+    "comment": "//"
+  },
+  {
+    "language": "jsx",
+    "label": "JSX",
+    "name": "JSX",
+    "hue": "amber",
+    "syntax": "JavaScript (Babel)",
+    "comment": "//"
+  },
+  {
+    "language": "ts",
+    "label": "TS",
+    "name": "TypeScript",
+    "hue": "blue",
+    "syntax": "TypeScript",
+    "comment": "//"
+  },
+  {
+    "language": "tsx",
+    "label": "TSX",
+    "name": "TSX",
+    "hue": "blue",
+    "syntax": "TypeScriptReact",
+    "comment": "//"
+  },
+  {
+    "language": "py",
+    "label": "PY",
+    "name": "Python",
+    "hue": "green",
+    "syntax": "Python",
+    "comment": "#",
+    "indent": "    "
+  },
+  {
+    "language": "rs",
+    "label": "RS",
+    "name": "Rust",
+    "hue": "green",
+    "syntax": "Rust",
+    "comment": "//",
+    "indent": "    "
+  },
+  {
+    "language": "go",
+    "label": "GO",
+    "name": "Go",
+    "hue": "green",
+    "syntax": "Go",
+    "comment": "//",
+    "indent": "\t"
+  },
+  {
+    "language": "java",
+    "label": "JAVA",
+    "name": "Java",
+    "hue": "blue",
+    "syntax": "Java",
+    "comment": "//",
+    "indent": "    "
+  },
+  {
+    "language": "cs",
+    "label": "CS",
+    "name": "C#",
+    "hue": "blue",
+    "syntax": "C#",
+    "comment": "//",
+    "indent": "    "
+  },
+  {
+    "language": "php",
+    "label": "PHP",
+    "name": "PHP",
+    "hue": "amber",
+    "syntax": "PHP",
+    "comment": "//",
+    "indent": "    "
+  },
+  {
+    "language": "c",
+    "label": "C",
+    "name": "C",
+    "hue": "green",
+    "syntax": "C",
+    "comment": "//",
+    "indent": "    "
+  },
+  {
+    "language": "cpp",
+    "label": "C++",
+    "name": "C++",
+    "hue": "green",
+    "syntax": "C++",
+    "comment": "//",
+    "indent": "    "
+  },
+  { "language": "sql", "label": "SQL", "name": "SQL", "hue": "purple", "syntax": "SQL", "comment": "--" },
+  {
+    "language": "graphql",
+    "label": "GRAPHQL",
+    "name": "GraphQL",
+    "hue": "purple",
+    "syntax": "GraphQL",
+    "comment": "//"
+  },
+  { "language": "yml", "label": "YML", "name": "YAML", "hue": "red", "syntax": "YAML", "comment": "#" },
+  { "language": "toml", "label": "TOML", "name": "TOML", "hue": "red", "syntax": "TOML", "comment": "#" },
+  { "language": "xml", "label": "XML", "name": "XML", "hue": "blue", "syntax": "XML" },
+  { "language": "html", "label": "HTML", "name": "HTML", "hue": "amber", "syntax": "HTML" },
+  { "language": "vue", "label": "VUE", "name": "Vue", "hue": "amber", "syntax": "Vue Component" },
+  { "language": "angular", "label": "NG", "name": "Angular template", "hue": "amber", "syntax": "HTML" },
+  { "language": "css", "label": "CSS", "name": "CSS", "hue": "purple", "syntax": "CSS" },
+  { "language": "scss", "label": "SCSS", "name": "SCSS", "hue": "purple", "syntax": "SCSS", "comment": "//" },
+  { "language": "less", "label": "LESS", "name": "Less", "hue": "purple", "syntax": "Less", "comment": "//" },
+  { "language": "sass", "label": "SASS", "name": "Sass", "hue": "purple", "syntax": "Sass", "comment": "//" },
+  {
+    "language": "sh",
+    "label": "SH",
+    "name": "Shell",
+    "hue": "green",
+    "syntax": "Bourne Again Shell (bash)",
+    "comment": "#"
+  },
+  {
+    "language": "ps1",
+    "label": "PS1",
+    "name": "PowerShell",
+    "hue": "green",
+    "syntax": "PowerShell",
+    "comment": "#"
+  },
+  { "language": "kt", "label": "KT", "name": "Kotlin", "hue": "green", "syntax": "Kotlin", "comment": "//" },
+  { "language": "rb", "label": "RB", "name": "Ruby", "hue": "green", "syntax": "Ruby", "comment": "#" },
+  {
+    "language": "swift",
+    "label": "SWIFT",
+    "name": "Swift",
+    "hue": "green",
+    "syntax": "Swift",
+    "comment": "//"
+  },
+  { "language": "dart", "label": "DART", "name": "Dart", "hue": "green", "syntax": "Dart", "comment": "//" },
+  { "language": "ex", "label": "EX", "name": "Elixir", "hue": "green", "syntax": "Elixir", "comment": "#" },
+  { "language": "apl", "label": "APL", "name": "APL", "hue": "green" },
+  {
+    "language": "armasm",
+    "label": "ARM",
+    "name": "ARM assembly",
+    "hue": "green",
+    "syntax": "ARM Assembly",
+    "comment": ";"
+  },
+  { "language": "asn1", "label": "ASN.1", "name": "ASN.1", "hue": "blue" },
+  {
+    "language": "asm",
+    "label": "ASM",
+    "name": "Assembly (GAS)",
+    "hue": "green",
+    "syntax": "x86_64 Assembly",
+    "comment": ";"
+  },
+  {
+    "language": "asterisk",
+    "label": "ASTERISK",
+    "name": "Asterisk dialplan",
+    "hue": "red",
+    "syntax": "INI",
+    "comment": ";"
+  },
+  { "language": "bf", "label": "BF", "name": "Brainfuck", "hue": "green" },
+  { "language": "ceylon", "label": "CEYLON", "name": "Ceylon", "hue": "blue", "comment": "//" },
+  {
+    "language": "clj",
+    "label": "CLJ",
+    "name": "Clojure",
+    "hue": "green",
+    "syntax": "Clojure",
+    "comment": ";"
+  },
+  {
+    "language": "gss",
+    "label": "GSS",
+    "name": "Closure Stylesheets",
+    "hue": "purple",
+    "syntax": "CSS",
+    "comment": "//"
+  },
+  { "language": "cmake", "label": "CMAKE", "name": "CMake", "hue": "red", "syntax": "CMake", "comment": "#" },
+  { "language": "cobol", "label": "COBOL", "name": "COBOL", "hue": "green" },
+  {
+    "language": "coffee",
+    "label": "COFFEE",
+    "name": "CoffeeScript",
+    "hue": "amber",
+    "syntax": "CoffeeScript",
+    "comment": "#"
+  },
+  {
+    "language": "lisp",
+    "label": "LISP",
+    "name": "Common Lisp",
+    "hue": "green",
+    "syntax": "Lisp",
+    "comment": ";"
+  },
+  { "language": "cr", "label": "CR", "name": "Crystal", "hue": "green", "syntax": "Crystal", "comment": "#" },
+  { "language": "cypher", "label": "CYPHER", "name": "Cypher", "hue": "purple", "comment": "--" },
+  {
+    "language": "cython",
+    "label": "CYTHON",
+    "name": "Cython",
+    "hue": "green",
+    "syntax": "Python",
+    "comment": "#",
+    "indent": "    "
+  },
+  {
+    "language": "d",
+    "label": "D",
+    "name": "D",
+    "hue": "green",
+    "syntax": "D",
+    "comment": "//",
+    "indent": "    "
+  },
+  { "language": "diff", "label": "DIFF", "name": "Diff", "hue": "neutral", "syntax": "Diff" },
+  {
+    "language": "dockerfile",
+    "label": "DOCKER",
+    "name": "Dockerfile",
+    "hue": "red",
+    "syntax": "Dockerfile",
+    "comment": "#"
+  },
+  { "language": "dtd", "label": "DTD", "name": "DTD", "hue": "blue", "syntax": "XML" },
+  { "language": "dylan", "label": "DYLAN", "name": "Dylan", "hue": "green" },
+  { "language": "ebnf", "label": "EBNF", "name": "EBNF", "hue": "purple" },
+  { "language": "ecl", "label": "ECL", "name": "ECL", "hue": "purple" },
+  { "language": "eiffel", "label": "EIFFEL", "name": "Eiffel", "hue": "blue", "comment": "--" },
+  {
+    "language": "elm",
+    "label": "ELM",
+    "name": "Elm",
+    "hue": "amber",
+    "syntax": "Elm",
+    "comment": "--",
+    "indent": "    "
+  },
+  {
+    "language": "erl",
+    "label": "ERL",
+    "name": "Erlang",
+    "hue": "green",
+    "syntax": "Erlang",
+    "comment": "%",
+    "indent": "    "
+  },
+  { "language": "fs", "label": "F#", "name": "F#", "hue": "blue", "syntax": "F#", "comment": "//" },
+  { "language": "factor", "label": "FACTOR", "name": "Factor", "hue": "green" },
+  { "language": "fcl", "label": "FCL", "name": "FCL", "hue": "green" },
+  { "language": "forth", "label": "FORTH", "name": "Forth", "hue": "green" },
+  {
+    "language": "fortran",
+    "label": "FORTRAN",
+    "name": "Fortran",
+    "hue": "green",
+    "syntax": "Fortran (Modern)",
+    "comment": "!"
+  },
+  { "language": "gherkin", "label": "GHERKIN", "name": "Gherkin", "hue": "neutral", "comment": "#" },
+  { "language": "glsl", "label": "GLSL", "name": "GLSL", "hue": "green", "syntax": "GLSL", "comment": "//" },
+  {
+    "language": "groovy",
+    "label": "GROOVY",
+    "name": "Groovy",
+    "hue": "green",
+    "syntax": "Groovy",
+    "comment": "//",
+    "indent": "    "
+  },
+  { "language": "hs", "label": "HS", "name": "Haskell", "hue": "blue", "syntax": "Haskell", "comment": "--" },
+  { "language": "haxe", "label": "HAXE", "name": "Haxe", "hue": "blue", "comment": "//" },
+  {
+    "language": "http",
+    "label": "HTTP",
+    "name": "HTTP",
+    "hue": "amber",
+    "syntax": "HTTP Request and Response",
+    "comment": "#"
+  },
+  { "language": "hxml", "label": "HXML", "name": "HXML", "hue": "red" },
+  { "language": "idl", "label": "IDL", "name": "IDL", "hue": "blue", "comment": "//" },
+  { "language": "ini", "label": "INI", "name": "INI", "hue": "red", "syntax": "INI", "comment": ";" },
+  { "language": "jinja", "label": "JINJA", "name": "Jinja", "hue": "amber", "syntax": "Jinja2" },
+  { "language": "jsonld", "label": "JSON-LD", "name": "JSON-LD", "hue": "blue", "syntax": "JSON" },
+  { "language": "jl", "label": "JL", "name": "Julia", "hue": "green", "syntax": "Julia", "comment": "#" },
+  { "language": "tex", "label": "TEX", "name": "LaTeX", "hue": "neutral", "syntax": "LaTeX", "comment": "%" },
+  { "language": "liquid", "label": "LIQUID", "name": "Liquid", "hue": "amber" },
+  {
+    "language": "ls",
+    "label": "LS",
+    "name": "LiveScript",
+    "hue": "amber",
+    "syntax": "LiveScript",
+    "comment": "#"
+  },
+  { "language": "lua", "label": "LUA", "name": "Lua", "hue": "green", "syntax": "Lua", "comment": "--" },
+  { "language": "mathematica", "label": "WL", "name": "Mathematica", "hue": "green" },
+  {
+    "language": "matlab",
+    "label": "MATLAB",
+    "name": "MATLAB / Octave",
+    "hue": "green",
+    "syntax": "MATLAB",
+    "comment": "%"
+  },
+  {
+    "language": "mbox",
+    "label": "MBOX",
+    "name": "mbox",
+    "hue": "neutral",
+    "syntax": "Email",
+    "comment": "#"
+  },
+  { "language": "mirc", "label": "MIRC", "name": "mIRC", "hue": "green" },
+  { "language": "modelica", "label": "MODELICA", "name": "Modelica", "hue": "blue" },
+  { "language": "mscgen", "label": "MSC", "name": "Mscgen", "hue": "purple" },
+  { "language": "mumps", "label": "MUMPS", "name": "MUMPS", "hue": "green", "comment": "%" },
+  { "language": "ntriples", "label": "NT", "name": "N-Triples", "hue": "purple", "comment": "#" },
+  { "language": "nesc", "label": "NESC", "name": "nesC", "hue": "green", "syntax": "C", "comment": "//" },
+  { "language": "nginx", "label": "NGINX", "name": "Nginx", "hue": "red", "syntax": "nginx", "comment": "#" },
+  { "language": "nix", "label": "NIX", "name": "Nix", "hue": "red", "syntax": "Nix", "comment": "#" },
+  { "language": "nsis", "label": "NSIS", "name": "NSIS", "hue": "red", "syntax": "NSIS", "comment": "#" },
+  {
+    "language": "objc",
+    "label": "OBJC",
+    "name": "Objective-C",
+    "hue": "green",
+    "syntax": "Objective-C",
+    "comment": "//",
+    "indent": "    "
+  },
+  {
+    "language": "objcpp",
+    "label": "OBJC++",
+    "name": "Objective-C++",
+    "hue": "green",
+    "syntax": "Objective-C++",
+    "comment": "//",
+    "indent": "    "
+  },
+  { "language": "ml", "label": "ML", "name": "OCaml", "hue": "blue", "syntax": "OCaml" },
+  { "language": "oz", "label": "OZ", "name": "Oz", "hue": "green" },
+  { "language": "pascal", "label": "PASCAL", "name": "Pascal", "hue": "green", "syntax": "Pascal" },
+  { "language": "pegjs", "label": "PEGJS", "name": "PEG.js", "hue": "purple", "comment": "//" },
+  {
+    "language": "perl",
+    "label": "PERL",
+    "name": "Perl",
+    "hue": "green",
+    "syntax": "Perl",
+    "comment": "#",
+    "indent": "    "
+  },
+  { "language": "asc", "label": "PGP", "name": "PGP armor", "hue": "neutral" },
+  { "language": "pig", "label": "PIG", "name": "Pig", "hue": "purple" },
+  {
+    "language": "prisma",
+    "label": "PRISMA",
+    "name": "Prisma",
+    "hue": "purple",
+    "syntax": "Prisma",
+    "comment": "//"
+  },
+  {
+    "language": "properties",
+    "label": "PROPS",
+    "name": "Properties",
+    "hue": "red",
+    "syntax": "Java Properties",
+    "comment": "#"
+  },
+  {
+    "language": "proto",
+    "label": "PROTO",
+    "name": "Protocol Buffers",
+    "hue": "blue",
+    "syntax": "Protocol Buffer",
+    "comment": "//"
+  },
+  { "language": "pug", "label": "PUG", "name": "Pug", "hue": "amber" },
+  {
+    "language": "puppet",
+    "label": "PUPPET",
+    "name": "Puppet",
+    "hue": "red",
+    "syntax": "Puppet",
+    "comment": "#"
+  },
+  { "language": "q", "label": "Q", "name": "Q", "hue": "purple", "comment": "#" },
+  { "language": "r", "label": "R", "name": "R", "hue": "purple", "syntax": "R", "comment": "#" },
+  { "language": "rpmspec", "label": "RPM", "name": "RPM spec", "hue": "red", "comment": "#" },
+  { "language": "sas", "label": "SAS", "name": "SAS", "hue": "purple" },
+  {
+    "language": "scala",
+    "label": "SCALA",
+    "name": "Scala",
+    "hue": "blue",
+    "syntax": "Scala",
+    "comment": "//"
+  },
+  {
+    "language": "scheme",
+    "label": "SCHEME",
+    "name": "Scheme",
+    "hue": "green",
+    "syntax": "Lisp",
+    "comment": ";"
+  },
+  { "language": "sieve", "label": "SIEVE", "name": "Sieve", "hue": "red", "comment": "#" },
+  { "language": "smalltalk", "label": "ST", "name": "Smalltalk", "hue": "green" },
+  {
+    "language": "sol",
+    "label": "SOL",
+    "name": "Solidity",
+    "hue": "green",
+    "syntax": "Solidity",
+    "comment": "//",
+    "indent": "    "
+  },
+  { "language": "solr", "label": "SOLR", "name": "Solr", "hue": "purple" },
+  { "language": "sparql", "label": "SPARQL", "name": "SPARQL", "hue": "purple", "comment": "#" },
+  { "language": "spreadsheet", "label": "SHEET", "name": "Spreadsheet formula", "hue": "purple" },
+  { "language": "squirrel", "label": "NUT", "name": "Squirrel", "hue": "green", "comment": "//" },
+  { "language": "sml", "label": "SML", "name": "Standard ML", "hue": "blue", "syntax": "SML" },
+  {
+    "language": "styl",
+    "label": "STYL",
+    "name": "Stylus",
+    "hue": "purple",
+    "syntax": "Stylus",
+    "comment": "//"
+  },
+  { "language": "tcl", "label": "TCL", "name": "Tcl", "hue": "green", "syntax": "Tcl", "comment": "#" },
+  {
+    "language": "tf",
+    "label": "TF",
+    "name": "Terraform / HCL",
+    "hue": "red",
+    "syntax": "Terraform",
+    "comment": "#"
+  },
+  { "language": "textile", "label": "TEXTILE", "name": "Textile", "hue": "neutral", "syntax": "Textile" },
+  { "language": "tiddlywiki", "label": "TW", "name": "TiddlyWiki", "hue": "neutral" },
+  { "language": "tiki", "label": "TIKI", "name": "Tiki wiki", "hue": "neutral" },
+  { "language": "troff", "label": "TROFF", "name": "troff", "hue": "neutral", "syntax": "Groff/troff" },
+  { "language": "ttcn", "label": "TTCN", "name": "TTCN-3", "hue": "blue" },
+  { "language": "ttcncfg", "label": "TTCN-CFG", "name": "TTCN-3 configuration", "hue": "red" },
+  { "language": "turtle", "label": "TTL", "name": "Turtle", "hue": "purple", "comment": "#" },
+  { "language": "vbs", "label": "VBS", "name": "VBScript", "hue": "green", "comment": "'" },
+  { "language": "velocity", "label": "VTL", "name": "Velocity", "hue": "amber" },
+  {
+    "language": "verilog",
+    "label": "VERILOG",
+    "name": "Verilog",
+    "hue": "green",
+    "syntax": "Verilog",
+    "comment": "//"
+  },
+  { "language": "vhdl", "label": "VHDL", "name": "VHDL", "hue": "green", "syntax": "VHDL", "comment": "--" },
+  {
+    "language": "vb",
+    "label": "VB",
+    "name": "Visual Basic",
+    "hue": "blue",
+    "comment": "'",
+    "indent": "    "
+  },
+  { "language": "webidl", "label": "WEBIDL", "name": "Web IDL", "hue": "blue", "comment": "//" },
+  { "language": "wat", "label": "WAT", "name": "WebAssembly text", "hue": "amber" },
+  { "language": "xquery", "label": "XQUERY", "name": "XQuery", "hue": "purple" },
+  { "language": "yacas", "label": "YACAS", "name": "Yacas", "hue": "green" },
+  {
+    "language": "z80",
+    "label": "Z80",
+    "name": "Z80 assembly",
+    "hue": "green",
+    "syntax": "x86_64 Assembly",
+    "comment": ";"
+  },
+  {
+    "language": "zig",
+    "label": "ZIG",
+    "name": "Zig",
+    "hue": "green",
+    "syntax": "Zig",
+    "comment": "//",
+    "indent": "    "
+  },
+  { "language": "md", "label": "MD", "name": "Markdown", "hue": "neutral", "syntax": "Markdown" },
+  { "language": "txt", "label": "TXT", "name": "Text", "hue": "neutral" }
+]

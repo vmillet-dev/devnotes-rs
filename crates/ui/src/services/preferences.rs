@@ -1,5 +1,5 @@
-//! A `preferences.json`, as the reference wrote it and as the core reads `automaticBackups` from
-//! it: one flat object of `devnotes.*` keys, each a string. Two of them (plan § 4.2): the
+//! A `preferences.json`, as the reference wrote it: one flat object of `devnotes.*` keys, each a
+//! string. Two of them (plan § 4.2): the
 //! application's, in the profile, and the open library's, in its directory, for
 //! `devnotes.notes.*`.
 

@@ -4159,7 +4159,7 @@ egui's focus navigation.
 ### Preferences, settings and the notifiers
 
 The two `preferences.json` keep the reference's format — one flat object of `devnotes.*` keys,
-each a string — so the core still reads `automaticBackups` from the application's file itself.
+each a string.
 `services::preferences::Preferences` keeps every key it read, those this version does not know
 included, and is written staged then renamed. The application's file is read by `main` before
 the window exists; the open library's (`devnotes.notes.*`) is read again on the db queue each
@@ -5312,10 +5312,9 @@ space or a folder gone since falls back on « Tous les espaces » or every note 
 first launch's own pick of the seeded space is shown, not remembered: nothing was chosen yet.
 
 ⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
-launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
-out of that file before the front end has booted (`backup::copies::wanted`). Rust reads the
-JSON file itself (`backup::wanted_by_preference`), not through `tauri-plugin-store`: the core
-knows no plugin.
+launch" is a habit rather than a property of one corpus. The interface reads it with the
+others and hands the core a plain flag (`Engine::keep_launch_copies`) at start and at each
+apply, before any unlock reads it: the core reads no file whose format is the interface's.
 
 ⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
 opened once. A space id means nothing in another library, and a samples marker carried
