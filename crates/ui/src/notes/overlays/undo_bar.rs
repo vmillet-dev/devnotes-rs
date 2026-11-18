@@ -61,8 +61,9 @@ fn message(ui: &mut Ui, action: &Reversible, language: i18n::Language) {
     let p = palette(ui.ctx());
     let count = u32::try_from(action.count()).unwrap_or(u32::MAX);
     let words = match action {
-        Reversible::FolderMove { name, into, .. } => {
-            let mut params = vec![("name", name.as_str().into())];
+        Reversible::FolderMove { was, name, into } => {
+            let notes = u32::try_from(was.notes.len()).unwrap_or(u32::MAX);
+            let mut params = vec![("name", name.as_str().into()), ("count", notes.into())];
             params.extend(into.as_deref().map(|into| ("into", into.into())));
             i18n::translate(language, said(action), &params)
         }
@@ -94,6 +95,9 @@ fn said(action: &Reversible) -> Key {
         Reversible::Priority(_) => keys::undo::PRIORITISED,
         Reversible::File(_) => keys::undo::FILED,
         Reversible::Arrangement { .. } => keys::undo::ARRANGED,
+        Reversible::FolderMove {
+            was, into: Some(_), ..
+        } if !was.notes.is_empty() => keys::undo::FOLDER_MOVED_WITH_NOTES,
         Reversible::FolderMove { into: Some(_), .. } => keys::undo::FOLDER_MOVED,
         Reversible::FolderMove { into: None, .. } => keys::undo::FOLDER_MOVED_TOP,
         Reversible::Convert { into, .. } => match into {

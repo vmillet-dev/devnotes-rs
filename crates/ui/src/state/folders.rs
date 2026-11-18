@@ -234,19 +234,19 @@ impl FoldersState {
         self.push(write, failed);
     }
 
-    /// Under `parent_id`, or at the top of its space for `None`, with everything it holds. The
-    /// rules are `Lineage`'s, in the core; a move it refuses is said, and changes nothing.
-    pub fn move_folder(&mut self, backend: &Backend, id: String, parent_id: Option<String>) {
-        let Some(name) = self.find(&id).map(|folder| folder.name.clone()) else {
-            return;
-        };
-        let into = parent_id
-            .as_deref()
-            .and_then(|parent| self.find(parent))
-            .map(|parent| parent.name.clone());
+    /// Under `parent_id` of `space_id`, or at its top for `None`, with everything it holds;
+    /// `name` and `into` are what the undo bar says. The rules are `Lineage`'s, in the core; a
+    /// move it refuses is said, and changes nothing.
+    pub fn move_folder(
+        &mut self,
+        backend: &Backend,
+        id: String,
+        (space_id, parent_id): (String, Option<String>),
+        (name, into): (String, Option<String>),
+    ) {
         let failed = Message::new(keys::errors::FOLDER_MOVE_FAILED);
         let write = Write::Moved {
-            pending: api::folders::move_to(backend, id, parent_id),
+            pending: api::folders::move_to(backend, id, (space_id, parent_id)),
             name,
             into,
         };

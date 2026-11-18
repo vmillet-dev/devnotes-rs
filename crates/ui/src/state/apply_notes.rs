@@ -98,8 +98,10 @@ impl AppState {
         self.folders.active(self.spaces.active_space())
     }
 
-    /// Under `parent` or at the top of `space`. Refused and said when it cannot go there — into
-    /// itself or what it holds, out of its space — by the rules of `Lineage`, the core's.
+    /// Under `parent` or at the top of `space` — another space too, its sub-tree and notes going
+    /// along. Refused and said when it cannot go there — into itself or what it holds, or deeper
+    /// than folders nest — by the rules of `Lineage`, the core's; a name taken there is refused
+    /// by the core.
     pub(super) fn move_folder(
         &mut self,
         backend: &Backend,
@@ -107,22 +109,42 @@ impl AppState {
         (parent, space): (Option<String>, String),
     ) {
         use engine::folders::model::Lineage;
+        use i18n::keys::sidebar::moved;
         let Some(folder) = self.folders.find(&id) else {
             return;
         };
-        if folder.parent_id == parent {
+        let name = folder.name.clone();
+        let crossing = folder.space_id != space;
+        if !crossing && folder.parent_id == parent {
+            self.status
+                .report(i18n::Message::new(moved::ALREADY).with("name", name.as_str()));
             return;
         }
-        let name = folder.name.clone();
         let lineage = Lineage::of(self.folders.list());
-        let allowed =
-            folder.space_id == space && lineage.check_move(&id, parent.as_deref()).is_ok();
+        let allowed = if crossing {
+            lineage
+                .check_arrival(parent.as_deref(), lineage.height(&id).max(1))
+                .is_ok()
+        } else {
+            lineage.check_move(&id, parent.as_deref()).is_ok()
+        };
         if !allowed {
-            let refused = i18n::Message::new(i18n::keys::sidebar::moved::refused::THERE);
+            let refused = i18n::Message::new(moved::refused::THERE);
             self.status.report(refused.with("name", name.as_str()));
             return;
         }
-        self.folders.move_folder(backend, id, parent);
+        let into = match &parent {
+            Some(parent) => self.folders.find(parent).map(|parent| parent.name.clone()),
+            None if crossing => self
+                .spaces
+                .spaces()
+                .iter()
+                .find(|other| other.id == space)
+                .map(|other| other.name.clone()),
+            None => None,
+        };
+        self.folders
+            .move_folder(backend, id, (space, parent), (name, into));
     }
 
     /// The rail's keyboard twin of a drag: up a level, or into the sibling above it.
@@ -160,7 +182,13 @@ impl AppState {
             };
             Some(above.id.clone())
         };
-        self.folders.move_folder(backend, folder.id, target);
+        let into = target
+            .as_deref()
+            .and_then(|target| self.folders.find(target))
+            .map(|target| target.name.clone());
+        let space = folder.space_id.clone();
+        self.folders
+            .move_folder(backend, folder.id, (space, target), (folder.name, into));
     }
 
     /// Opened, in its own space, which is then the one shown.

@@ -2700,11 +2700,18 @@ transaction, before the row goes; `parent_id`'s own `SET NULL` is only a guard.
 **A folder holds folders, one tree per space.** Every rule about it is `folders::model::Lineage`,
 built from ids and parents alone, so no name is opened to answer one: the sub-tree, the path, the
 depth, where a note sits on a board (`Seat`), and what a move may do — never into itself or what
-it holds, never out of its space, its whole sub-tree within `MAX_DEPTH` (8, a guard and not a
-level anyone should reach). A name is unique **among its siblings**: two folders may each hold a
-« Perf », as two spaces may. `move_folder` answers where the folder was — its parent and its
-zone's frame — which `move_folder_back` puts back; the frame is let go of on the way, since a
-frame is a place on one parent's board and means nothing on another's. `spaces/`
+it holds, its whole sub-tree within `MAX_DEPTH` (8, a guard and not a level anyone should reach;
+`check_arrival` holds it for a sub-tree coming from another space). A name is unique **among its
+siblings**: two folders may each hold a « Perf », as two spaces may. `move_folder` takes the
+target space: **into another space**, the folder takes its sub-tree and every note filed in it,
+trashed ones included (one left behind would be filed in a folder of another space), in one
+transaction, `updated_at` untouched; it is refused only for a name taken among the new siblings
+or a tree too deep there. It answers where the folder was — its space, its parent, its zone's
+frame and the notes that changed space — which `move_folder_back` puts back, every note filed in
+it going back too; the frame is let go of on the way, since a frame is a place on one parent's
+board and means nothing on another's. In the rail it is a drop onto another space's row or one of
+its folders, pointer only (decided by the owner: `Alt+←/→` stay inside a space); a drop where it
+already is says so. `spaces/`
 cascades into `folders/`, and that cascade then fires the `SET NULL` — a space's notes reach
 their refuge unfiled, which is correct, since a folder of the deleted space no longer exists.
 
