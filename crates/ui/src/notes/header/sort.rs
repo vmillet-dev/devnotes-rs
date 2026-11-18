@@ -20,8 +20,6 @@ use crate::widgets::{self, interact};
 /// Past this window width the button says the order in words, as the reference's media query.
 const WORDS_FROM: f32 = 1_280.0;
 
-const MENU_WIDTH: f32 = 214.0;
-
 pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
@@ -38,7 +36,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let chosen = Popup::menu(&trigger)
         .frame(widgets::menu_frame(ui.ctx()))
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| menu(ui, now, language))
+        .show(|ui| widgets::fitted_menu(ui, trigger.rect.width(), |ui| menu(ui, now, language)))
         .and_then(|shown| shown.inner);
     if let Some(arrangement) = chosen {
         actions.push(Action::Notes(crate::notes::Action::Arrange(arrangement)));
@@ -95,7 +93,6 @@ fn trigger(ui: &mut Ui, label: &str, now: &str, words: bool) -> Response {
 /// The arrangement chosen, if one was.
 fn menu(ui: &mut Ui, now: Arrangement, language: i18n::Language) -> Option<Arrangement> {
     let tr = |key| i18n::translate(language, key, &[]);
-    ui.set_width(MENU_WIDTH);
     ui.spacing_mut().item_spacing.y = 0.0;
     let mut chosen = None;
     title(ui, &tr(keys::sort::SORT_BY));
@@ -164,6 +161,7 @@ fn title(ui: &mut Ui, words: &str) {
         FontFamily::Proportional,
         p.text_2,
     );
+    widgets::menu_needs(ui, 16.0 + galley.size().x);
     let (rect, _) = ui.allocate_exact_size(Vec2::new(galley.size().x, 22.0), Sense::hover());
     ui.painter().galley(
         pos2(rect.left() + 8.0, rect.bottom() - galley.size().y - 4.0),
@@ -199,18 +197,21 @@ fn item(ui: &mut Ui, label: &str, hint: Option<&str>, author_id: &str, on: bool)
             Rect::from_center_size(pos2(rect.left() + 14.0, rect.center().y), Vec2::splat(12.0));
         icons::paint(ui, glyph, Icon::Check, p.amber_text);
     }
-    widgets::arrowed(
+    let words = widgets::arrowed(
         ui,
         Some(pos2(rect.left() + 28.0, rect.center().y)),
         label,
         font::BODY,
         ink,
     );
+    let mut needed = 28.0 + words + 8.0;
     if let Some(hint) = hint {
         let width = widgets::arrowed(ui, None, hint, font::META, p.text_2);
         let at = pos2(rect.right() - 8.0 - width, rect.center().y);
         widgets::arrowed(ui, Some(at), hint, font::META, p.text_2);
+        needed += gap::GROUPS + width;
     }
+    widgets::menu_needs(ui, needed);
     response.clicked()
 }
 

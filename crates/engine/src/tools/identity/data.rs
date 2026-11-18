@@ -2,44 +2,41 @@
 //! ⚠️ **The names are one list**: no origin and no country is attached to a name — not in the
 //! data, not in a file's name, not in the order of the file, which is alphabetical. Sorting
 //! people's names by where they come from is not something this tool does; what is a
-//! country's own is its places, its formats and its numbers. ⚠️ Files shipped beside the
-//! application (`resources/identity/`, read through `Paths::resources`), read once and kept for
-//! the session: a name is corrected or a list completed without building the application again. What was a constant is a file someone can remove, so each
-//! list is checked when read, and a missing or damaged one is said — nothing divides by the
-//! length of an empty list. Every list together is held under [`BUDGET`] by a test: the lists
-//! do not have to be long, they have to be well chosen.
+//! country's own is its places, its formats and its numbers. ⚠️ Compiled into the application
+//! (`resources/identity/`, `include_str!`): the standalone executable is one file and draws
+//! people with nothing beside it. Each list is held whole by a test, and every list together
+//! under [`BUDGET`]: the lists do not have to be long, they have to be well chosen.
 
-use std::path::Path;
-use std::sync::Mutex;
+use std::sync::LazyLock;
 
 use super::Country;
-use crate::closed_enum::closed_enum;
 
 /// Every list together, in bytes. A megabyte of names a country was the obvious way, and
 /// refused: a few hundred given names and a thousand surnames give hundreds of thousands of
 /// people.
 #[cfg(test)]
-pub(super) const BUDGET: u64 = 100 * 1024;
+pub(super) const BUDGET: usize = 100 * 1024;
 
-closed_enum! {
-    pub enum ListProblem {
-        #[default]
-        Missing = "missing",
-        Damaged = "damaged",
+const NAMES: &str = include_str!("../../../resources/identity/names.txt");
+
+/// A country's places and streets.
+fn land_text(country: Country) -> &'static str {
+    match country {
+        Country::Fr => include_str!("../../../resources/identity/places/fr.txt"),
+        Country::Be => include_str!("../../../resources/identity/places/be.txt"),
+        Country::De => include_str!("../../../resources/identity/places/de.txt"),
+        Country::Es => include_str!("../../../resources/identity/places/es.txt"),
+        Country::It => include_str!("../../../resources/identity/places/it.txt"),
+        Country::Pt => include_str!("../../../resources/identity/places/pt.txt"),
+        Country::Nl => include_str!("../../../resources/identity/places/nl.txt"),
+        Country::Ch => include_str!("../../../resources/identity/places/ch.txt"),
+        Country::Gb => include_str!("../../../resources/identity/places/gb.txt"),
+        Country::Pl => include_str!("../../../resources/identity/places/pl.txt"),
+        Country::Se => include_str!("../../../resources/identity/places/se.txt"),
+        Country::Us => include_str!("../../../resources/identity/places/us.txt"),
+        Country::Ca => include_str!("../../../resources/identity/places/ca.txt"),
     }
 }
-
-/// A list that could not be used: which one, and where it was looked for.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UnreadableList {
-    pub problem: ListProblem,
-    /// As it is named under the folder: `names.txt`, `places/fr.txt`.
-    pub file: String,
-    pub folder: String,
-}
-
-/// The one file of names, under the folder.
-const NAMES: &str = "names.txt";
 
 /// The surname as the person bears it. ⚠️ One in `-ski`, `-cki` or `-dzki` is an adjective:
 /// a woman's ends in `-a`. The grammar of the name, read off its ending and nothing else.
@@ -129,10 +126,6 @@ impl Land {
     }
 }
 
-fn land_file(country: Country) -> String {
-    format!("places/{}.txt", country.as_str().to_lowercase())
-}
-
 /// The places, a line each, then a list of streets under each `---` and its tag. ⚠️ Read line
 /// by line: a checkout may have turned every line ending into two characters.
 fn land(text: &'static str) -> Land {
@@ -161,7 +154,7 @@ fn land(text: &'static str) -> Land {
     land
 }
 
-/// Every list, as read from the folder the application ships.
+/// Every list, as compiled in.
 pub(super) struct Library {
     pub(super) names: Names,
     lands: Vec<(Country, Land)>,
@@ -176,207 +169,131 @@ impl Library {
     }
 }
 
-/// The folder as a person reads a path: Windows hands the resources over behind `\\?\`.
-fn shown(root: &Path) -> String {
-    let path = root.to_string_lossy();
-    path.strip_prefix(r"\\?\").unwrap_or(&path).to_owned()
-}
-
-/// A file's text, for as long as the application runs. ⚠️ Given away on purpose: the lists
-/// are read once and every name drawn afterwards points into them. An editor's byte-order
-/// mark is not a name.
-fn text(root: &Path, file: &str) -> Result<&'static str, UnreadableList> {
-    let unreadable = |problem| UnreadableList {
-        problem,
-        file: file.to_owned(),
-        folder: shown(root),
-    };
-    let bytes = std::fs::read(root.join(file)).map_err(|_| unreadable(ListProblem::Missing))?;
-    let text = String::from_utf8(bytes).map_err(|_| unreadable(ListProblem::Damaged))?;
-    let kept: &'static str = Box::leak(text.into_boxed_str());
-    Ok(kept.trim_start_matches('\u{feff}'))
-}
-
-/// Every list read and checked, or the first one that cannot be used.
-pub(super) fn read(root: &Path) -> Result<Library, UnreadableList> {
-    let damaged = |file: &str| UnreadableList {
-        problem: ListProblem::Damaged,
-        file: file.to_owned(),
-        folder: shown(root),
-    };
+/// Every list read with these names, or nothing when one is not whole.
+pub(super) fn read_with(names_text: &'static str) -> Option<Library> {
     let mut library = Library {
-        names: names(text(root, NAMES)?).ok_or_else(|| damaged(NAMES))?,
+        names: names(names_text)?,
         lands: Vec::new(),
     };
     for country in Country::ALL {
-        let file = land_file(country);
-        let land = land(text(root, &file)?);
+        let land = land(land_text(country));
         if !land.is_whole() {
-            return Err(damaged(&file));
+            return None;
         }
         library.lands.push((country, land));
     }
-    Ok(library)
+    Some(library)
 }
 
-/// The lists of the session: read at the first card, kept for the others. ⚠️ Only what was
-/// read whole is kept — a file put back is found at the next draw, without a restart.
-pub(super) fn library(root: &Path) -> Result<&'static Library, UnreadableList> {
-    static KEPT: Mutex<Option<&'static Library>> = Mutex::new(None);
-    let mut kept = KEPT
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    if let Some(library) = *kept {
-        return Ok(library);
-    }
-    let library: &'static Library = Box::leak(Box::new(read(root)?));
-    *kept = Some(library);
-    Ok(library)
-}
-
-/// Where the repository keeps what the application ships.
-#[cfg(test)]
-pub(super) fn shipped_folder() -> std::path::PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/identity")
-}
-
-/// The shipped lists, read once for every test.
-#[cfg(test)]
-pub(super) fn shipped() -> &'static Library {
-    library(&shipped_folder()).expect("the shipped lists are whole")
+/// The lists, read at the first card and kept. ⚠️ Whole by construction: a test reads every one
+/// of them, so the `expect` cannot be reached by a build that passed its tests.
+pub(super) fn library() -> &'static Library {
+    static KEPT: LazyLock<Library> =
+        LazyLock::new(|| read_with(NAMES).expect("the lists compiled in are whole"));
+    &KEPT
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::path::Path;
 
     use super::*;
 
-    /// Every file the application ships, with its name under the folder.
-    fn files() -> Vec<String> {
-        std::iter::once(NAMES.to_owned())
-            .chain(Country::ALL.iter().map(|country| land_file(*country)))
-            .collect()
-    }
-
-    /// A copy of the shipped folder, to damage.
-    fn copy() -> tempfile::TempDir {
-        let folder = tempfile::tempdir().unwrap();
-        fs::create_dir(folder.path().join("places")).unwrap();
-        for file in files() {
-            fs::copy(shipped_folder().join(&file), folder.path().join(&file)).unwrap();
-        }
-        folder
+    /// Where the repository keeps the lists.
+    fn folder() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/identity")
     }
 
     /// The obvious way was refused: this is what keeps it out.
     #[test]
     fn every_list_together_holds_to_the_budget() {
-        let weight: u64 = files()
-            .iter()
-            .map(|file| fs::metadata(shipped_folder().join(file)).unwrap().len())
-            .sum();
+        let weight: usize = NAMES.len()
+            + Country::ALL
+                .iter()
+                .map(|country| land_text(*country).len())
+                .sum::<usize>();
         assert!(
             weight <= BUDGET,
             "{weight} bytes of lists, {BUDGET} at most"
         );
     }
 
-    /// ⚠️ What is shipped is what is read — and the names are **one file**: a second one beside
-    /// it would be names sorted by something, which is what this folder does not do.
+    /// ⚠️ What is compiled in is the whole folder — and the names are **one file**: a second one
+    /// beside it would be names sorted by something, which is what this folder does not do.
     #[test]
-    fn the_shipped_folder_holds_one_file_of_names_a_file_a_country_and_nothing_else() {
+    fn the_folder_holds_one_file_of_names_a_file_a_country_and_nothing_else() {
         let entries = |folder: std::path::PathBuf| -> Vec<String> {
-            fs::read_dir(folder)
+            std::fs::read_dir(folder)
                 .unwrap()
                 .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
                 .collect()
         };
-        let mut found: Vec<String> = entries(shipped_folder())
+        let mut found: Vec<String> = entries(folder())
             .into_iter()
             .filter(|name| name != "places")
             .chain(
-                entries(shipped_folder().join("places"))
+                entries(folder().join("places"))
                     .into_iter()
                     .map(|name| format!("places/{name}")),
             )
             .collect();
-        let mut expected = files();
+        let mut expected: Vec<String> = std::iter::once("names.txt".to_owned())
+            .chain(
+                Country::ALL
+                    .iter()
+                    .map(|country| format!("places/{}.txt", country.as_str().to_lowercase())),
+            )
+            .collect();
         found.sort();
         expected.sort();
 
         assert_eq!(found, expected);
-        assert!(read(&shipped_folder()).is_ok());
     }
 
+    /// What a list was checked for when it was read at run time, now checked here.
     #[test]
-    fn a_list_that_is_missing_is_named_with_where_it_was_looked_for() {
-        let folder = copy();
-        fs::remove_file(folder.path().join("places/it.txt")).unwrap();
-
-        let Err(unreadable) = read(folder.path()) else {
-            panic!("a country's places are missing");
-        };
-        assert_eq!(
-            unreadable,
-            UnreadableList {
-                problem: ListProblem::Missing,
-                file: "places/it.txt".to_owned(),
-                folder: folder.path().to_string_lossy().into_owned(),
-            }
-        );
-        assert_eq!(shown(Path::new(r"\\?\C:\app\identity")), r"C:\app\identity");
+    fn every_list_compiled_in_is_whole() {
+        assert!(names(NAMES).is_some());
+        for country in Country::ALL {
+            assert!(land(land_text(country)).is_whole(), "{country}");
+        }
+        assert!(read_with(NAMES).is_some());
     }
 
-    /// ⚠️ A list is no longer part of the program: emptied, cut short or no text at all, it is
-    /// said to be damaged before anything is drawn from it.
+    /// Emptied or cut short, a list is not whole: the test above would fail on it.
     #[test]
-    fn a_list_that_is_damaged_is_said_rather_than_drawn_from() {
-        let damaged_by = |file: &str, content: &[u8]| {
-            let folder = copy();
-            fs::write(folder.path().join(file), content).unwrap();
-            read(folder.path()).err().map(|unreadable| {
-                assert_eq!(unreadable.problem, ListProblem::Damaged);
-                unreadable.file
-            })
-        };
-
-        // Names with no surname, with a list left empty, and a file that is no text.
-        for content in [
-            &b"f:Anna\nm:Jan\n"[..],
-            b"f:Anna\nm: , \ns:Nowak\n",
-            &[0xff, 0xfe],
+    fn a_list_cut_short_is_not_whole() {
+        // Names with no surname, and with a list left empty.
+        for text in [
+            "f:Anna
+m:Jan
+",
+            "f:Anna
+m: , 
+s:Nowak
+",
         ] {
-            assert_eq!(damaged_by(NAMES, content).as_deref(), Some(NAMES));
+            assert!(names(text).is_none(), "{text}");
         }
         // A country with no place, a place cut short, and a place whose streets are not there.
-        for content in [
-            "---\nHigh Street\n",
-            "ENG;M1 #@@;Manchester\n---\nHigh Street\n",
-            "ENG;M1 #@@;Manchester;Greater Manchester;0161 496 0;cy\n---\nHigh Street\n",
-            "ENG;M1 #@@;Manchester;Greater Manchester;0161 496 0\n---\n",
+        for text in [
+            "---
+High Street
+",
+            "ENG;M1 #@@;Manchester
+---
+High Street
+",
+            "ENG;M1 #@@;Manchester;Greater Manchester;0161 496 0;cy
+---
+High Street
+",
+            "ENG;M1 #@@;Manchester;Greater Manchester;0161 496 0
+---
+",
         ] {
-            assert_eq!(
-                damaged_by("places/gb.txt", content.as_bytes()).as_deref(),
-                Some("places/gb.txt")
-            );
+            assert!(!land(text).is_whole(), "{text}");
         }
-    }
-
-    /// An editor may have saved a list with a byte-order mark and Windows line endings.
-    #[test]
-    fn a_list_saved_by_an_editor_is_still_read() {
-        let folder = copy();
-        let file = folder.path().join(NAMES);
-        let saved = format!(
-            "\u{feff}{}",
-            fs::read_to_string(&file).unwrap().replace('\n', "\r\n")
-        );
-        fs::write(&file, saved).unwrap();
-
-        let library = read(folder.path()).ok().unwrap();
-        assert_eq!(library.names.female, shipped().names.female);
-        assert_eq!(library.names.surnames, shipped().names.surnames);
     }
 
     /// The order a list is kept in: its letters, an accent or a stroke aside.
@@ -388,7 +305,7 @@ mod tests {
     /// come from, in a file that says it of none. Each name is there once.
     #[test]
     fn the_names_are_in_alphabetical_order_each_once_and_enough_of_each_kind() {
-        let names = &shipped().names;
+        let names = &library().names;
         for (kind, list, at_least) in [
             ("female", &names.female, 400),
             ("male", &names.male, 400),
@@ -419,7 +336,7 @@ mod tests {
     #[test]
     fn a_country_has_enough_places_and_streets_for_each_of_them() {
         for country in Country::ALL {
-            let land = shipped().land(country);
+            let land = library().land(country);
             assert!(land.places.len() >= 20, "{country}: {}", land.places.len());
             for (tag, streets) in &land.streets {
                 assert!(streets.len() >= 10, "{country} {tag}: {}", streets.len());

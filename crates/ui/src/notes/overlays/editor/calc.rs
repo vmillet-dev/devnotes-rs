@@ -414,6 +414,7 @@ fn value_cell(
             .hline(cell.x_range(), cell.top(), Stroke::new(1.0, p.text_1));
     }
     let response = ui.allocate_rect(cell, Sense::click());
+    crate::widgets::pointer(ui, &response);
     let label = i18n::translate(language, keys::calc::editor::PICK, &[]);
     ui.ctx().accesskit_node_builder(response.id, |node| {
         node.set_label(label);

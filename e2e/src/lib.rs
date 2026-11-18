@@ -319,6 +319,16 @@ impl App {
     /// (a menu opening, a list settling) was clicked where it no longer was. So the place is the
     /// same in two reads in a row.
     pub fn click_where(&mut self, author_id: &str, which: impl Fn(&Node) -> bool) {
+        self.click_with(author_id, PointerButton::Primary, which);
+    }
+
+    /// As `click_where`, with another button: the middle one closes a tab.
+    pub fn click_with(
+        &mut self,
+        author_id: &str,
+        button: PointerButton,
+        which: impl Fn(&Node) -> bool,
+    ) {
         let until = Instant::now() + PATIENCE;
         let mut last = None;
         let bounds = loop {
@@ -344,15 +354,15 @@ impl App {
             f64::midpoint(bounds.x0, bounds.x1) as f32,
             f64::midpoint(bounds.y0, bounds.y1) as f32,
         );
-        let button = |pressed| Event::PointerButton {
+        let press = |pressed| Event::PointerButton {
             pos,
-            button: PointerButton::Primary,
+            button,
             pressed,
             modifiers: Modifiers::NONE,
         };
         self.apply(vec![Event::PointerMoved(pos)]);
-        self.apply(vec![button(true)]);
-        self.apply(vec![button(false)]);
+        self.apply(vec![press(true)]);
+        self.apply(vec![press(false)]);
     }
 
     /// A press at `from` and a release at `to`, in points from the control's corner.

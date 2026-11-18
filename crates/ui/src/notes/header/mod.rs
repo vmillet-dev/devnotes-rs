@@ -12,7 +12,7 @@ pub(crate) use new_note::shortcut;
 mod sort;
 mod switchers;
 
-use crate::theme::tokens::{font, gap, radius};
+use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET, BAR_TOGGLE, font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Margin, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2,
     WidgetInfo,
@@ -54,7 +54,7 @@ pub(super) fn show(
 ) {
     let s = spacing(ui.ctx());
     #[expect(clippy::cast_possible_truncation, reason = "a few points")]
-    let (grid, canvas) = (s.grid.round() as i8, s.canvas.round() as i8);
+    let grid = s.grid.round() as i8;
     let language = state.language;
     let switchers = if switchers_shown(state) {
         switchers::natural_widths(ui, state).to_vec()
@@ -62,7 +62,7 @@ pub(super) fn show(
         Vec::new()
     };
     let new_note = new_note::width(ui, language);
-    let width = ui.available_width() - 2.0 * f32::from(canvas);
+    let width = ui.available_width() - 2.0 * BAR_INSET;
     let plan = layout::plan(width, view.fixed, &switchers, new_note);
     let pressed = state.notes_query.facets().count();
     let open = view.facets || pressed > 0;
@@ -75,8 +75,17 @@ pub(super) fn show(
     }
     // What does not narrow is kept from the last time it was drawn.
     let mut fixed = view.fixed;
+    // The first row on the bar's line at either density, the toggle at the bar's inset: the
+    // density changes what is below it, not where the toggle is.
+    #[expect(clippy::cast_possible_truncation, reason = "a few points")]
+    let (inset, above) = (BAR_INSET as i8, ((BAR_HEIGHT - BAR_TOGGLE) / 2.0) as i8);
     let shown = egui::Frame::new()
-        .inner_margin(Margin::symmetric(canvas, grid))
+        .inner_margin(Margin {
+            left: inset,
+            right: inset,
+            top: above,
+            bottom: grid,
+        })
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing = Vec2::new(GAP, gap::CONTROLS);
             let facets = (open, pressed);

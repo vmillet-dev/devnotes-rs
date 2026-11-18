@@ -202,6 +202,7 @@
     "moved": {
       "into": "« {{name}} » est maintenant dans {{other}}.",
       "top": "« {{name}} » est maintenant en haut de {{other}}.",
+      "already": "« {{name}} » est déjà là.",
       "refused": {
         "atTop": "« {{name}} » est déjà en haut de son espace.",
         "noFolderAbove": "Aucun dossier au-dessus de « {{name}} » pour l’y ranger.",
@@ -896,6 +897,7 @@
       "drawing": "Convertie en dessin"
     },
     "folderMoved": "« {{name}} » est maintenant dans {{into}}",
+    "folderMovedWithNotes": "« {{name}} » est maintenant dans {{into}}, avec {count, plural, one {# note} other {# notes}}",
     "folderMovedTop": "« {{name}} » est maintenant en haut de l’espace"
   },
   "file": {
@@ -1999,12 +2001,7 @@
         "bank": "Banque",
         "company": "Entreprise"
       },
-      "noFirmNumber": "Aucun identifiant d’entreprise à clé dans ce pays.",
-      "lists": {
-        "missing": "Liste introuvable : {{file}}.",
-        "damaged": "Liste illisible : {{file}}.",
-        "where": "Les listes sont lues dans {{folder}}"
-      }
+      "noFirmNumber": "Aucun identifiant d’entreprise à clé dans ce pays."
     },
     "lorem": {
       "name": "Lorem ipsum",

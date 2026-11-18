@@ -422,6 +422,30 @@ fn copying_from_the_editor_writes_first_and_full_screen_is_remembered() {
     assert!(!harness.state().state.settings.editor_fullscreen);
 }
 
+#[test]
+fn expanded_the_note_leaves_the_header_and_its_sidebar_toggle_in_reach() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql");
+    let mut harness = area(backend, profile);
+    click_id(&mut harness, "note-card-open");
+    click_id(&mut harness, "editor-fullscreen");
+
+    let toggle = harness
+        .get_by(|node| node.author_id() == Some("library-rail-toggle"))
+        .rect();
+    let expand = harness
+        .get_by(|node| node.author_id() == Some("editor-fullscreen"))
+        .rect();
+    assert!(
+        toggle.bottom() < expand.top(),
+        "{toggle:?} above {expand:?}"
+    );
+    click_id(&mut harness, "library-rail-toggle");
+
+    assert!(!harness.state().state.settings.rail_shown);
+    assert!(is_open(&harness) && harness.state().state.settings.editor_fullscreen);
+}
+
 /// Wide enough for the panel beside two columns of cards.
 fn wide(
     mut harness: egui_kittest::Harness<'static, Bench>,
@@ -465,6 +489,46 @@ fn a_note_opens_beside_the_cards_and_expands_over_them() {
     click_id(&mut harness, "editor-back-to-cards");
     assert_eq!(cards(&harness), 1);
     assert!(is_open(&harness));
+}
+
+/// From one open note to another: on every frame until the second is read, the panel keeps its
+/// place and the cards beside it their width.
+#[test]
+fn moving_to_another_note_keeps_the_panel_in_place() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "first");
+    testing::note(&backend, "second");
+    let mut harness = wide(area(backend, profile));
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open") && node.label().as_deref() == Some("first")
+        })
+        .click();
+    settle(&mut harness);
+    let header = rect_of(&harness, "new-note");
+
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open") && node.label().as_deref() == Some("second")
+        })
+        .click();
+    for frame in 0..500 {
+        harness.step();
+        let now = rect_of(&harness, "new-note");
+        assert_eq!(now, header, "the cards' width moved at frame {frame}");
+        let read = harness
+            .state()
+            .state
+            .editor
+            .opened()
+            .and_then(|open| open.note());
+        if read.is_some_and(|note| note.title == "second") {
+            return;
+        }
+    }
+    settle(&mut harness);
+    assert_eq!(title_of_open(&harness), "second");
+    assert_eq!(rect_of(&harness, "new-note"), header);
 }
 
 /// A card clicked while a note is open: what was typed in the first is written on the way.

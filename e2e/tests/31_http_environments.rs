@@ -126,6 +126,28 @@ fn protected(app: &mut App) {
     });
 }
 
+/// The active environment's secret, named in the URL: its chip's card says where it comes from,
+/// masks it, and shows it when asked.
+fn pointed_at(app: &mut App) {
+    step(
+        "a variable pointed at says where it is from, and its value",
+        || {
+            app.click("http-url");
+            app.press(Key::A, Modifiers::COMMAND);
+            app.type_text("https://example.test/{{apiKey}}");
+            app.wait_for("http-used-variable");
+            app.hover("http-used-variable");
+            app.eventually("the card masks the secret", |tree| {
+                tree.text("http-used-variable-value").as_deref() == Some("••••••••")
+            });
+            app.click("http-used-variable-reveal");
+            app.eventually("and shows it", |tree| {
+                tree.text("http-used-variable-value").as_deref() == Some("s3cret")
+            });
+        },
+    );
+}
+
 fn read_back(app: App) -> App {
     let mut app = app.relaunch();
     step("unlocked again, the secret is masked, then shown", || {
@@ -158,5 +180,6 @@ fn http_environments() {
     let mut app = read_back(app);
     an_environment(&mut app);
     protected(&mut app);
+    pointed_at(&mut app);
     app.quit_discarding();
 }

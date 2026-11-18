@@ -3,7 +3,7 @@
 //! task's row being taller), a sheet's last results, a drawing's picture — or the line a search
 //! found, when that is not code.
 
-use crate::theme::tokens::radius;
+use crate::theme::tokens::{gap, radius};
 use egui::{
     Color32, CornerRadius, Rect, Role, Sense, Stroke, Ui, UiBuilder, WidgetInfo, pos2, vec2,
 };
@@ -24,6 +24,9 @@ use crate::widgets::{address, interact};
 
 /// A task's row: a box to tick needs it.
 const ITEM_HEIGHT: f32 = 24.0;
+/// The strip over a list's tasks: its bar, « 5/6 » and « +4 more ».
+const PROGRESS_HEIGHT: f32 = 12.0;
+const TRACK_HEIGHT: f32 = 5.0;
 /// A task's marks, as the screen reader is told them; drawn as boxes.
 const TICKED: &str = "☑";
 const UNTICKED: &str = "☐";
@@ -303,8 +306,8 @@ fn calc_lines(ui: &mut Ui, rect: Rect, (note, lines): (&DisplayNote, usize), for
     }
 }
 
-/// As many tasks as the card has rows for: what is left to do first, the task a search found
-/// always. Each one is ticked from the card; how far along the list is sits beside its title.
+/// How far along the list is, then as many tasks as the card has rows for: what is left to do
+/// first, the task a search found always. Each one is ticked from the card.
 fn checklist(
     ui: &mut Ui,
     rect: Rect,
@@ -313,11 +316,23 @@ fn checklist(
     actions: &mut Actions,
 ) {
     let items = &note.items;
-    let mut top = rect.top();
-    for at in seats(note, rows) {
-        if top + ITEM_HEIGHT > rect.bottom() + 0.5 {
-            break;
-        }
+    if items.is_empty() {
+        return;
+    }
+    // A task's row carries its own air around its 24 px box: the list takes the gaps by the bands,
+    // and keeps as many tasks as before it had a progress strip.
+    let rect = rect.expand2(vec2(0.0, super::GAP));
+    let strip = Rect::from_min_size(rect.min, vec2(rect.width(), PROGRESS_HEIGHT));
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "a few rows of a card"
+    )]
+    let fits = ((rect.height() - PROGRESS_HEIGHT + 0.5) / ITEM_HEIGHT).max(0.0) as usize;
+    let seats = seats(note, rows.min(fits));
+    progress(ui, strip, items, items.len() - seats.len(), language);
+    let mut top = strip.bottom();
+    for at in seats {
         let row = Rect::from_min_size(pos2(rect.left(), top), vec2(rect.width(), ITEM_HEIGHT));
         if item(ui, row, &items[at], language) {
             let mut ticked = items.clone();
@@ -328,6 +343,64 @@ fn checklist(
             }));
         }
         top += ITEM_HEIGHT;
+    }
+}
+
+/// A bar filled to the share of tasks done, « done/total » at its right, and « +n » for the tasks
+/// the card has no row for.
+fn progress(
+    ui: &mut Ui,
+    strip: Rect,
+    items: &[ChecklistItem],
+    hidden: usize,
+    language: i18n::Language,
+) {
+    let p = palette(ui.ctx());
+    let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
+    let done = items.iter().filter(|item| item.done).count();
+    let middle = strip.center().y;
+    let mut right = strip.right();
+    if hidden > 0 {
+        let words = i18n::translate(
+            language,
+            keys::notes::CHECKLIST_MORE,
+            &[("count", count(hidden).into())],
+        );
+        let font = Font::proportional(9.5, 400.0, 1.2);
+        let shown = galley(ui, &words, &font, p.text_2, f32::INFINITY, 1);
+        right -= shown.size().x;
+        let at = pos2(right, middle - shown.size().y / 2.0);
+        text_at(ui, at, shown, &words, "note-card-more");
+        right -= gap::CONTROLS;
+    }
+    let words = i18n::translate(
+        language,
+        keys::notes::CHECKLIST_PROGRESS,
+        &[
+            ("done", count(done).into()),
+            ("total", count(items.len()).into()),
+        ],
+    );
+    let font = Font {
+        weight: 600.0,
+        ..Font::mono(9.5, 1.2)
+    };
+    let shown = galley(ui, &words, &font, p.text_2, f32::INFINITY, 1);
+    right -= shown.size().x;
+    let at = pos2(right, middle - shown.size().y / 2.0);
+    text_at(ui, at, shown, &words, "note-card-progress");
+    right -= gap::CONTROLS;
+    let track = Rect::from_min_max(
+        pos2(strip.left(), middle - TRACK_HEIGHT / 2.0),
+        pos2(right.max(strip.left()), middle + TRACK_HEIGHT / 2.0),
+    );
+    let corner = CornerRadius::same(radius::MARK);
+    ui.painter().rect_filled(track, corner, p.bg_3);
+    #[expect(clippy::cast_precision_loss, reason = "a list's tasks")]
+    let share = done as f32 / items.len() as f32;
+    if share > 0.0 {
+        let filled = Rect::from_min_size(track.min, vec2(track.width() * share, TRACK_HEIGHT));
+        ui.painter().rect_filled(filled, corner, p.amber_fill);
     }
 }
 

@@ -28,9 +28,6 @@ use platform::paths::{self, Locations};
 use platform::window::Geometry;
 use ui::services::preferences::Preferences;
 
-/// The identity tool's lists in the source tree, for a binary run from `target/`.
-const DEVELOPMENT_RESOURCES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/resources");
-
 fn main() -> ExitCode {
     // First, for the script host too: it logs nothing there, and exits the same.
     logging::install_panic_hook();
@@ -104,7 +101,6 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
     let startup = ui::Startup {
         paths: engine::Paths {
             profile: locations.profile,
-            resources: paths::resources(Path::new(DEVELOPMENT_RESOURCES)),
         },
         window_file: locations.window,
         geometry: restored,

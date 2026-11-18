@@ -3,6 +3,7 @@
 
 pub(crate) mod auth;
 mod body;
+mod chips;
 mod composer;
 mod extractions;
 mod graphql;
@@ -26,7 +27,6 @@ use egui::{
 use engine::http::model::{HttpMethod, RequestAuth, RequestKind};
 use engine::http::scripts::model::ScriptKind;
 use engine::http::send::{ImpliedHeader, ImpliedSource};
-use engine::http::variables::UsedVariable;
 use i18n::keys;
 
 use super::{Action, scripts, variables_table};
@@ -202,7 +202,7 @@ pub(crate) fn show(
                     line(ui, state, tab, actions);
                     let used = state.http.used();
                     if !used.is_empty() {
-                        chips(ui, state, used, actions);
+                        chips::show(ui, state, used, actions);
                     }
                     if state.http.environments().asking() == Some(tab.key.as_str()) {
                         protected(ui, state, tab, actions);
@@ -448,82 +448,6 @@ fn kind_badge(ui: &mut Ui, kind: RequestKind, language: i18n::Language) {
         .galley(rect.center() - galley.size() / 2.0, galley, p.text_1);
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     widgets::address(ui, &response, "http-kind-badge");
-}
-
-/// Each `{{name}}` the request holds, in the colour of where it resolves from; the tooltip says
-/// from where, or that nothing sets it.
-fn chips(ui: &mut Ui, state: &AppState, used: &[UsedVariable], actions: &mut Actions) {
-    let p = palette(ui.ctx());
-    let language = state.language;
-    ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(gap::SNUG);
-        for known in used {
-            let scope = known.resolved.as_ref().map(|found| found.scope);
-            let hue = url::hue(p, scope);
-            let written = format!("{{{{{}}}}}", known.name);
-            let galley =
-                widgets::text(ui, &written, font::LABEL, 400.0, FontFamily::Monospace, hue);
-            let size = galley.size() + Vec2::new(16.0, 8.0);
-            let response = interact(
-                ui,
-                size,
-                Sense::click(),
-                "http-used-variable",
-                || WidgetInfo::labeled(Role::Label, true, &written),
-                CornerRadius::same(radius::CONTROL),
-            );
-            let rect = response.rect;
-            ui.painter().rect_filled(
-                rect,
-                CornerRadius::same(radius::CONTROL),
-                hue.gamma_multiply(0.16),
-            );
-            ui.painter()
-                .galley(rect.center() - galley.size() / 2.0, galley, hue);
-            let tip = match &known.resolved {
-                Some(found) => {
-                    let key = i18n::Key::find(&format!(
-                        "http.variables.used.from.{}",
-                        found.scope.as_str()
-                    ));
-                    let from = key.map_or_else(String::new, |key| {
-                        i18n::translate(
-                            language,
-                            key,
-                            &[("name", found.from.clone().unwrap_or_default().into())],
-                        )
-                    });
-                    format!("{} · {from}", known.name)
-                }
-                None => format!(
-                    "{} · {} · {}",
-                    known.name,
-                    i18n::translate(language, keys::http::variables::used::NONE, &[]),
-                    define_words(state),
-                ),
-            };
-            let response = widgets::tooltip(response, &tip);
-            if response.clicked() && known.resolved.is_none() {
-                actions.push(Asked::Http(Action::Define(known.name.clone())));
-            }
-        }
-    });
-}
-
-/// « Set in Staging », or in the globals with no environment.
-fn define_words(state: &AppState) -> String {
-    match state.http.environments().active() {
-        Some(active) => i18n::translate(
-            state.language,
-            keys::http::variables::used::DEFINE,
-            &[("name", active.name.as_str().into())],
-        ),
-        None => i18n::translate(
-            state.language,
-            keys::http::variables::used::DEFINE_GLOBALS,
-            &[],
-        ),
-    }
 }
 
 /// Under a protected environment, what could change something waits for this yes.
@@ -970,41 +894,76 @@ fn headers(ui: &mut Ui, state: &AppState, tab: &Tab, actions: &mut Actions) {
     }
 }
 
-/// What leaves with the request without a row of its own, and why: Rust composes the request,
-/// so Rust says.
+/// The name column of the headers sent unasked, at its narrowest: the reference's.
+const IMPLIED_NAME: f32 = 140.0;
+const IMPLIED_ROW: f32 = 26.0;
+
+/// What leaves with the request without a row of its own, and why, as the reference framed it:
+/// names and values in two columns, where each comes from at the right edge. Rust composes the
+/// request, so Rust says.
 fn implied_list(ui: &mut Ui, implied: &[ImpliedHeader], language: i18n::Language) {
     let p = palette(ui.ctx());
     let title = i18n::translate(language, keys::http::headers::IMPLIED, &[]);
-    let words = egui::RichText::new(&title)
-        .size(font::CONTROL)
-        .color(p.text_2);
-    ui.add(egui::Label::new(words));
-    let list = ui.vertical(|ui| {
-        ui.spacing_mut().item_spacing.y = gap::TIGHT;
-        for header in implied {
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = gap::INSET;
-                let name = egui::RichText::new(&header.name)
-                    .monospace()
-                    .size(font::LABEL)
-                    .color(p.text_1);
-                ui.add(egui::Label::new(name));
-                let value = egui::RichText::new(&header.value)
-                    .monospace()
-                    .size(font::LABEL)
-                    .color(p.text_0);
-                let said = ui.add(egui::Label::new(value).truncate());
+    let mono = |ui: &Ui, words: &str, ink| {
+        widgets::text(ui, words, font::LABEL, 400.0, FontFamily::Monospace, ink)
+    };
+    let names = implied
+        .iter()
+        .map(|header| mono(ui, &header.name, p.text_1).size().x)
+        .fold(IMPLIED_NAME, f32::max);
+    let list = egui::Frame::new()
+        .fill(p.bg_1)
+        .stroke(Stroke::new(1.0, p.line_soft))
+        .corner_radius(CornerRadius::same(radius::CARD))
+        .inner_margin(gap::margin(0.0, gap::TIGHT))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.spacing_mut().item_spacing.y = 0.0;
+            for header in implied {
+                let (row, _) = ui.allocate_exact_size(
+                    Vec2::new(ui.available_width(), IMPLIED_ROW),
+                    Sense::hover(),
+                );
+                let inner = row.shrink2(Vec2::new(gap::BLOCKS, 0.0));
+                let middle = inner.center().y;
+                let name = mono(ui, &header.name, p.text_1);
+                let at = pos2(inner.left(), middle - name.size().y / 2.0);
+                ui.painter().galley(at, name, p.text_1);
+                let from = widgets::text(
+                    ui,
+                    &origin(header, language),
+                    font::META,
+                    400.0,
+                    FontFamily::Proportional,
+                    p.text_2,
+                );
+                let from_left = inner.right() - from.size().x;
+                let at = pos2(from_left, middle - from.size().y / 2.0);
+                ui.painter().galley(at, from, p.text_2);
+                let value_left = inner.left() + names + gap::GROUPS;
+                let room = (from_left - gap::GROUPS - value_left).max(1.0);
+                let value = Rect::from_min_max(
+                    pos2(value_left, row.top()),
+                    pos2(value_left + room, row.bottom()),
+                );
+                let said = ui.allocate_rect(value, Sense::hover());
+                said.widget_info(|| WidgetInfo::labeled(Role::Label, true, &header.value));
                 widgets::address(ui, &said, "http-implied-value");
-                let from = egui::RichText::new(origin(header, language))
-                    .size(font::CONTROL)
-                    .color(p.text_2);
-                ui.add(egui::Label::new(from));
-            });
-        }
-    });
+                let mut job = egui::text::LayoutJob::simple_singleline(
+                    header.value.clone(),
+                    FontId::monospace(font::LABEL),
+                    p.text_0,
+                );
+                job.wrap = egui::text::TextWrapping::truncate_at_width(room);
+                let shown = ui.fonts_mut(|fonts| fonts.layout_job(job));
+                let at = pos2(value_left, middle - shown.size().y / 2.0);
+                ui.painter().galley(at, shown, p.text_0);
+            }
+        });
     list.response
         .widget_info(|| WidgetInfo::labeled(Role::List, true, &title));
     widgets::address(ui, &list.response, "http-implied-headers");
+    ui.add_space(gap::INSET);
 }
 
 /// « by default », « from the body », or the folder or collection that hands it down.

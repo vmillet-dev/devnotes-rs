@@ -57,6 +57,15 @@ fn type_into(harness: &mut Harness<'_, DevNotesApp>, author_id: &str, words: &st
 
 /// Draws the window as it stands, then again in the other theme, and gives the first one back.
 fn capture(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
+    shoot(harness, name, true);
+}
+
+/// As `capture`, the pointer still pressed where it is: what a drag shows on its way.
+fn capture_holding(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
+    shoot(harness, name, false);
+}
+
+fn shoot(harness: &mut Harness<'_, DevNotesApp>, name: &str, pointer_gone: bool) {
     let directory = std::env::var_os("DEVNOTES_CAPTURES");
     for _ in 0..2 {
         let theme = match harness.ctx.theme() {
@@ -64,7 +73,9 @@ fn capture(harness: &mut Harness<'_, DevNotesApp>, name: &str) {
             egui::Theme::Light => "light",
         };
         // kittest draws its pointer, and where a click left it.
-        harness.event(egui::Event::PointerGone);
+        if pointer_gone {
+            harness.event(egui::Event::PointerGone);
+        }
         settle(harness);
         let image = harness
             .render()
@@ -729,27 +740,10 @@ fn the_tools_area() {
     capture(&mut harness, "tools-references");
 }
 
-/// The bench's resources are its profile.
-pub(super) fn copy_identity_lists(profile: &Path) {
-    let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../engine/resources/identity");
-    let places = profile.join("identity/places");
-    std::fs::create_dir_all(&places).unwrap();
-    std::fs::copy(
-        shipped.join("names.txt"),
-        profile.join("identity/names.txt"),
-    )
-    .unwrap();
-    for list in std::fs::read_dir(shipped.join("places")).unwrap() {
-        let list = list.unwrap();
-        std::fs::copy(list.path(), places.join(list.file_name())).unwrap();
-    }
-}
-
 /// Each tool on its example, once it has answered.
 #[test]
 fn the_tools() {
     let profile = tempfile::tempdir().unwrap();
-    copy_identity_lists(profile.path());
     let mut harness = launch(profile.path());
     type_into(&mut harness, "vault-passphrase", PASSPHRASE);
     type_into(&mut harness, "vault-confirmation", PASSPHRASE);
@@ -1289,4 +1283,316 @@ fn a_selection_and_a_report_at_three_widths() {
         .report(i18n::Message::new(i18n::keys::tools::SAMPLE_LOADED));
     settle(&mut harness);
     capture(&mut harness, "status");
+}
+
+/// The samples' tree with a chain of folders four levels deep, at the default rail (#1463).
+#[test]
+fn the_folders_four_levels_deep() {
+    use engine::folders::model::FolderDraft;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1084.0, 681.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    engine::db::run_here(backend.engine(), |engine| {
+        let folders = engine::folders::list_folders(engine, None)?;
+        let snippets = folders
+            .iter()
+            .find(|folder| folder.name == "Snippets")
+            .unwrap();
+        let mut parent = snippets.id.clone();
+        for name in ["Requêtes SQL", "Exploitation", "Lecture seule", "Rapports"] {
+            let draft = FolderDraft {
+                space_id: snippets.space_id.clone(),
+                name: name.to_owned(),
+                parent_id: Some(parent),
+            };
+            parent = engine::folders::create_folder(engine, &draft)?.id;
+        }
+        Ok::<_, engine::error::AppError>(())
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    capture(&mut harness, "folders-four-deep");
+}
+
+// Dropdowns of short entries and of long ones, at the width they open (#1459).
+#[test]
+fn the_dropdowns_at_their_width() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    click(&mut harness, "file-menu");
+    capture(&mut harness, "menu-file");
+    click(&mut harness, "file-menu");
+    click(&mut harness, "sort-trigger");
+    capture(&mut harness, "menu-sort");
+    click(&mut harness, "sort-trigger");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("psql prod")
+        })
+        .click();
+    settle(&mut harness);
+    for menu in ["editor-kind", "editor-priority", "editor-language"] {
+        click(&mut harness, menu);
+        capture(&mut harness, &format!("menu-{menu}"));
+        harness.key_press(egui::Key::Escape);
+        settle(&mut harness);
+    }
+    drop(harness);
+
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "http-method");
+    capture(&mut harness, "menu-http-method");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    click(&mut harness, "http-section-auth");
+    click(&mut harness, "http-auth-kind");
+    capture(&mut harness, "menu-http-auth-kind");
+}
+
+/// A long Note holding a code block, open beside the cards and scrolled down (#1464).
+#[test]
+fn a_long_note_with_code_scrolled_in_the_panel() {
+    use engine::notes::kind::NoteKind;
+    use engine::notes::language::Language;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    let space = crate::testing::note(backend, "seed").space_id.clone();
+    let code = (0..60)
+        .map(|n| format!("SELECT * FROM orders WHERE id = {n};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let content = format!("# Requêtes\n\nCe qu'on lance le lundi.\n\n```sql\n{code}\n```\n");
+    engine::db::run_here(backend.engine(), move |engine| {
+        let draft = engine::notes::model::NoteDraft {
+            kind: NoteKind::Note,
+            language: Language::Txt,
+            content,
+            ..crate::testing::snippet(space, "Requêtes du lundi".to_owned())
+        };
+        engine::notes::create_note(engine, draft)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("Requêtes du lundi")
+        })
+        .click();
+    settle(&mut harness);
+    let body = harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .rect();
+    harness.event(egui::Event::PointerMoved(body.center()));
+    for _ in 0..6 {
+        harness.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, -120.0),
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Unknown,
+            modifiers: egui::Modifiers::NONE,
+        });
+        harness.step();
+    }
+    settle(&mut harness);
+    capture(&mut harness, "note-code-scrolled");
+}
+
+/// The request's variables under its URL, one pointed at: a value, a secret, one set nowhere
+/// (#1457).
+#[test]
+fn a_variable_pointed_at() {
+    use engine::http::environments::{Variable, VariableKind};
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    let global = |name: &str, value: &str, kind| Variable {
+        enabled: true,
+        name: name.to_owned(),
+        value: value.to_owned(),
+        kind,
+        filled_by: None,
+    };
+    let globals = [
+        global("base", "https://api.example.test", VariableKind::Text),
+        global("token", "s3cr3t-t0k3n", VariableKind::Secret),
+    ];
+    engine::db::run_here(harness.state().backend.engine(), |engine| {
+        engine::http::save_http_globals(engine, &globals)
+    })
+    .unwrap();
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().is_some_and(|label| label.ends_with("Login"))
+        })
+        .click();
+    settle(&mut harness);
+    let app = harness.state_mut();
+    let key = app.state.http.tabs().active_key().unwrap().to_owned();
+    app.state.http.tabs_mut().edit(&key, |draft| {
+        use crate::state::http::tabs::DraftEdit;
+        draft.apply(DraftEdit::Url(
+            "{{base}}/sessions/{{token}}?user={{user}}".to_owned(),
+        ));
+    });
+    settle(&mut harness);
+    for (at, name) in ["base", "token", "user"].into_iter().enumerate() {
+        let chip = harness
+            .get_all_by(|node| node.author_id() == Some("http-used-variable"))
+            .nth(at)
+            .unwrap()
+            .rect();
+        harness.event(egui::Event::PointerMoved(chip.center()));
+        for _ in 0..60 {
+            harness.step();
+        }
+        let image = harness
+            .render()
+            .expect("a software adapter draws the window");
+        if let Some(directory) = std::env::var_os("DEVNOTES_CAPTURES") {
+            std::fs::create_dir_all(&directory).unwrap();
+            let file = format!("variable-{name}.png");
+            image.save(Path::new(&directory).join(file)).unwrap();
+        }
+    }
+}
+
+/// Four tabs, the first held between the last two, then let go there (#1506).
+#[test]
+fn an_http_tab_dragged_along_the_strip() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = http_area(profile.path());
+    for name in ["Login", "Session", "Factures", "Flux"] {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some("http-node-name")
+                    && node.label().is_some_and(|label| label.ends_with(name))
+            })
+            .click();
+        settle(&mut harness);
+    }
+    let tab = |harness: &Harness<'_, DevNotesApp>, name: &str| {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some("http-tab-open")
+                    && node.label().is_some_and(|label| label.ends_with(name))
+            })
+            .rect()
+    };
+    let from = tab(&harness, "Login").center();
+    let to = tab(&harness, "Flux").left_center() + egui::vec2(4.0, 0.0);
+    let press = |pressed| egui::Event::PointerButton {
+        pos: to,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    harness.event(egui::Event::PointerMoved(from));
+    harness.event(egui::Event::PointerButton {
+        pos: from,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    harness.step();
+    for step in 1..=10_u8 {
+        harness.event(egui::Event::PointerMoved(
+            from + (to - from) * (f32::from(step) / 10.0),
+        ));
+        harness.step();
+    }
+    capture_holding(&mut harness, "http-tab-dragging");
+    harness.event(press(false));
+    harness.event(egui::Event::PointerMoved(egui::pos2(700.0, 500.0)));
+    settle(&mut harness);
+    capture(&mut harness, "http-tab-moved");
+}
+
+/// The task lists' cards, a list longer than its card among them (#1461).
+#[test]
+fn the_task_lists_and_their_progress() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let _ = kinds(&harness.state().backend);
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    capture(&mut harness, "task-lists");
+}
+
+/// The samples' « Snippets » folder dropped onto another space (#1503).
+#[test]
+fn a_folder_dropped_onto_another_space() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let draft = engine::spaces::model::SpaceDraft {
+        name: "Archives".into(),
+    };
+    engine::db::run_here(harness.state().backend().engine(), move |engine| {
+        engine::spaces::create_space(engine, &draft)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    let at = |harness: &Harness<'_, DevNotesApp>, author_id: &str, name: &str| {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some(author_id) && node.label().as_deref() == Some(name)
+            })
+            .rect()
+            .center()
+    };
+    let from = at(&harness, "folder-option", "Snippets");
+    let to = at(&harness, "space-option", "Archives");
+    let press = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    harness.event(egui::Event::PointerMoved(from));
+    harness.step();
+    harness.event(press(from, true));
+    harness.step();
+    for step in [0.25, 0.5, 0.75, 1.0] {
+        harness.event(egui::Event::PointerMoved(from + (to - from) * step));
+        harness.step();
+    }
+    harness.event(press(to, false));
+    settle(&mut harness);
+    capture(&mut harness, "folder-to-space");
 }

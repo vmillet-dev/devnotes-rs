@@ -32,7 +32,8 @@ pub use layout::{RailWidth, area_room, split_handle, tooltip};
 pub use list::{code_viewer, virtual_list};
 pub use menu::{
     ChoiceMenu, FILTER_FROM, MenuItem, Naming, arrows as menu_arrows, entry as menu_entry,
-    frame as menu_frame, icon_entry, line as menu_line, menu,
+    fitted as fitted_menu, frame as menu_frame, icon_entry, line as menu_line, menu,
+    needs as menu_needs,
 };
 pub use release_notes::release_notes;
 pub use rich::{Read, rich_reader};
@@ -70,7 +71,28 @@ pub fn interact(
     response.widget_info(info);
     address(ui, &response, author_id);
     focus::ring(ui, &response, corner);
+    pointer(ui, &response);
     response
+}
+
+/// What the pointer says over a control, from what it senses: a hand where it clicks, an open
+/// hand where it drags and a closed one while it moves, the arrow over a disabled one. A later
+/// call in the frame wins: a handle or a link says more.
+pub fn pointer(ui: &Ui, response: &Response) {
+    if !response.enabled() || !(response.hovered() || response.dragged()) {
+        return;
+    }
+    let sense = response.sense;
+    let icon = if sense.senses_drag() && response.dragged() {
+        egui::CursorIcon::Grabbing
+    } else if sense.senses_drag() {
+        egui::CursorIcon::Grab
+    } else if sense.senses_click() {
+        egui::CursorIcon::PointingHand
+    } else {
+        return;
+    };
+    ui.ctx().set_cursor_icon(icon);
 }
 
 /// Whether the keys of the frame are `response`'s to take: the focus egui keeps, as its own

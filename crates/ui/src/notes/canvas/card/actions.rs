@@ -19,9 +19,6 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, IconButton, MIN_TARGET};
 
-/// As wide as the reference's, a French entry included.
-const MENU_WIDTH: f32 = 176.0;
-
 const LEVELS: [Priority; 5] = [
     Priority::None,
     Priority::Low,
@@ -39,15 +36,15 @@ pub(super) fn show(
     ui: &mut Ui,
     card: Rect,
     note: &DisplayNote,
-    (context, ticking): (&Context<'_>, bool),
+    context: &Context<'_>,
     actions: &mut Actions,
 ) {
     let ctx = ui.ctx().clone();
     let here = Id::unique("note-card-actions").with(&note.id);
     let (drawn, open) = ctx.data(|data| data.get_temp::<(Rect, bool)>(here)).unzip();
-    // Its box, unless the card already shows it; copy, but for a drawing; the ⋯.
+    // Copy, but for a drawing; the ⋯. The card's box is in its top band.
     let copies = note.kind != NoteKind::Drawing;
-    let buttons = 1.0 + f32::from(u8::from(!ticking)) + f32::from(u8::from(copies));
+    let buttons = 1.0 + f32::from(u8::from(copies));
     let width = buttons * MIN_TARGET + (buttons - 1.0) * 6.0 + 10.0;
     // Over the bottom edge, ending short of the next row.
     let pill = Rect::from_min_size(
@@ -78,9 +75,6 @@ pub(super) fn show(
         .show(&mut ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = gap::SNUG;
-                if !ticking && tick(ui, &title, language) {
-                    push(actions, Asked::Check(note.id.clone()));
-                }
                 // A note with fields asks for them before it is copied.
                 let (icon, key, author_id) = if note.placeholders.is_empty() {
                     (Icon::Copy, keys::notes::COPY_CONTENT, "note-card-copy")
@@ -110,27 +104,6 @@ pub(super) fn show(
     ctx.data_mut(|data| data.insert_temp(here, (drawn, open)));
 }
 
-/// The card's box in the pill: nothing on the card moves for it.
-fn tick(ui: &mut Ui, title: &str, language: i18n::Language) -> bool {
-    let p = palette(ui.ctx());
-    let label = i18n::translate(
-        language,
-        keys::notes::SELECT_NOTE,
-        &[("title", title.into())],
-    );
-    let response = widgets::interact(
-        ui,
-        Vec2::splat(MIN_TARGET),
-        egui::Sense::click(),
-        "note-card-check",
-        || egui::WidgetInfo::selected(egui::Role::CheckBox, true, false, &label),
-        CornerRadius::same(radius::TAG),
-    );
-    let square = Rect::from_center_size(response.rect.center(), Vec2::splat(14.0));
-    crate::notes::ui::tick_box(ui, square, false, p.text_1);
-    response.clicked()
-}
-
 fn menu(
     ui: &Ui,
     trigger: &Response,
@@ -149,29 +122,30 @@ fn menu(
         .align(RectAlign::BOTTOM_END)
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
-            ui.set_width(MENU_WIDTH);
-            ui.spacing_mut().item_spacing.y = 0.0;
-            let id = note.id.clone();
-            first_entries(ui, note, language, actions);
-            filing(ui, note, context, actions);
-            moving(ui, note, context, actions);
-            widgets::menu_line(ui);
-            let delete = tr(if armed {
-                keys::editor::DELETE_CONFIRM
-            } else {
-                keys::editor::DELETE
-            });
-            let about = (Icon::Trash, None);
-            let deleted =
-                widgets::icon_entry(ui, about, &delete, "note-card-delete", (true, false));
-            if deleted.clicked() {
-                if armed {
-                    push(actions, Asked::Delete(id));
-                    ui.close();
+            widgets::fitted_menu(ui, 0.0, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                let id = note.id.clone();
+                first_entries(ui, note, language, actions);
+                filing(ui, note, context, actions);
+                moving(ui, note, context, actions);
+                widgets::menu_line(ui);
+                let delete = tr(if armed {
+                    keys::editor::DELETE_CONFIRM
                 } else {
-                    ui.data_mut(|data| data.insert_temp(armed_id, true));
+                    keys::editor::DELETE
+                });
+                let about = (Icon::Trash, None);
+                let deleted =
+                    widgets::icon_entry(ui, about, &delete, "note-card-delete", (true, false));
+                if deleted.clicked() {
+                    if armed {
+                        push(actions, Asked::Delete(id));
+                        ui.close();
+                    } else {
+                        ui.data_mut(|data| data.insert_temp(armed_id, true));
+                    }
                 }
-            }
+            });
         });
     // Folded with the menu: the next opening starts unarmed.
     if shown.is_none() && armed {
@@ -277,26 +251,27 @@ fn priority(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, actions: 
         .frame(widgets::menu_frame(ui.ctx()))
         .open_bool(&mut open)
         .show(|ui| {
-            ui.set_width(180.0);
-            ui.spacing_mut().item_spacing.y = 0.0;
-            for level in LEVELS {
-                let name = i18n::translate(language, level_key(level), &[]);
-                let on = level == note.priority;
-                if widgets::menu_entry(ui, &name, "note-card-priority-level", false, on, false)
-                    .clicked()
-                {
-                    if !on {
-                        push(
-                            actions,
-                            Asked::Prioritise {
-                                id: note.id.clone(),
-                                priority: level,
-                            },
-                        );
+            widgets::fitted_menu(ui, 0.0, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                for level in LEVELS {
+                    let name = i18n::translate(language, level_key(level), &[]);
+                    let on = level == note.priority;
+                    if widgets::menu_entry(ui, &name, "note-card-priority-level", false, on, false)
+                        .clicked()
+                    {
+                        if !on {
+                            push(
+                                actions,
+                                Asked::Prioritise {
+                                    id: note.id.clone(),
+                                    priority: level,
+                                },
+                            );
+                        }
+                        ui.close();
                     }
-                    ui.close();
                 }
-            }
+            });
         });
     ui.data_mut(|data| data.insert_temp(open_id, open));
 }
@@ -415,6 +390,7 @@ fn title(ui: &mut Ui, words: &str) {
         egui::FontFamily::Proportional,
         p.text_2,
     );
+    widgets::menu_needs(ui, 16.0 + galley.size().x);
     let (rect, _) = ui.allocate_exact_size(Vec2::new(galley.size().x, 24.0), egui::Sense::hover());
     ui.painter().galley(
         pos2(rect.left() + 8.0, rect.bottom() - galley.size().y - 4.0),

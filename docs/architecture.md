@@ -844,38 +844,33 @@ a country, hard-coded, is a megabyte of test data in the binary.
 `ui/src/tools/catalogue/identity.rs`). A pure function of the options and a seed.
 Four files under `tools/identity/`, each one thing:
 
-| File         | What it holds                                                                                              |
-| ------------ | ---------------------------------------------------------------------------------------------------------- |
-| `data.rs`    | The lists — one file of names, a file of places and streets a country — read from files it checks          |
-| `profile.rs` | A country in a few lines: the order of an address, the shape of a phone number, a firm — nothing of a name |
-| `numbers.rs` | The keys, a function each, each held to an example its country publishes                                   |
-| `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`                 |
+| File         | What it holds                                                                                               |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| `data.rs`    | The lists — one file of names, a file of places and streets a country — compiled in and held whole by tests |
+| `profile.rs` | A country in a few lines: the order of an address, the shape of a phone number, a firm — nothing of a name  |
+| `numbers.rs` | The keys, a function each, each held to an example its country publishes                                    |
+| `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`                  |
 
 The lists weigh **36 KB** for the thirteen countries, held under `BUDGET` by a test that
 sums the files.
 
-⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
-is corrected or a list completed without building the application again.
+⚠️ **The lists are compiled into the application** (`include_str!` in `data.rs`), decided by the
+owner after the standalone executable of 1.0.0 answered « Liste introuvable »: it is one file,
+with no folder beside it. For a while they were files beside the executable, so that a name could
+be corrected without a build; that is given up.
 
-- **A resource**: `crates/engine/resources/identity/` (`names.txt`, `places/*.txt`) lands in
-  `<resources>/identity/` — beside the executable on Windows, under the package's own folder on
-  Linux, and read from the crate in a development or e2e build. `Paths::resources` says where
-  (`platform::paths::resources`), joined with `identity`.
-- **Read once, kept for the session** (`data::library`): every file is read at the first card
-  and its text given away for as long as the application runs, every name drawn afterwards
-  pointing into it. ⚠️ Only a reading that was whole is kept: a file put back is found at the
-  next draw, without a restart; a file edited while the application runs waits for the next
-  launch.
-- ⚠️ **A list can now be missing or damaged, and is checked when read** (`data::read`): the
-  names have a list of each kind, a country has places — every part of each — and streets under
-  each place's own tag. The first file that fails is answered with where it was looked for
-  (`UnreadableList`: `missing` or `damaged`, the file, the folder), and the tool says so in
-  place of a card (`IdentityOutcome::Unreadable`) — an export writes nothing
-  (`PeopleExport::Unreadable`). Nothing divides by the length of an empty list. A byte-order
-  mark and Windows line endings, which an editor leaves, are read through.
-- **What is shipped is what is read**: a test holds the folder to one file of names and a
-  file a country, and nothing else; the tests draw from the very files that are shipped. The
-  e2e scenario of the tool runs against the assembled application: it fails if they are not.
+- **The files are the source**: `crates/engine/resources/identity/` (`names.txt`,
+  `places/*.txt`), one `include_str!` each; nothing is installed beside the binary and nothing
+  is read from a folder at run time.
+- **Read once, kept for the session** (`data::library`, a `LazyLock`): the texts are parsed at
+  the first card, every name drawn afterwards pointing into them.
+- ⚠️ **A list is held whole by a test, not checked at run time**: the names have a list of each
+  kind, a country has places — every part of each — and streets under each place's own tag
+  (`every_list_compiled_in_is_whole`). A build that passed its tests cannot meet a list that
+  is not whole, so the tool has no « unreadable » answer. Windows line endings, which a checkout
+  may leave, are read through.
+- **What is compiled in is the whole folder**: a test holds the folder to one file of names and
+  a file a country, and nothing else.
 - **Not done**: lists of the user's own beside the shipped ones.
 
 - **The seed is text** — « devnotes » is one — hashed to the number the tools' `Draw` takes;
@@ -1536,7 +1531,7 @@ instead of a floating layer of their own.
 
 **A card reads like a small editor window: a title bar, a preview, a status line**. The
 title bar (28 px, `card::bands::top`) holds the kind's icon in an 18 px tile tinted with its hue,
-a snippet's format (« TS », « Texte » in grey for plain text), the title on one line with an ellipsis, then on the right a list's « 1/4 », the priority as three
+a snippet's format (« TS », « Texte » in grey for plain text), the title on one line with an ellipsis, then on the right the priority as three
 bars (« Urgent » written out in red beside them, the others named in the tooltip), the pin, and
 — while cards are ticked — the selection box, last, so nothing on its left moves but the pin,
 which steps over for it. The status line (22 px, `card::bands::bottom`) is passive: where the
@@ -1546,7 +1541,10 @@ fields to fill, 📎 and the attachments, and the short date (« 4 h »,
 « hier », « dans 2 h » in red for a near expiry; the long label is the node's name). Neither
 band is ever empty, both have no fill but under the pointer (`bg_3`) and a `line_soft` rule
 toward the preview. A card shows no tag: a search that found one says so in the preview. An
-armed deletion turns the status line red with its two keys.
+armed deletion turns the status line red with its two keys. A list's preview opens on its
+progress, as the reference's: a bar in the accent filled to the share done, « 5/6 » at its right
+and « +4 more » for the tasks the card has no row for. The list takes the gaps beside the bands
+(a task's 24 px row carries its own air), so the strip costs no row of tasks.
 
 ⚠️ **The title bar was chosen over a band of marks** (2026-11-09). The first version put the
 kind, the format and the counts in a band above a title line, as the mockup
@@ -2454,8 +2452,8 @@ is left out; a value naming another is filled again, eight times at most.
 - **The editor asks Rust what each name resolves to** (`http_variables`, the same layers and
   texts as a send): a chip a name under the URL, in the colour of its level — the request
   green, a folder teal, the collection blue, the environment amber, the globals pink, red when
-  nothing sets it — and the URL's copy in the same hues. Pointed at or focused, a chip says
-  from where, the value (a secret's masked until « Afficher », masked again once left) and the
+  nothing sets it — and the URL's copy in the same hues. Pointed at or focused, a chip opens its
+  card (`http::request::chips`, kept open while the pointer is on it), which says from where, the value (a secret's masked until « Afficher », masked again once left) and the
   levels it hides; a name nothing sets offers « Définir dans … », which opens the environment
   — the globals with none — on a row of that name. The answer is asked again when the request,
   its place, the environment or a set changes, the last one kept while the next is read.
@@ -2697,11 +2695,18 @@ transaction, before the row goes; `parent_id`'s own `SET NULL` is only a guard.
 **A folder holds folders, one tree per space.** Every rule about it is `folders::model::Lineage`,
 built from ids and parents alone, so no name is opened to answer one: the sub-tree, the path, the
 depth, where a note sits on a board (`Seat`), and what a move may do — never into itself or what
-it holds, never out of its space, its whole sub-tree within `MAX_DEPTH` (8, a guard and not a
-level anyone should reach). A name is unique **among its siblings**: two folders may each hold a
-« Perf », as two spaces may. `move_folder` answers where the folder was — its parent and its
-zone's frame — which `move_folder_back` puts back; the frame is let go of on the way, since a
-frame is a place on one parent's board and means nothing on another's. `spaces/`
+it holds, its whole sub-tree within `MAX_DEPTH` (8, a guard and not a level anyone should reach;
+`check_arrival` holds it for a sub-tree coming from another space). A name is unique **among its
+siblings**: two folders may each hold a « Perf », as two spaces may. `move_folder` takes the
+target space: **into another space**, the folder takes its sub-tree and every note filed in it,
+trashed ones included (one left behind would be filed in a folder of another space), in one
+transaction, `updated_at` untouched; it is refused only for a name taken among the new siblings
+or a tree too deep there. It answers where the folder was — its space, its parent, its zone's
+frame and the notes that changed space — which `move_folder_back` puts back, every note filed in
+it going back too; the frame is let go of on the way, since a frame is a place on one parent's
+board and means nothing on another's. In the rail it is a drop onto another space's row or one of
+its folders, pointer only (decided by the owner: `Alt+←/→` stay inside a space); a drop where it
+already is says so. `spaces/`
 cascades into `folders/`, and that cascade then fires the `SET NULL` — a space's notes reach
 their refuge unfiled, which is correct, since a folder of the deleted space no longer exists.
 
@@ -4287,8 +4292,9 @@ found (`matched == 0`, `canvas-no-results`) or a failure with its retry (`canvas
 bumps the revision) instead of the sections.
 
 A card (`canvas::card`) draws the core's `DisplayNote` and decides nothing about it, in three
-bands (→ "A card is two layers"): the title bar (the kind's icon, `notes::ui::kind_icon`; a
-snippet's format, `notes::ui::format_label`; the title; the priority's bars, the pin, the box), the preview by kind — a snippet's first lines in
+bands (→ "A card is two layers"): the title bar (the card's box; the kind's icon,
+`notes::ui::kind_icon`; a snippet's format, `notes::ui::format_label`; the title; the priority's
+bars, the pin), the preview by kind — a snippet's first lines in
 the mono face, a Note's outline, a list's open tasks (ticking one writes it through
 `state::notes`, not optimistically), a sheet's last results, a drawing's picture — and the status
 line (the place; the fields, the attachments, the short date). Previews are monochrome until syntax colouring arrives with
@@ -4369,7 +4375,11 @@ toolbar takes two lines: the title with expand and close, then the language, the
 priority on the left and copy, pin and ⋯ on the right; folding the header, presenting and deleting
 (two clicks, the menu staying open between them) wait in ⋯. ⚠️ The split between the cards and the
 panel is on a whole point: on a fraction the header's measure of itself drifted by thousandths of
-a point each frame and never settled. **Expanded, each kind has its layout**
+a point each frame and never settled. The panel keeps its place while the next note is read
+(`EditorState::is_open`, not the note read): an empty panel stands for it, so the cards beside
+never jump to the whole width and back. Expanded, the note takes the cards' zone and no more: the
+notes header stays above it, so the sidebar's toggle, the search and « New note » stay in reach.
+**Expanded, each kind has its layout**
 (`notes::overlays::editor::expanded`): the toolbar holds the kind's icon, a snippet's format, the
 title, ‹ `n / total` ›, the kind's own action (copy, filled for a snippet with fields; « Export ▾ »
 for a Dessin), « Details », pin, ⋯ (presenting a Note, deleting), back from full screen and close.
@@ -4431,9 +4441,9 @@ then commands — move to a space, file into a folder or out of every one, a tag
 unpin, delete in two clicks — and « … » for a priority, a tag removed, the copy, and whatever the
 width leaves out (the filing first, then the move, the pin, the tag field). Asking for the search
 (`Ctrl+K`) lets the selection go. A batch acts on the ticked notes still on screen, in one call to the core; Escape lets
-the selection go after disarming and before the search. ⚠️ The card's box is allocated on every
-frame, shown or not: a widget that comes and goes moved the ids of every widget after it, and the
-⋯ lost its menu.
+the selection go after disarming and before the search. The card's box is always first in its
+title bar, as the reference's: dim at rest, plain under the pointer or while cards are ticked,
+filled amber once ticked — it never moves, so the pointer finds it where it saw it.
 
 Every write of the card, the keys and the selection bar answers what it changed as an
 `api::undo::Reversible` — the core's own answer, as on the front — and `state::undo::UndoState`
@@ -4579,12 +4589,16 @@ or a WebSocket, or the empty workspace's three buttons — is a draft alone (`dr
 nowhere until saved. `Ctrl+S` (`keys::HTTP`) writes the draft in front whole
 (`save_http_request`); typing during the write keeps what was typed. Closing a modified tab asks
 first (`http::close`: cancel, close without saving, save — save waits for the first save's
-dialog on a draft); the middle button closes a tab as in a browser. ⚠️ A tab follows every tree
+dialog on a draft); the middle button closes a tab as in a browser, a press that moved too when
+it is let go on the tab. A tab is dragged along the strip (`Tabs::move_to`, a gap between two
+tabs), an amber bar where it would land, the rail's drop bar upright; held at an end, the strip
+scrolls. Its keyboard twin is `Alt` and ← or → on the tab with the keys (`Tabs::nudge`); each
+tab is drawn under a scope id of its key, so the keys stay on it as it moves. ⚠️ A tab follows every tree
 that is read: a request deleted closes its tab, one moved takes its new place, one renamed takes
 the name in what is saved and in what is edited, so the next save does not write the old one
 back. The rail lights the request in front, and its deletion question names the open tabs it
 would close with changes (`tree::requests_under`, `Tabs::unsaved_among`): Rust counts what is
-deleted, only the interface what is typed. Which requests were open and which was in front is the
+deleted, only the interface what is typed. Which requests were open, in the strip's order, and which was in front is the
 library's (`devnotes.notes.http.tabs`), read once the area is shown and written, with the folds,
 whenever either changes (`HttpState::remember`).
 
@@ -5539,8 +5553,7 @@ whole profile, its logs and the window's geometry in that directory — tests an
 only. Without it, `platform::paths::Locations::installed` resolves the profile
 `com.devnotes.app`, the packages' identifier (`com.devnotes.app.dev` until 1.0.0, D16): roaming data on
 Windows, `$XDG_DATA_HOME` and `$XDG_CONFIG_HOME` on Linux, the logs under the local data
-directory. The resources are found beside the executable, under `lib/devnotes` in a Linux
-package, or in `crates/engine/resources` for a binary run from `target/`.
+directory. Nothing else is read beside the executable: the identity tool's lists are compiled in.
 
 **One application per profile (D16).** Before the log, `platform::instance::claim` binds a local socket named after a digest of the canonical profile path (a named pipe on Windows, the abstract namespace on Linux). A second launch that cannot bind it connects, sends `reveal` — or `action <name>` from the `e2e` flavour, its way to press a global shortcut — and exits; the first hears it on a thread of its own and brings its window forward. ⚠️ Windows answers a pipe already taken with « access denied », not « address in use ». A claim that fails otherwise stops the launch: a second writer would leave the index silently wrong. Two profiles never collide, so a scenario never meets a development instance.
 
@@ -5954,7 +5967,10 @@ the widget rather than of each screen (plan § 3.12):
   its role and its name, sets its `author_id`, paints the focus ring and allocates at least
   **24 × 24 px** for anything clickable (WCAG 2.5.8). `egui::Ui::interact` is refused elsewhere by
   `disallowed-methods` (`crates/ui/clippy.toml`), and kittest refuses a control without an
-  accessible name (its check, on by default and left on).
+  accessible name (its check, on by default and left on). It also sets the mouse pointer from
+  what the control senses (`widgets::pointer`): a hand where it clicks, an open hand where it
+  drags and a closed one while it moves, the arrow over a disabled one; text surfaces ask for the
+  I-beam, handles for their resize arrows, after it.
 - **An icon-only control draws an icon** (`theme::icons`, stroked in the text's colour), never a
   glyph from the system's emoji font, which looks different on every machine and follows no
   theme; the control names itself, and a decorative picture says nothing.
@@ -6134,8 +6150,8 @@ three invariants `changelog::tests::the_shipped_file_parses_into_something_to_sh
 
 **The packages** are built by `cargo build -p app --release`, then `.github/actions/package`:
 `cargo packager` (NSIS per user on Windows; AppImage and deb on Linux) and `cargo generate-rpm`,
-each signed with the minisign key, each checked to hold the application alone and the identity
-lists where `Paths::resources` reads them (→ `docs/releasing.md`, "What gets published").
+each signed with the minisign key, each checked to hold the application alone (→
+`docs/releasing.md`, "What gets published").
 `packages.yml` runs the same action on a pull request that touches packaging, with a key made
 for the run, then installs 1.0.0 on a clean runner, refuses a 1.0.1 altered by one byte and
 installs the whole one through the application's own updater client

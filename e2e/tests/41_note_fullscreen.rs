@@ -21,6 +21,26 @@ fn close(app: &mut App) {
     app.eventually("the editor is closed", |tree| !tree.has("editor-title"));
 }
 
+/// The left edge of the expanded note's title.
+fn note_left(tree: &Tree) -> f64 {
+    tree.find("editor-title")
+        .and_then(egui::accesskit::Node::bounds)
+        .map_or(f64::NAN, |bounds| bounds.x0)
+}
+
+/// The header stays over the expanded note: its toggle folds the sidebar and the note widens.
+fn sidebar_folded_under_an_expanded_note(app: &mut App) {
+    let left = note_left(&app.tree());
+    app.click("library-rail-toggle");
+    app.eventually("the note took the sidebar's room", |tree| {
+        note_left(tree) < left - 100.0
+    });
+    app.click("library-rail-toggle");
+    app.eventually("and gave it back", |tree| {
+        (note_left(tree) - left).abs() < 1.0
+    });
+}
+
 #[test]
 fn note_fullscreen() {
     let profile = tempfile::tempdir().unwrap();
@@ -61,6 +81,10 @@ fn note_fullscreen() {
         app.eventually("the column gone", |tree| !tree.has("editor-space"));
         app.click("editor-details");
         app.wait_for("editor-space");
+    });
+
+    step("expanded, the sidebar is folded by its toggle", || {
+        sidebar_folded_under_an_expanded_note(&mut app);
         close(&mut app);
     });
 

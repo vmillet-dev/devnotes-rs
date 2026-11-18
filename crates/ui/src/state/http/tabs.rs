@@ -424,6 +424,29 @@ impl Tabs {
         }
     }
 
+    /// A tab put down in the strip at `gap`: 0 before the first tab, the count after the last.
+    /// The tab in front stays in front.
+    pub fn move_to(&mut self, key: &str, gap: usize) {
+        let Some(at) = self.open.iter().position(|tab| tab.key == key) else {
+            return;
+        };
+        let tab = self.open.remove(at);
+        let to = if gap > at { gap - 1 } else { gap };
+        self.open.insert(to.min(self.open.len()), tab);
+    }
+
+    /// One place to the left or to the right; nothing past either end.
+    pub fn nudge(&mut self, key: &str, right: bool) {
+        let Some(at) = self.open.iter().position(|tab| tab.key == key) else {
+            return;
+        };
+        match (right, at) {
+            (true, _) if at + 1 < self.open.len() => self.move_to(key, at + 2),
+            (false, 1..) => self.move_to(key, at - 1),
+            _ => {}
+        }
+    }
+
     /// What a tab edits, changed by the editor.
     pub fn edit(&mut self, key: &str, change: impl FnOnce(&mut Draft)) {
         if let Some(tab) = self.find_mut(key) {
@@ -696,6 +719,57 @@ mod tests {
         assert!(tabs.closing().is_none());
         tabs.ask_close("c", false);
         assert_eq!(tabs.active_key(), Some("a"));
+    }
+
+    fn keys(tabs: &Tabs) -> Vec<&str> {
+        tabs.tabs().iter().map(|tab| tab.key.as_str()).collect()
+    }
+
+    #[test]
+    fn a_tab_is_moved_between_two_others_and_the_one_in_front_stays() {
+        let mut tabs = opened(&["a", "b", "c", "d"]);
+        tabs.activate("b");
+
+        tabs.move_to("a", 3);
+        assert_eq!(keys(&tabs), ["b", "c", "a", "d"]);
+        tabs.move_to("d", 0);
+        assert_eq!(keys(&tabs), ["d", "b", "c", "a"]);
+        tabs.move_to("b", 4);
+        assert_eq!(keys(&tabs), ["d", "c", "a", "b"]);
+        tabs.move_to("c", 1);
+        assert_eq!(keys(&tabs), ["d", "c", "a", "b"]);
+        tabs.move_to("gone", 0);
+        assert_eq!(keys(&tabs), ["d", "c", "a", "b"]);
+        assert_eq!(tabs.active_key(), Some("b"));
+    }
+
+    #[test]
+    fn the_keys_move_a_tab_one_place_and_never_past_an_end() {
+        let mut tabs = opened(&["a", "b", "c"]);
+
+        tabs.nudge("a", true);
+        assert_eq!(keys(&tabs), ["b", "a", "c"]);
+        tabs.nudge("a", true);
+        tabs.nudge("a", true);
+        assert_eq!(keys(&tabs), ["b", "c", "a"]);
+        tabs.nudge("b", false);
+        assert_eq!(keys(&tabs), ["b", "c", "a"]);
+        tabs.nudge("a", false);
+        assert_eq!(keys(&tabs), ["b", "a", "c"]);
+    }
+
+    #[test]
+    fn the_order_of_the_strip_is_what_is_remembered() {
+        let mut tabs = opened(&["a", "b", "c"]);
+        let mut preferences = Preferences::default();
+
+        tabs.move_to("c", 0);
+        tabs.remember(&mut preferences);
+
+        assert_eq!(
+            preferences.get(TABS_KEY),
+            Some(r#"{"open":["c","a","b"],"active":"c"}"#)
+        );
     }
 
     #[test]

@@ -113,6 +113,7 @@ fn body(
         let words = RichText::new(&skip).size(font::LABEL).color(p.text_1);
         let label = ui.add(egui::Label::new(words).sense(egui::Sense::click()));
         widgets::address(ui, &label, "update-skip-label");
+        widgets::pointer(ui, &label);
         if label.clicked() {
             view.skip = !view.skip;
         }

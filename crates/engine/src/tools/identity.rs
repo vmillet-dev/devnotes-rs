@@ -1,7 +1,7 @@
 //! A fictitious person whose every identifier passes its own check: test data for a form or a
 //! database, drawn from a seed so that the same one comes back. ⚠️ The names are one list for
-//! every country, with no origin attached to any — a file shipped beside the application and
-//! read there (`identity/data.rs`) — and a country is a profile — its
+//! every country, with no origin attached to any — a file compiled into the application
+//! (`identity/data.rs`) — and a country is a profile — its
 //! places, its formats (`identity/profile.rs`) — with the numbers it gives a person, a firm
 //! and an account (`identity/papers.rs`), each key computed in `identity/numbers.rs`. ⚠️ An
 //! identifier that encodes the person is computed from them, never drawn beside them: the
@@ -12,13 +12,10 @@ mod numbers;
 mod papers;
 mod profile;
 
-use std::path::Path;
-
 use chrono::{Datelike, NaiveDate};
 use serde::Serialize;
 
 use self::data::{Land, Library, Place};
-pub use self::data::{ListProblem, UnreadableList};
 use self::papers::Bearer;
 use self::profile::Profile;
 use super::files::{self, FileProblem};
@@ -220,23 +217,8 @@ impl CsvSeparator {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PeopleExport {
-    Written {
-        people: u32,
-    },
-    Failed {
-        problem: FileProblem,
-    },
-    /// Nothing was written: a list the people are drawn from cannot be read.
-    Unreadable {
-        list: UnreadableList,
-    },
-}
-
-/// A person, or the list that kept one from being drawn.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum IdentityOutcome {
-    Drawn { answer: Box<IdentityAnswer> },
-    Unreadable { list: UnreadableList },
+    Written { people: u32 },
+    Failed { problem: FileProblem },
 }
 
 /// The seed as it is written, hashed: « devnotes » is a seed like `42` is.
@@ -456,15 +438,9 @@ fn drawn(request: &IdentityRequest, today: NaiveDate, library: &Library) -> Iden
     }
 }
 
-/// A person drawn from the lists in `lists`, the folder the application ships — or the list
-/// that cannot be read there.
-pub fn generate(request: &IdentityRequest, today: NaiveDate, lists: &Path) -> IdentityOutcome {
-    match data::library(lists) {
-        Ok(library) => IdentityOutcome::Drawn {
-            answer: Box::new(drawn(request, today, library)),
-        },
-        Err(list) => IdentityOutcome::Unreadable { list },
-    }
+/// A person drawn from the lists compiled into the application.
+pub fn generate(request: &IdentityRequest, today: NaiveDate) -> IdentityAnswer {
+    drawn(request, today, data::library())
 }
 
 fn csv_field(value: &str, separator: char) -> String {
@@ -560,13 +536,8 @@ pub fn export(
     batch: &PeopleBatch,
     path: &str,
     today: NaiveDate,
-    lists: &Path,
 ) -> PeopleExport {
-    let library = match data::library(lists) {
-        Ok(library) => library,
-        Err(list) => return PeopleExport::Unreadable { list },
-    };
-    let (text, people) = exported(request, batch, today, library);
+    let (text, people) = exported(request, batch, today, data::library());
     match files::write(path, text.as_bytes()) {
         Ok(()) => PeopleExport::Written { people },
         Err(problem) => PeopleExport::Failed { problem },
@@ -589,7 +560,7 @@ mod tests {
 
     /// A person from the lists the application ships.
     fn generate(request: &IdentityRequest, today: NaiveDate) -> IdentityAnswer {
-        super::drawn(request, today, data::shipped())
+        super::drawn(request, today, data::library())
     }
 
     fn exported(
@@ -605,7 +576,7 @@ mod tests {
             format,
             separator: CsvSeparator::Comma,
         };
-        super::exported(request, &batch, today, data::shipped())
+        super::exported(request, &batch, today, data::library())
     }
 
     fn asked_in(country: Country, seed: &str) -> IdentityRequest {
@@ -628,7 +599,7 @@ mod tests {
 
     /// As many people of a country as asked, a seed each, its lists read once.
     fn crowd(country: Country, count: u32) -> Vec<Identity> {
-        let lists = Lists::of(data::shipped(), country);
+        let lists = Lists::of(data::library(), country);
         (0..count)
             .map(|seed| {
                 let seed = seed.to_string();
@@ -642,24 +613,15 @@ mod tests {
     /// (#1477, N50).
     #[test]
     fn a_short_list_of_given_names_ends_every_draw() {
-        let folder = tempfile::tempdir().unwrap();
-        for entry in walk(&data::shipped_folder()) {
-            let to = folder
-                .path()
-                .join(entry.strip_prefix(data::shipped_folder()).unwrap());
-            std::fs::create_dir_all(to.parent().unwrap()).unwrap();
-            std::fs::copy(&entry, to).unwrap();
-        }
-        std::fs::write(
-            folder.path().join("names.txt"),
-            "f:Ana,Eva
+        let library: &'static data::Library = Box::leak(Box::new(
+            data::read_with(
+                "f:Ana,Eva
 m:Jo,Al
 s:Ba
 ",
-        )
-        .unwrap();
-        let library: &'static data::Library =
-            Box::leak(Box::new(data::read(folder.path()).unwrap()));
+            )
+            .unwrap(),
+        ));
 
         let (done, finished) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
@@ -681,19 +643,6 @@ s:Ba
                 .is_ok(),
             "a draw never ended"
         );
-    }
-
-    fn walk(root: &std::path::Path) -> Vec<std::path::PathBuf> {
-        let mut found = Vec::new();
-        for entry in std::fs::read_dir(root).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_dir() {
-                found.extend(walk(&path));
-            } else {
-                found.push(path);
-            }
-        }
-        found
     }
 
     /// The number of that kind, with nothing but its letters and digits.
@@ -1105,7 +1054,7 @@ s:Ba
     }
 
     fn place_of(country: Country, city: &str) -> Place {
-        *data::shipped()
+        *data::library()
             .land(country)
             .places
             .iter()
@@ -1147,7 +1096,7 @@ s:Ba
             (Country::Ca, &["A9A 9A9"]),
         ];
         for (country, shapes) in POSTCODES {
-            let land = data::shipped().land(*country);
+            let land = data::library().land(*country);
             for person in &crowd(*country, 300) {
                 let address = &person.address;
                 assert!(
@@ -1415,7 +1364,7 @@ s:Ba
     /// The whole list is there to be drawn: most of it comes out in a few thousand people.
     #[test]
     fn a_few_thousand_people_bring_out_most_of_the_names() {
-        let names = &data::shipped().names;
+        let names = &data::library().names;
         let people = crowd(Country::Fr, 4000);
         let surnames: HashSet<&str> = people
             .iter()
@@ -1476,7 +1425,7 @@ s:Ba
 
             assert_eq!(
                 born.len(),
-                data::shipped().land(country).places.len(),
+                data::library().land(country).places.len(),
                 "{country}"
             );
             let most = born.values().max().unwrap();
@@ -1618,7 +1567,7 @@ s:Ba
             format: PeopleFormat::Csv,
             separator: CsvSeparator::Semicolon,
         };
-        let (csv, _) = super::exported(&asked("devnotes"), &batch, today(), data::shipped());
+        let (csv, _) = super::exported(&asked("devnotes"), &batch, today(), data::library());
         let rows: Vec<&str> = csv.trim_end().split("\r\n").collect();
 
         assert!(rows[0].starts_with("\u{feff}country;sex;surname;givenNames"));
@@ -1638,14 +1587,12 @@ s:Ba
             separator: CsvSeparator::Comma,
         };
 
-        let lists = data::shipped_folder();
         assert_eq!(
             export(
                 &asked("devnotes"),
                 &batch(PeopleFormat::Csv),
                 &path.to_string_lossy(),
                 today(),
-                &lists
             ),
             PeopleExport::Written { people: 2 }
         );
@@ -1660,7 +1607,6 @@ s:Ba
                     .join("people.json")
                     .to_string_lossy(),
                 today(),
-                &lists
             ),
             PeopleExport::Failed {
                 problem: FileProblem::Unwritable
@@ -1668,25 +1614,13 @@ s:Ba
         );
     }
 
-    /// ⚠️ The lists are files beside the application, no longer part of it: a folder that does
-    /// not hold them is said — to the card and to an export, which then writes nothing.
+    /// The service draws from the lists compiled in: the same person as from the library.
     #[test]
-    fn a_folder_without_its_lists_is_said_and_the_shipped_one_draws_the_same_person() {
+    fn the_lists_compiled_in_draw_the_same_person_for_a_seed() {
         let request = asked("devnotes");
         assert_eq!(
-            super::generate(&request, today(), &data::shipped_folder()),
-            IdentityOutcome::Drawn {
-                answer: Box::new(generate(&request, today()))
-            }
+            super::generate(&request, today()),
+            generate(&request, today())
         );
-
-        // Asked first of a folder that holds nothing: nothing is kept of a failed reading.
-        let empty = tempfile::tempdir().unwrap();
-        let Err(list) = data::read(empty.path()) else {
-            panic!("an empty folder holds no list");
-        };
-        assert_eq!(list.problem, ListProblem::Missing);
-        assert_eq!(list.file, "names.txt");
-        assert_eq!(list.folder, empty.path().to_string_lossy());
     }
 }

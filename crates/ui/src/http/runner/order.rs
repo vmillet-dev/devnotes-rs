@@ -205,6 +205,7 @@ fn grip(
     let p = palette(ui.ctx());
     let (rect, response) = ui.allocate_exact_size(Vec2::new(GRIP, ROW), Sense::drag());
     widgets::address(ui, &response, "http-runner-row-grip");
+    widgets::pointer(ui, &response);
     for dot in 0..6_u8 {
         let x = rect.center().x + if dot % 2 == 0 { -2.5 } else { 2.5 };
         let y = rect.center().y + (f32::from(dot / 2) - 1.0) * 5.0;

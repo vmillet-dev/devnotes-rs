@@ -54,6 +54,16 @@ pub enum Action {
     /// A draft of that kind, written nowhere until saved.
     NewRequest(engine::http::model::RequestKind),
     Activate(String),
+    /// A tab dropped in the strip at a gap between two others: 0 before the first.
+    MoveTab {
+        key: String,
+        gap: usize,
+    },
+    /// `Alt` and an arrow on a tab: one place to the left or to the right.
+    NudgeTab {
+        key: String,
+        right: bool,
+    },
     /// Closed at once, or asked first when it holds changes.
     AskClose(String),
     /// Closed, what was typed left.
@@ -170,6 +180,7 @@ pub enum Action {
 pub struct View {
     rail_width: widgets::RailWidth,
     rail: rail::RailView,
+    tabs: tabs::TabsView,
     editor: request::EditorView,
     environments: environments::PageView,
     history: history::PageView,
@@ -230,12 +241,12 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
 /// A page of the area (environments, history): its background, a head band ruled under, and
 /// the body below. Answers the head's `Ui` and the body's rect.
 pub(super) fn page(ui: &mut Ui, region: Rect) -> (Ui, Rect) {
-    const HEAD: f32 = 56.0;
+    use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET};
     let p = palette(ui.ctx());
     ui.painter()
         .rect_filled(region, egui::CornerRadius::ZERO, p.bg_0);
-    let head = Rect::from_min_size(region.min, egui::Vec2::new(region.width(), HEAD));
-    let inset = head.shrink2(egui::Vec2::new(crate::theme::tokens::gap::PANEL, 0.0));
+    let head = Rect::from_min_size(region.min, egui::Vec2::new(region.width(), BAR_HEIGHT));
+    let inset = head.shrink2(egui::Vec2::new(BAR_INSET, 0.0));
     let top = ui.new_child(egui::UiBuilder::new().max_rect(inset));
     ui.painter().hline(
         region.x_range(),
@@ -275,7 +286,7 @@ pub(crate) fn modal<T>(
 /// The open requests under their tabs.
 fn requests(ui: &mut Ui, rest: Rect, state: &AppState, view: &mut View, actions: &mut Actions) {
     let mut strip = ui.new_child(UiBuilder::new().max_rect(rest));
-    tabs::show(&mut strip, state, actions);
+    tabs::show(&mut strip, state, &mut view.tabs, actions);
     let below = Rect::from_min_max(rest.min + Vec2::new(0.0, tabs::HEIGHT), rest.max);
     let mut workspace = ui.new_child(UiBuilder::new().max_rect(below));
     match state.http.tabs().active() {

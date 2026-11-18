@@ -300,6 +300,79 @@ fn a_folder_dragged_onto_another_goes_inside_it_and_the_undo_bar_puts_it_back() 
     assert_eq!(parent_of(&harness, "Index"), None);
 }
 
+fn space_of(harness: &Harness<'_, Bench>, name: &str) -> String {
+    harness
+        .state()
+        .state
+        .folders
+        .list()
+        .iter()
+        .find(|folder| folder.name == name)
+        .map(|folder| folder.space_id.clone())
+        .unwrap_or_default()
+}
+
+fn latest(harness: &Harness<'_, Bench>) -> Option<i18n::Key> {
+    harness
+        .state()
+        .state
+        .status
+        .latest()
+        .map(|(_, message)| message.key)
+}
+
+#[test]
+fn a_folder_dragged_onto_another_space_goes_there_and_the_undo_bar_brings_it_back() {
+    let (backend, profile) = testing::unlocked();
+    let home = space(&backend, "Home");
+    let work = space(&backend, "Work");
+    let sql = folder(&backend, &home, None, "SQL");
+    folder(&backend, &home, Some(&sql), "Perf");
+    folder(&backend, &work, None, "Reports");
+    let mut harness = area(backend, profile);
+    click(&mut harness, "space-option", "Home");
+
+    // Onto its own space, where it already is: said, and nothing sent.
+    let from = row(&harness, "folder-option", "SQL").center();
+    let to = row(&harness, "space-option", "Home").center();
+    drag(&mut harness, from, to);
+    assert_eq!(latest(&harness), Some(i18n::keys::sidebar::moved::ALREADY));
+
+    let from = row(&harness, "folder-option", "SQL").center();
+    let to = row(&harness, "space-option", "Work").center();
+    drag(&mut harness, from, to);
+    assert_eq!(space_of(&harness, "SQL"), work.id);
+    assert_eq!(space_of(&harness, "Perf"), work.id);
+    let said = harness
+        .get_by(|node| node.author_id() == Some("undo-text"))
+        .accesskit_node()
+        .value()
+        .unwrap_or_default();
+    assert!(said.contains("SQL") && said.contains("Work"), "{said}");
+
+    click_id(&mut harness, "undo-restore");
+    assert_eq!(space_of(&harness, "SQL"), home.id);
+    assert_eq!(space_of(&harness, "Perf"), home.id);
+}
+
+#[test]
+fn a_folder_dragged_onto_a_folder_of_another_space_goes_inside_it() {
+    let (backend, profile) = testing::unlocked();
+    let home = space(&backend, "Home");
+    let work = space(&backend, "Work");
+    folder(&backend, &home, None, "SQL");
+    folder(&backend, &work, None, "Reports");
+    let mut harness = area(backend, profile);
+    click(&mut harness, "space-option", "Home");
+
+    let from = row(&harness, "folder-option", "SQL").center();
+    let to = row(&harness, "folder-option", "Reports").center();
+    drag(&mut harness, from, to);
+
+    assert_eq!(space_of(&harness, "SQL"), work.id);
+    assert_eq!(parent_of(&harness, "SQL").as_deref(), Some("Reports"));
+}
+
 #[test]
 fn alt_and_the_arrows_move_a_folder_in_and_out_saying_what_they_refuse() {
     let (backend, profile) = testing::unlocked();
@@ -342,6 +415,40 @@ fn alt_and_the_arrows_move_a_folder_in_and_out_saying_what_they_refuse() {
         said(&harness),
         Some(i18n::keys::sidebar::moved::refused::NO_FOLDER_ABOVE)
     );
+}
+
+/// A folder in each of five levels, `Level 0` at the top: the names, from the top.
+fn five_levels(backend: &crate::backend::Backend) -> Vec<String> {
+    let home = space(backend, "Home");
+    let mut parent = None;
+    let mut names = Vec::new();
+    for depth in 0..5 {
+        let name = format!("Level {depth}");
+        parent = Some(folder(backend, &home, parent.as_ref(), &name));
+        names.push(name);
+    }
+    names
+}
+
+#[test]
+fn each_level_of_folders_is_one_indent_further() {
+    let (backend, profile) = testing::unlocked();
+    let names = five_levels(&backend);
+    let harness = area(backend, profile);
+
+    let lefts: Vec<f32> = names
+        .iter()
+        .map(|name| row(&harness, "folder-option", name).left())
+        .collect();
+    for pair in lefts.windows(2) {
+        assert!(
+            (pair[1] - pair[0] - super::row::INDENT).abs() < 0.5,
+            "{lefts:?}"
+        );
+    }
+    // Twelve letters at 12.5 px, the swatch and the name's insets: « Exploitation ».
+    let two_down = row(&harness, "folder-option", &names[2]).width();
+    assert!(two_down >= 100.0, "{two_down}");
 }
 
 #[test]

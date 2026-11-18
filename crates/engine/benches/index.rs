@@ -33,7 +33,6 @@ fn bench(size: Size) -> Bench {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let paths = Paths {
         profile: std::env::temp_dir(),
-        resources: std::env::temp_dir(),
     };
     let engine = Arc::new(Engine::new(
         paths,

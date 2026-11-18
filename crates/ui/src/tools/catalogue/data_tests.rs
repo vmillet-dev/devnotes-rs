@@ -1,6 +1,5 @@
 //! The data and generator tools over a real core: what is typed in, what comes out.
 
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use egui_kittest::Harness;
@@ -9,32 +8,8 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use super::text_tests::{click, has, opened, output_values, type_in, value_of, waits_for};
 use crate::notes::bench::{Bench, settle};
 
-const SHIPPED_LISTS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/resources/identity");
-
-/// The lists the bench's core reads: its resources are its profile. ⚠️ The core keeps them for the
-/// life of the process, so a test here can neither find them missing nor damage them.
-fn lists(harness: &Harness<'_, Bench>) -> PathBuf {
-    let paths = harness.state().backend.engine().paths();
-    paths.resources.join("identity")
-}
-
-fn copy_folder(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for entry in std::fs::read_dir(from).unwrap() {
-        let entry = entry.unwrap();
-        let target = to.join(entry.file_name());
-        if entry.file_type().unwrap().is_dir() {
-            copy_folder(&entry.path(), &target);
-        } else {
-            std::fs::copy(entry.path(), target).unwrap();
-        }
-    }
-}
-
-fn identity_with_its_lists() -> Harness<'static, Bench> {
+fn identity_drawn() -> Harness<'static, Bench> {
     let mut harness = opened("identity");
-    let lists = lists(&harness);
-    copy_folder(Path::new(SHIPPED_LISTS), &lists);
     click(&mut harness, "tool-action-draw");
     waits_for(&mut harness, "a person is drawn", |harness| {
         has(harness, "identity-card")
@@ -226,7 +201,7 @@ fn the_code_is_saved_where_the_dialog_says() {
 
 #[test]
 fn a_pinned_seed_brings_the_same_person_back() {
-    let mut harness = identity_with_its_lists();
+    let mut harness = identity_drawn();
 
     click(&mut harness, "tool-sample");
     waits_for(&mut harness, "the sample is drawn", |harness| {
@@ -247,7 +222,7 @@ fn a_pinned_seed_brings_the_same_person_back() {
 
 #[test]
 fn the_pin_writes_the_seed_just_used_and_lets_it_go() {
-    let mut harness = identity_with_its_lists();
+    let mut harness = identity_drawn();
 
     assert!(has(&harness, "identity-seed-used"));
     click(&mut harness, "identity-pin-seed");
@@ -260,7 +235,7 @@ fn the_pin_writes_the_seed_just_used_and_lets_it_go() {
 
 #[test]
 fn the_card_country_belongs_to_the_batch_and_cannot_leave_it() {
-    let mut harness = identity_with_its_lists();
+    let mut harness = identity_drawn();
     let own = "identity-batch-country-FR";
     let is_lit = |harness: &Harness<'_, Bench>, id: &str| {
         let chip = harness.get_by(|node| node.author_id() == Some(id));
@@ -278,7 +253,7 @@ fn the_card_country_belongs_to_the_batch_and_cannot_leave_it() {
 
 #[test]
 fn a_batch_is_written_as_a_file_of_as_many_people_as_asked() {
-    let mut harness = identity_with_its_lists();
+    let mut harness = identity_drawn();
     let folder = tempfile::tempdir().unwrap();
     let path = folder.path().join("people.json");
     harness.state_mut().state.dialog = Arc::new(platform::dialog::Fixed(path.clone()));
@@ -303,7 +278,7 @@ fn a_batch_is_written_as_a_file_of_as_many_people_as_asked() {
 
 #[test]
 fn the_separator_chosen_is_kept_with_the_application() {
-    let mut harness = identity_with_its_lists();
+    let mut harness = identity_drawn();
 
     click(&mut harness, "identity-format-1");
     click(&mut harness, "identity-separator-1");

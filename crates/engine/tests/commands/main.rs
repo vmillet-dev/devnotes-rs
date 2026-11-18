@@ -47,7 +47,6 @@ impl Session {
         let profile = tempfile::tempdir().unwrap();
         let paths = Paths {
             profile: profile.path().to_path_buf(),
-            resources: profile.path().to_path_buf(),
         };
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let heard = Arc::new(RecordingSink::default());

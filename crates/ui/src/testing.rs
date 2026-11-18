@@ -54,7 +54,6 @@ pub(crate) fn backend() -> (crate::backend::Backend, tempfile::TempDir) {
 pub(crate) fn backend_on(profile: &std::path::Path) -> crate::backend::Backend {
     let paths = engine::Paths {
         profile: profile.to_path_buf(),
-        resources: profile.to_path_buf(),
     };
     crate::backend::Backend::start(
         paths,

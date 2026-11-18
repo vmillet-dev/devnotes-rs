@@ -473,3 +473,44 @@ fn a_fence_in_a_language_the_editor_does_not_know_stays_code_and_keeps_its_word(
     click_id(&mut harness, "editor-close");
     assert_eq!(stored(&harness, &id), written, "nothing rewritten");
 }
+
+/// A Note holding a long code block, scrolled: no line of it is painted above the body, over
+/// the toolbar and the header.
+#[test]
+fn a_long_code_block_scrolled_down_paints_nothing_above_the_body() {
+    let code = (0..80)
+        .map(|n| format!("let line_{n} = {n};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let (mut harness, _) = note(&format!("# Notes\n\nIntro.\n\n```rust\n{code}\n```\n"));
+    let body = harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .rect();
+    harness.event(egui::Event::PointerMoved(body.center()));
+    for _ in 0..6 {
+        harness.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, -120.0),
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Unknown,
+            modifiers: Modifiers::NONE,
+        });
+        harness.step();
+    }
+    settle(&mut harness);
+
+    let over: Vec<egui::Rect> = harness
+        .output()
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) if text.galley.text().contains("let line_") => {
+                let drawn = egui::Rect::from_min_size(text.pos, text.galley.size());
+                Some(drawn.intersect(clipped.clip_rect))
+            }
+            _ => None,
+        })
+        .filter(|seen| seen.is_positive() && seen.top() < body.top() - 0.5)
+        .collect();
+    assert!(over.is_empty(), "code painted above {body:?}: {over:?}");
+}

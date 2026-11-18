@@ -1,6 +1,6 @@
 //! Where the application reads and writes, resolved once at launch (plan § 4.1).
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// The installed profile, named after the packages' identifier (`[package.metadata.packager]`).
 /// Until 1.0.0 it was `com.devnotes.app.dev`, kept apart from the Angular application (D16).
@@ -39,27 +39,10 @@ impl Locations {
 
 const WINDOW_FILE: &str = "window.json";
 
-/// What ships beside the binary (the identity tool's lists): next to the executable on
-/// Windows, under `lib/devnotes` in a Linux package, `development` when neither holds them.
-pub fn resources(development: &Path) -> PathBuf {
-    let beside = std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(Path::to_path_buf));
-    let mut candidates: Vec<PathBuf> = beside.into_iter().collect();
-    if cfg!(target_os = "linux") {
-        if let Some(image) = std::env::var_os("APPDIR") {
-            candidates.push(PathBuf::from(image).join("usr/lib/devnotes"));
-        }
-        candidates.push(PathBuf::from("/usr/lib/devnotes"));
-    }
-    candidates
-        .into_iter()
-        .find(|directory| directory.join("identity").is_dir())
-        .unwrap_or_else(|| development.to_path_buf())
-}
-
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
 
     #[test]
@@ -90,12 +73,5 @@ mod tests {
                 .window
                 .ends_with(Path::new(DEFAULT_PROFILE).join(WINDOW_FILE))
         );
-    }
-
-    #[test]
-    fn resources_fall_back_to_the_development_folder() {
-        let development = tempfile::tempdir().unwrap();
-
-        assert_eq!(resources(development.path()), development.path());
     }
 }

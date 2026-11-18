@@ -148,6 +148,9 @@ fn checklists() {
     step("a row is ticked from the card without opening it", || {
         app.click_nth("note-card-item", 0);
         app.eventually("the editor stayed closed", |tree| !tree.has("editor-title"));
+        app.eventually("the card's progress counts it", |tree| {
+            tree.text("note-card-progress").as_deref() == Some("2/4")
+        });
         open(&mut app);
         app.eventually("the first open row ticked", |tree| {
             ticks(tree).first() == Some(&true)

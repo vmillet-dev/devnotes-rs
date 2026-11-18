@@ -297,6 +297,9 @@ fn resize_corner(
         || WidgetInfo::labeled(Role::Button, true, &label),
         CornerRadius::same(radius::TAG),
     );
+    if response.hovered() || response.dragged() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeNwSe);
+    }
     let response = widgets::tooltip(response, &label);
     let kind = Kind::ResizeZone(zone.folder.id.clone());
     hand.grab(ui, &response, Some(kind), frame);

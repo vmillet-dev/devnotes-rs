@@ -10,7 +10,7 @@ use engine::folders::{
     list_folders, move_folder, move_folder_back, recolour_folder, rename_folder, save_board_layout,
 };
 use engine::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery};
-use engine::notes::{create_note, query_notes};
+use engine::notes::{create_note, delete_notes, get_note, query_notes, restore_notes};
 
 use super::common::snippet;
 use super::{Session, code};
@@ -258,9 +258,11 @@ fn a_folder_moved_into_another_comes_back_with_its_undo() {
     let sql = folder(&session, &space, "SQL");
     let perf = folder(&session, &space, "Perf");
 
-    let was = session.call(|e| move_folder(e, &perf, Some(&sql))).unwrap();
+    let was = session
+        .call(|e| move_folder(e, &perf, (&space, Some(&sql))))
+        .unwrap();
     let nested = session.call(|e| board_view(e, &board(&space))).unwrap();
-    let refused = session.call(|e| move_folder(e, &sql, Some(&perf)));
+    let refused = session.call(|e| move_folder(e, &sql, (&space, Some(&perf))));
     let back = session.call(|e| move_folder_back(e, &was)).unwrap();
     let flat = session.call(|e| board_view(e, &board(&space))).unwrap();
 
@@ -269,6 +271,113 @@ fn a_folder_moved_into_another_comes_back_with_its_undo() {
     assert!(matches!(code(refused), ErrorCode::InvalidInput));
     assert!(back);
     assert_eq!(flat.zones.len(), 2);
+}
+
+/// Into another space, a folder takes its sub-folder and every note filed in it, the trashed one
+/// included; its undo brings exactly that back.
+#[test]
+fn a_folder_moved_into_another_space_takes_its_tree_and_notes_and_comes_back() {
+    let session = Session::open();
+    let work = session.space("Work");
+    let home = session.space("Home");
+    let sql = folder(&session, &work, "SQL");
+    let perf = sub_folder(&session, &work, &sql, "Perf");
+    let filed = filed_note(&session, &work, &sql);
+    let deeper = filed_note(&session, &work, &perf);
+    let trashed = filed_note(&session, &work, &perf);
+    let loose = session
+        .call(|e| create_note(e, snippet(&work)))
+        .unwrap()
+        .note
+        .id;
+    session
+        .call(|e| delete_notes(e, std::slice::from_ref(&trashed)))
+        .unwrap();
+    let placed = |id: &str| {
+        let note = session.call(|e| get_note(e, id)).unwrap();
+        (note.space_id.clone(), note.folder_id.clone())
+    };
+
+    let was = session
+        .call(|e| move_folder(e, &sql, (&home, None)))
+        .unwrap();
+
+    assert_eq!(was.space_id, work);
+    assert_eq!(was.notes.len(), 3);
+    let folders = session.call(|e| list_folders(e, Some(&home))).unwrap();
+    assert_eq!(folders.len(), 2);
+    assert!(
+        session
+            .call(|e| list_folders(e, Some(&work)))
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(placed(&filed), (home.clone(), Some(sql.clone())));
+    assert_eq!(placed(&deeper), (home.clone(), Some(perf.clone())));
+    assert_eq!(placed(&loose).0, work);
+    let listed = |space: &str| {
+        let view = session
+            .call(|e| query_notes(e, &notes_query(space)))
+            .unwrap();
+        view.sections
+            .iter()
+            .map(|section| section.cards.len())
+            .sum::<usize>()
+    };
+    assert_eq!(listed(&home), 2);
+    session
+        .call(|e| restore_notes(e, std::slice::from_ref(&trashed)))
+        .unwrap();
+    assert_eq!(placed(&trashed), (home.clone(), Some(perf.clone())));
+
+    assert!(session.call(|e| move_folder_back(e, &was)).unwrap());
+    assert_eq!(placed(&filed), (work.clone(), Some(sql.clone())));
+    assert_eq!(placed(&trashed), (work.clone(), Some(perf.clone())));
+    assert_eq!(
+        session
+            .call(|e| list_folders(e, Some(&work)))
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(
+        session
+            .call(|e| list_folders(e, Some(&home)))
+            .unwrap()
+            .is_empty()
+    );
+}
+
+/// Into another space, a name taken among the new siblings or a tree too deep there is refused,
+/// and nothing moves.
+#[test]
+fn a_folder_that_cannot_go_into_another_space_moves_nothing() {
+    let session = Session::open();
+    let work = session.space("Work");
+    let home = session.space("Home");
+    let sql = folder(&session, &work, "SQL");
+    let filed = filed_note(&session, &work, &sql);
+    folder(&session, &home, "SQL");
+
+    let taken = session.call(|e| move_folder(e, &sql, (&home, None)));
+
+    assert!(matches!(code(taken), ErrorCode::DuplicateFolderName));
+    let note = session.call(|e| get_note(e, &filed)).unwrap();
+    assert_eq!(note.space_id, work);
+
+    let mut parent = folder(&session, &home, "Deep");
+    for level in 1..engine::folders::model::MAX_DEPTH {
+        parent = sub_folder(&session, &home, &parent, &format!("L{level}"));
+    }
+    let deep = session.call(|e| move_folder(e, &sql, (&home, Some(&parent))));
+    assert!(matches!(code(deep), ErrorCode::InvalidInput));
+    assert_eq!(
+        session
+            .call(|e| list_folders(e, Some(&work)))
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 /// A sheet's `aujourd'hui` is the local day on the board as in the list: at 00:30 at UTC+2,

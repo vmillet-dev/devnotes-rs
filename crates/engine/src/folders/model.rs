@@ -63,13 +63,16 @@ pub struct NoteFolder {
     pub path: Vec<String>,
 }
 
-/// Where a folder was before it moved, the only thing that can put it back: its parent, and
-/// its zone's frame on that parent's board.
+/// Where a folder was before it moved, the only thing that can put it back: its space, its
+/// parent, and its zone's frame on that parent's board — and the notes filed in it that changed
+/// space with it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FolderMove {
     pub folder_id: String,
+    pub space_id: String,
     pub parent_id: Option<String>,
     pub frame: Option<crate::folders::board::BoardFrame>,
+    pub notes: Vec<String>,
 }
 
 /// Which folder each note left, the only thing that can put a filing back; `None` was loose.
@@ -223,8 +226,8 @@ impl Lineage {
         self.check_room(parent, 1)
     }
 
-    /// A folder moved under `parent`: never into itself or what it holds, never out of its
-    /// space, and its whole sub-tree within [`MAX_DEPTH`].
+    /// A folder moved under `parent` of this tree: never into itself or what it holds, and its
+    /// whole sub-tree within [`MAX_DEPTH`].
     pub fn check_move(&self, id: &str, parent: Option<&str>) -> Result<(), ValidationError> {
         if let Some(parent) = parent
             && self.subtree(id).iter().any(|below| below == parent)
@@ -235,6 +238,15 @@ impl Lineage {
             ));
         }
         self.check_room(parent, self.height(id).max(1))
+    }
+
+    /// A sub-tree `levels` deep arriving from another space under `parent` of this one.
+    pub fn check_arrival(
+        &self,
+        parent: Option<&str>,
+        levels: usize,
+    ) -> Result<(), ValidationError> {
+        self.check_room(parent, levels)
     }
 
     fn check_room(&self, parent: Option<&str>, levels: usize) -> Result<(), ValidationError> {

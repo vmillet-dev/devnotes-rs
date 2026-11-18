@@ -60,7 +60,6 @@ mod tests {
         let profile = tempfile::tempdir().unwrap();
         let paths = Paths {
             profile: profile.path().to_path_buf(),
-            resources: profile.path().to_path_buf(),
         };
         let directory = plaintext_directory(&paths);
         assert_eq!(

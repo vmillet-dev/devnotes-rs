@@ -70,7 +70,7 @@ impl<'a> Context<'a> {
 }
 
 /// Between the bands and the preview.
-const GAP: f32 = gap::SNUG;
+pub(super) const GAP: f32 = gap::SNUG;
 
 pub(super) fn show(
     ui: &mut Ui,
@@ -104,6 +104,7 @@ pub(super) fn show(
     open.widget_info(|| WidgetInfo::labeled(Role::Button, true, &title));
     address(ui, &open, "note-card-open");
     crate::theme::focus::ring(ui, &open, CornerRadius::same(radius::CARD));
+    crate::widgets::pointer(ui, &open);
     if canvas_view.request.as_deref() == Some(note.id.as_str()) {
         open.request_focus();
         canvas_view.request = None;
@@ -161,9 +162,8 @@ pub(super) fn show(
         inner.max,
     );
     bands::frame(ui, (top, bottom), hovered, armed);
-    // Not under the pointer alone: the box would come and go as the pointer crosses the card.
-    let ticking = checked || context.selecting;
-    if bands::top(ui, top, (note, &title), context, (checked, ticking)) {
+    let lit = hovered || context.selecting;
+    if bands::top(ui, top, (note, &title), context, (checked, lit)) {
         actions.push(crate::action::Action::Notes(crate::notes::Action::Check(
             note.id.clone(),
         )));
@@ -179,7 +179,7 @@ pub(super) fn show(
     } else {
         bands::bottom(ui, bottom, note, context);
     }
-    actions::show(ui, rect, note, (context, ticking), actions);
+    actions::show(ui, rect, note, context, actions);
 }
 
 /// Opened by a click; ticked with Ctrl, or as far as the anchor with Shift.

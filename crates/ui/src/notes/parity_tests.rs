@@ -64,16 +64,17 @@ fn the_controls_of_the_header_stand_on_one_line() {
 }
 
 #[test]
-fn a_card_offers_its_box_under_the_pointer_and_its_title_stays_where_it_is() {
+fn a_cards_box_stays_put_under_the_pointer_and_its_title_too() {
     let (backend, profile) = testing::unlocked();
     testing::note(&backend, "psql prod");
     let mut harness = area(backend, profile);
     let left = rect(&harness, "note-card-title").left();
-    assert!(!present(&harness, "note-card-check"));
+    let tick = rect(&harness, "note-card-check");
 
     hover_first_card(&mut harness);
 
     assert!((rect(&harness, "note-card-title").left() - left).abs() < 0.5);
+    assert_eq!(rect(&harness, "note-card-check"), tick);
     click_id(&mut harness, "note-card-check");
     assert_eq!(harness.state().state.selection.checked_in(&[]).len(), 0);
     assert!(present(&harness, "selection-count"));
