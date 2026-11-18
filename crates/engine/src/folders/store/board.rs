@@ -1,7 +1,7 @@
 //! The geometry, the half of a folder that does not travel: the rules are in
 //! `folders::board`, and this is the SQL that stores and reads them.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use diesel::prelude::*;
 
@@ -236,7 +236,8 @@ pub fn geometry(
         let mut stored_frames = frames(connection, space_id)?;
         stored_frames.retain(|id, _| zones.iter().any(|(zone, _)| zone == id));
         let mut stored_positions = positions(connection, space_id)?;
-        stored_positions.retain(|id, _| occupancy.loose.contains(id));
+        let loose: HashSet<&str> = occupancy.loose.iter().map(String::as_str).collect();
+        stored_positions.retain(|id, _| loose.contains(id.as_str()));
 
         let folder_ids: Vec<&String> = zones.iter().map(|(id, _)| id).collect();
         let missing: Vec<&&String> = folder_ids
@@ -374,7 +375,8 @@ pub fn arrange(
         let mut before = frames(connection, space_id)?;
         before.retain(|id, _| zones.iter().any(|(zone, _)| zone == id));
         let mut places = positions(connection, space_id)?;
-        places.retain(|id, _| loose.contains(id));
+        let free: HashSet<&str> = loose.iter().map(String::as_str).collect();
+        places.retain(|id, _| free.contains(id.as_str()));
 
         let next = match scope {
             BoardScope::Everything => board::arrange_everything(&zones, &loose, card),
