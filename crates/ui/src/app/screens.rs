@@ -332,7 +332,6 @@ fn seed(window: &Window) {
 /// A profile holding the samples and the seed, its library closed as a process leaves it.
 fn seeded() -> tempfile::TempDir {
     let profile = tempfile::tempdir().unwrap();
-    super::captures::copy_identity_lists(profile.path());
     let mut window = launch(profile.path(), DEFAULT_SIZE, false);
     type_into(&mut window, "vault-passphrase", PASSPHRASE);
     type_into(&mut window, "vault-confirmation", PASSPHRASE);

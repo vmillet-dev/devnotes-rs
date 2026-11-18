@@ -30,10 +30,7 @@ fn main() {
     };
     std::fs::create_dir_all(&profile).unwrap();
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let paths = Paths {
-        resources: profile.clone(),
-        profile,
-    };
+    let paths = Paths { profile };
     let engine = Arc::new(Engine::new(
         paths,
         Arc::new(RecordingSink::default()),

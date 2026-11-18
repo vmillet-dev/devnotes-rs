@@ -1,5 +1,5 @@
 //! What reaches the profile the engine was given: the registry of libraries, the gate's state,
-//! the recovery commands and the shipped lists.
+//! the recovery commands; and the identity tool, which reads nothing there.
 
 use engine::error::ErrorCode;
 use engine::libraries::{
@@ -7,7 +7,7 @@ use engine::libraries::{
 };
 use engine::recovery::{archive_locked_library, set_aside_damaged_library};
 use engine::tools::generate_identity;
-use engine::tools::identity::{Country, IdentityOutcome, IdentityRequest};
+use engine::tools::identity::{Country, IdentityRequest};
 use engine::vault::{VaultState, vault_state};
 
 use super::{Session, code};
@@ -60,21 +60,25 @@ fn an_open_library_is_never_set_aside() {
     ));
 }
 
-/// The lists are read from the resources the engine was given: here, a folder without them.
+/// The lists are compiled in: a profile with no folder of lists beside it, as the standalone
+/// executable runs, draws a person in every country.
 #[test]
-fn the_identity_tool_answers_that_its_lists_are_missing_rather_than_failing() {
+fn the_identity_tool_draws_a_person_in_every_country_with_no_folder_to_read() {
     let session = Session::open();
-    let request = IdentityRequest {
-        country: Country::Fr,
-        sex: None,
-        age_min: 18,
-        age_max: 80,
-        seed: Some("devnotes".to_string()),
-    };
+    for country in Country::ALL {
+        let request = IdentityRequest {
+            country,
+            sex: None,
+            age_min: 18,
+            age_max: 80,
+            seed: Some("devnotes".to_string()),
+        };
 
-    let outcome = session.call(|e| generate_identity(e.paths(), &request));
+        let answer = session.call(|_| generate_identity(&request));
 
-    assert!(matches!(outcome, IdentityOutcome::Unreadable { .. }));
+        assert_eq!(answer.person.country, country);
+        assert!(!answer.person.surname.is_empty(), "{country}");
+    }
 }
 
 #[test]

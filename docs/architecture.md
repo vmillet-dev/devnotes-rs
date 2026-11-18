@@ -844,38 +844,33 @@ a country, hard-coded, is a megabyte of test data in the binary.
 `ui/src/tools/catalogue/identity.rs`). A pure function of the options and a seed.
 Four files under `tools/identity/`, each one thing:
 
-| File         | What it holds                                                                                              |
-| ------------ | ---------------------------------------------------------------------------------------------------------- |
-| `data.rs`    | The lists — one file of names, a file of places and streets a country — read from files it checks          |
-| `profile.rs` | A country in a few lines: the order of an address, the shape of a phone number, a firm — nothing of a name |
-| `numbers.rs` | The keys, a function each, each held to an example its country publishes                                   |
-| `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`                 |
+| File         | What it holds                                                                                               |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| `data.rs`    | The lists — one file of names, a file of places and streets a country — compiled in and held whole by tests |
+| `profile.rs` | A country in a few lines: the order of an address, the shape of a phone number, a firm — nothing of a name  |
+| `numbers.rs` | The keys, a function each, each held to an example its country publishes                                    |
+| `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`                  |
 
 The lists weigh **36 KB** for the thirteen countries, held under `BUDGET` by a test that
 sums the files.
 
-⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
-is corrected or a list completed without building the application again.
+⚠️ **The lists are compiled into the application** (`include_str!` in `data.rs`), decided by the
+owner after the standalone executable of 1.0.0 answered « Liste introuvable »: it is one file,
+with no folder beside it. For a while they were files beside the executable, so that a name could
+be corrected without a build; that is given up.
 
-- **A resource**: `crates/engine/resources/identity/` (`names.txt`, `places/*.txt`) lands in
-  `<resources>/identity/` — beside the executable on Windows, under the package's own folder on
-  Linux, and read from the crate in a development or e2e build. `Paths::resources` says where
-  (`platform::paths::resources`), joined with `identity`.
-- **Read once, kept for the session** (`data::library`): every file is read at the first card
-  and its text given away for as long as the application runs, every name drawn afterwards
-  pointing into it. ⚠️ Only a reading that was whole is kept: a file put back is found at the
-  next draw, without a restart; a file edited while the application runs waits for the next
-  launch.
-- ⚠️ **A list can now be missing or damaged, and is checked when read** (`data::read`): the
-  names have a list of each kind, a country has places — every part of each — and streets under
-  each place's own tag. The first file that fails is answered with where it was looked for
-  (`UnreadableList`: `missing` or `damaged`, the file, the folder), and the tool says so in
-  place of a card (`IdentityOutcome::Unreadable`) — an export writes nothing
-  (`PeopleExport::Unreadable`). Nothing divides by the length of an empty list. A byte-order
-  mark and Windows line endings, which an editor leaves, are read through.
-- **What is shipped is what is read**: a test holds the folder to one file of names and a
-  file a country, and nothing else; the tests draw from the very files that are shipped. The
-  e2e scenario of the tool runs against the assembled application: it fails if they are not.
+- **The files are the source**: `crates/engine/resources/identity/` (`names.txt`,
+  `places/*.txt`), one `include_str!` each; nothing is installed beside the binary and nothing
+  is read from a folder at run time.
+- **Read once, kept for the session** (`data::library`, a `LazyLock`): the texts are parsed at
+  the first card, every name drawn afterwards pointing into them.
+- ⚠️ **A list is held whole by a test, not checked at run time**: the names have a list of each
+  kind, a country has places — every part of each — and streets under each place's own tag
+  (`every_list_compiled_in_is_whole`). A build that passed its tests cannot meet a list that
+  is not whole, so the tool has no « unreadable » answer. Windows line endings, which a checkout
+  may leave, are read through.
+- **What is compiled in is the whole folder**: a test holds the folder to one file of names and
+  a file a country, and nothing else.
 - **Not done**: lists of the user's own beside the shipped ones.
 
 - **The seed is text** — « devnotes » is one — hashed to the number the tools' `Draw` takes;
@@ -5551,8 +5546,7 @@ whole profile, its logs and the window's geometry in that directory — tests an
 only. Without it, `platform::paths::Locations::installed` resolves the profile
 `com.devnotes.app`, the packages' identifier (`com.devnotes.app.dev` until 1.0.0, D16): roaming data on
 Windows, `$XDG_DATA_HOME` and `$XDG_CONFIG_HOME` on Linux, the logs under the local data
-directory. The resources are found beside the executable, under `lib/devnotes` in a Linux
-package, or in `crates/engine/resources` for a binary run from `target/`.
+directory. Nothing else is read beside the executable: the identity tool's lists are compiled in.
 
 **One application per profile (D16).** Before the log, `platform::instance::claim` binds a local socket named after a digest of the canonical profile path (a named pipe on Windows, the abstract namespace on Linux). A second launch that cannot bind it connects, sends `reveal` — or `action <name>` from the `e2e` flavour, its way to press a global shortcut — and exits; the first hears it on a thread of its own and brings its window forward. ⚠️ Windows answers a pipe already taken with « access denied », not « address in use ». A claim that fails otherwise stops the launch: a second writer would leave the index silently wrong. Two profiles never collide, so a scenario never meets a development instance.
 
@@ -6149,8 +6143,8 @@ three invariants `changelog::tests::the_shipped_file_parses_into_something_to_sh
 
 **The packages** are built by `cargo build -p app --release`, then `.github/actions/package`:
 `cargo packager` (NSIS per user on Windows; AppImage and deb on Linux) and `cargo generate-rpm`,
-each signed with the minisign key, each checked to hold the application alone and the identity
-lists where `Paths::resources` reads them (→ `docs/releasing.md`, "What gets published").
+each signed with the minisign key, each checked to hold the application alone (→
+`docs/releasing.md`, "What gets published").
 `packages.yml` runs the same action on a pull request that touches packaging, with a key made
 for the run, then installs 1.0.0 on a clean runner, refuses a 1.0.1 altered by one byte and
 installs the whole one through the application's own updater client
