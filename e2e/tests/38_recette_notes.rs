@@ -348,6 +348,8 @@ fn recette_a_formatted_note() {
 fn recette_a_sheet_and_a_drawing() {
     let profile = tempfile::tempdir().unwrap();
     let mut app = a_new_library("38_recette_calc", profile.path());
+    // Every result in view under the notes header, which stays above an expanded note.
+    app.resize(1_100, 900);
 
     step("CAL-45 a sheet pasted answers line by line", || {
         app.press(Key::M, SHIFT_COMMAND);
