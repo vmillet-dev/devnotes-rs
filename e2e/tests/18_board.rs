@@ -164,17 +164,20 @@ fn open_title(tree: &Tree) -> Option<&str> {
     tree.find("editor-title").and_then(Node::value)
 }
 
-/// One note open, then another card clicked: the zones never move while the second is read.
+/// One note open, then the next one by J: the zones never move while the second is read. J
+/// rather than a click: the panel may cover the next card.
 fn panel_kept(app: &mut App) {
     app.click_where("note-card-open", named(FILED));
     app.eventually("the first note is open", |tree| {
         open_title(tree) == Some(FILED)
     });
+    // Out of the title, which the click gave the focus: J is then the editor's key.
+    app.press(Key::Escape, Modifiers::NONE);
     let beside = frames(&app.tree());
-    app.click_where("note-card-open", named(LOOSE));
-    app.eventually("the second is open, the zones where they were", |tree| {
+    app.press(Key::J, Modifiers::NONE);
+    app.eventually("the next is open, the zones where they were", |tree| {
         assert_eq!(frames(tree), beside, "the board moved");
-        open_title(tree) == Some(LOOSE)
+        open_title(tree).is_some_and(|title| title != FILED)
     });
     app.click("editor-close");
     app.eventually("the editor closed", |tree| !tree.has("editor-title"));
