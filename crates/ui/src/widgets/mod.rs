@@ -32,7 +32,8 @@ pub use layout::{RailWidth, area_room, split_handle, tooltip};
 pub use list::{code_viewer, virtual_list};
 pub use menu::{
     ChoiceMenu, FILTER_FROM, MenuItem, Naming, arrows as menu_arrows, entry as menu_entry,
-    frame as menu_frame, icon_entry, line as menu_line, menu,
+    fitted as fitted_menu, frame as menu_frame, icon_entry, line as menu_line, menu,
+    needs as menu_needs,
 };
 pub use release_notes::release_notes;
 pub use rich::{Read, rich_reader};

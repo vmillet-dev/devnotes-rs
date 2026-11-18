@@ -271,6 +271,7 @@ fn menu_option(ui: &mut Ui, label: &str, author_id: &str, tone: Tone) -> egui::R
         Tone::Plain => p.text_1,
     };
     let words = widgets::text(ui, label, font::BODY, 400.0, FontFamily::Proportional, ink);
+    widgets::menu_needs(ui, 20.0 + words.size().x);
     let at = egui::pos2(
         response.rect.left() + 10.0,
         response.rect.center().y - words.size().y / 2.0,

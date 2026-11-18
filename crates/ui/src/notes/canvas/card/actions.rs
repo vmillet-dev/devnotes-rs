@@ -19,9 +19,6 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, IconButton, MIN_TARGET};
 
-/// As wide as the reference's, a French entry included.
-const MENU_WIDTH: f32 = 176.0;
-
 const LEVELS: [Priority; 5] = [
     Priority::None,
     Priority::Low,
@@ -149,29 +146,30 @@ fn menu(
         .align(RectAlign::BOTTOM_END)
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
-            ui.set_width(MENU_WIDTH);
-            ui.spacing_mut().item_spacing.y = 0.0;
-            let id = note.id.clone();
-            first_entries(ui, note, language, actions);
-            filing(ui, note, context, actions);
-            moving(ui, note, context, actions);
-            widgets::menu_line(ui);
-            let delete = tr(if armed {
-                keys::editor::DELETE_CONFIRM
-            } else {
-                keys::editor::DELETE
-            });
-            let about = (Icon::Trash, None);
-            let deleted =
-                widgets::icon_entry(ui, about, &delete, "note-card-delete", (true, false));
-            if deleted.clicked() {
-                if armed {
-                    push(actions, Asked::Delete(id));
-                    ui.close();
+            widgets::fitted_menu(ui, 0.0, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                let id = note.id.clone();
+                first_entries(ui, note, language, actions);
+                filing(ui, note, context, actions);
+                moving(ui, note, context, actions);
+                widgets::menu_line(ui);
+                let delete = tr(if armed {
+                    keys::editor::DELETE_CONFIRM
                 } else {
-                    ui.data_mut(|data| data.insert_temp(armed_id, true));
+                    keys::editor::DELETE
+                });
+                let about = (Icon::Trash, None);
+                let deleted =
+                    widgets::icon_entry(ui, about, &delete, "note-card-delete", (true, false));
+                if deleted.clicked() {
+                    if armed {
+                        push(actions, Asked::Delete(id));
+                        ui.close();
+                    } else {
+                        ui.data_mut(|data| data.insert_temp(armed_id, true));
+                    }
                 }
-            }
+            });
         });
     // Folded with the menu: the next opening starts unarmed.
     if shown.is_none() && armed {
@@ -277,26 +275,27 @@ fn priority(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, actions: 
         .frame(widgets::menu_frame(ui.ctx()))
         .open_bool(&mut open)
         .show(|ui| {
-            ui.set_width(180.0);
-            ui.spacing_mut().item_spacing.y = 0.0;
-            for level in LEVELS {
-                let name = i18n::translate(language, level_key(level), &[]);
-                let on = level == note.priority;
-                if widgets::menu_entry(ui, &name, "note-card-priority-level", false, on, false)
-                    .clicked()
-                {
-                    if !on {
-                        push(
-                            actions,
-                            Asked::Prioritise {
-                                id: note.id.clone(),
-                                priority: level,
-                            },
-                        );
+            widgets::fitted_menu(ui, 0.0, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                for level in LEVELS {
+                    let name = i18n::translate(language, level_key(level), &[]);
+                    let on = level == note.priority;
+                    if widgets::menu_entry(ui, &name, "note-card-priority-level", false, on, false)
+                        .clicked()
+                    {
+                        if !on {
+                            push(
+                                actions,
+                                Asked::Prioritise {
+                                    id: note.id.clone(),
+                                    priority: level,
+                                },
+                            );
+                        }
+                        ui.close();
                     }
-                    ui.close();
                 }
-            }
+            });
         });
     ui.data_mut(|data| data.insert_temp(open_id, open));
 }
@@ -415,6 +414,7 @@ fn title(ui: &mut Ui, words: &str) {
         egui::FontFamily::Proportional,
         p.text_2,
     );
+    widgets::menu_needs(ui, 16.0 + galley.size().x);
     let (rect, _) = ui.allocate_exact_size(Vec2::new(galley.size().x, 24.0), egui::Sense::hover());
     ui.painter().galley(
         pos2(rect.left() + 8.0, rect.bottom() - galley.size().y - 4.0),
