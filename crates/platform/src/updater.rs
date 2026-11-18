@@ -27,6 +27,11 @@ pub enum DownloadError {
 pub trait Updater {
     /// Whether this installation can update itself at all.
     fn is_available(&self) -> bool;
+    /// Whether it can ask the releases: a copy that does not install itself still learns that a
+    /// newer version exists.
+    fn can_check(&self) -> bool {
+        self.is_available()
+    }
     /// `None` when the application is up to date.
     fn check(&self) -> Result<Option<AvailableUpdate>, String>;
     /// The version last found, checked and kept. `progress` in percent, when the size is known.

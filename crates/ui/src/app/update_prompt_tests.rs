@@ -26,17 +26,28 @@ fn stored(directory: &std::path::Path) -> Settings {
 }
 
 #[test]
-fn with_no_updater_the_check_says_this_copy_is_not_updated_here() {
+fn a_copy_that_does_not_install_itself_lists_the_check_and_names_a_newer_version() {
+    let directory = tempfile::tempdir().unwrap();
+    let fake = FakeUpdater::offering("0.26.0");
+    *fake.installs.lock().unwrap() = false;
+    let harness = offered(directory.path(), fake);
+
+    assert!(present(&harness, "about-whats-new"), "the menu stays open");
+    assert!(
+        !present(&harness, "update-prompt"),
+        "nothing to install from here"
+    );
+    assert!(harness.query_by_label_contains("0.26.0").is_some());
+}
+
+#[test]
+fn with_no_updater_the_check_is_still_listed() {
     let directory = tempfile::tempdir().unwrap();
     let mut harness = open_library(directory.path());
 
     click(&mut harness, "about-open");
-    click(&mut harness, "about-check-updates");
 
-    assert!(present(&harness, "about-whats-new"), "the menu stays open");
-    let language = harness.state().state.language;
-    let said = i18n::translate(language, i18n::keys::about::NOT_UPDATED_HERE, &[]);
-    assert!(harness.query_by_label_contains(&said).is_some());
+    assert!(present(&harness, "about-check-updates"));
 }
 
 #[test]

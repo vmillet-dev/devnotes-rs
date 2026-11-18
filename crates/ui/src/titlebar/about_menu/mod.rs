@@ -118,9 +118,11 @@ fn dot(ui: &mut Ui, under: &egui::Response, state: &AppState, author_id: &str) {
     ui.painter().circle_filled(centre, 3.0, p.amber_fill);
     let waiting = i18n::translate(state.language, keys::about::UPDATE_WAITING, &[]);
     let rect = Rect::from_center_size(centre, Vec2::splat(6.0));
-    let marked = ui.allocate_rect(rect, Sense::hover());
+    // In a child: allocated in the menu's column, it would bring the cursor back over the entry.
+    let mut mark = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+    let marked = mark.allocate_rect(rect, Sense::hover());
     marked.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &waiting));
-    widgets::address(ui, &marked, author_id);
+    widgets::address(&mark, &marked, author_id);
 }
 
 /// « Check for updates », and under it what the check answered: it comes after the click, and
@@ -145,7 +147,10 @@ fn check_entry(ui: &mut Ui, state: &AppState, actions: &mut Actions) -> Id {
             Some(Message::new(keys::about::UP_TO_DATE).with("app", METADATA.name))
         }
         CheckState::Failed => Some(Message::new(keys::about::CHECK_FAILED)),
-        CheckState::NotHere => Some(Message::new(keys::about::NOT_UPDATED_HERE)),
+        CheckState::Newer => Some(
+            Message::new(keys::about::NEWER_ELSEWHERE)
+                .with("version", state.updates.newer().unwrap_or_default()),
+        ),
     };
     if let Some(said) = said {
         let words = egui::RichText::new(said.text(language))

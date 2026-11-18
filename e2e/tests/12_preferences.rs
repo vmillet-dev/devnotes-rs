@@ -71,15 +71,11 @@ fn file_word(app: &mut App) -> String {
     app.tree().text("file-menu").unwrap_or_default()
 }
 
-/// A build run from `target/` has no updater: the entry is there and answers so.
+/// The `e2e` flavour asks no release server, yet the entry is there.
 fn not_updated_here(app: &mut App) {
     step("« Check for updates » is always listed", || {
         app.click("about-open");
-        app.click("about-check-updates");
-        app.eventually("the answer is under the entry", |tree| {
-            tree.text("about-check-status")
-                .is_some_and(|said| said.contains("package manager"))
-        });
+        app.wait_for("about-check-updates");
         app.click("about-open");
         app.eventually("the menu closed", |tree| !tree.has("about-check-updates"));
     });

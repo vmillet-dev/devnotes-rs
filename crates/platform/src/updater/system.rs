@@ -33,6 +33,10 @@ impl Updater for System {
         self.can_install
     }
 
+    fn can_check(&self) -> bool {
+        true
+    }
+
     fn check(&self) -> Result<Option<AvailableUpdate>, String> {
         let found = UpdaterBuilder::new(self.current.clone(), self.config.clone())
             .build()

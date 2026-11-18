@@ -130,10 +130,21 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     settle(&mut harness);
     capture(&mut harness, "titlebar-notes");
 
+    // A copy that checks but does not install itself, as the standalone executable.
+    let fake = crate::services::updates::fake::FakeUpdater::default();
+    *fake.installs.lock().unwrap() = false;
+    harness.state_mut().state.updates =
+        crate::services::updates::UpdateState::with(std::sync::Arc::new(fake));
     click(&mut harness, "about-open");
-    capture(&mut harness, "about-menu");
     click(&mut harness, "about-check-updates");
-    capture(&mut harness, "about-menu-not-here");
+    settle(&mut harness);
+    capture(&mut harness, "about-menu");
+    let fake = crate::services::updates::fake::FakeUpdater::offering("1.0.3");
+    *fake.installs.lock().unwrap() = false;
+    harness.state_mut().state.updates = crate::services::updates::UpdateState::with(fake);
+    click(&mut harness, "about-check-updates");
+    settle(&mut harness);
+    capture(&mut harness, "about-menu-newer");
     click(&mut harness, "about-about");
     settle(&mut harness);
     capture(&mut harness, "about-card");

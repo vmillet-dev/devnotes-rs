@@ -680,7 +680,7 @@
     "checking": "Recherche…",
     "upToDate": "✓ {{app}} est à jour",
     "checkFailed": "✕ Recherche impossible",
-    "notUpdatedHere": "Cette copie se met à jour par son gestionnaire de paquets, ou à la main",
+    "newerElsewhere": "Version {{version}} à télécharger",
     "openAbout": "À propos de {{app}}",
     "title": "{{app}}",
     "description": "Vos notes, vos snippets et vos listes de tâches, à portée de raccourci. Tout reste local.",

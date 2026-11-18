@@ -680,7 +680,7 @@
     "checking": "Checking…",
     "upToDate": "✓ {{app}} is up to date",
     "checkFailed": "✕ Check failed",
-    "notUpdatedHere": "This copy is updated by its package manager, or by hand",
+    "newerElsewhere": "Version {{version}} to download",
     "openAbout": "About {{app}}",
     "title": "{{app}}",
     "description": "Your notes, your snippets and your to-do lists, a shortcut away. Everything stays local.",

@@ -33,8 +33,8 @@ pub enum CheckState {
     Checking,
     UpToDate,
     Failed,
-    /// Asked of an installation that does not update itself: a package manager, or a hand, does.
-    NotHere,
+    /// A newer version exists, which this copy cannot install itself: it is named, not offered.
+    Newer,
 }
 
 type Checked = Result<Option<AvailableUpdate>, String>;
@@ -77,7 +77,12 @@ impl UpdateState {
     }
 
     pub fn can_check(&self) -> bool {
-        self.updater.is_available()
+        self.updater.can_check()
+    }
+
+    /// The newer version found, offered or not.
+    pub fn newer(&self) -> Option<&str> {
+        self.update.as_ref().map(|update| update.version.as_str())
     }
 
     pub fn status(&self) -> Status {
@@ -118,9 +123,6 @@ impl UpdateState {
             return;
         }
         if !self.can_check() {
-            if !silent {
-                self.check = CheckState::NotHere;
-            }
             return;
         }
         self.check = CheckState::Checking;
@@ -208,6 +210,10 @@ impl UpdateState {
         };
         self.asked = None;
         match answer.unwrap_or_else(|_| Err("the check stopped".to_owned())) {
+            Ok(Some(update)) if !self.updater.is_available() => {
+                self.update = Some(update);
+                self.check = CheckState::Newer;
+            }
             Ok(Some(update)) => {
                 let hushed = silent && is_silenced(&update, settings);
                 self.status = if hushed {
@@ -246,12 +252,25 @@ pub(crate) mod fake {
     use super::*;
 
     /// Answers what a test decided, and remembers what was asked.
-    #[derive(Default)]
     pub(crate) struct FakeUpdater {
         pub found: Mutex<Option<AvailableUpdate>>,
+        /// `false` for a copy that checks but does not install itself.
+        pub installs: Mutex<bool>,
         pub fails: Mutex<bool>,
         pub refused: Mutex<bool>,
         pub relaunched: Mutex<bool>,
+    }
+
+    impl Default for FakeUpdater {
+        fn default() -> Self {
+            Self {
+                found: Mutex::new(None),
+                installs: Mutex::new(true),
+                fails: Mutex::new(false),
+                refused: Mutex::new(false),
+                relaunched: Mutex::new(false),
+            }
+        }
     }
 
     impl FakeUpdater {
@@ -268,6 +287,10 @@ pub(crate) mod fake {
 
     impl Updater for FakeUpdater {
         fn is_available(&self) -> bool {
+            *self.installs.lock().unwrap()
+        }
+
+        fn can_check(&self) -> bool {
             true
         }
 
@@ -333,16 +356,38 @@ mod tests {
     }
 
     #[test]
-    fn with_no_updater_nothing_is_checked_and_asking_says_so() {
+    fn with_no_updater_nothing_is_checked() {
         let (backend, _profile) = testing::backend();
         let mut updates = UpdateState::default();
 
-        updates.check(&backend, true);
+        updates.check(&backend, false);
+
         assert!(!updates.can_check());
         assert_eq!(updates.check_state(), CheckState::Idle);
+    }
 
-        updates.check(&backend, false);
-        assert_eq!(updates.check_state(), CheckState::NotHere);
+    #[test]
+    fn a_copy_that_does_not_install_itself_checks_and_names_a_newer_version() {
+        let fake = FakeUpdater::offering("0.26.0");
+        *fake.installs.lock().unwrap() = false;
+        let mut bench = bench(fake);
+
+        bench.check(true);
+
+        assert_eq!(bench.updates.check_state(), CheckState::Newer);
+        assert_eq!(bench.updates.newer(), Some("0.26.0"));
+        assert!(bench.updates.offered().is_none(), "no prompt to install");
+    }
+
+    #[test]
+    fn a_copy_that_does_not_install_itself_says_it_is_up_to_date() {
+        let fake = FakeUpdater::default();
+        *fake.installs.lock().unwrap() = false;
+        let mut bench = bench(Arc::new(fake));
+
+        bench.check(true);
+
+        assert_eq!(bench.updates.check_state(), CheckState::UpToDate);
     }
 
     #[test]

@@ -6074,9 +6074,11 @@ key can produce an installable update. It is the key the Tauri releases were sig
   path that downloads. A silent update would restart the application mid-keystroke.
 - **What updates itself**: only an `AppImage` (`$APPIMAGE`, replaced in place) or a folder holding
   the NSIS uninstaller (the installer run passive, `/P /R`). A binary run from `target/`, a
-  standalone executable, a `.deb` or an `.rpm` checks nothing: system packages are updated by
-  their package manager, by design. The About menu still lists « Check for updates », and asked
-  there it answers that this copy is updated by its package manager or by hand.
+  standalone executable, a `.deb` or an `.rpm` installs nothing: system packages are updated by
+  their package manager, by design. Every copy still checks (`Updater::can_check`), at launch
+  and from the About menu, which says « ✓ DevNotes est à jour », or names a newer version it
+  cannot install (« Version x à télécharger ») with the menu's dot instead of the prompt. The
+  `e2e` flavour asks no release server (`NoUpdater`).
 - **The file is checked before it is kept**: downloaded whole, verified against the signature and
   the compiled key, and refused otherwise (`DownloadError::Refused`) — nothing is installed.
 - ⚠️ **Installing is the very last thing the process does.** Under Windows the client launches the

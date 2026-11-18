@@ -8,6 +8,7 @@ use platform::autostart::Autostart;
 use platform::dialog::FileDialog;
 use platform::shortcuts::Shortcuts;
 use platform::tray::{NoTray, Picture, Tray};
+#[cfg(not(feature = "e2e"))]
 use platform::updater::Source;
 use ui::inputs::{Inbox, Input};
 use ui::services::preferences::Preferences;
@@ -17,6 +18,7 @@ use ui::services::settings::Settings;
 const IDENTIFIER: &str = "com.devnotes.app";
 
 /// The address and the key the published versions already use (D26).
+#[cfg(not(feature = "e2e"))]
 const UPDATES: Source<'_> = Source {
     version: env!("CARGO_PKG_VERSION"),
     endpoint: "https://github.com/vmillet-dev/devnotes-rs/releases/latest/download/latest.json",
@@ -32,7 +34,7 @@ pub(crate) fn start(preferences: &Preferences, inbox: &Inbox) -> ui::Desktop {
         autostart: autostart(),
         notifier: platform::notify::system(METADATA.name, IDENTIFIER),
         dialog: dialog(inbox.clone()),
-        updater: platform::updater::system(&UPDATES),
+        updater: updater(),
         clipboard: platform::clipboard::system(),
         opener: platform::desktop::system(),
     }
@@ -71,6 +73,17 @@ fn take_shortcuts(inbox: Inbox) -> Box<dyn Shortcuts> {
 #[cfg(feature = "e2e")]
 fn take_shortcuts(_inbox: Inbox) -> Box<dyn Shortcuts> {
     Box::new(platform::shortcuts::NoShortcuts)
+}
+
+#[cfg(not(feature = "e2e"))]
+fn updater() -> Arc<dyn platform::updater::Updater + Send + Sync> {
+    platform::updater::system(&UPDATES)
+}
+
+/// A scenario does not ask GitHub at every launch: its answer would change from run to run.
+#[cfg(feature = "e2e")]
+fn updater() -> Arc<dyn platform::updater::Updater + Send + Sync> {
+    Arc::new(platform::updater::NoUpdater)
 }
 
 #[cfg(not(feature = "e2e"))]
