@@ -140,6 +140,9 @@ pub fn show(ui: &Ui, state: &AppState, picker: &mut Picker) {
     }
 }
 
+/// The height of the list.
+const LIST: f32 = 320.0;
+
 fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
     let p = palette(ui.ctx());
     let language = state.language;
@@ -174,11 +177,14 @@ fn body(ui: &mut Ui, state: &AppState, picker: &mut Picker) {
     let first = notes.first().map(|card| card.id.clone());
     let mut results = Vec::with_capacity(notes.len());
     let mut chosen = None;
+    // Of one height, whatever is found: the dialog is centred on it.
+    let room = Vec2::new(ui.available_width(), LIST);
+    let (room, _) = ui.allocate_exact_size(room, Sense::hover());
+    let mut list = ui.new_child(egui::UiBuilder::new().max_rect(room));
     egui::ScrollArea::vertical()
         .id_salt("note-picker-list")
-        .max_height(320.0)
-        .auto_shrink([false, true])
-        .show(ui, |ui| {
+        .auto_shrink(false)
+        .show(&mut list, |ui| {
             ui.spacing_mut().item_spacing.y = gap::LINE;
             for card in &notes {
                 let row = option(ui, state, card);
