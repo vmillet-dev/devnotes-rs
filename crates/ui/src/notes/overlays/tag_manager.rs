@@ -19,6 +19,10 @@ use crate::theme::palette;
 use crate::widgets::{self, Button, IconButton, Kind, TextField};
 
 const WIDTH: f32 = 480.0;
+const CHIP: f32 = 26.0;
+/// What the tags take of the window's height at most: the title stays above them and the form
+/// below, whatever their number.
+const LIST_SHARE: f32 = 0.45;
 
 /// The name typed for the ticked tags.
 #[derive(Default)]
@@ -100,14 +104,7 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut
         );
         return closed;
     }
-    ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = vec2(gap::SNUG, gap::SNUG);
-        for usage in tags.tags() {
-            if item(ui, usage, tags.is_selected(&usage.tag), language) {
-                ask(actions, Tags::Toggle(usage.tag.clone()));
-            }
-        }
-    });
+    list(ui, state, language, actions);
     if let Some(change) = tags.pending() {
         confirmation(ui, change, language, view, actions);
     } else {
@@ -122,8 +119,64 @@ fn say(ui: &mut Ui, words: &str, colour: Color32, author_id: &str) {
     widgets::address(ui, &response, author_id);
 }
 
-/// « #staging 2 notes », amber while ticked.
-fn item(ui: &mut Ui, usage: &TagUsage, on: bool, language: i18n::Language) -> bool {
+/// The tags as a cloud that scrolls, only its lines in view drawn.
+fn list(ui: &mut Ui, state: &AppState, language: i18n::Language, actions: &mut Actions) {
+    let tags = &state.tags;
+    let widths: Vec<f32> = tags
+        .tags()
+        .iter()
+        .map(|usage| chip_width(ui, usage, language))
+        .collect();
+    let room = ui.available_width() - ui.spacing().scroll.allocated_width();
+    let lines = lines_of(&widths, room);
+    ui.spacing_mut().item_spacing.y = gap::SNUG;
+    egui::ScrollArea::vertical()
+        .id_salt("tag-manager-list")
+        .max_height(ui.ctx().content_rect().height() * LIST_SHARE)
+        .auto_shrink([false, true])
+        .show_rows(ui, CHIP, lines.len(), |ui, shown| {
+            for line in &lines[shown] {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = gap::SNUG;
+                    for usage in &tags.tags()[line.clone()] {
+                        if item(ui, usage, tags.is_selected(&usage.tag), language) {
+                            ask(actions, Tags::Toggle(usage.tag.clone()));
+                        }
+                    }
+                });
+            }
+        });
+    ui.spacing_mut().item_spacing.y = gap::INSET;
+}
+
+/// The chips each line holds, filled left to right.
+fn lines_of(widths: &[f32], room: f32) -> Vec<std::ops::Range<usize>> {
+    let mut lines = Vec::new();
+    let mut start = 0;
+    let mut taken = 0.0;
+    for (rank, width) in widths.iter().enumerate() {
+        if rank > start && taken + width > room {
+            lines.push(start..rank);
+            start = rank;
+            taken = 0.0;
+        }
+        taken += width + gap::SNUG;
+    }
+    lines.push(start..widths.len());
+    lines
+}
+
+fn chip_width(ui: &Ui, usage: &TagUsage, language: i18n::Language) -> f32 {
+    let (name, count) = chip_texts(ui, usage, language);
+    name.size().x + 6.0 + count.size().x + 20.0
+}
+
+/// Its name, then how many notes carry it.
+fn chip_texts(
+    ui: &Ui,
+    usage: &TagUsage,
+    language: i18n::Language,
+) -> (std::sync::Arc<egui::Galley>, std::sync::Arc<egui::Galley>) {
     let p = palette(ui.ctx());
     let name = format!("#{}", usage.tag);
     let count = i18n::translate(
@@ -131,17 +184,32 @@ fn item(ui: &mut Ui, usage: &TagUsage, on: bool, language: i18n::Language) -> bo
         keys::tag_manager::NOTE_COUNT,
         &[("count", usage.note_count.into())],
     );
-    let mono = FontFamily::Monospace;
-    let words = widgets::text(ui, &name, font::CONTROL, 400.0, mono.clone(), p.text_1);
-    let counted = widgets::text(
-        ui,
-        &count,
-        font::CAPTION,
-        400.0,
-        FontFamily::Proportional,
-        p.text_2,
-    );
-    let size = vec2(words.size().x + 6.0 + counted.size().x + 20.0, 26.0);
+    (
+        widgets::text(
+            ui,
+            &name,
+            font::CONTROL,
+            400.0,
+            FontFamily::Monospace,
+            p.text_1,
+        ),
+        widgets::text(
+            ui,
+            &count,
+            font::CAPTION,
+            400.0,
+            FontFamily::Proportional,
+            p.text_2,
+        ),
+    )
+}
+
+/// « #staging 2 notes », amber while ticked.
+fn item(ui: &mut Ui, usage: &TagUsage, on: bool, language: i18n::Language) -> bool {
+    let p = palette(ui.ctx());
+    let name = format!("#{}", usage.tag);
+    let (_, counted) = chip_texts(ui, usage, language);
+    let size = vec2(chip_width(ui, usage, language), CHIP);
     let corner = CornerRadius::same(u8::MAX);
     let response = widgets::interact(
         ui,
@@ -177,7 +245,7 @@ fn item(ui: &mut Ui, usage: &TagUsage, on: bool, language: i18n::Language) -> bo
         Stroke::new(1.0, edge),
         StrokeKind::Inside,
     );
-    let words = widgets::text(ui, &name, font::CONTROL, 400.0, mono, ink);
+    let words = widgets::text(ui, &name, font::CONTROL, 400.0, FontFamily::Monospace, ink);
     let left = rect.left() + 10.0;
     let width = words.size().x;
     ui.painter().galley(
@@ -388,6 +456,66 @@ mod tests {
         let node = harness.get_by(|node| node.author_id() == Some("tag-confirm-text"));
         let node = node.accesskit_node();
         node.label().or_else(|| node.value()).unwrap_or_default()
+    }
+
+    /// `count` tags over as many notes as hold them; the manager open.
+    fn many(count: usize) -> Harness<'static, Bench> {
+        let (backend, profile) = testing::unlocked();
+        let tags: Vec<String> = (0..count).map(|rank| format!("tag-{rank:03}")).collect();
+        for (rank, tags) in tags.chunks(10).enumerate() {
+            let id = testing::note(&backend, &format!("note {rank}")).id.clone();
+            let patch = NotePatch {
+                tags: Some(tags.to_vec()),
+                ..NotePatch::default()
+            };
+            engine::db::run_here(backend.engine(), move |engine| {
+                engine::notes::update_note(engine, &id, &patch)
+            })
+            .unwrap();
+        }
+        let mut harness = area(backend, profile);
+        click_id(&mut harness, "facets-toggle");
+        click_id(&mut harness, "tag-manage");
+        harness
+    }
+
+    #[test]
+    fn three_hundred_tags_scroll_between_the_title_and_the_form() {
+        let mut harness = many(300);
+        let window = harness.ctx.content_rect();
+        for author_id in ["tag-manager-close", "tag-target", "tag-apply", "tag-delete"] {
+            let rect = harness
+                .get_by(|node| node.author_id() == Some(author_id))
+                .rect();
+            assert!(window.contains_rect(rect), "{author_id} at {rect:?}");
+        }
+        assert!(listed(&harness).len() < 300, "only what shows is drawn");
+
+        let first = harness
+            .get_all_by(|node| node.author_id() == Some("tag-item"))
+            .next()
+            .unwrap()
+            .rect()
+            .center();
+        harness.event(egui::Event::PointerMoved(first));
+        for _ in 0..60 {
+            harness.event(egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta: egui::vec2(0.0, -400.0),
+                phase: egui::TouchPhase::Move,
+                source: egui::MouseWheelSource::Unknown,
+                modifiers: egui::Modifiers::NONE,
+            });
+            harness.step();
+        }
+        settle(&mut harness);
+        assert!(listed(&harness).contains(&"#tag-299".to_owned()));
+        tick(&mut harness, "tag-299");
+        propose(&mut harness, "last");
+        let confirm = harness
+            .get_by(|node| node.author_id() == Some("tag-confirm-apply"))
+            .rect();
+        assert!(window.contains_rect(confirm), "{confirm:?}");
     }
 
     #[test]
