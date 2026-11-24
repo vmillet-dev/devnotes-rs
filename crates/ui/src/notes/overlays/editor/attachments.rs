@@ -81,12 +81,16 @@ fn item(
     let id = &attachment.id;
     let shown = state.attachments.preview_id() == Some(id.as_str());
     let edge = if shown { p.amber_edge } else { p.line };
-    egui::Frame::new()
-        .fill(p.bg_2)
-        .stroke(Stroke::new(1.0, edge))
-        .corner_radius(CornerRadius::same(radius::PANEL))
-        .inner_margin(gap::margin(gap::SNUG, gap::HAIRLINE))
-        .show(ui, |ui| {
+    let buttons = if is_shown(attachment) { 3.0 } else { 2.0 };
+    let around = 2.0 * gap::SNUG + buttons * (gap::TIGHT + widgets::MIN_TARGET);
+    let width = name_width(ui, state, attachment) + around;
+    widgets::kept_together(ui, width, |ui| {
+        let frame = egui::Frame::new()
+            .fill(p.bg_2)
+            .stroke(Stroke::new(1.0, edge))
+            .corner_radius(CornerRadius::same(radius::PANEL))
+            .inner_margin(gap::margin(gap::SNUG, gap::HAIRLINE));
+        frame.show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = gap::TIGHT;
                 if name_button(ui, state, attachment).clicked() {
@@ -125,15 +129,28 @@ fn item(
                 }
             });
         });
+    });
 }
 
-/// Open with the default application. Rounded up: « 0 KB » for a file is wrong.
+/// Rounded up: « 0 KB » for a file is wrong.
+fn name_and_size(language: Language, attachment: &Attachment) -> String {
+    let size = attachment.byte_size.div_ceil(BYTES_PER_KB).max(1);
+    let size = i18n::translate(language, keys::attachments::SIZE, &[("size", size.into())]);
+    format!("{} · {size}", attachment.file_name)
+}
+
+fn name_width(ui: &Ui, state: &AppState, attachment: &Attachment) -> f32 {
+    let words = name_and_size(state.language, attachment);
+    let (family, ink) = (egui::FontFamily::Proportional, palette(ui.ctx()).text_1);
+    let galley = widgets::text(ui, &words, font::META, 400.0, family, ink);
+    galley.size().x.min(NAME_WIDTH)
+}
+
+/// Open with the default application.
 fn name_button(ui: &mut Ui, state: &AppState, attachment: &Attachment) -> egui::Response {
     let language = state.language;
     let p = palette(ui.ctx());
-    let size = attachment.byte_size.div_ceil(BYTES_PER_KB).max(1);
-    let size = i18n::translate(language, keys::attachments::SIZE, &[("size", size.into())]);
-    let words = format!("{} · {size}", attachment.file_name);
+    let words = name_and_size(language, attachment);
     ui.scope(|ui| {
         ui.set_max_width(NAME_WIDTH);
         let response = ui.add(
