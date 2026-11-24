@@ -82,9 +82,12 @@ fn a_note_of(app: &mut App, title: &str, markdown: &str) {
     app.wait_for("editor-rich");
 }
 
-/// The language menu's filter takes the focus a frame after it opens.
+/// The language menu's filter takes the focus a frame after it opens; a click in it keeps the
+/// menu open.
 fn choose_language(app: &mut App, typed: &str, option: &str) {
     app.click("editor-language");
+    app.wait_for("editor-language-filter");
+    app.click("editor-language-filter");
     app.eventually("the filter has the focus", |tree| {
         tree.focused().starts_with("editor-language-filter")
     });
