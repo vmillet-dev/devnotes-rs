@@ -18,7 +18,7 @@ use crate::state::http::tabs::Tab;
 use crate::state::http::tree::Badge;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
-use crate::widgets::{self, interact};
+use crate::widgets::{self, SplitButton, SplitKind, interact};
 
 pub(super) const HEIGHT: f32 = BAR_HEIGHT;
 
@@ -350,18 +350,23 @@ fn end_width(ui: &Ui, state: &AppState) -> f32 {
 
 fn new_request_width(ui: &Ui, language: i18n::Language) -> f32 {
     let label = i18n::translate(language, keys::http::tabs::NEW, &[]);
-    widgets::Button::width(ui, &label) + 26.0
+    SplitButton::width(ui, &label)
 }
 
 /// « + New request », split: an HTTP request in one click, the other kinds in two.
 fn new_request(ui: &mut Ui, actions: &mut Actions, language: i18n::Language) {
     let tr = |key| i18n::translate(language, key, &[]);
-    ui.spacing_mut().item_spacing.x = 0.0;
-    let main = widgets::Button::new(&tr(keys::http::tabs::NEW), "http-tab-new").show(ui);
+    let label = tr(keys::http::tabs::NEW);
+    let kinds = tr(keys::http::tabs::NEW_KIND);
+    let (main, caret) = SplitButton::new(
+        (&label, "http-tab-new"),
+        (&kinds, "http-tab-new-kind"),
+        SplitKind::Neutral,
+    )
+    .show(ui);
     if main.clicked() {
         push(actions, Action::NewRequest(RequestKind::Http));
     }
-    let caret = caret(ui, &tr(keys::http::tabs::NEW_KIND), main.rect.height());
     Popup::menu(&caret)
         .frame(widgets::menu_frame(ui.ctx()))
         .align(RectAlign::BOTTOM_END)
@@ -389,40 +394,6 @@ fn new_request(ui: &mut Ui, actions: &mut Actions, language: i18n::Language) {
                 }
             }
         });
-}
-
-/// The chevron joined to « New request », framed as it is.
-fn caret(ui: &mut Ui, label: &str, height: f32) -> Response {
-    let p = palette(ui.ctx());
-    let corner = CornerRadius {
-        nw: 0,
-        sw: 0,
-        ne: 6,
-        se: 6,
-    };
-    let response = interact(
-        ui,
-        Vec2::new(26.0, height),
-        Sense::click(),
-        "http-tab-new-kind",
-        || WidgetInfo::labeled(Role::Button, true, label),
-        corner,
-    );
-    let edge = if response.hovered() {
-        p.amber_dim
-    } else {
-        p.line_soft
-    };
-    ui.painter().rect(
-        response.rect,
-        corner,
-        p.bg_2,
-        Stroke::new(1.0, edge),
-        egui::StrokeKind::Inside,
-    );
-    let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(12.0));
-    icons::paint(ui, glyph, Icon::ChevronDown, p.text_1);
-    response
 }
 
 /// A kind of request: the badge its tab and its row will wear, its name, what it is for.

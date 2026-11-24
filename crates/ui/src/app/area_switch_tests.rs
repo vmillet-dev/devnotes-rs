@@ -73,3 +73,44 @@ fn the_switch_is_at_one_place_and_one_size_on_every_area() {
         assert_eq!(places(&mut harness, "area-option-http"), notes);
     }
 }
+
+/// The two halves of a split button, and the one rounded outline it is drawn in.
+fn halves(
+    harness: &mut egui_kittest::Harness<'_, super::DevNotesApp>,
+    area: &str,
+    ids: [&str; 2],
+) -> [egui::Rect; 2] {
+    click(harness, area);
+    ids.map(|author_id| {
+        harness
+            .get_by(|node| node.author_id() == Some(author_id))
+            .rect()
+    })
+}
+
+#[test]
+fn new_request_has_the_shape_of_new_note() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut harness = open_library(directory.path());
+
+    let note = halves(
+        &mut harness,
+        "area-option-notes",
+        ["new-note", "new-note-kind"],
+    );
+    let request = halves(
+        &mut harness,
+        "area-option-http",
+        ["http-tab-new", "http-tab-new-kind"],
+    );
+
+    for [main, more] in [note, request] {
+        assert!(
+            (main.right() - more.left()).abs() < 0.1,
+            "{main:?} {more:?}"
+        );
+        assert!((main.height() - more.height()).abs() < 0.1);
+    }
+    assert!((note[0].height() - request[0].height()).abs() < 0.1);
+    assert!((note[1].size() - request[1].size()).length() < 0.1);
+}

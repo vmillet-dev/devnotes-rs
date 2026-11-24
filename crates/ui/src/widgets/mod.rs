@@ -14,6 +14,7 @@ mod list;
 mod menu;
 mod release_notes;
 mod segmented;
+mod split;
 
 pub mod date;
 pub mod editor;
@@ -21,7 +22,7 @@ pub mod json_explorer;
 pub mod rich;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
-pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
+pub use button::{Button, IconButton, Kind, SquareButton};
 pub use dialog::{
     Cross, DialogStack, Layer, Shown, dialog, dialog_title, framed_dialog, modal_panel,
 };
@@ -38,6 +39,7 @@ pub use menu::{
 pub use release_notes::release_notes;
 pub use rich::{Read, rich_reader};
 pub use segmented::Segmented;
+pub use split::{SplitButton, SplitKind};
 
 use std::sync::Arc;
 
