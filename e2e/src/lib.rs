@@ -574,8 +574,14 @@ impl App {
 
     /// Clicks a field, then types into it once it holds the focus: text typed a frame early
     /// goes nowhere, as a passphrase lost on a slow first launch.
-    /// ⚠️ A click can land in a frame that drops it: clicked again until the focus moves.
+    /// ⚠️ A click can land in a frame that drops it: clicked again until the focus moves. The gate
+    /// moves down when its libraries are listed: a click aimed before lands beside the field,
+    /// whose focus comes back by itself, and the phrase is typed into nothing.
     pub fn fill(&mut self, author_id: &str, text: &str) {
+        if author_id == "vault-passphrase" {
+            self.wait_for("vault-library");
+            self.at_rest(author_id);
+        }
         let until = Instant::now() + PATIENCE;
         'clicked: loop {
             self.click(author_id);
