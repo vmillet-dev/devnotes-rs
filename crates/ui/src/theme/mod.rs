@@ -2,6 +2,7 @@
 //! densities, and the egui `Style` drawn from them. A widget reads its colours from
 //! [`palette`] and its gaps from [`spacing`], never a literal.
 
+pub mod cursors;
 pub mod focus;
 pub mod fonts;
 pub mod icons;
