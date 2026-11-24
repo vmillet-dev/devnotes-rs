@@ -592,6 +592,26 @@ fn the_eraser_stays_in_hand_after_an_erase_and_escape_puts_it_down() {
     assert_eq!(shapes(&harness), "1");
 }
 
+#[test]
+fn an_arrow_selected_is_moved_by_its_ends() {
+    let (mut harness, id) = opened("");
+    draw_rectangle(&mut harness);
+    press(&mut harness, Key::A, Modifiers::NONE);
+    let (from, to) = (point(&harness, 90.0, 70.0), point(&harness, 300.0, 70.0));
+    drag(&mut harness, from, to);
+    let bound = |harness: &mut Harness| {
+        harness.run_steps(8);
+        settle(harness);
+        stored(harness, &id).content.contains(r#""from":""#)
+    };
+    assert!(bound(&mut harness));
+
+    // Its start is on the rectangle's right side, 141 from the stage's edge.
+    let (start, away) = (point(&harness, 141.0, 70.0), point(&harness, 200.0, 200.0));
+    drag(&mut harness, start, away);
+    assert!(!bound(&mut harness), "let go on the paper");
+}
+
 /// The toolbar of a panel: nothing over anything else.
 #[test]
 fn in_a_narrow_panel_the_exports_take_a_line_of_their_own() {
