@@ -400,7 +400,7 @@ impl AppState {
             }
             Notes::OpenNote(id) => self.open_in_editor(EditorNext::Note(id)),
             Notes::Editor(editing) => self.apply_editing(editing, ctx, backend),
-            Notes::NewNote(kind) => self.new_note_asked(kind, backend),
+            Notes::NewNote(kind) => self.new_note(kind),
             Notes::Pin { id, pinned } => {
                 self.notes.pin(backend, vec![id], pinned);
             }
@@ -829,25 +829,12 @@ impl AppState {
         crate::notes::calc::Format::of(&self.settings, self.language)
     }
 
-    /// In the space shown, or the first one for « all spaces », and the folder shown.
     pub(super) fn set_decimals(&mut self, places: Option<u8>, backend: &Backend) {
         self.settings.calc_decimals = places;
         self.save_settings(backend);
     }
 
-    /// From the menu: a Note made once, its entry stops saying « New ».
-    pub(super) fn new_note_asked(
-        &mut self,
-        kind: Option<engine::notes::kind::NoteKind>,
-        backend: &Backend,
-    ) {
-        self.new_note(kind);
-        if kind == Some(engine::notes::kind::NoteKind::Note) && !self.settings.note_kind_tried {
-            self.settings.note_kind_tried = true;
-            self.save_settings(backend);
-        }
-    }
-
+    /// In the space shown, or the first one for « all spaces », and the folder shown.
     pub(super) fn new_note(&mut self, kind: Option<engine::notes::kind::NoteKind>) {
         self.open_in_editor(EditorNext::Draft(kind));
     }

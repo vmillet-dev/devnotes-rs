@@ -88,7 +88,6 @@
     "newRichNote": "Note",
     "newChecklist": "To-do list",
     "createMenuTitle": "Create",
-    "kindNew": "New",
     "kindLines": {
       "snippet": "A block of code, its language and its fields to fill in.",
       "note": "Formatted text: headings, lists, links, tables, code blocks.",

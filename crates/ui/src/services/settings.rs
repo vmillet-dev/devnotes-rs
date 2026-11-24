@@ -92,8 +92,6 @@ pub struct Settings {
     pub code_wrap: bool,
     /// What « Nouvelle note » and the global shortcut open; the menu still picks any.
     pub default_note_kind: NoteKind,
-    /// A formatted note was made once: its menu entry stops saying « New ».
-    pub note_kind_tried: bool,
     pub start_with_system: bool,
     pub minimize_to_tray: bool,
     pub close_to_tray: bool,
@@ -141,7 +139,6 @@ impl Default for Settings {
             code_indent: IndentChoice::default(),
             code_wrap: false,
             default_note_kind: NoteKind::Snippet,
-            note_kind_tried: false,
             start_with_system: false,
             minimize_to_tray: false,
             close_to_tray: true,
@@ -174,7 +171,6 @@ const HISTORY_LIST_WIDTH_KEY: &str = "devnotes.httpHistoryListWidth";
 const CODE_INDENT: &str = "devnotes.codeIndent";
 const CODE_WRAP: &str = "devnotes.codeWrap";
 const DEFAULT_NOTE_KIND: &str = "devnotes.defaultNoteKind";
-const NOTE_KIND_TRIED: &str = "devnotes.noteKindTried";
 const START_WITH_SYSTEM: &str = "devnotes.startWithSystem";
 const MINIMIZE_TO_TRAY: &str = "devnotes.minimizeToTray";
 const CLOSE_TO_TRAY: &str = "devnotes.closeToTray";
@@ -225,7 +221,6 @@ impl Settings {
             code_wrap: preferences.get(CODE_WRAP) == Some("true"),
             default_note_kind: chosen(preferences, DEFAULT_NOTE_KIND, &NOTE_KINDS)
                 .unwrap_or_default(),
-            note_kind_tried: preferences.get(NOTE_KIND_TRIED) == Some("true"),
             start_with_system: preferences.get(START_WITH_SYSTEM) == Some("true"),
             minimize_to_tray: preferences.get(MINIMIZE_TO_TRAY) == Some("true"),
             close_to_tray: preferences.get(CLOSE_TO_TRAY) != Some("false"),
@@ -272,7 +267,6 @@ impl Settings {
             DEFAULT_NOTE_KIND,
             name_of(&NOTE_KINDS, self.default_note_kind),
         );
-        preferences.set(NOTE_KIND_TRIED, flag(self.note_kind_tried));
         preferences.set(START_WITH_SYSTEM, flag(self.start_with_system));
         preferences.set(MINIMIZE_TO_TRAY, flag(self.minimize_to_tray));
         preferences.set(CLOSE_TO_TRAY, flag(self.close_to_tray));
@@ -469,7 +463,6 @@ mod tests {
             code_indent: IndentChoice::Tab,
             code_wrap: true,
             default_note_kind: NoteKind::Calc,
-            note_kind_tried: false,
             start_with_system: true,
             minimize_to_tray: true,
             close_to_tray: false,
