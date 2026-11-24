@@ -13,6 +13,7 @@ pub mod sidebar;
 pub mod ui;
 
 pub(crate) use overlays::editor::picture_palette;
+pub(crate) use overlays::undo_bar::layer as undo_bar_layer;
 
 use egui::{Rect, Ui, UiBuilder};
 use engine::notes::kind::NoteKind;

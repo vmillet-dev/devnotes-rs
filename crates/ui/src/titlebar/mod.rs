@@ -126,7 +126,6 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
     );
 
     let inner = bar - gap::margin(gap::GROUPS, 0.0);
-    let mut sides = (inner.left(), inner.right());
     ui.scope_builder(egui::UiBuilder::new().max_rect(inner), |ui| {
         ui.horizontal_centered(|ui| {
             // Every entry of the menus acts on the library: none while it is locked.
@@ -138,22 +137,13 @@ pub(crate) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
             if unlocked && !state.settings.rail_shown {
                 area_switch::bar(ui, state.settings.area, language, actions);
             }
-            sides.0 = ui.min_rect().right();
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 theme_toggle(ui, language, actions);
-                sides.1 = ui.min_rect().left();
             });
         });
     });
 
     // Centred on the window, not on what the two groups leave between them.
-    let half = (bar.center().x - sides.0).min(sides.1 - bar.center().x) - 16.0;
-    if let Some(latest) = state.status.latest() {
-        if crate::banners::report(ui, latest, (language, 2.0 * half)) {
-            actions.push(Asked::App(AppAction::DismissStatus));
-        }
-        return;
-    }
     let title = widgets::text(
         ui,
         METADATA.name,

@@ -4,7 +4,8 @@
 
 use crate::theme::tokens::{font, gap, radius};
 use egui::{
-    Align2, CornerRadius, FontFamily, Order, Role, Sense, Stroke, StrokeKind, Ui, WidgetInfo, vec2,
+    Align2, CornerRadius, FontFamily, Id, LayerId, Order, Role, Sense, Stroke, StrokeKind, Ui,
+    WidgetInfo, vec2,
 };
 use engine::notes::kind::NoteKind;
 use i18n::{Key, keys};
@@ -15,6 +16,11 @@ use crate::state::AppState;
 use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, IconButton};
+
+/// For the toasts to stand clear of it.
+pub(crate) fn layer() -> LayerId {
+    LayerId::new(Order::Tooltip, Id::unique("undo-bar"))
+}
 
 pub(in crate::notes) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
     let now = ui.input(|input| input.time);
@@ -32,8 +38,8 @@ pub(in crate::notes) fn show(ui: &Ui, state: &AppState, actions: &mut Actions) {
         .corner_radius(CornerRadius::same(radius::CARD))
         .shadow(p.shadow_overlay)
         .inner_margin(gap::margin(gap::GROUPS, gap::SNUG));
-    egui::Area::new(egui::Id::unique("undo-bar"))
-        .order(Order::Tooltip)
+    egui::Area::new(layer().id)
+        .order(layer().order)
         .anchor(Align2::CENTER_BOTTOM, vec2(0.0, -20.0))
         .show(ui.ctx(), |ui| {
             let bar = frame.show(ui, |ui| {

@@ -1,28 +1,31 @@
-//! What the status toast says: the last thing that happened. Every operation on a library
-//! reports, even when nothing changed.
+//! What was done. Every operation on a library reports, even when nothing changed.
 
 use i18n::Message;
 
-/// The toast's message, numbered: the same words said twice are two reports.
+use super::notices::Notices;
+
 #[derive(Debug, Default)]
 pub struct StatusNotifier {
-    latest: Option<(u64, Message)>,
-    said: u64,
+    notices: Notices,
 }
 
 impl StatusNotifier {
     pub fn report(&mut self, message: Message) {
-        self.said += 1;
-        self.latest = Some((self.said, message));
+        self.notices.push(message);
     }
 
     /// The last report and its number.
     pub fn latest(&self) -> Option<(u64, &Message)> {
-        self.latest.as_ref().map(|(said, message)| (*said, message))
+        self.shown().next()
     }
 
-    pub fn dismiss(&mut self) {
-        self.latest = None;
+    /// Those still shown, the latest first.
+    pub fn shown(&self) -> impl Iterator<Item = (u64, &Message)> {
+        self.notices.shown()
+    }
+
+    pub fn dismiss(&mut self, number: u64) {
+        self.notices.dismiss(number);
     }
 }
 
@@ -42,5 +45,6 @@ mod tests {
         status.report(saved);
 
         assert_ne!(status.latest().unwrap().0, first);
+        assert_eq!(status.shown().count(), 2);
     }
 }

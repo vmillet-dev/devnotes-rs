@@ -1953,3 +1953,36 @@ fn a_note_moved_among_many_folders() {
         capture(&mut harness, "note-move");
     }
 }
+
+/// Three reports at once, over a drawing open beside the cards (#1591).
+#[test]
+fn reports_in_the_corner() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let id = crate::testing::note(&harness.state().backend, "Architecture")
+        .id
+        .clone();
+    harness.state_mut().state.revision.bump();
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    let status = &mut harness.state_mut().state.status;
+    status
+        .report(i18n::Message::new(i18n::keys::notes::COPIED_NOTE).with("title", "Connexion psql"));
+    let path = r"C:\Utilisateurs\moi\Documents\captures\schéma-de-la-base.pdf";
+    status.report(i18n::Message::new(i18n::keys::attachments::SAVED).with("path", path));
+    status.report(
+        i18n::Message::new(i18n::keys::file::EXPORTED)
+            .with("notes", 12_u32)
+            .with("path", "export-2026.json"),
+    );
+    settle(&mut harness);
+    capture(&mut harness, "status-toasts");
+    let failed = i18n::Message::new(i18n::keys::errors::ATTACHMENTS_LOAD_FAILED);
+    harness.state_mut().state.errors.notify(failed);
+    settle(&mut harness);
+    capture(&mut harness, "error-toast");
+}

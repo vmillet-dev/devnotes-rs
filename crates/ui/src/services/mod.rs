@@ -5,6 +5,7 @@ pub mod errors;
 pub mod global_keys;
 pub mod guide;
 pub mod highlight;
+pub mod notices;
 pub mod preferences;
 pub mod samples;
 pub mod settings;

@@ -4204,9 +4204,9 @@ settings, never the draft.
 
 `services::time`: an injectable `Clock` (`SystemClock`, a `FakeClock` in tests) and
 `relative(at, clock)`, which answers the label and **how long it holds**, the next frame asked
-for exactly then. `services::status::StatusNotifier` keeps the toast's last report, numbered so
-the same words said twice show twice; `services::errors::ErrorNotifier` the banner's last
-failure: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
+for exactly then. `services::status::StatusNotifier` keeps the toasts' last reports, numbered so
+the same words said twice show twice; `services::errors::ErrorNotifier` the last failures, the
+same one once: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
 choosing its sub-key by one parameter), or the action's own when the code says nothing better.
 ⚠️ The error's `detail` never goes to the screen, and to the log only through `AppError::for_log`:
 the code alone, its detail too where no variant carries a name, a file, a URL or a script's words.
@@ -4290,11 +4290,13 @@ names what it switches **to**, its icon and its label alike, and writes the appe
 preferences panel does. Until the screens arrive, an area is an empty room addressed
 `area-notes`, `area-tools` or `area-http`.
 
-`ui::banners` draws the `ErrorNotifier`'s failure (red, announced assertively, `error-banner`)
-as a top panel under the bar, until its X is pressed (`DismissError`). The `StatusNotifier`'s
-report (green, announced politely, `status-toast`) takes the name's place in the middle of the
-title bar, cut to the room the menus leave: there it moves nothing and covers no control. It goes
-by its X or after `motion::REPORT` seconds away from the pointer (`DismissStatus`).
+`ui::banners::toasts` stacks in the bottom right corner, above every modal and clear of the undo
+bar, what was done and what failed, each whole on as many lines as it takes, the latest on top. The
+`StatusNotifier`'s reports (green, announced politely, `status-toast`) go by their X or after
+`motion::REPORT` seconds, counted while the pointer is away from them (`DismissStatus`). The
+`ErrorNotifier`'s failures (red, announced assertively, `error-banner`) stand under them until
+their X is pressed (`DismissError`), the same one once. Past `notices::KEPT` of a kind the oldest
+makes room.
 
 ### The notes canvas
 

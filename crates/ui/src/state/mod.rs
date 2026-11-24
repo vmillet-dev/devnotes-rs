@@ -549,8 +549,8 @@ impl AppState {
                 self.apply_look(ctx);
                 self.save_settings(backend);
             }
-            Action::App(AppAction::DismissError) => self.errors.dismiss(),
-            Action::App(AppAction::DismissStatus) => self.status.dismiss(),
+            Action::App(AppAction::DismissError(said)) => self.errors.dismiss(said),
+            Action::App(AppAction::DismissStatus(said)) => self.status.dismiss(said),
             Action::App(AppAction::ToggleRail) => {
                 self.settings.rail_shown = !self.settings.rail_shown;
                 self.save_settings(backend);
