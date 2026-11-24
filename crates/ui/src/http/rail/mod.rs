@@ -95,7 +95,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: 
         ui.set_min_height(ui.available_height());
         ui.spacing_mut().item_spacing.y = gap::SNUG;
         egui::Frame::new()
-            .inner_margin(Margin::symmetric(6, 0))
+            .inner_margin(gap::margin(gap::SNUG, 0.0))
             .show(ui, |ui| {
                 crate::titlebar::area_switch::rail(ui, Area::Http, language, actions);
             });
