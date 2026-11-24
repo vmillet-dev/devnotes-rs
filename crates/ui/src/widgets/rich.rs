@@ -82,13 +82,21 @@ pub struct RichView<'a> {
     pictures: Option<(Pictures<'a>, &'a str)>,
     /// Edited: the selection painted, links followed with Ctrl alone.
     selection: Option<&'a Selection>,
-    slide: Option<f32>,
+    slide: Option<Slide>,
+}
+
+/// How a slide is drawn: the widest its text reads, and the scale of its title, which a slide
+/// drawn smaller to hold keeps.
+#[derive(Clone, Copy)]
+struct Slide {
+    widest: f32,
+    title: f32,
 }
 
 /// What every block of a frame is drawn with.
 struct Frame<'a> {
     size: f32,
-    slide: Option<f32>,
+    slide: Option<Slide>,
     pictures: Option<(Pictures<'a>, &'a str)>,
     selection: Option<&'a Selection>,
     found: &'a [Found],
@@ -107,11 +115,11 @@ impl<'a> RichView<'a> {
         }
     }
 
-    /// Presented: text no wider than `widest`, a code block no wider than its code and centred
-    /// in the whole room.
+    /// Presented: text no wider than `widest`, a code block no wider than its code, its lines
+    /// wrapped, centred in the whole room.
     #[must_use]
-    pub fn slide(mut self, widest: f32) -> Self {
-        self.slide = Some(widest);
+    pub fn slide(mut self, widest: f32, title: f32) -> Self {
+        self.slide = Some(Slide { widest, title });
         self
     }
 
@@ -191,6 +199,11 @@ fn draw_block(ui: &mut Ui, block: &Block, path: &mut Vec<usize>, frame: &mut Fra
     match block {
         Block::Paragraph(content) => paragraph(ui, content, Style::body(p, size), path, frame),
         Block::Heading { level, content } => {
+            let first = matches!(path.as_slice(), [0]);
+            let size = match frame.slide {
+                Some(slide) if first => BODY * slide.title,
+                _ => size,
+            };
             let style = Style {
                 size: heading_size(*level, size),
                 weight: 600.0,
@@ -301,7 +314,7 @@ fn format(p: &Palette, marks: &Marks, style: Style) -> TextFormat {
 
 fn paragraph(ui: &mut Ui, content: &[Inline], style: Style, path: &[usize], frame: &mut Frame<'_>) {
     let p = palette(ui.ctx());
-    let widest = frame.slide.unwrap_or(f32::INFINITY);
+    let widest = frame.slide.map_or(f32::INFINITY, |slide| slide.widest);
     let (job, links) = job(p, content, style, ui.available_width().min(widest));
     let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
     let reading = frame.selection.is_none();
@@ -542,10 +555,14 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
         let tokens = lines.as_ref().and_then(|lines| lines.get(at));
         append_coloured(&mut job, p, line, tokens, &font);
     }
-    job.wrap.max_width = f32::INFINITY;
-    let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
     let padding = vec2(14.0, 12.0);
     let column = ui.available_width();
+    job.wrap.max_width = if frame.slide.is_some() {
+        column - 2.0 * padding.x
+    } else {
+        f32::INFINITY
+    };
+    let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
     let width = if frame.slide.is_some() {
         (galley.size().x + 2.0 * padding.x + fence_room(ui, language)).min(column)
     } else {
