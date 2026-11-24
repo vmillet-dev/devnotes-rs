@@ -43,6 +43,8 @@
   {
     "title": "shortcuts.groups.editor",
     "rows": [
+      { "keys": ["J", "K"], "label": "shortcuts.editor.step" },
+      { "keys": ["F2"], "label": "shortcuts.editor.title" },
       { "keys": ["Escape"], "label": "shortcuts.editor.close" },
       { "keys": ["Enter"], "label": "shortcuts.editor.newItem" },
       { "keys": ["Backspace"], "label": "shortcuts.editor.removeItem" },

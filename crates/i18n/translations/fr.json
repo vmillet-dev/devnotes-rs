@@ -987,6 +987,8 @@
       "newDrawing": "Nouveau dessin"
     },
     "editor": {
+      "step": "Note suivante ou précédente, hors d’un champ",
+      "title": "Modifier le titre de la note ouverte",
       "close": "Quitter le code, puis fermer l’éditeur en enregistrant",
       "newItem": "Ajouter un item sous celui-ci",
       "removeItem": "Retirer un item vide",

@@ -4364,8 +4364,8 @@ each goes through the closing path first, which writes the drafts, and `Editing:
 what was asked. Opening straight away replaced the view and lost what was being typed. **J and K**
 (`keys::EDITOR`, read while no field has the focus and nothing opens over the editor) step to
 the card after or before, in the order the cards are shown (`AppState::on_screen`: the list's or
-the board's); a note reached that way does not give its title the focus, so the keys go on
-stepping. Expanded, the toolbar says `n / total` between ‹ and ›. **Escape** steps back: it
+the board's). A note that exists opens with no field focused, so the keys step from the first
+press; **F2** goes to its title, and a new note's title takes the focus as it opens. Expanded, the toolbar says `n / total` between ‹ and ›. **Escape** steps back: it
 leaves the field first (egui drops the focus before the frame is drawn, so the editor remembers
 whether a field had it at the last frame), then full screen, then closes; it is read after the
 panel is drawn, so a search bar or a drawing's tool takes it first, and not at all while a

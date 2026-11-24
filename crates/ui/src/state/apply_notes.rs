@@ -539,6 +539,11 @@ impl AppState {
             }
             Editing::Close => self.close_editor(),
             Editing::Step(by) => self.step_in_editor(by),
+            Editing::FocusTitle => {
+                if let Some(view) = &mut self.notes_view.editor {
+                    view.focus_title = true;
+                }
+            }
             Editing::Present { title, markdown } => {
                 self.presentation.ask(backend, title, markdown);
             }
@@ -846,7 +851,7 @@ impl AppState {
             self.open_now(next);
             return;
         }
-        if let EditorNext::Note(id) | EditorNext::Stepped(id) = &next
+        if let EditorNext::Note(id) = &next
             && self.editor.open_id() == Some(id.as_str())
         {
             return;
@@ -857,7 +862,7 @@ impl AppState {
     pub(super) fn open_now(&mut self, next: EditorNext) {
         match next {
             EditorNext::Note(id) => self.editor.open(id),
-            EditorNext::Stepped(id) => self.editor.step_to(id),
+
             EditorNext::Draft(kind) => {
                 let Some((space, folder)) = self.new_place() else {
                     return;
@@ -884,7 +889,7 @@ impl AppState {
         let Some(next) = at.checked_add_signed(by).and_then(|to| order.get(to)) else {
             return;
         };
-        self.open_in_editor(EditorNext::Stepped(next.clone()));
+        self.open_in_editor(EditorNext::Note(next.clone()));
     }
 
     /// Where the note open sits among the cards shown, and those cards; `None` for a draft or a

@@ -987,6 +987,8 @@
       "newDrawing": "New drawing"
     },
     "editor": {
+      "step": "Next or previous note, no field in focus",
+      "title": "Edit the title of the open note",
       "close": "Leave the code, then close the editor, saving",
       "newItem": "Add an item below this one",
       "removeItem": "Remove an empty item",

@@ -133,11 +133,17 @@ fn beside_the_cards(app: &mut App) {
             app.click_nth("note-card-open", 0);
             app.wait_for("editor-title");
             let first = open_title(&app.tree());
-            // The title takes the focus as the note opens: Escape gives it up first.
-            app.press(Key::Escape, Modifiers::NONE);
             app.press(Key::J, Modifiers::NONE);
             app.eventually("the next card open", |tree| {
                 tree.has("editor-title") && open_title(tree) != first
+            });
+            app.press(Key::F2, Modifiers::NONE);
+            app.eventually("F2 goes to the title", |tree| {
+                tree.focused().starts_with("editor-title")
+            });
+            app.press(Key::Escape, Modifiers::NONE);
+            app.eventually("Escape leaves it, the note still open", |tree| {
+                tree.has("editor-title") && !tree.focused().starts_with("editor-title")
             });
             app.capture("editor-beside-the-cards");
         },
