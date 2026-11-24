@@ -546,7 +546,7 @@ fn recette_on_the_canvas() {
                 app.press(key, Modifiers::NONE);
             }
             app.click("selection-move");
-            app.click("selection-move-1");
+            app.click_where("selection-move-place", |node| node.label() == Some("Perso"));
             app.wait_for("undo-text");
             app.capture("sel-02");
             app.click("undo-restore");

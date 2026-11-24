@@ -4,16 +4,17 @@
 //! they do rather than a value chosen.
 
 use crate::theme::tokens::{font, gap};
-use egui::{FontFamily, Role, Sense, Ui, WidgetInfo, vec2};
+use egui::{FontFamily, Popup, PopupCloseBehavior, Role, Sense, Ui, WidgetInfo, vec2};
 use engine::notes::priority::Priority;
 use i18n::keys;
 
 use crate::action::{Action, Actions};
 use crate::notes::Batch;
+use crate::notes::destinations::{self, Moving};
 use crate::state::AppState;
 use crate::theme::icons::Icon;
 use crate::theme::palette;
-use crate::widgets::{self, Button, ChoiceMenu, IconButton, Kind, MenuItem, Naming, TextField};
+use crate::widgets::{self, Button, IconButton, Kind, MenuItem, TextField};
 
 const LEVELS: [Priority; 5] = [
     Priority::None,
@@ -23,8 +24,6 @@ const LEVELS: [Priority; 5] = [
     Priority::Urgent,
 ];
 
-/// No entry chosen: the menus name what they do.
-const NONE: usize = usize::MAX;
 const GAP: f32 = gap::CONTROLS;
 const TAG_WIDTH: f32 = 120.0;
 
@@ -93,7 +92,6 @@ fn batch(actions: &mut Actions, batch: Batch) {
 const TAG: usize = 0;
 const PIN: usize = 1;
 const MOVE: usize = 2;
-const FILE: usize = 3;
 
 const fn holds(kept: usize, rank: usize) -> bool {
     rank < kept
@@ -126,9 +124,6 @@ pub(super) fn show(
     if holds(kept, MOVE) {
         move_to(ui, state, actions);
     }
-    if holds(kept, FILE) {
-        file_into(ui, state, actions);
-    }
     if holds(kept, TAG) || view.tagging {
         tag_field(ui, view, actions, language);
     }
@@ -149,8 +144,7 @@ pub(super) fn show(
 }
 
 /// The count, the trash, « … » and the cross always; then, while they hold, the tag field, the
-/// pin, the move and the filing — given up the other way round. A move with no space to go to,
-/// a filing with no folder, take no room.
+/// pin and the move — given up the other way round. A move with no space to go to takes no room.
 fn kept(
     ui: &Ui,
     state: &AppState,
@@ -165,7 +159,6 @@ fn kept(
             .size()
             .x
     };
-    let menu = |key| (width(&tr(key), 11.5, 400.0) + 30.0).min(190.0);
     let button = |label: &str| width(label, 12.0, 400.0) + 24.0;
     let delete =
         button(&tr(keys::selection::DELETE)).max(button(&tr(keys::selection::DELETE_CONFIRM)));
@@ -184,12 +177,7 @@ fn kept(
         if state.spaces.spaces().is_empty() {
             0.0
         } else {
-            menu(keys::selection::MOVE_TO)
-        },
-        if folders(state).is_empty() {
-            0.0
-        } else {
-            menu(keys::selection::FILE_INTO)
+            button(&tr(keys::selection::MOVE_TO))
         },
     ];
     wanted
@@ -201,63 +189,32 @@ fn kept(
         .count()
 }
 
-/// The folders of the space shown, or of every space.
-fn folders(state: &AppState) -> Vec<&engine::folders::model::Folder> {
-    let shown_space = state.spaces.active_space();
-    state
-        .folders
-        .list()
-        .iter()
-        .filter(|folder| shown_space.is_none_or(|space| folder.space_id == space))
-        .collect()
-}
-
 fn move_to(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     if state.spaces.spaces().is_empty() {
         return;
     }
     let label = i18n::translate(state.language, keys::selection::MOVE_TO, &[]);
-    let spaces: Vec<(usize, &str)> = state
-        .spaces
-        .spaces()
-        .iter()
-        .enumerate()
-        .map(|(at, space)| (at, space.name.as_str()))
-        .collect();
-    let mut picked = NONE;
-    if ChoiceMenu::new(&label, "selection-move", &spaces)
-        .naming(Naming::Label)
-        .show(ui, &mut picked)
-        .changed()
-        && let Some(space) = state.spaces.spaces().get(picked)
-    {
-        batch(actions, Batch::MoveTo(space.id.clone()));
-    }
+    let trigger = Button::new(&label, "selection-move").show(ui);
+    let places = Popup::menu(&trigger)
+        .frame(widgets::menu_frame(ui.ctx()))
+        .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+        .show(|ui| places(ui, state, actions));
+    drop(places);
 }
 
-/// Into a folder of the space shown, or out of every one.
-fn file_into(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
-    let language = state.language;
-    let folders = folders(state);
-    if folders.is_empty() {
-        return;
-    }
-    let unfile = i18n::translate(language, keys::selection::UNFILE, &[]);
-    let mut options: Vec<(usize, &str)> = folders
-        .iter()
-        .enumerate()
-        .map(|(at, folder)| (at, folder.name.as_str()))
-        .collect();
-    options.push((folders.len(), unfile.as_str()));
-    let mut picked = NONE;
-    let label = i18n::translate(language, keys::selection::FILE_INTO, &[]);
-    if ChoiceMenu::new(&label, "selection-file", &options)
-        .naming(Naming::Label)
-        .show(ui, &mut picked)
-        .changed()
-    {
-        let folder = folders.get(picked).map(|folder| folder.id.clone());
-        batch(actions, Batch::File(folder));
+/// Every space and its folders; the space shown first.
+fn places(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
+    let moving = Moving {
+        spaces: state.spaces.spaces(),
+        folders: state.folders.list(),
+        recent: &state.caches.recent_moves,
+        home: state.spaces.active_space(),
+        here: None,
+        filed: !state.folders.list().is_empty(),
+        language: state.language,
+    };
+    if let Some(to) = destinations::picker(ui, &moving, "selection-move") {
+        batch(actions, Batch::MoveTo(to));
     }
 }
 
@@ -365,8 +322,6 @@ fn more(
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let spaces = state.spaces.spaces();
-    let folders = folders(state);
-    let unfile = tr(keys::selection::UNFILE);
     let levels: Vec<String> = LEVELS.iter().map(|level| tr(level_key(*level))).collect();
     let mut carried: Vec<&str> = ticked
         .iter()
@@ -374,24 +329,12 @@ fn more(
         .collect();
     carried.sort_unstable();
     carried.dedup();
-    let moves = named(
-        spaces.iter().map(|space| space.name.as_str()),
-        "selection-more-move",
-    );
-    let filings = named(
-        folders
-            .iter()
-            .map(|folder| folder.name.as_str())
-            .chain([unfile.as_str()]),
-        "selection-more-file",
-    );
     let priorities = named(levels.iter().map(String::as_str), "selection-more-priority");
     let untags = named(carried.iter().copied(), "selection-more-untag");
-    let (moves_in, filings_in) = (entries(&moves), entries(&filings));
+
     let (priorities_in, untags_in) = (entries(&priorities), entries(&untags));
     let labels = [
         tr(keys::selection::MOVE_TO),
-        tr(keys::selection::FILE_INTO),
         tr(keys::selection::ADD_TAG),
         tr(keys::selection::PRIORITY),
         tr(keys::selection::REMOVE_TAG),
@@ -399,24 +342,29 @@ fn more(
     ];
     let mut items = Vec::new();
     if !holds(kept, MOVE) && !spaces.is_empty() {
-        items.push(MenuItem::new(&labels[0], "selection-more-move").children(&moves_in));
-    }
-    if !holds(kept, FILE) && !folders.is_empty() {
-        items.push(MenuItem::new(&labels[1], "selection-more-file").children(&filings_in));
+        items.push(MenuItem::new(&labels[0], "selection-more-move"));
     }
     if !holds(kept, TAG) && !view.tagging {
-        items.push(MenuItem::new(&labels[2], "selection-more-tag"));
+        items.push(MenuItem::new(&labels[1], "selection-more-tag"));
     }
     if !holds(kept, PIN) {
         items.push(MenuItem::new(pin, "selection-more-pin"));
     }
-    items.push(MenuItem::new(&labels[3], "selection-more-priority").children(&priorities_in));
+    items.push(MenuItem::new(&labels[2], "selection-more-priority").children(&priorities_in));
     if !carried.is_empty() {
-        items.push(MenuItem::new(&labels[4], "selection-more-untag").children(&untags_in));
+        items.push(MenuItem::new(&labels[3], "selection-more-untag").children(&untags_in));
     }
-    items.push(MenuItem::new(&labels[5], "selection-more-copy"));
+    items.push(MenuItem::new(&labels[4], "selection-more-copy"));
     let label = tr(keys::selection::MORE);
     let trigger = IconButton::new(Icon::Ellipsis, &label, "selection-more").show(ui);
+    // Before the menu: the click that asks for the places would close them.
+    let places_id = trigger.id.with("places");
+    Popup::from_response(&trigger)
+        .id(places_id)
+        .frame(widgets::menu_frame(ui.ctx()))
+        .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+        .open_memory(None)
+        .show(|ui| places(ui, state, actions));
     let Some(picked) = widgets::menu(&trigger, &items) else {
         return;
     };
@@ -425,11 +373,8 @@ fn more(
             .strip_prefix(prefix)
             .and_then(|rest| rest.parse::<usize>().ok())
     };
-    if let Some(space) = rank("selection-more-move-").and_then(|at| spaces.get(at)) {
-        batch(actions, Batch::MoveTo(space.id.clone()));
-    } else if let Some(at) = rank("selection-more-file-") {
-        let folder = folders.get(at).map(|folder| folder.id.clone());
-        batch(actions, Batch::File(folder));
+    if picked == "selection-more-move" {
+        Popup::open_id(ui.ctx(), places_id);
     } else if let Some(level) = rank("selection-more-priority-").and_then(|at| LEVELS.get(at)) {
         batch(actions, Batch::Prioritise(*level));
     } else if let Some(tag) = rank("selection-more-untag-").and_then(|at| carried.get(at)) {
@@ -554,7 +499,7 @@ mod tests {
         ctrl_click(&mut harness, "one");
 
         click_id(&mut harness, "selection-move");
-        click(&mut harness, "selection-move-0", "Archive");
+        click(&mut harness, "selection-move-place", "Archive");
         assert_eq!(stored(&harness, &one).space_id, archive.id);
 
         // A batch keeps its selection: the cross lets it go.
@@ -655,13 +600,7 @@ mod tests {
 
         click_id(&mut harness, "selection-more");
         click_id(&mut harness, "selection-more-move");
-        harness
-            .get_by(|node| {
-                node.author_id()
-                    .is_some_and(|id| id.starts_with("selection-more-move-"))
-                    && node.label().as_deref() == Some("Archive")
-            })
-            .click();
+        click(&mut harness, "selection-move-place", "Archive");
         settle(&mut harness);
 
         assert_eq!(stored(&harness, &one).space_id, archive.id);

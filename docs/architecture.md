@@ -2983,8 +2983,8 @@ about which folder a note is in.
 means "this note is loose", and writing one back would undo what `file_many` just did.
 
 **The keyboard twin is not optional**, and it is the path that already existed: tick cards
-with `X`, then "Ranger dans" in the selection bar — the same batch command the drop uses,
-so the two cannot drift. The gesture adds to it; it does not replace it.
+with `X`, then "Déplacer vers…" in the selection bar. The gesture adds to it; it does not
+replace it.
 
 **A right-button drag sweeps a selection band; the left one still draws a folder.** The
 existing gesture does not move — it is the one that _creates_ something, and it had the
@@ -3359,7 +3359,13 @@ otherwise the arrows would move an outline while the keyboard stayed behind.
 `Ctrl`-click checks a card, `Shift`-click extends the range from the focused one, `X` toggles
 it from the keyboard — the conventions of a file list, which is what the canvas becomes once
 several notes are selected. `SelectionBarComponent` appears only when something is checked and
-offers: move to a space, file, give a priority, add or remove a tag, pin, copy, move to trash.
+offers: move, give a priority, add or remove a tag, pin, copy, move to trash.
+
+**One verb, one picker** (`notes/destinations.rs` over `widgets::place_picker`): the menu of a
+card and the selection bar move a note to any place — a space (`move_notes`: out of its folder,
+in its own space too), a folder of any space (`folders::move_notes_into`), or out of its folder
+(`file_notes`). It keeps its size whatever the library holds: a filter, the tree, its rows drawn
+where they are in view, the last three places used at the top (`LibraryCaches.recent_moves`).
 
 Each action is **one command for the whole batch** (`move_notes`, `tag_notes`,
 `delete_notes`), not a loop of single writes: a stale id in the selection produces a partial

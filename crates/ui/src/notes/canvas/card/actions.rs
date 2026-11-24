@@ -1,12 +1,11 @@
 //! What a card offers under the pointer: its box, copy, and the ⋯ of its menu — open, pin, priority ›,
-//! copy, duplicate, file into a folder of its space, move to another space, delete in two
-//! steps. A pill over the card's bottom edge, clear of its footer and costing it no room.
+//! copy, duplicate, move to another place, delete in two steps. A pill over the card's bottom
+//! edge, clear of its footer and costing it no room.
 
-use crate::theme::tokens::{font, gap, radius};
+use crate::theme::tokens::{gap, radius};
 use egui::{
     CornerRadius, Id, Popup, PopupCloseBehavior, Rect, RectAlign, Response, Stroke, Ui, Vec2, pos2,
 };
-use engine::folders::model::Lineage;
 use engine::notes::kind::NoteKind;
 use engine::notes::model::DisplayNote;
 use engine::notes::priority::Priority;
@@ -15,6 +14,7 @@ use i18n::keys;
 use super::Context;
 use crate::action::{Action, Actions};
 use crate::notes::Action as Asked;
+use crate::notes::destinations::{self, Destination, Moving};
 use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::widgets::{self, IconButton, MIN_TARGET};
@@ -117,17 +117,29 @@ fn menu(
     let armed = ui
         .data(|data| data.get_temp::<bool>(armed_id))
         .unwrap_or(false);
+    // The places take the entries' room: the menu keeps its size whatever the folders are.
+    let moving_id = trigger.id.with("moving");
+    let moving = ui
+        .data(|data| data.get_temp::<bool>(moving_id))
+        .unwrap_or(false);
     let shown = Popup::menu(trigger)
         .frame(widgets::menu_frame(ui.ctx()))
         .align(RectAlign::BOTTOM_END)
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
         .show(|ui| {
+            if moving {
+                return places(ui, note, context, actions);
+            }
             widgets::fitted_menu(ui, 0.0, |ui| {
                 ui.spacing_mut().item_spacing.y = 0.0;
                 let id = note.id.clone();
                 first_entries(ui, note, language, actions);
-                filing(ui, note, context, actions);
-                moving(ui, note, context, actions);
+                let label = tr(keys::notes::MOVE_TO);
+                let about = (Icon::Folder, None);
+                let plain = (false, false);
+                if widgets::icon_entry(ui, about, &label, "note-card-move", plain).clicked() {
+                    ui.data_mut(|data| data.insert_temp(moving_id, true));
+                }
                 widgets::menu_line(ui);
                 let delete = tr(if armed {
                     keys::editor::DELETE_CONFIRM
@@ -147,9 +159,32 @@ fn menu(
                 }
             });
         });
-    // Folded with the menu: the next opening starts unarmed.
-    if shown.is_none() && armed {
-        ui.data_mut(|data| data.insert_temp(armed_id, false));
+    // Folded with the menu: the next opening starts on its entries, unarmed.
+    if shown.is_none() && (armed || moving) {
+        ui.data_mut(|data| {
+            data.insert_temp(armed_id, false);
+            data.insert_temp(moving_id, false);
+        });
+    }
+}
+
+fn places(ui: &mut Ui, note: &DisplayNote, context: &Context<'_>, actions: &mut Actions) {
+    let here = match &note.folder_id {
+        Some(folder) => Destination::Folder(folder.clone()),
+        None => Destination::Space(note.space_id.clone()),
+    };
+    let moving = Moving {
+        spaces: context.library.spaces(),
+        folders: context.folders.list(),
+        recent: context.recent_moves,
+        home: Some(&note.space_id),
+        here: Some(here),
+        filed: note.folder_id.is_some(),
+        language: context.language,
+    };
+    if let Some(to) = destinations::picker(ui, &moving, "note-card-move") {
+        let id = note.id.clone();
+        push(actions, Asked::MoveTo { id, to });
     }
 }
 
@@ -283,119 +318,6 @@ fn level_key(level: Priority) -> i18n::Key {
     }
 }
 
-/// The folders of the note's space, in the tree's order, a nested one hinted by its parents;
-/// where it is, left out. A folder belongs to one space, so moving out of it is below.
-fn filing(ui: &mut Ui, note: &DisplayNote, context: &Context<'_>, actions: &mut Actions) {
-    let language = context.language;
-    let inside: Vec<_> = context
-        .folders
-        .list()
-        .iter()
-        .filter(|folder| folder.space_id == note.space_id)
-        .collect();
-    let current = note.folder_id.as_deref();
-    if inside.is_empty() && current.is_none() {
-        return;
-    }
-    title(ui, &i18n::translate(language, keys::notes::FILE_INTO, &[]));
-    if current.is_some()
-        && widgets::menu_entry(
-            ui,
-            &i18n::translate(language, keys::notes::NO_FOLDER, &[]),
-            "note-card-unfile",
-            false,
-            false,
-            false,
-        )
-        .clicked()
-    {
-        push(
-            actions,
-            Asked::File {
-                id: note.id.clone(),
-                folder: None,
-            },
-        );
-        ui.close();
-    }
-    let lineage = Lineage::new(
-        inside
-            .iter()
-            .map(|folder| (folder.id.clone(), folder.parent_id.clone())),
-    );
-    for folder in inside
-        .iter()
-        .filter(|folder| Some(folder.id.as_str()) != current)
-    {
-        let path: Vec<&str> = lineage
-            .path(&folder.id)
-            .iter()
-            .filter_map(|id| inside.iter().find(|other| other.id == *id))
-            .map(|other| other.name.as_str())
-            .collect();
-        let label = path.join(" › ");
-        if widgets::menu_entry(ui, &label, "note-card-file", false, false, false).clicked() {
-            push(
-                actions,
-                Asked::File {
-                    id: note.id.clone(),
-                    folder: Some(folder.id.clone()),
-                },
-            );
-            ui.close();
-        }
-    }
-}
-
-/// The other spaces: moving there takes the note out of its folder.
-fn moving(ui: &mut Ui, note: &DisplayNote, context: &Context<'_>, actions: &mut Actions) {
-    let others: Vec<_> = context
-        .library
-        .spaces()
-        .iter()
-        .filter(|space| space.id != note.space_id)
-        .collect();
-    if others.is_empty() {
-        return;
-    }
-    title(
-        ui,
-        &i18n::translate(context.language, keys::notes::MOVE_TO_SPACE, &[]),
-    );
-    for space in others {
-        if widgets::menu_entry(ui, &space.name, "note-card-move", false, false, false).clicked() {
-            push(
-                actions,
-                Asked::MoveTo {
-                    id: note.id.clone(),
-                    space: space.id.clone(),
-                },
-            );
-            ui.close();
-        }
-    }
-}
-
-fn title(ui: &mut Ui, words: &str) {
-    let p = palette(ui.ctx());
-    let upper = words.to_uppercase();
-    let galley = widgets::text(
-        ui,
-        &upper,
-        font::CAPTION,
-        600.0,
-        egui::FontFamily::Proportional,
-        p.text_2,
-    );
-    widgets::menu_needs(ui, 16.0 + galley.size().x);
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(galley.size().x, 24.0), egui::Sense::hover());
-    ui.painter().galley(
-        pos2(rect.left() + 8.0, rect.bottom() - galley.size().y - 4.0),
-        galley,
-        p.text_2,
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use egui_kittest::Harness;
@@ -468,15 +390,109 @@ mod tests {
         let work = space(&backend, "Work");
         let mut harness = area(backend, profile);
 
+        let home = format!("{} › Runbooks", spaces_name(&harness, 0));
         open_menu(&mut harness);
-        click(&mut harness, "note-card-file", "Runbooks");
+        click_id(&mut harness, "note-card-move");
+        click(&mut harness, "note-card-move-place", &home);
         assert_eq!(stored(&harness, &id).folder_id, Some(runbooks.id));
 
         open_menu(&mut harness);
-        click(&mut harness, "note-card-move", "Work");
+        assert!(
+            harness
+                .query_by(|node| node.author_id() == Some("note-card-move-filter"))
+                .is_none(),
+            "the menu opens on its entries again"
+        );
+        click_id(&mut harness, "note-card-move");
+        click(&mut harness, "note-card-move-place", "Work");
         let moved = stored(&harness, &id);
         assert_eq!(moved.space_id, work.id);
         assert_eq!(moved.folder_id, None);
+    }
+
+    fn spaces_name(harness: &Harness<'_, Bench>, at: usize) -> String {
+        let backend = &harness.state().backend;
+        let spaces = engine::db::run_here(backend.engine(), engine::spaces::list_spaces).unwrap();
+        spaces[at].name.clone()
+    }
+
+    #[test]
+    fn a_note_goes_straight_to_a_folder_of_another_space_and_the_place_is_offered_again() {
+        let (backend, profile) = testing::unlocked();
+        let id = testing::note(&backend, "psql").id.clone();
+        let work = space(&backend, "Work");
+        let scripts = folder(&backend, &work, None, "Scripts");
+        let mut harness = area(backend, profile);
+
+        open_menu(&mut harness);
+        click_id(&mut harness, "note-card-move");
+        click(&mut harness, "note-card-move-place", "Work › Scripts");
+        let moved = stored(&harness, &id);
+        assert_eq!(
+            (moved.space_id.clone(), moved.folder_id.clone()),
+            (work.id, Some(scripts.id))
+        );
+
+        let offered = |harness: &Harness<'_, Bench>| -> Vec<String> {
+            harness
+                .query_all_by(|node| node.author_id() == Some("note-card-move-place"))
+                .map(|node| node.accesskit_node().label().unwrap_or_default())
+                .collect()
+        };
+        open_menu(&mut harness);
+        click_id(&mut harness, "note-card-move");
+        let first = offered(&harness);
+        assert_eq!(first[0], "No folder");
+        assert_eq!(
+            first[1], "Work",
+            "its own space first, the place it is in not again"
+        );
+        click(&mut harness, "note-card-move-place", "No folder");
+        assert_eq!(stored(&harness, &id).folder_id, None);
+
+        open_menu(&mut harness);
+        click_id(&mut harness, "note-card-move");
+        assert_eq!(offered(&harness)[0], "Work › Scripts", "the last one used");
+
+        // The filter has the keys: typed, walked, picked.
+        harness.event(egui::Event::Text("scri".to_owned()));
+        settle(&mut harness);
+        assert_eq!(offered(&harness), ["Work › Scripts"]);
+        harness.key_press(egui::Key::Enter);
+        settle(&mut harness);
+        assert!(stored(&harness, &id).folder_id.is_some());
+    }
+
+    #[test]
+    fn with_many_folders_the_menu_keeps_its_size() {
+        let (backend, profile) = testing::unlocked();
+        testing::note(&backend, "psql");
+        let spaces = engine::db::run_here(backend.engine(), engine::spaces::list_spaces).unwrap();
+        for at in 0..300 {
+            folder(
+                &backend,
+                &spaces[0],
+                None,
+                &format!("A folder of a long name, number {at}"),
+            );
+        }
+        let mut harness = area(backend, profile);
+
+        open_menu(&mut harness);
+        let last = |harness: &Harness<'_, Bench>, id| {
+            let rects = harness.query_all_by(|node| node.author_id() == Some(id));
+            rects.map(|node| node.rect().bottom()).fold(0.0, f32::max)
+        };
+        let height = last(&harness, "note-card-delete")
+            - harness
+                .get_by(|node| node.author_id() == Some("note-card-open-menu"))
+                .rect()
+                .top();
+        assert!(height < 300.0, "{height}");
+        click_id(&mut harness, "note-card-move");
+        let filter = harness.get_by(|node| node.author_id() == Some("note-card-move-filter"));
+        let height = last(&harness, "note-card-move-place") - filter.rect().top();
+        assert!(height < 300.0, "{height}");
     }
 
     #[test]

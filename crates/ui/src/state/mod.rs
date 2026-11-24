@@ -41,6 +41,7 @@ use crate::action::{Action, AppAction, GlobalAction};
 use crate::api;
 use crate::backend::{Backend, Pending};
 use crate::gate::{Gate, GateView};
+use crate::notes::destinations::Destination;
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
 use crate::services::samples;
@@ -81,6 +82,17 @@ pub struct LibraryCaches {
     pub thumbnails: drawing_pictures::Thumbnails,
     /// The large pictures Notes embed.
     pub pictures: drawing_pictures::Thumbnails,
+    /// Where notes were last moved, the latest first.
+    pub recent_moves: Vec<Destination>,
+}
+
+impl LibraryCaches {
+    pub(super) fn moved_to(&mut self, to: Destination) {
+        const KEPT: usize = 3;
+        self.recent_moves.retain(|recent| *recent != to);
+        self.recent_moves.insert(0, to);
+        self.recent_moves.truncate(KEPT);
+    }
 }
 
 impl Default for LibraryCaches {
@@ -88,6 +100,7 @@ impl Default for LibraryCaches {
         Self {
             thumbnails: drawing_pictures::Thumbnails::default(),
             pictures: drawing_pictures::Thumbnails::large(),
+            recent_moves: Vec::new(),
         }
     }
 }

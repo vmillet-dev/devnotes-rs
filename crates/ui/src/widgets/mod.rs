@@ -12,6 +12,7 @@ mod in_place;
 mod layout;
 mod list;
 mod menu;
+mod picker;
 mod release_notes;
 mod segmented;
 mod split;
@@ -36,6 +37,7 @@ pub use menu::{
     fitted as fitted_menu, frame as menu_frame, icon_entry, line as menu_line, menu,
     needs as menu_needs, sub_menu,
 };
+pub use picker::{Lead, Place, place_picker};
 pub use release_notes::release_notes;
 pub use rich::{Read, rich_reader};
 pub use segmented::Segmented;

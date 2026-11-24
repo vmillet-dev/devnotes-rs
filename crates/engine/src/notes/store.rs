@@ -693,7 +693,8 @@ pub fn set_placeholder_values(
     })
 }
 
-/// Answers where each note came from, which is what putting the move back needs.
+/// To the space itself, out of any folder. Answers where each note came from, which is what
+/// putting the move back needs.
 pub fn move_many(
     connection: &mut Library,
     ids: &[String],
@@ -712,7 +713,11 @@ pub fn move_many(
         let moved: Vec<NotePlacement> = notes::table
             .filter(notes::id.eq_any(ids))
             .filter(notes::deleted_at.is_null())
-            .filter(notes::space_id.ne(space_id))
+            .filter(
+                notes::space_id
+                    .ne(space_id)
+                    .or(notes::folder_id.is_not_null()),
+            )
             .select((notes::id, notes::space_id, notes::folder_id))
             .load::<(String, String, Option<String>)>(connection)?
             .into_iter()
@@ -722,6 +727,14 @@ pub fn move_many(
                 folder_id,
             })
             .collect();
+
+        // A place in a folder means nothing on the board of the space it is in.
+        let unfiled: Vec<String> = moved
+            .iter()
+            .filter(|placement| placement.space_id == space_id)
+            .map(|placement| placement.note_id.clone())
+            .collect();
+        folders::board::forget_positions(connection, &unfiled)?;
 
         let touched: Vec<&String> = moved.iter().map(|placement| &placement.note_id).collect();
         diesel::update(notes::table.filter(notes::id.eq_any(touched)))

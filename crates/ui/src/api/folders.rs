@@ -57,6 +57,18 @@ pub fn sort_key(name: &str) -> String {
 }
 
 /// Into `folder`, or out of every folder for `None`.
+/// From whatever space they are in.
+pub fn move_into(
+    backend: &Backend,
+    ids: Vec<String>,
+    folder: String,
+    lines: PreviewLines,
+) -> Pending<Reversible> {
+    backend.db(move |engine| {
+        folders::move_notes_into(engine, &ids, &folder, lines).map(Reversible::Move)
+    })
+}
+
 pub fn file(
     backend: &Backend,
     ids: Vec<String>,

@@ -86,16 +86,11 @@ fn filed(node: &Node) -> bool {
 }
 
 fn file_into(app: &mut App, name: &str) {
-    app.click("selection-file");
-    app.eventually("the folders are offered", |tree| {
-        tree.has("selection-file-0")
+    app.click("selection-move");
+    let end = format!(" › {name}");
+    app.click_where("selection-move-place", |node| {
+        node.label().is_some_and(|label| label.ends_with(&end))
     });
-    let tree = app.tree();
-    let entry = (0..12)
-        .map(|at| format!("selection-file-{at}"))
-        .find(|id| tree.text(id).as_deref() == Some(name))
-        .unwrap_or_else(|| panic!("no entry {name}"));
-    app.click(&entry);
 }
 
 fn reopen(app: App) -> App {

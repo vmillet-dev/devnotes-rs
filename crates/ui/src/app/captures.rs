@@ -1901,3 +1901,55 @@ fn a_drawing_in_a_note() {
     click(&mut harness, "rich-embed-size-2");
     capture(&mut harness, "note-drawing-half");
 }
+
+/// A note's menu in a library of many folders (#1578), and the places it moves to.
+#[test]
+fn a_note_moved_among_many_folders() {
+    use engine::folders::model::FolderDraft;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let engine = harness.state().backend.engine().clone();
+    let space = crate::testing::note(&harness.state().backend, "Architecture")
+        .space_id
+        .clone();
+    let make = |name: String, parent: Option<String>| {
+        let draft = FolderDraft {
+            space_id: space.clone(),
+            parent_id: parent,
+            name,
+        };
+        engine::db::run_here(&engine, move |engine| {
+            engine::folders::create_folder(engine, &draft)
+        })
+        .unwrap()
+        .id
+    };
+    for project in 1..=14 {
+        let name = format!("Projet {project:02} — migration de la base clients");
+        let parent = make(name, None);
+        make("Incidents".to_owned(), Some(parent.clone()));
+        make("Requêtes d’exploitation".to_owned(), Some(parent));
+    }
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    let card = harness
+        .query_all_by(|node| node.author_id() == Some("note-card-open"))
+        .nth(1)
+        .unwrap()
+        .rect();
+    harness.hover_at(card.center());
+    settle(&mut harness);
+    click(&mut harness, "note-card-menu");
+    capture(&mut harness, "note-menu");
+    if harness
+        .query_by(|node| node.author_id() == Some("note-card-move"))
+        .is_some()
+    {
+        click(&mut harness, "note-card-move");
+        capture(&mut harness, "note-move");
+    }
+}
