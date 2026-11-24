@@ -375,35 +375,6 @@ fn said(label: &str, keys: Option<&str>) -> String {
     }
 }
 
-/// The action and, joined to it, the arrow that opens its other choices.
-pub struct SplitButton<'a> {
-    label: &'a str,
-    more_label: &'a str,
-    author_id: &'a str,
-}
-
-impl<'a> SplitButton<'a> {
-    pub fn new(label: &'a str, more_label: &'a str, author_id: &'a str) -> Self {
-        Self {
-            label,
-            more_label,
-            author_id,
-        }
-    }
-
-    /// The action's response, then the arrow's.
-    pub fn show(self, ui: &mut Ui) -> (Response, Response) {
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 0.0;
-            let main = Button::new(self.label, self.author_id).show(ui);
-            let more_id = format!("{}-more", self.author_id);
-            let more = IconButton::new(Icon::ChevronRight, self.more_label, &more_id).show(ui);
-            (main, more)
-        })
-        .inner
-    }
-}
-
 /// The 32 px square that hides and shows a rail; amber while the rail is out. Its label is its
 /// tooltip, as an icon button's.
 pub struct SquareButton<'a> {

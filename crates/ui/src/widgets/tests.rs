@@ -37,7 +37,12 @@ fn bench() -> Harness<'static, Bench> {
             IconButton::new(Icon::Trash, "Corbeille", "trash")
                 .keys("Suppr")
                 .show(ui);
-            SplitButton::new("Exporter", "Autres formats", "export").show(ui);
+            SplitButton::new(
+                ("Exporter", "export"),
+                ("Autres formats", "export-more"),
+                SplitKind::Neutral,
+            )
+            .show(ui);
             SquareButton::new(Icon::Sidebar, "Masquer le rail", "rail-toggle")
                 .pressed(true)
                 .show(ui);
