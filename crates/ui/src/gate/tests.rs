@@ -112,6 +112,22 @@ fn a_first_launch_asks_for_a_phrase_twice_and_holds_it_to_twelve_characters() {
 }
 
 #[test]
+fn the_pointer_over_the_phrase_is_the_i_beam() {
+    let (backend, profile) = testing::backend();
+    let mut harness = screen(backend, profile);
+    settle(&mut harness);
+
+    let phrase = node(&harness, "vault-passphrase").rect().center();
+    harness.event(egui::Event::PointerMoved(phrase));
+    harness.run();
+
+    assert_eq!(
+        harness.output().platform_output.cursor_icon,
+        egui::CursorIcon::Text
+    );
+}
+
+#[test]
 fn an_unlock_takes_any_length_and_says_when_the_phrase_is_wrong() {
     let profile = testing::locked();
     let backend = testing::backend_on(profile.path());

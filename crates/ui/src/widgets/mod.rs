@@ -76,8 +76,8 @@ pub fn interact(
 }
 
 /// What the pointer says over a control, from what it senses: a hand where it clicks, an open
-/// hand where it drags and a closed one while it moves, the arrow over a disabled one. A later
-/// call in the frame wins: a handle or a link says more.
+/// hand where it only drags and a closed one while it moves, the arrow over a disabled one. A
+/// later call in the frame wins: a handle, a link or a field says more.
 pub fn pointer(ui: &Ui, response: &Response) {
     if !response.enabled() || !(response.hovered() || response.dragged()) {
         return;
@@ -85,14 +85,22 @@ pub fn pointer(ui: &Ui, response: &Response) {
     let sense = response.sense;
     let icon = if sense.senses_drag() && response.dragged() {
         egui::CursorIcon::Grabbing
-    } else if sense.senses_drag() {
-        egui::CursorIcon::Grab
     } else if sense.senses_click() {
         egui::CursorIcon::PointingHand
+    } else if sense.senses_drag() {
+        egui::CursorIcon::Grab
     } else {
         return;
     };
     ui.ctx().set_cursor_icon(icon);
+}
+
+/// The pointer over a grip, whose one use is to be dragged: the open hand, though it takes
+/// clicks for the focus.
+pub fn grip_pointer(ui: &Ui, response: &Response) {
+    if response.hovered() && !response.dragged() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
+    }
 }
 
 /// Whether the keys of the frame are `response`'s to take: the focus egui keeps, as its own

@@ -21,7 +21,7 @@ fn over(harness: &mut Harness<'_, Bench>, author_id: &str) -> CursorIcon {
 }
 
 #[test]
-fn a_hand_over_what_clicks_an_open_hand_over_what_drags_an_i_beam_over_text() {
+fn a_hand_over_what_clicks_an_i_beam_over_text() {
     let (backend, profile) = testing::unlocked();
     testing::note(&backend, "psql prod");
     let home = crate::notes::bench::space(&backend, "Work");
@@ -33,7 +33,10 @@ fn a_hand_over_what_clicks_an_open_hand_over_what_drags_an_i_beam_over_text() {
         over(&mut harness, "note-card-open"),
         CursorIcon::PointingHand
     );
-    assert_eq!(over(&mut harness, "folder-option"), CursorIcon::Grab);
+    assert_eq!(
+        over(&mut harness, "folder-option"),
+        CursorIcon::PointingHand
+    );
     assert_eq!(over(&mut harness, "search-input"), CursorIcon::Text);
 
     click_id(&mut harness, "note-card-open");
@@ -49,4 +52,26 @@ fn a_disabled_control_keeps_the_arrow() {
     click_id(&mut harness, "space-option-all");
 
     assert_eq!(over(&mut harness, "view-board"), CursorIcon::Default);
+}
+
+#[test]
+fn a_row_dragged_closes_the_hand() {
+    let (backend, profile) = testing::unlocked();
+    let home = crate::notes::bench::space(&backend, "Work");
+    crate::notes::bench::folder(&backend, &home, None, "Runbooks");
+    let mut harness = area(backend, profile);
+
+    let row = harness
+        .get_by(|node| node.author_id() == Some("folder-option"))
+        .rect()
+        .center();
+    harness.drag_at(row);
+    harness.run();
+    harness.event(egui::Event::PointerMoved(row + egui::vec2(0.0, 30.0)));
+    harness.run();
+
+    assert_eq!(
+        harness.output().platform_output.cursor_icon,
+        CursorIcon::Grabbing
+    );
 }
