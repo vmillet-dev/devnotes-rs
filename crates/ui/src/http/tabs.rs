@@ -183,7 +183,6 @@ fn tab_of(
         || WidgetInfo::selected(Role::Tab, true, active, &label),
         CornerRadius::ZERO,
     );
-    widgets::grip_pointer(ui, &open);
     let close_label = i18n::translate(
         language,
         keys::http::tabs::CLOSE,
