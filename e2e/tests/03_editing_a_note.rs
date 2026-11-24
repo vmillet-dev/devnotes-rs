@@ -87,6 +87,30 @@ fn drawings(app: &mut App, exported: &std::path::Path) {
         },
     );
 
+    step("the drawing is zoomed, moved and shown whole again", || {
+        let shown = |tree: &Tree| tree.text("drawing-zoom").unwrap_or_default();
+        app.eventually("as drawn", |tree| shown(tree).starts_with("100"));
+        app.click("drawing-zoom-in");
+        app.click("drawing-zoom-in");
+        app.eventually("closer", |tree| shown(tree).starts_with("156"));
+        app.drag(
+            egui::pos2(700.0, 400.0),
+            egui::pos2(640.0, 380.0),
+            egui::PointerButton::Middle,
+        );
+        app.capture("drawing-zoomed");
+        app.click("drawing-fit");
+        app.eventually("whole again", |tree| shown(tree).starts_with("100"));
+        app.click("drawing-zoom-out");
+        app.eventually("further", |tree| shown(tree).starts_with("80"));
+        app.click("drawing-zoom");
+        app.eventually("as drawn again", |tree| shown(tree).starts_with("100"));
+        assert_eq!(shapes(&app.tree()), "1", "nothing was drawn");
+        app.click("editor-close");
+        app.eventually("closed", |tree| !tree.has("editor-title"));
+        open_sketch(app);
+    });
+
     step(
         "Escape drops the tool, the selection, then the editor",
         || {

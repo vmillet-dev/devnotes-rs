@@ -74,6 +74,12 @@ impl Drawing {
 
     /// `None` for a body that holds no scene, or one whose objects are not objects: what
     /// opens as a new drawing.
+    /// What everything drawn covers; `None` when nothing is.
+    pub fn bounds(&self) -> Option<crate::geometry::Box> {
+        let boxes: Vec<_> = self.objects.iter().map(Object::bounds).collect();
+        crate::geometry::scene_box(&boxes, 0.0)
+    }
+
     pub fn read(content: &str) -> Option<Self> {
         let Value::Object(mut body) = serde_json::from_str(content).ok()? else {
             return None;
