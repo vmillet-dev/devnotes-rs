@@ -16,7 +16,6 @@ use platform::tray::{self, Tray};
 use platform::updater::{NoUpdater, Updater};
 use platform::window::Geometry;
 
-use crate::action::AppAction;
 use crate::action::{Action, Actions, GlobalAction};
 use crate::backend::Backend;
 use crate::inputs::{Inbox, Input, Waker};
@@ -348,16 +347,6 @@ impl eframe::App for DevNotesApp {
                 titlebar::show(ui, &self.state, &mut view, &mut actions);
                 self.state.titlebar_view = view;
             });
-        if let Some(notice) = self.state.errors.notice() {
-            let notice = notice.clone();
-            egui::Panel::top("error-banner")
-                .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
-                .show(ui, |ui| {
-                    if banners::error_banner(ui, &notice, language) {
-                        actions.push(Action::App(AppAction::DismissError));
-                    }
-                });
-        }
         // Flush with the window, as the reference: egui's 8 px margin cost the header its one row.
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
@@ -401,6 +390,7 @@ impl eframe::App for DevNotesApp {
         let mut view = std::mem::take(&mut self.state.titlebar_view);
         titlebar::dialogs(ui.ctx(), &self.state, &mut view, &mut actions);
         self.state.titlebar_view = view;
+        banners::toasts::show(ui.ctx(), &self.state, &mut actions);
         if let Some(action) = keys::read(&self.state, ui.ctx()) {
             actions.push(action);
         }
@@ -792,6 +782,110 @@ mod tests {
         }
         settle(&mut harness);
         assert!(!present(&harness, "status-toast"));
+    }
+
+    fn toasts(harness: &Harness<'_, DevNotesApp>) -> Vec<egui::Rect> {
+        use egui_kittest::kittest::Queryable;
+        harness
+            .query_all_by(|node| node.author_id() == Some("status-toast"))
+            .map(|toast| toast.rect())
+            .collect()
+    }
+
+    #[test]
+    fn reports_stack_in_the_corner_and_one_is_dismissed_alone() {
+        use egui_kittest::kittest::Queryable;
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        for path in ["a.pdf", "b.pdf", "c.pdf"] {
+            let said = i18n::Message::new(i18n::keys::attachments::SAVED).with("path", path);
+            harness.state_mut().state.status.report(said);
+        }
+        settle(&mut harness);
+
+        let stacked = toasts(&harness);
+        assert_eq!(stacked.len(), 3);
+        let window = harness.ctx.content_rect();
+        for toast in &stacked {
+            assert!(window.contains_rect(*toast) && toast.left() > window.center().x);
+            assert!(toast.top() > window.center().y, "not under the title bar");
+        }
+        let apart = |a: &egui::Rect, b: &egui::Rect| a.bottom() <= b.top() || b.bottom() <= a.top();
+        assert!(apart(&stacked[0], &stacked[1]) && apart(&stacked[1], &stacked[2]));
+        let name = harness.get_by(|node| {
+            node.author_id() == Some("status-toast")
+                && node.label().is_some_and(|said| said.contains("c.pdf"))
+        });
+        assert!(
+            stacked.iter().all(|toast| toast.top() >= name.rect().top()),
+            "the latest is on top"
+        );
+
+        let crosses = harness.query_all_by(|node| node.author_id() == Some("status-dismiss"));
+        crosses.last().unwrap().click();
+        settle(&mut harness);
+        assert_eq!(toasts(&harness).len(), 2);
+    }
+
+    #[test]
+    fn what_failed_stays_under_the_reports_and_moves_nothing() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        let before = top_of(&harness, "search-input");
+        let state = &mut harness.state_mut().state;
+        let failed = [
+            i18n::keys::errors::ATTACHMENTS_LOAD_FAILED,
+            i18n::keys::errors::NOTE_SAVE_FAILED,
+        ];
+        for key in [failed[0], failed[1], failed[0]] {
+            state.errors.notify(i18n::Message::new(key));
+        }
+        let said = i18n::Message::new(i18n::keys::attachments::SAVED);
+        state.status.report(said);
+        settle(&mut harness);
+
+        assert_eq!(count(&harness, "error-banner"), 2, "the same one once");
+        assert!((top_of(&harness, "search-input") - before).abs() < 0.5);
+        assert!(top_of(&harness, "status-toast") < top_of_first(&harness, "error-banner"));
+
+        let gone = f64::from(crate::theme::motion::REPORT) + 1.0;
+        let started = harness.ctx.input(|input| input.time);
+        while harness.ctx.input(|input| input.time) - started < gone {
+            harness.step();
+        }
+        settle(&mut harness);
+        assert!(!present(&harness, "status-toast"));
+        assert_eq!(count(&harness, "error-banner"), 2, "until dismissed");
+    }
+
+    fn top_of_first(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> f64 {
+        use egui_kittest::kittest::{NodeT, Queryable};
+        let nodes = harness.query_all_by(|node| node.author_id() == Some(author_id));
+        nodes
+            .map(|node| node.accesskit_node().bounding_box().unwrap().y0)
+            .fold(f64::INFINITY, f64::min)
+    }
+
+    #[test]
+    fn a_report_stands_clear_of_the_undo_bar_in_a_narrow_window() {
+        use egui_kittest::kittest::Queryable;
+        let directory = tempfile::tempdir().unwrap();
+        let mut harness = open_library(directory.path());
+        harness.set_size(egui::vec2(700.0, 620.0));
+        let now = harness.ctx.input(|input| input.time);
+        let pinned = crate::api::undo::Reversible::Pin {
+            ids: vec!["a".to_owned(), "b".to_owned()],
+            pinned: true,
+        };
+        harness.state_mut().state.undo.record(pinned, now);
+        let said = i18n::Message::new(i18n::keys::attachments::SAVED);
+        harness.state_mut().state.status.report(said);
+        settle(&mut harness);
+
+        let bar = harness.get_by(|node| node.author_id() == Some("undo-bar"));
+        let bar = bar.rect();
+        let toast = toasts(&harness)[0];
+        assert!(!bar.intersects(toast), "{bar:?} {toast:?}");
     }
 
     pub(super) fn open_library(directory: &std::path::Path) -> Harness<'static, DevNotesApp> {

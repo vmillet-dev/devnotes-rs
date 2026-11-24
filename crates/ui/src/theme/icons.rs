@@ -68,6 +68,7 @@ pub enum Icon {
     Lock,
     Sparkle,
     Clock,
+    Info,
     Calculator,
     Search,
     Copy,
@@ -251,6 +252,11 @@ impl Icon {
                 "M15.5 8.5 18 6",
             ],
             Self::Clock => &["M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z", "M12 6v6l4 2"],
+            Self::Info => &[
+                "M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z",
+                "M12 16v-4",
+                "M12 8h.01",
+            ],
             Self::Calculator => &[
                 "M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z",
                 "M8 6h8",
@@ -441,7 +447,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 79] = [
+    const ALL: [Icon; 80] = [
         Icon::ArrowLeftRight,
         Icon::MoveHorizontal,
         Icon::Sidebar,
@@ -488,6 +494,7 @@ mod tests {
         Icon::Lock,
         Icon::Sparkle,
         Icon::Clock,
+        Icon::Info,
         Icon::Calculator,
         Icon::Search,
         Icon::Copy,
