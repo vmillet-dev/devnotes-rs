@@ -603,6 +603,103 @@ fn j_and_k_step_through_the_cards_and_escape_steps_back() {
     assert!(!is_open(&harness));
 }
 
+/// A note holding all a header can, its files included, open in a window `width` wide.
+fn full_header(width: f32) -> egui_kittest::Harness<'static, Bench> {
+    use engine::notes::model::{NoteLifecycle, NotePatch};
+    let (backend, profile) = testing::unlocked();
+    let id = testing::note(&backend, "Rotation").id.clone();
+    let mut harness = area(backend, profile);
+    let note = id.clone();
+    engine::db::run_here(harness.state().backend.engine(), move |engine| {
+        let space_id = engine::notes::get_note(engine, &note)?.space_id.clone();
+        let folder = engine::folders::create_folder(
+            engine,
+            &engine::folders::model::FolderDraft {
+                space_id,
+                name: "Certificates and their yearly rotation".to_owned(),
+                parent_id: None,
+            },
+        )?;
+        let lines = engine::folders::board::PreviewLines::default();
+        let ids = std::slice::from_ref(&note);
+        engine::folders::file_notes(engine, ids, Some(&folder.id), lines)?;
+        let at = chrono::DateTime::parse_from_rfc3339("2026-12-24T22:00:00Z")
+            .unwrap()
+            .to_utc();
+        let long = "a-tag-longer-than-a-whole-line-of-the-panel-at-its-narrowest-which-is-cut";
+        let tags = ["infrastructure", "certificates", "staging", "openssl", long];
+        engine::notes::update_note(
+            engine,
+            &note,
+            &NotePatch {
+                source: Some("https://wiki.example.test/runbooks/certificates".to_owned()),
+                tags: Some(tags.map(str::to_owned).to_vec()),
+                lifecycle: Some(NoteLifecycle::Expires { at }),
+                ..NotePatch::default()
+            },
+        )
+    })
+    .unwrap();
+    harness.state_mut().state.editor.open(id);
+    harness.set_size(egui::vec2(width, 800.0));
+    settle(&mut harness);
+    let files = tempfile::tempdir().unwrap();
+    for name in ["first", "second"] {
+        let name = format!("the-{name}-chain-of-the-staging-certificate.pem");
+        let file = files.path().join(name);
+        std::fs::write(&file, b"chain").unwrap();
+        harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(file));
+        click_id(&mut harness, "attachment-add");
+    }
+    harness
+}
+
+#[test]
+fn everything_of_the_header_is_inside_the_panel_at_its_narrowest() {
+    // Beside the cards, then over them in the narrowest window.
+    for width in [1_220.0, 640.0] {
+        let harness = full_header(width);
+        let count = |id: &str| {
+            harness
+                .query_all_by(|node| node.author_id() == Some(id))
+                .count()
+        };
+        assert_eq!(count("editor-tag"), 5);
+        assert_eq!(count("attachment-remove"), 2);
+        for id in ["editor-lifecycle", "editor-deadline", "editor-folder"] {
+            assert_eq!(count(id), 1, "{id}");
+        }
+        let left = rect_of(&harness, "editor-source").left();
+        for node in harness.query_all_by(|node| {
+            node.author_id()
+                .is_some_and(|id| id.starts_with("editor-") || id.starts_with("attachment-"))
+        }) {
+            let id = node
+                .accesskit_node()
+                .author_id()
+                .unwrap_or_default()
+                .to_owned();
+            let rect = node.rect();
+            assert!(
+                rect.right() <= width && (rect.left() >= left || id == "editor-panel-edge"),
+                "{id} at {rect:?} in {width}"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_folded_header_stays_inside_the_panel() {
+    let mut harness = full_header(1_220.0);
+    harness.state_mut().state.settings.editor_header_folded = true;
+    settle(&mut harness);
+
+    for id in ["editor-header-summary", "editor-lifecycle"] {
+        let rect = rect_of(&harness, id);
+        assert!(rect.right() <= 1_220.0, "{id} at {rect:?}");
+    }
+}
+
 /// Too narrow for both, the note takes the area beside the rail.
 #[test]
 fn in_a_narrow_window_the_note_covers_the_cards() {

@@ -111,10 +111,15 @@ fn tags(
     let p = palette(ui.ctx());
     let language = state.language;
     for tag in &note.tags {
-        ui.horizontal(|ui| {
+        let label = format!("#{tag}");
+        let cross = gap::LINE + widgets::MIN_TARGET;
+        let widest = ui.max_rect().width() - cross;
+        let width = widgets::Chip::width(ui, &label).min(widest) + cross;
+        widgets::kept_together(ui, width, |ui| {
             ui.spacing_mut().item_spacing.x = gap::LINE;
-            let label = format!("#{tag}");
-            widgets::Chip::new(&label, "editor-tag", true).show(ui);
+            widgets::Chip::new(&label, "editor-tag", true)
+                .widest(widest)
+                .show(ui);
             let remove = i18n::translate(
                 language,
                 keys::editor::REMOVE_TAG,
@@ -162,19 +167,35 @@ fn tags(
     }
 }
 
+fn lifecycle_words(state: &AppState, note: &DisplayNote) -> String {
+    match note.lifecycle {
+        NoteLifecycle::Permanent => {
+            i18n::translate(state.language, keys::lifecycle::NEVER_EXPIRES, &[])
+        }
+        NoteLifecycle::Expires { at } => {
+            i18n::time::expiry(at, state.clock.now(), &Local).text(state.language)
+        }
+    }
+}
+
+/// What the badge takes beside its words: its insets and its icon.
+const BADGE_ROOM: f32 = 20.0 + 16.0;
+
+fn lifecycle_width(ui: &Ui, state: &AppState, note: &DisplayNote) -> f32 {
+    let words = lifecycle_words(state, note);
+    let (family, ink) = (FontFamily::Proportional, palette(ui.ctx()).text_2);
+    let galley = widgets::text(ui, &words, font::META, 400.0, family, ink);
+    galley.size().x + BADGE_ROOM
+}
+
 /// « Never expires » in the neutral ink, or how long is left in amber — red once it is close, as
 /// the core decided.
 fn lifecycle_badge(ui: &mut Ui, state: &AppState, note: &DisplayNote) {
     let p = palette(ui.ctx());
-    let (icon, words) = match note.lifecycle {
-        NoteLifecycle::Permanent => (
-            Icon::Clock,
-            i18n::translate(state.language, keys::lifecycle::NEVER_EXPIRES, &[]),
-        ),
-        NoteLifecycle::Expires { at } => (
-            Icon::Hourglass,
-            i18n::time::expiry(at, state.clock.now(), &Local).text(state.language),
-        ),
+    let words = lifecycle_words(state, note);
+    let icon = match note.lifecycle {
+        NoteLifecycle::Permanent => Icon::Clock,
+        NoteLifecycle::Expires { .. } => Icon::Hourglass,
     };
     let hue = if note.expiring_soon {
         p.red
@@ -185,7 +206,7 @@ fn lifecycle_badge(ui: &mut Ui, state: &AppState, note: &DisplayNote) {
     };
     // The reference's `tint-badge`: the hue at a tenth under, a quarter on the edge.
     let galley = widgets::text(ui, &words, font::META, 400.0, FontFamily::Proportional, hue);
-    let size = galley.size() + Vec2::new(20.0 + 16.0, 6.0);
+    let size = galley.size() + Vec2::new(BADGE_ROOM, 6.0);
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &words));
     let corner = egui::CornerRadius::same(radius::PANEL);
@@ -517,24 +538,22 @@ pub(super) fn summary(ui: &mut Ui, state: &AppState, note: &DisplayNote, actions
         let (caret, _) = ui.allocate_exact_size(Vec2::splat(12.0), egui::Sense::hover());
         crate::theme::icons::paint(ui, caret, Icon::ChevronRight, p.text_2);
         let unfold = tr(keys::editor::header::UNFOLD);
+        let expires = matches!(note.lifecycle, NoteLifecycle::Expires { .. });
+        let badge = if expires {
+            lifecycle_width(ui, state, note) + ui.spacing().item_spacing.x
+        } else {
+            0.0
+        };
+        let room = ui.available_width() - badge - 2.0 * ui.spacing().button_padding.x;
+        let line = widgets::one_line(ui, &words, (font::CONTROL, 400.0), p.text_2, room);
         let response = ui
-            .add(
-                egui::Button::new(widgets::text(
-                    ui,
-                    &words,
-                    font::CONTROL,
-                    400.0,
-                    FontFamily::Proportional,
-                    p.text_2,
-                ))
-                .frame(false),
-            )
+            .add(egui::Button::new(line).frame(false))
             .on_hover_text(&unfold);
         widgets::address(ui, &response, "editor-header-summary");
         if response.clicked() {
             actions.push(editor(Editing::FoldHeader(false)));
         }
-        if matches!(note.lifecycle, NoteLifecycle::Expires { .. }) {
+        if expires {
             lifecycle_badge(ui, state, note);
         }
     });

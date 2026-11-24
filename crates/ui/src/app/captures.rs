@@ -1210,6 +1210,76 @@ fn the_editor_header_under_the_pointer() {
     }
 }
 
+/// The unfolded header of a note that holds everything, at the panel's narrowest and in the
+/// narrowest window (#1574).
+#[test]
+fn the_editor_header_of_a_full_note_when_narrow() {
+    use engine::notes::model::{NoteLifecycle, NotePatch};
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1220.0, 681.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    let id = crate::testing::note(backend, "Rotation of the staging certificate")
+        .id
+        .clone();
+    let note = id.clone();
+    engine::db::run_here(backend.engine(), move |engine| {
+        let space = engine::notes::get_note(engine, &note)?.space_id.clone();
+        let folder = engine::folders::create_folder(
+            engine,
+            &engine::folders::model::FolderDraft {
+                space_id: space,
+                name: "Certificates and their yearly rotation".to_owned(),
+                parent_id: None,
+            },
+        )?;
+        engine::folders::file_notes(
+            engine,
+            std::slice::from_ref(&note),
+            Some(&folder.id),
+            engine::folders::board::PreviewLines::default(),
+        )?;
+        let at = chrono::DateTime::parse_from_rfc3339("2026-12-24T22:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let tags = [
+            "infrastructure",
+            "certificates",
+            "staging",
+            "openssl",
+            "yearly-rotation-runbook",
+        ];
+        engine::notes::update_note(
+            engine,
+            &note,
+            &NotePatch {
+                source: Some("https://wiki.example.test/runbooks/certificates".to_owned()),
+                tags: Some(tags.map(str::to_owned).to_vec()),
+                lifecycle: Some(NoteLifecycle::Expires { at }),
+                ..NotePatch::default()
+            },
+        )
+    })
+    .unwrap();
+    let file = profile
+        .path()
+        .join("the-whole-chain-of-the-staging-certificate-2026.pem");
+    std::fs::write(&file, b"-----BEGIN CERTIFICATE-----").unwrap();
+    harness.state_mut().state.revision.bump();
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(file));
+    click(&mut harness, "attachment-add");
+    for width in [1220.0, 1180.0, 640.0] {
+        harness.set_size(egui::vec2(width, 681.0));
+        settle(&mut harness);
+        capture(&mut harness, &format!("editor-header-full-{width}"));
+    }
+}
+
 /// A request in the narrowest window (#1487): its URL, its actions and its tabs.
 #[test]
 fn the_http_request_in_a_narrow_window() {
