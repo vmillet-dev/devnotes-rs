@@ -22,7 +22,7 @@ use crate::notes::prettier::{Indentation, clamp_width};
 use crate::state::AppState;
 use crate::theme::icons::Icon;
 use crate::theme::palette;
-use crate::widgets::{self, Button, Checkbox, IconButton, Segmented, TextField};
+use crate::widgets::{self, Button, Segmented, SplitButton, SplitKind, TextField};
 
 /// How long a notice stays; the marked lines stay until the next keystroke.
 const NOTICE_FOR: f64 = 6.0;
@@ -83,7 +83,7 @@ fn ready(state: &AppState, (session, note): (u64, &DisplayNote), editing: &Edito
             .is_none_or(super::json_view::Exploring::shows_code)
 }
 
-/// The button and its chevron, in the toolbar drawn from the right.
+/// The button and, joined to it, the chevron that opens the settings.
 pub(super) fn button(
     ui: &mut Ui,
     state: &AppState,
@@ -94,9 +94,6 @@ pub(super) fn button(
 ) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
-    let settings_label = tr(keys::editor::format::SETTINGS);
-    let chevron =
-        IconButton::new(Icon::ChevronDown, &settings_label, "editor-format-settings").show(ui);
     let hint = if language::formatter(note.language).is_some() {
         tr(keys::editor::format::HINT)
     } else {
@@ -107,25 +104,30 @@ pub(super) fn button(
         )
     };
     let enabled = ready(state, (session, note), editing);
-    let label = if labelled {
-        tr(keys::editor::format::LABEL)
-    } else {
-        String::new()
-    };
-    let clicked = Button::new(&label, "editor-format")
-        .icon(Icon::Format)
-        .enabled(enabled)
-        .show(ui);
-    // Its icon alone in a narrow toolbar: the name stays.
-    let name = tr(keys::editor::format::LABEL);
-    ui.ctx()
-        .accesskit_node_builder(clicked.id, |node| node.set_label(name));
-    if widgets::tooltip(clicked, &hint).clicked() {
+    let (label, keys) = (
+        tr(keys::editor::format::LABEL),
+        tr(keys::editor::format::KEYS),
+    );
+    let settings = tr(keys::editor::format::SETTINGS);
+    let mut split = SplitButton::new(
+        (&label, "editor-format"),
+        (&settings, "editor-format-settings"),
+        SplitKind::Tint,
+    )
+    .icon(Icon::Format)
+    .keys(&keys)
+    .enabled(enabled);
+    if !labelled {
+        split = split.icon_only();
+    }
+    let (format, chevron) = split.show(ui);
+    if widgets::tooltip(format, &hint).clicked() {
         ask(state, (session, note), editing, actions);
     }
+    let chevron = widgets::tooltip(chevron, &settings);
     Popup::from_toggle_button_response(&chevron)
         .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-        .frame(widgets::menu_frame(ui.ctx()))
+        .frame(widgets::menu_frame(ui.ctx()).inner_margin(gap::margin(gap::GROUPS, gap::GROUPS)))
         .show(|ui| panel(ui, state, &mut editing.format.width, actions));
 }
 
@@ -332,6 +334,11 @@ pub(super) fn notice(ui: &mut Ui, state: &AppState, body: Rect, editing: &mut Ed
     }
 }
 
+/// As high as the tallest control, so each row reads on one line.
+const SETTING_HEIGHT: f32 = 30.0;
+/// Three digits and their room.
+const WIDTH_FIELD: f32 = 64.0;
+
 /// The library's settings, applied as they are chosen: the panel has no button to confirm.
 fn panel(ui: &mut Ui, state: &AppState, width: &mut Option<String>, actions: &mut Actions) {
     let p = palette(ui.ctx());
@@ -340,16 +347,16 @@ fn panel(ui: &mut Ui, state: &AppState, width: &mut Option<String>, actions: &mu
     let now = state.prettier;
     let mut next = now;
     ui.set_width(300.0);
-    ui.spacing_mut().item_spacing.y = gap::INSET;
+    ui.spacing_mut().item_spacing.y = gap::SNUG;
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Prettier").strong().color(p.text_0));
-        ui.label(
-            egui::RichText::new(tr(keys::editor::format::SCOPE))
-                .size(font::CONTROL)
-                .color(p.text_2),
-        );
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            let scope = egui::RichText::new(tr(keys::editor::format::SCOPE));
+            ui.label(scope.size(font::CONTROL).color(p.text_2));
+        });
     });
     setting(ui, &tr(keys::editor::format::PRINT_WIDTH), |ui| {
+        ui.set_max_width(WIDTH_FIELD);
         let typed = width.get_or_insert_with(|| now.print_width.to_string());
         let field = TextField::new(
             typed,
@@ -399,7 +406,10 @@ fn panel(ui: &mut Ui, state: &AppState, width: &mut Option<String>, actions: &mu
             &mut next.format_on_save,
         ),
     ] {
-        Checkbox::new(value, &tr(key), author_id).show(ui);
+        let label = tr(key);
+        setting(ui, &label, |ui| {
+            widgets::switch(ui, &label, author_id, value, true);
+        });
     }
     let formatted: Vec<&str> = Language::ALL
         .into_iter()
@@ -434,7 +444,8 @@ fn indentation_key(indentation: Indentation) -> i18n::Key {
 
 fn setting(ui: &mut Ui, label: &str, control: impl FnOnce(&mut Ui)) {
     let p = palette(ui.ctx());
-    ui.horizontal(|ui| {
+    let row = vec2(ui.available_width(), SETTING_HEIGHT);
+    ui.allocate_ui_with_layout(row, Layout::left_to_right(Align::Center), |ui| {
         ui.label(egui::RichText::new(label).size(font::BODY).color(p.text_1));
         ui.with_layout(Layout::right_to_left(Align::Center), control);
     });

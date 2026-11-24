@@ -1325,6 +1325,47 @@ fn the_slides_of_a_presentation() {
     }
 }
 
+/// The Format button and its settings (#1594), full screen then beside the cards, on a language
+/// Prettier reads and on one it does not.
+#[test]
+fn the_format_button_and_its_settings() {
+    use engine::notes::language::Language;
+    for (name, language, code) in [
+        ("ts", Language::Ts, "const a = {b:1}"),
+        ("sql", Language::Sql, "SELECT 1;"),
+    ] {
+        let profile = tempfile::tempdir().unwrap();
+        let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+        type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+        type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+        click(&mut harness, "vault-submit");
+        settle(&mut harness);
+        let id = crate::testing::note(&harness.state().backend, "Invoices")
+            .id
+            .clone();
+        let patch = engine::notes::model::NotePatch {
+            content: Some(code.to_owned()),
+            language: Some(language),
+            ..engine::notes::model::NotePatch::default()
+        };
+        let engine = harness.state().backend.engine().clone();
+        let note = id.clone();
+        engine::db::run_here(&engine, move |engine| {
+            engine::notes::update_note(engine, &note, &patch)
+        })
+        .unwrap();
+        harness.state_mut().state.revision.bump();
+        harness.state_mut().state.editor.open(id);
+        settle(&mut harness);
+        click(&mut harness, "editor-format-settings");
+        capture(&mut harness, &format!("format-panel-{name}"));
+        harness.key_press(egui::Key::Escape);
+        settle(&mut harness);
+        click(&mut harness, "editor-fullscreen");
+        capture(&mut harness, &format!("format-full-{name}"));
+    }
+}
+
 /// A request in the narrowest window (#1487): its URL, its actions and its tabs.
 #[test]
 fn the_http_request_in_a_narrow_window() {
