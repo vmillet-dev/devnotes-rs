@@ -3,7 +3,9 @@
 
 use crate::theme::tokens::{font, gap};
 use egui::Ui;
+use engine::tools::check_numbers::{Affix, DrawnNumber, NumbersAnswer, NumbersRequest};
 use engine::tools::checks::{CardNetwork, CheckAnswer, CheckKind, CheckRequest, IbanVerdict};
+use engine::tools::identity::Country;
 use i18n::{Language, Message, keys};
 use serde_json::json;
 use zeroize::Zeroize;
@@ -12,23 +14,51 @@ use crate::api;
 use crate::theme::palette;
 use crate::tools::live::{Live, Turn};
 use crate::tools::ui::{
-    ResultRow, card, group_title, hint, named, paragraph, problem, result_rows,
+    CopyValue, ResultRow, card, columns, group_title, hint, label, line, named, number_field,
+    paragraph, problem, result_rows, section_head, section_title,
 };
 use crate::tools::{Drawn, Tool};
-use crate::widgets::{Segmented, TextField, address};
+use crate::widgets::{Button, ChoiceMenu, Kind, Segmented, TextField, address};
 
 /// The published French example IBAN: valid, and nobody's account.
 const SAMPLE: &str = "FR76 3000 6000 0112 3456 7890 189";
 
-#[derive(Default)]
+/// What a card number or an IBAN takes, and no more.
+const INPUT: f32 = 420.0;
+/// A prefix or a suffix.
+const AFFIX: f32 = 150.0;
+
+/// A new draw with the same options is part of what is asked.
+type Asked = (NumbersRequest, u32);
+
 pub(super) struct ChecksTool {
     text: String,
     kind: Option<CheckKind>,
     answer: Live<CheckRequest, CheckAnswer>,
+    drawn_kind: CheckKind,
+    prefix: String,
+    suffix: String,
+    length: String,
+    count: String,
+    country: Country,
+    draw: u32,
+    numbers: Live<Asked, NumbersAnswer>,
 }
 
 pub(super) fn make() -> Box<dyn Tool> {
-    Box::<ChecksTool>::default()
+    Box::new(ChecksTool {
+        text: String::new(),
+        kind: None,
+        answer: Live::default(),
+        drawn_kind: CheckKind::Luhn,
+        prefix: String::new(),
+        suffix: String::new(),
+        length: "16".to_owned(),
+        count: "5".to_owned(),
+        country: Country::Fr,
+        draw: 0,
+        numbers: Live::default(),
+    })
 }
 
 fn head(ui: &mut Ui, title: &str, valid: bool, reason: Option<String>, language: Language) {
@@ -261,10 +291,54 @@ fn iban_card(ui: &mut Ui, iban: &Iban<'_>, language: Language) {
     });
 }
 
+fn number_list(ui: &mut Ui, numbers: &[DrawnNumber], language: Language) {
+    use keys::tools::checks as words;
+    let count = u32::try_from(numbers.len()).unwrap_or(u32::MAX);
+    let counted = Message::new(words::GENERATED)
+        .with("count", count)
+        .text(language);
+    let all: Vec<&str> = numbers.iter().map(|it| it.raw.as_str()).collect();
+    let all = all.join("\n");
+    section_head(ui, &counted, |ui| {
+        let name = i18n::translate(language, words::GENERATED_ALL, &[]);
+        CopyValue::new(&all, &name, language)
+            .label(keys::tools::COPY_ALL)
+            .show(ui);
+    });
+    let names: Vec<String> = (1..=numbers.len()).map(|at| at.to_string()).collect();
+    card(ui, "checks-numbers", |ui| {
+        let rows: Vec<_> = numbers
+            .iter()
+            .zip(&names)
+            .map(|(number, name)| ResultRow::new(name, &number.printed).copied(&number.raw))
+            .collect();
+        result_rows(ui, &rows, language);
+    });
+}
+
+fn refusal(answer: &NumbersAnswer, language: Language) -> String {
+    use keys::tools::checks::generate_problems as words;
+    match answer {
+        NumbersAnswer::NotDigits { affix, at } => {
+            let key = match affix {
+                Affix::Prefix => words::PREFIX,
+                Affix::Suffix => words::SUFFIX,
+            };
+            Message::new(key).with("at", *at).text(language)
+        }
+        NumbersAnswer::TooLong { digits } => Message::new(words::TOO_LONG)
+            .with("count", *digits)
+            .text(language),
+        NumbersAnswer::Impossible => i18n::translate(language, words::IMPOSSIBLE, &[]),
+        NumbersAnswer::Drawn(_) => String::new(),
+    }
+}
+
 impl ChecksTool {
     fn intro(&mut self, ui: &mut Ui, language: Language) {
         use keys::tools::checks as words;
         let tr = |key| i18n::translate(language, key, &[]);
+        section_title(ui, &tr(words::VALIDATE_TITLE));
         hint(ui, &tr(words::INTRO));
         let options = [
             (None, tr(words::kinds::AUTO)),
@@ -274,10 +348,127 @@ impl ChecksTool {
         let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
         Segmented::new(&options, "checks-kind").show(ui, &mut self.kind);
         let name = tr(words::INPUT_LABEL);
-        TextField::new(&mut self.text, &name, "checks-input")
-            .hint(&tr(words::PLACEHOLDER))
-            .show(ui);
+        ui.scope(|ui| {
+            ui.set_max_width(INPUT.min(ui.available_width()));
+            TextField::new(&mut self.text, &name, "checks-input")
+                .hint(&tr(words::PLACEHOLDER))
+                .show(ui);
+        });
         crate::tools::ui::notice(ui, &tr(words::PRIVATE), "checks-private");
+    }
+
+    fn validate(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
+        let language = drawn.language;
+        self.intro(ui, language);
+        self.answer_of(ui, language);
+        hint(
+            ui,
+            &i18n::translate(language, keys::tools::checks::FOOTNOTE, &[]),
+        );
+    }
+
+    fn numbers_request(&self) -> Option<Asked> {
+        let count = self.count.trim().parse().ok()?;
+        let request = match self.drawn_kind {
+            CheckKind::Luhn => NumbersRequest::Luhn {
+                prefix: self.prefix.clone(),
+                suffix: self.suffix.clone(),
+                length: self.length.trim().parse().ok()?,
+                count,
+            },
+            CheckKind::Iban => NumbersRequest::Iban {
+                country: self.country,
+                count,
+            },
+        };
+        Some((request, self.draw))
+    }
+
+    fn generate(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
+        use keys::tools::checks as words;
+        let language = drawn.language;
+        let tr = |key| i18n::translate(language, key, &[]);
+        section_title(ui, &tr(words::GENERATE_TITLE));
+        hint(ui, &tr(words::GENERATE_INTRO));
+        let options = [
+            (CheckKind::Luhn, tr(words::kinds::LUHN)),
+            (CheckKind::Iban, tr(words::kinds::IBAN)),
+        ];
+        let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
+        Segmented::new(&options, "checks-generate-kind").show(ui, &mut self.drawn_kind);
+        match self.drawn_kind {
+            CheckKind::Luhn => self.affixes(ui, language),
+            CheckKind::Iban => self.countries(ui, language),
+        }
+        line(ui, |ui| {
+            if self.drawn_kind == CheckKind::Luhn {
+                let name = tr(words::NUMBER_LENGTH);
+                label(ui, &name);
+                number_field(ui, &mut self.length, &name, "checks-length");
+            }
+            let name = tr(words::COUNT);
+            label(ui, &name);
+            number_field(ui, &mut self.count, &name, "checks-count");
+            if Button::new(&tr(words::AGAIN), "checks-generate")
+                .kind(Kind::Accent)
+                .show(ui)
+                .clicked()
+            {
+                self.draw += 1;
+            }
+        });
+        self.drawn_numbers(ui, language);
+        hint(ui, &tr(words::GENERATED_NOTE));
+    }
+
+    fn affixes(&mut self, ui: &mut Ui, language: Language) {
+        use keys::tools::checks as words;
+        let tr = |key| i18n::translate(language, key, &[]);
+        ui.horizontal_top(|ui| {
+            ui.spacing_mut().item_spacing.x = gap::INSET;
+            for (value, name, id) in [
+                (&mut self.prefix, tr(words::PREFIX), "checks-prefix"),
+                (&mut self.suffix, tr(words::SUFFIX), "checks-suffix"),
+            ] {
+                ui.vertical(|ui| {
+                    ui.set_width(AFFIX);
+                    label(ui, &name);
+                    TextField::new(value, &name, id).compact().show(ui);
+                });
+            }
+        });
+    }
+
+    fn countries(&mut self, ui: &mut Ui, language: Language) {
+        let countries = api::tools::iban_countries();
+        let names: Vec<(Country, String)> = countries
+            .into_iter()
+            .map(|it| {
+                let code = it.as_str();
+                let name = i18n::format::country(code, language).unwrap_or(code);
+                (it, format!("{name} ({code})"))
+            })
+            .collect();
+        let options: Vec<(Country, &str)> =
+            names.iter().map(|(id, it)| (*id, it.as_str())).collect();
+        let name = i18n::translate(language, keys::tools::checks::COUNTRY, &[]);
+        line(ui, |ui| {
+            label(ui, &name);
+            ChoiceMenu::new(&name, "checks-country", &options)
+                .language(language)
+                .show(ui, &mut self.country);
+        });
+    }
+
+    fn drawn_numbers(&self, ui: &mut Ui, language: Language) {
+        match self.numbers.value() {
+            Some(NumbersAnswer::Drawn(numbers)) => number_list(ui, numbers, language),
+            Some(refused) => {
+                let said = refusal(refused, language);
+                problem(ui, &said, "checks-generate-problem");
+            }
+            None => {}
+        }
     }
 
     fn answer_of(&self, ui: &mut Ui, language: Language) {
@@ -343,22 +534,14 @@ impl Tool for ChecksTool {
             kind: self.kind,
         });
         self.answer.update(turn, request, api::tools::check_digits);
+        let request = self.numbers_request();
+        self.numbers.update(turn, request, |backend, (asked, _)| {
+            api::tools::draw_numbers(backend, asked)
+        });
     }
 
     fn ui(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
-        let language = drawn.language;
-        egui::ScrollArea::vertical()
-            .id_salt("checks")
-            .auto_shrink(false)
-            .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = gap::INSET;
-                self.intro(ui, language);
-                self.answer_of(ui, language);
-                hint(
-                    ui,
-                    &i18n::translate(language, keys::tools::checks::FOOTNOTE, &[]),
-                );
-            });
+        columns(ui, self, drawn, (Self::validate, Self::generate));
     }
 
     fn has_sample(&self) -> bool {
@@ -377,5 +560,8 @@ impl Tool for ChecksTool {
     fn left(&mut self) {
         self.text.zeroize();
         self.answer = Live::default();
+        self.prefix.zeroize();
+        self.suffix.zeroize();
+        self.numbers = Live::default();
     }
 }

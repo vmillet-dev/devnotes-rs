@@ -439,6 +439,16 @@ fn drawn(request: &IdentityRequest, today: NaiveDate, library: &Library) -> Iden
 }
 
 /// A person drawn from the lists compiled into the application.
+/// Where an account is written as an IBAN.
+pub(crate) fn has_iban(country: Country) -> bool {
+    !matches!(country, Country::Us | Country::Ca)
+}
+
+/// An account's IBAN as it is printed, its national keys right; none where there is no IBAN.
+pub(crate) fn iban(country: Country, draw: &mut Draw) -> Option<String> {
+    papers::bank(country, draw).iban
+}
+
 pub fn generate(request: &IdentityRequest, today: NaiveDate) -> IdentityAnswer {
     drawn(request, today, data::library())
 }
