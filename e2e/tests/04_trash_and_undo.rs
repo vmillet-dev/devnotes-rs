@@ -55,6 +55,26 @@ fn trash_and_undo() {
         },
     );
 
+    step(
+        "the priorities of the menu come and go with the pointer, and one is picked",
+        || {
+            let levels = "note-card-priority-level";
+            app.hover("note-card-open");
+            app.click("note-card-menu");
+            app.hover("note-card-priority");
+            app.eventually("the five levels", |tree| tree.count(levels) == 5);
+            app.hover("note-card-duplicate");
+            app.eventually("closed with the pointer gone", |tree| !tree.has(levels));
+            app.hover("note-card-priority");
+            app.hover_nth(levels, 3);
+            app.eventually("open under the pointer", |tree| tree.count(levels) == 5);
+            app.click_nth(levels, 0);
+            app.eventually("a pick closes the menu", |tree| {
+                !tree.has("note-card-priority")
+            });
+        },
+    );
+
     step("Delete arms the card, and Escape calls it off", || {
         app.press(Key::ArrowDown, Modifiers::NONE);
         app.press(Key::Delete, Modifiers::NONE);

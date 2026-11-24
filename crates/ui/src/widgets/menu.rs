@@ -138,38 +138,117 @@ fn entries<'a>(ui: &mut Ui, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
             }
             continue;
         }
-        let opens = response.clicked()
-            || response.hovered()
-            || (super::takes_keys(ui, &response)
-                && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowRight)));
-        // Its own open state: egui keeps one popup in its memory, and the parent is that one.
-        let open_id = response.id.with("children");
-        let mut open = opens || ui.data(|data| data.get_temp(open_id)).unwrap_or(false);
-        let sub = Popup::from_response(&response)
-            .id(open_id)
-            .align(RectAlign::RIGHT_START)
-            .frame(frame(ui.ctx()))
-            .open_bool(&mut open)
-            .show(|ui| {
-                let inner = fitted(ui, 0.0, |ui| entries(ui, item.children));
-                let back = ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowLeft));
-                (inner, back)
-            });
-        let sub = sub.map(|shown| {
-            let (inner, back) = shown.inner;
-            if back {
-                open = false;
-                ui.memory_mut(|memory| memory.request_focus(response.id));
-            }
-            egui::InnerResponse::new(inner, shown.response)
-        });
-        ui.data_mut(|data| data.insert_temp(open_id, open));
-        if let Some(chosen) = sub.and_then(|shown| shown.inner) {
-            picked = Some(chosen);
+        let chosen = sub_menu(ui, &response, |ui| entries(ui, item.children)).flatten();
+        if chosen.is_some() {
+            picked = chosen;
+            ui.close();
         }
     }
     arrows(ui, &ids);
     picked
+}
+
+/// How a sub-menu stands from a pass to the next. Its own state, not egui's memory: egui keeps
+/// one popup there, and the parent is that one.
+#[derive(Clone, Copy, Default)]
+struct SubMenu {
+    open: bool,
+    /// The last pass its entry was drawn in: the menu was closed since, if not the one before.
+    pass: u64,
+    rect: Option<egui::Rect>,
+    layer: Option<egui::LayerId>,
+    /// Opened with the keys: open while the focus is in it, wherever the pointer is.
+    by_keys: bool,
+    /// Closed under a pointer that has not moved since.
+    dismissed: bool,
+    focused: Option<Id>,
+}
+
+/// The menu to the side of `parent`, open while the pointer is on either or the focus is in it.
+/// → opens it and walks in, ← closes it.
+pub fn sub_menu<R>(
+    ui: &mut Ui,
+    parent: &Response,
+    content: impl FnOnce(&mut Ui) -> R,
+) -> Option<R> {
+    let id = parent.id.with("children");
+    let pass = ui.ctx().cumulative_pass_nr();
+    let mut held: SubMenu = ui
+        .data(|data| data.get_temp(id))
+        .filter(|held: &SubMenu| held.pass + 1 >= pass)
+        .unwrap_or_default();
+    held.pass = pass;
+    let entered = (parent.clicked() && !parent.contains_pointer())
+        || (super::takes_keys(ui, parent)
+            && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowRight)));
+    let focused = ui.memory(egui::Memory::focused);
+    let elsewhere = focused
+        .and_then(|focused| ui.ctx().read_response(focused))
+        .is_some_and(|response| Some(response.layer_id) != held.layer);
+    held.by_keys = entered || (held.by_keys && !elsewhere);
+    if entered || ui.input(|input| input.pointer.delta() != Vec2::ZERO) {
+        held.dismissed = false;
+    } else if focused != held.focused && elsewhere && focused != Some(parent.id) {
+        held.dismissed = true;
+    }
+    held.focused = focused;
+    if entered {
+        // The first entry takes it, as of any menu that opens.
+        ui.memory_mut(|memory| {
+            memory.surrender_focus(parent.id);
+            memory.move_focus(egui::FocusDirection::None);
+        });
+    }
+
+    let mut open = held.by_keys || (!held.dismissed && pointed_at(ui, parent, &held));
+    let shown = Popup::from_response(parent)
+        .id(id)
+        .align(RectAlign::RIGHT_START)
+        .frame(frame(ui.ctx()))
+        // A click outside closes the menu it belongs to, one on its entry keeps it.
+        .close_behavior(PopupCloseBehavior::IgnoreClicks)
+        .open_bool(&mut open)
+        .show(|ui| {
+            let inner = fitted(ui, 0.0, content);
+            let back = ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowLeft));
+            (inner, back)
+        });
+    let inner = shown.map(|shown| {
+        held.rect = Some(shown.response.rect);
+        held.layer = Some(shown.response.layer_id);
+        let (inner, back) = shown.inner;
+        if back {
+            open = false;
+            ui.memory_mut(|memory| {
+                memory.request_focus(parent.id);
+                // egui walks the focus left as well, off the entry it was just given to.
+                memory.move_focus(egui::FocusDirection::None);
+            });
+        }
+        // Closed by a key or a click, not by the pointer leaving it.
+        held.dismissed |= !open;
+        inner
+    });
+    held.open = open;
+    held.by_keys &= open;
+    ui.data_mut(|data| data.insert_temp(id, held));
+    inner
+}
+
+/// On the entry, in its sub-menu, or on the way from one to the other.
+fn pointed_at(ui: &Ui, parent: &Response, held: &SubMenu) -> bool {
+    if parent.contains_pointer() {
+        return true;
+    }
+    let (Some(rect), true) = (held.rect, held.open) else {
+        return false;
+    };
+    let Some(at) = ui.input(|input| input.pointer.hover_pos()) else {
+        return false;
+    };
+    let towards = rect.center().x - parent.rect.center().x;
+    let moving = ui.input(|input| input.pointer.velocity().x);
+    rect.contains(at) || (towards * moving > 0.0 && parent.rect.union(rect).contains(at))
 }
 
 /// The first entry takes the focus when the menu opens; egui's own arrow navigation moves it
@@ -723,6 +802,86 @@ mod tests {
                 .query_by(|node| node.author_id() == Some("export-json"))
                 .is_some()
         );
+    }
+
+    fn point(harness: &mut egui_kittest::Harness<'static, Option<String>>, author_id: &str) {
+        let centre = harness
+            .get_by(|node| node.author_id() == Some(author_id))
+            .rect()
+            .center();
+        harness.event(egui::Event::PointerMoved(centre));
+        harness.run();
+        harness.run();
+    }
+
+    fn sub_menu_shown(harness: &egui_kittest::Harness<'static, Option<String>>) -> bool {
+        harness
+            .query_by(|node| node.author_id() == Some("export-json"))
+            .is_some()
+    }
+
+    #[test]
+    fn a_sub_menu_is_open_while_the_pointer_is_on_its_entry_or_in_it() {
+        let mut harness = harness();
+        open(&mut harness);
+
+        point(&mut harness, "export");
+        assert!(sub_menu_shown(&harness));
+        point(&mut harness, "export-json");
+        assert!(sub_menu_shown(&harness));
+        point(&mut harness, "rename");
+        assert!(!sub_menu_shown(&harness), "it outlived the pointer");
+    }
+
+    #[test]
+    fn a_sub_menu_closes_when_another_entry_takes_the_focus() {
+        let mut harness = harness();
+        open(&mut harness);
+
+        point(&mut harness, "export");
+        assert!(sub_menu_shown(&harness));
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+
+        assert!(!sub_menu_shown(&harness));
+    }
+
+    #[test]
+    fn the_left_arrow_gives_the_focus_back_to_the_entry() {
+        let mut harness = harness();
+        open(&mut harness);
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::ArrowRight);
+        harness.run();
+        harness.key_press(Key::ArrowLeft);
+        harness.run();
+
+        assert!(!sub_menu_shown(&harness));
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::Enter);
+        harness.run();
+        assert_eq!(harness.state().as_deref(), Some("delete"));
+    }
+
+    #[test]
+    fn an_entry_of_a_sub_menu_is_picked_with_the_keys() {
+        let mut harness = harness();
+        open(&mut harness);
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::ArrowRight);
+        harness.run();
+        harness.run();
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::Enter);
+        harness.run();
+
+        assert_eq!(harness.state().as_deref(), Some("export-json"));
     }
 
     #[test]
