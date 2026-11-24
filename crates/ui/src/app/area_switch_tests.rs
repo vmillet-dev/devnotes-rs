@@ -42,3 +42,34 @@ fn each_area_is_reached_from_the_switch_of_its_rail() {
     click(&mut harness, "area-option-notes");
     assert_eq!(switches(&harness), 1);
 }
+
+/// Where the three buttons are drawn, the area `area` on screen.
+fn places(
+    harness: &mut egui_kittest::Harness<'_, super::DevNotesApp>,
+    area: &str,
+) -> Vec<egui::Rect> {
+    click(harness, area);
+    ["area-option-notes", "area-option-tools", "area-option-http"]
+        .map(|author_id| {
+            harness
+                .get_by(|node| node.author_id() == Some(author_id))
+                .rect()
+        })
+        .to_vec()
+}
+
+#[test]
+fn the_switch_is_at_one_place_and_one_size_on_every_area() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut harness = open_library(directory.path());
+
+    for rail_away in [false, true] {
+        if rail_away {
+            click(&mut harness, "area-option-notes");
+            click(&mut harness, "library-rail-toggle");
+        }
+        let notes = places(&mut harness, "area-option-notes");
+        assert_eq!(places(&mut harness, "area-option-tools"), notes);
+        assert_eq!(places(&mut harness, "area-option-http"), notes);
+    }
+}

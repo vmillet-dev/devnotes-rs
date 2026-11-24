@@ -81,8 +81,8 @@ impl RailView {
 
 pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: &mut Actions) {
     let s = spacing(ui.ctx());
-    // The tree is wider than the head by what the rail's padding can spare: the rows are what
-    // run out of room.
+    // The tree is wider than the switch by what the rail's padding can spare: the rows are what
+    // run out of room, and the switch keeps the place it has in the other areas.
     let margin = Margin {
         left: 4,
         right: 4,
@@ -94,7 +94,11 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut RailView, actions: 
     egui::Frame::new().inner_margin(margin).show(ui, |ui| {
         ui.set_min_height(ui.available_height());
         ui.spacing_mut().item_spacing.y = gap::SNUG;
-        crate::titlebar::area_switch::rail(ui, Area::Http, language, actions);
+        egui::Frame::new()
+            .inner_margin(Margin::symmetric(6, 0))
+            .show(ui, |ui| {
+                crate::titlebar::area_switch::rail(ui, Area::Http, language, actions);
+            });
         head(ui, view, actions, language);
         if view.creating_under(None).is_some() {
             create_form(ui, view, actions, language);
