@@ -4492,7 +4492,10 @@ after the folder until something is searched.
 A drawing's picture is never in the list: the card asks for it by `Stamp` (id and `updated_at`, so
 a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
 reads it on the db queue, decodes the PNG on the compute queue, uploads it once and keeps the last
-256; it is library content, so it lives in `LibraryCaches` and goes with the library scope.
+256; it is library content, so it lives in `LibraryCaches` and goes with the library scope. A
+drawing that has no picture, as one that came by import, has its two taken there the first time
+a card or a Note shows it: its scene is read, pictured on the compute queue and the pictures
+written, which moves no date.
 
 ### The board, drawn
 

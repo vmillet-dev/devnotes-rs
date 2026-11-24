@@ -4266,7 +4266,8 @@
     "embed": "Insérer un dessin",
     "embedNone": "Aucun dessin à insérer",
     "missing": "Dessin introuvable",
-    "noPicture": "Pas encore d’aperçu",
+    "noPicture": "Pas d’aperçu",
+    "emptyCard": "Dessin vide",
     "preview": "Aperçu du dessin"
   },
   "crash": {

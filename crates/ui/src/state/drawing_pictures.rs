@@ -1,15 +1,20 @@
 //! A Dessin's pictures: the small one for its card, asked for once the card is drawn (a list
 //! carries none), and the large one for a Note that embeds it, asked by its id where it is shown.
 //! Decoded off the UI thread, uploaded once, and kept for the last ones shown (plan § 3.6
-//! « Images »). It is library content: it lives in `LibraryCaches`.
+//! « Images »). It is library content: it lives in `LibraryCaches`. A drawing that came with no
+//! picture, as an import leaves it, has its two taken here, the first time it is shown.
 
 use std::collections::{HashMap, VecDeque};
+use std::sync::Arc;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use chrono::{DateTime, Utc};
 use egui::{ColorImage, TextureHandle, TextureOptions};
 use engine::error::AppError;
+use engine::notes::drawing::DrawingPictures;
+use engine::notes::kind::NoteKind;
+use engine::notes::model::{DisplayNote, NotePatch};
 
 use crate::api;
 use crate::backend::{Backend, Pending};
@@ -30,25 +35,43 @@ pub enum Thumbnail<'a> {
     /// Never asked: the card asks.
     Unknown,
     Waiting,
-    /// The drawing has no picture, or it could not be read.
+    /// Nothing is drawn on it.
+    Empty,
+    /// No drawing, or its picture could not be read.
     Missing,
     Shown(&'a TextureHandle),
 }
 
 enum Entry {
     Reading(Pending<Option<String>>),
+    /// It has no picture: its scene is read, for one to be taken.
+    Scene(Pending<DisplayNote>),
+    Taking(Pending<DrawingPictures>),
     Decoding(Pending<Option<ColorImage>>),
-    Done(Option<TextureHandle>),
+    Empty,
+    Missing,
+    Shown(TextureHandle),
+}
+
+impl Entry {
+    fn is_done(&self) -> bool {
+        matches!(self, Self::Empty | Self::Missing | Self::Shown(_))
+    }
 }
 
 /// Which of a drawing's pictures a cache reads.
 type Reader = fn(&Backend, String) -> Pending<Option<String>>;
+/// The same one, of the two just taken.
+type Taken = fn(DrawingPictures) -> String;
 
 pub struct Thumbnails {
     entries: HashMap<Stamp, Entry>,
     /// Oldest first: what goes when more than `KEPT` are done.
     done: VecDeque<Stamp>,
+    /// The pictures taken here, being written.
+    writes: Vec<Pending<DisplayNote>>,
     reader: Reader,
+    taken: Taken,
 }
 
 impl Default for Thumbnails {
@@ -56,7 +79,9 @@ impl Default for Thumbnails {
         Self {
             entries: HashMap::new(),
             done: VecDeque::new(),
+            writes: Vec::new(),
             reader: api::notes::drawing_thumbnail,
+            taken: |pictures| pictures.thumbnail,
         }
     }
 }
@@ -66,6 +91,7 @@ impl Thumbnails {
     pub fn large() -> Self {
         Self {
             reader: api::notes::drawing_picture,
+            taken: |pictures| pictures.picture,
             ..Self::default()
         }
     }
@@ -81,9 +107,10 @@ impl Thumbnails {
     pub fn get(&self, stamp: &Stamp) -> Thumbnail<'_> {
         match self.entries.get(stamp) {
             None => Thumbnail::Unknown,
-            Some(Entry::Reading(_) | Entry::Decoding(_)) => Thumbnail::Waiting,
-            Some(Entry::Done(None)) => Thumbnail::Missing,
-            Some(Entry::Done(Some(texture))) => Thumbnail::Shown(texture),
+            Some(Entry::Empty) => Thumbnail::Empty,
+            Some(Entry::Missing) => Thumbnail::Missing,
+            Some(Entry::Shown(texture)) => Thumbnail::Shown(texture),
+            Some(_) => Thumbnail::Waiting,
         }
     }
 
@@ -101,33 +128,26 @@ impl Thumbnails {
         self.done.retain(|stamp| stamp.id != id);
     }
 
-    /// Once a frame: what was read goes to be decoded, what was decoded is uploaded.
+    /// Once a frame: each picture under way goes to its next step.
     pub fn update(&mut self, ctx: &egui::Context, backend: &Backend) {
+        self.writes.retain_mut(|write| match write.poll() {
+            None => true,
+            Some(answer) => {
+                log_failure(answer.err());
+                false
+            }
+        });
         let mut finished = Vec::new();
         for (stamp, entry) in &mut self.entries {
-            match entry {
-                Entry::Reading(pending) => match pending.poll() {
-                    Some(Ok(Some(uri))) => {
-                        *entry = Entry::Decoding(backend.compute(move |_| Ok(decode(&uri))));
-                    }
-                    Some(answer) => {
-                        log_failure(answer.err());
-                        *entry = Entry::Done(None);
-                        finished.push(stamp.clone());
-                    }
-                    None => {}
-                },
-                Entry::Decoding(pending) => {
-                    if let Some(answer) = pending.poll() {
-                        let image = answer.ok().flatten();
-                        let name = format!("drawing-{}", stamp.id);
-                        let texture = image
-                            .map(|image| ctx.load_texture(name, image, TextureOptions::LINEAR));
-                        *entry = Entry::Done(texture);
-                        finished.push(stamp.clone());
-                    }
-                }
-                Entry::Done(_) => {}
+            if entry.is_done() {
+                continue;
+            }
+            if let Some(next) = advance(ctx, backend, stamp, entry, (&mut self.writes, self.taken))
+            {
+                *entry = next;
+            }
+            if entry.is_done() {
+                finished.push(stamp.clone());
             }
         }
         self.done.extend(finished);
@@ -139,9 +159,64 @@ impl Thumbnails {
     }
 }
 
+/// What an entry becomes once what it waits for has answered.
+fn advance(
+    ctx: &egui::Context,
+    backend: &Backend,
+    stamp: &Stamp,
+    entry: &mut Entry,
+    (writes, taken): (&mut Vec<Pending<DisplayNote>>, Taken),
+) -> Option<Entry> {
+    let decoding = |uri: String| Entry::Decoding(backend.compute(move |_| Ok(decode(&uri))));
+    let failed = |error: AppError| {
+        log_failure(Some(error));
+        Entry::Missing
+    };
+    Some(match entry {
+        Entry::Reading(pending) => match pending.poll()? {
+            Ok(Some(uri)) => decoding(uri),
+            Ok(None) => Entry::Scene(api::notes::get(backend, stamp.id.clone())),
+            Err(error) => failed(error),
+        },
+        Entry::Scene(pending) => match pending.poll()? {
+            Ok(note) if note.kind == NoteKind::Drawing => {
+                let palette = crate::notes::picture_palette(crate::theme::palette(ctx));
+                let scene = note.content.clone();
+                Entry::Taking(api::notes::picture_drawing(
+                    backend,
+                    scene,
+                    Arc::new(palette),
+                ))
+            }
+            Ok(_) => Entry::Missing,
+            Err(error) => failed(error),
+        },
+        Entry::Taking(pending) => match pending.poll()? {
+            Ok(pictures) if pictures.thumbnail.is_empty() => Entry::Empty,
+            Ok(pictures) => {
+                let patch = NotePatch {
+                    pictures: Some(pictures.clone()),
+                    ..NotePatch::default()
+                };
+                writes.push(api::notes::update(backend, stamp.id.clone(), patch));
+                decoding(taken(pictures))
+            }
+            Err(error) => failed(error),
+        },
+        Entry::Decoding(pending) => match pending.poll()?.ok().flatten() {
+            Some(image) => {
+                let name = format!("drawing-{}", stamp.id);
+                Entry::Shown(ctx.load_texture(name, image, TextureOptions::LINEAR))
+            }
+            None => Entry::Missing,
+        },
+        Entry::Empty | Entry::Missing | Entry::Shown(_) => return None,
+    })
+}
+
 fn log_failure(error: Option<AppError>) {
     if let Some(error) = error {
-        log::warn!("A drawing's picture was not read: {:?}", error.code);
+        log::warn!("A drawing's picture was not read or kept: {:?}", error.code);
     }
 }
 

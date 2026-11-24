@@ -171,7 +171,7 @@ fn file_name(title: &str, language: Language) -> String {
 }
 
 /// The colours of the pictures, from the tokens the stage paints with.
-pub(super) fn picture_palette(p: &Palette) -> drawing::Palette {
+pub(crate) fn picture_palette(p: &Palette) -> drawing::Palette {
     drawing::Palette {
         stroke: Hue::ALL.map(|hue| css(stroke(p, hue))),
         fill: Hue::ALL.map(|hue| css(tint(p, hue))),

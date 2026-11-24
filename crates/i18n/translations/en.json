@@ -4266,7 +4266,8 @@
     "embed": "Insert a drawing",
     "embedNone": "No drawing to insert",
     "missing": "Drawing not found",
-    "noPicture": "No preview yet",
+    "noPicture": "No preview",
+    "emptyCard": "Empty drawing",
     "preview": "Drawing preview"
   },
   "crash": {
