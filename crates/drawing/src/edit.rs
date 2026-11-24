@@ -28,6 +28,8 @@ const CORNER_RADIUS: f64 = 6.0;
 /// screen, whatever the scene is shown at.
 const ROTATE_REACH: f64 = 40.0;
 const GRIP_REACH: f64 = 8.0;
+/// How far apart the eraser looks along its way, on the screen.
+const ERASER_STEP: f64 = 4.0;
 /// An object scaled to nothing could not be taken again.
 const LEAST_SCALE: f64 = 0.01;
 
@@ -40,6 +42,7 @@ pub enum Tool {
     Diamond,
     Arrow,
     Pen,
+    Eraser,
     Text,
 }
 
@@ -145,6 +148,7 @@ enum Gesture {
         from_id: Option<String>,
     },
     Pen(Vec<Point>),
+    Erasing(Point),
     Moving {
         from: Point,
         before: Selected,
@@ -289,7 +293,13 @@ impl Editor {
         if self.selected.is_empty() || self.editing.is_some() {
             return false;
         }
-        let mut gone: Vec<usize> = std::mem::take(&mut self.selected);
+        let gone = std::mem::take(&mut self.selected);
+        self.take_out(gone);
+        self.keep();
+        true
+    }
+
+    fn take_out(&mut self, mut gone: Vec<usize>) {
         gone.sort_unstable();
         let ids: Vec<Option<String>> = gone
             .iter()
@@ -307,8 +317,35 @@ impl Editor {
                 object.set_bound("to", None);
             }
         }
-        self.keep();
-        true
+    }
+
+    /// Where the eraser would take an object away: its frame.
+    pub fn erasable(&self, at: Point) -> Option<Frame> {
+        let object = &self.drawing.objects[self.object_at(at)?];
+        Some(self.frame_of(object))
+    }
+
+    /// From one point to the next, whatever the pointer comes onto: what it was already on, under
+    /// what it took away, stays.
+    fn erase_along(&mut self, from: Point, to: Point) {
+        let length = (to.x - from.x).hypot(to.y - from.y);
+        let steps = (length * self.scale / ERASER_STEP).ceil().max(1.0);
+        let mut last = from;
+        let mut step = 1.0;
+        while step <= steps {
+            let part = step / steps;
+            let at = Point {
+                x: from.x + (to.x - from.x) * part,
+                y: from.y + (to.y - from.y) * part,
+            };
+            let come_onto = |object: &Object| object.contains(at) && !object.contains(last);
+            let gone: Vec<usize> = (0..self.drawing.objects.len())
+                .filter(|&index| come_onto(&self.drawing.objects[index]))
+                .collect();
+            self.take_out(gone);
+            last = at;
+            step += 1.0;
+        }
     }
 
     /// Escape on a tool: back to the selection, as it was before the tool was taken.
@@ -372,15 +409,7 @@ impl Editor {
             return None;
         }
         if let [index] = self.selected[..] {
-            let object = &self.drawing.objects[index];
-            let (width, height) = object.dimensions();
-            return Some(Frame {
-                centre: object.centre(),
-                width,
-                height,
-                angle: object.angle(),
-                reach: ROTATE_REACH / self.scale,
-            });
+            return Some(self.frame_of(&self.drawing.objects[index]));
         }
         let boxes: Vec<Box> = self
             .selected
@@ -395,6 +424,17 @@ impl Editor {
             angle: 0.0,
             reach: ROTATE_REACH / self.scale,
         })
+    }
+
+    fn frame_of(&self, object: &Object) -> Frame {
+        let (width, height) = object.dimensions();
+        Frame {
+            centre: object.centre(),
+            width,
+            height,
+            angle: object.angle(),
+            reach: ROTATE_REACH / self.scale,
+        }
     }
 
     /// The rectangle a drag on the paper is selecting with.
@@ -436,6 +476,14 @@ impl Editor {
             Tool::Select => self.press_selecting(at, adding),
             Tool::Pen => self.gesture = Some(Gesture::Pen(vec![at])),
             Tool::Text => self.make_text(at),
+            Tool::Eraser => {
+                self.gesture = Some(Gesture::Erasing(at));
+                // What a tool took the selection from may be what goes.
+                self.kept.clear();
+                let under = self.object_at(at);
+                self.take_out(under.into_iter().collect());
+                self.revision += 1;
+            }
             Tool::Arrow => {
                 let from_id = self.shape_at(at);
                 self.gesture = Some(Gesture::Arrow {
@@ -526,6 +574,10 @@ impl Editor {
                 }
             }
             Gesture::Pen(points) => points.push(to),
+            Gesture::Erasing(last) => {
+                self.erase_along(*last, to);
+                *last = to;
+            }
             Gesture::Moving { from, before, .. } => {
                 if *from != to {
                     move_to(self, before, *from, to);
@@ -594,7 +646,9 @@ impl Editor {
                     self.begin_text();
                 }
             }
-            Some(Gesture::Scaling { .. } | Gesture::Rotating { .. }) => self.settle(),
+            Some(Gesture::Scaling { .. } | Gesture::Rotating { .. } | Gesture::Erasing(_)) => {
+                self.settle();
+            }
         }
     }
 

@@ -448,3 +448,78 @@ fn what_it_opened_comes_back_unchanged_until_it_is_touched() {
     assert!(editor.body().contains(r#""later":true"#));
     assert!(editor.body().contains(r#""left":70"#));
 }
+
+/// Three rectangles side by side, 60 wide and 40 apart, from (0, 0).
+fn three_rectangles() -> Editor {
+    let mut editor = editor();
+    for rank in 0..3 {
+        editor.set_tool(Tool::Rectangle);
+        let left = f64::from(rank) * 100.0;
+        drag(&mut editor, at(left, 0.0), at(left + 60.0, 60.0));
+    }
+    editor.set_tool(Tool::Eraser);
+    editor
+}
+
+#[test]
+fn three_clicks_of_the_eraser_remove_three_shapes_an_undo_each() {
+    let mut editor = three_rectangles();
+    for (rank, left) in [0.0, 100.0, 200.0].into_iter().enumerate() {
+        let on = at(left + 30.0, 30.0);
+        assert!(editor.erasable(on).is_some());
+        drag(&mut editor, on, on);
+        assert_eq!(editor.shapes(), 2 - rank);
+        assert_eq!(editor.tool(), Tool::Eraser, "it stays in hand");
+    }
+    assert!(editor.erasable(at(30.0, 30.0)).is_none());
+    for left in 1..=3 {
+        editor.undo();
+        assert_eq!(editor.shapes(), left);
+    }
+}
+
+#[test]
+fn a_drag_of_the_eraser_across_three_shapes_is_one_step_of_the_history() {
+    let mut editor = three_rectangles();
+    // Fast: one move over the whole row.
+    drag(&mut editor, at(-20.0, 30.0), at(300.0, 30.0));
+    assert_eq!(editor.shapes(), 0);
+
+    editor.undo();
+    assert_eq!(editor.shapes(), 3);
+}
+
+#[test]
+fn the_eraser_takes_the_topmost_and_a_shake_leaves_what_was_under_it() {
+    let mut editor = editor();
+    for _ in 0..2 {
+        editor.set_tool(Tool::Rectangle);
+        drag(&mut editor, at(0.0, 0.0), at(100.0, 100.0));
+    }
+    editor.set_tool(Tool::Eraser);
+    drag(&mut editor, at(50.0, 50.0), at(53.0, 51.0));
+    assert_eq!(editor.shapes(), 1);
+}
+
+#[test]
+fn the_eraser_on_the_paper_changes_nothing() {
+    let mut editor = three_rectangles();
+    editor.take_unsaved();
+    drag(&mut editor, at(500.0, 500.0), at(520.0, 500.0));
+    assert_eq!(editor.shapes(), 3);
+    assert!(!editor.take_unsaved());
+}
+
+#[test]
+fn an_arrow_keeps_its_other_end_when_the_eraser_takes_the_shape_it_starts_on() {
+    let mut editor = three_rectangles();
+    editor.set_tool(Tool::Arrow);
+    drag(&mut editor, at(30.0, 30.0), at(130.0, 30.0));
+    assert!(object(&editor, 3).from().is_some());
+
+    editor.set_tool(Tool::Eraser);
+    drag(&mut editor, at(10.0, 50.0), at(10.0, 50.0));
+
+    let arrow = object(&editor, 2);
+    assert!(arrow.from().is_none() && arrow.to().is_some());
+}

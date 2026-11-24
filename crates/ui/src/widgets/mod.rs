@@ -29,7 +29,7 @@ pub use dialog::{
 pub use empty::{EmptyAction, empty_state};
 pub use field::{Checkbox, SearchField, Searched, TextField, switch};
 pub use in_place::{InPlace, ask_in_place};
-pub use layout::{RailWidth, area_room, kept_together, split_handle, tooltip};
+pub use layout::{RailWidth, area_room, kept_together, split_handle, tooltip, wrap_before};
 pub use list::{code_viewer, virtual_list};
 pub use menu::{
     ChoiceMenu, FILTER_FROM, MenuItem, Naming, arrows as menu_arrows, entry as menu_entry,

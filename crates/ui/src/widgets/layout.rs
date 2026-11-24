@@ -138,11 +138,16 @@ const STEP: f32 = 16.0;
 /// A group of controls `width` wide in a wrapped row: whole on the next line where it does not
 /// fit on this one. egui wraps a widget, not a group of them.
 pub fn kept_together<R>(ui: &mut Ui, width: f32, content: impl FnOnce(&mut Ui) -> R) -> R {
+    wrap_before(ui, width);
+    ui.horizontal(content).inner
+}
+
+/// The next line of a wrapped row, where `width` does not fit on this one.
+pub fn wrap_before(ui: &mut Ui, width: f32) {
     let started = ui.cursor().left() > ui.max_rect().left() + 1.0;
-    if started && ui.available_size_before_wrap().x < width {
+    if ui.layout().main_wrap() && started && ui.available_size_before_wrap().x < width {
         ui.end_row();
     }
-    ui.horizontal(content).inner
 }
 
 pub fn tooltip(response: Response, words: &str) -> Response {

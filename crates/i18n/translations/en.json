@@ -4256,6 +4256,7 @@
     "diamond": "Diamond (D)",
     "arrow": "Arrow (A): started on a shape, it follows it",
     "pen": "Freehand (P)",
+    "eraser": "Eraser (E): click or drag across shapes",
     "text": "Text (T)",
     "colours": "Colour",
     "colour": {

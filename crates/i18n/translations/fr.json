@@ -4256,6 +4256,7 @@
     "diamond": "Losange (D)",
     "arrow": "Flèche (A) : partie d’une forme, elle la suit",
     "pen": "Trait libre (P)",
+    "eraser": "Gomme (E) : cliquer ou glisser sur les formes",
     "text": "Texte (T)",
     "colours": "Couleur",
     "colour": {
