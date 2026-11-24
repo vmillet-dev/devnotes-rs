@@ -235,6 +235,7 @@ fn row(
         || WidgetInfo::labeled(Role::Button, true, &grip_label),
         CornerRadius::same(radius::TAG),
     );
+    widgets::grip_pointer(ui, &grip);
     let dots = egui::Rect::from_center_size(grip.rect.center(), Vec2::splat(12.0));
     icons::paint(ui, dots, Icon::Ellipsis, p.text_2);
     if widgets::takes_keys(ui, &grip)
