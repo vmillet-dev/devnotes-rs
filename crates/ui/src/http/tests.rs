@@ -719,7 +719,7 @@ fn a_dragged_tab_closes_the_hand_and_is_raised_over_the_others() {
     };
     harness.event(egui::Event::PointerMoved(login.center()));
     harness.run();
-    assert_eq!(cursor(&harness), egui::CursorIcon::Grab);
+    assert_eq!(cursor(&harness), egui::CursorIcon::PointingHand);
     assert_eq!(raised(&harness), None);
 
     harness.drag_at(login.center());
