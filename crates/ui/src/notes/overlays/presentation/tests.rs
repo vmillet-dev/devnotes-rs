@@ -155,6 +155,105 @@ fn titles_and_text_start_at_the_margin_on_every_slide_and_code_is_centred() {
     assert!(code.width() < 400.0);
 }
 
+/// A slide of one code block of `lines`, shown.
+fn coded(lines: &[String]) -> Harness<'static> {
+    let mut harness = presenting(&format!("## Code\n\n```rust\n{}\n```\n", lines.join("\n")));
+    harness.set_size(egui::vec2(1_600.0, 900.0));
+    settle(&mut harness);
+    press(&mut harness, Key::ArrowRight);
+    harness
+}
+
+fn numbered(count: usize) -> Vec<String> {
+    (1..=count)
+        .map(|at| format!("let line_{at} = {at};"))
+        .collect()
+}
+
+/// The code painted: what it covers, what it is clipped to, and its first line's height.
+fn code(harness: &Harness<'_>) -> (egui::Rect, egui::Rect, f32) {
+    harness
+        .output()
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) if text.galley.text().contains("let ") => Some((
+                egui::Rect::from_min_size(text.pos, text.galley.size()),
+                clipped.clip_rect,
+                text.galley.rows[0].height(),
+            )),
+            _ => None,
+        })
+        // Over the editor, which paints it too.
+        .next_back()
+        .expect("the code is painted")
+}
+
+#[test]
+fn a_line_of_code_wider_than_the_slide_is_wrapped() {
+    let words = "client.get(url).header(token).timeout(thirty).send().await ";
+    let harness = coded(&[format!("let {}END", words.repeat(6))]);
+
+    let (covered, clip, _) = code(&harness);
+    assert!(covered.right() <= clip.right(), "{covered:?} in {clip:?}");
+    assert!(covered.left() >= clip.left());
+}
+
+#[test]
+fn a_block_taller_than_the_slide_is_fitted_and_past_the_floor_it_scrolls() {
+    let (_, _, full) = code(&coded(&numbered(3)));
+
+    let title = place(&coded(&numbered(3)), "Code");
+    assert_eq!(place(&coded(&numbered(60)), "Code"), title, "one title");
+    let (covered, clip, fitted) = code(&coded(&numbered(30)));
+    assert!(fitted < full, "{fitted} against {full}");
+    assert!(covered.bottom() <= clip.bottom(), "{covered:?} in {clip:?}");
+
+    let mut harness = coded(&numbered(60));
+    let (covered, _, floor) = code(&harness);
+    assert!(
+        (floor / full - super::SMALLEST).abs() < 0.05,
+        "{floor} against {full}"
+    );
+    let bottom = 900.0 * 0.9;
+    assert!(covered.bottom() > bottom, "sixty lines do not hold");
+    harness.event(egui::Event::PointerMoved(egui::pos2(800.0, 400.0)));
+    for _ in 0..40 {
+        harness.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, -300.0),
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Unknown,
+            modifiers: Modifiers::NONE,
+        });
+        harness.step();
+    }
+    settle(&mut harness);
+    assert!(
+        code(&harness).0.bottom() <= bottom,
+        "the last line is reached"
+    );
+}
+
+#[test]
+fn a_fitted_slide_is_where_it_stays_from_its_first_frame() {
+    let mut harness = presenting(&format!(
+        "## Titre\n\n```rust\n{}\n```\n",
+        numbered(30).join("\n")
+    ));
+    harness.input_mut().events.push(egui::Event::Key {
+        key: Key::ArrowRight,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    });
+    harness.step();
+    let first = (place(&harness, "Titre"), code(&harness).0);
+    settle(&mut harness);
+    assert_eq!((place(&harness, "Titre"), code(&harness).0), first);
+}
+
 #[test]
 fn the_map_opens_the_slide_of_the_heading_pressed() {
     let mut harness = presented();

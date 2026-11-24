@@ -25,6 +25,8 @@ use crate::widgets::{self, Button, IconButton, Kind};
 
 /// The widest a slide's text reads.
 const WIDEST: f32 = 1100.0;
+/// How small a slide too tall for the screen is drawn before it scrolls, of its size.
+const SMALLEST: f32 = 0.6;
 
 /// Where the presenter is: a slide (0 is the cover) or the map.
 #[derive(Default)]
@@ -167,26 +169,73 @@ fn stage(
     let language = state.language;
     let pictures = |id: &str| crate::notes::overlays::editor::embedded(state, id);
     let missing = i18n::translate(language, keys::drawing::MISSING, &[]);
+    let draw = |ui: &mut Ui, factor: f32| {
+        ui.set_width(room.width());
+        RichView::new(slide)
+            .slide(width, scale)
+            .scale(scale * factor)
+            .pictures(&pictures, &missing)
+            .show(ui)
+    };
+    let place = ui.unique_id().with((
+        "presentation-fit",
+        presenting.session,
+        at,
+        room.size().to_string(),
+    ));
+    let fit = fitted(ui, room, place, |ui, factor| {
+        draw(ui, factor);
+    });
     // From the top and the margin: a title is at one place on every slide, and nothing of a
     // slide's place depends on a height known a frame late.
     let mut slide_ui = ui.new_child(UiBuilder::new().max_rect(room));
-    let painted = egui::ScrollArea::vertical()
+    let shown = egui::ScrollArea::vertical()
         .id_salt(("presentation-slide", at))
-        .show(&mut slide_ui, |ui| {
-            ui.set_width(room.width());
-            RichView::new(slide)
-                .slide(width)
-                .scale(scale)
-                .pictures(&pictures, &missing)
-                .show(ui)
-        })
-        .inner;
+        .show(&mut slide_ui, |ui| draw(ui, fit.factor));
+    if (shown.content_size.y - fit.height).abs() > 1.0 {
+        // A picture came: the slide is measured again.
+        ui.data_mut(|data| data.remove::<Fit>(place));
+        ui.ctx().request_repaint();
+    }
+    let painted = shown.inner;
     for id in painted.wanted {
         actions.push(Action::Notes(Asked::Picture(id)));
     }
     if let Some(url) = painted.link {
         actions.push(Action::Notes(Asked::Editor(Editing::OpenLink(url))));
     }
+}
+
+/// How large a slide is drawn for the whole of it to hold on the screen, and how tall it is so.
+#[derive(Clone, Copy)]
+struct Fit {
+    factor: f32,
+    height: f32,
+}
+
+/// A slide whole if it can be, `SMALLEST` and scrolled otherwise. Measured out of sight in the
+/// pass that first shows it, which is drawn over: nothing is seen to shrink.
+fn fitted(ui: &mut Ui, room: Rect, place: Id, draw: impl Fn(&mut Ui, f32)) -> Fit {
+    if let Some(fit) = ui.data(|data| data.get_temp::<Fit>(place)) {
+        return fit;
+    }
+    let mut measure = |factor: f32| {
+        let mut unseen = ui.new_child(UiBuilder::new().max_rect(room).invisible());
+        draw(&mut unseen, factor);
+        Fit {
+            factor,
+            height: unseen.min_rect().height(),
+        }
+    };
+    let mut fit = measure(1.0);
+    while fit.height > room.height() && fit.factor > SMALLEST {
+        // Text that wraps less shrinks faster than its size: a step, then measured again.
+        let step = (room.height() / fit.height).clamp(0.9, 0.97);
+        fit = measure((fit.factor * step).max(SMALLEST));
+    }
+    ui.data_mut(|data| data.insert_temp(place, fit));
+    ui.ctx().request_discard("a slide was measured");
+    fit
 }
 
 /// How far along: a line at the foot of the screen.
