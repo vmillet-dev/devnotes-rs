@@ -117,6 +117,19 @@ pub(crate) fn note(
     created.poll().unwrap().unwrap()
 }
 
+/// Every text the last frame painted, one entry a galley.
+pub(crate) fn painted<State>(harness: &egui_kittest::Harness<'_, State>) -> Vec<String> {
+    harness
+        .output()
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) => Some(text.galley.text().to_owned()),
+            _ => None,
+        })
+        .collect()
+}
+
 /// `count` snippets in a space of their own, in one transaction: a corpus, quickly.
 pub(crate) fn corpus(backend: &crate::backend::Backend, count: usize) {
     let notes = (0..count)

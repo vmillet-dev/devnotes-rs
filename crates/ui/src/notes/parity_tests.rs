@@ -130,17 +130,16 @@ fn a_selection_is_copied_from_its_row() {
 }
 
 #[test]
-fn the_new_note_menu_says_new_until_a_note_was_made() {
+fn the_new_note_menu_lists_the_kinds_alone() {
     let (backend, profile) = testing::unlocked();
     testing::note(&backend, "psql prod");
     let mut harness = area(backend, profile);
-    assert!(!harness.state().state.settings.note_kind_tried);
 
     click_id(&mut harness, "new-note-kind");
-    click_id(&mut harness, "new-note-note");
-    settle(&mut harness);
 
-    assert!(harness.state().state.settings.note_kind_tried);
+    let painted = testing::painted(&harness);
+    assert!(painted.iter().any(|words| words == "Note"));
+    assert!(!painted.iter().any(|words| words == "New"));
 }
 
 #[test]
