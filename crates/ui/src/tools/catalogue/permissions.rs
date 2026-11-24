@@ -40,6 +40,8 @@ pub(super) struct PermissionsTool {
     field: Field,
     text: String,
     umask: String,
+    /// The mode the boxes were left at, until the core answers about the text they wrote.
+    boxes: Option<u32>,
     answer: Live<PermissionsRequest, PermissionsAnswer>,
 }
 
@@ -48,6 +50,7 @@ pub(super) fn make() -> Box<dyn Tool> {
         field: Field::Octal,
         text: String::new(),
         umask: "022".to_owned(),
+        boxes: None,
         answer: Live::default(),
     })
 }
@@ -75,15 +78,6 @@ fn mask_of(class: Class, right: Right) -> u32 {
         (Right::Special, Class::Group) => 0o2000,
         (Right::Special, Class::Others) => 0o1000,
     }
-}
-
-fn held(rights: Option<&ClassRights>, right: Right) -> bool {
-    rights.is_some_and(|it| match right {
-        Right::Read => it.read,
-        Right::Write => it.write,
-        Right::Execute => it.execute,
-        Right::Special => it.special,
-    })
 }
 
 fn say(language: Language, path: &str) -> String {
@@ -127,10 +121,18 @@ impl PermissionsTool {
         })
     }
 
+    /// What the boxes show: the last click, or the core's reading once it is about that text.
+    fn bits(&self) -> u32 {
+        let answered = self.answer.answered();
+        self.boxes
+            .filter(|_| answered.is_none_or(|request| request.mode != self.text))
+            .unwrap_or_else(|| self.mode().map_or(0, |mode| mode.bits))
+    }
+
     /// One box flips one bit; the mode is written back as octal, which Rust reads again.
     fn toggle(&mut self, class: Class, right: Right) {
-        let bits = self.mode().map_or(0, |mode| mode.bits);
-        let next = bits ^ mask_of(class, right);
+        let next = self.bits() ^ mask_of(class, right);
+        self.boxes = Some(next);
         self.field = Field::Octal;
         self.text = if next > 0o777 {
             format!("{next:04o}")
@@ -180,6 +182,7 @@ impl PermissionsTool {
                         if edited.changed() {
                             self.field = field;
                             self.text = shown;
+                            self.boxes = None;
                         }
                     });
                 });
@@ -223,16 +226,9 @@ impl PermissionsTool {
             (Right::Execute, tr(rights::EXECUTE)),
         ];
         let mut flipped = None;
-        let held_now: Vec<Option<ClassRights>> = CLASSES
-            .iter()
-            .map(|class| {
-                let classes = self.mode().map(|mode| mode.classes.as_slice());
-                classes
-                    .and_then(|it| it.iter().find(|row| row.class == *class))
-                    .cloned()
-            })
-            .collect();
-        for (class, rights_held) in CLASSES.iter().zip(&held_now) {
+        let bits = self.bits();
+        let held = |class, right| bits & mask_of(class, right) != 0;
+        for class in &CLASSES {
             let id = class_id(*class);
             let name = tr(match class {
                 Class::Owner => classes::OWNER,
@@ -246,7 +242,7 @@ impl PermissionsTool {
                     label(ui, &name);
                 });
                 for (right, right_name) in &names {
-                    let mut on = held(rights_held.as_ref(), *right);
+                    let mut on = held(*class, *right);
                     let right_id = match right {
                         Right::Read => "read",
                         Right::Write => "write",
@@ -257,7 +253,7 @@ impl PermissionsTool {
                         flipped = Some((*class, *right));
                     }
                 }
-                let mut on = held(rights_held.as_ref(), Right::Special);
+                let mut on = held(*class, Right::Special);
                 let special = say(language, &format!("tools.permissions.specials.{id}"));
                 let box_id = format!("permissions-{id}-special");
                 if check(ui, &mut on, &special, &box_id).clicked() {
@@ -416,10 +412,12 @@ impl Tool for PermissionsTool {
         self.field = Field::Octal;
         "754".clone_into(&mut self.text);
         "027".clone_into(&mut self.umask);
+        self.boxes = None;
     }
 
     fn clear(&mut self) {
         self.field = Field::Octal;
+        self.boxes = None;
         self.text.clear();
         self.umask.clear();
     }
