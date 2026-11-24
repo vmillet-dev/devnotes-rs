@@ -300,6 +300,14 @@ fn recette_window() {
             app.eventually("the entry asks", |tree| {
                 tree.text("file-quit").is_some_and(|now| now != word)
             });
+            app.press(Key::ArrowUp, Modifiers::NONE);
+            app.eventually("the arrows call it off", |tree| {
+                tree.text("file-quit").is_some_and(|now| now == word)
+            });
+            app.click("file-quit");
+            app.eventually("the entry asks again", |tree| {
+                tree.text("file-quit").is_some_and(|now| now != word)
+            });
             app.click("file-menu");
             app.eventually("the menu closed", |tree| !tree.has("file-quit"));
             app.click("file-menu");

@@ -166,6 +166,8 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
 
     click(&mut harness, "file-menu");
     capture(&mut harness, "file-menu");
+    click(&mut harness, "file-quit");
+    capture(&mut harness, "file-menu-quit-asks");
     harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(
         profile.path().join("library.devnotes"),
     ));

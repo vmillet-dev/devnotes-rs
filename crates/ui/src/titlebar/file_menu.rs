@@ -117,8 +117,16 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
             .with("app", METADATA.name)
             .text(state.language)
     };
-    // Quitting loses nothing: plain, like the entries above it.
-    let row = super::menu_option(ui, &quit, "file-quit", Tone::Plain);
+    // Quitting loses nothing: red only while it asks, not at rest.
+    let tone = if view.confirming_quit {
+        Tone::Asking
+    } else {
+        Tone::Plain
+    };
+    let row = super::menu_option(ui, &quit, "file-quit", tone);
+    let elsewhere = ui
+        .memory(egui::Memory::focused)
+        .is_some_and(|focused| ids.contains(&focused));
     ids.push(row.id);
     if row.clicked() {
         if view.confirming_quit {
@@ -126,6 +134,9 @@ fn entries(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Actions
             ui.close();
         }
         view.confirming_quit = true;
+        row.request_focus();
+    } else if elsewhere {
+        view.confirming_quit = false;
     }
     widgets::menu_arrows(ui, &ids);
 }
