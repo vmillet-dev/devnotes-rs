@@ -1499,6 +1499,12 @@ way — the kind menu names it and offers nothing.
   the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose
   list is `list_drawings` (titles only opened), and which is there with no drawing to say there
   is none. Any other image stays as written: the CSP loads nothing from elsewhere.
+- **Its size is in its reference**: `devnotes:drawing/<id>?w=50`, a percent of the text's width
+  from 10 to 100, read and written by `richtext::picture` alone; without one the drawing is at its
+  own size, and any other query is left as written. In the editor an image is picked by a click
+  or by the arrows, in the caret's place: a drawing's corners, its sizes and `Alt` with an arrow
+  change it, Backspace and Delete take it away (`editor/rich/images.rs`). Read and presented, it
+  obeys.
 
 ### A list sends previews, and the body is read by id
 

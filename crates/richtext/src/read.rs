@@ -227,7 +227,10 @@ impl Reader {
                     cells.push(cell);
                 }
             }
-            Open::Image { src, alt } => self.block(Block::Image { alt, src }),
+            Open::Image { src, alt } => {
+                let (src, width) = crate::picture::read(src);
+                self.block(Block::Image { alt, src, width });
+            }
         }
     }
 

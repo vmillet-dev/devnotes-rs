@@ -4281,6 +4281,8 @@
     "empty": "Choisissez un outil, puis dessinez.",
     "embed": "Insérer un dessin",
     "embedNone": "Aucun dessin à insérer",
+    "embedOwnSize": "Auto",
+    "embedResize": "Redimensionner le dessin (Alt + ← →)",
     "missing": "Dessin introuvable",
     "noPicture": "Pas d’aperçu",
     "emptyCard": "Dessin vide",

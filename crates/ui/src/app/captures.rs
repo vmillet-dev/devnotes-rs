@@ -1847,3 +1847,57 @@ fn a_folder_dropped_onto_another_space() {
     settle(&mut harness);
     capture(&mut harness, "folder-to-space");
 }
+
+/// A drawing embedded in a Note (#1583), as it opens, then picked and at half the width.
+#[test]
+fn a_drawing_in_a_note() {
+    use engine::notes::kind::NoteKind;
+    use engine::notes::model::NotePatch;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let id = |harness: &Harness<'_, DevNotesApp>, title| {
+        crate::testing::note(&harness.state().backend, title)
+            .id
+            .clone()
+    };
+    let scene = id(&harness, "Architecture");
+    let note = id(&harness, "Bienvenue dans DevNotes");
+    let rewrite = |harness: &mut Harness<'_, DevNotesApp>, id: &str, kind, content: String| {
+        let patch = NotePatch {
+            kind: Some(kind),
+            content: Some(content),
+            ..NotePatch::default()
+        };
+        let engine = harness.state().backend.engine().clone();
+        let id = id.to_owned();
+        engine::db::run_here(&engine, move |engine| {
+            engine::notes::update_note(engine, &id, &patch)
+        })
+        .unwrap();
+        harness.state_mut().state.revision.bump();
+    };
+    let shapes = r#"{"version":1,"scene":{"objects":[
+{"type":"Rect","left":160,"top":160,"width":160,"height":90,"id":"a","hue":"blue","strokeWidth":2},
+{"type":"Ellipse","left":460,"top":240,"width":160,"height":100,"rx":80,"ry":50,"id":"b","hue":"green","strokeWidth":2}
+]}}"#;
+    rewrite(&mut harness, &scene, NoteKind::Drawing, shapes.to_owned());
+    // Opened and left: its pictures are taken.
+    harness.state_mut().state.editor.open(scene.clone());
+    settle(&mut harness);
+    click(&mut harness, "editor-close");
+    let words = "Le service lit la file, puis écrit dans le stockage.";
+    let content = format!("{words}\n\n![Architecture](devnotes:drawing/{scene})\n\n{words}");
+    rewrite(&mut harness, &note, NoteKind::Note, content);
+    harness.state_mut().state.editor.open(note);
+    settle(&mut harness);
+    capture(&mut harness, "note-drawing");
+    let sized = harness.query_by(|node| node.author_id() == Some("rich-embed"));
+    sized.unwrap().click();
+    settle(&mut harness);
+    click(&mut harness, "rich-embed-size-2");
+    capture(&mut harness, "note-drawing-half");
+}
