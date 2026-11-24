@@ -37,7 +37,6 @@ fn what_is_no_size_says_where_it_stops() {
 #[test]
 fn a_transfer_is_estimated_and_compared_with_common_links() {
     let mut harness = opened("sizes");
-    click(&mut harness, "sizes-tab-1");
 
     click(&mut harness, "tool-sample");
 
@@ -45,6 +44,67 @@ fn a_transfer_is_estimated_and_compared_with_common_links() {
         has(harness, "transfer-time")
     });
     assert!(has(&harness, "transfer-connections"));
+}
+
+fn place(harness: &Harness<'_, Bench>, id: &str) -> egui::Rect {
+    harness.get_by(|node| node.author_id() == Some(id)).rect()
+}
+
+/// Side by side in a wide window, one under the other in a narrow one, both answers on the page.
+#[test]
+fn the_two_parts_of_sizes_and_of_dates_are_on_one_page() {
+    for (tool, first, second, answers) in [
+        (
+            "sizes",
+            "sizes-input",
+            "transfer-size",
+            ["sizes-results", "transfer-time"],
+        ),
+        (
+            "dates",
+            "dates-input",
+            "dates-from",
+            ["dates-forms", "dates-gap"],
+        ),
+    ] {
+        let mut harness = opened(tool);
+        click(&mut harness, "tool-sample");
+        waits_for(&mut harness, "both have answered", |harness| {
+            answers.iter().all(|id| has(harness, id))
+        });
+        assert!(place(&harness, first).right() < place(&harness, second).left());
+
+        harness.set_size(egui::vec2(800.0, 900.0));
+        settle(&mut harness);
+        assert!(place(&harness, first).bottom() < place(&harness, second).top());
+    }
+}
+
+#[test]
+fn two_parts_are_kept_as_one_note_and_one_alone_as_itself() {
+    let part = |title: &str, content: &str| {
+        Some(crate::tools::ToolResult {
+            title: title.to_owned(),
+            language: engine::notes::language::Language::Txt,
+            content: content.to_owned(),
+            warning: None,
+        })
+    };
+    let together = crate::tools::ToolResult::together;
+
+    let both = together(part("A size", "1 GiB"), part("A transfer", "6 min")).unwrap();
+    assert_eq!(
+        (both.title.as_str(), both.content.as_str()),
+        (
+            "A size",
+            "1 GiB
+
+6 min"
+        )
+    );
+    let alone = together(None, part("A transfer", "6 min")).unwrap();
+    assert_eq!(alone.title, "A transfer");
+    assert!(together(None, None).is_none());
 }
 
 #[test]

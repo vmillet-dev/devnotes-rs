@@ -2093,11 +2093,7 @@
         "landmarks": "Repères"
       },
       "localZone": "heure locale · UTC{{offset}}",
-      "tab": "Onglet",
-      "tabs": {
-        "convert": "Convertir",
-        "durations": "Écart et durées"
-      },
+      "convertTitle": "Convertir une date",
       "gapTitle": "Écart entre deux dates",
       "fields": {
         "from": "De",
@@ -2433,12 +2429,8 @@
       "tooLarge": "Trop grand pour être compté exactement : 28 chiffres au plus.",
       "empty": "Tapez une quantité, avec son unité ou non : chaque unité s’affiche ici.",
       "noteTitle": "{{value}} {{unit}} dans toutes les unités",
-      "value": "Valeur",
-      "tab": "Onglet",
-      "tabs": {
-        "conversion": "Conversion",
-        "transfer": "Transfert"
-      },
+      "conversionTitle": "Convertir une taille",
+      "transferTitle": "Temps de transfert",
       "transferSize": "Taille à transférer",
       "rate": "Débit",
       "rateUnit": "Unité du débit",
