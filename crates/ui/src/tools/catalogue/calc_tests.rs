@@ -1,9 +1,10 @@
 //! The check and unit tools over a real core: what is typed in, what comes out.
 
+use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
 use super::text_tests::{click, has, opened, output_values, type_in, value_of, waits_for};
-use crate::notes::bench::settle;
+use crate::notes::bench::{Bench, settle};
 
 #[test]
 fn a_size_is_written_in_every_unit() {
@@ -188,4 +189,77 @@ fn the_ports_are_found_by_the_start_of_their_number() {
         .map(|node| node.accesskit_node().label().unwrap_or_default())
         .collect();
     assert_eq!(rows, ["5432"]);
+}
+
+/// One frame a sixtieth of a second after the last, `events` in it: the typing's delay is long.
+fn frame(harness: &mut Harness<'_, Bench>, events: Vec<egui::Event>) {
+    let time = harness.ctx.input(|input| input.time) + 1.0 / 60.0;
+    let input = harness.input_mut();
+    input.time = Some(time);
+    input.events.extend(events);
+    harness.step();
+}
+
+fn press(harness: &mut Harness<'_, Bench>, id: &str) {
+    let pos = harness
+        .get_by(|node| node.author_id() == Some(id))
+        .rect()
+        .left_center()
+        + egui::vec2(7.0, 0.0);
+    let button = |pressed| egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(harness, vec![egui::Event::PointerMoved(pos)]);
+    frame(harness, vec![button(true)]);
+    frame(harness, vec![button(false)]);
+}
+
+/// Whether the box is painted ticked: its node says what it was before the click.
+fn painted_ticked(harness: &Harness<'_, Bench>, id: &str) -> bool {
+    let place = harness.get_by(|node| node.author_id() == Some(id)).rect();
+    let amber = crate::theme::palette(&harness.ctx).amber_fill;
+    harness.output().shapes.iter().any(|clipped| {
+        matches!(&clipped.shape, egui::Shape::Rect(shape)
+            if shape.fill == amber && place.contains_rect(shape.rect))
+    })
+}
+
+/// The box as painted in every frame from the click to the answer.
+#[test]
+fn a_box_clicked_is_ticked_once_and_stays_so() {
+    let mut harness = opened("permissions");
+    type_in(&mut harness, "permissions-octal", "644");
+    waits_for(&mut harness, "the mode is read", |harness| {
+        has(harness, "permissions-words")
+    });
+    assert!(!painted_ticked(&harness, "permissions-owner-execute"));
+
+    press(&mut harness, "permissions-owner-execute");
+    let mut states = vec![painted_ticked(&harness, "permissions-owner-execute")];
+    for _ in 0..30 {
+        frame(&mut harness, Vec::new());
+        states.push(painted_ticked(&harness, "permissions-owner-execute"));
+    }
+    assert!(states.iter().all(|on| *on), "{states:?}");
+    settle(&mut harness);
+    assert!(painted_ticked(&harness, "permissions-owner-execute"));
+}
+
+/// Two boxes before the core answered about the first: neither is lost.
+#[test]
+fn two_boxes_clicked_at_once_are_both_ticked() {
+    let mut harness = opened("permissions");
+    type_in(&mut harness, "permissions-octal", "600");
+    waits_for(&mut harness, "the mode is read", |harness| {
+        has(harness, "permissions-words")
+    });
+
+    press(&mut harness, "permissions-group-read");
+    press(&mut harness, "permissions-others-read");
+    settle(&mut harness);
+
+    assert_eq!(value_of(&harness, "permissions-octal"), "644");
 }
