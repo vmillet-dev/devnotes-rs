@@ -4281,6 +4281,8 @@
     "empty": "Pick a tool, then draw.",
     "embed": "Insert a drawing",
     "embedNone": "No drawing to insert",
+    "embedOwnSize": "Auto",
+    "embedResize": "Resize the drawing (Alt + ← →)",
     "missing": "Drawing not found",
     "noPicture": "No preview",
     "emptyCard": "Empty drawing",

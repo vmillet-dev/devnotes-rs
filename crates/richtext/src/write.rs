@@ -41,7 +41,9 @@ fn block(block: &Block) -> String {
             format!("```{language}\n{text}{newline}```")
         }
         Block::Table(rows) => format!("\n{}\n", table(rows)),
-        Block::Image { alt, src } => format!("![{alt}]({src})"),
+        Block::Image { alt, src, width } => {
+            format!("![{alt}]({})", crate::picture::written(src, *width))
+        }
         Block::Rule => "---".to_owned(),
     }
 }

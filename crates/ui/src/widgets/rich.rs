@@ -13,6 +13,7 @@ use egui::{
     Align2, Color32, CornerRadius, FontFamily, FontId, Galley, Pos2, Rect, Sense, Stroke,
     StrokeKind, TextFormat, Ui, Vec2, pos2, vec2,
 };
+use richtext::picture::drawing_id;
 use richtext::{Block, Document, Inline, Item, ListKind, Marks, Selection};
 
 use crate::theme::palette;
@@ -55,10 +56,18 @@ pub struct Painted {
     pub link: Option<String>,
     /// The drawings whose picture was never asked for.
     pub wanted: Vec<String>,
+    /// Edited: every image, and the one clicked.
+    pub images: Vec<LaidImage>,
+    pub picked: Option<Vec<usize>>,
 }
 
-/// How a Note names a drawing it embeds: an image whose source is the drawing's id.
-pub const DRAWING_SOURCE: &str = "devnotes:drawing/";
+/// An image as this frame laid it out.
+pub struct LaidImage {
+    pub path: Vec<usize>,
+    pub rect: Rect,
+    /// What a drawing as wide as the text takes; `None` where no drawing shows.
+    pub whole: Option<f32>,
+}
 
 /// What stands where a Note embeds a drawing.
 pub enum Embedded {
@@ -216,7 +225,19 @@ fn draw_block(ui: &mut Ui, block: &Block, path: &mut Vec<usize>, frame: &mut Fra
         Block::Quote(inner) => quote(ui, inner, path, frame),
         Block::CodeBlock { language, text } => code_block(ui, language, text, path, frame),
         Block::Table(rows) => table(ui, rows, path, frame),
-        Block::Image { alt, src } => image(ui, alt, src, frame),
+        Block::Image { alt, src, width } => {
+            let laid = image(ui, alt, (src, *width), frame);
+            if frame.selection.is_some() {
+                if laid.clicked() {
+                    frame.painted.picked = Some(path.clone());
+                }
+                frame.painted.images.push(LaidImage {
+                    path: path.clone(),
+                    rect: laid.response.rect,
+                    whole: laid.whole,
+                });
+            }
+        }
         Block::Rule => {
             let (rect, _) =
                 ui.allocate_exact_size(vec2(ui.available_width(), size), Sense::hover());
@@ -710,30 +731,68 @@ fn table(ui: &mut Ui, rows: &[Vec<richtext::Cell>], path: &[usize], frame: &mut 
     }
 }
 
-/// A drawing embedded by `devnotes:drawing/<id>`, its picture read by id where it is shown; any
-/// other image as it was written: a Note never fetches an address.
-/// The drawing at its own size, never wider than the text.
-fn picture_of(ui: &mut Ui, texture: &egui::TextureHandle, alt: &str) {
-    let natural = texture.size_vec2();
-    let scale = (ui.available_width() / natural.x).min(1.0);
-    let (rect, response) = ui.allocate_exact_size(natural * scale, Sense::hover());
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Image, true, alt));
+/// What an image took, and `LaidImage::whole`.
+struct Drawn {
+    response: egui::Response,
+    whole: Option<f32>,
+}
+
+impl Drawn {
+    fn clicked(&self) -> bool {
+        self.response.clicked()
+    }
+}
+
+/// An image's room: edited, a click picks it.
+fn image_room(ui: &mut Ui, size: Vec2, words: &str, frame: &Frame<'_>) -> egui::Response {
+    let sense = if frame.selection.is_some() {
+        Sense::CLICK
+    } else {
+        Sense::hover()
+    };
+    let (_, response) = ui.allocate_exact_size(size, sense);
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Image, true, words));
     crate::widgets::address(ui, &response, "rich-embed");
+    crate::widgets::pointer(ui, &response);
+    response
+}
+
+/// The drawing at its own size, never wider than the text, or at the width it was given: a part
+/// of the text's, and of it as drawn smaller for its slide to hold.
+fn picture_of(
+    ui: &mut Ui,
+    texture: &egui::TextureHandle,
+    (alt, width): (&str, Option<u8>),
+    frame: &Frame<'_>,
+) -> Drawn {
+    let natural = texture.size_vec2();
+    let whole = match frame.slide {
+        Some(slide) => ui.available_width().min(slide.widest) * frame.size / (BODY * slide.title),
+        None => ui.available_width(),
+    };
+    let shown = match width {
+        Some(percent) => whole * f32::from(percent) / 100.0,
+        None => natural.x.min(ui.available_width()),
+    };
+    let response = image_room(ui, natural * (shown / natural.x), alt, frame);
     ui.painter().image(
         texture.id(),
-        rect,
+        response.rect,
         Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
         Color32::WHITE,
     );
+    Drawn {
+        response,
+        whole: Some(whole),
+    }
 }
 
 /// Where a picture is coming, or says it will not.
-fn placeholder(ui: &mut Ui, words: &str, size: f32) {
+fn placeholder(ui: &mut Ui, words: &str, frame: &Frame<'_>) -> Drawn {
     let p = palette(ui.ctx());
-    let (rect, response) =
-        ui.allocate_exact_size(vec2(ui.available_width(), 3.0 * size), Sense::hover());
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Image, true, words));
-    crate::widgets::address(ui, &response, "rich-embed");
+    let size = vec2(ui.available_width(), 3.0 * frame.size);
+    let response = image_room(ui, size, words, frame);
+    let rect = response.rect;
     ui.painter().rect(
         rect,
         CornerRadius::same(radius::MENU),
@@ -748,26 +807,33 @@ fn placeholder(ui: &mut Ui, words: &str, size: f32) {
         FontId::proportional(font::LABEL),
         p.text_2,
     );
+    Drawn {
+        response,
+        whole: None,
+    }
 }
 
-fn image(ui: &mut Ui, alt: &str, src: &str, frame: &mut Frame<'_>) {
-    let size = frame.size;
-    let id = src.strip_prefix(DRAWING_SOURCE);
+/// A drawing embedded by `devnotes:drawing/<id>`, its picture read by id where it is shown; any
+/// other image as it was written: a Note never fetches an address.
+fn image(ui: &mut Ui, alt: &str, (src, width): (&str, Option<u8>), frame: &mut Frame<'_>) -> Drawn {
+    let id = drawing_id(src);
     let embedded = id
         .zip(frame.pictures)
         .map(|(id, (pictures, missing))| (id, pictures(id), missing));
     if let Some((id, picture, missing)) = embedded {
         match picture {
-            Some(Embedded::Shown(texture)) => return picture_of(ui, &texture, alt),
-            Some(Embedded::Missing) => return placeholder(ui, missing, size),
+            Some(Embedded::Shown(texture)) => {
+                return picture_of(ui, &texture, (alt, width), frame);
+            }
+            Some(Embedded::Missing) => return placeholder(ui, missing, frame),
             Some(Embedded::Waiting) => {}
             None => frame.painted.wanted.push(id.to_owned()),
         }
-        return placeholder(ui, "", size);
+        return placeholder(ui, "", frame);
     }
     let written = format!("![{alt}]({src})");
     let words = if id.is_some() { alt } else { written.as_str() };
-    placeholder(ui, words, size);
+    placeholder(ui, words, frame)
 }
 
 #[cfg(test)]

@@ -85,6 +85,8 @@ pub enum Block {
     Image {
         alt: String,
         src: String,
+        /// Of a drawing, in percent of the text's width.
+        width: Option<u8>,
     },
     Rule,
 }

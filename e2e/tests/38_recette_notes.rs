@@ -450,9 +450,32 @@ fn recette_a_sheet_and_a_drawing() {
             app.click("rich-embed-drawing-0");
             app.wait_for("rich-embed");
             app.capture("des-13");
-            close_editor(&mut app);
         },
     );
+
+    step("a drawing in a Note is resized, and stays so", || {
+        let width = |tree: &Tree| {
+            let drawn = tree.find("rich-embed").and_then(Node::bounds);
+            drawn.map_or(0.0, |bounds| bounds.width())
+        };
+        app.click("rich-embed");
+        app.click("rich-embed-size-4");
+        app.wait_for("rich-embed-resize");
+        let whole = width(&app.tree());
+        app.click("rich-embed-size-1");
+        app.eventually("a quarter of the width", |tree| {
+            (width(tree) - whole / 4.0).abs() < 2.0
+        });
+        app.drag_in("rich-embed-resize", (12.0, 12.0), (1_200.0, 12.0));
+        app.eventually("the whole width again", |tree| {
+            (width(tree) - whole).abs() < 2.0
+        });
+        app.capture("des-13-sized");
+        close_editor(&mut app);
+        open_card(&mut app, "Avec dessin");
+        app.eventually("kept", |tree| (width(tree) - whole).abs() < 2.0);
+        close_editor(&mut app);
+    });
 
     app.quit();
 }

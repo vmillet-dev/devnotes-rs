@@ -11,6 +11,7 @@ mod history;
 mod html;
 pub mod inlines;
 mod model;
+pub mod picture;
 mod read;
 pub mod rules;
 pub mod table;

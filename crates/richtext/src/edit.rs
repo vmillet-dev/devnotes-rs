@@ -244,7 +244,7 @@ fn is_cell(document: &Document, path: &[usize]) -> bool {
 }
 
 /// Every leaf, and every image and rule, in reading order: what a selection can cover.
-fn units(document: &Document) -> Vec<(Vec<usize>, bool)> {
+pub(crate) fn units(document: &Document) -> Vec<(Vec<usize>, bool)> {
     let mut found = Vec::new();
     walk(&document.blocks, &mut Vec::new(), &mut found);
     found
@@ -280,7 +280,7 @@ fn walk(blocks: &[Block], prefix: &mut Vec<usize>, found: &mut Vec<(Vec<usize>, 
 
 /// Items, lists and quotes left with nothing in them go; a document is never left without a
 /// paragraph to type in.
-fn prune(blocks: &mut Vec<Block>) {
+pub(crate) fn prune(blocks: &mut Vec<Block>) {
     prune_in(blocks);
     if blocks.is_empty() {
         blocks.push(Block::Paragraph(Vec::new()));
