@@ -10,7 +10,7 @@ use egui::{
 };
 use i18n::Language;
 
-use super::CopyValue;
+use super::copies_width;
 use crate::theme::palette;
 use crate::widgets::{self, address};
 
@@ -26,6 +26,7 @@ pub struct ResultRow<'a> {
     name: &'a str,
     value: &'a str,
     copied: Option<&'a str>,
+    raw: Option<&'a str>,
     copyable: bool,
     meta: &'a str,
     matched: bool,
@@ -38,6 +39,7 @@ impl<'a> ResultRow<'a> {
             name,
             value,
             copied: None,
+            raw: None,
             copyable: true,
             meta: "",
             matched: false,
@@ -49,6 +51,13 @@ impl<'a> ResultRow<'a> {
     #[must_use]
     pub fn copied(mut self, copied: &'a str) -> Self {
         self.copied = Some(copied);
+        self
+    }
+
+    /// The same value as it is stored, copied by a button of its own.
+    #[must_use]
+    pub fn raw(mut self, raw: &'a str) -> Self {
+        self.raw = Some(raw);
         self
     }
 
@@ -88,7 +97,9 @@ impl<'a> ResultRow<'a> {
         let p = palette(ui.ctx());
         let width = ui.available_width();
         let inner = width - 16.0 - 10.0;
-        let copy = if self.copyable { 28.0 + 12.0 } else { 0.0 };
+        let given = (self.copied.unwrap_or(self.value), self.raw);
+        let copies = copies_width(ui, given, language);
+        let copy = if self.copyable { copies + 12.0 } else { 0.0 };
         let long = self.is_long();
         let name_room = if long {
             inner - copy
@@ -175,13 +186,12 @@ impl<'a> ResultRow<'a> {
                 rect.center().y - 14.0
             };
             let at = Rect::from_min_size(
-                Pos2::new(rect.right() - 10.0 - 28.0, top),
-                Vec2::splat(28.0),
+                Pos2::new(rect.right() - 10.0 - copies, top),
+                Vec2::new(copies, 28.0),
             );
-            let mut end = ui.new_child(UiBuilder::new().max_rect(at));
-            CopyValue::new(self.copied.unwrap_or(self.value), self.name, language)
-                .compact()
-                .show(&mut end);
+            let reading = egui::Layout::left_to_right(egui::Align::Center);
+            let mut end = ui.new_child(UiBuilder::new().max_rect(at).layout(reading));
+            super::copies(&mut end, given, self.name, language);
         }
         response
     }

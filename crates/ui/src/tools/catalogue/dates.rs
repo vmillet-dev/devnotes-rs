@@ -456,7 +456,7 @@ impl DatesTool {
             }) => {
                 let p = palette(ui.ctx());
                 let words = spell_parts(parts, *negative, language);
-                let totals_shown: Vec<(String, String)> = totals
+                let totals_shown: Vec<(String, String, String)> = totals
                     .iter()
                     .flat_map(|it| {
                         [
@@ -467,7 +467,8 @@ impl DatesTool {
                     })
                     .map(|(id, value)| {
                         let path = format!("tools.dates.totals.{id}");
-                        (said(language, &path, &[]), number(value, language))
+                        let shown = number(value, language);
+                        (said(language, &path, &[]), shown, value.to_string())
                     })
                     .collect();
                 let iso_name = said(language, "tools.dates.totals.iso", &[]);
@@ -483,7 +484,11 @@ impl DatesTool {
                     if *from_words {
                         rows.push(ResultRow::new(&iso_name, iso));
                     }
-                    rows.extend(totals_shown.iter().map(|(n, v)| ResultRow::new(n, v)));
+                    rows.extend(
+                        totals_shown
+                            .iter()
+                            .map(|(name, shown, raw)| ResultRow::new(name, shown).raw(raw)),
+                    );
                     result_rows(ui, &rows, language);
                 });
                 if totals.is_none() {
@@ -641,6 +646,7 @@ fn measured(ui: &mut Ui, answer: &DurationsAnswer, language: Language) {
         .each_ref()
         .map(|(id, _)| said(language, &format!("tools.dates.elapsedRows.{id}"), &[]));
     let words = spell_calendar(calendar, *negative, language);
+    let minutes = elapsed.total_minutes.to_string();
     card(ui, "dates-gap", |ui| {
         ui.add_space(gap::GROUPS);
         ui.horizontal(|ui| {
@@ -652,7 +658,10 @@ fn measured(ui: &mut Ui, answer: &DurationsAnswer, language: Language) {
         let shown: Vec<_> = rows
             .iter()
             .zip(&names)
-            .map(|((_, value), name)| ResultRow::new(name, value))
+            .map(|((id, value), name)| match *id {
+                "minutes" => ResultRow::new(name, value).raw(&minutes),
+                _ => ResultRow::new(name, value),
+            })
             .collect();
         result_rows(ui, &shown, language);
     });

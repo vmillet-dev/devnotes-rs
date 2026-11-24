@@ -26,6 +26,7 @@ pub mod image;
 pub mod jwt;
 pub(crate) mod numbers;
 pub mod permissions;
+pub mod printed;
 pub mod qr;
 pub mod random;
 pub mod sizes;
