@@ -75,7 +75,7 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
         let inside = egui::UiBuilder::new()
             .max_rect(rect.shrink(1.0))
             .layout(reading);
-        ui.scope_builder(inside, |ui| {
+        let changed = ui.scope_builder(inside, |ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             let mut changed = None;
             for (index, (value, label)) in self.options.iter().enumerate() {
@@ -88,15 +88,13 @@ impl<'a, T: PartialEq + Copy> Segmented<'a, T> {
                 }
             }
             changed
+        });
+        // Whether it changed or not: the spacing it adds would come a frame late on a click.
+        let unchanged = ui.allocate_response(Vec2::ZERO, Sense::hover());
+        changed.inner.map_or(unchanged, |mut response| {
+            response.mark_changed();
+            response
         })
-        .inner
-        .map_or_else(
-            || ui.allocate_response(Vec2::ZERO, Sense::hover()),
-            |mut response| {
-                response.mark_changed();
-                response
-            },
-        )
     }
 }
 

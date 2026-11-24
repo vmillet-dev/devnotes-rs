@@ -198,6 +198,8 @@ fn frame(harness: &mut Harness<'_, Bench>, events: Vec<egui::Event>) {
     input.time = Some(time);
     input.events.extend(events);
     harness.step();
+    // Kept from a step to the next otherwise, and the clock would stand still.
+    harness.input_mut().time = None;
 }
 
 fn press(harness: &mut Harness<'_, Bench>, id: &str) {
@@ -262,4 +264,60 @@ fn two_boxes_clicked_at_once_are_both_ticked() {
     settle(&mut harness);
 
     assert_eq!(value_of(&harness, "permissions-octal"), "644");
+}
+
+/// Where each text of the frame is painted.
+fn texts(harness: &Harness<'_, Bench>) -> std::collections::BTreeMap<String, egui::Pos2> {
+    harness
+        .output()
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) if !text.galley.text().is_empty() => {
+                Some((text.galley.text().to_owned(), text.pos.round()))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// What a kind shows is at its place from the frame of the click, its options with it.
+#[test]
+fn a_kind_of_identifier_shows_its_options_where_they_stay() {
+    let mut harness = opened("identifiers");
+    waits_for(&mut harness, "the list is drawn", |harness| {
+        has(harness, "identifiers-row")
+    });
+    for kind in [3, 0, 6, 2, 3] {
+        press(&mut harness, &format!("identifiers-kind-{kind}"));
+        let first = texts(&harness);
+        frame(&mut harness, Vec::new());
+        frame(&mut harness, Vec::new());
+        for (words, at) in texts(&harness) {
+            if let Some(before) = first.get(&words) {
+                assert_eq!(*before, at, "{words:?} moved after the kind {kind}");
+            }
+        }
+        settle(&mut harness);
+    }
+}
+
+/// The picker of a note keeps its height while its list is read.
+#[test]
+fn the_note_picker_does_not_move_once_its_notes_are_listed() {
+    let mut harness = opened("convert");
+    press(&mut harness, "note-import-text");
+    let place = |harness: &Harness<'_, Bench>| {
+        harness
+            .query_by(|node| node.author_id() == Some("note-picker-cancel"))
+            .map(|node| node.rect())
+    };
+    let mut places: Vec<egui::Rect> = Vec::new();
+    for _ in 0..20 {
+        frame(&mut harness, Vec::new());
+        places.extend(place(&harness));
+    }
+    settle(&mut harness);
+    let last = place(&harness).expect("the picker is open");
+    assert!(places.iter().all(|at| *at == last), "{places:?}");
 }
