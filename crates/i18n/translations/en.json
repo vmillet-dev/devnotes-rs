@@ -2093,11 +2093,7 @@
         "landmarks": "Landmarks"
       },
       "localZone": "local time · UTC{{offset}}",
-      "tab": "Tab",
-      "tabs": {
-        "convert": "Convert",
-        "durations": "Gap and durations"
-      },
+      "convertTitle": "Convert a date",
       "gapTitle": "Gap between two dates",
       "fields": {
         "from": "From",
@@ -2433,12 +2429,8 @@
       "tooLarge": "Too large to count exactly: 28 digits at most.",
       "empty": "Type a quantity, with its unit or without: every unit shows here.",
       "noteTitle": "{{value}} {{unit}} in every unit",
-      "value": "Value",
-      "tab": "Tab",
-      "tabs": {
-        "conversion": "Conversion",
-        "transfer": "Transfer"
-      },
+      "conversionTitle": "Convert a size",
+      "transferTitle": "Transfer time",
       "transferSize": "Size to transfer",
       "rate": "Rate",
       "rateUnit": "Rate unit",

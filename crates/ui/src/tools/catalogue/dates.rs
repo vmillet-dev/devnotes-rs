@@ -24,14 +24,7 @@ use crate::tools::ui::{
 use crate::tools::{Drawn, Tool, ToolResult};
 use crate::widgets::{Button, Segmented, TextField, address};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Tab {
-    Convert,
-    Durations,
-}
-
 pub(super) struct DatesTool {
-    tab: Tab,
     text: String,
     magnitude: Option<Magnitude>,
     from: String,
@@ -45,7 +38,6 @@ pub(super) struct DatesTool {
 
 pub(super) fn make() -> Box<dyn Tool> {
     Box::new(DatesTool {
-        tab: Tab::Convert,
         text: String::new(),
         magnitude: None,
         from: String::new(),
@@ -260,6 +252,7 @@ impl DatesTool {
     fn convert(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
         let language = drawn.language;
         let tr = |key| i18n::translate(language, key, &[]);
+        section_title(ui, &tr(keys::tools::dates::CONVERT_TITLE));
         let name = tr(keys::tools::dates::INPUT_LABEL);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;
@@ -521,6 +514,13 @@ impl DatesTool {
         hint(ui, &explained);
     }
 
+    /// The time between two dates, then one written in words or as ISO.
+    fn durations(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
+        self.gap(ui, drawn);
+        ui.add_space(gap::GROUPS);
+        self.duration(ui, drawn);
+    }
+
     fn durations_result(&self, language: Language) -> Option<ToolResult> {
         let answer = self.durations.value()?;
         let mut lines = Vec::new();
@@ -708,27 +708,7 @@ impl Tool for DatesTool {
     }
 
     fn ui(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
-        use keys::tools::dates::tabs;
-        let tr = |key| i18n::translate(drawn.language, key, &[]);
-        let options = [
-            (Tab::Convert, tr(tabs::CONVERT)),
-            (Tab::Durations, tr(tabs::DURATIONS)),
-        ];
-        let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
-        Segmented::new(&options, "dates-tab").show(ui, &mut self.tab);
-        ui.add_space(gap::GROUPS);
-        match self.tab {
-            Tab::Convert => {
-                egui::ScrollArea::vertical()
-                    .id_salt("dates-convert")
-                    .auto_shrink(false)
-                    .show(ui, |ui| {
-                        ui.spacing_mut().item_spacing.y = gap::INSET;
-                        self.convert(ui, drawn);
-                    });
-            }
-            Tab::Durations => columns(ui, self, drawn, (Self::gap, Self::duration)),
-        }
+        columns(ui, self, drawn, (Self::convert, Self::durations));
     }
 
     fn keeps_result(&self) -> bool {
@@ -736,10 +716,7 @@ impl Tool for DatesTool {
     }
 
     fn result(&self, language: Language) -> Option<ToolResult> {
-        match self.tab {
-            Tab::Convert => self.converted(language),
-            Tab::Durations => self.durations_result(language),
-        }
+        ToolResult::together(self.converted(language), self.durations_result(language))
     }
 
     fn has_sample(&self) -> bool {

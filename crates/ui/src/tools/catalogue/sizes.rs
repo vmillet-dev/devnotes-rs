@@ -19,7 +19,7 @@ use crate::tools::ui::{
     result_rows, section_title,
 };
 use crate::tools::{Drawn, Tool, ToolResult};
-use crate::widgets::{ChoiceMenu, Segmented, TextField, address};
+use crate::widgets::{ChoiceMenu, TextField, address};
 
 const GROUPS: [(&str, &[SizeUnit]); 3] = [
     (
@@ -68,14 +68,7 @@ const RATES: [RateUnit; 8] = [
 
 const EFFICIENCY: (u32, u32) = (50, 100);
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Tab {
-    Conversion,
-    Transfer,
-}
-
 pub(super) struct SizesTool {
-    tab: Tab,
     text: String,
     unit: SizeUnit,
     decimals: String,
@@ -90,7 +83,6 @@ pub(super) struct SizesTool {
 
 pub(super) fn make() -> Box<dyn Tool> {
     Box::new(SizesTool {
-        tab: Tab::Conversion,
         text: String::new(),
         unit: SizeUnit::Megabyte,
         decimals: "3".to_owned(),
@@ -235,7 +227,7 @@ impl SizesTool {
     fn value_input(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
         let language = drawn.language;
         let tr = |key| i18n::translate(language, key, &[]);
-        section_title(ui, &tr(keys::tools::sizes::VALUE));
+        section_title(ui, &tr(keys::tools::sizes::CONVERSION_TITLE));
         let name = tr(keys::tools::sizes::INPUT_LABEL);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;
@@ -344,8 +336,9 @@ impl SizesTool {
     fn transfer_input(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
         let language = drawn.language;
         let tr = |key| i18n::translate(language, key, &[]);
+        section_title(ui, &tr(keys::tools::sizes::TRANSFER_TITLE));
         let name = tr(keys::tools::sizes::TRANSFER_SIZE);
-        section_title(ui, &name);
+        label(ui, &name);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;
             let room = ui.available_width() - 170.0;
@@ -358,7 +351,7 @@ impl SizesTool {
             unit_menu(ui, &mut self.size_unit, "transfer-size-unit", language);
         });
         let name = tr(keys::tools::sizes::RATE);
-        section_title(ui, &name);
+        label(ui, &name);
         let rates: Vec<(RateUnit, String)> = RATES
             .iter()
             .map(|it| (*it, rate_name(*it, language)))
@@ -453,6 +446,16 @@ impl SizesTool {
         });
     }
 
+    fn conversion(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
+        self.value_input(ui, drawn);
+        self.converted(ui, drawn);
+    }
+
+    fn transfers(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
+        self.transfer_input(ui, drawn);
+        self.estimate(ui, drawn);
+    }
+
     fn conversion_result(&self, language: Language) -> Option<ToolResult> {
         let Some(SizesAnswer::Converted { rows, unit, .. }) = self.answer.value() else {
             return None;
@@ -526,19 +529,7 @@ impl Tool for SizesTool {
     }
 
     fn ui(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
-        use keys::tools::sizes::tabs;
-        let tr = |key| i18n::translate(drawn.language, key, &[]);
-        let options = [
-            (Tab::Conversion, tr(tabs::CONVERSION)),
-            (Tab::Transfer, tr(tabs::TRANSFER)),
-        ];
-        let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
-        Segmented::new(&options, "sizes-tab").show(ui, &mut self.tab);
-        ui.add_space(gap::GROUPS);
-        match self.tab {
-            Tab::Conversion => columns(ui, self, drawn, (Self::value_input, Self::converted)),
-            Tab::Transfer => columns(ui, self, drawn, (Self::transfer_input, Self::estimate)),
-        }
+        columns(ui, self, drawn, (Self::conversion, Self::transfers));
     }
 
     fn keeps_result(&self) -> bool {
@@ -546,10 +537,10 @@ impl Tool for SizesTool {
     }
 
     fn result(&self, language: Language) -> Option<ToolResult> {
-        match self.tab {
-            Tab::Conversion => self.conversion_result(language),
-            Tab::Transfer => self.transfer_result(language),
-        }
+        ToolResult::together(
+            self.conversion_result(language),
+            self.transfer_result(language),
+        )
     }
 
     fn has_sample(&self) -> bool {
