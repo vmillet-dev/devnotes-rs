@@ -1402,7 +1402,9 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
 - **A code block is coloured by the code's grammars** (`text::highlight`, → "Syntax
   highlighting"), its language as a label on the block, drawn plain until the grammars have
   loaded. Tab indents as the code does (`indent_unit`). A card and a search read its lines as
-  they are (`notes::markdown::plain`).
+  they are (`notes::markdown::plain`). It is left at its end by a third Enter, after two blank
+  lines, and by ↓ on its last line when nothing follows it: `edit::leave_code` opens a paragraph
+  after it, which is not written while it is empty.
 - **« Présenter » shows the Note full screen, a slide at a time.** Rust cuts the draft on
   screen, not the stored body (`present_note`, `notes::markdown::present`): a slide starts at
   each `#` or `##` heading and after each `---` rule outside any list, quote or fence, each slide

@@ -306,6 +306,25 @@ fn recette_a_formatted_note() {
     });
 
     step(
+        "RIC-08 a final code block is left by the down arrow",
+        || {
+            app.press(Key::N, SHIFT_COMMAND);
+            app.fill("editor-title", "Bloc final");
+            app.click("editor-rich");
+            app.click("rich-codeBlock");
+            app.type_text("let x = 1;");
+            app.press(Key::ArrowDown, Modifiers::NONE);
+            app.type_text("Suite");
+            app.eventually("the text is under the block", |tree| {
+                tree.find("editor-rich")
+                    .and_then(Node::value)
+                    .is_some_and(|text| text.contains("let x = 1;") && text.contains("\nSuite"))
+            });
+            close_editor(&mut app);
+        },
+    );
+
+    step(
         "RIC-09 what looks like Markdown comes back as typed",
         || {
             app.press(Key::N, SHIFT_COMMAND);
