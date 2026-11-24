@@ -1289,6 +1289,37 @@ fn a_selection_and_a_report_at_three_widths() {
 
 /// The samples' tree with a chain of folders four levels deep, at the default rail (#1463).
 #[test]
+fn the_tag_manager_with_two_hundred_tags() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let engine = harness.state().backend.engine().clone();
+    let tags: Vec<String> = (0..200).map(|rank| format!("service-{rank:03}")).collect();
+    for (rank, tags) in tags.chunks(10).enumerate() {
+        let id = crate::testing::note(&harness.state().backend, &format!("note {rank}"))
+            .id
+            .clone();
+        let patch = engine::notes::model::NotePatch {
+            tags: Some(tags.to_vec()),
+            ..engine::notes::model::NotePatch::default()
+        };
+        engine::db::run_here(&engine, move |engine| {
+            engine::notes::update_note(engine, &id, &patch)
+        })
+        .unwrap();
+    }
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    click(&mut harness, "facets-toggle");
+    click(&mut harness, "tag-manage");
+    settle(&mut harness);
+    capture(&mut harness, "tag-manager-many");
+}
+
+#[test]
 fn the_folders_four_levels_deep() {
     use engine::folders::model::FolderDraft;
     let profile = tempfile::tempdir().unwrap();
