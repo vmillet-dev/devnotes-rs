@@ -247,6 +247,8 @@ enum Tone {
     Plain,
     /// Nothing to act on: it stays where it is, muted, and a click does nothing.
     Idle,
+    /// The entry asks to be clicked again.
+    Asking,
 }
 
 /// A line of the bar's menus: 7 × 10, 6 px, 12.5 px; `bg-3` under the pointer.
@@ -265,7 +267,12 @@ fn menu_option(ui: &mut Ui, label: &str, author_id: &str, tone: Tone) -> egui::R
     if lit {
         ui.painter().rect_filled(response.rect, corner, p.bg_3);
     }
+    if tone == Tone::Asking {
+        ui.painter()
+            .rect_filled(response.rect, corner, p.red.gamma_multiply(0.12));
+    }
     let ink = match tone {
+        Tone::Asking => p.red,
         Tone::Idle => p.text_2,
         Tone::Plain if lit => p.text_0,
         Tone::Plain => p.text_1,

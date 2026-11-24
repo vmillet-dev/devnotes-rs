@@ -914,6 +914,37 @@ mod tests {
         assert!(!present(&harness, "passphrase-prompt"));
     }
 
+    /// The colour `words` were painted in by the last frame.
+    fn ink_of(harness: &Harness<'_, DevNotesApp>, words: &str) -> Option<egui::Color32> {
+        harness
+            .output()
+            .shapes
+            .iter()
+            .find_map(|clipped| match &clipped.shape {
+                egui::Shape::Text(text) if text.galley.text() == words => {
+                    Some(text.galley.job.sections[0].format.color)
+                }
+                _ => None,
+            })
+    }
+
+    #[test]
+    fn the_quit_entry_is_red_while_it_asks_and_the_arrows_call_it_off() {
+        let mut harness = open_library(tempfile::tempdir().unwrap().path());
+        let red = crate::theme::palette(&harness.ctx).red;
+        let language = harness.state().state.language;
+        let asks = i18n::translate(language, i18n::keys::file::QUIT_CONFIRM, &[]);
+        click(&mut harness, "file-menu");
+        assert_eq!(ink_of(&harness, &asks), None);
+
+        click(&mut harness, "file-quit");
+        assert_eq!(ink_of(&harness, &asks), Some(red));
+
+        harness.key_press(egui::Key::ArrowUp);
+        settle(&mut harness);
+        assert_eq!(ink_of(&harness, &asks), None);
+    }
+
     #[test]
     fn an_entry_with_nothing_to_act_on_does_nothing() {
         use egui_kittest::kittest::{NodeT, Queryable};
