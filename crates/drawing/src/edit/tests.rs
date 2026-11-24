@@ -523,3 +523,135 @@ fn an_arrow_keeps_its_other_end_when_the_eraser_takes_the_shape_it_starts_on() {
     let arrow = object(&editor, 2);
     assert!(arrow.from().is_none() && arrow.to().is_some());
 }
+
+/// Two rectangles, (0, 0)–(100, 60) and (300, 0)–(400, 60), an arrow from the first to the second.
+fn joined() -> Editor {
+    let mut editor = editor();
+    for left in [0.0, 300.0] {
+        editor.set_tool(Tool::Rectangle);
+        drag(&mut editor, at(left, 0.0), at(left + 100.0, 60.0));
+    }
+    editor.set_tool(Tool::Arrow);
+    drag(&mut editor, at(50.0, 30.0), at(350.0, 30.0));
+    editor
+}
+
+fn ends(editor: &Editor) -> Ends {
+    object(editor, 2).ends().unwrap()
+}
+
+#[test]
+fn an_arrow_selected_alone_shows_its_two_ends_and_no_frame() {
+    let editor = joined();
+    assert_eq!(editor.selected(), [2]);
+    assert!(editor.frame().is_none());
+    let [(_, from), (_, to)] = editor.arrow_ends().unwrap();
+    assert_eq!((from, to), (at(101.0, 30.0), at(299.0, 30.0)));
+}
+
+#[test]
+fn an_end_dragged_to_the_paper_lets_its_shape_go_and_back_on_a_shape_holds_it_again() {
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(250.0, 200.0));
+    assert_eq!(object(&editor, 2).to(), None);
+    assert_eq!(object(&editor, 2).from(), object(&editor, 0).id());
+    assert_eq!(ends(&editor)[2..], [250.0, 200.0]);
+    editor.undo();
+    assert_eq!(object(&editor, 2).to(), object(&editor, 1).id());
+
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(250.0, 200.0));
+    drag(&mut editor, at(250.0, 200.0), at(350.0, 40.0));
+    assert_eq!(object(&editor, 2).to(), object(&editor, 1).id());
+    assert_eq!(ends(&editor)[2..], [299.0, 30.0]);
+}
+
+#[test]
+fn a_click_on_an_end_moves_nothing() {
+    let mut editor = joined();
+    let before = editor.body();
+    drag(&mut editor, at(299.0, 30.0), at(299.0, 30.0));
+    assert_eq!(editor.body(), before);
+}
+
+#[test]
+fn an_end_takes_another_shape_but_not_the_one_the_other_end_is_on() {
+    let mut editor = joined();
+    editor.set_tool(Tool::Ellipse);
+    drag(&mut editor, at(0.0, 300.0), at(100.0, 400.0));
+    let third = object(&editor, 3).id().map(str::to_owned);
+
+    drag(&mut editor, at(200.0, 30.0), at(200.0, 30.0));
+    drag(&mut editor, at(299.0, 30.0), at(50.0, 350.0));
+    assert_eq!(object(&editor, 2).to(), third.as_deref());
+    let end = at(ends(&editor)[2], ends(&editor)[3]);
+    drag(&mut editor, end, at(20.0, 20.0));
+    assert_eq!(object(&editor, 2).to(), None);
+}
+
+#[test]
+fn the_shape_an_end_would_hold_is_told_while_an_arrow_is_drawn_or_an_end_moved() {
+    let mut editor = joined();
+    let on_the_second = at(350.0, 30.0);
+    assert!(editor.attaching(on_the_second).is_none(), "nothing in hand");
+
+    editor.set_tool(Tool::Arrow);
+    assert!(editor.attaching(on_the_second).is_some());
+    editor.press(at(50.0, 30.0), false);
+    assert!(
+        editor.attaching(at(60.0, 30.0)).is_none(),
+        "not the one it starts on"
+    );
+    editor.release(at(200.0, 200.0));
+
+    let end = editor.arrow_ends().unwrap()[1].1;
+    editor.press(end, false);
+    editor.drag(on_the_second);
+    assert!(editor.attaching(on_the_second).is_some());
+    editor.release(on_the_second);
+    assert!(editor.attaching(on_the_second).is_none());
+}
+
+#[test]
+fn a_shape_under_a_text_holds_an_arrow() {
+    let mut editor = editor();
+    editor.set_tool(Tool::Rectangle);
+    drag(&mut editor, at(0.0, 0.0), at(300.0, 200.0));
+    editor.set_tool(Tool::Text);
+    drag(&mut editor, at(50.0, 100.0), at(50.0, 100.0));
+    editor.set_text("label");
+    editor.leave_text();
+
+    editor.set_tool(Tool::Arrow);
+    drag(&mut editor, at(600.0, 100.0), at(60.0, 100.0));
+    assert_eq!(object(&editor, 2).to(), object(&editor, 0).id());
+}
+
+#[test]
+fn an_arrow_follows_a_shape_resized_and_rotated() {
+    let mut editor = joined();
+    drag(&mut editor, at(350.0, 30.0), at(350.0, 30.0));
+    // Its left side pulled 50 to the left.
+    drag(&mut editor, at(299.0, 30.0), at(249.0, 30.0));
+    assert!(
+        (ends(&editor)[2] - 249.0).abs() < 1.0,
+        "{:?}",
+        ends(&editor)
+    );
+
+    let mut editor = joined();
+    drag(&mut editor, at(350.0, 30.0), at(350.0, 30.0));
+    let frame = editor.frame().unwrap();
+    let handle = frame.grip(Grip::Rotate);
+    drag(
+        &mut editor,
+        handle,
+        at(frame.centre.x + 200.0, frame.centre.y),
+    );
+    // Turned a quarter, it is 62 wide: its left side came closer to its centre.
+    assert!(
+        (ends(&editor)[2] - 319.0).abs() < 1.5,
+        "{:?}",
+        ends(&editor)
+    );
+}

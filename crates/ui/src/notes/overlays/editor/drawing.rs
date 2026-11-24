@@ -578,6 +578,28 @@ fn paint(ui: &Ui, view: &mut DrawingView, stage: Rect, language: Language) {
             Stroke::new(2.0, p.red),
         ));
     }
+    if let Some(at) = ui.input(|input| input.pointer.latest_pos())
+        && stage.contains(at)
+        && let Some(frame) = view.editor.attaching(view.camera.scene_at(stage, at))
+    {
+        // What the end of the arrow would hold on to.
+        let corners = frame.corners().map(|at| view.camera.screen_at(stage, at));
+        painter.add(Shape::closed_line(
+            corners.to_vec(),
+            Stroke::new(2.0, p.amber_edge),
+        ));
+    }
+    if let Some(ends) = view.editor.arrow_ends() {
+        for (_, at) in ends {
+            let centre = view.camera.screen_at(stage, at);
+            painter.circle(
+                centre,
+                GRIP_SIZE / 2.0,
+                p.amber_edge,
+                Stroke::new(1.0, p.bg_1),
+            );
+        }
+    }
     if let Some(frame) = view.editor.frame() {
         paint_frame(&painter, p, (stage, view.camera), &frame);
     }
