@@ -10,7 +10,7 @@ use egui::{
 use engine::notes::view::fold;
 use i18n::{Language, keys};
 
-use super::{TextField, hovered, interact, text, towards};
+use super::{TextField, hovered, interact, one_line, text, tooltip, towards};
 use crate::theme::icons::Icon;
 use crate::theme::palette;
 
@@ -195,7 +195,7 @@ pub fn entry(
     on: bool,
     opens: bool,
 ) -> Response {
-    drawn(ui, None, label, author_id, (destructive, on, opens))
+    drawn(ui, None, label, author_id, (destructive, on, opens), 0.0)
 }
 
 /// An entry after its icon, drawn in `colour`, or in the entry's own ink without one.
@@ -207,15 +207,17 @@ pub fn icon_entry(
     (destructive, opens): (bool, bool),
 ) -> Response {
     let lead = Some((icon, colour));
-    drawn(ui, lead, label, author_id, (destructive, false, opens))
+    drawn(ui, lead, label, author_id, (destructive, false, opens), 0.0)
 }
 
+/// `tail` is the room kept at the right of the label for what the caller paints there.
 fn drawn(
     ui: &mut Ui,
     lead: Option<(Icon, Option<Color32>)>,
     label: &str,
     author_id: &str,
     (destructive, on, opens): (bool, bool, bool),
+    tail: f32,
 ) -> Response {
     let p = palette(ui.ctx());
     let probe = text(
@@ -260,7 +262,10 @@ fn drawn(
         crate::theme::icons::paint(ui, glyph, icon, colour.unwrap_or(ink));
         left += 22.0;
     }
-    let galley = text(ui, label, font::LABEL, 400.0, FontFamily::Proportional, ink);
+    let room = response.rect.right() - 8.0 - chevron_room - tail - left;
+    // The half pixel: a label as wide as its room is whole.
+    let galley = one_line(ui, label, (font::LABEL, 400.0), ink, room + 0.5);
+    let cut = galley.elided;
     let at = egui::pos2(left, response.rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, Color32::TRANSPARENT);
     if opens {
@@ -269,6 +274,9 @@ fn drawn(
             Vec2::splat(12.0),
         );
         crate::theme::icons::paint(ui, glyph, Icon::ChevronRight, p.text_2);
+    }
+    if cut {
+        return tooltip(response, label);
     }
     response
 }
@@ -384,14 +392,11 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             egui::StrokeKind::Inside,
         );
         let ink = towards(p.text_1, p.amber_text, hover);
-        let galley = text(
-            ui,
-            shown,
-            font::CONTROL,
-            400.0,
-            FontFamily::Proportional,
-            ink,
-        );
+        let room = response.rect.width() - 30.0;
+        let galley = one_line(ui, shown, (font::CONTROL, 400.0), ink, room + 0.5);
+        if galley.elided {
+            response = tooltip(response, shown);
+        }
         let at = egui::pos2(
             response.rect.left() + 8.0,
             response.rect.center().y - galley.size().y / 2.0,
@@ -406,9 +411,15 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
         let query_id = response.id.with("query");
         let filtering = self.options.len() >= FILTER_FROM;
         let trigger = response.rect.width();
+        // A click in the filter is a click in the popup: only a pick closes a filtered menu.
+        let close = if filtering {
+            PopupCloseBehavior::CloseOnClickOutside
+        } else {
+            PopupCloseBehavior::CloseOnClick
+        };
         let picked = Popup::menu(&response)
             .frame(frame(ui.ctx()))
-            .close_behavior(PopupCloseBehavior::CloseOnClick)
+            .close_behavior(close)
             .show(|ui| {
                 if filtering {
                     self.filtered(ui, query_id, current)
@@ -487,6 +498,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             })
             .inner;
         if picked.is_some() {
+            ui.close();
             return picked;
         }
         if entered {
@@ -550,8 +562,17 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             let (value, name) = self.options[*index];
             let id = format!("{}-{index}", self.author_id);
             let here = Some(*index) == walked;
-            let row = entry(ui, name, &id, false, here || Some(name) == current, false);
-            self.paint_hint(ui, row.rect, *index);
+            let hint = self.hint_of(ui, *index);
+            let tail = hint.as_ref().map_or(0.0, |hint| hint.size().x + 8.0);
+            let on = here || Some(name) == current;
+            let row = drawn(ui, None, name, &id, (false, on, false), tail);
+            if let Some(hint) = hint {
+                let at = egui::pos2(
+                    row.rect.right() - 8.0 - hint.size().x,
+                    row.rect.center().y - hint.size().y / 2.0,
+                );
+                ui.painter().galley(at, hint, Color32::TRANSPARENT);
+            }
             if here {
                 walked_ring(ui, row.rect);
                 if moved {
@@ -570,18 +591,10 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             .map_or_else(String::new, |language| i18n::translate(language, key, &[]))
     }
 
-    fn paint_hint(&self, ui: &Ui, row: egui::Rect, index: usize) {
+    fn hint_of(&self, ui: &Ui, index: usize) -> Option<std::sync::Arc<egui::Galley>> {
         let hint = self.hint(index);
-        if hint.is_empty() {
-            return;
-        }
         let ink = palette(ui.ctx()).text_2;
-        let galley = text(ui, hint, font::META, 400.0, FontFamily::Proportional, ink);
-        let at = egui::pos2(
-            row.right() - 8.0 - galley.size().x,
-            row.center().y - galley.size().y / 2.0,
-        );
-        ui.painter().galley(at, galley, Color32::TRANSPARENT);
+        (!hint.is_empty()).then(|| text(ui, hint, font::META, 400.0, FontFamily::Proportional, ink))
     }
 }
 
@@ -873,6 +886,90 @@ mod tests {
                 .is_none(),
             "the menu closed"
         );
+    }
+
+    #[test]
+    fn a_click_in_the_filter_keeps_the_menu_open_and_a_click_on_an_entry_closes_it() {
+        let shown = |harness: &egui_kittest::Harness<'static, usize>| {
+            harness
+                .query_by(|node| node.author_id() == Some("format-filter"))
+                .is_some()
+        };
+        let mut harness = opened();
+        harness
+            .get_by(|node| node.author_id() == Some("format-filter"))
+            .click();
+        harness.run();
+        assert!(shown(&harness), "the click closed the menu");
+
+        harness
+            .get_by(|node| node.author_id() == Some("format-filter"))
+            .type_text("rus");
+        harness.run();
+        harness
+            .get_by(|node| node.author_id() == Some("format-4"))
+            .click();
+        harness.run();
+        assert_eq!(*harness.state(), 4);
+        assert!(!shown(&harness));
+    }
+
+    /// Every text painted in the rows of a menu, with the right edge of what it covers.
+    fn rights(harness: &egui_kittest::Harness<'static, usize>, words: &str) -> Vec<f32> {
+        harness
+            .output()
+            .shapes
+            .iter()
+            .filter_map(|clipped| match &clipped.shape {
+                egui::Shape::Text(text) if text.galley.job.text.starts_with(words) => {
+                    Some(text.pos.x + text.galley.size().x)
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_long_name_is_cut_at_the_edge_of_the_menu_and_said_whole_on_hover() {
+        let long = format!("Drawing {}", "of the whole architecture ".repeat(8));
+        let names: Vec<String> = (0..12).map(|rank| format!("{long}{rank}")).collect();
+        let mut harness = crate::testing::harness()
+            .with_size(egui::vec2(900.0, 500.0))
+            .build_ui_state(
+                move |ui, selected: &mut usize| {
+                    let options: Vec<(usize, &str)> =
+                        names.iter().map(String::as_str).enumerate().collect();
+                    ChoiceMenu::new("Insert", "drawings", &options).show(ui, selected);
+                },
+                0,
+            );
+        harness.run();
+        harness
+            .get_by(|node| node.author_id() == Some("drawings"))
+            .click();
+        harness.run();
+        harness.run();
+
+        let row = harness
+            .get_by(|node| node.author_id() == Some("drawings-1"))
+            .rect();
+        let control = harness
+            .get_by(|node| node.author_id() == Some("drawings"))
+            .rect();
+        let edge = row.right().max(control.right());
+        for right in rights(&harness, "Drawing") {
+            assert!(right <= edge, "a name ends at {right}, past {edge}");
+        }
+        let whole = |harness: &egui_kittest::Harness<'static, usize>| {
+            harness.output().shapes.iter().any(|clipped| {
+                matches!(&clipped.shape, egui::Shape::Text(text)
+                    if text.galley.job.text.ends_with("architecture 1") && !text.galley.elided)
+            })
+        };
+        assert!(!whole(&harness));
+        harness.event(egui::Event::PointerMoved(row.center()));
+        harness.run();
+        assert!(whole(&harness), "no tooltip says the name whole");
     }
 
     #[test]
