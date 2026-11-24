@@ -9,9 +9,9 @@ pub mod picture;
 pub mod scene;
 pub mod text;
 
-pub use edit::{Editor, End, Frame, Grip, Tool};
+pub use edit::{Attaching, Editor, End, Frame, Grip, Tool};
 pub use geometry::{Box, Ends, Point};
 pub use marks::{Fill, Mark, marks};
 pub use picture::{Format, Palette, Pictures, export, pictures, svg};
-pub use scene::{Drawing, Hue, Kind, Object, PathCommand};
+pub use scene::{Drawing, Hue, Kind, Object, PathCommand, Side};
 pub use text::{Fonts, wrap};

@@ -1447,6 +1447,9 @@ gives. It has no field (`{{x}}` written on it is words), no revision (a scene co
 text), no copy (a card and the palette offer none: it is exported), and no conversion either
 way — the kind menu names it and offers nothing.
 
+- **An arrow holds on to a shape by its edge, facing its other end, or by the middle of a side**:
+  `from` and `to` are the shapes' ids, `fromAnchor` and `toAnchor` (`top`, `right`, `bottom`,
+  `left`, on the shape's own plane) the side, absent for the edge.
 - **⚠️ Its pictures are not in the body.** A list opens every body it searches, at every
   keystroke; two PNGs are most of a drawing's bytes. They sit in `drawing_pictures`, one row
   per drawing, both sealed as raw bytes, cascaded with the note: a small one for its card, a

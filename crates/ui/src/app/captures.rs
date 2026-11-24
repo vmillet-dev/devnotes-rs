@@ -1373,11 +1373,9 @@ const WIDE_SCENE: &str = r#"{"version":1,"scene":{"objects":[
 {"type":"Rect","left":2800,"top":300,"width":300,"height":200,"id":"c","hue":"amber","strokeWidth":2}
 ]}}"#;
 
-/// A drawing larger than the panel (#1580), as it opens and closer.
-#[test]
-fn a_drawing_larger_than_the_panel() {
-    let profile = tempfile::tempdir().unwrap();
-    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+/// The window, a drawing of that scene open in it.
+fn with_a_drawing(profile: &std::path::Path, scene: &str) -> Harness<'static, DevNotesApp> {
+    let mut harness = launch_at(profile, egui::vec2(1440.0, 900.0));
     type_into(&mut harness, "vault-passphrase", PASSPHRASE);
     type_into(&mut harness, "vault-confirmation", PASSPHRASE);
     click(&mut harness, "vault-submit");
@@ -1387,7 +1385,7 @@ fn a_drawing_larger_than_the_panel() {
         .clone();
     let patch = engine::notes::model::NotePatch {
         kind: Some(engine::notes::kind::NoteKind::Drawing),
-        content: Some(WIDE_SCENE.to_owned()),
+        content: Some(scene.to_owned()),
         ..engine::notes::model::NotePatch::default()
     };
     let engine = harness.state().backend.engine().clone();
@@ -1399,7 +1397,35 @@ fn a_drawing_larger_than_the_panel() {
     harness.state_mut().state.revision.bump();
     harness.state_mut().state.editor.open(id);
     settle(&mut harness);
+    harness
+}
+
+/// A drawing larger than the panel (#1580), as it opens and closer.
+#[test]
+fn a_drawing_larger_than_the_panel() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = with_a_drawing(profile.path(), WIDE_SCENE);
     capture(&mut harness, "drawing-wide");
+}
+
+/// An arrow dragged to the middle of an ellipse's left side (#1582), the points shown.
+#[test]
+fn an_arrow_near_the_points_of_a_shape() {
+    let profile = tempfile::tempdir().unwrap();
+    let scene = r#"{"version":1,"scene":{"objects":[
+{"type":"Rect","left":160,"top":160,"width":160,"height":90,"id":"a","hue":"blue","strokeWidth":2},
+{"type":"Ellipse","left":460,"top":240,"width":160,"height":100,"rx":80,"ry":50,"id":"b","hue":"green","strokeWidth":2}
+]}}"#;
+    let mut harness = with_a_drawing(profile.path(), scene);
+    click(&mut harness, "drawing-tool-arrow");
+    let stage = harness
+        .get_by(|node| node.author_id() == Some("drawing-stage"))
+        .rect();
+    harness.drag_at(stage.min + egui::vec2(192.0, 165.0));
+    harness.run_steps(2);
+    harness.hover_at(stage.min + egui::vec2(332.0, 246.0));
+    harness.run_steps(2);
+    capture_holding(&mut harness, "drawing-arrow-points");
 }
 
 /// A request in the narrowest window (#1487): its URL, its actions and its tabs.
