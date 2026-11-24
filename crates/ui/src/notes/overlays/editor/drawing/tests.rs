@@ -569,3 +569,49 @@ fn a_drawing_larger_than_the_stage_opens_whole_and_f_shows_it_again() {
     press(&mut harness, Key::ArrowRight, Modifiers::COMMAND);
     assert_eq!(zoom(&harness), fitted);
 }
+
+#[test]
+fn the_eraser_stays_in_hand_after_an_erase_and_escape_puts_it_down() {
+    let (mut harness, _) = opened("");
+    draw_rectangle(&mut harness);
+    click_id(&mut harness, "drawing-tool-rectangle");
+    let (from, to) = (point(&harness, 200.0, 40.0), point(&harness, 300.0, 100.0));
+    drag(&mut harness, from, to);
+    assert_eq!(shapes(&harness), "2");
+
+    press(&mut harness, Key::E, Modifiers::NONE);
+    for (x, left) in [(90.0, "1"), (250.0, "0")] {
+        let on = point(&harness, x, 70.0);
+        drag(&mut harness, on, on);
+        assert_eq!(shapes(&harness), left);
+        assert!(pressed(&harness, "drawing-tool-eraser"));
+    }
+    press(&mut harness, Key::Escape, Modifiers::NONE);
+    assert!(pressed(&harness, "drawing-tool-select"));
+    press(&mut harness, Key::Z, Modifiers::COMMAND);
+    assert_eq!(shapes(&harness), "1");
+}
+
+/// The toolbar of a panel: nothing over anything else.
+#[test]
+fn in_a_narrow_panel_the_exports_take_a_line_of_their_own() {
+    let (mut harness, _) = opened("");
+    harness.state_mut().state.settings.editor_fullscreen = false;
+    harness.set_size(egui::vec2(1_220.0, 900.0));
+    settle(&mut harness);
+
+    let rect = |id: &str| harness.get_by(|node| node.author_id() == Some(id)).rect();
+    let tools = [
+        "drawing-tool-select",
+        "drawing-hue-purple",
+        "drawing-undo",
+        "drawing-delete",
+    ];
+    for export in ["drawing-export-png", "drawing-export-svg"] {
+        for tool in tools {
+            assert!(!rect(export).intersects(rect(tool)), "{export} over {tool}");
+        }
+        assert!(rect(export).right() <= 1_220.0);
+    }
+    assert!(rect("drawing-delete").right() <= 1_220.0);
+}

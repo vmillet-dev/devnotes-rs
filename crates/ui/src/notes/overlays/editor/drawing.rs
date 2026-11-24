@@ -32,7 +32,7 @@ const HUE_TINT: u8 = 36;
 /// How far above a line's baseline its first glyphs start, in font sizes: Inter's ascent.
 const ASCENT: f32 = 0.97;
 
-const TOOLS: [(Tool, Icon, i18n::Key, &str, Key); 7] = [
+const TOOLS: [(Tool, Icon, i18n::Key, &str, Key); 8] = [
     (
         Tool::Select,
         Icon::MousePointer,
@@ -69,6 +69,13 @@ const TOOLS: [(Tool, Icon, i18n::Key, &str, Key); 7] = [
         Key::A,
     ),
     (Tool::Pen, Icon::Pencil, keys::drawing::PEN, "pen", Key::P),
+    (
+        Tool::Eraser,
+        Icon::Eraser,
+        keys::drawing::ERASER,
+        "eraser",
+        Key::E,
+    ),
     (Tool::Text, Icon::Type, keys::drawing::TEXT, "text", Key::T),
 ];
 
@@ -299,12 +306,15 @@ fn toolbar(
 ) -> Option<Format> {
     let p = palette(ui.ctx());
     let mut export = None;
-    let row = ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = gap::TIGHT;
+    let row = ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = Vec2::new(gap::TIGHT, gap::SNUG);
         tools(ui, view, language, 14.0);
         if !exports {
             return;
         }
+        // At the end of the row, or on the next one in a panel they do not fit in.
+        let room = exports_width(ui, language);
+        widgets::wrap_before(ui, room);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let drawn = view.editor.shapes() > 0;
             export = ui
@@ -358,6 +368,7 @@ fn tools(ui: &mut Ui, view: &mut DrawingView, language: Language, gap: f32) {
         swatch(ui, view, hue, language);
     }
     ui.add_space(gap);
+    widgets::wrap_before(ui, widgets::MIN_TARGET);
     ui.add_enabled_ui(view.editor.can_undo(), |ui| {
         if IconButton::new(Icon::Undo, &tr(keys::drawing::UNDO), "drawing-undo")
             .show(ui)
@@ -366,6 +377,7 @@ fn tools(ui: &mut Ui, view: &mut DrawingView, language: Language, gap: f32) {
             view.editor.undo();
         }
     });
+    widgets::wrap_before(ui, widgets::MIN_TARGET);
     ui.add_enabled_ui(view.editor.can_redo(), |ui| {
         if IconButton::new(Icon::Redo, &tr(keys::drawing::REDO), "drawing-redo")
             .show(ui)
@@ -374,7 +386,7 @@ fn tools(ui: &mut Ui, view: &mut DrawingView, language: Language, gap: f32) {
             view.editor.redo();
         }
     });
-    if IconButton::new(Icon::Eraser, &tr(keys::drawing::REMOVE), "drawing-delete")
+    if IconButton::new(Icon::Trash, &tr(keys::drawing::REMOVE), "drawing-delete")
         .show(ui)
         .clicked()
     {
@@ -392,6 +404,14 @@ pub(super) fn exports(ui: &mut Ui, language: Language) -> Option<Format> {
         }
     }
     chosen
+}
+
+fn exports_width(ui: &Ui, language: Language) -> f32 {
+    let widths = EXPORTS.map(|(_, key, _)| {
+        let words = i18n::translate(language, key, &[]);
+        Button::width(ui, &words) + gap::TIGHT
+    });
+    widths.iter().sum()
 }
 
 fn swatch(ui: &mut Ui, view: &mut DrawingView, hue: Hue, language: Language) {
@@ -544,6 +564,18 @@ fn paint(ui: &Ui, view: &mut DrawingView, stage: Rect, language: Language) {
         painter.add(Shape::line(
             line,
             Stroke::new(width, stroke(p, view.editor.hue())),
+        ));
+    }
+    if view.editor.tool() == Tool::Eraser
+        && let Some(at) = ui.input(|input| input.pointer.hover_pos())
+        && stage.contains(at)
+        && let Some(frame) = view.editor.erasable(view.camera.scene_at(stage, at))
+    {
+        // What a press would take away.
+        let corners = frame.corners().map(|at| view.camera.screen_at(stage, at));
+        painter.add(Shape::closed_line(
+            corners.to_vec(),
+            Stroke::new(2.0, p.red),
         ));
     }
     if let Some(frame) = view.editor.frame() {

@@ -87,6 +87,23 @@ fn drawings(app: &mut App, exported: &std::path::Path) {
         },
     );
 
+    step(
+        "the eraser takes shape after shape and stays in hand",
+        || {
+            app.click("drawing-tool-ellipse");
+            app.drag_in("drawing-stage", (200.0, 40.0), (280.0, 110.0));
+            app.eventually("two shapes", |tree| shapes(tree) == "2");
+            app.click("drawing-tool-eraser");
+            app.drag_in("drawing-stage", (20.0, 75.0), (300.0, 75.0));
+            app.eventually("both gone in one drag", |tree| shapes(tree) == "0");
+            assert!(pressed(&app.tree(), "drawing-tool-eraser"));
+            app.click("drawing-undo");
+            app.eventually("one step back", |tree| shapes(tree) == "2");
+            app.drag_in("drawing-stage", (240.0, 75.0), (240.0, 75.0));
+            app.eventually("one by a click", |tree| shapes(tree) == "1");
+        },
+    );
+
     step("the drawing is zoomed, moved and shown whole again", || {
         let shown = |tree: &Tree| tree.text("drawing-zoom").unwrap_or_default();
         app.eventually("as drawn", |tree| shown(tree).starts_with("100"));
