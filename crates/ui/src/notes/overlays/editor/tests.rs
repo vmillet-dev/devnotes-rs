@@ -464,6 +464,35 @@ fn title_of_open(harness: &egui_kittest::Harness<'_, Bench>) -> String {
     opened.note().unwrap().title.clone()
 }
 
+/// Closed, beside the cards, expanded: the header keeps its place, and the note is under it.
+#[test]
+fn the_header_spans_the_area_whether_the_note_is_beside_the_cards_or_expanded() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql");
+    let mut harness = wide(area(backend, profile));
+    let controls = |harness: &egui_kittest::Harness<'_, Bench>| {
+        [
+            "new-note",
+            "search-input",
+            "facets-toggle",
+            "library-rail-toggle",
+        ]
+        .map(|id| rect_of(harness, id))
+    };
+    let closed = controls(&harness);
+
+    click_id(&mut harness, "note-card-open");
+    assert_eq!(controls(&harness), closed, "beside the cards");
+    let edge = rect_of(&harness, "editor-panel-edge");
+    let lowest = closed.iter().map(egui::Rect::bottom).fold(0.0, f32::max);
+    assert!(edge.top() >= lowest, "{edge:?} under {lowest}");
+    let close = rect_of(&harness, "editor-close").top();
+    assert!(close >= edge.top());
+
+    click_id(&mut harness, "editor-fullscreen");
+    assert_eq!(controls(&harness), closed, "expanded");
+}
+
 /// The cards stay on screen beside the note open; expanded, the note takes the area, and the
 /// way back brings the cards again.
 #[test]
