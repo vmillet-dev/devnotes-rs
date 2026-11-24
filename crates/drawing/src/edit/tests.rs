@@ -655,3 +655,84 @@ fn an_arrow_follows_a_shape_resized_and_rotated() {
         ends(&editor)
     );
 }
+
+#[test]
+fn an_end_let_go_on_the_middle_of_a_side_stays_on_it() {
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(352.0, 64.0));
+    assert_eq!(object(&editor, 2).to(), object(&editor, 1).id());
+    assert_eq!(
+        ends(&editor)[2..],
+        [350.0, 61.0],
+        "the middle of its bottom"
+    );
+    let stored = editor.body();
+    assert!(stored.contains(r#""toAnchor":"bottom""#), "{stored}");
+    assert!(!stored.contains("fromAnchor"));
+
+    // The shape moved, then pulled wider by its right side.
+    drag(&mut editor, at(380.0, 10.0), at(380.0, 110.0));
+    assert_eq!(ends(&editor)[2..], [350.0, 161.0]);
+    drag(&mut editor, at(401.0, 130.0), at(501.0, 130.0));
+    assert!(
+        (ends(&editor)[2] - 400.0).abs() < 1.0,
+        "{:?}",
+        ends(&editor)
+    );
+
+    let mut reopened = Editor::open(&editor.body(), Arc::new(fonts()));
+    drag(&mut reopened, at(480.0, 150.0), at(480.0, 50.0));
+    assert_eq!(
+        ends(&reopened)[3],
+        61.0,
+        "read back, it is on the same point"
+    );
+}
+
+#[test]
+fn the_point_chosen_turns_with_its_shape() {
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(350.0, 0.0));
+    drag(&mut editor, at(350.0, 40.0), at(350.0, 40.0));
+    let frame = editor.frame().unwrap();
+    // A quarter turn: its top is on the right.
+    drag(&mut editor, frame.grip(Grip::Rotate), at(600.0, 30.0));
+    let [.., x, y] = ends(&editor);
+    assert!((x - 381.0).abs() < 0.1 && (y - 30.0).abs() < 0.1, "{x} {y}");
+}
+
+#[test]
+fn let_go_anywhere_else_on_the_shape_an_end_slides_along_its_edge_again() {
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(350.0, 61.0));
+    drag(&mut editor, at(350.0, 61.0), at(340.0, 30.0));
+    assert_eq!(object(&editor, 2).to(), object(&editor, 1).id());
+    assert!(!editor.body().contains("Anchor"));
+    drag(&mut editor, at(299.0, 30.0), at(350.0, 61.0));
+    drag(&mut editor, at(350.0, 61.0), at(250.0, 300.0));
+    assert!(!editor.body().contains("Anchor"), "let go of, it has none");
+}
+
+#[test]
+fn an_arrow_is_drawn_from_a_point_and_the_points_are_told() {
+    let mut editor = joined();
+    editor.set_tool(Tool::Arrow);
+    let near = editor.attaching(at(405.0, 30.0)).unwrap();
+    assert_eq!(near.points.len(), 4);
+    assert_eq!(near.chosen, Some(at(401.0, 30.0)));
+    assert_eq!(editor.attaching(at(340.0, 30.0)).unwrap().chosen, None);
+
+    drag(&mut editor, at(405.0, 30.0), at(500.0, 300.0));
+    assert_eq!(object(&editor, 3).ends(), Some([401.0, 30.0, 500.0, 300.0]));
+}
+
+#[test]
+fn an_anchor_no_code_here_wrote_is_the_edge_and_stays_stored() {
+    let body = r#"{"scene":{"objects":[
+        {"type":"Rect","id":"a","left":100,"top":100,"width":100,"height":100},
+        {"type":"Path","id":"b","from":"a","fromAnchor":"corner","ends":[151,100,400,100],"path":[["M",151,100],["L",400,100]]}
+    ]}}"#;
+    let mut editor = Editor::open(body, Arc::new(fonts()));
+    drag(&mut editor, at(100.0, 100.0), at(100.0, 110.0));
+    assert!(editor.body().contains(r#""fromAnchor":"corner""#));
+}

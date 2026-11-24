@@ -610,6 +610,15 @@ fn an_arrow_selected_is_moved_by_its_ends() {
     let (start, away) = (point(&harness, 141.0, 70.0), point(&harness, 200.0, 200.0));
     drag(&mut harness, start, away);
     assert!(!bound(&mut harness), "let go on the paper");
+
+    // Back on the middle of that side: the point is the one it keeps.
+    drag(&mut harness, away, start);
+    assert!(bound(&mut harness));
+    assert!(
+        stored(&harness, &id)
+            .content
+            .contains(r#""fromAnchor":"right""#)
+    );
 }
 
 /// The toolbar of a panel: nothing over anything else.

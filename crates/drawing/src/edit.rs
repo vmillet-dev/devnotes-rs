@@ -8,9 +8,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::geometry::{
-    Box, Ends, Point, arrow_path, bound_ends, diamond_points, drag_box, smooth_path,
+    Box, Ends, Held, Point, arrow_path, bound_ends, diamond_points, drag_box, smooth_path,
 };
-use crate::scene::{Drawing, Hue, Kind, Object};
+use crate::scene::{Drawing, Hue, Kind, Object, Side};
 use crate::text::{Fonts, text_height, wrap};
 
 /// A shape let go smaller than this was a click: it takes the size a click gives.
@@ -125,6 +125,16 @@ impl Frame {
         self.on_scene(x * self.width / 2.0, y * self.height / 2.0 - reach)
     }
 
+    fn side(&self, side: Side) -> Point {
+        let (half_width, half_height) = (self.width / 2.0, self.height / 2.0);
+        match side {
+            Side::Top => self.on_scene(0.0, -half_height),
+            Side::Right => self.on_scene(half_width, 0.0),
+            Side::Bottom => self.on_scene(0.0, half_height),
+            Side::Left => self.on_scene(-half_width, 0.0),
+        }
+    }
+
     pub fn corners(&self) -> [Point; 4] {
         [
             Grip::TopLeft,
@@ -134,6 +144,22 @@ impl Frame {
         ]
         .map(|corner| self.grip(corner))
     }
+}
+
+/// The shape the end of an arrow would hold on to, let go where the pointer is.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Attaching {
+    pub frame: Frame,
+    /// The points it can be held by, and the one the pointer is on: without it, its edge.
+    pub points: Vec<Point>,
+    pub chosen: Option<Point>,
+}
+
+/// A shape an arrow holds on to, and the side it holds it by.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Hold {
+    id: String,
+    side: Option<Side>,
 }
 
 /// The end of an arrow.
@@ -166,11 +192,23 @@ impl End {
         }
     }
 
+    fn bound(self, arrow: &Object) -> Option<&str> {
+        match self {
+            Self::From => arrow.from(),
+            Self::To => arrow.to(),
+        }
+    }
+
     fn other_bound(self, arrow: &Object) -> Option<&str> {
         match self {
             Self::From => arrow.to(),
             Self::To => arrow.from(),
         }
+    }
+
+    fn hold(self, arrow: &mut Object, hold: Option<&Hold>) {
+        arrow.set_bound(self.field(), hold.map(|hold| hold.id.as_str()));
+        arrow.set_anchor(self.field(), hold.and_then(|hold| hold.side));
     }
 }
 
@@ -183,7 +221,7 @@ enum Gesture {
     },
     Arrow {
         from: Point,
-        from_id: Option<String>,
+        held: Option<Hold>,
     },
     Pen(Vec<Point>),
     Erasing(Point),
@@ -465,19 +503,28 @@ impl Editor {
             .map(|(end, _)| end)
     }
 
-    /// The shape the end of an arrow let go at `at` would hold on to: its frame. Asked while the
-    /// arrow tool is in hand or an end is dragged.
-    pub fn attaching(&self, at: Point) -> Option<Frame> {
+    /// Asked while the arrow tool is in hand or an end is dragged.
+    pub fn attaching(&self, at: Point) -> Option<Attaching> {
         let kept = match &self.gesture {
             Some(Gesture::MovingEnd { index, end, .. }) => {
                 end.other_bound(&self.drawing.objects[*index])
             }
-            Some(Gesture::Arrow { from_id, .. }) => from_id.as_deref(),
+            Some(Gesture::Arrow { held, .. }) => held.as_ref().map(|hold| hold.id.as_str()),
             None if self.tool == Tool::Arrow => None,
             _ => return None,
         };
-        let object = &self.drawing.objects[self.holder_at(at)?];
-        (object.id() != kept).then(|| self.frame_of(object))
+        let (index, side) = self.holder_at(at)?;
+        let object = &self.drawing.objects[index];
+        if object.id() == kept {
+            return None;
+        }
+        let frame = self.frame_of(object);
+        let sides = sides_of(object).iter();
+        Some(Attaching {
+            frame,
+            points: sides.map(|&side| frame.side(side)).collect(),
+            chosen: side.map(|side| frame.side(side)),
+        })
     }
 
     /// The handles' frame; `None` with nothing selected, a text typed into, or an arrow alone.
@@ -562,15 +609,12 @@ impl Editor {
                 self.revision += 1;
             }
             Tool::Arrow => {
-                let from_id = self.shape_at(at);
-                self.gesture = Some(Gesture::Arrow {
-                    from: at,
-                    from_id: from_id.clone(),
-                });
+                let held = self.hold_at(at);
                 let mut arrow = self.new_object("Path");
                 arrow.put_number("strokeWidth", SHAPE_STROKE);
-                arrow.set_bound("from", from_id.as_deref());
-                arrow.set_bound("to", None);
+                End::From.hold(&mut arrow, held.as_ref());
+                End::To.hold(&mut arrow, None);
+                self.gesture = Some(Gesture::Arrow { from: at, held });
                 set_arrow(&mut arrow, [at.x, at.y, at.x, at.y]);
                 self.drawing.objects.push(arrow);
                 self.revision += 1;
@@ -716,13 +760,16 @@ impl Editor {
                 self.reshape_last(tool, bounds);
                 self.finish();
             }
-            Some(Gesture::Arrow { from, from_id }) => {
+            Some(Gesture::Arrow { from, held }) => {
                 // The arrow being drawn is under the pointer: it is not what it ends on.
                 let Some(mut arrow) = self.drawing.objects.pop() else {
                     return;
                 };
-                let to_id = self.shape_at(at).filter(|id| Some(id) != from_id.as_ref());
-                arrow.set_bound("to", to_id.as_deref());
+                let kept = held.map(|hold| hold.id);
+                let hold = self
+                    .hold_at(at)
+                    .filter(|hold| Some(&hold.id) != kept.as_ref());
+                End::To.hold(&mut arrow, hold.as_ref());
                 self.drawing.objects.push(arrow);
                 let last = self.drawing.objects.len() - 1;
                 self.bind(last, [from.x, from.y, at.x, at.y]);
@@ -733,12 +780,10 @@ impl Editor {
             Some(Gesture::MovingEnd { from, .. }) if from == at => {}
             Some(Gesture::MovingEnd { index, end, .. }) => {
                 let kept = end.other_bound(&self.drawing.objects[index]);
-                let holder = self
-                    .holder_at(at)
-                    .and_then(|holder| self.drawing.objects[holder].id())
-                    .filter(|id| Some(*id) != kept)
-                    .map(str::to_owned);
-                self.move_end(index, end, holder.as_deref(), at);
+                let hold = self
+                    .hold_at(at)
+                    .filter(|hold| Some(hold.id.as_str()) != kept);
+                self.move_end(index, end, hold.as_ref(), at);
                 self.keep();
             }
             Some(Gesture::Marquee { from, to }) => self.select_within(drag_box(from, to)),
@@ -897,43 +942,57 @@ impl Editor {
         self.revision += 1;
     }
 
-    /// The topmost of what holds arrows: a shape does, under the text or the arrow over it.
-    fn holder_at(&self, at: Point) -> Option<usize> {
-        self.drawing.objects.iter().rposition(|object| {
-            let holds = object.ends().is_none() && object.kind() != Kind::Textbox;
-            holds && object.id().is_some() && object.contains(at)
+    /// The topmost of what holds arrows and is under the point, or has the middle of a side near
+    /// it: a shape does, under the text or the arrow over it.
+    fn holder_at(&self, at: Point) -> Option<(usize, Option<Side>)> {
+        let objects = self.drawing.objects.iter().enumerate().rev();
+        objects
+            .filter(|(_, object)| holds_arrows(object))
+            .find_map(|(index, object)| {
+                let side = self.side_at(object, at);
+                (side.is_some() || object.contains(at)).then_some((index, side))
+            })
+    }
+
+    fn side_at(&self, object: &Object, at: Point) -> Option<Side> {
+        let reach = GRIP_REACH / self.scale;
+        let frame = self.frame_of(object);
+        sides_of(object).iter().copied().find(|&side| {
+            let place = frame.side(side);
+            (place.x - at.x).abs() <= reach && (place.y - at.y).abs() <= reach
         })
     }
 
-    fn shape_at(&self, at: Point) -> Option<String> {
-        let object = &self.drawing.objects[self.holder_at(at)?];
-        object.id().map(str::to_owned)
+    fn hold_at(&self, at: Point) -> Option<Hold> {
+        let (index, side) = self.holder_at(at)?;
+        let id = self.drawing.objects[index].id()?.to_owned();
+        Some(Hold { id, side })
     }
 
-    /// An arrow's end let go at `at`, on the shape `holder` or on the paper; the other one keeps
-    /// what it is bound to.
-    fn move_end(&mut self, index: usize, end: End, holder: Option<&str>, at: Point) {
+    /// An arrow's end let go at `at`, on a shape or on the paper; the other one keeps what it is
+    /// bound to.
+    fn move_end(&mut self, index: usize, end: End, hold: Option<&Hold>, at: Point) {
         let arrow = &mut self.drawing.objects[index];
         let Some(ends) = arrow.ends() else { return };
-        arrow.set_bound(end.field(), holder);
+        end.hold(arrow, hold);
         self.bind(index, end.moved(ends, at));
     }
 
-    fn box_of(&self, id: Option<&str>) -> Option<Box> {
-        let id = id?;
-        let object = self
-            .drawing
-            .objects
-            .iter()
-            .find(|object| object.id() == Some(id))?;
-        Some(object.bounds())
+    fn held_by(&self, arrow: &Object, end: End) -> Option<Held> {
+        let id = end.bound(arrow)?;
+        let mut objects = self.drawing.objects.iter();
+        let object = objects.find(|object| object.id() == Some(id))?;
+        Some(match arrow.anchor(end.field()) {
+            Some(side) => Held::At(self.frame_of(object).side(side)),
+            None => Held::Edge(object.bounds()),
+        })
     }
 
-    /// Its ends on the edges of the shapes it is bound to, or where they were drawn.
+    /// Its ends on the shapes it is bound to, or where they were drawn.
     fn bind(&mut self, index: usize, drawn: Ends) {
         let arrow = &self.drawing.objects[index];
-        let from = self.box_of(arrow.from());
-        let to = self.box_of(arrow.to());
+        let from = self.held_by(arrow, End::From);
+        let to = self.held_by(arrow, End::To);
         set_arrow(
             &mut self.drawing.objects[index],
             bound_ends(drawn, from.as_ref(), to.as_ref()),
@@ -955,6 +1014,18 @@ impl Editor {
     fn settle(&mut self) {
         self.follow();
         self.keep();
+    }
+}
+
+fn holds_arrows(object: &Object) -> bool {
+    object.ends().is_none() && object.kind() != Kind::Textbox && object.id().is_some()
+}
+
+/// What an arrow can be held by on it: a pen's line or a group has no side to point at.
+fn sides_of(object: &Object) -> &'static [Side] {
+    match object.kind() {
+        Kind::Rect | Kind::Ellipse | Kind::Polygon => &Side::ALL,
+        _ => &[],
     }
 }
 

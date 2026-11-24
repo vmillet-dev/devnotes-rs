@@ -8,7 +8,7 @@ mod look;
 
 use self::camera::Camera;
 use crate::theme::tokens::{font, gap};
-use drawing::{Editor, Fill, Format, Frame, Grip, Hue, Mark, Point, Tool};
+use drawing::{Attaching, Editor, Fill, Format, Frame, Grip, Hue, Mark, Point, Tool};
 use egui::epaint::{PathShape, PathStroke, TextShape};
 use egui::{
     Align, Color32, CornerRadius, CursorIcon, Key, Layout, Modifiers, Pos2, Rect, Response, Sense,
@@ -580,14 +580,9 @@ fn paint(ui: &Ui, view: &mut DrawingView, stage: Rect, language: Language) {
     }
     if let Some(at) = ui.input(|input| input.pointer.latest_pos())
         && stage.contains(at)
-        && let Some(frame) = view.editor.attaching(view.camera.scene_at(stage, at))
+        && let Some(held) = view.editor.attaching(view.camera.scene_at(stage, at))
     {
-        // What the end of the arrow would hold on to.
-        let corners = frame.corners().map(|at| view.camera.screen_at(stage, at));
-        painter.add(Shape::closed_line(
-            corners.to_vec(),
-            Stroke::new(2.0, p.amber_edge),
-        ));
+        paint_attaching(&painter, p, (stage, view.camera), &held);
     }
     if let Some(ends) = view.editor.arrow_ends() {
         for (_, at) in ends {
@@ -667,6 +662,28 @@ fn paint_mark(
             let shape = TextShape::new(camera.screen_at(stage, *at) + above, galley, colour);
             painter.add(shape.with_angle(turned));
         }
+    }
+}
+
+/// What the end of the arrow would hold on to, and the points it can be held by.
+fn paint_attaching(
+    painter: &egui::Painter,
+    p: &Palette,
+    (stage, camera): (Rect, Camera),
+    held: &Attaching,
+) {
+    let edge = Stroke::new(2.0, p.amber_edge);
+    let corners = held.frame.corners().map(|at| camera.screen_at(stage, at));
+    painter.add(Shape::closed_line(corners.to_vec(), edge));
+    for point in &held.points {
+        let chosen = held.chosen == Some(*point);
+        let fill = if chosen { p.amber_edge } else { p.bg_1 };
+        painter.circle(
+            camera.screen_at(stage, *point),
+            GRIP_SIZE / 2.0,
+            fill,
+            Stroke::new(1.0, p.amber_edge),
+        );
     }
 }
 
