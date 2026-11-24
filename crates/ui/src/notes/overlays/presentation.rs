@@ -23,7 +23,7 @@ use crate::theme::palette;
 use crate::widgets::rich::RichView;
 use crate::widgets::{self, Button, IconButton, Kind};
 
-/// The widest a slide reads.
+/// The widest a slide's text reads.
 const WIDEST: f32 = 1100.0;
 
 /// Where the presenter is: a slide (0 is the cover) or the map.
@@ -145,7 +145,6 @@ fn stage(
         whole.max - vec2(6.0 * vw, 10.0 * vh),
     );
     let width = room.width().min(WIDEST);
-    let column = Rect::from_center_size(room.center(), vec2(width, room.height()));
     let Some(slide) = at.checked_sub(1).and_then(|at| presenting.slides.get(at)) else {
         let mut format =
             TextFormat::simple(FontId::proportional((6.0 * vw).clamp(36.0, 72.0)), p.text_0);
@@ -154,7 +153,7 @@ fn stage(
         job.wrap.max_width = width;
         job.halign = egui::Align::Center;
         let galley = ui.painter().layout_job(job);
-        let rect = Rect::from_center_size(column.center(), galley.size());
+        let rect = Rect::from_center_size(room.center(), galley.size());
         let response = widgets::region(ui, rect, "presentation-cover", Sense::hover());
         response.widget_info(|| {
             egui::WidgetInfo::labeled(egui::Role::Heading, true, &presenting.title)
@@ -168,13 +167,15 @@ fn stage(
     let language = state.language;
     let pictures = |id: &str| crate::notes::overlays::editor::embedded(state, id);
     let missing = i18n::translate(language, keys::drawing::MISSING, &[]);
-    let mut slide_ui = ui.new_child(UiBuilder::new().max_rect(column));
-    // From the top: nothing of a slide's place depends on a height known a frame late.
+    // From the top and the margin: a title is at one place on every slide, and nothing of a
+    // slide's place depends on a height known a frame late.
+    let mut slide_ui = ui.new_child(UiBuilder::new().max_rect(room));
     let painted = egui::ScrollArea::vertical()
         .id_salt(("presentation-slide", at))
         .show(&mut slide_ui, |ui| {
-            ui.set_width(width);
+            ui.set_width(room.width());
             RichView::new(slide)
+                .slide(width)
                 .scale(scale)
                 .pictures(&pictures, &missing)
                 .show(ui)
