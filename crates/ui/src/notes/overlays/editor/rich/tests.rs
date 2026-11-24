@@ -514,3 +514,29 @@ fn a_long_code_block_scrolled_down_paints_nothing_above_the_body() {
         .collect();
     assert!(over.is_empty(), "code painted above {body:?}: {over:?}");
 }
+
+#[test]
+fn the_down_arrow_on_the_last_line_of_a_final_code_block_opens_a_paragraph() {
+    let (mut harness, id) = note("```rust\nlet x = 1;\nlet y = 2;\n```");
+    let surface = harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .rect();
+    harness.drag_at(surface.left_top() + egui::vec2(60.0, 20.0));
+    harness.drop_at(surface.left_top() + egui::vec2(60.0, 20.0));
+    settle(&mut harness);
+
+    for _ in 0..3 {
+        harness.key_press(Key::ArrowDown);
+        settle(&mut harness);
+    }
+    harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .type_text("Après");
+    settle(&mut harness);
+    click_id(&mut harness, "editor-close");
+
+    assert_eq!(
+        stored(&harness, &id),
+        "```rust\nlet x = 1;\nlet y = 2;\n```\n\nAprès"
+    );
+}

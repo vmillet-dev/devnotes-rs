@@ -267,6 +267,16 @@ impl RichEditor {
         })
     }
 
+    /// ↓ with nothing under a code block: a paragraph is opened there.
+    fn leave_code(&mut self) {
+        let path = &self.selection.head.path;
+        if matches!(tree::leaf(&self.document, path), Some(tree::Leaf::Code(_))) {
+            self.change(Step::Other, |document, selection| {
+                edit::leave_code(document, selection).unwrap_or_else(|| selection.clone())
+            });
+        }
+    }
+
     /// ↑ and ↓: a line up or down at the same x, into the leaf above or below.
     fn vertical(&mut self, down: bool, extend: bool) {
         let Some(caret) = self.caret_rect() else {
@@ -296,6 +306,9 @@ impl RichEditor {
             }
         });
         let Some(target) = target else {
+            if down && !extend {
+                self.leave_code();
+            }
             return;
         };
         let rect = laid_rect(target);
