@@ -2607,6 +2607,23 @@
       "rib": "Clé RIB",
       "ribWrong": "{{given}} · {{expected}} attendue",
       "compact": "Format compact",
+      "validateTitle": "Vérifier",
+      "generateTitle": "Générer",
+      "generateIntro": "Des numéros de test qui passent : une série de chiffres qui commence et finit comme vous le choisissez, ou l’IBAN d’un pays.",
+      "prefix": "Commence par",
+      "suffix": "Finit par",
+      "numberLength": "Longueur",
+      "count": "Nombre",
+      "again": "Générer à nouveau",
+      "generated": "{count, plural, one {# numéro} other {# numéros}}",
+      "generatedAll": "Tous les numéros",
+      "generatedNote": "Tirés au hasard pour des tests : ni carte ni compte derrière eux. La copie est sans espace.",
+      "generateProblems": {
+        "prefix": "Le début contient autre chose qu’un chiffre au caractère {{at}}.",
+        "suffix": "La fin contient autre chose qu’un chiffre au caractère {{at}}.",
+        "tooLong": "Le début et la fin font {count, plural, one {# chiffre} other {# chiffres}}, plus que la longueur.",
+        "impossible": "Aucun chiffre ne reste à tirer, et ce numéro ne passe pas la vérification."
+      },
       "footnote": "Un numéro valide respecte le format et la clé de contrôle. Cela ne prouve pas que le compte ou la carte existe."
     },
     "jwt": {

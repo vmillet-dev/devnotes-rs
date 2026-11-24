@@ -381,3 +381,39 @@ fn the_note_picker_does_not_move_once_its_notes_are_listed() {
     let last = place(&harness).expect("the picker is open");
     assert!(places.iter().all(|at| *at == last), "{places:?}");
 }
+
+#[test]
+fn numbers_are_drawn_between_a_beginning_and_an_end_and_an_iban_for_a_country() {
+    let mut harness = opened("checks");
+    waits_for(&mut harness, "numbers are drawn at once", |harness| {
+        has(harness, "checks-numbers")
+    });
+    assert!(place(&harness, "checks-input").width() <= 421.0);
+    assert!(place(&harness, "checks-input").right() < place(&harness, "checks-prefix").left());
+
+    type_in(&mut harness, "checks-prefix", "41");
+    type_in(&mut harness, "checks-suffix", "77");
+    waits_for(&mut harness, "the numbers follow", |harness| {
+        let values = output_values(harness);
+        values.len() == 5
+            && values
+                .iter()
+                .all(|it| it.starts_with("41") && it.ends_with("77") && it.len() == 19)
+    });
+    let before = output_values(&harness);
+    click(&mut harness, "checks-generate");
+    waits_for(&mut harness, "others are drawn", |harness| {
+        output_values(harness) != before
+    });
+
+    type_in(&mut harness, "checks-prefix", "x");
+    waits_for(&mut harness, "the letter is refused", |harness| {
+        has(harness, "checks-generate-problem")
+    });
+
+    click(&mut harness, "checks-generate-kind-1");
+    waits_for(&mut harness, "IBANs are drawn", |harness| {
+        output_values(harness).iter().all(|it| it.starts_with("FR"))
+            && output_values(harness).len() == 5
+    });
+}

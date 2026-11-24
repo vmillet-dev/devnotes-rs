@@ -2607,6 +2607,23 @@
       "rib": "RIB key",
       "ribWrong": "{{given}} · {{expected}} expected",
       "compact": "Compact format",
+      "validateTitle": "Validate",
+      "generateTitle": "Generate",
+      "generateIntro": "Test numbers that pass: a series of digits that begins and ends as you choose, or the IBAN of a country.",
+      "prefix": "Begins with",
+      "suffix": "Ends with",
+      "numberLength": "Length",
+      "count": "Count",
+      "again": "Generate again",
+      "generated": "{count, plural, one {# number} other {# numbers}}",
+      "generatedAll": "All the numbers",
+      "generatedNote": "Drawn at random for tests: no card and no account stands behind them. The copy has no space.",
+      "generateProblems": {
+        "prefix": "The beginning holds something else than a digit at character {{at}}.",
+        "suffix": "The end holds something else than a digit at character {{at}}.",
+        "tooLong": "The beginning and the end hold {count, plural, one {# digit} other {# digits}}, more than the length.",
+        "impossible": "No digit is left to draw, and this number does not pass the check."
+      },
       "footnote": "A valid number follows the format and the check digits. It does not prove the account or the card exists."
     },
     "jwt": {

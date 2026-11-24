@@ -462,6 +462,17 @@ fn recette_the_rest() {
         app.capture("TPS-10");
     });
 
+    step("CMP-13 numbers drawn that pass", || {
+        open_tool(&mut app, "checks");
+        app.wait_for("checks-numbers");
+        retype(&mut app, "checks-prefix", "4242");
+        app.eventually("five that begin so", |tree| {
+            let drawn = tree.texts("output-value");
+            drawn.len() == 5 && drawn.iter().all(|it| it.starts_with("4242"))
+        });
+        app.capture("CMP-13-generate");
+    });
+
     step("CMP-05 a transfer timed", || {
         open_tool(&mut app, "sizes");
         app.wait_for("sizes-input");

@@ -121,7 +121,7 @@ pub enum CardNetwork {
 
 impl CardNetwork {
     /// By the prefix its issuers are given and a length it issues: a hint, never a proof.
-    fn of(number: &str) -> Option<Self> {
+    pub(crate) fn of(number: &str) -> Option<Self> {
         let within = |low: u32, high: u32, digits: usize| {
             number
                 .get(..digits)
@@ -159,7 +159,7 @@ impl CardNetwork {
     }
 
     /// American Express groups 4-6-5; the others by four.
-    fn grouped(self, digits: &str) -> String {
+    pub(crate) fn grouped(self, digits: &str) -> String {
         match self {
             Self::AmericanExpress if digits.len() == 15 => {
                 format!("{} {} {}", &digits[..4], &digits[4..10], &digits[10..])
@@ -169,7 +169,7 @@ impl CardNetwork {
     }
 }
 
-fn by_four(text: &str) -> String {
+pub(crate) fn by_four(text: &str) -> String {
     text.as_bytes()
         .chunks(4)
         .map(|chunk| String::from_utf8_lossy(chunk).into_owned())
