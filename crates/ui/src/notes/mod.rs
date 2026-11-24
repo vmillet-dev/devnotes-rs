@@ -385,17 +385,12 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         .beside(ui, region, rail, "library-rail-edge", |ui| {
             sidebar::show(ui, state, &mut view.sidebar, actions);
         });
-    let (cards, editor) = beside_the_cards(rest, state, view.panel_width);
-    let editor = match (cards, editor) {
-        (Some(cards), editor) => {
-            cards_and_header(ui, cards, state, view, actions);
-            editor
-        }
-        // Expanded, the note takes the cards' zone: the header stays above it, its sidebar
-        // toggle in reach.
-        (None, Some(zone)) => Some(header_above(ui, zone, state, view, actions)),
-        (None, None) => None,
-    };
+    // Above the cards and the note, beside each other or the note alone: it never moves.
+    let below = header_above(ui, rest, state, view, actions);
+    let (cards, editor) = beside_the_cards(below, state, view.panel_width);
+    if let Some(cards) = cards {
+        show_cards(ui, cards, state, view, actions);
+    }
     overlays::editor::show(
         ui,
         editor,
@@ -479,15 +474,8 @@ fn panel_edge(ui: &mut Ui, editor: Rect, view: &mut View, actions: &mut Actions)
     }
 }
 
-fn cards_and_header(
-    ui: &mut Ui,
-    room: Rect,
-    state: &AppState,
-    view: &mut View,
-    actions: &mut Actions,
-) {
-    let below = header_above(ui, room, state, view, actions);
-    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
+fn show_cards(ui: &mut Ui, room: Rect, state: &AppState, view: &mut View, actions: &mut Actions) {
+    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(room));
     // A card dragged on the board can be let go of over a row of the rail, which lights.
     view.canvas.rail = if state.settings.rail_shown {
         view.sidebar.rows().to_vec()

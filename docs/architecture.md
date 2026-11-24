@@ -4352,7 +4352,7 @@ the search gives way first, then the switchers' names. ⚠️ The central panel 
 own, as the reference: egui's 8 px cost the header its one row at the window's default width.
 
 A card's click surface (`note-card-open`, a layer under its controls) opens the note editor
-(`notes::overlays::editor`, `state::editor`) **in a panel beside the cards**, not over them: 45 %
+(`notes::overlays::editor`, `state::editor`) **in a panel beside the cards**, not over them, both under the area’s header, which spans them: 45 %
 of the area right of the rail, between 460 and 760 px (`notes::beside_the_cards`) until its edge is moved (`editor-panel-edge`,
 remembered as `editorPanelWidth`), always leaving at least two columns of cards on its left, drawn
 and clickable, the cards taking the columns their width has room for, the open one lit (amber edge, a tint). Expanded (the
