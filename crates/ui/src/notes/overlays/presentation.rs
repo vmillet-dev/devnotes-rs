@@ -169,27 +169,15 @@ fn stage(
     let pictures = |id: &str| crate::notes::overlays::editor::embedded(state, id);
     let missing = i18n::translate(language, keys::drawing::MISSING, &[]);
     let mut slide_ui = ui.new_child(UiBuilder::new().max_rect(column));
-    // Centred by the height it took last frame: a slide is laid out before it is measured.
-    let measured = ui.unique_id().with(("presentation-slide", at));
-    let last = ui.data(|data| data.get_temp::<f32>(measured));
-    let lead = last.map_or(0.0, |height| ((column.height() - height) / 2.0).max(0.0));
+    // From the top: nothing of a slide's place depends on a height known a frame late.
     let painted = egui::ScrollArea::vertical()
         .id_salt(("presentation-slide", at))
         .show(&mut slide_ui, |ui| {
             ui.set_width(width);
-            ui.add_space(lead);
-            let shown = ui.scope(|ui| {
-                RichView::new(slide)
-                    .scale(scale)
-                    .pictures(&pictures, &missing)
-                    .show(ui)
-            });
-            let (painted, height) = (shown.inner, shown.response.rect.height());
-            if last.is_none_or(|last| (last - height).abs() > 0.5) {
-                ui.data_mut(|data| data.insert_temp(measured, height));
-                ui.ctx().request_repaint();
-            }
-            painted
+            RichView::new(slide)
+                .scale(scale)
+                .pictures(&pictures, &missing)
+                .show(ui)
         })
         .inner;
     for id in painted.wanted {

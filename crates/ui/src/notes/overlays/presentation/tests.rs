@@ -12,13 +12,19 @@ const BODY: &str = "## Préparer\n\nLa sauvegarde.\n\n## Basculer\n\n### DNS\n\n
 
 /// A Note of two sections, open and presented.
 fn presented() -> Harness<'static> {
+    presenting(BODY)
+}
+
+/// A Note holding `body`, open and presented.
+fn presenting(body: &str) -> Harness<'static> {
+    let body = body.to_owned();
     let (backend, profile) = testing::unlocked();
     let space = testing::note(&backend, "seed").space_id.clone();
     engine::db::run_here(backend.engine(), move |engine| {
         let draft = engine::notes::model::NoteDraft {
             kind: NoteKind::Note,
             language: Language::Txt,
-            content: BODY.to_owned(),
+            content: body,
             ..testing::snippet(space, "Bascule".to_owned())
         };
         engine::notes::create_note(engine, draft)
@@ -89,6 +95,40 @@ fn the_title_comes_first_then_each_section_a_slide_moved_by_the_keys_and_the_but
     assert_eq!(count(&harness), "1 / 3");
     click_id(&mut harness, "presentation-next");
     assert_eq!(count(&harness), "2 / 3");
+}
+
+/// Where the words `said` are drawn.
+fn place(harness: &Harness<'_>, said: &str) -> egui::Rect {
+    harness
+        .query_all_by(|node| {
+            node.label()
+                .or_else(|| node.value())
+                .is_some_and(|words| words == said)
+        })
+        .next()
+        .unwrap_or_else(|| panic!("{said} is not on screen"))
+        .rect()
+}
+
+#[test]
+fn a_slide_is_where_it_stays_from_its_first_frame() {
+    let mut harness = presenting(
+        "## Courte\n\nUne ligne.\n\n## Longue\n\nUne.\n\nDeux.\n\nTrois.\n\nQuatre.\n\nCinq.\n",
+    );
+    for title in ["Courte", "Longue"] {
+        // Not `key_press`, whose release takes a frame of its own.
+        harness.input_mut().events.push(egui::Event::Key {
+            key: Key::ArrowRight,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: Modifiers::NONE,
+        });
+        harness.step();
+        let first = place(&harness, title);
+        settle(&mut harness);
+        assert_eq!(place(&harness, title), first, "{title} moved");
+    }
 }
 
 #[test]
