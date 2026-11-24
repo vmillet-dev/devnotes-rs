@@ -407,6 +407,7 @@ impl eframe::App for DevNotesApp {
         for action in actions.drain() {
             self.state.apply(action, ui.ctx(), &self.backend);
         }
+        theme::cursors::show(ui.ctx());
     }
 
     /// The window's colour before anything is drawn over it, from the first frame.
