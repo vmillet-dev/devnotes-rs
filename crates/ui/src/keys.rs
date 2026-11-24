@@ -62,19 +62,21 @@ pub static NOTES: [Binding; 1] = [Binding {
     action: Action::Notes(crate::notes::Action::FocusSearch),
 }];
 
-/// The note open beside the cards, while no field has the focus: J the next card, K the one
-/// before, in the order they are shown.
-pub static EDITOR: [Binding; 2] = [step(Key::J, 1), step(Key::K, -1)];
+/// The note open, while no field has the focus: J the next card, K the one before, in the order
+/// they are shown; F2 its title.
+pub static EDITOR: [Binding; 3] = [
+    editing(Key::J, crate::notes::Editing::Step(1)),
+    editing(Key::K, crate::notes::Editing::Step(-1)),
+    editing(Key::F2, crate::notes::Editing::FocusTitle),
+];
 
-const fn step(key: Key, by: isize) -> Binding {
+const fn editing(key: Key, asked: crate::notes::Editing) -> Binding {
     Binding {
         key,
         modifiers: Modifiers::NONE,
         read: Read::Character,
         while_typing: false,
-        action: Action::Notes(crate::notes::Action::Editor(crate::notes::Editing::Step(
-            by,
-        ))),
+        action: Action::Notes(crate::notes::Action::Editor(asked)),
     }
 }
 

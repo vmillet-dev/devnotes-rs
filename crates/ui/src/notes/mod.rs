@@ -242,6 +242,7 @@ pub enum Editing {
     Close,
     /// J or K: the note so many cards after the one open (before, negative).
     Step(isize),
+    FocusTitle,
     Fullscreen(bool),
     FoldHeader(bool),
     /// Expanded: the column of details shown beside the body, or not.
@@ -355,7 +356,7 @@ pub struct View {
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
     pub(crate) focus_search: bool,
     header: header::HeaderView,
-    editor: Option<overlays::editor::EditorView>,
+    pub(crate) editor: Option<overlays::editor::EditorView>,
     presentation: overlays::presentation::PresentationView,
     explorer_layout: overlays::editor::ExplorerLayout,
     trash: overlays::trash_panel::TrashView,

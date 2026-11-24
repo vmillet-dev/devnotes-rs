@@ -539,6 +539,8 @@ fn another_card_opens_once_the_note_open_wrote_its_title() {
     testing::note(&backend, "second");
     let mut harness = wide(area(backend, profile));
     crate::notes::bench::click(&mut harness, "note-card-open", "first");
+    click_id(&mut harness, "editor-title");
+    harness.key_press(egui::Key::End);
     harness
         .get_by(|node| node.author_id() == Some("editor-title"))
         .type_text(" edited");
@@ -548,6 +550,51 @@ fn another_card_opens_once_the_note_open_wrote_its_title() {
 
     assert_eq!(title_of_open(&harness), "second");
     assert_eq!(stored(&harness, &first).title, "first edited");
+}
+
+fn title_has_focus(harness: &egui_kittest::Harness<'_, Bench>) -> bool {
+    harness
+        .get_by(|node| node.author_id() == Some("editor-title"))
+        .accesskit_node()
+        .is_focused()
+}
+
+#[test]
+fn a_note_opened_from_its_card_leaves_the_keys_to_j_and_k() {
+    let (backend, profile) = testing::unlocked();
+    for title in ["one", "two"] {
+        testing::note(&backend, title);
+    }
+    let mut harness = wide(area(backend, profile));
+    let order = harness.state().state.on_screen();
+
+    crate::notes::bench::click(&mut harness, "note-card-open", "two");
+    let first = title_of_open(&harness);
+    assert!(!title_has_focus(&harness));
+    let step = if harness.state().state.editor.open_id() == Some(order[0].as_str()) {
+        egui::Key::J
+    } else {
+        egui::Key::K
+    };
+    harness.key_press(step);
+    settle(&mut harness);
+    assert_ne!(title_of_open(&harness), first);
+    assert!(!title_has_focus(&harness));
+
+    harness.key_press(egui::Key::F2);
+    settle(&mut harness);
+    assert!(title_has_focus(&harness));
+}
+
+#[test]
+fn a_new_note_gives_its_title_the_focus() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "one");
+    let mut harness = wide(area(backend, profile));
+
+    click_id(&mut harness, "new-note");
+
+    assert!(title_has_focus(&harness));
 }
 
 /// J and K walk the cards as they are shown, once no field has the focus; expanded, the
@@ -562,9 +609,6 @@ fn j_and_k_step_through_the_cards_and_escape_steps_back() {
     let order = harness.state().state.on_screen();
     let first = order[0].clone();
     harness.state_mut().state.editor.open(first);
-    settle(&mut harness);
-    // The title takes the focus as the note opens: Escape gives it up first.
-    harness.key_press(egui::Key::Escape);
     settle(&mut harness);
     assert!(is_open(&harness));
 

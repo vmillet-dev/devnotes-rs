@@ -55,8 +55,6 @@ use notes_query::NotesQueryState;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EditorNext {
     Note(String),
-    /// Reached by J or K.
-    Stepped(String),
     /// A new note of that kind, or of the preferred one.
     Draft(Option<engine::notes::kind::NoteKind>),
 }
