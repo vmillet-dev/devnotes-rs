@@ -122,6 +122,7 @@ pub(crate) use json_view::Layout as ExplorerLayout;
 
 /// What the history leaves the body, unfolded.
 const BODY_FLOOR: f32 = 96.0;
+pub(crate) use drawing::picture_palette;
 pub(in crate::notes) use rich::embedded;
 
 /// The editor in `room`: beside the cards, or the whole area once expanded. `None` while no

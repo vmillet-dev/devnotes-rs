@@ -442,7 +442,7 @@ pub(in crate::notes) fn embedded(state: &AppState, id: &str) -> Option<Embedded>
     match state.caches.pictures.get(&Thumbnails::embedded(id)) {
         Thumbnail::Unknown => None,
         Thumbnail::Waiting => Some(Embedded::Waiting),
-        Thumbnail::Missing => Some(Embedded::Missing),
+        Thumbnail::Empty | Thumbnail::Missing => Some(Embedded::Missing),
         Thumbnail::Shown(texture) => Some(Embedded::Shown(texture.clone())),
     }
 }

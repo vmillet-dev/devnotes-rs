@@ -504,13 +504,15 @@ fn drawing(
         id: note.id.clone(),
         updated_at: note.updated_at,
     };
+    let says = |ui: &mut Ui, key| {
+        let words = i18n::translate(context.language, key, &[]);
+        prose(ui, rect, (&words, 1), false, "note-card-drawing-empty");
+    };
     match context.thumbnails.get(&stamp) {
         Thumbnail::Unknown => actions.push(Action::Notes(crate::notes::Action::Thumbnail(stamp))),
         Thumbnail::Waiting => {}
-        Thumbnail::Missing => {
-            let words = i18n::translate(context.language, keys::drawing::NO_PICTURE, &[]);
-            prose(ui, rect, (&words, 1), false, "note-card-drawing-empty");
-        }
+        Thumbnail::Empty => says(ui, keys::drawing::EMPTY_CARD),
+        Thumbnail::Missing => says(ui, keys::drawing::NO_PICTURE),
         Thumbnail::Shown(texture) => {
             let size = texture.size_vec2();
             let scale = (rect.width() / size.x).min(rect.height() / size.y).min(1.0);

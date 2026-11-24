@@ -11,6 +11,8 @@ pub mod prettier;
 pub mod sidebar;
 pub mod ui;
 
+pub(crate) use overlays::editor::picture_palette;
+
 use egui::{Rect, Ui, UiBuilder};
 use engine::notes::kind::NoteKind;
 use engine::notes::priority::Priority;

@@ -323,19 +323,6 @@ fn a_sheet_with_a_short_date_before_an_accent_is_listed() {
 }
 
 #[test]
-fn a_drawing_without_a_picture_says_so() {
-    let (backend, profile) = testing::unlocked();
-    write(&backend, |draft| {
-        draft.kind = NoteKind::Drawing;
-        draft.content = String::new();
-    });
-
-    let harness = canvas(backend, profile);
-
-    assert_eq!(label(&harness, "note-card-drawing-empty"), "No preview yet");
-}
-
-#[test]
 fn a_priority_is_its_bars_in_the_top_band() {
     let (backend, profile) = testing::unlocked();
     let id = write(&backend, |draft| draft.title = "urgent fix".into());
@@ -444,4 +431,75 @@ fn a_drawing_shows_its_picture_once_decoded() {
     let harness = canvas(backend, profile);
 
     node(&harness, "note-card-drawing");
+}
+
+const SCENE: &str = r#"{"version":1,"scene":{"objects":[{"type":"Rect","left":60,"top":45,"width":100,"height":50}]}}"#;
+
+fn count(harness: &Harness<'_, Bench>, author_id: &str) -> usize {
+    harness
+        .query_all_by(|node| node.author_id() == Some(author_id))
+        .count()
+}
+
+/// As an import leaves them: a scene, and no picture taken of it.
+#[test]
+fn a_drawing_with_no_picture_yet_has_one_taken_once_its_card_is_drawn() {
+    let (backend, profile) = testing::unlocked();
+    let ids: Vec<String> = (0..40)
+        .map(|rank| {
+            write(&backend, move |draft| {
+                draft.title = format!("imported {rank}");
+                draft.kind = NoteKind::Drawing;
+                draft.content = SCENE.to_owned();
+            })
+        })
+        .collect();
+    let before = stored(&backend, &ids[39]).updated_at;
+
+    let harness = canvas(backend, profile);
+
+    assert!(count(&harness, "note-card-drawing") > 5);
+    assert_eq!(count(&harness, "note-card-drawing-empty"), 0);
+    let backend = &harness.state().backend;
+    let kept = ids
+        .iter()
+        .filter(|id| thumbnail(backend, id).is_some())
+        .count();
+    assert_eq!(
+        kept,
+        count(&harness, "note-card-drawing"),
+        "only the cards drawn, each kept for the next time"
+    );
+    assert_eq!(stored(backend, &ids[39]).updated_at, before);
+}
+
+#[test]
+fn a_drawing_with_nothing_on_it_says_so() {
+    for scene in ["", r#"{"version":1,"scene":{"objects":[]}}"#] {
+        let (backend, profile) = testing::unlocked();
+        write(&backend, move |draft| {
+            draft.kind = NoteKind::Drawing;
+            draft.content = scene.to_owned();
+        });
+
+        let harness = canvas(backend, profile);
+
+        assert_eq!(label(&harness, "note-card-drawing-empty"), "Empty drawing");
+    }
+}
+
+fn stored(backend: &crate::backend::Backend, id: &str) -> engine::notes::model::DisplayNote {
+    let id = id.to_owned();
+    engine::db::run_here(backend.engine(), move |engine| {
+        engine::notes::get_note(engine, &id)
+    })
+    .unwrap()
+}
+
+fn thumbnail(backend: &crate::backend::Backend, id: &str) -> Option<String> {
+    let id = id.to_owned();
+    engine::db::run_here(backend.engine(), move |engine| {
+        engine::notes::drawing_thumbnail(engine, &id)
+    })
+    .unwrap()
 }
