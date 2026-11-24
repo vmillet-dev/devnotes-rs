@@ -1409,7 +1409,8 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   a slice of the body so it is drawn as written, empty ones dropped; the headings come back as a
   tree, each with the slide it is on. `overlays::presentation` puts the Note's title first as a
   cover and draws each slide with `widgets::rich` read only and larger — the editor's own blocks
-  and colours — centred by the height it took last frame.
+  and colours — from the top and the left margin, so a title is at one place on every slide, a
+  code block centred on the screen, no wider than its code.
   ← → (and the keys a clicker sends), Home/End, `M` for the map, Escape out: a modal over
   everything, the editor kept under it. `PresentationState` sends `ViewportCommand::Fullscreen`
   only when the window was not full screen already, and gives back only what it took — on

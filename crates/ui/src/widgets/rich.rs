@@ -82,11 +82,13 @@ pub struct RichView<'a> {
     pictures: Option<(Pictures<'a>, &'a str)>,
     /// Edited: the selection painted, links followed with Ctrl alone.
     selection: Option<&'a Selection>,
+    slide: Option<f32>,
 }
 
 /// What every block of a frame is drawn with.
 struct Frame<'a> {
     size: f32,
+    slide: Option<f32>,
     pictures: Option<(Pictures<'a>, &'a str)>,
     selection: Option<&'a Selection>,
     found: &'a [Found],
@@ -101,7 +103,16 @@ impl<'a> RichView<'a> {
             found: &[],
             pictures: None,
             selection: None,
+            slide: None,
         }
+    }
+
+    /// Presented: text no wider than `widest`, a code block no wider than its code and centred
+    /// in the whole room.
+    #[must_use]
+    pub fn slide(mut self, widest: f32) -> Self {
+        self.slide = Some(widest);
+        self
     }
 
     /// The pictures of the drawings the Note embeds; without them, each one's name.
@@ -133,6 +144,7 @@ impl<'a> RichView<'a> {
     pub fn show(self, ui: &mut Ui) -> Painted {
         let mut frame = Frame {
             size: BODY * self.scale,
+            slide: self.slide,
             pictures: self.pictures,
             selection: self.selection,
             found: self.found,
@@ -289,7 +301,8 @@ fn format(p: &Palette, marks: &Marks, style: Style) -> TextFormat {
 
 fn paragraph(ui: &mut Ui, content: &[Inline], style: Style, path: &[usize], frame: &mut Frame<'_>) {
     let p = palette(ui.ctx());
-    let (job, links) = job(p, content, style, ui.available_width());
+    let widest = frame.slide.unwrap_or(f32::INFINITY);
+    let (job, links) = job(p, content, style, ui.available_width().min(widest));
     let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
     let reading = frame.selection.is_none();
     let sense = if reading && !links.is_empty() {
@@ -532,10 +545,19 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
     job.wrap.max_width = f32::INFINITY;
     let galley = ui.fonts_mut(|fonts| fonts.layout_job(job));
     let padding = vec2(14.0, 12.0);
-    let width = ui.available_width();
-    let height = galley.size().y;
-    let (rect, response) =
-        ui.allocate_exact_size(vec2(width, height + 2.0 * padding.y), Sense::hover());
+    let column = ui.available_width();
+    let width = if frame.slide.is_some() {
+        (galley.size().x + 2.0 * padding.x + fence_room(ui, language)).min(column)
+    } else {
+        column
+    };
+    let size = vec2(width, galley.size().y + 2.0 * padding.y);
+    let (rect, response) = ui
+        .horizontal(|ui| {
+            ui.add_space((column - width) / 2.0);
+            ui.allocate_exact_size(size, Sense::hover())
+        })
+        .inner;
     if frame.selection.is_none() {
         response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Code, true, text));
     }
@@ -563,6 +585,18 @@ fn code_block(ui: &mut Ui, language: &str, text: &str, path: &[usize], frame: &m
             .intersect(ui.clip_rect()),
     );
     paint_leaf(&clipped, path, rect.min + padding, galley, p.text_0, frame);
+}
+
+/// What the fence's word takes in the corner of a block no wider than its code.
+fn fence_room(ui: &Ui, language: &str) -> f32 {
+    if language.is_empty() {
+        return 0.0;
+    }
+    let font = FontId::monospace(font::CAPTION);
+    let word = ui
+        .painter()
+        .layout_no_wrap(language.to_owned(), font, Color32::PLACEHOLDER);
+    word.size().x + 10.0
 }
 
 /// A fence's word: a language's tag as the editor writes it, or a shell's usual name.

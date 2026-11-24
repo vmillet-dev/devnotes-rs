@@ -1280,6 +1280,51 @@ fn the_editor_header_of_a_full_note_when_narrow() {
     }
 }
 
+/// A Note presented (#1568, #1569): a short slide, a list, a short code, one too long and too
+/// wide for the screen.
+#[test]
+fn the_slides_of_a_presentation() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1600.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let wide = "let answer = client.get(\"https://api.example.test/v1/certificates\").header(\"Authorization\", token).timeout(Duration::from_secs(30)).send().await?;";
+    let long: String = std::iter::once(wide.to_owned())
+        .chain((1..60).map(|at| format!("let line_{at} = {at};")))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let body = format!(
+        "## A short slide\n\nOne line of text.\n\n## A list\n\n- prepare the backup\n- switch the DNS\n- watch the logs\n\n## A short code\n\n```rust\nlet x = 1;\nlet y = 2;\n```\n\n## A long code\n\n```rust\n{long}\n```\n"
+    );
+    let id = crate::testing::note(&harness.state().backend, "Switch over")
+        .id
+        .clone();
+    let patch = engine::notes::model::NotePatch {
+        kind: Some(engine::notes::kind::NoteKind::Note),
+        content: Some(body),
+        ..engine::notes::model::NotePatch::default()
+    };
+    let engine = harness.state().backend.engine().clone();
+    let note = id.clone();
+    engine::db::run_here(&engine, move |engine| {
+        engine::notes::update_note(engine, &note, &patch)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    click(&mut harness, "editor-more");
+    click(&mut harness, "editor-present");
+    settle(&mut harness);
+    for slide in ["short", "list", "code", "long-code"] {
+        harness.key_press(egui::Key::ArrowRight);
+        settle(&mut harness);
+        capture(&mut harness, &format!("slide-{slide}"));
+    }
+}
+
 /// A request in the narrowest window (#1487): its URL, its actions and its tabs.
 #[test]
 fn the_http_request_in_a_narrow_window() {

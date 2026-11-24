@@ -132,6 +132,30 @@ fn a_slide_is_where_it_stays_from_its_first_frame() {
 }
 
 #[test]
+fn titles_and_text_start_at_the_margin_on_every_slide_and_code_is_centred() {
+    let mut harness = presenting(
+        "# Un\n\nUne ligne.\n\n## Deux\n\n- Un point\n\n## Trois\n\n```rust\nlet x = 1;\n```\n",
+    );
+    harness.set_size(egui::vec2(1_900.0, 900.0));
+    settle(&mut harness);
+    let margin = 0.06 * 1_900.0;
+
+    press(&mut harness, Key::ArrowRight);
+    let first = place(&harness, "Un").min;
+    assert!((first.x - margin).abs() < 1.0, "{first:?}");
+    assert!((place(&harness, "Une ligne.").left() - margin).abs() < 1.0);
+    press(&mut harness, Key::ArrowRight);
+    assert_eq!(place(&harness, "Deux").min, first);
+    assert!(place(&harness, "Un point").left() < margin + 80.0);
+    press(&mut harness, Key::ArrowRight);
+    assert_eq!(place(&harness, "Trois").min, first);
+
+    let code = place(&harness, "let x = 1;");
+    assert!((code.center().x - 950.0).abs() < 1.0, "{code:?}");
+    assert!(code.width() < 400.0);
+}
+
+#[test]
 fn the_map_opens_the_slide_of_the_heading_pressed() {
     let mut harness = presented();
 
