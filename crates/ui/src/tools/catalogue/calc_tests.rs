@@ -417,3 +417,61 @@ fn numbers_are_drawn_between_a_beginning_and_an_end_and_an_iban_for_a_country() 
             && output_values(harness).len() == 5
     });
 }
+
+/// What the `at`th of the copies named `id` puts on the clipboard.
+fn copied(harness: &mut Harness<'_, Bench>, id: &str, at: usize) -> String {
+    harness
+        .get_all_by(|node| node.author_id() == Some(id))
+        .nth(at)
+        .unwrap()
+        .click();
+    let mut text = None;
+    for _ in 0..4 {
+        harness.step();
+        for command in &harness.output().platform_output.commands {
+            if let egui::OutputCommand::CopyText(copied) = command {
+                text = Some(copied.clone());
+            }
+        }
+    }
+    text.expect("it was copied")
+}
+
+#[test]
+fn a_printed_number_is_copied_as_it_is_shown_or_raw() {
+    let mut harness = opened("checks");
+    waits_for(&mut harness, "numbers are drawn", |harness| {
+        has(harness, "checks-numbers")
+    });
+    let shown = output_values(&harness)[0].clone();
+    assert!(shown.contains(' '));
+
+    let first = harness
+        .get_all_by(|node| node.author_id() == Some("copy-raw"))
+        .count();
+    assert_eq!(first, 5, "one a number");
+    // « Copy all » comes before the rows.
+    assert_eq!(copied(&mut harness, "copy-value", 1), shown);
+    assert_eq!(copied(&mut harness, "copy-raw", 0), shown.replace(' ', ""));
+}
+
+#[test]
+fn the_numbers_of_an_identity_have_both_copies_and_its_email_one() {
+    let mut harness = opened("identity");
+    waits_for(&mut harness, "a person is drawn", |harness| {
+        has(harness, "identity-block-contact")
+    });
+    let raws: Vec<String> = harness
+        .query_all_by(|node| node.author_id() == Some("copy-raw"))
+        .map(|node| node.accesskit_node().label().unwrap_or_default())
+        .collect();
+    for number in ["Phone", "Mobile", "IBAN"] {
+        let wanted = format!("Copy {number}, raw");
+        assert!(raws.contains(&wanted), "{number}: {raws:?}");
+    }
+    assert!(
+        !raws
+            .iter()
+            .any(|it| it.contains("mail") || it.contains("Address"))
+    );
+}

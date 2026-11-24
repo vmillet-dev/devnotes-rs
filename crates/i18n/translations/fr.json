@@ -1473,6 +1473,9 @@
     "copy": "Copier",
     "copied": "Copié",
     "copyWhat": "Copier {{what}}",
+    "copyRawWhat": "Copier {{what}}, brut",
+    "raw": "Brut",
+    "copyRawHint": "Copier la valeur brute",
     "case": {
       "name": "Convertisseur de casse",
       "description": "camelCase, snake_case, dot.case, Train-Case…",
@@ -2606,7 +2609,6 @@
       "account": "Numéro de compte",
       "rib": "Clé RIB",
       "ribWrong": "{{given}} · {{expected}} attendue",
-      "compact": "Format compact",
       "validateTitle": "Vérifier",
       "generateTitle": "Générer",
       "generateIntro": "Des numéros de test qui passent : une série de chiffres qui commence et finit comme vous le choisissez, ou l’IBAN d’un pays.",

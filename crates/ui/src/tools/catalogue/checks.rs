@@ -150,9 +150,13 @@ fn luhn_card(ui: &mut Ui, luhn: &Luhn<'_>, language: Language) {
         }
         result_rows(ui, &rows, language);
         group_title(ui, &tr(words::CONTENT));
+        let (number, completed) = (
+            api::tools::raw_number(luhn.grouped),
+            api::tools::raw_number(luhn.completed),
+        );
         let rows = [
-            ResultRow::new(&names.3, luhn.grouped),
-            ResultRow::new(&names.4, luhn.completed),
+            ResultRow::new(&names.3, luhn.grouped).raw(&number),
+            ResultRow::new(&names.4, luhn.completed).raw(&completed),
         ];
         result_rows(ui, &rows, language);
     });
@@ -263,13 +267,13 @@ fn iban_card(ui: &mut Ui, iban: &Iban<'_>, language: Language) {
     let key = iban_key(iban, language);
     let country = i18n::format::country(iban.country, language).unwrap_or(iban.country);
     let country = format!("{country} ({})", iban.country);
-    let compact = iban.printed.replace(' ', "");
+    let compact = api::tools::raw_number(iban.printed);
     let parts = iban_parts(iban.verdict, language);
     let names = (
         tr(words::LENGTH),
         tr(words::KEY),
         tr(words::COUNTRY),
-        tr(words::COMPACT),
+        tr(words::kinds::IBAN),
         tr(words::CORRECTED),
     );
     card(ui, "checks-result", |ui| {
@@ -283,9 +287,14 @@ fn iban_card(ui: &mut Ui, iban: &Iban<'_>, language: Language) {
         group_title(ui, &tr(words::CONTENT));
         let mut rows = vec![ResultRow::new(&names.2, &country).reading()];
         rows.extend(parts.iter().map(|(n, v)| ResultRow::new(n, v).reading()));
-        rows.push(ResultRow::new(&names.3, &compact));
-        if let IbanVerdict::WrongChecksum { corrected, .. } = iban.verdict {
-            rows.push(ResultRow::new(&names.4, corrected));
+        rows.push(ResultRow::new(&names.3, iban.printed).raw(&compact));
+        let corrected = match iban.verdict {
+            IbanVerdict::WrongChecksum { corrected, .. } => corrected.as_str(),
+            _ => "",
+        };
+        let corrected_raw = api::tools::raw_number(corrected);
+        if !corrected.is_empty() {
+            rows.push(ResultRow::new(&names.4, corrected).raw(&corrected_raw));
         }
         result_rows(ui, &rows, language);
     });
@@ -310,7 +319,7 @@ fn number_list(ui: &mut Ui, numbers: &[DrawnNumber], language: Language) {
         let rows: Vec<_> = numbers
             .iter()
             .zip(&names)
-            .map(|(number, name)| ResultRow::new(name, &number.printed).copied(&number.raw))
+            .map(|(number, name)| ResultRow::new(name, &number.printed).raw(&number.raw))
             .collect();
         result_rows(ui, &rows, language);
     });

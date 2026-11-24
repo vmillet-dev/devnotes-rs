@@ -1473,6 +1473,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "copyWhat": "Copy {{what}}",
+    "copyRawWhat": "Copy {{what}}, raw",
+    "raw": "Raw",
+    "copyRawHint": "Copy the raw value",
     "case": {
       "name": "Case converter",
       "description": "camelCase, snake_case, dot.case, Train-Case…",
@@ -2606,7 +2609,6 @@
       "account": "Account number",
       "rib": "RIB key",
       "ribWrong": "{{given}} · {{expected}} expected",
-      "compact": "Compact format",
       "validateTitle": "Validate",
       "generateTitle": "Generate",
       "generateIntro": "Test numbers that pass: a series of digits that begins and ends as you choose, or the IBAN of a country.",

@@ -1,6 +1,6 @@
 //! « Copy », beside a result, and what it says for a moment once done.
 
-use crate::theme::tokens::{font, radius};
+use crate::theme::tokens::{font, gap, radius};
 use egui::{
     CornerRadius, FontFamily, Id, Rect, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo,
 };
@@ -16,6 +16,8 @@ pub struct CopyValue<'a> {
     what: &'a str,
     language: Language,
     compact: bool,
+    /// Told apart from the other copy of the same result: its word in place of the icon.
+    raw: bool,
     label: Key,
 }
 
@@ -26,6 +28,7 @@ impl<'a> CopyValue<'a> {
             what,
             language,
             compact: false,
+            raw: false,
             label: keys::tools::COPY,
         }
     }
@@ -34,6 +37,13 @@ impl<'a> CopyValue<'a> {
     #[must_use]
     pub fn compact(mut self) -> Self {
         self.compact = true;
+        self
+    }
+
+    /// The result without its formatting: a word at the end of a row, beside the icon that
+    /// copies it as it is shown.
+    fn raw(mut self) -> Self {
+        self.raw = true;
         self
     }
 
@@ -54,7 +64,9 @@ impl<'a> CopyValue<'a> {
             self.label
         };
         let word = i18n::translate(self.language, key, &[]);
-        let response = if self.compact {
+        let response = if self.raw {
+            self.word(ui, copied)
+        } else if self.compact {
             self.icon(ui, copied, enabled, &word)
         } else {
             self.framed(ui, copied, enabled, &word)
@@ -69,9 +81,49 @@ impl<'a> CopyValue<'a> {
     }
 
     fn accessible_name(&self) -> String {
-        Message::new(keys::tools::COPY_WHAT)
+        let key = if self.raw {
+            keys::tools::COPY_RAW_WHAT
+        } else {
+            keys::tools::COPY_WHAT
+        };
+        Message::new(key)
             .with("what", self.what)
             .text(self.language)
+    }
+
+    fn word(&self, ui: &mut Ui, copied: bool) -> Response {
+        let p = palette(ui.ctx());
+        let name = self.accessible_name();
+        let galley = raw_word(ui, self.language);
+        let corner = CornerRadius::same(radius::CONTROL);
+        let response = interact(
+            ui,
+            Vec2::new(galley.size().x + RAW_ROOM, 28.0),
+            Sense::click(),
+            "copy-raw",
+            || WidgetInfo::labeled(Role::Button, true, &name),
+            corner,
+        );
+        let hover = hovered(ui, &response);
+        let pill = response.rect.shrink2(Vec2::new(0.0, 4.0));
+        ui.painter().rect(
+            pill,
+            corner,
+            p.bg_2,
+            Stroke::new(1.0, towards(p.line_soft, p.amber_dim, hover)),
+            egui::StrokeKind::Inside,
+        );
+        if copied {
+            let glyph = Rect::from_center_size(pill.center(), Vec2::splat(12.0));
+            icons::paint(ui, glyph, Icon::Check, p.green);
+        } else {
+            let ink = towards(p.text_2, p.text_0, hover);
+            let at = pill.center() - galley.size() / 2.0;
+            ui.painter()
+                .galley_with_override_text_color(at, galley, ink);
+        }
+        let hint = i18n::translate(self.language, keys::tools::COPY_RAW_HINT, &[]);
+        widgets::tooltip(response, &hint)
     }
 
     fn icon(&self, ui: &mut Ui, copied: bool, enabled: bool, word: &str) -> Response {
@@ -165,4 +217,32 @@ fn sense(enabled: bool) -> Sense {
 
 fn mark(copied: bool) -> Icon {
     if copied { Icon::Check } else { Icon::Copy }
+}
+
+/// On both sides of the word.
+const RAW_ROOM: f32 = 2.0 * gap::SNUG;
+
+fn raw_word(ui: &Ui, language: Language) -> std::sync::Arc<egui::Galley> {
+    let word = i18n::translate(language, keys::tools::RAW, &[]);
+    let ink = palette(ui.ctx()).text_2;
+    let family = FontFamily::Proportional;
+    widgets::text(ui, &word, font::CAPTION, 500.0, family, ink)
+}
+
+/// What the copies of a result take at the end of its row.
+pub fn copies_width(ui: &Ui, (shown, raw): (&str, Option<&str>), language: Language) -> f32 {
+    let second = raw.filter(|raw| *raw != shown);
+    28.0 + second.map_or(0.0, |_| {
+        gap::LINE + raw_word(ui, language).size().x + RAW_ROOM
+    })
+}
+
+/// The result as it is shown and, where it is written otherwise, as it is stored: two buttons
+/// side by side.
+pub fn copies(ui: &mut Ui, (shown, raw): (&str, Option<&str>), what: &str, language: Language) {
+    ui.spacing_mut().item_spacing.x = gap::LINE;
+    CopyValue::new(shown, what, language).compact().show(ui);
+    if let Some(raw) = raw.filter(|raw| *raw != shown) {
+        CopyValue::new(raw, what, language).raw().show(ui);
+    }
 }

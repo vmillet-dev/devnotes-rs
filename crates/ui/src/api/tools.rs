@@ -150,6 +150,11 @@ pub fn draw_numbers(backend: &Backend, request: NumbersRequest) -> Pending<Numbe
     backend.compute(move |_| tools::draw_numbers(&request))
 }
 
+/// A printed number without its separators.
+pub fn raw_number(printed: &str) -> String {
+    engine::tools::printed::raw(printed)
+}
+
 /// The countries whose IBAN is drawn.
 pub fn iban_countries() -> Vec<engine::tools::identity::Country> {
     engine::tools::check_numbers::iban_countries()

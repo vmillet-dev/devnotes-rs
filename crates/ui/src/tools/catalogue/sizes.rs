@@ -325,7 +325,7 @@ impl SizesTool {
                     .collect();
                 let lines: Vec<_> = shown
                     .iter()
-                    .map(|(name, value, exact)| ResultRow::new(name, value).copied(exact))
+                    .map(|(name, value, exact)| ResultRow::new(name, value).raw(exact))
                     .collect();
                 result_rows(ui, &lines, language);
             }

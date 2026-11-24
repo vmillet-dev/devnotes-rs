@@ -22,8 +22,8 @@ use crate::theme::icons::Icon;
 use crate::theme::palette;
 use crate::tools::live::{Live, Turn};
 use crate::tools::ui::{
-    CopyValue, ResultRow, card, columns, group_title, hint, label, line, named, number_field,
-    paragraph, result_rows, section_head, section_title,
+    CopyValue, ResultRow, card, columns, copies, copies_width, group_title, hint, label, line,
+    named, number_field, paragraph, result_rows, section_head, section_title,
 };
 use crate::tools::{Action, Drawn, Tool, ToolAction, ToolResult};
 use crate::widgets::{
@@ -36,8 +36,6 @@ const PEOPLE_AT_FIRST: u32 = 10;
 /// The seed a sample draws from: the same person for whoever opens the tool.
 const SAMPLE_SEED: &str = "devnotes";
 const MONOGRAM: f32 = 104.0;
-/// A compact copy button and the gap before it.
-const COPY_ROOM: f32 = 36.0;
 const FACT_GAP: f32 = gap::INSET;
 
 /// The request, and which draw of it: a new draw with the same options is a new request.
@@ -69,6 +67,8 @@ impl Mark {
 struct Row {
     name: String,
     value: String,
+    /// The same, as it is stored: a number without its separators.
+    raw: Option<String>,
     mark: Option<Mark>,
 }
 
@@ -77,7 +77,15 @@ impl Row {
         Self {
             name: i18n::translate(language, name, &[]),
             value: value.to_owned(),
+            raw: None,
             mark: None,
+        }
+    }
+
+    fn number(language: Language, name: i18n::Key, value: &str) -> Self {
+        Self {
+            raw: Some(api::tools::raw_number(value)),
+            ..Self::new(language, name, value)
         }
     }
 
@@ -173,6 +181,7 @@ fn identifier_rows(
                 &json!(identifier.kind),
             ),
             value: identifier.value.clone(),
+            raw: Some(api::tools::raw_number(&identifier.value)),
             mark: unkeyed.contains(&identifier.kind).then_some(Mark::Unkeyed),
         })
         .collect()
@@ -184,8 +193,8 @@ fn contact_rows(answer: &IdentityAnswer, language: Language) -> Vec<Row> {
     let phones = (!answer.fiction_phones).then_some(Mark::MayRing);
     vec![
         Row::new(language, fields::ADDRESS, &person.address.formatted),
-        Row::new(language, fields::PHONE, &person.phone).marked(phones),
-        Row::new(language, fields::MOBILE, &person.mobile).marked(phones),
+        Row::number(language, fields::PHONE, &person.phone).marked(phones),
+        Row::number(language, fields::MOBILE, &person.mobile).marked(phones),
         Row::new(language, fields::EMAIL, &person.email),
     ]
 }
@@ -196,7 +205,7 @@ fn bank_rows(answer: &IdentityAnswer, language: Language) -> Vec<Row> {
     let bank = &answer.person.bank;
     let mut rows = vec![Row::new(language, fields::BANK, &bank.name)];
     if let Some(iban) = &bank.iban {
-        rows.push(Row::new(language, fields::IBAN, iban));
+        rows.push(Row::number(language, fields::IBAN, iban));
     }
     if let Some(bic) = &bank.bic {
         rows.push(Row::new(language, fields::BIC, bic));
@@ -241,7 +250,13 @@ fn block(ui: &mut Ui, id: &str, title: i18n::Key, rows: &[Row], language: Langua
         let shown: Vec<_> = rows
             .iter()
             .zip(&marks)
-            .map(|(row, mark)| ResultRow::new(&row.name, &row.value).meta(mark))
+            .map(|(row, mark)| {
+                let shown = ResultRow::new(&row.name, &row.value).meta(mark);
+                match &row.raw {
+                    Some(raw) => shown.raw(raw),
+                    None => shown,
+                }
+            })
             .collect();
         result_rows(ui, &shown, language);
     });
@@ -259,12 +274,12 @@ fn fact_name(ui: &mut Ui, name: &str, mark: Option<&str>) {
     });
 }
 
-/// A fact of the card with its name above it; `copied` is what its button gives.
+/// A fact of the card with its name above it; `raw` is how it is stored, copied beside it.
 fn fact(
     ui: &mut Ui,
     (name, value): (&str, &str),
     style: (f32, f32),
-    copied: Option<&str>,
+    raw: Option<&str>,
     author_id: &str,
     language: Language,
 ) {
@@ -272,14 +287,16 @@ fn fact(
     let ink = palette(ui.ctx()).text_0;
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = gap::CONTROLS;
-        let copy_room = if copied.is_some() { COPY_ROOM } else { 0.0 };
+        let copy_room = raw.map_or(0.0, |_| {
+            copies_width(ui, (value, raw), language) + gap::CONTROLS
+        });
         let room = ui.available_width() - copy_room;
         ui.allocate_ui(Vec2::new(room, 0.0), |ui| {
             let said = paragraph(ui, value, style, ink);
             address(ui, &said, author_id);
         });
-        if let Some(copied) = copied {
-            CopyValue::new(copied, name, language).compact().show(ui);
+        if raw.is_some() {
+            copies(ui, (value, raw), name, language);
         }
     });
     ui.add_space(FACT_GAP);
@@ -296,9 +313,7 @@ fn number(ui: &mut Ui, row: &Row, author_id: &str, language: Language) {
             .color(palette(ui.ctx()).text_0);
         let said = ui.add(egui::Label::new(shown).selectable(true));
         address(ui, &said, author_id);
-        CopyValue::new(&row.value, &row.name, language)
-            .compact()
-            .show(ui);
+        copies(ui, (&row.value, row.raw.as_deref()), &row.name, language);
     });
     ui.add_space(FACT_GAP);
 }
@@ -427,7 +442,7 @@ fn card_facts(ui: &mut Ui, answer: &IdentityAnswer, today: NaiveDate, language: 
     for row in identifier_rows(&person.identifiers, &answer.unkeyed, language) {
         number(ui, &row, "identity-personal", language);
     }
-    let document = Row::new(language, words::fields::DOCUMENT, &person.document);
+    let document = Row::number(language, words::fields::DOCUMENT, &person.document);
     number(ui, &document, "identity-document", language);
 }
 
