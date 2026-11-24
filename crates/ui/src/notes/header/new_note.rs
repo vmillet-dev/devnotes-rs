@@ -53,20 +53,22 @@ const NAME_HEIGHT: f32 = 17.0;
 /// How wide it is drawn, for the row that lays out what comes before it.
 pub(super) fn width(ui: &Ui, language: i18n::Language) -> f32 {
     let label = i18n::translate(language, keys::notes::NEW_NOTE, &[]);
-    SplitButton::width(ui, &label)
+    split(&label, "").width(ui)
+}
+
+fn split<'a>(label: &'a str, kinds: &'a str) -> SplitButton<'a> {
+    SplitButton::new(
+        (label, "new-note"),
+        (kinds, "new-note-kind"),
+        SplitKind::Primary,
+    )
 }
 
 pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
     let label = tr(keys::notes::NEW_NOTE);
-    let kinds = tr(keys::notes::NEW_NOTE_KIND_LABEL);
-    let (main, caret) = SplitButton::new(
-        (&label, "new-note"),
-        (&kinds, "new-note-kind"),
-        SplitKind::Primary,
-    )
-    .show(ui);
+    let (main, caret) = split(&label, &tr(keys::notes::NEW_NOTE_KIND_LABEL)).show(ui);
     if main.clicked() {
         new_note(actions, None);
     }

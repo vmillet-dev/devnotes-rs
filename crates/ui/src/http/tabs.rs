@@ -350,20 +350,22 @@ fn end_width(ui: &Ui, state: &AppState) -> f32 {
 
 fn new_request_width(ui: &Ui, language: i18n::Language) -> f32 {
     let label = i18n::translate(language, keys::http::tabs::NEW, &[]);
-    SplitButton::width(ui, &label)
+    split(&label, "").width(ui)
+}
+
+fn split<'a>(label: &'a str, kinds: &'a str) -> SplitButton<'a> {
+    SplitButton::new(
+        (label, "http-tab-new"),
+        (kinds, "http-tab-new-kind"),
+        SplitKind::Neutral,
+    )
 }
 
 /// « + New request », split: an HTTP request in one click, the other kinds in two.
 fn new_request(ui: &mut Ui, actions: &mut Actions, language: i18n::Language) {
     let tr = |key| i18n::translate(language, key, &[]);
     let label = tr(keys::http::tabs::NEW);
-    let kinds = tr(keys::http::tabs::NEW_KIND);
-    let (main, caret) = SplitButton::new(
-        (&label, "http-tab-new"),
-        (&kinds, "http-tab-new-kind"),
-        SplitKind::Neutral,
-    )
-    .show(ui);
+    let (main, caret) = split(&label, &tr(keys::http::tabs::NEW_KIND)).show(ui);
     if main.clicked() {
         push(actions, Action::NewRequest(RequestKind::Http));
     }

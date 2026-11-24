@@ -74,6 +74,83 @@ fn the_button_formats_marks_the_lines_and_its_notice_undoes() {
     assert!(notice(&harness).is_none());
 }
 
+fn rect(harness: &Harness<'_>, author_id: &str) -> egui::Rect {
+    harness
+        .get_by(|node| node.author_id() == Some(author_id))
+        .rect()
+}
+
+/// Where the frame painted `words`.
+fn painted_at(harness: &Harness<'_>, words: &str) -> Option<egui::Rect> {
+    harness
+        .output()
+        .shapes
+        .iter()
+        .find_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) if text.galley.text() == words => {
+                Some(egui::Rect::from_min_size(text.pos, text.galley.size()))
+            }
+            _ => None,
+        })
+}
+
+#[test]
+fn the_button_is_one_piece_with_its_chevron_and_says_its_keys_where_they_fit() {
+    let (mut harness, _) = snippet(MESSY, Language::Ts);
+    let (main, chevron) = (
+        rect(&harness, "editor-format"),
+        rect(&harness, "editor-format-settings"),
+    );
+    assert!(
+        (main.right() - chevron.left()).abs() < 0.1,
+        "{main:?} {chevron:?}"
+    );
+    assert!((main.height() - chevron.height()).abs() < 0.1);
+    assert!(
+        painted_at(&harness, "Shift Alt F").is_none(),
+        "beside the cards"
+    );
+
+    harness.set_size(egui::vec2(1_700.0, 900.0));
+    settle(&mut harness);
+    click_id(&mut harness, "editor-fullscreen");
+    let keys = painted_at(&harness, "Shift Alt F").expect("its keys, full screen");
+    assert!(rect(&harness, "editor-format").contains_rect(keys));
+}
+
+#[test]
+fn each_switch_of_the_settings_has_its_label_on_its_row() {
+    let (mut harness, _) = snippet(MESSY, Language::Ts);
+    click_id(&mut harness, "editor-format-settings");
+
+    for (author_id, words) in [
+        ("prettier-semicolons", "Semicolons"),
+        ("prettier-trailingCommas", "Trailing commas"),
+        ("prettier-formatOnSave", "Format on save"),
+    ] {
+        let switch = rect(&harness, author_id);
+        let label = painted_at(&harness, words).unwrap_or_else(|| panic!("{words} is not painted"));
+        assert!(label.right() < switch.left(), "{words}");
+        assert!(
+            (label.center().y - switch.center().y).abs() < 3.0,
+            "{words}"
+        );
+    }
+    click_id(&mut harness, "prettier-semicolons");
+    assert!(!harness.state().state.prettier.semicolons);
+}
+
+#[test]
+fn a_language_prettier_does_not_read_leaves_the_settings_in_reach() {
+    let (mut harness, _) = snippet("SELECT 1;", Language::Sql);
+    let main = harness.get_by(|node| node.author_id() == Some("editor-format"));
+    assert!(main.accesskit_node().is_disabled());
+
+    click_id(&mut harness, "editor-format-settings");
+
+    rect(&harness, "prettier-semicolons");
+}
+
 #[test]
 fn shift_alt_f_formats_from_the_title_and_the_result_is_saved() {
     let (mut harness, id) = snippet(MESSY, Language::Ts);
