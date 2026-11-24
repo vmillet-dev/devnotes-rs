@@ -177,6 +177,38 @@ fn a_card_menu_draws_its_entries_and_deletes_in_two_steps() {
     }
 }
 
+#[test]
+fn the_priorities_of_a_card_menu_close_when_the_pointer_leaves_them() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = area(backend, profile);
+    hover_first_card(&mut harness);
+    click_id(&mut harness, "note-card-menu");
+    let point = |harness: &mut Harness<'_, Bench>, author_id: &str| {
+        let at = rect(harness, author_id).center();
+        harness.event(egui::Event::PointerMoved(at));
+        settle(harness);
+        harness
+            .query_all_by(|node| node.author_id() == Some("note-card-priority-level"))
+            .count()
+    };
+
+    assert_eq!(point(&mut harness, "note-card-priority"), 5);
+    assert_eq!(point(&mut harness, "note-card-duplicate"), 0);
+
+    point(&mut harness, "note-card-priority");
+    harness
+        .get_all_by(|node| node.author_id() == Some("note-card-priority-level"))
+        .last()
+        .unwrap()
+        .click();
+    settle(&mut harness);
+    assert!(
+        !present(&harness, "note-card-priority"),
+        "a pick closes the menu"
+    );
+}
+
 fn open_palette(harness: &mut Harness<'_, Bench>) {
     harness.key_press_modifiers(Modifiers::COMMAND | Modifiers::ALT, Key::P);
     settle(harness);

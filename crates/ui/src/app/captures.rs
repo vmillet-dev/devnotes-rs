@@ -668,7 +668,7 @@ fn the_http_area() {
         .click();
     settle(&mut harness);
     click(&mut harness, "http-node-new");
-    capture(&mut harness, "http-node-menu");
+    capture_holding(&mut harness, "http-node-menu");
     click(&mut harness, "http-node-new-http");
     capture(&mut harness, "http-create-request");
     harness.key_press(egui::Key::Escape);

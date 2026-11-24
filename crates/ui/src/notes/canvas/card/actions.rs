@@ -241,39 +241,36 @@ fn priority(ui: &mut Ui, note: &DisplayNote, language: i18n::Language, actions: 
     let label = i18n::translate(language, keys::notes::PRIORITY_LABEL, &[]);
     let about = (Icon::Flag, None);
     let parent = widgets::icon_entry(ui, about, &label, "note-card-priority", (false, true));
-    let open_id = parent.id.with("levels");
-    let mut open = parent.clicked()
-        || parent.hovered()
-        || ui.data(|data| data.get_temp(open_id)).unwrap_or(false);
-    Popup::from_response(&parent)
-        .id(open_id)
-        .align(RectAlign::RIGHT_START)
-        .frame(widgets::menu_frame(ui.ctx()))
-        .open_bool(&mut open)
-        .show(|ui| {
-            widgets::fitted_menu(ui, 0.0, |ui| {
-                ui.spacing_mut().item_spacing.y = 0.0;
-                for level in LEVELS {
-                    let name = i18n::translate(language, level_key(level), &[]);
-                    let on = level == note.priority;
-                    if widgets::menu_entry(ui, &name, "note-card-priority-level", false, on, false)
-                        .clicked()
-                    {
-                        if !on {
-                            push(
-                                actions,
-                                Asked::Prioritise {
-                                    id: note.id.clone(),
-                                    priority: level,
-                                },
-                            );
-                        }
-                        ui.close();
-                    }
-                }
-            });
-        });
-    ui.data_mut(|data| data.insert_temp(open_id, open));
+    let picked = widgets::sub_menu(ui, &parent, |ui| {
+        ui.spacing_mut().item_spacing.y = 0.0;
+        let mut ids = Vec::new();
+        let mut picked = None;
+        for level in LEVELS {
+            let name = i18n::translate(language, level_key(level), &[]);
+            let on = level == note.priority;
+            let entry =
+                widgets::menu_entry(ui, &name, "note-card-priority-level", false, on, false);
+            ids.push(entry.id);
+            if entry.clicked() {
+                picked = Some(level);
+            }
+        }
+        widgets::menu_arrows(ui, &ids);
+        picked
+    });
+    let Some(level) = picked.flatten() else {
+        return;
+    };
+    if level != note.priority {
+        push(
+            actions,
+            Asked::Prioritise {
+                id: note.id.clone(),
+                priority: level,
+            },
+        );
+    }
+    ui.close();
 }
 
 fn level_key(level: Priority) -> i18n::Key {
