@@ -33,6 +33,7 @@ pub(super) struct Context<'a> {
     /// The spaces and folders a note can be moved to or filed into.
     pub(super) library: &'a crate::state::spaces::SpacesState,
     pub(super) folders: &'a crate::state::folders::FoldersState,
+    pub(super) recent_moves: &'a [crate::notes::destinations::Destination],
     /// The card a first `Delete` armed: a second one sends it to the trash.
     pub(super) armed: Option<&'a str>,
     /// The ticked cards: while any is, every card shows its box.
@@ -54,6 +55,7 @@ impl<'a> Context<'a> {
             thumbnails: &state.caches.thumbnails,
             library: &state.spaces,
             folders: &state.folders,
+            recent_moves: &state.caches.recent_moves,
             armed: state.selection.armed(),
             selection: &state.selection,
             selecting: !state.selection.checked_in(on_screen).is_empty(),

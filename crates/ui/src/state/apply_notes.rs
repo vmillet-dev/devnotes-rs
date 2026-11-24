@@ -6,6 +6,7 @@ use super::{
 };
 use crate::api;
 use crate::backend::Backend;
+use crate::notes::destinations::Destination;
 use engine::folders::board::PreviewLines;
 
 impl AppState {
@@ -407,13 +408,7 @@ impl AppState {
             Notes::Prioritise { id, priority } => {
                 self.notes.prioritise(backend, vec![id], priority);
             }
-            Notes::File { id, folder } => {
-                self.notes
-                    .file(backend, (vec![id], folder), self.preview_lines);
-            }
-            Notes::MoveTo { id, space } => {
-                self.notes.move_to(backend, vec![id], space);
-            }
+            Notes::MoveTo { id, to } => self.move_notes(vec![id], to, backend),
             Notes::Delete(id) => self.notes.delete(backend, vec![id]),
             Notes::Check(id) => self.selection.toggle(&id),
             Notes::CheckRange { id, anchor } => {
@@ -503,7 +498,7 @@ impl AppState {
                     note.folder_id = None;
                 });
                 if !moved && let Some(id) = id {
-                    self.notes.move_to(backend, vec![id], space);
+                    self.move_notes(vec![id], Destination::Space(space), backend);
                 }
             }
             Editing::File(folder) => {
@@ -513,8 +508,8 @@ impl AppState {
                     .change_draft(backend, |note| note.folder_id = into)
                     && let Some(id) = id
                 {
-                    self.notes
-                        .file(backend, (vec![id], folder), self.preview_lines);
+                    let to = folder.map_or(Destination::NoFolder, Destination::Folder);
+                    self.move_notes(vec![id], to, backend);
                 }
             }
             Editing::Convert {
@@ -640,6 +635,13 @@ impl AppState {
             .map(|card| card.pinned)
     }
 
+    fn move_notes(&mut self, ids: Vec<String>, to: Destination, backend: &Backend) {
+        if to != Destination::NoFolder {
+            self.caches.moved_to(to.clone());
+        }
+        self.notes.move_to(backend, (ids, to), self.preview_lines);
+    }
+
     /// The ticked notes still on screen; nothing is asked of the core for none.
     pub(super) fn batch(&mut self, batch: crate::notes::Batch, backend: &Backend) {
         use crate::notes::Batch;
@@ -650,8 +652,7 @@ impl AppState {
             return;
         }
         match batch {
-            Batch::MoveTo(space) => self.notes.move_to(backend, ids, space),
-            Batch::File(folder) => self.notes.file(backend, (ids, folder), self.preview_lines),
+            Batch::MoveTo(to) => self.move_notes(ids, to, backend),
             Batch::Prioritise(priority) => self.notes.prioritise(backend, ids, priority),
             Batch::Tag(tag) => self.notes.tag(backend, ids, tag),
             Batch::Untag(tag) => self.notes.untag(backend, ids, tag),

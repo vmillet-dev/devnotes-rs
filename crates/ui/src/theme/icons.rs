@@ -72,6 +72,7 @@ pub enum Icon {
     Search,
     Copy,
     Check,
+    Folder,
     FolderPlus,
     Eye,
     EyeOff,
@@ -268,6 +269,9 @@ impl Icon {
                 "M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3",
             ],
             Self::Check => &["m5 12 5 5L20 7"],
+            Self::Folder => &[
+                "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z",
+            ],
             Self::FolderPlus => &[
                 "M12 10v6",
                 "M9 13h6",
@@ -437,7 +441,7 @@ fn rasterise(icon: Icon, pixels: u32) -> Option<ColorImage> {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 78] = [
+    const ALL: [Icon; 79] = [
         Icon::ArrowLeftRight,
         Icon::MoveHorizontal,
         Icon::Sidebar,
@@ -488,6 +492,7 @@ mod tests {
         Icon::Search,
         Icon::Copy,
         Icon::Check,
+        Icon::Folder,
         Icon::FolderPlus,
         Icon::Eye,
         Icon::EyeOff,

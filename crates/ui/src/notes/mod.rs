@@ -3,6 +3,7 @@
 
 pub mod calc;
 pub mod canvas;
+pub(crate) mod destinations;
 pub(crate) mod header;
 pub mod language;
 mod overlays;
@@ -25,6 +26,7 @@ use engine::notes::view::NoteFilter;
 use crate::action::{Action as Asked, Actions, AppAction};
 use crate::state::AppState;
 use crate::state::drawing_pictures::Stamp;
+use destinations::Destination;
 
 /// What the area's controls ask, applied at the end of the frame.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -117,14 +119,9 @@ pub enum Action {
         id: String,
         priority: engine::notes::priority::Priority,
     },
-    /// `None`: out of every folder.
-    File {
-        id: String,
-        folder: Option<String>,
-    },
     MoveTo {
         id: String,
-        space: String,
+        to: Destination,
     },
     /// Into the trash.
     Delete(String),
@@ -337,9 +334,7 @@ pub enum BoardGesture {
 /// What the selection bar does to every ticked note at once.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Batch {
-    MoveTo(String),
-    /// `None` takes them out of their folders.
-    File(Option<String>),
+    MoveTo(Destination),
     Prioritise(engine::notes::priority::Priority),
     Tag(String),
     Untag(String),

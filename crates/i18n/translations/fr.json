@@ -24,7 +24,7 @@
     "deleteSpaceFolders": "{count, plural, one {Son dossier part avec lui.} other {Ses # dossiers partent avec lui.}}",
     "deleteSpaceNeedsAnother": "Créez un second espace pour pouvoir supprimer celui-ci : ses notes doivent aller quelque part.",
     "noteOptionsLabel": "Options de la note {{title}}",
-    "moveToSpace": "Déplacer vers",
+    "moveToSpace": "Déplacer vers un espace",
     "tags": "Tags",
     "tagsGroupLabel": "Filtrer par tag",
     "languages": "Format",
@@ -149,7 +149,8 @@
     "copy": "Copier",
     "duplicate": "Dupliquer",
     "copyTitle": "{{title}} (copie)",
-    "fileInto": "Ranger dans",
+    "moveTo": "Déplacer vers…",
+    "fileInto": "Déplacer vers un dossier",
     "noFolder": "Aucun dossier",
     "newCalc": "Calcul",
     "newDrawing": "Dessin",
@@ -743,7 +744,7 @@
     "label": "Actions sur la sélection",
     "count": "{count, plural, one {# sélectionnée} other {# sélectionnées}}",
     "clear": "Tout désélectionner",
-    "moveTo": "Déplacer vers",
+    "moveTo": "Déplacer vers…",
     "priority": "Priorité",
     "addTagLabel": "Ajouter un tag à la sélection",
     "addTagPlaceholder": "+ tag",
@@ -754,9 +755,7 @@
     "pin": "Épingler",
     "unpin": "Désépingler",
     "delete": "Mettre à la corbeille",
-    "deleteConfirm": "Confirmer ?",
-    "fileInto": "Ranger dans",
-    "unfile": "Sortir du dossier"
+    "deleteConfirm": "Confirmer ?"
   },
   "palette": {
     "title": "Palette",

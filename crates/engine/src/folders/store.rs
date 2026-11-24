@@ -13,6 +13,7 @@ use super::model::{Folder, FolderColour, FolderMove, Lineage, NoteFiling, NoteFo
 use crate::db::schema::{folders, notes};
 use crate::db::{Library, iso8601};
 use crate::error::StorageError;
+use crate::notes::model::NotePlacement;
 use crate::spaces::store as spaces;
 use crate::vault::key::Vault;
 
@@ -508,6 +509,51 @@ pub fn file_many(
         }
 
         Ok(filed)
+    })
+}
+
+/// Answers where each note came from; one already in the folder is not among them.
+pub fn move_into(
+    connection: &mut Library,
+    ids: &[String],
+    folder_id: &str,
+    card: i32,
+) -> Result<Vec<NotePlacement>, StorageError> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    connection.transaction(|connection, vault| {
+        let space_id = find(connection, vault, folder_id)?.space_id;
+
+        // Read before the update, which erases where each note came from.
+        let moved: Vec<NotePlacement> = notes::table
+            .filter(notes::id.eq_any(ids))
+            .filter(notes::deleted_at.is_null())
+            .select((notes::id, notes::space_id, notes::folder_id))
+            .load::<(String, String, Option<String>)>(connection)?
+            .into_iter()
+            .filter(|(_, _, current)| current.as_deref() != Some(folder_id))
+            .map(|(note_id, space_id, folder_id)| NotePlacement {
+                note_id,
+                space_id,
+                folder_id,
+            })
+            .collect();
+
+        let touched: Vec<String> = moved.iter().map(|one| one.note_id.clone()).collect();
+        board::forget_positions(connection, &touched)?;
+        diesel::update(notes::table.filter(notes::id.eq_any(&touched)))
+            .set((
+                notes::space_id.eq(space_id),
+                notes::folder_id.eq(Some(folder_id)),
+            ))
+            .execute(connection)?;
+
+        let lineage = lineage_of(connection, folder_id)?;
+        grow_with_ancestors(connection, &lineage, folder_id, card)?;
+
+        Ok(moved)
     })
 }
 

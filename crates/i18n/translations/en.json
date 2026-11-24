@@ -24,7 +24,7 @@
     "deleteSpaceFolders": "{count, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",
     "deleteSpaceNeedsAnother": "Create a second space before deleting this one: its notes need somewhere to go.",
     "noteOptionsLabel": "Options for note {{title}}",
-    "moveToSpace": "Move to",
+    "moveToSpace": "Move to a space",
     "tags": "Tags",
     "tagsGroupLabel": "Filter by tag",
     "languages": "Format",
@@ -149,7 +149,8 @@
     "copy": "Copy",
     "duplicate": "Duplicate",
     "copyTitle": "{{title}} (copy)",
-    "fileInto": "File into",
+    "moveTo": "Move to…",
+    "fileInto": "Move to a folder",
     "noFolder": "No folder",
     "newCalc": "Calculation",
     "newDrawing": "Drawing",
@@ -743,7 +744,7 @@
     "label": "Selection actions",
     "count": "{count, plural, one {# selected} other {# selected}}",
     "clear": "Clear selection",
-    "moveTo": "Move to",
+    "moveTo": "Move to…",
     "priority": "Priority",
     "addTagLabel": "Add a tag to the selection",
     "addTagPlaceholder": "+ tag",
@@ -754,9 +755,7 @@
     "pin": "Pin",
     "unpin": "Unpin",
     "delete": "Move to trash",
-    "deleteConfirm": "Confirm?",
-    "fileInto": "File into",
-    "unfile": "Take out of folder"
+    "deleteConfirm": "Confirm?"
   },
   "palette": {
     "title": "Palette",

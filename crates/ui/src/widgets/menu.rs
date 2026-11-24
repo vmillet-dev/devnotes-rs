@@ -209,7 +209,10 @@ pub fn sub_menu<R>(
         .close_behavior(PopupCloseBehavior::IgnoreClicks)
         .open_bool(&mut open)
         .show(|ui| {
-            let inner = fitted(ui, 0.0, content);
+            let inner = egui::ScrollArea::vertical()
+                .max_height(SUB_MENU_HEIGHT)
+                .show(ui, |ui| fitted(ui, 0.0, content))
+                .inner;
             let back = ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowLeft));
             (inner, back)
         });
@@ -380,7 +383,79 @@ pub enum Naming {
 pub const FILTER_FROM: usize = 9;
 /// A filtered menu keeps its size whatever it holds: the entries scroll under the field.
 const FILTERED_WIDTH: f32 = 240.0;
-const FILTERED_HEIGHT: f32 = 240.0;
+pub(super) const FILTERED_HEIGHT: f32 = 240.0;
+/// A sub-menu scrolls past this: a library can hold hundreds of tags.
+const SUB_MENU_HEIGHT: f32 = 320.0;
+
+/// What a menu's filter holds, and what its keys asked of the entries under it.
+pub(super) struct Filter {
+    pub(super) query: String,
+    pub(super) step: isize,
+    pub(super) entered: bool,
+    height: f32,
+}
+
+/// The field stays put and keeps the focus: the arrows walk the entries from it, Enter picks
+/// the one walked to, Escape empties the field before it closes the menu.
+pub(super) fn filter_field(
+    ui: &mut Ui,
+    query_id: Id,
+    (label, author_id, placeholder): (&str, &str, &str),
+) -> Filter {
+    let mut query: String = ui.data(|data| data.get_temp(query_id)).unwrap_or_default();
+    let emptied =
+        !query.is_empty() && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::Escape));
+    if emptied {
+        query.clear();
+    }
+    // Read before the field: it would lose the focus to Enter, and walk its caret.
+    let (step, entered) = ui.input_mut(|input| {
+        let down = input.consume_key(Modifiers::NONE, Key::ArrowDown);
+        let up = input.consume_key(Modifiers::NONE, Key::ArrowUp);
+        let enter = input.consume_key(Modifiers::NONE, Key::Enter);
+        (isize::from(down) - isize::from(up), enter)
+    });
+    let field = TextField::new(&mut query, label, author_id)
+        .hint(placeholder)
+        .compact()
+        .show(ui);
+    if !field.has_focus() && ui.memory(|memory| memory.focused().is_none()) {
+        field.request_focus();
+    }
+    ui.data_mut(|data| data.insert_temp(query_id, query.clone()));
+    Filter {
+        query,
+        step,
+        entered,
+        height: field.rect.height(),
+    }
+}
+
+/// The entry the arrows stand on: the one they left, or the current one, or the first.
+pub(super) fn walk(
+    ui: &Ui,
+    walked_id: Id,
+    shown: &[usize],
+    step: isize,
+    current: Option<usize>,
+) -> Option<usize> {
+    let held: Option<usize> = ui.data(|data| data.get_temp(walked_id));
+    let place = |entry: usize| shown.iter().position(|index| *index == entry);
+    let start = held
+        .and_then(place)
+        .or_else(|| current.and_then(place))
+        .unwrap_or(0);
+    let last = shown.len().saturating_sub(1);
+    let walked = shown
+        .get(start.saturating_add_signed(step).min(last))
+        .copied();
+    ui.data_mut(|data| {
+        if let Some(walked) = walked {
+            data.insert_temp(walked_id, walked);
+        }
+    });
+    walked
+}
 
 pub struct ChoiceMenu<'a, T> {
     label: &'a str,
@@ -532,44 +607,23 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
         picked
     }
 
-    /// The field stays put and keeps the focus: the arrows walk the entries from it, Enter picks
-    /// the one walked to, Escape empties the field before it closes the menu.
     fn filtered(&self, ui: &mut Ui, query_id: Id, current: Option<&str>) -> Option<T> {
         ui.set_width(FILTERED_WIDTH);
         ui.spacing_mut().item_spacing.y = gap::TIGHT;
-        let walked_id = query_id.with("walked");
-        let mut query: String = ui.data(|data| data.get_temp(query_id)).unwrap_or_default();
-        let emptied = !query.is_empty()
-            && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::Escape));
-        if emptied {
-            query.clear();
-        }
-        // Read before the field: it would lose the focus to Enter, and walk its caret.
-        let (step, entered) = ui.input_mut(|input| {
-            let down = input.consume_key(Modifiers::NONE, Key::ArrowDown);
-            let up = input.consume_key(Modifiers::NONE, Key::ArrowUp);
-            let enter = input.consume_key(Modifiers::NONE, Key::Enter);
-            (isize::from(down) - isize::from(up), enter)
-        });
         let filter_id = format!("{}-filter", self.author_id);
         let placeholder = self.words(keys::choice_menu::FILTER_PLACEHOLDER);
-        let field = TextField::new(&mut query, self.label, &filter_id)
-            .hint(&placeholder)
-            .compact()
-            .show(ui);
-        if !field.has_focus() && ui.memory(|memory| memory.focused().is_none()) {
-            field.request_focus();
-        }
-        let shown = self.matching(&query);
-        let walked = self.walk(ui, walked_id, &shown, step, current);
-        ui.data_mut(|data| data.insert_temp(query_id, query));
+        let filter = filter_field(ui, query_id, (self.label, &filter_id, &placeholder));
+        let shown = self.matching(&filter.query);
+        let step = filter.step;
+        let on = current.and_then(|name| self.options.iter().position(|(_, one)| *one == name));
+        let walked = walk(ui, query_id.with("walked"), &shown, step, on);
         if shown.is_empty() {
             let none = self.words(keys::choice_menu::NO_RESULTS);
             let ink = palette(ui.ctx()).text_2;
             ui.label(egui::RichText::new(none).size(font::LABEL).color(ink));
         }
         let picked = egui::ScrollArea::vertical()
-            .max_height(FILTERED_HEIGHT - field.rect.height() - 4.0)
+            .max_height(FILTERED_HEIGHT - filter.height - 4.0)
             .auto_shrink([false, true])
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = 0.0;
@@ -580,7 +634,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             ui.close();
             return picked;
         }
-        if entered {
+        if filter.entered {
             ui.close();
             return walked.map(|index| self.options[index].0);
         }
@@ -597,36 +651,6 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
                     || fold(self.hint(*index)).contains(&wanted)
             })
             .collect()
-    }
-
-    /// The entry the arrows stand on: the one they left, or the current value, or the first.
-    fn walk(
-        &self,
-        ui: &mut Ui,
-        walked_id: Id,
-        shown: &[usize],
-        step: isize,
-        current: Option<&str>,
-    ) -> Option<usize> {
-        let held: Option<usize> = ui.data(|data| data.get_temp(walked_id));
-        let start = held
-            .and_then(|walked| shown.iter().position(|index| *index == walked))
-            .or_else(|| {
-                shown
-                    .iter()
-                    .position(|index| Some(self.options[*index].1) == current)
-            })
-            .unwrap_or(0);
-        let last = shown.len().saturating_sub(1);
-        let walked = shown
-            .get(start.saturating_add_signed(step).min(last))
-            .copied();
-        ui.data_mut(|data| {
-            if let Some(walked) = walked {
-                data.insert_temp(walked_id, walked);
-            }
-        });
-        walked
     }
 
     fn rows(
@@ -678,7 +702,7 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
 }
 
 /// The entry walked to: the focus stays in the field, so its ring is drawn by hand.
-fn walked_ring(ui: &Ui, row: egui::Rect) {
+pub(super) fn walked_ring(ui: &Ui, row: egui::Rect) {
     ui.painter().rect_stroke(
         row,
         CornerRadius::same(radius::CONTROL),

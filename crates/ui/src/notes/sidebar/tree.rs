@@ -9,7 +9,7 @@ use engine::spaces::model::Space;
 use crate::api;
 
 #[derive(Debug)]
-pub(super) enum Row<'a> {
+pub(in crate::notes) enum Row<'a> {
     /// « All spaces »: a choice, not a space.
     All,
     Space {
@@ -32,7 +32,7 @@ pub(super) enum Row<'a> {
 
 /// `collapsed` holds what was closed, not what was opened: a library is worth showing whole,
 /// and a fresh install would otherwise look empty.
-pub(super) fn rows<'a>(
+pub(in crate::notes) fn rows<'a>(
     spaces: &'a [Space],
     folders: &'a [Folder],
     active_space: Option<&str>,
