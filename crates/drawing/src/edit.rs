@@ -21,10 +21,11 @@ const TEXT_WIDTH: f64 = 180.0;
 const TEXT_MIN_WIDTH: f64 = 20.0;
 const TEXT_SIZE: f64 = 18.0;
 const TEXT_FONT: &str = "Inter Variable, sans-serif";
-const PEN_WIDTH: f64 = 2.5;
+pub const PEN_WIDTH: f64 = 2.5;
 const SHAPE_STROKE: f64 = 2.0;
 const CORNER_RADIUS: f64 = 6.0;
-/// Fabric's rotation handle, above the top side; how near a handle the pointer takes it.
+/// Fabric's rotation handle, above the top side; how near a handle the pointer takes it: on the
+/// screen, whatever the scene is shown at.
 const ROTATE_REACH: f64 = 40.0;
 const GRIP_REACH: f64 = 8.0;
 /// An object scaled to nothing could not be taken again.
@@ -91,6 +92,8 @@ pub struct Frame {
     pub width: f64,
     pub height: f64,
     pub angle: f64,
+    /// How far above its top side the rotation handle stands.
+    pub reach: f64,
 }
 
 impl Frame {
@@ -112,7 +115,7 @@ impl Frame {
     pub fn grip(&self, grip: Grip) -> Point {
         let (x, y) = grip.place();
         let reach = if grip == Grip::Rotate {
-            ROTATE_REACH
+            self.reach
         } else {
             0.0
         };
@@ -176,6 +179,8 @@ pub struct Editor {
     /// What was selected when a tool was taken: Escape gives it back.
     kept: Vec<usize>,
     gesture: Option<Gesture>,
+    /// How many points of the screen a unit of the scene takes.
+    scale: f64,
     /// The text being typed into.
     editing: Option<usize>,
     history: Vec<String>,
@@ -199,12 +204,18 @@ impl Editor {
             selected: Vec::new(),
             kept: Vec::new(),
             gesture: None,
+            scale: 1.0,
             editing: None,
             history,
             at: 0,
             revision: 0,
             unsaved: false,
         }
+    }
+
+    /// What the scene is shown at: the handles and a click keep their size on the screen.
+    pub fn set_scale(&mut self, scale: f64) {
+        self.scale = scale;
     }
 
     pub fn drawing(&self) -> &Drawing {
@@ -368,6 +379,7 @@ impl Editor {
                 width,
                 height,
                 angle: object.angle(),
+                reach: ROTATE_REACH / self.scale,
             });
         }
         let boxes: Vec<Box> = self
@@ -381,6 +393,7 @@ impl Editor {
             width: around.width,
             height: around.height,
             angle: 0.0,
+            reach: ROTATE_REACH / self.scale,
         })
     }
 
@@ -404,7 +417,8 @@ impl Editor {
         let frame = self.frame()?;
         Grip::ALL.into_iter().find(|&grip| {
             let handle = frame.grip(grip);
-            (handle.x - at.x).abs() <= GRIP_REACH && (handle.y - at.y).abs() <= GRIP_REACH
+            let reach = GRIP_REACH / self.scale;
+            (handle.x - at.x).abs() <= reach && (handle.y - at.y).abs() <= reach
         })
     }
 
@@ -541,7 +555,8 @@ impl Editor {
             None => {}
             Some(Gesture::Shape { tool, from }) => {
                 let dragged = drag_box(from, at);
-                let clicked = dragged.width < CLICKED && dragged.height < CLICKED;
+                let least = CLICKED / self.scale;
+                let clicked = dragged.width < least && dragged.height < least;
                 let (width, height) = CLICK_SIZE;
                 let bounds = if clicked {
                     Box {

@@ -1366,6 +1366,42 @@ fn the_format_button_and_its_settings() {
     }
 }
 
+/// Three shapes over three thousand points, an arrow between two of them.
+const WIDE_SCENE: &str = r#"{"version":1,"scene":{"objects":[
+{"type":"Rect","left":200,"top":150,"width":240,"height":120,"id":"a","hue":"blue","stroke":"x","strokeWidth":2},
+{"type":"Ellipse","left":1500,"top":700,"width":400,"height":240,"rx":200,"ry":120,"id":"b","hue":"green","strokeWidth":2},
+{"type":"Rect","left":2800,"top":300,"width":300,"height":200,"id":"c","hue":"amber","strokeWidth":2}
+]}}"#;
+
+/// A drawing larger than the panel (#1580), as it opens and closer.
+#[test]
+fn a_drawing_larger_than_the_panel() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let id = crate::testing::note(&harness.state().backend, "Architecture")
+        .id
+        .clone();
+    let patch = engine::notes::model::NotePatch {
+        kind: Some(engine::notes::kind::NoteKind::Drawing),
+        content: Some(WIDE_SCENE.to_owned()),
+        ..engine::notes::model::NotePatch::default()
+    };
+    let engine = harness.state().backend.engine().clone();
+    let note = id.clone();
+    engine::db::run_here(&engine, move |engine| {
+        engine::notes::update_note(engine, &note, &patch)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    capture(&mut harness, "drawing-wide");
+}
+
 /// A request in the narrowest window (#1487): its URL, its actions and its tabs.
 #[test]
 fn the_http_request_in_a_narrow_window() {

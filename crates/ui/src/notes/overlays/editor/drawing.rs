@@ -3,6 +3,10 @@
 //! answers. The scene is saved once the hand pauses; its pictures go only when it is left, as
 //! taking two is dear.
 
+mod camera;
+mod look;
+
+use self::camera::Camera;
 use crate::theme::tokens::{font, gap};
 use drawing::{Editor, Fill, Format, Frame, Grip, Hue, Mark, Point, Tool};
 use egui::epaint::{PathShape, PathStroke, TextShape};
@@ -20,6 +24,8 @@ use crate::widgets::{self, Button, IconButton};
 /// What is drawn is saved once the hand pauses: each save writes the scene.
 const SAVE_AFTER: f64 = 0.4;
 const GRIP_SIZE: f32 = 9.0;
+/// A stroke seen from afar still shows.
+const THINNEST: f32 = 1.0;
 /// The reference's 0.06 and 0.14, out of 255.
 const INK_TINT: u8 = 15;
 const HUE_TINT: u8 = 36;
@@ -96,6 +102,8 @@ pub(crate) struct DrawingView {
     touched: bool,
     /// Something was drawn since the pictures were last taken.
     unpictured: bool,
+    camera: Camera,
+    look: look::Look,
     /// The stage held the keys at the last frame: egui drops the focus on Escape before it.
     held_keys: bool,
 }
@@ -110,6 +118,8 @@ impl DrawingView {
             save_at: None,
             touched: false,
             unpictured: false,
+            camera: Camera::default(),
+            look: look::Look::default(),
             held_keys: false,
         }
     }
@@ -240,10 +250,16 @@ pub(super) fn show(
 
 fn on_stage(ui: &mut Ui, view: &mut DrawingView, (title, language): (&str, Language)) -> Shown {
     let stage = stage(ui, view, title, language);
+    look::open(view, stage.rect);
     keys_of(ui, view, &stage);
-    pointer(ui, view, &stage);
+    let looking = look::gestures(ui, view, &stage);
+    view.editor.set_scale(f64::from(view.camera.zoom));
+    if !looking {
+        pointer(ui, view, &stage);
+    }
     paint(ui, view, stage.rect, language);
     typing(ui, view, stage.rect);
+    look::controls(ui, view, stage.rect, language);
 
     let holds = has_keys(ui, &stage) || view.typing.is_some();
     let left = view.held_keys && !holds;
@@ -426,18 +442,6 @@ fn stage(ui: &mut Ui, view: &DrawingView, title: &str, language: Language) -> Re
     response
 }
 
-fn scene_at(stage: Rect, at: Pos2) -> Point {
-    Point {
-        x: f64::from(at.x - stage.left()),
-        y: f64::from(at.y - stage.top()),
-    }
-}
-
-fn screen_at(stage: Rect, at: Point) -> Pos2 {
-    #[expect(clippy::cast_possible_truncation, reason = "a point on the screen")]
-    Pos2::new(stage.left() + at.x as f32, stage.top() + at.y as f32)
-}
-
 fn pointer(ui: &Ui, view: &mut DrawingView, stage: &Response) {
     let (pressed, released, at, shift) = ui.input(|input| {
         (
@@ -448,7 +452,7 @@ fn pointer(ui: &Ui, view: &mut DrawingView, stage: &Response) {
         )
     });
     let Some(at) = at else { return };
-    let scene = scene_at(stage.rect, at);
+    let scene = view.camera.scene_at(stage.rect, at);
     if pressed && stage.hovered() {
         leave_text(view);
         stage.request_focus();
@@ -486,6 +490,7 @@ fn keys_of(ui: &Ui, view: &mut DrawingView, stage: &Response) {
     {
         return;
     }
+    look::keys_of(ui, view, stage.rect);
     let escaped = ui.input(|input| input.key_pressed(Key::Escape));
     if escaped {
         let dropped = if view.editor.tool() == Tool::Select {
@@ -530,30 +535,23 @@ fn paint(ui: &Ui, view: &mut DrawingView, stage: Rect, language: Language) {
         painter.galley(at, galley, p.text_2);
     }
     for mark in &view.marks {
-        paint_mark(ui, &painter, p, stage, mark);
+        paint_mark(ui, &painter, p, (stage, view.camera), mark);
     }
     if let Some(points) = view.editor.pen_line() {
-        let line: Vec<Pos2> = points.iter().map(|at| screen_at(stage, *at)).collect();
+        let at = |at: &Point| view.camera.screen_at(stage, *at);
+        let line: Vec<Pos2> = points.iter().map(at).collect();
+        let width = view.camera.length(drawing::edit::PEN_WIDTH);
         painter.add(Shape::line(
             line,
-            Stroke::new(2.5, stroke(p, view.editor.hue())),
+            Stroke::new(width, stroke(p, view.editor.hue())),
         ));
     }
     if let Some(frame) = view.editor.frame() {
-        paint_frame(&painter, p, stage, &frame);
+        paint_frame(&painter, p, (stage, view.camera), &frame);
     }
     if let Some(marquee) = view.editor.marquee() {
-        let min = screen_at(
-            stage,
-            Point {
-                x: marquee.left,
-                y: marquee.top,
-            },
-        );
-        #[expect(clippy::cast_possible_truncation, reason = "a size on the screen")]
-        let size = Vec2::new(marquee.width as f32, marquee.height as f32);
         painter.rect(
-            Rect::from_min_size(min, size),
+            view.camera.rect(stage, &marquee),
             CornerRadius::ZERO,
             p.amber_edge.gamma_multiply(0.08),
             Stroke::new(1.0, p.amber_edge),
@@ -562,7 +560,13 @@ fn paint(ui: &Ui, view: &mut DrawingView, stage: Rect, language: Language) {
     }
 }
 
-fn paint_mark(ui: &Ui, painter: &egui::Painter, p: &Palette, stage: Rect, mark: &Mark) {
+fn paint_mark(
+    ui: &Ui,
+    painter: &egui::Painter,
+    p: &Palette,
+    (stage, camera): (Rect, Camera),
+    mark: &Mark,
+) {
     match mark {
         Mark::Line {
             points,
@@ -572,9 +576,9 @@ fn paint_mark(ui: &Ui, painter: &egui::Painter, p: &Palette, stage: Rect, mark: 
             width,
         } => {
             let colour = stroke(p, *hue);
-            let line: Vec<Pos2> = points.iter().map(|at| screen_at(stage, *at)).collect();
-            #[expect(clippy::cast_possible_truncation, reason = "a stroke on the screen")]
-            let edge = PathStroke::new(*width as f32, colour);
+            let at = |at: &Point| camera.screen_at(stage, *at);
+            let line: Vec<Pos2> = points.iter().map(at).collect();
+            let edge = PathStroke::new(camera.length(*width).max(THINNEST), colour);
             let inside = match fill {
                 Fill::None => Color32::TRANSPARENT,
                 Fill::Tint => tint(p, *hue),
@@ -594,8 +598,9 @@ fn paint_mark(ui: &Ui, painter: &egui::Painter, p: &Palette, stage: Rect, mark: 
             hue,
         } => {
             let colour = stroke(p, *hue);
-            #[expect(clippy::cast_possible_truncation, reason = "sizes on the screen")]
-            let (size, turned) = (*size as f32, angle.to_radians() as f32);
+            #[expect(clippy::cast_possible_truncation, reason = "an angle on the screen")]
+            let turned = angle.to_radians() as f32;
+            let size = camera.length(*size);
             let galley = widgets::text(
                 ui,
                 text,
@@ -605,29 +610,34 @@ fn paint_mark(ui: &Ui, painter: &egui::Painter, p: &Palette, stage: Rect, mark: 
                 colour,
             );
             let above = egui::emath::Rot2::from_angle(turned) * Vec2::new(0.0, -ASCENT * size);
-            let shape = TextShape::new(screen_at(stage, *at) + above, galley, colour);
+            let shape = TextShape::new(camera.screen_at(stage, *at) + above, galley, colour);
             painter.add(shape.with_angle(turned));
         }
     }
 }
 
-fn paint_frame(painter: &egui::Painter, p: &Palette, stage: Rect, frame: &Frame) {
+fn paint_frame(
+    painter: &egui::Painter,
+    p: &Palette,
+    (stage, camera): (Rect, Camera),
+    frame: &Frame,
+) {
     let edge = Stroke::new(1.0, p.amber_edge);
     let corners: Vec<Pos2> = frame
         .corners()
         .iter()
-        .map(|at| screen_at(stage, *at))
+        .map(|at| camera.screen_at(stage, *at))
         .collect();
     painter.add(Shape::closed_line(corners, edge));
     painter.line_segment(
         [
-            screen_at(stage, frame.grip(Grip::Top)),
-            screen_at(stage, frame.grip(Grip::Rotate)),
+            camera.screen_at(stage, frame.grip(Grip::Top)),
+            camera.screen_at(stage, frame.grip(Grip::Rotate)),
         ],
         edge,
     );
     for grip in Grip::ALL {
-        let centre = screen_at(stage, frame.grip(grip));
+        let centre = camera.screen_at(stage, frame.grip(grip));
         painter.rect(
             Rect::from_center_size(centre, Vec2::splat(GRIP_SIZE)),
             CornerRadius::ZERO,
@@ -645,33 +655,24 @@ fn typing(ui: &mut Ui, view: &mut DrawingView, stage: Rect) {
         return;
     };
     let p = palette(ui.ctx());
-    let bounds = object.bounds();
-    #[expect(clippy::cast_possible_truncation, reason = "sizes on the screen")]
-    let (size, font_size) = (
-        Vec2::new(bounds.width as f32, bounds.height as f32),
-        object.font_size() as f32,
-    );
+    let place = view.camera.rect(stage, &object.bounds());
+    let font_size = view.camera.length(object.font_size());
     let colour = stroke(p, object.hue());
-    let at = screen_at(
-        stage,
-        Point {
-            x: bounds.left,
-            y: bounds.top,
-        },
-    );
     let mut field = view.typing.take().unwrap_or_else(|| Typing {
         words: object.text().unwrap_or_default().to_owned(),
         settling: true,
     });
-    let response = ui.put(
-        Rect::from_min_size(at, size),
+    let mut on_stage = ui.new_child(egui::UiBuilder::new().max_rect(place));
+    on_stage.set_clip_rect(stage.intersect(ui.clip_rect()));
+    let response = on_stage.put(
+        place,
         egui::TextEdit::multiline(&mut field.words)
             .font(egui::FontId::new(font_size, egui::FontFamily::Proportional))
             .frame(egui::Frame::new())
             .margin(egui::Margin::ZERO)
             .text_color(colour)
             .desired_rows(1)
-            .desired_width(size.x),
+            .desired_width(place.width()),
     );
     widgets::address(ui, &response, "drawing-text");
     if field.settling {

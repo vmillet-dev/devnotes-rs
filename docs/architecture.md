@@ -1473,6 +1473,11 @@ way — the kind menu names it and offers nothing.
 - **An arrow started or ended on a shape stays on its edge** (`from`/`to` ids, `ends`,
   `boundEnds`): it follows the shape as it moves, and a shape removed lets go of it. A path's
   box is read when it is made, so an arrow whose ends move is made again in its place.
+- **The look is the view's** (`drawing::camera`, `drawing::look`): zoom between 10 and 800 %, and
+  the pan, never in the scene. Wheel pans, Ctrl+wheel or a pinch zooms under the pointer, the
+  middle button or Space and a drag pans; Ctrl with +, −, 0 and the arrows, `F` for the whole. A
+  drawing larger than the stage opens fitted. `Editor::set_scale` keeps the handles and a click
+  at their size on the screen.
 - **`drawing::Editor` holds every gesture**, in the scene's units, with no egui: `press`, `drag` and
   `release`, a selection framed by its handles, each step read from the objects as they were when
   the gesture began, so nothing drifts. The widget paints `marks`, the scene flattened to lines and
