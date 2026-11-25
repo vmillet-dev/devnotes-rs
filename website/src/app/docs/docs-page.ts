@@ -6,6 +6,7 @@ import {
   OnInit,
   afterNextRender,
   computed,
+  effect,
   inject,
   input,
   signal,
@@ -13,13 +14,14 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
-import { Lang } from '../core/lang';
+import { Lang, OTHER } from '../core/lang';
 import { Language } from '../core/language';
 import { ScrollFrame } from '../core/scroll-frame';
 import { Seo } from '../core/seo';
 import { absolute } from '../core/site';
 import { CHECKED_ON, DOC_INDEX, docGroups, docPath } from './doc-index';
 import { search, searchIndex } from './doc-search';
+import { DocPage } from './doc.model';
 import { DocBlocks } from './doc-blocks';
 import { DOC_PAGES } from './generated/pages';
 
@@ -60,6 +62,13 @@ const EN: typeof FR = {
 
 const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
 
+/** A page's sections, the same in number and order in both languages. */
+function sectionsOf(page: DocPage | undefined): readonly { readonly id: string; readonly text: string }[] {
+  return (page?.body ?? []).flatMap((block) =>
+    block.kind === 'h2' ? [{ id: block.id, text: block.text }] : [],
+  );
+}
+
 @Component({
   selector: 'app-docs-page',
   imports: [RouterLink, DocBlocks],
@@ -73,7 +82,8 @@ export class DocsPage implements OnInit {
 
   private readonly seo = inject(Seo);
   private readonly router = inject(Router);
-  protected readonly lang = inject(Language).lang;
+  private readonly language = inject(Language);
+  protected readonly lang = this.language.lang;
   protected readonly text = computed(() => TEXT[this.lang()]);
   protected readonly groups = computed(() => docGroups(this.lang()));
   protected readonly checkedOn = CHECKED_ON;
@@ -92,11 +102,15 @@ export class DocsPage implements OnInit {
   protected readonly page = computed(() => this.pages().find(({ id }) => id === this.entry()?.id));
   protected readonly previous = computed(() => DOC_INDEX[this.position() - 1] ?? null);
   protected readonly next = computed(() => DOC_INDEX[this.position() + 1] ?? null);
-  protected readonly sections = computed(() =>
-    (this.page()?.body ?? []).flatMap((block) =>
-      block.kind === 'h2' ? [{ id: block.id, text: block.text }] : [],
-    ),
-  );
+  /** The section being read, marked in the contents beside the page. */
+  protected readonly reading = signal<string | null>(null);
+  protected readonly sections = computed(() => sectionsOf(this.page()));
+  /** The section being read in the other language: the same place, under another address. */
+  private readonly translated = computed(() => {
+    const at = this.sections().findIndex(({ id }) => id === this.reading());
+    const other = DOC_PAGES[OTHER[this.lang()]].find(({ id }) => id === this.entry()?.id);
+    return sectionsOf(other)[at]?.id ?? null;
+  });
 
   /** What the visitor looks for, across every page; empty shows the sidebar. */
   protected readonly query = signal('');
@@ -111,13 +125,13 @@ export class DocsPage implements OnInit {
 
   /** The sidebar, folded on a narrow screen. */
   protected readonly navOpen = signal(false);
-  /** The section being read, marked in the contents beside the page. */
-  protected readonly reading = signal<string | null>(null);
   private readonly article = viewChild.required<ElementRef<HTMLElement>>('article');
 
   constructor() {
     const frame = inject(ScrollFrame);
     const destroyRef = inject(DestroyRef);
+    effect(() => this.language.section.set(this.translated()));
+    destroyRef.onDestroy(() => this.language.section.set(null));
     afterNextRender(() => {
       const headings = [...this.article().nativeElement.querySelectorAll<HTMLElement>('h2[id]')];
       const stop = frame.watch(() => {

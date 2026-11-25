@@ -39,6 +39,12 @@ describe('the documentation', () => {
     });
   }
 
+  it('finds each section in the other language by its place', () => {
+    const sections = (lang: 'fr' | 'en', id: string) =>
+      (DOC_PAGES[lang].find((page) => page.id === id)?.body ?? []).filter((block) => block.kind === 'h2');
+    for (const { id } of DOC_INDEX) expect(sections('en', id).length, id).toBe(sections('fr', id).length);
+  });
+
   it('names every code block and makes it reachable by keyboard', async () => {
     const page = await renderPage(DocsPage, { doc: 'start' });
     const blocks = [...page.querySelectorAll('pre')];
