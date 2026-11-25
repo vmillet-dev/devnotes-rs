@@ -1,3 +1,13 @@
+// A face the visitor already has, at Inter's measures: the lines stay when Inter arrives.
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('Roboto'), local('Liberation Sans');
+  size-adjust: 107.06%;
+  ascent-override: 90.49%;
+  descent-override: 22.56%;
+  line-gap-override: 0%;
+}
+
 *,
 *::before,
 *::after {

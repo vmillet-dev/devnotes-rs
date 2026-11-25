@@ -2,7 +2,7 @@
 // robots.txt, a 404 page at the root), then a check that every page was written as real
 // HTML. The site's address is read back from the home page's canonical link, so it is set
 // in one place: the build's `SITE_URL`.
-import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUT = 'dist';
@@ -25,6 +25,43 @@ for (const path of paths) {
   if (!/<title>[^<]+<\/title>/.test(html)) problems.push(`${path}: no title`);
 }
 if (!existsSync(join(OUT, 'index.html'))) problems.push('no index.html at the root');
+
+// Each page names both its languages, itself included, and they name each other.
+const alternates = (path) =>
+  Object.fromEntries(
+    [
+      ...readFileSync(page(path), 'utf8').matchAll(
+        /<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g,
+      ),
+    ].map(([, hreflang, href]) => [hreflang, href.slice(origin.length) || '/']),
+  );
+for (const path of paths) {
+  const { fr, en, 'x-default': fallback } = alternates(path);
+  if (!paths.includes(fr) || !paths.includes(en)) problems.push(`${path}: its languages are ${fr} and ${en}`);
+  else if (![fr, en].includes(path) || fallback !== fr) problems.push(`${path}: is neither of its languages`);
+  else if (alternates(fr).en !== en || alternates(en).fr !== fr)
+    problems.push(`${path}: its languages disagree`);
+}
+
+// What a search engine and a link preview read: structured data that parses, an image that exists.
+for (const path of paths) {
+  const html = readFileSync(page(path), 'utf8');
+  for (const [, data] of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+    try {
+      JSON.parse(data);
+    } catch (error) {
+      problems.push(`${path}: structured data that does not parse (${error.message})`);
+    }
+  }
+  const image = /<meta property="og:image" content="([^"]+)"/.exec(html)?.[1];
+  const file = image && join(OUT, image.slice(origin.length));
+  if (!file || !existsSync(file)) problems.push(`${path}: no social image (${image})`);
+  else {
+    const png = readFileSync(file);
+    const size = `${png.readUInt32BE(16)}×${png.readUInt32BE(20)}`;
+    if (size !== '1200×630') problems.push(`${path}: a social image of ${size}`);
+  }
+}
 
 // The download links name the version's own files: built before that release is published,
 // the site would offer files that do not exist yet.
@@ -50,12 +87,29 @@ if (problems.length) {
   process.exit(1);
 }
 
+// The text's face, asked for with the page rather than once the styles are read: the sooner it
+// is there, the fewer lines move.
+const face = readdirSync(join(OUT, 'media')).find((name) => /^inter-latin-wght-normal-.*\.woff2$/.test(name));
+if (!face) throw new Error('The build has no Inter to preload.');
+const preload = `<link rel="preload" href="/media/${face}" as="font" type="font/woff2" crossorigin>`;
+for (const path of [...paths, '/404']) {
+  const html = readFileSync(page(path), 'utf8');
+  writeFileSync(
+    page(path),
+    html.replace('</head>', () => `${preload}</head>`),
+  );
+}
+
 // No date of the build in the sitemap: the site is published when its files change.
 const url = (path) => `${origin}${path === '/' ? '/' : path}`;
+const languages = (path) =>
+  Object.entries(alternates(path))
+    .map(([hreflang, href]) => `<xhtml:link rel="alternate" hreflang="${hreflang}" href="${url(href)}"/>`)
+    .join('');
 writeFileSync(
   join(OUT, 'sitemap.xml'),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${paths
-    .map((path) => `  <url><loc>${url(path)}</loc></url>`)
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${paths
+    .map((path) => `  <url><loc>${url(path)}</loc>${languages(path)}</url>`)
     .join('\n')}\n</urlset>\n`,
 );
 writeFileSync(join(OUT, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`);
