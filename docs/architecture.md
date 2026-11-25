@@ -6215,9 +6215,10 @@ key can produce an installable update. It is the key the Tauri releases were sig
   prompt it was raised with.
 - **The notes the prompt shows** are the release's changelog section less what the user cannot see,
   carried by `latest.json` (→ "The update prompt shows the release's notes").
-- **The manifest** (`latest.json`, `scripts/latest-json.mjs`) carries the NSIS installer and the
-  AppImage, each with its `format` (`nsis`, `appimage`), which the client requires. Windows is the
-  one platform whose absence fails the release; a missing Linux artefact only warns. It is
+- **The manifest** (`latest.json`, `scripts/latest-json.mjs`) carries the NSIS installer, the
+  AppImage and the two macOS archives, each with its `format` (`nsis`, `appimage`, `app`), which the
+  client requires. Windows is the one platform whose absence fails the release; another missing
+  only warns. It is
   published at `releases/latest/download/latest.json`, the endpoint compiled into the binary.
 - The signing key and its password are the `release` **environment**'s secrets, so no other
   workflow and no other branch can reach them; `packages.yml` signs with a key made for its run.
@@ -6228,12 +6229,12 @@ One button: **Actions → Release → Run workflow**, with a `dry_run` checkbox,
 `prepare` and shows what the release would change (`scripts/release-preview.mjs`). `release.yml`
 carries the whole path — `prepare`, `release-build`, `publish` — and `ci.yml` is only CI.
 
-**Two platforms, deliberately: Windows and Linux.** The release matrix builds
-`windows-latest` and `ubuntu-22.04`, the CI matrix tests the same two, and that is the whole
-list. macOS is out of scope and stays out: nothing here can test it, and Gatekeeper wants a
-paid Apple Developer account with no free bypass on recent versions — a build that can be
-neither tested nor distributed is a liability wearing the costume of a feature. The packages
-therefore declare no `.icns`, and the README says which platforms it ships.
+**Three platforms: Windows, Linux and macOS.** The CI matrix tests `windows-latest`,
+`ubuntu-22.04` and `macos-latest`; the release builds on the same, and on an Intel runner for the
+second macOS file. There is no Mac to try it by hand: what CI does not show of macOS is not known.
+Its packages are signed ad hoc, by nobody, since Gatekeeper's own signature wants a paid Apple
+Developer account: a person opens the first one through the system's settings. ⚠️ A macOS leg that
+fails holds nothing back (`continue-on-error`): the tag is out by then.
 
 Two facts shape that, and neither is negotiable:
 
@@ -6252,7 +6253,8 @@ the file it just wrote, and `scripts/release-notes.mjs` mirrors, in `assertRende
 three invariants `changelog::tests::the_shipped_file_parses_into_something_to_show` asserts.
 
 **The packages** are built by `cargo build -p app --release`, then `.github/actions/package`:
-`cargo packager` (NSIS per user on Windows; AppImage and deb on Linux) and `cargo generate-rpm`,
+`cargo packager` (NSIS per user on Windows; AppImage and deb on Linux; a `.dmg` and the updater's
+archive on macOS) and `cargo generate-rpm`,
 each signed with the minisign key, each checked to hold the application alone (→
 `docs/releasing.md`, "What gets published").
 `packages.yml` runs the same action on a pull request that touches packaging, with a key made

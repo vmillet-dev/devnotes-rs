@@ -14,7 +14,7 @@ import { clamp, field } from '../core/browser';
 import { Lang, downloadPath, homePath } from '../core/lang';
 import { Language } from '../core/language';
 import { PageProgress, ProgressSegment } from '../core/page-progress';
-import { System, VERSION, offers, visitorSystem } from '../core/release';
+import { System, VERSION, offers, systems, visitorSystem } from '../core/release';
 import { ScrollFrame } from '../core/scroll-frame';
 import { Seo } from '../core/seo';
 import { REPOSITORY, absolute } from '../core/site';
@@ -98,7 +98,7 @@ const FR = {
   sections: ['Snippets', 'Ranger', 'Code', 'Outils', 'Client API', 'Chiffrement', 'Et aussi'],
   closing: 'Vos snippets, rangés et à portée de raccourci.',
   closingLede: (version: string) =>
-    `DevNotes ${version}, pour Windows et Linux. Gratuit, libre, et rien ne quitte votre machine.`,
+    `DevNotes ${version}, pour ${systems('fr')}. Gratuit, libre, et rien ne quitte votre machine.`,
   closingDownload: 'Télécharger DevNotes',
 };
 
@@ -170,7 +170,7 @@ const EN: typeof FR = {
   sections: ['Snippets', 'Organise', 'Code', 'Tools', 'API client', 'Encryption', 'And more'],
   closing: 'Your snippets, filed and one shortcut away.',
   closingLede: (version: string) =>
-    `DevNotes ${version}, for Windows and Linux. Free, open source, and nothing leaves your machine.`,
+    `DevNotes ${version}, for ${systems('en')}. Free, open source, and nothing leaves your machine.`,
   closingDownload: 'Download DevNotes',
 };
 
@@ -240,7 +240,9 @@ export class HomePage {
           '@type': 'SoftwareApplication',
           name: 'DevNotes',
           applicationCategory: 'DeveloperApplication',
-          operatingSystem: 'Windows, Linux',
+          operatingSystem: offers(lang)
+            .map(({ label }) => label)
+            .join(', '),
           softwareVersion: VERSION,
           url: absolute(homePath(lang)),
           downloadUrl: absolute(downloadPath(lang)),

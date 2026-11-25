@@ -8,7 +8,7 @@ Oui, et libre : il est publié sous licence GPL-3.0, son code est sur [GitHub](h
 
 ## Y a-t-il une version macOS ?
 
-Pas pour l’instant. Elle ne peut pas être testée ici, et Gatekeeper réclame un compte Apple Developer payant, sans contournement gratuit sur les versions récentes.
+Oui, à partir de la version qui suit la 1.1.0 : un fichier pour les Mac à puce Apple, un autre pour les Mac Intel. Au premier lancement, macOS le bloque, DevNotes n’ayant pas de certificat d’éditeur : ouvrez Réglages Système, Confidentialité et sécurité, puis Ouvrir quand même.
 
 ## Puis-je synchroniser deux ordinateurs ?
 
@@ -40,7 +40,7 @@ DevNotes utilise X11 dès qu’il est là, XWayland compris. Dans une session Wa
 
 ## Où sont mes notes ?
 
-Dans le dossier de votre profil : `%APPDATA%\com.devnotes.app\` sous Windows, `~/.local/share/com.devnotes.app/` sous Linux. Le détail est dans [Sécurité et sauvegardes](safety.md).
+Dans le dossier de votre profil : `%APPDATA%\com.devnotes.app\` sous Windows, `~/Library/Application Support/com.devnotes.app/` sous macOS, `~/.local/share/com.devnotes.app/` sous Linux. Le détail est dans [Sécurité et sauvegardes](safety.md).
 
 ## J’ai trouvé un bug, ou j’ai une idée.
 

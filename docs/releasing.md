@@ -123,6 +123,10 @@ what the build left in `target/release`. Its configuration is `[package.metadata
 - **Linux** — the AppImage (`devnotes_<version>_x86_64.AppImage`), the `.deb` (by
   `cargo-packager`), the `.rpm` (by `cargo-generate-rpm`, `[package.metadata.generate-rpm]`),
   and the standalone binary (`devnotes-<version>-linux`).
+- **macOS** — one `.dmg` per architecture (`devnotes_<version>_aarch64.dmg` for Apple Silicon,
+  `devnotes_<version>_x64.dmg` for Intel), and the archive the updater installs beside each
+  (`….app.tar.gz`). Signed ad hoc. A macOS build that fails leaves the release without its files,
+  and the site without its offer, and holds nothing else back.
 
 Plus `SHA256SUMS.txt` over all of them, and `latest.json` — the manifest the in-app updater
 reads, written by `scripts/latest-json.mjs`. Neither package needs WebView2 or WebKitGTK any

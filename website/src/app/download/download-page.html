@@ -30,7 +30,7 @@
         }
       </p>
       <p class="who">{{ offer.primary.who }}</p>
-      <p class="heads-up">{{ offer.system === 'windows' ? text().unsigned : text().executable }}</p>
+      <p class="heads-up">{{ headsUp(offer.system) }}</p>
       <h3>{{ text().others }}</h3>
       <ul class="others">
         @for (other of offer.others; track other.file) {
@@ -48,7 +48,6 @@
 
 <div class="wrap beside">
   <a class="notes" [href]="releasePage">{{ text().notes }}</a>
-  <p class="mac">{{ text().mac }}</p>
 </div>
 
 <section class="wrap install" aria-labelledby="install-h">
@@ -58,6 +57,12 @@
       <h3>{{ text().onWindows }}</h3>
       <p>{{ text().windows }}</p>
     </div>
+    @if (hasMacos) {
+    <div class="column">
+      <h3>{{ text().onMacos }}</h3>
+      <p>{{ text().macos }}</p>
+    </div>
+    }
     <div class="column">
       <h3>{{ text().onLinux }}</h3>
       <p>{{ text().linux }}</p>
