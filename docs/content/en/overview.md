@@ -17,4 +17,4 @@ DevNotes keeps your snippets, notes and lists in an encrypted library on your ma
 
 ## In the application
 
-The title bar’s *About* menu opens a *Getting started* guide, the list of *Keyboard shortcuts* active wherever you are, and the *What’s new* of each version. Shortcuts are set in *File → Preferences… → Shortcuts*.
+The title bar’s *About* menu opens these same pages offline (*Documentation*), the list of *Keyboard shortcuts* active wherever you are, and the *What’s new* of each version. Shortcuts are set in *File → Preferences… → Shortcuts*.

@@ -17,4 +17,4 @@ DevNotes garde vos snippets, vos notes et vos listes dans une bibliothèque chif
 
 ## Dans l’application
 
-Le menu *À propos* de la barre de titre ouvre un guide de *Prise en main*, la liste des *Raccourcis clavier* actifs selon l’endroit où vous êtes, et les *Nouveautés* de chaque version. Les raccourcis se règlent dans *Fichier → Préférences… → Raccourcis*.
+Le menu *À propos* de la barre de titre ouvre ces mêmes pages hors ligne (*Documentation*), la liste des *Raccourcis clavier* actifs selon l’endroit où vous êtes, et les *Nouveautés* de chaque version. Les raccourcis se règlent dans *Fichier → Préférences… → Raccourcis*.

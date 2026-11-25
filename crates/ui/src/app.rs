@@ -445,6 +445,8 @@ mod update_prompt_tests;
 
 #[cfg(test)]
 mod about_link_tests;
+#[cfg(test)]
+mod docs_tests;
 
 #[cfg(test)]
 mod prompt_tests;
@@ -1101,31 +1103,6 @@ mod tests {
         assert!(count(&harness, "news-version") > 0);
         click(&mut harness, "news-close");
         assert!(!present(&harness, "news-close"));
-    }
-
-    #[test]
-    fn the_guide_walks_jumps_and_closes_from_any_chapter() {
-        use egui_kittest::kittest::{NodeT, Queryable};
-        let directory = tempfile::tempdir().unwrap();
-        let mut harness = open_library(directory.path());
-        let chapter = |harness: &Harness<'_, DevNotesApp>| {
-            let node = harness.get_by(|node| node.author_id() == Some("guide-chapter"));
-            node.accesskit_node().value().unwrap_or_default()
-        };
-
-        click(&mut harness, "about-open");
-        click(&mut harness, "about-getting-started");
-        let first = chapter(&harness);
-        click(&mut harness, "guide-next");
-        let second = chapter(&harness);
-        assert_ne!(first, second);
-
-        click(&mut harness, "guide-dot-http");
-        assert!(!present(&harness, "guide-next"), "the last has no next");
-        assert_ne!(chapter(&harness), second);
-
-        click(&mut harness, "guide-close");
-        assert!(!present(&harness, "guide-chapter"));
     }
 
     #[test]

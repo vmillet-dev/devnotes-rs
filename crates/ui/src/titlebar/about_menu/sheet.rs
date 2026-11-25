@@ -7,7 +7,7 @@ use i18n::{Key, keys};
 
 use super::framed;
 use crate::action::Actions;
-use crate::services::guide::{self, SheetRow};
+use crate::services::shortcut_sheet::{self, SheetRow};
 use crate::state::AppState;
 use crate::theme::palette;
 use crate::widgets::{self, Kbd};
@@ -45,7 +45,7 @@ pub(super) fn show(ctx: &egui::Context, state: &AppState, _actions: &mut Actions
 fn body(ui: &mut Ui, state: &AppState) {
     let language = state.language;
     let p = palette(ui.ctx());
-    for group in guide::sheet() {
+    for group in shortcut_sheet::sheet() {
         let title = i18n::translate(language, group.title(), &[]).to_uppercase();
         let words = widgets::text(
             ui,

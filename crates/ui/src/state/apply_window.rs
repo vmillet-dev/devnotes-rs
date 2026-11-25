@@ -73,6 +73,10 @@ impl AppState {
                 self.dialogs.close(ctx, crate::titlebar::about_menu::id());
             }
             Menu::OpenLink(url) => self.open_link(&url),
+            Menu::CopyExample(text) => {
+                let said = i18n::Message::new(i18n::keys::docs::COPIED);
+                self.copy_out(ctx, backend, text, said);
+            }
             Menu::Update(asked) => self.apply_update(asked, backend),
         }
     }

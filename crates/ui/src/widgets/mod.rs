@@ -40,6 +40,7 @@ pub use menu::{
 pub use picker::{Lead, Place, place_picker};
 pub use release_notes::release_notes;
 pub use rich::{Read, rich_reader};
+pub(crate) use rich::{append_coloured, syntax_of};
 pub use segmented::Segmented;
 pub use split::{SplitButton, SplitKind};
 
@@ -235,7 +236,7 @@ pub(crate) fn wrapped(
 }
 
 /// The icon an arrow is painted as.
-fn arrow_of(glyph: char) -> Option<Icon> {
+pub(crate) fn arrow_of(glyph: char) -> Option<Icon> {
     Some(match glyph {
         '←' => Icon::ArrowLeft,
         '↑' => Icon::ArrowUp,

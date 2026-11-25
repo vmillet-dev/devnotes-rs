@@ -638,7 +638,7 @@ fn fence_room(ui: &Ui, language: &str) -> f32 {
 }
 
 /// A fence's word: a language's tag as the editor writes it, or a shell's usual name.
-fn syntax_of(fence: &str) -> Option<&'static str> {
+pub(crate) fn syntax_of(fence: &str) -> Option<&'static str> {
     use engine::notes::language::Language;
     let lower = fence.to_ascii_lowercase();
     let language = match lower.as_str() {
@@ -648,7 +648,7 @@ fn syntax_of(fence: &str) -> Option<&'static str> {
     language.and_then(crate::notes::language::syntax)
 }
 
-fn append_coloured(
+pub(crate) fn append_coloured(
     job: &mut LayoutJob,
     p: &Palette,
     line: &str,
