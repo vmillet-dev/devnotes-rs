@@ -37,8 +37,11 @@ permissions:
 jobs:
   publish:
     name: Build and publish
-    # A release that failed published no file the site could name.
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    # A release that failed, or was only a dry run, published no file the site could name.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.display_title != 'Release (dry run)')
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
