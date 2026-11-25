@@ -2,7 +2,7 @@
 // robots.txt, a 404 page at the root), then a check that every page was written as real
 // HTML. The site's address is read back from the home page's canonical link, so it is set
 // in one place: the build's `SITE_URL`.
-import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUT = 'dist';
@@ -85,6 +85,19 @@ if (!files.size) problems.push('no download link to a release file');
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
+}
+
+// The text's face, asked for with the page rather than once the styles are read: the sooner it
+// is there, the fewer lines move.
+const face = readdirSync(join(OUT, 'media')).find((name) => /^inter-latin-wght-normal-.*\.woff2$/.test(name));
+if (!face) throw new Error('The build has no Inter to preload.');
+const preload = `<link rel="preload" href="/media/${face}" as="font" type="font/woff2" crossorigin>`;
+for (const path of [...paths, '/404']) {
+  const html = readFileSync(page(path), 'utf8');
+  writeFileSync(
+    page(path),
+    html.replace('</head>', () => `${preload}</head>`),
+  );
 }
 
 // No date of the build in the sitemap: the site is published when its files change.
