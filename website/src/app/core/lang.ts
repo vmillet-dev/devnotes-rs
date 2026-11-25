@@ -24,3 +24,7 @@ export function homePath(lang: Lang): string {
 export function downloadPath(lang: Lang): string {
   return lang === 'fr' ? '/telecharger' : '/en/download';
 }
+
+export function accessibilityPath(lang: Lang): string {
+  return lang === 'fr' ? '/accessibilite' : '/en/accessibility';
+}

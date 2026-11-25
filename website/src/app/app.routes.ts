@@ -6,6 +6,7 @@ import { SITE_PAGES, SitePage } from './core/pages';
 const LOADERS: Readonly<Record<SitePage['kind'], NonNullable<Route['loadComponent']>>> = {
   home: () => import('./home/home-page').then((m) => m.HomePage),
   download: () => import('./download/download-page').then((m) => m.DownloadPage),
+  accessibility: () => import('./accessibility/accessibility-page').then((m) => m.AccessibilityPage),
   docs: () => import('./docs/docs-page').then((m) => m.DocsPage),
 };
 

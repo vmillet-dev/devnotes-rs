@@ -15,6 +15,8 @@ h3 {
 }
 
 .self {
+  display: inline-block;
+  min-height: 24px;
   color: inherit;
   text-decoration: none;
 }
@@ -125,7 +127,7 @@ p,
 
 .note.warn {
   border-color: rgba(var(--red-rgb), 0.55);
-  background: rgba(var(--red-rgb), 0.08);
+  background: rgba(var(--red-rgb), 0.03);
 }
 
 .note.warn .note-mark {

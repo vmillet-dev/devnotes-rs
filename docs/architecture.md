@@ -6674,7 +6674,7 @@ specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the token
   `RenderMode.Prerender`): one `index.html` per route, at the root of the output for `/`, and
   hydrated in the browser. The routes are the home page, the download page, one per
   documentation page (`docs/doc-index.ts`, kept apart from the text so the first download does
-  not carry it), in each language (`core/pages.ts`), and `404`. Anything that measures or animates
+  not carry it), in each language (`core/pages.ts`), the accessibility statement, and `404`. Anything that measures or animates
   runs in `afterNextRender` and asks `core/browser.ts` first: neither the build's Node nor jsdom
   has `matchMedia` or `IntersectionObserver`.
 - **Two languages, French at `/` and English under `/en/`.** The language is the address's

@@ -1,7 +1,7 @@
 import { DOC_INDEX, docPath } from '../docs/doc-index';
-import { Lang, downloadPath, homePath } from './lang';
+import { Lang, accessibilityPath, downloadPath, homePath } from './lang';
 
-export type PageKind = 'home' | 'download' | 'docs';
+export type PageKind = 'home' | 'download' | 'accessibility' | 'docs';
 
 /** Every page of the site, with its address in each language: the routes and the language switch read it. */
 export interface SitePage {
@@ -14,6 +14,7 @@ export interface SitePage {
 export const SITE_PAGES: readonly SitePage[] = [
   { kind: 'home', doc: '', paths: { fr: homePath('fr'), en: homePath('en') } },
   { kind: 'download', doc: '', paths: { fr: downloadPath('fr'), en: downloadPath('en') } },
+  { kind: 'accessibility', doc: '', paths: { fr: accessibilityPath('fr'), en: accessibilityPath('en') } },
   ...DOC_INDEX.map(({ id }) => ({
     kind: 'docs' as const,
     doc: id,
