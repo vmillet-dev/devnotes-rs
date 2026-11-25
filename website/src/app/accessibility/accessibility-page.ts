@@ -22,7 +22,7 @@ const FR = {
   limits: 'Ce qui ne l’est pas encore',
   missing: [
     'Les pages n’ont pas encore été relues avec un lecteur d’écran.',
-    'Les scènes de la page d’accueil redessinent l’application pour l’illustrer : elles sont masquées aux lecteurs d’écran, et le texte à côté dit la même chose.',
+    'Les scènes de la page d’accueil redessinent l’application pour l’illustrer : la première est annoncée comme une image décrite, les autres sont masquées aux lecteurs d’écran, et le texte à côté dit la même chose.',
   ],
   report: 'Signaler un problème',
   reportBefore: 'Ouvrez un ticket sur ',
@@ -47,7 +47,7 @@ const EN: typeof FR = {
   limits: 'What is not yet',
   missing: [
     'The pages have not yet been read with a screen reader.',
-    'The scenes of the home page redraw the application to illustrate it: they are hidden from screen readers, and the text beside them says the same.',
+    'The scenes of the home page redraw the application to illustrate it: the first is announced as a described image, the others are hidden from screen readers, and the text beside them says the same.',
   ],
   report: 'Reporting a problem',
   reportBefore: 'Open an issue on ',
