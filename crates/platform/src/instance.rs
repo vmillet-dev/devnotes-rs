@@ -50,13 +50,30 @@ pub enum Claim {
     Taken,
 }
 
-pub struct Instance(Listener);
+pub struct Instance {
+    listener: Listener,
+    #[cfg(target_os = "macos")]
+    _lock: std::fs::File,
+}
 
 /// Takes the profile's name, or finds it taken. Two profiles never share one.
 pub fn claim(profile: &Path) -> io::Result<Claim> {
     let name = socket_name(profile)?.to_ns_name::<GenericNamespaced>()?;
-    match ListenerOptions::new().name(name).create_sync() {
-        Ok(listener) => Ok(Claim::First(Instance(listener))),
+    // ⚠️ macOS names a socket by a file, which a crash leaves behind: there a lock, which goes with
+    // the process, says who holds the profile, and a name left behind is taken over.
+    #[cfg(target_os = "macos")]
+    let Some(lock) = lock(profile)? else {
+        return Ok(Claim::Taken);
+    };
+    let options = ListenerOptions::new()
+        .name(name)
+        .try_overwrite(cfg!(target_os = "macos"));
+    match options.create_sync() {
+        Ok(listener) => Ok(Claim::First(Instance {
+            listener,
+            #[cfg(target_os = "macos")]
+            _lock: lock,
+        })),
         // ⚠️ Windows answers a named pipe already created with « access denied », not
         // « address in use ».
         Err(error)
@@ -68,6 +85,21 @@ pub fn claim(profile: &Path) -> io::Result<Claim> {
             Ok(Claim::Taken)
         }
         Err(error) => Err(error),
+    }
+}
+
+/// `None` while another process holds it.
+#[cfg(target_os = "macos")]
+fn lock(profile: &Path) -> io::Result<Option<std::fs::File>> {
+    let file = std::fs::File::options()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(profile.join("instance.lock"))?;
+    match file.try_lock() {
+        Ok(()) => Ok(Some(file)),
+        Err(std::fs::TryLockError::WouldBlock) => Ok(None),
+        Err(std::fs::TryLockError::Error(error)) => Err(error),
     }
 }
 
@@ -85,7 +117,9 @@ impl Instance {
         std::thread::Builder::new()
             .name("single-instance".to_string())
             .spawn(move || {
-                for connection in self.0.incoming() {
+                // Whole: naming the listener alone would leave the lock behind, and free it.
+                let instance = self;
+                for connection in instance.listener.incoming() {
                     match connection.map(read_message) {
                         Ok(Some(message)) => deliver(message),
                         Ok(None) => log::warn!("A second launch sent nothing readable"),
@@ -170,6 +204,20 @@ mod tests {
 
         let wait = Duration::from_secs(10);
         assert_eq!(hearing.recv_timeout(wait).unwrap(), Message::Reveal);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_name_left_by_a_crash_is_taken_over() {
+        let profile = tempfile::tempdir().unwrap();
+        let name = socket_name(profile.path())
+            .unwrap()
+            .to_ns_name::<GenericNamespaced>()
+            .unwrap();
+        let crashed = ListenerOptions::new().name(name).reclaim_name(false);
+        drop(crashed.create_sync().unwrap());
+
+        drop(first(profile.path()));
     }
 
     #[test]

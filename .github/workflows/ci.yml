@@ -192,7 +192,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-22.04, windows-latest]
+        os: [ubuntu-22.04, windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -225,7 +225,7 @@ jobs:
           echo "\`test-rust\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Test
-        if: runner.os == 'Windows'
+        if: runner.os != 'Linux'
         run: |
           start=$(date +%s)
 
@@ -313,7 +313,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-22.04, windows-latest]
+        os: [ubuntu-22.04, windows-latest, macos-latest]
 
     # The flavour in `target/debug`, where the cache is: nothing else builds `app` in this job.
     env:
@@ -354,7 +354,8 @@ jobs:
           {
             echo "\`e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s"
             echo
-            sed 's/\x1b\[[0-9;]*m//g' "$output" | awk '
+            # perl: macOS's sed knows no \x1b.
+            perl -pe 's/\x1b\[[0-9;]*m//g' "$output" | awk '
               match($0, /tests.[0-9a-z_]+\.rs/) { name = substr($0, RSTART + 6, RLENGTH - 9); order[++n] = name; next }
               /Doc-tests/ { name = "" }
               /^▶ / { steps[name]++ }

@@ -20,7 +20,15 @@ pub fn system_prefers_reduced() -> bool {
         .is_ok_and(|output| String::from_utf8_lossy(&output.stdout).trim() == "false")
 }
 
-#[cfg(not(any(windows, target_os = "linux")))]
+#[cfg(target_os = "macos")]
+pub fn system_prefers_reduced() -> bool {
+    std::process::Command::new("defaults")
+        .args(["read", "com.apple.universalaccess", "reduceMotion"])
+        .output()
+        .is_ok_and(|output| String::from_utf8_lossy(&output.stdout).trim() == "1")
+}
+
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 pub fn system_prefers_reduced() -> bool {
     false
 }

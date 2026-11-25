@@ -72,8 +72,8 @@ profiling = { workspace = true, optional = true }
 puffin = { workspace = true, optional = true }
 puffin_http = { workspace = true, optional = true }
 
-[target.'cfg(target_os = "linux")'.dependencies]
-# The one eframe uses, for its X11 switch (D15).
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+# The one eframe uses, for its X11 switch (D15) and for macOS's menu bar.
 winit.workspace = true
 
 [dev-dependencies]

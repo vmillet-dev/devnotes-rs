@@ -92,40 +92,62 @@ impl Updater for System {
 }
 
 /// The installer relaunches under Windows (`/R`), and the process has ended by now.
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(unix))]
 fn come_back() {}
+
+#[cfg(target_os = "linux")]
+fn come_back() {
+    if let Some(image) = std::env::var_os("APPIMAGE") {
+        start_once_gone(std::iter::once(image).chain(std::env::args_os().skip(1)));
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn come_back() {
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    if let Some(bundle) = bundle_of(&exe) {
+        start_once_gone(["open".into(), bundle.as_os_str().to_owned()]);
+    }
+}
 
 /// Started only once this process is gone: one that came up beside it would find the profile
 /// taken, hand over to it, and leave nothing running.
-#[cfg(target_os = "linux")]
-fn come_back() {
+#[cfg(unix)]
+fn start_once_gone(command: impl IntoIterator<Item = std::ffi::OsString>) {
     const AFTER_US: &str =
         r#"while kill -0 "$1" 2>/dev/null; do sleep 0.1; done; shift; exec "$@""#;
-    let Some(image) = std::env::var_os("APPIMAGE") else {
-        return;
-    };
     let started = std::process::Command::new("sh")
         .args(["-c", AFTER_US, "sh"])
         .arg(std::process::id().to_string())
-        .arg(image)
-        .args(std::env::args_os().skip(1))
+        .args(command)
         .spawn();
     if let Err(error) = started {
         log::error!("The application was not started again: {error}");
     }
 }
 
-/// Only what an installer put in place replaces itself: an `AppImage`, or a folder with the NSIS
-/// uninstaller in it. A build run from `target/` asks nobody for anything.
+/// Only what was put in place replaces itself: an `AppImage`, a macOS application, or a folder with
+/// the NSIS uninstaller in it. A build run from `target/` asks nobody for anything.
 fn installs_itself() -> bool {
     if cfg!(target_os = "linux") {
         return std::env::var_os("APPIMAGE").is_some();
     }
-    std::env::current_exe()
-        .ok()
-        .as_deref()
-        .and_then(Path::parent)
+    let Ok(exe) = std::env::current_exe() else {
+        return false;
+    };
+    if cfg!(target_os = "macos") {
+        return bundle_of(&exe).is_some();
+    }
+    exe.parent()
         .is_some_and(|folder| folder.join("uninstall.exe").is_file())
+}
+
+/// The `.app` a macOS executable is in.
+fn bundle_of(exe: &Path) -> Option<&Path> {
+    exe.ancestors()
+        .find(|folder| folder.extension().is_some_and(|ending| ending == "app"))
 }
 
 pub(super) fn built(source: &Source<'_>, can_install: bool) -> Option<System> {

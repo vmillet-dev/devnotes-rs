@@ -97,8 +97,9 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
     {
         log::warn!("Second launches will not be heard: {error}");
     }
-    let desktop = desktop::start(&preferences, &inbox);
-    let startup = ui::Startup {
+    // ⚠️ Called with the event loop running: macOS makes no tray icon before.
+    let startup = move || ui::Startup {
+        desktop: desktop::start(&preferences, &inbox),
         paths: engine::Paths {
             profile: locations.profile,
         },
@@ -109,18 +110,17 @@ fn run(locations: Locations, instance: Instance) -> eframe::Result {
         inbox,
         waker,
         inputs,
-        desktop,
     };
 
     eframe::run_native(
         METADATA.name,
         options(restored),
         #[cfg(not(feature = "e2e"))]
-        Box::new(move |cc| Ok(Box::new(ui::DevNotesApp::new(cc, startup)?))),
+        Box::new(move |cc| Ok(Box::new(ui::DevNotesApp::new(cc, startup())?))),
         #[cfg(feature = "e2e")]
         Box::new(move |cc| {
             unpainted::attach(&cc.egui_ctx);
-            Ok(Box::new(ui::DevNotesApp::new(cc, startup)?))
+            Ok(Box::new(ui::DevNotesApp::new(cc, startup())?))
         }),
     )
 }
@@ -158,7 +158,7 @@ fn options(restored: Option<Geometry>) -> eframe::NativeOptions {
         viewport,
         centered: restored.is_none(),
         persist_window: false,
-        event_loop_builder: x11_when_possible(),
+        event_loop_builder: event_loop(),
         wgpu_options: renderer::options(),
         ..Default::default()
     }
@@ -167,7 +167,7 @@ fn options(restored: Option<Geometry>) -> eframe::NativeOptions {
 /// D15: under native Wayland, winit 0.30 delivers no dropped file and cannot hide the window,
 /// so X11 (`XWayland`) is taken whenever a display offers it.
 #[cfg(target_os = "linux")]
-fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
+fn event_loop() -> Option<eframe::EventLoopBuilderHook> {
     use winit::platform::x11::EventLoopBuilderExtX11;
 
     std::env::var_os("DISPLAY")?;
@@ -176,8 +176,19 @@ fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
     }))
 }
 
-#[cfg(not(target_os = "linux"))]
-fn x11_when_possible() -> Option<eframe::EventLoopBuilderHook> {
+/// No menu bar of winit's: its « Quit » ends the process where it stands, with what is typed and
+/// unsaved. ⌘Q is the application's own key.
+#[cfg(target_os = "macos")]
+fn event_loop() -> Option<eframe::EventLoopBuilderHook> {
+    use winit::platform::macos::EventLoopBuilderExtMacOS;
+
+    Some(Box::new(|builder| {
+        builder.with_default_menu(false);
+    }))
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+fn event_loop() -> Option<eframe::EventLoopBuilderHook> {
     None
 }
 

@@ -32,7 +32,7 @@ pub struct Binding {
 }
 
 /// Every area's key, `Ctrl` and its rank in the switch, read by position.
-pub static APPLICATION: [Binding; 5] = [
+pub static APPLICATION: [Binding; 6] = [
     area(Key::Num1, Area::Notes),
     area(Key::Num2, Area::Tools),
     area(Key::Num3, Area::Http),
@@ -50,6 +50,14 @@ pub static APPLICATION: [Binding; 5] = [
         read: Read::Position,
         while_typing: true,
         action: Action::Global(crate::action::GlobalAction::PaletteHere),
+    },
+    // ⌘ is only ever held on a Mac, where the menu bar that would answer is not there.
+    Binding {
+        key: Key::Q,
+        modifiers: Modifiers::MAC_CMD,
+        read: Read::Character,
+        while_typing: true,
+        action: Action::Global(crate::action::GlobalAction::Quit),
     },
 ];
 
