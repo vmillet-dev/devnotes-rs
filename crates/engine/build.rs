@@ -1,7 +1,9 @@
+use std::fmt::Write as _;
 use std::{env, fs, path::Path};
 
 fn main() {
     export_metadata();
+    list_the_documentation();
 }
 
 /// Cargo does not pass `[package.metadata]` to the crate, so it is read here and handed
@@ -40,6 +42,42 @@ fn export_metadata() {
         "cargo:rustc-env=DEVNOTES_RUST_VERSION={}",
         pinned_toolchain(&manifest_dir)
     );
+}
+
+/// Every page of `docs/content`, by language and name, for `docs.rs` to embed: a page added there
+/// is in the application without being named here.
+fn list_the_documentation() {
+    const CONTENT: &str = "../../docs/content";
+    println!("cargo:rerun-if-changed={CONTENT}");
+
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by cargo");
+    let content = Path::new(&manifest_dir).join(CONTENT);
+    let mut pages = Vec::new();
+    for language in ["en", "fr"] {
+        println!("cargo:rerun-if-changed={CONTENT}/{language}");
+        for file in fs::read_dir(content.join(language)).expect("docs/content is readable") {
+            let path = file.expect("docs/content is readable").path();
+            if path.extension().is_some_and(|extension| extension == "md") {
+                let id = path.file_stem().and_then(|stem| stem.to_str());
+                pages.push((
+                    language,
+                    id.expect("a page's name is text").to_owned(),
+                    path,
+                ));
+            }
+        }
+    }
+    pages.sort();
+
+    let mut out = String::from("const SOURCES: &[(&str, &str, &str)] = &[\n");
+    for (language, id, path) in pages {
+        let path = path.to_str().expect("the repository is at a path of text");
+        writeln!(out, "    ({language:?}, {id:?}, include_str!({path:?})),")
+            .expect("a string grows");
+    }
+    out.push_str("];\n");
+    let target = Path::new(&env::var("OUT_DIR").expect("cargo sets OUT_DIR")).join("docs.rs");
+    fs::write(target, out).expect("docs.rs is written");
 }
 
 /// The toolchain `rust-toolchain.toml` pins, which rustup resolves for every build.

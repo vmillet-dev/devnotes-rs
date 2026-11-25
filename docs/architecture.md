@@ -6715,6 +6715,10 @@ specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the token
   browser section by section, accents aside (`docs/doc-search.ts`). A section's address is its text's
   (`slug`), so it differs per language. `checkedOn` names the version the pages were last checked
   against in the application, by hand.
+- **The application reads the same files** (`engine::docs`), embedded by `build.rs`, which lists the
+  folder. Its tests hold the pages together — every link, the same shape in both languages — and
+  `ui`'s `services::docs_quotes` holds them to the application: a label is one of its texts, a
+  shortcut one it answers to. A renamed button fails there rather than on a reader.
 - **The theme** is applied before the first paint by an inline script in `src/index.html` (a
   stored choice, else the system's), then followed by `ThemeStore`.
 - **Checked by `ci.yml`**, which builds, lints and tests the site on a pull request that touches
