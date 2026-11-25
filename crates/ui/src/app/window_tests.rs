@@ -8,6 +8,7 @@ use super::DevNotesApp;
 use super::tests::{commands, startup, with_a_tray};
 use crate::action::{Action, GlobalAction};
 use crate::inputs::Input;
+use crate::state::out_of_sight;
 
 fn press_the_close_button(harness: &mut Harness<'_, DevNotesApp>) {
     viewport(harness).events.push(ViewportEvent::Close);
@@ -23,7 +24,7 @@ fn viewport<'a>(harness: &'a mut Harness<'_, DevNotesApp>) -> &'a mut ViewportIn
 }
 
 fn hidden_and_held(commands: &[Command]) -> bool {
-    commands.contains(&Command::Visible(false)) && commands.contains(&Command::CancelClose)
+    commands.contains(&out_of_sight()) && commands.contains(&Command::CancelClose)
 }
 
 #[test]
@@ -96,12 +97,12 @@ fn minimised_with_the_preference_on_the_window_goes_to_the_tray_once() {
 
     viewport(&mut harness).minimized = Some(true);
     harness.step();
-    assert!(commands(&harness).contains(&Command::Visible(false)));
+    assert!(commands(&harness).contains(&out_of_sight()));
 
     // Still minimised for a frame while it comes back: it must not go away again.
     viewport(&mut harness).minimized = Some(true);
     harness.step();
-    assert!(!commands(&harness).contains(&Command::Visible(false)));
+    assert!(!commands(&harness).contains(&out_of_sight()));
 }
 
 #[test]
@@ -112,7 +113,7 @@ fn minimised_with_the_preference_off_the_window_stays_in_the_taskbar() {
     viewport(&mut harness).minimized = Some(true);
     harness.step();
 
-    assert!(!commands(&harness).contains(&Command::Visible(false)));
+    assert!(!commands(&harness).contains(&out_of_sight()));
 }
 
 #[test]

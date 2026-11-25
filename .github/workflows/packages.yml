@@ -77,7 +77,7 @@ jobs:
 
       # The one line of `[workspace.package]` that starts with `version`; Cargo.lock follows.
       - name: Version 1.0.0
-        run: sed -i 's/^version = ".*"/version = "1.0.0"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
+        run: perl -pi -e 's/^version = ".*"/version = "1.0.0"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
 
       - uses: ./.github/actions/package
         with:
@@ -86,7 +86,7 @@ jobs:
           out: old
 
       - name: Version 1.0.1
-        run: sed -i 's/^version = ".*"/version = "1.0.1"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
+        run: perl -pi -e 's/^version = ".*"/version = "1.0.1"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
 
       - uses: ./.github/actions/package
         with:

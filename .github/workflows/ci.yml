@@ -333,6 +333,10 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get install -y --no-install-recommends xvfb
 
+      - name: A screen larger than the window
+        if: runner.os == 'macOS'
+        run: swift .github/scripts/largest-screen.swift
+
       - name: Build the flavour
         run: cargo build -p app --features e2e --locked
 

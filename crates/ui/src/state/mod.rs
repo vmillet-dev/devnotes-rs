@@ -197,13 +197,17 @@ pub struct AppState {
     pub reduced_motion: bool,
 }
 
-/// Out of sight, for the tray, a key or the Dock to call back: minimised where nothing hides it.
 pub(crate) fn put_away(ctx: &egui::Context) {
-    ctx.send_viewport_cmd(if platform::window::can_hide() {
+    ctx.send_viewport_cmd(out_of_sight());
+}
+
+/// For the tray, a key or the Dock to call back: minimised where nothing hides it.
+pub(crate) fn out_of_sight() -> egui::ViewportCommand {
+    if platform::window::can_hide() {
         egui::ViewportCommand::Visible(false)
     } else {
         egui::ViewportCommand::Minimized(true)
-    });
+    }
 }
 
 impl AppState {
