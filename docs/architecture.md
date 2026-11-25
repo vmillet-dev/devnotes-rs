@@ -6224,7 +6224,8 @@ key can produce an installable update. It is the key the Tauri releases were sig
 
 ## Releasing
 
-One button: **Actions → Release → Run workflow**, with a `dry_run` checkbox. `release.yml`
+One button: **Actions → Release → Run workflow**, with a `dry_run` checkbox, which stops after
+`prepare` and shows what the release would change (`scripts/release-preview.mjs`). `release.yml`
 carries the whole path — `prepare`, `release-build`, `publish` — and `ci.yml` is only CI.
 
 **Two platforms, deliberately: Windows and Linux.** The release matrix builds
