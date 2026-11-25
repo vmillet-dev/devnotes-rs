@@ -71,6 +71,9 @@
   <p class="verify-lede">{{ text().verifyLede }} <a [href]="checksums">SHA256SUMS.txt</a>.</p>
   <div class="sums">
     <table>
+      <caption class="visually-hidden">
+        {{ text().verify }}
+      </caption>
       <thead>
         <tr>
           <th scope="col">{{ text().file }}</th>

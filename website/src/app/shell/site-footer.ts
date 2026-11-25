@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Lang, downloadPath } from '../core/lang';
+import { Lang, accessibilityPath, downloadPath } from '../core/lang';
 import { Language } from '../core/language';
 import { CHANGELOG, LICENSE, REPOSITORY } from '../core/site';
 import { docPath } from '../docs/doc-index';
@@ -17,6 +17,7 @@ const FR = {
   changelog: 'Journal des modifications',
   license: 'Licence',
   privacy: 'Confidentialité',
+  accessibility: 'Accessibilité',
 };
 
 const EN: typeof FR = {
@@ -29,6 +30,7 @@ const EN: typeof FR = {
   changelog: 'Changelog',
   license: 'License',
   privacy: 'Privacy',
+  accessibility: 'Accessibility',
 };
 
 const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
@@ -50,6 +52,7 @@ const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
           <a [href]="changelog">{{ t().changelog }}</a>
           <a [href]="license">{{ t().license }}</a>
           <a [routerLink]="links().privacy">{{ t().privacy }}</a>
+          <a [routerLink]="links().accessibility">{{ t().accessibility }}</a>
         </nav>
       </div>
     </footer>
@@ -116,6 +119,7 @@ export class SiteFooter {
       download: downloadPath(lang),
       docs: docPath('overview', lang),
       privacy: docPath('safety', lang),
+      accessibility: accessibilityPath(lang),
     };
   });
 }
