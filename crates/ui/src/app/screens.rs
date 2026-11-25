@@ -521,9 +521,9 @@ const MENUS: [(&str, Reach); 10] = [
         preferences_page(window, "settings-page-security");
         click(window, "setting-change-passphrase");
     }),
-    ("getting-started", |window| {
+    ("documentation", |window| {
         click(window, "about-open");
-        click(window, "about-getting-started");
+        click(window, "about-documentation");
     }),
     ("tools-home", |window| area(window, Area::Tools)),
 ];
