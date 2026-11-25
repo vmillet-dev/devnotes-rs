@@ -254,6 +254,7 @@ dependencies = [
  "engine",
  "flexi_logger",
  "i18n",
+ "image",
  "log",
  "platform",
  "profiling",

@@ -77,6 +77,8 @@ puffin_http = { workspace = true, optional = true }
 winit.workspace = true
 
 [dev-dependencies]
+# `examples/tours.rs`, which assembles the README's tours, and their test.
+image.workspace = true
 # `examples/icons.rs`, which draws the icons.
 resvg.workspace = true
 tempfile.workspace = true
