@@ -1,6 +1,6 @@
 name: Packages
 
-# The packages a release publishes, proven before a release depends on them (plan § 4.3 point 5):
+# The packages a release publishes, proven before a release depends on them:
 # built and signed as `release.yml` builds them, but with a key made for the run; installed on a
 # clean runner as 1.0.0; offered 1.0.1 by a `latest.json` served on the runner, first altered by
 # one byte — refused, nothing changes — then whole — installed. Both versions package the same

@@ -1,4 +1,4 @@
-//! Prettier's answers as the reference got them (`golden/format`): every parser, two indents,
+//! Prettier's answers (`golden/format`): every parser, two indents,
 //! `{{fields}}` kept.
 
 use serde_json::Value;
@@ -69,7 +69,7 @@ fn expected(output: &Value) -> Answer {
 }
 
 #[test]
-fn prettier_answers_every_golden_case_as_the_reference_did() {
+fn prettier_answers_every_golden_case() {
     let cases: Vec<Value> =
         serde_json::from_str(include_str!("../../../../golden/format/cases.json")).unwrap();
     let differing: Vec<String> = cases

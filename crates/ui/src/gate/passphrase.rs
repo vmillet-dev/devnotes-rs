@@ -1,4 +1,4 @@
-//! The one field that holds a secret (plan § 3.8, § 3.13). egui's text editor keeps an undo
+//! The one field that holds a secret. egui's text editor keeps an undo
 //! history of what is typed, in its memory; this field keeps nothing of its own: the text is a
 //! `Zeroizing<String>` the screen owns, typed at its end, wiped when it is taken.
 

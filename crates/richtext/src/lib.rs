@@ -1,7 +1,7 @@
-//! A Note's document (plan § 3.9.1, points 1–2): blocks and marked text, read from Markdown by
-//! `pulldown-cmark` with the core's options and written back byte for byte as the reference's
-//! editor wrote it (`golden/markdown`), its typed text escaped only where it would read as
-//! syntax (`golden/markdown-escape`). No egui here: the editor and the reader are `ui`'s.
+//! A Note's document: blocks and marked text, read from Markdown by `pulldown-cmark` with the
+//! core's options and written back byte for byte (`golden/markdown`), its typed text escaped only
+//! where it would read as syntax (`golden/markdown-escape`). No egui here: the editor and the
+//! reader are `ui`'s.
 //!
 //! Offsets are `char`s, as the text editor counts them.
 

@@ -1,5 +1,5 @@
 //! What the binary starts on the desktop before the window: only a desktop answers for it, the
-//! OS checklist's (plan § 8.5).
+//! OS checklist's (`docs/recette/recette.html`).
 
 use std::sync::Arc;
 

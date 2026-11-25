@@ -1,4 +1,4 @@
-//! A day picked from a month drawn as a grid (plan § 3.9, gap E4): the reference kept the
+//! A day picked from a month drawn as a grid: the reference kept the
 //! system's `<input type="date">`, which egui has no equivalent of. Arrows move the day,
 //! Enter picks it, Delete clears it.
 

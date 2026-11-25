@@ -187,4 +187,29 @@ mod tests {
             "{ not, a block }"
         );
     }
+
+    /// A count with no branch of its own takes `other`: without it, the sentence has a hole.
+    #[test]
+    fn every_plural_of_both_files_closes_and_has_an_other_branch() {
+        let mut broken = Vec::new();
+        for (path, template) in crate::FRENCH.iter().chain(crate::ENGLISH.iter()) {
+            let mut from = 0;
+            while let Some((start, _, branches_from)) = next_head(template, from) {
+                let Some(closing) = matching_brace(template, start) else {
+                    broken.push(format!("{path} does not close: {template}"));
+                    break;
+                };
+                let cases = parse_branches(&template[branches_from..closing]);
+                if !cases
+                    .iter()
+                    .any(|(case, text)| *case == "other" && !text.is_empty())
+                {
+                    broken.push(format!("{path} has no other: {template}"));
+                }
+                from = closing + 1;
+            }
+        }
+
+        assert!(broken.is_empty(), "{broken:#?}");
+    }
 }

@@ -638,25 +638,19 @@ mod tests {
         assert!(plain.contains(&"hex".to_owned()));
     }
 
-    /// What the reference's formatter wrote, at the settings' defaults (`golden/calc-format`).
+    /// Each kind of value at the settings' defaults (`golden/calc-format`).
     #[test]
-    fn values_are_written_as_the_reference_wrote_them() {
+    fn values_are_written_as_the_golden_cases_say() {
         let cases: Vec<serde_json::Value> =
             serde_json::from_str(include_str!("../../../../golden/calc-format/cases.json"))
                 .unwrap();
         let mut checked = 0;
         for case in cases {
-            let options = &case["options"];
-            if options["locale"] != serde_json::Value::Null
-                || options["decimals"] != "auto"
-                || options["date"] != "numeric"
-            {
-                continue;
-            }
-            let language = if options["lang"] == "fr" {
-                Language::Fr
-            } else {
-                Language::En
+            let language = match case["options"]["lang"].as_str() {
+                Some("fr") => Language::Fr,
+                Some(_) => Language::En,
+                // A footer's: the core's own test reads it.
+                None => continue,
             };
             let input: CalcValue = serde_json::from_value(case["input"].clone()).unwrap();
             let written = value(&input, None, Format::plain(language));

@@ -58,7 +58,7 @@ pub fn claim(profile: &Path) -> io::Result<Claim> {
     match ListenerOptions::new().name(name).create_sync() {
         Ok(listener) => Ok(Claim::First(Instance(listener))),
         // ⚠️ Windows answers a named pipe already created with « access denied », not
-        // « address in use » (ADR S1).
+        // « address in use ».
         Err(error)
             if matches!(
                 error.kind(),

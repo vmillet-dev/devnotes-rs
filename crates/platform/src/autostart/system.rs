@@ -1,4 +1,5 @@
-//! The entry itself, which only a session can answer for: the OS checklist's (plan § 8.5).
+//! The entry itself, which only a session can answer for: the OS checklist's
+//! (`docs/recette/recette.html`).
 
 use std::sync::Arc;
 

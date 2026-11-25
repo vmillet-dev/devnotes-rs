@@ -1,4 +1,4 @@
-//! The editing core under every editor that is not a one-line field (plan § 3.8): a rope with a
+//! The editing core under every editor that is not a one-line field: a rope with a
 //! selection, undo grouped by typing, edits by grapheme, word and line, and search. It knows no
 //! rule of the notes (D10): what to decorate, which unit indents a language, which token
 //! comments a line are given by the caller. No egui here: the view is `ui`'s `EditorView`.

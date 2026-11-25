@@ -1,7 +1,8 @@
-//! The journeys of the plan (§ 6.2, § 6.3) through the real application, without a window: a
-//! frame here is the pass and its tessellation, CPU only, the AccessKit tree a person without a
-//! screen reader never pays included. Nothing runs unless `DEVNOTES_PERF` names a profile
-//! written by the `reference_profile` bench; it writes to that profile.
+//! The journeys `docs/architecture.md` keeps the figures of (« The window on the reference
+//! corpora ») through the real application, without a window: a frame here is the pass and its
+//! tessellation, CPU only, the AccessKit tree a person without a screen reader never pays included.
+//! Nothing runs unless `DEVNOTES_PERF` names a profile written by the `reference_profile` bench; it
+//! writes to that profile.
 //!
 //! ```
 //! DEVNOTES_PERF=<profile> cargo test --release -p ui --lib app::perf -- --nocapture

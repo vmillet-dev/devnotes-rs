@@ -7,7 +7,7 @@ description: Use when planning or building the DevNotes marketing/showcase websi
 
 Load `frontend-design` and follow its plan → review → build → critique process. Then:
 
-1. Ground it in the product: read `README.md`, the three tours (`docs/tour-notes.gif`, `docs/tour-tools.gif`, `docs/tour-http.gif`), `docs/mockups/` and the app's real tokens (`crates/ui/src/theme/tokens.rs`: palette, amber accent, density, dark base). The site should feel made by the same hands as the app, not from a template.
+1. Ground it in the product: read `README.md`, the three tours (`docs/gifs/`) and the app's real tokens (`crates/ui/src/theme/tokens.rs`: palette, amber accent, density, dark base). The site should feel made by the same hands as the app, not from a template.
 2. Real content only: encrypted multi-library vault, snippets with `{{fields}}`, Markdown notes, todo lists, canvas/board, quick-paste palette, HTTP/JSON/tools. Show real UI captures or live demos, not icons in cards.
 3. Avoid: identical feature cards, SaaS hero with gradient and big stat, fade-up on every section, decorative blobs. One memorable element; the rest stays quiet.
 4. It is an Angular project of its own in `website/`, outside the Cargo workspace: its own `package.json` and lockfile, `npm ci` from `website/`, and a dependency the site alone needs is still one the user approves first. It imports nothing from the application: the design tokens are a copy of `crates/ui/src/theme/tokens.rs` (`scripts/tokens.test.mjs` keeps them equal). The in-app desktop rules (egui, no router) do not apply there. A workflow publishes the build to the site's own repository; the public URL is a build input, never hard-coded, and canonical URLs, the sitemap and Open Graph tags are built from it.

@@ -14,7 +14,7 @@ publish = false
 name = "devnotes"
 path = "src/main.rs"
 
-# The packages of a release (plan § 4.3, D8, D26): `cargo packager -p app --release`, after
+# The packages of a release (D8, D26): `cargo packager -p app --release`, after
 # `cargo build -p app --release`, which it does not run. Paths are read from this folder.
 [package.metadata.packager]
 product-name = "DevNotes"

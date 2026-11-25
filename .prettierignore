@@ -4,11 +4,8 @@ coverage
 target
 .angular
 package-lock.json
-# Maquette statique de référence : conservée telle quelle, hors périmètre du formatage.
-docs/mockups/*
 # La feuille de recette : une page autonome, ses cas sur une ligne de données.
 docs/recette/*
-docs/egui-migration/*
 # The documentation is written by hand, without a formatter: its own checks read it.
 docs/content/fr
 docs/content/en
@@ -21,7 +18,7 @@ website/src/app/docs/generated
 .claude/skills/core-web-vitals
 .claude/skills/accessibility
 
-# Written by `npm run golden` on `angular-reference`, byte for byte.
+# Test data, compared byte for byte.
 golden/*/
 # Prettier itself, copied by `npm run prettier`: kept as published.
 crates/text/prettier

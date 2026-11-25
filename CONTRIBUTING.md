@@ -6,10 +6,10 @@ handful of conventions that are load-bearing, and where the traps are.
 DevNotes is licensed under the [GNU GPL v3.0](LICENSE). Opening a pull request means you agree
 to have your contribution distributed under those terms.
 
-DevNotes is Rust alone: an egui window over a core, in one process. It was an Angular + Tauri
-application until 1.0.0 ([the plan](docs/egui-migration/egui-migration-plan.md) tells the
-migration and holds its decisions); that application stays whole, sources and scenarios, at the
-`angular-reference` tag.
+DevNotes is Rust alone: an egui window over a core, in one process. The decisions taken for it
+are in [docs/architecture.md](docs/architecture.md), "Decisions". It was an Angular + Tauri
+application until 1.0.0, which stays whole, sources and scenarios, at the `angular-reference`
+tag.
 
 ## Getting set up
 
@@ -66,10 +66,21 @@ crates/engine/src/
   transfer/       Import, export, share: the exchange format and the Markdown rendering
   db.rs           Connection, migrations, schema, stored-instant format
   error.rs        The three errors and the translation between them
+crates/ui/        The interface: its state, its screens, its widgets
+crates/app/       The binary, its icons and its packages
+crates/text/, richtext/, drawing/
+                  The editing cores: code, Notes, drawings
+crates/platform/  What is asked of the operating system
 crates/i18n/      The interface's translations
 e2e/              The end-to-end driver and its scenarios, on the assembled window
-docs/             Architecture notes, the migration plan, the release procedure, the mockups
+golden/           Test data: exact outputs the tests compare with (its README says which)
+docs/             Architecture notes, the release procedure, the manual checklist, the README's GIFs
+docs/content/     The user documentation, in French and English: the site and the application
+                  read it (its README says how to write it)
+website/          devnotes.fr, published by itself when it or docs/content/ changes on main
 ```
+
+A change a user sees updates `docs/content/` in both languages, in the same pull request.
 
 Everything is filed by **subject**, not by technical nature. Each feature owns its model, its
 SQL and the service functions that expose it. Deleting `crates/engine/src/notes/` deletes the

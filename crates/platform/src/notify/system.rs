@@ -1,4 +1,5 @@
-//! The toast itself, which only a desktop can show: the OS checklist's (plan § 8.5).
+//! The toast itself, which only a desktop can show: the OS checklist's
+//! (`docs/recette/recette.html`).
 
 use std::sync::Arc;
 

@@ -13,7 +13,7 @@ fn wrapped(text: &str, width: f64) -> Vec<String> {
     wrap(text, width, 18.0, &fonts())
 }
 
-/// Where Fabric's lines, in a browser, kerned, break elsewhere than these (E14).
+/// Where Fabric's lines, in a browser, kerned, break elsewhere than these.
 const KERNED_ELSEWHERE: [&str; 1] =
     ["The quick brown fox jumps over the lazy dog, twice over, then rests"];
 

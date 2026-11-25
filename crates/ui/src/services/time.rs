@@ -1,5 +1,5 @@
 //! The clock, injected, and the labels that age with it: a relative label asks to be drawn
-//! again at the exact moment it changes, never every thirty seconds (plan § 3.4).
+//! again at the exact moment it changes, never every thirty seconds.
 
 use std::time::Duration;
 

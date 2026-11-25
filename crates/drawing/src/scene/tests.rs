@@ -1,6 +1,6 @@
 use super::*;
 
-/// What Fabric 7.4.0 wrote for the objects the reference makes (`golden/fabric`): `(what, body)`.
+/// Drawings as they are stored, in Fabric's format (`golden/fabric`): `(what, body)`.
 fn cases() -> Vec<(String, String)> {
     let cases: Vec<Value> =
         serde_json::from_str(include_str!("../../../../golden/fabric/cases.json")).unwrap();

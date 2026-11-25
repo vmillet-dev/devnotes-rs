@@ -1,4 +1,4 @@
-//! The screens of the Angular reference (plan § 5.2) drawn by the egui window: its data, its
+//! The screens of the Angular reference drawn by the egui window: its data, its
 //! gestures, its file names and its window sizes, for a look side by side with the captures of
 //! the `angular-reference` pre-release. Nothing here compares pixels, and nothing runs unless
 //! `DEVNOTES_SCREENS` names where to write.

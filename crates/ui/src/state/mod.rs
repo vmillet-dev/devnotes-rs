@@ -1,4 +1,4 @@
-//! What the interface remembers between frames, apart from the drawing (plan § 3.4).
+//! What the interface remembers between frames, apart from the drawing.
 
 pub mod attachments;
 pub mod backups;
@@ -198,7 +198,7 @@ pub struct AppState {
 }
 
 /// Out of sight, for the tray or a key to call back. Nothing hides a window under native
-/// Wayland: it minimises there (E12).
+/// Wayland: it minimises there.
 pub(crate) fn put_away(ctx: &egui::Context) {
     ctx.send_viewport_cmd(if platform::window::is_native_wayland() {
         egui::ViewportCommand::Minimized(true)
