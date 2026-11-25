@@ -1,19 +1,19 @@
 # CLAUDE.md
 
-Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README. The decisions taken for the egui application are § 11 of `docs/egui-migration/egui-migration-plan.md` (D1–D33); a decision is changed there first, never silently in code.
+Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README. The decisions taken for the egui application (D1–D33) are its « Decisions » section; a decision is changed there first, never silently in code.
 
 ## Project
 
 DevNotes — desktop notes app for developers, in **Rust alone**: an **egui** window over a core, in one process (since 1.0.0; no WebView, no IPC). The core is **`crates/engine`** (SQLite via Diesel, vault, the in-memory index, HTTP, tools); the interface is `crates/ui`, the binary `crates/app` (`devnotes`); beside them `text` (the editing core), `richtext`, `drawing`, `i18n` and `platform` (what is asked of the OS). Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted), todo lists, Calcul sheets (one result a line) or drawings; they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a palette, requests, tools and spaces. Libraries are **encrypted**, several, each behind its own passphrase.
 
-The Angular application is no longer in the tree: it stays whole at the tag `angular-reference` (its `src/` and `e2e/`; `git show angular-reference:src/app/…`, D32). A screen that existed there keeps its look and behaviour (plan § 5); its captures are the files of the `angular-reference` pre-release.
+The Angular application is no longer in the tree: it stays whole at the tag `angular-reference` (its `src/` and `e2e/`; `git show angular-reference:src/app/…`, D32). A screen that existed there keeps its look and behaviour; its captures are the files of the `angular-reference` pre-release.
 
 Principles:
 
 - **Data processing belongs to the core** (`crates/engine/src/notes/`): `query_notes` returns a ready-to-render `NotesView`; the UI filters, sorts and groups nothing. UI exceptions: relative-time formatting, syntax highlighting, layout, pure UI.
 - **Rust is feature-first**: `crates/engine/src/<feature>.rs` = service functions (validate, lock, delegate, translate error); `<feature>/model.rs` = types and rules (no Diesel, no UI); `<feature>/store.rs` = SQL (no rules). Root keeps `error`, `db`, `host`, and library plumbing (`vault`, `libraries`, `layout`, `backup`, `recovery`). → "Feature-first, not layer-first".
 - **One rule, one definition, in the core** (D10): what a `{{field}}`, an HTTP variable or a heading is is decided in `engine`; the UI and the editing crates take the result as an argument.
-- **The UI tree is the shape of the screen** (plan § 3.2): `ui/src/{notes,http,tools,titlebar,banners,gate}` draw; `state/`, `services/`, `api/`, `backend.rs` hold what has no place on screen; `widgets/` crosses areas and reads no global state. Only `ui/src/api/` names engine functions.
+- **The UI tree is the shape of the screen**: `ui/src/{notes,http,tools,titlebar,banners,gate}` draw; `state/`, `services/`, `api/`, `backend.rs` hold what has no place on screen; `widgets/` crosses areas and reads no global state. Only `ui/src/api/` names engine functions.
 - **Clean code, KISS — the code is maintained by a human.** Concise but plainly readable: the simplest design that works, small functions with one job, names that say what things are, early returns over nesting, no abstraction (trait, generic, macro, layer) before its second real use, no cleverness to save a few lines; delete rather than add when both fix it. Rust idiom: `rust-guidelines`, where the project's rules win; egui: `egui-ui`.
 - Language: English for code and comments. **Comments record decisions, not narration**: only a load-bearing ordering, platform trap, non-obvious invariant, or a rejected approach; one or two lines, ~10 % of a file at most; no issue numbers; ⚠️ only for traps that cost a day.
 
@@ -23,8 +23,8 @@ Principles:
 - Cargo workspace: `cargo check|build|test --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings` (⚠️ `--all-features` is what compiles the `e2e` flavour), `cargo fmt --all --check`, `cargo bench -p engine` (not in CI; `autobenches = false` is load-bearing; → "Benchmarks"). Every external dependency is declared once, in the root `[workspace.dependencies]`; a crate takes it with `dep.workspace = true` and adds only its own features (D33). Toolchain pinned in `rust-toolchain.toml`; `unsafe_code` forbidden in every crate (D7), `clippy::pedantic` denied.
 - Node is only a build tool: `npm install` · `npm run lint` (Prettier over Markdown, JSON, YAML; `format` writes) · `npm run test:scripts` (⚠️ test files are named one by one in `package.json`; add new ones there) · `cargo run -p app --example icons` (writes `crates/app/icons/`; ⚠️ small `.ico` sizes come from `icons/source/`) · `npm run prettier` (copies the pinned Prettier into `crates/text/prettier/`, the formatter compiled in). The request-script libraries are bundled by `crates/engine/sandbox/build.mjs`, from that folder's own `package.json`.
 - Website (`website/`, Angular, devnotes.fr; its own `package.json`, outside the Cargo workspace): from `website/`, `npm ci` · `npm start` (port 4300) · `npm run build` (fetches the latest release, prerenders to `website/dist/`, checks every page and its download links) · `npm test` · `npm run lint` · `npm run test:scripts`. `website.yml` publishes it when `website/` or `docs/content/` changes on `main`, and after each release. → "The website".
-- E2E: `cargo build -p app --features e2e --target-dir target/e2e`, then `cargo test -p e2e` (the driver is `e2e/` at the root; all scenarios, one after the other; `--test 01_first_launch` for one; `cargo test --workspace --exclude e2e` otherwise). `01`–`35` are the WebdriverIO scenarios ported (plan § 8.3, Annex D), the rest are this application's own. → "The scenarios, on the assembled window".
-- Release is a `workflow_dispatch` after a version bump; the version is `[workspace.package] version` in `Cargo.toml` alone (D27), so a bump touches `Cargo.toml` and `Cargo.lock` (`cargo update --workspace`); `scripts/version.mjs` refuses a release where they disagree. `release.yml` builds, packages (`cargo-packager`: NSIS, AppImage, deb; rpm by `cargo-generate-rpm`) and signs; `packages.yml` installs and updates them (plan § 4.3). ⚠️ A version branch (`dev/x.y.z`) reaches `main` by a merge commit, never a squash: the release notes read what the merge brings. → "Releasing", `docs/releasing.md`.
+- E2E: `cargo build -p app --features e2e --target-dir target/e2e`, then `cargo test -p e2e` (the driver is `e2e/` at the root; all scenarios, one after the other; `--test 01_first_launch` for one; `cargo test --workspace --exclude e2e` otherwise). `01`–`35` are the WebdriverIO scenarios ported, the rest are this application's own. → "The scenarios, on the assembled window".
+- Release is a `workflow_dispatch` after a version bump; the version is `[workspace.package] version` in `Cargo.toml` alone (D27), so a bump touches `Cargo.toml` and `Cargo.lock` (`cargo update --workspace`); `scripts/version.mjs` refuses a release where they disagree. `release.yml` builds, packages (`cargo-packager`: NSIS, AppImage, deb; rpm by `cargo-generate-rpm`) and signs; `packages.yml` installs and updates them. ⚠️ A version branch (`dev/x.y.z`) reaches `main` by a merge commit, never a squash: the release notes read what the merge brings. → "Releasing", `docs/releasing.md`.
 
 ## Things that will bite you
 
@@ -34,7 +34,7 @@ Principles:
 - **Sealed vs plain**: titles, bodies, sources, items, names, field values, attachments are sealed; what SQL filters/sorts/joins on (tags, instants, ids, `kind`, `language`, `priority`) is not. Never SQLCipher. → "What is sealed, and what is not".
 - **Passphrase wraps the key** and is `zeroize`d before a service returns. ⚠️ Changing it re-wraps every retained backup's `vault.json`. The 12-char floor applies only when _choosing_ a phrase, not unlocking. → "Changing the passphrase", "The floor".
 - ⚠️ An open library answers `Library::directory()`; `libraries::open_directory` is only for when none is open. Names in `layout.rs` are the address of an installed library — never rename. → "Several libraries, and the registry beside them".
-- **Switching library resets the library scope of the UI** (plan § 3.3.8); neither the open nor the last library can be deleted.
+- **Switching library resets the library scope of the UI** (→ "State between frames"); neither the open nor the last library can be deleted.
 - **Two `preferences.json`**: `devnotes.notes.*` is per library, the rest per application (`automaticBackups` stays application-level: the interface reads it and hands the core a plain flag). → "Two scopes of preference, one prefix apart".
 - **Profiles**: the binary defaults to `com.devnotes.app`, the packages' identifier (`com.devnotes.app.dev` until 1.0.0, D16); ⚠️ never two processes on one profile — the in-memory index assumes it is the only writer (D16).
 - **Files are written durably** — staged, flushed, renamed, the folder flushed on Unix — through `engine::durable` (registry, key file, export, saved response, restore, attachments). ⚠️ The two `preferences.json` and the window geometry are only staged then renamed: rewritten at each change on the db queue, a flush each time clogs it, and an empty one after a power cut reads as the defaults.
@@ -82,7 +82,7 @@ Principles:
 
 ### Behaviours every screen keeps
 
-Read at the `angular-reference` tag; the egui mechanism is in the plan (§ 3.3–3.12).
+Read at the `angular-reference` tag; the egui mechanism is in `docs/architecture.md` (→ "Backend and events").
 
 - Writes are not optimistic: persist, adopt the answer, bump the revision; nothing reloads a view by hand. Time comes from an injectable clock.
 - Creating a note writes nothing until worth keeping. Editor drafts are keyed on note id and committed on blur and every closing path. → "Creating a note writes nothing".
@@ -108,12 +108,9 @@ Read at the `angular-reference` tag; the egui mechanism is in the plan (§ 3.3�
 ## Security and verification
 
 - Never rewrite cryptography, key derivation or file formats unasked. Never log or commit passphrases, keys or note content (a panic hook logs location and thread, never the message — D18). eframe persistence stays off. `.claude/rules/security.md` holds the agent limits.
+- **A change the user sees updates what shows it, in the same pull request**: `docs/content/{fr,en}` (the site and the application read it; `docs_quotes` fails on a label renamed), the README's GIFs in `docs/gifs/` (`cargo run -p app --example tours`) and the site's scenes when they show the screen that changed. Publishing is `website.yml`'s.
 - Before saying a change is done, run the checks for what changed (`verify-change`) and report only what actually ran.
 
 ## Claude Code setup
 
 - `.claude/skills/` is versioned. Local: `add-feature`, `egui-ui`, `platform-integration`, `database-migration`, `devnotes-security-review`, `verify-change`, `desktop-e2e-testing` (the `e2e/` driver), `backup-restore`, `bug-investigation`, `release-packaging`, `marketing-site`, `performance-profiling`, `dependency-audit`. Vendored, unmodified and pinned in `.claude/skills/PROVENANCE.md`: `frontend-design`, `webapp-testing` (`anthropics/skills`); `seo`, `core-web-vitals`, `accessibility` (`addyosmani/web-quality-skills`); `rust-guidelines` (`microsoft/rust-guidelines`, its `SKILL.md` ours). A vendored skill is generic: where it disagrees with this file or a local skill, the project wins. `frontend-design`, `webapp-testing`, `seo`, `core-web-vitals` and `accessibility` are for the website. `.claude/settings.json` holds the permission rules that back `.claude/rules/security.md`; `settings.local.json`, `launch.json` and `.mcp.json` stay local.
-
-## Design reference
-
-`docs/mockups/scratch-mockup-v2.html` and `docs/mockups/scratch-folders.html` are static mockups of the intended UI (canvas; folders and board). Visual references, not code to import.

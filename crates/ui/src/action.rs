@@ -1,4 +1,4 @@
-//! What drawing asks for, applied at the end of the frame (plan § 3.4, D13): drawing reads a
+//! What drawing asks for, applied at the end of the frame (D13): drawing reads a
 //! screen's state and pushes actions; the state changes only in `AppState::apply`. Keys, menus,
 //! the palette, the tray and a second launch all speak this one language.
 

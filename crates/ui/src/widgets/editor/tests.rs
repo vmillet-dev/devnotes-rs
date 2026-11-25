@@ -261,7 +261,7 @@ fn wrapped_rows_hang_under_their_line_s_indent() {
     assert!((galley.rows[1].pos.x - first - 6.0 * 8.0).abs() < 0.5);
 }
 
-/// The budgets of § 6.2, measured by hand: `cargo test -p ui --release budgets -- --ignored
+/// The budgets, measured by hand: `cargo test -p ui --release budgets -- --ignored
 /// --nocapture`. A frame is egui's pass, without painting.
 #[test]
 #[ignore = "a measure, not a check"]

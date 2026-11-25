@@ -1,4 +1,4 @@
-//! The variables of the Angular reference's `styles.scss`, one for one (plan § 3.7): the dark
+//! The variables of the Angular reference's `styles.scss`, one for one: the dark
 //! palette is the base, the light one redefines what a light surface needs, and the compact
 //! density tightens four gaps and nothing else.
 #![allow(

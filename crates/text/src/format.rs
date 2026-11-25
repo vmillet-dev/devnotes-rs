@@ -1,4 +1,4 @@
-//! A snippet formatted by Prettier itself (plan D1, ADR S8): Prettier 3.9.10 and its plugins in
+//! A snippet formatted by Prettier itself (D1): Prettier 3.9.10 and its plugins in
 //! QuickJS, on a thread of their own, loaded by the first format and kept warm. It is handed
 //! text, never code, and every `{{…}}` comes back as it went in (`shield`). Which parser a
 //! language has is the caller's to say.

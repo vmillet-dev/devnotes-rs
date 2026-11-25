@@ -15,7 +15,7 @@ const DARK: u8 = 40;
 fn every_frame_of_every_tour_is_dark_and_each_file_under_a_megabyte() {
     for name in ["notes", "tools", "http"] {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let path = path.join(format!("../../docs/tour-{name}.gif"));
+        let path = path.join(format!("../../docs/gifs/tour-{name}.gif"));
         let bytes = std::fs::read(&path).unwrap();
         assert!(bytes.len() < HEAVIEST, "{name}: {} bytes", bytes.len());
 

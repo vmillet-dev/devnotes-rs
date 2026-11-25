@@ -1,5 +1,5 @@
 //! The list view: the sections of the view the core answered, drawn a row at a time, only where
-//! the viewport is (plan § 3.6), or the state that owns the region instead — loading, an error,
+//! the viewport is, or the state that owns the region instead — loading, an error,
 //! nothing found.
 
 mod board;

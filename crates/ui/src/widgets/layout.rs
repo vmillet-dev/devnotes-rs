@@ -134,7 +134,7 @@ pub fn split_handle(ui: &mut Ui, author_id: &str) -> f32 {
 /// What one press of an arrow moves a handle by.
 const STEP: f32 = 16.0;
 
-/// A tooltip drawn as the menus are, in place of the system's `title` (E3).
+/// A tooltip drawn as the menus are, in place of the system's `title`.
 /// A group of controls `width` wide in a wrapped row: whole on the next line where it does not
 /// fit on this one. egui wraps a widget, not a group of them.
 pub fn kept_together<R>(ui: &mut Ui, width: f32, content: impl FnOnce(&mut Ui) -> R) -> R {

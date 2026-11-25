@@ -1,6 +1,6 @@
 //! The second view of a space: its folders as zones from stored frames, the cards filed there
 //! flowing inside them, the loose ones sitting freely on a dotted ground that pans and never
-//! zooms. Only what crosses the viewport is drawn (plan § 3.6).
+//! zooms. Only what crosses the viewport is drawn.
 //!
 //! Every gesture is a pointer drag read here, not egui's drag and drop: a card is its own handle
 //! (the distance travelled tells a drag from the click that opens it), a zone moves by its grip

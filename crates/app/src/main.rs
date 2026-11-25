@@ -1,5 +1,5 @@
 //! The `devnotes` binary: a request-script host when relaunched as one, the application
-//! otherwise (plan § 3.3.8, « Lancement »).
+//! otherwise.
 
 // Prevents an additional console window on Windows in release.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]

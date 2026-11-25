@@ -1,5 +1,5 @@
-//! The two reference libraries of the migration plan (§ 6.1), generated on disk, never in
-//! memory: an in-memory database has no pager, no page cache and no I/O.
+//! The two reference libraries, generated on disk, never in memory: an in-memory database has no
+//! pager, no page cache and no I/O.
 //!
 //! - **Realistic** (~60 MB of text): 30,000 notes — 20,000 snippets of ~1.5 kB, 5,000 Notes of
 //!   ~4 kB, 3,000 lists of 20 items, 1,500 Calcul sheets of 30 lines, 500 Dessins of ~20 kB —,

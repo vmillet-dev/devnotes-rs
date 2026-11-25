@@ -1,5 +1,5 @@
 //! The client itself (D26). What it installs, only a real installation can answer for: the OS
-//! checklist's (plan § 8.5).
+//! checklist's (`docs/recette/recette.html`).
 
 use std::cell::Cell;
 use std::path::Path;

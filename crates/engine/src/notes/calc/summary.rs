@@ -75,9 +75,9 @@ mod tests {
         figures(values).unwrap()
     }
 
-    /// What the reference's footer gave, on the same strings (`golden/calc-format`).
+    /// A sheet's sum and mean (`golden/calc-format`).
     #[test]
-    fn the_footer_gives_what_the_reference_gave() {
+    fn the_footer_gives_what_the_golden_cases_say() {
         let cases: Vec<serde_json::Value> =
             serde_json::from_str(include_str!("../../../../../golden/calc-format/cases.json"))
                 .unwrap();

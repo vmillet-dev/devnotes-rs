@@ -162,7 +162,7 @@ fn only_what_crosses_the_viewport_is_drawn() {
     assert_eq!(harness.state().state.board.cards().count(), 60);
 }
 
-/// The budget of § 6.2, measured by hand: `cargo test -p ui --release board_budget --
+/// The budget, measured by hand: `cargo test -p ui --release board_budget --
 /// --ignored --nocapture`. A frame is egui's pass, without painting.
 #[test]
 #[ignore = "a measure, not a check"]

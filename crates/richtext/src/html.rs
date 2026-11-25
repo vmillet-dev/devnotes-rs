@@ -413,7 +413,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_page_s_html_reads_as_the_reference_read_it() {
+    fn a_page_s_html_becomes_markdown() {
         let cases: Vec<serde_json::Value> =
             serde_json::from_str(include_str!("../../../golden/html-paste/cases.json")).unwrap();
         let differing: Vec<String> = cases

@@ -1,5 +1,5 @@
-//! The reference's editor, read in and written back (`golden/markdown`), and its typed text as it
-//! was stored (`golden/markdown-escape`): byte for byte.
+//! A Note read in and written back (`golden/markdown`), and typed text as it is stored
+//! (`golden/markdown-escape`): byte for byte.
 
 use serde_json::Value;
 
@@ -8,7 +8,7 @@ fn cases(json: &str) -> Vec<Value> {
 }
 
 #[test]
-fn markdown_read_and_written_back_is_the_reference_s() {
+fn markdown_is_read_and_written_back_as_stored() {
     let differing: Vec<String> = cases(include_str!("../../../golden/markdown/cases.json"))
         .iter()
         .filter_map(|case| {
@@ -23,7 +23,7 @@ fn markdown_read_and_written_back_is_the_reference_s() {
 }
 
 #[test]
-fn typed_text_is_escaped_as_the_reference_stored_it() {
+fn typed_text_is_escaped_only_where_it_would_read_as_syntax() {
     let differing: Vec<String> = cases(include_str!("../../../golden/markdown-escape/cases.json"))
         .iter()
         .filter_map(|case| {

@@ -229,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn every_outline_of_the_golden_corpus_is_placed_as_the_reference_placed_it() {
+    fn every_outline_is_placed_as_its_golden_case_says() {
         let cases: Value =
             serde_json::from_str(include_str!("../../../../../../golden/mind-map/cases.json"))
                 .unwrap();

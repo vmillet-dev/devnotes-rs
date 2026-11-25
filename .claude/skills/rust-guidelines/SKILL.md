@@ -13,8 +13,7 @@ rendered book, not at these files). Read the `<why>` before applying a rule: the
 ## Order of precedence
 
 1. `CLAUDE.md`, `.claude/rules/security.md`, `docs/architecture.md` and the local skills.
-2. `../../../docs/egui-migration/egui-migration-plan.md` for work on the migration.
-3. These guidelines.
+2. These guidelines.
 
 Keep it simple: a guideline is a reason to write less, plainer code, never a licence to add a
 layer. Apply it to the code you are changing; do not sweep the codebase unasked.
@@ -25,7 +24,7 @@ layer. Apply it to the code you are changing; do not sweep the codebase unasked.
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | M-ERRORS-CANONICAL-STRUCTS, M-APP-ERROR             | Errors stay `AppError { code, params, detail }` with `ErrorCode` (→ "Error contract"); no `anyhow`, no backtraces in answers.                                      |
 | M-INTEGRATION-TESTS                                 | Unit tests stay inline `#[cfg(test)] mod tests` at the bottom of the file; `tests/` holds the integration binaries, as today.                                      |
-| M-SMALLER-CRATES                                    | The crates are the ones the migration plan lists (§ 3.1); a new crate is a decision, not a reflex.                                                                 |
+| M-SMALLER-CRATES                                    | The crates are the ones `docs/architecture.md` lists (« Overview »); a new crate is a decision, not a reflex.                                                      |
 | M-MODULE-DOCS, M-CANONICAL-DOCS                     | Comments record decisions, not narration (`CLAUDE.md`): short doc comments, no essays.                                                                             |
 | M-LOG-STRUCTURED                                    | Logging stays on `log`; what matters here is the redaction part — never log note content, passphrases, keys or tokens.                                             |
 | M-STATIC-VERIFICATION                               | The lint set is the project's (`unsafe_code` forbidden, `clippy::pedantic` denied); an extra lint is a proposal to the user.                                       |

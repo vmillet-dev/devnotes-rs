@@ -401,7 +401,7 @@ mod tests {
         assert_eq!(coloured[0], vec![(0..6, Token::Comment)]);
     }
 
-    /// The budget of § 6.2, by hand: `cargo test -p text --release budget -- --ignored
+    /// The budget, by hand: `cargo test -p text --release budget -- --ignored
     /// --nocapture`.
     #[test]
     #[ignore = "a measure, not a check"]

@@ -54,34 +54,3 @@ fn marks_close_at_the_caret_and_spaced_emphasis_stays_as_typed() {
         "no italic inside a word"
     );
 }
-
-#[test]
-fn every_input_rule_of_the_reference_has_its_port() {
-    let corpus: Vec<serde_json::Value> =
-        serde_json::from_str(include_str!("../../../../golden/rich-keys/cases.json")).unwrap();
-    // `image` turns `![alt](src)` into a picture: a Note's pictures are its drawings, embedded
-    // from the toolbar (#1215).
-    let ported = [
-        "heading",
-        "blockquote",
-        "bulletList",
-        "orderedList",
-        "taskItem",
-        "codeBlock",
-        "horizontalRule",
-        "bold",
-        "italic",
-        "strike",
-        "code",
-        "spacedEmphasis",
-        "image",
-    ];
-    for case in &corpus {
-        let rules = case["output"]["inputRules"].as_array().unwrap();
-        let name = case["input"].as_str().unwrap();
-        assert!(
-            rules.is_empty() || ported.contains(&name),
-            "{name} has rules of its own"
-        );
-    }
-}

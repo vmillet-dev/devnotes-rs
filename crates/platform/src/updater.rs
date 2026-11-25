@@ -1,5 +1,5 @@
 //! A new version: found in `latest.json`, downloaded and checked against its minisign signature,
-//! then installed once the application has finished leaving (plan § 4.3, D26). Nothing installs
+//! then installed once the application has finished leaving (D26). Nothing installs
 //! without an explicit gesture, and deb and rpm packages do not update themselves.
 
 mod system;

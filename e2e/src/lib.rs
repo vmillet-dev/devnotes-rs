@@ -1,4 +1,4 @@
-//! The end-to-end driver (plan § 8.3): launches the `e2e` flavour of `devnotes` on a profile of
+//! The end-to-end driver: launches the `e2e` flavour of `devnotes` on a profile of
 //! its own and drives it like a person, through egui's inspection protocol. It knows of the
 //! application only what its AccessKit tree shows, and finds a control by its `author_id`.
 //!

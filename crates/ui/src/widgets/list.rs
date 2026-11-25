@@ -1,4 +1,4 @@
-//! What can run to thousands of rows: drawn only where the viewport is (plan § 3.6), over rows
+//! What can run to thousands of rows: drawn only where the viewport is, over rows
 //! of one height. The code viewer is one of them, a line a row.
 
 use crate::theme::tokens::{font, radius};

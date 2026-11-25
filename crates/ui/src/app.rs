@@ -1,4 +1,4 @@
-//! The application frame: what every frame does, in its order (plan § 3.3.7).
+//! The application frame: what every frame does, in its order.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -335,7 +335,7 @@ impl eframe::App for DevNotesApp {
         }
     }
 
-    /// Draw, then the keys the widgets left, then the actions: always in this order (§ 3.3.7).
+    /// Draw, then the keys the widgets left, then the actions: always in this order.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let mut actions = Actions::default();
         let language = self.state.language;

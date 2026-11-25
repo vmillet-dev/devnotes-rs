@@ -62,7 +62,7 @@ HTTP, GraphQL and WebSocket. Collections, environments and variables, a history 
 
 ## Notes and snippets
 
-![The notes: by date, as a board of folders, a search quoting the line that matched, the facets, a selection, a snippet with its fields and their form, its history, a formatted Note and its presentation, a todo list, a Calcul sheet, the palette and the trash](docs/tour-notes.gif)
+![The notes: by date, as a board of folders, a search quoting the line that matched, the facets, a selection, a snippet with its fields and their form, its history, a formatted Note and its presentation, a todo list, a Calcul sheet, the palette and the trash](docs/gifs/tour-notes.gif)
 
 - **Three kinds of note.** Snippets highlighted in twenty-six languages and formatted with Prettier; Notes written formatted — headings, lists, checkboxes, tables, code blocks — and stored as Markdown; todo lists you tick off.
 - **`{{fields}}`.** `ssh -p {{port=22}} {{user}}@{{host}}` asks for its values before it reaches the clipboard, with defaults you set once.
@@ -77,7 +77,7 @@ HTTP, GraphQL and WebSocket. Collections, environments and variables, a history 
 
 Every tool runs on your machine and calls nothing. Search them, star the ones you use, and keep a result as a note.
 
-![The tools: their home, then JWT, the JSON generator, Diff, Hash and HMAC, passwords, dates, time zones, Cron, CIDR subnets, colours, QR codes, fictitious identities and HTTP statuses](docs/tour-tools.gif)
+![The tools: their home, then JWT, the JSON generator, Diff, Hash and HMAC, passwords, dates, time zones, Cron, CIDR subnets, colours, QR codes, fictitious identities and HTTP statuses](docs/gifs/tour-tools.gif)
 
 | Kind          | Tools                                                                                           |
 | ------------- | ----------------------------------------------------------------------------------------------- |
@@ -91,7 +91,7 @@ Every tool runs on your machine and calls nothing. Search them, star the ones yo
 
 ## API client
 
-![The API client: its collections, an HTTP request, a GraphQL request, a WebSocket, the environments and the code generated from a request](docs/tour-http.gif)
+![The API client: its collections, an HTTP request, a GraphQL request, a WebSocket, the environments and the code generated from a request](docs/gifs/tour-http.gif)
 
 - **HTTP and GraphQL** requests in tabs, with bodies, authentication and cookies; a GraphQL answer's errors read apart from its data.
 - **WebSocket** connections with a live log, and messages kept to send again.

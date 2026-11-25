@@ -18,8 +18,7 @@ pub struct Geometry {
     pub maximized: bool,
 }
 
-/// A session with no X server left (D15): winit 0.30 can neither place nor hide a window there
-/// (E12).
+/// A session with no X server left (D15): winit 0.30 can neither place nor hide a window there.
 pub fn is_native_wayland() -> bool {
     cfg!(target_os = "linux")
         && only_wayland(

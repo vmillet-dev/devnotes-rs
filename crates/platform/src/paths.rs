@@ -1,4 +1,4 @@
-//! Where the application reads and writes, resolved once at launch (plan § 4.1).
+//! Where the application reads and writes, resolved once at launch.
 
 use std::path::PathBuf;
 

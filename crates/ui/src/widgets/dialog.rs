@@ -149,7 +149,7 @@ pub(crate) fn shown<R>(response: ModalResponse<(R, bool)>) -> Shown<R> {
 }
 
 /// A fitted modal: `bg-1`, 14 px corners, a `line` border, the overlay's shadow, a cross top
-/// right. Its scrim is solid, where the reference blurred (E7). `None` when `id` is not open.
+/// right. Its scrim is solid, where the reference blurred. `None` when `id` is not open.
 pub fn dialog<R>(
     ctx: &Context,
     stack: &DialogStack,

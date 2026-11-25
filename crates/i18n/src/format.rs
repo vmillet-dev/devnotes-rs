@@ -1,6 +1,6 @@
 //! Numbers, dates, lists and country names in French and English, written by hand (D21): one
 //! function per pattern the interface really uses, named by that use, each proved against
-//! what `Intl` wrote for the reference (`golden/intl`). No ICU: two languages and a dozen
+//! what `Intl` writes (`golden/intl`). No ICU: two languages and a dozen
 //! patterns do not need one.
 //!
 //! A date or a time arrives as the wall-clock value to show: the caller has put it in the
@@ -498,9 +498,9 @@ mod tests {
         })
     }
 
-    /// Every call of the reference's `Intl`, with its exact options, at its edge values.
+    /// Every pattern in both languages, at its edge values (`golden/intl`).
     #[test]
-    fn every_pattern_writes_what_intl_wrote() {
+    fn every_pattern_writes_what_intl_writes() {
         let corpus: serde_json::Value =
             serde_json::from_str(include_str!("../../../golden/intl/cases.json")).unwrap();
         let mut wrong = Vec::new();

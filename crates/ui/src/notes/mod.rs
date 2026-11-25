@@ -1,5 +1,4 @@
-//! The notes area: the canvas of cards, the header over it and the rail beside it, as they are
-//! ported (plan § 7 « Phase 3 »).
+//! The notes area: the canvas of cards, the header over it and the rail beside it.
 
 pub mod calc;
 pub mod canvas;

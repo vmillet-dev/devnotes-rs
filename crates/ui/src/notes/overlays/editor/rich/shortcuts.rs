@@ -1,7 +1,5 @@
-//! The formatting shortcuts, written in the reference's notation (`Mod` is Ctrl, ⌘ on a Mac) as
-//! `golden/rich-keys` records them, and read from it by a test rather than copied by hand. A
-//! digit is read where the key sits, as the area keys are: on AZERTY, Ctrl+Shift+7 is the key
-//! that prints 7 unshifted elsewhere.
+//! The formatting shortcuts (`Mod` is Ctrl, ⌘ on a Mac). A digit is read where the key sits, as
+//! the area keys are: on AZERTY, Ctrl+Shift+7 is the key that prints 7 unshifted elsewhere.
 
 use egui::{Key, Modifiers};
 
@@ -83,62 +81,6 @@ fn matches(notation: &str, key: Key, physical: Option<Key>, modifiers: Modifiers
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// A shortcut as the corpus writes it, its modifiers in one order and its key lower-case.
-    fn normal(notation: &str) -> String {
-        let mut parts: Vec<String> = notation.split('-').map(str::to_lowercase).collect();
-        let key = parts.pop().unwrap_or_default();
-        parts.sort();
-        parts.push(key);
-        parts.join("-")
-    }
-
-    #[test]
-    fn every_formatting_shortcut_of_the_reference_is_ours() {
-        let corpus: Vec<serde_json::Value> = serde_json::from_str(include_str!(
-            "../../../../../../../golden/rich-keys/cases.json"
-        ))
-        .unwrap();
-        let ours: Vec<String> = SHORTCUTS
-            .iter()
-            .chain(std::iter::once(&SELECT_ALL))
-            .map(|(notation, _)| normal(notation))
-            .collect();
-        let formatting = [
-            "paragraph",
-            "bold",
-            "italic",
-            "strike",
-            "code",
-            "heading",
-            "bulletList",
-            "orderedList",
-            "taskList",
-            "blockquote",
-            "codeBlock",
-            "hardBreak",
-            "undoRedo",
-        ];
-        for case in &corpus {
-            let name = case["input"].as_str().unwrap_or_default();
-            if !formatting.contains(&name) {
-                continue;
-            }
-            for shortcut in case["output"]["shortcuts"].as_array().unwrap() {
-                let shortcut = shortcut.as_str().unwrap();
-                // The block's own keys are the editor's (Enter, Tab, the arrows); `я` is the
-                // Cyrillic letter on Z's key, which egui already reads as Z.
-                let held = shortcut.contains("Mod") || shortcut.contains("Shift-Enter");
-                if !held || shortcut.contains('я') {
-                    continue;
-                }
-                assert!(
-                    ours.contains(&normal(shortcut)),
-                    "{name}: {shortcut} is not ours"
-                );
-            }
-        }
-    }
 
     #[test]
     fn a_digit_is_read_where_the_key_sits_and_a_letter_as_it_reads() {

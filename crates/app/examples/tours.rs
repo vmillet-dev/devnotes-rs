@@ -1,6 +1,6 @@
 //! Assembles the README's tours from the screens `app::screens` draws:
 //! `DEVNOTES_SCREENS=<dir> cargo test -p ui --lib app::screens`, then
-//! `cargo run -p app --example tours -- <dir>`, which writes `docs/tour-*.gif`.
+//! `cargo run -p app --example tours -- <dir>`, which writes `docs/gifs/tour-*.gif`.
 //!
 //! One theme throughout, the dark one: a loop that ends on a light frame flashes.
 
@@ -72,9 +72,9 @@ const COLOURS: usize = 256;
 fn main() {
     let screens = std::env::args_os().nth(1).map(PathBuf::from);
     let screens = screens.expect("the folder the screens were drawn in");
-    let docs = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs");
+    let gifs = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/gifs");
     for (name, frames) in TOURS {
-        let path = docs.join(format!("tour-{name}.gif"));
+        let path = gifs.join(format!("tour-{name}.gif"));
         let frames: Vec<RgbaImage> = frames.iter().map(|one| screen(&screens, one)).collect();
         write(&path, &frames);
         let bytes = std::fs::metadata(&path).expect("written").len();
