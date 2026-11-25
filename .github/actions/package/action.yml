@@ -44,7 +44,14 @@ runs:
         if [ "$RUNNER_OS" = Windows ]; then
           cargo packager -p app --release -f nsis -o "$packages"
         elif [ "$RUNNER_OS" = macOS ]; then
-          cargo packager -p app --release -f app,dmg -o "$packages"
+          # The runner's scanners can still hold the image when it is ejected: busy, free later.
+          for attempt in 1 2 3; do
+            cargo packager -p app --release -f app,dmg -o "$packages" && break
+            [ "$attempt" = 3 ] && exit 1
+            hdiutil detach /Volumes/DevNotes -force > /dev/null 2>&1 || true
+            rm -rf "$packages"
+            sleep 15
+          done
           # One archive an architecture in a release: the packager names it after the application alone.
           version=$(cargo metadata --format-version 1 --no-deps \
             | jq -r '.packages[] | select(.name == "app") | .version')
