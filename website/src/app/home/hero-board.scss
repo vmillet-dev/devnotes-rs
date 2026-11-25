@@ -1,0 +1,469 @@
+// The one place the page holds a moment: the window stays centred while its cards are filed.
+.track {
+  position: relative;
+  height: calc(var(--bh, 640px) + 160vh);
+  margin-top: clamp(32px, 5vw, 56px);
+}
+
+.pin {
+  position: sticky;
+  top: max(calc(var(--head-h) + 12px), calc((100vh + var(--head-h) - var(--bh, 640px)) / 2));
+}
+
+// Clipped rather than scrolled: the window is never panned. The margin keeps its shadow.
+.scroller {
+  overflow: clip;
+  overflow-clip-margin: 64px;
+}
+
+// The application's window, drawn at its own size and scaled to the column by `HeroBoard`; the
+// steps below are its defaults before the script has measured anything.
+.app-window {
+  display: grid;
+  grid-template-columns: 210px 1120px;
+  grid-template-rows: 34px 50px 552px;
+  grid-template-areas:
+    'title title'
+    'rail tools'
+    'rail board';
+  width: max-content;
+  margin-inline: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-1);
+  box-shadow: var(--shadow);
+  zoom: 0.85;
+}
+
+.titlebar {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.menus {
+  display: flex;
+  gap: 14px;
+}
+
+.areas,
+.views,
+.filters {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.areas {
+  margin-left: auto;
+}
+
+.areas span,
+.views span,
+.filters span {
+  padding: 3px 10px;
+  border-radius: 5px;
+}
+
+.areas .on,
+.filters .on {
+  background: var(--bg-3);
+  color: var(--text-0);
+}
+
+.controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.controls i {
+  position: relative;
+  width: 10px;
+  height: 10px;
+}
+
+// Minimise, maximise, close: a line, a square, a cross.
+.controls i:nth-child(1)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  border-top: 1.4px solid currentColor;
+}
+
+.controls i:nth-child(2) {
+  border: 1.4px solid currentColor;
+  border-radius: 2px;
+}
+
+.controls i:nth-child(3)::before,
+.controls i:nth-child(3)::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: 4px;
+  border-top: 1.4px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.controls i:nth-child(3)::after {
+  transform: rotate(-45deg);
+}
+
+.rail {
+  grid-area: rail;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 12px 8px;
+  border-right: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+
+.rail-h {
+  padding: 2px 8px 6px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.rail .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.rail .row.sub {
+  padding-left: 22px;
+}
+
+.rail .row.on {
+  background: rgba(var(--amber-rgb), 0.13);
+  color: var(--amber-text);
+  font-weight: 600;
+}
+
+.rail .sw {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: rgb(var(--c));
+}
+
+.rail b {
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-foot {
+  margin-top: 12px;
+  padding: 10px 8px 0;
+  border-top: 1px solid var(--line-soft);
+  color: var(--text-2);
+}
+
+.toolbar {
+  grid-area: tools;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+.views .on {
+  background: var(--amber-fill);
+  color: var(--amber-ink);
+  font-weight: 600;
+}
+
+.search {
+  flex: 0 1 300px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg-0);
+  color: var(--text-2);
+}
+
+.search kbd:first-of-type {
+  margin-left: auto;
+}
+
+.search kbd {
+  font-size: 10px;
+}
+
+.new {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 7px;
+  background: var(--amber-fill);
+  color: var(--amber-ink);
+  font-weight: 650;
+}
+
+// The canvas the folders are drawn on.
+.board {
+  grid-area: board;
+  position: relative;
+  width: 1120px;
+  height: 552px;
+  background-color: var(--bg-0);
+  background-image: radial-gradient(var(--dot) 1.1px, transparent 1.4px);
+  background-size: 16px 16px;
+}
+
+.board .zone {
+  position: absolute;
+  top: 48px;
+  width: 344px;
+  height: 330px;
+}
+
+.zone {
+  transition:
+    background-color var(--motion),
+    border-color var(--motion);
+}
+
+.zone.drop-target {
+  background: rgba(var(--c), 0.15);
+  border-color: rgb(var(--c));
+}
+
+.card {
+  box-shadow: var(--shadow-soft);
+}
+
+.board .card {
+  position: absolute;
+}
+
+.card.loose {
+  box-shadow: none;
+}
+
+.card.mover {
+  z-index: 2;
+}
+
+.card.lifted {
+  z-index: 3;
+  box-shadow: var(--shadow);
+  border-color: var(--line);
+}
+
+.board .untriaged {
+  position: absolute;
+  left: 24px;
+  top: 12px;
+}
+
+.untriaged {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.untriaged::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber-fill);
+}
+
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 2px 3px rgba(var(--black-rgb), 0.45));
+}
+
+.cursor.on {
+  opacity: 1;
+}
+
+@media (min-width: 1500px) {
+  .app-window {
+    zoom: 1;
+  }
+}
+
+@media (min-width: 1800px) {
+  .app-window {
+    zoom: 1.12;
+  }
+}
+
+@media (min-width: 2100px) {
+  .app-window {
+    zoom: 1.25;
+  }
+}
+
+// A tablet: the window without its rail, the board taking the room.
+@media (max-width: 1099px) {
+  .app-window {
+    grid-template-columns: 1120px;
+    grid-template-areas:
+      'title'
+      'tools'
+      'board';
+    zoom: 0.75;
+  }
+
+  .rail {
+    display: none;
+  }
+}
+
+.phone-window {
+  display: none;
+}
+
+// A phone: a window drawn for its width, one folder and the note filed into it, at a size
+// that reads.
+@media (max-width: 720px) {
+  .track {
+    height: calc(var(--bh, 540px) + 90vh);
+  }
+
+  .app-window {
+    display: none;
+  }
+
+  .phone-window {
+    display: block;
+    max-width: 440px;
+    margin-inline: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-1);
+    box-shadow: var(--shadow);
+  }
+
+  .phone-window .titlebar {
+    height: 34px;
+  }
+
+  .phone-window .areas {
+    margin-left: 0;
+  }
+
+  .phone-window .toolbar {
+    justify-content: space-between;
+    height: 44px;
+  }
+
+  .space {
+    font-weight: 650;
+    color: var(--text-0);
+  }
+
+  .phone-board {
+    position: relative;
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    background-color: var(--bg-0);
+    background-image: radial-gradient(var(--dot) 1.1px, transparent 1.4px);
+    background-size: 16px 16px;
+  }
+
+  .slots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .zone .slots {
+    padding: 0 10px 10px;
+  }
+
+  // Under the folder's own columns: the note filed rises straight into its place.
+  .loose-row {
+    padding-inline: 11px;
+  }
+
+  .phone-board .card,
+  .slot {
+    width: auto;
+    height: 112px;
+  }
+
+  .phone-board .card {
+    font-size: 12px;
+  }
+
+  .phone-board .card-top strong {
+    font-size: 12.5px;
+  }
+
+  .phone-board .card-top .chip-lang {
+    font-size: 9.5px;
+  }
+
+  .phone-board .card pre {
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .phone-board .card-foot {
+    font-size: 10.5px;
+  }
+
+  .phone-board .untriaged {
+    justify-self: start;
+    height: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    height: auto;
+  }
+
+  .pin {
+    position: static;
+  }
+}

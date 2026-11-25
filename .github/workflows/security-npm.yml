@@ -12,6 +12,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'crates/engine/sandbox/**'
+      - 'website/package.json'
+      - 'website/package-lock.json'
       - '.github/workflows/security-npm.yml'
   schedule:
     # Monday morning, so the week starts with the answer rather than ends with it.
@@ -27,9 +29,17 @@ permissions:
 
 jobs:
   npm-audit:
-    name: npm advisories
+    # The root keeps its name: it may be a required check. The site's lockfile is audited alike.
+    name: npm advisories${{ matrix.directory == '.' && '' || ' (website)' }}
     runs-on: ubuntu-22.04
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ['.', 'website']
+    defaults:
+      run:
+        working-directory: ${{ matrix.directory }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -37,6 +47,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: ${{ matrix.directory }}/package-lock.json
 
       - run: npm ci
 

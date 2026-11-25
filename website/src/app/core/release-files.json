@@ -1,0 +1,29 @@
+{
+  "version": "1.1.0",
+  "files": {
+    "devnotes-1.1.0-linux": {
+      "size": 53839112,
+      "sha256": "4d904461a87a76b818808aeecd3695ccb345e7cb499f2c4bfd58baf760553762"
+    },
+    "devnotes-1.1.0-windows.exe": {
+      "size": 45046272,
+      "sha256": "93cb514110e32b2518203d7d89b68123fc3fcac8e334a551dd2b71647d471a9c"
+    },
+    "devnotes-1.1.0.x86_64.rpm": {
+      "size": 17626245,
+      "sha256": "ed877c4811a493438c64060049a973b0c7a2e376389ddfd56a33a3c2bf0a8dc6"
+    },
+    "devnotes_1.1.0_amd64.deb": {
+      "size": 22676280,
+      "sha256": "b459e6e93606f199ec23bdd137404bba188d373bace7a6d53c1a3f769c84df4f"
+    },
+    "devnotes_1.1.0_x64-setup.exe": {
+      "size": 16010364,
+      "sha256": "b15604ea6083b363b1c84fdb9d46875ea954854c8db2489a9f6213bc93d3ddc6"
+    },
+    "devnotes_1.1.0_x86_64.AppImage": {
+      "size": 30726648,
+      "sha256": "e536ddbc75e7d8468316ee1cc3542f6a1715f3fca0ba3f08bfe068b8d8e27d0f"
+    }
+  }
+}

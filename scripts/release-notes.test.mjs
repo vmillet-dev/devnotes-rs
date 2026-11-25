@@ -119,6 +119,13 @@ describe('sectionFor', () => {
     assert.equal(via, 'préfixe (fix)');
   });
 
+  it('files the website under the hood, by its label', () => {
+    assert.deepEqual(sectionFor({ issueLabels: [{ issue: 632, label: 'website' }] }), {
+      section: 'internal',
+      via: 'label ticket #632 (website)',
+    });
+  });
+
   it('files what nothing classifies under the hood', () => {
     assert.deepEqual(sectionFor({ title: 'Something nobody labelled' }), {
       section: 'internal',

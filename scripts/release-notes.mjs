@@ -32,7 +32,7 @@ export const SECTIONS = [
   {
     id: 'internal',
     heading: '🧰 Under the hood',
-    labels: ['refactor', 'documentation', 'chore', 'ci', 'test'],
+    labels: ['refactor', 'documentation', 'website', 'chore', 'ci', 'test'],
     kinds: ['refactor', 'docs', 'test', 'chore', 'ci', 'build', 'deps'],
   },
   { id: 'dependencies', heading: '📦 Dependencies', labels: ['dependencies'], kinds: [] },
