@@ -215,6 +215,8 @@ jobs:
     environment: release
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    # ⚠️ The tag is out by now: a macOS leg that fails must not leave it without a release.
+    continue-on-error: ${{ startsWith(matrix.target, 'macos') }}
     defaults:
       run:
         shell: bash
@@ -228,6 +230,10 @@ jobs:
             target: linux
           - os: windows-latest
             target: windows
+          - os: macos-latest
+            target: macos-aarch64
+          - os: macos-15-intel
+            target: macos-x64
     steps:
       # The SHA rather than the tag name: the tag was just created by `prepare`, and a SHA
       # cannot come to mean something else in between.
